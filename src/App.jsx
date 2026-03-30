@@ -49,7 +49,7 @@ function App() {
   return (
     <div className="overflow-hidden">
       <Sidebar activePage={activePage} onNavigate={(page) => navigate(`/${page}`)} />
-      <main className="ml-64 min-h-screen bg-background relative">
+      <main className="ml-16 min-h-screen bg-background relative">
         <TopNav isDark={isDark} onToggleTheme={() => setIsDark((d) => !d)} />
         <Routes>
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
