@@ -249,7 +249,7 @@ function ProcessPanel({ processName, rows, onRowClick }) {
               return (
                 <tr
                   key={i}
-                  className="hover:bg-surface-container/50 cursor-pointer transition-colors"
+                  className="hover:bg-primary/10 hover:shadow-[inset_3px_0_0_rgb(var(--c-primary))] cursor-pointer transition-all duration-150"
                   onClick={() => onRowClick(r, processName)}
                 >
                   <td className="px-4 py-2.5 font-bold text-on-surface">{r["品番"] ?? "—"}</td>
