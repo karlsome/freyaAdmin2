@@ -291,7 +291,7 @@ export default function RecordDetailModal({ record, processName, onClose, onLotC
     >
       <div
         className="glass-card rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto
-                   shadow-[0_0_60px_rgba(99,102,241,0.15)] scrollbar-hide"
+                   border border-purple-400/40 shadow-[0_0_60px_rgba(99,102,241,0.15)] scrollbar-hide"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
