@@ -2,24 +2,96 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ─── Light mode (default) ─────────────────────────────────────────────────── */
+/* Colors are stored as RGB channels so Tailwind opacity modifiers work:        */
+/* e.g. bg-primary/10 → rgba(73, 75, 214, 0.10)                                */
+:root {
+  --c-background:               251 248 255;
+  --c-surface:                  255 255 255;
+  --c-surface-container:        248 249 250;
+  --c-surface-container-lowest: 255 255 255;
+  --c-surface-container-low:    244 243 249;
+  --c-surface-container-high:   236 233 244;
+  --c-surface-container-highest:228 225 233;
+  --c-on-surface:               27 27 31;
+  --c-on-surface-variant:       70 70 79;
+  --c-on-background:            27 27 31;
+  --c-primary:                  73 75 214;
+  --c-primary-container:        128 131 255;
+  --c-on-primary:               255 255 255;
+  --c-on-primary-container:     0 0 110;
+  --c-secondary:                99 86 143;
+  --c-secondary-container:      232 221 255;
+  --c-tertiary:                 0 104 123;
+  --c-error:                    186 26 26;
+  --c-error-container:          255 218 214;
+  --c-on-error:                 255 255 255;
+  --c-on-error-container:       65 0 2;
+  --c-outline:                  118 118 128;
+  --c-outline-variant:          226 228 233;
+}
+
+/* ─── Dark mode ─────────────────────────────────────────────────────────────── */
+.dark {
+  --c-background:               16 19 26;
+  --c-surface:                  16 19 26;
+  --c-surface-container:        29 32 38;
+  --c-surface-container-lowest: 11 14 20;
+  --c-surface-container-low:    25 28 34;
+  --c-surface-container-high:   39 42 49;
+  --c-surface-container-highest:50 53 60;
+  --c-on-surface:               225 226 235;
+  --c-on-surface-variant:       199 196 215;
+  --c-on-background:            225 226 235;
+  --c-primary:                  192 193 255;
+  --c-primary-container:        128 131 255;
+  --c-on-primary:               16 0 169;
+  --c-on-primary-container:     13 0 150;
+  --c-secondary:                206 189 255;
+  --c-secondary-container:      90 1 223;
+  --c-tertiary:                 76 214 255;
+  --c-error:                    255 180 171;
+  --c-error-container:          147 0 10;
+  --c-on-error:                 105 0 5;
+  --c-on-error-container:       255 218 214;
+  --c-outline:                  144 143 160;
+  --c-outline-variant:          70 69 84;
+}
+
+/* ─── Base ──────────────────────────────────────────────────────────────────── */
 body {
-  background-color: #10131a;
-  color: #e1e2eb;
+  background-color: rgb(var(--c-background));
+  color: rgb(var(--c-on-surface));
   font-family: 'Inter', sans-serif;
   overflow: hidden;
 }
 
+/* ─── Glass card ────────────────────────────────────────────────────────────── */
 .glass-card {
+  background: rgba(255, 255, 255, 0.75);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(226, 228, 233, 0.8);
+}
+.dark .glass-card {
   background: rgba(29, 32, 38, 0.6);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
+  border: none;
 }
 
+/* ─── Kinetic gradient (logo + accent elements) ─────────────────────────────── */
+.kinetic-gradient {
+  background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
+}
+
+/* ─── Material Icons ────────────────────────────────────────────────────────── */
 .material-symbols-outlined {
   font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
   font-size: 20px;
 }
 
+/* ─── Scrollbar ─────────────────────────────────────────────────────────────── */
 .scrollbar-hide {
   -ms-overflow-style: none;
   scrollbar-width: none;

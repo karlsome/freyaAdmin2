@@ -1,19 +1,79 @@
+import { useState, useEffect } from "react";
+import { Navigate, Route, Routes, useLocation, useNavigate } from "react-router-dom";
 import Sidebar from "./components/Sidebar";
 import TopNav from "./components/TopNav";
-import Dashboard from "./components/Dashboard";
+import DashboardPage from "./pages/DashboardPage";
+import PlaceholderPage from "./pages/PlaceholderPage";
+
+const placeholderPages = [
+  "factories",
+  "factoryStatus",
+  "planner",
+  "inventory",
+  "notifications",
+  "analytics",
+  "financials",
+  "userManagement",
+  "approvals",
+  "masterDB",
+  "customerManagement",
+  "equipment",
+  "scna",
+  "noda",
+  "videoManual",
+];
 
 function App() {
+  const [isDark, setIsDark] = useState(() => {
+    const saved = localStorage.getItem("theme");
+    if (saved) return saved === "dark";
+    return true;
+  });
+  const location = useLocation();
+  const navigate = useNavigate();
+  const activePage = location.pathname.slice(1) || "dashboard";
+
+  useEffect(() => {
+    const root = document.documentElement;
+    if (isDark) {
+      root.classList.add("dark");
+      localStorage.setItem("theme", "dark");
+    } else {
+      root.classList.remove("dark");
+      localStorage.setItem("theme", "light");
+    }
+  }, [isDark]);
+
   return (
     <div className="overflow-hidden">
-      <Sidebar />
-      <main className="ml-64 min-h-screen bg-[#10131a] relative">
-        <TopNav />
-        <Dashboard />
+      <Sidebar activePage={activePage} onNavigate={(page) => navigate(`/${page}`)} />
+      <main className="ml-64 min-h-screen bg-background relative">
+        <TopNav isDark={isDark} onToggleTheme={() => setIsDark((d) => !d)} />
+        <Routes>
+          <Route path="/" element={<Navigate to="/dashboard" replace />} />
+          <Route
+            path="/dashboard"
+            element={
+              <DashboardPage
+                onNavigateToFactory={(factoryName) => {
+                  // Future: navigate to factory detail page
+                  console.log("Navigate to:", factoryName);
+                }}
+              />
+            }
+          />
+          {placeholderPages.map((page) => (
+            <Route key={page} path={`/${page}`} element={<PlaceholderPage page={page} />} />
+          ))}
+          <Route path="*" element={<Navigate to="/dashboard" replace />} />
+        </Routes>
       </main>
 
       {/* FAB */}
-      <button className="fixed bottom-8 right-8 w-14 h-14 bg-indigo-600 rounded-2xl shadow-[0_0_25px_rgba(79,70,229,0.5)] flex items-center justify-center text-white hover:scale-110 active:scale-95 transition-all z-50">
-        <span className="material-symbols-outlined" style={{ fontVariationSettings: "'FILL' 1" }}>add</span>
+      <button className="fixed bottom-8 right-8 w-14 h-14 kinetic-gradient rounded-2xl shadow-[0_0_25px_rgba(99,102,241,0.4)] flex items-center justify-center text-white hover:scale-110 active:scale-95 transition-all z-50">
+        <span className="material-symbols-outlined" style={{ fontVariationSettings: "'FILL' 1" }}>
+          add
+        </span>
       </button>
     </div>
   );
