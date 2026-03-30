@@ -251,3 +251,77 @@ export async function fetchEnvironmentalData(factoryName) {
     return _defaultEnv();
   }
 }
+
+// ─── Full production range (for FactoryDetailPage) ────────────────────────────
+const PROCESSES = [
+  { name: "Kensa", collection: "kensaDB" },
+  { name: "Press",  collection: "pressDB"  },
+  { name: "SRS",   collection: "SRSDB"    },
+  { name: "Slit",  collection: "slitDB"   },
+];
+
+function _buildProdQuery(factory, start, end, partNumbers, serialNumbers) {
+  const q = {
+    工場: factory,
+    Date: { $gte: start, $lte: end },
+  };
+  if (partNumbers.length > 0) q["品番"] = { $in: partNumbers };
+  if (serialNumbers.length > 0) q["背番号"] = { $in: serialNumbers };
+  return q;
+}
+
+async function _fetchRange(factory, start, end, partNumbers, serialNumbers) {
+  const settled = await Promise.allSettled(
+    PROCESSES.map((p) =>
+      query("submittedDB", p.collection, _buildProdQuery(factory, start, end, partNumbers, serialNumbers))
+    )
+  );
+  return PROCESSES.reduce((acc, p, i) => {
+    acc[p.name] = settled[i].status === "fulfilled" ? settled[i].value : [];
+    return acc;
+  }, {});
+}
+
+function _fmtDate(d) { return d.toISOString().split("T")[0]; }
+
+/**
+ * Fetches production data for a period (or single day → 3 sections: Daily/Weekly/Monthly).
+ * Returns { isSingleDay, sections: { [label]: { Kensa, Press, SRS, Slit } } }
+ */
+export async function fetchProductionByPeriod(factory, from, to, partNumbers = [], serialNumbers = []) {
+  const isSingleDay = from === to;
+  if (isSingleDay) {
+    const base  = new Date(from);
+    const wkStart = new Date(base); wkStart.setDate(base.getDate() - 6);
+    const moStart = new Date(base); moStart.setDate(base.getDate() - 29);
+    const [daily, weekly, monthly] = await Promise.all([
+      _fetchRange(factory, from, from, partNumbers, serialNumbers),
+      _fetchRange(factory, _fmtDate(wkStart), from, partNumbers, serialNumbers),
+      _fetchRange(factory, _fmtDate(moStart), from, partNumbers, serialNumbers),
+    ]);
+    return { isSingleDay: true, sections: { Daily: daily, Weekly: weekly, Monthly: monthly } };
+  }
+  const data = await _fetchRange(factory, from, to, partNumbers, serialNumbers);
+  return { isSingleDay: false, sections: { Period: data } };
+}
+
+// ─── Manufacturing lot lookup ──────────────────────────────────────────────────
+export async function checkMaterialSebanggo(lotNumber) {
+  const res = await fetch(BASE_URL + "api/check-material-sebanggo", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ lotNumber }),
+  });
+  if (!res.ok) throw new Error(`API ${res.status}`);
+  return res.json();
+}
+
+export async function lookupMaterialLot(lotNumber, sebanggo) {
+  const res = await fetch(BASE_URL + "api/material-lot-lookup", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ lotNumber, sebanggo }),
+  });
+  if (!res.ok) throw new Error(`API ${res.status}`);
+  return res.json();
+}
