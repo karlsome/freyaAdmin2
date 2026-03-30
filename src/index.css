@@ -70,18 +70,22 @@ body {
 
 /* ─── Glass card ────────────────────────────────────────────────────────────── */
 .glass-card {
-  background: rgba(255, 255, 255, 0.75);
+  background: rgba(255, 255, 255, 0.85);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow: inset 1px 1px 0 rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(99, 102, 241, 0.18);
+  box-shadow:
+    0 2px 16px rgba(99, 102, 241, 0.07),
+    inset 1px 1px 0 rgba(255, 255, 255, 0.6);
 }
 .dark .glass-card {
-  background: rgba(29, 32, 38, 0.6);
+  background: rgba(29, 32, 38, 0.75);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow: inset 1px 1px 0 rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(192, 193, 255, 0.12);
+  box-shadow:
+    0 2px 16px rgba(0, 0, 0, 0.3),
+    inset 1px 1px 0 rgba(255, 255, 255, 0.06);
 }
 
 /* ─── Kinetic gradient (logo + accent elements) ─────────────────────────────── */
