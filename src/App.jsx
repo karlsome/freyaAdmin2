@@ -3,6 +3,8 @@ import { Navigate, Route, Routes, useLocation, useNavigate } from "react-router-
 import Sidebar from "./components/Sidebar";
 import TopNav from "./components/TopNav";
 import DashboardPage from "./pages/DashboardPage";
+import FactoryDetailPage from "./pages/FactoryDetailPage";
+import SensorDetailPage from "./pages/SensorDetailPage";
 import PlaceholderPage from "./pages/PlaceholderPage";
 
 const placeholderPages = [
@@ -55,16 +57,17 @@ function App() {
             path="/dashboard"
             element={
               <DashboardPage
-                onNavigateToFactory={(factoryName) => {
-                  // Future: navigate to factory detail page
-                  console.log("Navigate to:", factoryName);
-                }}
+                onNavigateToFactory={(factoryName) =>
+                  navigate(`/factory/${encodeURIComponent(factoryName)}`)
+                }
               />
             }
           />
           {placeholderPages.map((page) => (
             <Route key={page} path={`/${page}`} element={<PlaceholderPage page={page} />} />
           ))}
+          <Route path="/factory/:factoryName" element={<FactoryDetailPage />} />
+          <Route path="/sensors/:factoryName" element={<SensorDetailPage />} />
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Routes>
       </main>

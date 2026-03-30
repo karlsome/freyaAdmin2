@@ -1,6 +1,5 @@
-import { useState } from "react";
+import { useDashboardData } from "../hooks/useDashboardData";
 import FactoryCard from "../components/FactoryCard";
-import { factories } from "../data/mockDashboard";
 import { getDefectStatus } from "../utils/statusHelpers";
 
 // ─── Summary stat chip ────────────────────────────────────────────────────────
@@ -20,7 +19,7 @@ function StatChip({ icon, label, value, color = "text-on-surface" }) {
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 export default function DashboardPage({ onNavigateToFactory }) {
-  const [refreshKey, setRefreshKey] = useState(0);
+  const { factories, loading, error, refresh } = useDashboardData();
 
   const today = new Date().toLocaleDateString("en-US", {
     weekday: "long",
@@ -47,7 +46,7 @@ export default function DashboardPage({ onNavigateToFactory }) {
           <p className="text-on-surface-variant mt-1 text-sm">{today}</p>
         </div>
         <button
-          onClick={() => setRefreshKey((k) => k + 1)}
+          onClick={refresh}
           className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold bg-surface-container border border-outline-variant/20 text-on-surface-variant hover:bg-surface-container-high hover:text-primary transition-all"
         >
           <span className="material-symbols-outlined" style={{ fontSize: 16 }}>refresh</span>
@@ -84,14 +83,24 @@ export default function DashboardPage({ onNavigateToFactory }) {
       </div>
 
       {/* ── Factory grid ── */}
+      {error && (
+        <div className="glass-card rounded-2xl p-6 mb-6 flex items-center gap-4 text-error">
+          <span className="material-symbols-outlined">error</span>
+          <p className="text-sm font-bold">Backend unreachable — showing last cached data. ({error})</p>
+        </div>
+      )}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5 pb-8">
-        {factories.map((factory) => (
-          <FactoryCard
-            key={`${factory.name}-${refreshKey}`}
-            factory={factory}
-            onClick={() => onNavigateToFactory?.(factory.name)}
-          />
-        ))}
+        {loading && factories.length === 0
+          ? Array.from({ length: 7 }).map((_, i) => (
+              <div key={i} className="glass-card rounded-2xl p-5 h-64 animate-pulse bg-surface-container" />
+            ))
+          : factories.map((factory) => (
+              <FactoryCard
+                key={factory.name}
+                factory={factory}
+                onClick={() => onNavigateToFactory?.(factory.name)}
+              />
+            ))}
       </div>
     </section>
   );
