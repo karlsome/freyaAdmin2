@@ -325,3 +325,26 @@ export async function lookupMaterialLot(lotNumber, sebanggo) {
   if (!res.ok) throw new Error(`API ${res.status}`);
   return res.json();
 }
+
+// ─── Master image lookup ──────────────────────────────────────────────────────
+export async function fetchMasterImage(hinban, sebanggo) {
+  try {
+    if (hinban) {
+      const r = await query("Sasaki_Coating_MasterDB", "masterDB",
+        { 品番: hinban },
+        { projection: { imageURL: 1, 品番: 1, 背番号: 1, 品名: 1 } }
+      );
+      if (r?.length && r[0].imageURL) return r[0];
+    }
+    if (sebanggo) {
+      const r = await query("Sasaki_Coating_MasterDB", "masterDB",
+        { 背番号: sebanggo },
+        { projection: { imageURL: 1, 品番: 1, 背番号: 1, 品名: 1 } }
+      );
+      if (r?.length && r[0].imageURL) return r[0];
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}

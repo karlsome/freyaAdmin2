@@ -4,6 +4,7 @@ import {
   fetchProductionByPeriod,
   fetchSensorData,
   fetchEnvironmentalData,
+  fetchMasterImage,
   checkMaterialSebanggo,
   lookupMaterialLot,
   query,
@@ -325,23 +326,121 @@ function ProcessPanel({ processName, rows, onRowClick }) {
   );
 }
 
+// ─── PhotosSection (used inside DetailModal) ─────────────────────────────────
+function PhotosSection({ checkImages, labelImages, totalCount }) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <div className="px-6 py-0 border-t border-white/10">
+      <button
+        className="w-full flex items-center justify-between gap-2 py-4 text-[10px] font-bold uppercase
+                   tracking-wider text-outline hover:text-on-surface transition-colors"
+        onClick={() => setOpen((v) => !v)}
+      >
+        <span className="flex items-center gap-1.5">
+          <span className="material-symbols-outlined" style={{ fontSize: 14 }}>photo_library</span>
+          Uploaded Photos
+          <span className="px-1.5 py-0.5 rounded-full bg-surface-container text-[9px] font-bold normal-case tracking-normal">
+            {totalCount}
+          </span>
+        </span>
+        <span className="material-symbols-outlined" style={{ fontSize: 14 }}>
+          {open ? "keyboard_arrow_up" : "keyboard_arrow_down"}
+        </span>
+      </button>
+
+      {open && (
+        <div className="pb-5 space-y-5">
+          {/* Check images (初物 / 終物) — 2 columns */}
+          {checkImages.length > 0 && (
+            <div className="grid grid-cols-2 gap-3">
+              {checkImages.map(({ label, url }) => (
+                <div key={label}>
+                  <p className="text-[10px] font-bold text-outline mb-1.5">{label}</p>
+                  <a href={url} target="_blank" rel="noreferrer" className="block rounded-xl overflow-hidden border border-white/10 hover:border-primary/40 transition-colors cursor-zoom-in">
+                    <img src={url} alt={label} className="w-full object-cover max-h-36 bg-black/20" />
+                  </a>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Material label images — 4-column grid */}
+          {labelImages.length > 0 && (
+            <div>
+              <p className="text-[10px] font-bold text-outline mb-2">材料ラベル ({labelImages.length})</p>
+              <div className="grid grid-cols-4 gap-2">
+                {labelImages.map((url, i) => (
+                  <a
+                    key={i}
+                    href={url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="block rounded-xl overflow-hidden border border-white/10 hover:border-primary/40 transition-colors cursor-zoom-in"
+                  >
+                    <img
+                      src={url}
+                      alt={`材料ラベル ${i + 1}`}
+                      className="w-full aspect-square object-cover bg-black/20"
+                    />
+                    <p className="text-[9px] text-outline text-center py-1">材料ラベル {i + 1}</p>
+                  </a>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── DetailModal ──────────────────────────────────────────────────────────────
-function DetailModal({ record, processName, onClose }) {
+function DetailModal({ record, processName, onClose, onLotClick }) {
+  const [imageData,     setImageData]     = useState(null);
+  const [imageLoading,  setImageLoading]  = useState(true);
+  const [allFieldsOpen, setAllFieldsOpen] = useState(false);
+
+  useEffect(() => {
+    if (!record) return;
+    let cancelled = false;
+    setImageLoading(true);
+    setImageData(null);
+    fetchMasterImage(record["品番"], record["背番号"]).then((d) => {
+      if (!cancelled) { setImageData(d); setImageLoading(false); }
+    });
+    return () => { cancelled = true; };
+  }, [record]);
+
   if (!record) return null;
 
-  const qty     = Number(record.Process_Quantity) || Number(record.Total) || 0;
-  const ng      = Number(record.Total_NG) || 0;
-  const defRate = qty > 0 ? ((ng / qty) * 100).toFixed(2) : "0.00";
-  const hrs     = calcWorkHours(record.Time_start, record.Time_end);
+  const qty      = Number(record.Process_Quantity) || Number(record.Total) || 0;
+  const ng       = Number(record.Total_NG) || 0;
+  const defRate  = qty > 0 ? ((ng / qty) * 100).toFixed(2) : "0.00";
+  const hrs      = calcWorkHours(record.Time_start, record.Time_end);
+  const defColor = parseFloat(defRate) > 2 ? "text-error" : parseFloat(defRate) > 1 ? "text-amber-400" : "text-emerald-400";
 
-  const SKIP   = new Set(["_id", "_source", "__v"]);
+  const materialLots = record["材料ロット"]
+    ? String(record["材料ロット"]).split(",").map((l) => l.trim()).filter(Boolean)
+    : [];
+
+  const SKIP    = new Set(["_id", "_source", "__v"]);
   const entries = Object.entries(record).filter(([k]) => !SKIP.has(k) && record[k] != null && record[k] !== "");
 
-  const defColor = parseFloat(defRate) > 2 ? "text-error" : parseFloat(defRate) > 1 ? "text-amber-400" : "text-emerald-400";
+  const keyFields = [
+    ["工場",      record["工場"]],
+    ["Date",      record.Date],
+    ["作業者",    record.Worker_Name],
+    ["設備",      record["設備"]],
+    ["開始時刻",  record.Time_start],
+    ["終了時刻",  record.Time_end],
+    ["稼働時間",  hrs != null ? `${hrs.toFixed(2)} hrs` : null],
+    ["製造ロット", record["製造ロット"]],
+  ].filter(([, v]) => v != null);
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75"
       onClick={onClose}
     >
       <div
@@ -366,12 +465,40 @@ function DetailModal({ record, processName, onClose }) {
           </button>
         </div>
 
+        {/* Product image */}
+        <div className="px-6 pt-5 pb-2">
+          {imageLoading ? (
+            <div className="w-full h-40 rounded-2xl bg-surface-container/60 animate-pulse" />
+          ) : imageData?.imageURL ? (
+            <a
+              href={imageData.imageURL}
+              target="_blank"
+              rel="noreferrer"
+              className="block w-full overflow-hidden rounded-2xl border border-emerald-400/30
+                         hover:border-emerald-400/60 transition-colors cursor-zoom-in"
+            >
+              <img
+                src={imageData.imageURL}
+                alt={imageData["品名"] ?? record["品番"]}
+                className="w-full max-h-52 object-contain bg-black/20"
+                onError={(e) => { e.currentTarget.closest("a").classList.add("hidden"); }}
+              />
+            </a>
+          ) : (
+            <div className="w-full h-10 flex items-center justify-center rounded-xl bg-surface-container/30
+                            text-[11px] text-outline gap-1.5">
+              <span className="material-symbols-outlined" style={{ fontSize: 14 }}>image_not_supported</span>
+              No image available
+            </div>
+          )}
+        </div>
+
         {/* Stats strip */}
         <div className="grid grid-cols-3 gap-3 px-6 py-4 border-b border-white/10">
           {[
-            { label: "Total", value: qty.toLocaleString(), color: "text-on-surface" },
-            { label: "Total NG", value: ng, color: ng > 0 ? "text-error" : "text-on-surface" },
-            { label: "不良率", value: `${defRate}%`, color: defColor },
+            { label: "Total",    value: qty.toLocaleString(), color: "text-on-surface" },
+            { label: "Total NG", value: ng,                   color: ng > 0 ? "text-error" : "text-on-surface" },
+            { label: "不良率",   value: `${defRate}%`,        color: defColor },
           ].map(({ label, value, color }) => (
             <div key={label} className="glass-card rounded-xl px-4 py-3 text-center">
               <p className={`text-2xl font-black ${color}`}>{value}</p>
@@ -382,46 +509,84 @@ function DetailModal({ record, processName, onClose }) {
 
         {/* Key metrics */}
         <div className="px-6 py-4 grid grid-cols-2 gap-3 border-b border-white/10">
-          {[
-            ["工場",     record["工場"]],
-            ["Date",     record.Date],
-            ["作業者",   record.Worker_Name],
-            ["設備",     record["設備"]],
-            ["開始時刻", record.Time_start],
-            ["終了時刻", record.Time_end],
-            ["稼働時間", hrs != null ? `${hrs.toFixed(2)} hrs` : null],
-            ["製造ロット", record["製造ロット"]],
-            ["材料ロット", record["材料ロット"]],
-          ].filter(([, v]) => v != null).map(([label, value]) => (
+          {keyFields.map(([label, value]) => (
             <div key={label} className="flex flex-col gap-0.5">
               <span className="text-[10px] font-bold uppercase tracking-wider text-outline">{label}</span>
               <span className="text-sm font-bold text-on-surface">{value}</span>
             </div>
           ))}
+          {/* 材料ロット — clickable lot chips */}
+          {materialLots.length > 0 ? (
+            <div className="flex flex-col gap-1.5 col-span-2">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-outline">材料ロット</span>
+              <div className="flex flex-wrap gap-1.5">
+                {materialLots.map((lot) => (
+                  <button
+                    key={lot}
+                    onClick={() => onLotClick?.(lot)}
+                    className="px-2.5 py-1 rounded-full bg-primary/10 text-primary text-[11px] font-mono font-bold
+                               hover:bg-primary/25 hover:scale-[1.04] transition-all border border-primary/20"
+                  >
+                    {lot}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ) : record["材料ロット"] != null && (
+            <div className="flex flex-col gap-0.5">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-outline">材料ロット</span>
+              <span className="text-sm font-bold text-on-surface">{record["材料ロット"]}</span>
+            </div>
+          )}
         </div>
 
-        {/* All fields */}
+        {/* Uploaded photos — collapsible */}
+        {(() => {
+          const checkImages = [
+            { label: "初物チェック画像", url: record["初物チェック画像"] },
+            { label: "終物チェック画像", url: record["終物チェック画像"] },
+          ].filter((i) => i.url);
+          const labelImages = Array.isArray(record.materialLabelImages)
+            ? record.materialLabelImages.filter(Boolean)
+            : record["材料ラベル画像"] ? [record["材料ラベル画像"]] : [];
+          const totalCount = checkImages.length + labelImages.length;
+          if (totalCount === 0) return null;
+          return <PhotosSection checkImages={checkImages} labelImages={labelImages} totalCount={totalCount} />;
+        })()}
+
+        {/* All fields — collapsible */}
         <div className="px-6 py-4">
-          <p className="text-[10px] font-bold uppercase tracking-wider text-outline mb-3">All Fields</p>
-          <div className="space-y-0">
-            {entries.map(([k, v]) => {
-              let display = v;
-              if (typeof v === "object") {
-                try { display = JSON.stringify(v, null, 2); } catch { display = String(v); }
-              }
-              const isImage = typeof v === "string" && /\.(png|jpg|jpeg|gif|webp)$/i.test(v);
-              return (
-                <div key={k} className="flex justify-between gap-4 py-2 border-b border-white/5 last:border-0">
-                  <span className="text-[11px] font-bold text-outline flex-shrink-0">{k}</span>
-                  {isImage ? (
-                    <img src={v} alt={k} className="max-h-24 rounded-lg" />
-                  ) : (
-                    <span className="text-xs text-on-surface-variant text-right break-all font-mono">{String(display)}</span>
-                  )}
-                </div>
-              );
-            })}
-          </div>
+          <button
+            className="w-full flex items-center justify-between gap-2 text-[10px] font-bold uppercase
+                       tracking-wider text-outline hover:text-on-surface transition-colors"
+            onClick={() => setAllFieldsOpen((v) => !v)}
+          >
+            <span>All Fields</span>
+            <span className="material-symbols-outlined" style={{ fontSize: 14 }}>
+              {allFieldsOpen ? "keyboard_arrow_up" : "keyboard_arrow_down"}
+            </span>
+          </button>
+          {allFieldsOpen && (
+            <div className="space-y-0 mt-3">
+              {entries.map(([k, v]) => {
+                let display = v;
+                if (typeof v === "object") {
+                  try { display = JSON.stringify(v, null, 2); } catch { display = String(v); }
+                }
+                const isImage = typeof v === "string" && /\.(png|jpg|jpeg|gif|webp)$/i.test(v);
+                return (
+                  <div key={k} className="flex justify-between gap-4 py-2 border-b border-white/5 last:border-0">
+                    <span className="text-[11px] font-bold text-outline flex-shrink-0">{k}</span>
+                    {isImage ? (
+                      <img src={v} alt={k} className="max-h-24 rounded-lg" />
+                    ) : (
+                      <span className="text-xs text-on-surface-variant text-right break-all font-mono">{String(display)}</span>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       </div>
     </div>
@@ -429,17 +594,16 @@ function DetailModal({ record, processName, onClose }) {
 }
 
 // ─── MfgLotModal ─────────────────────────────────────────────────────────────
-function MfgLotModal({ onClose }) {
-  const [lotInput, setLotInput]   = useState("");
+function MfgLotModal({ onClose, initialLot = "" }) {
+  const [lotInput, setLotInput]   = useState(initialLot);
   const [step, setStep]           = useState("input");
   const [sebanggoOptions, setSebanggoOptions] = useState([]);
   const [results, setResults]     = useState(null);
   const [loading, setLoading]     = useState(false);
   const [errMsg, setErrMsg]       = useState("");
 
-  const handleSearch = async () => {
-    const lot = lotInput.trim();
-    if (lot.length < 3) return;
+  const doSearch = useCallback(async (lot) => {
+    if (!lot || lot.length < 3) return;
     setLoading(true);
     setErrMsg("");
     try {
@@ -453,7 +617,6 @@ function MfgLotModal({ onClose }) {
         setStep("results");
       }
     } catch {
-      // Fallback: search pressDB by 製造ロット regex
       try {
         const rows = await query("submittedDB", "pressDB", { "製造ロット": { $regex: lot, $options: "i" } });
         setResults({ rows });
@@ -464,7 +627,15 @@ function MfgLotModal({ onClose }) {
       }
     }
     setLoading(false);
-  };
+  }, []);
+
+  // Auto-search when opened with a pre-filled lot (e.g. from 材料ロット chip)
+  useEffect(() => {
+    const t = initialLot.trim();
+    if (t.length >= 3) doSearch(t);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const handleSearch = () => doSearch(lotInput.trim());
 
   const handleSelectSebanggo = async (seb) => {
     setLoading(true);
@@ -486,7 +657,7 @@ function MfgLotModal({ onClose }) {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75"
       onClick={onClose}
     >
       <div
@@ -619,6 +790,7 @@ export default function FactoryDetailPage() {
   const [selectedRecord,  setSelectedRecord]  = useState(null);
   const [selectedProcess, setSelectedProcess] = useState(null);
   const [showLotModal,    setShowLotModal]    = useState(false);
+  const [lotModalInitial, setLotModalInitial] = useState("");
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -876,11 +1048,17 @@ export default function FactoryDetailPage() {
           record={selectedRecord}
           processName={selectedProcess}
           onClose={() => { setSelectedRecord(null); setSelectedProcess(null); }}
+          onLotClick={(lot) => { setLotModalInitial(lot); setShowLotModal(true); }}
         />
       )}
 
       {/* ── Manufacturing lot modal ── */}
-      {showLotModal && <MfgLotModal onClose={() => setShowLotModal(false)} />}
+      {showLotModal && (
+        <MfgLotModal
+          initialLot={lotModalInitial}
+          onClose={() => { setShowLotModal(false); setLotModalInitial(""); }}
+        />
+      )}
     </section>
   );
 }
