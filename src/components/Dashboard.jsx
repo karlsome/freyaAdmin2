@@ -38,7 +38,7 @@ function PayoutsCard() {
         </div>
       </div>
 
-      <div className="grid grid-cols-4 gap-4 relative z-10 border-t border-outline-variant/40 pt-6">
+      <div className="grid grid-cols-4 gap-4 relative z-10 border-t border-outline-variant/20 pt-6">
         <div className="space-y-1">
           <p className="text-[10px] text-on-surface-variant">Efficiency</p>
           <p className="text-sm font-bold text-on-surface">98.4% <span className="text-emerald-500 text-[10px]">↑ 2%</span></p>
@@ -65,7 +65,7 @@ function FactoryStatusCard() {
     <div className="col-span-4 glass-card rounded-2xl p-6 flex flex-col">
       <h3 className="text-lg font-bold text-on-surface mb-6">Factory Status Overview</h3>
       <div className="space-y-4 flex-1">
-        <div className="p-4 rounded-xl bg-surface-container border border-outline-variant hover:bg-surface-container-high transition-colors">
+        <div className="p-4 rounded-xl bg-surface-container border border-outline-variant/20 hover:bg-surface-container-high transition-colors">
           <div className="flex justify-between items-center mb-3">
             <span className="text-xs font-bold text-on-surface">Active Facilities</span>
             <span className="flex items-center gap-1 text-[10px] font-black text-emerald-600 dark:text-emerald-400">
@@ -79,7 +79,7 @@ function FactoryStatusCard() {
           </div>
         </div>
 
-        <div className="p-4 rounded-xl bg-surface-container border border-outline-variant hover:bg-surface-container-high transition-colors">
+        <div className="p-4 rounded-xl bg-surface-container border border-outline-variant/20 hover:bg-surface-container-high transition-colors">
           <div className="flex justify-between items-center mb-3">
             <span className="text-xs font-bold text-on-surface">Idle / Maintenance</span>
             <span className="text-[10px] font-black text-outline">STANDBY</span>
@@ -99,7 +99,7 @@ function FactoryStatusCard() {
         </div>
       </div>
 
-      <div className="mt-6 pt-6 border-t border-outline-variant">
+      <div className="mt-6 pt-6 border-t border-outline-variant/20">
         <div className="w-full h-24 rounded-lg bg-surface-container-high flex items-center justify-center">
           <span className="text-[10px] text-outline uppercase tracking-widest">Global Map</span>
         </div>
@@ -138,22 +138,22 @@ function IncomeCard() {
         ))}
       </div>
 
-      <div className="space-y-4">
-        <div className="flex justify-between items-center py-2 border-b border-outline-variant/40">
+      <div className="space-y-2">
+        <div className="flex justify-between items-center px-2 py-2 rounded-lg hover:bg-surface-container transition-colors">
           <div className="flex items-center gap-3">
             <span className="w-2 h-2 rounded-full bg-primary"></span>
             <span className="text-sm font-medium text-on-surface-variant">Projected Revenue</span>
           </div>
           <span className="text-sm font-bold text-on-surface">+$4.2M</span>
         </div>
-        <div className="flex justify-between items-center py-2 border-b border-outline-variant/40">
+        <div className="flex justify-between items-center px-2 py-2 rounded-lg hover:bg-surface-container transition-colors">
           <div className="flex items-center gap-3">
             <span className="w-2 h-2 rounded-full bg-tertiary"></span>
             <span className="text-sm font-medium text-on-surface-variant">Maintenance Cost</span>
           </div>
           <span className="text-sm font-bold text-on-surface">-$1.1M</span>
         </div>
-        <div className="flex justify-between items-center py-2">
+        <div className="flex justify-between items-center px-2 py-2 rounded-lg hover:bg-surface-container transition-colors">
           <div className="flex items-center gap-3">
             <span className="w-2 h-2 rounded-full bg-secondary"></span>
             <span className="text-sm font-medium text-on-surface-variant">Expansion Budget</span>
@@ -250,7 +250,7 @@ function InventoryCard() {
         </div>
       </div>
 
-      <div className="mt-8 p-3 rounded-xl bg-surface-container-high border border-outline-variant">
+      <div className="mt-8 p-3 rounded-xl bg-surface-container-high border border-outline-variant/20">
         <div className="flex items-center gap-3">
           <span className="material-symbols-outlined text-tertiary">shopping_cart</span>
           <div>

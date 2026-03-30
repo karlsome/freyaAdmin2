@@ -1,6 +1,6 @@
 export default function TopNav({ isDark, onToggleTheme }) {
   return (
-    <header className="fixed top-0 right-0 left-64 h-16 bg-surface/90 backdrop-blur-md border-b border-outline-variant flex justify-between items-center px-8 z-40 font-headline antialiased">
+    <header className="fixed top-0 right-0 left-64 h-16 bg-surface/90 backdrop-blur-md border-b border-outline-variant/20 flex justify-between items-center px-8 z-40 font-headline antialiased">
 
       {/* Search */}
       <div className="flex items-center gap-6 flex-1">
@@ -42,7 +42,7 @@ export default function TopNav({ isDark, onToggleTheme }) {
         </button>
 
         {/* Divider */}
-        <div className="h-8 w-px bg-outline-variant"></div>
+        <div className="h-8 w-px bg-outline-variant/20"></div>
 
         {/* User */}
         <div className="flex items-center gap-3">

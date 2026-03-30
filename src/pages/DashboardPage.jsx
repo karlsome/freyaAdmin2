@@ -48,7 +48,7 @@ export default function DashboardPage({ onNavigateToFactory }) {
         </div>
         <button
           onClick={() => setRefreshKey((k) => k + 1)}
-          className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold bg-surface-container border border-outline-variant text-on-surface-variant hover:bg-surface-container-high hover:text-primary transition-all"
+          className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold bg-surface-container border border-outline-variant/20 text-on-surface-variant hover:bg-surface-container-high hover:text-primary transition-all"
         >
           <span className="material-symbols-outlined" style={{ fontSize: 16 }}>refresh</span>
           Refresh All

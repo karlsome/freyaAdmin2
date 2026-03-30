@@ -64,7 +64,7 @@ export default function FactoryCard({ factory, onClick }) {
   return (
     <div
       onClick={onClick}
-      className="glass-card rounded-2xl p-5 flex flex-col gap-4 cursor-pointer hover:shadow-xl hover:shadow-primary/5 transition-all duration-300 group"
+      className="glass-card rounded-2xl p-5 flex flex-col gap-4 cursor-pointer hover:shadow-xl hover:shadow-primary/5 hover:scale-[1.02] transition-all duration-300 group"
     >
       {/* ── Header ── */}
       <div className="flex items-start justify-between">
@@ -81,7 +81,7 @@ export default function FactoryCard({ factory, onClick }) {
       </div>
 
       {/* ── Production stats ── */}
-      <div className="grid grid-cols-3 gap-2 border-b border-outline-variant/40 pb-4">
+      <div className="grid grid-cols-3 gap-2 pb-4">
         <div>
           <p className="text-[10px] text-on-surface-variant uppercase tracking-widest mb-1">Total</p>
           <p className="text-sm font-black text-on-surface">{total.toLocaleString()}</p>
@@ -154,7 +154,7 @@ export default function FactoryCard({ factory, onClick }) {
 
       {/* ── Physical sensors ── */}
       {sensor.hasData ? (
-        <div className="border-t border-outline-variant/40 pt-3">
+        <div className="border-t border-outline-variant/20 pt-3">
           <div className="flex items-center justify-between mb-2">
             <p className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">
               Physical Sensors
@@ -165,7 +165,7 @@ export default function FactoryCard({ factory, onClick }) {
             </span>
           </div>
           <div
-            className="grid grid-cols-3 gap-2 p-2 rounded-xl border border-outline-variant/40 hover:border-primary/30 transition-colors"
+            className="grid grid-cols-3 gap-2 p-2 rounded-xl border border-outline-variant/20 hover:border-primary/30 transition-colors"
             onClick={(e) => e.stopPropagation()}
           >
             <SensorCell icon="thermometer" value={sensor.highestTemp} unit="°C" label="Peak Temp" status={sensorTempStatus} />
@@ -178,9 +178,9 @@ export default function FactoryCard({ factory, onClick }) {
           </div>
         </div>
       ) : sensor.hasHistorical ? (
-        <div className="border-t border-outline-variant/40 pt-3">
+        <div className="border-t border-outline-variant/20 pt-3">
           <button
-            className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border border-outline-variant/40 hover:border-primary/30 hover:bg-primary/5 text-outline hover:text-primary transition-all text-xs font-medium"
+            className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border border-outline-variant/20 hover:border-primary/30 hover:bg-primary/5 text-outline hover:text-primary transition-all text-xs font-medium"
             onClick={(e) => e.stopPropagation()}
           >
             <span className="material-symbols-outlined" style={{ fontSize: 15 }}>history</span>

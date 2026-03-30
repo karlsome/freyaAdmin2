@@ -19,7 +19,7 @@ const navItems = [
 
 export default function Sidebar({ activePage, onNavigate }) {
   return (
-    <aside className="fixed left-0 top-0 h-full w-64 bg-surface-container-lowest border-r border-outline-variant flex flex-col py-6 px-4 z-50 font-headline text-sm font-medium">
+    <aside className="fixed left-0 top-0 h-full w-64 bg-surface-container-lowest border-r border-outline-variant/20 flex flex-col py-6 px-4 z-50 font-headline text-sm font-medium">
 
       {/* Logo */}
       <div className="flex items-center gap-3 px-2 mb-10">
@@ -68,7 +68,7 @@ export default function Sidebar({ activePage, onNavigate }) {
       </nav>
 
       {/* Bottom */}
-      <div className="mt-auto pt-6 border-t border-outline-variant space-y-0.5">
+      <div className="mt-auto pt-6 border-t border-outline-variant/20 space-y-0.5">
         <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 text-outline hover:text-primary hover:bg-primary/5 dark:hover:text-on-surface dark:hover:bg-white/5">
           <span className="material-symbols-outlined">settings</span>
           <span>Settings</span>
