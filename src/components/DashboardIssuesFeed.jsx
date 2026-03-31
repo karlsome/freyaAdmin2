@@ -46,7 +46,7 @@ export default function DashboardIssuesFeed({ issues, loading, onRecordClick }) 
         </div>
       ) : (
         <div className="flex-1 overflow-y-auto scrollbar-hide space-y-2">
-          {issues.map((r) => {
+          {issues.map((r, idx) => {
             const recordTotal = Number(r.Total) || 0;
             const recordNG    = Number(r.Total_NG) || 0;
             const defRate     = recordTotal > 0 ? (recordNG / recordTotal) * 100 : 0;
@@ -55,7 +55,7 @@ export default function DashboardIssuesFeed({ issues, loading, onRecordClick }) 
 
             return (
               <button
-                key={r._id?.$oid ?? `${r["工場"]}-${r["設備"]}-${r.Date}`}
+                key={r._id?.$oid ?? `${r["工場"]}-${r["設備"]}-${r.Date}-${idx}`}
                 onClick={() => onRecordClick?.(r)}
                 className="w-full text-left p-3 rounded-xl bg-surface-container/60 border border-white/5
                            hover:bg-surface-container hover:border-primary/20 transition-all"

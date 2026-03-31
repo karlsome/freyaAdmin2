@@ -58,6 +58,30 @@
   --c-outline-variant:          70 69 84;
 }
 
+/* ─── Aurora animation (dark mode only) ─────────────────────────────────────── */
+@keyframes aurora-shift {
+  0%   { background-position: 0% 50%; }
+  25%  { background-position: 60% 30%; }
+  50%  { background-position: 100% 50%; }
+  75%  { background-position: 40% 70%; }
+  100% { background-position: 0% 50%; }
+}
+@keyframes aurora-blob1 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33%       { transform: translate(8vw, -6vh) scale(1.15); }
+  66%       { transform: translate(-5vw, 10vh) scale(0.9); }
+}
+@keyframes aurora-blob2 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  40%       { transform: translate(-10vw, 8vh) scale(1.2); }
+  70%       { transform: translate(7vw, -4vh) scale(0.85); }
+}
+@keyframes aurora-blob3 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  30%       { transform: translate(6vw, 12vh) scale(1.1); }
+  60%       { transform: translate(-8vw, -5vh) scale(0.95); }
+}
+
 /* ─── Base ──────────────────────────────────────────────────────────────────── */
 body {
   background-color: rgb(var(--c-background));
@@ -66,6 +90,45 @@ body {
   overflow: hidden;
   background-image: radial-gradient(circle, rgba(99,102,241,0.055) 1px, transparent 1px);
   background-size: 24px 24px;
+}
+
+/* Dark mode aurora background */
+.dark {
+  background-color: rgb(10, 8, 24); /* fallback base on html element */
+}
+.dark body {
+  background: transparent;
+  background-image: none;
+  position: relative;
+}
+.dark body::before {
+  content: '';
+  position: fixed;
+  inset: -20%;
+  z-index: -1;
+  background:
+    radial-gradient(ellipse 70% 60% at 20% 30%, rgba(67, 56, 202, 0.55) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 55% at 80% 20%, rgba(109, 40, 217, 0.45) 0%, transparent 55%),
+    radial-gradient(ellipse 55% 65% at 60% 80%, rgba(49, 10, 101, 0.60) 0%, transparent 60%),
+    radial-gradient(ellipse 80% 50% at 40% 60%, rgba(30, 27, 75, 0.70) 0%, transparent 65%);
+  background-color: rgb(10, 8, 24);
+  animation: aurora-blob1 38s ease-in-out infinite;
+}
+.dark body::after {
+  content: '';
+  position: fixed;
+  inset: -20%;
+  z-index: -1;
+  background:
+    radial-gradient(ellipse 65% 50% at 70% 50%, rgba(88, 28, 135, 0.40) 0%, transparent 55%),
+    radial-gradient(ellipse 50% 60% at 30% 70%, rgba(67, 56, 202, 0.35) 0%, transparent 50%),
+    radial-gradient(ellipse 45% 55% at 85% 75%, rgba(124, 58, 237, 0.30) 0%, transparent 50%);
+  mix-blend-mode: screen;
+  animation: aurora-blob2 52s ease-in-out infinite;
+}
+/* Dot grid overlay sits on top of aurora */
+.dark body > * {
+  isolation: isolate;
 }
 
 /* ─── Glass card ────────────────────────────────────────────────────────────── */
@@ -79,13 +142,13 @@ body {
     inset 1px 1px 0 rgba(255, 255, 255, 0.7);
 }
 .dark .glass-card {
-  background: rgba(29, 32, 38, 0.75);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(192, 193, 255, 0.12);
+  background: rgba(20, 16, 40, 0.52);
+  backdrop-filter: blur(22px) saturate(1.5);
+  -webkit-backdrop-filter: blur(22px) saturate(1.5);
+  border: 1px solid rgba(139, 92, 246, 0.18);
   box-shadow:
-    0 2px 16px rgba(0, 0, 0, 0.3),
-    inset 1px 1px 0 rgba(255, 255, 255, 0.06);
+    0 4px 24px rgba(0, 0, 0, 0.45),
+    inset 1px 1px 0 rgba(192, 193, 255, 0.07);
 }
 
 /* ─── Kinetic gradient (logo + accent elements) ─────────────────────────────── */
