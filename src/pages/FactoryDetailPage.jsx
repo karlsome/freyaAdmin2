@@ -12,6 +12,7 @@ import { getDefectStatus, getTempStatus, getHumidityStatus, getWBGTStatus } from
 import RecordDetailModal from "../components/RecordDetailModal";
 import ProcessPanel from "../components/ProcessPanel";
 import ProductionFilterBar from "../components/ProductionFilterBar";
+import { useRecordModal } from "../hooks/useRecordModal";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function fmtDate(d) { return d.toISOString().split("T")[0]; }
@@ -217,8 +218,7 @@ export default function FactoryDetailPage() {
   const [loading,       setLoading]       = useState(true);
   const [activeSection, setActiveSection] = useState("Daily");
 
-  const [selectedRecord,  setSelectedRecord]  = useState(null);
-  const [selectedProcess, setSelectedProcess] = useState(null);
+  const { modalRecord, modalProcess, openRecord, closeRecord } = useRecordModal();
   const [showLotModal,    setShowLotModal]    = useState(false);
   const [lotModalInitial, setLotModalInitial] = useState("");
 
@@ -436,8 +436,7 @@ export default function FactoryDetailPage() {
                   processName={proc}
                   rows={currentRows[proc] ?? []}
                   onRowClick={(record, pName) => {
-                    setSelectedRecord(record);
-                    setSelectedProcess(pName);
+                    openRecord(record, pName);
                   }}
                 />
               ))}
@@ -447,11 +446,11 @@ export default function FactoryDetailPage() {
       </div>
 
       {/* ── Record detail modal ── */}
-      {selectedRecord && (
+      {modalRecord && (
         <RecordDetailModal
-          record={selectedRecord}
-          processName={selectedProcess}
-          onClose={() => { setSelectedRecord(null); setSelectedProcess(null); }}
+          record={modalRecord}
+          processName={modalProcess}
+          onClose={closeRecord}
           onLotClick={(lot) => { setLotModalInitial(lot); setShowLotModal(true); }}
         />
       )}

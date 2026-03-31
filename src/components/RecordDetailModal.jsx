@@ -246,6 +246,14 @@ export default function RecordDetailModal({ record, processName, onClose, onLotC
   const [imageData,     setImageData]     = useState(null);
   const [imageLoading,  setImageLoading]  = useState(true);
   const [allFieldsOpen, setAllFieldsOpen] = useState(false);
+  const [copied,        setCopied]        = useState(false);
+
+  function copyLink() {
+    navigator.clipboard.writeText(window.location.href).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  }
 
   useEffect(() => {
     if (!record) return;
@@ -303,12 +311,23 @@ export default function RecordDetailModal({ record, processName, onClose, onLotC
             </div>
             <p className="text-[11px] text-outline mt-0.5 font-mono">{record["品番"]} / {record["背番号"]}</p>
           </div>
-          <button
-            onClick={onClose}
-            className="p-2 rounded-xl hover:bg-surface-container text-outline hover:text-on-surface transition-colors"
-          >
-            <span className="material-symbols-outlined" style={{ fontSize: 18 }}>close</span>
-          </button>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={copyLink}
+              title="Copy shareable link"
+              className="p-2 rounded-xl hover:bg-surface-container text-outline hover:text-primary transition-colors"
+            >
+              <span className="material-symbols-outlined" style={{ fontSize: 18 }}>
+                {copied ? "check" : "link"}
+              </span>
+            </button>
+            <button
+              onClick={onClose}
+              className="p-2 rounded-xl hover:bg-surface-container text-outline hover:text-on-surface transition-colors"
+            >
+              <span className="material-symbols-outlined" style={{ fontSize: 18 }}>close</span>
+            </button>
+          </div>
         </div>
 
         {/* Product image */}

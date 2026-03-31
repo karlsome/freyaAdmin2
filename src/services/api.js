@@ -260,6 +260,31 @@ const PROCESSES = [
   { name: "Slit",  collection: "slitDB"   },
 ];
 
+// Maps process short name → collection (exported for useRecordModal)
+export const PROC_TO_COLLECTION = {
+  Kensa: "kensaDB", Press: "pressDB", SRS: "SRSDB", Slit: "slitDB",
+};
+
+/**
+ * Fetch a single production record by its unique key fields.
+ * Used by useRecordModal to re-open a record from a shared URL.
+ */
+export async function fetchRecordByKey(proc, { 工場: factory, Date: date, Time_start: timeStart, 品番: hinban }) {
+  const collection = PROC_TO_COLLECTION[proc];
+  if (!collection) return null;
+  try {
+    const rows = await query(
+      "submittedDB", collection,
+      { 工場: factory, Date: date, Time_start: timeStart, 品番: hinban },
+      { limit: 1 }
+    );
+    if (!rows?.length) return null;
+    return { ...rows[0], _source: collection };
+  } catch {
+    return null;
+  }
+}
+
 const _NUMBER_FIELDS = new Set(["Total", "Total_NG", "Process_Quantity", "Cycle_Time", "Remaining_Quantity", "Spare"]);
 
 /**

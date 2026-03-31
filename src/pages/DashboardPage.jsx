@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTodayData } from "../hooks/useTodayData";
 import DashboardKPIStrip from "../components/DashboardKPIStrip";
@@ -6,12 +5,12 @@ import DashboardIssuesFeed from "../components/DashboardIssuesFeed";
 import DashboardRecentSubmissions from "../components/DashboardRecentSubmissions";
 import DashboardFactorySummary from "../components/DashboardFactorySummary";
 import RecordDetailModal from "../components/RecordDetailModal";
+import { useRecordModal } from "../hooks/useRecordModal";
 
 export default function DashboardPage() {
   const navigate = useNavigate();
   const { kpis, issues, recent, byFactory, byProcess, loading, error, lastRefresh, refresh } = useTodayData();
-
-  const [selectedRecord, setSelectedRecord] = useState(null);
+  const { modalRecord, modalProcess, openRecord, closeRecord } = useRecordModal();
 
   const today = new Date().toLocaleDateString("en-US", {
     weekday: "long", year: "numeric", month: "long", day: "numeric",
@@ -58,12 +57,12 @@ export default function DashboardPage() {
         <DashboardIssuesFeed
           issues={issues}
           loading={loading}
-          onRecordClick={(r) => setSelectedRecord(r)}
+          onRecordClick={openRecord}
         />
         <DashboardRecentSubmissions
           recent={recent}
           loading={loading}
-          onRecordClick={(r) => setSelectedRecord(r)}
+          onRecordClick={openRecord}
         />
       </div>
 
@@ -75,11 +74,11 @@ export default function DashboardPage() {
       />
 
       {/* ── Record detail modal ── */}
-      {selectedRecord && (
+      {modalRecord && (
         <RecordDetailModal
-          record={selectedRecord}
-          processName={selectedRecord._process ?? ""}
-          onClose={() => setSelectedRecord(null)}
+          record={modalRecord}
+          processName={modalProcess}
+          onClose={closeRecord}
         />
       )}
     </section>

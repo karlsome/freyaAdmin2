@@ -1,11 +1,14 @@
 import { useNavigate } from "react-router-dom";
 import { useDashboardData } from "../hooks/useDashboardData";
 import FactoryCard from "../components/FactoryCard";
+import RecordDetailModal from "../components/RecordDetailModal";
 import { getDefectStatus } from "../utils/statusHelpers";
+import { useRecordModal } from "../hooks/useRecordModal";
 
 export default function FactoriesPage() {
   const { factories, loading, error, refresh } = useDashboardData();
   const navigate = useNavigate();
+  const { modalRecord, modalProcess, openRecord, closeRecord } = useRecordModal();
 
   const total    = factories.length;
   const normal   = factories.filter((f) => getDefectStatus(f.defectRate).level === "normal").length;
@@ -51,9 +54,18 @@ export default function FactoriesPage() {
                 key={factory.name}
                 factory={factory}
                 onClick={() => navigate(`/factory/${encodeURIComponent(factory.name)}`)}
+                onDefectClick={openRecord}
               />
             ))}
       </div>
+
+      {modalRecord && (
+        <RecordDetailModal
+          record={modalRecord}
+          processName={modalProcess}
+          onClose={closeRecord}
+        />
+      )}
     </section>
   );
 }
