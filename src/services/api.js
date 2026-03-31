@@ -9,7 +9,12 @@
  * Factory coordinates: Sasaki_Coating_MasterDB / factoryDB
  */
 
-const BASE_URL = (import.meta.env.VITE_API_URL ?? "http://localhost:3000/").replace(/\/?$/, "/");
+// ─── API Base URL ─────────────────────────────────────────────────────────────
+// Switch between local dev and production by commenting/uncommenting:
+// const MANUAL_URL = "http://localhost:3000/";
+const MANUAL_URL = "https://kurachi.onrender.com/";
+
+const BASE_URL = (import.meta.env.VITE_API_URL ?? MANUAL_URL).replace(/\/?$/, "/");
 
 // ─── Cache ────────────────────────────────────────────────────────────────────
 const _cache = new Map();
