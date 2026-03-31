@@ -42,7 +42,7 @@ export default function DashboardFactorySummary({ factories, loading, onNavigate
       <div className="space-y-1.5">
         {/* Header */}
         <div className="grid grid-cols-[1fr_80px_80px_80px_56px_120px] gap-3 px-3 pb-1 border-b border-white/5">
-          {["Factory", "Produced", "NG", "Defect %", "Trouble", ""].map((h) => (
+          {["Factory", "Combined", "Combined NG", "Defect %", "Trouble", ""].map((h) => (
             <span key={h} className="text-[10px] font-bold uppercase tracking-wider text-outline">{h}</span>
           ))}
         </div>
