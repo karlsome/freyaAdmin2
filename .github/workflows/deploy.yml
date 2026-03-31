@@ -28,8 +28,15 @@ jobs:
           cache: npm
 
       - run: npm ci
-      - name: Write production env
-        run: echo "VITE_API_URL=${{ vars.VITE_API_URL }}" > .env.production
+      - name: Validate and write production env
+        env:
+          VITE_API_URL: ${{ vars.VITE_API_URL }}
+        run: |
+          if [ -z "$VITE_API_URL" ]; then
+            echo "VITE_API_URL is empty. Set it in repository variables or in the github-pages environment."
+            exit 1
+          fi
+          echo "VITE_API_URL=$VITE_API_URL" > .env.production
       - run: npm run build
 
       - uses: actions/configure-pages@v4

@@ -10,11 +10,11 @@
  */
 
 // ─── API Base URL ─────────────────────────────────────────────────────────────
-// Switch between local dev and production by commenting/uncommenting:
-// const MANUAL_URL = "http://localhost:3000/";
-const MANUAL_URL = "https://kurachi.onrender.com/";
+const LOCAL_URL = "http://localhost:3000/";
+const ENV_URL = import.meta.env.VITE_API_URL?.trim();
 
-const BASE_URL = (import.meta.env.VITE_API_URL ?? MANUAL_URL).replace(/\/?$/, "/");
+// Local dev falls back to localhost. Hosted builds must provide VITE_API_URL.
+const BASE_URL = (ENV_URL || LOCAL_URL).replace(/\/?$/, "/");
 
 // ─── Cache ────────────────────────────────────────────────────────────────────
 const _cache = new Map();
