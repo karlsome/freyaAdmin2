@@ -314,6 +314,30 @@ async function _fetchRange(factory, start, end, partNumbers, serialNumbers, adva
 function _fmtDate(d) { return d.toISOString().split("T")[0]; }
 
 /**
+ * Fetches every production record for a given date across ALL factories and
+ * all 4 process collections.  Used by the Dashboard.
+ * Returns flat array of records, each tagged with `_process` ("Kensa"|"Press"|"SRS"|"Slit").
+ */
+export async function fetchTodayAllRecords(date) {
+  const key = `today_all_${date}`;
+  const cached = _getCached(key, SENSOR_TTL);
+  if (cached) return cached;
+
+  const settled = await Promise.allSettled(
+    PROCESSES.map((p) =>
+      query("submittedDB", p.collection, { Date: date }, { sort: { createdAt: -1 }, limit: 2000 })
+    )
+  );
+  const records = settled.flatMap((r, i) =>
+    r.status === "fulfilled"
+      ? r.value.map((doc) => ({ ...doc, _process: PROCESSES[i].name }))
+      : []
+  );
+  _setCache(key, records);
+  return records;
+}
+
+/**
  * Fetches production data for a period (or single day → 3 sections: Daily/Weekly/Monthly).
  * Returns { isSingleDay, sections: { [label]: { Kensa, Press, SRS, Slit } } }
  */

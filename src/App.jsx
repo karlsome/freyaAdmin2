@@ -3,12 +3,12 @@ import { Navigate, Route, Routes, useLocation, useNavigate } from "react-router-
 import Sidebar from "./components/Sidebar";
 import TopNav from "./components/TopNav";
 import DashboardPage from "./pages/DashboardPage";
+import FactoriesPage from "./pages/FactoriesPage";
 import FactoryDetailPage from "./pages/FactoryDetailPage";
 import SensorDetailPage from "./pages/SensorDetailPage";
 import PlaceholderPage from "./pages/PlaceholderPage";
 
 const placeholderPages = [
-  "factories",
   "factoryStatus",
   "planner",
   "inventory",
@@ -53,19 +53,11 @@ function App() {
         <TopNav isDark={isDark} onToggleTheme={() => setIsDark((d) => !d)} />
         <Routes>
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
-          <Route
-            path="/dashboard"
-            element={
-              <DashboardPage
-                onNavigateToFactory={(factoryName) =>
-                  navigate(`/factory/${encodeURIComponent(factoryName)}`)
-                }
-              />
-            }
-          />
+          <Route path="/dashboard" element={<DashboardPage />} />
           {placeholderPages.map((page) => (
             <Route key={page} path={`/${page}`} element={<PlaceholderPage page={page} />} />
           ))}
+          <Route path="/factories" element={<FactoriesPage />} />
           <Route path="/factory/:factoryName" element={<FactoryDetailPage />} />
           <Route path="/sensors/:factoryName" element={<SensorDetailPage />} />
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
