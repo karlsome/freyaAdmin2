@@ -9,7 +9,7 @@ import RecordDetailModal from "../components/RecordDetailModal";
 
 export default function DashboardPage() {
   const navigate = useNavigate();
-  const { kpis, issues, recent, byFactory, loading, error, lastRefresh, refresh } = useTodayData();
+  const { kpis, issues, recent, byFactory, byProcess, loading, error, lastRefresh, refresh } = useTodayData();
 
   const [selectedRecord, setSelectedRecord] = useState(null);
 
@@ -51,7 +51,7 @@ export default function DashboardPage() {
       )}
 
       {/* ── KPI strip ── */}
-      <DashboardKPIStrip kpis={kpis} loading={loading} />
+      <DashboardKPIStrip kpis={kpis} byProcess={byProcess} loading={loading} />
 
       {/* ── Middle row: issues + recent submissions ── */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-5" style={{ minHeight: 360 }}>

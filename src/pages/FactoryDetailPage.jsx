@@ -253,6 +253,21 @@ export default function FactoryDetailPage() {
   const stripRate    = stripTotal > 0 ? Math.round((stripNG / stripTotal) * 10000) / 100 : 0;
   const defStatus    = getDefectStatus(stripRate);
 
+  // Per-process stats
+  const PROCESS_ACCENT = {
+    Kensa: "text-violet-500",
+    Press: "text-sky-500",
+    SRS:   "text-amber-500",
+    Slit:  "text-emerald-500",
+  };
+  const perProcess = ["Kensa", "Press", "SRS", "Slit"].map((proc) => {
+    const rows  = (firstSection[proc] ?? []);
+    const total = rows.reduce((s, r) => s + (Number(r.Process_Quantity) || Number(r.Total) || 0), 0);
+    const ng    = rows.reduce((s, r) => s + (Number(r.Total_NG) || 0), 0);
+    const rate  = total > 0 ? Math.round((ng / total) * 10000) / 100 : 0;
+    return { proc, total, ng, rate, color: PROCESS_ACCENT[proc] ?? "text-primary" };
+  });
+
   return (
     <section className="pt-24 pb-20 px-4 md:px-8 overflow-y-auto h-screen scrollbar-hide">
 
@@ -290,18 +305,43 @@ export default function FactoryDetailPage() {
       </div>
 
       {/* ── Summary strip ── */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
-        {[
-          { label: "Total Units",    value: loading ? "—" : stripTotal.toLocaleString(),      color: "text-on-surface"   },
-          { label: "NG Units",       value: loading ? "—" : stripNG.toLocaleString(),          color: "text-error"        },
-          { label: "Defect Rate",    value: loading ? "—" : `${stripRate.toFixed(2)}%`,        color: defStatus.valueColor ?? "text-on-surface" },
-          { label: "Sensors Online", value: loading ? "—" : (sensor?.sensorCount ?? 0),        color: sensor?.hasData ? "text-emerald-400" : "text-outline" },
-        ].map(({ label, value, color }) => (
-          <div key={label} className="glass-card rounded-2xl px-5 py-4 flex flex-col gap-1">
-            <p className={`text-2xl font-black leading-none ${color}`}>{value}</p>
-            <p className="text-xs font-bold text-on-surface-variant">{label}</p>
-          </div>
-        ))}
+      <div className="space-y-3 mb-6">
+        {/* Row 1: overall */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          {[
+            { label: "Total Processed", value: loading ? "—" : stripTotal.toLocaleString(),       color: "text-on-surface"   },
+            { label: "NG Units",        value: loading ? "—" : stripNG.toLocaleString(),           color: "text-error"        },
+            { label: "Defect Rate",     value: loading ? "—" : `${stripRate.toFixed(2)}%`,         color: defStatus.valueColor ?? "text-on-surface" },
+            { label: "Sensors Online",  value: loading ? "—" : (sensor?.sensorCount ?? 0),         color: sensor?.hasData ? "text-emerald-400" : "text-outline" },
+          ].map(({ label, value, color }) => (
+            <div key={label} className="glass-card rounded-2xl px-5 py-4 flex flex-col gap-1">
+              <p className={`text-2xl font-black leading-none ${color}`}>{value}</p>
+              <p className="text-xs font-bold text-on-surface-variant">{label}</p>
+            </div>
+          ))}
+        </div>
+        {/* Row 2: per-process */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          {perProcess.map(({ proc, total, ng, rate, color }) => {
+            const ds = getDefectStatus(rate);
+            return (
+              <div key={proc} className="glass-card rounded-2xl px-5 py-4 flex flex-col gap-1">
+                <div className="flex items-center justify-between mb-0.5">
+                  <span className={`text-[10px] font-bold uppercase tracking-wider ${color}`}>{proc}</span>
+                  {!loading && total > 0 && (
+                    <span className={`text-[10px] font-bold ${ds.valueColor}`}>{rate.toFixed(2)}%</span>
+                  )}
+                </div>
+                <p className="text-2xl font-black leading-none text-on-surface">
+                  {loading ? "—" : total > 0 ? total.toLocaleString() : <span className="text-outline text-lg">—</span>}
+                </p>
+                <p className="text-xs font-bold text-on-surface-variant">
+                  {loading ? "" : total > 0 ? `${ng} NG` : "No data"}
+                </p>
+              </div>
+            );
+          })}
+        </div>
       </div>
 
       {/* ── Env / sensor strip ── */}

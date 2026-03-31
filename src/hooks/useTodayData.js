@@ -38,11 +38,11 @@ export function useTodayData() {
   const kpis = (() => {
     let total = 0, totalNG = 0, workHours = 0, troubleHours = 0, breakHours = 0;
     records.forEach((r) => {
-      total        += Number(r.Total)                ?? 0;
-      totalNG      += Number(r.Total_NG)             ?? 0;
-      workHours    += Number(r.Total_Work_Hours)     ?? 0;
-      troubleHours += Number(r.Total_Trouble_Hours)  ?? 0;
-      breakHours   += Number(r.Total_Break_Hours)    ?? 0;
+      total        += Number(r.Total)               || 0;
+      totalNG      += Number(r.Total_NG)            || 0;
+      workHours    += Number(r.Total_Work_Hours)    || 0;
+      troubleHours += Number(r.Total_Trouble_Hours) || 0;
+      breakHours   += Number(r.Total_Break_Hours)   || 0;
     });
     const defectRate = total > 0 ? Math.round((totalNG / total) * 10000) / 100 : 0;
     return { total, totalNG, defectRate, workHours, troubleHours, breakHours, submissionCount: records.length };
@@ -65,6 +65,19 @@ export function useTodayData() {
     .sort((a, b) => new Date(b.createdAt ?? 0) - new Date(a.createdAt ?? 0))
     .slice(0, 10);
 
+  // ── Per-process summary ──────────────────────────────────────────────────
+  const PROCESS_LIST = ["Kensa", "Press", "SRS", "Slit"];
+  const byProcess = PROCESS_LIST.map((name) => {
+    const recs = records.filter((r) => r._process === name);
+    let total = 0, workHours = 0, totalNG = 0;
+    recs.forEach((r) => {
+      total     += Number(r.Total)            || 0;
+      totalNG   += Number(r.Total_NG)         || 0;
+      workHours += Number(r.Total_Work_Hours) || 0;
+    });
+    return { name, total, totalNG, workHours, submissionCount: recs.length };
+  });
+
   // ── Per-factory summary ───────────────────────────────────────────────────
   const byFactory = factoryNames.map((name) => {
     const recs = records.filter((r) => r["工場"] === name);
@@ -78,5 +91,5 @@ export function useTodayData() {
     return { name, total: ftotal, totalNG: ftotalNG, defectRate, troubleHours: fTrouble, submissionCount: recs.length };
   });
 
-  return { records, factoryNames, loading, error, lastRefresh, kpis, issues, recent, byFactory, refresh: load };
+  return { records, factoryNames, loading, error, lastRefresh, kpis, issues, recent, byFactory, byProcess, refresh: load };
 }
