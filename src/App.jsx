@@ -6,6 +6,7 @@ import DashboardPage from "./pages/DashboardPage";
 import FactoriesPage from "./pages/FactoriesPage";
 import FactoryDetailPage from "./pages/FactoryDetailPage";
 import SensorDetailPage from "./pages/SensorDetailPage";
+import SensorsPage from "./pages/SensorsPage";
 import PlaceholderPage from "./pages/PlaceholderPage";
 
 const placeholderPages = [
@@ -58,6 +59,7 @@ function App() {
             <Route key={page} path={`/${page}`} element={<PlaceholderPage page={page} />} />
           ))}
           <Route path="/factories" element={<FactoriesPage />} />
+          <Route path="/sensors" element={<SensorsPage />} />
           <Route path="/factory/:factoryName" element={<FactoryDetailPage />} />
           <Route path="/sensors/:factoryName" element={<SensorDetailPage />} />
           <Route path="*" element={<Navigate to="/dashboard" replace />} />

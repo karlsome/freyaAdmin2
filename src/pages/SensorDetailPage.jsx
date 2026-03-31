@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { fetchHistoricalSensorData, calcWBGT } from "../services/api";
 import { getTempStatus, getHumidityStatus, getWBGTStatus } from "../utils/statusHelpers";
+import SensorTrendChart from "../components/SensorTrendChart";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function parseTemp(v) { return parseFloat(String(v ?? "").replace("°C", "").trim()); }
@@ -141,6 +142,22 @@ export default function SensorDetailPage() {
     return map;
   }, [filtered]);
 
+  // KPI stats over the filtered range
+  const sensorKPIs = useMemo(() => {
+    const temps  = filtered.map((r) => parseTemp(r.Temperature)).filter((v) => !isNaN(v));
+    const humids = filtered.map((r) => parseHumid(r.Humidity)).filter((v) => !isNaN(v));
+    const round1 = (n) => Math.round(n * 10) / 10;
+    const avgTemp   = temps.length  ? round1(temps.reduce((s, v)  => s + v, 0)  / temps.length)  : null;
+    const peakTemp  = temps.length  ? Math.max(...temps)  : null;
+    const minTemp   = temps.length  ? Math.min(...temps)  : null;
+    const avgHumid  = humids.length ? round1(humids.reduce((s, v) => s + v, 0) / humids.length) : null;
+    const heatAlerts = filtered.filter((r) => {
+      const wbgt = calcWBGT(parseTemp(r.Temperature), parseHumid(r.Humidity));
+      return wbgt !== null && wbgt > 28;
+    }).length;
+    return { avgTemp, peakTemp, minTemp, avgHumid, heatAlerts };
+  }, [filtered]);
+
   return (
     <section className="pt-24 pb-16 px-8 overflow-y-auto h-screen scrollbar-hide">
 
@@ -243,6 +260,71 @@ export default function SensorDetailPage() {
         </div>
       ) : (
         <>
+          {/* ── KPI strip ── */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+            {[
+              {
+                label: "Avg Temperature",
+                value: sensorKPIs.avgTemp !== null ? `${sensorKPIs.avgTemp}°C` : "—",
+                sub: sensorKPIs.minTemp !== null ? `Min ${sensorKPIs.minTemp}°C` : null,
+                icon: "thermostat",
+                color: getTempStatus(sensorKPIs.avgTemp).color,
+                bg: getTempStatus(sensorKPIs.avgTemp).bg,
+              },
+              {
+                label: "Peak Temperature",
+                value: sensorKPIs.peakTemp !== null ? `${sensorKPIs.peakTemp}°C` : "—",
+                sub: null,
+                icon: "device_thermostat",
+                color: getTempStatus(sensorKPIs.peakTemp).color,
+                bg: getTempStatus(sensorKPIs.peakTemp).bg,
+              },
+              {
+                label: "Avg Humidity",
+                value: sensorKPIs.avgHumid !== null ? `${sensorKPIs.avgHumid}%` : "—",
+                sub: null,
+                icon: "water_drop",
+                color: getHumidityStatus(sensorKPIs.avgHumid).color,
+                bg: getHumidityStatus(sensorKPIs.avgHumid).bg,
+              },
+              {
+                label: "Heat Stress Alerts",
+                value: sensorKPIs.heatAlerts,
+                sub: sensorKPIs.heatAlerts > 0 ? "WBGT > 28°C" : "All clear",
+                icon: "warning",
+                color: sensorKPIs.heatAlerts > 0 ? "text-error" : "text-outline",
+                bg: sensorKPIs.heatAlerts > 0 ? "bg-error/10" : "bg-surface-container",
+              },
+            ].map(({ label, value, sub, icon, color, bg }) => (
+              <div key={label} className={`rounded-2xl p-5 border border-outline-variant/10 ${bg}`}>
+                <div className="flex items-center gap-2 mb-2">
+                  <span className={`material-symbols-outlined ${color}`} style={{ fontSize: 16 }}>{icon}</span>
+                  <p className="text-[10px] text-outline font-bold uppercase tracking-wider">{label}</p>
+                </div>
+                <p className={`text-2xl font-black ${color}`}>{value}</p>
+                {sub && <p className="text-[10px] text-outline mt-1">{sub}</p>}
+              </div>
+            ))}
+          </div>
+
+          {/* ── Trend charts ── */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-8">
+            <div className="glass-card rounded-2xl p-5">
+              <p className="text-[10px] text-outline font-bold uppercase tracking-widest mb-3 flex items-center gap-2">
+                <span className="material-symbols-outlined text-amber-500" style={{ fontSize: 14 }}>thermostat</span>
+                Temperature Trend (daily avg)
+              </p>
+              <SensorTrendChart readings={filtered} type="temp" height={180} />
+            </div>
+            <div className="glass-card rounded-2xl p-5">
+              <p className="text-[10px] text-outline font-bold uppercase tracking-widest mb-3 flex items-center gap-2">
+                <span className="material-symbols-outlined text-cyan-400" style={{ fontSize: 14 }}>water_drop</span>
+                Humidity Trend (daily avg)
+              </p>
+              <SensorTrendChart readings={filtered} type="humid" height={180} />
+            </div>
+          </div>
+
           {/* ── Device summary cards ── */}
           {byDevice.size > 0 && (
             <div className="mb-8">
