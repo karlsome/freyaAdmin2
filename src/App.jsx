@@ -49,8 +49,15 @@ function App() {
 
   return (
     <div className="overflow-hidden">
+      {isDark && (
+        <div className="aurora-bg" aria-hidden="true">
+          <div className="aurora-blob aurora-blob-1" />
+          <div className="aurora-blob aurora-blob-2" />
+          <div className="aurora-blob aurora-blob-3" />
+        </div>
+      )}
       <Sidebar activePage={activePage} onNavigate={(page) => navigate(`/${page}`)} />
-      <main className="ml-16 min-h-screen bg-background relative">
+      <main className="ml-16 min-h-screen bg-background dark:bg-transparent relative" style={{ zIndex: 1 }}>
         <TopNav isDark={isDark} onToggleTheme={() => setIsDark((d) => !d)} />
         <Routes>
           <Route path="/" element={<Navigate to="/dashboard" replace />} />

@@ -94,41 +94,50 @@ body {
 
 /* Dark mode aurora background */
 .dark {
-  background-color: rgb(10, 8, 24); /* fallback base on html element */
+  background-color: rgb(10, 8, 24);
 }
 .dark body {
   background: transparent;
   background-image: none;
-  position: relative;
 }
-.dark body::before {
-  content: '';
+
+/* Aurora real DOM elements */
+.aurora-bg {
   position: fixed;
-  inset: -20%;
-  z-index: -1;
-  background:
-    radial-gradient(ellipse 70% 60% at 20% 30%, rgba(67, 56, 202, 0.55) 0%, transparent 60%),
-    radial-gradient(ellipse 60% 55% at 80% 20%, rgba(109, 40, 217, 0.45) 0%, transparent 55%),
-    radial-gradient(ellipse 55% 65% at 60% 80%, rgba(49, 10, 101, 0.60) 0%, transparent 60%),
-    radial-gradient(ellipse 80% 50% at 40% 60%, rgba(30, 27, 75, 0.70) 0%, transparent 65%);
-  background-color: rgb(10, 8, 24);
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+  background: rgb(10, 8, 24);
+}
+.aurora-blob {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(90px);
+}
+.aurora-blob-1 {
+  width: 80vw;
+  height: 70vh;
+  top: -20vh;
+  left: -15vw;
+  background: radial-gradient(ellipse at center, rgba(38, 20, 110, 0.80) 0%, rgba(22, 8, 58, 0.55) 45%, transparent 70%);
   animation: aurora-blob1 38s ease-in-out infinite;
 }
-.dark body::after {
-  content: '';
-  position: fixed;
-  inset: -20%;
-  z-index: -1;
-  background:
-    radial-gradient(ellipse 65% 50% at 70% 50%, rgba(88, 28, 135, 0.40) 0%, transparent 55%),
-    radial-gradient(ellipse 50% 60% at 30% 70%, rgba(67, 56, 202, 0.35) 0%, transparent 50%),
-    radial-gradient(ellipse 45% 55% at 85% 75%, rgba(124, 58, 237, 0.30) 0%, transparent 50%);
-  mix-blend-mode: screen;
+.aurora-blob-2 {
+  width: 70vw;
+  height: 65vh;
+  bottom: -15vh;
+  right: -10vw;
+  background: radial-gradient(ellipse at center, rgba(60, 15, 120, 0.70) 0%, rgba(30, 8, 70, 0.45) 50%, transparent 70%);
   animation: aurora-blob2 52s ease-in-out infinite;
 }
-/* Dot grid overlay sits on top of aurora */
-.dark body > * {
-  isolation: isolate;
+.aurora-blob-3 {
+  width: 60vw;
+  height: 60vh;
+  top: 20vh;
+  left: 20vw;
+  background: radial-gradient(ellipse at center, rgba(45, 10, 95, 0.65) 0%, rgba(28, 12, 75, 0.35) 40%, transparent 65%);
+  animation: aurora-blob3 44s ease-in-out infinite;
 }
 
 /* ─── Glass card ────────────────────────────────────────────────────────────── */
