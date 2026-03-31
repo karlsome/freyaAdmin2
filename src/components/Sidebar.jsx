@@ -55,7 +55,7 @@ export default function Sidebar({ activePage, onNavigate }) {
   }
 
   return (
-    <aside className="group fixed left-0 top-0 h-full w-16 hover:w-64 bg-surface-container-lowest border-r border-outline-variant/20 flex flex-col py-6 z-50 font-headline text-sm font-medium overflow-hidden transition-[width] duration-300 ease-[cubic-bezier(0.4,0,0.2,1)]">
+    <aside className="group fixed left-0 top-0 h-full w-16 hover:w-64 sidebar-glass flex flex-col py-6 z-50 font-headline text-sm font-medium overflow-hidden transition-[width] duration-300 ease-[cubic-bezier(0.4,0,0.2,1)]">
 
       {/* Logo */}
       <div className="flex items-center gap-3 px-3 mb-10 min-w-[256px]">
@@ -144,7 +144,7 @@ export default function Sidebar({ activePage, onNavigate }) {
                           <div className="flex-shrink-0 flex items-center self-stretch">
                             {/* Cap the vertical line at last item */}
                             {isLast && (
-                              <div className="absolute left-0 top-1/2 bottom-0 w-px bg-surface-container-lowest" />
+                              <div className="absolute left-0 top-1/2 bottom-0 w-px bg-transparent" />
                             )}
                             <div className="w-4 h-px bg-outline-variant/30 ml-px" />
                           </div>
