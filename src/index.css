@@ -58,28 +58,34 @@
   --c-outline-variant:          70 69 84;
 }
 
-/* ─── Aurora animation (dark mode only) ─────────────────────────────────────── */
-@keyframes aurora-shift {
-  0%   { background-position: 0% 50%; }
-  25%  { background-position: 60% 30%; }
-  50%  { background-position: 100% 50%; }
-  75%  { background-position: 40% 70%; }
-  100% { background-position: 0% 50%; }
+/* ─── Lava lamp animation (dark mode only) ──────────────────────────────────── */
+@keyframes lava-1 {
+  0%        { transform: translateY(60vh) translateX(0)    scale(1.0);  border-radius: 55% 45% 60% 40% / 50% 55% 45% 50%; }
+  20%       { transform: translateY(30vh) translateX(4vw)  scale(1.15); border-radius: 40% 60% 45% 55% / 60% 40% 55% 45%; }
+  45%       { transform: translateY(-5vh) translateX(-3vw) scale(0.9);  border-radius: 65% 35% 55% 45% / 45% 60% 40% 55%; }
+  65%       { transform: translateY(10vh) translateX(6vw)  scale(1.1);  border-radius: 45% 55% 40% 60% / 55% 45% 60% 40%; }
+  85%       { transform: translateY(45vh) translateX(-5vw) scale(0.95); border-radius: 60% 40% 50% 50% / 40% 60% 50% 50%; }
+  100%      { transform: translateY(60vh) translateX(0)    scale(1.0);  border-radius: 55% 45% 60% 40% / 50% 55% 45% 50%; }
 }
-@keyframes aurora-blob1 {
-  0%, 100% { transform: translate(0, 0) scale(1); }
-  33%       { transform: translate(8vw, -6vh) scale(1.15); }
-  66%       { transform: translate(-5vw, 10vh) scale(0.9); }
+@keyframes lava-2 {
+  0%        { transform: translateY(-10vh) translateX(0)    scale(1.0);  border-radius: 50% 50% 55% 45% / 60% 40% 55% 45%; }
+  25%       { transform: translateY(25vh)  translateX(-6vw) scale(1.2);  border-radius: 60% 40% 45% 55% / 45% 55% 40% 60%; }
+  50%       { transform: translateY(65vh)  translateX(4vw)  scale(0.85); border-radius: 40% 60% 60% 40% / 55% 45% 50% 50%; }
+  75%       { transform: translateY(35vh)  translateX(-4vw) scale(1.05); border-radius: 55% 45% 40% 60% / 40% 60% 60% 40%; }
+  100%      { transform: translateY(-10vh) translateX(0)    scale(1.0);  border-radius: 50% 50% 55% 45% / 60% 40% 55% 45%; }
 }
-@keyframes aurora-blob2 {
-  0%, 100% { transform: translate(0, 0) scale(1); }
-  40%       { transform: translate(-10vw, 8vh) scale(1.2); }
-  70%       { transform: translate(7vw, -4vh) scale(0.85); }
+@keyframes lava-3 {
+  0%        { transform: translateY(80vh)  translateX(0)    scale(0.9);  border-radius: 45% 55% 50% 50% / 55% 45% 60% 40%; }
+  30%       { transform: translateY(40vh)  translateX(7vw)  scale(1.1);  border-radius: 60% 40% 55% 45% / 40% 60% 45% 55%; }
+  55%       { transform: translateY(5vh)   translateX(-5vw) scale(1.2);  border-radius: 50% 50% 40% 60% / 60% 40% 50% 50%; }
+  80%       { transform: translateY(55vh)  translateX(3vw)  scale(0.95); border-radius: 40% 60% 60% 40% / 45% 55% 55% 45%; }
+  100%      { transform: translateY(80vh)  translateX(0)    scale(0.9);  border-radius: 45% 55% 50% 50% / 55% 45% 60% 40%; }
 }
-@keyframes aurora-blob3 {
-  0%, 100% { transform: translate(0, 0) scale(1); }
-  30%       { transform: translate(6vw, 12vh) scale(1.1); }
-  60%       { transform: translate(-8vw, -5vh) scale(0.95); }
+@keyframes lava-4 {
+  0%        { transform: translateY(20vh)  translateX(0)    scale(1.05); border-radius: 50% 50% 45% 55% / 50% 50% 55% 45%; }
+  35%       { transform: translateY(-15vh) translateX(-7vw) scale(0.9);  border-radius: 55% 45% 60% 40% / 45% 55% 40% 60%; }
+  60%       { transform: translateY(50vh)  translateX(5vw)  scale(1.15); border-radius: 40% 60% 50% 50% / 60% 40% 55% 45%; }
+  100%      { transform: translateY(20vh)  translateX(0)    scale(1.05); border-radius: 50% 50% 45% 55% / 50% 50% 55% 45%; }
 }
 
 /* ─── Base ──────────────────────────────────────────────────────────────────── */
@@ -92,52 +98,60 @@ body {
   background-size: 24px 24px;
 }
 
-/* Dark mode aurora background */
+/* Dark mode lava lamp background */
 .dark {
-  background-color: rgb(10, 8, 24);
+  background-color: rgb(6, 4, 16);
 }
 .dark body {
   background: transparent;
   background-image: none;
 }
 
-/* Aurora real DOM elements */
+/* Lava lamp container */
 .aurora-bg {
   position: fixed;
   inset: 0;
   z-index: 0;
   pointer-events: none;
   overflow: hidden;
-  background: rgb(10, 8, 24);
+  background: rgb(6, 4, 16);
 }
 .aurora-blob {
   position: absolute;
-  border-radius: 50%;
-  filter: blur(90px);
+  filter: blur(55px);
+  will-change: transform, border-radius;
 }
 .aurora-blob-1 {
-  width: 80vw;
-  height: 70vh;
-  top: -20vh;
-  left: -15vw;
-  background: radial-gradient(ellipse at center, rgba(38, 20, 110, 0.80) 0%, rgba(22, 8, 58, 0.55) 45%, transparent 70%);
-  animation: aurora-blob1 38s ease-in-out infinite;
+  width: 38vw;
+  height: 42vh;
+  left: 10vw;
+  top: 10vh;
+  background: rgba(35, 6, 75, 0.95);
+  animation: lava-1 22s ease-in-out infinite;
 }
 .aurora-blob-2 {
-  width: 70vw;
-  height: 65vh;
-  bottom: -15vh;
-  right: -10vw;
-  background: radial-gradient(ellipse at center, rgba(60, 15, 120, 0.70) 0%, rgba(30, 8, 70, 0.45) 50%, transparent 70%);
-  animation: aurora-blob2 52s ease-in-out infinite;
+  width: 30vw;
+  height: 36vh;
+  left: 55vw;
+  top: 5vh;
+  background: rgba(45, 8, 90, 0.92);
+  animation: lava-2 28s ease-in-out infinite;
 }
 .aurora-blob-3 {
-  width: 60vw;
-  height: 60vh;
-  top: 20vh;
-  left: 20vw;
-  background: radial-gradient(ellipse at center, rgba(45, 10, 95, 0.65) 0%, rgba(28, 12, 75, 0.35) 40%, transparent 65%);
-  animation: aurora-blob3 44s ease-in-out infinite;
+  width: 34vw;
+  height: 38vh;
+  left: 30vw;
+  top: 15vh;
+  background: rgba(28, 5, 62, 0.95);
+  animation: lava-3 18s ease-in-out infinite;
+}
+.aurora-blob-4 {
+  width: 26vw;
+  height: 30vh;
+  left: 65vw;
+  top: 30vh;
+  background: rgba(50, 10, 100, 0.90);
+  animation: lava-4 32s ease-in-out infinite;
 }
 
 /* ─── Glass card ────────────────────────────────────────────────────────────── */
