@@ -32,9 +32,9 @@ export default {
         "outline-variant":          "rgb(var(--c-outline-variant) / <alpha-value>)",
       },
       fontFamily: {
-        headline: ["Inter Tight", "Inter", "sans-serif"],
-        body: ["Inter", "sans-serif"],
-        label: ["Inter", "sans-serif"],
+        headline: ["DM Sans", "sans-serif"],
+        body: ["DM Sans", "sans-serif"],
+        label: ["DM Sans", "sans-serif"],
       },
       borderRadius: {
         DEFAULT: "0.25rem",
