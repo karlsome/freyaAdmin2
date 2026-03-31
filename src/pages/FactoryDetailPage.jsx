@@ -222,10 +222,10 @@ export default function FactoryDetailPage() {
   const [showLotModal,    setShowLotModal]    = useState(false);
   const [lotModalInitial, setLotModalInitial] = useState("");
 
-  const loadData = useCallback(async (from = dateFrom, to = dateTo, parts = partNumbers, serials = serialNumbers) => {
+  const loadData = useCallback(async (from = dateFrom, to = dateTo, parts = partNumbers, serials = serialNumbers, filters = []) => {
     setLoading(true);
     const [p, s, e] = await Promise.allSettled([
-      fetchProductionByPeriod(factoryName, from, to, parts, serials),
+      fetchProductionByPeriod(factoryName, from, to, parts, serials, filters),
       fetchSensorData(factoryName, from),
       fetchEnvironmentalData(factoryName),
     ]);
@@ -346,12 +346,13 @@ export default function FactoryDetailPage() {
 
       {/* ── Filter bar ── */}
       <ProductionFilterBar
+        factoryName={factoryName}
         defaultDateFrom={dateFrom}
         defaultDateTo={dateTo}
         loading={loading}
-        onApply={({ dateFrom: f, dateTo: t, partNumbers: p, serialNumbers: s }) => {
+        onApply={({ dateFrom: f, dateTo: t, partNumbers: p, serialNumbers: s, advancedFilters: af }) => {
           setDateFrom(f); setDateTo(t); setPartNumbers(p); setSerialNumbers(s);
-          loadData(f, t, p, s);
+          loadData(f, t, p, s, af);
         }}
         onLotFinderOpen={() => setShowLotModal(true)}
       />

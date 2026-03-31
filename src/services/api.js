@@ -260,20 +260,49 @@ const PROCESSES = [
   { name: "Slit",  collection: "slitDB"   },
 ];
 
-function _buildProdQuery(factory, start, end, partNumbers, serialNumbers) {
+const _NUMBER_FIELDS = new Set(["Total", "Total_NG", "Process_Quantity", "Cycle_Time", "Remaining_Quantity", "Spare"]);
+
+/**
+ * Returns sorted distinct (non-null) values for `field` across all 4 production
+ * collections, scoped to the given factory.
+ */
+export async function fetchDistinctValues(factory, field) {
+  const proj = { [field]: 1, _id: 0 };
+  const settled = await Promise.allSettled(
+    PROCESSES.map((p) =>
+      query("submittedDB", p.collection, { 工場: factory }, { projection: proj, limit: 10000 })
+    )
+  );
+  const flat = settled.flatMap((r) =>
+    r.status === "fulfilled" ? r.value.map((doc) => doc[field]).filter((v) => v != null && v !== "") : []
+  );
+  return [...new Set(flat)].sort((a, b) => String(a).localeCompare(String(b)));
+}
+
+function _buildProdQuery(factory, start, end, partNumbers, serialNumbers, advancedFilters = []) {
   const q = {
     工場: factory,
     Date: { $gte: start, $lte: end },
   };
   if (partNumbers.length > 0) q["品番"] = { $in: partNumbers };
   if (serialNumbers.length > 0) q["背番号"] = { $in: serialNumbers };
+  for (const { field, operator, value } of advancedFilters) {
+    if (!field || !operator || value === "" || value === undefined) continue;
+    const coerced = _NUMBER_FIELDS.has(field) ? Number(value) : value;
+    switch (operator) {
+      case "equals":       q[field] = coerced; break;
+      case "contains":     q[field] = { $regex: value, $options: "i" }; break;
+      case "greater_than": q[field] = { ...(q[field] ?? {}), $gt: coerced }; break;
+      case "less_than":    q[field] = { ...(q[field] ?? {}), $lt: coerced }; break;
+    }
+  }
   return q;
 }
 
-async function _fetchRange(factory, start, end, partNumbers, serialNumbers) {
+async function _fetchRange(factory, start, end, partNumbers, serialNumbers, advancedFilters = []) {
   const settled = await Promise.allSettled(
     PROCESSES.map((p) =>
-      query("submittedDB", p.collection, _buildProdQuery(factory, start, end, partNumbers, serialNumbers))
+      query("submittedDB", p.collection, _buildProdQuery(factory, start, end, partNumbers, serialNumbers, advancedFilters))
     )
   );
   return PROCESSES.reduce((acc, p, i) => {
@@ -288,20 +317,20 @@ function _fmtDate(d) { return d.toISOString().split("T")[0]; }
  * Fetches production data for a period (or single day → 3 sections: Daily/Weekly/Monthly).
  * Returns { isSingleDay, sections: { [label]: { Kensa, Press, SRS, Slit } } }
  */
-export async function fetchProductionByPeriod(factory, from, to, partNumbers = [], serialNumbers = []) {
+export async function fetchProductionByPeriod(factory, from, to, partNumbers = [], serialNumbers = [], advancedFilters = []) {
   const isSingleDay = from === to;
   if (isSingleDay) {
     const base  = new Date(from);
     const wkStart = new Date(base); wkStart.setDate(base.getDate() - 6);
     const moStart = new Date(base); moStart.setDate(base.getDate() - 29);
     const [daily, weekly, monthly] = await Promise.all([
-      _fetchRange(factory, from, from, partNumbers, serialNumbers),
-      _fetchRange(factory, _fmtDate(wkStart), from, partNumbers, serialNumbers),
-      _fetchRange(factory, _fmtDate(moStart), from, partNumbers, serialNumbers),
+      _fetchRange(factory, from, from, partNumbers, serialNumbers, advancedFilters),
+      _fetchRange(factory, _fmtDate(wkStart), from, partNumbers, serialNumbers, advancedFilters),
+      _fetchRange(factory, _fmtDate(moStart), from, partNumbers, serialNumbers, advancedFilters),
     ]);
     return { isSingleDay: true, sections: { Daily: daily, Weekly: weekly, Monthly: monthly } };
   }
-  const data = await _fetchRange(factory, from, to, partNumbers, serialNumbers);
+  const data = await _fetchRange(factory, from, to, partNumbers, serialNumbers, advancedFilters);
   return { isSingleDay: false, sections: { Period: data } };
 }
 
