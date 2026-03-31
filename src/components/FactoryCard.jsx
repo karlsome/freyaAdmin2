@@ -1,4 +1,13 @@
+import { useState } from "react";
 import { getDefectStatus } from "../utils/statusHelpers";
+import RecordDetailModal from "./RecordDetailModal";
+
+const PROCESS_LABEL = {
+  kensaDB: "Kensa Process",
+  pressDB: "Press Process",
+  slitDB:  "Slit Process",
+  SRSDB:   "SRS Process",
+};
 
 // ─── Rank badge ───────────────────────────────────────────────────────────────
 const RANK_COLORS = [
@@ -13,8 +22,10 @@ const RANK_COLORS = [
 export default function FactoryCard({ factory, onClick }) {
   const { name, total, totalNG, defectRate, topDefects = [] } = factory;
   const defectStatus = getDefectStatus(defectRate);
+  const [modalRecord, setModalRecord] = useState(null);
 
   return (
+    <>
     <div
       onClick={onClick}
       className="glass-card rounded-2xl p-5 flex flex-col gap-4 cursor-pointer hover:shadow-xl hover:shadow-primary/5 hover:scale-[1.02] transition-all duration-300"
@@ -82,6 +93,7 @@ export default function FactoryCard({ factory, onClick }) {
               return (
                 <div
                   key={`${d.sebanggo}-${i}`}
+                  onClick={(e) => { e.stopPropagation(); if (d.worstRecord) setModalRecord(d.worstRecord); }}
                   className="grid grid-cols-[1.5rem_1fr_3rem_3.5rem] gap-x-2 items-center px-1 py-1.5 rounded-lg hover:bg-primary/10 hover:shadow-[inset_3px_0_0_rgb(var(--c-primary))] transition-all duration-150"
                 >
                   {/* Rank badge */}
@@ -103,6 +115,15 @@ export default function FactoryCard({ factory, onClick }) {
         )}
       </div>
     </div>
+
+    {modalRecord && (
+      <RecordDetailModal
+        record={modalRecord}
+        processName={PROCESS_LABEL[modalRecord._source] ?? "Process"}
+        onClose={() => setModalRecord(null)}
+      />
+    )}
+    </>
   );
 }
 

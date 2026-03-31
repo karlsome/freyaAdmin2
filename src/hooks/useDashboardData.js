@@ -11,10 +11,14 @@ function computeTopDefects(records = []) {
   const map = new Map();
   records.forEach((r) => {
     const key = r["背番号"] ?? "—";
-    if (!map.has(key)) map.set(key, { sebanggo: key, total: 0, ng: 0 });
+    if (!map.has(key)) map.set(key, { sebanggo: key, total: 0, ng: 0, worstRecord: null });
     const entry = map.get(key);
     entry.total += Number(r.Total)    || 0;
     entry.ng    += Number(r.Total_NG) || 0;
+    // Keep the record with the highest NG count as the representative record
+    if ((Number(r.Total_NG) || 0) > (Number(entry.worstRecord?.Total_NG) || 0)) {
+      entry.worstRecord = r;
+    }
   });
   return Array.from(map.values())
     .filter((d) => d.ng > 0)
