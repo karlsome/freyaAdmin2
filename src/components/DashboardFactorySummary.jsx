@@ -39,8 +39,67 @@ export default function DashboardFactorySummary({ factories, loading, onNavigate
       </h3>
       <p className="text-[11px] text-outline mb-4">Click a row to open factory detail</p>
 
-      <div className="space-y-1.5">
-        {/* Header */}
+      <div className="space-y-3 md:hidden">
+        {factories.map((f) => {
+          const ds = getDefectStatus(f.defectRate);
+          const hasTrouble = f.troubleHours > 0;
+
+          return (
+            <button
+              key={f.name}
+              onClick={() => onNavigateToFactory?.(f.name)}
+              className="w-full rounded-2xl border border-white/10 bg-surface-container/40 p-4
+                         text-left hover:bg-primary/10 hover:border-primary/20 transition-all duration-150"
+            >
+              <div className="flex items-center justify-between gap-3 mb-3">
+                <span className="text-sm font-semibold text-on-surface truncate">{f.name}</span>
+                <span className="material-symbols-outlined text-outline" style={{ fontSize: 16 }}>
+                  chevron_right
+                </span>
+              </div>
+
+              <div className="grid grid-cols-2 gap-x-4 gap-y-3 mb-3">
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-outline mb-1">Combined</p>
+                  <p className="text-sm font-bold text-on-surface tabular-nums">
+                    {f.total > 0 ? f.total.toLocaleString() : "—"}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-outline mb-1">Combined NG</p>
+                  <p className={`text-sm font-bold tabular-nums ${f.totalNG > 0 ? "text-error" : "text-outline"}`}>
+                    {f.totalNG > 0 ? f.totalNG.toLocaleString() : "—"}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-outline mb-1">Defect %</p>
+                  <p className={`text-sm font-bold tabular-nums ${ds.valueColor}`}>
+                    {f.total > 0 ? `${f.defectRate.toFixed(2)}%` : "—"}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-outline mb-1">Trouble</p>
+                  <p className={`text-sm font-bold tabular-nums ${hasTrouble ? "text-amber-500" : "text-outline"}`}>
+                    {hasTrouble ? `${f.troubleHours.toFixed(1)}h` : "—"}
+                  </p>
+                </div>
+              </div>
+
+              <MiniBar
+                value={f.total}
+                max={maxTotal}
+                color={ds.level === "high" ? "bg-error" : ds.level === "warning" ? "bg-amber-500" : "bg-primary"}
+              />
+            </button>
+          );
+        })}
+
+        {factories.length === 0 && (
+          <p className="text-sm text-outline text-center py-6">No factory data available</p>
+        )}
+      </div>
+
+      <div className="hidden md:block space-y-1.5">
         <div className="grid grid-cols-[1fr_80px_80px_80px_56px_120px] gap-3 px-3 pb-1 border-b border-white/5">
           {["Factory", "Combined", "Combined NG", "Defect %", "Trouble", ""].map((h) => (
             <span key={h} className="text-[10px] font-bold uppercase tracking-wider text-outline">{h}</span>
@@ -58,32 +117,26 @@ export default function DashboardFactorySummary({ factories, loading, onNavigate
               className="w-full grid grid-cols-[1fr_80px_80px_80px_56px_120px] gap-3 items-center px-3 py-2.5
                          rounded-xl text-left hover:bg-primary/10 hover:shadow-[inset_3px_0_0_rgb(var(--c-primary))] transition-all duration-150 group"
             >
-              {/* Name */}
               <span className="text-sm font-semibold text-on-surface group-hover:text-primary transition-colors truncate">
                 {f.name}
               </span>
 
-              {/* Produced */}
               <span className="text-sm font-bold text-on-surface tabular-nums">
                 {f.total > 0 ? f.total.toLocaleString() : <span className="text-outline text-xs">—</span>}
               </span>
 
-              {/* NG */}
               <span className={`text-sm font-bold tabular-nums ${f.totalNG > 0 ? "text-error" : "text-outline"}`}>
                 {f.totalNG > 0 ? f.totalNG.toLocaleString() : "—"}
               </span>
 
-              {/* Defect % */}
               <span className={`text-sm font-bold tabular-nums ${ds.valueColor}`}>
                 {f.total > 0 ? `${f.defectRate.toFixed(2)}%` : <span className="text-outline text-xs">—</span>}
               </span>
 
-              {/* Trouble */}
               <span className={`text-sm font-bold tabular-nums ${hasTrouble ? "text-amber-500" : "text-outline"}`}>
                 {hasTrouble ? `${f.troubleHours.toFixed(1)}h` : "—"}
               </span>
 
-              {/* Mini bar + arrow */}
               <div className="flex items-center gap-2">
                 <MiniBar value={f.total} max={maxTotal} color={ds.level === "high" ? "bg-error" : ds.level === "warning" ? "bg-amber-500" : "bg-primary"} />
                 <span className="material-symbols-outlined text-outline group-hover:text-primary transition-colors" style={{ fontSize: 14 }}>

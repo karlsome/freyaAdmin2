@@ -21,18 +21,18 @@ export default function DashboardPage() {
     : null;
 
   return (
-    <section className="pt-24 pb-16 px-8 overflow-y-auto h-screen scrollbar-hide">
+    <section className="pt-20 sm:pt-24 pb-24 sm:pb-16 px-4 sm:px-6 md:px-8 overflow-y-auto h-screen scrollbar-hide">
 
       {/* ── Header ── */}
-      <div className="flex items-end justify-between mb-8">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between mb-6 sm:mb-8">
         <div>
-          <h2 className="text-3xl font-bold font-headline tracking-tight text-on-surface">Dashboard</h2>
+          <h2 className="text-2xl sm:text-3xl font-bold font-headline tracking-tight text-on-surface">Dashboard</h2>
           <p className="text-on-surface-variant mt-1 text-sm">{today}</p>
         </div>
         <button
           onClick={refresh}
           disabled={loading}
-          className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold bg-surface-container
+          className="flex w-full sm:w-auto items-center justify-center gap-2 px-4 py-2 rounded-xl text-xs font-bold bg-surface-container
                      border border-outline-variant/20 text-on-surface-variant hover:bg-surface-container-high
                      hover:text-primary transition-all disabled:opacity-50"
         >
@@ -53,7 +53,7 @@ export default function DashboardPage() {
       <DashboardKPIStrip kpis={kpis} byProcess={byProcess} loading={loading} />
 
       {/* ── Middle row: issues + recent submissions ── */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-5" style={{ minHeight: 360 }}>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-5 mb-4 sm:mb-5" style={{ minHeight: 360 }}>
         <DashboardIssuesFeed
           issues={issues}
           loading={loading}
