@@ -1,77 +1,30 @@
-import {
-  getDefectStatus,
-  getTempStatus,
-  getHumidityStatus,
-  getCO2Status,
-  getWBGTStatus,
-} from "../utils/statusHelpers";
+import { getDefectStatus } from "../utils/statusHelpers";
 
-// ─── Env metric cell ──────────────────────────────────────────────────────────
-function EnvCell({ icon, value, label, status }) {
-  const isNull = value === null || value === undefined;
-  return (
-    <div className={`text-center p-2 rounded-xl ${isNull ? "bg-surface-container" : status.bg}`}>
-      <span className={`material-symbols-outlined block mb-0.5 ${isNull ? "text-outline" : status.color}`} style={{ fontSize: 18 }}>
-        {icon}
-      </span>
-      <div className={`font-bold text-xs ${isNull ? "text-outline" : status.color}`}>
-        {isNull ? "—" : value}
-      </div>
-      <div className="text-[10px] text-on-surface-variant mt-0.5">{label}</div>
-    </div>
-  );
-}
-
-// ─── Sensor metric cell ───────────────────────────────────────────────────────
-function SensorCell({ icon, value, unit, label, status }) {
-  const isNull = value === null || value === undefined;
-  return (
-    <div className={`text-center p-2 rounded-xl ${isNull ? "bg-surface-container" : status.bg}`}>
-      <span className={`material-symbols-outlined block mb-0.5 ${isNull ? "text-outline" : status.color}`} style={{ fontSize: 18 }}>
-        {icon}
-      </span>
-      <div className={`font-bold text-xs ${isNull ? "text-outline" : status.color}`}>
-        {isNull ? "—" : `${value}${unit}`}
-      </div>
-      <div className="text-[10px] text-on-surface-variant mt-0.5">{label}</div>
-    </div>
-  );
-}
+// ─── Rank badge ───────────────────────────────────────────────────────────────
+const RANK_COLORS = [
+  "bg-error/15 text-error",
+  "bg-amber-500/15 text-amber-500",
+  "bg-amber-400/10 text-amber-400",
+  "bg-surface-container text-outline",
+  "bg-surface-container text-outline",
+];
 
 // ─── Main card ────────────────────────────────────────────────────────────────
 export default function FactoryCard({ factory, onClick }) {
-  const { name, total, totalNG, defectRate, env, sensor } = factory;
-
+  const { name, total, totalNG, defectRate, topDefects = [] } = factory;
   const defectStatus = getDefectStatus(defectRate);
-  const tempStatus   = getTempStatus(env.temperature);
-  const humidStatus  = getHumidityStatus(env.humidity);
-  const co2Status    = getCO2Status(env.co2);
-  const wbgtStatus   = getWBGTStatus(sensor.wbgt);
-  const sensorTempStatus = getTempStatus(sensor.highestTemp);
-  const sensorHumStatus  = getHumidityStatus(sensor.averageHumidity);
-
-  const sourceIcon =
-    env.coordinateSource === "geotag"
-      ? "my_location"
-      : env.coordinateSource === "coordinates"
-      ? "location_on"
-      : "public";
-
-  const updatedTime = env.timestamp
-    ? new Date(env.timestamp).toLocaleTimeString("ja-JP", { hour: "2-digit", minute: "2-digit" })
-    : null;
 
   return (
     <div
       onClick={onClick}
-      className="glass-card rounded-2xl p-5 flex flex-col gap-4 cursor-pointer hover:shadow-xl hover:shadow-primary/5 hover:scale-[1.02] transition-all duration-300 group"
+      className="glass-card rounded-2xl p-5 flex flex-col gap-4 cursor-pointer hover:shadow-xl hover:shadow-primary/5 hover:scale-[1.02] transition-all duration-300"
     >
       {/* ── Header ── */}
       <div className="flex items-start justify-between">
         <div>
           <h4 className="text-base font-bold text-on-surface leading-tight">{name}</h4>
           <p className="text-[10px] text-on-surface-variant mt-0.5">
-            {total.toLocaleString()} units today
+            {total.toLocaleString()} kensa units today
           </p>
         </div>
         <span className={`flex items-center gap-1.5 text-[10px] font-bold px-2 py-1 rounded-full ${defectStatus.bg} ${defectStatus.color}`}>
@@ -80,8 +33,8 @@ export default function FactoryCard({ factory, onClick }) {
         </span>
       </div>
 
-      {/* ── Production stats ── */}
-      <div className="grid grid-cols-3 gap-2 pb-4">
+      {/* ── Production summary ── */}
+      <div className="grid grid-cols-3 gap-2 pb-3 border-b border-outline-variant/20">
         <div>
           <p className="text-[10px] text-on-surface-variant uppercase tracking-widest mb-1">Total</p>
           <p className="text-sm font-black text-on-surface">{total.toLocaleString()}</p>
@@ -96,98 +49,60 @@ export default function FactoryCard({ factory, onClick }) {
         </div>
       </div>
 
-      {/* ── Environmental data ── */}
-      <div>
-        <div className="flex items-center justify-between mb-2">
-          <p className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">Environmental</p>
-          <button
-            onClick={(e) => e.stopPropagation()}
-            className="p-1 rounded-full hover:bg-surface-container text-outline hover:text-primary transition-colors"
-          >
-            <span className="material-symbols-outlined" style={{ fontSize: 14 }}>refresh</span>
-          </button>
+      {/* ── Top defects ── */}
+      <div className="flex-1 flex flex-col">
+        <div className="flex items-center justify-between mb-2.5">
+          <p className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">
+            Top Defects
+          </p>
+          {topDefects.length > 0 && (
+            <span className="text-[10px] font-bold text-error bg-error/10 px-2 py-0.5 rounded-full">
+              {topDefects.length} part{topDefects.length !== 1 ? "s" : ""}
+            </span>
+          )}
         </div>
 
-        {env.isDefault ? (
-          <div className="text-center py-3 text-[11px] text-outline bg-surface-container rounded-xl">
-            No environmental data
+        {topDefects.length === 0 ? (
+          <div className="flex items-center justify-center gap-1.5 rounded-xl bg-emerald-500/10 py-4 text-[11px] font-medium text-emerald-600 dark:text-emerald-400">
+            <span className="material-symbols-outlined" style={{ fontSize: 15, fontVariationSettings: "'FILL' 1" }}>check_circle</span>
+            No defects today
           </div>
         ) : (
-          <>
-            <div className="grid grid-cols-3 gap-2">
-              <EnvCell
-                icon="thermometer"
-                value={env.temperature !== null ? `${env.temperature}°C` : null}
-                label="Temp"
-                status={tempStatus}
-              />
-              <EnvCell
-                icon="water_drop"
-                value={env.humidity !== null ? `${env.humidity}%` : null}
-                label="Humidity"
-                status={humidStatus}
-              />
-              <EnvCell
-                icon="eco"
-                value={env.co2 !== null ? `${env.co2}` : null}
-                label="CO₂ ppm"
-                status={co2Status}
-              />
+          <div className="space-y-0.5">
+            {/* Column headers */}
+            <div className="grid grid-cols-[1.5rem_1fr_3rem_3.5rem] gap-x-2 px-1 mb-1">
+              <span />
+              <span className="text-[9px] font-bold text-outline uppercase tracking-widest">背番号</span>
+              <span className="text-[9px] font-bold text-outline uppercase tracking-widest text-right">NG</span>
+              <span className="text-[9px] font-bold text-outline uppercase tracking-widest text-right">Rate</span>
             </div>
-            <div className="flex items-center justify-center gap-1 mt-2 text-[10px] text-outline">
-              {updatedTime && (
-                <>
-                  <span className="material-symbols-outlined" style={{ fontSize: 11 }}>schedule</span>
-                  <span>{updatedTime}</span>
-                </>
-              )}
-              {env.coordinateSource && (
-                <>
-                  <span className="mx-1">•</span>
-                  <span className="material-symbols-outlined" style={{ fontSize: 11 }}>{sourceIcon}</span>
-                </>
-              )}
-            </div>
-          </>
+
+            {topDefects.map((d, i) => {
+              const rowStatus = getDefectStatus(d.defectRate);
+              return (
+                <div
+                  key={`${d.sebanggo}-${i}`}
+                  className="grid grid-cols-[1.5rem_1fr_3rem_3.5rem] gap-x-2 items-center px-1 py-1.5 rounded-lg hover:bg-primary/10 hover:shadow-[inset_3px_0_0_rgb(var(--c-primary))] transition-all duration-150"
+                >
+                  {/* Rank badge */}
+                  <span className={`text-[9px] font-black w-5 h-5 rounded-md flex items-center justify-center ${RANK_COLORS[i] ?? RANK_COLORS[4]}`}>
+                    {i + 1}
+                  </span>
+                  {/* 背番号 */}
+                  <span className="text-xs font-mono text-on-surface truncate">{d.sebanggo}</span>
+                  {/* NG qty */}
+                  <span className="text-xs font-bold text-right text-error">{d.ng.toLocaleString()}</span>
+                  {/* Defect rate */}
+                  <span className={`text-xs font-bold text-right ${rowStatus.valueColor}`}>
+                    {d.defectRate.toFixed(2)}%
+                  </span>
+                </div>
+              );
+            })}
+          </div>
         )}
       </div>
-
-      {/* ── Physical sensors ── */}
-      {sensor.hasData ? (
-        <div className="border-t border-outline-variant/20 pt-3">
-          <div className="flex items-center justify-between mb-2">
-            <p className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">
-              Physical Sensors
-            </p>
-            <span className="flex items-center gap-1 text-[10px] text-primary font-bold">
-              <span className="material-symbols-outlined" style={{ fontSize: 12 }}>sensors</span>
-              {sensor.sensorCount}
-            </span>
-          </div>
-          <div
-            className="grid grid-cols-3 gap-2 p-2 rounded-xl border border-outline-variant/20 hover:border-primary/30 transition-colors"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <SensorCell icon="thermometer" value={sensor.highestTemp} unit="°C" label="Peak Temp" status={sensorTempStatus} />
-            <SensorCell icon="water_drop" value={sensor.averageHumidity} unit="%" label="Avg Humid" status={sensorHumStatus} />
-            <SensorCell icon="wb_sunny" value={sensor.wbgt} unit="°C" label="WBGT" status={wbgtStatus} />
-          </div>
-          <div className="flex items-center justify-center gap-1 mt-2 text-[10px] text-outline hover:text-primary transition-colors cursor-pointer">
-            <span className="material-symbols-outlined" style={{ fontSize: 13 }}>visibility</span>
-            <span>View sensor details</span>
-          </div>
-        </div>
-      ) : sensor.hasHistorical ? (
-        <div className="border-t border-outline-variant/20 pt-3">
-          <button
-            className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border border-outline-variant/20 hover:border-primary/30 hover:bg-primary/5 text-outline hover:text-primary transition-all text-xs font-medium"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <span className="material-symbols-outlined" style={{ fontSize: 15 }}>history</span>
-            View Temperature History
-          </button>
-        </div>
-      ) : null}
     </div>
   );
 }
+
