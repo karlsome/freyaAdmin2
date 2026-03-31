@@ -28,9 +28,9 @@ jobs:
           cache: npm
 
       - run: npm ci
+      - name: Write production env
+        run: echo "VITE_API_URL=${{ vars.VITE_API_URL }}" > .env.production
       - run: npm run build
-        env:
-          VITE_API_URL: ${{ vars.VITE_API_URL }}
 
       - uses: actions/configure-pages@v4
 
