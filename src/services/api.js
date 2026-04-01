@@ -67,6 +67,22 @@ async function _getJson(endpoint) {
   return data;
 }
 
+async function _deleteJson(endpoint, body) {
+  const res = await fetch(BASE_URL + endpoint, {
+    method: "DELETE",
+    headers: body ? { "Content-Type": "application/json" } : undefined,
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  const data = await _readJson(res);
+  if (!res.ok) {
+    const message = typeof data === "string"
+      ? data
+      : data?.error || data?.message || `API ${res.status}`;
+    throw new Error(message);
+  }
+  return data;
+}
+
 // ─── Universal query helper ───────────────────────────────────────────────────
 export async function query(dbName, collectionName, q, { sort, limit, projection } = {}) {
   const res = await fetch(BASE_URL + "queries", {
@@ -629,4 +645,127 @@ export async function batchUpdateMasterRecords({ recordIds, updates, username, t
     username,
     collectionName,
   });
+}
+
+// ─── Product PDFs (梱包 / 検査基準 / 3点照合) ───────────────────────────────
+function normalizePaginatedItems(result) {
+  if (Array.isArray(result)) {
+    return {
+      items: result,
+      page: 1,
+      limit: result.length,
+      total: result.length,
+      totalPages: 1,
+    };
+  }
+
+  return {
+    items: Array.isArray(result?.items) ? result.items : [],
+    page: Number(result?.page) || 1,
+    limit: Number(result?.limit) || 25,
+    total: Number(result?.total) || 0,
+    totalPages: Number(result?.totalPages) || 1,
+  };
+}
+
+export async function fetchProductPDFProducts() {
+  const cacheKey = "product_pdf_products";
+  const cached = _getCached(cacheKey, MASTER_TTL);
+  if (cached) return cached;
+
+  const products = await query(
+    "Sasaki_Coating_MasterDB",
+    "masterDB",
+    {},
+    { projection: { 背番号: 1, モデル: 1, 品番: 1 } }
+  );
+
+  const nextProducts = Array.isArray(products) ? products : [];
+  _setCache(cacheKey, nextProducts);
+  return nextProducts;
+}
+
+export async function fetchProductPDFsByType({
+  pdfType,
+  page = 1,
+  limit = 25,
+  searchQuery = "",
+  model = "",
+  sortField = "uploadedAt",
+  sortDir = "desc",
+  includeHinban = true,
+} = {}) {
+  const query = new URLSearchParams({
+    page: String(page),
+    limit: String(limit),
+  });
+
+  if (includeHinban) query.set("includeHinban", "1");
+  if (searchQuery) query.set("q", searchQuery);
+  if (model) query.set("model", model);
+  if (sortField) query.set("sortField", sortField);
+  if (sortDir) query.set("sortDir", sortDir);
+
+  const result = await _getJson(`api/product-pdfs-by-type/${encodeURIComponent(pdfType)}?${query.toString()}`);
+  return normalizePaginatedItems(result);
+}
+
+export async function checkExistingProductPDFs({ pdfType, serialNumbers = [] }) {
+  return _postJson("api/check-existing-pdfs", {
+    pdfType,
+    背番号Array: serialNumbers,
+  });
+}
+
+export async function uploadProductPDFFile({
+  pdfType,
+  serialNumbers = [],
+  pdfBase64,
+  fileName,
+  uploadedBy,
+  resolutions = {},
+}) {
+  return _postJson("api/upload-product-pdf", {
+    pdfType,
+    背番号Array: serialNumbers,
+    pdfBase64,
+    fileName,
+    uploadedBy,
+    resolutions,
+  });
+}
+
+export async function uploadProductPDFImage({ documentId, imageBase64, pdfType }) {
+  return _postJson("api/upload-pdf-image", {
+    documentId,
+    imageBase64,
+    pdfType,
+  });
+}
+
+export async function batchDeleteProductPDFs(documentIds = []) {
+  return _postJson("api/product-pdf-batch-delete", {
+    documentIds,
+  });
+}
+
+export async function deleteProductPDF(documentId) {
+  return _deleteJson(`api/product-pdf/${encodeURIComponent(documentId)}`);
+}
+
+export async function fetchProductPDFTrash({ page = 1, limit = 25 } = {}) {
+  const query = new URLSearchParams({
+    page: String(page),
+    limit: String(limit),
+  });
+  const result = await _getJson(`api/product-pdfs-trash?${query.toString()}`);
+  return normalizePaginatedItems(result);
+}
+
+export async function recoverProductPDF(documentId) {
+  return _postJson(`api/product-pdf-recover/${encodeURIComponent(documentId)}`, {});
+}
+
+export async function permanentlyDeleteProductPDF(documentId) {
+  return _deleteJson(`api/product-pdf-permanent/${encodeURIComponent(documentId)}`);
 }

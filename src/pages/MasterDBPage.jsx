@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { Suspense, lazy, useCallback, useEffect, useRef, useState } from "react";
 import Papa from "papaparse";
 import MasterBatchEditModal from "../components/MasterBatchEditModal";
 import MasterCsvImportCard from "../components/MasterCsvImportCard";
@@ -34,6 +34,8 @@ import {
   getMasterTabUI,
   getMasterTableColumns,
 } from "../utils/masterDB";
+
+const ProductPDFsWorkspace = lazy(() => import("../components/ProductPDFsWorkspace"));
 
 function FlashBanner({ flash, onClose }) {
   if (!flash) return null;
@@ -108,6 +110,7 @@ export default function MasterDBPage() {
 
   const activeTabMeta = getMasterTabMeta(activeTab);
   const activeTabUI = getMasterTabUI(activeTab);
+  const isProductPDFTab = activeTab === "productPDFs";
   const fieldDefinitions = buildMasterFieldDefinitions(schemaFields, records, activeTab);
   const columns = getMasterTableColumns(records, schemaFields, activeTab);
   const batchEditEnabled = Object.keys(advancedQuery).length > 0 && stats.filteredCount > 0;
@@ -120,6 +123,12 @@ export default function MasterDBPage() {
 
   useEffect(() => {
     let cancelled = false;
+
+    if (isProductPDFTab) {
+      setSchemaFields([]);
+      setFilterOptions({ factories: [], rl: [], colors: [], processes: [] });
+      return undefined;
+    }
 
     async function loadPageMeta() {
       try {
@@ -141,11 +150,20 @@ export default function MasterDBPage() {
     return () => {
       cancelled = true;
     };
-  }, [activeTab]);
+  }, [activeTab, isProductPDFTab]);
 
   useEffect(() => {
     let cancelled = false;
     const requestId = ++requestIdRef.current;
+
+    if (isProductPDFTab) {
+      setLoading(false);
+      setError("");
+      setRecords([]);
+      setStats({ totalCount: 0, filteredCount: 0, withImageCount: 0, withoutImageCount: 0 });
+      setTotalPages(0);
+      return undefined;
+    }
 
     async function loadRecords() {
       setLoading(true);
@@ -192,7 +210,7 @@ export default function MasterDBPage() {
     return () => {
       cancelled = true;
     };
-  }, [activeTab, page, pageSize, sort, simpleFilters, advancedQuery, searchTags, schemaFields, searchLogicMode, refreshNonce]);
+  }, [activeTab, page, pageSize, sort, simpleFilters, advancedQuery, searchTags, schemaFields, searchLogicMode, refreshNonce, isProductPDFTab]);
 
   const loadDistinctOptions = useCallback(async (field) => {
     const cacheKey = `${activeTab}:${field}`;
@@ -538,14 +556,16 @@ export default function MasterDBPage() {
             Refresh
           </button>
 
-          <button
-            type="button"
-            onClick={() => setAddModalOpen(true)}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold bg-primary text-white hover:opacity-90 transition-all"
-          >
-            <span className="material-symbols-outlined" style={{ fontSize: 16 }}>add</span>
-            Add New Record
-          </button>
+          {!isProductPDFTab && (
+            <button
+              type="button"
+              onClick={() => setAddModalOpen(true)}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold bg-primary text-white hover:opacity-90 transition-all"
+            >
+              <span className="material-symbols-outlined" style={{ fontSize: 16 }}>add</span>
+              Add New Record
+            </button>
+          )}
         </div>
       </div>
 
@@ -553,72 +573,86 @@ export default function MasterDBPage() {
 
       <MasterTabNav tabs={MASTER_TABS} activeTab={activeTab} onSelect={handleTabSelect} />
 
-      {batchPreparing && (
+      {!isProductPDFTab && batchPreparing && (
         <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-surface px-3 py-1.5 text-xs font-bold text-on-surface shadow-sm">
           <span className="material-symbols-outlined animate-spin" style={{ fontSize: 16 }}>progress_activity</span>
           Preparing batch edit…
         </div>
       )}
 
-      <MasterCsvImportCard
-        fileName={csvFileName}
-        parsedRows={csvRows}
-        parsing={csvParsing}
-        importing={csvImporting}
-        onFileSelect={handleCsvFileSelect}
-        onImport={handleCsvImport}
-      />
+      {isProductPDFTab ? (
+        <Suspense
+          fallback={(
+            <div className="glass-card rounded-3xl px-6 py-10 text-sm font-medium text-on-surface-variant">
+              Loading Product PDFs workspace…
+            </div>
+          )}
+        >
+          <ProductPDFsWorkspace refreshToken={refreshNonce} onFlash={setFlash} />
+        </Suspense>
+      ) : (
+        <>
+          <MasterCsvImportCard
+            fileName={csvFileName}
+            parsedRows={csvRows}
+            parsing={csvParsing}
+            importing={csvImporting}
+            onFileSelect={handleCsvFileSelect}
+            onImport={handleCsvImport}
+          />
 
-      <MasterFilterPanel
-        simpleFilters={simpleFilters}
-        filterOptions={filterOptions}
-        searchTags={searchTags}
-        searchLogicMode={searchLogicMode}
-        fieldDefinitions={fieldDefinitions}
-        advancedRows={advancedRows}
-        canBatchEdit={batchEditEnabled}
-        batchCount={stats.filteredCount}
-        onSimpleFilterChange={handleSimpleFilterChange}
-        onAddSearchTag={handleAddSearchTag}
-        onRemoveSearchTag={handleRemoveSearchTag}
-        onClearSearchTags={handleClearSearchTags}
-        onSearchLogicModeChange={handleSearchLogicModeChange}
-        onUpdateAdvancedRow={handleUpdateAdvancedRow}
-        onAddAdvancedRow={handleAddAdvancedRow}
-        onRemoveAdvancedRow={handleRemoveAdvancedRow}
-        onApplyAdvancedFilters={handleApplyAdvancedFilters}
-        onClearAdvancedFilters={handleClearAdvancedFilters}
-        onOpenBatchEdit={handleOpenBatchEdit}
-        loadDistinctOptions={loadDistinctOptions}
-        processLabel={activeTabUI.processFilterLabel}
-        processAllLabel={activeTabUI.processAllLabel}
-      />
+          <MasterFilterPanel
+            simpleFilters={simpleFilters}
+            filterOptions={filterOptions}
+            searchTags={searchTags}
+            searchLogicMode={searchLogicMode}
+            fieldDefinitions={fieldDefinitions}
+            advancedRows={advancedRows}
+            canBatchEdit={batchEditEnabled}
+            batchCount={stats.filteredCount}
+            onSimpleFilterChange={handleSimpleFilterChange}
+            onAddSearchTag={handleAddSearchTag}
+            onRemoveSearchTag={handleRemoveSearchTag}
+            onClearSearchTags={handleClearSearchTags}
+            onSearchLogicModeChange={handleSearchLogicModeChange}
+            onUpdateAdvancedRow={handleUpdateAdvancedRow}
+            onAddAdvancedRow={handleAddAdvancedRow}
+            onRemoveAdvancedRow={handleRemoveAdvancedRow}
+            onApplyAdvancedFilters={handleApplyAdvancedFilters}
+            onClearAdvancedFilters={handleClearAdvancedFilters}
+            onOpenBatchEdit={handleOpenBatchEdit}
+            loadDistinctOptions={loadDistinctOptions}
+            processLabel={activeTabUI.processFilterLabel}
+            processAllLabel={activeTabUI.processAllLabel}
+          />
 
-      <MasterStatsStrip stats={stats} />
+          <MasterStatsStrip stats={stats} />
 
-      <MasterTable
-        columns={columns}
-        records={records}
-        loading={loading}
-        error={error}
-        sort={sort}
-        page={page}
-        pageSize={pageSize}
-        filteredCount={stats.filteredCount}
-        totalPages={totalPages}
-        onSort={handleSort}
-        onPageChange={(nextPage) => {
-          if (nextPage < 1 || nextPage > totalPages) return;
-          setPage(nextPage);
-        }}
-        onPageSizeChange={(nextPageSize) => {
-          setPage(1);
-          setPageSize(nextPageSize);
-        }}
-        onRowClick={(record) => setSelectedRecord(record)}
-      />
+          <MasterTable
+            columns={columns}
+            records={records}
+            loading={loading}
+            error={error}
+            sort={sort}
+            page={page}
+            pageSize={pageSize}
+            filteredCount={stats.filteredCount}
+            totalPages={totalPages}
+            onSort={handleSort}
+            onPageChange={(nextPage) => {
+              if (nextPage < 1 || nextPage > totalPages) return;
+              setPage(nextPage);
+            }}
+            onPageSizeChange={(nextPageSize) => {
+              setPage(1);
+              setPageSize(nextPageSize);
+            }}
+            onRowClick={(record) => setSelectedRecord(record)}
+          />
+        </>
+      )}
 
-      {selectedRecord && (
+      {!isProductPDFTab && selectedRecord && (
         <MasterDetailDrawer
           key={extractRecordId(selectedRecord) || "master-detail"}
           open={!!selectedRecord}
@@ -633,7 +667,7 @@ export default function MasterDBPage() {
         />
       )}
 
-      {addModalOpen && (
+      {!isProductPDFTab && addModalOpen && (
         <MasterRecordModal
           open={addModalOpen}
           fieldDefinitions={fieldDefinitions}
@@ -645,7 +679,7 @@ export default function MasterDBPage() {
         />
       )}
 
-      {batchModalOpen && (
+      {!isProductPDFTab && batchModalOpen && (
         <MasterBatchEditModal
           open={batchModalOpen}
           fieldDefinitions={fieldDefinitions}

@@ -1,7 +1,7 @@
 export const MASTER_TABS = [
   { key: "masterDB", label: "内装品 DB", description: "Interior product records", ready: true },
   { key: "materialDB", label: "材料 DB", description: "Material master records", ready: true },
-  { key: "productPDFs", label: "梱包 / 検査基準 / 3点照合", description: "Planned next", ready: false },
+  { key: "productPDFs", label: "梱包 / 検査基準 / 3点照合", description: "Product PDF library", ready: true },
   { key: "furyoKanri", label: "不良管理", description: "Planned next", ready: false },
 ];
 
