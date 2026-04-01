@@ -20,6 +20,7 @@ const BASE_URL = (ENV_URL || LOCAL_URL).replace(/\/?$/, "/");
 const _cache = new Map();
 const ENV_TTL    = 10 * 60 * 1000; // 10 min
 const SENSOR_TTL =  2 * 60 * 1000; // 2 min
+const MASTER_TTL =  5 * 60 * 1000; // 5 min
 
 function _getCached(key, ttl) {
   const e = _cache.get(key);
@@ -27,6 +28,44 @@ function _getCached(key, ttl) {
   return null;
 }
 function _setCache(key, data) { _cache.set(key, { data, ts: Date.now() }); }
+
+async function _readJson(res) {
+  const text = await res.text();
+  if (!text) return {};
+  try {
+    return JSON.parse(text);
+  } catch {
+    return text;
+  }
+}
+
+async function _postJson(endpoint, body) {
+  const res = await fetch(BASE_URL + endpoint, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  const data = await _readJson(res);
+  if (!res.ok) {
+    const message = typeof data === "string"
+      ? data
+      : data?.error || data?.message || `API ${res.status}`;
+    throw new Error(message);
+  }
+  return data;
+}
+
+async function _getJson(endpoint) {
+  const res = await fetch(BASE_URL + endpoint);
+  const data = await _readJson(res);
+  if (!res.ok) {
+    const message = typeof data === "string"
+      ? data
+      : data?.error || data?.message || `API ${res.status}`;
+    throw new Error(message);
+  }
+  return data;
+}
 
 // ─── Universal query helper ───────────────────────────────────────────────────
 export async function query(dbName, collectionName, q, { sort, limit, projection } = {}) {
@@ -430,4 +469,164 @@ export async function fetchMasterImage(hinban, sebanggo) {
   } catch {
     return null;
   }
+}
+
+// ─── Master DB page (React migration) ────────────────────────────────────────
+const MASTER_FACTORY_COLLECTIONS = ["kensaDB", "pressDB", "SRSDB", "slitDB"];
+
+export function getMasterCollectionConfig(tabKey = "masterDB") {
+  if (tabKey === "materialDB") {
+    return { collectionName: "materialMasterDB2", baseQuery: { 工程名: "粘着工程" } };
+  }
+  return { collectionName: "masterDB", baseQuery: {} };
+}
+
+export async function fetchMasterPage({
+  tabKey = "masterDB",
+  page = 1,
+  limit = 25,
+  sort = { column: null, direction: 1 },
+  simpleFilters = {},
+  advancedFilters = {},
+  searchTags = [],
+  searchFields = [],
+  searchLogicMode = "OR",
+} = {}) {
+  const { collectionName, baseQuery } = getMasterCollectionConfig(tabKey);
+  const result = await _postJson("api/masterdb/paginate", {
+    collectionName,
+    baseQuery,
+    page,
+    limit,
+    sort,
+    simpleFilters,
+    advancedFilters,
+    searchTags,
+    searchFields,
+    searchLogicMode,
+  });
+
+  return {
+    data: Array.isArray(result?.data) ? result.data : [],
+    totalCount: Number(result?.totalCount) || 0,
+    filteredCount: Number(result?.filteredCount) || 0,
+    withImageCount: Number(result?.withImageCount) || 0,
+    totalPages: Number(result?.totalPages) || 0,
+  };
+}
+
+export async function fetchMasterSchema(tabKey = "masterDB") {
+  const { collectionName, baseQuery } = getMasterCollectionConfig(tabKey);
+  const query = new URLSearchParams({
+    collection: collectionName,
+    query: JSON.stringify(baseQuery),
+  });
+  const cacheKey = `master_schema_${tabKey}`;
+  const cached = _getCached(cacheKey, MASTER_TTL);
+  if (cached) return cached;
+
+  const result = await _getJson(`api/masterdb/schema?${query.toString()}`);
+  const fields = Array.isArray(result) ? result : [];
+  _setCache(cacheKey, fields);
+  return fields;
+}
+
+export async function fetchMasterDistinctField(field, tabKey = "masterDB") {
+  const { collectionName, baseQuery } = getMasterCollectionConfig(tabKey);
+  const cacheKey = `master_distinct_${tabKey}_${field}`;
+  const cached = _getCached(cacheKey, MASTER_TTL);
+  if (cached) return cached;
+
+  const result = await _postJson("api/distinct", {
+    dbName: "Sasaki_Coating_MasterDB",
+    collectionName,
+    field,
+    filter: baseQuery,
+  });
+  const values = Array.isArray(result?.values) ? result.values : [];
+  _setCache(cacheKey, values);
+  return values;
+}
+
+export async function fetchMasterFilterOptions(tabKey = "masterDB") {
+  const cacheKey = `master_filter_options_${tabKey}`;
+  const cached = _getCached(cacheKey, MASTER_TTL);
+  if (cached) return cached;
+
+  const processEndpoint = tabKey === "materialDB"
+    ? "api/masterdb/materials"
+    : "api/masterdb/equipment";
+
+  const [factoryResult, rlResult, colorResult, processResult] = await Promise.all([
+    _postJson("api/factories/batch", { collections: MASTER_FACTORY_COLLECTIONS }),
+    _getJson("api/masterdb/rl"),
+    _getJson("api/masterdb/colors"),
+    _getJson(processEndpoint),
+  ]);
+
+  const factories = Object.values(factoryResult?.results || {}).flatMap((entry) =>
+    Array.isArray(entry?.factories) ? entry.factories : []
+  );
+  const uniqueFactories = [...new Set(factories.filter((value) => value && String(value).trim()))].sort((a, b) =>
+    String(a).localeCompare(String(b), "ja")
+  );
+
+  const options = {
+    factories: uniqueFactories,
+    rl: Array.isArray(rlResult?.data) ? rlResult.data : [],
+    colors: Array.isArray(colorResult?.data) ? colorResult.data : [],
+    processes: Array.isArray(processResult?.data) ? processResult.data : [],
+  };
+
+  _setCache(cacheKey, options);
+  return options;
+}
+
+export async function createMasterRecord({ data, username, tabKey = "masterDB" }) {
+  const { collectionName } = getMasterCollectionConfig(tabKey);
+  return _postJson("submitToMasterDB", {
+    data,
+    username,
+    collectionName,
+  });
+}
+
+export async function updateMasterRecord({ recordId, updates, username, tabKey = "masterDB" }) {
+  const { collectionName } = getMasterCollectionConfig(tabKey);
+  return _postJson("updateMasterRecord", {
+    recordId,
+    updates,
+    username,
+    collectionName,
+  });
+}
+
+export async function uploadMasterImage({ base64, recordId, username, tabKey = "masterDB", label = "main" }) {
+  const { collectionName } = getMasterCollectionConfig(tabKey);
+  return _postJson("uploadMasterImage", {
+    base64,
+    label,
+    recordId,
+    username,
+    collectionName,
+  });
+}
+
+export async function fetchMasterRecordIds({ query, tabKey = "masterDB" }) {
+  const { collectionName } = getMasterCollectionConfig(tabKey);
+  const result = await _postJson("api/masterdb/ids", {
+    collectionName,
+    query,
+  });
+  return Array.isArray(result) ? result : [];
+}
+
+export async function batchUpdateMasterRecords({ recordIds, updates, username, tabKey = "masterDB" }) {
+  const { collectionName } = getMasterCollectionConfig(tabKey);
+  return _postJson("batchUpdateMasterRecords", {
+    recordIds,
+    updates,
+    username,
+    collectionName,
+  });
 }
