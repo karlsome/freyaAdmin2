@@ -18,7 +18,7 @@ function TagInput({ tags, onAdd, onRemove, placeholder }) {
     >
       <div className="flex flex-wrap items-center gap-2">
         {tags.map((tag) => (
-          <span key={tag} className="inline-flex items-center gap-1 rounded-full bg-primary/12 px-3 py-1 text-xs font-bold text-primary">
+          <span key={tag} className="inline-flex items-center gap-1 rounded-full bg-amber-400 px-3 py-1 text-xs font-bold text-amber-950 shrink-0">
             {tag}
             <button type="button" onClick={() => onRemove(tag)} className="leading-none hover:text-error">×</button>
           </span>
@@ -186,7 +186,7 @@ export default function MasterFilterPanel({
 
   return (
     <div className="glass-card rounded-2xl p-5 mb-6">
-      <div className="grid gap-4 lg:grid-cols-2 xl:grid-cols-6">
+      <div className="grid items-end gap-4 lg:grid-cols-2 xl:grid-cols-6">
         <div className="xl:col-span-1">
           <label className="mb-2 block text-[11px] font-bold uppercase tracking-[0.18em] text-outline">Factory / 工場</label>
           <select
@@ -391,11 +391,11 @@ export default function MasterFilterPanel({
 
                   <div className="mt-4 flex flex-wrap gap-2">
                     {activeFilters.map((filter) => (
-                      <span key={filter.id} className="inline-flex items-center gap-2 rounded-full bg-primary/12 px-3 py-1.5 text-xs font-bold text-primary">
+                      <span key={filter.id} className="inline-flex items-center gap-2 rounded-full bg-amber-400 px-3 py-1.5 text-xs font-bold text-amber-950">
                         <span>{filter.label}</span>
-                        <span className="text-primary/60">{filter.operator}</span>
+                        <span className="text-amber-950/50">{filter.operator}</span>
                         <span>{filter.value}</span>
-                        <button type="button" onClick={() => onRemoveAdvancedRow(filter.id)} className="leading-none hover:text-error">×</button>
+                        <button type="button" onClick={() => onRemoveAdvancedRow(filter.id)} className="leading-none hover:opacity-60">×</button>
                       </span>
                     ))}
                   </div>
