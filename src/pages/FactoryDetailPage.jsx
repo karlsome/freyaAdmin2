@@ -158,11 +158,11 @@ function MfgLotModal({ onClose, initialLot = "" }) {
               )}
               {rows.length > 0 ? (
                 <div className="overflow-x-auto rounded-xl border border-white/10">
-                  <table className="w-full text-xs">
+                  <table className="ui-table-data w-full">
                     <thead className="bg-surface-container-high/50">
                       <tr>
                         {["品番","背番号","Date","Total","Total NG","不良率"].map((h) => (
-                          <th key={h} className="px-4 py-2.5 text-left text-[10px] font-bold uppercase tracking-wider text-outline">{h}</th>
+                          <th key={h} className="ui-table-heading px-4 py-2.5 text-left uppercase tracking-wider text-outline">{h}</th>
                         ))}
                       </tr>
                     </thead>

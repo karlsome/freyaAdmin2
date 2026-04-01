@@ -51,7 +51,7 @@ export default function MasterTable({
         width: 112,
         minWidth: 96,
         headerCellClassName: "px-3 py-2.5 text-left whitespace-nowrap",
-        headerButtonClassName: "inline-flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-on-surface-variant",
+        headerButtonClassName: "ui-table-heading inline-flex items-center gap-2 uppercase tracking-wider text-on-surface-variant",
         cellClassName: "px-3 py-2.5 whitespace-nowrap",
         disableCellWrapper: true,
         renderCell: (record) => renderImageCell(record),
@@ -65,7 +65,7 @@ export default function MasterTable({
       width: getColumnWidth(column.key),
       minWidth: emphasis ? 160 : 120,
       headerCellClassName: "px-3 py-2.5 text-left whitespace-nowrap",
-      headerButtonClassName: "inline-flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-on-surface-variant transition hover:text-on-surface",
+      headerButtonClassName: "ui-table-heading inline-flex items-center gap-2 uppercase tracking-wider text-on-surface-variant transition hover:text-on-surface",
       cellClassName: [
         "px-3 py-2.5 align-top",
         emphasis ? "font-bold text-primary" : "text-on-surface",
@@ -105,7 +105,7 @@ export default function MasterTable({
       stickyHeaderCellClassName="bg-surface-container-high shadow-[inset_0_-1px_0_rgba(148,163,184,0.18)]"
       defaultColumnWidth={168}
       defaultMinColumnWidth={120}
-      tableClassName="w-full border-separate border-spacing-0 text-xs"
+      tableClassName="ui-table-data w-full border-separate border-spacing-0"
       tableViewportClassName="max-h-[68vh] overflow-auto overscroll-contain"
       headClassName="bg-surface-container-high/40 border-b border-outline-variant/20"
       rowClassName="border-b border-outline-variant/10 transition hover:bg-primary/5"

@@ -29,6 +29,11 @@
   --c-on-error-container:       65 0 2;
   --c-outline:                  118 118 128;
   --c-outline-variant:          226 228 233;
+  --table-data-font-size:       0.75rem;
+  --table-data-line-height:     1rem;
+  --table-heading-font-size:    10px;
+  --table-heading-line-height:  0.875rem;
+  --table-heading-letter-space: 0.08em;
 }
 
 /* ─── Dark mode ─────────────────────────────────────────────────────────────── */
@@ -313,4 +318,20 @@ body {
 
 .pagination-liquid-blob.is-moving {
   animation: pagination-liquid-morph 460ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.ui-table-data {
+  font-family: 'DM Sans', sans-serif;
+  font-size: var(--table-data-font-size);
+  line-height: var(--table-data-line-height);
+  font-variant-numeric: tabular-nums lining-nums;
+  font-feature-settings: "tnum" 1, "lnum" 1;
+}
+
+.ui-table-heading {
+  font-family: 'DM Sans', sans-serif;
+  font-size: var(--table-heading-font-size);
+  line-height: var(--table-heading-line-height);
+  font-weight: 700;
+  letter-spacing: var(--table-heading-letter-space);
 }

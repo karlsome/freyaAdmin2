@@ -349,11 +349,11 @@ export default function SensorDetailPage() {
             </div>
             {filtered.length ? (
               <div className="overflow-x-auto">
-                <table className="w-full text-xs">
+                <table className="ui-table-data w-full">
                   <thead>
                     <tr className="text-outline uppercase tracking-widest text-left border-b border-outline-variant/20">
                       {["Date", "Time", "Device", "Temp", "Humidity", "WBGT", "Status"].map((h) => (
-                        <th key={h} className="pb-3 pr-6 font-bold">{h}</th>
+                        <th key={h} className="ui-table-heading pb-3 pr-6">{h}</th>
                       ))}
                     </tr>
                   </thead>

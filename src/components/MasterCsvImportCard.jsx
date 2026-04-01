@@ -10,11 +10,11 @@ function PreviewTable({ rows }) {
         CSV Preview
       </div>
       <div className="overflow-x-auto">
-        <table className="min-w-full text-sm">
+        <table className="ui-table-data min-w-full">
           <thead className="bg-surface-container">
             <tr>
               {columns.map((column) => (
-                <th key={column} className="px-3 py-2 text-left font-bold text-on-surface-variant whitespace-nowrap">
+                <th key={column} className="ui-table-heading px-3 py-2 text-left text-on-surface-variant whitespace-nowrap">
                   {column}
                 </th>
               ))}

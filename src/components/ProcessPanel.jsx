@@ -128,7 +128,7 @@ export default function ProcessPanel({ processName, rows, onRowClick }) {
 
   const TH = ({ col, label, right }) => (
     <th
-      className={`px-4 py-2.5 text-[10px] font-bold uppercase tracking-wider text-outline cursor-pointer
+      className={`ui-table-heading px-4 py-2.5 uppercase tracking-wider text-outline cursor-pointer
                   hover:text-on-surface-variant transition-colors select-none whitespace-nowrap
                   ${right ? "text-right" : "text-left"}`}
       onClick={() => handleSort(col)}
@@ -172,7 +172,7 @@ export default function ProcessPanel({ processName, rows, onRowClick }) {
 
       {/* Table */}
       <div className="overflow-x-auto flex-1">
-        <table className="w-full min-w-[640px] text-xs">
+        <table className="ui-table-data w-full min-w-[640px]">
           <thead className="bg-surface-container-high/40 sticky top-0">
             <tr>
               <TH col="品番"             label="品番" />
@@ -240,14 +240,14 @@ export default function ProcessPanel({ processName, rows, onRowClick }) {
           </button>
           {showSummary && (
             <div className="px-5 pb-4 overflow-x-auto">
-              <table className="w-full min-w-[400px] text-xs">
+              <table className="ui-table-data w-full min-w-[400px]">
                 <thead>
                   <tr className="text-[10px] font-bold uppercase tracking-wider text-outline">
-                    <th className="text-left pb-2 pr-6">品番</th>
-                    <th className="text-left pb-2 pr-6">背番号</th>
-                    <th className="text-right pb-2 pr-6">Total</th>
-                    <th className="text-right pb-2 pr-6">Total NG</th>
-                    <th className="text-right pb-2">不良率</th>
+                    <th className="ui-table-heading text-left pb-2 pr-6">品番</th>
+                    <th className="ui-table-heading text-left pb-2 pr-6">背番号</th>
+                    <th className="ui-table-heading text-right pb-2 pr-6">Total</th>
+                    <th className="ui-table-heading text-right pb-2 pr-6">Total NG</th>
+                    <th className="ui-table-heading text-right pb-2">不良率</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-white/5">

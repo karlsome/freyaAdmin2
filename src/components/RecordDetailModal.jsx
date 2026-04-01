@@ -126,11 +126,11 @@ function BreakTimeSection({ record }) {
       {open && (
         <div className="pb-4">
           <div className="rounded-2xl overflow-hidden border border-white/10">
-            <table className="w-full text-xs">
+            <table className="ui-table-data w-full">
               <thead className="bg-surface-container-high/40">
                 <tr>
                   {["Break", "Start", "End", "Duration"].map((h) => (
-                    <th key={h} className="px-4 py-2 text-left text-[10px] font-bold uppercase tracking-wider text-outline">{h}</th>
+                    <th key={h} className="ui-table-heading px-4 py-2 text-left uppercase tracking-wider text-outline">{h}</th>
                   ))}
                 </tr>
               </thead>
