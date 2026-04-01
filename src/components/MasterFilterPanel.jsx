@@ -156,6 +156,8 @@ export default function MasterFilterPanel({
   onClearAdvancedFilters,
   onOpenBatchEdit,
   loadDistinctOptions,
+  processLabel = "Equipment",
+  processAllLabel = "All Equipment",
 }) {
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const [optionsByField, setOptionsByField] = useState({});
@@ -230,13 +232,13 @@ export default function MasterFilterPanel({
         </div>
 
         <div className="xl:col-span-1 flex flex-col gap-1.5">
-          <label className="text-[10px] font-bold uppercase tracking-wider text-outline">Equipment</label>
+          <label className="text-[10px] font-bold uppercase tracking-wider text-outline">{processLabel}</label>
           <select
             value={simpleFilters.process}
             onChange={(event) => onSimpleFilterChange("process", event.target.value)}
             className="h-10 w-full rounded-xl border border-outline-variant/20 bg-white px-3 text-sm text-on-surface outline-none transition-colors focus:border-primary/40"
           >
-            <option value="">All Equipment</option>
+            <option value="">{processAllLabel}</option>
             {filterOptions.processes.map((option) => (
               <option key={option} value={option}>{option}</option>
             ))}

@@ -1,11 +1,53 @@
 export const MASTER_TABS = [
   { key: "masterDB", label: "内装品 DB", description: "Interior product records", ready: true },
-  { key: "materialDB", label: "材料 DB", description: "Planned next", ready: false },
+  { key: "materialDB", label: "材料 DB", description: "Material master records", ready: true },
   { key: "productPDFs", label: "梱包 / 検査基準 / 3点照合", description: "Planned next", ready: false },
   { key: "furyoKanri", label: "不良管理", description: "Planned next", ready: false },
 ];
 
 export const MASTER_PAGE_SIZE_OPTIONS = [10, 25, 50, 100];
+
+const MATERIAL_LABEL_OVERRIDES = {
+  NMOJI_色コード: "色",
+  NMOJI_ユーザー: "次工程",
+};
+
+const MATERIAL_PRIORITY_COLUMNS = [
+  { key: "品番", label: "品番" },
+  { key: "品名", label: "品名" },
+  { key: "ラベル品番", label: "ラベル品番" },
+  { key: "NMOJI_色コード", label: "色" },
+  { key: "梱包数", label: "梱包数" },
+  { key: "仕様", label: "仕様" },
+  { key: "型番", label: "型番" },
+  { key: "ロール温度", label: "ロール温度" },
+  { key: "imageURL", label: "画像" },
+  { key: "NMOJI_ユーザー", label: "次工程" },
+  { key: "原材料品番", label: "原材料品番" },
+];
+
+const MATERIAL_DEFAULT_FIELDS = MATERIAL_PRIORITY_COLUMNS
+  .filter((column) => column.key !== "imageURL")
+  .map((column) => column.key);
+
+const MASTER_TAB_UI = {
+  masterDB: {
+    processFilterLabel: "Equipment",
+    processAllLabel: "All Equipment",
+    recordLabel: "Master Record",
+    previewFields: ["品番", "品名", "モデル", "背番号", "加工設備", "工場"],
+    identityTitleFields: ["品番", "品名", "材料品番"],
+    identitySubtitleFields: ["モデル", "背番号"],
+  },
+  materialDB: {
+    processFilterLabel: "Material",
+    processAllLabel: "All Material",
+    recordLabel: "Material Record",
+    previewFields: ["品番", "品名", "ラベル品番", "NMOJI_色コード", "NMOJI_ユーザー", "原材料品番"],
+    identityTitleFields: ["品番", "品名", "ラベル品番", "原材料品番"],
+    identitySubtitleFields: ["型番", "NMOJI_色コード", "NMOJI_ユーザー"],
+  },
+};
 
 export const MASTER_DEFAULT_FIELDS = [
   "品番",
@@ -33,7 +75,53 @@ export const MASTER_DEFAULT_FIELDS = [
   "boardData",
 ];
 
-const PRIORITY_FIELDS = [
+const PRIORITY_FIELDS_BY_TAB = {
+  masterDB: MASTER_DEFAULT_FIELDS,
+  materialDB: MATERIAL_DEFAULT_FIELDS,
+};
+
+export function getMasterTabUI(tabKey = "masterDB") {
+  return MASTER_TAB_UI[tabKey] || MASTER_TAB_UI.masterDB;
+}
+
+export function getMasterFieldLabel(field, tabKey = "masterDB") {
+  return MATERIAL_LABEL_OVERRIDES[field] || field;
+}
+
+function getFirstFilledField(record, fields = []) {
+  for (const field of fields) {
+    const value = record?.[field];
+    if (value != null && String(value).trim() !== "") {
+      return String(value);
+    }
+  }
+
+  return "";
+}
+
+export function getMasterRecordIdentity(record = {}, tabKey = "masterDB") {
+  const tabUI = getMasterTabUI(tabKey);
+  const title = getFirstFilledField(record, tabUI.identityTitleFields);
+  const subtitle = tabUI.identitySubtitleFields
+    .map((field) => record?.[field])
+    .filter((value) => value != null && String(value).trim() !== "")
+    .map((value) => String(value))
+    .join(" / ");
+
+  return {
+    title: title || "Record",
+    subtitle,
+  };
+}
+
+export function getMasterPreviewFields(tabKey = "masterDB") {
+  return getMasterTabUI(tabKey).previewFields.map((field) => ({
+    field,
+    label: getMasterFieldLabel(field, tabKey),
+  }));
+}
+
+const MASTER_PRIORITY_FIELDS = [
   "品番",
   "モデル",
   "背番号",
@@ -128,11 +216,14 @@ export function decodeMasterCsvBuffer(buffer) {
   return new TextDecoder().decode(buffer);
 }
 
-function inferFieldGroup(field) {
-  if (/(品番|背番号|モデル|型番|QR)/i.test(field)) return "Identity";
-  if (/(品名|形状|色|R\/L|顧客|納入|備考)/i.test(field)) return "Product";
-  if (/(加工設備|工場|工程|温度|離型紙|送りピッチ|SRS|SLIT)/i.test(field)) return "Process";
-  if (/(材料|梱包|収容|boardData)/i.test(field)) return "Material & Packaging";
+function inferFieldGroup(field, tabKey = "masterDB") {
+  const label = getMasterFieldLabel(field, tabKey);
+  const text = `${field} ${label}`;
+
+  if (/(品番|背番号|モデル|型番|QR|ラベル品番|原材料品番)/i.test(text)) return "Identity";
+  if (/(品名|形状|色|R\/L|顧客|納入|備考|仕様)/i.test(text)) return "Product";
+  if (/(加工設備|工場|工程|温度|離型紙|送りピッチ|SRS|SLIT|次工程|ユーザー)/i.test(text)) return "Process";
+  if (/(材料|梱包|収容|boardData|ロール温度)/i.test(text)) return "Material & Packaging";
   return "Other";
 }
 
@@ -145,8 +236,9 @@ export function inferMasterFieldType(field) {
   return "text";
 }
 
-export function getMasterFieldOrder(schemaFields = [], records = []) {
+export function getMasterFieldOrder(schemaFields = [], records = [], tabKey = "masterDB") {
   const fieldSet = new Set();
+  const priorityFields = PRIORITY_FIELDS_BY_TAB[tabKey] || MASTER_PRIORITY_FIELDS;
 
   schemaFields.forEach((field) => {
     if (field && field !== "_id" && field !== "imageURL") fieldSet.add(field);
@@ -160,11 +252,15 @@ export function getMasterFieldOrder(schemaFields = [], records = []) {
   });
 
   if (!fieldSet.size) {
-    MASTER_DEFAULT_FIELDS.forEach((field) => fieldSet.add(field));
+    priorityFields.forEach((field) => fieldSet.add(field));
+  }
+
+  if (tabKey === "materialDB") {
+    priorityFields.forEach((field) => fieldSet.add(field));
   }
 
   const fields = [...fieldSet].filter(Boolean);
-  const ordered = PRIORITY_FIELDS.filter((field) => fields.includes(field));
+  const ordered = priorityFields.filter((field) => fields.includes(field));
   const remainder = fields
     .filter((field) => !ordered.includes(field))
     .sort((left, right) => String(left).localeCompare(String(right), "ja"));
@@ -172,8 +268,8 @@ export function getMasterFieldOrder(schemaFields = [], records = []) {
   return [...ordered, ...remainder];
 }
 
-export function buildMasterFieldDefinitions(schemaFields = [], records = []) {
-  return getMasterFieldOrder(schemaFields, records).map((field) => {
+export function buildMasterFieldDefinitions(schemaFields = [], records = [], tabKey = "masterDB") {
+  return getMasterFieldOrder(schemaFields, records, tabKey).map((field) => {
     const type = inferMasterFieldType(field);
     const operators = type === "date"
       ? ["equals", "range"]
@@ -185,9 +281,9 @@ export function buildMasterFieldDefinitions(schemaFields = [], records = []) {
 
     return {
       field,
-      label: field,
+      label: getMasterFieldLabel(field, tabKey),
       type,
-      group: inferFieldGroup(field),
+      group: inferFieldGroup(field, tabKey),
       operators,
     };
   });
@@ -199,9 +295,23 @@ export function buildSearchFields(fieldDefinitions = []) {
     .map((field) => field.field);
 }
 
-export function getMasterTableColumns(records = [], schemaFields = []) {
+export function getMasterTableColumns(records = [], schemaFields = [], tabKey = "masterDB") {
+  const orderedFields = getMasterFieldOrder(schemaFields, records, tabKey);
+
+  if (tabKey === "materialDB") {
+    const priorityColumns = MATERIAL_PRIORITY_COLUMNS.filter(
+      (column) => column.key === "imageURL" || orderedFields.includes(column.key)
+    );
+    const priorityKeys = new Set(priorityColumns.map((column) => column.key));
+    const remainderColumns = orderedFields
+      .filter((field) => !priorityKeys.has(field))
+      .map((field) => ({ key: field, label: getMasterFieldLabel(field, tabKey) }));
+
+    return [...priorityColumns, ...remainderColumns];
+  }
+
   return [
-    ...getMasterFieldOrder(schemaFields, records).map((field) => ({ key: field, label: field })),
+    ...orderedFields.map((field) => ({ key: field, label: getMasterFieldLabel(field, tabKey) })),
     { key: "imageURL", label: "画像" },
   ];
 }

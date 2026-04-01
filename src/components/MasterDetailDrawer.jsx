@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { formatMasterValue } from "../utils/masterDB";
+import { formatMasterValue, getMasterRecordIdentity, getMasterTabUI } from "../utils/masterDB";
 
 function getVisibleFields(fieldDefinitions, record) {
   const seen = new Set();
@@ -28,6 +28,7 @@ export default function MasterDetailDrawer({
   onClose,
   onSave,
   onUploadImage,
+  tabKey = "masterDB",
 }) {
   const modalRef = useRef(null);
   const inputRef = useRef(null);
@@ -63,9 +64,17 @@ export default function MasterDetailDrawer({
 
   if (!open || !record) return null;
 
-  const partNo = record["品番"] || record["品名"] || record["材料品番"] || "Master Record";
-  const serialNo = record["背番号"];
-  const title = serialNo ? `${partNo} - ${serialNo}` : partNo;
+  const tabUI = getMasterTabUI(tabKey);
+  const identity = getMasterRecordIdentity(record, tabKey);
+  const title = tabKey === "masterDB"
+    ? (() => {
+        const partNo = record["品番"] || record["品名"] || record["材料品番"] || tabUI.recordLabel;
+        const serialNo = record["背番号"];
+        return serialNo ? `${partNo} - ${serialNo}` : partNo;
+      })()
+    : identity.subtitle
+      ? `${identity.title} - ${identity.subtitle}`
+      : identity.title;
   const visibleFields = getVisibleFields(fieldDefinitions, record);
 
   return (
@@ -77,7 +86,7 @@ export default function MasterDetailDrawer({
           <div className="border-b border-outline-variant/20 px-5 py-4">
             <div className="flex items-center justify-between gap-4">
               <div>
-                <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-outline">Master Record</div>
+                <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-outline">{tabUI.recordLabel}</div>
                 <h3 className="text-base font-bold text-on-surface">{title}</h3>
               </div>
               <button

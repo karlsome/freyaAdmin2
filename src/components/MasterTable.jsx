@@ -1,13 +1,17 @@
 import DataTable from "./DataTable";
 import { MASTER_PAGE_SIZE_OPTIONS, formatMasterValue } from "../utils/masterDB";
 
-const EMPHASIS_COLUMNS = new Set(["品番", "品名", "材料品番", "材料背番号", "材料"]);
+const EMPHASIS_COLUMNS = new Set(["品番", "品名", "材料品番", "材料背番号", "材料", "ラベル品番", "原材料品番"]);
 
 function getColumnWidth(columnKey) {
   const upperKey = String(columnKey || "").toUpperCase();
 
   if (columnKey === "imageURL") return 112;
   if (upperKey.includes("CONFIG") || upperKey.includes("BOARD") || upperKey.includes("DATA")) return 280;
+  if (columnKey === "ラベル品番" || columnKey === "原材料品番") return 220;
+  if (columnKey === "仕様") return 220;
+  if (columnKey === "ロール温度") return 144;
+  if (columnKey === "NMOJI_ユーザー") return 168;
   if (upperKey.includes("LEADTIME")) return 140;
   if (upperKey.includes("MOQ")) return 120;
   if (EMPHASIS_COLUMNS.has(columnKey)) return 220;

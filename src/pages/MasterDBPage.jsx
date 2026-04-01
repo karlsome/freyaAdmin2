@@ -30,6 +30,8 @@ import {
   decodeMasterCsvBuffer,
   extractRecordId,
   getAuthUser,
+  getMasterTabMeta,
+  getMasterTabUI,
   getMasterTableColumns,
 } from "../utils/masterDB";
 
@@ -104,8 +106,10 @@ export default function MasterDBPage() {
   const requestIdRef = useRef(0);
   const distinctCacheRef = useRef(new Map());
 
-  const fieldDefinitions = buildMasterFieldDefinitions(schemaFields, records);
-  const columns = getMasterTableColumns(records, schemaFields);
+  const activeTabMeta = getMasterTabMeta(activeTab);
+  const activeTabUI = getMasterTabUI(activeTab);
+  const fieldDefinitions = buildMasterFieldDefinitions(schemaFields, records, activeTab);
+  const columns = getMasterTableColumns(records, schemaFields, activeTab);
   const batchEditEnabled = Object.keys(advancedQuery).length > 0 && stats.filteredCount > 0;
 
   useEffect(() => {
@@ -156,7 +160,7 @@ export default function MasterDBPage() {
           simpleFilters,
           advancedFilters: advancedQuery,
           searchTags,
-          searchFields: buildSearchFields(buildMasterFieldDefinitions(schemaFields)),
+          searchFields: buildSearchFields(buildMasterFieldDefinitions(schemaFields, [], activeTab)),
           searchLogicMode,
         });
 
@@ -212,14 +216,18 @@ export default function MasterDBPage() {
     setPage(1);
     setPageSize(25);
     setSelectedRecord(null);
+    setAddModalOpen(false);
     setBatchModalOpen(false);
     setBatchRecordIds([]);
+    setCsvFileName("");
+    setCsvRows([]);
     distinctCacheRef.current.clear();
   }
 
   function handleTabSelect(tab) {
     if (!tab.ready) {
-      setFlash({ type: "warning", message: `${tab.label} is queued for the next migration pass. 内装品 DB is the only live tab right now.` });
+      const liveTabs = MASTER_TABS.filter((item) => item.ready).map((item) => item.label).join(" / ");
+      setFlash({ type: "warning", message: `${tab.label} is queued for the next migration pass. Live tabs: ${liveTabs}.` });
       return;
     }
 
@@ -331,7 +339,7 @@ export default function MasterDBPage() {
 
   async function handleCsvImport() {
     if (!csvRows.length) return;
-    if (!window.confirm(`Insert ${csvRows.length} CSV records into ${activeTab}?`)) return;
+    if (!window.confirm(`Insert ${csvRows.length} CSV records into ${activeTabMeta.label}?`)) return;
 
     setCsvImporting(true);
     const authUser = getAuthUser();
@@ -582,6 +590,8 @@ export default function MasterDBPage() {
         onClearAdvancedFilters={handleClearAdvancedFilters}
         onOpenBatchEdit={handleOpenBatchEdit}
         loadDistinctOptions={loadDistinctOptions}
+        processLabel={activeTabUI.processFilterLabel}
+        processAllLabel={activeTabUI.processAllLabel}
       />
 
       <MasterStatsStrip stats={stats} />
@@ -613,6 +623,7 @@ export default function MasterDBPage() {
           key={extractRecordId(selectedRecord) || "master-detail"}
           open={!!selectedRecord}
           record={selectedRecord}
+          tabKey={activeTab}
           fieldDefinitions={fieldDefinitions}
           saving={drawerSaving}
           uploading={drawerUploading}
@@ -626,6 +637,8 @@ export default function MasterDBPage() {
         <MasterRecordModal
           open={addModalOpen}
           fieldDefinitions={fieldDefinitions}
+          tabLabel={activeTabMeta.label}
+          recordLabel={activeTabUI.recordLabel}
           submitting={addSubmitting}
           onClose={() => setAddModalOpen(false)}
           onSubmit={handleCreateRecord}
@@ -637,6 +650,7 @@ export default function MasterDBPage() {
           open={batchModalOpen}
           fieldDefinitions={fieldDefinitions}
           previewRecords={records}
+          tabKey={activeTab}
           totalCount={stats.filteredCount}
           submitting={batchSubmitting}
           onClose={() => setBatchModalOpen(false)}

@@ -1,17 +1,16 @@
 import { useMemo, useState } from "react";
-import { formatMasterValue } from "../utils/masterDB";
+import { formatMasterValue, getMasterPreviewFields, getMasterRecordIdentity, getMasterTabUI } from "../utils/masterDB";
 
-function PreviewCard({ record, changes }) {
-  const title = record["品番"] || record["品名"] || record["材料品番"] || "Record";
-  const subtitle = [record["モデル"], record["背番号"]].filter(Boolean).join(" / ");
+function PreviewCard({ record, changes, previewFields, tabKey }) {
+  const identity = getMasterRecordIdentity(record, tabKey);
   const changedFields = Object.entries(changes);
 
   return (
     <div className="rounded-xl border border-outline-variant/20 bg-surface p-4 shadow-sm">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h4 className="text-base font-black text-on-surface">{title}</h4>
-          <p className="mt-1 text-xs text-on-surface-variant">{subtitle || "No secondary identifier"}</p>
+          <h4 className="text-base font-black text-on-surface">{identity.title}</h4>
+          <p className="mt-1 text-xs text-on-surface-variant">{identity.subtitle || "No secondary identifier"}</p>
         </div>
         <span className="rounded-full bg-primary/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.18em] text-primary">
           Preview
@@ -34,9 +33,9 @@ function PreviewCard({ record, changes }) {
             </div>
           </div>
         )) : (
-          ["品番", "品名", "モデル", "背番号", "加工設備", "工場"].map((field) => (
+          previewFields.map(({ field, label }) => (
             <div key={field} className="grid grid-cols-[120px,minmax(0,1fr)] gap-3 text-sm">
-              <div className="font-bold text-on-surface-variant">{field}</div>
+              <div className="font-bold text-on-surface-variant">{label}</div>
               <div className="text-on-surface">{formatMasterValue(record[field])}</div>
             </div>
           ))
@@ -55,11 +54,14 @@ export default function MasterBatchEditModal({
   onClose,
   onSubmit,
   loadDistinctOptions,
+  tabKey = "masterDB",
 }) {
+  const tabUI = getMasterTabUI(tabKey);
   const fields = useMemo(
     () => fieldDefinitions.filter((field) => field.field !== "imageURL"),
     [fieldDefinitions]
   );
+  const previewFields = useMemo(() => getMasterPreviewFields(tabKey), [tabKey]);
   const [selectedField, setSelectedField] = useState("");
   const [draftValue, setDraftValue] = useState("");
   const [changes, setChanges] = useState({});
@@ -100,7 +102,7 @@ export default function MasterBatchEditModal({
             <div className="flex items-start justify-between gap-4">
               <div>
                 <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-outline">Batch Edit</div>
-                <h3 className="mt-2 text-2xl font-black text-on-surface">Update {totalCount} filtered records</h3>
+                <h3 className="mt-2 text-2xl font-black text-on-surface">Update {totalCount} filtered {tabUI.recordLabel.toLowerCase()}s</h3>
                 <p className="mt-1 text-sm text-on-surface-variant">Choose one field at a time, build a change set, then apply it across every record that matched the current advanced filter query.</p>
               </div>
 
@@ -248,7 +250,13 @@ export default function MasterBatchEditModal({
 
               <div className="space-y-4">
                 {previewRecords.slice(0, 5).map((record, index) => (
-                  <PreviewCard key={`${record._id?.$oid || record._id || index}`} record={record} changes={changes} />
+                  <PreviewCard
+                    key={`${record._id?.$oid || record._id || index}`}
+                    record={record}
+                    changes={changes}
+                    previewFields={previewFields}
+                    tabKey={tabKey}
+                  />
                 ))}
               </div>
             </div>

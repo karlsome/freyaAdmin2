@@ -13,6 +13,8 @@ export default function MasterRecordModal({
   submitting,
   onClose,
   onSubmit,
+  tabLabel = "Master DB",
+  recordLabel = "Master Record",
 }) {
   const editableFields = useMemo(
     () => fieldDefinitions.filter((field) => field.field !== "imageURL"),
@@ -33,9 +35,9 @@ export default function MasterRecordModal({
           <div className="border-b border-outline-variant/20 px-6 py-5">
             <div className="flex items-start justify-between gap-4">
               <div>
-                <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-outline">Create Master Record</div>
-                <h3 className="mt-2 text-2xl font-black text-on-surface">Add New 内装品 DB Record</h3>
-                <p className="mt-1 text-sm text-on-surface-variant">Build a new master entry with the full dynamic field set from the current schema.</p>
+                <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-outline">Create {recordLabel}</div>
+                <h3 className="mt-2 text-2xl font-black text-on-surface">Add New {tabLabel} Record</h3>
+                <p className="mt-1 text-sm text-on-surface-variant">Build a new entry with the full dynamic field set from the current schema.</p>
               </div>
 
               <button
