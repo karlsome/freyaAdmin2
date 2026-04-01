@@ -23,6 +23,10 @@ const navItems = [
 
 import { useEffect, useState } from "react";
 
+function hasActiveChild(item, activePage) {
+  return Boolean(item.children?.some((child) => isActiveFor(child, activePage)));
+}
+
 function isActiveFor(item, activePage) {
   if (activePage === item.page) return true;
   if (
@@ -36,23 +40,7 @@ function isActiveFor(item, activePage) {
 }
 
 export default function Sidebar({ activePage, mobileOpen = false, onClose, onNavigate }) {
-  const [openItems, setOpenItems] = useState(() => {
-    const open = new Set();
-    navItems.forEach((item) => {
-      if (item.children && isActiveFor(item, activePage)) open.add(item.page);
-    });
-    return open;
-  });
-
-  useEffect(() => {
-    setOpenItems((prev) => {
-      const next = new Set(prev);
-      navItems.forEach((item) => {
-        if (item.children && isActiveFor(item, activePage)) next.add(item.page);
-      });
-      return next;
-    });
-  }, [activePage]);
+  const [openItems, setOpenItems] = useState(() => new Set());
 
   useEffect(() => {
     if (!mobileOpen) return undefined;
@@ -104,64 +92,71 @@ export default function Sidebar({ activePage, mobileOpen = false, onClose, onNav
         <nav className="flex-1 space-y-0.5 overflow-y-auto scrollbar-hide px-3">
           {navItems.map((item) => {
             const isActive = isActiveFor(item, activePage);
-            const isOpen = openItems.has(item.page);
             const hasChildren = !!item.children?.length;
+            const isOpen = openItems.has(item.page) || hasActiveChild(item, activePage);
 
             return (
               <div key={item.page}>
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (hasChildren) toggleOpen(item.page);
-                    onNavigate(item.page);
-                    if (isMobile && !hasChildren) onClose?.();
-                  }}
-                  title={item.label}
-                  className={`w-full flex items-center gap-3 rounded-xl text-left transition-all duration-200 ease-in-out ${
-                    isMobile
-                      ? "px-3 py-2.5"
-                      : "min-w-[232px] px-0 py-2.5"
-                  } ${
-                    isActive
-                      ? "bg-primary/5 text-primary dark:bg-transparent dark:shadow-[0_0_15px_rgba(192,193,255,0.2)]"
-                      : "text-outline hover:bg-primary/5 hover:text-primary dark:hover:bg-white/5 dark:hover:text-on-surface"
-                  }`}
-                >
-                  <span
-                    className={`flex-shrink-0 material-symbols-outlined ${isMobile ? "" : "w-10 flex items-center justify-center"}`}
-                    style={isActive ? { fontVariationSettings: "'FILL' 1" } : {}}
+                <div className={`flex items-center ${isMobile ? "" : "min-w-[232px]"}`}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onNavigate(item.page);
+                      if (isMobile) onClose?.();
+                    }}
+                    title={item.label}
+                    className={`min-w-0 flex-1 flex items-center gap-3 rounded-xl text-left transition-all duration-200 ease-in-out ${
+                      isMobile
+                        ? "px-3 py-2.5"
+                        : "px-0 py-2.5"
+                    } ${
+                      isActive
+                        ? "bg-primary/5 text-primary dark:bg-transparent dark:shadow-[0_0_15px_rgba(192,193,255,0.2)]"
+                        : "text-outline hover:bg-primary/5 hover:text-primary dark:hover:bg-white/5 dark:hover:text-on-surface"
+                    }`}
                   >
-                    {item.icon}
-                  </span>
-                  <span className={`flex-1 whitespace-nowrap overflow-hidden ${
-                    isMobile
-                      ? isActive ? "font-semibold" : ""
-                      : `${isActive ? "font-semibold " : ""}opacity-0 transition-opacity duration-200 group-hover:opacity-100`
-                  }`}>
-                    {item.label}
-                  </span>
-                  {hasChildren && (
                     <span
-                      className={`mr-1.5 flex-shrink-0 material-symbols-outlined transition-all duration-300 ${
+                      className={`flex-shrink-0 material-symbols-outlined ${isMobile ? "" : "w-10 flex items-center justify-center"}`}
+                      style={isActive ? { fontVariationSettings: "'FILL' 1" } : {}}
+                    >
+                      {item.icon}
+                    </span>
+                    <span className={`flex-1 whitespace-nowrap overflow-hidden ${
+                      isMobile
+                        ? isActive ? "font-semibold" : ""
+                        : `${isActive ? "font-semibold " : ""}opacity-0 transition-opacity duration-200 group-hover:opacity-100`
+                    }`}>
+                      {item.label}
+                    </span>
+                    {item.badge && (
+                      <span className={`mr-2 flex-shrink-0 rounded-full bg-error px-1.5 py-0.5 text-[10px] font-bold text-on-error dark:bg-error-container dark:text-on-error-container dark:rounded-md ${
+                        isMobile ? "opacity-100" : "opacity-0 transition-opacity duration-200 group-hover:opacity-100"
+                      }`}>
+                        {item.badge}
+                      </span>
+                    )}
+                  </button>
+
+                  {hasChildren && (
+                    <button
+                      type="button"
+                      onClick={() => toggleOpen(item.page)}
+                      aria-label={`${isOpen ? "Collapse" : "Expand"} ${item.label} submenu`}
+                      title={`${isOpen ? "Collapse" : "Expand"} ${item.label}`}
+                      className={`mr-1.5 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg transition-all duration-300 hover:bg-primary/5 ${
                         isOpen ? "rotate-180" : "rotate-0"
                       } ${
                         isActive ? "text-primary" : "text-outline"
                       } ${
                         isMobile ? "opacity-100" : "opacity-0 group-hover:opacity-100"
                       }`}
-                      style={{ fontSize: 16 }}
                     >
-                      expand_more
-                    </span>
+                      <span className="material-symbols-outlined" style={{ fontSize: 16 }}>
+                        expand_more
+                      </span>
+                    </button>
                   )}
-                  {item.badge && (
-                    <span className={`mr-2 flex-shrink-0 rounded-full bg-error px-1.5 py-0.5 text-[10px] font-bold text-on-error dark:bg-error-container dark:text-on-error-container dark:rounded-md ${
-                      isMobile ? "opacity-100" : "opacity-0 transition-opacity duration-200 group-hover:opacity-100"
-                    }`}>
-                      {item.badge}
-                    </span>
-                  )}
-                </button>
+                </div>
 
                 {hasChildren && (
                   <div
