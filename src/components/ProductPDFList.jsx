@@ -1,5 +1,6 @@
 import DataTable from "./DataTable";
 import LiquidSegmentedControl from "./LiquidSegmentedControl";
+import PaginationControls from "./PaginationControls";
 import {
   PRODUCT_PDF_PAGE_SIZE_OPTIONS,
   formatProductPDFDateTime,
@@ -273,109 +274,107 @@ export default function ProductPDFList({
             </div>
           </div>
 
-          {loading ? (
-            <div className="px-5 py-12 text-center text-sm font-medium text-on-surface-variant">Loading product PDFs…</div>
-          ) : error ? (
-            <div className="px-5 py-12 text-center text-sm font-medium text-error">{error}</div>
-          ) : !items.length ? (
-            <div className="px-5 py-12 text-center text-sm text-on-surface-variant">No files found for this view.</div>
-          ) : (
-            <div className="grid gap-4 px-5 py-5 md:grid-cols-2 xl:grid-cols-3">
-              {items.map((item) => {
-                const documentId = getProductPDFItemId(item);
-                const checked = selectedIds.has(documentId);
+          <div className="relative">
+            {loading && items.length > 0 && (
+              <div className="absolute inset-0 z-10 flex items-center justify-center bg-surface/70 backdrop-blur-sm">
+                <div className="flex items-center gap-3 rounded-full bg-surface px-4 py-3 text-sm font-bold text-on-surface shadow-lg">
+                  <span className="material-symbols-outlined animate-spin" style={{ fontSize: 18 }}>progress_activity</span>
+                  Loading product PDFs…
+                </div>
+              </div>
+            )}
 
-                return (
-                  <article
-                    key={documentId}
-                    className="group relative rounded-3xl border border-outline-variant/15 bg-surface-container-low p-4 transition hover:-translate-y-0.5 hover:shadow-xl"
-                  >
-                    <div className="absolute left-4 top-4 z-10">
-                      <input
-                        type="checkbox"
-                        checked={checked}
-                        onChange={() => onToggleItemSelection(documentId)}
-                        className="h-4 w-4 rounded border-outline-variant/40"
-                      />
-                    </div>
+            {loading && !items.length ? (
+              <div className="px-5 py-12 text-center text-sm font-medium text-on-surface-variant">Loading product PDFs…</div>
+            ) : error ? (
+              <div className="px-5 py-12 text-center text-sm font-medium text-error">{error}</div>
+            ) : !items.length ? (
+              <div className="px-5 py-12 text-center text-sm text-on-surface-variant">No files found for this view.</div>
+            ) : (
+              <div className="grid gap-4 px-5 py-5 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-6" aria-busy={loading}>
+                {items.map((item) => {
+                  const documentId = getProductPDFItemId(item);
+                  const checked = selectedIds.has(documentId);
 
-                    <button
-                      type="button"
-                      onClick={() => item?.imageURL && onPreviewItem(item)}
-                      className="block w-full text-left"
+                  return (
+                    <article
+                      key={documentId}
+                      className="group relative rounded-3xl border border-outline-variant/15 bg-surface-container-low p-4 transition hover:-translate-y-0.5 hover:shadow-xl"
                     >
-                      <div className="flex h-44 items-center justify-center overflow-hidden rounded-2xl bg-surface px-4 py-4">
-                        {item?.imageURL ? (
-                          <img src={item.imageURL} alt={item.fileName} className="h-full w-full object-contain transition duration-300 group-hover:scale-[1.02]" />
-                        ) : (
-                          <span className="material-symbols-outlined text-5xl text-outline">picture_as_pdf</span>
-                        )}
+                      <div className="absolute left-4 top-4 z-10">
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={() => onToggleItemSelection(documentId)}
+                          className="h-4 w-4 rounded border-outline-variant/40"
+                        />
                       </div>
-                    </button>
 
-                    <div className="mt-4">
-                      <div className="text-sm font-bold text-on-surface">{formatProductPDFTitle(item, 6)}</div>
-                      <div className="mt-1 text-xs text-on-surface-variant">{formatProductPDFHinban(item)}</div>
-                      <div className="mt-2 truncate text-xs text-outline">{item?.fileName || "Untitled file"}</div>
-                      <div className="mt-1 text-xs text-outline">{item?.uploadedBy || "—"} · {formatProductPDFDateTime(item?.uploadedAt)}</div>
-                    </div>
-
-                    <div className="mt-4 flex flex-wrap items-center gap-2">
                       <button
                         type="button"
-                        onClick={() => onPreviewItem(item)}
-                        disabled={!item?.imageURL}
-                        className="rounded-xl border border-outline-variant/20 px-3 py-2 text-xs font-bold text-on-surface transition hover:bg-surface-container disabled:cursor-not-allowed disabled:opacity-50"
+                        onClick={() => item?.imageURL && onPreviewItem(item)}
+                        className="block w-full text-left"
                       >
-                        Preview
+                        <div className="flex h-44 items-center justify-center overflow-hidden rounded-2xl bg-surface px-4 py-4">
+                          {item?.imageURL ? (
+                            <img src={item.imageURL} alt={item.fileName} className="h-full w-full object-contain transition duration-300 group-hover:scale-[1.02]" />
+                          ) : (
+                            <span className="material-symbols-outlined text-5xl text-outline">picture_as_pdf</span>
+                          )}
+                        </div>
                       </button>
-                      {item?.pdfURL && (
-                        <a
-                          href={item.pdfURL}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="rounded-xl border border-outline-variant/20 px-3 py-2 text-xs font-bold text-on-surface transition hover:bg-surface-container"
+
+                      <div className="mt-4">
+                        <div className="text-sm font-bold text-on-surface">{formatProductPDFTitle(item, 6)}</div>
+                        <div className="mt-1 text-xs text-on-surface-variant">{formatProductPDFHinban(item)}</div>
+                        <div className="mt-2 truncate text-xs text-outline">{item?.fileName || "Untitled file"}</div>
+                        <div className="mt-1 text-xs text-outline">{item?.uploadedBy || "—"} · {formatProductPDFDateTime(item?.uploadedAt)}</div>
+                      </div>
+
+                      <div className="mt-4 flex flex-wrap items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => onPreviewItem(item)}
+                          disabled={!item?.imageURL}
+                          className="rounded-xl border border-outline-variant/20 px-3 py-2 text-xs font-bold text-on-surface transition hover:bg-surface-container disabled:cursor-not-allowed disabled:opacity-50"
                         >
-                          Open PDF
-                        </a>
-                      )}
-                      <button
-                        type="button"
-                        onClick={() => onDeleteItem(item)}
-                        className="rounded-xl bg-error/10 px-3 py-2 text-xs font-bold text-error transition hover:bg-error/15"
-                      >
-                        Delete
-                      </button>
-                    </div>
-                  </article>
-                );
-              })}
-            </div>
-          )}
+                          Preview
+                        </button>
+                        {item?.pdfURL && (
+                          <a
+                            href={item.pdfURL}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="rounded-xl border border-outline-variant/20 px-3 py-2 text-xs font-bold text-on-surface transition hover:bg-surface-container"
+                          >
+                            Open PDF
+                          </a>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => onDeleteItem(item)}
+                          className="rounded-xl bg-error/10 px-3 py-2 text-xs font-bold text-error transition hover:bg-error/15"
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </article>
+                  );
+                })}
+              </div>
+            )}
+          </div>
 
           <div className="flex flex-col gap-4 border-t border-outline-variant/20 px-5 py-4 md:flex-row md:items-center md:justify-between">
             <div className="text-sm text-on-surface-variant">{selectedCount} selected</div>
 
             {totalPages > 1 && (
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => onPageChange(page - 1)}
-                  disabled={page <= 1 || loading}
-                  className="rounded-xl border border-outline-variant/20 px-3 py-2 text-xs font-bold text-on-surface transition hover:bg-surface-container disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  Previous
-                </button>
-                <div className="rounded-xl bg-surface-container px-3 py-2 text-xs font-bold text-on-surface-variant">Page {page} / {totalPages}</div>
-                <button
-                  type="button"
-                  onClick={() => onPageChange(page + 1)}
-                  disabled={page >= totalPages || loading}
-                  className="rounded-xl border border-outline-variant/20 px-3 py-2 text-xs font-bold text-on-surface transition hover:bg-surface-container disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  Next
-                </button>
-              </div>
+              <PaginationControls
+                page={page}
+                totalPages={totalPages}
+                onPageChange={onPageChange}
+                disabled={loading}
+              />
             )}
           </div>
         </div>
