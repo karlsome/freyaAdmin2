@@ -192,19 +192,19 @@ export default function MasterTable({
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="min-w-full text-sm">
-              <thead className="bg-surface-container-low border-b border-outline-variant/20">
+            <table className="min-w-full text-xs">
+              <thead className="bg-surface-container-high/40 border-b border-outline-variant/20">
                 <tr>
                   {columns.map((column) => {
                     const active = sort.column === column.key;
                     const arrow = !active ? "" : sort.direction === 1 ? "↑" : "↓";
 
                     return (
-                      <th key={column.key} className="px-3 py-3 text-left whitespace-nowrap">
+                      <th key={column.key} className="px-3 py-2.5 text-left whitespace-nowrap">
                         <button
                           type="button"
                           onClick={() => onSort(column.key)}
-                          className="inline-flex items-center gap-2 font-bold text-on-surface-variant transition hover:text-on-surface"
+                          className="inline-flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-on-surface-variant transition hover:text-on-surface"
                         >
                           <span>{column.label}</span>
                           <span className={active ? "text-primary" : "text-outline"}>{arrow || "↕"}</span>
@@ -224,14 +224,14 @@ export default function MasterTable({
                     {columns.map((column) => {
                       if (column.key === "imageURL") {
                         return (
-                          <td key={column.key} className="px-3 py-3 whitespace-nowrap">
+                          <td key={column.key} className="px-3 py-2.5 whitespace-nowrap">
                             {record.imageURL ? (
-                              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/12 px-2.5 py-1 text-xs font-bold text-emerald-600 dark:text-emerald-300">
+                              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/12 px-2 py-0.5 text-[10px] font-bold text-emerald-600 dark:text-emerald-300">
                                 <span className="material-symbols-outlined" style={{ fontSize: 14 }}>image</span>
                                 あり
                               </span>
                             ) : (
-                              <span className="inline-flex items-center gap-1 rounded-full bg-surface-container px-2.5 py-1 text-xs font-bold text-outline">
+                              <span className="inline-flex items-center gap-1 rounded-full bg-surface-container px-2 py-0.5 text-[10px] font-bold text-outline">
                                 <span className="material-symbols-outlined" style={{ fontSize: 14 }}>image_not_supported</span>
                                 なし
                               </span>
@@ -246,7 +246,7 @@ export default function MasterTable({
                         <td
                           key={column.key}
                           className={[
-                            "px-3 py-3 align-top",
+                            "px-3 py-2.5 align-top",
                             emphasis ? "font-bold text-primary" : "text-on-surface",
                           ].join(" ")}
                         >
