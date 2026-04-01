@@ -13,12 +13,12 @@ function TagInput({ tags, onAdd, onRemove, placeholder }) {
 
   return (
     <div
-      className="min-h-[50px] cursor-text rounded-2xl border border-outline-variant/30 bg-surface px-3 py-2 transition focus-within:border-primary/40"
+      className="min-h-10 cursor-text rounded-xl border border-outline-variant/20 bg-white px-3 py-1.5 transition-colors focus-within:border-primary/40"
       onClick={(event) => event.currentTarget.querySelector("input")?.focus()}
     >
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="flex flex-wrap items-center gap-1">
         {tags.map((tag) => (
-          <span key={tag} className="inline-flex items-center gap-1 rounded-full bg-amber-400 px-3 py-1 text-xs font-bold text-amber-950 shrink-0">
+          <span key={tag} className="inline-flex items-center gap-1 rounded-full bg-amber-400 px-2 py-0.5 text-[11px] font-bold text-amber-950 shrink-0">
             {tag}
             <button type="button" onClick={() => onRemove(tag)} className="leading-none hover:text-error">×</button>
           </span>
@@ -28,7 +28,7 @@ function TagInput({ tags, onAdd, onRemove, placeholder }) {
           type="text"
           value={value}
           placeholder={tags.length ? "" : placeholder}
-          className="min-w-[140px] flex-1 bg-transparent py-1 text-sm text-on-surface outline-none placeholder:text-outline"
+          className="min-w-24 flex-1 bg-transparent text-xs text-on-surface outline-none placeholder:text-outline"
           onChange={(event) => setValue(event.target.value)}
           onKeyDown={(event) => {
             if (event.key === "Enter" || event.key === ",") {
@@ -57,7 +57,7 @@ function RowValueInput({ row, fieldDefinition, options, loading, onChange }) {
         value={row.value}
         onChange={(event) => onChange({ value: event.target.value })}
         disabled
-        className="h-11 w-full rounded-2xl border border-outline-variant/30 bg-surface px-3 text-sm text-on-surface outline-none opacity-40"
+        className="h-9 w-full rounded-xl border border-outline-variant/20 bg-white px-3 text-xs text-on-surface outline-none opacity-40"
       />
     );
   }
@@ -65,19 +65,19 @@ function RowValueInput({ row, fieldDefinition, options, loading, onChange }) {
   if (row.operator === "range") {
     const inputType = fieldDefinition.type === "number" ? "number" : "date";
     return (
-      <div className="grid gap-2 md:grid-cols-2">
+      <div className="grid gap-2 sm:grid-cols-2">
         <input
           type={inputType}
           value={row.valueFrom}
           onChange={(event) => onChange({ valueFrom: event.target.value })}
-          className="h-11 w-full rounded-2xl border border-outline-variant/30 bg-surface px-3 text-sm text-on-surface outline-none transition focus:border-primary/40"
+          className="h-9 w-full rounded-xl border border-outline-variant/20 bg-white px-3 text-xs text-on-surface outline-none transition-colors focus:border-primary/40"
           placeholder="From"
         />
         <input
           type={inputType}
           value={row.valueTo}
           onChange={(event) => onChange({ valueTo: event.target.value })}
-          className="h-11 w-full rounded-2xl border border-outline-variant/30 bg-surface px-3 text-sm text-on-surface outline-none transition focus:border-primary/40"
+          className="h-9 w-full rounded-xl border border-outline-variant/20 bg-white px-3 text-xs text-on-surface outline-none transition-colors focus:border-primary/40"
           placeholder="To"
         />
       </div>
@@ -91,7 +91,7 @@ function RowValueInput({ row, fieldDefinition, options, loading, onChange }) {
           type="text"
           value={Array.isArray(row.value) ? row.value.join(", ") : row.value}
           onChange={(event) => onChange({ value: event.target.value })}
-          className="h-11 w-full rounded-2xl border border-outline-variant/30 bg-surface px-3 text-sm text-on-surface outline-none transition focus:border-primary/40"
+          className="h-9 w-full rounded-xl border border-outline-variant/20 bg-white px-3 text-xs text-on-surface outline-none transition-colors focus:border-primary/40"
           placeholder="Comma separated values"
           list={options.length ? datalistId : undefined}
         />
@@ -120,7 +120,7 @@ function RowValueInput({ row, fieldDefinition, options, loading, onChange }) {
         type={inputType}
         value={row.value}
         onChange={(event) => onChange({ value: event.target.value })}
-        className="h-11 w-full rounded-2xl border border-outline-variant/30 bg-surface px-3 text-sm text-on-surface outline-none transition focus:border-primary/40"
+        className="h-9 w-full rounded-xl border border-outline-variant/20 bg-white px-3 text-xs text-on-surface outline-none transition-colors focus:border-primary/40"
         placeholder={loading ? "Loading known values…" : "Enter value"}
         list={options.length && inputType === "text" ? datalistId : undefined}
       />
@@ -186,13 +186,13 @@ export default function MasterFilterPanel({
 
   return (
     <div className="glass-card rounded-2xl p-5 mb-6">
-      <div className="grid items-end gap-4 lg:grid-cols-2 xl:grid-cols-6">
-        <div className="xl:col-span-1">
-          <label className="mb-2 block text-[11px] font-bold uppercase tracking-[0.18em] text-outline">Factory / 工場</label>
+      <div className="grid items-end gap-3 lg:grid-cols-2 xl:grid-cols-6">
+        <div className="xl:col-span-1 flex flex-col gap-1.5">
+          <label className="text-[10px] font-bold uppercase tracking-wider text-outline">Factory / 工場</label>
           <select
             value={simpleFilters.factory}
             onChange={(event) => onSimpleFilterChange("factory", event.target.value)}
-            className="h-11 w-full rounded-2xl border border-outline-variant/30 bg-surface px-3 text-sm text-on-surface outline-none transition focus:border-primary/40"
+            className="h-10 w-full rounded-xl border border-outline-variant/20 bg-white px-3 text-sm text-on-surface outline-none transition-colors focus:border-primary/40"
           >
             <option value="">All Factory</option>
             {filterOptions.factories.map((option) => (
@@ -201,12 +201,12 @@ export default function MasterFilterPanel({
           </select>
         </div>
 
-        <div className="xl:col-span-1">
-          <label className="mb-2 block text-[11px] font-bold uppercase tracking-[0.18em] text-outline">R/L</label>
+        <div className="xl:col-span-1 flex flex-col gap-1.5">
+          <label className="text-[10px] font-bold uppercase tracking-wider text-outline">R/L</label>
           <select
             value={simpleFilters.rl}
             onChange={(event) => onSimpleFilterChange("rl", event.target.value)}
-            className="h-11 w-full rounded-2xl border border-outline-variant/30 bg-surface px-3 text-sm text-on-surface outline-none transition focus:border-primary/40"
+            className="h-10 w-full rounded-xl border border-outline-variant/20 bg-white px-3 text-sm text-on-surface outline-none transition-colors focus:border-primary/40"
           >
             <option value="">All R/L</option>
             {filterOptions.rl.map((option) => (
@@ -215,12 +215,12 @@ export default function MasterFilterPanel({
           </select>
         </div>
 
-        <div className="xl:col-span-1">
-          <label className="mb-2 block text-[11px] font-bold uppercase tracking-[0.18em] text-outline">Color</label>
+        <div className="xl:col-span-1 flex flex-col gap-1.5">
+          <label className="text-[10px] font-bold uppercase tracking-wider text-outline">Color</label>
           <select
             value={simpleFilters.color}
             onChange={(event) => onSimpleFilterChange("color", event.target.value)}
-            className="h-11 w-full rounded-2xl border border-outline-variant/30 bg-surface px-3 text-sm text-on-surface outline-none transition focus:border-primary/40"
+            className="h-10 w-full rounded-xl border border-outline-variant/20 bg-white px-3 text-sm text-on-surface outline-none transition-colors focus:border-primary/40"
           >
             <option value="">All Color</option>
             {filterOptions.colors.map((option) => (
@@ -229,12 +229,12 @@ export default function MasterFilterPanel({
           </select>
         </div>
 
-        <div className="xl:col-span-1">
-          <label className="mb-2 block text-[11px] font-bold uppercase tracking-[0.18em] text-outline">Equipment</label>
+        <div className="xl:col-span-1 flex flex-col gap-1.5">
+          <label className="text-[10px] font-bold uppercase tracking-wider text-outline">Equipment</label>
           <select
             value={simpleFilters.process}
             onChange={(event) => onSimpleFilterChange("process", event.target.value)}
-            className="h-11 w-full rounded-2xl border border-outline-variant/30 bg-surface px-3 text-sm text-on-surface outline-none transition focus:border-primary/40"
+            className="h-10 w-full rounded-xl border border-outline-variant/20 bg-white px-3 text-sm text-on-surface outline-none transition-colors focus:border-primary/40"
           >
             <option value="">All Equipment</option>
             {filterOptions.processes.map((option) => (
@@ -243,19 +243,19 @@ export default function MasterFilterPanel({
           </select>
         </div>
 
-        <div className="lg:col-span-2 xl:col-span-2">
-          <div className="mb-2 flex items-center gap-2">
-            <label className="block text-[11px] font-bold uppercase tracking-[0.18em] text-outline">Search Tags</label>
+        <div className="lg:col-span-2 xl:col-span-2 flex flex-col gap-1.5">
+          <div className="flex items-center gap-2">
+            <label className="text-[10px] font-bold uppercase tracking-wider text-outline">Search Tags</label>
             <select
               value={searchLogicMode}
               onChange={(event) => onSearchLogicModeChange(event.target.value)}
-              className="h-7 rounded-lg border border-outline-variant/30 bg-surface px-2 text-xs font-bold text-on-surface outline-none transition focus:border-primary/40"
+              className="h-7 rounded-lg border border-outline-variant/20 bg-white px-2 text-[10px] font-bold text-on-surface outline-none transition-colors focus:border-primary/40"
             >
               <option value="OR">Match Any</option>
               <option value="AND">Match All</option>
             </select>
             {!!searchTags.length && (
-              <button type="button" onClick={onClearSearchTags} className="ml-auto text-xs font-bold uppercase tracking-[0.18em] text-error">
+              <button type="button" onClick={onClearSearchTags} className="ml-auto text-[10px] font-bold uppercase tracking-wider text-error">
                 Clear
               </button>
             )}
@@ -270,40 +270,39 @@ export default function MasterFilterPanel({
         </div>
       </div>
 
-      <div className="mt-5 rounded-xl border border-outline-variant/20 bg-surface-container-low overflow-hidden">
+      <div className="mt-4 rounded-xl border border-white/10 bg-surface-container/30 overflow-hidden">
         <button
           type="button"
           onClick={() => setAdvancedOpen((current) => !current)}
-          className="flex w-full items-center justify-between gap-3 px-5 py-4 text-left"
+          className="flex w-full items-center justify-between gap-2 px-4 py-3 text-left text-xs font-bold text-outline transition-colors hover:text-on-surface"
         >
-          <div className="flex items-center gap-3">
-            <span className="material-symbols-outlined text-primary">filter_alt</span>
-            <div className="text-sm font-black text-on-surface">Advanced Filters</div>
-          </div>
-
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1.5">
+            <span className="material-symbols-outlined text-primary" style={{ fontSize: 14 }}>filter_alt</span>
+            <span className="uppercase tracking-wider">Advanced Filters</span>
             {!!activeFilters.length && (
-              <span className="rounded-full bg-primary/12 px-2.5 py-1 text-xs font-bold text-primary">
+              <span className="rounded-full bg-primary/15 px-1.5 py-0.5 text-[9px] font-bold normal-case tracking-normal text-primary">
                 {activeFilters.length} active
               </span>
             )}
-            <span className="material-symbols-outlined text-on-surface-variant">
+          </div>
+
+          <div className="flex items-center gap-2">
+            <span className="material-symbols-outlined text-on-surface-variant" style={{ fontSize: 14 }}>
               {advancedOpen ? "keyboard_arrow_up" : "keyboard_arrow_down"}
             </span>
           </div>
         </button>
 
         {advancedOpen && (
-          <div className="border-t border-outline-variant/20 px-5 py-5">
-            <div className="space-y-4">
+          <div className="border-t border-white/10 px-4 py-4">
+            <div className="space-y-3">
               {advancedRows.map((row) => {
                 const fieldDefinition = fieldDefinitions.find((field) => field.field === row.field);
                 const operators = fieldDefinition?.operators || [];
                 const options = optionsByField[row.field] || [];
 
                 return (
-                  <div key={row.id} className="rounded-xl border border-outline-variant/20 bg-surface p-4">
-                    <div className="grid gap-3 xl:grid-cols-[minmax(0,1.1fr),220px,minmax(0,1fr),48px] xl:items-start">
+                  <div key={row.id} className="flex flex-wrap items-center gap-2">
                       <select
                         value={row.field}
                         onChange={(event) => {
@@ -317,7 +316,7 @@ export default function MasterFilterPanel({
                             valueTo: "",
                           });
                         }}
-                        className="h-11 rounded-2xl border border-outline-variant/30 bg-surface-container px-3 text-sm text-on-surface outline-none transition focus:border-primary/40"
+                        className="h-9 min-w-[180px] flex-1 rounded-xl border border-outline-variant/20 bg-white px-3 text-xs text-on-surface outline-none transition-colors focus:border-primary/40"
                       >
                         <option value="">Select field</option>
                         {fieldGroups.map((group) => (
@@ -338,7 +337,7 @@ export default function MasterFilterPanel({
                           valueTo: "",
                         })}
                         disabled={!fieldDefinition}
-                        className="h-11 rounded-2xl border border-outline-variant/30 bg-surface-container px-3 text-sm text-on-surface outline-none transition focus:border-primary/40 disabled:opacity-40"
+                        className="h-9 min-w-[150px] flex-1 rounded-xl border border-outline-variant/20 bg-white px-3 text-xs text-on-surface outline-none transition-colors focus:border-primary/40 disabled:opacity-40 disabled:cursor-not-allowed"
                       >
                         <option value="">Select operator</option>
                         {operators.map((operator) => (
@@ -346,7 +345,7 @@ export default function MasterFilterPanel({
                         ))}
                       </select>
 
-                      <div>
+                      <div className="min-w-[200px] flex-[2]">
                         <RowValueInput
                           row={row}
                           fieldDefinition={fieldDefinition}
@@ -359,11 +358,10 @@ export default function MasterFilterPanel({
                       <button
                         type="button"
                         onClick={() => onRemoveAdvancedRow(row.id)}
-                        className="flex h-11 w-11 items-center justify-center rounded-2xl bg-error/10 text-error transition hover:bg-error/15"
+                        className="flex-shrink-0 rounded-xl p-2 text-outline transition-colors hover:bg-error/10 hover:text-error"
                       >
-                        <span className="material-symbols-outlined" style={{ fontSize: 18 }}>delete</span>
+                        <span className="material-symbols-outlined" style={{ fontSize: 16 }}>delete</span>
                       </button>
-                    </div>
                   </div>
                 );
               })}
@@ -371,25 +369,25 @@ export default function MasterFilterPanel({
               <button
                 type="button"
                 onClick={onAddAdvancedRow}
-                className="flex items-center gap-2 rounded-xl border border-dashed border-primary/35 px-4 py-2 text-xs font-bold text-primary transition hover:bg-primary/5"
+                className="mt-1 flex items-center gap-1.5 rounded-xl border border-dashed border-white/20 px-3 py-1.5 text-xs font-bold text-outline transition-colors hover:border-primary/40 hover:text-on-surface"
               >
-                <span className="material-symbols-outlined" style={{ fontSize: 18 }}>add</span>
+                <span className="material-symbols-outlined" style={{ fontSize: 14 }}>add</span>
                 Add Filter Row
               </button>
 
               {!!activeFilters.length && (
-                  <div className="rounded-xl border border-outline-variant/20 bg-surface px-4 py-4">
+                <div className="rounded-xl border border-white/10 bg-surface-container/40 px-4 py-3">
                   <div className="flex items-center justify-between gap-3">
                     <div>
-                      <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-outline">Active Filters</div>
-                      <div className="mt-1 text-sm text-on-surface-variant">Current advanced query conditions before execution.</div>
+                      <div className="text-[10px] font-bold uppercase tracking-wider text-outline">Active Filters</div>
+                      <div className="mt-1 text-xs text-on-surface-variant">Current advanced query conditions before execution.</div>
                     </div>
-                    <button type="button" onClick={onClearAdvancedFilters} className="text-xs font-bold uppercase tracking-[0.18em] text-error">
+                    <button type="button" onClick={onClearAdvancedFilters} className="text-[10px] font-bold uppercase tracking-wider text-error">
                       Clear All
                     </button>
                   </div>
 
-                  <div className="mt-4 flex flex-wrap gap-2">
+                  <div className="mt-3 flex flex-wrap gap-1.5">
                     {activeFilters.map((filter) => (
                       <span key={filter.id} className="inline-flex items-center gap-2 rounded-full bg-amber-400 px-3 py-1.5 text-xs font-bold text-amber-950">
                         <span>{filter.label}</span>
@@ -402,22 +400,22 @@ export default function MasterFilterPanel({
                 </div>
               )}
 
-              <div className="flex flex-wrap items-center gap-3 border-t border-outline-variant/20 pt-4">
+              <div className="flex flex-wrap items-center gap-3 border-t border-white/10 pt-4">
                 <button
                   type="button"
                   onClick={onApplyAdvancedFilters}
-                  className="flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-xs font-bold text-on-primary transition hover:opacity-90"
+                  className="flex items-center gap-2 rounded-xl kinetic-gradient px-5 py-2.5 text-sm font-bold text-white shadow-[0_0_20px_rgba(99,102,241,0.25)] transition-opacity hover:opacity-90"
                 >
-                  <span className="material-symbols-outlined" style={{ fontSize: 18 }}>filter_alt</span>
+                  <span className="material-symbols-outlined" style={{ fontSize: 16 }}>filter_alt</span>
                   Apply Advanced Filters
                 </button>
 
                 <button
                   type="button"
                   onClick={onClearAdvancedFilters}
-                  className="flex items-center gap-2 rounded-xl border border-outline-variant/20 px-4 py-2 text-xs font-bold text-on-surface transition hover:bg-surface-container"
+                  className="flex items-center gap-2 rounded-xl border border-white/10 glass-card px-5 py-2.5 text-sm font-bold text-on-surface transition-all hover:border-primary/30"
                 >
-                  <span className="material-symbols-outlined" style={{ fontSize: 18 }}>refresh</span>
+                  <span className="material-symbols-outlined" style={{ fontSize: 16 }}>refresh</span>
                   Reset Advanced Filters
                 </button>
 
@@ -425,9 +423,9 @@ export default function MasterFilterPanel({
                   <button
                     type="button"
                     onClick={onOpenBatchEdit}
-                    className="flex items-center gap-2 rounded-xl bg-amber-500 px-4 py-2 text-xs font-bold text-white transition hover:bg-amber-400"
+                    className="flex items-center gap-2 rounded-xl border border-amber-400/30 bg-amber-400/10 px-5 py-2.5 text-sm font-bold text-amber-700 transition-colors hover:bg-amber-400/15"
                   >
-                    <span className="material-symbols-outlined" style={{ fontSize: 18 }}>edit_square</span>
+                    <span className="material-symbols-outlined" style={{ fontSize: 16 }}>edit_square</span>
                     Batch Edit {batchCount} Records
                   </button>
                 )}

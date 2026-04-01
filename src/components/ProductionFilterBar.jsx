@@ -51,7 +51,7 @@ function TagInput({ tags, onAdd, onRemove, placeholder }) {
   return (
     <div
       className="min-h-10 flex flex-wrap gap-1 items-center px-3 py-1.5 rounded-xl
-                 bg-surface-container border border-white/10 focus-within:border-primary/40 transition-colors cursor-text"
+             bg-white border border-outline-variant/20 focus-within:border-primary/40 transition-colors cursor-text"
       onClick={(e) => e.currentTarget.querySelector("input")?.focus()}
     >
       {tags.map((t) => (
@@ -145,7 +145,7 @@ export default function ProductionFilterBar({
             type="date"
             value={dateFrom}
             onChange={(e) => setDateFrom(e.target.value)}
-            className="h-10 px-3 rounded-xl bg-surface-container border border-white/10 text-sm text-on-surface outline-none focus:border-primary/40 transition-colors"
+            className="h-10 px-3 rounded-xl bg-white border border-outline-variant/20 text-sm text-on-surface outline-none focus:border-primary/40 transition-colors"
           />
         </div>
         <div className="flex flex-col gap-1.5">
@@ -154,7 +154,7 @@ export default function ProductionFilterBar({
             type="date"
             value={dateTo}
             onChange={(e) => setDateTo(e.target.value)}
-            className="h-10 px-3 rounded-xl bg-surface-container border border-white/10 text-sm text-on-surface outline-none focus:border-primary/40 transition-colors"
+            className="h-10 px-3 rounded-xl bg-white border border-outline-variant/20 text-sm text-on-surface outline-none focus:border-primary/40 transition-colors"
           />
         </div>
         <div className="flex flex-col gap-1.5">
@@ -212,7 +212,7 @@ export default function ProductionFilterBar({
                 <select
                   value={row.field}
                   onChange={(e) => updateRow(row.id, { field: e.target.value })}
-                  className="h-9 px-3 rounded-xl bg-surface-container border border-white/10 text-xs text-on-surface
+                  className="h-9 px-3 rounded-xl bg-white border border-outline-variant/20 text-xs text-on-surface
                              outline-none focus:border-primary/40 transition-colors flex-1 min-w-[160px]"
                 >
                   <option value="">Select Field</option>
@@ -230,7 +230,7 @@ export default function ProductionFilterBar({
                   value={row.operator}
                   onChange={(e) => updateRow(row.id, { operator: e.target.value })}
                   disabled={!row.field}
-                  className="h-9 px-3 rounded-xl bg-surface-container border border-white/10 text-xs text-on-surface
+                  className="h-9 px-3 rounded-xl bg-white border border-outline-variant/20 text-xs text-on-surface
                              outline-none focus:border-primary/40 transition-colors flex-1 min-w-[140px]
                              disabled:opacity-40 disabled:cursor-not-allowed"
                 >
@@ -245,7 +245,7 @@ export default function ProductionFilterBar({
                   <select
                     value={row.value}
                     onChange={(e) => updateRow(row.id, { value: e.target.value })}
-                    className="h-9 px-3 rounded-xl bg-surface-container border border-white/10 text-xs text-on-surface
+                    className="h-9 px-3 rounded-xl bg-white border border-outline-variant/20 text-xs text-on-surface
                                outline-none focus:border-primary/40 transition-colors flex-[2] min-w-[160px]"
                   >
                     <option value="">Select {schemaDef?.label ?? row.field}...</option>
@@ -260,7 +260,7 @@ export default function ProductionFilterBar({
                     onChange={(e) => updateRow(row.id, { value: e.target.value })}
                     disabled={!row.operator}
                     placeholder={enumLoading ? "Loading options…" : "Enter Value"}
-                    className="h-9 px-3 rounded-xl bg-surface-container border border-white/10 text-xs text-on-surface
+                    className="h-9 px-3 rounded-xl bg-white border border-outline-variant/20 text-xs text-on-surface
                                placeholder:text-outline outline-none focus:border-primary/40 transition-colors flex-[2] min-w-[160px]
                                disabled:opacity-40 disabled:cursor-not-allowed"
                   />
