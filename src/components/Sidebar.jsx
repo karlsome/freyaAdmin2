@@ -2,6 +2,7 @@ const navItems = [
   { icon: "dashboard",               label: "Dashboard",           page: "dashboard" },
   { icon: "factory",                  label: "Factories",           page: "factories",
     children: [
+      { icon: "overview",            label: "Overview",            page: "factory/overview" },
       { icon: "sensors",             label: "Sensors",             page: "sensors"   },
     ]
   },

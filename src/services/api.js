@@ -320,6 +320,17 @@ const PROCESSES = [
   { name: "Slit",  collection: "slitDB"   },
 ];
 
+function _hasFactoryScope(factory) {
+  return Boolean(factory && factory !== "__all__");
+}
+
+function _averageMetric(values, digits = 1) {
+  if (!values.length) return null;
+  const total = values.reduce((sum, value) => sum + value, 0);
+  const factor = 10 ** digits;
+  return Math.round((total / values.length) * factor) / factor;
+}
+
 // Maps process short name → collection (exported for useRecordModal)
 export const PROC_TO_COLLECTION = {
   Kensa: "kensaDB", Press: "pressDB", SRS: "SRSDB", Slit: "slitDB",
@@ -353,9 +364,10 @@ const _NUMBER_FIELDS = new Set(["Total", "Total_NG", "Process_Quantity", "Cycle_
  */
 export async function fetchDistinctValues(factory, field) {
   const proj = { [field]: 1, _id: 0 };
+  const factoryQuery = _hasFactoryScope(factory) ? { 工場: factory } : {};
   const settled = await Promise.allSettled(
     PROCESSES.map((p) =>
-      query("submittedDB", p.collection, { 工場: factory }, { projection: proj, limit: 10000 })
+      query("submittedDB", p.collection, factoryQuery, { projection: proj, limit: 10000 })
     )
   );
   const flat = settled.flatMap((r) =>
@@ -366,9 +378,9 @@ export async function fetchDistinctValues(factory, field) {
 
 function _buildProdQuery(factory, start, end, partNumbers, serialNumbers, advancedFilters = []) {
   const q = {
-    工場: factory,
     Date: { $gte: start, $lte: end },
   };
+  if (_hasFactoryScope(factory)) q["工場"] = factory;
   if (partNumbers.length > 0) q["品番"] = { $in: partNumbers };
   if (serialNumbers.length > 0) q["背番号"] = { $in: serialNumbers };
   for (const { field, operator, value } of advancedFilters) {
@@ -441,6 +453,91 @@ export async function fetchProductionByPeriod(factory, from, to, partNumbers = [
   }
   const data = await _fetchRange(factory, from, to, partNumbers, serialNumbers, advancedFilters);
   return { isSingleDay: false, sections: { Period: data } };
+}
+
+export async function fetchCombinedSensorData(date) {
+  const key = `sensor_all_${date}`;
+  const cached = _getCached(key, SENSOR_TTL);
+  if (cached) return cached;
+
+  const empty = {
+    sensors: [],
+    highestTemp: null,
+    averageHumidity: null,
+    wbgt: null,
+    sensorCount: 0,
+    hasData: false,
+    factoryCount: 0,
+    activeFactoryCount: 0,
+  };
+
+  try {
+    const factories = await fetchMasterFactories();
+    const settled = await Promise.allSettled(factories.map((factory) => fetchSensorData(factory, date)));
+    const summaries = settled
+      .filter((result) => result.status === "fulfilled")
+      .map((result) => result.value);
+
+    const active = summaries.filter((item) => item?.hasData);
+    const highestTemps = active.map((item) => item.highestTemp).filter((value) => value !== null);
+    const humidities = active.map((item) => item.averageHumidity).filter((value) => value !== null);
+    const wbgtValues = active.map((item) => item.wbgt).filter((value) => value !== null);
+
+    const result = {
+      sensors: active.flatMap((item) => item?.sensors || []),
+      highestTemp: highestTemps.length ? Math.max(...highestTemps) : null,
+      averageHumidity: _averageMetric(humidities, 1),
+      wbgt: wbgtValues.length ? Math.max(...wbgtValues) : null,
+      sensorCount: active.reduce((sum, item) => sum + (Number(item?.sensorCount) || 0), 0),
+      hasData: active.length > 0,
+      factoryCount: factories.length,
+      activeFactoryCount: active.length,
+    };
+
+    _setCache(key, result);
+    return result;
+  } catch {
+    return empty;
+  }
+}
+
+export async function fetchCombinedEnvironmentalData() {
+  const key = "env_all";
+  const cached = _getCached(key, ENV_TTL);
+  if (cached) return cached;
+
+  try {
+    const factories = await fetchMasterFactories();
+    const settled = await Promise.allSettled(factories.map((factory) => fetchEnvironmentalData(factory)));
+    const snapshots = settled
+      .filter((result) => result.status === "fulfilled")
+      .map((result) => result.value)
+      .filter(Boolean);
+
+    if (!snapshots.length) {
+      const fallback = { ..._defaultEnv(), coordinateSource: "combined" };
+      _setCache(key, fallback);
+      return fallback;
+    }
+
+    const temperatures = snapshots.map((item) => item.temperature).filter((value) => value !== null && value !== undefined);
+    const humidities = snapshots.map((item) => item.humidity).filter((value) => value !== null && value !== undefined);
+    const co2Values = snapshots.map((item) => item.co2).filter((value) => value !== null && value !== undefined);
+
+    const result = {
+      temperature: _averageMetric(temperatures, 1),
+      humidity: _averageMetric(humidities, 0),
+      co2: _averageMetric(co2Values, 0),
+      timestamp: Date.now(),
+      isDefault: snapshots.every((item) => item.isDefault),
+      coordinateSource: "combined",
+    };
+
+    _setCache(key, result);
+    return result;
+  } catch {
+    return { ..._defaultEnv(), coordinateSource: "combined" };
+  }
 }
 
 // ─── Manufacturing lot lookup ──────────────────────────────────────────────────

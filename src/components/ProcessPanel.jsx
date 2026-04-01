@@ -1,5 +1,6 @@
 //This component displays a paginated, sortable, and searchable table of production records for a specific process (Kensa, Press, SRS, or Slit). It also includes a summary section that aggregates data by part number and worker ID. The component is designed to be reusable for different processes by passing the appropriate props.
 import { useState, useEffect, useRef } from "react";
+import PaginationControls from "./PaginationControls";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const ITEMS_PER_PAGE = 25;
@@ -41,44 +42,12 @@ function groupSummary(rows) {
   return Array.from(map.values());
 }
 
-// ─── Pagination ───────────────────────────────────────────────────────────────
-function Pagination({ total, page, onPage }) {
-  const totalPages = Math.ceil(total / ITEMS_PER_PAGE);
-  if (totalPages <= 1) return null;
-  const start = (page - 1) * ITEMS_PER_PAGE + 1;
-  const end   = Math.min(page * ITEMS_PER_PAGE, total);
-  const rangeStart = Math.max(1, page - 2);
-  const pages = Array.from({ length: Math.min(5, totalPages - rangeStart + 1) }, (_, i) => rangeStart + i);
-
-  return (
-    <div className="flex items-center justify-between px-5 py-3 border-t border-white/10">
-      <span className="text-[11px] text-outline">{start}–{end} of {total}</span>
-      <div className="flex gap-1">
-        <button disabled={page === 1} onClick={() => onPage(page - 1)}
-          className="px-2.5 py-1 rounded-lg text-xs text-on-surface-variant hover:bg-surface-container disabled:opacity-30 disabled:cursor-not-allowed transition-colors">
-          前へ
-        </button>
-        {pages.map((p) => (
-          <button key={p} onClick={() => onPage(p)}
-            className={`w-7 h-7 rounded-lg text-xs font-bold transition-colors ${
-              p === page ? "kinetic-gradient text-white shadow-sm" : "hover:bg-surface-container text-on-surface-variant"
-            }`}>{p}</button>
-        ))}
-        <button disabled={page === totalPages} onClick={() => onPage(page + 1)}
-          className="px-2.5 py-1 rounded-lg text-xs text-on-surface-variant hover:bg-surface-container disabled:opacity-30 disabled:cursor-not-allowed transition-colors">
-          次へ
-        </button>
-      </div>
-    </div>
-  );
-}
-
 // ─── ProcessPanel ─────────────────────────────────────────────────────────────
 // Props:
 //   processName — "Kensa" | "Press" | "SRS" | "Slit"
 //   rows        — array of raw production records from the matching DB
 //   onRowClick  — callback(record, processName) when a row is clicked
-export default function ProcessPanel({ processName, rows, onRowClick }) {
+export default function ProcessPanel({ processName, rows, onRowClick, showFactoryColumn = false }) {
   const accent = PROCESS_ACCENT[processName] ?? PROCESS_ACCENT.Kensa;
   const [sort, setSort]               = useState({ col: null, dir: 1 });
   const [page, setPage]               = useState(1);
@@ -98,6 +67,7 @@ export default function ProcessPanel({ processName, rows, onRowClick }) {
     const s = search.toLowerCase();
     return (r["品番"]?.toLowerCase().includes(s)) ||
            (r["背番号"]?.toLowerCase().includes(s)) ||
+          (r["工場"]?.toLowerCase().includes(s)) ||
            (r.Worker_Name?.toLowerCase().includes(s));
   });
 
@@ -122,9 +92,12 @@ export default function ProcessPanel({ processName, rows, onRowClick }) {
   });
 
   const totalItems = sorted.length;
+  const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE);
   const pageRows   = sorted.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE);
   const summary    = groupSummary(sorted);
   const arrow = (col) => sort.col === col ? (sort.dir > 0 ? " ↑" : " ↓") : "";
+  const pageStart = totalItems ? (page - 1) * ITEMS_PER_PAGE + 1 : 0;
+  const pageEnd = Math.min(page * ITEMS_PER_PAGE, totalItems);
 
   const TH = ({ col, label, right }) => (
     <th
@@ -177,6 +150,7 @@ export default function ProcessPanel({ processName, rows, onRowClick }) {
             <tr>
               <TH col="品番"             label="品番" />
               <TH col="背番号"           label="背番号" />
+              {showFactoryColumn && <TH col="工場"     label="工場" />}
               <TH col="Worker_Name"      label="作業者" />
               <TH col="Date"             label="日付" />
               <TH col="Process_Quantity" label="Total"   right />
@@ -188,7 +162,7 @@ export default function ProcessPanel({ processName, rows, onRowClick }) {
           <tbody className="divide-y divide-white/5">
             {pageRows.length === 0 ? (
               <tr>
-                <td colSpan={8} className="px-5 py-10 text-center text-outline text-xs">
+                <td colSpan={showFactoryColumn ? 9 : 8} className="px-5 py-10 text-center text-outline text-xs">
                   {search ? "No results match your search" : "No data available"}
                 </td>
               </tr>
@@ -205,6 +179,7 @@ export default function ProcessPanel({ processName, rows, onRowClick }) {
                 >
                   <td className="px-4 py-2.5 font-bold text-on-surface">{r["品番"] ?? "—"}</td>
                   <td className="px-4 py-2.5 text-on-surface-variant">{r["背番号"] ?? "—"}</td>
+                  {showFactoryColumn && <td className="px-4 py-2.5 text-on-surface-variant whitespace-nowrap">{r["工場"] ?? "—"}</td>}
                   <td className="px-4 py-2.5 text-on-surface-variant">{r.Worker_Name ?? "—"}</td>
                   <td className="px-4 py-2.5 text-outline whitespace-nowrap">{r.Date ?? "—"}</td>
                   <td className="px-4 py-2.5 text-right font-bold text-on-surface">{qty.toLocaleString()}</td>
@@ -224,7 +199,18 @@ export default function ProcessPanel({ processName, rows, onRowClick }) {
         </table>
       </div>
 
-      <Pagination total={totalItems} page={page} onPage={setPage} />
+      {totalPages > 1 && (
+        <div className="flex flex-col gap-4 border-t border-outline-variant/20 px-5 py-4 md:flex-row md:items-center md:justify-between">
+          <span className="text-sm text-on-surface-variant">{totalItems} records, showing {pageStart}-{pageEnd}</span>
+          <PaginationControls
+            page={page}
+            totalPages={totalPages}
+            onPageChange={setPage}
+            previousLabel="前へ"
+            nextLabel="次へ"
+          />
+        </div>
+      )}
 
       {/* Summary collapsible */}
       {summary.length > 0 && (

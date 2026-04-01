@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
+  fetchCombinedEnvironmentalData,
+  fetchCombinedSensorData,
   fetchProductionByPeriod,
   fetchSensorData,
   fetchEnvironmentalData,
@@ -203,9 +205,10 @@ function MfgLotModal({ onClose, initialLot = "" }) {
 }
 
 // ─── Main page ────────────────────────────────────────────────────────────────
-export default function FactoryDetailPage() {
+export default function FactoryDetailPage({ combined = false }) {
   const { factoryName: encoded } = useParams();
-  const factoryName = decodeURIComponent(encoded);
+  const factoryName = combined ? "__all__" : decodeURIComponent(encoded);
+  const pageTitle = combined ? "Overview" : factoryName;
   const navigate    = useNavigate();
 
   const [dateFrom,      setDateFrom]      = useState(todayStr());
@@ -226,9 +229,9 @@ export default function FactoryDetailPage() {
   const loadData = useCallback(async (from = dateFrom, to = dateTo, parts = partNumbers, serials = serialNumbers, filters = []) => {
     setLoading(true);
     const [p, s, e] = await Promise.allSettled([
-      fetchProductionByPeriod(factoryName, from, to, parts, serials, filters),
-      fetchSensorData(factoryName, from),
-      fetchEnvironmentalData(factoryName),
+      fetchProductionByPeriod(combined ? null : factoryName, from, to, parts, serials, filters),
+      combined ? fetchCombinedSensorData(from) : fetchSensorData(factoryName, from),
+      combined ? fetchCombinedEnvironmentalData() : fetchEnvironmentalData(factoryName),
     ]);
     if (p.status === "fulfilled") {
       setProdData(p.value);
@@ -237,7 +240,7 @@ export default function FactoryDetailPage() {
     if (s.status === "fulfilled") setSensor(s.value);
     if (e.status === "fulfilled") setEnv(e.value);
     setLoading(false);
-  }, [factoryName]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [combined, factoryName]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Load on mount
   useEffect(() => { loadData(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
@@ -275,14 +278,14 @@ export default function FactoryDetailPage() {
       {/* ── Page header ── */}
       <div className="flex items-start gap-4 mb-8">
         <button
-          onClick={() => navigate("/dashboard")}
+          onClick={() => navigate(combined ? "/factories" : "/dashboard")}
           className="p-2 rounded-xl hover:bg-surface-container text-outline hover:text-primary transition-colors mt-1"
         >
           <span className="material-symbols-outlined">arrow_back</span>
         </button>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-3 flex-wrap">
-            <h2 className="text-3xl font-black tracking-tight text-on-surface font-headline">{factoryName}</h2>
+            <h2 className="text-3xl font-black tracking-tight text-on-surface font-headline">{pageTitle}</h2>
             {!loading && (
               <span className={`flex items-center gap-1.5 text-[10px] font-bold px-3 py-1 rounded-full ${defStatus.bg} ${defStatus.color}`}>
                 <span className={`w-1.5 h-1.5 rounded-full ${defStatus.dot}`} />
@@ -291,17 +294,17 @@ export default function FactoryDetailPage() {
             )}
           </div>
           <p className="text-on-surface-variant text-sm mt-1">
-            Factory Overview —&nbsp;
+            {combined ? "All Factories Combined —" : "Factory Overview —"}&nbsp;
             {dateFrom === dateTo ? dateFrom : `${dateFrom} → ${dateTo}`}
           </p>
         </div>
         <button
-          onClick={() => navigate(`/sensors/${encoded}`)}
+          onClick={() => navigate(combined ? "/sensors" : `/sensors/${encoded}`)}
           className="flex-shrink-0 flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold
                      kinetic-gradient text-white shadow-[0_0_15px_rgba(99,102,241,0.3)] hover:opacity-90 transition-opacity"
         >
           <span className="material-symbols-outlined" style={{ fontSize: 16 }}>sensors</span>
-          Sensor History
+          {combined ? "Sensor Overview" : "Sensor History"}
         </button>
       </div>
 
@@ -313,7 +316,7 @@ export default function FactoryDetailPage() {
             { label: "Total Processed", value: loading ? "—" : stripTotal.toLocaleString(),       color: "text-on-surface"   },
             { label: "NG Units",        value: loading ? "—" : stripNG.toLocaleString(),           color: "text-error"        },
             { label: "Defect Rate",     value: loading ? "—" : `${stripRate.toFixed(2)}%`,         color: defStatus.valueColor ?? "text-on-surface" },
-            { label: "Sensors Online",  value: loading ? "—" : (sensor?.sensorCount ?? 0),         color: sensor?.hasData ? "text-emerald-400" : "text-outline" },
+            { label: combined ? "Total Sensors" : "Sensors Online", value: loading ? "—" : (sensor?.sensorCount ?? 0), color: sensor?.hasData ? "text-emerald-400" : "text-outline" },
           ].map(({ label, value, color }) => (
             <div key={label} className="glass-card rounded-2xl px-5 py-4 flex flex-col gap-1">
               <p className={`text-2xl font-black leading-none ${color}`}>{value}</p>
@@ -387,7 +390,7 @@ export default function FactoryDetailPage() {
 
       {/* ── Filter bar ── */}
       <ProductionFilterBar
-        factoryName={factoryName}
+        factoryName={combined ? "__all__" : factoryName}
         defaultDateFrom={dateFrom}
         defaultDateTo={dateTo}
         loading={loading}
@@ -428,6 +431,7 @@ export default function FactoryDetailPage() {
                   key={`${activeSection}_${proc}`}
                   processName={proc}
                   rows={currentRows[proc] ?? []}
+                  showFactoryColumn={combined}
                   onRowClick={(record, pName) => {
                     openRecord(record, pName);
                   }}

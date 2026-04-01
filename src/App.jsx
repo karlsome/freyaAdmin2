@@ -91,6 +91,7 @@ function App() {
           <Route path="/masterDB" element={<MasterDBPage />} />
           <Route path="/factories" element={<FactoriesPage />} />
           <Route path="/sensors" element={<SensorsPage />} />
+          <Route path="/factory/overview" element={<FactoryDetailPage combined />} />
           <Route path="/factory/:factoryName" element={<FactoryDetailPage />} />
           <Route path="/sensors/:factoryName" element={<SensorDetailPage />} />
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
