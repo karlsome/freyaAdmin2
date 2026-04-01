@@ -187,7 +187,7 @@ export default function ProductPDFList({
         </div>
 
         <div className="mt-5 flex flex-col gap-4 lg:flex-row">
-          <div className="flex min-h-[52px] flex-1 flex-wrap items-center gap-2 rounded-3xl border border-outline-variant/20 bg-surface-container px-4 py-3">
+          <div className="ui-control-surface flex min-h-[52px] flex-1 flex-wrap items-center gap-2 rounded-3xl border border-outline-variant/20 px-4 py-3">
             {searchTokens.map((token) => (
               <span key={token} className="inline-flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1 text-xs font-bold text-primary">
                 <span>{token}</span>
@@ -213,7 +213,7 @@ export default function ProductPDFList({
           <select
             value={modelFilter}
             onChange={(event) => onModelFilterChange(event.target.value)}
-            className="h-[52px] rounded-3xl border border-outline-variant/20 bg-surface-container px-4 text-sm text-on-surface outline-none transition focus:border-primary/40 lg:w-72"
+            className="h-[52px] rounded-3xl border border-outline-variant/20 bg-white px-4 text-sm text-on-surface outline-none transition focus:border-primary/40 lg:w-72"
           >
             <option value="">All models</option>
             {modelOptions.map((model) => (
@@ -264,7 +264,7 @@ export default function ProductPDFList({
               <select
                 value={pageSize}
                 onChange={(event) => onPageSizeChange(Number(event.target.value))}
-                className="h-10 rounded-2xl border border-outline-variant/20 bg-surface-container px-3 text-sm text-on-surface outline-none transition focus:border-primary/40"
+                className="h-10 rounded-2xl border border-outline-variant/20 bg-white px-3 text-sm text-on-surface outline-none transition focus:border-primary/40"
               >
                 {PRODUCT_PDF_PAGE_SIZE_OPTIONS.map((option) => (
                   <option key={option} value={option}>{option}</option>

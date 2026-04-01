@@ -13,7 +13,7 @@ function TagInput({ tags, onAdd, onRemove, placeholder }) {
 
   return (
     <div
-      className="min-h-10 cursor-text rounded-xl border border-outline-variant/20 bg-white px-3 py-1.5 transition-colors focus-within:border-primary/40"
+      className="ui-control-surface min-h-10 cursor-text rounded-xl border border-outline-variant/20 px-3 py-1.5 transition-colors focus-within:border-primary/40"
       onClick={(event) => event.currentTarget.querySelector("input")?.focus()}
     >
       <div className="flex flex-wrap items-center gap-1">

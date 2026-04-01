@@ -36,6 +36,7 @@ import {
 } from "../utils/masterDB";
 
 const ProductPDFsWorkspace = lazy(() => import("../components/ProductPDFsWorkspace"));
+const FuryoKanriWorkspace = lazy(() => import("../components/FuryoKanriWorkspace"));
 
 function FlashBanner({ flash, onClose }) {
   if (!flash) return null;
@@ -111,6 +112,8 @@ export default function MasterDBPage() {
   const activeTabMeta = getMasterTabMeta(activeTab);
   const activeTabUI = getMasterTabUI(activeTab);
   const isProductPDFTab = activeTab === "productPDFs";
+  const isFuryoKanriTab = activeTab === "furyoKanri";
+  const isSpecialTab = isProductPDFTab || isFuryoKanriTab;
   const fieldDefinitions = buildMasterFieldDefinitions(schemaFields, records, activeTab);
   const columns = getMasterTableColumns(records, schemaFields, activeTab);
   const batchEditEnabled = Object.keys(advancedQuery).length > 0 && stats.filteredCount > 0;
@@ -124,7 +127,7 @@ export default function MasterDBPage() {
   useEffect(() => {
     let cancelled = false;
 
-    if (isProductPDFTab) {
+    if (isSpecialTab) {
       setSchemaFields([]);
       setFilterOptions({ factories: [], rl: [], colors: [], processes: [] });
       return undefined;
@@ -150,13 +153,13 @@ export default function MasterDBPage() {
     return () => {
       cancelled = true;
     };
-  }, [activeTab, isProductPDFTab]);
+  }, [activeTab, isSpecialTab]);
 
   useEffect(() => {
     let cancelled = false;
     const requestId = ++requestIdRef.current;
 
-    if (isProductPDFTab) {
+    if (isSpecialTab) {
       setLoading(false);
       setError("");
       setRecords([]);
@@ -210,7 +213,7 @@ export default function MasterDBPage() {
     return () => {
       cancelled = true;
     };
-  }, [activeTab, page, pageSize, sort, simpleFilters, advancedQuery, searchTags, schemaFields, searchLogicMode, refreshNonce, isProductPDFTab]);
+  }, [activeTab, page, pageSize, sort, simpleFilters, advancedQuery, searchTags, schemaFields, searchLogicMode, refreshNonce, isSpecialTab]);
 
   const loadDistinctOptions = useCallback(async (field) => {
     const cacheKey = `${activeTab}:${field}`;
@@ -556,7 +559,7 @@ export default function MasterDBPage() {
             Refresh
           </button>
 
-          {!isProductPDFTab && (
+          {!isSpecialTab && (
             <button
               type="button"
               onClick={() => setAddModalOpen(true)}
@@ -573,22 +576,26 @@ export default function MasterDBPage() {
 
       <MasterTabNav tabs={MASTER_TABS} activeTab={activeTab} onSelect={handleTabSelect} />
 
-      {!isProductPDFTab && batchPreparing && (
+      {!isSpecialTab && batchPreparing && (
         <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-surface px-3 py-1.5 text-xs font-bold text-on-surface shadow-sm">
           <span className="material-symbols-outlined animate-spin" style={{ fontSize: 16 }}>progress_activity</span>
           Preparing batch edit…
         </div>
       )}
 
-      {isProductPDFTab ? (
+      {isSpecialTab ? (
         <Suspense
           fallback={(
             <div className="glass-card rounded-3xl px-6 py-10 text-sm font-medium text-on-surface-variant">
-              Loading Product PDFs workspace…
+              Loading workspace…
             </div>
           )}
         >
-          <ProductPDFsWorkspace refreshToken={refreshNonce} onFlash={setFlash} />
+          {isProductPDFTab ? (
+            <ProductPDFsWorkspace refreshToken={refreshNonce} onFlash={setFlash} />
+          ) : (
+            <FuryoKanriWorkspace refreshToken={refreshNonce} onFlash={setFlash} />
+          )}
         </Suspense>
       ) : (
         <>
@@ -652,7 +659,7 @@ export default function MasterDBPage() {
         </>
       )}
 
-      {!isProductPDFTab && selectedRecord && (
+      {!isSpecialTab && selectedRecord && (
         <MasterDetailDrawer
           key={extractRecordId(selectedRecord) || "master-detail"}
           open={!!selectedRecord}
@@ -667,7 +674,7 @@ export default function MasterDBPage() {
         />
       )}
 
-      {!isProductPDFTab && addModalOpen && (
+      {!isSpecialTab && addModalOpen && (
         <MasterRecordModal
           open={addModalOpen}
           fieldDefinitions={fieldDefinitions}
@@ -679,7 +686,7 @@ export default function MasterDBPage() {
         />
       )}
 
-      {!isProductPDFTab && batchModalOpen && (
+      {!isSpecialTab && batchModalOpen && (
         <MasterBatchEditModal
           open={batchModalOpen}
           fieldDefinitions={fieldDefinitions}

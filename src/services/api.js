@@ -84,11 +84,11 @@ async function _deleteJson(endpoint, body) {
 }
 
 // ─── Universal query helper ───────────────────────────────────────────────────
-export async function query(dbName, collectionName, q, { sort, limit, projection } = {}) {
+export async function query(dbName, collectionName, q = {}, { sort, limit, projection, aggregation } = {}) {
   const res = await fetch(BASE_URL + "queries", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ dbName, collectionName, query: q, sort, limit, projection }),
+    body: JSON.stringify({ dbName, collectionName, query: q, sort, limit, projection, aggregation }),
   });
   if (!res.ok) throw new Error(`API ${res.status}: ${await res.text()}`);
   return res.json();
@@ -768,4 +768,77 @@ export async function recoverProductPDF(documentId) {
 
 export async function permanentlyDeleteProductPDF(documentId) {
   return _deleteJson(`api/product-pdf-permanent/${encodeURIComponent(documentId)}`);
+}
+
+// ─── Furyo Kanri (不良管理) ──────────────────────────────────────────────────
+export async function fetchFuryoModels() {
+  const cacheKey = "furyo_models";
+  const cached = _getCached(cacheKey, MASTER_TTL);
+  if (cached) return cached;
+
+  const result = await query(
+    "Sasaki_Coating_MasterDB",
+    "masterDB",
+    {},
+    {
+      aggregation: [
+        { $group: { _id: "$モデル" } },
+        { $sort: { _id: 1 } },
+      ],
+    }
+  );
+
+  const models = (Array.isArray(result) ? result : [])
+    .map((item) => item?._id)
+    .filter((value) => value && String(value).trim() !== "")
+    .map((value) => String(value));
+
+  _setCache(cacheKey, models);
+  return models;
+}
+
+export async function fetchDefectDefinitions(model = "") {
+  const query = model
+    ? `?${new URLSearchParams({ model }).toString()}`
+    : "";
+  const result = await _getJson(`defectDefinitions${query}`);
+  return Array.isArray(result) ? result : [];
+}
+
+export async function saveDefectDefinition({ model, counters, countersEn, username }) {
+  return _postJson("defectDefinitions", {
+    model,
+    counters,
+    counters_en: countersEn,
+    username,
+  });
+}
+
+export async function fetchFuryoModelProducts(model) {
+  return query(
+    "Sasaki_Coating_MasterDB",
+    "masterDB",
+    { モデル: model },
+    {
+      projection: { 背番号: 1, 品番: 1, 品名: 1, imageURL: 1, _id: 0 },
+    }
+  );
+}
+
+export async function translateJapaneseText(text) {
+  const query = new URLSearchParams({
+    q: text,
+    langpair: "ja|en",
+  });
+  const res = await fetch(`https://api.mymemory.translated.net/get?${query.toString()}`);
+  const data = await _readJson(res);
+
+  if (!res.ok) {
+    const message = typeof data === "string"
+      ? data
+      : data?.responseDetails || data?.error || `Translate ${res.status}`;
+    throw new Error(message);
+  }
+
+  return String(data?.responseData?.translatedText || "").trim();
 }

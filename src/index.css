@@ -29,6 +29,10 @@
   --c-on-error-container:       65 0 2;
   --c-outline:                  118 118 128;
   --c-outline-variant:          226 228 233;
+  --c-form-control-bg:          255 255 255;
+  --c-form-control-bg-hover:    248 249 250;
+  --c-form-control-text:        27 27 31;
+  --c-form-control-placeholder: 118 118 128;
   --table-data-font-size:       0.75rem;
   --table-data-line-height:     1rem;
   --table-heading-font-size:    10px;
@@ -61,6 +65,10 @@
   --c-on-error-container:       255 218 214;
   --c-outline:                  144 143 160;
   --c-outline-variant:          70 69 84;
+  --c-form-control-bg:          29 32 38;
+  --c-form-control-bg-hover:    39 42 49;
+  --c-form-control-text:        225 226 235;
+  --c-form-control-placeholder: 144 143 160;
 }
 
 /* ─── Lava lamp animation (dark mode only) ──────────────────────────────────── */
@@ -120,6 +128,56 @@ body {
   overflow: hidden;
   background-image: radial-gradient(circle, rgba(99,102,241,0.055) 1px, transparent 1px);
   background-size: 24px 24px;
+}
+
+input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([type="hidden"]):not(.bg-transparent),
+select,
+textarea {
+  background-color: rgb(var(--c-form-control-bg)) !important;
+  color: rgb(var(--c-form-control-text)) !important;
+  caret-color: rgb(var(--c-form-control-text));
+}
+
+input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([type="hidden"]):not(.bg-transparent):focus,
+select:focus,
+textarea:focus {
+  background-color: rgb(var(--c-form-control-bg)) !important;
+}
+
+input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([type="hidden"]):not(.bg-transparent)::placeholder,
+textarea::placeholder {
+  color: rgb(var(--c-form-control-placeholder)) !important;
+}
+
+select option,
+select optgroup {
+  background-color: rgb(var(--c-form-control-bg)) !important;
+  color: rgb(var(--c-form-control-text)) !important;
+}
+
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+textarea:-webkit-autofill,
+textarea:-webkit-autofill:hover,
+textarea:-webkit-autofill:focus,
+select:-webkit-autofill,
+select:-webkit-autofill:hover,
+select:-webkit-autofill:focus {
+  -webkit-text-fill-color: rgb(var(--c-form-control-text));
+  -webkit-box-shadow: 0 0 0 1000px rgb(var(--c-form-control-bg)) inset;
+  box-shadow: 0 0 0 1000px rgb(var(--c-form-control-bg)) inset;
+  transition: background-color 9999s ease-in-out 0s;
+}
+
+.ui-control-surface {
+  background-color: rgb(var(--c-form-control-bg)) !important;
+  color: rgb(var(--c-form-control-text));
+}
+
+.ui-control-surface:hover,
+.ui-control-surface:focus-within {
+  background-color: rgb(var(--c-form-control-bg-hover)) !important;
 }
 
 /* Dark mode lava lamp background */

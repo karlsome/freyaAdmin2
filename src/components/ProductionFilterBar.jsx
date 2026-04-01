@@ -50,8 +50,8 @@ function TagInput({ tags, onAdd, onRemove, placeholder }) {
   };
   return (
     <div
-      className="min-h-10 flex flex-wrap gap-1 items-center px-3 py-1.5 rounded-xl
-             bg-white border border-outline-variant/20 focus-within:border-primary/40 transition-colors cursor-text"
+            className="ui-control-surface min-h-10 flex flex-wrap gap-1 items-center px-3 py-1.5 rounded-xl
+              border border-outline-variant/20 focus-within:border-primary/40 transition-colors cursor-text"
       onClick={(e) => e.currentTarget.querySelector("input")?.focus()}
     >
       {tags.map((t) => (

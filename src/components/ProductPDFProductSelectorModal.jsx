@@ -89,7 +89,7 @@ export default function ProductPDFProductSelectorModal({
               value={searchTerm}
               onChange={(event) => setSearchTerm(event.target.value)}
               placeholder="Search by 背番号, 品番, or モデル"
-              className="mt-4 w-full rounded-2xl border border-outline-variant/20 bg-surface-container px-4 py-3 text-sm text-on-surface outline-none transition focus:border-primary/40"
+              className="mt-4 w-full rounded-2xl border border-outline-variant/20 bg-white px-4 py-3 text-sm text-on-surface outline-none transition focus:border-primary/40"
             />
           </div>
 

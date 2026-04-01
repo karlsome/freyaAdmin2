@@ -56,7 +56,7 @@ export default function ProductPDFUploadPanel({
               <select
                 value={filterType}
                 onChange={(event) => onFilterTypeChange(event.target.value)}
-                className="h-11 w-full rounded-2xl border border-outline-variant/20 bg-surface-container px-4 text-sm text-on-surface outline-none transition focus:border-primary/40"
+                className="h-11 w-full rounded-2xl border border-outline-variant/20 bg-white px-4 text-sm text-on-surface outline-none transition focus:border-primary/40"
               >
                 <option value="model">モデル (Model)</option>
                 <option value="serial">背番号 (Serial Number)</option>
@@ -69,7 +69,7 @@ export default function ProductPDFUploadPanel({
                 <select
                   value={selectedModel}
                   onChange={(event) => onSelectedModelChange(event.target.value)}
-                  className="h-11 w-full rounded-2xl border border-outline-variant/20 bg-surface-container px-4 text-sm text-on-surface outline-none transition focus:border-primary/40"
+                  className="h-11 w-full rounded-2xl border border-outline-variant/20 bg-white px-4 text-sm text-on-surface outline-none transition focus:border-primary/40"
                 >
                   <option value="">Select model…</option>
                   {modelOptions.map((model) => (
@@ -83,7 +83,7 @@ export default function ProductPDFUploadPanel({
                 <button
                   type="button"
                   onClick={onOpenProductSelector}
-                  className="flex h-11 w-full items-center justify-between rounded-2xl border border-outline-variant/20 bg-surface-container px-4 text-sm font-medium text-on-surface transition hover:bg-surface-container-high"
+                  className="ui-control-surface flex h-11 w-full items-center justify-between rounded-2xl border border-outline-variant/20 px-4 text-sm font-medium transition"
                 >
                   <span>{selectedSerialNumbers.length ? `${selectedSerialNumbers.length} selected` : "Select products…"}</span>
                   <span className="material-symbols-outlined text-base text-on-surface-variant">chevron_right</span>
@@ -102,7 +102,7 @@ export default function ProductPDFUploadPanel({
                   Show all
                 </button>
               </div>
-              <div className="flex h-11 items-center rounded-2xl border border-outline-variant/20 bg-surface-container px-4 text-sm text-on-surface-variant">
+              <div className="ui-control-surface flex h-11 items-center rounded-2xl border border-outline-variant/20 px-4 text-sm text-on-surface-variant">
                 {selectedSerialNumbers.length ? `${selectedSerialNumbers.length} product${selectedSerialNumbers.length === 1 ? "" : "s"} selected` : "None selected"}
               </div>
             </div>

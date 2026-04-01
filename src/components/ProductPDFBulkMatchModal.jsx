@@ -110,7 +110,7 @@ export default function ProductPDFBulkMatchModal({
                         ...current,
                         [index]: event.target.value,
                       }))}
-                      className="mt-3 h-11 w-full rounded-2xl border border-outline-variant/20 bg-surface-container px-4 text-sm text-on-surface outline-none transition focus:border-primary/40"
+                      className="mt-3 h-11 w-full rounded-2xl border border-outline-variant/20 bg-white px-4 text-sm text-on-surface outline-none transition focus:border-primary/40"
                     >
                       <option value="">Skip this file</option>
                       {selectedSerialNumbers.map((serialNumber) => (

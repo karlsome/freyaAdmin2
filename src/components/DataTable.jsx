@@ -364,7 +364,7 @@ export default function DataTable({
   rowClassName = "border-b border-outline-variant/10 transition hover:bg-primary/5",
   clickableRowClassName = "cursor-pointer",
   cellClassName = "px-3 py-3 align-top",
-  rowsSelectClassName = "h-10 rounded-2xl border border-outline-variant/30 bg-surface-container px-3 text-sm text-on-surface outline-none transition focus:border-primary/40",
+  rowsSelectClassName = "h-10 rounded-2xl border border-outline-variant/30 bg-white px-3 text-sm text-on-surface outline-none transition focus:border-primary/40",
   loadingOverlayClassName = "absolute inset-0 z-10 flex items-center justify-center bg-surface/70 backdrop-blur-sm",
   loadingPillClassName = "flex items-center gap-3 rounded-full bg-surface-container px-4 py-3 text-sm font-bold text-on-surface shadow-lg",
 }) {
