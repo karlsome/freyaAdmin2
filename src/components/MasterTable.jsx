@@ -100,9 +100,13 @@ export default function MasterTable({
       enableColumnResize
       enableColumnReorder
       layoutStorageKey="freyaAdmin2.masterTableLayout"
+      stickyHeader
+      stickyHeaderOffset={0}
+      stickyHeaderCellClassName="bg-surface-container-high shadow-[inset_0_-1px_0_rgba(148,163,184,0.18)]"
       defaultColumnWidth={168}
       defaultMinColumnWidth={120}
-      tableClassName="w-full text-xs"
+      tableClassName="w-full border-separate border-spacing-0 text-xs"
+      tableViewportClassName="max-h-[68vh] overflow-auto overscroll-contain"
       headClassName="bg-surface-container-high/40 border-b border-outline-variant/20"
       rowClassName="border-b border-outline-variant/10 transition hover:bg-primary/5"
       clickableRowClassName="cursor-pointer"

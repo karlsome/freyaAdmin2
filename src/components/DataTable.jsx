@@ -344,6 +344,9 @@ export default function DataTable({
   enableColumnReorder = false,
   layoutStorageKey = null,
   resetColumnsLabel = "Reset columns",
+  stickyHeader = false,
+  stickyHeaderOffset = 0,
+  stickyHeaderCellClassName = "bg-surface-container-low/95 backdrop-blur-md",
   defaultColumnWidth = null,
   defaultMinColumnWidth = 112,
   defaultMaxColumnWidth = null,
@@ -353,6 +356,8 @@ export default function DataTable({
   topInfoClassName = "text-sm font-medium text-on-surface-variant",
   bottomInfoClassName = "text-sm text-on-surface-variant",
   tableClassName = "min-w-full text-sm",
+  tableViewportClassName = "overflow-x-auto",
+  tableViewportStyle,
   headClassName = "bg-surface-container-low border-b border-outline-variant/20",
   headerCellClassName = "px-3 py-3 text-left whitespace-nowrap",
   headerButtonClassName = "inline-flex items-center gap-2 font-bold text-on-surface-variant transition hover:text-on-surface",
@@ -674,7 +679,7 @@ export default function DataTable({
             toneClassName="bg-surface-container text-outline"
           />
         ) : (
-          <div className="overflow-x-auto">
+          <div className={tableViewportClassName} style={tableViewportStyle}>
             <table className={tableClassName} style={tableStyle}>
               <colgroup>
                 {resolvedColumns.map((column) => (
@@ -701,8 +706,10 @@ export default function DataTable({
                     const resolvedHeaderCellClassName = joinClasses(
                       headerCellClassName,
                       "relative",
+                      stickyHeader ? "sticky" : "",
                       alignClass(column.align),
                       resizable ? "pr-5" : "",
+                      stickyHeader ? stickyHeaderCellClassName : "",
                       dragOverColumnKey === column.key && draggingColumnKey !== column.key ? "bg-primary/5" : "",
                       draggingColumnKey === column.key ? "opacity-75" : "",
                       resolveValue(column.headerCellClassName, column)
@@ -719,6 +726,7 @@ export default function DataTable({
                       <th
                         key={column.key}
                         className={resolvedHeaderCellClassName}
+                        style={stickyHeader ? { top: toSizeValue(stickyHeaderOffset), zIndex: 15 } : undefined}
                         onDragOver={reorderable ? (event) => handleColumnDragOver(event, column.key) : undefined}
                         onDrop={reorderable ? (event) => handleColumnDrop(event, column.key) : undefined}
                       >
