@@ -1,3 +1,4 @@
+import { useLayoutEffect, useRef, useState } from "react";
 import { MASTER_PAGE_SIZE_OPTIONS, buildPaginationItems, formatMasterValue } from "../utils/masterDB";
 
 function PageInfo({ filteredCount, page, pageSize }) {
@@ -8,6 +9,119 @@ function PageInfo({ filteredCount, page, pageSize }) {
   const start = (page - 1) * pageSize + 1;
   const end = Math.min(page * pageSize, filteredCount);
   return <span>{filteredCount} records, showing {start}-{end}</span>;
+}
+
+function PaginationControls({ page, totalPages, paginationItems, onPageChange }) {
+  const containerRef = useRef(null);
+  const pageButtonRefs = useRef(new Map());
+  const moveTimeoutRef = useRef(null);
+  const [indicatorStyle, setIndicatorStyle] = useState(null);
+  const [isMoving, setIsMoving] = useState(false);
+
+  const paginationSignature = paginationItems.join("|");
+
+  useLayoutEffect(() => {
+    function syncIndicator() {
+      const container = containerRef.current;
+      const activeButton = pageButtonRefs.current.get(page);
+
+      if (!container || !activeButton) {
+        setIndicatorStyle(null);
+        return;
+      }
+
+      const containerRect = container.getBoundingClientRect();
+      const activeRect = activeButton.getBoundingClientRect();
+
+      setIndicatorStyle({
+        left: activeRect.left - containerRect.left,
+        top: activeRect.top - containerRect.top,
+        width: activeRect.width,
+        height: activeRect.height,
+      });
+    }
+
+    const frame = window.requestAnimationFrame(() => {
+      syncIndicator();
+      setIsMoving(true);
+      window.clearTimeout(moveTimeoutRef.current);
+      moveTimeoutRef.current = window.setTimeout(() => setIsMoving(false), 480);
+    });
+
+    window.addEventListener("resize", syncIndicator);
+
+    return () => {
+      window.cancelAnimationFrame(frame);
+      window.removeEventListener("resize", syncIndicator);
+      window.clearTimeout(moveTimeoutRef.current);
+    };
+  }, [page, paginationSignature]);
+
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      <button
+        type="button"
+        onClick={() => onPageChange(page - 1)}
+        disabled={page <= 1}
+        className="rounded-2xl border border-outline-variant/30 px-3 py-2 text-sm font-bold text-on-surface transition hover:bg-surface-container disabled:cursor-not-allowed disabled:opacity-40"
+      >
+        Previous
+      </button>
+
+      <div ref={containerRef} className="relative flex min-h-10 flex-wrap items-center gap-2">
+        {indicatorStyle && (
+          <span
+            aria-hidden="true"
+            className="pagination-liquid-shell rounded-2xl"
+            style={{
+              width: `${indicatorStyle.width}px`,
+              height: `${indicatorStyle.height}px`,
+              transform: `translate(${indicatorStyle.left}px, ${indicatorStyle.top}px)`,
+            }}
+          >
+            <span className="pagination-liquid-glow" />
+            <span className={`pagination-liquid-blob ${isMoving ? "is-moving" : ""}`} />
+          </span>
+        )}
+
+        {paginationItems.map((item) => {
+          if (typeof item !== "number") {
+            return <span key={item} className="relative z-10 px-2 text-outline">…</span>;
+          }
+
+          const active = item === page;
+          return (
+            <button
+              key={item}
+              ref={(node) => {
+                if (node) pageButtonRefs.current.set(item, node);
+                else pageButtonRefs.current.delete(item);
+              }}
+              type="button"
+              onClick={() => onPageChange(item)}
+              className={[
+                "relative z-10 min-w-10 rounded-2xl px-3 py-2 text-sm font-bold transition-colors duration-300",
+                active
+                  ? "border border-transparent bg-transparent text-on-primary"
+                  : "border border-outline-variant/30 text-on-surface hover:bg-surface-container",
+              ].join(" ")}
+            >
+              {item}
+            </button>
+          );
+        })}
+      </div>
+
+      <button
+        type="button"
+        onClick={() => onPageChange(page + 1)}
+        disabled={page >= totalPages || totalPages <= 1}
+        className="rounded-2xl border border-outline-variant/30 px-3 py-2 text-sm font-bold text-on-surface transition hover:bg-surface-container disabled:cursor-not-allowed disabled:opacity-40"
+      >
+        Next
+      </button>
+    </div>
+  );
 }
 
 export default function MasterTable({
@@ -155,48 +269,12 @@ export default function MasterTable({
           <PageInfo filteredCount={filteredCount} page={page} pageSize={pageSize} />
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
-          <button
-            type="button"
-            onClick={() => onPageChange(page - 1)}
-            disabled={page <= 1}
-            className="rounded-2xl border border-outline-variant/30 px-3 py-2 text-sm font-bold text-on-surface transition hover:bg-surface-container disabled:cursor-not-allowed disabled:opacity-40"
-          >
-            Previous
-          </button>
-
-          {paginationItems.map((item) => {
-            if (typeof item !== "number") {
-              return <span key={item} className="px-2 text-outline">…</span>;
-            }
-
-            const active = item === page;
-            return (
-              <button
-                key={item}
-                type="button"
-                onClick={() => onPageChange(item)}
-                className={[
-                  "min-w-10 rounded-2xl px-3 py-2 text-sm font-bold transition",
-                  active
-                    ? "bg-primary text-on-primary shadow-[0_0_18px_rgba(99,102,241,0.25)]"
-                    : "border border-outline-variant/30 text-on-surface hover:bg-surface-container",
-                ].join(" ")}
-              >
-                {item}
-              </button>
-            );
-          })}
-
-          <button
-            type="button"
-            onClick={() => onPageChange(page + 1)}
-            disabled={page >= totalPages || totalPages <= 1}
-            className="rounded-2xl border border-outline-variant/30 px-3 py-2 text-sm font-bold text-on-surface transition hover:bg-surface-container disabled:cursor-not-allowed disabled:opacity-40"
-          >
-            Next
-          </button>
-        </div>
+        <PaginationControls
+          page={page}
+          totalPages={totalPages}
+          paginationItems={paginationItems}
+          onPageChange={onPageChange}
+        />
       </div>
     </div>
   );

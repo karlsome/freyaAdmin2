@@ -9,6 +9,7 @@ import {
   query,
 } from "../services/api";
 import { getDefectStatus, getTempStatus, getHumidityStatus, getWBGTStatus } from "../utils/statusHelpers";
+import LiquidSegmentedControl from "../components/LiquidSegmentedControl";
 import RecordDetailModal from "../components/RecordDetailModal";
 import ProcessPanel from "../components/ProcessPanel";
 import ProductionFilterBar from "../components/ProductionFilterBar";
@@ -405,19 +406,11 @@ export default function FactoryDetailPage() {
             Daily Production
           </h3>
           {sectionNames.length > 1 && (
-            <div className="flex gap-1 p-1 rounded-xl bg-surface-container">
-              {sectionNames.map((name) => (
-                <button
-                  key={name}
-                  onClick={() => setActiveSection(name)}
-                  className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                    activeSection === name
-                      ? "kinetic-gradient text-white shadow-sm"
-                      : "text-on-surface-variant hover:text-on-surface"
-                  }`}
-                >{name}</button>
-              ))}
-            </div>
+            <LiquidSegmentedControl
+              items={sectionNames}
+              activeKey={activeSection}
+              onChange={setActiveSection}
+            />
           )}
         </div>
 
