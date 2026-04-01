@@ -32,6 +32,7 @@ function App() {
     if (saved) return saved === "dark";
     return true;
   });
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
   const activePage = location.pathname.slice(1) || "dashboard";
@@ -47,6 +48,18 @@ function App() {
     }
   }, [isDark]);
 
+  useEffect(() => {
+    setMobileNavOpen(false);
+  }, [location.pathname]);
+
+  useEffect(() => {
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = mobileNavOpen ? "hidden" : previousOverflow || "";
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [mobileNavOpen]);
+
   return (
     <div className="overflow-hidden">
       {isDark && (
@@ -57,9 +70,18 @@ function App() {
           <div className="aurora-blob aurora-blob-4" />
         </div>
       )}
-      <Sidebar activePage={activePage} onNavigate={(page) => navigate(`/${page}`)} />
-      <main className="ml-16 min-h-screen bg-background dark:bg-transparent relative" style={{ zIndex: 1 }}>
-        <TopNav isDark={isDark} onToggleTheme={() => setIsDark((d) => !d)} />
+      <Sidebar
+        activePage={activePage}
+        mobileOpen={mobileNavOpen}
+        onClose={() => setMobileNavOpen(false)}
+        onNavigate={(page) => navigate(`/${page}`)}
+      />
+      <main className="ml-0 min-h-screen bg-background dark:bg-transparent relative md:ml-16" style={{ zIndex: 1 }}>
+        <TopNav
+          isDark={isDark}
+          onOpenMobileNav={() => setMobileNavOpen(true)}
+          onToggleTheme={() => setIsDark((d) => !d)}
+        />
         <Routes>
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
           <Route path="/dashboard" element={<DashboardPage />} />

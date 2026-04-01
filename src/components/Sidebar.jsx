@@ -21,7 +21,7 @@ const navItems = [
   { icon: "play_circle",             label: "Video Manual",        page: "videoManual" },
 ];
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 function isActiveFor(item, activePage) {
   if (activePage === item.page) return true;
@@ -35,16 +35,35 @@ function isActiveFor(item, activePage) {
   return false;
 }
 
-export default function Sidebar({ activePage, onNavigate }) {
-  // Track which items with children are open
+export default function Sidebar({ activePage, mobileOpen = false, onClose, onNavigate }) {
   const [openItems, setOpenItems] = useState(() => {
-    // Auto-open if a child is currently active
     const open = new Set();
     navItems.forEach((item) => {
       if (item.children && isActiveFor(item, activePage)) open.add(item.page);
     });
     return open;
   });
+
+  useEffect(() => {
+    setOpenItems((prev) => {
+      const next = new Set(prev);
+      navItems.forEach((item) => {
+        if (item.children && isActiveFor(item, activePage)) next.add(item.page);
+      });
+      return next;
+    });
+  }, [activePage]);
+
+  useEffect(() => {
+    if (!mobileOpen) return undefined;
+
+    function handleKeyDown(event) {
+      if (event.key === "Escape") onClose?.();
+    }
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [mobileOpen, onClose]);
 
   function toggleOpen(page) {
     setOpenItems((prev) => {
@@ -54,150 +73,193 @@ export default function Sidebar({ activePage, onNavigate }) {
     });
   }
 
-  return (
-    <aside className="group fixed left-0 top-0 h-full w-16 hover:w-64 sidebar-glass flex flex-col py-6 z-50 font-headline text-sm font-medium overflow-hidden transition-[width] duration-300 ease-[cubic-bezier(0.4,0,0.2,1)]">
+  function renderSidebarContent(isMobile) {
+    return (
+      <>
+        <div className="mb-10 flex items-center justify-between px-3">
+          <div className={`flex items-center gap-3 ${isMobile ? "" : "min-w-[256px]"}`}>
+            <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl kinetic-gradient shadow-lg shadow-primary/20">
+              <span className="material-symbols-outlined text-white" style={{ fontVariationSettings: "'FILL' 1" }}>
+                precision_manufacturing
+              </span>
+            </div>
+            <div className={`overflow-hidden transition-opacity duration-200 ${isMobile ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`}>
+              <h1 className="whitespace-nowrap text-lg font-black leading-none text-on-surface">Factory Admin</h1>
+              <p className="mt-0.5 whitespace-nowrap text-[10px] font-bold uppercase tracking-widest text-primary">Precision Control</p>
+            </div>
+          </div>
 
-      {/* Logo */}
-      <div className="flex items-center gap-3 px-3 mb-10 min-w-[256px]">
-        <div className="w-10 h-10 flex-shrink-0 kinetic-gradient rounded-xl flex items-center justify-center shadow-lg shadow-primary/20">
-          <span className="material-symbols-outlined text-white" style={{ fontVariationSettings: "'FILL' 1" }}>
-            precision_manufacturing
-          </span>
+          {isMobile && (
+            <button
+              type="button"
+              onClick={() => onClose?.()}
+              className="flex h-10 w-10 items-center justify-center rounded-xl text-outline transition-all hover:bg-primary/10 hover:text-primary"
+              aria-label="Close navigation menu"
+            >
+              <span className="material-symbols-outlined">close</span>
+            </button>
+          )}
         </div>
-        <div className="overflow-hidden opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-          <h1 className="text-lg font-black text-on-surface leading-none whitespace-nowrap">Factory Admin</h1>
-          <p className="text-[10px] uppercase tracking-widest text-primary font-bold mt-0.5 whitespace-nowrap">Precision Control</p>
-        </div>
-      </div>
 
-      {/* Nav */}
-      <nav className="flex-1 space-y-0.5 overflow-y-auto scrollbar-hide px-3">
-        {navItems.map((item) => {
-          const isActive  = isActiveFor(item, activePage);
-          const isOpen    = openItems.has(item.page);
-          const hasChildren = !!item.children?.length;
+        <nav className="flex-1 space-y-0.5 overflow-y-auto scrollbar-hide px-3">
+          {navItems.map((item) => {
+            const isActive = isActiveFor(item, activePage);
+            const isOpen = openItems.has(item.page);
+            const hasChildren = !!item.children?.length;
 
-          return (
-            <div key={item.page}>
-              {/* ── Parent row ── */}
-              <button
-                onClick={() => {
-                  if (hasChildren) toggleOpen(item.page);
-                  onNavigate(item.page);
-                }}
-                title={item.label}
-                className={`w-full flex items-center gap-3 px-0 py-2.5 rounded-xl transition-all duration-200 ease-in-out text-left min-w-[232px] ${
-                  isActive
-                    ? "text-primary bg-primary/5 dark:bg-transparent dark:shadow-[0_0_15px_rgba(192,193,255,0.2)]"
-                    : "text-outline hover:text-primary hover:bg-primary/5 dark:hover:text-on-surface dark:hover:bg-white/5"
-                }`}
-              >
-                <span
-                  className="w-10 flex-shrink-0 flex items-center justify-center material-symbols-outlined"
-                  style={isActive ? { fontVariationSettings: "'FILL' 1" } : {}}
-                >
-                  {item.icon}
-                </span>
-                <span className={`flex-1 whitespace-nowrap overflow-hidden opacity-0 group-hover:opacity-100 transition-opacity duration-200 ${
-                  isActive ? "font-semibold" : ""
-                }`}>
-                  {item.label}
-                </span>
-                {/* Chevron — only for items with children */}
-                {hasChildren && (
-                  <span
-                    className={`mr-1.5 flex-shrink-0 material-symbols-outlined text-[16px] opacity-0 group-hover:opacity-100 transition-all duration-300 ${
-                      isOpen ? "rotate-180" : "rotate-0"
-                    } ${isActive ? "text-primary" : "text-outline"}`}
-                    style={{ fontSize: 16 }}
-                  >
-                    expand_more
-                  </span>
-                )}
-                {item.badge && (
-                  <span className="mr-2 flex-shrink-0 bg-error text-on-error text-[10px] px-1.5 py-0.5 rounded-full font-bold opacity-0 group-hover:opacity-100 transition-opacity duration-200 dark:bg-error-container dark:text-on-error-container dark:rounded-md">
-                    {item.badge}
-                  </span>
-                )}
-              </button>
-
-              {/* ── Children with hierarchy line ── */}
-              {hasChildren && (
-                <div
-                  className={`overflow-hidden transition-[max-height,opacity] duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] opacity-0 group-hover:opacity-100 ${
-                    isOpen ? "max-h-40" : "max-h-0"
+            return (
+              <div key={item.page}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (hasChildren) toggleOpen(item.page);
+                    onNavigate(item.page);
+                    if (isMobile && !hasChildren) onClose?.();
+                  }}
+                  title={item.label}
+                  className={`w-full flex items-center gap-3 rounded-xl text-left transition-all duration-200 ease-in-out ${
+                    isMobile
+                      ? "px-3 py-2.5"
+                      : "min-w-[232px] px-0 py-2.5"
+                  } ${
+                    isActive
+                      ? "bg-primary/5 text-primary dark:bg-transparent dark:shadow-[0_0_15px_rgba(192,193,255,0.2)]"
+                      : "text-outline hover:bg-primary/5 hover:text-primary dark:hover:bg-white/5 dark:hover:text-on-surface"
                   }`}
                 >
-                  {/* Tree structure: vertical line + child rows */}
-                  <div className="relative ml-[18px] mt-0.5 mb-1">
-                    {/* Vertical hierarchy line */}
-                    <div className="absolute left-0 top-0 bottom-0 w-px bg-outline-variant/30 rounded-full" />
+                  <span
+                    className={`flex-shrink-0 material-symbols-outlined ${isMobile ? "" : "w-10 flex items-center justify-center"}`}
+                    style={isActive ? { fontVariationSettings: "'FILL' 1" } : {}}
+                  >
+                    {item.icon}
+                  </span>
+                  <span className={`flex-1 whitespace-nowrap overflow-hidden ${
+                    isMobile
+                      ? isActive ? "font-semibold" : ""
+                      : `${isActive ? "font-semibold " : ""}opacity-0 transition-opacity duration-200 group-hover:opacity-100`
+                  }`}>
+                    {item.label}
+                  </span>
+                  {hasChildren && (
+                    <span
+                      className={`mr-1.5 flex-shrink-0 material-symbols-outlined transition-all duration-300 ${
+                        isOpen ? "rotate-180" : "rotate-0"
+                      } ${
+                        isActive ? "text-primary" : "text-outline"
+                      } ${
+                        isMobile ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+                      }`}
+                      style={{ fontSize: 16 }}
+                    >
+                      expand_more
+                    </span>
+                  )}
+                  {item.badge && (
+                    <span className={`mr-2 flex-shrink-0 rounded-full bg-error px-1.5 py-0.5 text-[10px] font-bold text-on-error dark:bg-error-container dark:text-on-error-container dark:rounded-md ${
+                      isMobile ? "opacity-100" : "opacity-0 transition-opacity duration-200 group-hover:opacity-100"
+                    }`}>
+                      {item.badge}
+                    </span>
+                  )}
+                </button>
 
-                    {item.children.map((child, idx) => {
-                      const childActive =
-                        activePage === child.page || activePage.startsWith(child.page + "/");
-                      const isLast = idx === item.children.length - 1;
+                {hasChildren && (
+                  <div
+                    className={`overflow-hidden transition-[max-height,opacity] duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] ${
+                      isOpen ? "max-h-40" : "max-h-0"
+                    } ${isMobile ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`}
+                  >
+                    <div className="relative mb-1 ml-[18px] mt-0.5">
+                      <div className="absolute bottom-0 top-0 left-0 w-px rounded-full bg-outline-variant/30" />
 
-                      return (
-                        <div key={child.page} className="relative flex items-center">
-                          {/* Horizontal connector "─" */}
-                          <div className="flex-shrink-0 flex items-center self-stretch">
-                            {/* Cap the vertical line at last item */}
-                            {isLast && (
-                              <div className="absolute left-0 top-1/2 bottom-0 w-px bg-transparent" />
-                            )}
-                            <div className="w-4 h-px bg-outline-variant/30 ml-px" />
-                          </div>
+                      {item.children.map((child, idx) => {
+                        const childActive = activePage === child.page || activePage.startsWith(child.page + "/");
+                        const isLast = idx === item.children.length - 1;
 
-                          {/* Child button */}
-                          <button
-                            onClick={() => onNavigate(child.page)}
-                            title={child.label}
-                            className={`flex-1 flex items-center gap-2.5 py-1.5 pl-1 pr-2 rounded-xl transition-all duration-200 text-left min-w-0 ${
-                              childActive
-                                ? "text-primary bg-primary/5"
-                                : "text-outline hover:text-primary hover:bg-primary/5 dark:hover:text-on-surface dark:hover:bg-white/5"
-                            }`}
-                          >
-                            <span
-                              className="flex-shrink-0 material-symbols-outlined"
-                              style={{
-                                fontSize: 16,
-                                ...(childActive ? { fontVariationSettings: "'FILL' 1" } : {}),
+                        return (
+                          <div key={child.page} className="relative flex items-center">
+                            <div className="flex flex-shrink-0 items-center self-stretch">
+                              {isLast && <div className="absolute bottom-0 top-1/2 left-0 w-px bg-transparent" />}
+                              <div className="ml-px h-px w-4 bg-outline-variant/30" />
+                            </div>
+
+                            <button
+                              type="button"
+                              onClick={() => {
+                                onNavigate(child.page);
+                                if (isMobile) onClose?.();
                               }}
-                            >
-                              {child.icon}
-                            </span>
-                            <span
-                              className={`whitespace-nowrap overflow-hidden text-xs ${
-                                childActive ? "font-semibold" : ""
+                              title={child.label}
+                              className={`min-w-0 flex-1 rounded-xl py-1.5 pr-2 text-left transition-all duration-200 ${
+                                isMobile ? "pl-2.5" : "pl-1"
+                              } ${
+                                childActive
+                                  ? "bg-primary/5 text-primary"
+                                  : "text-outline hover:bg-primary/5 hover:text-primary dark:hover:bg-white/5 dark:hover:text-on-surface"
                               }`}
                             >
-                              {child.label}
-                            </span>
-                          </button>
-                        </div>
-                      );
-                    })}
+                              <div className="flex items-center gap-2.5">
+                                <span
+                                  className="material-symbols-outlined flex-shrink-0"
+                                  style={{
+                                    fontSize: 16,
+                                    ...(childActive ? { fontVariationSettings: "'FILL' 1" } : {}),
+                                  }}
+                                >
+                                  {child.icon}
+                                </span>
+                                <span className={`overflow-hidden whitespace-nowrap text-xs ${childActive ? "font-semibold" : ""}`}>
+                                  {child.label}
+                                </span>
+                              </div>
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
-                </div>
-              )}
-            </div>
-          );
-        })}
-      </nav>
+                )}
+              </div>
+            );
+          })}
+        </nav>
 
-      {/* Bottom */}
-      <div className="mt-auto pt-6 border-t border-outline-variant/20 space-y-0.5 px-3">
-        <button className="w-full flex items-center gap-3 px-0 py-2.5 rounded-xl transition-all duration-200 text-outline hover:text-primary hover:bg-primary/5 dark:hover:text-on-surface dark:hover:bg-white/5 min-w-[232px]" title="Settings">
-          <span className="w-10 flex-shrink-0 flex items-center justify-center material-symbols-outlined">settings</span>
-          <span className="whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-200">Settings</span>
-        </button>
-        <button className="w-full flex items-center gap-3 px-0 py-2.5 rounded-xl transition-all duration-200 text-error/70 hover:text-error hover:bg-error/5 dark:text-outline dark:hover:text-on-surface dark:hover:bg-white/5 min-w-[232px]" title="Logout">
-          <span className="w-10 flex-shrink-0 flex items-center justify-center material-symbols-outlined">logout</span>
-          <span className="whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-200">Logout</span>
-        </button>
+        <div className="mt-auto space-y-0.5 border-t border-outline-variant/20 px-3 pt-6">
+          <button className={`w-full flex items-center gap-3 rounded-xl text-outline transition-all duration-200 hover:bg-primary/5 hover:text-primary dark:hover:bg-white/5 dark:hover:text-on-surface ${
+            isMobile ? "px-3 py-2.5" : "min-w-[232px] px-0 py-2.5"
+          }`} title="Settings">
+            <span className={`material-symbols-outlined ${isMobile ? "" : "w-10 flex items-center justify-center"}`}>settings</span>
+            <span className={isMobile ? "whitespace-nowrap" : "whitespace-nowrap opacity-0 transition-opacity duration-200 group-hover:opacity-100"}>Settings</span>
+          </button>
+          <button className={`w-full flex items-center gap-3 rounded-xl text-error/70 transition-all duration-200 hover:bg-error/5 hover:text-error dark:text-outline dark:hover:bg-white/5 dark:hover:text-on-surface ${
+            isMobile ? "px-3 py-2.5" : "min-w-[232px] px-0 py-2.5"
+          }`} title="Logout">
+            <span className={`material-symbols-outlined ${isMobile ? "" : "w-10 flex items-center justify-center"}`}>logout</span>
+            <span className={isMobile ? "whitespace-nowrap" : "whitespace-nowrap opacity-0 transition-opacity duration-200 group-hover:opacity-100"}>Logout</span>
+          </button>
+        </div>
+      </>
+    );
+  }
+
+  return (
+    <>
+      <aside className="group fixed left-0 top-0 z-50 hidden h-full w-16 overflow-hidden sidebar-glass py-6 font-headline text-sm font-medium transition-[width] duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] hover:w-64 md:flex md:flex-col">
+        {renderSidebarContent(false)}
+      </aside>
+
+      <div className={`fixed inset-0 z-50 md:hidden ${mobileOpen ? "" : "pointer-events-none"}`}>
+        <button
+          type="button"
+          onClick={() => onClose?.()}
+          aria-label="Close navigation menu"
+          className={`absolute inset-0 bg-black/45 backdrop-blur-sm transition-opacity ${mobileOpen ? "opacity-100" : "opacity-0"}`}
+        />
+
+        <aside className={`absolute left-0 top-0 z-10 flex h-full w-72 max-w-[82vw] flex-col sidebar-glass py-6 font-headline text-sm font-medium shadow-2xl transition-transform duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] ${mobileOpen ? "translate-x-0" : "-translate-x-full"}`}>
+          {renderSidebarContent(true)}
+        </aside>
       </div>
-    </aside>
+    </>
   );
 }

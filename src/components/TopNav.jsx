@@ -1,10 +1,19 @@
-export default function TopNav({ isDark, onToggleTheme }) {
+export default function TopNav({ isDark, onOpenMobileNav, onToggleTheme }) {
   return (
-    <header className="topnav-glass fixed top-0 right-0 left-16 h-16 flex justify-between items-center px-8 z-40 font-headline antialiased">
+    <header className="topnav-glass fixed top-0 right-0 left-0 z-40 flex h-16 items-center justify-between px-4 font-headline antialiased sm:px-6 md:left-16 md:px-8">
 
       {/* Search */}
-      <div className="flex items-center gap-6 flex-1">
-        <div className="relative w-full max-w-md">
+      <div className="flex min-w-0 flex-1 items-center gap-3 sm:gap-4 md:gap-6">
+        <button
+          type="button"
+          onClick={onOpenMobileNav}
+          className="flex h-10 w-10 items-center justify-center rounded-xl text-outline transition-all hover:bg-primary/10 hover:text-primary md:hidden"
+          aria-label="Open navigation menu"
+        >
+          <span className="material-symbols-outlined">menu</span>
+        </button>
+
+        <div className="relative w-full min-w-0 max-w-md">
           <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline" style={{ fontSize: 18 }}>
             search
           </span>
@@ -17,7 +26,7 @@ export default function TopNav({ isDark, onToggleTheme }) {
       </div>
 
       {/* Right side */}
-      <div className="flex items-center gap-2">
+      <div className="ml-3 flex flex-shrink-0 items-center gap-1 sm:gap-2">
 
         {/* Theme toggle */}
         <button
@@ -37,16 +46,16 @@ export default function TopNav({ isDark, onToggleTheme }) {
         </button>
 
         {/* Settings */}
-        <button className="p-2 text-outline hover:text-primary hover:bg-primary/10 rounded-xl transition-all">
+        <button className="hidden rounded-xl p-2 text-outline transition-all hover:bg-primary/10 hover:text-primary sm:block">
           <span className="material-symbols-outlined">settings</span>
         </button>
 
         {/* Divider */}
-        <div className="h-8 w-px bg-primary/20 mx-2"></div>
+        <div className="mx-2 hidden h-8 w-px bg-primary/20 sm:block"></div>
 
         {/* User */}
         <div className="flex items-center gap-3 pl-1">
-          <div className="text-right">
+          <div className="hidden text-right sm:block">
             <p className="text-xs font-bold text-on-surface leading-none">Admin User</p>
             <p className="text-[10px] text-outline mt-0.5">System Overseer</p>
           </div>
