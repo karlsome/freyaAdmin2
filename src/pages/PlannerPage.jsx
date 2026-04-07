@@ -13,6 +13,7 @@ import PlannerDuplicateChoiceModal from "../components/planner/PlannerDuplicateC
 import PlannerGoalImportReviewModal from "../components/planner/PlannerGoalImportReviewModal";
 import PlannerSlotSchedulingModal from "../components/planner/PlannerSlotSchedulingModal";
 import PlannerSmartSchedulingModal from "../components/planner/PlannerSmartSchedulingModal";
+import PlannerPrintModal from "../components/planner/PlannerPrintModal";
 import {
   batchCreatePlannerGoals,
   checkPlannerGoalDuplicates,
@@ -53,6 +54,7 @@ import {
   processInProgressData,
   timeToMinutes,
 } from "../utils/planner";
+import { openPlannerCalendarWindow, openPlannerPrintWindow } from "../utils/plannerExports";
 
 const MAIN_TABS = [
   { key: "goals", label: "Production Goals" },
@@ -174,6 +176,7 @@ export default function PlannerPage() {
   const [smartApplying, setSmartApplying] = useState(false);
   const [smartPreview, setSmartPreview] = useState(null);
   const [smartPreviewOpen, setSmartPreviewOpen] = useState(false);
+  const [printModalOpen, setPrintModalOpen] = useState(false);
 
   const productColors = buildProductColorMap(products, [...goals, ...scheduledProducts]);
   const filteredGoals = filterGoals(goals, goalSearch);
@@ -840,6 +843,50 @@ export default function PlannerPage() {
     }
   }
 
+  function handleOpenCalendar() {
+    if (!scheduledProducts.length) {
+      showFlash("No products scheduled for this date.", "warning");
+      return;
+    }
+
+    try {
+      openPlannerCalendarWindow({
+        factoryName,
+        planDate,
+        scheduledProducts,
+        breaks,
+      });
+    } catch (error) {
+      showFlash(error.message || "Failed to open calendar view.", "error");
+    }
+  }
+
+  function handlePrintSelectedEquipment(selectedEquipment) {
+    if (!scheduledProducts.length) {
+      showFlash("No products scheduled for this date.", "warning");
+      return;
+    }
+
+    if (!selectedEquipment.length) {
+      showFlash("Select at least one equipment to print.", "warning");
+      return;
+    }
+
+    setPrintModalOpen(false);
+
+    try {
+      openPlannerPrintWindow({
+        factoryName,
+        planDate,
+        scheduledProducts,
+        selectedEquipment,
+        breaks,
+      });
+    } catch (error) {
+      showFlash(error.message || "Failed to open print preview.", "error");
+    }
+  }
+
   return (
     <section className="h-screen overflow-y-auto px-4 pb-24 pt-20 scrollbar-hide sm:px-6 sm:pb-16 sm:pt-24 md:px-8">
       <FlashBanner flash={flash} onClose={() => setFlash(null)} />
@@ -925,8 +972,29 @@ export default function PlannerPage() {
               onClearAll={handleClearAllScheduled}
             />
 
-            <div>
+            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
               <LiquidSegmentedControl items={VIEW_TABS} activeKey={viewTab} onChange={setViewTab} className="inline-flex" />
+
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={handleOpenCalendar}
+                  disabled={!scheduledProducts.length}
+                  className="flex items-center gap-2 rounded-2xl border border-outline-variant/20 bg-surface-container px-4 py-2 text-xs font-bold text-on-surface transition hover:bg-surface-container-high disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  <span className="material-symbols-outlined" style={{ fontSize: 16 }}>calendar_month</span>
+                  Calendar View
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPrintModalOpen(true)}
+                  disabled={!scheduledProducts.length}
+                  className="flex items-center gap-2 rounded-2xl kinetic-gradient px-4 py-2 text-xs font-bold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  <span className="material-symbols-outlined" style={{ fontSize: 16 }}>print</span>
+                  Print
+                </button>
+              </div>
             </div>
 
             {viewTab === "timeline" ? (
@@ -977,6 +1045,13 @@ export default function PlannerPage() {
         saving={breakSaving}
         onClose={() => setBreakModalOpen(false)}
         onSave={handleSaveBreaks}
+      />
+
+      <PlannerPrintModal
+        open={printModalOpen}
+        equipmentOptions={[...new Set(scheduledProducts.map((item) => item.equipment).filter(Boolean))]}
+        onClose={() => setPrintModalOpen(false)}
+        onConfirm={handlePrintSelectedEquipment}
       />
 
       <PlannerManualGoalModal
