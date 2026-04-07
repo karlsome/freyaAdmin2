@@ -5,8 +5,7 @@
  *   POST /queries       → { dbName, collectionName, query, sort, limit }
  *   GET  /api/masterdb/factories
  *
- * Environmental data: Open-Meteo (free, no key required)
- * Factory coordinates: Sasaki_Coating_MasterDB / factoryDB
+ * Environmental data: server-side weather batch via /api/factory-overview/env
  */
 
 // ─── API Base URL ─────────────────────────────────────────────────────────────
@@ -18,6 +17,7 @@ const BASE_URL = (ENV_URL || LOCAL_URL).replace(/\/?$/, "/");
 
 // ─── Cache ────────────────────────────────────────────────────────────────────
 const _cache = new Map();
+const _inflight = new Map();
 const ENV_TTL    = 10 * 60 * 1000; // 10 min
 const SENSOR_TTL =  2 * 60 * 1000; // 2 min
 const MASTER_TTL =  5 * 60 * 1000; // 5 min
@@ -28,6 +28,20 @@ function _getCached(key, ttl) {
   return null;
 }
 function _setCache(key, data) { _cache.set(key, { data, ts: Date.now() }); }
+
+async function _withInFlight(key, loader) {
+  const pending = _inflight.get(key);
+  if (pending) return pending;
+
+  const task = Promise.resolve()
+    .then(loader)
+    .finally(() => {
+      _inflight.delete(key);
+    });
+
+  _inflight.set(key, task);
+  return task;
+}
 
 async function _readJson(res) {
   const text = await res.text();
@@ -227,57 +241,43 @@ export async function fetchHistoricalSensorData(factoryName, startDate, endDate)
   }
 }
 
-// ─── Environmental data (factory location → Open-Meteo) ──────────────────────
-async function _fetchFactoryLocation(factoryName) {
-  const key = `loc_${factoryName}`;
-  const cached = _getCached(key, ENV_TTL);
-  if (cached) return cached;
-  try {
-    const data = await query("Sasaki_Coating_MasterDB", "factoryDB", { 工場: factoryName });
-    if (!data?.length) return null;
-    const f = data[0];
-    let coordinates = null;
-    if (f.geotag) {
-      const parts = f.geotag.split(",");
-      if (parts.length === 2)
-        coordinates = { lat: parseFloat(parts[0].trim()), lon: parseFloat(parts[1].trim()) };
-    } else if (f.coordinates) {
-      coordinates = f.coordinates;
-    }
-    const result = {
-      location: f.location,
-      coordinates,
-      source: f.geotag ? "geotag" : f.coordinates ? "coordinates" : "none",
-    };
-    _setCache(key, result);
-    return result;
-  } catch {
-    return null;
-  }
+// ─── Environmental data (shared server-side weather batch) ──────────────────
+function _todayKey() {
+  return new Date().toISOString().split("T")[0];
 }
 
-async function _fetchWeatherData(lat, lon) {
-  try {
-    const res = await fetch(
-      `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m&timezone=Asia/Tokyo`
-    );
-    const data = await res.json();
-    if (!data.current) return null;
-    const hour  = new Date().getHours();
-    const isWork = hour >= 8 && hour <= 18;
-    const co2 = Math.round(
-      400 + (isWork ? 100 + Math.random() * 300 : Math.random() * 100) +
-      Math.sin((hour * Math.PI) / 12) * 50
-    );
-    return {
-      temperature: Math.round(data.current.temperature_2m * 10) / 10,
-      humidity:    Math.round(data.current.relative_humidity_2m),
-      co2,
-      timestamp: Date.now(),
-    };
-  } catch {
-    return null;
-  }
+function _normalizeEnvSnapshot(snapshot, coordinateSource = "server-batch") {
+  if (!snapshot) return null;
+  return {
+    temperature: snapshot.temperature ?? null,
+    humidity: snapshot.humidity ?? null,
+    co2: snapshot.co2 ?? null,
+    timestamp: snapshot.timestamp ?? Date.now(),
+    isDefault: Boolean(snapshot.isDefault),
+    coordinateSource: snapshot.coordinateSource ?? coordinateSource,
+    apparentTemperature: snapshot.apparentTemperature ?? null,
+    isDay: snapshot.isDay ?? null,
+    weatherCode: snapshot.weatherCode ?? null,
+  };
+}
+
+async function _fetchEnvironmentalOverview(date = _todayKey()) {
+  const key = `env_overview_${date}`;
+  const cached = _getCached(key, ENV_TTL);
+  if (cached) return cached;
+
+  return _withInFlight(key, async () => {
+    try {
+      const result = await _getJson(`api/factory-overview/env?date=${encodeURIComponent(date)}`);
+      const data = result?.data && typeof result.data === "object" ? result.data : {};
+      if (Object.keys(data).length > 0) {
+        _setCache(key, data);
+      }
+      return data;
+    } catch {
+      return {};
+    }
+  });
 }
 
 function _defaultEnv() {
@@ -299,17 +299,14 @@ export async function fetchEnvironmentalData(factoryName) {
   const key = `env_${factoryName}`;
   const cached = _getCached(key, ENV_TTL);
   if (cached) return cached;
-  try {
-    const loc = await _fetchFactoryLocation(factoryName);
-    if (!loc?.coordinates) return _defaultEnv();
-    const weather = await _fetchWeatherData(loc.coordinates.lat, loc.coordinates.lon);
-    if (!weather) return _defaultEnv();
-    const result = { ...weather, coordinateSource: loc.source, isDefault: false };
+
+  return _withInFlight(key, async () => {
+    const overview = await _fetchEnvironmentalOverview();
+    const snapshot = _normalizeEnvSnapshot(overview[factoryName]);
+    const result = snapshot ?? _defaultEnv();
     _setCache(key, result);
     return result;
-  } catch {
-    return _defaultEnv();
-  }
+  });
 }
 
 // ─── Full production range (for FactoryDetailPage) ────────────────────────────
@@ -506,12 +503,10 @@ export async function fetchCombinedEnvironmentalData() {
   const cached = _getCached(key, ENV_TTL);
   if (cached) return cached;
 
-  try {
-    const factories = await fetchMasterFactories();
-    const settled = await Promise.allSettled(factories.map((factory) => fetchEnvironmentalData(factory)));
-    const snapshots = settled
-      .filter((result) => result.status === "fulfilled")
-      .map((result) => result.value)
+  return _withInFlight(key, async () => {
+    const overview = await _fetchEnvironmentalOverview();
+    const snapshots = Object.values(overview)
+      .map((snapshot) => _normalizeEnvSnapshot(snapshot, "combined"))
       .filter(Boolean);
 
     if (!snapshots.length) {
@@ -528,16 +523,14 @@ export async function fetchCombinedEnvironmentalData() {
       temperature: _averageMetric(temperatures, 1),
       humidity: _averageMetric(humidities, 0),
       co2: _averageMetric(co2Values, 0),
-      timestamp: Date.now(),
+      timestamp: Math.max(...snapshots.map((item) => item.timestamp || 0), Date.now()),
       isDefault: snapshots.every((item) => item.isDefault),
       coordinateSource: "combined",
     };
 
     _setCache(key, result);
     return result;
-  } catch {
-    return { ..._defaultEnv(), coordinateSource: "combined" };
-  }
+  });
 }
 
 // ─── Manufacturing lot lookup ──────────────────────────────────────────────────
