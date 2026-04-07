@@ -25,6 +25,166 @@ function defectChip(rate) {
   return "bg-emerald-400/15 text-emerald-400";
 }
 
+function parseStructuredValue(value) {
+  if (typeof value !== "string") return value;
+  const trimmed = value.trim();
+  if (!trimmed) return value;
+  if (
+    (trimmed.startsWith("{") && trimmed.endsWith("}")) ||
+    (trimmed.startsWith("[") && trimmed.endsWith("]"))
+  ) {
+    try {
+      return JSON.parse(trimmed);
+    } catch {
+      return value;
+    }
+  }
+  return value;
+}
+
+function isStructuredValue(value) {
+  return value != null && typeof value === "object";
+}
+
+function isLikelyImage(value) {
+  return typeof value === "string" && /(?:^data:image\/|\.(png|jpg|jpeg|gif|webp|avif|svg))(?:\?.*)?$/i.test(value);
+}
+
+function formatPrimitiveValue(value) {
+  if (value == null || value === "") return "—";
+  if (typeof value === "boolean") return value ? "True" : "False";
+  if (typeof value === "number" && Number.isFinite(value)) return value.toLocaleString();
+  return String(value);
+}
+
+function PrimitiveFieldValue({ value, align = "right" }) {
+  if (isLikelyImage(value)) {
+    return (
+      <div className={`flex ${align === "right" ? "justify-end" : "justify-start"}`}>
+        <img
+          src={value}
+          alt="Record field"
+          className="max-h-28 rounded-2xl border border-outline-variant/20 bg-surface object-contain"
+        />
+      </div>
+    );
+  }
+
+  return (
+    <span
+      className={`block min-w-0 whitespace-pre-wrap break-all text-xs font-mono text-on-surface-variant ${
+        align === "right" ? "text-right" : "text-left"
+      }`}
+    >
+      {formatPrimitiveValue(value)}
+    </span>
+  );
+}
+
+function StructuredValueCard({ value, depth = 0 }) {
+  const normalizedValue = parseStructuredValue(value);
+
+  if (!isStructuredValue(normalizedValue)) {
+    return <PrimitiveFieldValue value={normalizedValue} align={depth > 0 ? "left" : "right"} />;
+  }
+
+  if (Array.isArray(normalizedValue)) {
+    const items = normalizedValue.filter((item) => item != null && item !== "");
+
+    if (items.length === 0) {
+      return (
+        <div className="rounded-2xl border border-outline-variant/20 bg-surface-container/40 px-3 py-2 text-[11px] text-outline">
+          Empty array
+        </div>
+      );
+    }
+
+    return (
+      <div className="rounded-2xl border border-outline-variant/20 bg-surface-container/40 p-3 space-y-2">
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-[10px] font-bold uppercase tracking-wider text-outline">Array</span>
+          <span className="rounded-full bg-surface px-2 py-0.5 text-[10px] font-bold text-on-surface-variant">
+            {items.length} item{items.length === 1 ? "" : "s"}
+          </span>
+        </div>
+        <div className="space-y-2">
+          {items.map((item, index) => {
+            const nestedValue = parseStructuredValue(item);
+            const nestedStructured = isStructuredValue(nestedValue);
+            return (
+              <div key={index} className="rounded-xl border border-outline-variant/15 bg-surface px-3 py-2.5">
+                {nestedStructured ? (
+                  <div className="space-y-2">
+                    <span className="block text-[10px] font-bold uppercase tracking-wider text-outline">
+                      Item {index + 1}
+                    </span>
+                    <StructuredValueCard value={nestedValue} depth={depth + 1} />
+                  </div>
+                ) : (
+                  <div className="flex items-start justify-between gap-3">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-outline">
+                      Item {index + 1}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <PrimitiveFieldValue value={nestedValue} align="right" />
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  }
+
+  const objectEntries = Object.entries(normalizedValue).filter(([, nestedValue]) => nestedValue != null && nestedValue !== "");
+
+  if (objectEntries.length === 0) {
+    return (
+      <div className="rounded-2xl border border-outline-variant/20 bg-surface-container/40 px-3 py-2 text-[11px] text-outline">
+        Empty object
+      </div>
+    );
+  }
+
+  return (
+    <div className="rounded-2xl border border-outline-variant/20 bg-surface-container/40 p-3 space-y-2">
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-[10px] font-bold uppercase tracking-wider text-outline">Object</span>
+        <span className="rounded-full bg-surface px-2 py-0.5 text-[10px] font-bold text-on-surface-variant">
+          {objectEntries.length} field{objectEntries.length === 1 ? "" : "s"}
+        </span>
+      </div>
+      <div className="space-y-2">
+        {objectEntries.map(([nestedKey, nestedValue]) => {
+          const normalizedNestedValue = parseStructuredValue(nestedValue);
+          const nestedStructured = isStructuredValue(normalizedNestedValue);
+          return (
+            <div key={nestedKey} className="rounded-xl border border-outline-variant/15 bg-surface px-3 py-2.5">
+              {nestedStructured ? (
+                <div className="space-y-2">
+                  <span className="block text-[10px] font-bold uppercase tracking-wider text-outline break-all">
+                    {nestedKey}
+                  </span>
+                  <StructuredValueCard value={normalizedNestedValue} depth={depth + 1} />
+                </div>
+              ) : (
+                <div className="flex items-start justify-between gap-3">
+                  <span className="text-[11px] font-bold text-outline break-all">{nestedKey}</span>
+                  <div className="min-w-0 flex-1">
+                    <PrimitiveFieldValue value={normalizedNestedValue} align="right" />
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 // ─── PhotosSection ────────────────────────────────────────────────────────────
 function PhotosSection({ checkImages, labelImages, totalCount }) {
   const [open, setOpen] = useState(false);
@@ -439,18 +599,18 @@ export default function RecordDetailModal({ record, processName, onClose, onLotC
           {allFieldsOpen && (
             <div className="space-y-0 mt-3">
               {entries.map(([k, v]) => {
-                let display = v;
-                if (typeof v === "object") {
-                  try { display = JSON.stringify(v, null, 2); } catch { display = String(v); }
-                }
-                const isImage = typeof v === "string" && /\.(png|jpg|jpeg|gif|webp)$/i.test(v);
+                const normalizedValue = parseStructuredValue(v);
+                const structured = isStructuredValue(normalizedValue);
                 return (
-                  <div key={k} className="flex justify-between gap-4 py-2 border-b border-white/5 last:border-0">
-                    <span className="text-[11px] font-bold text-outline flex-shrink-0">{k}</span>
-                    {isImage ? (
-                      <img src={v} alt={k} className="max-h-24 rounded-2xl" />
+                  <div
+                    key={k}
+                    className="grid grid-cols-1 gap-2 py-3 border-b border-white/5 last:border-0 md:grid-cols-[minmax(120px,160px)_1fr] md:gap-4"
+                  >
+                    <span className="text-[11px] font-bold text-outline md:pt-1">{k}</span>
+                    {structured ? (
+                      <StructuredValueCard value={normalizedValue} />
                     ) : (
-                      <span className="text-xs text-on-surface-variant text-right break-all font-mono">{String(display)}</span>
+                      <PrimitiveFieldValue value={normalizedValue} align="right" />
                     )}
                   </div>
                 );

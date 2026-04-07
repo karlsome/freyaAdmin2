@@ -6,7 +6,7 @@
 /* Colors are stored as RGB channels so Tailwind opacity modifiers work:        */
 /* e.g. bg-primary/10 → rgba(73, 75, 214, 0.10)                                */
 :root {
-  --c-background:               251 248 255;
+  --c-background:               255 255 255;
   --c-surface:                  255 255 255;
   --c-surface-container:        248 249 250;
   --c-surface-container-lowest: 255 255 255;
