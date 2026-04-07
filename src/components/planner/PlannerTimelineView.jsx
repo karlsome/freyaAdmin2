@@ -92,11 +92,11 @@ export default function PlannerTimelineView({
           ) : null}
 
           <div className="sticky top-0 z-10 flex border-b border-outline-variant/15 bg-surface-container-high/95 backdrop-blur-md">
-            <div className="sticky left-0 z-10 flex h-12 items-center border-r border-outline-variant/15 bg-surface-container-high/95 px-4 text-xs font-bold uppercase tracking-[0.18em] text-outline" style={{ width: LABEL_WIDTH }}>
+            <div className="planner-data-label sticky left-0 z-10 flex h-12 items-center border-r border-outline-variant/15 bg-surface-container-high/95 px-4 text-outline" style={{ width: LABEL_WIDTH }}>
               Equipment
             </div>
             {timeSlots.map((slot) => (
-              <div key={slot} className="flex h-12 items-center justify-center border-r border-outline-variant/10 text-[11px] font-bold text-on-surface-variant" style={{ width: SLOT_WIDTH }}>
+              <div key={slot} className="planner-data-text flex h-12 items-center justify-center border-r border-outline-variant/10 font-bold text-on-surface-variant" style={{ width: SLOT_WIDTH }}>
                 {slot}
               </div>
             ))}
@@ -114,8 +114,8 @@ export default function PlannerTimelineView({
               <div key={equipmentName} className="border-b border-outline-variant/10 last:border-b-0">
                 <div className={`flex min-h-[58px] ${plannedUnavailable ? "opacity-50" : ""}`}>
                   <div className="sticky left-0 z-[5] flex flex-col justify-center border-r border-outline-variant/15 bg-surface px-4" style={{ width: LABEL_WIDTH }}>
-                    <div className="text-sm font-black text-on-surface">{equipmentName}</div>
-                    <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-outline">
+                    <div className="planner-data-text font-bold text-on-surface">{equipmentName}</div>
+                    <div className="planner-data-label text-outline">
                       Planned{isGroupEquipment(equipmentName) ? " group" : " lane"}
                     </div>
                   </div>
@@ -163,7 +163,7 @@ export default function PlannerTimelineView({
                           >
                             {showLabel ? (
                               <>
-                                <div className="absolute inset-0 flex items-center justify-center px-1 text-[10px] font-bold" style={{ color: product.color }}>
+                                <div className="planner-data-text absolute inset-0 flex items-center justify-center px-1 font-bold" style={{ color: product.color }}>
                                   {product.背番号}
                                 </div>
                                 <button
@@ -208,8 +208,8 @@ export default function PlannerTimelineView({
 
                 <div className={`flex min-h-[50px] bg-surface-container-lowest/30 ${actualUnavailable ? "opacity-50" : ""}`}>
                   <div className="sticky left-0 z-[5] flex flex-col justify-center border-r border-outline-variant/15 bg-surface-container-low px-4" style={{ width: LABEL_WIDTH }}>
-                    <div className="text-xs font-black text-on-surface">{equipmentName}</div>
-                    <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-outline">Actual</div>
+                    <div className="planner-data-text font-bold text-on-surface">{equipmentName}</div>
+                    <div className="planner-data-label text-outline">Actual</div>
                   </div>
 
                   <div className="flex">
@@ -229,7 +229,7 @@ export default function PlannerTimelineView({
                             title={`${block.背番号} · ${block.totalQuantity} pcs actual`}
                           >
                             {showLabel ? (
-                              <div className="absolute inset-0 flex items-center justify-center px-1 text-[10px] font-bold text-sky-900 dark:text-sky-200">
+                              <div className="planner-data-text absolute inset-0 flex items-center justify-center px-1 font-bold text-sky-900 dark:text-sky-200">
                                 {block.背番号}
                               </div>
                             ) : null}
@@ -245,7 +245,7 @@ export default function PlannerTimelineView({
                             style={{ width: SLOT_WIDTH }}
                             title={`${inProgress.背番号 || inProgress.品番} in progress`}
                           >
-                            <div className="absolute inset-0 flex items-center justify-center gap-1 px-1 text-[9px] font-bold text-amber-700 dark:text-amber-300">
+                            <div className="planner-data-text absolute inset-0 flex items-center justify-center gap-1 px-1 font-bold text-amber-700 dark:text-amber-300">
                               <span className="material-symbols-outlined animate-spin" style={{ fontSize: 10 }}>progress_activity</span>
                               {inProgress.背番号 || "Run"}
                             </div>
@@ -256,7 +256,7 @@ export default function PlannerTimelineView({
                       if (slotMinutes <= currentMinutes) {
                         return (
                           <div key={`${equipmentName}-actual-${slot}`} className="border-r border-outline-variant/10 bg-[#16181e]" style={{ width: SLOT_WIDTH }}>
-                            {slotMinutes % 60 === 0 ? <div className="mt-4 text-center text-[9px] font-bold text-white/40">IDLE</div> : null}
+                            {slotMinutes % 60 === 0 ? <div className="planner-data-text mt-4 text-center font-bold text-white/40">IDLE</div> : null}
                           </div>
                         );
                       }

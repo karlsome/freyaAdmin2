@@ -103,8 +103,8 @@ export default function PlannerSelectedSummary({
                 <section key={equipment} className="rounded-3xl border border-outline-variant/15 bg-surface-container-low p-4">
                   <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                     <div>
-                      <h4 className="text-base font-black text-on-surface">{equipment}</h4>
-                      <p className="mt-1 text-xs text-on-surface-variant">
+                      <h4 className="planner-data-text font-bold text-on-surface">{equipment}</h4>
+                      <p className="planner-data-text mt-1 text-on-surface-variant">
                         {items.length} item{items.length === 1 ? "" : "s"} · {totalQuantity} pcs · {minutesToTime(firstStart)} - {minutesToTime(lastEnd)}
                       </p>
                     </div>
@@ -119,16 +119,16 @@ export default function PlannerSelectedSummary({
 
                   <div className="mt-4 space-y-2">
                     {items.map((item) => (
-                      <div key={item._scheduleId} className="flex items-center justify-between gap-3 rounded-2xl bg-surface px-4 py-3">
+                      <div key={item._scheduleId} className="planner-data-text flex items-center justify-between gap-3 rounded-2xl bg-surface px-4 py-3">
                         <div className="min-w-0 flex items-center gap-3">
                           <span className="h-3 w-3 flex-shrink-0 rounded-full" style={{ backgroundColor: item.color }} />
                           <div className="min-w-0">
-                            <div className="truncate text-sm font-bold text-on-surface">{item.背番号 || item.品番 || "Product"}</div>
-                            <div className="truncate text-[11px] text-on-surface-variant">{item.品名 || item.品番 || ""}</div>
+                            <div className="truncate font-bold text-on-surface">{item.背番号 || item.品番 || "Product"}</div>
+                            <div className="truncate text-on-surface-variant">{item.品名 || item.品番 || ""}</div>
                           </div>
                         </div>
 
-                        <div className="flex items-center gap-4 text-right text-xs text-on-surface-variant">
+                        <div className="flex items-center gap-4 text-right text-on-surface-variant">
                           <div>
                             <div className="font-bold text-on-surface">{item.quantity} pcs</div>
                             <div>{item.boxes} boxes</div>

@@ -15,18 +15,18 @@ function GoalRow({ goal, currentDate, scheduledProducts, products, productColors
   const schedulable = goal.date === currentDate && Number(goal.remainingQuantity || 0) > 0;
 
   return (
-    <article className={`rounded-2xl border p-4 ${goalState.surfaceClassName}`}>
+    <article className={`planner-data-text rounded-2xl border p-4 ${goalState.surfaceClassName}`}>
       <div className="flex flex-col gap-4 xl:grid xl:grid-cols-[minmax(90px,1fr)_minmax(160px,1.2fr)_minmax(220px,1.8fr)_minmax(220px,1.8fr)_minmax(140px,1.2fr)_minmax(120px,0.9fr)_minmax(96px,0.8fr)_auto] xl:items-center">
         <div className="flex items-center gap-3">
           <span className={`h-2.5 w-2.5 rounded-full ${goalState.dotClassName}`} />
           <div>
-            <div className="text-sm font-bold text-on-surface">{goal.背番号 || "-"}</div>
-            <div className="text-[11px] text-outline">{goalState.label}</div>
+            <div className="font-bold text-on-surface">{goal.背番号 || "-"}</div>
+            <div className="text-outline">{goalState.label}</div>
           </div>
         </div>
 
         <div>
-          <div className="text-xs font-semibold text-on-surface">{goal.品番 || "-"}</div>
+          <div className="font-semibold text-on-surface">{goal.品番 || "-"}</div>
           <div className="mt-1 inline-flex items-center gap-2 rounded-full bg-surface-container px-2.5 py-1 text-[10px] font-bold text-on-surface-variant">
             <span className="h-2 w-2 rounded-full" style={{ backgroundColor: productColors[goal.背番号] }} />
             {goal.date === currentDate ? "Current day" : goal.date}
@@ -34,14 +34,14 @@ function GoalRow({ goal, currentDate, scheduledProducts, products, productColors
         </div>
 
         <div>
-          <div className="truncate text-sm font-medium text-on-surface">{goal.品名 || "Unnamed product"}</div>
-          <div className="mt-1 text-xs text-on-surface-variant">
+          <div className="truncate font-medium text-on-surface">{goal.品名 || "Unnamed product"}</div>
+          <div className="mt-1 text-on-surface-variant">
             Remaining {Number(goal.remainingQuantity || 0)} pcs
           </div>
         </div>
 
         <div>
-          <div className="mb-2 flex items-center justify-between gap-3 text-xs font-medium">
+          <div className="mb-2 flex items-center justify-between gap-3 font-medium">
             <span className="text-on-surface">{Number(goal.scheduledQuantity || 0)} / {Number(goal.targetQuantity || 0)} pcs</span>
             <span className={goalState.textClassName}>{goalState.percentage}%</span>
           </div>
@@ -51,20 +51,20 @@ function GoalRow({ goal, currentDate, scheduledProducts, products, productColors
         </div>
 
         <div>
-          <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-outline">Assigned</div>
-          <div className="mt-1 text-sm font-medium text-primary">
+          <div className="planner-data-label text-outline">Assigned</div>
+          <div className="mt-1 font-bold text-primary">
             {assignedEquipment.length ? assignedEquipment.join(", ") : "Not scheduled"}
           </div>
         </div>
 
-        <div className="text-sm text-on-surface xl:text-right">
+        <div className="text-on-surface xl:text-right">
           <div className="font-bold">{scheduledBoxes}/{targetBoxes}</div>
-          <div className="text-[11px] text-outline">Boxes</div>
+          <div className="planner-data-label text-outline">Boxes</div>
         </div>
 
-        <div className="text-sm text-on-surface xl:text-right">
+        <div className="text-on-surface xl:text-right">
           <div className={`font-bold ${goalState.textClassName}`}>{goalState.label}</div>
-          <div className="text-[11px] text-outline">State</div>
+          <div className="planner-data-label text-outline">State</div>
         </div>
 
         <div className="flex items-center justify-end gap-2">
@@ -117,7 +117,7 @@ export default function PlannerGoalList({
       {dateGroups.map((date) => (
         <section key={date}>
           <div className="mb-3 flex items-center justify-between gap-3">
-            <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-outline">{date}</div>
+            <div className="planner-data-label text-outline">{date}</div>
             {date === currentDate ? (
               <span className="rounded-full bg-primary/12 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.16em] text-primary">Today</span>
             ) : null}

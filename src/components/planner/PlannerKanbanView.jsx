@@ -18,12 +18,12 @@ export default function PlannerKanbanView({ equipment = [], scheduledProducts = 
         const utilization = getEquipmentUtilization(scheduledProducts, equipmentName, breaks);
 
         return (
-          <section key={equipmentName} className="glass-card flex w-80 flex-shrink-0 flex-col rounded-3xl">
+          <section key={equipmentName} className="glass-card planner-data-text flex w-80 flex-shrink-0 flex-col rounded-3xl">
             <div className="border-b border-outline-variant/15 px-5 py-4">
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <h3 className="text-base font-black text-on-surface">{equipmentName}</h3>
-                  <p className="mt-1 text-xs text-on-surface-variant">{items.length} scheduled item{items.length === 1 ? "" : "s"}</p>
+                  <h3 className="font-bold text-on-surface">{equipmentName}</h3>
+                  <p className="mt-1 text-on-surface-variant">{items.length} scheduled item{items.length === 1 ? "" : "s"}</p>
                 </div>
                 <span className={`rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-[0.16em] ${utilization.utilization > 100 ? "bg-error/10 text-error" : "bg-primary/10 text-primary"}`}>
                   {utilization.formattedTime}
@@ -62,9 +62,9 @@ export default function PlannerKanbanView({ equipment = [], scheduledProducts = 
                     <div className="min-w-0">
                       <div className="flex items-center gap-2">
                         <span className="h-3 w-3 rounded-full" style={{ backgroundColor: item.color }} />
-                        <h4 className="truncate text-sm font-black text-on-surface">{item.背番号 || item.品番}</h4>
+                        <h4 className="truncate font-bold text-on-surface">{item.背番号 || item.品番}</h4>
                       </div>
-                      <p className="mt-1 truncate text-xs text-on-surface-variant">{item.品名 || item.品番}</p>
+                      <p className="mt-1 truncate text-on-surface-variant">{item.品名 || item.品番}</p>
                     </div>
                     <button
                       type="button"
@@ -76,7 +76,7 @@ export default function PlannerKanbanView({ equipment = [], scheduledProducts = 
                     </button>
                   </div>
 
-                  <div className="mt-4 grid grid-cols-3 gap-2 text-[11px] text-on-surface-variant">
+                  <div className="mt-4 grid grid-cols-3 gap-2 text-on-surface-variant">
                     <div className="rounded-2xl bg-surface px-3 py-2">
                       <div className="font-bold text-on-surface">{item.quantity}</div>
                       <div>pcs</div>

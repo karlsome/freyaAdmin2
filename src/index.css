@@ -393,3 +393,20 @@ select:-webkit-autofill:focus {
   font-weight: 700;
   letter-spacing: var(--table-heading-letter-space);
 }
+
+.planner-data-text {
+  font-family: 'DM Sans', sans-serif;
+  font-size: var(--table-data-font-size);
+  line-height: var(--table-data-line-height);
+  font-variant-numeric: tabular-nums lining-nums;
+  font-feature-settings: "tnum" 1, "lnum" 1;
+}
+
+.planner-data-label {
+  font-family: 'DM Sans', sans-serif;
+  font-size: var(--table-heading-font-size);
+  line-height: var(--table-heading-line-height);
+  font-weight: 700;
+  letter-spacing: var(--table-heading-letter-space);
+  text-transform: uppercase;
+}

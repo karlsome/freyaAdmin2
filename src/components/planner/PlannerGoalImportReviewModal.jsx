@@ -71,17 +71,17 @@ export default function PlannerGoalImportReviewModal({
           <tbody>
             {rows.map((row) => (
               <tr key={row.id} className={`border-b border-outline-variant/10 ${row.status === "error" ? "bg-error/5" : row.status === "duplicate" ? "bg-amber-500/5" : ""}`}>
-                <td className="px-4 py-3 text-sm text-on-surface">{row.date}</td>
-                <td className="px-4 py-3 text-sm text-on-surface">{row.背番号 || "-"}</td>
-                <td className="px-4 py-3 text-sm text-on-surface-variant">{row.品番 || "-"}</td>
-                <td className="px-4 py-3 text-sm text-on-surface-variant">{row.品名 || row.error || "-"}</td>
-                <td className="px-4 py-3 text-sm font-bold text-on-surface">{row.targetQuantity}</td>
-                <td className="px-4 py-3 text-sm">
+                <td className="px-4 py-3 text-on-surface">{row.date}</td>
+                <td className="px-4 py-3 text-on-surface">{row.背番号 || "-"}</td>
+                <td className="px-4 py-3 text-on-surface-variant">{row.品番 || "-"}</td>
+                <td className="px-4 py-3 text-on-surface-variant">{row.品名 || row.error || "-"}</td>
+                <td className="px-4 py-3 font-bold text-on-surface">{row.targetQuantity}</td>
+                <td className="px-4 py-3">
                   {row.status === "valid" ? <span className="text-emerald-600 dark:text-emerald-300">Ready</span> : null}
                   {row.status === "duplicate" ? <span className="text-amber-600 dark:text-amber-300">Duplicate</span> : null}
                   {row.status === "error" ? <span className="text-error">Invalid</span> : null}
                 </td>
-                <td className="px-4 py-3 text-sm text-on-surface">
+                <td className="px-4 py-3 text-on-surface">
                   {row.status === "duplicate" ? (
                     <select
                       value={decisions[row.id] || "add"}
