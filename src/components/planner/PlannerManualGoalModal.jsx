@@ -72,20 +72,20 @@ export default function PlannerManualGoalModal({
         </div>
       )}
     >
-      <div className="grid gap-5 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1.4fr)]">
+      <div className="planner-data-text grid gap-5 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1.4fr)]">
         <div className="space-y-4">
           <div className="rounded-3xl border border-outline-variant/15 bg-surface-container-low p-4">
-            <label className="text-[10px] font-bold uppercase tracking-[0.18em] text-outline">Goal Date</label>
+            <label className="planner-data-label text-outline">Goal Date</label>
             <input
               type="date"
               value={date}
               onChange={(event) => setDate(event.target.value)}
-              className="mt-2 h-11 w-full rounded-2xl border border-outline-variant/20 px-4 text-sm outline-none transition focus:border-primary/40"
+              className="planner-data-text mt-2 h-11 w-full rounded-2xl border border-outline-variant/20 px-4 outline-none transition focus:border-primary/40"
             />
           </div>
 
           <div className="rounded-3xl border border-outline-variant/15 bg-surface-container-low p-4">
-            <label className="text-[10px] font-bold uppercase tracking-[0.18em] text-outline">Search Product</label>
+            <label className="planner-data-label text-outline">Search Product</label>
             <div className="ui-control-surface mt-2 flex h-11 items-center gap-3 rounded-2xl border border-outline-variant/20 px-4">
               <span className="material-symbols-outlined text-outline" style={{ fontSize: 18 }}>search</span>
               <input
@@ -93,28 +93,28 @@ export default function PlannerManualGoalModal({
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
                 placeholder="Search by 背番号, 品番, or 品名…"
-                className="h-full flex-1 bg-transparent text-sm outline-none"
+                className="planner-data-text h-full flex-1 bg-transparent outline-none"
               />
             </div>
           </div>
 
           <div className="rounded-3xl border border-outline-variant/15 bg-surface-container-low p-4">
-            <label className="text-[10px] font-bold uppercase tracking-[0.18em] text-outline">Target Quantity</label>
+            <label className="planner-data-label text-outline">Target Quantity</label>
             <input
               type="number"
               min="1"
               value={targetQuantity}
               onChange={(event) => setTargetQuantity(event.target.value)}
-              className="mt-2 h-11 w-full rounded-2xl border border-outline-variant/20 px-4 text-sm outline-none transition focus:border-primary/40"
+              className="planner-data-text mt-2 h-11 w-full rounded-2xl border border-outline-variant/20 px-4 outline-none transition focus:border-primary/40"
             />
           </div>
 
           {selectedProduct ? (
             <div className="rounded-3xl border border-primary/15 bg-primary/8 p-4">
-              <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-primary">Selected Product</div>
-              <div className="mt-2 text-lg font-black text-on-surface">{selectedProduct.背番号}</div>
-              <div className="mt-1 text-sm text-on-surface-variant">{selectedProduct.品番}</div>
-              <div className="mt-1 text-sm text-on-surface-variant">{selectedProduct.品名 || "Unnamed product"}</div>
+              <div className="planner-data-label text-primary">Selected Product</div>
+              <div className="mt-2 font-bold text-on-surface">{selectedProduct.背番号}</div>
+              <div className="mt-1 text-on-surface-variant">{selectedProduct.品番}</div>
+              <div className="mt-1 text-on-surface-variant">{selectedProduct.品名 || "Unnamed product"}</div>
             </div>
           ) : null}
         </div>
@@ -122,8 +122,8 @@ export default function PlannerManualGoalModal({
         <div className="rounded-3xl border border-outline-variant/15 bg-surface-container-low p-4">
           <div className="mb-3 flex items-center justify-between gap-3">
             <div>
-              <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-outline">Products</div>
-              <div className="mt-1 text-sm text-on-surface-variant">Showing {filteredProducts.length} matches</div>
+              <div className="planner-data-label text-outline">Products</div>
+              <div className="mt-1 text-on-surface-variant">Showing {filteredProducts.length} matches</div>
             </div>
           </div>
 
@@ -137,15 +137,15 @@ export default function PlannerManualGoalModal({
                   onClick={() => handleSelectProduct(item.背番号)}
                   className={`w-full rounded-3xl border px-4 py-4 text-left transition ${active ? "border-primary/35 bg-primary/10" : "border-outline-variant/15 bg-surface hover:bg-surface-container"}`}
                 >
-                  <div className="text-sm font-black text-on-surface">{item.背番号}</div>
-                  <div className="mt-1 text-xs text-on-surface-variant">{item.品番}</div>
-                  <div className="mt-1 text-xs text-on-surface-variant">{item.品名 || "Unnamed product"}</div>
+                  <div className="font-bold text-on-surface">{item.背番号}</div>
+                  <div className="mt-1 text-on-surface-variant">{item.品番}</div>
+                  <div className="mt-1 text-on-surface-variant">{item.品名 || "Unnamed product"}</div>
                 </button>
               );
             })}
 
             {!filteredProducts.length ? (
-              <div className="rounded-3xl border border-dashed border-outline-variant/20 bg-surface px-4 py-10 text-center text-sm text-on-surface-variant">
+              <div className="rounded-3xl border border-dashed border-outline-variant/20 bg-surface px-4 py-10 text-center text-on-surface-variant">
                 No products match the current search.
               </div>
             ) : null}

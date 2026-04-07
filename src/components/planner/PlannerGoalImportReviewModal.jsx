@@ -86,7 +86,7 @@ export default function PlannerGoalImportReviewModal({
                     <select
                       value={decisions[row.id] || "add"}
                       onChange={(event) => setDecisions((state) => ({ ...state, [row.id]: event.target.value }))}
-                      className="h-10 rounded-2xl border border-outline-variant/20 px-3 text-sm outline-none transition focus:border-primary/40"
+                      className="planner-data-text h-10 rounded-2xl border border-outline-variant/20 px-3 outline-none transition focus:border-primary/40"
                     >
                       <option value="add">Add</option>
                       <option value="overwrite">Overwrite</option>

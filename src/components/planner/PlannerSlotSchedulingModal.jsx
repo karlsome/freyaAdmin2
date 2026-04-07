@@ -3,12 +3,12 @@ import PlannerModalShell from "./PlannerModalShell";
 
 function QueueRow({ item, index, total, onMove, onQuantityChange, onRemove }) {
   return (
-    <div className="rounded-3xl border border-outline-variant/15 bg-surface-container-low p-4">
+    <div className="planner-data-text rounded-3xl border border-outline-variant/15 bg-surface-container-low p-4">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <div className="text-sm font-black text-on-surface">{item.背番号 || item.品番}</div>
-          <div className="mt-1 text-xs text-on-surface-variant">{item.品番}</div>
-          <div className="mt-1 text-xs text-on-surface-variant">Remaining {item.remainingQuantity} pcs</div>
+          <div className="font-bold text-on-surface">{item.背番号 || item.品番}</div>
+          <div className="mt-1 text-on-surface-variant">{item.品番}</div>
+          <div className="mt-1 text-on-surface-variant">Remaining {item.remainingQuantity} pcs</div>
         </div>
 
         <div className="flex items-center gap-2">
@@ -19,14 +19,14 @@ function QueueRow({ item, index, total, onMove, onQuantityChange, onRemove }) {
       </div>
 
       <div className="mt-3">
-        <label className="text-[10px] font-bold uppercase tracking-[0.18em] text-outline">Schedule Quantity</label>
+        <label className="planner-data-label text-outline">Schedule Quantity</label>
         <input
           type="number"
           min="1"
           max={item.remainingQuantity}
           value={item.quantity}
           onChange={(event) => onQuantityChange(item._id, Number(event.target.value || 0))}
-          className="mt-2 h-11 w-full rounded-2xl border border-outline-variant/20 px-4 text-sm outline-none transition focus:border-primary/40"
+          className="planner-data-text mt-2 h-11 w-full rounded-2xl border border-outline-variant/20 px-4 outline-none transition focus:border-primary/40"
         />
       </div>
     </div>
@@ -108,7 +108,7 @@ export default function PlannerSlotSchedulingModal({
         </div>
       )}
     >
-      <div className="grid gap-5 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)]">
+      <div className="planner-data-text grid gap-5 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)]">
         <div className="rounded-3xl border border-outline-variant/15 bg-surface-container-low p-4">
           <div className="ui-control-surface flex h-11 items-center gap-3 rounded-2xl border border-outline-variant/20 px-4">
             <span className="material-symbols-outlined text-outline" style={{ fontSize: 18 }}>search</span>
@@ -117,7 +117,7 @@ export default function PlannerSlotSchedulingModal({
               value={search}
               onChange={(event) => setSearch(event.target.value)}
               placeholder="Search goals for this date…"
-              className="h-full flex-1 bg-transparent text-sm outline-none"
+              className="planner-data-text h-full flex-1 bg-transparent outline-none"
             />
           </div>
 
@@ -134,9 +134,9 @@ export default function PlannerSlotSchedulingModal({
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div>
-                      <div className="text-sm font-black text-on-surface">{goal.背番号 || goal.品番}</div>
-                      <div className="mt-1 text-xs text-on-surface-variant">{goal.品番}</div>
-                      <div className="mt-1 text-xs text-on-surface-variant">{goal.品名 || "Unnamed product"}</div>
+                      <div className="font-bold text-on-surface">{goal.背番号 || goal.品番}</div>
+                      <div className="mt-1 text-on-surface-variant">{goal.品番}</div>
+                      <div className="mt-1 text-on-surface-variant">{goal.品名 || "Unnamed product"}</div>
                     </div>
                     <span className="rounded-full bg-primary/10 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.16em] text-primary">
                       {goal.remainingQuantity} pcs
@@ -147,7 +147,7 @@ export default function PlannerSlotSchedulingModal({
             })}
 
             {!availableGoals.length ? (
-              <div className="rounded-3xl border border-dashed border-outline-variant/20 bg-surface px-4 py-10 text-center text-sm text-on-surface-variant">
+              <div className="rounded-3xl border border-dashed border-outline-variant/20 bg-surface px-4 py-10 text-center text-on-surface-variant">
                 No goals with remaining quantity are available for the selected date.
               </div>
             ) : null}
@@ -157,8 +157,8 @@ export default function PlannerSlotSchedulingModal({
         <div className="rounded-3xl border border-outline-variant/15 bg-surface-container-low p-4">
           <div className="mb-4 flex items-center justify-between gap-3">
             <div>
-              <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-outline">Queue</div>
-              <div className="mt-1 text-sm text-on-surface-variant">Items run in the order shown here.</div>
+              <div className="planner-data-label text-outline">Queue</div>
+              <div className="mt-1 text-on-surface-variant">Items run in the order shown here.</div>
             </div>
             <div className="rounded-full bg-surface px-3 py-1 text-[10px] font-bold uppercase tracking-[0.16em] text-on-surface-variant">
               {queue.length} selected
@@ -184,7 +184,7 @@ export default function PlannerSlotSchedulingModal({
             ))}
 
             {!queue.length ? (
-              <div className="rounded-3xl border border-dashed border-outline-variant/20 bg-surface px-4 py-10 text-center text-sm text-on-surface-variant">
+              <div className="rounded-3xl border border-dashed border-outline-variant/20 bg-surface px-4 py-10 text-center text-on-surface-variant">
                 Add goals from the left panel to build a scheduling queue.
               </div>
             ) : null}

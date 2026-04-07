@@ -48,26 +48,26 @@ export default function PlannerSmartSchedulingModal({
         </div>
       )}
     >
-      <div className="rounded-3xl border border-outline-variant/15 bg-surface-container-low p-4">
-        <label className="text-[10px] font-bold uppercase tracking-[0.18em] text-outline">Schedule Until</label>
+      <div className="planner-data-text rounded-3xl border border-outline-variant/15 bg-surface-container-low p-4">
+        <label className="planner-data-label text-outline">Schedule Until</label>
         <input
           type="time"
           value={timeLimit}
           onChange={(event) => setTimeLimit(event.target.value)}
-          className="mt-2 h-11 w-full max-w-xs rounded-2xl border border-outline-variant/20 px-4 text-sm outline-none transition focus:border-primary/40"
+          className="planner-data-text mt-2 h-11 w-full max-w-xs rounded-2xl border border-outline-variant/20 px-4 outline-none transition focus:border-primary/40"
         />
-        <p className="mt-2 text-xs text-on-surface-variant">The scheduler will fit complete boxes before this time, with the same grace-period logic used in the original planner.</p>
+        <p className="mt-2 text-on-surface-variant">The scheduler will fit complete boxes before this time, with the same grace-period logic used in the original planner.</p>
       </div>
 
       <div className="mt-5 space-y-5">
         {!equipmentNames.length ? (
-          <div className="rounded-3xl border border-dashed border-outline-variant/20 bg-surface px-4 py-12 text-center text-sm text-on-surface-variant">
+          <div className="planner-data-text rounded-3xl border border-dashed border-outline-variant/20 bg-surface px-4 py-12 text-center text-on-surface-variant">
             No historical equipment matches were found for the current goals.
           </div>
         ) : equipmentNames.map((equipment) => (
-          <section key={equipment} className="rounded-3xl border border-outline-variant/15 bg-surface-container-low p-4">
+          <section key={equipment} className="planner-data-text rounded-3xl border border-outline-variant/15 bg-surface-container-low p-4">
             <div className="mb-3 flex items-center justify-between gap-3">
-              <h4 className="text-base font-black text-on-surface">{equipment}</h4>
+              <h4 className="font-bold text-on-surface">{equipment}</h4>
               <span className="rounded-full bg-primary/10 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.16em] text-primary">
                 {assignments[equipment].length} goal{assignments[equipment].length === 1 ? "" : "s"}
               </span>
@@ -76,8 +76,8 @@ export default function PlannerSmartSchedulingModal({
               {assignments[equipment].map((item) => (
                 <div key={item._id} className="flex items-center justify-between gap-3 rounded-2xl bg-surface px-4 py-3">
                   <div>
-                    <div className="text-sm font-black text-on-surface">{item.背番号 || item.品番}</div>
-                    <div className="mt-1 text-xs text-on-surface-variant">{item.品番} · {item.remainingQuantity} pcs remaining</div>
+                    <div className="font-bold text-on-surface">{item.背番号 || item.品番}</div>
+                    <div className="mt-1 text-on-surface-variant">{item.品番} · {item.remainingQuantity} pcs remaining</div>
                   </div>
                   <div className="rounded-full bg-surface-container px-3 py-1 text-[10px] font-bold uppercase tracking-[0.16em] text-on-surface-variant">
                     {Math.round(Number(item.confidence || 0) * 100)}% confidence

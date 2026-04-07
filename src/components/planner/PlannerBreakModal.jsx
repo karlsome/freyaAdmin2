@@ -60,7 +60,7 @@ export default function PlannerBreakModal({
         </div>
       )}
     >
-      <div className="space-y-3">
+      <div className="planner-data-text space-y-3">
         {draftBreaks.map((item) => (
           <div key={item.id} className="grid gap-3 rounded-3xl border border-outline-variant/15 bg-surface-container-low p-4 lg:grid-cols-[minmax(180px,1.2fr)_140px_140px_minmax(180px,1fr)_auto] lg:items-center">
             <input
@@ -68,24 +68,24 @@ export default function PlannerBreakModal({
               value={item.name || ""}
               onChange={(event) => updateBreak(item.id, { name: event.target.value })}
               placeholder="Break name"
-              className="h-11 rounded-2xl border border-outline-variant/20 px-4 text-sm outline-none transition focus:border-primary/40"
+              className="planner-data-text h-11 rounded-2xl border border-outline-variant/20 px-4 outline-none transition focus:border-primary/40"
             />
             <input
               type="time"
               value={item.start || ""}
               onChange={(event) => updateBreak(item.id, { start: event.target.value })}
-              className="h-11 rounded-2xl border border-outline-variant/20 px-4 text-sm outline-none transition focus:border-primary/40"
+              className="planner-data-text h-11 rounded-2xl border border-outline-variant/20 px-4 outline-none transition focus:border-primary/40"
             />
             <input
               type="time"
               value={item.end || ""}
               onChange={(event) => updateBreak(item.id, { end: event.target.value })}
-              className="h-11 rounded-2xl border border-outline-variant/20 px-4 text-sm outline-none transition focus:border-primary/40"
+              className="planner-data-text h-11 rounded-2xl border border-outline-variant/20 px-4 outline-none transition focus:border-primary/40"
             />
             <select
               value={item.equipment || ""}
               onChange={(event) => updateBreak(item.id, { equipment: event.target.value || null })}
-              className="h-11 rounded-2xl border border-outline-variant/20 px-4 text-sm outline-none transition focus:border-primary/40"
+              className="planner-data-text h-11 rounded-2xl border border-outline-variant/20 px-4 outline-none transition focus:border-primary/40"
             >
               <option value="">All equipment</option>
               {equipmentOptions.map((equipment) => (

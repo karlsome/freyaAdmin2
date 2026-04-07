@@ -72,12 +72,12 @@ export default function PlannerGoalsPanel({
                 value={goalSearch}
                 onChange={(event) => onGoalSearchChange(event.target.value)}
                 placeholder="Search by 背番号, 品番, or 品名…"
-                className="h-full flex-1 bg-transparent text-sm outline-none"
+                className="planner-data-text h-full flex-1 bg-transparent outline-none"
               />
             </div>
           </div>
 
-          <div className="rounded-2xl bg-surface-container-low px-4 py-3 text-xs font-bold text-on-surface-variant">
+          <div className="planner-data-text rounded-2xl bg-surface-container-low px-4 py-3 font-bold text-on-surface-variant">
             {goals.length} goal{goals.length === 1 ? "" : "s"} in view
           </div>
         </div>
