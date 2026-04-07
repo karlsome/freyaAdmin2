@@ -1,0 +1,157 @@
+import { useEffect, useState } from "react";
+import PlannerModalShell from "./PlannerModalShell";
+import { getProductCapacity } from "../../utils/planner";
+
+export default function PlannerManualGoalModal({
+  open,
+  products = [],
+  initialDate,
+  submitting = false,
+  onClose,
+  onSubmit,
+}) {
+  const [search, setSearch] = useState("");
+  const [selectedSerial, setSelectedSerial] = useState("");
+  const [targetQuantity, setTargetQuantity] = useState("");
+  const [date, setDate] = useState(initialDate);
+
+  useEffect(() => {
+    if (!open) return;
+    setSearch("");
+    setSelectedSerial("");
+    setTargetQuantity("");
+    setDate(initialDate);
+  }, [open, initialDate]);
+
+  const filteredProducts = products
+    .filter((item) => {
+      const query = search.toLowerCase();
+      if (!query) return true;
+      return (
+        String(item.背番号 || "").toLowerCase().includes(query)
+        || String(item.品番 || "").toLowerCase().includes(query)
+        || String(item.品名 || "").toLowerCase().includes(query)
+      );
+    })
+    .slice(0, 60);
+
+  const selectedProduct = products.find((item) => item.背番号 === selectedSerial) || null;
+
+  function handleSelectProduct(serial) {
+    const nextProduct = products.find((item) => item.背番号 === serial);
+    setSelectedSerial(serial);
+    if (nextProduct) {
+      setTargetQuantity(String(getProductCapacity(nextProduct, products)));
+    }
+  }
+
+  return (
+    <PlannerModalShell
+      open={open}
+      title="Manual Goal Input"
+      subtitle="Search a product from master DB and add a production goal for the selected date."
+      onClose={onClose}
+      maxWidthClassName="max-w-5xl"
+      footer={(
+        <div className="flex justify-end gap-3">
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-2xl border border-outline-variant/20 px-4 py-2 text-sm font-bold text-on-surface transition hover:bg-surface-container"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            disabled={submitting || !selectedProduct || !date || Number(targetQuantity) <= 0}
+            onClick={() => onSubmit({ product: selectedProduct, quantity: Number(targetQuantity), date })}
+            className="rounded-2xl kinetic-gradient px-4 py-2 text-sm font-bold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {submitting ? "Saving…" : "Add Goal"}
+          </button>
+        </div>
+      )}
+    >
+      <div className="grid gap-5 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1.4fr)]">
+        <div className="space-y-4">
+          <div className="rounded-3xl border border-outline-variant/15 bg-surface-container-low p-4">
+            <label className="text-[10px] font-bold uppercase tracking-[0.18em] text-outline">Goal Date</label>
+            <input
+              type="date"
+              value={date}
+              onChange={(event) => setDate(event.target.value)}
+              className="mt-2 h-11 w-full rounded-2xl border border-outline-variant/20 px-4 text-sm outline-none transition focus:border-primary/40"
+            />
+          </div>
+
+          <div className="rounded-3xl border border-outline-variant/15 bg-surface-container-low p-4">
+            <label className="text-[10px] font-bold uppercase tracking-[0.18em] text-outline">Search Product</label>
+            <div className="ui-control-surface mt-2 flex h-11 items-center gap-3 rounded-2xl border border-outline-variant/20 px-4">
+              <span className="material-symbols-outlined text-outline" style={{ fontSize: 18 }}>search</span>
+              <input
+                type="text"
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder="Search by 背番号, 品番, or 品名…"
+                className="h-full flex-1 bg-transparent text-sm outline-none"
+              />
+            </div>
+          </div>
+
+          <div className="rounded-3xl border border-outline-variant/15 bg-surface-container-low p-4">
+            <label className="text-[10px] font-bold uppercase tracking-[0.18em] text-outline">Target Quantity</label>
+            <input
+              type="number"
+              min="1"
+              value={targetQuantity}
+              onChange={(event) => setTargetQuantity(event.target.value)}
+              className="mt-2 h-11 w-full rounded-2xl border border-outline-variant/20 px-4 text-sm outline-none transition focus:border-primary/40"
+            />
+          </div>
+
+          {selectedProduct ? (
+            <div className="rounded-3xl border border-primary/15 bg-primary/8 p-4">
+              <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-primary">Selected Product</div>
+              <div className="mt-2 text-lg font-black text-on-surface">{selectedProduct.背番号}</div>
+              <div className="mt-1 text-sm text-on-surface-variant">{selectedProduct.品番}</div>
+              <div className="mt-1 text-sm text-on-surface-variant">{selectedProduct.品名 || "Unnamed product"}</div>
+            </div>
+          ) : null}
+        </div>
+
+        <div className="rounded-3xl border border-outline-variant/15 bg-surface-container-low p-4">
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <div>
+              <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-outline">Products</div>
+              <div className="mt-1 text-sm text-on-surface-variant">Showing {filteredProducts.length} matches</div>
+            </div>
+          </div>
+
+          <div className="max-h-[50vh] space-y-2 overflow-y-auto">
+            {filteredProducts.map((item) => {
+              const active = item.背番号 === selectedSerial;
+              return (
+                <button
+                  key={item.背番号}
+                  type="button"
+                  onClick={() => handleSelectProduct(item.背番号)}
+                  className={`w-full rounded-3xl border px-4 py-4 text-left transition ${active ? "border-primary/35 bg-primary/10" : "border-outline-variant/15 bg-surface hover:bg-surface-container"}`}
+                >
+                  <div className="text-sm font-black text-on-surface">{item.背番号}</div>
+                  <div className="mt-1 text-xs text-on-surface-variant">{item.品番}</div>
+                  <div className="mt-1 text-xs text-on-surface-variant">{item.品名 || "Unnamed product"}</div>
+                </button>
+              );
+            })}
+
+            {!filteredProducts.length ? (
+              <div className="rounded-3xl border border-dashed border-outline-variant/20 bg-surface px-4 py-10 text-center text-sm text-on-surface-variant">
+                No products match the current search.
+              </div>
+            ) : null}
+          </div>
+        </div>
+      </div>
+    </PlannerModalShell>
+  );
+}

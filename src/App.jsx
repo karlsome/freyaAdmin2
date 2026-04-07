@@ -9,10 +9,10 @@ import SensorDetailPage from "./pages/SensorDetailPage";
 import SensorsPage from "./pages/SensorsPage";
 import PlaceholderPage from "./pages/PlaceholderPage";
 import MasterDBPage from "./pages/MasterDBPage";
+import PlannerPage from "./pages/PlannerPage";
 
 const placeholderPages = [
   "factoryStatus",
-  "planner",
   "inventory",
   "notifications",
   "analytics",
@@ -85,6 +85,7 @@ function App() {
         <Routes>
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
           <Route path="/dashboard" element={<DashboardPage />} />
+          <Route path="/planner" element={<PlannerPage />} />
           {placeholderPages.map((page) => (
             <Route key={page} path={`/${page}`} element={<PlaceholderPage page={page} />} />
           ))}
