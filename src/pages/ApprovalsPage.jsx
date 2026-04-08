@@ -884,7 +884,7 @@ export default function ApprovalsPage() {
 
   if (!hasAccess) {
     return (
-      <div className="px-4 py-6 md:px-6 lg:px-8">
+      <section className="h-screen overflow-y-auto px-4 pb-24 pt-20 scrollbar-hide sm:px-6 sm:pb-16 sm:pt-24 md:px-8">
         <div className="glass-card rounded-[28px] px-6 py-8">
           <div className="text-[10px] font-bold uppercase tracking-[0.22em] text-outline">Approvals</div>
           <h1 className="mt-2 text-2xl font-black text-on-surface">Access Required</h1>
@@ -892,7 +892,7 @@ export default function ApprovalsPage() {
             The approval workflow is available only to admin, 部長, 課長, 係長, and 班長 roles.
           </p>
         </div>
-      </div>
+      </section>
     );
   }
 
@@ -903,7 +903,7 @@ export default function ApprovalsPage() {
   const currentPage = activeTab === "recycleBin" ? effectiveBinPage : pagination.currentPage || page;
 
   return (
-    <div className="px-4 py-6 md:px-6 lg:px-8">
+    <section className="h-screen overflow-y-auto px-4 pb-24 pt-20 scrollbar-hide sm:px-6 sm:pb-16 sm:pt-24 md:px-8">
       <FlashBanner flash={flash} onClose={() => setFlash(null)} />
 
       <div className="mb-6 flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
@@ -1187,6 +1187,6 @@ export default function ApprovalsPage() {
         onRestore={handleRestore}
         onPermanentDelete={handlePermanentDelete}
       />
-    </div>
+    </section>
   );
 }

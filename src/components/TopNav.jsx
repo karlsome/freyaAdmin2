@@ -1,4 +1,11 @@
-export default function TopNav({ isDark, onOpenMobileNav, onToggleTheme }) {
+import { getAuthDisplayName, getAuthInitials } from "../utils/auth";
+
+export default function TopNav({ authUser, isDark, onLogout, onOpenMobileNav, onToggleTheme }) {
+  const displayName = getAuthDisplayName(authUser);
+  const initials = getAuthInitials(authUser);
+  const usernameLine = authUser?.username ? `@${authUser.username}` : "";
+  const roleLine = authUser?.role || "Authenticated user";
+
   return (
     <header className="topnav-glass fixed top-0 right-0 left-0 z-40 flex h-16 items-center justify-between px-4 font-headline antialiased sm:px-6 md:left-16 md:px-8">
 
@@ -50,17 +57,27 @@ export default function TopNav({ isDark, onOpenMobileNav, onToggleTheme }) {
           <span className="material-symbols-outlined">settings</span>
         </button>
 
+        {/* Logout */}
+        <button
+          onClick={onLogout}
+          className="hidden rounded-xl p-2 text-outline transition-all hover:bg-error/10 hover:text-error sm:block"
+          title="Logout"
+          type="button"
+        >
+          <span className="material-symbols-outlined">logout</span>
+        </button>
+
         {/* Divider */}
         <div className="mx-2 hidden h-8 w-px bg-primary/20 sm:block"></div>
 
         {/* User */}
         <div className="flex items-center gap-3 pl-1">
           <div className="hidden text-right sm:block">
-            <p className="text-xs font-bold text-on-surface leading-none">Admin User</p>
-            <p className="text-[10px] text-outline mt-0.5">System Overseer</p>
+            <p className="text-xs font-bold text-on-surface leading-none">{displayName}</p>
+            <p className="text-[10px] text-outline mt-0.5">{roleLine}{usernameLine ? ` · ${usernameLine}` : ""}</p>
           </div>
           <div className="w-8 h-8 rounded-full kinetic-gradient ring-2 ring-primary/30 shadow-[0_0_12px_rgba(99,102,241,0.35)] flex items-center justify-center">
-            <span className="material-symbols-outlined text-white" style={{ fontSize: 16, fontVariationSettings: "'FILL' 1" }}>person</span>
+            <span className="text-xs font-black tracking-[0.12em] text-white">{initials}</span>
           </div>
         </div>
       </div>

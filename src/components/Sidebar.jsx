@@ -40,7 +40,7 @@ function isActiveFor(item, activePage) {
   return false;
 }
 
-export default function Sidebar({ activePage, mobileOpen = false, onClose, onNavigate }) {
+export default function Sidebar({ activePage, mobileOpen = false, onClose, onLogout, onNavigate }) {
   const [openItems, setOpenItems] = useState(() => new Set());
 
   useEffect(() => {
@@ -227,9 +227,14 @@ export default function Sidebar({ activePage, mobileOpen = false, onClose, onNav
             <span className={`material-symbols-outlined ${isMobile ? "" : "w-10 flex items-center justify-center"}`}>settings</span>
             <span className={isMobile ? "whitespace-nowrap" : "whitespace-nowrap opacity-0 transition-opacity duration-200 group-hover:opacity-100"}>Settings</span>
           </button>
-          <button className={`w-full flex items-center gap-3 rounded-xl text-error/70 transition-all duration-200 hover:bg-error/5 hover:text-error dark:text-outline dark:hover:bg-white/5 dark:hover:text-on-surface ${
+          <button
+            className={`w-full flex items-center gap-3 rounded-xl text-error/70 transition-all duration-200 hover:bg-error/5 hover:text-error dark:text-outline dark:hover:bg-white/5 dark:hover:text-on-surface ${
             isMobile ? "px-3 py-2.5" : "min-w-[232px] px-0 py-2.5"
-          }`} title="Logout">
+          }`}
+            onClick={onLogout}
+            title="Logout"
+            type="button"
+          >
             <span className={`material-symbols-outlined ${isMobile ? "" : "w-10 flex items-center justify-center"}`}>logout</span>
             <span className={isMobile ? "whitespace-nowrap" : "whitespace-nowrap opacity-0 transition-opacity duration-200 group-hover:opacity-100"}>Logout</span>
           </button>
