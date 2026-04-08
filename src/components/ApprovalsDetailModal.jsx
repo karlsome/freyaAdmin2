@@ -9,7 +9,6 @@ import {
   canRequestApprovalDeletion,
   canRequestCorrection,
   canRestoreRecycleBin,
-  canSoftDeleteApproval,
   collectApprovalImageEntries,
   formatApprovalValue,
   getApprovalCounters,
@@ -24,10 +23,48 @@ import {
   getApprovalStatusMeta,
   getApproveActionLabel,
   getCorrectionActionLabel,
+  hasApprovalAccess,
 } from "../utils/approvals";
 
 function joinClasses(...classes) {
   return classes.filter(Boolean).join(" ");
+}
+
+function parseStructuredValue(value) {
+  if (typeof value !== "string") return value;
+  const trimmed = value.trim();
+  if (!trimmed) return value;
+  if (
+    (trimmed.startsWith("{") && trimmed.endsWith("}"))
+    || (trimmed.startsWith("[") && trimmed.endsWith("]"))
+  ) {
+    try {
+      return JSON.parse(trimmed);
+    } catch {
+      return value;
+    }
+  }
+  return value;
+}
+
+function isStructuredValue(value) {
+  return value != null && typeof value === "object";
+}
+
+function isImageUrl(value) {
+  if (typeof value !== "string") return false;
+  const normalized = value.trim();
+  if (!normalized) return false;
+  if (/^data:image\//i.test(normalized)) return true;
+  if (!/^https?:\/\//i.test(normalized)) return false;
+  return /\.(png|jpe?g|gif|webp|bmp|svg)(\?|$)/i.test(normalized);
+}
+
+function formatPrimitiveValue(value) {
+  if (value == null || value === "") return "—";
+  if (typeof value === "boolean") return value ? "True" : "False";
+  if (typeof value === "number" && Number.isFinite(value)) return value.toLocaleString();
+  return String(value);
 }
 
 function ActionButton({ tone = "primary", onClick, disabled, children }) {
@@ -53,19 +90,142 @@ function ActionButton({ tone = "primary", onClick, disabled, children }) {
   );
 }
 
-function StructuredValue({ value }) {
-  const formatted = formatApprovalValue(value);
-  const structured = value && typeof value === "object";
+function PrimitiveFieldValue({ value, align = "right" }) {
+  const formatted = formatApprovalValue(parseStructuredValue(value));
 
-  if (structured) {
+  if (isImageUrl(value)) {
     return (
-      <pre className="planner-data-text whitespace-pre-wrap break-words rounded-2xl bg-surface-container-low px-3 py-2 text-xs text-on-surface">
-        {formatted}
-      </pre>
+      <div className={`flex ${align === "right" ? "justify-end" : "justify-start"}`}>
+        <button
+          type="button"
+          onClick={() => window.open(value, "_blank", "noopener,noreferrer")}
+          className="overflow-hidden rounded-2xl border border-outline-variant/20 bg-surface transition hover:-translate-y-0.5"
+        >
+          <img
+            src={value}
+            alt="Record field"
+            className="max-h-28 rounded-2xl border border-outline-variant/20 bg-surface object-contain"
+          />
+        </button>
+      </div>
     );
   }
 
-  return <div className="planner-data-text text-sm font-semibold text-on-surface">{formatted}</div>;
+  return (
+    <span
+      className={`block min-w-0 whitespace-pre-wrap break-all text-xs font-mono text-on-surface-variant ${
+        align === "right" ? "text-right" : "text-left"
+      }`}
+    >
+      {formatted || formatPrimitiveValue(value)}
+    </span>
+  );
+}
+
+function StructuredValueCard({ value, depth = 0 }) {
+  const normalizedValue = parseStructuredValue(value);
+
+  if (!isStructuredValue(normalizedValue)) {
+    return <PrimitiveFieldValue value={normalizedValue} align={depth > 0 ? "left" : "right"} />;
+  }
+
+  if (Array.isArray(normalizedValue)) {
+    const items = normalizedValue.filter((item) => item != null && item !== "");
+
+    if (items.length === 0) {
+      return (
+        <div className="rounded-2xl border border-outline-variant/20 bg-surface-container/40 px-3 py-2 text-[11px] text-outline">
+          Empty array
+        </div>
+      );
+    }
+
+    return (
+      <div className="space-y-2 rounded-2xl border border-outline-variant/20 bg-surface-container/40 p-3">
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-[10px] font-bold uppercase tracking-wider text-outline">Array</span>
+          <span className="rounded-full bg-surface px-2 py-0.5 text-[10px] font-bold text-on-surface-variant">
+            {items.length} item{items.length === 1 ? "" : "s"}
+          </span>
+        </div>
+        <div className="space-y-2">
+          {items.map((item, index) => {
+            const nestedValue = parseStructuredValue(item);
+            const nestedStructured = isStructuredValue(nestedValue);
+
+            return (
+              <div key={index} className="rounded-2xl border border-outline-variant/15 bg-surface px-3 py-2.5">
+                {nestedStructured ? (
+                  <div className="space-y-2">
+                    <span className="block text-[10px] font-bold uppercase tracking-wider text-outline">
+                      Item {index + 1}
+                    </span>
+                    <StructuredValueCard value={nestedValue} depth={depth + 1} />
+                  </div>
+                ) : (
+                  <div className="flex items-start justify-between gap-3">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-outline">
+                      Item {index + 1}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <PrimitiveFieldValue value={nestedValue} align="right" />
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  }
+
+  const objectEntries = Object.entries(normalizedValue).filter(([, nestedValue]) => nestedValue != null && nestedValue !== "");
+
+  if (objectEntries.length === 0) {
+    return (
+      <div className="rounded-2xl border border-outline-variant/20 bg-surface-container/40 px-3 py-2 text-[11px] text-outline">
+        Empty object
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-2 rounded-2xl border border-outline-variant/20 bg-surface-container/40 p-3">
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-[10px] font-bold uppercase tracking-wider text-outline">Object</span>
+        <span className="rounded-full bg-surface px-2 py-0.5 text-[10px] font-bold text-on-surface-variant">
+          {objectEntries.length} field{objectEntries.length === 1 ? "" : "s"}
+        </span>
+      </div>
+      <div className="space-y-2">
+        {objectEntries.map(([nestedKey, nestedValue]) => {
+          const normalizedNestedValue = parseStructuredValue(nestedValue);
+          const nestedStructured = isStructuredValue(normalizedNestedValue);
+
+          return (
+            <div key={nestedKey} className="rounded-2xl border border-outline-variant/15 bg-surface px-3 py-2.5">
+              {nestedStructured ? (
+                <div className="space-y-2">
+                  <span className="block break-all text-[10px] font-bold uppercase tracking-wider text-outline">
+                    {nestedKey}
+                  </span>
+                  <StructuredValueCard value={normalizedNestedValue} depth={depth + 1} />
+                </div>
+              ) : (
+                <div className="flex items-start justify-between gap-3">
+                  <span className="break-all text-[11px] font-bold text-outline">{nestedKey}</span>
+                  <div className="min-w-0 flex-1">
+                    <PrimitiveFieldValue value={normalizedNestedValue} align="right" />
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
 }
 
 export default function ApprovalsDetailModal({
@@ -79,7 +239,7 @@ export default function ApprovalsDetailModal({
   onApprove,
   onRequestCorrection,
   onRequestDeletion,
-  onSoftDelete,
+  onOpenEdit,
   onApproveDeleteRequest,
   onRejectDeleteRequest,
   onCancelDeleteRequest,
@@ -166,6 +326,7 @@ export default function ApprovalsDetailModal({
   const title = getApprovalRecordTitle(sourceRecord);
   const subtitle = getApprovalRecordSubtitle(sourceRecord);
   const mismatch = getApprovalDateTimeMismatch(sourceRecord);
+  const canEditRecord = mode !== "recycle" && hasApprovalAccess(authUser);
 
   return (
     <div className="fixed inset-0 z-50 bg-black/45 backdrop-blur-sm">
@@ -176,8 +337,8 @@ export default function ApprovalsDetailModal({
             <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
               <div>
                 <div className="text-[10px] font-bold uppercase tracking-[0.22em] text-outline">Approval Record</div>
-                <h2 className="mt-1 text-xl font-black text-on-surface">{title}</h2>
-                <p className="mt-1 text-sm text-on-surface-variant">{subtitle || "Approval workflow details"}</p>
+                <h2 className="mt-1 break-words text-xl font-black text-on-surface [overflow-wrap:anywhere]">{title}</h2>
+                <p className="mt-1 break-words text-sm text-on-surface-variant [overflow-wrap:anywhere]">{subtitle || "Approval workflow details"}</p>
               </div>
 
               <div className="flex items-center gap-3">
@@ -275,8 +436,8 @@ export default function ApprovalsDetailModal({
                 ].map((item) => (
                   <div key={item.label} className="rounded-2xl border border-outline-variant/15 bg-surface-container-low px-4 py-3">
                     <div className="planner-data-label text-outline">{item.label}</div>
-                    <div className={joinClasses("planner-data-text mt-1 flex items-center gap-1 text-sm font-semibold", item.tone || "text-on-surface")}>
-                      <span>{formatApprovalValue(item.value)}</span>
+                    <div className={joinClasses("planner-data-text mt-1 flex min-w-0 items-center gap-1 text-sm font-semibold", item.tone || "text-on-surface")}>
+                      <span className="min-w-0 break-words [overflow-wrap:anywhere]">{formatApprovalValue(item.value)}</span>
                       {item.icon ? (
                         <span className="material-symbols-outlined" style={{ fontSize: 16 }} title={item.iconTitle || undefined}>
                           {item.icon}
@@ -331,11 +492,18 @@ export default function ApprovalsDetailModal({
 
               <div className="mb-5 rounded-2xl border border-outline-variant/15 bg-surface-container-low px-4 py-4">
                 <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-outline">All Fields</div>
-                <div className="mt-3 space-y-3">
+                <div className="mt-3 space-y-0">
                   {detailEntries.map(([field, value]) => (
-                    <div key={field} className="grid gap-2 border-b border-outline-variant/10 pb-3 last:border-0 last:pb-0 md:grid-cols-[minmax(160px,220px)_1fr]">
-                      <div className="planner-data-label text-outline">{field}</div>
-                      <StructuredValue value={value} />
+                    <div
+                      key={field}
+                      className="grid grid-cols-1 gap-2 border-b border-outline-variant/10 py-3 last:border-0 md:grid-cols-[minmax(120px,160px)_1fr] md:gap-4"
+                    >
+                      <span className="break-all text-[11px] font-bold text-outline md:pt-1">{field}</span>
+                      {isStructuredValue(parseStructuredValue(value)) ? (
+                        <StructuredValueCard value={value} />
+                      ) : (
+                        <PrimitiveFieldValue value={value} align="right" />
+                      )}
                     </div>
                   ))}
                 </div>
@@ -367,65 +535,6 @@ export default function ApprovalsDetailModal({
             </div>
 
             <aside className="min-h-0 overflow-y-auto border-t border-outline-variant/20 bg-surface-container-lowest/60 px-5 py-5 lg:border-l lg:border-t-0 lg:px-6">
-              <div className="rounded-2xl border border-outline-variant/15 bg-white/80 p-4 dark:bg-surface-container">
-                <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-outline">Actions</div>
-
-                <div className="mt-4 flex flex-wrap gap-2">
-                  {mode === "recycle" ? (
-                    <>
-                      {canRestoreRecycleBin(authUser) ? (
-                        <ActionButton tone="primary" disabled={busy} onClick={() => onRestore?.(record)}>
-                          Restore Record
-                        </ActionButton>
-                      ) : null}
-                      {canPermanentlyDeleteRecycleBin(authUser) ? (
-                        <ActionButton tone="danger" disabled={busy} onClick={() => onPermanentDelete?.(record)}>
-                          Permanent Delete
-                        </ActionButton>
-                      ) : null}
-                    </>
-                  ) : (
-                    <>
-                      {canApproveApproval(sourceRecord, authUser) ? (
-                        <ActionButton tone="primary" disabled={busy} onClick={() => onApprove?.(sourceRecord)}>
-                          {getApproveActionLabel(sourceRecord, authUser)}
-                        </ActionButton>
-                      ) : null}
-                      {canRequestCorrection(sourceRecord, authUser) ? (
-                        <ActionButton tone="warning" disabled={busy} onClick={() => onRequestCorrection?.(sourceRecord)}>
-                          {getCorrectionActionLabel(sourceRecord, authUser)}
-                        </ActionButton>
-                      ) : null}
-                      {canApproveDeleteRequest(sourceRecord, authUser) ? (
-                        <ActionButton tone="danger" disabled={busy} onClick={() => onApproveDeleteRequest?.(sourceRecord)}>
-                          Approve Delete
-                        </ActionButton>
-                      ) : null}
-                      {canRejectDeleteRequest(sourceRecord, authUser) ? (
-                        <ActionButton tone="neutral" disabled={busy} onClick={() => onRejectDeleteRequest?.(sourceRecord)}>
-                          Reject Delete
-                        </ActionButton>
-                      ) : null}
-                      {canCancelDeleteRequest(sourceRecord, authUser) ? (
-                        <ActionButton tone="warning" disabled={busy} onClick={() => onCancelDeleteRequest?.(sourceRecord)}>
-                          Cancel Delete Request
-                        </ActionButton>
-                      ) : null}
-                      {canSoftDeleteApproval(sourceRecord, authUser) ? (
-                        <ActionButton tone="danger" disabled={busy} onClick={() => onSoftDelete?.(sourceRecord)}>
-                          Soft Delete
-                        </ActionButton>
-                      ) : null}
-                      {canRequestApprovalDeletion(sourceRecord, authUser) ? (
-                        <ActionButton tone="danger" disabled={busy} onClick={() => onRequestDeletion?.(sourceRecord)}>
-                          Request Delete
-                        </ActionButton>
-                      ) : null}
-                    </>
-                  )}
-                </div>
-              </div>
-
               <div className="mt-5 rounded-2xl border border-outline-variant/15 bg-white/80 p-4 dark:bg-surface-container">
                 <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-outline">Submitted Images</div>
 
@@ -473,6 +582,65 @@ export default function ApprovalsDetailModal({
                     <div className="flex h-52 items-center justify-center px-4 text-center text-sm font-semibold text-on-surface-variant">
                       No master reference image was found for this record.
                     </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="mt-5 rounded-2xl border border-outline-variant/15 bg-white/80 p-4 dark:bg-surface-container">
+                <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-outline">Actions</div>
+
+                <div className="mt-4 flex flex-wrap gap-2">
+                  {mode === "recycle" ? (
+                    <>
+                      {canRestoreRecycleBin(authUser) ? (
+                        <ActionButton tone="primary" disabled={busy} onClick={() => onRestore?.(record)}>
+                          Restore Record
+                        </ActionButton>
+                      ) : null}
+                      {canPermanentlyDeleteRecycleBin(authUser) ? (
+                        <ActionButton tone="danger" disabled={busy} onClick={() => onPermanentDelete?.(record)}>
+                          Permanent Delete
+                        </ActionButton>
+                      ) : null}
+                    </>
+                  ) : (
+                    <>
+                      {canEditRecord ? (
+                        <ActionButton tone="primary" disabled={busy} onClick={() => onOpenEdit?.(sourceRecord)}>
+                          Edit Record
+                        </ActionButton>
+                      ) : null}
+                      {canApproveApproval(sourceRecord, authUser) ? (
+                        <ActionButton tone="primary" disabled={busy} onClick={() => onApprove?.(sourceRecord)}>
+                          {getApproveActionLabel(sourceRecord, authUser)}
+                        </ActionButton>
+                      ) : null}
+                      {canRequestCorrection(sourceRecord, authUser) ? (
+                        <ActionButton tone="warning" disabled={busy} onClick={() => onRequestCorrection?.(sourceRecord)}>
+                          {getCorrectionActionLabel(sourceRecord, authUser)}
+                        </ActionButton>
+                      ) : null}
+                      {canApproveDeleteRequest(sourceRecord, authUser) ? (
+                        <ActionButton tone="danger" disabled={busy} onClick={() => onApproveDeleteRequest?.(sourceRecord)}>
+                          Approve Delete
+                        </ActionButton>
+                      ) : null}
+                      {canRejectDeleteRequest(sourceRecord, authUser) ? (
+                        <ActionButton tone="neutral" disabled={busy} onClick={() => onRejectDeleteRequest?.(sourceRecord)}>
+                          Reject Delete
+                        </ActionButton>
+                      ) : null}
+                      {canCancelDeleteRequest(sourceRecord, authUser) ? (
+                        <ActionButton tone="warning" disabled={busy} onClick={() => onCancelDeleteRequest?.(sourceRecord)}>
+                          Cancel Delete Request
+                        </ActionButton>
+                      ) : null}
+                      {canRequestApprovalDeletion(sourceRecord, authUser) ? (
+                        <ActionButton tone="danger" disabled={busy} onClick={() => onRequestDeletion?.(sourceRecord)}>
+                          Request Delete
+                        </ActionButton>
+                      ) : null}
+                    </>
                   )}
                 </div>
               </div>

@@ -1,4 +1,5 @@
 import { query } from "./api";
+import { flattenApprovalEditChanges } from "../utils/approvalEdit";
 
 const LOCAL_URL = "http://localhost:3000/";
 const ENV_URL = import.meta.env.VITE_API_URL?.trim();
@@ -167,6 +168,27 @@ export async function fetchApprovalMasterReference({ partNumber, serialNumber })
   }
 
   return "";
+}
+
+export async function searchApprovalMasterProducts(search = "") {
+  const params = new URLSearchParams();
+  if (search) {
+    params.set("q", search);
+  }
+
+  const result = await getJson(`api/approvals/masterdb-products${params.toString() ? `?${params.toString()}` : ""}`);
+  return Array.isArray(result?.data) ? result.data : [];
+}
+
+export async function editApprovalDocument({ collectionName, itemId, draft, actorName, username, note = "" }) {
+  return postJson("api/approvals/edit-document", {
+    collection: collectionName,
+    docId: itemId,
+    changes: flattenApprovalEditChanges(draft),
+    editedBy: actorName,
+    editedByUsername: username || null,
+    editNote: note,
+  });
 }
 
 export async function approveApprovalRecord({ collectionName, record, authUser, actorName }) {

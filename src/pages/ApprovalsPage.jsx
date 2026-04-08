@@ -2,11 +2,14 @@ import { useDeferredValue, useEffect, useRef, useState } from "react";
 import DataTable from "../components/DataTable";
 import LiquidSegmentedControl from "../components/LiquidSegmentedControl";
 import ApprovalsDetailModal from "../components/ApprovalsDetailModal";
+import RecordEditModal from "../components/RecordEditModal";
 import ApprovalsStatsStrip from "../components/ApprovalsStatsStrip";
+import { fetchDistinctValues } from "../services/api";
 import {
   approveApprovalDeleteRequest,
   approveApprovalRecord,
   cancelApprovalDeleteRequest,
+  editApprovalDocument,
   fetchApprovalFactories,
   fetchApprovalPage,
   fetchApprovalRecord,
@@ -18,9 +21,16 @@ import {
   requestApprovalDeletion,
   resolveApprovalActorName,
   restoreApprovalFromRecycleBin,
+  searchApprovalMasterProducts,
   softDeleteApproval,
 } from "../services/approvalsApi";
 import { getAuthUser } from "../utils/masterDB";
+import {
+  APPROVAL_EDIT_HIDDEN_FIELDS,
+  buildApprovalEditSections,
+  computeApprovalDerivedFields,
+  resolveApprovalEditFieldKind,
+} from "../utils/approvalEdit";
 import {
   APPROVAL_RANGE_MODES,
   APPROVAL_STATUS_OPTIONS,
@@ -29,6 +39,7 @@ import {
   buildApprovalQueryFilters,
   buildApprovalStatsFilters,
   canAccessRecycleBin,
+  canSoftDeleteApproval,
   getApprovalDateTimeMismatch,
   getApprovalDefectRate,
   getApprovalFactoryAccess,
@@ -36,6 +47,8 @@ import {
   getApprovalPrimaryApprover,
   getApprovalQuantityValue,
   getApprovalRecordId,
+  getApprovalRecordSubtitle,
+  getApprovalRecordTitle,
   getApprovalStatusMeta,
   getApproveActionLabel,
   getTodayDateString,
@@ -102,6 +115,7 @@ export default function ApprovalsPage() {
   const authUser = getAuthUser();
   const requestIdRef = useRef(0);
   const actorNameRef = useRef("");
+  const editFieldOptionsCacheRef = useRef(new Map());
   const authRole = authUser?.role || "";
   const authUsername = authUser?.username || "";
   const authFirstName = authUser?.firstName || "";
@@ -132,6 +146,7 @@ export default function ApprovalsPage() {
   const [error, setError] = useState("");
   const [flash, setFlash] = useState(null);
   const [detailState, setDetailState] = useState({ open: false, record: null, mode: "live" });
+  const [editState, setEditState] = useState({ open: false, record: null, collectionName: "" });
   const [selectedIds, setSelectedIds] = useState([]);
   const [actionBusy, setActionBusy] = useState(false);
   const [refreshNonce, setRefreshNonce] = useState(0);
@@ -354,6 +369,40 @@ export default function ApprovalsPage() {
     return resolved;
   }
 
+  async function loadApprovalFieldPickerOptions(path, draft) {
+    const currentValue = String(draft?.[path] || "").trim();
+
+    if (path === "工場") {
+      const baseOptions = factories.length ? factories : await fetchApprovalFactories({
+        collectionName: activeTab,
+        userRole: authRole,
+        factoryAccess,
+      });
+
+      return [...new Set([...baseOptions, currentValue].filter(Boolean))]
+        .sort((left, right) => String(left).localeCompare(String(right), "ja"));
+    }
+
+    if (!["設備", "Worker_Name"].includes(path)) {
+      return currentValue ? [currentValue] : [];
+    }
+
+    const selectedFactory = String(draft?.工場 || "").trim();
+    const cacheKey = `${path}::${selectedFactory}`;
+
+    if (editFieldOptionsCacheRef.current.has(cacheKey)) {
+      const cachedOptions = editFieldOptionsCacheRef.current.get(cacheKey);
+      return [...new Set([...cachedOptions, currentValue].filter(Boolean))]
+        .sort((left, right) => String(left).localeCompare(String(right), "ja"));
+    }
+
+    const values = await fetchDistinctValues(selectedFactory, path);
+    editFieldOptionsCacheRef.current.set(cacheKey, values);
+
+    return [...new Set([...values, currentValue].filter(Boolean))]
+      .sort((left, right) => String(left).localeCompare(String(right), "ja"));
+  }
+
   function setFilterPatch(patch) {
     setPage(1);
     setFilters((current) => ({ ...current, ...patch }));
@@ -365,6 +414,7 @@ export default function ApprovalsPage() {
     setSort({ column: "", direction: 1 });
     setError("");
     setDetailState({ open: false, record: null, mode: "live" });
+    setEditState({ open: false, record: null, collectionName: "" });
     if (nextTab === "recycleBin") {
       setViewMode("review");
     }
@@ -464,20 +514,42 @@ export default function ApprovalsPage() {
     );
   }
 
-  async function handleSoftDelete(record) {
-    const reason = window.prompt("Enter the reason for soft deleting this record.");
-    if (!reason || !reason.trim()) return;
+  async function performSoftDelete(record, reason, { closeEdit = false } = {}) {
+    const trimmedReason = String(reason || "").trim();
+    if (!trimmedReason) return;
 
-    await runAction(
-      async (actorName) => softDeleteApproval({
+    setActionBusy(true);
+
+    try {
+      const actorName = await ensureActorName();
+      await softDeleteApproval({
         collectionName: activeTab,
         itemId: getApprovalRecordId(record),
         actorName,
         username: authUser?.username,
-        reason: reason.trim(),
-      }),
-      "Record moved to recycle bin."
-    );
+        reason: trimmedReason,
+      });
+
+      if (closeEdit) {
+        setEditState({ open: false, record: null, collectionName: "" });
+      }
+
+      setDetailState({ open: false, record: null, mode: "live" });
+      setSelectedIds([]);
+      setFlash({ type: "success", message: "Record moved to recycle bin." });
+      setRefreshNonce((current) => current + 1);
+    } catch (actionError) {
+      setFlash({ type: "error", message: actionError.message || "Action failed." });
+    } finally {
+      setActionBusy(false);
+    }
+  }
+
+  async function handleSoftDelete(record) {
+    const reason = window.prompt("Enter the reason for soft deleting this record.");
+    if (!reason || !reason.trim()) return;
+
+    await performSoftDelete(record, reason);
   }
 
   async function handleRequestDelete(record) {
@@ -566,6 +638,62 @@ export default function ApprovalsPage() {
       }),
       "Recycle-bin record permanently deleted."
     );
+  }
+
+  function openEditModal(record) {
+    if (!record) return;
+
+    setEditState({
+      open: true,
+      record,
+      collectionName: activeTab,
+    });
+  }
+
+  async function handleSaveEdit({ draft, note }) {
+    if (!editState.record || !editState.collectionName) return;
+
+    setActionBusy(true);
+
+    try {
+      const actorName = await ensureActorName();
+      const itemId = getApprovalRecordId(editState.record);
+
+      await editApprovalDocument({
+        collectionName: editState.collectionName,
+        itemId,
+        draft,
+        actorName,
+        username: authUser?.username,
+        note: String(note || "").trim(),
+      });
+
+      const refreshedRecord = await fetchApprovalRecord(editState.collectionName, itemId);
+      const nextRecord = refreshedRecord || draft;
+
+      setEditState({ open: false, record: null, collectionName: "" });
+      setDetailState((current) => {
+        if (!current.open) return current;
+        if (getApprovalRecordId(current.record || {}) !== itemId) return current;
+        return { ...current, record: nextRecord };
+      });
+      setFlash({ type: "success", message: "Record updated successfully." });
+      setRefreshNonce((current) => current + 1);
+    } catch (actionError) {
+      setFlash({ type: "error", message: actionError.message || "Failed to save record edits." });
+    } finally {
+      setActionBusy(false);
+    }
+  }
+
+  async function handleSoftDeleteFromEdit({ note }) {
+    if (!editState.record) return;
+
+    const reasonFromNote = String(note || "").trim();
+    const resolvedReason = reasonFromNote || window.prompt("Enter the reason for soft deleting this record.") || "";
+    if (!resolvedReason.trim()) return;
+
+    await performSoftDelete(editState.record, resolvedReason, { closeEdit: true });
   }
 
   function getSelectedLiveRows() {
@@ -1216,12 +1344,35 @@ export default function ApprovalsPage() {
         onApprove={handleApprove}
         onRequestCorrection={handleRequestCorrection}
         onRequestDeletion={handleRequestDelete}
-        onSoftDelete={handleSoftDelete}
+        onOpenEdit={openEditModal}
         onApproveDeleteRequest={handleApproveDeleteRequest}
         onRejectDeleteRequest={handleRejectDeleteRequest}
         onCancelDeleteRequest={handleCancelDeleteRequest}
         onRestore={handleRestore}
         onPermanentDelete={handlePermanentDelete}
+      />
+
+      <RecordEditModal
+        open={editState.open}
+        title={getApprovalRecordTitle(editState.record || {})}
+        subtitle={[editState.collectionName, editState.record?.品番, editState.record?.背番号, editState.record?.Date].filter(Boolean).join(" / ") || getApprovalRecordSubtitle(editState.record || {})}
+        record={editState.record}
+        busy={actionBusy}
+        onClose={() => setEditState({ open: false, record: null, collectionName: "" })}
+        onSave={handleSaveEdit}
+        onSoftDelete={handleSoftDeleteFromEdit}
+        canSoftDelete={canSoftDeleteApproval(editState.record || {}, authUser)}
+        saveLabel="Save Changes"
+        softDeleteLabel="Move To Recycle Bin"
+        notePlaceholder="変更理由または削除理由を入力..."
+        buildSections={buildApprovalEditSections}
+        resolveFieldKind={resolveApprovalEditFieldKind}
+        computeDraft={computeApprovalDerivedFields}
+        schemaContext={editState.collectionName}
+        hiddenFields={APPROVAL_EDIT_HIDDEN_FIELDS}
+        linkedProductPaths={{ partNumberPath: "品番", serialNumberPath: "背番号" }}
+        loadLinkedProductOptions={searchApprovalMasterProducts}
+        loadFieldPickerOptions={loadApprovalFieldPickerOptions}
       />
     </section>
   );
