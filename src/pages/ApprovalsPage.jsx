@@ -1163,10 +1163,13 @@ export default function ApprovalsPage() {
         enableColumnReorder
         stickyHeader
         stickyHeaderOffset={0}
+        stickyHeaderCellClassName="bg-surface-container-high shadow-[inset_0_-1px_0_rgba(148,163,184,0.18)]"
         layoutStorageKey={activeTab === "recycleBin" ? "approvals_bin_table" : `approvals_${activeTab}_${viewMode}`}
         className="glass-card mb-8 overflow-hidden rounded-[28px]"
         topBarClassName="flex flex-col gap-4 border-b border-outline-variant/20 px-5 py-4 md:flex-row md:items-center md:justify-between"
         bottomBarClassName="flex flex-col gap-4 border-t border-outline-variant/20 px-5 py-4 md:flex-row md:items-center md:justify-between"
+        tableClassName="ui-table-data w-full border-separate border-spacing-0"
+        tableViewportClassName="max-h-[68vh] overflow-auto overscroll-contain"
       />
 
       <ApprovalsDetailModal
