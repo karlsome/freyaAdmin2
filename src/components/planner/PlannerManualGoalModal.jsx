@@ -74,7 +74,7 @@ export default function PlannerManualGoalModal({
     >
       <div className="planner-data-text grid gap-5 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1.4fr)]">
         <div className="space-y-4">
-          <div className="rounded-3xl border border-outline-variant/15 bg-surface-container-low p-4">
+          <div className="rounded-2xl border border-outline-variant/15 bg-surface-container-low p-4">
             <label className="planner-data-label text-outline">Goal Date</label>
             <input
               type="date"
@@ -84,7 +84,7 @@ export default function PlannerManualGoalModal({
             />
           </div>
 
-          <div className="rounded-3xl border border-outline-variant/15 bg-surface-container-low p-4">
+          <div className="rounded-2xl border border-outline-variant/15 bg-surface-container-low p-4">
             <label className="planner-data-label text-outline">Search Product</label>
             <div className="ui-control-surface mt-2 flex h-11 items-center gap-3 rounded-2xl border border-outline-variant/20 px-4">
               <span className="material-symbols-outlined text-outline" style={{ fontSize: 18 }}>search</span>
@@ -98,7 +98,7 @@ export default function PlannerManualGoalModal({
             </div>
           </div>
 
-          <div className="rounded-3xl border border-outline-variant/15 bg-surface-container-low p-4">
+          <div className="rounded-2xl border border-outline-variant/15 bg-surface-container-low p-4">
             <label className="planner-data-label text-outline">Target Quantity</label>
             <input
               type="number"
@@ -110,7 +110,7 @@ export default function PlannerManualGoalModal({
           </div>
 
           {selectedProduct ? (
-            <div className="rounded-3xl border border-primary/15 bg-primary/8 p-4">
+            <div className="rounded-2xl border border-primary/15 bg-primary/8 p-4">
               <div className="planner-data-label text-primary">Selected Product</div>
               <div className="mt-2 font-bold text-on-surface">{selectedProduct.背番号}</div>
               <div className="mt-1 text-on-surface-variant">{selectedProduct.品番}</div>
@@ -119,7 +119,7 @@ export default function PlannerManualGoalModal({
           ) : null}
         </div>
 
-        <div className="rounded-3xl border border-outline-variant/15 bg-surface-container-low p-4">
+        <div className="rounded-2xl border border-outline-variant/15 bg-surface-container-low p-4">
           <div className="mb-3 flex items-center justify-between gap-3">
             <div>
               <div className="planner-data-label text-outline">Products</div>
@@ -135,7 +135,7 @@ export default function PlannerManualGoalModal({
                   key={item.背番号}
                   type="button"
                   onClick={() => handleSelectProduct(item.背番号)}
-                  className={`w-full rounded-3xl border px-4 py-4 text-left transition ${active ? "border-primary/35 bg-primary/10" : "border-outline-variant/15 bg-surface hover:bg-surface-container"}`}
+                  className={`w-full rounded-2xl border px-4 py-4 text-left transition ${active ? "border-primary/35 bg-primary/10" : "border-outline-variant/15 bg-surface hover:bg-surface-container"}`}
                 >
                   <div className="font-bold text-on-surface">{item.背番号}</div>
                   <div className="mt-1 text-on-surface-variant">{item.品番}</div>
@@ -145,7 +145,7 @@ export default function PlannerManualGoalModal({
             })}
 
             {!filteredProducts.length ? (
-              <div className="rounded-3xl border border-dashed border-outline-variant/20 bg-surface px-4 py-10 text-center text-on-surface-variant">
+              <div className="rounded-2xl border border-dashed border-outline-variant/20 bg-surface px-4 py-10 text-center text-on-surface-variant">
                 No products match the current search.
               </div>
             ) : null}

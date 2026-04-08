@@ -62,7 +62,7 @@ export default function PlannerBreakModal({
     >
       <div className="planner-data-text space-y-3">
         {draftBreaks.map((item) => (
-          <div key={item.id} className="grid gap-3 rounded-3xl border border-outline-variant/15 bg-surface-container-low p-4 lg:grid-cols-[minmax(180px,1.2fr)_140px_140px_minmax(180px,1fr)_auto] lg:items-center">
+          <div key={item.id} className="grid gap-3 rounded-2xl border border-outline-variant/15 bg-surface-container-low p-4 lg:grid-cols-[minmax(180px,1.2fr)_140px_140px_minmax(180px,1fr)_auto] lg:items-center">
             <input
               type="text"
               value={item.name || ""}
@@ -105,7 +105,7 @@ export default function PlannerBreakModal({
         <button
           type="button"
           onClick={() => setDraftBreaks((items) => [...items, createDraftBreak()])}
-          className="w-full rounded-3xl border border-dashed border-outline-variant/20 bg-surface-container-low px-5 py-4 text-sm font-bold text-on-surface transition hover:border-primary/35 hover:text-primary"
+          className="w-full rounded-2xl border border-dashed border-outline-variant/20 bg-surface-container-low px-5 py-4 text-sm font-bold text-on-surface transition hover:border-primary/35 hover:text-primary"
         >
           Add Break Row
         </button>

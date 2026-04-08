@@ -170,7 +170,7 @@ export default function ApprovalsDetailModal({
   return (
     <div className="fixed inset-0 z-50 bg-black/45 backdrop-blur-sm">
       <div className="flex min-h-full items-center justify-center p-4 lg:p-6">
-        <div ref={modalRef} className="glass-card flex max-h-[92vh] w-full max-w-7xl flex-col overflow-hidden rounded-[28px]">
+        <div ref={modalRef} className="glass-card flex max-h-[92vh] w-full max-w-7xl flex-col overflow-hidden rounded-2xl">
 
           <div className="border-b border-outline-variant/20 px-5 py-4 lg:px-6">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
@@ -211,7 +211,7 @@ export default function ApprovalsDetailModal({
                     tone: defectRate > 0 ? "text-error" : "text-emerald-600 dark:text-emerald-300",
                   },
                 ].map((card) => (
-                  <div key={card.label} className="glass-card rounded-3xl px-4 py-4">
+                  <div key={card.label} className="glass-card rounded-2xl px-4 py-4">
                     <div className={joinClasses("planner-data-text text-3xl font-black tabular-nums", card.tone)}>{card.value}</div>
                     <div className="mt-1 text-[10px] font-bold uppercase tracking-[0.18em] text-outline">{card.label}</div>
                   </div>
@@ -221,7 +221,7 @@ export default function ApprovalsDetailModal({
               {mismatch.hasMismatch ? (
                 <div className="mb-5 space-y-3">
                   {mismatch.dateMismatch ? (
-                    <div className="rounded-[28px] border border-error/20 bg-error/10 px-4 py-4 text-error">
+                    <div className="rounded-2xl border border-error/20 bg-error/10 px-4 py-4 text-error">
                       <div className="flex items-start gap-3">
                         <span className="material-symbols-outlined" style={{ fontSize: 28 }}>error</span>
                         <div>
@@ -235,7 +235,7 @@ export default function ApprovalsDetailModal({
                   ) : null}
 
                   {mismatch.timeMismatch ? (
-                    <div className="rounded-[28px] border border-amber-500/20 bg-amber-500/10 px-4 py-4 text-amber-700 dark:text-amber-300">
+                    <div className="rounded-2xl border border-amber-500/20 bg-amber-500/10 px-4 py-4 text-amber-700 dark:text-amber-300">
                       <div className="flex items-start gap-3">
                         <span className="material-symbols-outlined" style={{ fontSize: 28 }}>schedule</span>
                         <div>
@@ -273,7 +273,7 @@ export default function ApprovalsDetailModal({
                   { label: "Equipment", value: sourceRecord?.設備 },
                   { label: "Approver", value: latestApprover || "—" },
                 ].map((item) => (
-                  <div key={item.label} className="rounded-3xl border border-outline-variant/15 bg-surface-container-low px-4 py-3">
+                  <div key={item.label} className="rounded-2xl border border-outline-variant/15 bg-surface-container-low px-4 py-3">
                     <div className="planner-data-label text-outline">{item.label}</div>
                     <div className={joinClasses("planner-data-text mt-1 flex items-center gap-1 text-sm font-semibold", item.tone || "text-on-surface")}>
                       <span>{formatApprovalValue(item.value)}</span>
@@ -290,14 +290,14 @@ export default function ApprovalsDetailModal({
               {(sourceRecord?.correctionComment || sourceRecord?.deleteRequestReason) ? (
                 <div className="mb-5 grid gap-4 md:grid-cols-2">
                   {sourceRecord?.correctionComment ? (
-                    <div className="rounded-3xl border border-amber-500/20 bg-amber-500/10 px-4 py-4">
+                    <div className="rounded-2xl border border-amber-500/20 bg-amber-500/10 px-4 py-4">
                       <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-amber-700 dark:text-amber-300">Correction Note</div>
                       <p className="planner-data-text mt-2 whitespace-pre-wrap text-sm font-medium text-on-surface">{sourceRecord.correctionComment}</p>
                     </div>
                   ) : null}
 
                   {sourceRecord?.deleteRequestReason ? (
-                    <div className="rounded-3xl border border-error/20 bg-error/10 px-4 py-4">
+                    <div className="rounded-2xl border border-error/20 bg-error/10 px-4 py-4">
                       <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-error">Delete Reason</div>
                       <p className="planner-data-text mt-2 whitespace-pre-wrap text-sm font-medium text-on-surface">{sourceRecord.deleteRequestReason}</p>
                     </div>
@@ -305,7 +305,7 @@ export default function ApprovalsDetailModal({
                 </div>
               ) : null}
 
-              <div className="mb-5 rounded-[28px] border border-outline-variant/15 bg-surface-container-low px-4 py-4">
+              <div className="mb-5 rounded-2xl border border-outline-variant/15 bg-surface-container-low px-4 py-4">
                 <div className="mb-3 flex items-center justify-between gap-4">
                   <div>
                     <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-outline">Quality Details</div>
@@ -329,7 +329,7 @@ export default function ApprovalsDetailModal({
                 )}
               </div>
 
-              <div className="mb-5 rounded-[28px] border border-outline-variant/15 bg-surface-container-low px-4 py-4">
+              <div className="mb-5 rounded-2xl border border-outline-variant/15 bg-surface-container-low px-4 py-4">
                 <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-outline">All Fields</div>
                 <div className="mt-3 space-y-3">
                   {detailEntries.map(([field, value]) => (
@@ -341,7 +341,7 @@ export default function ApprovalsDetailModal({
                 </div>
               </div>
 
-              <div className="rounded-[28px] border border-outline-variant/15 bg-surface-container-low px-4 py-4">
+              <div className="rounded-2xl border border-outline-variant/15 bg-surface-container-low px-4 py-4">
                 <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-outline">Approval History</div>
                 {approvalHistory.length ? (
                   <div className="mt-3 space-y-3">
@@ -367,7 +367,7 @@ export default function ApprovalsDetailModal({
             </div>
 
             <aside className="min-h-0 overflow-y-auto border-t border-outline-variant/20 bg-surface-container-lowest/60 px-5 py-5 lg:border-l lg:border-t-0 lg:px-6">
-              <div className="rounded-[28px] border border-outline-variant/15 bg-white/80 p-4 dark:bg-surface-container">
+              <div className="rounded-2xl border border-outline-variant/15 bg-white/80 p-4 dark:bg-surface-container">
                 <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-outline">Actions</div>
 
                 <div className="mt-4 flex flex-wrap gap-2">
@@ -426,7 +426,7 @@ export default function ApprovalsDetailModal({
                 </div>
               </div>
 
-              <div className="mt-5 rounded-[28px] border border-outline-variant/15 bg-white/80 p-4 dark:bg-surface-container">
+              <div className="mt-5 rounded-2xl border border-outline-variant/15 bg-white/80 p-4 dark:bg-surface-container">
                 <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-outline">Submitted Images</div>
 
                 {images.length ? (
@@ -436,7 +436,7 @@ export default function ApprovalsDetailModal({
                         key={`${image.sourceKey}-${image.url}`}
                         type="button"
                         onClick={() => window.open(image.url, "_blank", "noopener,noreferrer")}
-                        className="overflow-hidden rounded-3xl border border-outline-variant/15 bg-surface-container-low text-left transition hover:-translate-y-0.5"
+                        className="overflow-hidden rounded-2xl border border-outline-variant/15 bg-surface-container-low text-left transition hover:-translate-y-0.5"
                       >
                         <img src={image.url} alt={image.label} className="h-40 w-full object-cover" />
                         <div className="px-3 py-3">
@@ -453,10 +453,10 @@ export default function ApprovalsDetailModal({
                 )}
               </div>
 
-              <div className="mt-5 rounded-[28px] border border-outline-variant/15 bg-white/80 p-4 dark:bg-surface-container">
+              <div className="mt-5 rounded-2xl border border-outline-variant/15 bg-white/80 p-4 dark:bg-surface-container">
                 <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-outline">Master Reference</div>
 
-                <div className="mt-4 overflow-hidden rounded-3xl border border-outline-variant/15 bg-surface-container-low">
+                <div className="mt-4 overflow-hidden rounded-2xl border border-outline-variant/15 bg-surface-container-low">
                   {masterImageLoading ? (
                     <div className="flex h-52 items-center justify-center text-sm font-semibold text-on-surface-variant">
                       Loading reference image...

@@ -44,7 +44,7 @@ export default function ProductPDFConflictModal({ open, conflicts, onClose, onCo
   return (
     <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm">
       <div className="flex min-h-full items-center justify-center p-4">
-        <div ref={modalRef} className="glass-card flex w-full max-w-3xl flex-col overflow-hidden rounded-3xl">
+        <div ref={modalRef} className="glass-card flex w-full max-w-3xl flex-col overflow-hidden rounded-2xl">
           <div className="border-b border-outline-variant/20 px-6 py-5">
             <div className="flex items-start justify-between gap-4">
               <div>
@@ -58,7 +58,7 @@ export default function ProductPDFConflictModal({ open, conflicts, onClose, onCo
               <button
                 type="button"
                 onClick={onClose}
-                className="flex h-9 w-9 items-center justify-center rounded-xl bg-surface-container text-on-surface-variant transition hover:bg-surface-container-high hover:text-on-surface"
+                className="flex h-9 w-9 items-center justify-center rounded-2xl bg-surface-container text-on-surface-variant transition hover:bg-surface-container-high hover:text-on-surface"
               >
                 <span className="material-symbols-outlined">close</span>
               </button>
@@ -125,14 +125,14 @@ export default function ProductPDFConflictModal({ open, conflicts, onClose, onCo
             <button
               type="button"
               onClick={onClose}
-              className="rounded-xl border border-outline-variant/20 px-4 py-2 text-xs font-bold text-on-surface transition hover:bg-surface-container"
+              className="rounded-2xl border border-outline-variant/20 px-4 py-2 text-xs font-bold text-on-surface transition hover:bg-surface-container"
             >
               Cancel
             </button>
             <button
               type="button"
               onClick={() => onConfirm(resolutions)}
-              className="rounded-xl bg-primary px-4 py-2 text-xs font-bold text-on-primary transition hover:opacity-90"
+              className="rounded-2xl bg-primary px-4 py-2 text-xs font-bold text-on-primary transition hover:opacity-90"
             >
               Continue Upload
             </button>

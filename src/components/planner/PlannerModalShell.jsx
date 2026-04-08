@@ -25,7 +25,7 @@ export default function PlannerModalShell({
   return (
     <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/55 p-4 backdrop-blur-sm" onClick={onClose}>
       <div
-        className={`glass-card flex max-h-[90vh] w-full flex-col overflow-hidden rounded-3xl ${maxWidthClassName}`.trim()}
+        className={`glass-card flex max-h-[90vh] w-full flex-col overflow-hidden rounded-2xl ${maxWidthClassName}`.trim()}
         onClick={(event) => event.stopPropagation()}
       >
         <div className="flex items-start justify-between gap-4 border-b border-outline-variant/15 px-6 py-5">

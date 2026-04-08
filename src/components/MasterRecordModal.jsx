@@ -60,9 +60,9 @@ export default function MasterRecordModal({
           >
             <div className="grid gap-6 xl:grid-cols-[320px,minmax(0,1fr)]">
               <div>
-                <div className="rounded-xl border border-outline-variant/20 bg-surface-container-low p-4 sticky top-0">
+                <div className="rounded-2xl border border-outline-variant/20 bg-surface-container-low p-4 sticky top-0">
                   <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-outline">Product Image</div>
-                  <div className="mt-3 overflow-hidden rounded-xl border border-outline-variant/20 bg-surface min-h-[280px]">
+                  <div className="mt-3 overflow-hidden rounded-2xl border border-outline-variant/20 bg-surface min-h-[280px]">
                     {imagePreview ? (
                       <img src={imagePreview} alt="New record preview" className="h-[280px] w-full object-contain bg-surface-container-lowest" />
                     ) : (
@@ -75,7 +75,7 @@ export default function MasterRecordModal({
                     )}
                   </div>
 
-                  <label className="mt-4 flex cursor-pointer items-center justify-center rounded-xl bg-primary px-4 py-2 text-xs font-bold text-on-primary transition hover:opacity-90">
+                  <label className="mt-4 flex cursor-pointer items-center justify-center rounded-2xl bg-primary px-4 py-2 text-xs font-bold text-on-primary transition hover:opacity-90">
                     <input
                       type="file"
                       accept="image/*"
@@ -138,14 +138,14 @@ export default function MasterRecordModal({
                 <button
                   type="button"
                   onClick={onClose}
-                  className="rounded-xl border border-outline-variant/20 px-4 py-2 text-xs font-bold text-on-surface transition hover:bg-surface-container"
+                  className="rounded-2xl border border-outline-variant/20 px-4 py-2 text-xs font-bold text-on-surface transition hover:bg-surface-container"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={!hasData || submitting}
-                  className="rounded-xl bg-primary px-4 py-2 text-xs font-bold text-on-primary transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="rounded-2xl bg-primary px-4 py-2 text-xs font-bold text-on-primary transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {submitting ? "Saving…" : "Create Record"}
                 </button>

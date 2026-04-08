@@ -48,7 +48,7 @@ export default function PlannerSmartSchedulingModal({
         </div>
       )}
     >
-      <div className="planner-data-text rounded-3xl border border-outline-variant/15 bg-surface-container-low p-4">
+      <div className="planner-data-text rounded-2xl border border-outline-variant/15 bg-surface-container-low p-4">
         <label className="planner-data-label text-outline">Schedule Until</label>
         <input
           type="time"
@@ -61,11 +61,11 @@ export default function PlannerSmartSchedulingModal({
 
       <div className="mt-5 space-y-5">
         {!equipmentNames.length ? (
-          <div className="planner-data-text rounded-3xl border border-dashed border-outline-variant/20 bg-surface px-4 py-12 text-center text-on-surface-variant">
+          <div className="planner-data-text rounded-2xl border border-dashed border-outline-variant/20 bg-surface px-4 py-12 text-center text-on-surface-variant">
             No historical equipment matches were found for the current goals.
           </div>
         ) : equipmentNames.map((equipment) => (
-          <section key={equipment} className="planner-data-text rounded-3xl border border-outline-variant/15 bg-surface-container-low p-4">
+          <section key={equipment} className="planner-data-text rounded-2xl border border-outline-variant/15 bg-surface-container-low p-4">
             <div className="mb-3 flex items-center justify-between gap-3">
               <h4 className="font-bold text-on-surface">{equipment}</h4>
               <span className="rounded-full bg-primary/10 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.16em] text-primary">

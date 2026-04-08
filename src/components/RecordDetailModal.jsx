@@ -112,7 +112,7 @@ function StructuredValueCard({ value, depth = 0 }) {
             const nestedValue = parseStructuredValue(item);
             const nestedStructured = isStructuredValue(nestedValue);
             return (
-              <div key={index} className="rounded-xl border border-outline-variant/15 bg-surface px-3 py-2.5">
+              <div key={index} className="rounded-2xl border border-outline-variant/15 bg-surface px-3 py-2.5">
                 {nestedStructured ? (
                   <div className="space-y-2">
                     <span className="block text-[10px] font-bold uppercase tracking-wider text-outline">
@@ -161,7 +161,7 @@ function StructuredValueCard({ value, depth = 0 }) {
           const normalizedNestedValue = parseStructuredValue(nestedValue);
           const nestedStructured = isStructuredValue(normalizedNestedValue);
           return (
-            <div key={nestedKey} className="rounded-xl border border-outline-variant/15 bg-surface px-3 py-2.5">
+            <div key={nestedKey} className="rounded-2xl border border-outline-variant/15 bg-surface px-3 py-2.5">
               {nestedStructured ? (
                 <div className="space-y-2">
                   <span className="block text-[10px] font-bold uppercase tracking-wider text-outline break-all">
@@ -475,7 +475,7 @@ export default function RecordDetailModal({ record, processName, onClose, onLotC
             <button
               onClick={copyLink}
               title="Copy shareable link"
-              className="p-2 rounded-xl hover:bg-surface-container text-outline hover:text-primary transition-colors"
+              className="p-2 rounded-2xl hover:bg-surface-container text-outline hover:text-primary transition-colors"
             >
               <span className="material-symbols-outlined" style={{ fontSize: 18 }}>
                 {copied ? "check" : "link"}
@@ -483,7 +483,7 @@ export default function RecordDetailModal({ record, processName, onClose, onLotC
             </button>
             <button
               onClick={onClose}
-              className="p-2 rounded-xl hover:bg-surface-container text-outline hover:text-on-surface transition-colors"
+              className="p-2 rounded-2xl hover:bg-surface-container text-outline hover:text-on-surface transition-colors"
             >
               <span className="material-symbols-outlined" style={{ fontSize: 18 }}>close</span>
             </button>

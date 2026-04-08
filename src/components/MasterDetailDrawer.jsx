@@ -92,7 +92,7 @@ export default function MasterDetailDrawer({
               <button
                 type="button"
                 onClick={onClose}
-                className="flex h-8 w-8 items-center justify-center rounded-lg bg-surface-container text-on-surface-variant transition hover:bg-surface-container-high hover:text-on-surface"
+                className="flex h-8 w-8 items-center justify-center rounded-2xl bg-surface-container text-on-surface-variant transition hover:bg-surface-container-high hover:text-on-surface"
               >
                 <span className="material-symbols-outlined">close</span>
               </button>
@@ -135,7 +135,7 @@ export default function MasterDetailDrawer({
                     type="button"
                     onClick={() => inputRef.current?.click()}
                     disabled={uploading}
-                    className="absolute bottom-3 right-3 rounded-xl bg-primary px-3 py-1.5 text-xs font-bold text-on-primary transition hover:opacity-90 disabled:opacity-50"
+                    className="absolute bottom-3 right-3 rounded-2xl bg-primary px-3 py-1.5 text-xs font-bold text-on-primary transition hover:opacity-90 disabled:opacity-50"
                   >
                     {uploading ? "Uploading…" : record.imageURL ? "Update Image" : "Upload Image"}
                   </button>
@@ -150,7 +150,7 @@ export default function MasterDetailDrawer({
                 const multiline = field.type === "textarea" || String(value).length > 120;
 
                 return (
-                  <div key={field.field} className={`rounded-xl border border-outline-variant/15 bg-surface-container-low px-3 py-2 ${multiline ? "col-span-2" : ""}`}>
+                  <div key={field.field} className={`rounded-2xl border border-outline-variant/15 bg-surface-container-low px-3 py-2 ${multiline ? "col-span-2" : ""}`}>
                     <div className="mb-1 text-[11px] font-bold uppercase tracking-wider text-outline">{field.label}</div>
                     {editing ? (
                       multiline ? (
@@ -158,14 +158,14 @@ export default function MasterDetailDrawer({
                           value={value}
                           onChange={(event) => setDraft((current) => ({ ...current, [field.field]: event.target.value }))}
                           rows={3}
-                          className="w-full rounded-lg border border-outline-variant/30 bg-surface px-2 py-1.5 text-xs text-on-surface outline-none transition focus:border-primary/40"
+                          className="w-full rounded-2xl border border-outline-variant/30 bg-surface px-2 py-1.5 text-xs text-on-surface outline-none transition focus:border-primary/40"
                         />
                       ) : (
                         <input
                           type={field.type === "number" ? "number" : field.type === "date" ? "date" : field.type === "time" ? "time" : "text"}
                           value={value}
                           onChange={(event) => setDraft((current) => ({ ...current, [field.field]: event.target.value }))}
-                          className="w-full rounded-lg border border-outline-variant/30 bg-surface px-2 py-1.5 text-xs text-on-surface outline-none transition focus:border-primary/40"
+                          className="w-full rounded-2xl border border-outline-variant/30 bg-surface px-2 py-1.5 text-xs text-on-surface outline-none transition focus:border-primary/40"
                         />
                       )
                     ) : (
@@ -195,7 +195,7 @@ export default function MasterDetailDrawer({
                       setDraft(nextDraft);
                       setEditing(false);
                     }}
-                    className="rounded-xl border border-outline-variant/20 px-4 py-2 text-xs font-bold text-on-surface transition hover:bg-surface-container"
+                    className="rounded-2xl border border-outline-variant/20 px-4 py-2 text-xs font-bold text-on-surface transition hover:bg-surface-container"
                   >
                     Cancel
                   </button>
@@ -203,7 +203,7 @@ export default function MasterDetailDrawer({
                     type="button"
                     onClick={() => onSave(draft)}
                     disabled={saving}
-                    className="rounded-xl bg-primary px-4 py-2 text-xs font-bold text-on-primary transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+                    className="rounded-2xl bg-primary px-4 py-2 text-xs font-bold text-on-primary transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     {saving ? "Saving…" : "Save Changes"}
                   </button>
@@ -212,7 +212,7 @@ export default function MasterDetailDrawer({
                 <button
                   type="button"
                   onClick={() => setEditing(true)}
-                  className="rounded-xl bg-primary px-4 py-2 text-xs font-bold text-on-primary transition hover:opacity-90"
+                  className="rounded-2xl bg-primary px-4 py-2 text-xs font-bold text-on-primary transition hover:opacity-90"
                 >
                   Edit Record
                 </button>

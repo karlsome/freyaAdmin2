@@ -6,7 +6,7 @@ function PreviewCard({ record, changes, previewFields, tabKey }) {
   const changedFields = Object.entries(changes);
 
   return (
-    <div className="rounded-xl border border-outline-variant/20 bg-surface p-4 shadow-sm">
+    <div className="rounded-2xl border border-outline-variant/20 bg-surface p-4 shadow-sm">
       <div className="flex items-start justify-between gap-4">
         <div>
           <h4 className="text-base font-black text-on-surface">{identity.title}</h4>
@@ -118,7 +118,7 @@ export default function MasterBatchEditModal({
 
           <div className="grid min-h-0 flex-1 gap-0 xl:grid-cols-[360px,minmax(0,1fr)]">
             <div className="border-r border-outline-variant/20 bg-surface-container-low px-5 py-5 overflow-y-auto scrollbar-hide">
-              <div className="rounded-xl bg-surface px-4 py-4 border border-outline-variant/20">
+              <div className="rounded-2xl bg-surface px-4 py-4 border border-outline-variant/20">
                 <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-outline">Available Fields</div>
                 <div className="mt-4 flex flex-wrap gap-2">
                   {fields.map((field) => (
@@ -139,7 +139,7 @@ export default function MasterBatchEditModal({
                 </div>
               </div>
 
-              <div className="mt-4 rounded-xl bg-surface px-4 py-4 border border-outline-variant/20">
+              <div className="mt-4 rounded-2xl bg-surface px-4 py-4 border border-outline-variant/20">
                 <div className="flex items-center justify-between gap-4">
                   <div>
                     <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-outline">Edit Field</div>
@@ -182,7 +182,7 @@ export default function MasterBatchEditModal({
                         if (!activeField || draftValue === "") return;
                         setChanges((current) => ({ ...current, [activeField.field]: draftValue }));
                       }}
-                      className="rounded-xl bg-primary px-4 py-2 text-xs font-bold text-on-primary transition hover:opacity-90"
+                      className="rounded-2xl bg-primary px-4 py-2 text-xs font-bold text-on-primary transition hover:opacity-90"
                     >
                       Add Change
                     </button>
@@ -190,7 +190,7 @@ export default function MasterBatchEditModal({
                 ) : null}
               </div>
 
-              <div className="mt-4 rounded-xl bg-surface px-4 py-4 border border-outline-variant/20">
+              <div className="mt-4 rounded-2xl bg-surface px-4 py-4 border border-outline-variant/20">
                 <div className="flex items-center justify-between gap-3">
                   <div>
                     <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-outline">Changes To Apply</div>
@@ -272,7 +272,7 @@ export default function MasterBatchEditModal({
                 <button
                   type="button"
                   onClick={onClose}
-                  className="rounded-xl border border-outline-variant/20 px-4 py-2 text-xs font-bold text-on-surface transition hover:bg-surface-container"
+                  className="rounded-2xl border border-outline-variant/20 px-4 py-2 text-xs font-bold text-on-surface transition hover:bg-surface-container"
                 >
                   Cancel
                 </button>
@@ -280,7 +280,7 @@ export default function MasterBatchEditModal({
                   type="button"
                   onClick={() => onSubmit(changes)}
                   disabled={!Object.keys(changes).length || submitting}
-                  className="rounded-xl bg-primary px-4 py-2 text-xs font-bold text-on-primary transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="rounded-2xl bg-primary px-4 py-2 text-xs font-bold text-on-primary transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {submitting ? "Updating…" : "Apply Updates"}
                 </button>

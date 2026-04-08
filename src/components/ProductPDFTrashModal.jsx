@@ -58,7 +58,7 @@ export default function ProductPDFTrashModal({
   return (
     <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm">
       <div className="flex min-h-full items-center justify-center p-4">
-        <div ref={modalRef} className="glass-card flex w-full max-w-6xl flex-col overflow-hidden rounded-3xl">
+        <div ref={modalRef} className="glass-card flex w-full max-w-6xl flex-col overflow-hidden rounded-2xl">
           <div className="border-b border-outline-variant/20 px-6 py-5">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
               <div>
@@ -72,7 +72,7 @@ export default function ProductPDFTrashModal({
                   type="button"
                   onClick={onRecoverAll}
                   disabled={disableBulkActions}
-                  className="rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-3 py-2 text-xs font-bold text-emerald-700 transition hover:bg-emerald-500/15 disabled:cursor-not-allowed disabled:opacity-50 dark:text-emerald-300"
+                  className="rounded-2xl border border-emerald-500/20 bg-emerald-500/10 px-3 py-2 text-xs font-bold text-emerald-700 transition hover:bg-emerald-500/15 disabled:cursor-not-allowed disabled:opacity-50 dark:text-emerald-300"
                 >
                   Recover All
                 </button>
@@ -80,14 +80,14 @@ export default function ProductPDFTrashModal({
                   type="button"
                   onClick={onDeleteAll}
                   disabled={disableBulkActions}
-                  className="rounded-xl border border-error/20 bg-error/10 px-3 py-2 text-xs font-bold text-error transition hover:bg-error/15 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="rounded-2xl border border-error/20 bg-error/10 px-3 py-2 text-xs font-bold text-error transition hover:bg-error/15 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   Delete All
                 </button>
                 <button
                   type="button"
                   onClick={onClose}
-                  className="flex h-9 w-9 items-center justify-center rounded-xl bg-surface-container text-on-surface-variant transition hover:bg-surface-container-high hover:text-on-surface"
+                  className="flex h-9 w-9 items-center justify-center rounded-2xl bg-surface-container text-on-surface-variant transition hover:bg-surface-container-high hover:text-on-surface"
                 >
                   <span className="material-symbols-outlined">close</span>
                 </button>
@@ -97,15 +97,15 @@ export default function ProductPDFTrashModal({
 
           <div className="max-h-[62vh] overflow-y-auto px-6 py-5 scrollbar-hide">
             {loading ? (
-              <div className="rounded-3xl border border-outline-variant/15 bg-surface-container-low px-6 py-12 text-center text-sm font-medium text-on-surface-variant">
+              <div className="rounded-2xl border border-outline-variant/15 bg-surface-container-low px-6 py-12 text-center text-sm font-medium text-on-surface-variant">
                 Loading trash…
               </div>
             ) : error ? (
-              <div className="rounded-3xl border border-error/20 bg-error/10 px-6 py-12 text-center text-sm font-medium text-error">
+              <div className="rounded-2xl border border-error/20 bg-error/10 px-6 py-12 text-center text-sm font-medium text-error">
                 {error}
               </div>
             ) : !items.length ? (
-              <div className="rounded-3xl border border-dashed border-outline-variant/20 bg-surface-container-low px-6 py-12 text-center text-sm text-on-surface-variant">
+              <div className="rounded-2xl border border-dashed border-outline-variant/20 bg-surface-container-low px-6 py-12 text-center text-sm text-on-surface-variant">
                 Trash is empty.
               </div>
             ) : (
@@ -114,7 +114,7 @@ export default function ProductPDFTrashModal({
                   const { daysAgo, daysLeft } = getTrashAgeSummary(item?.deletedAt);
 
                   return (
-                    <div key={getProductPDFItemId(item)} className="rounded-3xl border border-outline-variant/15 bg-surface-container-low px-4 py-4">
+                    <div key={getProductPDFItemId(item)} className="rounded-2xl border border-outline-variant/15 bg-surface-container-low px-4 py-4">
                       <div className="flex flex-col gap-4 md:flex-row md:items-start">
                         <div className="flex h-24 w-full items-center justify-center overflow-hidden rounded-2xl bg-surface md:w-40">
                           {item?.imageURL ? (
@@ -144,7 +144,7 @@ export default function ProductPDFTrashModal({
                               type="button"
                               onClick={() => onRecover(item)}
                               disabled={actionBusy}
-                              className="rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-3 py-2 text-xs font-bold text-emerald-700 transition hover:bg-emerald-500/15 disabled:cursor-not-allowed disabled:opacity-50 dark:text-emerald-300"
+                              className="rounded-2xl border border-emerald-500/20 bg-emerald-500/10 px-3 py-2 text-xs font-bold text-emerald-700 transition hover:bg-emerald-500/15 disabled:cursor-not-allowed disabled:opacity-50 dark:text-emerald-300"
                             >
                               Recover
                             </button>
@@ -152,7 +152,7 @@ export default function ProductPDFTrashModal({
                               type="button"
                               onClick={() => onDeletePermanent(item)}
                               disabled={actionBusy}
-                              className="rounded-xl border border-error/20 bg-error/10 px-3 py-2 text-xs font-bold text-error transition hover:bg-error/15 disabled:cursor-not-allowed disabled:opacity-50"
+                              className="rounded-2xl border border-error/20 bg-error/10 px-3 py-2 text-xs font-bold text-error transition hover:bg-error/15 disabled:cursor-not-allowed disabled:opacity-50"
                             >
                               Delete Permanently
                             </button>
@@ -189,18 +189,18 @@ export default function ProductPDFTrashModal({
                   type="button"
                   onClick={() => onPageChange(page - 1)}
                   disabled={page <= 1 || loading}
-                  className="rounded-xl border border-outline-variant/20 px-3 py-2 text-xs font-bold text-on-surface transition hover:bg-surface-container disabled:cursor-not-allowed disabled:opacity-50"
+                  className="rounded-2xl border border-outline-variant/20 px-3 py-2 text-xs font-bold text-on-surface transition hover:bg-surface-container disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   Previous
                 </button>
-                <div className="rounded-xl bg-surface-container px-3 py-2 text-xs font-bold text-on-surface-variant">
+                <div className="rounded-2xl bg-surface-container px-3 py-2 text-xs font-bold text-on-surface-variant">
                   Page {page} / {totalPages}
                 </div>
                 <button
                   type="button"
                   onClick={() => onPageChange(page + 1)}
                   disabled={page >= totalPages || loading}
-                  className="rounded-xl border border-outline-variant/20 px-3 py-2 text-xs font-bold text-on-surface transition hover:bg-surface-container disabled:cursor-not-allowed disabled:opacity-50"
+                  className="rounded-2xl border border-outline-variant/20 px-3 py-2 text-xs font-bold text-on-surface transition hover:bg-surface-container disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   Next
                 </button>

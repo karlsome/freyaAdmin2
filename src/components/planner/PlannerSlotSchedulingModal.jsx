@@ -3,7 +3,7 @@ import PlannerModalShell from "./PlannerModalShell";
 
 function QueueRow({ item, index, total, onMove, onQuantityChange, onRemove }) {
   return (
-    <div className="planner-data-text rounded-3xl border border-outline-variant/15 bg-surface-container-low p-4">
+    <div className="planner-data-text rounded-2xl border border-outline-variant/15 bg-surface-container-low p-4">
       <div className="flex items-start justify-between gap-3">
         <div>
           <div className="font-bold text-on-surface">{item.背番号 || item.品番}</div>
@@ -12,9 +12,9 @@ function QueueRow({ item, index, total, onMove, onQuantityChange, onRemove }) {
         </div>
 
         <div className="flex items-center gap-2">
-          <button type="button" onClick={() => onMove(index, -1)} disabled={index === 0} className="rounded-xl border border-outline-variant/20 px-2 py-1 text-xs font-bold text-on-surface transition hover:bg-surface-container disabled:opacity-40">↑</button>
-          <button type="button" onClick={() => onMove(index, 1)} disabled={index === total - 1} className="rounded-xl border border-outline-variant/20 px-2 py-1 text-xs font-bold text-on-surface transition hover:bg-surface-container disabled:opacity-40">↓</button>
-          <button type="button" onClick={() => onRemove(item._id)} className="rounded-xl border border-error/20 px-2 py-1 text-xs font-bold text-error transition hover:bg-error/10">Remove</button>
+          <button type="button" onClick={() => onMove(index, -1)} disabled={index === 0} className="rounded-2xl border border-outline-variant/20 px-2 py-1 text-xs font-bold text-on-surface transition hover:bg-surface-container disabled:opacity-40">↑</button>
+          <button type="button" onClick={() => onMove(index, 1)} disabled={index === total - 1} className="rounded-2xl border border-outline-variant/20 px-2 py-1 text-xs font-bold text-on-surface transition hover:bg-surface-container disabled:opacity-40">↓</button>
+          <button type="button" onClick={() => onRemove(item._id)} className="rounded-2xl border border-error/20 px-2 py-1 text-xs font-bold text-error transition hover:bg-error/10">Remove</button>
         </div>
       </div>
 
@@ -109,7 +109,7 @@ export default function PlannerSlotSchedulingModal({
       )}
     >
       <div className="planner-data-text grid gap-5 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)]">
-        <div className="rounded-3xl border border-outline-variant/15 bg-surface-container-low p-4">
+        <div className="rounded-2xl border border-outline-variant/15 bg-surface-container-low p-4">
           <div className="ui-control-surface flex h-11 items-center gap-3 rounded-2xl border border-outline-variant/20 px-4">
             <span className="material-symbols-outlined text-outline" style={{ fontSize: 18 }}>search</span>
             <input
@@ -130,7 +130,7 @@ export default function PlannerSlotSchedulingModal({
                   type="button"
                   onClick={() => addGoal(goal)}
                   disabled={queued}
-                  className="w-full rounded-3xl border border-outline-variant/15 bg-surface px-4 py-4 text-left transition hover:bg-surface-container disabled:cursor-not-allowed disabled:opacity-50"
+                  className="w-full rounded-2xl border border-outline-variant/15 bg-surface px-4 py-4 text-left transition hover:bg-surface-container disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div>
@@ -147,14 +147,14 @@ export default function PlannerSlotSchedulingModal({
             })}
 
             {!availableGoals.length ? (
-              <div className="rounded-3xl border border-dashed border-outline-variant/20 bg-surface px-4 py-10 text-center text-on-surface-variant">
+              <div className="rounded-2xl border border-dashed border-outline-variant/20 bg-surface px-4 py-10 text-center text-on-surface-variant">
                 No goals with remaining quantity are available for the selected date.
               </div>
             ) : null}
           </div>
         </div>
 
-        <div className="rounded-3xl border border-outline-variant/15 bg-surface-container-low p-4">
+        <div className="rounded-2xl border border-outline-variant/15 bg-surface-container-low p-4">
           <div className="mb-4 flex items-center justify-between gap-3">
             <div>
               <div className="planner-data-label text-outline">Queue</div>
@@ -184,7 +184,7 @@ export default function PlannerSlotSchedulingModal({
             ))}
 
             {!queue.length ? (
-              <div className="rounded-3xl border border-dashed border-outline-variant/20 bg-surface px-4 py-10 text-center text-on-surface-variant">
+              <div className="rounded-2xl border border-dashed border-outline-variant/20 bg-surface px-4 py-10 text-center text-on-surface-variant">
                 Add goals from the left panel to build a scheduling queue.
               </div>
             ) : null}

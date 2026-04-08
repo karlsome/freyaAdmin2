@@ -58,7 +58,7 @@ export default function PlannerPrintModal({
     >
       <div className="planner-data-text space-y-4">
         {!normalizedOptions.length ? (
-          <div className="rounded-3xl border border-dashed border-outline-variant/20 bg-surface-container-low px-5 py-8 text-center text-on-surface-variant">
+          <div className="rounded-2xl border border-dashed border-outline-variant/20 bg-surface-container-low px-5 py-8 text-center text-on-surface-variant">
             No scheduled equipment is available for printing.
           </div>
         ) : (
