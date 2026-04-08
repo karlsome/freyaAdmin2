@@ -1202,7 +1202,7 @@ export default function ApprovalsPage() {
         topBarClassName="flex flex-col gap-4 border-b border-outline-variant/20 px-5 py-4 md:flex-row md:items-center md:justify-between"
         bottomBarClassName="flex flex-col gap-4 border-t border-outline-variant/20 px-5 py-4 md:flex-row md:items-center md:justify-between"
         tableClassName="ui-table-data w-full border-separate border-spacing-0"
-        tableViewportClassName="max-h-[68vh] overflow-auto overscroll-contain"
+        tableViewportClassName="max-h-[68vh] overflow-auto"
       />
 
       <ApprovalsDetailModal

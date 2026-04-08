@@ -110,7 +110,7 @@ export default function MasterTable({
       defaultColumnWidth={168}
       defaultMinColumnWidth={120}
       tableClassName="ui-table-data w-full border-separate border-spacing-0"
-      tableViewportClassName="max-h-[68vh] overflow-auto overscroll-contain"
+      tableViewportClassName="max-h-[68vh] overflow-auto"
       headClassName="bg-surface-container-high/40 border-b border-outline-variant/20"
       rowClassName="border-b border-outline-variant/10 transition hover:bg-primary/5"
       clickableRowClassName="cursor-pointer"
