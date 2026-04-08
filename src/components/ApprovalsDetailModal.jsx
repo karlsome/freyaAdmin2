@@ -13,6 +13,7 @@ import {
   collectApprovalImageEntries,
   formatApprovalValue,
   getApprovalCounters,
+  getApprovalDateTimeMismatch,
   getApprovalDefectRate,
   getApprovalDetailEntries,
   getApprovalNGValue,
@@ -164,6 +165,7 @@ export default function ApprovalsDetailModal({
   const latestApprover = getApprovalPrimaryApprover(sourceRecord);
   const title = getApprovalRecordTitle(sourceRecord);
   const subtitle = getApprovalRecordSubtitle(sourceRecord);
+  const mismatch = getApprovalDateTimeMismatch(sourceRecord);
 
   return (
     <div className="fixed inset-0 z-50 bg-black/45 backdrop-blur-sm">
@@ -216,20 +218,71 @@ export default function ApprovalsDetailModal({
                 ))}
               </div>
 
+              {mismatch.hasMismatch ? (
+                <div className="mb-5 space-y-3">
+                  {mismatch.dateMismatch ? (
+                    <div className="rounded-[28px] border border-error/20 bg-error/10 px-4 py-4 text-error">
+                      <div className="flex items-start gap-3">
+                        <span className="material-symbols-outlined" style={{ fontSize: 28 }}>error</span>
+                        <div>
+                          <div className="text-sm font-black">Date Error Detected</div>
+                          <p className="planner-data-text mt-1 text-sm font-semibold">
+                            Input date: {sourceRecord?.Date || "—"} - Actual submission: {mismatch.objectIdDate || "—"}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  ) : null}
+
+                  {mismatch.timeMismatch ? (
+                    <div className="rounded-[28px] border border-amber-500/20 bg-amber-500/10 px-4 py-4 text-amber-700 dark:text-amber-300">
+                      <div className="flex items-start gap-3">
+                        <span className="material-symbols-outlined" style={{ fontSize: 28 }}>schedule</span>
+                        <div>
+                          <div className="text-sm font-black">Time Drift Detected</div>
+                          <p className="planner-data-text mt-1 text-sm font-semibold text-on-surface dark:text-on-surface">
+                            End time: {sourceRecord?.Time_end || "—"} - Actual submission: {mismatch.objectIdTime || "—"}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  ) : null}
+                </div>
+              ) : null}
+
               <div className="mb-5 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
                 {[
-                  ["Factory", sourceRecord?.工場],
-                  ["Worker", sourceRecord?.Worker_Name],
-                  ["Date", sourceRecord?.Date],
-                  ["Time", [sourceRecord?.Time_start, sourceRecord?.Time_end].filter(Boolean).join(" - ") || "—"],
-                  ["Part No.", sourceRecord?.品番],
-                  ["Serial No.", sourceRecord?.背番号],
-                  ["Equipment", sourceRecord?.設備],
-                  ["Approver", latestApprover || "—"],
-                ].map(([label, value]) => (
-                  <div key={label} className="rounded-3xl border border-outline-variant/15 bg-surface-container-low px-4 py-3">
-                    <div className="planner-data-label text-outline">{label}</div>
-                    <div className="planner-data-text mt-1 text-sm font-semibold text-on-surface">{formatApprovalValue(value)}</div>
+                  { label: "Factory", value: sourceRecord?.工場 },
+                  { label: "Worker", value: sourceRecord?.Worker_Name },
+                  {
+                    label: "Date",
+                    value: sourceRecord?.Date,
+                    tone: mismatch.dateMismatch ? "text-error" : "text-on-surface",
+                    icon: mismatch.dateMismatch ? "warning" : "",
+                    iconTitle: mismatch.dateMismatch ? `Actual submission date: ${mismatch.objectIdDate || "unknown"}` : "",
+                  },
+                  {
+                    label: "Time",
+                    value: [sourceRecord?.Time_start, sourceRecord?.Time_end].filter(Boolean).join(" - ") || "—",
+                    tone: mismatch.timeMismatch ? "text-amber-700 dark:text-amber-300" : "text-on-surface",
+                    icon: mismatch.timeMismatch ? "schedule" : "",
+                    iconTitle: mismatch.timeMismatch ? `Actual submission time: ${mismatch.objectIdTime || "unknown"}` : "",
+                  },
+                  { label: "Part No.", value: sourceRecord?.品番 },
+                  { label: "Serial No.", value: sourceRecord?.背番号 },
+                  { label: "Equipment", value: sourceRecord?.設備 },
+                  { label: "Approver", value: latestApprover || "—" },
+                ].map((item) => (
+                  <div key={item.label} className="rounded-3xl border border-outline-variant/15 bg-surface-container-low px-4 py-3">
+                    <div className="planner-data-label text-outline">{item.label}</div>
+                    <div className={joinClasses("planner-data-text mt-1 flex items-center gap-1 text-sm font-semibold", item.tone || "text-on-surface")}>
+                      <span>{formatApprovalValue(item.value)}</span>
+                      {item.icon ? (
+                        <span className="material-symbols-outlined" style={{ fontSize: 16 }} title={item.iconTitle || undefined}>
+                          {item.icon}
+                        </span>
+                      ) : null}
+                    </div>
                   </div>
                 ))}
               </div>

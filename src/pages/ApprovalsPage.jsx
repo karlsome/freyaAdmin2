@@ -29,6 +29,7 @@ import {
   buildApprovalQueryFilters,
   buildApprovalStatsFilters,
   canAccessRecycleBin,
+  getApprovalDateTimeMismatch,
   getApprovalDefectRate,
   getApprovalFactoryAccess,
   getApprovalNGValue,
@@ -702,12 +703,38 @@ export default function ApprovalsPage() {
       label: "Submitted",
       width: 158,
       disableCellWrapper: true,
-      renderCell: (row) => (
-        <div>
-          <div className="planner-data-text text-sm font-semibold text-on-surface">{row.Date || "—"}</div>
-          <div className="planner-data-text text-xs text-on-surface-variant">{[row.Time_start, row.Time_end].filter(Boolean).join(" - ") || "—"}</div>
-        </div>
-      ),
+      renderCell: (row) => {
+        const mismatch = getApprovalDateTimeMismatch(row);
+
+        return (
+          <div>
+            <div className={joinClasses("planner-data-text flex items-center gap-1 text-sm font-semibold", mismatch.dateMismatch ? "text-error" : "text-on-surface")}>
+              <span>{row.Date || "—"}</span>
+              {mismatch.dateMismatch ? (
+                <span
+                  className="material-symbols-outlined text-error"
+                  style={{ fontSize: 16 }}
+                  title={`Date mismatch. Actual submission date: ${mismatch.objectIdDate || "unknown"}`}
+                >
+                  warning
+                </span>
+              ) : null}
+            </div>
+            <div className={joinClasses("planner-data-text flex items-center gap-1 text-xs", mismatch.timeMismatch ? "font-semibold text-amber-700 dark:text-amber-300" : "text-on-surface-variant")}>
+              <span>{[row.Time_start, row.Time_end].filter(Boolean).join(" - ") || "—"}</span>
+              {mismatch.timeMismatch ? (
+                <span
+                  className="material-symbols-outlined text-amber-600 dark:text-amber-300"
+                  style={{ fontSize: 16 }}
+                  title={`Time mismatch. Actual submission time: ${mismatch.objectIdTime || "unknown"}`}
+                >
+                  schedule
+                </span>
+              ) : null}
+            </div>
+          </div>
+        );
+      },
     },
     {
       key: "工場",
@@ -1146,7 +1173,13 @@ export default function ApprovalsPage() {
             return selected ? "bg-primary/5" : "bg-error/5";
           }
 
-          return joinClasses(getApprovalStatusMeta(row).rowClassName, selected ? "bg-primary/5" : "");
+          const mismatch = getApprovalDateTimeMismatch(row);
+
+          return joinClasses(
+            getApprovalStatusMeta(row).rowClassName,
+            mismatch.dateMismatch ? "bg-error/5 shadow-[inset_4px_0_0_rgba(239,68,68,0.65)]" : "",
+            selected ? "bg-primary/5" : ""
+          );
         }}
         renderPageInfo={({ filteredCount, page: current, pageSize: currentPageSize }) => {
           if (!filteredCount) return <span>0 records shown</span>;

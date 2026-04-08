@@ -24,6 +24,10 @@ const SRS_COUNTER_FIELDS = [
 const PRESS_COUNTER_FIELDS = ["疵引不良", "加工不良", "その他"];
 
 const DETAIL_HIDDEN_FIELDS = new Set([
+  "_hasDateMismatch",
+  "_hasTimeMismatch",
+  "_objectIdDate",
+  "_objectIdTime",
   "approvalHistory",
   "approvalStatus",
   "approvedAt",
@@ -81,6 +85,37 @@ function normalizeNumber(value) {
     return Number.isFinite(parsed) ? parsed : 0;
   }
   return 0;
+}
+
+function parseClockMinutes(value) {
+  const match = asString(value).trim().match(/^(\d{1,2}):(\d{2})$/);
+  if (!match) return null;
+
+  const hours = Number(match[1]);
+  const minutes = Number(match[2]);
+  if (!Number.isInteger(hours) || !Number.isInteger(minutes)) return null;
+  if (hours < 0 || hours > 23 || minutes < 0 || minutes > 59) return null;
+  return hours * 60 + minutes;
+}
+
+function getLocalDateParts(date) {
+  return {
+    date: `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`,
+    time: `${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`,
+  };
+}
+
+function getObjectIdDateParts(objectId) {
+  const normalized = asString(objectId).trim();
+  if (!/^[a-f0-9]{24}$/i.test(normalized)) return null;
+
+  const timestampSeconds = Number.parseInt(normalized.slice(0, 8), 16);
+  if (!Number.isFinite(timestampSeconds)) return null;
+
+  const date = new Date(timestampSeconds * 1000);
+  if (Number.isNaN(date.getTime())) return null;
+
+  return getLocalDateParts(date);
 }
 
 function compareValues(left, right) {
@@ -144,6 +179,39 @@ export function getApprovalRecordId(record = {}) {
   if (typeof record?._id === "string") return record._id;
   if (record?._id?.$oid) return record._id.$oid;
   return asString(record?._id);
+}
+
+export function getApprovalDateTimeMismatch(record = {}) {
+  const parsedObjectId = getObjectIdDateParts(getApprovalRecordId(record));
+  const objectIdDate = parsedObjectId?.date || asString(record?._objectIdDate).trim();
+  const objectIdTime = parsedObjectId?.time || asString(record?._objectIdTime).trim();
+  const inputDate = asString(record?.Date).trim();
+  const inputEndTime = asString(record?.Time_end).trim();
+
+  const dateMismatch = objectIdDate
+    ? inputDate !== objectIdDate
+    : Boolean(record?._hasDateMismatch);
+
+  let diffMinutes = null;
+  let timeMismatch = false;
+  const inputEndMinutes = parseClockMinutes(inputEndTime);
+  const objectIdMinutes = parseClockMinutes(objectIdTime);
+
+  if (inputEndMinutes != null && objectIdMinutes != null) {
+    diffMinutes = Math.abs(inputEndMinutes - objectIdMinutes);
+    timeMismatch = diffMinutes > 30;
+  } else {
+    timeMismatch = Boolean(record?._hasTimeMismatch);
+  }
+
+  return {
+    dateMismatch,
+    timeMismatch,
+    diffMinutes,
+    objectIdDate,
+    objectIdTime,
+    hasMismatch: dateMismatch || timeMismatch,
+  };
 }
 
 export function getApprovalQuantityValue(record = {}, tabKey) {
