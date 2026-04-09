@@ -7,7 +7,7 @@ export default function TopNav({ authUser, isDark, onLogout, onOpenMobileNav, on
   const roleLine = authUser?.role || "Authenticated user";
 
   return (
-    <header className="topnav-glass fixed top-0 right-0 left-0 z-40 flex h-16 items-center justify-between px-4 font-headline antialiased sm:px-6 md:left-16 md:px-8">
+    <header className="topnav-glass fixed top-0 right-0 left-0 z-40 flex h-16 items-center justify-between px-4 font-headline antialiased sm:px-6 md:pl-24 md:pr-8">
 
       {/* Search */}
       <div className="flex min-w-0 flex-1 items-center gap-3 sm:gap-4 md:gap-6">
