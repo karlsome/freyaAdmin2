@@ -15,6 +15,7 @@ import LiquidSegmentedControl from "../components/LiquidSegmentedControl";
 import RecordDetailModal from "../components/RecordDetailModal";
 import ProcessPanel from "../components/ProcessPanel";
 import ProductionFilterBar from "../components/ProductionFilterBar";
+import StatSummaryCard from "../components/StatSummaryCard";
 import { useRecordModal } from "../hooks/useRecordModal";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -259,18 +260,58 @@ export default function FactoryDetailPage({ combined = false }) {
 
   // Per-process stats
   const PROCESS_ACCENT = {
-    Kensa: "text-violet-500",
-    Press: "text-sky-500",
-    SRS:   "text-amber-500",
-    Slit:  "text-emerald-500",
+    Kensa: { color: "text-violet-500", bg: "bg-violet-500/10" },
+    Press: { color: "text-sky-500", bg: "bg-sky-500/10" },
+    SRS: { color: "text-amber-500", bg: "bg-amber-500/10" },
+    Slit: { color: "text-emerald-500", bg: "bg-emerald-500/10" },
   };
   const perProcess = ["Kensa", "Press", "SRS", "Slit"].map((proc) => {
     const rows  = (firstSection[proc] ?? []);
     const total = rows.reduce((s, r) => s + (Number(r.Process_Quantity) || Number(r.Total) || 0), 0);
     const ng    = rows.reduce((s, r) => s + (Number(r.Total_NG) || 0), 0);
     const rate  = total > 0 ? Math.round((ng / total) * 10000) / 100 : 0;
-    return { proc, total, ng, rate, color: PROCESS_ACCENT[proc] ?? "text-primary" };
+    return { proc, total, ng, rate, accent: PROCESS_ACCENT[proc] ?? { color: "text-primary", bg: "bg-primary/10" } };
   });
+
+  const overviewSummaryCards = [
+    {
+      key: "total-processed",
+      icon: "output",
+      label: "Total Processed",
+      value: stripTotal.toLocaleString(),
+      subtitle: "units processed",
+      accent: "text-primary bg-primary/10",
+    },
+    {
+      key: "ng-units",
+      icon: "report",
+      label: "NG Units",
+      value: stripNG.toLocaleString(),
+      subtitle: "defective units",
+      accent: stripNG > 0 ? "text-error bg-error/10" : "text-emerald-500 bg-emerald-500/10",
+    },
+    {
+      key: "defect-rate",
+      icon: "percent",
+      label: "Defect Rate",
+      value: `${stripRate.toFixed(2)}%`,
+      subtitle: defStatus.label,
+      accent:
+        stripRate >= 2
+          ? "text-error bg-error/10"
+          : stripRate >= 1.5
+            ? "text-amber-500 bg-amber-500/10"
+            : "text-emerald-500 bg-emerald-500/10",
+    },
+    {
+      key: "sensors",
+      icon: "sensors",
+      label: combined ? "Total Sensors" : "Sensors Online",
+      value: String(sensor?.sensorCount ?? 0),
+      subtitle: combined ? "connected sensors across factories" : "active sensor devices",
+      accent: sensor?.hasData ? "text-emerald-500 bg-emerald-500/10" : "text-outline bg-surface-container-high",
+    },
+  ];
 
   return (
     <section className="pt-24 pb-20 px-4 md:px-8 overflow-y-auto h-screen scrollbar-hide">
@@ -311,38 +352,39 @@ export default function FactoryDetailPage({ combined = false }) {
       {/* ── Summary strip ── */}
       <div className="space-y-3 mb-6">
         {/* Row 1: overall */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          {[
-            { label: "Total Processed", value: loading ? "—" : stripTotal.toLocaleString(),       color: "text-on-surface"   },
-            { label: "NG Units",        value: loading ? "—" : stripNG.toLocaleString(),           color: "text-error"        },
-            { label: "Defect Rate",     value: loading ? "—" : `${stripRate.toFixed(2)}%`,         color: defStatus.valueColor ?? "text-on-surface" },
-            { label: combined ? "Total Sensors" : "Sensors Online", value: loading ? "—" : (sensor?.sensorCount ?? 0), color: sensor?.hasData ? "text-emerald-400" : "text-outline" },
-          ].map(({ label, value, color }) => (
-            <div key={label} className="glass-card rounded-2xl px-5 py-4 flex flex-col gap-1">
-              <p className={`text-2xl font-black leading-none ${color}`}>{value}</p>
-              <p className="text-xs font-bold text-on-surface-variant">{label}</p>
-            </div>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {overviewSummaryCards.map((card) => (
+            <StatSummaryCard
+              key={card.key}
+              icon={card.icon}
+              label={card.label}
+              value={card.value}
+              subtitle={card.subtitle}
+              accent={card.accent}
+              loading={loading}
+            />
           ))}
         </div>
         {/* Row 2: per-process */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          {perProcess.map(({ proc, total, ng, rate, color }) => {
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {perProcess.map(({ proc, total, ng, rate, accent }) => {
             const ds = getDefectStatus(rate);
             return (
-              <div key={proc} className="glass-card rounded-2xl px-5 py-4 flex flex-col gap-1">
-                <div className="flex items-center justify-between mb-0.5">
-                  <span className={`text-[10px] font-bold uppercase tracking-wider ${color}`}>{proc}</span>
-                  {!loading && total > 0 && (
-                    <span className={`text-[10px] font-bold ${ds.valueColor}`}>{rate.toFixed(2)}%</span>
-                  )}
-                </div>
-                <p className="text-2xl font-black leading-none text-on-surface">
-                  {loading ? "—" : total > 0 ? total.toLocaleString() : <span className="text-outline text-lg">—</span>}
-                </p>
-                <p className="text-xs font-bold text-on-surface-variant">
-                  {loading ? "" : total > 0 ? `${ng} NG` : "No data"}
-                </p>
-              </div>
+              <StatSummaryCard
+                key={proc}
+                icon="precision_manufacturing"
+                label={`${proc} Process`}
+                labelClassName={accent.color}
+                value={total > 0 ? total.toLocaleString() : "—"}
+                subtitle={
+                  total > 0
+                    ? <><span className={ds.valueColor}>{rate.toFixed(2)}%</span>{" · "}{ng.toLocaleString()} NG</>
+                    : "No data"
+                }
+                subtitleClassName={total > 0 ? "text-on-surface-variant" : ""}
+                accent={`${accent.color} ${accent.bg}`}
+                loading={loading}
+              />
             );
           })}
         </div>

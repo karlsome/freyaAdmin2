@@ -12,6 +12,7 @@ export default function StatSummaryCard({
   active = false,
   onClick,
   className = "",
+  labelClassName = "",
   valueClassName = "",
   subtitleClassName = "",
   iconClassName = "",
@@ -39,7 +40,7 @@ export default function StatSummaryCard({
             ? <span className="inline-block w-16 h-5 rounded bg-surface-container-high animate-pulse" />
             : value}
         </p>
-        <p className="mt-0.5 text-[11px] font-semibold text-on-surface-variant">{label}</p>
+        <p className={joinClasses("mt-0.5 text-[11px] font-semibold text-on-surface-variant", labelClassName)}>{label}</p>
         <p className={joinClasses("mt-0.5 text-[10px] text-outline", subtitleClassName)}>{loading ? "" : subtitle}</p>
       </div>
     </RootTag>
