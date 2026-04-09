@@ -355,11 +355,27 @@ export async function fetchRecordByKey(proc, { 工場: factory, Date: date, Time
 
 const _NUMBER_FIELDS = new Set(["Total", "Total_NG", "Process_Quantity", "Cycle_Time", "Remaining_Quantity", "Spare"]);
 
+function _toDistinctSortedStrings(values = []) {
+  return [...new Set(
+    values
+      .map((value) => (value == null ? "" : String(value).trim()))
+      .filter(Boolean)
+  )].sort((a, b) => String(a).localeCompare(String(b), "ja"));
+}
+
 /**
  * Returns sorted distinct (non-null) values for `field` across all 4 production
  * collections, scoped to the given factory.
  */
 export async function fetchDistinctValues(factory, field) {
+  if (field === "モデル") {
+    const rows = await query("Sasaki_Coating_MasterDB", "masterDB", {}, {
+      projection: { モデル: 1, _id: 0 },
+      limit: 10000,
+    });
+    return _toDistinctSortedStrings(Array.isArray(rows) ? rows.map((row) => row?.モデル) : []);
+  }
+
   const proj = { [field]: 1, _id: 0 };
   const factoryQuery = _hasFactoryScope(factory) ? { 工場: factory } : {};
   const settled = await Promise.allSettled(
@@ -370,33 +386,102 @@ export async function fetchDistinctValues(factory, field) {
   const flat = settled.flatMap((r) =>
     r.status === "fulfilled" ? r.value.map((doc) => doc[field]).filter((v) => v != null && v !== "") : []
   );
-  return [...new Set(flat)].sort((a, b) => String(a).localeCompare(String(b)));
+  return _toDistinctSortedStrings(flat);
 }
 
-function _buildProdQuery(factory, start, end, partNumbers, serialNumbers, advancedFilters = []) {
-  const q = {
+async function _buildProdQuery(factory, start, end, partNumbers, serialNumbers, advancedFilters = []) {
+  const baseQuery = {
     Date: { $gte: start, $lte: end },
   };
-  if (_hasFactoryScope(factory)) q["工場"] = factory;
-  if (partNumbers.length > 0) q["品番"] = { $in: partNumbers };
-  if (serialNumbers.length > 0) q["背番号"] = { $in: serialNumbers };
+  if (_hasFactoryScope(factory)) baseQuery["工場"] = factory;
+  if (partNumbers.length > 0) baseQuery["品番"] = { $in: partNumbers };
+  if (serialNumbers.length > 0) baseQuery["背番号"] = { $in: serialNumbers };
+
+  const groupedClauses = new Map();
+
   for (const { field, operator, value } of advancedFilters) {
-    if (!field || !operator || value === "" || value === undefined) continue;
-    const coerced = _NUMBER_FIELDS.has(field) ? Number(value) : value;
-    switch (operator) {
-      case "equals":       q[field] = coerced; break;
-      case "contains":     q[field] = { $regex: value, $options: "i" }; break;
-      case "greater_than": q[field] = { ...(q[field] ?? {}), $gt: coerced }; break;
-      case "less_than":    q[field] = { ...(q[field] ?? {}), $lt: coerced }; break;
+    const isEmptyArray = Array.isArray(value) && value.length === 0;
+    if (!field || !operator || value === "" || value === undefined || isEmptyArray) continue;
+
+    if (field === "モデル") {
+      const modelValues = Array.isArray(value)
+        ? value.map((item) => String(item || "").trim()).filter(Boolean)
+        : String(value || "")
+            .split(",")
+            .map((item) => item.trim())
+            .filter(Boolean);
+
+      if (!modelValues.length) continue;
+
+      const rows = await query("Sasaki_Coating_MasterDB", "masterDB", {
+        モデル: { $in: modelValues },
+      }, {
+        projection: { 背番号: 1, _id: 0 },
+        limit: 10000,
+      });
+
+      const serials = _toDistinctSortedStrings(Array.isArray(rows) ? rows.map((row) => row?.背番号) : []);
+      if (!serials.length) continue;
+
+      const clause = { 背番号: { $in: serials } };
+      if (!groupedClauses.has(field)) groupedClauses.set(field, []);
+      groupedClauses.get(field).push(clause);
+      continue;
     }
+
+    const coerced = _NUMBER_FIELDS.has(field) ? Number(value) : value;
+    let clause = null;
+
+    switch (operator) {
+      case "equals":
+        clause = { [field]: coerced };
+        break;
+      case "in": {
+        const values = Array.isArray(value)
+          ? value.map((item) => (_NUMBER_FIELDS.has(field) ? Number(item) : item)).filter((item) => item !== "" && item !== undefined)
+          : String(value || "")
+              .split(",")
+              .map((item) => item.trim())
+              .filter(Boolean)
+              .map((item) => (_NUMBER_FIELDS.has(field) ? Number(item) : item));
+        clause = values.length ? { [field]: { $in: values } } : null;
+        break;
+      }
+      case "contains":
+        clause = { [field]: { $regex: value, $options: "i" } };
+        break;
+      case "greater_than":
+        clause = { [field]: { $gt: coerced } };
+        break;
+      case "less_than":
+        clause = { [field]: { $lt: coerced } };
+        break;
+      default:
+        break;
+    }
+
+    if (!clause) continue;
+    if (!groupedClauses.has(field)) groupedClauses.set(field, []);
+    groupedClauses.get(field).push(clause);
   }
-  return q;
+
+  const clauses = Array.from(groupedClauses.values()).map((fieldClauses) => {
+    if (fieldClauses.length === 1) return fieldClauses[0];
+    return { $or: fieldClauses };
+  });
+
+  if (!clauses.length) return baseQuery;
+
+  return {
+    $and: [baseQuery, ...clauses],
+  };
 }
 
 async function _fetchRange(factory, start, end, partNumbers, serialNumbers, advancedFilters = []) {
+  const queries = await Promise.all(PROCESSES.map((p) => _buildProdQuery(factory, start, end, partNumbers, serialNumbers, advancedFilters)));
   const settled = await Promise.allSettled(
-    PROCESSES.map((p) =>
-      query("submittedDB", p.collection, _buildProdQuery(factory, start, end, partNumbers, serialNumbers, advancedFilters))
+    PROCESSES.map((p, index) =>
+      query("submittedDB", p.collection, queries[index])
     )
   );
   return PROCESSES.reduce((acc, p, i) => {

@@ -1,14 +1,20 @@
 import { useState, useRef, useCallback } from "react";
 import { fetchDistinctValues } from "../services/api";
 
+const APPROVAL_STATUS_VALUES = [
+  "pending",
+  "hancho_approved",
+  "fully_approved",
+  "correction_needed",
+  "correction_needed_from_kacho",
+];
+
 // ─── Filter schema — shared fields across kensaDB / pressDB / SRSDB / slitDB ──
-// `enum: true`  → fetch distinct values from DB and render a <select>
-// `staticEnum`  → hardcoded option list
 export const FILTER_SCHEMA = [
   // Basic
   { field: "品番",              label: "品番",                type: "text",   group: "Basic",                  operators: ["equals", "contains"] },
   { field: "背番号",            label: "背番号",              type: "text",   group: "Basic",                  operators: ["equals", "contains"] },
-  { field: "モデル",            label: "モデル",              type: "text",   group: "Basic",                  operators: ["equals", "contains"] },
+  { field: "モデル",            label: "モデル",              type: "select", group: "Basic",                  operators: ["equals", "in"] },
   { field: "製造ロット",        label: "製造ロット",          type: "text",   group: "Basic",                  operators: ["equals", "contains"] },
   { field: "Date",              label: "Date",                type: "date",   group: "Basic",                  operators: ["equals", "greater_than", "less_than"] },
   // Quantity & Performance
@@ -22,10 +28,10 @@ export const FILTER_SCHEMA = [
   { field: "Time_start",        label: "Time Start",          type: "time",   group: "Time",                   operators: ["equals", "greater_than", "less_than"] },
   { field: "Time_end",          label: "Time End",            type: "time",   group: "Time",                   operators: ["equals", "greater_than", "less_than"] },
   // Worker & Equipment
-  { field: "Worker_Name",       label: "Worker Name",         type: "text",   group: "Worker & Equipment",     operators: ["equals", "contains"], enum: true },
-  { field: "設備",              label: "設備",                type: "text",   group: "Worker & Equipment",     operators: ["equals", "contains"], enum: true },
+  { field: "Worker_Name",       label: "Worker Name",         type: "select", group: "Worker & Equipment",     operators: ["equals", "in"] },
+  { field: "設備",              label: "設備",                type: "select", group: "Worker & Equipment",     operators: ["equals", "in"] },
   // Status
-  { field: "Approval_Status",   label: "Approval Status",     type: "text",   group: "Status",                 operators: ["equals"],             enum: true },
+  { field: "approvalStatus",    label: "Approval Status",     type: "select", group: "Status",                 operators: ["equals", "in"], options: APPROVAL_STATUS_VALUES },
 ];
 
 const FILTER_GROUPS = [...new Set(FILTER_SCHEMA.map((s) => s.group))];
@@ -33,9 +39,16 @@ const FILTER_GROUPS = [...new Set(FILTER_SCHEMA.map((s) => s.group))];
 const OPERATOR_LABELS = {
   equals:       "= Equals",
   contains:     "Contains",
+  in:           "In",
   greater_than: "> Greater than",
   less_than:    "< Less than",
 };
+
+function hasFilterValue(row) {
+  if (!row?.field || !row?.operator) return false;
+  if (Array.isArray(row.value)) return row.value.length > 0;
+  return row.value !== "";
+}
 
 let _rowId = 0;
 function newRow() { return { id: ++_rowId, field: "", operator: "equals", value: "" }; }
@@ -120,18 +133,26 @@ export default function ProductionFilterBar({
     setFilterRows((r) => r.map((x) => {
       if (x.id !== id) return x;
       const next = { ...x, ...patch };
-      // When field changes: reset value, default operator to "equals", trigger enum fetch
+      // When field changes: reset value, default operator to the first supported one, trigger enum fetch
       if ("field" in patch && patch.field !== x.field) {
-        next.operator = "equals";
-        next.value    = "";
         const def = FILTER_SCHEMA.find((s) => s.field === patch.field);
-        if (def?.enum) fetchEnum(patch.field);
+        next.operator = def?.operators?.[0] || "equals";
+        next.value = next.operator === "in" ? [] : "";
+        if (def?.type === "select" && !def.options) fetchEnum(patch.field);
+      }
+
+      if ("operator" in patch && patch.operator !== x.operator) {
+        next.value = patch.operator === "in" ? [] : "";
+      }
+
+      if ("value" in patch && x.operator === "in" && !Array.isArray(patch.value)) {
+        next.value = patch.value ? [patch.value] : [];
       }
       return next;
     }));
 
   const handleApply = () => {
-    const advancedFilters = filterRows.filter((r) => r.field && r.operator && r.value !== "");
+    const advancedFilters = filterRows.filter(hasFilterValue);
     onApply?.({ dateFrom, dateTo, partNumbers, serialNumbers, advancedFilters });
   };
 
@@ -189,9 +210,9 @@ export default function ProductionFilterBar({
           {advancedOpen ? "keyboard_arrow_up" : "keyboard_arrow_down"}
         </span>
         Advanced Filters
-        {filterRows.some((r) => r.field && r.operator && r.value !== "") && (
+        {filterRows.some(hasFilterValue) && (
           <span className="px-1.5 py-0.5 rounded-full bg-primary/15 text-primary text-[9px] font-bold normal-case tracking-normal">
-            {filterRows.filter((r) => r.field && r.operator && r.value !== "").length} active
+            {filterRows.filter(hasFilterValue).length} active
           </span>
         )}
       </button>
@@ -202,9 +223,16 @@ export default function ProductionFilterBar({
             const schemaDef  = FILTER_SCHEMA.find((s) => s.field === row.field);
             const operators  = schemaDef?.operators ?? [];
             const inputType  = schemaDef?.type === "number" ? "number" : schemaDef?.type === "time" ? "time" : schemaDef?.type === "date" ? "date" : "text";
-            const cached     = row.field && schemaDef?.enum ? enumCache.current[row.field] : null;
-            const enumOptions = Array.isArray(cached) ? cached : null;
+            const cached = row.field && schemaDef?.type === "select" && !schemaDef?.options ? enumCache.current[row.field] : null;
+            const enumOptions = Array.isArray(schemaDef?.options) ? schemaDef.options : Array.isArray(cached) ? cached : [];
             const enumLoading = cached === "loading";
+            const isSelectField = schemaDef?.type === "select";
+            const isMultiSelect = row.operator === "in";
+            const selectedValue = isMultiSelect
+              ? (Array.isArray(row.value) ? row.value : row.value ? [row.value] : [])
+              : Array.isArray(row.value)
+                ? row.value[0] || ""
+                : row.value;
 
             return (
               <div key={row.id} className="flex items-center gap-2 flex-wrap">
@@ -240,15 +268,25 @@ export default function ProductionFilterBar({
                   ))}
                 </select>
 
-                {/* Value — enum select or free-text/number/date/time input */}
-                {enumOptions ? (
+                {/* Value — select or free-text/number/date/time input */}
+                {isSelectField ? (
                   <select
-                    value={row.value}
-                    onChange={(e) => updateRow(row.id, { value: e.target.value })}
-                    className="h-9 px-3 rounded-xl bg-white border border-outline-variant/20 text-xs text-on-surface
-                               outline-none focus:border-primary/40 transition-colors flex-[2] min-w-[160px]"
+                    value={selectedValue}
+                    multiple={isMultiSelect}
+                    size={isMultiSelect ? Math.min(Math.max(enumOptions.length, 4), 8) : undefined}
+                    onChange={(e) => updateRow(row.id, {
+                      value: isMultiSelect
+                        ? Array.from(e.target.selectedOptions, (option) => option.value)
+                        : e.target.value,
+                    })}
+                    className={`rounded-xl bg-white border border-outline-variant/20 text-xs text-on-surface
+                               outline-none focus:border-primary/40 transition-colors flex-[2] min-w-[160px] px-3 ${isMultiSelect ? "min-h-28 py-2" : "h-9"}`}
                   >
-                    <option value="">Select {schemaDef?.label ?? row.field}...</option>
+                    {!isMultiSelect ? (
+                      <option value="">
+                        {enumLoading ? `Loading ${schemaDef?.label ?? row.field}...` : `Select ${schemaDef?.label ?? row.field}...`}
+                      </option>
+                    ) : null}
                     {enumOptions.map((v) => (
                       <option key={v} value={v}>{v}</option>
                     ))}
@@ -259,7 +297,7 @@ export default function ProductionFilterBar({
                     value={row.value}
                     onChange={(e) => updateRow(row.id, { value: e.target.value })}
                     disabled={!row.operator}
-                    placeholder={enumLoading ? "Loading options…" : "Enter Value"}
+                    placeholder="Enter Value"
                     className="h-9 px-3 rounded-xl bg-white border border-outline-variant/20 text-xs text-on-surface
                                placeholder:text-outline outline-none focus:border-primary/40 transition-colors flex-[2] min-w-[160px]
                                disabled:opacity-40 disabled:cursor-not-allowed"

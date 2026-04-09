@@ -326,22 +326,25 @@ function coerceFilterValue(value, fieldDefinition) {
 
 export function buildMasterAdvancedQuery(rows = [], fieldDefinitions = []) {
   const fieldMap = Object.fromEntries(fieldDefinitions.map((field) => [field.field, field]));
-  const query = {};
+  const groupedClauses = new Map();
 
   rows.forEach((row) => {
     const fieldDefinition = fieldMap[row.field];
     if (!row.field || !row.operator || !fieldDefinition) return;
 
+    let clause = null;
+
     if (row.operator === "range") {
       if (row.valueFrom === "" || row.valueTo === "") return;
-      query[row.field] = {
-        $gte: coerceFilterValue(row.valueFrom, fieldDefinition),
-        $lte: coerceFilterValue(row.valueTo, fieldDefinition),
+      clause = {
+        [row.field]: {
+          $gte: coerceFilterValue(row.valueFrom, fieldDefinition),
+          $lte: coerceFilterValue(row.valueTo, fieldDefinition),
+        },
       };
-      return;
     }
 
-    if (row.operator === "in") {
+    if (row.operator === "in" && !clause) {
       const values = Array.isArray(row.value)
         ? row.value.filter(Boolean)
         : String(row.value || "")
@@ -349,20 +352,39 @@ export function buildMasterAdvancedQuery(rows = [], fieldDefinitions = []) {
             .map((value) => value.trim())
             .filter(Boolean);
       if (!values.length) return;
-      query[row.field] = { $in: values.map((value) => coerceFilterValue(value, fieldDefinition)) };
-      return;
+      clause = {
+        [row.field]: { $in: values.map((value) => coerceFilterValue(value, fieldDefinition)) },
+      };
     }
 
-    if (row.value === "" || row.value == null) return;
+    if (!clause) {
+      if (row.value === "" || row.value == null) return;
 
-    const value = coerceFilterValue(row.value, fieldDefinition);
-    if (row.operator === "equals") query[row.field] = value;
-    if (row.operator === "contains") query[row.field] = { $regex: row.value, $options: "i" };
-    if (row.operator === "greater") query[row.field] = { $gt: value };
-    if (row.operator === "less") query[row.field] = { $lt: value };
+      const value = coerceFilterValue(row.value, fieldDefinition);
+      if (row.operator === "equals") clause = { [row.field]: value };
+      if (row.operator === "contains") clause = { [row.field]: { $regex: row.value, $options: "i" } };
+      if (row.operator === "greater") clause = { [row.field]: { $gt: value } };
+      if (row.operator === "less") clause = { [row.field]: { $lt: value } };
+    }
+
+    if (!clause) return;
+
+    if (!groupedClauses.has(row.field)) {
+      groupedClauses.set(row.field, []);
+    }
+
+    groupedClauses.get(row.field).push(clause);
   });
 
-  return query;
+  const clauses = Array.from(groupedClauses.values()).map((fieldClauses) => {
+    if (fieldClauses.length === 1) return fieldClauses[0];
+    return { $or: fieldClauses };
+  });
+
+  if (!clauses.length) return {};
+  if (clauses.length === 1) return clauses[0];
+
+  return { $and: clauses };
 }
 
 export function getActiveMasterAdvancedFilters(rows = [], fieldDefinitions = []) {
