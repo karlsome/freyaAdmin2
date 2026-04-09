@@ -89,7 +89,7 @@ export default function LoginPage({ isDark, onToggleTheme, onLogin }) {
   }
 
   return (
-    <div className={`login-scene relative min-h-screen overflow-hidden bg-background dark:bg-transparent ${isHandingOff ? "login-scene--handoff" : ""} ${isHandingOff && !canUseViewTransitions ? "login-scene--handoff-fallback" : ""}`}>
+    <div className={`login-scene relative h-[100svh] overflow-x-hidden overflow-y-auto bg-background dark:bg-transparent ${isHandingOff ? "login-scene--handoff" : ""} ${isHandingOff && !canUseViewTransitions ? "login-scene--handoff-fallback" : ""}`}>
       <div className="login-backdrop pointer-events-none absolute inset-0 overflow-hidden">
         <div
           className="absolute inset-0 scale-105 bg-cover bg-center bg-no-repeat"
@@ -101,15 +101,15 @@ export default function LoginPage({ isDark, onToggleTheme, onLogin }) {
         <div className="absolute bottom-0 right-0 h-72 w-72 rounded-full bg-tertiary/12 blur-3xl" />
       </div>
 
-      <section className="login-stage relative z-10 flex min-h-screen items-center justify-center px-4 py-8 sm:px-6 lg:px-8">
-        <div className={`login-frost-card relative grid w-full max-w-6xl overflow-hidden rounded-[36px] border border-white/28 bg-white/[0.14] shadow-[0_40px_120px_rgba(15,23,42,0.18)] backdrop-blur-[30px] backdrop-saturate-150 dark:border-white/10 dark:bg-white/[0.08] dark:shadow-[0_40px_140px_rgba(0,0,0,0.44)] lg:grid-cols-[1.08fr_0.92fr] ${isHandingOff && canUseViewTransitions ? "login-frost-card--handoff" : ""}`}>
+      <section className="login-stage relative z-10 flex min-h-[100svh] items-start justify-center px-3 py-4 sm:px-6 sm:py-8 lg:min-h-screen lg:items-center lg:px-8">
+        <div className={`login-frost-card relative grid w-full max-w-6xl overflow-hidden rounded-[28px] border border-white/28 bg-white/[0.14] shadow-[0_40px_120px_rgba(15,23,42,0.18)] backdrop-blur-[30px] backdrop-saturate-150 dark:border-white/10 dark:bg-white/[0.08] dark:shadow-[0_40px_140px_rgba(0,0,0,0.44)] sm:rounded-[36px] lg:grid-cols-[0.92fr_1.08fr] ${isHandingOff && canUseViewTransitions ? "login-frost-card--handoff" : ""}`}>
           <div className="pointer-events-none absolute inset-0">
             <div className="absolute inset-0 bg-[linear-gradient(135deg,rgba(255,255,255,0.24),rgba(255,255,255,0.1)_42%,rgba(255,255,255,0.16))] dark:bg-[linear-gradient(135deg,rgba(255,255,255,0.08),rgba(255,255,255,0.03)_42%,rgba(255,255,255,0.06))]" />
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.24),transparent_30%),radial-gradient(circle_at_bottom_right,rgba(255,255,255,0.08),transparent_34%)] dark:bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.08),transparent_30%),radial-gradient(circle_at_bottom_right,rgba(255,255,255,0.04),transparent_34%)]" />
             <div className="absolute inset-px rounded-[35px] border border-white/18 dark:border-white/8" />
           </div>
 
-          <div className="login-frost-card__content relative overflow-hidden border-b border-white/14 px-6 py-8 sm:px-8 lg:border-b-0 lg:border-r lg:border-white/12 lg:px-10 lg:py-10">
+          <div className="login-frost-card__content order-2 relative overflow-hidden px-5 py-6 sm:px-8 sm:py-8 lg:order-2 lg:px-10 lg:py-10">
             <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(135deg,rgba(255,255,255,0.22),rgba(255,255,255,0.06)_38%,rgba(73,75,214,0.08))] dark:bg-[linear-gradient(135deg,rgba(255,255,255,0.06),rgba(255,255,255,0.02)_38%,rgba(192,193,255,0.06))]" />
             <div className="pointer-events-none absolute inset-0 opacity-35 [background-image:linear-gradient(rgba(255,255,255,0.22)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.18)_1px,transparent_1px)] [background-size:28px_28px] dark:opacity-15" />
 
@@ -120,7 +120,7 @@ export default function LoginPage({ isDark, onToggleTheme, onLogin }) {
                     <span className="material-symbols-outlined" style={{ fontSize: 14 }}>shield_lock</span>
                     Auth Gateway
                   </span>
-                  <h1 className="mt-5 max-w-md text-4xl font-black tracking-[-0.04em] text-on-surface sm:text-5xl">
+                  <h1 className="mt-5 max-w-md text-3xl font-black tracking-[-0.04em] text-on-surface sm:text-4xl xl:text-5xl">
                     Freya Admin 2
                   </h1>
                   <p className="mt-4 max-w-lg text-sm leading-6 text-on-surface/70 dark:text-white/82 sm:text-base">
@@ -140,7 +140,7 @@ export default function LoginPage({ isDark, onToggleTheme, onLogin }) {
                 </button>
               </div>
 
-              <div className="mt-10 grid gap-3 sm:grid-cols-3 lg:mt-auto lg:gap-4">
+              <div className="mt-8 grid gap-3 sm:grid-cols-3 lg:mt-auto lg:gap-4">
                 {FEATURE_CARDS.map((card) => (
                   <div
                     key={card.label}
@@ -155,11 +155,11 @@ export default function LoginPage({ isDark, onToggleTheme, onLogin }) {
             </div>
           </div>
 
-          <div className="login-frost-card__content relative px-6 py-8 sm:px-8 lg:px-10 lg:py-10">
-            <div className="mx-auto flex h-full w-full max-w-md flex-col justify-center">
+          <div className="login-frost-card__content order-1 relative border-b border-white/14 px-5 py-6 sm:px-8 sm:py-8 lg:order-1 lg:border-b-0 lg:border-r lg:border-white/12 lg:px-10 lg:py-10">
+            <div className="mx-auto flex h-full w-full max-w-none flex-col justify-center sm:max-w-md lg:max-w-[29rem]">
               <div>
                 <p className="text-xs font-bold uppercase tracking-[0.24em] text-outline dark:text-white/72">Access</p>
-                <h2 className="mt-3 text-3xl font-black tracking-[-0.03em] text-on-surface">Login</h2>
+                <h2 className="mt-3 text-2xl font-black tracking-[-0.03em] text-on-surface sm:text-3xl">Login</h2>
                 <p className="login-status-copy mt-3 text-sm leading-6 text-on-surface/70 dark:text-white/82">
                   {isHandingOff
                     ? "Credentials verified. Syncing your dashboard surface and restoring your assigned access now."
@@ -167,7 +167,7 @@ export default function LoginPage({ isDark, onToggleTheme, onLogin }) {
                 </p>
               </div>
 
-              <form className="login-form-stack mt-8 space-y-5" onSubmit={handleSubmit} aria-busy={isLocked}>
+              <form className="login-form-stack mt-6 space-y-4 sm:mt-8 sm:space-y-5" onSubmit={handleSubmit} aria-busy={isLocked}>
                 <label className="block">
                   <span className="mb-2 block text-xs font-bold uppercase tracking-[0.2em] text-outline dark:text-white/80">Username</span>
                   <div className="group flex items-center gap-3 rounded-[22px] border border-primary/12 bg-white/92 px-4 py-3 shadow-[0_10px_30px_rgba(73,75,214,0.06)] transition-all focus-within:border-primary/30 focus-within:shadow-[0_16px_44px_rgba(73,75,214,0.12)] dark:border-white/14 dark:bg-[rgba(7,11,20,0.18)] dark:shadow-none">
@@ -220,7 +220,7 @@ export default function LoginPage({ isDark, onToggleTheme, onLogin }) {
                 </button>
               </form>
 
-              <div className="login-status-card mt-6 rounded-[22px] border border-white/18 bg-white/[0.18] px-4 py-4 text-xs leading-5 text-on-surface/72 backdrop-blur-xl dark:border-white/12 dark:bg-[rgba(7,11,20,0.2)] dark:text-white/90">
+              <div className="login-status-card mt-5 rounded-[22px] border border-white/18 bg-white/[0.18] px-4 py-4 text-xs leading-5 text-on-surface/72 backdrop-blur-xl dark:border-white/12 dark:bg-[rgba(7,11,20,0.2)] dark:text-white/90 sm:mt-6">
                 The session is stored in localStorage under <span className="font-bold text-on-surface dark:text-white">authUser</span>, matching the original admin app so existing role-aware pages continue to work after sign-in.
               </div>
             </div>
