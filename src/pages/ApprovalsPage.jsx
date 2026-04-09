@@ -1275,6 +1275,7 @@ export default function ApprovalsPage() {
           fieldDefinitions={advancedFieldDefinitions}
           advancedRows={advancedRows}
           advancedApplying={advancedApplying}
+          optionsCacheKey={activeTab}
           onFilterChange={(key, value) => setFilterPatch({ [key]: value })}
           onSearchChange={(value) => {
             setPage(1);

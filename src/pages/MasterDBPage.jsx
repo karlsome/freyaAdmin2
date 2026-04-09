@@ -631,6 +631,7 @@ export default function MasterDBPage() {
             loadDistinctOptions={loadDistinctOptions}
             processLabel={activeTabUI.processFilterLabel}
             processAllLabel={activeTabUI.processAllLabel}
+            optionsCacheKey={activeTab}
           />
 
           <MasterStatsStrip stats={stats} />

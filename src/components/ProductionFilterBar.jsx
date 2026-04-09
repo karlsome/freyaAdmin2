@@ -1,5 +1,6 @@
-import { useState, useRef, useCallback } from "react";
+import { useState } from "react";
 import { fetchDistinctValues } from "../services/api";
+import AdvancedFilterSection from "./AdvancedFilterSection";
 
 const APPROVAL_STATUS_VALUES = [
   "pending",
@@ -33,8 +34,6 @@ export const FILTER_SCHEMA = [
   // Status
   { field: "approvalStatus",    label: "Approval Status",     type: "select", group: "Status",                 operators: ["equals", "in"], options: APPROVAL_STATUS_VALUES },
 ];
-
-const FILTER_GROUPS = [...new Set(FILTER_SCHEMA.map((s) => s.group))];
 
 const OPERATOR_LABELS = {
   equals:       "= Equals",
@@ -112,33 +111,19 @@ export default function ProductionFilterBar({
   const [dateTo,        setDateTo]        = useState(defaultDateTo);
   const [partNumbers,   setPartNumbers]   = useState([]);
   const [serialNumbers, setSerialNumbers] = useState([]);
-  const [advancedOpen,  setAdvancedOpen]  = useState(false);
   const [filterRows,    setFilterRows]    = useState([newRow()]);
-  // Cache: { [field]: string[] | "loading" | "error" }
-  const enumCache = useRef({});
-  const [, forceUpdate] = useState(0);
-
-  const fetchEnum = useCallback((field) => {
-    if (!factoryName || enumCache.current[field]) return;
-    enumCache.current[field] = "loading";
-    forceUpdate((n) => n + 1);
-    fetchDistinctValues(factoryName, field)
-      .then((vals) => { enumCache.current[field] = vals; forceUpdate((n) => n + 1); })
-      .catch(() => { enumCache.current[field] = "error"; forceUpdate((n) => n + 1); });
-  }, [factoryName]);
 
   const addRow    = () => setFilterRows((r) => [...r, newRow()]);
   const removeRow = (id) => setFilterRows((r) => r.filter((x) => x.id !== id));
+  const clearAdvancedRows = () => setFilterRows([newRow()]);
   const updateRow = (id, patch) =>
     setFilterRows((r) => r.map((x) => {
       if (x.id !== id) return x;
       const next = { ...x, ...patch };
-      // When field changes: reset value, default operator to the first supported one, trigger enum fetch
       if ("field" in patch && patch.field !== x.field) {
         const def = FILTER_SCHEMA.find((s) => s.field === patch.field);
         next.operator = def?.operators?.[0] || "equals";
         next.value = next.operator === "in" ? [] : "";
-        if (def?.type === "select" && !def.options) fetchEnum(patch.field);
       }
 
       if ("operator" in patch && patch.operator !== x.operator) {
@@ -202,129 +187,23 @@ export default function ProductionFilterBar({
       </div>
 
       {/* Advanced filters — dynamic rows */}
-      <button
-        className="flex items-center gap-1.5 text-xs font-bold text-outline hover:text-on-surface transition-colors mb-3"
-        onClick={() => setAdvancedOpen((v) => !v)}
-      >
-        <span className="material-symbols-outlined" style={{ fontSize: 14 }}>
-          {advancedOpen ? "keyboard_arrow_up" : "keyboard_arrow_down"}
-        </span>
-        Advanced Filters
-        {filterRows.some(hasFilterValue) && (
-          <span className="px-1.5 py-0.5 rounded-full bg-primary/15 text-primary text-[9px] font-bold normal-case tracking-normal">
-            {filterRows.filter(hasFilterValue).length} active
-          </span>
-        )}
-      </button>
-
-      {advancedOpen && (
-        <div className="mb-4 space-y-2">
-          {filterRows.map((row) => {
-            const schemaDef  = FILTER_SCHEMA.find((s) => s.field === row.field);
-            const operators  = schemaDef?.operators ?? [];
-            const inputType  = schemaDef?.type === "number" ? "number" : schemaDef?.type === "time" ? "time" : schemaDef?.type === "date" ? "date" : "text";
-            const cached = row.field && schemaDef?.type === "select" && !schemaDef?.options ? enumCache.current[row.field] : null;
-            const enumOptions = Array.isArray(schemaDef?.options) ? schemaDef.options : Array.isArray(cached) ? cached : [];
-            const enumLoading = cached === "loading";
-            const isSelectField = schemaDef?.type === "select";
-            const isMultiSelect = row.operator === "in";
-            const selectedValue = isMultiSelect
-              ? (Array.isArray(row.value) ? row.value : row.value ? [row.value] : [])
-              : Array.isArray(row.value)
-                ? row.value[0] || ""
-                : row.value;
-
-            return (
-              <div key={row.id} className="flex items-center gap-2 flex-wrap">
-                {/* Field selector — grouped */}
-                <select
-                  value={row.field}
-                  onChange={(e) => updateRow(row.id, { field: e.target.value })}
-                  className="h-9 px-3 rounded-xl bg-white border border-outline-variant/20 text-xs text-on-surface
-                             outline-none focus:border-primary/40 transition-colors flex-1 min-w-[160px]"
-                >
-                  <option value="">Select Field</option>
-                  {FILTER_GROUPS.map((group) => (
-                    <optgroup key={group} label={group}>
-                      {FILTER_SCHEMA.filter((s) => s.group === group).map((s) => (
-                        <option key={s.field} value={s.field}>{s.label}</option>
-                      ))}
-                    </optgroup>
-                  ))}
-                </select>
-
-                {/* Operator selector */}
-                <select
-                  value={row.operator}
-                  onChange={(e) => updateRow(row.id, { operator: e.target.value })}
-                  disabled={!row.field}
-                  className="h-9 px-3 rounded-xl bg-white border border-outline-variant/20 text-xs text-on-surface
-                             outline-none focus:border-primary/40 transition-colors flex-1 min-w-[140px]
-                             disabled:opacity-40 disabled:cursor-not-allowed"
-                >
-                  <option value="">Select Operator</option>
-                  {operators.map((op) => (
-                    <option key={op} value={op}>{OPERATOR_LABELS[op]}</option>
-                  ))}
-                </select>
-
-                {/* Value — select or free-text/number/date/time input */}
-                {isSelectField ? (
-                  <select
-                    value={selectedValue}
-                    multiple={isMultiSelect}
-                    size={isMultiSelect ? Math.min(Math.max(enumOptions.length, 4), 8) : undefined}
-                    onChange={(e) => updateRow(row.id, {
-                      value: isMultiSelect
-                        ? Array.from(e.target.selectedOptions, (option) => option.value)
-                        : e.target.value,
-                    })}
-                    className={`rounded-xl bg-white border border-outline-variant/20 text-xs text-on-surface
-                               outline-none focus:border-primary/40 transition-colors flex-[2] min-w-[160px] px-3 ${isMultiSelect ? "min-h-28 py-2" : "h-9"}`}
-                  >
-                    {!isMultiSelect ? (
-                      <option value="">
-                        {enumLoading ? `Loading ${schemaDef?.label ?? row.field}...` : `Select ${schemaDef?.label ?? row.field}...`}
-                      </option>
-                    ) : null}
-                    {enumOptions.map((v) => (
-                      <option key={v} value={v}>{v}</option>
-                    ))}
-                  </select>
-                ) : (
-                  <input
-                    type={inputType}
-                    value={row.value}
-                    onChange={(e) => updateRow(row.id, { value: e.target.value })}
-                    disabled={!row.operator}
-                    placeholder="Enter Value"
-                    className="h-9 px-3 rounded-xl bg-white border border-outline-variant/20 text-xs text-on-surface
-                               placeholder:text-outline outline-none focus:border-primary/40 transition-colors flex-[2] min-w-[160px]
-                               disabled:opacity-40 disabled:cursor-not-allowed"
-                  />
-                )}
-
-                {/* Remove row */}
-                <button
-                  onClick={() => removeRow(row.id)}
-                  className="p-2 rounded-xl text-outline hover:text-error hover:bg-error/10 transition-colors flex-shrink-0"
-                >
-                  <span className="material-symbols-outlined" style={{ fontSize: 16 }}>delete</span>
-                </button>
-              </div>
-            );
-          })}
-
-          <button
-            onClick={addRow}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-dashed border-white/20
-                       text-xs font-bold text-outline hover:text-on-surface hover:border-primary/40 transition-colors mt-1"
-          >
-            <span className="material-symbols-outlined" style={{ fontSize: 14 }}>add</span>
-            Add Filter
-          </button>
-        </div>
-      )}
+      <AdvancedFilterSection
+        rows={filterRows}
+        fieldDefinitions={FILTER_SCHEMA}
+        onUpdateRow={updateRow}
+        onAddRow={addRow}
+        onRemoveRow={removeRow}
+        onClearRows={clearAdvancedRows}
+        loadDistinctOptions={(field) => fetchDistinctValues(factoryName, field)}
+        shouldLoadOptions={(fieldDefinition) => fieldDefinition.type === "select"}
+        operatorLabels={OPERATOR_LABELS}
+        useOperatorLabelsInSelect
+        optionsCacheKey={factoryName}
+        addRowLabel="Add Filter"
+        showActiveSummary={false}
+        variant="compact"
+        framed={false}
+      />
 
       {/* Action buttons */}
       <div className="flex items-center gap-3 flex-wrap">
