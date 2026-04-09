@@ -1171,9 +1171,6 @@ export default function ApprovalsPage() {
         <div>
           <div className="text-[10px] font-bold uppercase tracking-[0.22em] text-outline">Approvals</div>
           <h1 className="mt-2 text-3xl font-black text-on-surface">Production Approval Desk</h1>
-          <p className="mt-2 max-w-3xl text-sm text-on-surface-variant">
-            Review submissions from inspection, press, SRS, and slit lines with the same backend rules as the original Freya Admin workflow.
-          </p>
         </div>
 
         <div className="flex flex-wrap items-center gap-3">

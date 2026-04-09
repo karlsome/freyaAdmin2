@@ -1,3 +1,5 @@
+import StatSummaryCard from "./StatSummaryCard";
+
 const CARD_DEFS = [
   {
     key: "pending",
@@ -41,10 +43,6 @@ const CARD_DEFS = [
   },
 ];
 
-function joinClasses(...classes) {
-  return classes.filter(Boolean).join(" ");
-}
-
 export default function ApprovalsStatsStrip({ stats, authUser, activeKey = "", onSelect }) {
   const cards = [...CARD_DEFS];
 
@@ -66,30 +64,16 @@ export default function ApprovalsStatsStrip({ stats, authUser, activeKey = "", o
         const active = activeKey && activeKey === card.key;
 
         return (
-          <button
+          <StatSummaryCard
             key={card.key}
-            type="button"
+            icon={card.icon}
+            label={card.label}
+            value={Number(value).toLocaleString()}
+            subtitle={card.subtitle}
+            accent={card.accent}
+            active={active}
             onClick={() => onSelect?.(card.key)}
-            className={joinClasses(
-              "glass-card rounded-3xl p-4 text-left transition-transform duration-200 hover:-translate-y-0.5",
-              active ? "ring-2 ring-primary/40" : ""
-            )}
-          >
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-outline">{card.label}</div>
-                <div className="planner-data-text mt-2 text-3xl font-black text-on-surface tabular-nums">
-                  {Number(value).toLocaleString()}
-                </div>
-                <p className="mt-1 text-xs text-on-surface-variant">{card.subtitle}</p>
-              </div>
-              <span className={joinClasses("flex h-12 w-12 items-center justify-center rounded-2xl", card.accent)}>
-                <span className="material-symbols-outlined" style={{ fontSize: 22, fontVariationSettings: "'FILL' 1" }}>
-                  {card.icon}
-                </span>
-              </span>
-            </div>
-          </button>
+          />
         );
       })}
     </div>
