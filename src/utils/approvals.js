@@ -73,9 +73,89 @@ export const APPROVAL_STATUS_OPTIONS = [
   { value: "correction_needed_from_kacho", label: "Kacho Correction Request" },
 ];
 
+export const APPROVAL_FILTER_OPERATOR_LABELS = {
+  equals: "Equals",
+  contains: "Contains",
+  in: "In",
+  greater: "Greater than",
+  less: "Less than",
+  range: "Range",
+};
+
+const APPROVAL_STATUS_ADVANCED_OPTIONS = APPROVAL_STATUS_OPTIONS
+  .map((option) => option.value)
+  .filter(Boolean);
+
+const APPROVAL_COMMON_ADVANCED_FIELDS = [
+  // Basic
+  { field: "品番", label: "品番", type: "text", group: "Basic", operators: ["equals", "contains"] },
+  { field: "背番号", label: "背番号", type: "text", group: "Basic", operators: ["equals", "contains"] },
+  { field: "モデル", label: "モデル", type: "select", group: "Basic", operators: ["equals", "in"], optionSource: "master-models" },
+  { field: "製造ロット", label: "製造ロット", type: "text", group: "Basic", operators: ["equals", "contains"] },
+  { field: "材料ロット", label: "材料ロット", type: "text", group: "Basic", operators: ["equals", "contains"] },
+  { field: "Date", label: "Date", type: "date", group: "Basic", operators: ["equals", "range"] },
+  
+  // Worker
+  { field: "Worker_Name", label: "Worker_Name", type: "select", group: "Worker", operators: ["equals", "in"], optionSource: "collection-distinct" },
+  
+  // Equipment
+  { field: "設備", label: "設備", type: "select", group: "Equipment", operators: ["equals", "in"], optionSource: "collection-distinct" },
+  { field: "工場", label: "工場", type: "select", group: "Equipment", operators: ["equals", "in"], optionSource: "collection-distinct" },
+  
+  // Time
+  { field: "Time_start", label: "Time_start", type: "time", group: "Time", operators: ["equals", "range", "greater", "less"] },
+  { field: "Time_end", label: "Time_end", type: "time", group: "Time", operators: ["equals", "range", "greater", "less"] },
+  
+  // Quantity
+  { field: "Total", label: "Total", type: "number", group: "Quantity", operators: ["equals", "range", "greater", "less"] },
+  { field: "Total_NG", label: "Total_NG", type: "number", group: "Quantity", operators: ["equals", "range", "greater", "less"] },
+  { field: "Process_Quantity", label: "Process_Quantity", type: "number", group: "Quantity", operators: ["equals", "range", "greater", "less"] },
+  { field: "Remaining_Quantity", label: "Remaining_Quantity", type: "number", group: "Quantity", operators: ["equals", "range", "greater", "less"] },
+  { field: "Spare", label: "Spare", type: "number", group: "Quantity", operators: ["equals", "range", "greater", "less"] },
+  
+  // Performance  
+  { field: "Cycle_Time", label: "Cycle_Time", type: "number", group: "Performance", operators: ["equals", "range", "greater", "less"] },
+  
+  // Other
+  { field: "ScannedQR", label: "ScannedQR", type: "text", group: "Other", operators: ["equals", "contains"] },
+  { field: "Comment", label: "Comment", type: "textarea", group: "Other", operators: ["equals", "contains"] },
+  { field: "approvalStatus", label: "approvalStatus", type: "select", group: "Status", operators: ["equals", "in"], options: APPROVAL_STATUS_ADVANCED_OPTIONS },
+];
+
+const APPROVAL_TAB_ADVANCED_FIELDS = {
+  kensaDB: [],
+  pressDB: [
+    { field: "疵引不良", label: "疵引不良", type: "number", group: "Defects", operators: ["equals", "range", "greater", "less"] },
+    { field: "加工不良", label: "加工不良", type: "number", group: "Defects", operators: ["equals", "range", "greater", "less"] },
+    { field: "その他", label: "その他", type: "number", group: "Defects", operators: ["equals", "range", "greater", "less"] },
+  ],
+  SRSDB: [
+    { field: "SRSコード", label: "SRSコード", type: "text", group: "Basic", operators: ["equals", "contains"] },
+    { field: "SRS_Total_NG", label: "SRS_Total_NG", type: "number", group: "Defects", operators: ["equals", "range", "greater", "less"] },
+    { field: "くっつき・めくれ", label: "くっつき・めくれ", type: "number", group: "Defects", operators: ["equals", "range", "greater", "less"] },
+    { field: "シワ", label: "シワ", type: "number", group: "Defects", operators: ["equals", "range", "greater", "less"] },
+    { field: "転写位置ズレ", label: "転写位置ズレ", type: "number", group: "Defects", operators: ["equals", "range", "greater", "less"] },
+    { field: "転写不良", label: "転写不良", type: "number", group: "Defects", operators: ["equals", "range", "greater", "less"] },
+    { field: "文字欠け", label: "文字欠け", type: "number", group: "Defects", operators: ["equals", "range", "greater", "less"] },
+    { field: "その他", label: "その他", type: "number", group: "Defects", operators: ["equals", "range", "greater", "less"] },
+  ],
+  slitDB: [
+    { field: "ショット数", label: "ショット数", type: "number", group: "Quantity", operators: ["equals", "range", "greater", "less"] },
+    { field: "疵引不良", label: "疵引不良", type: "number", group: "Defects", operators: ["equals", "range", "greater", "less"] },
+    { field: "加工不良", label: "加工不良", type: "number", group: "Defects", operators: ["equals", "range", "greater", "less"] },
+    { field: "その他", label: "その他", type: "number", group: "Defects", operators: ["equals", "range", "greater", "less"] },
+  ],
+};
+
+let approvalFilterRowCount = 0;
+
 function asString(value) {
   if (value == null) return "";
   return String(value);
+}
+
+function escapeRegex(value) {
+  return asString(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 function normalizeNumber(value) {
@@ -128,20 +208,161 @@ function compareValues(left, right) {
   return leftText.localeCompare(rightText, "ja");
 }
 
-function mergeOrFilter(filters, nextOrClause) {
-  if (!nextOrClause?.length) return filters;
+function getOperatorsForApprovalFieldType(type) {
+  if (type === "number") return ["equals", "greater", "less", "range"];
+  if (type === "time") return ["equals", "greater", "less", "range"];
+  return ["equals", "contains", "in"];
+}
 
-  if (filters.$or) {
-    filters.$and = [
-      { $or: filters.$or },
-      { $or: nextOrClause },
-    ];
-    delete filters.$or;
+function applyApprovalFilterClauses(filters, clauses = []) {
+  if (!clauses.length) return filters;
+
+  if (clauses.length === 1) {
+    Object.assign(filters, clauses[0]);
     return filters;
   }
 
-  filters.$or = nextOrClause;
+  filters.$and = clauses;
   return filters;
+}
+
+function coerceApprovalFilterValue(value, fieldDefinition) {
+  if (fieldDefinition?.type === "number") {
+    const next = Number(value);
+    return Number.isFinite(next) ? next : value;
+  }
+
+  return asString(value).trim();
+}
+
+export function createApprovalFilterRow() {
+  approvalFilterRowCount += 1;
+  return {
+    id: `approval-filter-${Date.now()}-${approvalFilterRowCount}`,
+    field: "",
+    operator: "",
+    value: "",
+    valueFrom: "",
+    valueTo: "",
+  };
+}
+
+export function getApprovalAdvancedFieldDefinitions(tabKey) {
+  const fields = [
+    ...APPROVAL_COMMON_ADVANCED_FIELDS,
+    ...(APPROVAL_TAB_ADVANCED_FIELDS[tabKey] || []),
+  ];
+
+  const deduped = [];
+  const seen = new Set();
+
+  fields.forEach((field) => {
+    if (!field?.field || seen.has(field.field)) return;
+    seen.add(field.field);
+    deduped.push({
+      ...field,
+      operators: field.operators || getOperatorsForApprovalFieldType(field.type),
+    });
+  });
+
+  return deduped;
+}
+
+export function buildApprovalAdvancedFilterClauses(rows = [], fieldDefinitions = []) {
+  const fieldMap = Object.fromEntries(fieldDefinitions.map((field) => [field.field, field]));
+  const groupedClauses = new Map();
+
+  rows.forEach((row) => {
+    const fieldDefinition = fieldMap[row.field];
+    if (!row?.field || !row?.operator || !fieldDefinition) return;
+
+    let clause = null;
+
+    if (row.operator === "range") {
+      if (row.valueFrom === "" || row.valueTo === "") return;
+      clause = {
+        [row.field]: {
+          $gte: coerceApprovalFilterValue(row.valueFrom, fieldDefinition),
+          $lte: coerceApprovalFilterValue(row.valueTo, fieldDefinition),
+        },
+      };
+    }
+
+    if (row.operator === "in" && !clause) {
+      const values = Array.isArray(row.value)
+        ? row.value.filter(Boolean)
+        : asString(row.value)
+            .split(",")
+            .map((value) => value.trim())
+            .filter(Boolean);
+
+      if (!values.length) return;
+
+      clause = {
+        [row.field]: { $in: values.map((value) => coerceApprovalFilterValue(value, fieldDefinition)) },
+      };
+    }
+
+    if (!clause) {
+      if (row.value === "" || row.value == null) return;
+
+      const value = coerceApprovalFilterValue(row.value, fieldDefinition);
+
+      if (row.operator === "equals") clause = { [row.field]: value };
+      if (row.operator === "contains") clause = { [row.field]: { $regex: escapeRegex(row.value), $options: "i" } };
+      if (row.operator === "greater") clause = { [row.field]: { $gt: value } };
+      if (row.operator === "less") clause = { [row.field]: { $lt: value } };
+    }
+
+    if (!clause) return;
+
+    if (!groupedClauses.has(row.field)) {
+      groupedClauses.set(row.field, []);
+    }
+
+    groupedClauses.get(row.field).push(clause);
+  });
+
+  return Array.from(groupedClauses.values()).map((clauses) => {
+    if (clauses.length === 1) return clauses[0];
+    return { $or: clauses };
+  });
+}
+
+export function getActiveApprovalAdvancedFilters(rows = [], fieldDefinitions = []) {
+  const fieldMap = Object.fromEntries(fieldDefinitions.map((field) => [field.field, field]));
+
+  return rows.flatMap((row) => {
+    if (!row?.field || !row?.operator) return [];
+    const fieldDefinition = fieldMap[row.field];
+    if (!fieldDefinition) return [];
+
+    let renderedValue = "";
+    if (row.operator === "range") {
+      if (row.valueFrom === "" || row.valueTo === "") return [];
+      renderedValue = `${row.valueFrom} - ${row.valueTo}`;
+    } else if (row.operator === "in") {
+      const values = Array.isArray(row.value)
+        ? row.value
+        : asString(row.value)
+            .split(",")
+            .map((value) => value.trim())
+            .filter(Boolean);
+      if (!values.length) return [];
+      renderedValue = values.join(", ");
+    } else {
+      if (row.value === "" || row.value == null) return [];
+      renderedValue = asString(row.value);
+    }
+
+    return [{
+      id: row.id,
+      field: row.field,
+      label: fieldDefinition.label,
+      operator: APPROVAL_FILTER_OPERATOR_LABELS[row.operator] || row.operator,
+      value: renderedValue,
+    }];
+  });
 }
 
 export function getTodayDateString() {
@@ -299,29 +520,35 @@ export function buildApprovalQueryFilters({
   status = "",
   date = "",
   search = "",
+  advancedFilters = [],
   rangeMode = "current",
 } = {}) {
   const filters = {
     timezoneOffset: new Date().getTimezoneOffset(),
   };
+  const clauses = [];
 
   if (factory) {
-    filters["工場"] = factory;
+    clauses.push({ 工場: factory });
   }
 
   if (status) {
     if (status === "pending") {
-      filters.$or = [
-        { approvalStatus: { $exists: false } },
-        { approvalStatus: "pending" },
-      ];
+      clauses.push({
+        $or: [
+          { approvalStatus: { $exists: false } },
+          { approvalStatus: "pending" },
+        ],
+      });
     } else if (status === "correction_needed") {
-      filters.$or = [
-        { approvalStatus: "correction_needed" },
-        { approvalStatus: "correction_needed_from_kacho" },
-      ];
+      clauses.push({
+        $or: [
+          { approvalStatus: "correction_needed" },
+          { approvalStatus: "correction_needed_from_kacho" },
+        ],
+      });
     } else {
-      filters.approvalStatus = status;
+      clauses.push({ approvalStatus: status });
     }
   }
 
@@ -332,28 +559,35 @@ export function buildApprovalQueryFilters({
 
   const searchTerm = search.trim();
   if (searchTerm) {
-    mergeOrFilter(filters, [
-      { 品番: { $regex: searchTerm, $options: "i" } },
-      { 背番号: { $regex: searchTerm, $options: "i" } },
-      { Worker_Name: { $regex: searchTerm, $options: "i" } },
-    ]);
+    const escapedSearch = escapeRegex(searchTerm);
+    clauses.push({
+      $or: [
+        { 品番: { $regex: escapedSearch, $options: "i" } },
+        { 背番号: { $regex: escapedSearch, $options: "i" } },
+        { Worker_Name: { $regex: escapedSearch, $options: "i" } },
+      ],
+    });
   }
 
-  return filters;
+  clauses.push(...advancedFilters);
+
+  return applyApprovalFilterClauses(filters, clauses);
 }
 
 export function buildApprovalStatsFilters({
   factory = "",
   date = "",
   search = "",
+  advancedFilters = [],
   rangeMode = "current",
 } = {}) {
   const filters = {
     timezoneOffset: new Date().getTimezoneOffset(),
   };
+  const clauses = [];
 
   if (factory) {
-    filters["工場"] = factory;
+    clauses.push({ 工場: factory });
   }
 
   const effectiveDate = date || (rangeMode === "current" ? getTodayDateString() : "");
@@ -363,14 +597,19 @@ export function buildApprovalStatsFilters({
 
   const searchTerm = search.trim();
   if (searchTerm) {
-    filters.$or = [
-      { 品番: { $regex: searchTerm, $options: "i" } },
-      { 背番号: { $regex: searchTerm, $options: "i" } },
-      { Worker_Name: { $regex: searchTerm, $options: "i" } },
-    ];
+    const escapedSearch = escapeRegex(searchTerm);
+    clauses.push({
+      $or: [
+        { 品番: { $regex: escapedSearch, $options: "i" } },
+        { 背番号: { $regex: escapedSearch, $options: "i" } },
+        { Worker_Name: { $regex: escapedSearch, $options: "i" } },
+      ],
+    });
   }
 
-  return filters;
+  clauses.push(...advancedFilters);
+
+  return applyApprovalFilterClauses(filters, clauses);
 }
 
 export function getApprovalRecordTitle(record = {}) {

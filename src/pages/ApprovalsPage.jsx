@@ -1,19 +1,22 @@
-import { useDeferredValue, useEffect, useRef, useState } from "react";
+import { useCallback, useDeferredValue, useEffect, useRef, useState } from "react";
 import DataTable from "../components/DataTable";
 import LiquidSegmentedControl from "../components/LiquidSegmentedControl";
 import ApprovalsDetailModal from "../components/ApprovalsDetailModal";
 import RecordEditModal from "../components/RecordEditModal";
 import ApprovalsStatsStrip from "../components/ApprovalsStatsStrip";
+import ApprovalsFilterPanel from "../components/ApprovalsFilterPanel";
 import { fetchDistinctValues } from "../services/api";
 import {
   approveApprovalDeleteRequest,
   approveApprovalRecord,
   cancelApprovalDeleteRequest,
+  fetchApprovalDistinctValues,
   editApprovalDocument,
   fetchApprovalFactories,
   fetchApprovalPage,
   fetchApprovalRecord,
   fetchApprovalRecycleBin,
+  fetchApprovalSerialNumbersForModel,
   fetchApprovalStats,
   permanentlyDeleteApprovalFromRecycleBin,
   rejectApprovalDeleteRequest,
@@ -33,14 +36,16 @@ import {
 } from "../utils/approvalEdit";
 import {
   APPROVAL_RANGE_MODES,
-  APPROVAL_STATUS_OPTIONS,
   APPROVAL_TABS,
   APPROVAL_VIEW_MODES,
+  buildApprovalAdvancedFilterClauses,
   buildApprovalQueryFilters,
   buildApprovalStatsFilters,
   canAccessRecycleBin,
   canSoftDeleteApproval,
+  createApprovalFilterRow,
   getApprovalDateTimeMismatch,
+  getApprovalAdvancedFieldDefinitions,
   getApprovalDefectRate,
   getApprovalFactoryAccess,
   getApprovalNGValue,
@@ -116,6 +121,7 @@ export default function ApprovalsPage() {
   const requestIdRef = useRef(0);
   const actorNameRef = useRef("");
   const editFieldOptionsCacheRef = useRef(new Map());
+  const advancedFieldOptionsCacheRef = useRef(new Map());
   const authRole = authUser?.role || "";
   const authUsername = authUser?.username || "";
   const authFirstName = authUser?.firstName || "";
@@ -131,6 +137,8 @@ export default function ApprovalsPage() {
   const [rangeMode, setRangeMode] = useState(buildInitialRangeMode);
   const [filters, setFilters] = useState({ factory: "", status: "", date: today });
   const [searchInput, setSearchInput] = useState("");
+  const [advancedRows, setAdvancedRows] = useState([createApprovalFilterRow()]);
+  const [advancedQueryFilters, setAdvancedQueryFilters] = useState([]);
   const deferredSearch = useDeferredValue(searchInput);
   const [binSearchInput, setBinSearchInput] = useState("");
   const deferredBinSearch = useDeferredValue(binSearchInput);
@@ -143,6 +151,7 @@ export default function ApprovalsPage() {
   const [pagination, setPagination] = useState({ currentPage: 1, totalPages: 0, totalRecords: 0 });
   const [recycleItems, setRecycleItems] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [advancedApplying, setAdvancedApplying] = useState(false);
   const [error, setError] = useState("");
   const [flash, setFlash] = useState(null);
   const [detailState, setDetailState] = useState({ open: false, record: null, mode: "live" });
@@ -150,6 +159,9 @@ export default function ApprovalsPage() {
   const [selectedIds, setSelectedIds] = useState([]);
   const [actionBusy, setActionBusy] = useState(false);
   const [refreshNonce, setRefreshNonce] = useState(0);
+  const modelSerialsCacheRef = useRef(new Map());
+
+  const advancedFieldDefinitions = getApprovalAdvancedFieldDefinitions(activeTab);
 
   const tableTabs = canUseRecycleBin
     ? [...APPROVAL_TABS, { key: "recycleBin", label: "Recycle Bin" }]
@@ -208,7 +220,7 @@ export default function ApprovalsPage() {
 
   useEffect(() => {
     setSelectedIds([]);
-  }, [activeTab, viewMode, page, pageSize, deferredSearch, deferredBinSearch, filters.factory, filters.status, filters.date, rangeMode]);
+  }, [activeTab, viewMode, page, pageSize, deferredSearch, deferredBinSearch, filters.factory, filters.status, filters.date, rangeMode, advancedQueryFilters]);
 
   useEffect(() => {
     if (!hasAccess) return undefined;
@@ -252,12 +264,14 @@ export default function ApprovalsPage() {
       status: filters.status,
       date: filters.date,
       search: deferredSearch,
+      advancedFilters: advancedQueryFilters,
       rangeMode,
     });
     const statsFilters = buildApprovalStatsFilters({
       factory: filters.factory,
       date: filters.date,
       search: deferredSearch,
+      advancedFilters: advancedQueryFilters,
       rangeMode,
     });
 
@@ -312,7 +326,7 @@ export default function ApprovalsPage() {
     return () => {
       cancelled = true;
     };
-  }, [activeTab, authRole, deferredSearch, factoryAccessKey, filters.date, filters.factory, filters.status, hasAccess, page, pageSize, rangeMode, refreshNonce]);
+  }, [activeTab, advancedQueryFilters, authRole, deferredSearch, factoryAccessKey, filters.date, filters.factory, filters.status, hasAccess, page, pageSize, rangeMode, refreshNonce]);
 
   const liveRows = sortApprovalRows(records, sort, activeTab);
   const binRows = sortApprovalRows(
@@ -403,18 +417,107 @@ export default function ApprovalsPage() {
       .sort((left, right) => String(left).localeCompare(String(right), "ja"));
   }
 
+  const loadAdvancedDistinctOptions = useCallback(async (field) => {
+    const cacheKey = `${activeTab}:${factoryAccessKey}:${field}`;
+    if (advancedFieldOptionsCacheRef.current.has(cacheKey)) {
+      return advancedFieldOptionsCacheRef.current.get(cacheKey);
+    }
+
+    const scopedAccess = factoryAccessKey ? factoryAccessKey.split("||").filter(Boolean) : [];
+    const values = await fetchApprovalDistinctValues({
+      collectionName: activeTab,
+      field,
+      factoryAccess: scopedAccess,
+    });
+
+    advancedFieldOptionsCacheRef.current.set(cacheKey, values);
+    return values;
+  }, [activeTab, factoryAccessKey]);
+
   function setFilterPatch(patch) {
     setPage(1);
     setFilters((current) => ({ ...current, ...patch }));
+  }
+
+  function handleAddAdvancedRow() {
+    setAdvancedRows((current) => [...current, createApprovalFilterRow()]);
+  }
+
+  function handleUpdateAdvancedRow(rowId, patch) {
+    setAdvancedRows((current) => current.map((row) => {
+      if (row.id !== rowId) return row;
+      return { ...row, ...patch };
+    }));
+  }
+
+  function handleRemoveAdvancedRow(rowId) {
+    setAdvancedRows((current) => {
+      const next = current.filter((row) => row.id !== rowId);
+      return next.length ? next : [createApprovalFilterRow()];
+    });
+  }
+
+  async function handleApplyAdvancedFilters() {
+    setAdvancedApplying(true);
+
+    try {
+      const nextClauses = buildApprovalAdvancedFilterClauses(
+        advancedRows.filter((row) => row.field !== "モデル"),
+        advancedFieldDefinitions
+      );
+
+      const modelValues = [...new Set(advancedRows
+        .filter((row) => row.field === "モデル" && row.operator)
+        .flatMap((row) => (Array.isArray(row.value)
+          ? row.value
+          : String(row.value || "").split(",")))
+        .map((value) => String(value || "").trim())
+        .filter(Boolean))];
+
+      let modelClause = null;
+      if (modelValues.length) {
+        const serialLists = await Promise.all(modelValues.map(async (modelValue) => {
+          if (modelSerialsCacheRef.current.has(modelValue)) {
+            return modelSerialsCacheRef.current.get(modelValue);
+          }
+
+          const serials = await fetchApprovalSerialNumbersForModel(modelValue);
+          modelSerialsCacheRef.current.set(modelValue, serials);
+          return serials;
+        }));
+
+        modelClause = {
+          背番号: {
+            $in: [...new Set(serialLists.flat().filter(Boolean))],
+          },
+        };
+      }
+
+      setPage(1);
+      setAdvancedQueryFilters(modelClause ? [...nextClauses, modelClause] : nextClauses);
+    } catch (applyError) {
+      setFlash({ type: "error", message: applyError.message || "Failed to apply advanced filters." });
+    } finally {
+      setAdvancedApplying(false);
+    }
+  }
+
+  function handleClearAdvancedFilters() {
+    setPage(1);
+    setAdvancedRows([createApprovalFilterRow()]);
+    setAdvancedQueryFilters([]);
   }
 
   function handleTabChange(nextTab) {
     setActiveTab(nextTab);
     setPage(1);
     setSort({ column: "", direction: 1 });
+    setAdvancedRows([createApprovalFilterRow()]);
+    setAdvancedQueryFilters([]);
     setError("");
     setDetailState({ open: false, record: null, mode: "live" });
     setEditState({ open: false, record: null, collectionName: "" });
+    advancedFieldOptionsCacheRef.current.clear();
     if (nextTab === "recycleBin") {
       setViewMode("review");
     }
@@ -445,6 +548,9 @@ export default function ApprovalsPage() {
     setPage(1);
     setSearchInput("");
     setFilters({ factory: "", status: "", date: rangeMode === "current" ? today : "" });
+    setAdvancedRows([createApprovalFilterRow()]);
+    setAdvancedQueryFilters([]);
+    advancedFieldOptionsCacheRef.current.clear();
   }
 
   function openDetail(record, mode = "live") {
@@ -1131,8 +1237,8 @@ export default function ApprovalsPage() {
         </div>
       )}
 
-      <div className="glass-card mb-6 rounded-[28px] p-5">
-        {activeTab === "recycleBin" ? (
+      {activeTab === "recycleBin" ? (
+        <div className="glass-card mb-6 rounded-[28px] p-5">
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_auto]">
             <div className="flex flex-col gap-1.5">
               <label className="text-[10px] font-bold uppercase tracking-[0.18em] text-outline">Search Recycle Bin</label>
@@ -1160,71 +1266,29 @@ export default function ApprovalsPage() {
               </button>
             </div>
           </div>
-        ) : (
-          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 xl:grid-cols-[180px_180px_180px_minmax(0,1fr)_auto]">
-            <div className="flex flex-col gap-1.5">
-              <label className="text-[10px] font-bold uppercase tracking-[0.18em] text-outline">Factory</label>
-              <select
-                value={filters.factory}
-                onChange={(event) => setFilterPatch({ factory: event.target.value })}
-                className="h-11 rounded-2xl border border-outline-variant/20 bg-white px-4 text-sm text-on-surface outline-none transition focus:border-primary/40 dark:bg-surface-container"
-              >
-                <option value="">All Factories</option>
-                {factories.map((factory) => (
-                  <option key={factory} value={factory}>{factory}</option>
-                ))}
-              </select>
-            </div>
-
-            <div className="flex flex-col gap-1.5">
-              <label className="text-[10px] font-bold uppercase tracking-[0.18em] text-outline">Status</label>
-              <select
-                value={filters.status}
-                onChange={(event) => setFilterPatch({ status: event.target.value })}
-                className="h-11 rounded-2xl border border-outline-variant/20 bg-white px-4 text-sm text-on-surface outline-none transition focus:border-primary/40 dark:bg-surface-container"
-              >
-                {APPROVAL_STATUS_OPTIONS.map((option) => (
-                  <option key={option.value || "all"} value={option.value}>{option.label}</option>
-                ))}
-              </select>
-            </div>
-
-            <div className="flex flex-col gap-1.5">
-              <label className="text-[10px] font-bold uppercase tracking-[0.18em] text-outline">Date</label>
-              <input
-                type="date"
-                value={filters.date}
-                onChange={(event) => setFilterPatch({ date: event.target.value })}
-                className="h-11 rounded-2xl border border-outline-variant/20 bg-white px-4 text-sm text-on-surface outline-none transition focus:border-primary/40 dark:bg-surface-container"
-              />
-            </div>
-
-            <div className="flex flex-col gap-1.5">
-              <label className="text-[10px] font-bold uppercase tracking-[0.18em] text-outline">Search</label>
-              <input
-                type="text"
-                value={searchInput}
-                onChange={(event) => {
-                  setPage(1);
-                  setSearchInput(event.target.value);
-                }}
-                placeholder="Part no., serial no., worker..."
-                className="h-11 rounded-2xl border border-outline-variant/20 bg-white px-4 text-sm text-on-surface outline-none transition focus:border-primary/40 dark:bg-surface-container"
-              />
-            </div>
-
-            <div className="flex items-end">
-              <button
-                type="button"
-                onClick={clearLiveFilters}
-                className="h-11 rounded-2xl border border-outline-variant/20 bg-white px-4 text-sm font-bold text-on-surface transition hover:bg-surface-container dark:bg-surface-container"
-              >
-                Reset Filters
-              </button>
-            </div>
-          </div>
-        )}
-      </div>
+        </div>
+      ) : (
+        <ApprovalsFilterPanel
+          filters={filters}
+          factories={factories}
+          searchInput={searchInput}
+          fieldDefinitions={advancedFieldDefinitions}
+          advancedRows={advancedRows}
+          advancedApplying={advancedApplying}
+          onFilterChange={(key, value) => setFilterPatch({ [key]: value })}
+          onSearchChange={(value) => {
+            setPage(1);
+            setSearchInput(value);
+          }}
+          onClearFilters={clearLiveFilters}
+          onAddAdvancedRow={handleAddAdvancedRow}
+          onUpdateAdvancedRow={handleUpdateAdvancedRow}
+          onRemoveAdvancedRow={handleRemoveAdvancedRow}
+          onApplyAdvancedFilters={handleApplyAdvancedFilters}
+          onClearAdvancedFilters={handleClearAdvancedFilters}
+          loadDistinctOptions={loadAdvancedDistinctOptions}
+        />
+      )}
 
       {activeTab !== "recycleBin" && viewMode === "batch" ? (
         <div className="glass-card mb-6 rounded-[28px] p-5">

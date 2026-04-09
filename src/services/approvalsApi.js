@@ -142,6 +142,50 @@ export async function fetchApprovalFactories({ collectionName, userRole, factory
   return Array.isArray(result?.factories) ? result.factories : [];
 }
 
+function toDistinctSortedStrings(values = []) {
+  return [...new Set(
+    values
+      .map((value) => (value == null ? "" : String(value).trim()))
+      .filter(Boolean)
+  )].sort((left, right) => left.localeCompare(right, "ja"));
+}
+
+export async function fetchApprovalDistinctValues({ collectionName, field, factoryAccess = [] }) {
+  if (!collectionName || !field) return [];
+
+  if (field === "モデル") {
+    const rows = await query("Sasaki_Coating_MasterDB", "masterDB", {}, {
+      projection: { モデル: 1, _id: 0 },
+      limit: 10000,
+    });
+
+    return toDistinctSortedStrings(Array.isArray(rows) ? rows.map((row) => row?.モデル) : []);
+  }
+
+  const scopedQuery = Array.isArray(factoryAccess) && factoryAccess.length
+    ? { 工場: { $in: factoryAccess } }
+    : {};
+
+  const rows = await query("submittedDB", collectionName, scopedQuery, {
+    projection: { [field]: 1, _id: 0 },
+    limit: 10000,
+  });
+
+  return toDistinctSortedStrings(Array.isArray(rows) ? rows.map((row) => row?.[field]) : []);
+}
+
+export async function fetchApprovalSerialNumbersForModel(model) {
+  const normalizedModel = String(model || "").trim();
+  if (!normalizedModel) return [];
+
+  const rows = await query("Sasaki_Coating_MasterDB", "masterDB", { モデル: normalizedModel }, {
+    projection: { 背番号: 1, _id: 0 },
+    limit: 10000,
+  });
+
+  return toDistinctSortedStrings(Array.isArray(rows) ? rows.map((row) => row?.背番号) : []);
+}
+
 export async function fetchApprovalRecord(collectionName, itemId) {
   const rows = await query("submittedDB", collectionName, { _id: itemId }, { limit: 1 });
   return Array.isArray(rows) && rows.length ? rows[0] : null;
