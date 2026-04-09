@@ -120,6 +120,129 @@
   }
 }
 
+@keyframes login-card-content-fade {
+  0% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+    filter: blur(0);
+  }
+  100% {
+    opacity: 0;
+    transform: translate3d(0, 18px, 0) scale(0.985);
+    filter: blur(10px);
+  }
+}
+
+@keyframes login-card-prime {
+  0% {
+    transform: translate3d(0, 0, 0) scale(1);
+    filter: blur(0);
+  }
+  100% {
+    transform: translate3d(0, 0, 0) scale(1.015);
+    filter: blur(1px);
+  }
+}
+
+@keyframes login-card-morph-out {
+  0% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+    filter: blur(0);
+  }
+  58% {
+    opacity: 0.94;
+    transform: translate3d(0, 0, 0) scale(1.04);
+    filter: blur(2px);
+  }
+  100% {
+    opacity: 0;
+    transform: translate3d(0, 0, 0) scale(1.14);
+    filter: blur(16px);
+  }
+}
+
+@keyframes login-backdrop-settle {
+  0% {
+    opacity: 1;
+    transform: scale(1);
+    filter: saturate(1);
+  }
+  100% {
+    opacity: 0.82;
+    transform: scale(1.08);
+    filter: saturate(1.12) blur(2px);
+  }
+}
+
+@keyframes login-card-sheen {
+  0% {
+    opacity: 0;
+    transform: translate3d(-28%, 20%, 0) rotate(-9deg);
+  }
+  34% {
+    opacity: 0.56;
+  }
+  100% {
+    opacity: 0;
+    transform: translate3d(108%, -12%, 0) rotate(-9deg);
+  }
+}
+
+@keyframes app-shell-sidebar-enter {
+  0% {
+    opacity: 0;
+    transform: translate3d(-28px, 20px, 0) scale(0.98);
+    filter: blur(12px);
+  }
+  100% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+    filter: blur(0);
+  }
+}
+
+@keyframes app-shell-main-enter {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, 28px, 0) scale(0.985);
+    filter: blur(14px);
+  }
+  55% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+    filter: blur(0);
+  }
+}
+
+@keyframes auth-shell-old-fade {
+  0% {
+    opacity: 1;
+    filter: blur(0) saturate(1);
+  }
+  100% {
+    opacity: 0.18;
+    filter: blur(14px) saturate(1.14);
+  }
+}
+
+@keyframes auth-shell-new-reveal {
+  0% {
+    opacity: 0;
+    filter: blur(18px) saturate(0.96);
+  }
+  40% {
+    opacity: 0.82;
+  }
+  100% {
+    opacity: 1;
+    filter: blur(0) saturate(1);
+  }
+}
+
 /* ─── Base ──────────────────────────────────────────────────────────────────── */
 body {
   background-color: rgb(var(--c-background));
@@ -259,6 +382,119 @@ select:-webkit-autofill:focus {
 /* ─── Kinetic gradient (logo + accent elements) ─────────────────────────────── */
 .kinetic-gradient {
   background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
+}
+
+.login-frost-card {
+  isolation: isolate;
+  transform-origin: 50% 12%;
+  transform-style: preserve-3d;
+  will-change: transform, opacity, filter;
+}
+
+.login-frost-card--handoff {
+  view-transition-name: auth-shell-handoff;
+}
+
+.login-frost-card::after {
+  content: "";
+  position: absolute;
+  inset: -12% -8%;
+  z-index: 3;
+  opacity: 0;
+  pointer-events: none;
+  background: linear-gradient(110deg, transparent 16%, rgba(255, 255, 255, 0.48) 42%, rgba(255, 255, 255, 0.12) 58%, transparent 74%);
+  mix-blend-mode: screen;
+  filter: blur(18px);
+}
+
+.login-frost-card__content,
+.login-feature-card,
+.login-form-stack,
+.login-status-card,
+.login-status-copy {
+  will-change: transform, opacity, filter;
+}
+
+.login-scene--handoff .login-backdrop {
+  animation: login-backdrop-settle 980ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.login-scene--handoff .login-frost-card::after {
+  animation: login-card-sheen 720ms ease-out forwards;
+}
+
+.login-scene--handoff .login-frost-card__content {
+  animation: login-card-content-fade 320ms cubic-bezier(0.33, 1, 0.68, 1) forwards;
+}
+
+.login-scene--handoff:not(.login-scene--handoff-fallback) .login-frost-card {
+  animation: login-card-prime 220ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.login-scene--handoff-fallback .login-frost-card {
+  animation: login-card-morph-out 440ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.login-scene--handoff .login-stage {
+  pointer-events: none;
+}
+
+.app-shell-sidebar--enter {
+  animation: app-shell-sidebar-enter 760ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.app-main-shell {
+  will-change: transform, opacity, filter;
+}
+
+.app-main-shell--handoff-target {
+  view-transition-name: auth-shell-handoff;
+}
+
+.app-main-shell--enter {
+  animation: app-shell-main-enter 880ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+::view-transition-group(auth-shell-handoff) {
+  animation-duration: 760ms;
+  animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+::view-transition-image-pair(auth-shell-handoff) {
+  isolation: isolate;
+}
+
+::view-transition-old(auth-shell-handoff),
+::view-transition-new(auth-shell-handoff) {
+  animation-duration: inherit;
+  animation-timing-function: inherit;
+  mix-blend-mode: normal;
+}
+
+::view-transition-old(auth-shell-handoff) {
+  animation-name: auth-shell-old-fade;
+}
+
+::view-transition-new(auth-shell-handoff) {
+  animation-name: auth-shell-new-reveal;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .login-scene--handoff .login-backdrop,
+  .login-scene--handoff .login-frost-card::after,
+  .login-scene--handoff .login-frost-card__content,
+  .login-scene--handoff .login-frost-card,
+  .app-shell-sidebar--enter,
+  .app-main-shell--enter {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+  }
+
+  ::view-transition-group(auth-shell-handoff),
+  ::view-transition-old(auth-shell-handoff),
+  ::view-transition-new(auth-shell-handoff) {
+    animation-duration: 1ms !important;
+  }
 }
 
 /* ─── Material Icons ────────────────────────────────────────────────────────── */

@@ -40,7 +40,7 @@ function isActiveFor(item, activePage) {
   return false;
 }
 
-export default function Sidebar({ activePage, mobileOpen = false, onClose, onLogout, onNavigate }) {
+export default function Sidebar({ activePage, mobileOpen = false, onClose, onLogout, onNavigate, className = "" }) {
   const [openItems, setOpenItems] = useState(() => new Set());
 
   useEffect(() => {
@@ -245,7 +245,7 @@ export default function Sidebar({ activePage, mobileOpen = false, onClose, onLog
 
   return (
     <>
-      <aside className="group fixed left-0 top-0 z-50 hidden h-full w-16 overflow-hidden sidebar-glass py-6 font-headline text-sm font-medium transition-[width] duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] hover:w-64 md:flex md:flex-col">
+      <aside className={`group fixed left-0 top-0 z-50 hidden h-full w-16 overflow-hidden sidebar-glass py-6 font-headline text-sm font-medium transition-[width] duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] hover:w-64 md:flex md:flex-col ${className}`}>
         {renderSidebarContent(false)}
       </aside>
 

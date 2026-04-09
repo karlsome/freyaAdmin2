@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { flushSync } from "react-dom";
 import { Navigate, Route, Routes, useLocation, useNavigate } from "react-router-dom";
 import Sidebar from "./components/Sidebar";
 import TopNav from "./components/TopNav";
@@ -33,6 +34,12 @@ const placeholderPages = [
   "videoManual",
 ];
 
+const SHELL_INTRO_DURATION_MS = 900;
+
+function supportsViewTransitions() {
+  return typeof document !== "undefined" && typeof document.startViewTransition === "function";
+}
+
 function App() {
   const [authUser, setAuthUser] = useState(() => readStoredAuthUser());
   const [isDark, setIsDark] = useState(() => {
@@ -41,11 +48,14 @@ function App() {
     return true;
   });
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const [shellIntro, setShellIntro] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
   const activePage = location.pathname.slice(1) || "dashboard";
   const isLoginRoute = location.pathname === "/login";
   const isAuthenticated = isAuthenticatedUser(authUser);
+  const justLoggedIn = Boolean(location.state?.justLoggedIn);
+  const canUseViewTransitions = supportsViewTransitions();
 
   function resolveRedirectPath() {
     const requestedPath = location.state?.from?.pathname;
@@ -56,9 +66,27 @@ function App() {
   }
 
   function handleLogin(nextAuthUser) {
-    const normalized = persistAuthUser(nextAuthUser);
-    setAuthUser(normalized);
-    navigate(resolveRedirectPath(), { replace: true });
+    const redirectPath = resolveRedirectPath();
+
+    const commitLogin = () => {
+      const normalized = persistAuthUser(nextAuthUser);
+      setAuthUser(normalized);
+      setMobileNavOpen(false);
+      navigate(redirectPath, { replace: true, state: { justLoggedIn: true } });
+    };
+
+    if (canUseViewTransitions) {
+      const transition = document.startViewTransition(() => {
+        flushSync(() => {
+          commitLogin();
+        });
+      });
+
+      return transition.finished.catch(() => {});
+    }
+
+    commitLogin();
+    return Promise.resolve();
   }
 
   function handleLogout() {
@@ -100,6 +128,20 @@ function App() {
     return () => window.removeEventListener("storage", handleStorage);
   }, []);
 
+  useEffect(() => {
+    if (!justLoggedIn || isLoginRoute) {
+      setShellIntro(false);
+      return undefined;
+    }
+
+    setShellIntro(true);
+    const timeoutId = window.setTimeout(() => {
+      setShellIntro(false);
+    }, SHELL_INTRO_DURATION_MS);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [isLoginRoute, justLoggedIn, location.key]);
+
   if (!isAuthenticated && !isLoginRoute) {
     return (
       <Navigate
@@ -117,7 +159,7 @@ function App() {
   }
 
   if (isAuthenticated && isLoginRoute) {
-    return <Navigate replace to="/dashboard" />;
+    return <Navigate replace to={resolveRedirectPath()} />;
   }
 
   return (
@@ -140,12 +182,16 @@ function App() {
         <>
           <Sidebar
             activePage={activePage}
+            className={shellIntro ? "app-shell-sidebar--enter" : ""}
             mobileOpen={mobileNavOpen}
             onClose={() => setMobileNavOpen(false)}
             onLogout={handleLogout}
             onNavigate={(page) => navigate(`/${page}`)}
           />
-          <main className="ml-0 min-h-screen bg-background dark:bg-transparent relative md:ml-16" style={{ zIndex: 1 }}>
+          <main
+            className={`app-main-shell ml-0 min-h-screen bg-background dark:bg-transparent relative md:ml-16 ${shellIntro && !canUseViewTransitions ? "app-main-shell--enter" : ""} ${justLoggedIn && canUseViewTransitions ? "app-main-shell--handoff-target" : ""}`}
+            style={{ zIndex: 1 }}
+          >
             <TopNav
               authUser={authUser}
               isDark={isDark}
