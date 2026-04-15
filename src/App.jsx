@@ -13,6 +13,7 @@ import MasterDBPage from "./pages/MasterDBPage";
 import PlannerPage from "./pages/PlannerPage";
 import ApprovalsPage from "./pages/ApprovalsPage";
 import NodaPage from "./pages/NodaPage";
+import InventoryPage from "./pages/InventoryPage";
 import LoginPage from "./pages/LoginPage";
 import {
   clearStoredAuthUser,
@@ -23,7 +24,6 @@ import {
 
 const placeholderPages = [
   "factoryStatus",
-  "inventory",
   "notifications",
   "analytics",
   "financials",
@@ -205,6 +205,7 @@ function App() {
               <Route path="/planner" element={<PlannerPage />} />
               <Route path="/approvals" element={<ApprovalsPage />} />
               <Route path="/noda" element={<NodaPage />} />
+              <Route path="/inventory" element={<InventoryPage />} />
               {placeholderPages.map((page) => (
                 <Route key={page} path={`/${page}`} element={<PlaceholderPage page={page} />} />
               ))}

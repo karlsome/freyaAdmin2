@@ -1,0 +1,373 @@
+import { useEffect, useMemo, useState } from "react";
+import AdvancedFilterSection from "../AdvancedFilterSection";
+import PlannerModalShell from "../planner/PlannerModalShell";
+import {
+  batchResetInventory,
+  fetchInventoryBatchResetItems,
+  fetchInventoryFilterOptions,
+  fetchInventoryModels,
+} from "../../services/inventoryApi";
+import {
+  buildInventoryBatchResetFilters,
+  createInventoryBatchResetRow,
+  formatInventoryNumber,
+  INVENTORY_BATCH_FILTER_FIELDS,
+  INVENTORY_OPERATOR_LABELS,
+} from "../../utils/inventory";
+
+function InlineBanner({ flash, onClose }) {
+  if (!flash) return null;
+
+  const tone = flash.type === "error"
+    ? "border-error/20 bg-error/10 text-error"
+    : flash.type === "warning"
+      ? "border-amber-500/20 bg-amber-500/10 text-amber-700 dark:text-amber-300"
+      : "border-emerald-500/20 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300";
+
+  return (
+    <div className={`rounded-2xl border px-4 py-3 ${tone}`.trim()}>
+      <div className="flex items-start justify-between gap-3">
+        <p className="text-sm font-medium">{flash.message}</p>
+        <button type="button" onClick={onClose} className="text-current/70 transition hover:text-current">
+          <span className="material-symbols-outlined">close</span>
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function isZeroInventoryItem(item) {
+  return Number(item?.physicalQuantity || 0) === 0
+    && Number(item?.reservedQuantity || 0) === 0
+    && Number(item?.availableQuantity || 0) === 0;
+}
+
+export default function InventoryBatchResetModal({
+  open,
+  authUser,
+  actorName,
+  onClose,
+  onCompleted,
+}) {
+  const [rows, setRows] = useState(() => [createInventoryBatchResetRow()]);
+  const [results, setResults] = useState([]);
+  const [selectedIds, setSelectedIds] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [executing, setExecuting] = useState(false);
+  const [flash, setFlash] = useState(null);
+  const [optionSets, setOptionSets] = useState({ partNumbers: [], backNumbers: [], models: [] });
+
+  const factoryOptions = useMemo(() => (
+    [...new Set(results.map((item) => item?.工場).filter(Boolean))].sort()
+  ), [results]);
+
+  const fieldDefinitions = useMemo(() => (
+    INVENTORY_BATCH_FILTER_FIELDS.map((field) => ({
+      ...field,
+      options: field.field === "品番"
+        ? optionSets.partNumbers
+        : field.field === "背番号"
+          ? optionSets.backNumbers
+          : field.field === "モデル"
+            ? optionSets.models
+            : field.field === "工場"
+              ? factoryOptions
+              : [],
+    }))
+  ), [factoryOptions, optionSets.backNumbers, optionSets.models, optionSets.partNumbers]);
+
+  const selectedItems = useMemo(() => (
+    results.filter((item) => selectedIds.includes(item.背番号))
+  ), [results, selectedIds]);
+
+  const selectableResults = useMemo(() => (
+    results.filter((item) => !isZeroInventoryItem(item))
+  ), [results]);
+
+  useEffect(() => {
+    if (!open) return;
+
+    setRows([createInventoryBatchResetRow()]);
+    setSelectedIds([]);
+    setFlash(null);
+    setLoading(true);
+
+    async function bootstrap() {
+      try {
+        const [filterOptions, models, items] = await Promise.all([
+          fetchInventoryFilterOptions(),
+          fetchInventoryModels(),
+          fetchInventoryBatchResetItems([]),
+        ]);
+
+        setOptionSets({
+          partNumbers: filterOptions.partNumbers,
+          backNumbers: filterOptions.backNumbers,
+          models,
+        });
+        setResults(items);
+      } catch (loadError) {
+        setFlash({ type: "error", message: loadError.message || "Failed to load batch reset data." });
+        setResults([]);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    void bootstrap();
+  }, [open]);
+
+  function updateRow(rowId, patch) {
+    setRows((current) => current.map((row) => (row.id === rowId ? { ...row, ...patch } : row)));
+  }
+
+  function removeRow(rowId) {
+    setRows((current) => {
+      const next = current.filter((row) => row.id !== rowId);
+      return next.length ? next : [createInventoryBatchResetRow()];
+    });
+  }
+
+  async function loadResults(filters) {
+    setLoading(true);
+    setFlash(null);
+    setSelectedIds([]);
+
+    try {
+      const items = await fetchInventoryBatchResetItems(filters);
+      setResults(items);
+    } catch (loadError) {
+      setResults([]);
+      setFlash({ type: "error", message: loadError.message || "Failed to load batch reset results." });
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleApplyFilters() {
+    await loadResults(buildInventoryBatchResetFilters(rows));
+  }
+
+  async function handleClearFilters() {
+    const freshRows = [createInventoryBatchResetRow()];
+    setRows(freshRows);
+    await loadResults([]);
+  }
+
+  function toggleSelected(backNumber) {
+    setSelectedIds((current) => (
+      current.includes(backNumber)
+        ? current.filter((item) => item !== backNumber)
+        : [...current, backNumber]
+    ));
+  }
+
+  function handleToggleAll(checked) {
+    setSelectedIds(checked ? selectableResults.map((item) => item.背番号) : []);
+  }
+
+  async function handleBatchReset() {
+    if (!selectedItems.length) return;
+
+    const preview = selectedItems
+      .slice(0, 5)
+      .map((item) => `${item.背番号} (${item.品番}) - Physical ${item.physicalQuantity}, Reserved ${item.reservedQuantity}, Available ${item.availableQuantity}`)
+      .join("\n");
+    const more = selectedItems.length > 5 ? `\n...and ${selectedItems.length - 5} more items` : "";
+
+    const firstConfirm = window.confirm(
+      `Reset ${selectedItems.length} inventory item${selectedItems.length === 1 ? "" : "s"} to zero?\n\n${preview}${more}`
+    );
+    if (!firstConfirm) return;
+
+    const secondConfirm = window.confirm(
+      "This action creates batch reset audit transactions for all selected items. Continue?"
+    );
+    if (!secondConfirm) return;
+
+    setExecuting(true);
+    setFlash(null);
+
+    try {
+      const result = await batchResetInventory(
+        selectedItems,
+        authUser?.username || "admin",
+        actorName || authUser?.username || "admin"
+      );
+
+      onCompleted?.({
+        type: "success",
+        message: `Batch reset completed for ${result?.successCount || selectedItems.length} item${(result?.successCount || selectedItems.length) === 1 ? "" : "s"}.`,
+      });
+    } catch (resetError) {
+      setFlash({ type: "error", message: resetError.message || "Failed to complete batch reset." });
+    } finally {
+      setExecuting(false);
+    }
+  }
+
+  const allSelected = selectableResults.length > 0 && selectableResults.every((item) => selectedIds.includes(item.背番号));
+
+  return (
+    <PlannerModalShell
+      open={open}
+      title="Batch Reset Inventory"
+      subtitle="Use advanced filters to find inventory rows and reset the selected items to zero with an audit trail."
+      onClose={onClose}
+      maxWidthClassName="max-w-7xl"
+      footer={(
+        <div className="flex items-center justify-between gap-3">
+          <div className="text-sm text-on-surface-variant">
+            {selectedItems.length} item{selectedItems.length === 1 ? "" : "s"} selected
+          </div>
+          <div className="flex gap-3">
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-2xl border border-outline-variant/20 px-4 py-2 text-sm font-bold text-on-surface transition hover:bg-surface-container"
+            >
+              Close
+            </button>
+            <button
+              type="button"
+              disabled={executing || selectedItems.length === 0}
+              onClick={handleBatchReset}
+              className="rounded-2xl bg-error px-4 py-2 text-sm font-bold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {executing ? "Resetting..." : "Reset Selected"}
+            </button>
+          </div>
+        </div>
+      )}
+    >
+      <div className="space-y-5">
+        <InlineBanner flash={flash} onClose={() => setFlash(null)} />
+
+        <AdvancedFilterSection
+          rows={rows}
+          fieldDefinitions={fieldDefinitions}
+          onUpdateRow={updateRow}
+          onAddRow={() => setRows((current) => [...current, createInventoryBatchResetRow()])}
+          onRemoveRow={removeRow}
+          onClearRows={() => {
+            void handleClearFilters();
+          }}
+          operatorLabels={INVENTORY_OPERATOR_LABELS}
+          useOperatorLabelsInSelect
+          title="Batch Reset Filters"
+          addRowLabel="Add Filter"
+          activeSummaryTitle="Active Reset Filters"
+          activeSummaryDescription="Filter by part number, serial number, factory, or model to preview affected inventory items."
+          variant="roomy"
+          framed
+          enableTextSuggestions
+          inputIdPrefix="inventory-batch-reset"
+          footer={(
+            <div className="ml-auto flex gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  void handleClearFilters();
+                }}
+                className="rounded-2xl border border-outline-variant/20 px-4 py-2 text-sm font-bold text-on-surface transition hover:bg-surface-container"
+              >
+                Clear Filters
+              </button>
+              <button
+                type="button"
+                disabled={loading}
+                onClick={() => {
+                  void handleApplyFilters();
+                }}
+                className="rounded-2xl bg-primary px-4 py-2 text-sm font-bold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {loading ? "Finding Items..." : "Find Items"}
+              </button>
+            </div>
+          )}
+        />
+
+        <div className="glass-card rounded-2xl p-5">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <div className="text-[10px] font-bold uppercase tracking-[0.22em] text-outline">Results</div>
+              <h3 className="mt-1 text-base font-black text-on-surface">Inventory Items</h3>
+            </div>
+            <label className="inline-flex items-center gap-2 text-sm text-on-surface-variant">
+              <input
+                type="checkbox"
+                checked={allSelected}
+                disabled={selectableResults.length === 0}
+                onChange={(event) => handleToggleAll(event.target.checked)}
+                className="h-4 w-4 rounded border-outline-variant/30 text-primary"
+              />
+              Select all non-zero items
+            </label>
+          </div>
+
+          {loading ? (
+            <div className="mt-4 rounded-2xl border border-outline-variant/20 bg-surface-container-low/35 px-6 py-12 text-center text-sm text-on-surface-variant">
+              Loading inventory items...
+            </div>
+          ) : results.length === 0 ? (
+            <div className="mt-4 rounded-2xl border border-outline-variant/20 bg-surface-container-low/35 px-6 py-12 text-center text-sm text-on-surface-variant">
+              No inventory items matched the current filters.
+            </div>
+          ) : (
+            <div className="mt-4 overflow-x-auto rounded-2xl border border-outline-variant/15">
+              <table className="ui-table-data min-w-full">
+                <thead className="border-b border-outline-variant/15 bg-surface-container-low">
+                  <tr>
+                    {[
+                      "Select",
+                      "Part Number",
+                      "Serial Number",
+                      "Physical",
+                      "Reserved",
+                      "Available",
+                      "Factory",
+                    ].map((label) => (
+                      <th key={label} className="px-4 py-3 text-left text-xs font-bold uppercase tracking-[0.18em] text-outline">
+                        {label}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {results.map((item) => {
+                    const itemId = item.背番号;
+                    const disabled = isZeroInventoryItem(item);
+                    const checked = selectedIds.includes(itemId);
+
+                    return (
+                      <tr
+                        key={itemId}
+                        className={`border-b border-outline-variant/10 ${disabled ? "bg-surface-container-low/30 text-outline" : "hover:bg-primary/5"}`.trim()}
+                      >
+                        <td className="px-4 py-3">
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            disabled={disabled}
+                            onChange={() => toggleSelected(itemId)}
+                            className="h-4 w-4 rounded border-outline-variant/30 text-primary"
+                          />
+                        </td>
+                        <td className="px-4 py-3 text-sm font-semibold text-on-surface">{item.品番 || "—"}</td>
+                        <td className="px-4 py-3 text-sm text-on-surface">{item.背番号 || "—"}</td>
+                        <td className="px-4 py-3 text-sm font-semibold text-emerald-700 dark:text-emerald-300">{formatInventoryNumber(item.physicalQuantity)}</td>
+                        <td className="px-4 py-3 text-sm font-semibold text-amber-700 dark:text-amber-300">{formatInventoryNumber(item.reservedQuantity)}</td>
+                        <td className="px-4 py-3 text-sm font-semibold text-sky-700 dark:text-sky-300">{formatInventoryNumber(item.availableQuantity)}</td>
+                        <td className="px-4 py-3 text-sm text-on-surface-variant">{item.工場 || "—"}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      </div>
+    </PlannerModalShell>
+  );
+}
