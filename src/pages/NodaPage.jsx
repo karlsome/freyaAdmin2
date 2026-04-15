@@ -149,6 +149,7 @@ export default function NodaPage() {
   const [pagination, setPagination] = useState(EMPTY_PAGINATION);
   const [filterOptions, setFilterOptions] = useState({ partNumbers: [], backNumbers: [] });
   const [loading, setLoading] = useState(false);
+  const [checkingInventory, setCheckingInventory] = useState(false);
   const [error, setError] = useState("");
   const [flash, setFlash] = useState(null);
   const [refreshNonce, setRefreshNonce] = useState(0);
@@ -295,6 +296,10 @@ export default function NodaPage() {
   }
 
   async function handleManualInventoryCheck() {
+    if (checkingInventory) return;
+
+    setCheckingInventory(true);
+
     try {
       const actorName = authUser?.username
         ? await fetchNodaUserFullName(authUser.username)
@@ -307,6 +312,8 @@ export default function NodaPage() {
       setRefreshNonce((current) => current + 1);
     } catch (inventoryError) {
       setFlash({ type: "error", message: inventoryError.message || "Manual inventory check failed." });
+    } finally {
+      setCheckingInventory(false);
     }
   }
 
@@ -501,9 +508,16 @@ export default function NodaPage() {
               <button
                 type="button"
                 onClick={handleManualInventoryCheck}
-                className="rounded-2xl border border-outline-variant/25 px-4 py-2.5 text-sm font-semibold text-on-surface transition hover:bg-surface-container"
+                disabled={checkingInventory}
+                aria-busy={checkingInventory}
+                className="inline-flex min-w-[168px] items-center justify-center gap-2 rounded-2xl border border-outline-variant/25 px-4 py-2.5 text-sm font-semibold text-on-surface transition hover:bg-surface-container disabled:cursor-not-allowed disabled:opacity-60"
               >
-                Check Inventory
+                {checkingInventory ? (
+                  <>
+                    <span className="material-symbols-outlined animate-spin" style={{ fontSize: 18 }}>autorenew</span>
+                    Checking Inventory...
+                  </>
+                ) : "Check Inventory"}
               </button>
             ) : null}
             {canManage ? (
