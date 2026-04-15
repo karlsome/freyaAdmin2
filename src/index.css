@@ -249,7 +249,7 @@ body {
   color: rgb(var(--c-on-surface));
   font-family: 'DM Sans', sans-serif;
   overflow: hidden;
-  background-image: radial-gradient(circle, rgba(99,102,241,0.055) 1px, transparent 1px);
+  background-image: radial-gradient(circle, rgba(0, 0, 0, 0.02) 1px, transparent 1px);
   background-size: 24px 24px;
 }
 
@@ -364,19 +364,19 @@ select:-webkit-autofill:focus {
   background: rgba(250, 249, 255, 0.82);
   -webkit-backdrop-filter: blur(14px) saturate(1.4);
   backdrop-filter: blur(14px) saturate(1.4);
-  border: 1px solid rgba(99, 102, 241, 0.16);
+  border: 1px solid rgba(226, 228, 233, 0.3);
   box-shadow:
-    0 2px 20px rgba(99, 102, 241, 0.09),
+    0 1px 3px rgba(0, 0, 0, 0.05),
     inset 1px 1px 0 rgba(255, 255, 255, 0.7);
 }
 .dark .glass-card {
   background: rgba(20, 16, 40, 0.52);
   -webkit-backdrop-filter: blur(22px) saturate(1.5);
   backdrop-filter: blur(22px) saturate(1.5);
-  border: 1px solid rgba(139, 92, 246, 0.18);
+  border: 1px solid rgba(70, 69, 84, 0.3);
   box-shadow:
-    0 4px 24px rgba(0, 0, 0, 0.45),
-    inset 1px 1px 0 rgba(192, 193, 255, 0.07);
+    0 2px 8px rgba(0, 0, 0, 0.3),
+    inset 1px 1px 0 rgba(255, 255, 255, 0.03);
 }
 
 /* ─── Kinetic gradient (logo + accent elements) ─────────────────────────────── */
@@ -505,32 +505,22 @@ select:-webkit-autofill:focus {
 
 /* ─── Top nav glass ─────────────────────────────────────────────────────────── */
 .topnav-glass {
-  background: linear-gradient(
-    108deg,
-    rgba(99, 102, 241, 0.18) 0%,
-    rgba(168, 85, 247, 0.12) 50%,
-    rgba(255, 255, 255, 0.10) 100%
-  );
+  background: rgba(255, 255, 255, 0.75);
   -webkit-backdrop-filter: blur(24px) saturate(1.6);
   backdrop-filter: blur(24px) saturate(1.6);
-  border-bottom: 1px solid rgba(192, 193, 255, 0.22);
+  border-bottom: 1px solid rgba(226, 228, 233, 0.4);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.18),
-    0 8px 32px rgba(99, 102, 241, 0.10);
+    inset 0 1px 0 rgba(255, 255, 255, 0.5),
+    0 2px 8px rgba(0, 0, 0, 0.04);
 }
 .dark .topnav-glass {
-  background: linear-gradient(
-    108deg,
-    rgba(99, 102, 241, 0.14) 0%,
-    rgba(168, 85, 247, 0.09) 50%,
-    rgba(16, 19, 26, 0.55) 100%
-  );
+  background: rgba(16, 19, 26, 0.75);
   -webkit-backdrop-filter: blur(28px) saturate(1.8);
   backdrop-filter: blur(28px) saturate(1.8);
-  border-bottom: 1px solid rgba(192, 193, 255, 0.14);
+  border-bottom: 1px solid rgba(70, 69, 84, 0.3);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.05),
-    0 8px 32px rgba(0, 0, 0, 0.28);
+    inset 0 1px 0 rgba(255, 255, 255, 0.03),
+    0 2px 8px rgba(0, 0, 0, 0.4);
 }
 
 /* ─── Sidebar glass ────────────────────────────────────────────────────────── */
@@ -538,14 +528,14 @@ select:-webkit-autofill:focus {
   background: linear-gradient(
     180deg,
     rgba(255, 255, 255, 0.72) 0%,
-    rgba(245, 245, 255, 0.68) 100%
+    rgba(248, 249, 250, 0.68) 100%
   );
   -webkit-backdrop-filter: blur(20px) saturate(1.5);
   backdrop-filter: blur(20px) saturate(1.5);
-  border-right: 1px solid rgba(192, 193, 255, 0.28);
+  border-right: 1px solid rgba(226, 228, 233, 0.4);
   box-shadow:
-    inset -1px 0 0 rgba(255, 255, 255, 0.45),
-    2px 0 28px rgba(99, 102, 241, 0.08);
+    inset -1px 0 0 rgba(255, 255, 255, 0.5),
+    2px 0 8px rgba(0, 0, 0, 0.04);
 }
 .dark .sidebar-glass {
   background: linear-gradient(
@@ -555,10 +545,10 @@ select:-webkit-autofill:focus {
   );
   -webkit-backdrop-filter: blur(24px) saturate(1.6);
   backdrop-filter: blur(24px) saturate(1.6);
-  border-right: 1px solid rgba(192, 193, 255, 0.11);
+  border-right: 1px solid rgba(70, 69, 84, 0.3);
   box-shadow:
-    inset -1px 0 0 rgba(255, 255, 255, 0.04),
-    2px 0 28px rgba(0, 0, 0, 0.35);
+    inset -1px 0 0 rgba(255, 255, 255, 0.02),
+    2px 0 8px rgba(0, 0, 0, 0.3);
 }
 
 /* ─── Scrollbar ─────────────────────────────────────────────────────────────── */
@@ -593,10 +583,7 @@ select:-webkit-autofill:focus {
 }
 
 .pagination-liquid-glow {
-  background: rgba(99, 102, 241, 0.28);
-  filter: blur(12px);
-  opacity: 0.72;
-  transform: scale(0.92);
+  display: none;
 }
 
 .pagination-liquid-blob {
@@ -605,7 +592,7 @@ select:-webkit-autofill:focus {
     radial-gradient(circle at 26% 20%, rgba(255, 255, 255, 0.34) 0%, rgba(255, 255, 255, 0.10) 28%, rgba(255, 255, 255, 0) 40%),
     linear-gradient(135deg, rgba(73, 75, 214, 1) 0%, rgba(125, 58, 237, 0.96) 100%);
   box-shadow:
-    0 10px 20px rgba(99, 102, 241, 0.18),
+    0 4px 12px rgba(0, 0, 0, 0.12),
     inset 0 1px 0 rgba(255, 255, 255, 0.24),
     inset 0 -1px 0 rgba(34, 40, 176, 0.16);
 }
