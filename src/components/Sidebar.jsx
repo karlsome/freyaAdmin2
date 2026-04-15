@@ -73,8 +73,8 @@ export default function Sidebar({ activePage, mobileOpen = false, onClose, onLog
               </span>
             </div>
             <div className={`overflow-hidden transition-opacity duration-200 ${isMobile ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`}>
-              <h1 className="whitespace-nowrap text-lg font-black leading-none text-on-surface">Factory Admin</h1>
-              <p className="mt-0.5 whitespace-nowrap text-[10px] font-bold uppercase tracking-widest text-primary">Precision Control</p>
+              <h1 className="whitespace-nowrap text-lg font-black leading-none text-on-surface">Freya Admin</h1>
+              <p className="mt-0.5 whitespace-nowrap text-[10px] font-bold uppercase tracking-widest text-primary">Detailed Data</p>
             </div>
           </div>
 
