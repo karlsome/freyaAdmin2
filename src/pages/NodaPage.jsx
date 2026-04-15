@@ -543,7 +543,7 @@ export default function NodaPage() {
 
         <FlashBanner flash={flash} onClose={() => setFlash(null)} />
 
-        <div className="mb-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-6">
+        <div className="mb-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-7">
           {NODA_STATUS_CARDS.map((card) => (
             <StatSummaryCard
               key={card.key}

@@ -7,6 +7,7 @@ export const EMPTY_NODA_STATS = {
   pending: 0,
   "in-progress": 0,
   completed: 0,
+  "past-deadline": 0,
   "partial-inventory": 0,
   cancelled: 0,
 };
@@ -16,6 +17,7 @@ export const NODA_STATUS_OPTIONS = [
   { value: "pending", label: "Pending" },
   { value: "in-progress", label: "In Progress" },
   { value: "completed", label: "Completed" },
+  { value: "past-deadline", label: "Deadline Passed" },
   { value: "partial-inventory", label: "Partial Inventory" },
   { value: "cancelled", label: "Cancelled" },
 ];
@@ -25,6 +27,7 @@ export const NODA_STATUS_CARDS = [
   { key: "pending", label: "Pending", icon: "schedule", accent: "bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300" },
   { key: "in-progress", label: "In Progress", icon: "play_circle", accent: "bg-sky-100 text-sky-700 dark:bg-sky-500/15 dark:text-sky-300" },
   { key: "completed", label: "Completed", icon: "task_alt", accent: "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300" },
+  { key: "past-deadline", label: "Deadline Passed", icon: "event_busy", accent: "bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-200" },
   { key: "partial-inventory", label: "Partial Inventory", icon: "error", accent: "bg-orange-100 text-orange-700 dark:bg-orange-500/15 dark:text-orange-300" },
   { key: "cancelled", label: "Cancelled", icon: "cancel", accent: "bg-rose-100 text-rose-700 dark:bg-rose-500/15 dark:text-rose-300" },
 ];
@@ -123,10 +126,14 @@ export function buildNodaQueryFilters({
 } = {}) {
   const filters = {};
 
-  if (activeStatus && activeStatus !== "all") {
-    filters.status = activeStatus;
-  } else if (status) {
-    filters.status = status;
+  const normalizedStatus = activeStatus && activeStatus !== "all"
+    ? activeStatus
+    : status;
+
+  if (normalizedStatus === "past-deadline") {
+    filters.pastDeadline = true;
+  } else if (normalizedStatus) {
+    filters.status = normalizedStatus;
   }
 
   if (partNumber) {
