@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { loginUser } from "../services/authApi";
+import { useLanguage } from "../contexts/LanguageContext";
 
 const FEATURE_CARDS = [
   {
@@ -43,6 +44,7 @@ export default function LoginPage({ isDark, onToggleTheme, onLogin }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [transitionState, setTransitionState] = useState("idle");
+  const { t } = useLanguage();
   const handoffTimerRef = useRef(null);
   const canUseViewTransitions = supportsViewTransitions();
   const isHandingOff = transitionState === "success";
@@ -133,8 +135,8 @@ export default function LoginPage({ isDark, onToggleTheme, onLogin }) {
                   onClick={onToggleTheme}
                   className="flex h-11 w-11 items-center justify-center rounded-2xl border border-white/24 bg-white/16 text-on-surface backdrop-blur-xl transition-all hover:border-white/40 hover:bg-white/26 disabled:cursor-not-allowed disabled:opacity-60 dark:border-white/12 dark:bg-white/8 dark:text-on-surface dark:hover:bg-white/12"
                   disabled={isLocked}
-                  aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
-                  title={isDark ? "Switch to light mode" : "Switch to dark mode"}
+                  aria-label={isDark ? t("switchToLight") : t("switchToDark")}
+                  title={isDark ? t("switchToLight") : t("switchToDark")}
                 >
                   <span className="material-symbols-outlined">{isDark ? "light_mode" : "dark_mode"}</span>
                 </button>
@@ -159,7 +161,7 @@ export default function LoginPage({ isDark, onToggleTheme, onLogin }) {
             <div className="mx-auto flex h-full w-full max-w-none flex-col justify-center sm:max-w-md lg:max-w-[29rem]">
               <div>
                 <p className="text-xs font-bold uppercase tracking-[0.24em] text-outline dark:text-white/72">Access</p>
-                <h2 className="mt-3 text-2xl font-black tracking-[-0.03em] text-on-surface sm:text-3xl">Login</h2>
+                <h2 className="mt-3 text-2xl font-black tracking-[-0.03em] text-on-surface sm:text-3xl">{t("loginTitle")}</h2>
                 <p className="login-status-copy mt-3 text-sm leading-6 text-on-surface/70 dark:text-white/82">
                   {isHandingOff
                     ? "Credentials verified. Syncing your dashboard surface and restoring your assigned access now."
@@ -169,7 +171,7 @@ export default function LoginPage({ isDark, onToggleTheme, onLogin }) {
 
               <form className="login-form-stack mt-6 space-y-4 sm:mt-8 sm:space-y-5" onSubmit={handleSubmit} aria-busy={isLocked}>
                 <label className="block">
-                  <span className="mb-2 block text-xs font-bold uppercase tracking-[0.2em] text-outline dark:text-white/80">Username</span>
+                  <span className="mb-2 block text-xs font-bold uppercase tracking-[0.2em] text-outline dark:text-white/80">{t("username")}</span>
                   <div className="group flex items-center gap-3 rounded-[22px] border border-primary/12 bg-white/92 px-4 py-3 shadow-[0_10px_30px_rgba(73,75,214,0.06)] transition-all focus-within:border-primary/30 focus-within:shadow-[0_16px_44px_rgba(73,75,214,0.12)] dark:border-white/14 dark:bg-[rgba(7,11,20,0.18)] dark:shadow-none">
                     <span className="material-symbols-outlined text-outline transition-colors group-focus-within:text-primary dark:text-white/72 dark:group-focus-within:text-white">person</span>
                     <input
@@ -178,7 +180,7 @@ export default function LoginPage({ isDark, onToggleTheme, onLogin }) {
                       disabled={isLocked}
                       name="username"
                       onChange={(event) => updateField("username", event.target.value)}
-                      placeholder="Enter username"
+                      placeholder={t("enterUsername")}
                       type="text"
                       value={form.username}
                     />
@@ -186,7 +188,7 @@ export default function LoginPage({ isDark, onToggleTheme, onLogin }) {
                 </label>
 
                 <label className="block">
-                  <span className="mb-2 block text-xs font-bold uppercase tracking-[0.2em] text-outline dark:text-white/80">Password</span>
+                  <span className="mb-2 block text-xs font-bold uppercase tracking-[0.2em] text-outline dark:text-white/80">{t("password")}</span>
                   <div className="group flex items-center gap-3 rounded-[22px] border border-primary/12 bg-white/92 px-4 py-3 shadow-[0_10px_30px_rgba(73,75,214,0.06)] transition-all focus-within:border-primary/30 focus-within:shadow-[0_16px_44px_rgba(73,75,214,0.12)] dark:border-white/14 dark:bg-[rgba(7,11,20,0.18)] dark:shadow-none">
                     <span className="material-symbols-outlined text-outline transition-colors group-focus-within:text-primary dark:text-white/72 dark:group-focus-within:text-white">key</span>
                     <input
@@ -195,7 +197,7 @@ export default function LoginPage({ isDark, onToggleTheme, onLogin }) {
                       disabled={isLocked}
                       name="password"
                       onChange={(event) => updateField("password", event.target.value)}
-                      placeholder="Enter password"
+                      placeholder={t("enterPassword")}
                       type="password"
                       value={form.password}
                     />
@@ -216,7 +218,7 @@ export default function LoginPage({ isDark, onToggleTheme, onLogin }) {
                   <span className="material-symbols-outlined" style={{ fontSize: 18 }}>
                     {busy ? "hourglass_top" : isHandingOff ? "check_circle" : "login"}
                   </span>
-                  {busy ? "Signing in..." : isHandingOff ? "Opening workspace..." : "Login"}
+                  {busy ? t("loading") : isHandingOff ? t("loading") : t("loginTitle")}
                 </button>
               </form>
 
