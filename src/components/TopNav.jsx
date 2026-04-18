@@ -1,10 +1,12 @@
 import { getAuthDisplayName, getAuthInitials } from "../utils/auth";
+import { useLanguage } from "../contexts/LanguageContext";
 
-export default function TopNav({ authUser, isDark, onLogout, onOpenMobileNav, onToggleTheme }) {
+export default function TopNav({ authUser, isDark, onLogout, onOpenMobileNav, onOpenSettings, onToggleTheme }) {
   const displayName = getAuthDisplayName(authUser);
   const initials = getAuthInitials(authUser);
   const usernameLine = authUser?.username ? `@${authUser.username}` : "";
   const roleLine = authUser?.role || "Authenticated user";
+  const { t } = useLanguage();
 
   return (
     <header className="topnav-glass fixed top-0 right-0 left-0 z-40 flex h-16 items-center justify-between px-4 font-headline antialiased sm:px-6 md:pl-24 md:pr-8">
@@ -26,7 +28,7 @@ export default function TopNav({ authUser, isDark, onLogout, onOpenMobileNav, on
           </span>
           <input
             className="w-full bg-white/10 dark:bg-white/5 border border-primary/20 dark:border-primary/20 rounded-full pl-10 pr-4 py-2 text-sm text-on-surface placeholder:text-outline/70 focus:ring-2 focus:ring-primary/30 focus:border-primary/40 focus:bg-white/20 dark:focus:bg-white/8 transition-all outline-none backdrop-blur-sm"
-            placeholder="Global system search..."
+            placeholder={t("globalSearch")}
             type="text"
           />
         </div>
@@ -39,7 +41,7 @@ export default function TopNav({ authUser, isDark, onLogout, onOpenMobileNav, on
         <button
           onClick={onToggleTheme}
           className="p-2 text-outline hover:text-primary hover:bg-primary/10 rounded-xl transition-all"
-          title={isDark ? "Switch to light mode" : "Switch to dark mode"}
+          title={isDark ? t("switchToLight") : t("switchToDark")}
         >
           <span className="material-symbols-outlined">
             {isDark ? "light_mode" : "dark_mode"}
@@ -53,7 +55,12 @@ export default function TopNav({ authUser, isDark, onLogout, onOpenMobileNav, on
         </button>
 
         {/* Settings */}
-        <button className="hidden rounded-xl p-2 text-outline transition-all hover:bg-primary/10 hover:text-primary sm:block">
+        <button
+          onClick={onOpenSettings}
+          className="hidden rounded-xl p-2 text-outline transition-all hover:bg-primary/10 hover:text-primary sm:block"
+          title={t("settings")}
+          type="button"
+        >
           <span className="material-symbols-outlined">settings</span>
         </button>
 
@@ -61,7 +68,7 @@ export default function TopNav({ authUser, isDark, onLogout, onOpenMobileNav, on
         <button
           onClick={onLogout}
           className="hidden rounded-xl p-2 text-outline transition-all hover:bg-error/10 hover:text-error sm:block"
-          title="Logout"
+          title={t("logout")}
           type="button"
         >
           <span className="material-symbols-outlined">logout</span>

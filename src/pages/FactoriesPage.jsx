@@ -4,11 +4,13 @@ import FactoryCard from "../components/FactoryCard";
 import RecordDetailModal from "../components/RecordDetailModal";
 import { getDefectStatus } from "../utils/statusHelpers";
 import { useRecordModal } from "../hooks/useRecordModal";
+import { useLanguage } from "../contexts/LanguageContext";
 
 export default function FactoriesPage() {
   const { factories, loading, error, refresh } = useDashboardData();
   const navigate = useNavigate();
   const { modalRecord, modalProcess, openRecord, closeRecord } = useRecordModal();
+  const { t } = useLanguage();
 
   const total    = factories.length;
   const normal   = factories.filter((f) => getDefectStatus(f.defectRate).level === "normal").length;
@@ -21,7 +23,7 @@ export default function FactoriesPage() {
       {/* ── Page header ── */}
       <div className="flex items-end justify-between mb-8">
         <div>
-          <h2 className="text-3xl font-bold font-headline tracking-tight text-on-surface">Factories</h2>
+          <h2 className="text-3xl font-bold font-headline tracking-tight text-on-surface">{t("factoryListTitle")}</h2>
           <p className="text-on-surface-variant mt-1 text-sm">
             {total} facilit{total === 1 ? "y" : "ies"} &mdash; {normal} normal, {warnings} warning{warnings !== 1 ? "s" : ""}, {critical} critical
           </p>
@@ -31,7 +33,7 @@ export default function FactoriesPage() {
           className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold bg-surface-container border border-outline-variant/20 text-on-surface-variant hover:bg-surface-container-high hover:text-primary transition-all"
         >
           <span className="material-symbols-outlined" style={{ fontSize: 16 }}>refresh</span>
-          Refresh All
+          {t("refresh")}
         </button>
       </div>
 
