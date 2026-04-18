@@ -3,6 +3,7 @@ import { flushSync } from "react-dom";
 import { Navigate, Route, Routes, useLocation, useNavigate } from "react-router-dom";
 import Sidebar from "./components/Sidebar";
 import TopNav from "./components/TopNav";
+import SettingsModal from "./components/SettingsModal";
 import DashboardPage from "./pages/DashboardPage";
 import FactoriesPage from "./pages/FactoriesPage";
 import FactoryDetailPage from "./pages/FactoryDetailPage";
@@ -48,6 +49,7 @@ function App() {
     return true;
   });
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const [shellIntro, setShellIntro] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
@@ -187,6 +189,7 @@ function App() {
             onClose={() => setMobileNavOpen(false)}
             onLogout={handleLogout}
             onNavigate={(page) => navigate(`/${page}`)}
+            onOpenSettings={() => setSettingsOpen(true)}
           />
           <main
             className={`app-main-shell ml-0 min-h-screen bg-background dark:bg-transparent relative md:ml-16 ${shellIntro && !canUseViewTransitions ? "app-main-shell--enter" : ""} ${justLoggedIn && canUseViewTransitions ? "app-main-shell--handoff-target" : ""}`}
@@ -197,8 +200,10 @@ function App() {
               isDark={isDark}
               onLogout={handleLogout}
               onOpenMobileNav={() => setMobileNavOpen(true)}
+              onOpenSettings={() => setSettingsOpen(true)}
               onToggleTheme={() => setIsDark((darkMode) => !darkMode)}
             />
+            <SettingsModal isOpen={settingsOpen} onClose={() => setSettingsOpen(false)} />
             <Routes>
               <Route path="/" element={<Navigate to="/dashboard" replace />} />
               <Route path="/dashboard" element={<DashboardPage />} />
