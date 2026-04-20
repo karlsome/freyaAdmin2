@@ -6,7 +6,11 @@ const navItems = [
       { icon: "sensors",             label: "Sensors",             page: "sensors"   },
     ]
   },
-  { icon: "precision_manufacturing",  label: "Factory Status",      page: "factoryStatus" },
+  { icon: "precision_manufacturing",  label: "Factory Status",      page: "factoryStatus",
+    children: [
+      { icon: "list_alt",            label: "Logs",                page: "factoryStatus/logs" },
+    ]
+  },
   { icon: "event_note",              label: "Production Planning", page: "planner" },
   { icon: "inventory_2",             label: "Inventory",           page: "inventory" },
   { icon: "notifications",           label: "Notifications",       page: "notifications" },

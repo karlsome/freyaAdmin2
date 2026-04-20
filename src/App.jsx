@@ -14,6 +14,8 @@ import PlannerPage from "./pages/PlannerPage";
 import ApprovalsPage from "./pages/ApprovalsPage";
 import NodaPage from "./pages/NodaPage";
 import InventoryPage from "./pages/InventoryPage";
+import FactoryStatusPage from "./pages/FactoryStatusPage";
+import FactoryStatusLogsPage from "./pages/FactoryStatusLogsPage";
 import LoginPage from "./pages/LoginPage";
 import {
   clearStoredAuthUser,
@@ -23,7 +25,6 @@ import {
 } from "./utils/auth";
 
 const placeholderPages = [
-  "factoryStatus",
   "notifications",
   "analytics",
   "financials",
@@ -206,6 +207,8 @@ function App() {
               <Route path="/approvals" element={<ApprovalsPage />} />
               <Route path="/noda" element={<NodaPage />} />
               <Route path="/inventory" element={<InventoryPage />} />
+              <Route path="/factoryStatus" element={<FactoryStatusPage />} />
+              <Route path="/factoryStatus/logs" element={<FactoryStatusLogsPage />} />
               {placeholderPages.map((page) => (
                 <Route key={page} path={`/${page}`} element={<PlaceholderPage page={page} />} />
               ))}
