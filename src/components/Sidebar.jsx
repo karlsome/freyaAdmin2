@@ -1,32 +1,29 @@
-const navItems = [
-  { icon: "dashboard",               label: "Dashboard",           page: "dashboard" },
-  { icon: "factory",                  label: "Factories",           page: "factories",
-    children: [
-      { icon: "overview",            label: "Overview",            page: "factory/overview" },
-      { icon: "sensors",             label: "Sensors",             page: "sensors"   },
-    ]
-  },
-  { icon: "precision_manufacturing",  label: "Factory Status",      page: "factoryStatus",
-    children: [
-      { icon: "list_alt",            label: "Logs",                page: "factoryStatus/logs" },
-    ]
-  },
-  { icon: "event_note",              label: "Production Planning", page: "planner" },
-  { icon: "inventory_2",             label: "Inventory",           page: "inventory" },
-  { icon: "notifications",           label: "Notifications",       page: "notifications" },
-  { icon: "analytics",               label: "Analytics",           page: "analytics" },
-  { icon: "payments",                label: "Financials",          page: "financials" },
-  { icon: "group",                   label: "User Management",     page: "userManagement" },
-  { icon: "fact_check",              label: "Approvals",           page: "approvals", badge: "12" },
-  { icon: "database",                label: "Master DB",           page: "masterDB" },
-  { icon: "hub",                     label: "Customer Management", page: "customerManagement" },
-  { icon: "construction",            label: "Equipment",           page: "equipment" },
-  { icon: "lan",                     label: "SCNA",                page: "scna" },
-  { icon: "settings_input_component",label: "Noda",                page: "noda" },
-  { icon: "play_circle",             label: "Video Manual",        page: "videoManual" },
-];
-
 import { useEffect, useState } from "react";
+import { useLanguage } from "../contexts/LanguageContext";
+
+const navItems = [
+  { icon: "dashboard",                labelKey: "dashboard",           page: "dashboard" },
+  { icon: "factory",                   labelKey: "factories",           page: "factories",
+    children: [
+      { icon: "overview",             labelKey: "overview",            page: "factory/overview" },
+      { icon: "sensors",              labelKey: "sensors",             page: "sensors" },
+    ]
+  },
+  { icon: "precision_manufacturing",   labelKey: "factoryStatus",       page: "factoryStatus" },
+  { icon: "event_note",               labelKey: "planner",             page: "planner" },
+  { icon: "inventory_2",              labelKey: "inventory",           page: "inventory" },
+  { icon: "notifications",            labelKey: "notifications",       page: "notifications" },
+  { icon: "analytics",                labelKey: "analytics",           page: "analytics" },
+  { icon: "payments",                 labelKey: "financials",          page: "financials" },
+  { icon: "group",                    labelKey: "userManagement",      page: "userManagement" },
+  { icon: "fact_check",               labelKey: "approvals",           page: "approvals", badge: "12" },
+  { icon: "database",                 labelKey: "masterDB",            page: "masterDB" },
+  { icon: "hub",                      labelKey: "customerManagement",  page: "customerManagement" },
+  { icon: "construction",             labelKey: "equipment",           page: "equipment" },
+  { icon: "lan",                      labelKey: "scna",                page: "scna" },
+  { icon: "settings_input_component", labelKey: "noda",                page: "noda" },
+  { icon: "play_circle",              labelKey: "videoManual",         page: "videoManual" },
+];
 
 function hasActiveChild(item, activePage) {
   return Boolean(item.children?.some((child) => isActiveFor(child, activePage)));
@@ -44,8 +41,9 @@ function isActiveFor(item, activePage) {
   return false;
 }
 
-export default function Sidebar({ activePage, mobileOpen = false, onClose, onLogout, onNavigate, className = "" }) {
+export default function Sidebar({ activePage, mobileOpen = false, onClose, onLogout, onNavigate, onOpenSettings, className = "" }) {
   const [openItems, setOpenItems] = useState(() => new Set());
+  const { t } = useLanguage();
 
   useEffect(() => {
     if (!mobileOpen) return undefined;
@@ -99,6 +97,7 @@ export default function Sidebar({ activePage, mobileOpen = false, onClose, onLog
             const isActive = isActiveFor(item, activePage);
             const hasChildren = !!item.children?.length;
             const isOpen = openItems.has(item.page) || hasActiveChild(item, activePage);
+            const label = t(item.labelKey);
 
             return (
               <div key={item.page}>
@@ -109,7 +108,7 @@ export default function Sidebar({ activePage, mobileOpen = false, onClose, onLog
                       onNavigate(item.page);
                       if (isMobile) onClose?.();
                     }}
-                    title={item.label}
+                    title={label}
                     className={`min-w-0 flex-1 flex items-center gap-3 rounded-xl text-left transition-all duration-200 ease-in-out ${
                       isMobile
                         ? "px-3 py-2.5"
@@ -131,7 +130,7 @@ export default function Sidebar({ activePage, mobileOpen = false, onClose, onLog
                         ? isActive ? "font-semibold" : ""
                         : `${isActive ? "font-semibold " : ""}opacity-0 transition-opacity duration-200 group-hover:opacity-100`
                     }`}>
-                      {item.label}
+                      {label}
                     </span>
                     {item.badge && (
                       <span className={`mr-2 flex-shrink-0 rounded-full bg-error px-1.5 py-0.5 text-[10px] font-bold text-on-error dark:bg-error-container dark:text-on-error-container dark:rounded-md ${
@@ -146,8 +145,8 @@ export default function Sidebar({ activePage, mobileOpen = false, onClose, onLog
                     <button
                       type="button"
                       onClick={() => toggleOpen(item.page)}
-                      aria-label={`${isOpen ? "Collapse" : "Expand"} ${item.label} submenu`}
-                      title={`${isOpen ? "Collapse" : "Expand"} ${item.label}`}
+                      aria-label={`${isOpen ? "Collapse" : "Expand"} ${label} submenu`}
+                      title={`${isOpen ? "Collapse" : "Expand"} ${label}`}
                       className={`mr-1.5 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg transition-all duration-300 hover:bg-primary/5 ${
                         isOpen ? "rotate-180" : "rotate-0"
                       } ${
@@ -175,6 +174,7 @@ export default function Sidebar({ activePage, mobileOpen = false, onClose, onLog
                       {item.children.map((child, idx) => {
                         const childActive = activePage === child.page || activePage.startsWith(child.page + "/");
                         const isLast = idx === item.children.length - 1;
+                        const childLabel = t(child.labelKey);
 
                         return (
                           <div key={child.page} className="relative flex items-center">
@@ -189,7 +189,7 @@ export default function Sidebar({ activePage, mobileOpen = false, onClose, onLog
                                 onNavigate(child.page);
                                 if (isMobile) onClose?.();
                               }}
-                              title={child.label}
+                              title={childLabel}
                               className={`min-w-0 flex-1 rounded-xl py-1.5 pr-2 text-left transition-all duration-200 ${
                                 isMobile ? "pl-2.5" : "pl-1"
                               } ${
@@ -209,7 +209,7 @@ export default function Sidebar({ activePage, mobileOpen = false, onClose, onLog
                                   {child.icon}
                                 </span>
                                 <span className={`overflow-hidden whitespace-nowrap text-xs ${childActive ? "font-semibold" : ""}`}>
-                                  {child.label}
+                                  {childLabel}
                                 </span>
                               </div>
                             </button>
@@ -225,22 +225,27 @@ export default function Sidebar({ activePage, mobileOpen = false, onClose, onLog
         </nav>
 
         <div className="mt-auto space-y-0.5 border-t border-outline-variant/20 px-3 pt-6">
-          <button className={`w-full flex items-center gap-3 rounded-xl text-outline transition-all duration-200 hover:bg-primary/5 hover:text-primary dark:hover:bg-white/5 dark:hover:text-on-surface ${
-            isMobile ? "px-3 py-2.5" : "min-w-[232px] px-0 py-2.5"
-          }`} title="Settings">
+          <button
+            className={`w-full flex items-center gap-3 rounded-xl text-outline transition-all duration-200 hover:bg-primary/5 hover:text-primary dark:hover:bg-white/5 dark:hover:text-on-surface ${
+              isMobile ? "px-3 py-2.5" : "min-w-[232px] px-0 py-2.5"
+            }`}
+            onClick={onOpenSettings}
+            title={t("settings")}
+            type="button"
+          >
             <span className={`material-symbols-outlined ${isMobile ? "" : "w-10 flex items-center justify-center"}`}>settings</span>
-            <span className={isMobile ? "whitespace-nowrap" : "whitespace-nowrap opacity-0 transition-opacity duration-200 group-hover:opacity-100"}>Settings</span>
+            <span className={isMobile ? "whitespace-nowrap" : "whitespace-nowrap opacity-0 transition-opacity duration-200 group-hover:opacity-100"}>{t("settings")}</span>
           </button>
           <button
             className={`w-full flex items-center gap-3 rounded-xl text-error/70 transition-all duration-200 hover:bg-error/5 hover:text-error dark:text-outline dark:hover:bg-white/5 dark:hover:text-on-surface ${
-            isMobile ? "px-3 py-2.5" : "min-w-[232px] px-0 py-2.5"
-          }`}
+              isMobile ? "px-3 py-2.5" : "min-w-[232px] px-0 py-2.5"
+            }`}
             onClick={onLogout}
-            title="Logout"
+            title={t("logout")}
             type="button"
           >
             <span className={`material-symbols-outlined ${isMobile ? "" : "w-10 flex items-center justify-center"}`}>logout</span>
-            <span className={isMobile ? "whitespace-nowrap" : "whitespace-nowrap opacity-0 transition-opacity duration-200 group-hover:opacity-100"}>Logout</span>
+            <span className={isMobile ? "whitespace-nowrap" : "whitespace-nowrap opacity-0 transition-opacity duration-200 group-hover:opacity-100"}>{t("logout")}</span>
           </button>
         </div>
       </>

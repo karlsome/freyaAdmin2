@@ -6,18 +6,20 @@ import DashboardRecentSubmissions from "../components/DashboardRecentSubmissions
 import DashboardFactorySummary from "../components/DashboardFactorySummary";
 import RecordDetailModal from "../components/RecordDetailModal";
 import { useRecordModal } from "../hooks/useRecordModal";
+import { useLanguage } from "../contexts/LanguageContext";
 
 export default function DashboardPage() {
   const navigate = useNavigate();
   const { kpis, issues, recent, byFactory, byProcess, loading, error, lastRefresh, refresh } = useTodayData();
   const { modalRecord, modalProcess, openRecord, closeRecord } = useRecordModal();
+  const { t, language } = useLanguage();
 
-  const today = new Date().toLocaleDateString("en-US", {
+  const today = new Date().toLocaleDateString(language === "ja" ? "ja-JP" : "en-US", {
     weekday: "long", year: "numeric", month: "long", day: "numeric",
   });
 
   const refreshLabel = lastRefresh
-    ? lastRefresh.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })
+    ? lastRefresh.toLocaleTimeString(language === "ja" ? "ja-JP" : "en-US", { hour: "2-digit", minute: "2-digit" })
     : null;
 
   return (
@@ -26,7 +28,7 @@ export default function DashboardPage() {
       {/* ── Header ── */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between mb-6 sm:mb-8">
         <div>
-          <h2 className="text-2xl sm:text-3xl font-bold font-headline tracking-tight text-on-surface">Dashboard</h2>
+          <h2 className="text-2xl sm:text-3xl font-bold font-headline tracking-tight text-on-surface">{t("dashboard")}</h2>
           <p className="text-on-surface-variant mt-1 text-sm">{today}</p>
         </div>
         <button
@@ -37,7 +39,7 @@ export default function DashboardPage() {
                      hover:text-primary transition-all disabled:opacity-50"
         >
           <span className={`material-symbols-outlined ${loading ? "animate-spin" : ""}`} style={{ fontSize: 16 }}>refresh</span>
-          {refreshLabel ? `Updated ${refreshLabel}` : "Refresh"}
+          {refreshLabel ? `${t("refresh")} ${refreshLabel}` : t("refresh")}
         </button>
       </div>
 
@@ -84,4 +86,3 @@ export default function DashboardPage() {
     </section>
   );
 }
-
