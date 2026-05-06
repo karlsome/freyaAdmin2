@@ -125,6 +125,10 @@ export async function fetchMasterFactories() {
   }
 }
 
+export async function fetchFactoryDBRecords() {
+  return query("Sasaki_Coating_MasterDB", "factoryDB", {}, { sort: { 工場: 1 } });
+}
+
 // ─── Production data (aggregates all 4 process DBs) ──────────────────────────
 const PROCESS_COLLECTIONS = ["kensaDB", "pressDB", "slitDB", "SRSDB"];
 
@@ -669,6 +673,9 @@ export function getMasterCollectionConfig(tabKey = "masterDB") {
   if (tabKey === "materialDB") {
     return { collectionName: "materialMasterDB2", baseQuery: { 工程名: "粘着工程" } };
   }
+  if (tabKey === "factoryDB") {
+    return { collectionName: "factoryDB", baseQuery: {} };
+  }
   return { collectionName: "masterDB", baseQuery: {} };
 }
 
@@ -789,6 +796,17 @@ export async function updateMasterRecord({ recordId, updates, username, tabKey =
     updates,
     username,
     collectionName,
+  });
+}
+
+export async function deleteMasterRecord({ recordId, username, tabKey = "masterDB" }) {
+  const { collectionName } = getMasterCollectionConfig(tabKey);
+  return _postJson("queries", {
+    dbName: "Sasaki_Coating_MasterDB",
+    collectionName,
+    query: { _id: recordId },
+    delete: true,
+    username,
   });
 }
 
