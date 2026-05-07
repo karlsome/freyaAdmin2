@@ -41,6 +41,8 @@ export default function FactoryDBWorkspace({ refreshToken, onFlash }) {
   const [editingRecord, setEditingRecord] = useState(null);
   const [formSubmitting, setFormSubmitting] = useState(false);
   const [deleteBusyId, setDeleteBusyId] = useState(null);
+  const [successModalOpen, setSuccessModalOpen] = useState(false);
+  const [successMessage, setSuccessMessage] = useState("");
 
   useEffect(() => {
     let active = true;
@@ -136,10 +138,12 @@ export default function FactoryDBWorkspace({ refreshToken, onFlash }) {
       if (editingRecord) {
         const recordId = editingRecord._id?.$oid || editingRecord._id;
         await updateMasterRecord({ recordId, updates: payload, username: authUserName, tabKey: "factoryDB" });
-        onFlash?.({ type: "success", message: "Factory record updated successfully." });
+        setSuccessMessage("Record edited successfully.");
+        setSuccessModalOpen(true);
       } else {
         await createMasterRecord({ data: payload, username: authUserName, tabKey: "factoryDB" });
-        onFlash?.({ type: "success", message: "Factory record created successfully." });
+        setSuccessMessage("Record created successfully.");
+        setSuccessModalOpen(true);
       }
 
       closeFormModal();
@@ -167,7 +171,8 @@ export default function FactoryDBWorkspace({ refreshToken, onFlash }) {
     setDeleteBusyId(recordId);
     try {
       await deleteMasterRecord({ recordId, username: authUser?.username || "unknown", tabKey: "factoryDB" });
-      onFlash?.({ type: "success", message: "Factory record deleted successfully." });
+      setSuccessMessage("Record deleted successfully.");
+      setSuccessModalOpen(true);
       setLocalRefresh((current) => current + 1);
     } catch (deleteError) {
       onFlash?.({ type: "error", message: deleteError.message || "Failed to delete factory record." });
@@ -305,6 +310,29 @@ export default function FactoryDBWorkspace({ refreshToken, onFlash }) {
         onClose={closeFormModal}
         onSubmit={handleSaveFactory}
       />
+
+      {successModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm">
+          <div className="flex min-h-full items-center justify-center p-4">
+            <div className="glass-card w-full max-w-md rounded-2xl overflow-hidden">
+              <div className="border-b border-outline-variant/20 px-6 py-5">
+                <h3 className="text-2xl font-black text-on-surface">Success</h3>
+              </div>
+              <div className="px-6 py-6">
+                <p className="text-sm text-on-surface-variant">{successMessage}</p>
+                <div className="mt-6 flex justify-end">
+                  <button
+                    onClick={() => setSuccessModalOpen(false)}
+                    className="rounded-2xl bg-primary px-4 py-2 text-xs font-bold text-on-primary transition hover:opacity-90"
+                  >
+                    OK
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </section>
   );
 }
