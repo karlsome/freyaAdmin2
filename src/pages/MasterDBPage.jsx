@@ -37,6 +37,7 @@ import {
 
 const ProductPDFsWorkspace = lazy(() => import("../components/ProductPDFsWorkspace"));
 const FuryoKanriWorkspace = lazy(() => import("../components/FuryoKanriWorkspace"));
+const FactoryDBWorkspace = lazy(() => import("../components/FactoryDBWorkspace"));
 
 function FlashBanner({ flash, onClose }) {
   if (!flash) return null;
@@ -113,7 +114,8 @@ export default function MasterDBPage() {
   const activeTabUI = getMasterTabUI(activeTab);
   const isProductPDFTab = activeTab === "productPDFs";
   const isFuryoKanriTab = activeTab === "furyoKanri";
-  const isSpecialTab = isProductPDFTab || isFuryoKanriTab;
+  const isFactoryTab = activeTab === "factoryDB";
+  const isSpecialTab = isProductPDFTab || isFuryoKanriTab || isFactoryTab;
   const fieldDefinitions = buildMasterFieldDefinitions(schemaFields, records, activeTab);
   const columns = getMasterTableColumns(records, schemaFields, activeTab);
   const batchEditEnabled = Object.keys(advancedQuery).length > 0 && stats.filteredCount > 0;
@@ -593,8 +595,10 @@ export default function MasterDBPage() {
         >
           {isProductPDFTab ? (
             <ProductPDFsWorkspace refreshToken={refreshNonce} onFlash={setFlash} />
-          ) : (
+          ) : isFuryoKanriTab ? (
             <FuryoKanriWorkspace refreshToken={refreshNonce} onFlash={setFlash} />
+          ) : (
+            <FactoryDBWorkspace refreshToken={refreshNonce} onFlash={setFlash} />
           )}
         </Suspense>
       ) : (
