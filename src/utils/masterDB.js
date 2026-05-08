@@ -4,6 +4,7 @@ export const MASTER_TABS = [
   { key: "productPDFs", label: "梱包 / 検査基準 / 3点照合", description: "Product PDF library", ready: true },
   { key: "furyoKanri", label: "不良管理", description: "Defect definition management", ready: true },
   { key: "factoryDB", label: "工場", description: "Factory master list", ready: true },
+  { key: "setsubiDB", label: "設備", description: "Equipment by factory", ready: true },
 ];
 
 export const MASTER_PAGE_SIZE_OPTIONS = [10, 25, 50, 100];

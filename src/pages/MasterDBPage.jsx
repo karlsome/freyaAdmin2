@@ -38,6 +38,7 @@ import {
 const ProductPDFsWorkspace = lazy(() => import("../components/ProductPDFsWorkspace"));
 const FuryoKanriWorkspace = lazy(() => import("../components/FuryoKanriWorkspace"));
 const FactoryDBWorkspace = lazy(() => import("../components/FactoryDBWorkspace"));
+const SetsubiDBWorkspace = lazy(() => import("../components/SetsubiDBWorkspace"));
 
 function FlashBanner({ flash, onClose }) {
   if (!flash) return null;
@@ -115,7 +116,8 @@ export default function MasterDBPage() {
   const isProductPDFTab = activeTab === "productPDFs";
   const isFuryoKanriTab = activeTab === "furyoKanri";
   const isFactoryTab = activeTab === "factoryDB";
-  const isSpecialTab = isProductPDFTab || isFuryoKanriTab || isFactoryTab;
+  const isSetsubiTab = activeTab === "setsubiDB";
+  const isSpecialTab = isProductPDFTab || isFuryoKanriTab || isFactoryTab || isSetsubiTab;
   const fieldDefinitions = buildMasterFieldDefinitions(schemaFields, records, activeTab);
   const columns = getMasterTableColumns(records, schemaFields, activeTab);
   const batchEditEnabled = Object.keys(advancedQuery).length > 0 && stats.filteredCount > 0;
@@ -597,8 +599,10 @@ export default function MasterDBPage() {
             <ProductPDFsWorkspace refreshToken={refreshNonce} onFlash={setFlash} />
           ) : isFuryoKanriTab ? (
             <FuryoKanriWorkspace refreshToken={refreshNonce} onFlash={setFlash} />
-          ) : (
+          ) : isFactoryTab ? (
             <FactoryDBWorkspace refreshToken={refreshNonce} onFlash={setFlash} />
+          ) : (
+            <SetsubiDBWorkspace refreshToken={refreshNonce} />
           )}
         </Suspense>
       ) : (
