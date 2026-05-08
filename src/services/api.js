@@ -133,6 +133,10 @@ export async function fetchSetsubiDBRecords() {
   return query("Sasaki_Coating_MasterDB", "setsubiDB", {}, { sort: { 工場: 1, name: 1 } });
 }
 
+export async function fetchEquipmentHistory(equipmentId) {
+  return query("Sasaki_Coating_MasterDB", "equipmentHistoryDB", { equipmentId }, { sort: { eventDate: -1 } });
+}
+
 // ─── Production data (aggregates all 4 process DBs) ──────────────────────────
 const PROCESS_COLLECTIONS = ["kensaDB", "pressDB", "slitDB", "SRSDB"];
 
@@ -682,6 +686,9 @@ export function getMasterCollectionConfig(tabKey = "masterDB") {
   }
   if (tabKey === "setsubiDB") {
     return { collectionName: "setsubiDB", baseQuery: {} };
+  }
+  if (tabKey === "equipmentHistoryDB") {
+    return { collectionName: "equipmentHistoryDB", baseQuery: {} };
   }
   return { collectionName: "masterDB", baseQuery: {} };
 }

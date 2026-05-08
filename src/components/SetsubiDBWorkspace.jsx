@@ -7,6 +7,8 @@ import {
   updateMasterRecord,
 } from "../services/api";
 import { getAuthUser } from "../utils/masterDB";
+import EquipmentEventModal from "./EquipmentEventModal";
+import EquipmentViewModal from "./EquipmentViewModal";
 import SetsubiRecordModal from "./SetsubiRecordModal";
 
 function SuccessModal({ message, onClose }) {
@@ -36,10 +38,7 @@ function SuccessModal({ message, onClose }) {
   );
 }
 
-function EquipmentRow({ equipment, canEdit, deleteBusyId, onEdit, onDelete }) {
-  const recordId = equipment._id?.$oid ?? equipment._id;
-  const busy = deleteBusyId === recordId;
-
+function EquipmentRow({ equipment, canEdit, onView, onEdit }) {
   return (
     <div className="flex items-center justify-between gap-3 rounded-xl border border-outline-variant/15 bg-surface px-4 py-3">
       <div className="min-w-0 flex-1">
@@ -50,8 +49,16 @@ function EquipmentRow({ equipment, canEdit, deleteBusyId, onEdit, onDelete }) {
           </p>
         )}
       </div>
-      {canEdit && (
-        <div className="flex shrink-0 items-center gap-2">
+      <div className="flex shrink-0 items-center gap-2">
+        <button
+          type="button"
+          onClick={() => onView(equipment)}
+          className="inline-flex items-center justify-center gap-1 rounded-xl border border-outline-variant/30 bg-surface-container px-3 py-1.5 text-[11px] font-bold text-on-surface transition hover:bg-surface-container-high"
+        >
+          <span className="material-symbols-outlined" style={{ fontSize: 13 }}>info</span>
+          View
+        </button>
+        {canEdit && (
           <button
             type="button"
             onClick={() => onEdit(equipment)}
@@ -59,21 +66,13 @@ function EquipmentRow({ equipment, canEdit, deleteBusyId, onEdit, onDelete }) {
           >
             Edit
           </button>
-          <button
-            type="button"
-            onClick={() => onDelete(equipment)}
-            disabled={busy}
-            className="inline-flex items-center justify-center rounded-xl border border-destructive/20 bg-destructive/10 px-3 py-1.5 text-[11px] font-bold text-destructive transition hover:bg-destructive/20 disabled:cursor-not-allowed disabled:opacity-40"
-          >
-            {busy ? "…" : "Delete"}
-          </button>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }
 
-function FactoryBox({ factory, equipment, canEdit, deleteBusyId, onAdd, onEdit, onDelete }) {
+function FactoryBox({ factory, equipment, canEdit, onAddEvent, onView, onEdit }) {
   const name = factory["工場"] || "—";
 
   return (
@@ -86,18 +85,18 @@ function FactoryBox({ factory, equipment, canEdit, deleteBusyId, onAdd, onEdit, 
             </span>
           </div>
           <div>
-            <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-outline">工場</p>
+            
             <h4 className="text-base font-black text-on-surface">{name}</h4>
           </div>
         </div>
         {canEdit && (
           <button
             type="button"
-            onClick={() => onAdd(factory)}
+            onClick={() => onAddEvent(factory)}
             className="inline-flex items-center gap-1.5 rounded-2xl bg-primary/10 px-3 py-2 text-xs font-bold text-primary transition hover:bg-primary/20"
           >
             <span className="material-symbols-outlined" style={{ fontSize: 14 }}>add</span>
-            Add
+            事案を追加
           </button>
         )}
       </div>
@@ -115,9 +114,8 @@ function FactoryBox({ factory, equipment, canEdit, deleteBusyId, onAdd, onEdit, 
                 key={id}
                 equipment={eq}
                 canEdit={canEdit}
-                deleteBusyId={deleteBusyId}
+                onView={onView}
                 onEdit={onEdit}
-                onDelete={onDelete}
               />
             );
           })
@@ -137,11 +135,21 @@ export default function SetsubiDBWorkspace({ refreshToken, onFlash }) {
   const [error, setError] = useState("");
   const [localRefresh, setLocalRefresh] = useState(0);
 
-  const [modalOpen, setModalOpen] = useState(false);
+  // Equipment create/edit modal
+  const [equipModalOpen, setEquipModalOpen] = useState(false);
   const [editingRecord, setEditingRecord] = useState(null);
   const [defaultFactory, setDefaultFactory] = useState("");
-  const [submitting, setSubmitting] = useState(false);
-  const [deleteBusyId, setDeleteBusyId] = useState(null);
+  const [equipSubmitting, setEquipSubmitting] = useState(false);
+
+  // Event (事案) modal
+  const [eventModalOpen, setEventModalOpen] = useState(false);
+  const [eventModalFactory, setEventModalFactory] = useState(null);
+  const [eventSubmitting, setEventSubmitting] = useState(false);
+
+  // View modal
+  const [viewModalOpen, setViewModalOpen] = useState(false);
+  const [viewingEquipment, setViewingEquipment] = useState(null);
+
   const [successMessage, setSuccessMessage] = useState("");
 
   useEffect(() => {
@@ -188,26 +196,28 @@ export default function SetsubiDBWorkspace({ refreshToken, onFlash }) {
     return map;
   }, [factories, equipment]);
 
-  function openCreateModal(factory) {
+  // ── Equipment CRUD ──────────────────────────────────────────────────────────
+
+  function openCreateEquipModal(factoryName = "") {
     setEditingRecord(null);
-    setDefaultFactory(factory["工場"] || "");
-    setModalOpen(true);
+    setDefaultFactory(factoryName);
+    setEquipModalOpen(true);
   }
 
-  function openEditModal(record) {
+  function openEditEquipModal(record) {
     setEditingRecord(record);
     setDefaultFactory("");
-    setModalOpen(true);
+    setEquipModalOpen(true);
   }
 
-  function closeModal() {
-    setModalOpen(false);
+  function closeEquipModal() {
+    setEquipModalOpen(false);
     setEditingRecord(null);
     setDefaultFactory("");
   }
 
-  async function handleSave(draft) {
-    setSubmitting(true);
+  async function handleSaveEquipment(draft) {
+    setEquipSubmitting(true);
     try {
       const payload = {
         name: draft.name || undefined,
@@ -225,36 +235,89 @@ export default function SetsubiDBWorkspace({ refreshToken, onFlash }) {
         setSuccessMessage("Record created successfully.");
       }
 
-      closeModal();
+      closeEquipModal();
       setLocalRefresh((n) => n + 1);
     } catch (err) {
       onFlash?.({ type: "error", message: err?.message || "Failed to save equipment record." });
     } finally {
-      setSubmitting(false);
+      setEquipSubmitting(false);
     }
   }
 
-  async function handleDelete(record) {
-    if (!canEdit || !record) return;
-    const recordId = record._id?.$oid ?? record._id;
-    if (!recordId) {
-      onFlash?.({ type: "error", message: "Cannot delete a record without an ID." });
-      return;
-    }
+  async function handleDeleteEquipment() {
+    if (!editingRecord) return;
+    const recordId = editingRecord._id?.$oid ?? editingRecord._id;
+    if (!recordId) return;
 
-    if (!window.confirm(`Delete "${record.name || recordId}"? This cannot be undone.`)) return;
+    if (!window.confirm(`Delete "${editingRecord.name || recordId}"? This cannot be undone.`)) return;
 
-    setDeleteBusyId(recordId);
+    setEquipSubmitting(true);
     try {
       await deleteMasterRecord({ recordId, username: authUser?.username || "unknown", tabKey: "setsubiDB" });
       setSuccessMessage("Record deleted successfully.");
+      closeEquipModal();
       setLocalRefresh((n) => n + 1);
     } catch (err) {
       onFlash?.({ type: "error", message: err?.message || "Failed to delete equipment record." });
     } finally {
-      setDeleteBusyId(null);
+      setEquipSubmitting(false);
     }
   }
+
+  // ── Event (事案) CRUD ────────────────────────────────────────────────────────
+
+  function openEventModal(factory) {
+    setEventModalFactory(factory);
+    setEventModalOpen(true);
+  }
+
+  function closeEventModal() {
+    setEventModalOpen(false);
+    setEventModalFactory(null);
+  }
+
+  async function handleSaveEvent(draft) {
+    setEventSubmitting(true);
+    try {
+      const payload = {
+        equipmentId: draft.equipmentId || undefined,
+        equipmentName: draft.equipmentName || undefined,
+        工場: draft["工場"] || undefined,
+        発生事案: draft["発生事案"] || undefined,
+        名前: draft["名前"] || undefined,
+        eventDate: draft.eventDate || undefined,
+      };
+      await createMasterRecord({
+        data: payload,
+        username: authUser?.username || "unknown",
+        tabKey: "equipmentHistoryDB",
+      });
+      setSuccessMessage("事案を登録しました。");
+      closeEventModal();
+    } catch (err) {
+      onFlash?.({ type: "error", message: err?.message || "Failed to save event record." });
+    } finally {
+      setEventSubmitting(false);
+    }
+  }
+
+  // ── View ────────────────────────────────────────────────────────────────────
+
+  function openViewModal(record) {
+    setViewingEquipment(record);
+    setViewModalOpen(true);
+  }
+
+  function closeViewModal() {
+    setViewModalOpen(false);
+    setViewingEquipment(null);
+  }
+
+  // Equipment belonging to the factory whose event modal is open
+  const eventModalEquipment = useMemo(() => {
+    if (!eventModalFactory) return [];
+    return equipmentByFactory.get(eventModalFactory["工場"] || "") ?? [];
+  }, [eventModalFactory, equipmentByFactory]);
 
   return (
     <section className="glass-card rounded-3xl p-6">
@@ -272,7 +335,7 @@ export default function SetsubiDBWorkspace({ refreshToken, onFlash }) {
           {canEdit && (
             <button
               type="button"
-              onClick={() => { setEditingRecord(null); setDefaultFactory(""); setModalOpen(true); }}
+              onClick={() => openCreateEquipModal()}
               className="inline-flex items-center gap-2 rounded-2xl bg-primary px-4 py-3 text-sm font-bold text-on-primary transition hover:opacity-90"
             >
               <span className="material-symbols-outlined" style={{ fontSize: 16 }}>add</span>
@@ -311,24 +374,41 @@ export default function SetsubiDBWorkspace({ refreshToken, onFlash }) {
                 factory={factory}
                 equipment={factoryEquipment}
                 canEdit={canEdit}
-                deleteBusyId={deleteBusyId}
-                onAdd={openCreateModal}
-                onEdit={openEditModal}
-                onDelete={handleDelete}
+                onAddEvent={openEventModal}
+                onView={openViewModal}
+                onEdit={openEditEquipModal}
               />
             );
           })}
         </div>
       )}
 
+      {/* Equipment create/edit modal */}
       <SetsubiRecordModal
-        open={modalOpen}
+        open={equipModalOpen}
         record={editingRecord}
-        submitting={submitting}
+        submitting={equipSubmitting}
         factories={factoryNames}
         defaultFactory={defaultFactory}
-        onClose={closeModal}
-        onSubmit={handleSave}
+        onClose={closeEquipModal}
+        onSubmit={handleSaveEquipment}
+        onDelete={editingRecord ? handleDeleteEquipment : undefined}
+      />
+
+      {/* Event (事案) modal */}
+      <EquipmentEventModal
+        open={eventModalOpen}
+        factoryEquipment={eventModalEquipment}
+        submitting={eventSubmitting}
+        onClose={closeEventModal}
+        onSubmit={handleSaveEvent}
+      />
+
+      {/* View modal */}
+      <EquipmentViewModal
+        open={viewModalOpen}
+        equipment={viewingEquipment}
+        onClose={closeViewModal}
       />
 
       <SuccessModal message={successMessage} onClose={() => setSuccessMessage("")} />

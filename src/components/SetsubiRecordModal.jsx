@@ -31,6 +31,7 @@ export default function SetsubiRecordModal({
   defaultFactory = "",
   onClose,
   onSubmit,
+  onDelete,
 }) {
   const [draft, setDraft] = useState(() => buildInitialDraft(record));
 
@@ -144,7 +145,20 @@ export default function SetsubiRecordModal({
             </div>
 
             <div className="mt-6 flex items-center justify-between gap-4 border-t border-outline-variant/20 pt-5">
-              <p className="text-sm text-on-surface-variant">設備名 is required before saving.</p>
+              <div>
+                {isEdit && onDelete ? (
+                  <button
+                    type="button"
+                    onClick={onDelete}
+                    disabled={submitting}
+                    className="rounded-2xl border border-destructive/20 bg-destructive/10 px-4 py-2 text-xs font-bold text-destructive transition hover:bg-destructive/20 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    Delete
+                  </button>
+                ) : (
+                  <p className="text-sm text-on-surface-variant">設備名 is required before saving.</p>
+                )}
+              </div>
               <div className="flex items-center gap-3">
                 <button
                   type="button"
