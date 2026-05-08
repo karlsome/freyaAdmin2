@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { uploadEquipmentEventImage } from "../services/api";
 
 const CATEGORY_TAGS = ["メンテナンス", "修理", "部品交換", "テスト", "その他"];
 
@@ -9,7 +10,17 @@ function buildInitialDraft(preselectedEquipmentId) {
     名前: "",
     eventDate: "",
     tags: [],
+    imageURLs: [],
   };
+}
+
+function toBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error("Failed to read file"));
+    reader.onloadend = () => resolve(String(reader.result || ""));
+    reader.readAsDataURL(file);
+  });
 }
 
 /**
@@ -20,22 +31,28 @@ function buildInitialDraft(preselectedEquipmentId) {
  *   factoryEquipment       — array of setsubiDB records for the current factory (used to build dropdown)
  *   preselectedEquipmentId — string, pre-select a specific piece of equipment
  *   submitting             — boolean
+ *   username               — string, current user (passed to upload endpoint)
  *   onClose                — () => void
- *   onSubmit               — (draft: { equipmentId, equipmentName, 工場, 発生事案, 名前, eventDate }) => void
+ *   onSubmit               — (draft: { equipmentId, equipmentName, 工場, 発生事案, 名前, eventDate, tags, imageURLs }) => void
  */
 export default function EquipmentEventModal({
   open,
   factoryEquipment = [],
   preselectedEquipmentId = "",
   submitting,
+  username = "unknown",
   onClose,
   onSubmit,
 }) {
   const [draft, setDraft] = useState(() => buildInitialDraft(preselectedEquipmentId));
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState("");
+  const fileInputRef = useRef(null);
 
   useEffect(() => {
     if (!open) return undefined;
     setDraft(buildInitialDraft(preselectedEquipmentId));
+    setUploadError("");
   }, [open, preselectedEquipmentId]);
 
   const hasData = useMemo(
@@ -53,6 +70,51 @@ export default function EquipmentEventModal({
       tags: current.tags.includes(tag)
         ? current.tags.filter((t) => t !== tag)
         : [...current.tags, tag],
+    }));
+  }
+
+  async function handleFileChange(e) {
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
+    e.target.value = "";
+
+    setUploading(true);
+    setUploadError("");
+
+    const selectedEquipment = factoryEquipment.find((eq) => {
+      const id = eq._id?.$oid ?? eq._id;
+      return id === draft.equipmentId;
+    });
+
+    try {
+      const urls = await Promise.all(
+        files.map(async (file) => {
+          const base64 = await toBase64(file);
+          const result = await uploadEquipmentEventImage({
+            base64,
+            factoryName: selectedEquipment?.["工場"] || "",
+            equipmentName: selectedEquipment?.name || "",
+            username,
+          });
+          return result.imageURL;
+        })
+      );
+      setDraft((current) => ({
+        ...current,
+        imageURLs: [...current.imageURLs, ...urls],
+      }));
+    } catch (err) {
+      const raw = err?.message || "";
+      setUploadError(raw.startsWith("<") ? "Upload failed — server error. Check that the server is running." : raw || "Upload failed.");
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  function removeImage(url) {
+    setDraft((current) => ({
+      ...current,
+      imageURLs: current.imageURLs.filter((u) => u !== url),
     }));
   }
 
@@ -87,39 +149,30 @@ export default function EquipmentEventModal({
                   設備に関する故障・修理・アップグレードなどを記録します。
                 </p>
               </div>
-              <button
-                type="button"
-                onClick={onClose}
-                className="flex h-11 w-11 items-center justify-center rounded-2xl bg-surface-container text-on-surface-variant transition hover:bg-surface-container-high hover:text-on-surface"
-              >
+              <button type="button" onClick={onClose}
+                className="flex h-11 w-11 items-center justify-center rounded-2xl bg-surface-container text-on-surface-variant transition hover:bg-surface-container-high hover:text-on-surface">
                 <span className="material-symbols-outlined">close</span>
               </button>
             </div>
           </div>
 
-          <form
-            onSubmit={handleSubmit}
-            className="max-h-[82vh] overflow-y-auto px-6 py-6 scrollbar-hide"
-          >
+          <form onSubmit={handleSubmit} className="max-h-[82vh] overflow-y-auto px-6 py-6 scrollbar-hide">
             <div className="grid gap-4">
 
+              {/* Equipment dropdown */}
               <label className="block">
                 <div className="mb-2 text-[11px] font-bold uppercase tracking-[0.18em] text-outline">
                   設備 <span className="text-error">*</span>
                 </div>
                 {factoryEquipment.length > 0 ? (
-                  <select
-                    value={draft.equipmentId}
+                  <select value={draft.equipmentId}
                     onChange={(e) => set("equipmentId", e.target.value)}
                     className="w-full rounded-2xl border border-outline-variant/30 bg-surface px-3 py-3 text-sm text-on-surface outline-none transition focus:border-primary/40"
-                    required
-                  >
+                    required>
                     <option value="">— 設備を選択 —</option>
                     {factoryEquipment.map((eq) => {
                       const id = eq._id?.$oid ?? eq._id ?? eq.name;
-                      return (
-                        <option key={id} value={eq._id?.$oid ?? eq._id}>{eq.name || id}</option>
-                      );
+                      return <option key={id} value={eq._id?.$oid ?? eq._id}>{eq.name || id}</option>;
                     })}
                   </select>
                 ) : (
@@ -129,43 +182,83 @@ export default function EquipmentEventModal({
                 )}
               </label>
 
+              {/* Description */}
               <label className="block">
                 <div className="mb-2 text-[11px] font-bold uppercase tracking-[0.18em] text-outline">
                   発生事案 <span className="text-error">*</span>
                 </div>
-                <textarea
-                  value={draft["発生事案"]}
+                <textarea value={draft["発生事案"]}
                   onChange={(e) => set("発生事案", e.target.value)}
                   placeholder="例：ベルト交換、モーター修理、定期点検…"
                   rows={4}
                   className="w-full rounded-2xl border border-outline-variant/30 bg-surface px-3 py-3 text-sm text-on-surface outline-none transition focus:border-primary/40 resize-none"
-                  required
-                />
+                  required />
               </label>
 
+              {/* Name + date */}
               <div className="grid gap-4 sm:grid-cols-2">
                 <label className="block">
                   <div className="mb-2 text-[11px] font-bold uppercase tracking-[0.18em] text-outline">名前</div>
-                  <input
-                    type="text"
-                    value={draft["名前"]}
+                  <input type="text" value={draft["名前"]}
                     onChange={(e) => set("名前", e.target.value)}
                     placeholder="担当者名"
-                    className="w-full rounded-2xl border border-outline-variant/30 bg-surface px-3 py-3 text-sm text-on-surface outline-none transition focus:border-primary/40"
-                  />
+                    className="w-full rounded-2xl border border-outline-variant/30 bg-surface px-3 py-3 text-sm text-on-surface outline-none transition focus:border-primary/40" />
                 </label>
-
                 <label className="block">
                   <div className="mb-2 text-[11px] font-bold uppercase tracking-[0.18em] text-outline">発生日</div>
-                  <input
-                    type="date"
-                    value={draft.eventDate}
+                  <input type="date" value={draft.eventDate}
                     onChange={(e) => set("eventDate", e.target.value)}
-                    className="w-full rounded-2xl border border-outline-variant/30 bg-surface px-3 py-3 text-sm text-on-surface outline-none transition focus:border-primary/40"
-                  />
+                    className="w-full rounded-2xl border border-outline-variant/30 bg-surface px-3 py-3 text-sm text-on-surface outline-none transition focus:border-primary/40" />
                 </label>
               </div>
 
+              {/* ── Image upload ─────────────────────────────────────────── */}
+              <div>
+                <div className="mb-2 text-[11px] font-bold uppercase tracking-[0.18em] text-outline">画像</div>
+
+                <input ref={fileInputRef} type="file" accept="image/*" multiple
+                  className="hidden" onChange={handleFileChange} />
+
+                <button type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={uploading}
+                  className="inline-flex items-center gap-2 rounded-2xl border border-outline-variant/30 bg-surface px-4 py-2.5 text-xs font-bold text-on-surface transition hover:bg-surface-container disabled:cursor-not-allowed disabled:opacity-50">
+                  {uploading ? (
+                    <>
+                      <span className="material-symbols-outlined animate-spin" style={{ fontSize: 15 }}>progress_activity</span>
+                      アップロード中…
+                    </>
+                  ) : (
+                    <>
+                      <span className="material-symbols-outlined" style={{ fontSize: 15 }}>attach_file</span>
+                      画像を添付
+                    </>
+                  )}
+                </button>
+
+                {uploadError && (
+                  <p className="mt-2 text-xs text-error">{uploadError}</p>
+                )}
+
+                {draft.imageURLs.length > 0 && (
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {draft.imageURLs.map((url) => (
+                      <div key={url} className="group relative">
+                        <img src={url} alt="添付画像"
+                          className="h-16 w-16 rounded-xl object-cover border border-outline-variant/20" />
+                        <button type="button"
+                          onClick={() => removeImage(url)}
+                          className="absolute -right-1.5 -top-1.5 hidden h-5 w-5 items-center justify-center rounded-full bg-error text-white group-hover:flex"
+                          style={{ fontSize: 11 }}>
+                          <span className="material-symbols-outlined" style={{ fontSize: 11 }}>close</span>
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* ── Category tags ─────────────────────────────────────────── */}
               <div>
                 <div className="mb-2 text-[11px] font-bold uppercase tracking-[0.18em] text-outline">
                   カテゴリ <span className="text-error">*</span>
@@ -174,16 +267,12 @@ export default function EquipmentEventModal({
                   {CATEGORY_TAGS.map((tag) => {
                     const selected = draft.tags.includes(tag);
                     return (
-                      <button
-                        key={tag}
-                        type="button"
-                        onClick={() => toggleTag(tag)}
+                      <button key={tag} type="button" onClick={() => toggleTag(tag)}
                         className={`rounded-full px-3.5 py-1.5 text-xs font-bold transition ${
                           selected
                             ? "bg-primary text-on-primary shadow-sm"
                             : "border border-outline-variant/30 bg-surface text-on-surface hover:bg-surface-container"
-                        }`}
-                      >
+                        }`}>
                         {tag}
                       </button>
                     );
@@ -196,18 +285,12 @@ export default function EquipmentEventModal({
             <div className="mt-6 flex items-center justify-between gap-4 border-t border-outline-variant/20 pt-5">
               <p className="text-sm text-on-surface-variant">設備・発生事案・カテゴリは必須です。</p>
               <div className="flex items-center gap-3">
-                <button
-                  type="button"
-                  onClick={onClose}
-                  className="rounded-2xl border border-outline-variant/20 px-4 py-2 text-xs font-bold text-on-surface transition hover:bg-surface-container"
-                >
+                <button type="button" onClick={onClose}
+                  className="rounded-2xl border border-outline-variant/20 px-4 py-2 text-xs font-bold text-on-surface transition hover:bg-surface-container">
                   Cancel
                 </button>
-                <button
-                  type="submit"
-                  disabled={!hasData || submitting}
-                  className="rounded-2xl bg-primary px-4 py-2 text-xs font-bold text-on-primary transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
-                >
+                <button type="submit" disabled={!hasData || submitting || uploading}
+                  className="rounded-2xl bg-primary px-4 py-2 text-xs font-bold text-on-primary transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50">
                   {submitting ? "保存中…" : "事案を登録"}
                 </button>
               </div>

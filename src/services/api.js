@@ -137,6 +137,10 @@ export async function fetchEquipmentHistory(equipmentId) {
   return query("Sasaki_Coating_MasterDB", "equipmentHistoryDB", { equipmentId }, { sort: { eventDate: -1 } });
 }
 
+export async function uploadEquipmentEventImage({ base64, factoryName, equipmentName, username }) {
+  return _postJson("api/upload-equipment-event-image", { base64, factoryName, equipmentName, username });
+}
+
 // ─── Production data (aggregates all 4 process DBs) ──────────────────────────
 const PROCESS_COLLECTIONS = ["kensaDB", "pressDB", "slitDB", "SRSDB"];
 

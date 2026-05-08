@@ -1,4 +1,20 @@
 import { useEffect, useState } from "react";
+
+function ImageLightbox({ url, onClose }) {
+  if (!url) return null;
+  return (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 backdrop-blur-sm"
+      onClick={onClose}>
+      <button type="button" onClick={onClose}
+        className="absolute right-4 top-4 flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-white transition hover:bg-white/20">
+        <span className="material-symbols-outlined">close</span>
+      </button>
+      <img src={url} alt="full size"
+        className="max-h-[90vh] max-w-[90vw] rounded-2xl object-contain shadow-2xl"
+        onClick={(e) => e.stopPropagation()} />
+    </div>
+  );
+}
 import { fetchEquipmentHistory } from "../services/api";
 
 function DetailRow({ label, value }) {
@@ -12,6 +28,10 @@ function DetailRow({ label, value }) {
 }
 
 function EventCard({ event }) {
+  const [lightboxURL, setLightboxURL] = useState(null);
+  const images = Array.isArray(event.imageURLs) ? event.imageURLs : [];
+  const tags = Array.isArray(event.tags) ? event.tags : [];
+
   return (
     <div className="rounded-2xl border border-outline-variant/20 bg-surface p-4">
       <div className="mb-2 flex items-center justify-between gap-3">
@@ -26,9 +46,29 @@ function EventCard({ event }) {
           <span className="text-[11px] text-on-surface-variant">{event["名前"]}</span>
         )}
       </div>
+      {tags.length > 0 && (
+        <div className="mb-2 flex flex-wrap gap-1">
+          {tags.map((tag) => (
+            <span key={tag} className="rounded-full bg-surface-container px-2 py-0.5 text-[10px] font-bold text-on-surface-variant">
+              {tag}
+            </span>
+          ))}
+        </div>
+      )}
       <p className="whitespace-pre-wrap text-sm text-on-surface">
         {event["発生事案"] || "—"}
       </p>
+      {images.length > 0 && (
+        <div className="mt-3 flex flex-wrap gap-2">
+          {images.map((url) => (
+            <button key={url} type="button" onClick={() => setLightboxURL(url)}
+              className="overflow-hidden rounded-xl border border-outline-variant/20 transition hover:opacity-80">
+              <img src={url} alt="添付画像" className="h-14 w-14 object-cover" />
+            </button>
+          ))}
+        </div>
+      )}
+      <ImageLightbox url={lightboxURL} onClose={() => setLightboxURL(null)} />
     </div>
   );
 }
