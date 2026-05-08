@@ -105,6 +105,16 @@ export default function EquipmentViewModal({ open, equipment, onClose }) {
 
             <section className="mb-6">
               <p className="mb-3 text-[11px] font-bold uppercase tracking-[0.18em] text-outline">設備情報</p>
+              {equipment.imageURL && (
+                <div className="mb-3 overflow-hidden rounded-2xl border border-outline-variant/20 bg-surface-container">
+                  <img
+                    src={equipment.imageURL}
+                    alt={equipment.name || "equipment"}
+                    className="h-40 w-full object-contain p-3"
+                    onError={(e) => { e.currentTarget.style.display = "none"; }}
+                  />
+                </div>
+              )}
               <dl className="grid grid-cols-2 gap-4 rounded-2xl border border-outline-variant/20 bg-surface-container px-5 py-4">
                 <DetailRow label="設備名" value={equipment.name} />
                 <DetailRow label="工場" value={equipment["工場"]} />

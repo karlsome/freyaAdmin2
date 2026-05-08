@@ -223,6 +223,7 @@ export default function SetsubiDBWorkspace({ refreshToken, onFlash }) {
         name: draft.name || undefined,
         工場: draft["工場"] || undefined,
         installationDate: draft.installationDate || undefined,
+        imageURL: draft.imageURL || undefined,
       };
       const username = authUser?.username || "unknown";
 

@@ -2,12 +2,13 @@ import { useEffect, useMemo, useState } from "react";
 
 function buildInitialDraft(record) {
   if (!record) {
-    return { name: "", 工場: "", installationDate: "" };
+    return { name: "", 工場: "", installationDate: "", imageURL: "" };
   }
   return {
     name: record.name || "",
     工場: record["工場"] || "",
     installationDate: record.installationDate || "",
+    imageURL: record.imageURL || "",
   };
 }
 
@@ -139,6 +140,17 @@ export default function SetsubiRecordModal({
                   type="date"
                   value={draft.installationDate}
                   onChange={(e) => set("installationDate", e.target.value)}
+                  className="w-full rounded-2xl border border-outline-variant/30 bg-surface px-3 py-3 text-sm text-on-surface outline-none transition focus:border-primary/40"
+                />
+              </label>
+
+              <label className="block">
+                <div className="mb-2 text-[11px] font-bold uppercase tracking-[0.18em] text-outline">Image URL</div>
+                <input
+                  type="url"
+                  value={draft.imageURL}
+                  onChange={(e) => set("imageURL", e.target.value)}
+                  placeholder="https://…"
                   className="w-full rounded-2xl border border-outline-variant/30 bg-surface px-3 py-3 text-sm text-on-surface outline-none transition focus:border-primary/40"
                 />
               </label>
