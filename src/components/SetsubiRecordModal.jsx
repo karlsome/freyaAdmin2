@@ -1,0 +1,171 @@
+import { useEffect, useMemo, useState } from "react";
+
+function buildInitialDraft(record) {
+  if (!record) {
+    return { name: "", 工場: "", installationDate: "" };
+  }
+  return {
+    name: record.name || "",
+    工場: record["工場"] || "",
+    installationDate: record.installationDate || "",
+  };
+}
+
+/**
+ * Reusable modal for creating and editing equipment (設備) records.
+ *
+ * Props:
+ *   open            — boolean, controls visibility
+ *   record          — existing record object for edit mode, or null for create
+ *   submitting      — boolean, disables submit while saving
+ *   factories       — string[], list of factory names for the dropdown
+ *   defaultFactory  — string, pre-select a factory when opening in create mode
+ *   onClose         — () => void
+ *   onSubmit        — (draft: { name, 工場, installationDate }) => void
+ */
+export default function SetsubiRecordModal({
+  open,
+  record,
+  submitting,
+  factories = [],
+  defaultFactory = "",
+  onClose,
+  onSubmit,
+}) {
+  const [draft, setDraft] = useState(() => buildInitialDraft(record));
+
+  useEffect(() => {
+    if (!open) return undefined;
+    const base = buildInitialDraft(record);
+    if (!record && defaultFactory) base["工場"] = defaultFactory;
+    setDraft(base);
+  }, [open, record, defaultFactory]);
+
+  const hasData = useMemo(
+    () => draft.name.trim() !== "",
+    [draft]
+  );
+
+  function set(field, value) {
+    setDraft((current) => ({ ...current, [field]: value }));
+  }
+
+  if (!open) return null;
+
+  const isEdit = Boolean(record);
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm">
+      <div className="flex min-h-full items-center justify-center p-4">
+        <div className="glass-card w-full max-w-lg rounded-2xl overflow-hidden">
+
+          <div className="border-b border-outline-variant/20 px-6 py-5">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-outline">
+                  {isEdit ? "Edit Equipment" : "Add Equipment"}
+                </div>
+                <h3 className="mt-2 text-2xl font-black text-on-surface">
+                  {isEdit ? "Edit Equipment Record" : "Add Equipment Record"}
+                </h3>
+                <p className="mt-1 text-sm text-on-surface-variant">
+                  {isEdit
+                    ? "Update the selected equipment details."
+                    : "Create a new equipment entry in setsubiDB."}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={onClose}
+                className="flex h-11 w-11 items-center justify-center rounded-2xl bg-surface-container text-on-surface-variant transition hover:bg-surface-container-high hover:text-on-surface"
+              >
+                <span className="material-symbols-outlined">close</span>
+              </button>
+            </div>
+          </div>
+
+          <form
+            onSubmit={(event) => {
+              event.preventDefault();
+              if (!hasData) return;
+              onSubmit(draft);
+            }}
+            className="max-h-[82vh] overflow-y-auto px-6 py-6 scrollbar-hide"
+          >
+            <div className="grid gap-4">
+
+              <label className="block">
+                <div className="mb-2 text-[11px] font-bold uppercase tracking-[0.18em] text-outline">
+                  設備名 <span className="text-error">*</span>
+                </div>
+                <input
+                  type="text"
+                  value={draft.name}
+                  onChange={(e) => set("name", e.target.value)}
+                  placeholder="e.g. プレス機 #1"
+                  className="w-full rounded-2xl border border-outline-variant/30 bg-surface px-3 py-3 text-sm text-on-surface outline-none transition focus:border-primary/40"
+                  required
+                />
+              </label>
+
+              <label className="block">
+                <div className="mb-2 text-[11px] font-bold uppercase tracking-[0.18em] text-outline">工場 (Location)</div>
+                {factories.length > 0 ? (
+                  <select
+                    value={draft["工場"]}
+                    onChange={(e) => set("工場", e.target.value)}
+                    className="w-full rounded-2xl border border-outline-variant/30 bg-surface px-3 py-3 text-sm text-on-surface outline-none transition focus:border-primary/40"
+                  >
+                    <option value="">— Select factory —</option>
+                    {factories.map((f) => (
+                      <option key={f} value={f}>{f}</option>
+                    ))}
+                  </select>
+                ) : (
+                  <input
+                    type="text"
+                    value={draft["工場"]}
+                    onChange={(e) => set("工場", e.target.value)}
+                    placeholder="Factory name"
+                    className="w-full rounded-2xl border border-outline-variant/30 bg-surface px-3 py-3 text-sm text-on-surface outline-none transition focus:border-primary/40"
+                  />
+                )}
+              </label>
+
+              <label className="block">
+                <div className="mb-2 text-[11px] font-bold uppercase tracking-[0.18em] text-outline">Installation Date</div>
+                <input
+                  type="date"
+                  value={draft.installationDate}
+                  onChange={(e) => set("installationDate", e.target.value)}
+                  className="w-full rounded-2xl border border-outline-variant/30 bg-surface px-3 py-3 text-sm text-on-surface outline-none transition focus:border-primary/40"
+                />
+              </label>
+            </div>
+
+            <div className="mt-6 flex items-center justify-between gap-4 border-t border-outline-variant/20 pt-5">
+              <p className="text-sm text-on-surface-variant">設備名 is required before saving.</p>
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="rounded-2xl border border-outline-variant/20 px-4 py-2 text-xs font-bold text-on-surface transition hover:bg-surface-container"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={!hasData || submitting}
+                  className="rounded-2xl bg-primary px-4 py-2 text-xs font-bold text-on-primary transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {submitting ? "Saving…" : isEdit ? "Save Changes" : "Add Equipment"}
+                </button>
+              </div>
+            </div>
+          </form>
+
+        </div>
+      </div>
+    </div>
+  );
+}
