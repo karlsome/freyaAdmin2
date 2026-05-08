@@ -416,6 +416,7 @@ export default function SetsubiDBWorkspace({ refreshToken, onFlash }) {
         発生事案: draft["発生事案"] || undefined,
         名前: draft["名前"] || undefined,
         eventDate: draft.eventDate || undefined,
+        tags: draft.tags?.length ? draft.tags : undefined,
       };
       await createMasterRecord({ data: payload, username: authUser?.username || "unknown", tabKey: "equipmentHistoryDB" });
       setSuccessMessage("事案を登録しました。");

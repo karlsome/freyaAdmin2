@@ -1,11 +1,14 @@
 import { useEffect, useMemo, useState } from "react";
 
+const CATEGORY_TAGS = ["メンテナンス", "修理", "部品交換", "テスト", "その他"];
+
 function buildInitialDraft(preselectedEquipmentId) {
   return {
     equipmentId: preselectedEquipmentId || "",
     発生事案: "",
     名前: "",
     eventDate: "",
+    tags: [],
   };
 }
 
@@ -36,12 +39,21 @@ export default function EquipmentEventModal({
   }, [open, preselectedEquipmentId]);
 
   const hasData = useMemo(
-    () => draft.equipmentId !== "" && draft.発生事案.trim() !== "",
+    () => draft.equipmentId !== "" && draft.発生事案.trim() !== "" && draft.tags.length > 0,
     [draft]
   );
 
   function set(field, value) {
     setDraft((current) => ({ ...current, [field]: value }));
+  }
+
+  function toggleTag(tag) {
+    setDraft((current) => ({
+      ...current,
+      tags: current.tags.includes(tag)
+        ? current.tags.filter((t) => t !== tag)
+        : [...current.tags, tag],
+    }));
   }
 
   if (!open) return null;
@@ -154,10 +166,35 @@ export default function EquipmentEventModal({
                 </label>
               </div>
 
+              <div>
+                <div className="mb-2 text-[11px] font-bold uppercase tracking-[0.18em] text-outline">
+                  カテゴリ <span className="text-error">*</span>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {CATEGORY_TAGS.map((tag) => {
+                    const selected = draft.tags.includes(tag);
+                    return (
+                      <button
+                        key={tag}
+                        type="button"
+                        onClick={() => toggleTag(tag)}
+                        className={`rounded-full px-3.5 py-1.5 text-xs font-bold transition ${
+                          selected
+                            ? "bg-primary text-on-primary shadow-sm"
+                            : "border border-outline-variant/30 bg-surface text-on-surface hover:bg-surface-container"
+                        }`}
+                      >
+                        {tag}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
             </div>
 
             <div className="mt-6 flex items-center justify-between gap-4 border-t border-outline-variant/20 pt-5">
-              <p className="text-sm text-on-surface-variant">設備と発生事案は必須です。</p>
+              <p className="text-sm text-on-surface-variant">設備・発生事案・カテゴリは必須です。</p>
               <div className="flex items-center gap-3">
                 <button
                   type="button"
