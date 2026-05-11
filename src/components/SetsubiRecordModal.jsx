@@ -58,7 +58,7 @@ export default function SetsubiRecordModal({
 
   return (
     <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm">
-      <div className="flex min-h-full items-center justify-center p-4">
+      <div className="flex min-h-full items-start justify-center px-4 pb-4 pt-10">
         <div className="glass-card w-full max-w-lg rounded-2xl overflow-hidden">
 
           <div className="border-b border-outline-variant/20 px-6 py-5">

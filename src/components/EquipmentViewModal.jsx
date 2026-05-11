@@ -1,18 +1,21 @@
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 
 function ImageLightbox({ url, onClose }) {
   if (!url) return null;
-  return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 backdrop-blur-sm"
+  return createPortal(
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80"
       onClick={onClose}>
-      <button type="button" onClick={onClose}
-        className="absolute right-4 top-4 flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-white transition hover:bg-white/20">
-        <span className="material-symbols-outlined">close</span>
-      </button>
-      <img src={url} alt="full size"
-        className="max-h-[90vh] max-w-[90vw] rounded-2xl object-contain shadow-2xl"
-        onClick={(e) => e.stopPropagation()} />
-    </div>
+      <div className="relative" onClick={(e) => e.stopPropagation()}>
+        <img src={url} alt="full size"
+          className="max-h-[90vh] max-w-[90vw] rounded-2xl object-contain shadow-2xl" />
+        <button type="button" onClick={onClose}
+          className="absolute -right-3 -top-3 flex h-8 w-8 items-center justify-center rounded-full bg-white/20 text-white shadow-lg transition hover:bg-white/40">
+          <span className="material-symbols-outlined" style={{ fontSize: 18 }}>close</span>
+        </button>
+      </div>
+    </div>,
+    document.body
   );
 }
 import { fetchEquipmentHistory } from "../services/api";
@@ -117,7 +120,7 @@ export default function EquipmentViewModal({ open, equipment, onClose }) {
 
   return (
     <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm">
-      <div className="flex min-h-full items-center justify-center p-4">
+      <div className="flex min-h-full items-start justify-center px-4 pb-4 pt-10">
         <div className="glass-card w-full max-w-xl rounded-2xl overflow-hidden">
 
           <div className="border-b border-outline-variant/20 px-6 py-5">
