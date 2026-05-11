@@ -206,21 +206,6 @@ function EquipmentDetailPanel({ equipment, onClose }) {
   );
 }
 
-function EmptyDetailPanel() {
-  return (
-    <div className="flex h-64 items-center justify-center rounded-3xl border border-dashed border-outline-variant/30 bg-surface-container/50">
-      <div className="text-center">
-        <span className="material-symbols-outlined text-outline/40" style={{ fontSize: 40 }}>
-          precision_manufacturing
-        </span>
-        <p className="mt-3 text-sm font-medium text-on-surface-variant/50">
-          Select a machine to view details
-        </p>
-      </div>
-    </div>
-  );
-}
-
 // ── Factory-box sub-components ───────────────────────────────────────────────
 
 function EquipmentRow({ equipment, isSelected, canEdit, onView, onEdit }) {
@@ -555,9 +540,9 @@ export default function SetsubiDBWorkspace({ refreshToken, onFlash }) {
       {!loading && !error && factories.length > 0 && (
         <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
 
-          {/* LEFT: 2-column factory grid */}
-          <div className="lg:w-[42%] lg:shrink-0">
-            <div className="grid grid-cols-2 gap-4">
+          {/* LEFT: 4-column factory grid */}
+          <div className={viewingEquipment ? "lg:w-[58%] lg:shrink-0" : "w-full"}>
+            <div className="grid grid-cols-4 gap-4">
               {factories.map((factory, index) => {
                 const key = factory._id?.$oid ?? factory._id ?? String(index);
                 const factoryName = factory["工場"] || "";
@@ -578,12 +563,12 @@ export default function SetsubiDBWorkspace({ refreshToken, onFlash }) {
             </div>
           </div>
 
-          {/* RIGHT: inline detail panel */}
-          <div className="flex-1 min-w-0 lg:sticky lg:top-6">
-            {viewingEquipment
-              ? <EquipmentDetailPanel equipment={viewingEquipment} onClose={() => setViewingEquipment(null)} />
-              : <EmptyDetailPanel />}
-          </div>
+          {/* RIGHT: inline detail panel — only when a machine is selected */}
+          {viewingEquipment && (
+            <div className="flex-1 min-w-0 lg:sticky lg:top-6">
+              <EquipmentDetailPanel equipment={viewingEquipment} onClose={() => setViewingEquipment(null)} />
+            </div>
+          )}
         </div>
       )}
 
