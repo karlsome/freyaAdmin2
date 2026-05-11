@@ -258,40 +258,69 @@ function EquipmentRow({ equipment, isSelected, canEdit, onView, onEdit }) {
 }
 
 function FactoryBox({ factory, equipment, selectedId, canEdit, onAddEvent, onView, onEdit }) {
+  const [expanded, setExpanded] = useState(false);
   const name = factory["工場"] || "—";
+  const hasMore = equipment.length > 1;
+  const visible = expanded ? equipment : equipment.slice(0, 1);
+
   return (
-    <div className="rounded-2xl border border-outline-variant/25 bg-surface-container p-4 shadow-sm">
-      <div className="mb-3 flex items-center justify-between gap-2">
-        <div className="flex items-center gap-2">
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-primary/10">
-            <span className="material-symbols-outlined text-primary" style={{ fontSize: 16 }}>factory</span>
+    <div className="rounded-2xl border border-outline-variant/25 bg-surface-container shadow-sm overflow-hidden">
+      {/* Header + equipment rows */}
+      <div className="p-4">
+        <div className="mb-3 flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-primary/10">
+              <span className="material-symbols-outlined text-primary" style={{ fontSize: 16 }}>factory</span>
+            </div>
+            <h4 className="text-sm font-black text-on-surface">{name}</h4>
           </div>
-          <h4 className="text-sm font-black text-on-surface">{name}</h4>
+          {canEdit && (
+            <button type="button" onClick={() => onAddEvent(factory)}
+              className="inline-flex items-center gap-1 rounded-xl bg-primary/10 px-2.5 py-1.5 text-[10px] font-bold text-primary transition hover:bg-primary/20">
+              <span className="material-symbols-outlined" style={{ fontSize: 12 }}>add</span>
+              事案を追加
+            </button>
+          )}
         </div>
-        {canEdit && (
-          <button type="button" onClick={() => onAddEvent(factory)}
-            className="inline-flex items-center gap-1 rounded-xl bg-primary/10 px-2.5 py-1.5 text-[10px] font-bold text-primary transition hover:bg-primary/20">
-            <span className="material-symbols-outlined" style={{ fontSize: 12 }}>add</span>
-            事案を追加
-          </button>
-        )}
+
+        <div className="flex flex-col gap-1.5">
+          {equipment.length === 0 ? (
+            <div className="rounded-xl border border-outline-variant/20 bg-surface px-3 py-2 text-center">
+              <p className="text-[10px] italic text-on-surface-variant/50">No equipment recorded yet.</p>
+            </div>
+          ) : (
+            visible.map((eq) => {
+              const id = eq._id?.$oid ?? eq._id ?? eq.name;
+              return (
+                <EquipmentRow key={id} equipment={eq}
+                  isSelected={(eq._id?.$oid ?? eq._id) === selectedId}
+                  canEdit={canEdit} onView={onView} onEdit={onEdit} />
+              );
+            })
+          )}
+        </div>
       </div>
-      <div className="flex flex-col gap-1.5">
-        {equipment.length === 0 ? (
-          <div className="rounded-xl border border-outline-variant/20 bg-surface px-3 py-2 text-center">
-            <p className="text-[10px] italic text-on-surface-variant/50">No equipment recorded yet.</p>
-          </div>
-        ) : (
-          equipment.map((eq) => {
-            const id = eq._id?.$oid ?? eq._id ?? eq.name;
-            return (
-              <EquipmentRow key={id} equipment={eq}
-                isSelected={(eq._id?.$oid ?? eq._id) === selectedId}
-                canEdit={canEdit} onView={onView} onEdit={onEdit} />
-            );
-          })
-        )}
-      </div>
+
+      {/* Expand / collapse chevron */}
+      {hasMore && (
+        <button
+          type="button"
+          onClick={() => setExpanded((v) => !v)}
+          className="flex w-full items-center justify-center gap-1 border-t border-outline-variant/15 py-2 text-on-surface-variant transition hover:bg-surface-container-high"
+        >
+          <span
+            className="material-symbols-outlined transition-transform duration-200"
+            style={{ fontSize: 18, transform: expanded ? "rotate(180deg)" : "rotate(0deg)" }}
+          >
+            expand_more
+          </span>
+          {!expanded && (
+            <span className="text-[10px] text-on-surface-variant">
+              +{equipment.length - 1} more
+            </span>
+          )}
+        </button>
+      )}
     </div>
   );
 }
