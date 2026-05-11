@@ -1,15 +1,30 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import {
   createMasterRecord,
   deleteMasterRecord,
+  fetchAllEquipmentHistory,
   fetchEquipmentHistory,
   fetchFactoryDBRecords,
   fetchSetsubiDBRecords,
   updateMasterRecord,
+  softDeleteEquipmentHistory,
+  uploadEquipmentEventImage,
 } from "../services/api";
 import { getAuthUser } from "../utils/masterDB";
+
+const EVENT_CATEGORY_TAGS = ["メンテナンス", "修理", "部品交換", "テスト", "その他"];
+
+function toBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error("Failed to read file"));
+    reader.onloadend = () => resolve(String(reader.result || ""));
+    reader.readAsDataURL(file);
+  });
+}
 import EquipmentEventModal from "./EquipmentEventModal";
+import EquipmentHistoryBinWorkspace from "./EquipmentHistoryBinWorkspace";
 import SetsubiRecordModal from "./SetsubiRecordModal";
 
 // ── Shared sub-components ────────────────────────────────────────────────────
@@ -56,21 +71,24 @@ function ImageLightbox({ url, onClose }) {
   );
 }
 
-function EventCard({ event }) {
-  const [lightboxURL, setLightboxURL] = useState(null);
-  const images = Array.isArray(event.imageURLs) ? event.imageURLs : [];
+function EventCard({ event, onOpen }) {
   const tags = Array.isArray(event.tags) ? event.tags : [];
 
   return (
-    <div className="rounded-2xl border border-outline-variant/20 bg-surface p-4">
-      <div className="mb-2 flex items-center justify-between gap-3">
+    <button
+      type="button"
+      onClick={() => onOpen(event)}
+      className="w-full rounded-2xl border border-outline-variant/20 bg-surface p-4 text-left transition hover:border-outline-variant/40 hover:bg-surface-container/50"
+    >
+      <p className="text-sm font-semibold text-on-surface">{event["発生事案"] || "—"}</p>
+      <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1">
         {event.eventDate
-          ? <span className="rounded-xl bg-primary/10 px-2.5 py-1 text-[11px] font-bold text-primary">{event.eventDate}</span>
+          ? <span className="text-[11px] font-bold text-primary">{event.eventDate}</span>
           : <span className="text-[11px] text-on-surface-variant/50">日付未記入</span>}
         {event["名前"] && <span className="text-[11px] text-on-surface-variant">{event["名前"]}</span>}
       </div>
       {tags.length > 0 && (
-        <div className="mb-2 flex flex-wrap gap-1">
+        <div className="mt-2 flex flex-wrap gap-1">
           {tags.map((tag) => (
             <span key={tag} className="rounded-full bg-surface-container px-2 py-0.5 text-[10px] font-bold text-on-surface-variant">
               {tag}
@@ -78,25 +96,308 @@ function EventCard({ event }) {
           ))}
         </div>
       )}
-      <p className="whitespace-pre-wrap text-sm text-on-surface">{event["発生事案"] || "—"}</p>
-      {images.length > 0 && (
-        <div className="mt-3 flex flex-wrap gap-2">
-          {images.map((url) => (
-            <button key={url} type="button" onClick={() => setLightboxURL(url)}
-              className="overflow-hidden rounded-xl border border-outline-variant/20 transition hover:opacity-80">
-              <img src={url} alt="添付画像" className="h-14 w-14 object-cover" />
-            </button>
-          ))}
+    </button>
+  );
+}
+
+// ── Event detail / edit popup ────────────────────────────────────────────────
+
+function EventDetailModal({ event, canEdit, username, onClose, onSaved, onDeleted }) {
+  const [mode, setMode] = useState("view"); // "view" | "edit"
+  const [draft, setDraft] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState("");
+  const [lightboxURL, setLightboxURL] = useState(null);
+  const fileInputRef = useRef(null);
+
+  function enterEdit() {
+    setDraft({
+      発生事案: event["発生事案"] || "",
+      詳細: event["詳細"] || "",
+      名前: event["名前"] || "",
+      eventDate: event.eventDate || "",
+      tags: Array.isArray(event.tags) ? [...event.tags] : [],
+      imageURLs: Array.isArray(event.imageURLs) ? [...event.imageURLs] : [],
+    });
+    setUploadError("");
+    setMode("edit");
+  }
+
+  function setField(field, value) {
+    setDraft((d) => ({ ...d, [field]: value }));
+  }
+
+  function toggleTag(tag) {
+    setDraft((d) => ({
+      ...d,
+      tags: d.tags.includes(tag) ? d.tags.filter((t) => t !== tag) : [...d.tags, tag],
+    }));
+  }
+
+  async function handleFileChange(e) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = "";
+    setUploading(true);
+    setUploadError("");
+    try {
+      const base64 = await toBase64(file);
+      const result = await uploadEquipmentEventImage({
+        base64,
+        factoryName: event["工場"] || "",
+        equipmentName: event.equipmentName || "",
+        username,
+      });
+      setDraft((d) => ({ ...d, imageURLs: [...d.imageURLs, result.imageURL] }));
+    } catch (err) {
+      const raw = err?.message || "";
+      setUploadError(raw.startsWith("<") ? "Upload failed — server error." : raw || "Upload failed.");
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  function removeImage(url) {
+    setDraft((d) => ({ ...d, imageURLs: d.imageURLs.filter((u) => u !== url) }));
+  }
+
+  async function handleSave() {
+    if (!draft) return;
+    const recordId = event._id?.$oid ?? event._id;
+    if (!recordId) return;
+    setBusy(true);
+    try {
+      await updateMasterRecord({
+        recordId,
+        updates: {
+          発生事案: draft.発生事案 || undefined,
+          詳細: draft.詳細 || undefined,
+          名前: draft.名前 || undefined,
+          eventDate: draft.eventDate || undefined,
+          tags: draft.tags.length ? draft.tags : undefined,
+          imageURLs: draft.imageURLs.length ? draft.imageURLs : undefined,
+        },
+        username,
+        tabKey: "equipmentHistoryDB",
+      });
+      onSaved();
+      onClose();
+    } catch (err) {
+      setUploadError(err?.message || "Failed to save.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleDelete() {
+    const reason = window.prompt("Enter the reason for deleting this record.");
+    if (!reason?.trim()) return;
+    const recordId = event._id?.$oid ?? event._id;
+    if (!recordId) return;
+    setBusy(true);
+    try {
+      await softDeleteEquipmentHistory({
+        recordId,
+        username,
+        reason: reason.trim(),
+      });
+      onDeleted();
+      onClose();
+    } catch (err) {
+      setUploadError(err?.message || "Failed to delete.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const tags = mode === "edit" ? draft?.tags ?? [] : (Array.isArray(event.tags) ? event.tags : []);
+  const imageURLs = mode === "edit" ? draft?.imageURLs ?? [] : (Array.isArray(event.imageURLs) ? event.imageURLs : []);
+
+  return createPortal(
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-black/40 backdrop-blur-sm">
+      <div className="flex min-h-full items-start justify-center px-4 pb-4 pt-10">
+        <div className="glass-card w-full max-w-lg rounded-2xl overflow-hidden">
+
+          {/* Header */}
+          <div className="border-b border-outline-variant/20 px-6 py-5">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-outline">事案詳細</div>
+                <h3 className="mt-2 text-2xl font-black text-on-surface">
+                  {mode === "edit" ? "事案を編集" : (event["発生事案"] || "—")}
+                </h3>
+                {mode === "view" && event["工場"] && (
+                  <p className="mt-1 text-sm text-on-surface-variant">{event["工場"]}</p>
+                )}
+              </div>
+              <button type="button" onClick={onClose}
+                className="flex h-11 w-11 items-center justify-center rounded-2xl bg-surface-container text-on-surface-variant transition hover:bg-surface-container-high hover:text-on-surface">
+                <span className="material-symbols-outlined">close</span>
+              </button>
+            </div>
+          </div>
+
+          <div className="max-h-[72vh] overflow-y-auto px-6 py-6 scrollbar-hide">
+            {mode === "view" ? (
+              <div className="grid gap-5">
+                {/* Meta row */}
+                <div className="flex flex-wrap gap-3">
+                  {event.eventDate && (
+                    <span className="rounded-xl bg-primary/10 px-3 py-1 text-[11px] font-bold text-primary">{event.eventDate}</span>
+                  )}
+                  {event["名前"] && (
+                    <span className="rounded-xl bg-surface-container px-3 py-1 text-[11px] font-bold text-on-surface-variant">{event["名前"]}</span>
+                  )}
+                </div>
+
+                {/* Tags */}
+                {tags.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5">
+                    {tags.map((tag) => (
+                      <span key={tag} className="rounded-full bg-surface-container px-3 py-1 text-[11px] font-bold text-on-surface-variant">{tag}</span>
+                    ))}
+                  </div>
+                )}
+
+                {/* Details */}
+                {event["詳細"] && (
+                  <div>
+                    <p className="mb-1.5 text-[10px] font-bold uppercase tracking-[0.18em] text-outline">詳細</p>
+                    <p className="whitespace-pre-wrap text-sm text-on-surface">{event["詳細"]}</p>
+                  </div>
+                )}
+
+                {/* Images */}
+                {imageURLs.length > 0 && (
+                  <div>
+                    <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.18em] text-outline">画像</p>
+                    <div className="flex flex-wrap gap-2">
+                      {imageURLs.map((url) => (
+                        <button key={url} type="button" onClick={() => setLightboxURL(url)}
+                          className="overflow-hidden rounded-xl border border-outline-variant/20 transition hover:opacity-80">
+                          <img src={url} alt="添付画像" className="h-16 w-16 object-cover" />
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="grid gap-4">
+                <label className="block">
+                  <div className="mb-2 text-[11px] font-bold uppercase tracking-[0.18em] text-outline">発生事案 <span className="text-error">*</span></div>
+                  <input type="text" value={draft.発生事案}
+                    onChange={(e) => setField("発生事案", e.target.value)}
+                    className="w-full rounded-2xl border border-outline-variant/30 bg-surface px-3 py-3 text-sm text-on-surface outline-none transition focus:border-primary/40" />
+                </label>
+
+                <label className="block">
+                  <div className="mb-2 text-[11px] font-bold uppercase tracking-[0.18em] text-outline">詳細</div>
+                  <textarea value={draft.詳細}
+                    onChange={(e) => setField("詳細", e.target.value)}
+                    rows={4}
+                    className="w-full rounded-2xl border border-outline-variant/30 bg-surface px-3 py-3 text-sm text-on-surface outline-none transition focus:border-primary/40 resize-none" />
+                </label>
+
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <label className="block">
+                    <div className="mb-2 text-[11px] font-bold uppercase tracking-[0.18em] text-outline">名前</div>
+                    <input type="text" value={draft.名前}
+                      onChange={(e) => setField("名前", e.target.value)}
+                      className="w-full rounded-2xl border border-outline-variant/30 bg-surface px-3 py-3 text-sm text-on-surface outline-none transition focus:border-primary/40" />
+                  </label>
+                  <label className="block">
+                    <div className="mb-2 text-[11px] font-bold uppercase tracking-[0.18em] text-outline">発生日</div>
+                    <input type="date" value={draft.eventDate}
+                      onChange={(e) => setField("eventDate", e.target.value)}
+                      className="w-full rounded-2xl border border-outline-variant/30 bg-surface px-3 py-3 text-sm text-on-surface outline-none transition focus:border-primary/40" />
+                  </label>
+                </div>
+
+                <div>
+                  <div className="mb-2 text-[11px] font-bold uppercase tracking-[0.18em] text-outline">カテゴリ</div>
+                  <div className="flex flex-wrap gap-2">
+                    {EVENT_CATEGORY_TAGS.map((tag) => {
+                      const selected = draft.tags.includes(tag);
+                      return (
+                        <button key={tag} type="button" onClick={() => toggleTag(tag)}
+                          className={`rounded-full px-3.5 py-1.5 text-xs font-bold transition ${selected ? "bg-primary text-on-primary shadow-sm" : "border border-outline-variant/30 bg-surface text-on-surface hover:bg-surface-container"}`}>
+                          {tag}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div>
+                  <div className="mb-2 text-[11px] font-bold uppercase tracking-[0.18em] text-outline">画像</div>
+                  <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
+                  <button type="button" onClick={() => fileInputRef.current?.click()} disabled={uploading}
+                    className="inline-flex items-center gap-2 rounded-2xl border border-outline-variant/30 bg-surface px-4 py-2.5 text-xs font-bold text-on-surface transition hover:bg-surface-container disabled:opacity-50">
+                    {uploading
+                      ? <><span className="material-symbols-outlined animate-spin" style={{ fontSize: 15 }}>progress_activity</span>アップロード中…</>
+                      : <><span className="material-symbols-outlined" style={{ fontSize: 15 }}>attach_file</span>画像を添付</>}
+                  </button>
+                  {uploadError && <p className="mt-2 text-xs text-error">{uploadError}</p>}
+                  {imageURLs.length > 0 && (
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {imageURLs.map((url) => (
+                        <div key={url} className="group relative">
+                          <img src={url} alt="添付画像" className="h-16 w-16 rounded-xl object-cover border border-outline-variant/20" />
+                          <button type="button" onClick={() => removeImage(url)}
+                            className="absolute -right-1.5 -top-1.5 hidden h-5 w-5 items-center justify-center rounded-full bg-error text-white group-hover:flex">
+                            <span className="material-symbols-outlined" style={{ fontSize: 11 }}>close</span>
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Footer */}
+          <div className="flex items-center justify-between gap-3 border-t border-outline-variant/20 px-6 py-4">
+            {canEdit && mode === "edit" ? (
+              <button type="button" onClick={handleDelete} disabled={busy}
+                className="rounded-2xl border border-error/20 bg-error/10 px-4 py-2 text-xs font-bold text-error transition hover:bg-error/20 disabled:opacity-50">
+                Delete
+              </button>
+            ) : <div />}
+
+            <div className="flex items-center gap-3">
+              <button type="button" onClick={mode === "edit" ? () => setMode("view") : onClose}
+                className="rounded-2xl border border-outline-variant/20 px-4 py-2 text-xs font-bold text-on-surface transition hover:bg-surface-container">
+                {mode === "edit" ? "Cancel" : "Close"}
+              </button>
+              {canEdit && mode === "view" && (
+                <button type="button" onClick={enterEdit}
+                  className="rounded-2xl bg-primary px-4 py-2 text-xs font-bold text-on-primary transition hover:opacity-90">
+                  Edit
+                </button>
+              )}
+              {mode === "edit" && (
+                <button type="button" onClick={handleSave} disabled={busy || uploading || !draft?.発生事案?.trim()}
+                  className="rounded-2xl bg-primary px-4 py-2 text-xs font-bold text-on-primary transition hover:opacity-90 disabled:opacity-50">
+                  {busy ? "保存中…" : "変更を保存"}
+                </button>
+              )}
+            </div>
+          </div>
+
         </div>
-      )}
+      </div>
       <ImageLightbox url={lightboxURL} onClose={() => setLightboxURL(null)} />
-    </div>
+    </div>,
+    document.body
   );
 }
 
 // ── Right-hand detail panel (inline, not a popup) ────────────────────────────
 
-function EquipmentDetailPanel({ equipment, onClose }) {
+function EquipmentDetailPanel({ equipment, onClose, onEdit, onAddEvent, onViewDetail, refreshKey }) {
   const [history, setHistory] = useState([]);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [historyError, setHistoryError] = useState("");
@@ -117,7 +418,7 @@ function EquipmentDetailPanel({ equipment, onClose }) {
       .finally(() => { if (active) setHistoryLoading(false); });
 
     return () => { active = false; };
-  }, [equipment]);
+  }, [equipment, refreshKey]);
 
   if (!equipment) return null;
 
@@ -132,10 +433,19 @@ function EquipmentDetailPanel({ equipment, onClose }) {
             <p className="mt-0.5 text-sm text-on-surface-variant">{equipment["工場"]}</p>
           )}
         </div>
-        <button type="button" onClick={onClose}
-          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-surface text-on-surface-variant transition hover:bg-surface-container-high hover:text-on-surface">
-          <span className="material-symbols-outlined" style={{ fontSize: 18 }}>close</span>
-        </button>
+        <div className="flex shrink-0 items-center gap-2">
+          {onEdit && (
+            <button type="button" onClick={() => onEdit(equipment)}
+              className="flex h-9 items-center gap-1.5 rounded-2xl border border-outline-variant/20 bg-surface px-3 text-xs font-bold text-on-surface transition hover:bg-surface-container-high">
+              <span className="material-symbols-outlined" style={{ fontSize: 15 }}>edit</span>
+              Edit
+            </button>
+          )}
+          <button type="button" onClick={onClose}
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-surface text-on-surface-variant transition hover:bg-surface-container-high hover:text-on-surface">
+            <span className="material-symbols-outlined" style={{ fontSize: 18 }}>close</span>
+          </button>
+        </div>
       </div>
 
       <div className="overflow-y-auto px-6 py-6" style={{ maxHeight: "calc(100vh - 220px)" }}>
@@ -174,9 +484,18 @@ function EquipmentDetailPanel({ equipment, onClose }) {
         <section>
           <div className="mb-3 flex items-center justify-between">
             <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-outline">事案履歴</p>
-            {!historyLoading && (
-              <span className="text-[11px] text-on-surface-variant">{history.length} 件</span>
-            )}
+            <div className="flex items-center gap-2">
+              {onAddEvent && (
+                <button type="button" onClick={() => onAddEvent(equipment)}
+                  className="inline-flex items-center gap-1 rounded-xl bg-primary/10 px-2.5 py-1.5 text-[10px] font-bold text-primary transition hover:bg-primary/20">
+                  <span className="material-symbols-outlined" style={{ fontSize: 12 }}>add</span>
+                  事案を追加
+                </button>
+              )}
+              {!historyLoading && (
+                <span className="text-[11px] text-on-surface-variant">{history.length} 件</span>
+              )}
+            </div>
           </div>
 
           {historyLoading && (
@@ -196,7 +515,7 @@ function EquipmentDetailPanel({ equipment, onClose }) {
           {!historyLoading && !historyError && history.length > 0 && (
             <div className="flex flex-col gap-3">
               {history.map((event, i) => (
-                <EventCard key={event._id?.$oid ?? event._id ?? i} event={event} />
+                <EventCard key={event._id?.$oid ?? event._id ?? i} event={event} onOpen={onViewDetail} />
               ))}
             </div>
           )}
@@ -208,41 +527,26 @@ function EquipmentDetailPanel({ equipment, onClose }) {
 
 // ── Factory-box sub-components ───────────────────────────────────────────────
 
-function EquipmentRow({ equipment, isSelected, canEdit, onView, onEdit }) {
+function EquipmentRow({ equipment, isSelected, onView }) {
   return (
-    <div className={`flex items-center justify-between gap-2 rounded-xl border px-3 py-2.5 transition ${
-      isSelected
-        ? "border-primary/40 bg-primary/5"
-        : "border-outline-variant/15 bg-surface"
-    }`}>
-      <div className="min-w-0 flex-1">
-        <p className="truncate text-xs font-bold text-on-surface">{equipment.name || "—"}</p>
-        {equipment.installationDate && (
-          <p className="mt-0.5 text-[10px] text-on-surface-variant">設置日: {equipment.installationDate}</p>
-        )}
-      </div>
-      <div className="flex shrink-0 items-center gap-1.5">
-        <button type="button" onClick={() => onView(equipment)}
-          className={`inline-flex items-center justify-center gap-0.5 rounded-lg border px-2 py-1 text-[10px] font-bold transition ${
-            isSelected
-              ? "border-primary/30 bg-primary/10 text-primary"
-              : "border-outline-variant/30 bg-surface-container text-on-surface hover:bg-surface-container-high"
-          }`}>
-          <span className="material-symbols-outlined" style={{ fontSize: 11 }}>info</span>
-          View
-        </button>
-        {canEdit && (
-          <button type="button" onClick={() => onEdit(equipment)}
-            className="inline-flex items-center justify-center rounded-lg border border-outline-variant/30 bg-surface-container px-2 py-1 text-[10px] font-bold text-on-surface transition hover:bg-surface-container-high">
-            Edit
-          </button>
-        )}
-      </div>
-    </div>
+    <button
+      type="button"
+      onClick={() => onView(equipment)}
+      className={`w-full rounded-xl border px-3 py-2.5 text-left transition ${
+        isSelected
+          ? "border-primary/40 bg-primary/5"
+          : "border-outline-variant/15 bg-surface hover:border-outline-variant/30 hover:bg-surface-container/50"
+      }`}
+    >
+      <p className="truncate text-xs font-bold text-on-surface">{equipment.name || "—"}</p>
+      {equipment.installationDate && (
+        <p className="mt-0.5 text-[10px] text-on-surface-variant">設置日: {equipment.installationDate}</p>
+      )}
+    </button>
   );
 }
 
-function FactoryBox({ factory, equipment, selectedId, canEdit, onAddEvent, onView, onEdit }) {
+function FactoryBox({ factory, equipment, selectedId, onView }) {
   const [expanded, setExpanded] = useState(false);
   const name = factory["工場"] || "—";
   const hasMore = equipment.length > 1;
@@ -252,20 +556,11 @@ function FactoryBox({ factory, equipment, selectedId, canEdit, onAddEvent, onVie
     <div className="rounded-2xl border border-outline-variant/25 bg-surface-container shadow-sm overflow-hidden">
       {/* Header + equipment rows */}
       <div className="p-4">
-        <div className="mb-3 flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2">
-            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-primary/10">
-              <span className="material-symbols-outlined text-primary" style={{ fontSize: 16 }}>factory</span>
-            </div>
-            <h4 className="text-sm font-black text-on-surface">{name}</h4>
+        <div className="mb-3 flex items-center gap-2">
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-primary/10">
+            <span className="material-symbols-outlined text-primary" style={{ fontSize: 16 }}>factory</span>
           </div>
-          {canEdit && (
-            <button type="button" onClick={() => onAddEvent(factory)}
-              className="inline-flex items-center gap-1 rounded-xl bg-primary/10 px-2.5 py-1.5 text-[10px] font-bold text-primary transition hover:bg-primary/20">
-              <span className="material-symbols-outlined" style={{ fontSize: 12 }}>add</span>
-              事案を追加
-            </button>
-          )}
+          <h4 className="text-sm font-black text-on-surface">{name}</h4>
         </div>
 
         <div className="flex flex-col gap-1.5">
@@ -279,7 +574,7 @@ function FactoryBox({ factory, equipment, selectedId, canEdit, onAddEvent, onVie
               return (
                 <EquipmentRow key={id} equipment={eq}
                   isSelected={(eq._id?.$oid ?? eq._id) === selectedId}
-                  canEdit={canEdit} onView={onView} onEdit={onEdit} />
+                  onView={onView} />
               );
             })
           )}
@@ -330,11 +625,28 @@ export default function SetsubiDBWorkspace({ refreshToken, onFlash }) {
 
   // Event (事案) modal
   const [eventModalOpen, setEventModalOpen] = useState(false);
-  const [eventModalFactory, setEventModalFactory] = useState(null);
+  const [eventModalEquipment, setEventModalEquipment] = useState(null);
   const [eventSubmitting, setEventSubmitting] = useState(false);
 
   // Inline detail panel
   const [viewingEquipment, setViewingEquipment] = useState(null);
+  const [historyRefreshKey, setHistoryRefreshKey] = useState(0);
+
+  // Event detail / edit popup
+  const [viewingEvent, setViewingEvent] = useState(null);
+
+  // Recycle bin modal
+  const [binOpen, setBinOpen] = useState(false);
+  const [binRefresh, setBinRefresh] = useState(0);
+
+  // View toggle + all-records list
+  const [listViewMode, setListViewMode] = useState("factory");
+  const [allHistory, setAllHistory] = useState([]);
+  const [allHistoryLoading, setAllHistoryLoading] = useState(false);
+  const [allHistoryError, setAllHistoryError] = useState("");
+  const [listSortDir, setListSortDir] = useState("desc");
+  const [listFilterTag, setListFilterTag] = useState("");
+  const [listFilterFactory, setListFilterFactory] = useState("");
 
   const [successMessage, setSuccessMessage] = useState("");
 
@@ -364,6 +676,18 @@ export default function SetsubiDBWorkspace({ refreshToken, onFlash }) {
     return () => { active = false; };
   }, [refreshToken, localRefresh, onFlash]);
 
+  useEffect(() => {
+    if (listViewMode !== "all") return undefined;
+    let active = true;
+    setAllHistoryLoading(true);
+    setAllHistoryError("");
+    fetchAllEquipmentHistory()
+      .then((rows) => { if (active) setAllHistory(Array.isArray(rows) ? rows : []); })
+      .catch((err) => { if (active) setAllHistoryError(err?.message || "Failed to load records."); })
+      .finally(() => { if (active) setAllHistoryLoading(false); });
+    return () => { active = false; };
+  }, [listViewMode, localRefresh, historyRefreshKey]);
+
   const factoryNames = useMemo(
     () => factories.map((f) => f["工場"]).filter(Boolean),
     [factories]
@@ -377,8 +701,20 @@ export default function SetsubiDBWorkspace({ refreshToken, onFlash }) {
       if (!map.has(key)) map.set(key, []);
       map.get(key).push(eq);
     });
+    map.forEach((list) => list.sort((a, b) => (a.name || "").localeCompare(b.name || "", "ja")));
     return map;
   }, [factories, equipment]);
+
+  const filteredSortedHistory = useMemo(() => {
+    let rows = allHistory;
+    if (listFilterFactory) rows = rows.filter((r) => (r["工場"] || "") === listFilterFactory);
+    if (listFilterTag) rows = rows.filter((r) => Array.isArray(r.tags) && r.tags.includes(listFilterTag));
+    return [...rows].sort((a, b) => {
+      const da = a.eventDate || "";
+      const db = b.eventDate || "";
+      return listSortDir === "asc" ? da.localeCompare(db) : db.localeCompare(da);
+    });
+  }, [allHistory, listFilterFactory, listFilterTag, listSortDir]);
 
   // ── Equipment CRUD ──────────────────────────────────────────────────────────
 
@@ -453,14 +789,14 @@ export default function SetsubiDBWorkspace({ refreshToken, onFlash }) {
 
   // ── Event (事案) CRUD ────────────────────────────────────────────────────────
 
-  function openEventModal(factory) {
-    setEventModalFactory(factory);
+  function openEventModal(equipment) {
+    setEventModalEquipment(equipment);
     setEventModalOpen(true);
   }
 
   function closeEventModal() {
     setEventModalOpen(false);
-    setEventModalFactory(null);
+    setEventModalEquipment(null);
   }
 
   async function handleSaveEvent(draft) {
@@ -471,6 +807,7 @@ export default function SetsubiDBWorkspace({ refreshToken, onFlash }) {
         equipmentName: draft.equipmentName || undefined,
         工場: draft["工場"] || undefined,
         発生事案: draft["発生事案"] || undefined,
+        詳細: draft["詳細"] || undefined,
         名前: draft["名前"] || undefined,
         eventDate: draft.eventDate || undefined,
         tags: draft.tags?.length ? draft.tags : undefined,
@@ -486,11 +823,6 @@ export default function SetsubiDBWorkspace({ refreshToken, onFlash }) {
     }
   }
 
-  const eventModalEquipment = useMemo(() => {
-    if (!eventModalFactory) return [];
-    return equipmentByFactory.get(eventModalFactory["工場"] || "") ?? [];
-  }, [eventModalFactory, equipmentByFactory]);
-
   const selectedId = viewingEquipment ? (viewingEquipment._id?.$oid ?? viewingEquipment._id) : null;
 
   // ── Render ───────────────────────────────────────────────────────────────────
@@ -498,17 +830,22 @@ export default function SetsubiDBWorkspace({ refreshToken, onFlash }) {
   return (
     <section className="glass-card rounded-3xl p-6">
       {/* Page header */}
-      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+      <div className="mb-4 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <p className="text-xs font-bold uppercase tracking-[0.18em] text-outline">設備</p>
           <h3 className="mt-1 text-2xl font-black text-on-surface">Equipment by Factory</h3>
         </div>
-        <div className="flex items-center gap-4">
-          {!loading && !error && (
+        <div className="flex items-center gap-3">
+          {!loading && !error && listViewMode === "factory" && (
             <span className="text-sm text-on-surface-variant">
               {equipment.length} items · {factories.length} factories
             </span>
           )}
+          <button type="button" onClick={() => setBinOpen(true)}
+            className="inline-flex items-center gap-2 rounded-2xl border border-outline-variant/20 bg-surface-container px-4 py-3 text-sm font-bold text-on-surface transition hover:bg-surface-container-high">
+            <span className="material-symbols-outlined" style={{ fontSize: 16 }}>delete</span>
+            Recycle Bin
+          </button>
           {canEdit && (
             <button type="button" onClick={() => openCreateEquipModal()}
               className="inline-flex items-center gap-2 rounded-2xl bg-primary px-4 py-3 text-sm font-bold text-on-primary transition hover:opacity-90">
@@ -519,54 +856,178 @@ export default function SetsubiDBWorkspace({ refreshToken, onFlash }) {
         </div>
       </div>
 
-      {loading && (
-        <div className="flex items-center justify-center py-16 text-sm font-medium text-on-surface-variant">
-          <span className="material-symbols-outlined animate-spin mr-2" style={{ fontSize: 18 }}>progress_activity</span>
-          Loading…
+      {/* View toggle */}
+      <div className="mb-6 flex items-center">
+        <div className="flex overflow-hidden rounded-2xl border border-outline-variant/20 bg-surface-container">
+          {[
+            { key: "factory", label: "View by factory", icon: "factory" },
+            { key: "all",     label: "View all records", icon: "list" },
+          ].map(({ key, label, icon }) => (
+            <button
+              key={key}
+              type="button"
+              onClick={() => setListViewMode(key)}
+              className={`inline-flex items-center gap-2 px-4 py-2.5 text-sm font-bold transition ${
+                listViewMode === key
+                  ? "bg-primary text-on-primary"
+                  : "text-on-surface hover:bg-surface-container-high"
+              }`}
+            >
+              <span className="material-symbols-outlined" style={{ fontSize: 16 }}>{icon}</span>
+              {label}
+            </button>
+          ))}
         </div>
-      )}
+      </div>
 
-      {!loading && error && (
-        <div className="rounded-2xl bg-error/10 px-5 py-4 text-sm font-medium text-error">{error}</div>
-      )}
-
-      {!loading && !error && factories.length === 0 && (
-        <div className="rounded-2xl border border-outline-variant/20 bg-surface px-5 py-8 text-center text-sm text-on-surface-variant">
-          No factory records found in factoryDB.
-        </div>
-      )}
-
-      {/* ── Two-panel layout ── */}
-      {!loading && !error && factories.length > 0 && (
-        <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
-
-          {/* LEFT: 4-column factory grid */}
-          <div className={viewingEquipment ? "lg:w-[58%] lg:shrink-0" : "w-full"}>
-            <div className="grid grid-cols-4 gap-4">
-              {factories.map((factory, index) => {
-                const key = factory._id?.$oid ?? factory._id ?? String(index);
-                const factoryName = factory["工場"] || "";
-                const factoryEquipment = equipmentByFactory.get(factoryName) ?? [];
-                return (
-                  <FactoryBox
-                    key={key}
-                    factory={factory}
-                    equipment={factoryEquipment}
-                    selectedId={selectedId}
-                    canEdit={canEdit}
-                    onAddEvent={openEventModal}
-                    onView={setViewingEquipment}
-                    onEdit={openEditEquipModal}
-                  />
-                );
-              })}
+      {/* ── Factory grid view ── */}
+      {listViewMode === "factory" && (
+        <>
+          {loading && (
+            <div className="flex items-center justify-center py-16 text-sm font-medium text-on-surface-variant">
+              <span className="material-symbols-outlined animate-spin mr-2" style={{ fontSize: 18 }}>progress_activity</span>
+              Loading…
             </div>
+          )}
+          {!loading && error && (
+            <div className="rounded-2xl bg-error/10 px-5 py-4 text-sm font-medium text-error">{error}</div>
+          )}
+          {!loading && !error && factories.length === 0 && (
+            <div className="rounded-2xl border border-outline-variant/20 bg-surface px-5 py-8 text-center text-sm text-on-surface-variant">
+              No factory records found in factoryDB.
+            </div>
+          )}
+          {!loading && !error && factories.length > 0 && (
+            <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
+              <div className={viewingEquipment ? "lg:w-[58%] lg:shrink-0" : "w-full"}>
+                <div className="grid grid-cols-4 gap-4">
+                  {factories.map((factory, index) => {
+                    const key = factory._id?.$oid ?? factory._id ?? String(index);
+                    const factoryName = factory["工場"] || "";
+                    const factoryEquipment = equipmentByFactory.get(factoryName) ?? [];
+                    return (
+                      <FactoryBox
+                        key={key}
+                        factory={factory}
+                        equipment={factoryEquipment}
+                        selectedId={selectedId}
+                        onView={setViewingEquipment}
+                      />
+                    );
+                  })}
+                </div>
+              </div>
+              {viewingEquipment && (
+                <div className="flex-1 min-w-0 lg:sticky lg:top-6">
+                  <EquipmentDetailPanel
+                    equipment={viewingEquipment}
+                    onClose={() => setViewingEquipment(null)}
+                    onEdit={canEdit ? openEditEquipModal : undefined}
+                    onAddEvent={canEdit ? openEventModal : undefined}
+                    onViewDetail={setViewingEvent}
+                    refreshKey={historyRefreshKey}
+                  />
+                </div>
+              )}
+            </div>
+          )}
+        </>
+      )}
+
+      {/* ── All records view ── */}
+      {listViewMode === "all" && (
+        <div>
+          {/* Filter + sort bar */}
+          <div className="mb-4 flex flex-wrap items-center gap-3">
+            <select
+              value={listFilterFactory}
+              onChange={(e) => setListFilterFactory(e.target.value)}
+              className="rounded-2xl border border-outline-variant/20 bg-surface px-3 py-2 text-sm text-on-surface outline-none transition focus:border-primary/40"
+            >
+              <option value="">All Factories</option>
+              {factoryNames.map((f) => <option key={f} value={f}>{f}</option>)}
+            </select>
+
+            <div className="flex flex-wrap gap-1.5">
+              {EVENT_CATEGORY_TAGS.map((tag) => (
+                <button
+                  key={tag}
+                  type="button"
+                  onClick={() => setListFilterTag(listFilterTag === tag ? "" : tag)}
+                  className={`rounded-full px-3 py-1.5 text-xs font-bold transition ${
+                    listFilterTag === tag
+                      ? "bg-primary text-on-primary"
+                      : "border border-outline-variant/20 bg-surface text-on-surface hover:bg-surface-container"
+                  }`}
+                >
+                  {tag}
+                </button>
+              ))}
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setListSortDir((d) => d === "desc" ? "asc" : "desc")}
+              className="ml-auto inline-flex items-center gap-1.5 rounded-2xl border border-outline-variant/20 bg-surface px-3 py-2 text-xs font-bold text-on-surface transition hover:bg-surface-container"
+            >
+              <span className="material-symbols-outlined" style={{ fontSize: 15 }}>
+                {listSortDir === "desc" ? "arrow_downward" : "arrow_upward"}
+              </span>
+              Date {listSortDir === "desc" ? "Newest first" : "Oldest first"}
+            </button>
           </div>
 
-          {/* RIGHT: inline detail panel — only when a machine is selected */}
-          {viewingEquipment && (
-            <div className="flex-1 min-w-0 lg:sticky lg:top-6">
-              <EquipmentDetailPanel equipment={viewingEquipment} onClose={() => setViewingEquipment(null)} />
+          {allHistoryLoading && (
+            <div className="flex items-center gap-2 py-12 text-sm text-on-surface-variant">
+              <span className="material-symbols-outlined animate-spin" style={{ fontSize: 18 }}>progress_activity</span>
+              読み込み中…
+            </div>
+          )}
+          {!allHistoryLoading && allHistoryError && (
+            <div className="rounded-2xl bg-error/10 px-5 py-4 text-sm font-medium text-error">{allHistoryError}</div>
+          )}
+          {!allHistoryLoading && !allHistoryError && filteredSortedHistory.length === 0 && (
+            <div className="rounded-2xl border border-outline-variant/20 bg-surface px-5 py-10 text-center text-sm text-on-surface-variant">
+              {allHistory.length === 0 ? "事案の記録はまだありません。" : "No records matched the current filters."}
+            </div>
+          )}
+          {!allHistoryLoading && !allHistoryError && filteredSortedHistory.length > 0 && (
+            <div className="flex flex-col gap-2">
+              {filteredSortedHistory.map((event, i) => {
+                const key = event._id?.$oid ?? event._id ?? i;
+                const tags = Array.isArray(event.tags) ? event.tags : [];
+                return (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => setViewingEvent(event)}
+                    className="w-full rounded-2xl border border-outline-variant/20 bg-surface px-4 py-3 text-left transition hover:border-outline-variant/40 hover:bg-surface-container/50"
+                  >
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-semibold text-on-surface">{event["発生事案"] || "—"}</p>
+                        <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                          {event["工場"] && <span className="text-[11px] text-on-surface-variant">{event["工場"]}</span>}
+                          {event.equipmentName && <span className="text-[11px] text-on-surface-variant/60">/ {event.equipmentName}</span>}
+                          {event["名前"] && <span className="text-[11px] text-on-surface-variant/60">· {event["名前"]}</span>}
+                        </div>
+                        {tags.length > 0 && (
+                          <div className="mt-1.5 flex flex-wrap gap-1">
+                            {tags.map((tag) => (
+                              <span key={tag} className="rounded-full bg-surface-container px-2 py-0.5 text-[10px] font-bold text-on-surface-variant">
+                                {tag}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                      {event.eventDate && (
+                        <span className="shrink-0 text-[11px] font-bold text-primary">{event.eventDate}</span>
+                      )}
+                    </div>
+                  </button>
+                );
+              })}
             </div>
           )}
         </div>
@@ -586,7 +1047,7 @@ export default function SetsubiDBWorkspace({ refreshToken, onFlash }) {
 
       <EquipmentEventModal
         open={eventModalOpen}
-        factoryEquipment={eventModalEquipment}
+        equipment={eventModalEquipment}
         submitting={eventSubmitting}
         username={authUser?.username || "unknown"}
         onClose={closeEventModal}
@@ -594,6 +1055,44 @@ export default function SetsubiDBWorkspace({ refreshToken, onFlash }) {
       />
 
       <SuccessModal message={successMessage} onClose={() => setSuccessMessage("")} />
+
+      {viewingEvent && (
+        <EventDetailModal
+          event={viewingEvent}
+          canEdit={canEdit}
+          username={authUser?.username || "unknown"}
+          onClose={() => setViewingEvent(null)}
+          onSaved={() => {
+            setSuccessMessage("事案を更新しました。");
+            setHistoryRefreshKey((k) => k + 1);
+          }}
+          onDeleted={() => {
+            setSuccessMessage("事案をリサイクルビンに移動しました。");
+            setHistoryRefreshKey((k) => k + 1);
+            setBinRefresh((k) => k + 1);
+          }}
+        />
+      )}
+
+      {binOpen && createPortal(
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-black/40 backdrop-blur-sm">
+          <div className="flex min-h-full items-start justify-center px-4 pb-4 pt-10">
+            <div className="w-full max-w-4xl">
+              <div className="mb-3 flex justify-end">
+                <button type="button" onClick={() => setBinOpen(false)}
+                  className="flex h-10 w-10 items-center justify-center rounded-2xl bg-white/20 text-white transition hover:bg-white/30">
+                  <span className="material-symbols-outlined">close</span>
+                </button>
+              </div>
+              <EquipmentHistoryBinWorkspace
+                refreshToken={binRefresh}
+                onFlash={(msg) => { onFlash?.(msg); setBinRefresh((n) => n + 1); }}
+              />
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
     </section>
   );
 }

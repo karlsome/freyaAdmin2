@@ -134,7 +134,42 @@ export async function fetchSetsubiDBRecords() {
 }
 
 export async function fetchEquipmentHistory(equipmentId) {
-  return query("Sasaki_Coating_MasterDB", "equipmentHistoryDB", { equipmentId }, { sort: { eventDate: -1 } });
+  return query("Sasaki_Coating_MasterDB", "equipmentHistoryDB", { equipmentId, _deleted: { $ne: true } }, { sort: { eventDate: -1 } });
+}
+
+export async function fetchAllEquipmentHistory() {
+  return query("Sasaki_Coating_MasterDB", "equipmentHistoryDB", { _deleted: { $ne: true } }, { sort: { eventDate: -1 } });
+}
+
+export async function softDeleteEquipmentHistory({ recordId, username, reason }) {
+  return updateMasterRecord({
+    recordId,
+    updates: {
+      _deleted: true,
+      _deletedAt: new Date().toISOString(),
+      _deletedBy: username,
+      _deleteReason: reason,
+    },
+    username,
+    tabKey: "equipmentHistoryDB",
+  });
+}
+
+export async function fetchEquipmentHistoryBin() {
+  return query("Sasaki_Coating_MasterDB", "equipmentHistoryDB", { _deleted: true }, { sort: { _deletedAt: -1 } });
+}
+
+export async function restoreEquipmentHistoryRecord({ recordId, username }) {
+  return updateMasterRecord({
+    recordId,
+    updates: { _deleted: false },
+    username,
+    tabKey: "equipmentHistoryDB",
+  });
+}
+
+export async function permanentDeleteEquipmentHistory({ recordId, username }) {
+  return deleteMasterRecord({ recordId, username, tabKey: "equipmentHistoryDB" });
 }
 
 export async function uploadEquipmentEventImage({ base64, factoryName, equipmentName, username }) {
