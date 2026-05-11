@@ -578,6 +578,7 @@ export default function SetsubiDBWorkspace({ refreshToken, onFlash }) {
         submitting={equipSubmitting}
         factories={factoryNames}
         defaultFactory={defaultFactory}
+        username={authUser?.username || "unknown"}
         onClose={closeEquipModal}
         onSubmit={handleSaveEquipment}
         onDelete={editingRecord ? handleDeleteEquipment : undefined}

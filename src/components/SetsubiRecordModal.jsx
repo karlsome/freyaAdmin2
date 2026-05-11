@@ -1,4 +1,15 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
+import { uploadEquipmentEventImage } from "../services/api";
+
+function toBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error("Failed to read file"));
+    reader.onloadend = () => resolve(String(reader.result || ""));
+    reader.readAsDataURL(file);
+  });
+}
 
 function buildInitialDraft(record) {
   if (!record) {
@@ -30,17 +41,22 @@ export default function SetsubiRecordModal({
   submitting,
   factories = [],
   defaultFactory = "",
+  username = "unknown",
   onClose,
   onSubmit,
   onDelete,
 }) {
   const [draft, setDraft] = useState(() => buildInitialDraft(record));
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState("");
+  const fileInputRef = useRef(null);
 
   useEffect(() => {
     if (!open) return undefined;
     const base = buildInitialDraft(record);
     if (!record && defaultFactory) base["工場"] = defaultFactory;
     setDraft(base);
+    setUploadError("");
   }, [open, record, defaultFactory]);
 
   const hasData = useMemo(
@@ -52,12 +68,35 @@ export default function SetsubiRecordModal({
     setDraft((current) => ({ ...current, [field]: value }));
   }
 
+  async function handleFileChange(e) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = "";
+    setUploading(true);
+    setUploadError("");
+    try {
+      const base64 = await toBase64(file);
+      const result = await uploadEquipmentEventImage({
+        base64,
+        factoryName: draft["工場"] || "",
+        equipmentName: draft.name || "",
+        username,
+      });
+      set("imageURL", result.imageURL);
+    } catch (err) {
+      const raw = err?.message || "";
+      setUploadError(raw.startsWith("<") ? "Upload failed — server error. Check that the server is running." : raw || "Upload failed.");
+    } finally {
+      setUploading(false);
+    }
+  }
+
   if (!open) return null;
 
   const isEdit = Boolean(record);
 
-  return (
-    <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm">
+  return createPortal(
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-black/40 backdrop-blur-sm">
       <div className="flex min-h-full items-start justify-center px-4 pb-4 pt-10">
         <div className="glass-card w-full max-w-lg rounded-2xl overflow-hidden">
 
@@ -144,16 +183,44 @@ export default function SetsubiRecordModal({
                 />
               </label>
 
-              <label className="block">
-                <div className="mb-2 text-[11px] font-bold uppercase tracking-[0.18em] text-outline">Image URL</div>
-                <input
-                  type="url"
-                  value={draft.imageURL}
-                  onChange={(e) => set("imageURL", e.target.value)}
-                  placeholder="https://…"
-                  className="w-full rounded-2xl border border-outline-variant/30 bg-surface px-3 py-3 text-sm text-on-surface outline-none transition focus:border-primary/40"
-                />
-              </label>
+              <div>
+                <div className="mb-2 text-[11px] font-bold uppercase tracking-[0.18em] text-outline">Image</div>
+
+                <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
+
+                <button type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={uploading}
+                  className="inline-flex items-center gap-2 rounded-2xl border border-outline-variant/30 bg-surface px-4 py-2.5 text-xs font-bold text-on-surface transition hover:bg-surface-container disabled:cursor-not-allowed disabled:opacity-50">
+                  {uploading ? (
+                    <>
+                      <span className="material-symbols-outlined animate-spin" style={{ fontSize: 15 }}>progress_activity</span>
+                      アップロード中…
+                    </>
+                  ) : (
+                    <>
+                      <span className="material-symbols-outlined" style={{ fontSize: 15 }}>attach_file</span>
+                      {draft.imageURL ? "画像を変更" : "画像を添付"}
+                    </>
+                  )}
+                </button>
+
+                {uploadError && (
+                  <p className="mt-2 text-xs text-error">{uploadError}</p>
+                )}
+
+                {draft.imageURL && (
+                  <div className="mt-3 group relative inline-block">
+                    <img src={draft.imageURL} alt="equipment"
+                      className="h-16 w-16 rounded-xl object-cover border border-outline-variant/20" />
+                    <button type="button"
+                      onClick={() => set("imageURL", "")}
+                      className="absolute -right-1.5 -top-1.5 hidden h-5 w-5 items-center justify-center rounded-full bg-error text-white group-hover:flex">
+                      <span className="material-symbols-outlined" style={{ fontSize: 11 }}>close</span>
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
 
             <div className="mt-6 flex items-center justify-between gap-4 border-t border-outline-variant/20 pt-5">
@@ -192,6 +259,7 @@ export default function SetsubiRecordModal({
 
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { uploadEquipmentEventImage } from "../services/api";
 
 const CATEGORY_TAGS = ["メンテナンス", "修理", "部品交換", "テスト", "その他"];
@@ -135,8 +136,8 @@ export default function EquipmentEventModal({
     });
   }
 
-  return (
-    <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm">
+  return createPortal(
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-black/40 backdrop-blur-sm">
       <div className="flex min-h-full items-start justify-center px-4 pb-4 pt-10">
         <div className="glass-card w-full max-w-lg rounded-2xl overflow-hidden">
 
@@ -299,6 +300,7 @@ export default function EquipmentEventModal({
 
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
