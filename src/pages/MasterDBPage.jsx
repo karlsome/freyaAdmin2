@@ -376,6 +376,7 @@ export default function MasterDBPage() {
         const result = await createMasterRecord({
           data: record,
           username: authUser.username,
+          role: authUser.role,
           tabKey: activeTab,
         });
 
@@ -404,6 +405,7 @@ export default function MasterDBPage() {
       const result = await createMasterRecord({
         data: draft,
         username: authUser.username,
+        role: authUser.role,
         tabKey: activeTab,
       });
 
@@ -447,6 +449,7 @@ export default function MasterDBPage() {
         recordId,
         updates: draft,
         username: authUser.username,
+        role: authUser.role,
         tabKey: activeTab,
       });
 

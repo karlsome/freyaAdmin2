@@ -102,7 +102,7 @@ function EventCard({ event, onOpen }) {
 
 // ── Event detail / edit popup ────────────────────────────────────────────────
 
-function EventDetailModal({ event, canEdit, username, onClose, onSaved, onDeleted }) {
+function EventDetailModal({ event, canEdit, username, role, onClose, onSaved, onDeleted }) {
   const [mode, setMode] = useState("view"); // "view" | "edit"
   const [draft, setDraft] = useState(null);
   const [busy, setBusy] = useState(false);
@@ -179,6 +179,7 @@ function EventDetailModal({ event, canEdit, username, onClose, onSaved, onDelete
           imageURLs: draft.imageURLs.length ? draft.imageURLs : undefined,
         },
         username,
+        role,
         tabKey: "equipmentHistoryDB",
       });
       onSaved();
@@ -200,6 +201,7 @@ function EventDetailModal({ event, canEdit, username, onClose, onSaved, onDelete
       await softDeleteEquipmentHistory({
         recordId,
         username,
+        role,
         reason: reason.trim(),
       });
       onDeleted();
@@ -748,13 +750,13 @@ export default function SetsubiDBWorkspace({ refreshToken, onFlash }) {
       const username = authUser?.username || "unknown";
       if (editingRecord) {
         const recordId = editingRecord._id?.$oid ?? editingRecord._id;
-        await updateMasterRecord({ recordId, updates: payload, username, tabKey: "setsubiDB" });
+        await updateMasterRecord({ recordId, updates: payload, username, role: authUser?.role, tabKey: "setsubiDB" });
         setSuccessMessage("Record edited successfully.");
         if (viewingEquipment && (viewingEquipment._id?.$oid ?? viewingEquipment._id) === recordId) {
           setViewingEquipment({ ...viewingEquipment, ...payload });
         }
       } else {
-        await createMasterRecord({ data: payload, username, tabKey: "setsubiDB" });
+        await createMasterRecord({ data: payload, username, role: authUser?.role, tabKey: "setsubiDB" });
         setSuccessMessage("Record created successfully.");
       }
       closeEquipModal();
@@ -773,7 +775,7 @@ export default function SetsubiDBWorkspace({ refreshToken, onFlash }) {
     if (!window.confirm(`Delete "${editingRecord.name || recordId}"? This cannot be undone.`)) return;
     setEquipSubmitting(true);
     try {
-      await deleteMasterRecord({ recordId, username: authUser?.username || "unknown", tabKey: "setsubiDB" });
+      await deleteMasterRecord({ recordId, username: authUser?.username || "unknown", role: authUser?.role, tabKey: "setsubiDB" });
       setSuccessMessage("Record deleted successfully.");
       if (viewingEquipment && (viewingEquipment._id?.$oid ?? viewingEquipment._id) === recordId) {
         setViewingEquipment(null);
@@ -813,7 +815,7 @@ export default function SetsubiDBWorkspace({ refreshToken, onFlash }) {
         tags: draft.tags?.length ? draft.tags : undefined,
         imageURLs: draft.imageURLs?.length ? draft.imageURLs : undefined,
       };
-      await createMasterRecord({ data: payload, username: authUser?.username || "unknown", tabKey: "equipmentHistoryDB" });
+      await createMasterRecord({ data: payload, username: authUser?.username || "unknown", role: authUser?.role, tabKey: "equipmentHistoryDB" });
       setSuccessMessage("事案を登録しました。");
       closeEventModal();
     } catch (err) {
@@ -1061,6 +1063,7 @@ export default function SetsubiDBWorkspace({ refreshToken, onFlash }) {
           event={viewingEvent}
           canEdit={canEdit}
           username={authUser?.username || "unknown"}
+          role={authUser?.role}
           onClose={() => setViewingEvent(null)}
           onSaved={() => {
             setSuccessMessage("事案を更新しました。");

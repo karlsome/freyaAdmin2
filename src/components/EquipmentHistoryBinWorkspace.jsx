@@ -67,7 +67,7 @@ export default function EquipmentHistoryBinWorkspace({ refreshToken, onFlash }) 
     const recordId = record._id?.$oid ?? record._id;
     setBusy(recordId);
     try {
-      await restoreEquipmentHistoryRecord({ recordId, username });
+      await restoreEquipmentHistoryRecord({ recordId, username, role: authUser?.role });
       onFlash?.({ type: "success", message: "Record restored." });
       setLocalRefresh((n) => n + 1);
     } catch (err) {
@@ -85,7 +85,7 @@ export default function EquipmentHistoryBinWorkspace({ refreshToken, onFlash }) 
         setConfirm(null);
         setBusy(recordId);
         try {
-          await permanentDeleteEquipmentHistory({ recordId, username });
+          await permanentDeleteEquipmentHistory({ recordId, username, role: authUser?.role });
           onFlash?.({ type: "success", message: "Record permanently deleted." });
           setLocalRefresh((n) => n + 1);
         } catch (err) {

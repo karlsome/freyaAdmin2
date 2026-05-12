@@ -141,7 +141,7 @@ export async function fetchAllEquipmentHistory() {
   return query("Sasaki_Coating_MasterDB", "equipmentHistoryDB", { _deleted: { $ne: true } }, { sort: { eventDate: -1 } });
 }
 
-export async function softDeleteEquipmentHistory({ recordId, username, reason }) {
+export async function softDeleteEquipmentHistory({ recordId, username, role, reason }) {
   return updateMasterRecord({
     recordId,
     updates: {
@@ -151,6 +151,7 @@ export async function softDeleteEquipmentHistory({ recordId, username, reason })
       _deleteReason: reason,
     },
     username,
+    role,
     tabKey: "equipmentHistoryDB",
   });
 }
@@ -159,17 +160,18 @@ export async function fetchEquipmentHistoryBin() {
   return query("Sasaki_Coating_MasterDB", "equipmentHistoryDB", { _deleted: true }, { sort: { _deletedAt: -1 } });
 }
 
-export async function restoreEquipmentHistoryRecord({ recordId, username }) {
+export async function restoreEquipmentHistoryRecord({ recordId, username, role }) {
   return updateMasterRecord({
     recordId,
     updates: { _deleted: false },
     username,
+    role,
     tabKey: "equipmentHistoryDB",
   });
 }
 
-export async function permanentDeleteEquipmentHistory({ recordId, username }) {
-  return deleteMasterRecord({ recordId, username, tabKey: "equipmentHistoryDB" });
+export async function permanentDeleteEquipmentHistory({ recordId, username, role }) {
+  return deleteMasterRecord({ recordId, username, role, tabKey: "equipmentHistoryDB" });
 }
 
 export async function uploadEquipmentEventImage({ base64, factoryName, equipmentName, username }) {
@@ -833,26 +835,28 @@ export async function fetchMasterFilterOptions(tabKey = "masterDB") {
   return options;
 }
 
-export async function createMasterRecord({ data, username, tabKey = "masterDB" }) {
+export async function createMasterRecord({ data, username, role, tabKey = "masterDB" }) {
   const { collectionName } = getMasterCollectionConfig(tabKey);
   return _postJson("submitToMasterDB", {
     data,
     username,
+    role,
     collectionName,
   });
 }
 
-export async function updateMasterRecord({ recordId, updates, username, tabKey = "masterDB" }) {
+export async function updateMasterRecord({ recordId, updates, username, role, tabKey = "masterDB" }) {
   const { collectionName } = getMasterCollectionConfig(tabKey);
   return _postJson("updateMasterRecord", {
     recordId,
     updates,
     username,
+    role,
     collectionName,
   });
 }
 
-export async function deleteMasterRecord({ recordId, username, tabKey = "masterDB" }) {
+export async function deleteMasterRecord({ recordId, username, role, tabKey = "masterDB" }) {
   const { collectionName } = getMasterCollectionConfig(tabKey);
   return _postJson("queries", {
     dbName: "Sasaki_Coating_MasterDB",
@@ -860,6 +864,7 @@ export async function deleteMasterRecord({ recordId, username, tabKey = "masterD
     query: { _id: recordId },
     delete: true,
     username,
+    role,
   });
 }
 
