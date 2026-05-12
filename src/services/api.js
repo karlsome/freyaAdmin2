@@ -163,7 +163,7 @@ export async function fetchEquipmentHistoryBin() {
 export async function restoreEquipmentHistoryRecord({ recordId, username, role }) {
   return updateMasterRecord({
     recordId,
-    updates: { _deleted: false },
+    updates: { _deleted: false, _deletedAt: null, _deletedBy: null, _deleteReason: null },
     username,
     role,
     tabKey: "equipmentHistoryDB",
