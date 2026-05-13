@@ -15,6 +15,10 @@ import { getAuthUser } from "../utils/masterDB";
 
 const EVENT_CATEGORY_TAGS = ["メンテナンス", "修理", "部品交換", "テスト", "その他"];
 
+function isVideoUrl(url) {
+  return /\.(mp4|mov)$/i.test(url.split("?")[0]);
+}
+
 function toBase64(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -53,14 +57,20 @@ function SuccessModal({ message, onClose }) {
   );
 }
 
-function ImageLightbox({ url, onClose }) {
+function MediaLightbox({ url, onClose }) {
   if (!url) return null;
+  const isVideo = isVideoUrl(url);
   return createPortal(
     <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80"
       onClick={onClose}>
       <div className="relative" onClick={(e) => e.stopPropagation()}>
-        <img src={url} alt="full size"
-          className="max-h-[90vh] max-w-[90vw] rounded-2xl object-contain shadow-2xl" />
+        {isVideo ? (
+          <video src={url} controls autoPlay
+            className="max-h-[90vh] max-w-[90vw] rounded-2xl shadow-2xl" />
+        ) : (
+          <img src={url} alt="full size"
+            className="max-h-[90vh] max-w-[90vw] rounded-2xl object-contain shadow-2xl" />
+        )}
         <button type="button" onClick={onClose}
           className="absolute -right-3 -top-3 flex h-8 w-8 items-center justify-center rounded-full bg-white/20 text-white shadow-lg transition hover:bg-white/40">
           <span className="material-symbols-outlined" style={{ fontSize: 18 }}>close</span>
@@ -277,15 +287,19 @@ function EventDetailModal({ event, canEdit, username, role, onClose, onSaved, on
                   </div>
                 )}
 
-                {/* Images */}
+                {/* Images / Videos */}
                 {imageURLs.length > 0 && (
                   <div>
-                    <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.18em] text-outline">画像</p>
+                    <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.18em] text-outline">画像 / 動画</p>
                     <div className="flex flex-wrap gap-2">
                       {imageURLs.map((url) => (
                         <button key={url} type="button" onClick={() => setLightboxURL(url)}
                           className="overflow-hidden rounded-xl border border-outline-variant/20 transition hover:opacity-80">
-                          <img src={url} alt="添付画像" className="h-16 w-16 object-cover" />
+                          {isVideoUrl(url) ? (
+                            <video src={url} className="h-16 w-16 object-cover bg-black" muted playsInline />
+                          ) : (
+                            <img src={url} alt="添付画像" className="h-16 w-16 object-cover" />
+                          )}
                         </button>
                       ))}
                     </div>
@@ -340,20 +354,24 @@ function EventDetailModal({ event, canEdit, username, role, onClose, onSaved, on
                 </div>
 
                 <div>
-                  <div className="mb-2 text-[11px] font-bold uppercase tracking-[0.18em] text-outline">画像</div>
-                  <input ref={fileInputRef} type="file" accept="image/*" multiple className="hidden" onChange={handleFileChange} />
+                  <div className="mb-2 text-[11px] font-bold uppercase tracking-[0.18em] text-outline">画像 / 動画</div>
+                  <input ref={fileInputRef} type="file" accept="image/*,video/mp4,video/quicktime" multiple className="hidden" onChange={handleFileChange} />
                   <button type="button" onClick={() => fileInputRef.current?.click()} disabled={uploading}
                     className="inline-flex items-center gap-2 rounded-2xl border border-outline-variant/30 bg-surface px-4 py-2.5 text-xs font-bold text-on-surface transition hover:bg-surface-container disabled:opacity-50">
                     {uploading
                       ? <><span className="material-symbols-outlined animate-spin" style={{ fontSize: 15 }}>progress_activity</span>アップロード中…</>
-                      : <><span className="material-symbols-outlined" style={{ fontSize: 15 }}>attach_file</span>画像を添付</>}
+                      : <><span className="material-symbols-outlined" style={{ fontSize: 15 }}>attach_file</span>ファイルを添付</>}
                   </button>
                   {uploadError && <p className="mt-2 text-xs text-error">{uploadError}</p>}
                   {imageURLs.length > 0 && (
                     <div className="mt-3 flex flex-wrap gap-2">
                       {imageURLs.map((url) => (
                         <div key={url} className="group relative">
-                          <img src={url} alt="添付画像" className="h-16 w-16 rounded-xl object-cover border border-outline-variant/20" />
+                          {isVideoUrl(url) ? (
+                            <video src={url} className="h-16 w-16 rounded-xl object-cover border border-outline-variant/20 bg-black" muted playsInline />
+                          ) : (
+                            <img src={url} alt="添付画像" className="h-16 w-16 rounded-xl object-cover border border-outline-variant/20" />
+                          )}
                           <button type="button" onClick={() => removeImage(url)}
                             className="absolute -right-1.5 -top-1.5 hidden h-5 w-5 items-center justify-center rounded-full bg-error text-white group-hover:flex">
                             <span className="material-symbols-outlined" style={{ fontSize: 11 }}>close</span>
@@ -398,7 +416,7 @@ function EventDetailModal({ event, canEdit, username, role, onClose, onSaved, on
 
         </div>
       </div>
-      <ImageLightbox url={lightboxURL} onClose={() => setLightboxURL(null)} />
+      <MediaLightbox url={lightboxURL} onClose={() => setLightboxURL(null)} />
     </div>,
     document.body
   );
