@@ -186,11 +186,11 @@ export default function EquipmentEventModal({
                 </label>
               </div>
 
-              {/* Image upload */}
+              {/* Image / video upload */}
               <div>
-                <div className="mb-2 text-[11px] font-bold uppercase tracking-[0.18em] text-outline">画像</div>
+                <div className="mb-2 text-[11px] font-bold uppercase tracking-[0.18em] text-outline">画像 / 動画</div>
 
-                <input ref={fileInputRef} type="file" accept="image/*" multiple
+                <input ref={fileInputRef} type="file" accept="image/*,video/mp4,video/quicktime" multiple
                   className="hidden" onChange={handleFileChange} />
 
                 <button type="button"
@@ -205,7 +205,7 @@ export default function EquipmentEventModal({
                   ) : (
                     <>
                       <span className="material-symbols-outlined" style={{ fontSize: 15 }}>attach_file</span>
-                      画像を添付
+                      ファイルを添付
                     </>
                   )}
                 </button>
@@ -216,18 +216,27 @@ export default function EquipmentEventModal({
 
                 {draft.imageURLs.length > 0 && (
                   <div className="mt-3 flex flex-wrap gap-2">
-                    {draft.imageURLs.map((url) => (
-                      <div key={url} className="group relative">
-                        <img src={url} alt="添付画像"
-                          className="h-16 w-16 rounded-xl object-cover border border-outline-variant/20" />
-                        <button type="button"
-                          onClick={() => removeImage(url)}
-                          className="absolute -right-1.5 -top-1.5 hidden h-5 w-5 items-center justify-center rounded-full bg-error text-white group-hover:flex"
-                          style={{ fontSize: 11 }}>
-                          <span className="material-symbols-outlined" style={{ fontSize: 11 }}>close</span>
-                        </button>
-                      </div>
-                    ))}
+                    {draft.imageURLs.map((url) => {
+                      const isVideo = /\.(mp4|mov)$/i.test(url.split("?")[0]);
+                      return (
+                        <div key={url} className="group relative">
+                          {isVideo ? (
+                            <video src={url}
+                              className="h-16 w-16 rounded-xl object-cover border border-outline-variant/20 bg-black"
+                              muted playsInline />
+                          ) : (
+                            <img src={url} alt="添付画像"
+                              className="h-16 w-16 rounded-xl object-cover border border-outline-variant/20" />
+                          )}
+                          <button type="button"
+                            onClick={() => removeImage(url)}
+                            className="absolute -right-1.5 -top-1.5 hidden h-5 w-5 items-center justify-center rounded-full bg-error text-white group-hover:flex"
+                            style={{ fontSize: 11 }}>
+                            <span className="material-symbols-outlined" style={{ fontSize: 11 }}>close</span>
+                          </button>
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
               </div>

@@ -136,26 +136,33 @@ function EventDetailModal({ event, canEdit, username, role, onClose, onSaved, on
   }
 
   async function handleFileChange(e) {
-    const file = e.target.files?.[0];
-    if (!file) return;
+    const files = Array.from(e.target.files || []);
+    if (!files.length) return;
     e.target.value = "";
     setUploading(true);
     setUploadError("");
-    try {
-      const base64 = await toBase64(file);
-      const result = await uploadEquipmentEventImage({
-        base64,
-        factoryName: event["工場"] || "",
-        equipmentName: event.equipmentName || "",
-        username,
-      });
-      setDraft((d) => ({ ...d, imageURLs: [...d.imageURLs, result.imageURL] }));
-    } catch (err) {
-      const raw = err?.message || "";
-      setUploadError(raw.startsWith("<") ? "Upload failed — server error." : raw || "Upload failed.");
-    } finally {
-      setUploading(false);
+    const results = await Promise.allSettled(
+      files.map(async (file) => {
+        const base64 = await toBase64(file);
+        const result = await uploadEquipmentEventImage({
+          base64,
+          factoryName: event["工場"] || "",
+          equipmentName: event.equipmentName || "",
+          username,
+        });
+        return result.imageURL;
+      })
+    );
+    const urls = results.filter((r) => r.status === "fulfilled").map((r) => r.value);
+    const failedCount = results.filter((r) => r.status === "rejected").length;
+    if (urls.length) {
+      setDraft((d) => ({ ...d, imageURLs: [...d.imageURLs, ...urls] }));
     }
+    if (failedCount) {
+      const raw = results.find((r) => r.status === "rejected")?.reason?.message || "";
+      setUploadError(raw.startsWith("<") ? "Upload failed — server error." : raw || `${failedCount} file(s) failed to upload.`);
+    }
+    setUploading(false);
   }
 
   function removeImage(url) {
@@ -334,7 +341,7 @@ function EventDetailModal({ event, canEdit, username, role, onClose, onSaved, on
 
                 <div>
                   <div className="mb-2 text-[11px] font-bold uppercase tracking-[0.18em] text-outline">画像</div>
-                  <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
+                  <input ref={fileInputRef} type="file" accept="image/*" multiple className="hidden" onChange={handleFileChange} />
                   <button type="button" onClick={() => fileInputRef.current?.click()} disabled={uploading}
                     className="inline-flex items-center gap-2 rounded-2xl border border-outline-variant/30 bg-surface px-4 py-2.5 text-xs font-bold text-on-surface transition hover:bg-surface-container disabled:opacity-50">
                     {uploading
