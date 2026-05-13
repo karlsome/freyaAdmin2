@@ -44,7 +44,7 @@ export default function SetsubiRecordModal({
   username = "unknown",
   onClose,
   onSubmit,
-  onDelete,
+  onArchive,
 }) {
   const [draft, setDraft] = useState(() => buildInitialDraft(record));
   const [uploading, setUploading] = useState(false);
@@ -225,14 +225,14 @@ export default function SetsubiRecordModal({
 
             <div className="mt-6 flex items-center justify-between gap-4 border-t border-outline-variant/20 pt-5">
               <div>
-                {isEdit && onDelete ? (
+                {isEdit && onArchive ? (
                   <button
                     type="button"
-                    onClick={onDelete}
+                    onClick={onArchive}
                     disabled={submitting}
-                    className="rounded-2xl border border-destructive/20 bg-destructive/10 px-4 py-2 text-xs font-bold text-destructive transition hover:bg-destructive/20 disabled:cursor-not-allowed disabled:opacity-50"
+                    className="rounded-2xl border border-amber-500/30 bg-amber-500/10 px-4 py-2 text-xs font-bold text-amber-600 transition hover:bg-amber-500/20 disabled:cursor-not-allowed disabled:opacity-50"
                   >
-                    Delete
+                    Archive
                   </button>
                 ) : (
                   <p className="text-sm text-on-surface-variant">設備名 is required before saving.</p>

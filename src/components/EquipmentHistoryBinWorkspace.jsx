@@ -6,6 +6,7 @@ import {
   restoreEquipmentHistoryRecord,
 } from "../services/api";
 import { getAuthUser } from "../utils/masterDB";
+import SetsubiArchiveWorkspace from "./SetsubiArchiveWorkspace";
 
 function ConfirmModal({ message, onConfirm, onCancel }) {
   return createPortal(
@@ -44,6 +45,7 @@ export default function EquipmentHistoryBinWorkspace({ refreshToken, onFlash }) 
   const [busy, setBusy] = useState(null);
   const [confirm, setConfirm] = useState(null);
   const [localRefresh, setLocalRefresh] = useState(0);
+  const [archiveOpen, setArchiveOpen] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -105,9 +107,16 @@ export default function EquipmentHistoryBinWorkspace({ refreshToken, onFlash }) 
           <h3 className="mt-1 text-2xl font-black text-on-surface">Maintenance Record Recycle Bin</h3>
           <p className="mt-1 text-sm text-on-surface-variant">Soft-deleted 事案 records. Restore or permanently delete.</p>
         </div>
-        {!loading && (
-          <span className="text-sm text-on-surface-variant">{records.length} records in bin</span>
-        )}
+        <div className="flex items-center gap-3">
+          {!loading && (
+            <span className="text-sm text-on-surface-variant">{records.length} records in bin</span>
+          )}
+          <button type="button" onClick={() => setArchiveOpen(true)}
+            className="inline-flex items-center gap-1.5 rounded-2xl border border-amber-500/30 bg-amber-500/10 px-4 py-2 text-xs font-bold text-amber-600 transition hover:bg-amber-500/20">
+            <span className="material-symbols-outlined" style={{ fontSize: 14 }}>inventory_2</span>
+            View Archive
+          </button>
+        </div>
       </div>
 
       {/* Search */}
@@ -207,6 +216,13 @@ export default function EquipmentHistoryBinWorkspace({ refreshToken, onFlash }) 
           message={confirm.message}
           onConfirm={confirm.onConfirm}
           onCancel={() => setConfirm(null)}
+        />
+      )}
+
+      {archiveOpen && (
+        <SetsubiArchiveWorkspace
+          onFlash={onFlash}
+          onClose={() => setArchiveOpen(false)}
         />
       )}
     </section>

@@ -130,7 +130,39 @@ export async function fetchFactoryDBRecords() {
 }
 
 export async function fetchSetsubiDBRecords() {
-  return query("Sasaki_Coating_MasterDB", "setsubiDB", {}, { sort: { 工場: 1, name: 1 } });
+  return query("Sasaki_Coating_MasterDB", "setsubiDB", { _archived: { $ne: true } }, { sort: { 工場: 1, name: 1 } });
+}
+
+export async function archiveEquipmentRecord({ recordId, username, role }) {
+  return updateMasterRecord({
+    recordId,
+    updates: {
+      _archived: true,
+      _archivedAt: new Date().toISOString(),
+      _archivedBy: username,
+    },
+    username,
+    role,
+    tabKey: "setsubiDB",
+  });
+}
+
+export async function fetchSetsubiArchive() {
+  return query("Sasaki_Coating_MasterDB", "setsubiDB", { _archived: true }, { sort: { _archivedAt: -1 } });
+}
+
+export async function restoreEquipmentRecord({ recordId, username, role }) {
+  return updateMasterRecord({
+    recordId,
+    updates: { _archived: false, _archivedAt: null, _archivedBy: null },
+    username,
+    role,
+    tabKey: "setsubiDB",
+  });
+}
+
+export async function permanentDeleteEquipmentRecord({ recordId, username, role }) {
+  return deleteMasterRecord({ recordId, username, role, tabKey: "setsubiDB" });
 }
 
 export async function fetchEquipmentHistory(equipmentId) {
@@ -138,7 +170,13 @@ export async function fetchEquipmentHistory(equipmentId) {
 }
 
 export async function fetchAllEquipmentHistory() {
-  return query("Sasaki_Coating_MasterDB", "equipmentHistoryDB", { _deleted: { $ne: true } }, { sort: { eventDate: -1 } });
+  const archived = await fetchSetsubiArchive();
+  const archivedIds = archived
+    .map((r) => String(r._id?.$oid ?? r._id ?? ""))
+    .filter(Boolean);
+  const baseQuery = { _deleted: { $ne: true } };
+  if (archivedIds.length > 0) baseQuery.equipmentId = { $nin: archivedIds };
+  return query("Sasaki_Coating_MasterDB", "equipmentHistoryDB", baseQuery, { sort: { eventDate: -1 } });
 }
 
 export async function softDeleteEquipmentHistory({ recordId, username, role, reason }) {

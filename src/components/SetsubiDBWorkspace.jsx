@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import {
+  archiveEquipmentRecord,
   createMasterRecord,
-  deleteMasterRecord,
   fetchAllEquipmentHistory,
   fetchEquipmentHistory,
   fetchFactoryDBRecords,
@@ -768,22 +768,22 @@ export default function SetsubiDBWorkspace({ refreshToken, onFlash }) {
     }
   }
 
-  async function handleDeleteEquipment() {
+  async function handleArchiveEquipment() {
     if (!editingRecord) return;
     const recordId = editingRecord._id?.$oid ?? editingRecord._id;
     if (!recordId) return;
-    if (!window.confirm(`Delete "${editingRecord.name || recordId}"? This cannot be undone.`)) return;
+    if (!window.confirm(`Archive "${editingRecord.name || recordId}"? The record will be moved to the equipment archive and its maintenance history will remain intact.`)) return;
     setEquipSubmitting(true);
     try {
-      await deleteMasterRecord({ recordId, username: authUser?.username || "unknown", role: authUser?.role, tabKey: "setsubiDB" });
-      setSuccessMessage("Record deleted successfully.");
+      await archiveEquipmentRecord({ recordId, username: authUser?.username || "unknown", role: authUser?.role });
+      setSuccessMessage("Equipment archived successfully.");
       if (viewingEquipment && (viewingEquipment._id?.$oid ?? viewingEquipment._id) === recordId) {
         setViewingEquipment(null);
       }
       closeEquipModal();
       setLocalRefresh((n) => n + 1);
     } catch (err) {
-      onFlash?.({ type: "error", message: err?.message || "Failed to delete equipment record." });
+      onFlash?.({ type: "error", message: err?.message || "Failed to archive equipment record." });
     } finally {
       setEquipSubmitting(false);
     }
@@ -1044,7 +1044,7 @@ export default function SetsubiDBWorkspace({ refreshToken, onFlash }) {
         username={authUser?.username || "unknown"}
         onClose={closeEquipModal}
         onSubmit={handleSaveEquipment}
-        onDelete={editingRecord ? handleDeleteEquipment : undefined}
+        onArchive={editingRecord ? handleArchiveEquipment : undefined}
       />
 
       <EquipmentEventModal
