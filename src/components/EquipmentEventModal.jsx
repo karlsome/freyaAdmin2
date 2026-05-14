@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { uploadEquipmentEventImage } from "../services/api";
+import { fetchWorkerNames, uploadEquipmentEventImage } from "../services/api";
 
 const CATEGORY_TAGS = ["メンテナンス", "修理", "部品交換", "テスト", "その他"];
 
@@ -35,13 +35,29 @@ export default function EquipmentEventModal({
   const [draft, setDraft] = useState(buildInitialDraft);
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState("");
+  const [workerNames, setWorkerNames] = useState([]);
+  const [showWorkerDropdown, setShowWorkerDropdown] = useState(false);
   const fileInputRef = useRef(null);
+  const workerContainerRef = useRef(null);
 
   useEffect(() => {
     if (!open) return undefined;
     setDraft(buildInitialDraft());
     setUploadError("");
+    setShowWorkerDropdown(false);
+    fetchWorkerNames().then(setWorkerNames).catch(() => {});
   }, [open]);
+
+  useEffect(() => {
+    if (!showWorkerDropdown) return undefined;
+    function handleClickOutside(e) {
+      if (workerContainerRef.current && !workerContainerRef.current.contains(e.target)) {
+        setShowWorkerDropdown(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [showWorkerDropdown]);
 
   const hasData = useMemo(
     () => draft.発生事案.trim() !== "" && draft.tags.length > 0,
@@ -106,11 +122,17 @@ export default function EquipmentEventModal({
   function handleSubmit(event) {
     event.preventDefault();
     if (!hasData) return;
+    const trimmedName = draft["名前"].trim();
+    const isNewWorker =
+      trimmedName !== "" &&
+      !workerNames.some((n) => n.toLowerCase() === trimmedName.toLowerCase());
     onSubmit({
       ...draft,
+      名前: trimmedName,
       equipmentId: equipment?._id?.$oid ?? equipment?._id ?? "",
       equipmentName: equipment?.name || "",
       工場: equipment?.["工場"] || "",
+      _newWorkerName: isNewWorker ? trimmedName : undefined,
     });
   }
 
@@ -171,13 +193,41 @@ export default function EquipmentEventModal({
 
               {/* Name + date */}
               <div className="grid gap-4 sm:grid-cols-2">
-                <label className="block">
+                <div className="block">
                   <div className="mb-2 text-[11px] font-bold uppercase tracking-[0.18em] text-outline">名前</div>
-                  <input type="text" value={draft["名前"]}
-                    onChange={(e) => set("名前", e.target.value)}
-                    placeholder="担当者名"
-                    className="w-full rounded-2xl border border-outline-variant/30 bg-surface px-3 py-3 text-sm text-on-surface outline-none transition focus:border-primary/40" />
-                </label>
+                  <div ref={workerContainerRef} className="relative">
+                    <input
+                      type="text"
+                      value={draft["名前"]}
+                      onChange={(e) => { set("名前", e.target.value); setShowWorkerDropdown(true); }}
+                      onFocus={() => setShowWorkerDropdown(true)}
+                      placeholder="担当者名"
+                      autoComplete="off"
+                      className="w-full rounded-2xl border border-outline-variant/30 bg-surface px-3 py-3 text-sm text-on-surface outline-none transition focus:border-primary/40"
+                    />
+                    {showWorkerDropdown && (() => {
+                      const q = draft["名前"].toLowerCase();
+                      const filtered = q
+                        ? workerNames.filter((n) => n.toLowerCase().includes(q))
+                        : workerNames;
+                      return filtered.length > 0 ? (
+                        <ul className="absolute z-50 mt-1 max-h-48 w-full overflow-y-auto rounded-2xl border border-outline-variant/20 bg-surface shadow-lg">
+                          {filtered.map((name) => (
+                            <li key={name}>
+                              <button
+                                type="button"
+                                onMouseDown={(e) => { e.preventDefault(); set("名前", name); setShowWorkerDropdown(false); }}
+                                className="w-full px-4 py-2 text-left text-sm text-on-surface transition hover:bg-surface-container"
+                              >
+                                {name}
+                              </button>
+                            </li>
+                          ))}
+                        </ul>
+                      ) : null;
+                    })()}
+                  </div>
+                </div>
                 <label className="block">
                   <div className="mb-2 text-[11px] font-bold uppercase tracking-[0.18em] text-outline">発生日</div>
                   <input type="date" value={draft.eventDate}

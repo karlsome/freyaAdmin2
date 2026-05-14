@@ -937,6 +937,32 @@ export async function batchUpdateMasterRecords({ recordIds, updates, username, t
 }
 
 // ─── Product PDFs (梱包 / 検査基準 / 3点照合) ───────────────────────────────
+// ─── Worker / user name lookup ────────────────────────────────────────────────
+export async function fetchWorkerNames() {
+  const [workers, users] = await Promise.all([
+    query("Sasaki_Coating_MasterDB", "workerDB", {}, { projection: { Name: 1 } }),
+    query("Sasaki_Coating_MasterDB", "users", {}, { projection: { firstName: 1, lastName: 1 } }),
+  ]);
+  const fromWorkers = (Array.isArray(workers) ? workers : [])
+    .map((w) => String(w.Name || "").trim())
+    .filter(Boolean);
+  const fromUsers = (Array.isArray(users) ? users : [])
+    .map((u) => [u.firstName, u.lastName].filter(Boolean).join(" ").trim())
+    .filter(Boolean);
+  return [...new Set([...fromWorkers, ...fromUsers])].sort((a, b) =>
+    a.localeCompare(b, "ja")
+  );
+}
+
+export async function createWorkerRecord(name) {
+  return _postJson("submitToMasterDB", {
+    data: { Name: String(name).trim() },
+    username: "system",
+    role: "admin",
+    collectionName: "workerDB",
+  });
+}
+
 function normalizePaginatedItems(result) {
   if (Array.isArray(result)) {
     return {

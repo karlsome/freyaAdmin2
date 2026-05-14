@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import {
   archiveEquipmentRecord,
   createMasterRecord,
+  createWorkerRecord,
   fetchAllEquipmentHistory,
   fetchEquipmentHistory,
   fetchFactoryDBRecords,
@@ -461,6 +462,13 @@ function EquipmentDetailPanel({ equipment, onClose, onEdit, onAddEvent, onViewDe
           )}
         </div>
         <div className="flex shrink-0 items-center gap-2">
+          {onAddEvent && (
+            <button type="button" onClick={() => onAddEvent(equipment)}
+              className="inline-flex items-center gap-1 rounded-xl bg-primary/10 px-2.5 py-1.5 text-[10px] font-bold text-primary transition hover:bg-primary/20">
+              <span className="material-symbols-outlined" style={{ fontSize: 12 }}>add</span>
+              事案を追加
+            </button>
+          )}
           {onEdit && (
             <button type="button" onClick={() => onEdit(equipment)}
               className="flex h-9 items-center gap-1.5 rounded-2xl border border-outline-variant/20 bg-surface px-3 text-xs font-bold text-on-surface transition hover:bg-surface-container-high">
@@ -511,18 +519,9 @@ function EquipmentDetailPanel({ equipment, onClose, onEdit, onAddEvent, onViewDe
         <section>
           <div className="mb-3 flex items-center justify-between">
             <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-outline">事案履歴</p>
-            <div className="flex items-center gap-2">
-              {onAddEvent && (
-                <button type="button" onClick={() => onAddEvent(equipment)}
-                  className="inline-flex items-center gap-1 rounded-xl bg-primary/10 px-2.5 py-1.5 text-[10px] font-bold text-primary transition hover:bg-primary/20">
-                  <span className="material-symbols-outlined" style={{ fontSize: 12 }}>add</span>
-                  事案を追加
-                </button>
-              )}
-              {!historyLoading && (
-                <span className="text-[11px] text-on-surface-variant">{history.length} 件</span>
-              )}
-            </div>
+            {!historyLoading && (
+              <span className="text-[11px] text-on-surface-variant">{history.length} 件</span>
+            )}
           </div>
 
           {historyLoading && (
@@ -841,6 +840,9 @@ export default function SetsubiDBWorkspace({ refreshToken, onFlash }) {
         imageURLs: draft.imageURLs?.length ? draft.imageURLs : undefined,
       };
       await createMasterRecord({ data: payload, username: authUser?.username || "unknown", role: authUser?.role, tabKey: "equipmentHistoryDB" });
+      if (draft._newWorkerName) {
+        createWorkerRecord(draft._newWorkerName).catch(() => {});
+      }
       setSuccessMessage("事案を登録しました。");
       closeEventModal();
     } catch (err) {
