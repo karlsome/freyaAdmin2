@@ -1140,6 +1140,37 @@ export async function fetchFuryoModelProducts(model) {
   );
 }
 
+// ─── Maintenance Check Forms ──────────────────────────────────────────────────
+export async function fetchCheckFormTemplates(factory) {
+  const q = factory ? { 工場: factory } : {};
+  return query("Sasaki_Coating_MasterDB", "checkFormTemplatesDB", q, { sort: { createdAt: -1 } });
+}
+
+export async function createCheckFormTemplate(draft, username) {
+  return _postJson("submitToMasterDB", {
+    data: {
+      ...draft,
+      createdBy: username,
+      createdAt: new Date().toISOString(),
+      updatedBy: null,
+      updatedAt: null,
+    },
+    username,
+    role: "admin",
+    collectionName: "checkFormTemplatesDB",
+  });
+}
+
+export async function updateCheckFormTemplate(id, updates, username) {
+  return _postJson("updateMasterRecord", {
+    recordId: id,
+    updates: { ...updates, updatedBy: username, updatedAt: new Date().toISOString() },
+    username,
+    role: "admin",
+    collectionName: "checkFormTemplatesDB",
+  });
+}
+
 export async function translateJapaneseText(text) {
   const query = new URLSearchParams({
     q: text,
