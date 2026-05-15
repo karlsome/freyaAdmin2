@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
-import { fetchFactoryDBRecords, fetchSetsubiDBRecords, createCheckFormTemplate, updateCheckFormTemplate } from "../services/api";
+import { fetchFactoryDBRecords, fetchSetsubiDBRecords, fetchCheckFormTemplates, createCheckFormTemplate, updateCheckFormTemplate } from "../services/api";
 import { getAuthUser } from "../utils/masterDB";
 
 const FIELD_TYPES = [
@@ -63,13 +63,22 @@ export default function CheckFormBuilderModal({ initial, onClose, onSaved }) {
   const [selectedFieldId, setSelectedFieldId] = useState(null);
   const [factories, setFactories] = useState([]);
   const [allEquipment, setAllEquipment] = useState([]);
+  const [allTemplates, setAllTemplates] = useState([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
+  const [showSuccess, setShowSuccess] = useState(false);
 
   useEffect(() => {
     fetchFactoryDBRecords().then((data) => setFactories(Array.isArray(data) ? data : [])).catch(() => {});
     fetchSetsubiDBRecords().then((data) => setAllEquipment(Array.isArray(data) ? data : [])).catch(() => {});
+    fetchCheckFormTemplates().then((data) => setAllTemplates(Array.isArray(data) ? data : [])).catch(() => {});
   }, []);
+
+  const nameConflict = draft.name.trim()
+    ? allTemplates.some(
+        (t) => t.name.toLowerCase() === draft.name.trim().toLowerCase() && t._id !== initial?._id
+      )
+    : false;
 
   const filteredEquipment = draft.工場
     ? allEquipment.filter((e) => e.工場 === draft.工場)
@@ -120,6 +129,7 @@ export default function CheckFormBuilderModal({ initial, onClose, onSaved }) {
 
   async function save(deployStatus) {
     if (!draft.name.trim()) { setError("Form name is required."); return; }
+    if (nameConflict) { setError("Please choose a unique form name before saving."); return; }
     setBusy(true);
     setError(null);
     const authUser = getAuthUser();
@@ -128,10 +138,12 @@ export default function CheckFormBuilderModal({ initial, onClose, onSaved }) {
     try {
       if (initial?._id) {
         await updateCheckFormTemplate(initial._id, payload, username);
+        onSaved();
       } else {
         await createCheckFormTemplate(payload, username);
+        setShowSuccess(true);
+        setTimeout(() => { setShowSuccess(false); onSaved(); }, 2500);
       }
-      onSaved();
     } catch (e) {
       setError(e.message);
     } finally {
@@ -162,13 +174,21 @@ export default function CheckFormBuilderModal({ initial, onClose, onSaved }) {
           {/* Left: form meta + field list */}
           <div className="flex w-72 flex-shrink-0 flex-col border-r border-outline-variant/20 overflow-y-auto p-4 gap-3">
             {/* Form name */}
-            <input
-              type="text"
-              placeholder="Form name *"
-              value={draft.name}
-              onChange={(e) => setTop("name", e.target.value)}
-              className={inputClass}
-            />
+            <div>
+              <input
+                type="text"
+                placeholder="Form name *"
+                value={draft.name}
+                onChange={(e) => setTop("name", e.target.value)}
+                className={`${inputClass} ${nameConflict ? "border-error/50 focus:border-error/60" : ""}`}
+              />
+              {nameConflict && (
+                <p className="mt-1.5 flex items-center gap-1 text-xs text-error">
+                  <span className="material-symbols-outlined" style={{ fontSize: 13 }}>error</span>
+                  This form name is already in use.
+                </p>
+              )}
+            </div>
             {/* Factory */}
             <select value={draft.工場} onChange={(e) => setTop("工場", e.target.value)} className={inputClass}>
               <option value="" disabled>Factory</option>
@@ -305,10 +325,10 @@ export default function CheckFormBuilderModal({ initial, onClose, onSaved }) {
             <button type="button" onClick={onClose} className="rounded-2xl border border-outline-variant/20 bg-surface-container px-4 py-2.5 text-sm font-bold text-on-surface transition hover:bg-surface-container-high">
               Cancel
             </button>
-            <button type="button" disabled={busy} onClick={() => save("draft")} className="rounded-2xl border border-outline-variant/20 bg-surface-container px-4 py-2.5 text-sm font-bold text-on-surface transition hover:bg-surface-container-high disabled:opacity-50">
+            <button type="button" disabled={busy || nameConflict} onClick={() => save("draft")} className="rounded-2xl border border-outline-variant/20 bg-surface-container px-4 py-2.5 text-sm font-bold text-on-surface transition hover:bg-surface-container-high disabled:opacity-50">
               {busy ? "Saving…" : "Save Draft"}
             </button>
-            <button type="button" disabled={busy} onClick={() => save("active")} className="rounded-2xl bg-primary px-4 py-2.5 text-sm font-bold text-on-primary transition hover:opacity-90 disabled:opacity-50">
+            <button type="button" disabled={busy || nameConflict} onClick={() => save("active")} className="rounded-2xl bg-primary px-4 py-2.5 text-sm font-bold text-on-primary transition hover:opacity-90 disabled:opacity-50">
               {busy ? "Saving…" : "Deploy"}
             </button>
           </div>
@@ -317,7 +337,23 @@ export default function CheckFormBuilderModal({ initial, onClose, onSaved }) {
     </div>
   );
 
-  return createPortal(modal, document.body);
+  const toast = showSuccess && (
+    <div className="fixed bottom-6 left-1/2 z-[60] -translate-x-1/2">
+      <div className="flex items-center gap-3 rounded-2xl bg-on-surface px-5 py-3.5 shadow-2xl">
+        <span className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-primary">
+          <span className="material-symbols-outlined text-on-primary" style={{ fontSize: 16, fontVariationSettings: "'FILL' 1" }}>check</span>
+        </span>
+        <span className="text-sm font-semibold text-surface">Form created successfully</span>
+      </div>
+    </div>
+  );
+
+  return (
+    <>
+      {createPortal(modal, document.body)}
+      {toast && createPortal(toast, document.body)}
+    </>
+  );
 }
 
 function FieldEditor({ field, onChange }) {
