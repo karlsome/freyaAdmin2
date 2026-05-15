@@ -137,11 +137,11 @@ export default function FactoryDBWorkspace({ refreshToken, onFlash }) {
 
       if (editingRecord) {
         const recordId = editingRecord._id?.$oid || editingRecord._id;
-        await updateMasterRecord({ recordId, updates: payload, username: authUserName, tabKey: "factoryDB" });
+        await updateMasterRecord({ recordId, updates: payload, username: authUserName, role: authUser?.role, tabKey: "factoryDB" });
         setSuccessMessage("Record edited successfully.");
         setSuccessModalOpen(true);
       } else {
-        await createMasterRecord({ data: payload, username: authUserName, tabKey: "factoryDB" });
+        await createMasterRecord({ data: payload, username: authUserName, role: authUser?.role, tabKey: "factoryDB" });
         setSuccessMessage("Record created successfully.");
         setSuccessModalOpen(true);
       }
@@ -170,7 +170,7 @@ export default function FactoryDBWorkspace({ refreshToken, onFlash }) {
 
     setDeleteBusyId(recordId);
     try {
-      await deleteMasterRecord({ recordId, username: authUser?.username || "unknown", tabKey: "factoryDB" });
+      await deleteMasterRecord({ recordId, username: authUser?.username || "unknown", role: authUser?.role, tabKey: "factoryDB" });
       setSuccessMessage("Record deleted successfully.");
       setSuccessModalOpen(true);
       setLocalRefresh((current) => current + 1);

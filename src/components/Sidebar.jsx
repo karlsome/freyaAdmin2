@@ -20,6 +20,7 @@ const navItems = [
   { icon: "database",                 labelKey: "masterDB",            page: "masterDB" },
   { icon: "hub",                      labelKey: "customerManagement",  page: "customerManagement" },
   { icon: "construction",             labelKey: "equipment",           page: "equipment" },
+  { icon: "checklist",                labelKey: "maintenance",         page: "maintenance" },
   { icon: "lan",                      labelKey: "scna",                page: "scna" },
   { icon: "settings_input_component", labelKey: "noda",                page: "noda" },
   { icon: "play_circle",              labelKey: "videoManual",         page: "videoManual" },

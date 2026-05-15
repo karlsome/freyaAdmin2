@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>freyaAdmin2 — Domain Map</title>
+<style>
+  :root {
+    --bg: #ffffff;
+    --bg-secondary: #f5f5f4;
+    --text: #1a1a1a;
+    --text-secondary: #6b6b6b;
+    --text-tertiary: #9b9b9b;
+    --border: rgba(0,0,0,0.10);
+    --border-hover: rgba(0,0,0,0.22);
+    --radius-md: 8px;
+    --radius-lg: 12px;
+    --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    --font-mono: 'SF Mono', 'Fira Code', 'Fira Mono', monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1a1a1a;
+      --bg-secondary: #242424;
+      --text: #e8e8e8;
+      --text-secondary: #a0a0a0;
+      --text-tertiary: #666;
+      --border: rgba(255,255,255,0.10);
+      --border-hover: rgba(255,255,255,0.22);
+    }
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: var(--font-sans);
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding: 40px 24px 80px;
+    max-width: 980px;
+    margin: 0 auto;
+  }
+  header { margin-bottom: 32px; }
+  h1 { font-size: 22px; font-weight: 500; margin-bottom: 6px; }
+  .subtitle { font-size: 14px; color: var(--text-secondary); }
+  .legend {
+    display: flex; gap: 12px; flex-wrap: wrap;
+    margin-bottom: 20px;
+  }
+  .legend-item {
+    display: flex; align-items: center; gap: 5px;
+    font-size: 11px; color: var(--text-secondary);
+  }
+  .legend-dot { width: 8px; height: 8px; border-radius: 2px; }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+  .domain-card {
+    border: 0.5px solid var(--border);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    cursor: pointer;
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  .domain-card:hover { border-color: var(--border-hover); }
+  .domain-card.active { border-width: 1.5px; }
+  .card-header {
+    padding: 11px 13px 10px;
+    display: flex; align-items: center; gap: 9px;
+  }
+  .card-header svg { width: 18px; height: 18px; flex-shrink: 0; }
+  .card-title { font-size: 13px; font-weight: 500; }
+  .card-subtitle { font-size: 11px; margin-top: 1px; opacity: 0.7; }
+  .card-chips {
+    padding: 0 13px 11px;
+    display: flex; flex-wrap: wrap; gap: 4px;
+  }
+  .chip {
+    font-size: 10px;
+    font-family: var(--font-mono);
+    padding: 2px 7px;
+    border-radius: 5px;
+    white-space: nowrap;
+  }
+  .chip.page       { background: #EEEDFE; color: #3C3489; }
+  .chip.component  { background: #E1F5EE; color: #085041; }
+  .chip.service    { background: #FAEEDA; color: #633806; }
+  .chip.util       { background: #FAECE7; color: #712B13; }
+  .chip.shared     { background: #F1EFE8; color: #444441; }
+  @media (prefers-color-scheme: dark) {
+    .chip.page       { background: #26215C; color: #CECBF6; }
+    .chip.component  { background: #04342C; color: #9FE1CB; }
+    .chip.service    { background: #412402; color: #FAC775; }
+    .chip.util       { background: #4A1B0C; color: #F5C4B3; }
+    .chip.shared     { background: #2C2C2A; color: #B4B2A9; }
+  }
+  .detail-panel {
+    border: 0.5px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 20px;
+    margin-top: 10px;
+    display: none;
+  }
+  .detail-panel.visible { display: block; }
+  .detail-header {
+    display: flex; align-items: flex-start; gap: 12px;
+    margin-bottom: 16px;
+  }
+  .detail-header svg { width: 24px; height: 24px; flex-shrink: 0; margin-top: 2px; }
+  .detail-title { font-size: 17px; font-weight: 500; }
+  .detail-desc {
+    font-size: 13px; color: var(--text-secondary);
+    margin-top: 4px; line-height: 1.6; max-width: 680px;
+  }
+  .detail-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 10px;
+    margin-top: 16px;
+  }
+  .detail-section {
+    background: var(--bg-secondary);
+    border-radius: var(--radius-md);
+    padding: 11px 13px;
+  }
+  .section-title {
+    font-size: 10px; font-weight: 500;
+    letter-spacing: 0.08em; text-transform: uppercase;
+    color: var(--text-tertiary); margin-bottom: 7px;
+  }
+  .detail-file {
+    font-size: 11px; font-family: var(--font-mono);
+    color: var(--text-secondary);
+    padding: 3px 0;
+    border-bottom: 0.5px solid var(--border);
+    line-height: 1.6;
+  }
+  .detail-file:last-child { border-bottom: none; }
+  .db-row {
+    font-size: 11px; color: var(--text-secondary);
+    padding: 3px 0; border-bottom: 0.5px solid var(--border);
+    line-height: 1.6;
+  }
+  .db-row:last-child { border-bottom: none; }
+  .db-name { font-family: var(--font-mono); font-size: 10px; color: var(--text-tertiary); }
+  .ask-btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 12px; margin-top: 14px; padding: 7px 13px;
+    border-radius: var(--radius-md);
+    border: 0.5px solid var(--border-hover);
+    background: transparent; color: var(--text-secondary);
+    cursor: pointer; font-family: var(--font-sans);
+    transition: background 0.12s;
+  }
+  .ask-btn:hover { background: var(--bg-secondary); }
+  .timestamp {
+    margin-top: 40px;
+    font-size: 11px; color: var(--text-tertiary);
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>freyaAdmin2 — Domain map</h1>
+  <p class="subtitle">Click a domain to see its pages, components, services, utils and DB collections.</p>
+</header>
+
+<div class="legend">
+  <span class="legend-item"><span class="legend-dot" style="background:#AFA9EC"></span>page</span>
+  <span class="legend-item"><span class="legend-dot" style="background:#5DCAA5"></span>component</span>
+  <span class="legend-item"><span class="legend-dot" style="background:#EF9F27"></span>service</span>
+  <span class="legend-item"><span class="legend-dot" style="background:#F0997B"></span>util</span>
+  <span class="legend-item"><span class="legend-dot" style="background:#B4B2A9"></span>shared</span>
+</div>
+
+<div class="grid" id="domain-grid"></div>
+<div class="detail-panel" id="detail-panel">
+  <div class="detail-header">
+    <svg id="d-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></svg>
+    <div>
+      <div class="detail-title" id="d-title"></div>
+      <div class="detail-desc" id="d-desc"></div>
+    </div>
+  </div>
+  <div class="detail-grid" id="d-grid"></div>
+  <button class="ask-btn" id="ask-btn">Open in Claude ↗</button>
+</div>
+
+<p class="timestamp" id="timestamp"></p>
+
+<script>
+const ICONS = {
+  dashboard: 'M3 3h7v7H3zm11 0h7v7h-7zm0 11h7v7h-7zM3 14h7v7H3z',
+  planner:   'M8 2v4M16 2v4M3 10h18M5 4h14a2 2 0 012 2v14a2 2 0 01-2 2H5a2 2 0 01-2-2V6a2 2 0 012-2z',
+  approvals: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4',
+  masterdb:  'M4 7a2 2 0 012-2h12a2 2 0 012 2v1a2 2 0 01-2 2H6a2 2 0 01-2-2V7zm0 6a2 2 0 012-2h12a2 2 0 012 2v1a2 2 0 01-2 2H6a2 2 0 01-2-2v-1zm0 6a2 2 0 012-2h12a2 2 0 012 2v1a2 2 0 01-2 2H6a2 2 0 01-2-2v-1z',
+  factories: 'M3 21V9l9-6 9 6v12M9 21V12h6v9',
+  factorystatus: 'M22 12h-4l-3 9L9 3l-3 9H2',
+  noda:      'M5 12h14M5 12l4-4m-4 4l4 4M19 12l-4-4m4 4l-4 4',
+  inventory: 'M20 7H4a2 2 0 00-2 2v10a2 2 0 002 2h16a2 2 0 002-2V9a2 2 0 00-2-2zm-9 9v-4l-2 2m4-2l-2 2M3 7l9-4 9 4',
+  shell:     'M4 6h16M4 12h16M4 18h7',
+};
+
+const DOMAINS = [
+  {
+    id: 'dashboard',
+    color: '#EEEDFE', titleColor: '#3C3489',
+    title: 'Dashboard',
+    subtitle: 'Factory KPIs at a glance',
+    desc: 'The landing page after login. Aggregates KPIs, sensor readings, recent submissions and issues across all factories. Pulls from every data source simultaneously.',
+    sections: [
+      { label: 'Page', files: ['DashboardPage.jsx'], type: 'page' },
+      { label: 'Components', files: ['Dashboard.jsx', 'DashboardKPIStrip.jsx', 'DashboardFactorySummary.jsx', 'DashboardRecentSubmissions.jsx', 'DashboardIssuesFeed.jsx', 'StatSummaryCard.jsx'], type: 'component' },
+      { label: 'Hooks', files: ['useDashboardData.js', 'useTodayData.js'], type: 'shared' },
+      { label: 'API calls', files: ['fetchTodayAllRecords()', 'fetchCombinedSensorData()', 'fetchCombinedEnvironmentalData()', 'fetchMasterFactories()'], type: 'service' },
+      { label: 'DB collections', rows: [{ label: 'kensaDB / pressDB / slitDB / SRSDB', db: 'submittedDB' }, { label: 'tempHumidityDB', db: 'submittedDB' }, { label: 'factory-overview/env', db: 'backend batch' }] },
+    ]
+  },
+  {
+    id: 'planner',
+    color: '#E1F5EE', titleColor: '#085041',
+    title: 'Production planner',
+    subtitle: 'Goal-based scheduling',
+    desc: 'The most complex domain. Manages daily production goals (CSV import or manual), then schedules them against press equipment on a timeline, kanban, or table view. Includes smart auto-scheduling and print export.',
+    sections: [
+      { label: 'Page', files: ['PlannerPage.jsx'], type: 'page' },
+      { label: 'Components (16)', files: ['PlannerFilters.jsx', 'PlannerGoalsPanel.jsx', 'PlannerGoalList.jsx', 'PlannerTimelineView.jsx', 'PlannerKanbanView.jsx', 'PlannerTableView.jsx', 'PlannerSelectedSummary.jsx', 'PlannerBreakModal.jsx', 'PlannerManualGoalModal.jsx', 'PlannerSlotSchedulingModal.jsx', 'PlannerSmartSchedulingModal.jsx', 'PlannerPrintModal.jsx', 'PlannerGoalImportReviewModal.jsx', 'PlannerDuplicateChoiceModal.jsx', 'PlannerScheduleDetailCard.jsx', 'PlannerModalShell.jsx'], type: 'component' },
+      { label: 'Service', files: ['plannerApi.js'], type: 'service' },
+      { label: 'Utils', files: ['planner.js', 'plannerExports.js'], type: 'util' },
+      { label: 'DB collections', rows: [{ label: 'production-goals', db: 'API endpoint' }, { label: 'production-plans / productionPlansDB', db: 'submittedDB' }, { label: 'pressDB (equipment + actuals)', db: 'submittedDB' }, { label: 'masterDB (products)', db: 'Sasaki_Coating_MasterDB' }, { label: 'tabletLogDB (in-progress)', db: 'submittedDB' }] },
+    ]
+  },
+  {
+    id: 'approvals',
+    color: '#FAEEDA', titleColor: '#633806',
+    title: 'Approvals',
+    subtitle: 'Multi-stage data sign-off',
+    desc: 'Two-tier approval workflow (班長 → 課長) for submitted production records. Supports filtering, inline editing, correction requests, soft-delete to recycle bin, and role-gated actions.',
+    sections: [
+      { label: 'Page', files: ['ApprovalsPage.jsx'], type: 'page' },
+      { label: 'Components', files: ['ApprovalsDetailModal.jsx', 'ApprovalsFilterPanel.jsx', 'ApprovalsStatsStrip.jsx'], type: 'component' },
+      { label: 'Service', files: ['approvalsApi.js'], type: 'service' },
+      { label: 'Utils', files: ['approvals.js', 'approvalEdit.js'], type: 'util' },
+      { label: 'DB collections', rows: [{ label: 'kensaDB / pressDB / slitDB / SRSDB', db: 'submittedDB' }, { label: 'users', db: 'Sasaki_Coating_MasterDB' }, { label: 'Recycle bin endpoint', db: 'API endpoint' }] },
+    ]
+  },
+  {
+    id: 'masterdb',
+    color: '#FAECE7', titleColor: '#712B13',
+    title: 'Master DB',
+    subtitle: 'Product & equipment records',
+    desc: 'CRUD interface for the master product catalogue, factory records, equipment (設備), and materials. Includes server-side pagination, advanced filtering, bulk edits, CSV import, image upload, and the Furyo Kanri defect definition editor.',
+    sections: [
+      { label: 'Page', files: ['MasterDBPage.jsx'], type: 'page' },
+      { label: 'Components (24)', files: ['MasterTable.jsx', 'MasterTabNav.jsx', 'MasterFilterPanel.jsx', 'MasterStatsStrip.jsx', 'MasterDetailDrawer.jsx', 'MasterRecordModal.jsx', 'MasterBatchEditModal.jsx', 'MasterCsvImportCard.jsx', 'MasterProductPickerModal.jsx', 'FactoryDBWorkspace.jsx', 'FactoryRecordModal.jsx', 'SetsubiDBWorkspace.jsx', 'SetsubiRecordModal.jsx', 'SetsubiArchiveWorkspace.jsx', 'EquipmentViewModal.jsx', 'EquipmentEventModal.jsx', 'EquipmentHistoryBinWorkspace.jsx', 'FuryoKanriWorkspace.jsx', 'FuryoModelListPanel.jsx', 'FuryoDefinitionPanel.jsx', 'FuryoModelInfoModal.jsx', 'ProductPDFsWorkspace.jsx', 'FieldOptionPickerModal.jsx', 'DataTable.jsx'], type: 'component' },
+      { label: 'Service (in api.js)', files: ['fetchMasterPage()', 'fetchMasterSchema()', 'createMasterRecord()', 'updateMasterRecord()', 'deleteMasterRecord()', 'batchUpdateMasterRecords()', 'uploadMasterImage()', 'fetchDefectDefinitions()', 'saveDefectDefinition()', 'fetchProductPDFs…()'], type: 'service' },
+      { label: 'Utils', files: ['masterDB.js', 'furyoKanri.js', 'productPDFs.js'], type: 'util' },
+      { label: 'DB collections', rows: [{ label: 'masterDB, factoryDB, setsubiDB', db: 'Sasaki_Coating_MasterDB' }, { label: 'materialMasterDB2', db: 'Sasaki_Coating_MasterDB' }, { label: 'equipmentHistoryDB', db: 'Sasaki_Coating_MasterDB' }, { label: 'Product PDFs endpoint', db: 'API endpoint' }] },
+    ]
+  },
+  {
+    id: 'factories',
+    color: '#E6F1FB', titleColor: '#0C447C',
+    title: 'Factories & sensors',
+    subtitle: 'Per-factory production data',
+    desc: 'Two related domains. Factories shows production totals, defect rates and sensor summaries per factory. Sensors / SensorDetailPage shows temperature, humidity and WBGT trend charts per device. Both share the core api.js data functions.',
+    sections: [
+      { label: 'Pages', files: ['FactoriesPage.jsx', 'FactoryDetailPage.jsx', 'SensorsPage.jsx', 'SensorDetailPage.jsx'], type: 'page' },
+      { label: 'Components', files: ['FactoryCard.jsx', 'SensorTrendChart.jsx', 'ProcessPanel.jsx', 'ProductionFilterBar.jsx', 'AdvancedFilterSection.jsx', 'RecordDetailModal.jsx', 'RecordEditModal.jsx'], type: 'component' },
+      { label: 'Hook', files: ['useRecordModal.js'], type: 'shared' },
+      { label: 'Service (in api.js)', files: ['fetchProductionByPeriod()', 'fetchSensorData()', 'fetchHistoricalSensorData()', 'fetchEnvironmentalData()', 'fetchDistinctValues()'], type: 'service' },
+      { label: 'DB collections', rows: [{ label: 'kensaDB, pressDB, slitDB, SRSDB', db: 'submittedDB' }, { label: 'tempHumidityDB', db: 'submittedDB' }, { label: 'factory-overview/env', db: 'backend batch' }] },
+    ]
+  },
+  {
+    id: 'factorystatus',
+    color: '#EAF3DE', titleColor: '#27500A',
+    title: 'Factory status',
+    subtitle: 'Live session & log monitoring',
+    desc: 'Real-time snapshot of what is running across factories — active sessions, equipment in use, worker assignments. A separate logs page shows paginated historical session records with filtering.',
+    sections: [
+      { label: 'Pages', files: ['FactoryStatusPage.jsx', 'FactoryStatusLogsPage.jsx'], type: 'page' },
+      { label: 'Components', files: ['factoryStatus/FactoryStatusLogsModal.jsx'], type: 'component' },
+      { label: 'Service', files: ['factoryStatusApi.js'], type: 'service' },
+      { label: 'Utils', files: ['factoryStatus.js', 'statusHelpers.js'], type: 'util' },
+      { label: 'DB collections', rows: [{ label: 'factory-status/snapshot', db: 'API endpoint' }, { label: 'factory-status/logs', db: 'API endpoint' }] },
+    ]
+  },
+  {
+    id: 'noda',
+    color: '#FBEAF0', titleColor: '#72243E',
+    title: 'NODA',
+    subtitle: 'Delivery request management',
+    desc: 'Manages outbound delivery / picking requests. Supports bulk creation, line-item status tracking, inventory reservation checks, and a Gen CSV export for logistics. All actions go through a single postNodaAction() dispatcher.',
+    sections: [
+      { label: 'Page', files: ['NodaPage.jsx'], type: 'page' },
+      { label: 'Components', files: ['noda/NodaDetailModal.jsx', 'noda/NodaBulkRequestModal.jsx', 'noda/NodaGenSyncModal.jsx', 'noda/NodaModalFrame.jsx'], type: 'component' },
+      { label: 'Service', files: ['nodaApi.js'], type: 'service' },
+      { label: 'Utils', files: ['noda.js'], type: 'util' },
+      { label: 'DB collections', rows: [{ label: 'nodaRequestDB', db: 'submittedDB' }, { label: 'masterDB (pickingIOT lookup)', db: 'Sasaki_Coating_MasterDB' }, { label: 'users', db: 'Sasaki_Coating_MasterDB' }, { label: 'extract-tokens endpoint', db: 'API endpoint' }] },
+    ]
+  },
+  {
+    id: 'inventory',
+    color: '#F1EFE8', titleColor: '#444441',
+    title: 'Inventory',
+    subtitle: 'Stock levels & transactions',
+    desc: 'Tracks stock quantities per product. Supports filtering, transaction history view, single and batch resets, and stock additions. All actions go through a postInventoryAction() dispatcher.',
+    sections: [
+      { label: 'Page', files: ['InventoryPage.jsx'], type: 'page' },
+      { label: 'Components', files: ['inventory/InventoryAddModal.jsx', 'inventory/InventoryBatchResetModal.jsx', 'inventory/InventoryTransactionsModal.jsx'], type: 'component' },
+      { label: 'Service', files: ['inventoryApi.js'], type: 'service' },
+      { label: 'Utils', files: ['inventory.js'], type: 'util' },
+      { label: 'DB collections', rows: [{ label: 'inventory-management endpoint', db: 'API endpoint' }, { label: 'masterDB (product lookup)', db: 'Sasaki_Coating_MasterDB' }] },
+    ]
+  },
+  {
+    id: 'shell',
+    color: '#F1EFE8', titleColor: '#444441',
+    title: 'App shell & auth',
+    subtitle: 'Routing, nav, login, i18n',
+    desc: 'Everything shared across all domains: the authenticated shell (Sidebar, TopNav, SettingsModal), login page with view-transition handoff, React Router routing, auth persistence in localStorage, and the EN/JA translation system.',
+    sections: [
+      { label: 'Entry points', files: ['main.jsx', 'App.jsx'], type: 'page' },
+      { label: 'Shell components', files: ['Sidebar.jsx', 'TopNav.jsx', 'SettingsModal.jsx', 'LiquidSegmentedControl.jsx', 'PaginationControls.jsx'], type: 'component' },
+      { label: 'Auth', files: ['LoginPage.jsx', 'authApi.js', 'utils/auth.js'], type: 'service' },
+      { label: 'i18n', files: ['i18n/translations.js', 'contexts/LanguageContext.jsx'], type: 'shared' },
+      { label: 'Shared data', files: ['data/mockDashboard.js', 'services/api.js (base)'], type: 'shared' },
+    ]
+  }
+];
+
+function makeIcon(id) {
+  const d = ICONS[id] || ICONS.shell;
+  return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="${d}"/></svg>`;
+}
+
+function renderCard(d, active) {
+  const chipTypes = ['page','component','service','util','shared'];
+  const chips = d.sections
+    .filter(s => s.type && chipTypes.includes(s.type))
+    .flatMap(s => s.files.slice(0, 2).map(f => `<span class="chip ${s.type}">${f.replace(/\.(jsx|js)$/,'')}</span>`))
+    .slice(0, 4).join('');
+  const borderStyle = active ? `border-color:${d.titleColor};border-width:1.5px` : '';
+  return `<div class="domain-card${active?' active':''}" style="${borderStyle}" onclick="selectDomain('${d.id}')">
+    <div class="card-header" style="background:${d.color}">
+      <svg viewBox="0 0 24 24" fill="none" stroke="${d.titleColor}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="width:18px;height:18px;flex-shrink:0"><path d="${ICONS[d.id]||ICONS.shell}"/></svg>
+      <div>
+        <div class="card-title" style="color:${d.titleColor}">${d.title}</div>
+        <div class="card-subtitle" style="color:${d.titleColor}">${d.subtitle}</div>
+      </div>
+    </div>
+    <div class="card-chips">${chips}</div>
+  </div>`;
+}
+
+function renderDetail(d) {
+  const chipTypes = ['page','component','service','util','shared'];
+  const sections = d.sections.filter(s => s.type && chipTypes.includes(s.type));
+  const dbSection = d.sections.find(s => s.rows);
+  let html = sections.map(s => {
+    const files = s.files.map(f => `<div class="detail-file">${f}</div>`).join('');
+    return `<div class="detail-section"><div class="section-title">${s.label}</div>${files}</div>`;
+  }).join('');
+  if (dbSection) {
+    const rows = dbSection.rows.map(r => `<div class="db-row">${r.label}<br><span class="db-name">${r.db}</span></div>`).join('');
+    html += `<div class="detail-section"><div class="section-title">${dbSection.label}</div>${rows}</div>`;
+  }
+  return html;
+}
+
+let active = null;
+
+function selectDomain(id) {
+  if (active === id) {
+    active = null;
+    document.getElementById('detail-panel').classList.remove('visible');
+    renderGrid();
+    return;
+  }
+  active = id;
+  renderGrid();
+  const d = DOMAINS.find(x => x.id === id);
+  document.getElementById('d-icon').innerHTML = `<path d="${ICONS[d.id]||ICONS.shell}"/>`;
+  document.getElementById('d-icon').style.stroke = d.titleColor;
+  document.getElementById('d-title').textContent = d.title;
+  document.getElementById('d-desc').textContent = d.desc;
+  document.getElementById('d-grid').innerHTML = renderDetail(d);
+  document.getElementById('ask-btn').onclick = () => {
+    window.open(`https://claude.ai/new?q=${encodeURIComponent('Tell me more about the ' + d.title + ' domain in freyaAdmin2 — how does it work end to end?')}`, '_blank');
+  };
+  document.getElementById('detail-panel').classList.add('visible');
+  document.getElementById('detail-panel').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function renderGrid() {
+  document.getElementById('domain-grid').innerHTML = DOMAINS.map(d => renderCard(d, d.id === active)).join('');
+}
+
+renderGrid();
+document.getElementById('timestamp').textContent = 'Generated ' + new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+</script>
+</body>
+</html>

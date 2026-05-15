@@ -129,6 +129,93 @@ export async function fetchFactoryDBRecords() {
   return query("Sasaki_Coating_MasterDB", "factoryDB", {}, { sort: { 工場: 1 } });
 }
 
+export async function fetchSetsubiDBRecords() {
+  return query("Sasaki_Coating_MasterDB", "setsubiDB", { _archived: { $ne: true } }, { sort: { 工場: 1, name: 1 } });
+}
+
+export async function archiveEquipmentRecord({ recordId, username, role }) {
+  return updateMasterRecord({
+    recordId,
+    updates: {
+      _archived: true,
+      _archivedAt: new Date().toISOString(),
+      _archivedBy: username,
+    },
+    username,
+    role,
+    tabKey: "setsubiDB",
+  });
+}
+
+export async function fetchSetsubiArchive() {
+  return query("Sasaki_Coating_MasterDB", "setsubiDB", { _archived: true }, { sort: { _archivedAt: -1 } });
+}
+
+export async function restoreEquipmentRecord({ recordId, username, role }) {
+  return updateMasterRecord({
+    recordId,
+    updates: { _archived: false, _archivedAt: null, _archivedBy: null },
+    username,
+    role,
+    tabKey: "setsubiDB",
+  });
+}
+
+export async function permanentDeleteEquipmentRecord({ recordId, username, role }) {
+  return deleteMasterRecord({ recordId, username, role, tabKey: "setsubiDB" });
+}
+
+export async function fetchEquipmentHistory(equipmentId) {
+  return query("Sasaki_Coating_MasterDB", "equipmentHistoryDB", { equipmentId, _deleted: { $ne: true } }, { sort: { eventDate: -1 } });
+}
+
+export async function fetchAllEquipmentHistory() {
+  const archived = await fetchSetsubiArchive();
+  const archivedIds = archived
+    .map((r) => String(r._id?.$oid ?? r._id ?? ""))
+    .filter(Boolean);
+  const baseQuery = { _deleted: { $ne: true } };
+  if (archivedIds.length > 0) baseQuery.equipmentId = { $nin: archivedIds };
+  return query("Sasaki_Coating_MasterDB", "equipmentHistoryDB", baseQuery, { sort: { eventDate: -1 } });
+}
+
+export async function softDeleteEquipmentHistory({ recordId, username, role, reason }) {
+  return updateMasterRecord({
+    recordId,
+    updates: {
+      _deleted: true,
+      _deletedAt: new Date().toISOString(),
+      _deletedBy: username,
+      _deleteReason: reason,
+    },
+    username,
+    role,
+    tabKey: "equipmentHistoryDB",
+  });
+}
+
+export async function fetchEquipmentHistoryBin() {
+  return query("Sasaki_Coating_MasterDB", "equipmentHistoryDB", { _deleted: true }, { sort: { _deletedAt: -1 } });
+}
+
+export async function restoreEquipmentHistoryRecord({ recordId, username, role }) {
+  return updateMasterRecord({
+    recordId,
+    updates: { _deleted: false, _deletedAt: null, _deletedBy: null, _deleteReason: null },
+    username,
+    role,
+    tabKey: "equipmentHistoryDB",
+  });
+}
+
+export async function permanentDeleteEquipmentHistory({ recordId, username, role }) {
+  return deleteMasterRecord({ recordId, username, role, tabKey: "equipmentHistoryDB" });
+}
+
+export async function uploadEquipmentEventImage({ base64, factoryName, equipmentName, username }) {
+  return _postJson("api/upload-equipment-event-image", { base64, factoryName, equipmentName, username });
+}
+
 // ─── Production data (aggregates all 4 process DBs) ──────────────────────────
 const PROCESS_COLLECTIONS = ["kensaDB", "pressDB", "slitDB", "SRSDB"];
 
@@ -676,6 +763,12 @@ export function getMasterCollectionConfig(tabKey = "masterDB") {
   if (tabKey === "factoryDB") {
     return { collectionName: "factoryDB", baseQuery: {} };
   }
+  if (tabKey === "setsubiDB") {
+    return { collectionName: "setsubiDB", baseQuery: {} };
+  }
+  if (tabKey === "equipmentHistoryDB") {
+    return { collectionName: "equipmentHistoryDB", baseQuery: {} };
+  }
   return { collectionName: "masterDB", baseQuery: {} };
 }
 
@@ -780,26 +873,28 @@ export async function fetchMasterFilterOptions(tabKey = "masterDB") {
   return options;
 }
 
-export async function createMasterRecord({ data, username, tabKey = "masterDB" }) {
+export async function createMasterRecord({ data, username, role, tabKey = "masterDB" }) {
   const { collectionName } = getMasterCollectionConfig(tabKey);
   return _postJson("submitToMasterDB", {
     data,
     username,
+    role,
     collectionName,
   });
 }
 
-export async function updateMasterRecord({ recordId, updates, username, tabKey = "masterDB" }) {
+export async function updateMasterRecord({ recordId, updates, username, role, tabKey = "masterDB" }) {
   const { collectionName } = getMasterCollectionConfig(tabKey);
   return _postJson("updateMasterRecord", {
     recordId,
     updates,
     username,
+    role,
     collectionName,
   });
 }
 
-export async function deleteMasterRecord({ recordId, username, tabKey = "masterDB" }) {
+export async function deleteMasterRecord({ recordId, username, role, tabKey = "masterDB" }) {
   const { collectionName } = getMasterCollectionConfig(tabKey);
   return _postJson("queries", {
     dbName: "Sasaki_Coating_MasterDB",
@@ -807,6 +902,7 @@ export async function deleteMasterRecord({ recordId, username, tabKey = "masterD
     query: { _id: recordId },
     delete: true,
     username,
+    role,
   });
 }
 
@@ -841,6 +937,32 @@ export async function batchUpdateMasterRecords({ recordIds, updates, username, t
 }
 
 // ─── Product PDFs (梱包 / 検査基準 / 3点照合) ───────────────────────────────
+// ─── Worker / user name lookup ────────────────────────────────────────────────
+export async function fetchWorkerNames() {
+  const [workers, users] = await Promise.all([
+    query("Sasaki_Coating_MasterDB", "workerDB", {}, { projection: { Name: 1 } }),
+    query("Sasaki_Coating_MasterDB", "users", {}, { projection: { firstName: 1, lastName: 1 } }),
+  ]);
+  const fromWorkers = (Array.isArray(workers) ? workers : [])
+    .map((w) => String(w.Name || "").trim())
+    .filter(Boolean);
+  const fromUsers = (Array.isArray(users) ? users : [])
+    .map((u) => [u.firstName, u.lastName].filter(Boolean).join(" ").trim())
+    .filter(Boolean);
+  return [...new Set([...fromWorkers, ...fromUsers])].sort((a, b) =>
+    a.localeCompare(b, "ja")
+  );
+}
+
+export async function createWorkerRecord(name) {
+  return _postJson("submitToMasterDB", {
+    data: { Name: String(name).trim() },
+    username: "system",
+    role: "admin",
+    collectionName: "workerDB",
+  });
+}
+
 function normalizePaginatedItems(result) {
   if (Array.isArray(result)) {
     return {
@@ -1016,6 +1138,37 @@ export async function fetchFuryoModelProducts(model) {
       projection: { 背番号: 1, 品番: 1, 品名: 1, imageURL: 1, _id: 0 },
     }
   );
+}
+
+// ─── Maintenance Check Forms ──────────────────────────────────────────────────
+export async function fetchCheckFormTemplates(factory) {
+  const q = factory ? { 工場: factory } : {};
+  return query("Sasaki_Coating_MasterDB", "checkFormTemplatesDB", q, { sort: { createdAt: -1 } });
+}
+
+export async function createCheckFormTemplate(draft, username) {
+  return _postJson("submitToMasterDB", {
+    data: {
+      ...draft,
+      createdBy: username,
+      createdAt: new Date().toISOString(),
+      updatedBy: null,
+      updatedAt: null,
+    },
+    username,
+    role: "admin",
+    collectionName: "checkFormTemplatesDB",
+  });
+}
+
+export async function updateCheckFormTemplate(id, updates, username) {
+  return _postJson("updateMasterRecord", {
+    recordId: id,
+    updates: { ...updates, updatedBy: username, updatedAt: new Date().toISOString() },
+    username,
+    role: "admin",
+    collectionName: "checkFormTemplatesDB",
+  });
 }
 
 export async function translateJapaneseText(text) {

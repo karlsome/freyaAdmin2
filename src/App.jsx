@@ -17,6 +17,7 @@ import NodaPage from "./pages/NodaPage";
 import InventoryPage from "./pages/InventoryPage";
 import FactoryStatusPage from "./pages/FactoryStatusPage";
 import FactoryStatusLogsPage from "./pages/FactoryStatusLogsPage";
+import MaintenancePage from "./pages/MaintenancePage";
 import LoginPage from "./pages/LoginPage";
 import {
   clearStoredAuthUser,
@@ -217,6 +218,7 @@ function App() {
               {placeholderPages.map((page) => (
                 <Route key={page} path={`/${page}`} element={<PlaceholderPage page={page} />} />
               ))}
+              <Route path="/maintenance" element={<MaintenancePage />} />
               <Route path="/masterDB" element={<MasterDBPage />} />
               <Route path="/factories" element={<FactoriesPage />} />
               <Route path="/sensors" element={<SensorsPage />} />
