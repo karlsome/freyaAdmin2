@@ -3,6 +3,7 @@ import { fetchCheckFormTemplates } from "../services/api";
 import CheckFormBuilderModal from "../components/CheckFormBuilderModal";
 import CheckFormPreviewModal from "../components/CheckFormPreviewModal";
 import CheckFormSimulatorModal from "../components/CheckFormSimulatorModal";
+import InspectionHistoryModal from "../components/InspectionHistoryModal";
 
 const STATUS_STYLES = {
   active:   "bg-primary/10 text-primary",
@@ -89,6 +90,7 @@ export default function MaintenancePage() {
   const [editTarget, setEditTarget] = useState(null);
   const [previewTarget, setPreviewTarget] = useState(null);
   const [simulateTarget, setSimulateTarget] = useState(null);
+  const [historyOpen, setHistoryOpen] = useState(false);
 
   async function load() {
     setLoading(true);
@@ -128,14 +130,24 @@ export default function MaintenancePage() {
             <p className="text-xs font-bold uppercase tracking-[0.18em] text-outline">メンテナンス</p>
             <h3 className="mt-1 text-2xl font-black text-on-surface">Maintenance Forms</h3>
           </div>
-          <button
-            type="button"
-            onClick={() => openBuilder()}
-            className="inline-flex items-center gap-2 rounded-2xl bg-primary px-4 py-3 text-sm font-bold text-on-primary transition hover:opacity-90"
-          >
-            <span className="material-symbols-outlined" style={{ fontSize: 18 }}>add</span>
-            New Form
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setHistoryOpen(true)}
+              className="inline-flex items-center gap-2 rounded-2xl border border-outline-variant/30 bg-surface-container px-4 py-3 text-sm font-bold text-on-surface transition hover:bg-surface-container-high"
+            >
+              <span className="material-symbols-outlined" style={{ fontSize: 18 }}>table_chart</span>
+              View Inspection History
+            </button>
+            <button
+              type="button"
+              onClick={() => openBuilder()}
+              className="inline-flex items-center gap-2 rounded-2xl bg-primary px-4 py-3 text-sm font-bold text-on-primary transition hover:opacity-90"
+            >
+              <span className="material-symbols-outlined" style={{ fontSize: 18 }}>add</span>
+              New Form
+            </button>
+          </div>
         </div>
 
         {loading && (
@@ -196,6 +208,10 @@ export default function MaintenancePage() {
           form={simulateTarget}
           onClose={() => setSimulateTarget(null)}
         />
+      )}
+
+      {historyOpen && (
+        <InspectionHistoryModal onClose={() => setHistoryOpen(false)} />
       )}
     </div>
   );

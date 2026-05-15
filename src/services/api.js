@@ -1171,6 +1171,14 @@ export async function updateCheckFormTemplate(id, updates, username) {
   });
 }
 
+export async function fetchCheckFormRecords(formIds = []) {
+  if (formIds.length === 0) return [];
+  return query("Sasaki_Coating_MasterDB", "checkFormRecordsDB",
+    { formId: { $in: formIds } },
+    { sort: { completedAt: -1 } }
+  );
+}
+
 export async function createCheckFormRecord(data) {
   return _postJson("submitToMasterDB", {
     data: { ...data, submittedAt: new Date().toISOString() },
