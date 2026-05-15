@@ -1171,6 +1171,15 @@ export async function updateCheckFormTemplate(id, updates, username) {
   });
 }
 
+export async function createCheckFormRecord(data) {
+  return _postJson("submitToMasterDB", {
+    data: { ...data, submittedAt: new Date().toISOString() },
+    username: data.completedBy || "simulator",
+    role: "worker",
+    collectionName: "checkFormRecordsDB",
+  });
+}
+
 export async function translateJapaneseText(text) {
   const query = new URLSearchParams({
     q: text,

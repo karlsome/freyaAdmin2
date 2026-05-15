@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { fetchCheckFormTemplates } from "../services/api";
 import CheckFormBuilderModal from "../components/CheckFormBuilderModal";
 import CheckFormPreviewModal from "../components/CheckFormPreviewModal";
+import CheckFormSimulatorModal from "../components/CheckFormSimulatorModal";
 
 const STATUS_STYLES = {
   active:   "bg-primary/10 text-primary",
@@ -9,7 +10,7 @@ const STATUS_STYLES = {
   archived: "bg-surface-container text-outline",
 };
 
-function FormCard({ form, onPreview, onEdit }) {
+function FormCard({ form, onPreview, onEdit, onSimulate }) {
   return (
     <div className="rounded-2xl border border-outline-variant/25 bg-surface-container shadow-sm overflow-hidden">
       <div className="px-5 py-4">
@@ -48,6 +49,19 @@ function FormCard({ form, onPreview, onEdit }) {
           View
         </button>
         <div className="w-px bg-outline-variant/20" />
+        {form.status === "active" && (
+          <>
+            <button
+              type="button"
+              onClick={onSimulate}
+              className="flex-1 py-2.5 text-xs font-bold text-on-surface hover:bg-surface-container-high transition flex items-center justify-center gap-1.5"
+            >
+              <span className="material-symbols-outlined" style={{ fontSize: 14 }}>tablet</span>
+              Simulate
+            </button>
+            <div className="w-px bg-outline-variant/20" />
+          </>
+        )}
         <button
           type="button"
           onClick={onEdit}
@@ -74,6 +88,7 @@ export default function MaintenancePage() {
   const [builderOpen, setBuilderOpen] = useState(false);
   const [editTarget, setEditTarget] = useState(null);
   const [previewTarget, setPreviewTarget] = useState(null);
+  const [simulateTarget, setSimulateTarget] = useState(null);
 
   async function load() {
     setLoading(true);
@@ -152,6 +167,7 @@ export default function MaintenancePage() {
                     form={form}
                     onPreview={() => setPreviewTarget(form)}
                     onEdit={() => openBuilder(form)}
+                    onSimulate={() => setSimulateTarget(form)}
                   />
                 ))}
               </div>
@@ -172,6 +188,13 @@ export default function MaintenancePage() {
         <CheckFormPreviewModal
           form={previewTarget}
           onClose={() => setPreviewTarget(null)}
+        />
+      )}
+
+      {simulateTarget && (
+        <CheckFormSimulatorModal
+          form={simulateTarget}
+          onClose={() => setSimulateTarget(null)}
         />
       )}
     </div>

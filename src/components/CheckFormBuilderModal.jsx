@@ -1,7 +1,16 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
-import { fetchFactoryDBRecords, fetchSetsubiDBRecords, fetchCheckFormTemplates, createCheckFormTemplate, updateCheckFormTemplate } from "../services/api";
+import { fetchFactoryDBRecords, fetchSetsubiDBRecords, fetchCheckFormTemplates, createCheckFormTemplate, updateCheckFormTemplate, uploadEquipmentEventImage } from "../services/api";
 import { getAuthUser } from "../utils/masterDB";
+
+function toBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = () => reject(new Error("Failed to read file"));
+    reader.readAsDataURL(file);
+  });
+}
 
 const FIELD_TYPES = [
   { value: "checkbox", label: "Checkbox", icon: "check_box" },
@@ -23,7 +32,7 @@ function newField() {
     id: crypto.randomUUID(),
     label: "",
     description: "",
-    location: "",
+    imageURL: "",
     type: "checkbox",
     required: false,
     photoRequired: false,
@@ -152,6 +161,7 @@ export default function CheckFormBuilderModal({ initial, onClose, onSaved }) {
   }
 
   const FIELD_TYPE_ICONS = { ...Object.fromEntries(FIELD_TYPES.map((t) => [t.value, t.icon])), name: "person" };
+  const username = getAuthUser()?.username || "";
 
   const modal = (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
@@ -305,7 +315,7 @@ export default function CheckFormBuilderModal({ initial, onClose, onSaved }) {
           {/* Right: field editor */}
           <div className="flex-1 overflow-y-auto p-6">
             {selectedField ? (
-              <FieldEditor field={selectedField} onChange={(patch) => updateField(selectedField.id, patch)} />
+              <FieldEditor field={selectedField} onChange={(patch) => updateField(selectedField.id, patch)} username={username} />
             ) : (
               <div className="flex h-full flex-col items-center justify-center gap-3 text-outline">
                 <span className="material-symbols-outlined" style={{ fontSize: 36 }}>edit_note</span>
@@ -356,7 +366,29 @@ export default function CheckFormBuilderModal({ initial, onClose, onSaved }) {
   );
 }
 
-function FieldEditor({ field, onChange }) {
+function FieldEditor({ field, onChange, username }) {
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState("");
+  const fileInputRef = useRef(null);
+
+  async function handleImageChange(e) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = "";
+    setUploading(true);
+    setUploadError("");
+    try {
+      const base64 = await toBase64(file);
+      const result = await uploadEquipmentEventImage({ base64, factoryName: "checkform", equipmentName: field.label || "field", username });
+      onChange({ imageURL: result.imageURL });
+    } catch (err) {
+      const raw = err?.message || "";
+      setUploadError(raw.startsWith("<") ? "Upload failed — check server is running." : raw || "Upload failed.");
+    } finally {
+      setUploading(false);
+    }
+  }
+
   return (
     <div className="flex flex-col gap-4">
       <div>
@@ -371,7 +403,7 @@ function FieldEditor({ field, onChange }) {
       </div>
 
       <div>
-        <label className="mb-1.5 block text-xs font-bold uppercase tracking-[0.15em] text-outline">Description</label>
+        <label className="mb-1.5 block text-xs font-bold uppercase tracking-[0.15em] text-outline">Instruction</label>
         <input
           type="text"
           placeholder="What should be checked…"
@@ -382,14 +414,39 @@ function FieldEditor({ field, onChange }) {
       </div>
 
       <div>
-        <label className="mb-1.5 block text-xs font-bold uppercase tracking-[0.15em] text-outline">Location</label>
-        <input
-          type="text"
-          placeholder="Where on the machine…"
-          value={field.location ?? ""}
-          onChange={(e) => onChange({ location: e.target.value })}
-          className="w-full rounded-2xl border border-outline-variant/30 bg-surface px-3 py-3 text-sm text-on-surface outline-none transition focus:border-primary/40"
-        />
+        <label className="mb-1.5 block text-xs font-bold uppercase tracking-[0.15em] text-outline">Reference Image</label>
+        <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleImageChange} />
+        <button
+          type="button"
+          onClick={() => fileInputRef.current?.click()}
+          disabled={uploading}
+          className="inline-flex items-center gap-2 rounded-2xl border border-outline-variant/30 bg-surface px-4 py-2.5 text-xs font-bold text-on-surface transition hover:bg-surface-container disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          {uploading ? (
+            <>
+              <span className="material-symbols-outlined animate-spin" style={{ fontSize: 15 }}>progress_activity</span>
+              アップロード中…
+            </>
+          ) : (
+            <>
+              <span className="material-symbols-outlined" style={{ fontSize: 15 }}>attach_file</span>
+              {field.imageURL ? "画像を変更" : "画像を添付"}
+            </>
+          )}
+        </button>
+        {uploadError && <p className="mt-2 text-xs text-error">{uploadError}</p>}
+        {field.imageURL && (
+          <div className="mt-3 group relative inline-block">
+            <img src={field.imageURL} alt="reference" className="h-20 w-20 rounded-xl object-cover border border-outline-variant/20" />
+            <button
+              type="button"
+              onClick={() => onChange({ imageURL: "" })}
+              className="absolute -right-1.5 -top-1.5 hidden h-5 w-5 items-center justify-center rounded-full bg-error text-white group-hover:flex"
+            >
+              <span className="material-symbols-outlined" style={{ fontSize: 11 }}>close</span>
+            </button>
+          </div>
+        )}
       </div>
 
       <div>
@@ -413,35 +470,19 @@ function FieldEditor({ field, onChange }) {
         </div>
       </div>
 
-      <div className="flex flex-wrap gap-x-6 gap-y-3">
-        <div className="flex items-center gap-3">
-          <button
-            type="button"
-            role="switch"
-            aria-checked={field.required}
-            onClick={() => onChange({ required: !field.required })}
-            className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors ${
-              field.required ? "bg-primary" : "bg-outline/30"
-            }`}
-          >
-            <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${field.required ? "translate-x-5" : "translate-x-0"}`} />
-          </button>
-          <span className="text-sm font-medium text-on-surface">Required</span>
-        </div>
-        <div className="flex items-center gap-3">
-          <button
-            type="button"
-            role="switch"
-            aria-checked={field.photoRequired}
-            onClick={() => onChange({ photoRequired: !field.photoRequired })}
-            className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors ${
-              field.photoRequired ? "bg-primary" : "bg-outline/30"
-            }`}
-          >
-            <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${field.photoRequired ? "translate-x-5" : "translate-x-0"}`} />
-          </button>
-          <span className="text-sm font-medium text-on-surface">Photo required</span>
-        </div>
+      <div className="flex items-center gap-3">
+        <button
+          type="button"
+          role="switch"
+          aria-checked={field.photoRequired}
+          onClick={() => onChange({ photoRequired: !field.photoRequired })}
+          className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors ${
+            field.photoRequired ? "bg-primary" : "bg-outline/30"
+          }`}
+        >
+          <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${field.photoRequired ? "translate-x-5" : "translate-x-0"}`} />
+        </button>
+        <span className="text-sm font-medium text-on-surface">Photo required</span>
       </div>
 
       {(field.type === "number") && (
