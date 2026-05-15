@@ -88,6 +88,14 @@ function NameFieldPreview({ field, workerNames, onNewName }) {
 
 function FieldPreview({ field, workerNames, onNewName }) {
   const [value, setValue] = useState(field.type === "checkbox" ? false : "");
+  const [photoPreview, setPhotoPreview] = useState(null);
+  const fileInputRef = useRef(null);
+
+  function handlePhotoChange(e) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setPhotoPreview(URL.createObjectURL(file));
+  }
 
   if (field.type === "name") {
     return <NameFieldPreview field={field} workerNames={workerNames} onNewName={onNewName} />;
@@ -103,6 +111,12 @@ function FieldPreview({ field, workerNames, onNewName }) {
           <span className="text-sm font-semibold text-on-surface">{field.label || <span className="italic text-outline">Untitled field</span>}</span>
           {field.required && <span className="ml-1.5 text-xs text-error">*</span>}
           {field.unit && <span className="ml-2 text-xs text-outline">({field.unit})</span>}
+          {field.photoRequired && (
+            <span className="ml-2 inline-flex items-center gap-0.5 text-xs text-outline">
+              <span className="material-symbols-outlined" style={{ fontSize: 12 }}>photo_camera</span>
+              写真必須
+            </span>
+          )}
         </div>
       </div>
 
@@ -166,6 +180,40 @@ function FieldPreview({ field, workerNames, onNewName }) {
         <div className="flex items-center gap-2 rounded-xl border border-dashed border-outline-variant/30 bg-surface px-4 py-3 text-xs text-outline">
           <span className="material-symbols-outlined" style={{ fontSize: 18 }}>photo_camera</span>
           Photo capture (tablet only)
+        </div>
+      )}
+
+      {field.photoRequired && (
+        <div className="mt-3 border-t border-outline-variant/10 pt-3">
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={handlePhotoChange}
+          />
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            className="inline-flex items-center gap-2 rounded-2xl border border-outline-variant/30 bg-surface px-4 py-2.5 text-xs font-bold text-on-surface transition hover:bg-surface-container"
+          >
+            <span className="material-symbols-outlined" style={{ fontSize: 15 }}>attach_file</span>
+            ファイルを添付
+          </button>
+          {photoPreview ? (
+            <div className="mt-2 flex items-center gap-2">
+              <img src={photoPreview} alt="添付画像" className="h-16 w-16 rounded-xl object-cover border border-outline-variant/20" />
+              <button
+                type="button"
+                onClick={() => { setPhotoPreview(null); if (fileInputRef.current) fileInputRef.current.value = ""; }}
+                className="flex h-6 w-6 items-center justify-center rounded-full bg-surface-container text-outline hover:text-error transition"
+              >
+                <span className="material-symbols-outlined" style={{ fontSize: 13 }}>close</span>
+              </button>
+            </div>
+          ) : (
+            <p className="mt-1.5 text-xs text-error">写真を添付してください</p>
+          )}
         </div>
       )}
     </div>

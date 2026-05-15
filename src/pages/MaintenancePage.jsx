@@ -106,7 +106,7 @@ export default function MaintenancePage() {
   }));
 
   return (
-    <div className="p-6">
+    <div className="px-6 pb-6 pt-10">
       <section className="glass-card rounded-3xl p-6">
         <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>

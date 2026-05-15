@@ -22,8 +22,11 @@ function newField() {
   return {
     id: crypto.randomUUID(),
     label: "",
+    description: "",
+    location: "",
     type: "checkbox",
     required: false,
+    photoRequired: false,
     options: [],
     min: null,
     max: null,
@@ -41,7 +44,7 @@ function emptyDraft() {
     name: "",
     description: "",
     工場: "",
-    equipmentId: "",
+    equipmentIds: [],
     schedule: "",
     fields: [NAME_FIELD],
     status: "draft",
@@ -54,7 +57,7 @@ const inputClass =
 export default function CheckFormBuilderModal({ initial, onClose, onSaved }) {
   const [draft, setDraft] = useState(() =>
     initial
-      ? { name: initial.name, description: initial.description ?? "", 工場: initial.工場 ?? "", equipmentId: initial.equipmentId ?? "", schedule: initial.schedule ?? "", fields: ensureNameField(initial.fields ?? []), status: initial.status ?? "draft" }
+      ? { name: initial.name, description: initial.description ?? "", 工場: initial.工場 ?? "", equipmentIds: initial.equipmentIds ?? (initial.equipmentId ? [initial.equipmentId] : []), schedule: initial.schedule ?? "", fields: ensureNameField(initial.fields ?? []), status: initial.status ?? "draft" }
       : emptyDraft()
   );
   const [selectedFieldId, setSelectedFieldId] = useState(null);
@@ -78,7 +81,7 @@ export default function CheckFormBuilderModal({ initial, onClose, onSaved }) {
     setDraft((d) => ({
       ...d,
       [key]: val,
-      ...(key === "工場" ? { equipmentId: "" } : {}),
+      ...(key === "工場" ? { equipmentIds: allEquipment.filter((e) => e.工場 === val).map((e) => e._id) } : {}),
     }));
   }
 
@@ -173,18 +176,47 @@ export default function CheckFormBuilderModal({ initial, onClose, onSaved }) {
                 <option key={f._id ?? f.工場} value={f.工場}>{f.工場}</option>
               ))}
             </select>
-            {/* Machine */}
-            <select
-              value={draft.equipmentId}
-              onChange={(e) => setTop("equipmentId", e.target.value)}
-              disabled={!draft.工場}
-              className={`${inputClass} disabled:opacity-40`}
-            >
-              <option value="" disabled>Machine</option>
-              {filteredEquipment.map((e) => (
-                <option key={e._id} value={e._id}>{e.name}</option>
-              ))}
-            </select>
+            {/* Machine — multi-select checkboxes */}
+            <div className={`rounded-2xl border border-outline-variant/30 bg-surface px-3 py-2 text-sm transition ${!draft.工場 ? "opacity-40 pointer-events-none" : ""}`}>
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-xs font-bold uppercase tracking-[0.15em] text-outline">Machine</span>
+                {filteredEquipment.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const allIds = filteredEquipment.map((e) => e._id);
+                      const allSelected = allIds.every((id) => draft.equipmentIds.includes(id));
+                      setTop("equipmentIds", allSelected ? [] : allIds);
+                    }}
+                    className="text-xs text-primary hover:underline"
+                  >
+                    {filteredEquipment.length > 0 && filteredEquipment.every((e) => draft.equipmentIds.includes(e._id)) ? "Deselect all" : "Select all"}
+                  </button>
+                )}
+              </div>
+              {!draft.工場 && <p className="text-xs text-outline py-1">Select a factory first</p>}
+              {draft.工場 && filteredEquipment.length === 0 && <p className="text-xs text-outline py-1">No machines found</p>}
+              {filteredEquipment.length > 0 && (
+                <div className="max-h-36 overflow-y-auto flex flex-col gap-0.5 mt-1">
+                  {filteredEquipment.map((e) => (
+                    <label key={e._id} className="flex items-center gap-2 cursor-pointer rounded-lg px-1 py-1 hover:bg-primary/5 transition">
+                      <input
+                        type="checkbox"
+                        checked={draft.equipmentIds.includes(e._id)}
+                        onChange={() => {
+                          const ids = draft.equipmentIds.includes(e._id)
+                            ? draft.equipmentIds.filter((id) => id !== e._id)
+                            : [...draft.equipmentIds, e._id];
+                          setTop("equipmentIds", ids);
+                        }}
+                        className="accent-primary h-3.5 w-3.5 flex-shrink-0"
+                      />
+                      <span className="text-xs text-on-surface truncate">{e.name}</span>
+                    </label>
+                  ))}
+                </div>
+              )}
+            </div>
             {/* Schedule */}
             <select value={draft.schedule} onChange={(e) => setTop("schedule", e.target.value)} className={inputClass}>
               <option value="" disabled>Frequency</option>
@@ -292,12 +324,34 @@ function FieldEditor({ field, onChange }) {
   return (
     <div className="flex flex-col gap-4">
       <div>
-        <label className="mb-1.5 block text-xs font-bold uppercase tracking-[0.15em] text-outline">Label</label>
+        <label className="mb-1.5 block text-xs font-bold uppercase tracking-[0.15em] text-outline">Title</label>
         <input
           type="text"
           placeholder="Describe this check…"
           value={field.label}
           onChange={(e) => onChange({ label: e.target.value })}
+          className="w-full rounded-2xl border border-outline-variant/30 bg-surface px-3 py-3 text-sm text-on-surface outline-none transition focus:border-primary/40"
+        />
+      </div>
+
+      <div>
+        <label className="mb-1.5 block text-xs font-bold uppercase tracking-[0.15em] text-outline">Description</label>
+        <input
+          type="text"
+          placeholder="What should be checked…"
+          value={field.description ?? ""}
+          onChange={(e) => onChange({ description: e.target.value })}
+          className="w-full rounded-2xl border border-outline-variant/30 bg-surface px-3 py-3 text-sm text-on-surface outline-none transition focus:border-primary/40"
+        />
+      </div>
+
+      <div>
+        <label className="mb-1.5 block text-xs font-bold uppercase tracking-[0.15em] text-outline">Location</label>
+        <input
+          type="text"
+          placeholder="Where on the machine…"
+          value={field.location ?? ""}
+          onChange={(e) => onChange({ location: e.target.value })}
           className="w-full rounded-2xl border border-outline-variant/30 bg-surface px-3 py-3 text-sm text-on-surface outline-none transition focus:border-primary/40"
         />
       </div>
@@ -323,19 +377,35 @@ function FieldEditor({ field, onChange }) {
         </div>
       </div>
 
-      <div className="flex items-center gap-3">
-        <button
-          type="button"
-          role="switch"
-          aria-checked={field.required}
-          onClick={() => onChange({ required: !field.required })}
-          className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors ${
-            field.required ? "bg-primary" : "bg-outline/30"
-          }`}
-        >
-          <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${field.required ? "translate-x-5" : "translate-x-0"}`} />
-        </button>
-        <span className="text-sm font-medium text-on-surface">Required</span>
+      <div className="flex flex-wrap gap-x-6 gap-y-3">
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            role="switch"
+            aria-checked={field.required}
+            onClick={() => onChange({ required: !field.required })}
+            className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors ${
+              field.required ? "bg-primary" : "bg-outline/30"
+            }`}
+          >
+            <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${field.required ? "translate-x-5" : "translate-x-0"}`} />
+          </button>
+          <span className="text-sm font-medium text-on-surface">Required</span>
+        </div>
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            role="switch"
+            aria-checked={field.photoRequired}
+            onClick={() => onChange({ photoRequired: !field.photoRequired })}
+            className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors ${
+              field.photoRequired ? "bg-primary" : "bg-outline/30"
+            }`}
+          >
+            <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${field.photoRequired ? "translate-x-5" : "translate-x-0"}`} />
+          </button>
+          <span className="text-sm font-medium text-on-surface">Photo required</span>
+        </div>
       </div>
 
       {(field.type === "number") && (
