@@ -165,17 +165,32 @@ function FieldCard({ field, value, onChange, photoUrl, photoUploading, onPhotoUp
       )}
 
       {field.type === "checkbox" && (
-        <button
-          type="button"
-          role="checkbox"
-          aria-checked={value}
-          onClick={() => onChange(!value)}
-          className={`flex h-8 w-8 items-center justify-center rounded-lg border-2 transition ${
-            value ? "border-primary bg-primary text-on-primary" : "border-outline/40 bg-surface"
-          }`}
-        >
-          {value && <span className="material-symbols-outlined" style={{ fontSize: 18, fontVariationSettings: "'FILL' 1" }}>check</span>}
-        </button>
+        <div className="flex gap-3">
+          <button
+            type="button"
+            onClick={() => onChange(value === "ok" ? "" : "ok")}
+            className={`flex flex-1 items-center justify-center gap-2 rounded-2xl py-3.5 text-base font-black transition ${
+              value === "ok"
+                ? "bg-primary text-on-primary"
+                : "border border-outline-variant/30 bg-surface text-outline hover:border-primary/40 hover:text-primary"
+            }`}
+          >
+            <span className="material-symbols-outlined" style={{ fontSize: 18, fontVariationSettings: value === "ok" ? "'FILL' 1" : "'FILL' 0" }}>check_circle</span>
+            OK
+          </button>
+          <button
+            type="button"
+            onClick={() => onChange(value === "ng" ? "" : "ng")}
+            className={`flex flex-1 items-center justify-center gap-2 rounded-2xl py-3.5 text-base font-black transition ${
+              value === "ng"
+                ? "bg-error text-white"
+                : "border border-outline-variant/30 bg-surface text-outline hover:border-error/40 hover:text-error"
+            }`}
+          >
+            <span className="material-symbols-outlined" style={{ fontSize: 18, fontVariationSettings: value === "ng" ? "'FILL' 1" : "'FILL' 0" }}>cancel</span>
+            NG
+          </button>
+        </div>
       )}
 
       {field.type === "text" && (
@@ -252,7 +267,7 @@ export default function CheckFormSimulatorModal({ form, onClose }) {
     fetchWorkerNames().then(setWorkerNames).catch(() => {});
     const init = {};
     for (const f of (form.fields ?? [])) {
-      init[f.id] = f.type === "checkbox" ? false : "";
+      init[f.id] = "";
     }
     setValues(init);
   }, [form]);
@@ -313,7 +328,7 @@ export default function CheckFormSimulatorModal({ form, onClose }) {
   function reset() {
     const init = {};
     for (const f of (form.fields ?? [])) {
-      init[f.id] = f.type === "checkbox" ? false : "";
+      init[f.id] = "";
     }
     setValues(init);
     setFieldPhotos({});
@@ -401,7 +416,7 @@ export default function CheckFormSimulatorModal({ form, onClose }) {
                 <FieldCard
                   key={field.id}
                   field={field}
-                  value={values[field.id] ?? (field.type === "checkbox" ? false : "")}
+                  value={values[field.id] ?? ""}
                   onChange={val => setValue(field.id, val)}
                   photoUrl={fieldPhotos[field.id]}
                   photoUploading={!!photoUploading[field.id]}

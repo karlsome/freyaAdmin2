@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { fetchCheckFormTemplates } from "../services/api";
+import { fetchCheckFormTemplates, fetchFactoryDBRecords } from "../services/api";
 import CheckFormBuilderModal from "../components/CheckFormBuilderModal";
 import CheckFormPreviewModal from "../components/CheckFormPreviewModal";
 import CheckFormSimulatorModal from "../components/CheckFormSimulatorModal";
@@ -91,6 +91,8 @@ export default function MaintenancePage() {
   const [previewTarget, setPreviewTarget] = useState(null);
   const [simulateTarget, setSimulateTarget] = useState(null);
   const [historyOpen, setHistoryOpen] = useState(false);
+  const [factories, setFactories] = useState([]);
+  const [factoryFilter, setFactoryFilter] = useState("");
 
   async function load() {
     setLoading(true);
@@ -105,7 +107,10 @@ export default function MaintenancePage() {
     }
   }
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    load();
+    fetchFactoryDBRecords().then((data) => setFactories(Array.isArray(data) ? data : [])).catch(() => {});
+  }, []);
 
   function openBuilder(form = null) {
     setEditTarget(form);
@@ -117,9 +122,13 @@ export default function MaintenancePage() {
     setEditTarget(null);
   }
 
+  const visibleTemplates = factoryFilter
+    ? templates.filter((t) => t.工場 === factoryFilter)
+    : templates;
+
   const grouped = GROUPS.map((g) => ({
     ...g,
-    items: templates.filter((t) => t.status === g.key),
+    items: visibleTemplates.filter((t) => t.status === g.key),
   }));
 
   return (
@@ -131,6 +140,16 @@ export default function MaintenancePage() {
             <h3 className="mt-1 text-2xl font-black text-on-surface">Maintenance Forms</h3>
           </div>
           <div className="flex items-center gap-2">
+            <select
+              value={factoryFilter}
+              onChange={(e) => setFactoryFilter(e.target.value)}
+              className="rounded-2xl border border-outline-variant/30 bg-surface-container px-4 py-3 text-sm font-bold text-on-surface outline-none transition hover:bg-surface-container-high"
+            >
+              <option value="">All Factories</option>
+              {factories.map((f) => (
+                <option key={f._id ?? f.工場} value={f.工場}>{f.工場}</option>
+              ))}
+            </select>
             <button
               type="button"
               onClick={() => setHistoryOpen(true)}

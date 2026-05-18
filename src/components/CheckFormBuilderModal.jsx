@@ -55,6 +55,7 @@ function emptyDraft() {
     工場: "",
     equipmentIds: [],
     schedule: "",
+    startDate: "",
     fields: [NAME_FIELD],
     status: "draft",
   };
@@ -66,7 +67,7 @@ const inputClass =
 export default function CheckFormBuilderModal({ initial, onClose, onSaved }) {
   const [draft, setDraft] = useState(() =>
     initial
-      ? { name: initial.name, description: initial.description ?? "", 工場: initial.工場 ?? "", equipmentIds: initial.equipmentIds ?? (initial.equipmentId ? [initial.equipmentId] : []), schedule: initial.schedule ?? "", fields: ensureNameField(initial.fields ?? []), status: initial.status ?? "draft" }
+      ? { name: initial.name, description: initial.description ?? "", 工場: initial.工場 ?? "", equipmentIds: initial.equipmentIds ?? (initial.equipmentId ? [initial.equipmentId] : []), schedule: initial.schedule ?? "", startDate: initial.startDate ?? "", fields: ensureNameField(initial.fields ?? []), status: initial.status ?? "draft" }
       : emptyDraft()
   );
   const [selectedFieldId, setSelectedFieldId] = useState(null);
@@ -254,15 +255,15 @@ export default function CheckFormBuilderModal({ initial, onClose, onSaved }) {
               <option value="weekly">Weekly</option>
               <option value="monthly">Monthly</option>
             </select>
-            {/* Description */}
-            <textarea
-              rows={2}
-              placeholder="Description (optional)"
-              value={draft.description}
-              onChange={(e) => setTop("description", e.target.value)}
-              className={`${inputClass} resize-none`}
-            />
-
+            <div>
+              <p className="mb-1.5 text-xs font-bold uppercase tracking-[0.15em] text-outline">Start Date</p>
+              <input
+                type="date"
+                value={draft.startDate}
+                onChange={(e) => setTop("startDate", e.target.value)}
+                className={inputClass}
+              />
+            </div>
             <div className="mt-1 border-t border-outline-variant/20 pt-3">
               <p className="mb-2 text-xs font-bold uppercase tracking-[0.15em] text-outline">Fields</p>
               {draft.fields.length === 0 && (
