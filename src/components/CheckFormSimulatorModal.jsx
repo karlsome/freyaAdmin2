@@ -1,7 +1,13 @@
 import { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
-import { fetchWorkerNames, createWorkerRecord, uploadEquipmentEventImage, createCheckFormRecord } from "../services/api";
+import { fetchWorkerNames, createWorkerRecord, uploadEquipmentEventImage, createCheckFormRecord, createNgReport, fetchSetsubiDBRecords } from "../services/api";
 import { getAuthUser } from "../utils/masterDB";
+
+function normalizeId(id) {
+  if (!id) return "";
+  if (typeof id === "object" && id.$oid) return id.$oid;
+  return String(id);
+}
 
 function toBase64(file) {
   return new Promise((resolve, reject) => {
@@ -236,14 +242,19 @@ function FieldCard({ field, value, onChange, photoUrl, photoUploading, onPhotoUp
         </select>
       )}
 
-      {field.photoRequired && (
-        <PhotoField
-          fieldId={field.id}
-          photoUrl={photoUrl}
-          uploading={photoUploading}
-          onUpload={onPhotoUpload}
-          onRemove={onPhotoRemove}
-        />
+      {(field.photoRequired || (field.type === "checkbox" && value === "ng")) && (
+        <>
+          {field.type === "checkbox" && value === "ng" && !field.photoRequired && (
+            <p className="mt-3 text-xs font-bold text-error">Attach a photo of the fault (optional)</p>
+          )}
+          <PhotoField
+            fieldId={field.id}
+            photoUrl={photoUrl}
+            uploading={photoUploading}
+            onUpload={onPhotoUpload}
+            onRemove={onPhotoRemove}
+          />
+        </>
       )}
     </div>
   );
@@ -251,6 +262,8 @@ function FieldCard({ field, value, onChange, photoUrl, photoUploading, onPhotoUp
 
 export default function CheckFormSimulatorModal({ form, onClose }) {
   const [workerNames, setWorkerNames] = useState([]);
+  const [allEquipment, setAllEquipment] = useState([]);
+  const [selectedMachineId, setSelectedMachineId] = useState("");
   const [values, setValues] = useState({});
   const [fieldPhotos, setFieldPhotos] = useState({});
   const [photoUploading, setPhotoUploading] = useState({});
@@ -265,12 +278,21 @@ export default function CheckFormSimulatorModal({ form, onClose }) {
 
   useEffect(() => {
     fetchWorkerNames().then(setWorkerNames).catch(() => {});
+    fetchSetsubiDBRecords().then(data => setAllEquipment(Array.isArray(data) ? data : [])).catch(() => {});
     const init = {};
     for (const f of (form.fields ?? [])) {
       init[f.id] = "";
     }
     setValues(init);
   }, [form]);
+
+  const formEquipment = allEquipment.filter(e =>
+    (form.equipmentIds ?? []).some(id => normalizeId(id) === normalizeId(e._id))
+  );
+
+  useEffect(() => {
+    if (formEquipment.length === 1) setSelectedMachineId(normalizeId(formEquipment[0]._id));
+  }, [formEquipment.length]);
 
   function setValue(fieldId, val) {
     setValues(v => ({ ...v, [fieldId]: val }));
@@ -290,7 +312,8 @@ export default function CheckFormSimulatorModal({ form, onClose }) {
   }
 
   const nameValue = nameField ? (values[nameField.id] ?? "") : "";
-  const canSubmit = nameValue.trim() !== "" && !submitting;
+  const needsMachineSelect = formEquipment.length > 1;
+  const canSubmit = nameValue.trim() !== "" && !submitting && (!needsMachineSelect || !!selectedMachineId);
 
   async function handleSubmit() {
     if (!canSubmit) return;
@@ -303,19 +326,47 @@ export default function CheckFormSimulatorModal({ form, onClose }) {
     for (const [fid, url] of Object.entries(fieldPhotos)) {
       responses[`${fid}_photo`] = url;
     }
+    const selectedMachine = formEquipment.find(e => normalizeId(e._id) === selectedMachineId);
+    const machineId = selectedMachine ? normalizeId(selectedMachine._id) : "";
+    const machineName = selectedMachine?.name ?? "";
+    const ngFields = otherFields
+      .filter(f => f.type === "checkbox" && values[f.id] === "ng")
+      .map(f => ({ fieldId: f.id, fieldLabel: f.label, photoUrl: fieldPhotos[f.id] ?? "" }));
     try {
-      await createCheckFormRecord({
+      const result = await createCheckFormRecord({
         formId,
         formName: form.name,
         工場: form.工場 || "",
         schedule: form.schedule || "",
+        machineId,
+        machineName,
         completedBy: nameValue.trim(),
         completedAt: now,
         periodStart,
         periodEnd,
+        hasNG: ngFields.length > 0,
+        ngFields,
         responses,
         deviceId: "simulator",
       });
+      if (ngFields.length > 0) {
+        const recordId = String(result?._id?.$oid ?? result?._id ?? result?.insertedId ?? "");
+        await Promise.all(ngFields.map(({ fieldId, fieldLabel, photoUrl }) =>
+          createNgReport({
+            formId,
+            formName: form.name,
+            工場: form.工場 || "",
+            recordId,
+            machineId,
+            machineName,
+            fieldId,
+            fieldLabel,
+            photoUrl,
+            completedBy: nameValue.trim(),
+            completedAt: now,
+          })
+        ));
+      }
       setSubmitTime(now);
       setSubmitted(true);
     } catch (e) {
@@ -335,6 +386,7 @@ export default function CheckFormSimulatorModal({ form, onClose }) {
     setSubmitted(false);
     setSubmitTime(null);
     setSubmitError(null);
+    if (formEquipment.length > 1) setSelectedMachineId("");
   }
 
   const modal = (
@@ -395,6 +447,26 @@ export default function CheckFormSimulatorModal({ form, onClose }) {
             </div>
           ) : (
             <div className="flex flex-col gap-4">
+              {/* Machine selector */}
+              {formEquipment.length > 1 && (
+                <div className="rounded-2xl border border-outline-variant/20 bg-surface-container p-5">
+                  <p className="mb-3 font-bold text-base text-on-surface">
+                    Machine
+                    <span className="ml-1.5 text-error">*</span>
+                  </p>
+                  <select
+                    value={selectedMachineId}
+                    onChange={e => setSelectedMachineId(e.target.value)}
+                    className="w-full rounded-2xl border border-outline-variant/30 bg-surface px-4 py-4 text-base text-on-surface outline-none transition focus:border-primary/50"
+                  >
+                    <option value="" disabled>Select machine…</option>
+                    {formEquipment.map(e => (
+                      <option key={normalizeId(e._id)} value={normalizeId(e._id)}>{e.name}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
               {/* Name field */}
               {nameField && (
                 <div className="rounded-2xl border border-outline-variant/20 bg-surface-container p-5">
@@ -435,6 +507,9 @@ export default function CheckFormSimulatorModal({ form, onClose }) {
         {/* Submit button — sticky footer */}
         {!submitted && (
           <div className="flex-shrink-0 border-t border-outline-variant/20 px-6 py-4">
+            {!canSubmit && needsMachineSelect && !selectedMachineId && (
+              <p className="mb-2 text-center text-xs text-outline">Select a machine to continue</p>
+            )}
             {!canSubmit && nameValue.trim() === "" && (
               <p className="mb-2 text-center text-xs text-outline">名前を入力してください</p>
             )}

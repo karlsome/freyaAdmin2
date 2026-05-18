@@ -1188,6 +1188,23 @@ export async function createCheckFormRecord(data) {
   });
 }
 
+export async function createNgReport(data) {
+  return _postJson("submitToMasterDB", {
+    data: { ...data, submittedAt: new Date().toISOString() },
+    username: data.completedBy || "simulator",
+    role: "worker",
+    collectionName: "ngReportsDB",
+  });
+}
+
+export async function fetchNgReports(formIds = []) {
+  if (formIds.length === 0) return [];
+  return query("Sasaki_Coating_MasterDB", "ngReportsDB",
+    { formId: { $in: formIds } },
+    { sort: { completedAt: -1 } }
+  );
+}
+
 export async function translateJapaneseText(text) {
   const query = new URLSearchParams({
     q: text,

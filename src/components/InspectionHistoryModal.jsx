@@ -83,7 +83,7 @@ function getCellData(machineId, date, forms, recordsByFormId) {
       const d = new Date(r.completedAt); d.setHours(0, 0, 0, 0);
       return d.getTime() === date.getTime();
     });
-    if (exactRecord) return { status: "green", record: exactRecord, form };
+    if (exactRecord) return { status: "green", record: exactRecord, form, hasNG: exactRecord.hasNG ?? false };
 
     // Only anchor days carry a red/orange marker — keeps weekly/monthly clean
     if (!isPeriodAnchor(date, form.schedule)) continue;
@@ -93,25 +93,28 @@ function getCellData(machineId, date, forms, recordsByFormId) {
 
     if (isCurrentPeriod(date, form.schedule)) {
       // ORANGE — current period, check not yet done
-      return { status: "orange", record: null, form };
+      return { status: "orange", record: null, form, hasNG: false };
     }
     if (periodEnded(date, form.schedule)) {
       // RED — past period, check was never done
-      return { status: "red", record: null, form };
+      return { status: "red", record: null, form, hasNG: false };
     }
   }
 
-  return { status: "none", record: null, form: null };
+  return { status: "none", record: null, form: null, hasNG: false };
 }
 
-function Cell({ status, onClick }) {
+function Cell({ status, onClick, hasNG }) {
   if (status === "green") return (
     <button
       type="button"
       onClick={onClick}
-      className="mx-auto flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-500/20 transition hover:bg-emerald-500/40 hover:scale-110 cursor-pointer"
+      className="relative mx-auto flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-500/20 transition hover:bg-emerald-500/40 hover:scale-110 cursor-pointer"
     >
       <div className="h-3.5 w-3.5 rounded-full bg-emerald-500" />
+      {hasNG && (
+        <div className="absolute right-1 top-1 h-2 w-2 rounded-full bg-error ring-1 ring-surface" />
+      )}
     </button>
   );
   if (status === "red") return (
@@ -133,7 +136,11 @@ function RecordDetailModal({ record, form, onClose }) {
 
   function formatValue(field) {
     const val = responses[field.id];
-    if (field.type === "checkbox") return val ? "✓  Yes" : "✗  No";
+    if (field.type === "checkbox") {
+      if (val === "ok") return "✓  OK";
+      if (val === "ng") return "✗  NG";
+      return "—";
+    }
     if (val === null || val === undefined || val === "") return "—";
     if (field.type === "number" && field.unit) return `${val} ${field.unit}`;
     return String(val);
@@ -178,6 +185,12 @@ function RecordDetailModal({ record, form, onClose }) {
               <span className="text-outline">{record.periodStart}{record.periodEnd !== record.periodStart ? ` → ${record.periodEnd}` : ""}</span>
             </div>
           )}
+          {record?.machineName && (
+            <div className="flex items-center gap-2 text-sm">
+              <span className="material-symbols-outlined text-primary" style={{ fontSize: 18 }}>precision_manufacturing</span>
+              <span className="font-semibold text-on-surface">{record.machineName}</span>
+            </div>
+          )}
           {record?.deviceId === "simulator" && (
             <span className="rounded-full bg-outline/10 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-outline">Simulator</span>
           )}
@@ -189,7 +202,8 @@ function RecordDetailModal({ record, form, onClose }) {
           {fields.map(field => {
             const photo = responses[`${field.id}_photo`];
             const value = formatValue(field);
-            const isChecked = field.type === "checkbox" && responses[field.id];
+            const isOK = field.type === "checkbox" && responses[field.id] === "ok";
+            const isNG = field.type === "checkbox" && responses[field.id] === "ng";
             return (
               <div key={field.id} className="rounded-2xl border border-outline-variant/20 bg-surface-container px-4 py-3">
                 <div className="flex items-start justify-between gap-3">
@@ -197,7 +211,7 @@ function RecordDetailModal({ record, form, onClose }) {
                     <p className="font-semibold text-sm text-on-surface truncate">{field.label || <span className="italic text-outline">Untitled</span>}</p>
                     {field.description && <p className="mt-0.5 text-xs text-outline">{field.description}</p>}
                   </div>
-                  <span className={`flex-shrink-0 text-sm font-bold ${field.type === "checkbox" ? (isChecked ? "text-emerald-500" : "text-error") : "text-on-surface"}`}>
+                  <span className={`flex-shrink-0 text-sm font-bold ${isOK ? "text-emerald-500" : isNG ? "text-error" : "text-on-surface"}`}>
                     {value}
                   </span>
                 </div>
@@ -209,6 +223,7 @@ function RecordDetailModal({ record, form, onClose }) {
               </div>
             );
           })}
+
         </div>
       </div>
     </div>
@@ -340,6 +355,13 @@ export default function InspectionHistoryModal({ onClose }) {
             <span className="flex items-center gap-1.5">
               <span className="h-3 w-3 rounded-full bg-amber-500" />Due
             </span>
+            <span className="flex items-center gap-1.5">
+              <span className="relative h-3 w-3 flex-shrink-0">
+                <span className="absolute inset-0 rounded-full bg-emerald-500" />
+                <span className="absolute right-0 top-0 h-1.5 w-1.5 rounded-full bg-error ring-1 ring-surface" />
+              </span>
+              NG
+            </span>
           </div>
           {/* Factory filter */}
           {factories.length > 1 && (
@@ -446,7 +468,7 @@ export default function InspectionHistoryModal({ onClose }) {
                   {/* Date cells */}
                   {dates.map(date => {
                     const isToday = date.getTime() === today.getTime();
-                    const { status, record, form } = getCellData(machine.id, date, templates, recordsByFormId);
+                    const { status, record, form, hasNG } = getCellData(machine.id, date, templates, recordsByFormId);
                     return (
                       <td
                         key={date.toISOString()}
@@ -454,6 +476,7 @@ export default function InspectionHistoryModal({ onClose }) {
                       >
                         <Cell
                           status={status}
+                          hasNG={hasNG}
                           onClick={status === "green" ? () => setSelectedCell({ record, form }) : undefined}
                         />
                       </td>
