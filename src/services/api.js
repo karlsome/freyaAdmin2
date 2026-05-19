@@ -1205,6 +1205,16 @@ export async function fetchNgReports(formIds = []) {
   );
 }
 
+export async function fetchNgInspectionCount() {
+  const recs = await query(
+    "Sasaki_Coating_MasterDB",
+    "checkFormRecordsDB",
+    { hasNG: true },
+    { projection: { _id: 1 }, limit: 9999 }
+  );
+  return Array.isArray(recs) ? recs.length : 0;
+}
+
 export async function translateJapaneseText(text) {
   const query = new URLSearchParams({
     q: text,

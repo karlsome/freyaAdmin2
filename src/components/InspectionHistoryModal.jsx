@@ -230,7 +230,7 @@ function RecordDetailModal({ record, form, onClose }) {
   );
 }
 
-const RANGES = [14, 30, 60];
+const RANGES = [30, 60];
 
 export default function InspectionHistoryModal({ onClose }) {
   const [templates, setTemplates] = useState([]);

@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { flushSync } from "react-dom";
 import { Navigate, Route, Routes, useLocation, useNavigate } from "react-router-dom";
 import Sidebar from "./components/Sidebar";
+import { fetchNgInspectionCount } from "./services/api";
 import TopNav from "./components/TopNav";
 import SettingsModal from "./components/SettingsModal";
 import DashboardPage from "./pages/DashboardPage";
@@ -52,6 +53,7 @@ function App() {
   });
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [badges, setBadges] = useState({ approvals: 12 });
   const [shellIntro, setShellIntro] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
@@ -133,6 +135,23 @@ function App() {
   }, []);
 
   useEffect(() => {
+    if (!isAuthenticated) return undefined;
+
+    async function loadNgCount() {
+      try {
+        const count = await fetchNgInspectionCount();
+        setBadges((prev) => ({ ...prev, maintenance: count || undefined }));
+      } catch {
+        // leave badge unchanged on error
+      }
+    }
+
+    loadNgCount();
+    const interval = window.setInterval(loadNgCount, 5 * 60 * 1000);
+    return () => window.clearInterval(interval);
+  }, [isAuthenticated]);
+
+  useEffect(() => {
     if (!justLoggedIn || isLoginRoute) {
       setShellIntro(false);
       return undefined;
@@ -186,6 +205,7 @@ function App() {
         <>
           <Sidebar
             activePage={activePage}
+            badges={badges}
             className={shellIntro ? "app-shell-sidebar--enter" : ""}
             mobileOpen={mobileNavOpen}
             onClose={() => setMobileNavOpen(false)}
