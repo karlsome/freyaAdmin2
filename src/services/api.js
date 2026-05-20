@@ -212,6 +212,79 @@ export async function permanentDeleteEquipmentHistory({ recordId, username, role
   return deleteMasterRecord({ recordId, username, role, tabKey: "equipmentHistoryDB" });
 }
 
+// ─── Device records ───────────────────────────────────────────────────────────
+export async function fetchDeviceDBRecords() {
+  return query("Sasaki_Coating_MasterDB", "deviceDB", { _archived: { $ne: true } }, { sort: { 工場: 1, name: 1 } });
+}
+
+export async function archiveDeviceRecord({ recordId, username, role }) {
+  return updateMasterRecord({
+    recordId,
+    updates: { _archived: true, _archivedAt: new Date().toISOString(), _archivedBy: username },
+    username,
+    role,
+    tabKey: "deviceDB",
+  });
+}
+
+export async function fetchDeviceArchive() {
+  return query("Sasaki_Coating_MasterDB", "deviceDB", { _archived: true }, { sort: { _archivedAt: -1 } });
+}
+
+export async function restoreDeviceRecord({ recordId, username, role }) {
+  return updateMasterRecord({
+    recordId,
+    updates: { _archived: false, _archivedAt: null, _archivedBy: null },
+    username,
+    role,
+    tabKey: "deviceDB",
+  });
+}
+
+export async function permanentDeleteDeviceRecord({ recordId, username, role }) {
+  return deleteMasterRecord({ recordId, username, role, tabKey: "deviceDB" });
+}
+
+export async function fetchDeviceHistory(deviceId) {
+  return query("Sasaki_Coating_MasterDB", "deviceHistoryDB", { deviceId, _deleted: { $ne: true } }, { sort: { eventDate: -1 } });
+}
+
+export async function fetchAllDeviceHistory() {
+  const archived = await fetchDeviceArchive();
+  const archivedIds = archived.map((r) => String(r._id?.$oid ?? r._id ?? "")).filter(Boolean);
+  const baseQuery = { _deleted: { $ne: true } };
+  if (archivedIds.length > 0) baseQuery.deviceId = { $nin: archivedIds };
+  return query("Sasaki_Coating_MasterDB", "deviceHistoryDB", baseQuery, { sort: { eventDate: -1 } });
+}
+
+export async function softDeleteDeviceHistory({ recordId, username, role, reason }) {
+  return updateMasterRecord({
+    recordId,
+    updates: { _deleted: true, _deletedAt: new Date().toISOString(), _deletedBy: username, _deleteReason: reason },
+    username,
+    role,
+    tabKey: "deviceHistoryDB",
+  });
+}
+
+export async function fetchDeviceHistoryBin() {
+  return query("Sasaki_Coating_MasterDB", "deviceHistoryDB", { _deleted: true }, { sort: { _deletedAt: -1 } });
+}
+
+export async function restoreDeviceHistoryRecord({ recordId, username, role }) {
+  return updateMasterRecord({
+    recordId,
+    updates: { _deleted: false, _deletedAt: null, _deletedBy: null, _deleteReason: null },
+    username,
+    role,
+    tabKey: "deviceHistoryDB",
+  });
+}
+
+export async function permanentDeleteDeviceHistory({ recordId, username, role }) {
+  return deleteMasterRecord({ recordId, username, role, tabKey: "deviceHistoryDB" });
+}
+
 export async function uploadEquipmentEventImage({ base64, factoryName, equipmentName, username }) {
   return _postJson("api/upload-equipment-event-image", { base64, factoryName, equipmentName, username });
 }
@@ -768,6 +841,12 @@ export function getMasterCollectionConfig(tabKey = "masterDB") {
   }
   if (tabKey === "equipmentHistoryDB") {
     return { collectionName: "equipmentHistoryDB", baseQuery: {} };
+  }
+  if (tabKey === "deviceDB") {
+    return { collectionName: "deviceDB", baseQuery: {} };
+  }
+  if (tabKey === "deviceHistoryDB") {
+    return { collectionName: "deviceHistoryDB", baseQuery: {} };
   }
   return { collectionName: "masterDB", baseQuery: {} };
 }
