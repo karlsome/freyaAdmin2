@@ -1173,7 +1173,7 @@ export async function updateCheckFormTemplate(id, updates, username) {
 
 export async function fetchCheckFormRecords(formIds = []) {
   if (formIds.length === 0) return [];
-  return query("Sasaki_Coating_MasterDB", "checkFormRecordsDB",
+  return query("submittedDB", "checkFormRecordsDB",
     { formId: { $in: formIds } },
     { sort: { completedAt: -1 } }
   );
@@ -1185,6 +1185,7 @@ export async function createCheckFormRecord(data) {
     username: data.completedBy || "simulator",
     role: "worker",
     collectionName: "checkFormRecordsDB",
+    dbName: "submittedDB",
   });
 }
 
@@ -1194,12 +1195,13 @@ export async function createNgReport(data) {
     username: data.completedBy || "simulator",
     role: "worker",
     collectionName: "ngReportsDB",
+    dbName: "submittedDB",
   });
 }
 
 export async function fetchNgReports(formIds = []) {
   if (formIds.length === 0) return [];
-  return query("Sasaki_Coating_MasterDB", "ngReportsDB",
+  return query("submittedDB", "ngReportsDB",
     { formId: { $in: formIds } },
     { sort: { completedAt: -1 } }
   );
@@ -1207,7 +1209,7 @@ export async function fetchNgReports(formIds = []) {
 
 export async function fetchNgInspectionCount() {
   const recs = await query(
-    "Sasaki_Coating_MasterDB",
+    "submittedDB",
     "checkFormRecordsDB",
     { hasNG: true },
     { projection: { _id: 1 }, limit: 9999 }
