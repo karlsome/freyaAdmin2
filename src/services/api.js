@@ -1171,6 +1171,17 @@ export async function updateCheckFormTemplate(id, updates, username) {
   });
 }
 
+export async function deleteCheckFormTemplate(recordId, username) {
+  return _postJson("queries", {
+    dbName: "Sasaki_Coating_MasterDB",
+    collectionName: "checkFormTemplatesDB",
+    query: { _id: recordId },
+    delete: true,
+    username,
+    role: "admin",
+  });
+}
+
 export async function fetchCheckFormRecords(formIds = []) {
   if (formIds.length === 0) return [];
   return query("submittedDB", "checkFormRecordsDB",

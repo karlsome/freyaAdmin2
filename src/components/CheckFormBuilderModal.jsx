@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
-import { fetchFactoryDBRecords, fetchSetsubiDBRecords, fetchCheckFormTemplates, createCheckFormTemplate, updateCheckFormTemplate, uploadEquipmentEventImage } from "../services/api";
+import { fetchFactoryDBRecords, fetchSetsubiDBRecords, fetchCheckFormTemplates, createCheckFormTemplate, updateCheckFormTemplate, deleteCheckFormTemplate, uploadEquipmentEventImage } from "../services/api";
 import { getAuthUser } from "../utils/masterDB";
 
 function toBase64(file) {
@@ -77,6 +77,7 @@ export default function CheckFormBuilderModal({ initial, onClose, onSaved }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
   const [showSuccess, setShowSuccess] = useState(false);
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
 
   useEffect(() => {
     fetchFactoryDBRecords().then((data) => setFactories(Array.isArray(data) ? data : [])).catch(() => {});
@@ -156,6 +157,21 @@ export default function CheckFormBuilderModal({ initial, onClose, onSaved }) {
       }
     } catch (e) {
       setError(e.message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function deleteForm() {
+    setBusy(true);
+    setError(null);
+    try {
+      await deleteCheckFormTemplate(initial._id, username);
+      onSaved();
+      onClose();
+    } catch (e) {
+      setError(e.message);
+      setConfirmingDelete(false);
     } finally {
       setBusy(false);
     }
@@ -329,8 +345,24 @@ export default function CheckFormBuilderModal({ initial, onClose, onSaved }) {
 
         {/* Footer */}
         <div className="flex items-center justify-between border-t border-outline-variant/20 px-6 py-4 gap-3">
-          <div className="flex-1">
+          <div className="flex flex-1 items-center gap-2">
             {error && <p className="text-xs text-error">{error}</p>}
+            {initial && !error && !confirmingDelete && (
+              <button type="button" onClick={() => setConfirmingDelete(true)} disabled={busy} className="rounded-2xl border border-error/30 px-3 py-2 text-xs font-bold text-error transition hover:bg-error/10 disabled:opacity-50">
+                Delete Form
+              </button>
+            )}
+            {initial && confirmingDelete && (
+              <div className="flex items-center gap-2">
+                <p className="text-xs font-bold text-error">Delete this form?</p>
+                <button type="button" onClick={deleteForm} disabled={busy} className="rounded-2xl bg-error px-3 py-1.5 text-xs font-bold text-white transition hover:opacity-90 disabled:opacity-50">
+                  Yes, delete
+                </button>
+                <button type="button" onClick={() => setConfirmingDelete(false)} disabled={busy} className="rounded-2xl border border-outline-variant/20 px-3 py-1.5 text-xs font-bold text-on-surface transition hover:bg-surface-container">
+                  Cancel
+                </button>
+              </div>
+            )}
           </div>
           <div className="flex gap-2">
             <button type="button" onClick={onClose} className="rounded-2xl border border-outline-variant/20 bg-surface-container px-4 py-2 text-sm font-bold text-on-surface transition hover:bg-surface-container-high">
