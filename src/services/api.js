@@ -1171,6 +1171,63 @@ export async function updateCheckFormTemplate(id, updates, username) {
   });
 }
 
+export async function deleteCheckFormTemplate(recordId, username) {
+  return _postJson("queries", {
+    dbName: "Sasaki_Coating_MasterDB",
+    collectionName: "checkFormTemplatesDB",
+    query: { _id: recordId },
+    delete: true,
+    username,
+    role: "admin",
+  });
+}
+
+export async function fetchCheckFormRecords(formIds = []) {
+  if (formIds.length === 0) return [];
+  return query("submittedDB", "checkFormRecordsDB",
+    { formId: { $in: formIds } },
+    { sort: { completedAt: -1 } }
+  );
+}
+
+export async function createCheckFormRecord(data) {
+  return _postJson("submitToMasterDB", {
+    data: { ...data, submittedAt: new Date().toISOString() },
+    username: data.completedBy || "simulator",
+    role: "worker",
+    collectionName: "checkFormRecordsDB",
+    dbName: "submittedDB",
+  });
+}
+
+export async function createNgReport(data) {
+  return _postJson("submitToMasterDB", {
+    data: { ...data, submittedAt: new Date().toISOString() },
+    username: data.completedBy || "simulator",
+    role: "worker",
+    collectionName: "ngReportsDB",
+    dbName: "submittedDB",
+  });
+}
+
+export async function fetchNgReports(formIds = []) {
+  if (formIds.length === 0) return [];
+  return query("submittedDB", "ngReportsDB",
+    { formId: { $in: formIds } },
+    { sort: { completedAt: -1 } }
+  );
+}
+
+export async function fetchNgInspectionCount() {
+  const recs = await query(
+    "submittedDB",
+    "checkFormRecordsDB",
+    { hasNG: true },
+    { projection: { _id: 1 }, limit: 9999 }
+  );
+  return Array.isArray(recs) ? recs.length : 0;
+}
+
 export async function translateJapaneseText(text) {
   const query = new URLSearchParams({
     q: text,

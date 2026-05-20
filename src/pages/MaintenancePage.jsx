@@ -1,7 +1,9 @@
 import { useState, useEffect } from "react";
-import { fetchCheckFormTemplates } from "../services/api";
+import { fetchCheckFormTemplates, fetchFactoryDBRecords } from "../services/api";
 import CheckFormBuilderModal from "../components/CheckFormBuilderModal";
 import CheckFormPreviewModal from "../components/CheckFormPreviewModal";
+import CheckFormSimulatorModal from "../components/CheckFormSimulatorModal";
+import InspectionHistoryModal from "../components/InspectionHistoryModal";
 
 const STATUS_STYLES = {
   active:   "bg-primary/10 text-primary",
@@ -9,9 +11,9 @@ const STATUS_STYLES = {
   archived: "bg-surface-container text-outline",
 };
 
-function FormCard({ form, onPreview, onEdit }) {
+function FormCard({ form, onPreview, onEdit, onSimulate }) {
   return (
-    <div className="rounded-2xl border border-outline-variant/25 bg-surface-container shadow-sm overflow-hidden">
+    <div className="rounded-2xl border border-outline-variant/20 bg-surface-container shadow-sm overflow-hidden">
       <div className="px-5 py-4">
         <div className="flex items-start justify-between gap-2 mb-3">
           <h5 className="font-bold text-on-surface text-sm leading-tight">{form.name}</h5>
@@ -48,6 +50,19 @@ function FormCard({ form, onPreview, onEdit }) {
           View
         </button>
         <div className="w-px bg-outline-variant/20" />
+        {form.status === "active" && (
+          <>
+            <button
+              type="button"
+              onClick={onSimulate}
+              className="flex-1 py-2.5 text-xs font-bold text-on-surface hover:bg-surface-container-high transition flex items-center justify-center gap-1.5"
+            >
+              <span className="material-symbols-outlined" style={{ fontSize: 14 }}>tablet</span>
+              Simulate
+            </button>
+            <div className="w-px bg-outline-variant/20" />
+          </>
+        )}
         <button
           type="button"
           onClick={onEdit}
@@ -74,6 +89,10 @@ export default function MaintenancePage() {
   const [builderOpen, setBuilderOpen] = useState(false);
   const [editTarget, setEditTarget] = useState(null);
   const [previewTarget, setPreviewTarget] = useState(null);
+  const [simulateTarget, setSimulateTarget] = useState(null);
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [factories, setFactories] = useState([]);
+  const [factoryFilter, setFactoryFilter] = useState("");
 
   async function load() {
     setLoading(true);
@@ -88,7 +107,10 @@ export default function MaintenancePage() {
     }
   }
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    load();
+    fetchFactoryDBRecords().then((data) => setFactories(Array.isArray(data) ? data : [])).catch(() => {});
+  }, []);
 
   function openBuilder(form = null) {
     setEditTarget(form);
@@ -100,27 +122,51 @@ export default function MaintenancePage() {
     setEditTarget(null);
   }
 
+  const visibleTemplates = factoryFilter
+    ? templates.filter((t) => t.工場 === factoryFilter)
+    : templates;
+
   const grouped = GROUPS.map((g) => ({
     ...g,
-    items: templates.filter((t) => t.status === g.key),
+    items: visibleTemplates.filter((t) => t.status === g.key),
   }));
 
   return (
-    <div className="p-6">
-      <section className="glass-card rounded-3xl p-6">
+    <div className="px-6 pb-6 pt-10">
+      <section className="glass-card rounded-2xl p-6">
         <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <p className="text-xs font-bold uppercase tracking-[0.18em] text-outline">メンテナンス</p>
             <h3 className="mt-1 text-2xl font-black text-on-surface">Maintenance Forms</h3>
           </div>
-          <button
-            type="button"
-            onClick={() => openBuilder()}
-            className="inline-flex items-center gap-2 rounded-2xl bg-primary px-4 py-3 text-sm font-bold text-on-primary transition hover:opacity-90"
-          >
-            <span className="material-symbols-outlined" style={{ fontSize: 18 }}>add</span>
-            New Form
-          </button>
+          <div className="flex items-center gap-2">
+            <select
+              value={factoryFilter}
+              onChange={(e) => setFactoryFilter(e.target.value)}
+              className="rounded-2xl border border-outline-variant/30 bg-surface-container px-4 py-3 text-sm font-bold text-on-surface outline-none transition hover:bg-surface-container-high"
+            >
+              <option value="">All Factories</option>
+              {factories.map((f) => (
+                <option key={f._id ?? f.工場} value={f.工場}>{f.工場}</option>
+              ))}
+            </select>
+            <button
+              type="button"
+              onClick={() => setHistoryOpen(true)}
+              className="inline-flex items-center gap-2 rounded-2xl border border-outline-variant/30 bg-surface-container px-4 py-3 text-sm font-bold text-on-surface transition hover:bg-surface-container-high"
+            >
+              <span className="material-symbols-outlined" style={{ fontSize: 18 }}>table_chart</span>
+              View Inspection History
+            </button>
+            <button
+              type="button"
+              onClick={() => openBuilder()}
+              className="inline-flex items-center gap-2 rounded-2xl bg-primary px-4 py-3 text-sm font-bold text-on-primary transition hover:opacity-90"
+            >
+              <span className="material-symbols-outlined" style={{ fontSize: 18 }}>add</span>
+              New Form
+            </button>
+          </div>
         </div>
 
         {loading && (
@@ -152,6 +198,7 @@ export default function MaintenancePage() {
                     form={form}
                     onPreview={() => setPreviewTarget(form)}
                     onEdit={() => openBuilder(form)}
+                    onSimulate={() => setSimulateTarget(form)}
                   />
                 ))}
               </div>
@@ -173,6 +220,17 @@ export default function MaintenancePage() {
           form={previewTarget}
           onClose={() => setPreviewTarget(null)}
         />
+      )}
+
+      {simulateTarget && (
+        <CheckFormSimulatorModal
+          form={simulateTarget}
+          onClose={() => setSimulateTarget(null)}
+        />
+      )}
+
+      {historyOpen && (
+        <InspectionHistoryModal onClose={() => setHistoryOpen(false)} />
       )}
     </div>
   );

@@ -451,7 +451,7 @@ function EquipmentDetailPanel({ equipment, onClose, onEdit, onAddEvent, onViewDe
   if (!equipment) return null;
 
   return (
-    <div className="rounded-3xl border border-outline-variant/25 bg-surface-container shadow-sm overflow-hidden">
+    <div className="rounded-2xl border border-outline-variant/20 bg-surface-container shadow-sm overflow-hidden">
       {/* Header */}
       <div className="flex items-start justify-between gap-4 border-b border-outline-variant/20 px-6 py-5">
         <div>
@@ -579,7 +579,7 @@ function FactoryBox({ factory, equipment, selectedId, onView }) {
   const visible = expanded ? equipment : equipment.slice(0, 1);
 
   return (
-    <div className="rounded-2xl border border-outline-variant/25 bg-surface-container shadow-sm overflow-hidden">
+    <div className="rounded-2xl border border-outline-variant/20 bg-surface-container shadow-sm overflow-hidden">
       {/* Header + equipment rows */}
       <div className="p-4">
         <div className="mb-3 flex items-center gap-2">
@@ -857,7 +857,7 @@ export default function SetsubiDBWorkspace({ refreshToken, onFlash }) {
   // ── Render ───────────────────────────────────────────────────────────────────
 
   return (
-    <section className="glass-card rounded-3xl p-6">
+    <section className="glass-card rounded-2xl p-6">
       {/* Page header */}
       <div className="mb-4 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>

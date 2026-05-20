@@ -16,7 +16,7 @@ const navItems = [
   { icon: "analytics",                labelKey: "analytics",           page: "analytics" },
   { icon: "payments",                 labelKey: "financials",          page: "financials" },
   { icon: "group",                    labelKey: "userManagement",      page: "userManagement" },
-  { icon: "fact_check",               labelKey: "approvals",           page: "approvals", badge: "12" },
+  { icon: "fact_check",               labelKey: "approvals",           page: "approvals" },
   { icon: "database",                 labelKey: "masterDB",            page: "masterDB" },
   { icon: "hub",                      labelKey: "customerManagement",  page: "customerManagement" },
   { icon: "construction",             labelKey: "equipment",           page: "equipment" },
@@ -42,7 +42,7 @@ function isActiveFor(item, activePage) {
   return false;
 }
 
-export default function Sidebar({ activePage, mobileOpen = false, onClose, onLogout, onNavigate, onOpenSettings, className = "" }) {
+export default function Sidebar({ activePage, badges = {}, mobileOpen = false, onClose, onLogout, onNavigate, onOpenSettings, className = "" }) {
   const [openItems, setOpenItems] = useState(() => new Set());
   const { t } = useLanguage();
 
@@ -133,11 +133,11 @@ export default function Sidebar({ activePage, mobileOpen = false, onClose, onLog
                     }`}>
                       {label}
                     </span>
-                    {item.badge && (
+                    {badges[item.page] > 0 && (
                       <span className={`mr-2 flex-shrink-0 rounded-full bg-error px-1.5 py-0.5 text-[10px] font-bold text-on-error dark:bg-error-container dark:text-on-error-container dark:rounded-md ${
                         isMobile ? "opacity-100" : "opacity-0 transition-opacity duration-200 group-hover:opacity-100"
                       }`}>
-                        {item.badge}
+                        {badges[item.page]}
                       </span>
                     )}
                   </button>
