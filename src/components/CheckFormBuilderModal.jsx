@@ -166,7 +166,7 @@ export default function CheckFormBuilderModal({ initial, onClose, onSaved }) {
 
   const modal = (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-      <div className="relative w-full max-w-3xl max-h-[90vh] flex flex-col rounded-3xl border border-outline-variant/20 bg-surface shadow-2xl overflow-hidden">
+      <div className="relative w-full max-w-3xl max-h-[90vh] flex flex-col rounded-2xl border border-outline-variant/20 glass-card overflow-hidden">
 
         {/* Header */}
         <div className="flex items-center justify-between border-b border-outline-variant/20 px-6 py-5">
@@ -176,7 +176,7 @@ export default function CheckFormBuilderModal({ initial, onClose, onSaved }) {
             </p>
             <h2 className="mt-0.5 text-lg font-black text-on-surface">Form Builder</h2>
           </div>
-          <button type="button" onClick={onClose} className="flex h-9 w-9 items-center justify-center rounded-xl text-outline hover:bg-primary/5 hover:text-primary transition">
+          <button type="button" onClick={onClose} className="flex h-10 w-10 items-center justify-center rounded-2xl bg-surface-container text-on-surface-variant transition hover:bg-surface-container-high">
             <span className="material-symbols-outlined">close</span>
           </button>
         </div>
@@ -305,7 +305,7 @@ export default function CheckFormBuilderModal({ initial, onClose, onSaved }) {
               <button
                 type="button"
                 onClick={addField}
-                className="mt-2 w-full flex items-center justify-center gap-2 rounded-2xl border border-dashed border-outline-variant/40 px-3 py-2.5 text-xs font-bold text-outline hover:border-primary/40 hover:text-primary transition"
+                className="mt-2 w-full flex items-center justify-center gap-2 rounded-2xl border border-dashed border-outline-variant/40 px-3 py-2 text-xs font-bold text-outline hover:border-primary/40 hover:text-primary transition"
               >
                 <span className="material-symbols-outlined" style={{ fontSize: 14 }}>add</span>
                 Add field
@@ -333,13 +333,13 @@ export default function CheckFormBuilderModal({ initial, onClose, onSaved }) {
             {error && <p className="text-xs text-error">{error}</p>}
           </div>
           <div className="flex gap-2">
-            <button type="button" onClick={onClose} className="rounded-2xl border border-outline-variant/20 bg-surface-container px-4 py-2.5 text-sm font-bold text-on-surface transition hover:bg-surface-container-high">
+            <button type="button" onClick={onClose} className="rounded-2xl border border-outline-variant/20 bg-surface-container px-4 py-2 text-sm font-bold text-on-surface transition hover:bg-surface-container-high">
               Cancel
             </button>
-            <button type="button" disabled={busy || nameConflict} onClick={() => save("draft")} className="rounded-2xl border border-outline-variant/20 bg-surface-container px-4 py-2.5 text-sm font-bold text-on-surface transition hover:bg-surface-container-high disabled:opacity-50">
+            <button type="button" disabled={busy || nameConflict} onClick={() => save("draft")} className="rounded-2xl border border-outline-variant/20 bg-surface-container px-4 py-2 text-sm font-bold text-on-surface transition hover:bg-surface-container-high disabled:opacity-50">
               {busy ? "Saving…" : "Save Draft"}
             </button>
-            <button type="button" disabled={busy || nameConflict} onClick={() => save("active")} className="rounded-2xl bg-primary px-4 py-2.5 text-sm font-bold text-on-primary transition hover:opacity-90 disabled:opacity-50">
+            <button type="button" disabled={busy || nameConflict} onClick={() => save("active")} className="rounded-2xl bg-primary px-4 py-2 text-sm font-bold text-on-primary transition hover:opacity-90 disabled:opacity-50">
               {busy ? "Saving…" : "Deploy"}
             </button>
           </div>
@@ -421,7 +421,7 @@ function FieldEditor({ field, onChange, username }) {
           type="button"
           onClick={() => fileInputRef.current?.click()}
           disabled={uploading}
-          className="inline-flex items-center gap-2 rounded-2xl border border-outline-variant/30 bg-surface px-4 py-2.5 text-xs font-bold text-on-surface transition hover:bg-surface-container disabled:cursor-not-allowed disabled:opacity-50"
+          className="inline-flex items-center gap-2 rounded-2xl border border-outline-variant/30 bg-surface px-4 py-2 text-xs font-bold text-on-surface transition hover:bg-surface-container disabled:cursor-not-allowed disabled:opacity-50"
         >
           {uploading ? (
             <>
@@ -547,9 +547,9 @@ function SelectOptionsEditor({ options, onChange }) {
           value={newOpt}
           onChange={(e) => setNewOpt(e.target.value)}
           onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addOpt(); } }}
-          className="flex-1 rounded-2xl border border-outline-variant/30 bg-surface px-3 py-2.5 text-sm text-on-surface outline-none transition focus:border-primary/40"
+          className="flex-1 rounded-2xl border border-outline-variant/30 bg-surface px-3 py-2 text-sm text-on-surface outline-none transition focus:border-primary/40"
         />
-        <button type="button" onClick={addOpt} className="rounded-2xl bg-primary px-4 py-2.5 text-sm font-bold text-on-primary transition hover:opacity-90">
+        <button type="button" onClick={addOpt} className="rounded-2xl bg-primary px-4 py-2 text-sm font-bold text-on-primary transition hover:opacity-90">
           Add
         </button>
       </div>

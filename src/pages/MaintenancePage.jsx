@@ -13,7 +13,7 @@ const STATUS_STYLES = {
 
 function FormCard({ form, onPreview, onEdit, onSimulate }) {
   return (
-    <div className="rounded-2xl border border-outline-variant/25 bg-surface-container shadow-sm overflow-hidden">
+    <div className="rounded-2xl border border-outline-variant/20 bg-surface-container shadow-sm overflow-hidden">
       <div className="px-5 py-4">
         <div className="flex items-start justify-between gap-2 mb-3">
           <h5 className="font-bold text-on-surface text-sm leading-tight">{form.name}</h5>
@@ -133,7 +133,7 @@ export default function MaintenancePage() {
 
   return (
     <div className="px-6 pb-6 pt-10">
-      <section className="glass-card rounded-3xl p-6">
+      <section className="glass-card rounded-2xl p-6">
         <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <p className="text-xs font-bold uppercase tracking-[0.18em] text-outline">メンテナンス</p>

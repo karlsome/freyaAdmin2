@@ -235,7 +235,7 @@ export default function CheckFormPreviewModal({ form, onClose }) {
 
   const modal = (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-      <div className="relative w-full max-w-lg max-h-[90vh] flex flex-col rounded-3xl border border-outline-variant/20 bg-surface shadow-2xl overflow-hidden">
+      <div className="relative w-full max-w-lg max-h-[90vh] flex flex-col rounded-2xl border border-outline-variant/20 glass-card overflow-hidden">
 
         {/* Header */}
         <div className="flex items-start justify-between border-b border-outline-variant/20 px-6 py-5">
@@ -252,7 +252,7 @@ export default function CheckFormPreviewModal({ form, onClose }) {
               {form.description && <span className="text-on-surface-variant">{form.description}</span>}
             </div>
           </div>
-          <button type="button" onClick={onClose} className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl text-outline hover:bg-primary/5 hover:text-primary transition">
+          <button type="button" onClick={onClose} className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-2xl bg-surface-container text-on-surface-variant transition hover:bg-surface-container-high">
             <span className="material-symbols-outlined">close</span>
           </button>
         </div>
@@ -274,7 +274,7 @@ export default function CheckFormPreviewModal({ form, onClose }) {
 
         {/* Footer */}
         <div className="flex justify-end border-t border-outline-variant/20 px-6 py-4">
-          <button type="button" onClick={onClose} className="rounded-2xl border border-outline-variant/20 bg-surface-container px-4 py-2.5 text-sm font-bold text-on-surface transition hover:bg-surface-container-high">
+          <button type="button" onClick={onClose} className="rounded-2xl border border-outline-variant/20 bg-surface-container px-4 py-2 text-sm font-bold text-on-surface transition hover:bg-surface-container-high">
             Close
           </button>
         </div>

@@ -147,8 +147,8 @@ function RecordDetailModal({ record, form, onClose }) {
   }
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-      <div className="w-full max-w-lg max-h-[85vh] flex flex-col rounded-3xl border border-outline-variant/20 bg-surface shadow-2xl overflow-hidden">
+    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+      <div className="w-full max-w-lg max-h-[85vh] flex flex-col rounded-2xl border border-outline-variant/20 glass-card overflow-hidden">
 
         {/* Header */}
         <div className="flex flex-shrink-0 items-start justify-between border-b border-outline-variant/20 px-6 py-5">
@@ -160,7 +160,7 @@ function RecordDetailModal({ record, form, onClose }) {
               {form?.schedule && <span className="capitalize">{form.schedule}</span>}
             </div>
           </div>
-          <button type="button" onClick={onClose} className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl text-outline hover:bg-primary/5 hover:text-primary transition">
+          <button type="button" onClick={onClose} className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-2xl bg-surface-container text-on-surface-variant transition hover:bg-surface-container-high">
             <span className="material-symbols-outlined">close</span>
           </button>
         </div>

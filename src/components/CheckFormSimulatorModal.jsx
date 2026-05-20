@@ -390,7 +390,7 @@ export default function CheckFormSimulatorModal({ form, onClose }) {
   }
 
   const modal = (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-md p-4 sm:p-8">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 sm:p-8">
       {/* Tablet device frame */}
       <div className="relative flex w-full max-w-[768px] flex-col rounded-[2.5rem] border-4 border-on-surface/10 bg-surface shadow-2xl" style={{ height: "min(90vh, 1024px)" }}>
 
@@ -415,7 +415,7 @@ export default function CheckFormSimulatorModal({ form, onClose }) {
           <button
             type="button"
             onClick={onClose}
-            className="ml-4 flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl text-outline hover:bg-primary/5 hover:text-primary transition"
+            className="ml-4 flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-2xl bg-surface-container text-on-surface-variant transition hover:bg-surface-container-high"
           >
             <span className="material-symbols-outlined">close</span>
           </button>
