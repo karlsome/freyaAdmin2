@@ -153,24 +153,23 @@ export default function DeviceRecordModal({
 
                 <label className="block">
                   <div className={labelClass}>Type</div>
-                  <input type="text" value={draft.type} onChange={(e) => set("type", e.target.value)}
-                    placeholder="e.g. Tablet, Scanner" className={inputClass} />
+                  <select value={draft.type} onChange={(e) => set("type", e.target.value)} className={inputClass}>
+                    <option value="">— Select type —</option>
+                    <option value="Phone/Tablet">Phone/Tablet</option>
+                    <option value="PC">PC</option>
+                    <option value="Printer">Printer</option>
+                    <option value="Peripheral">Peripheral</option>
+                    <option value="Display">Display</option>
+                    <option value="Other">Other</option>
+                  </select>
                 </label>
               </div>
 
-              <div className="grid gap-4 sm:grid-cols-2">
-                <label className="block">
-                  <div className={labelClass}>Model</div>
-                  <input type="text" value={draft.model} onChange={(e) => set("model", e.target.value)}
-                    placeholder="e.g. iPad Pro 12.9" className={inputClass} />
-                </label>
-
-                <label className="block">
-                  <div className={labelClass}>Colour</div>
-                  <input type="text" value={draft.colour} onChange={(e) => set("colour", e.target.value)}
-                    placeholder="e.g. Space Grey" className={inputClass} />
-                </label>
-              </div>
+              <label className="block">
+                <div className={labelClass}>Model</div>
+                <input type="text" value={draft.model} onChange={(e) => set("model", e.target.value)}
+                  placeholder="e.g. iPad Pro 12.9" className={inputClass} />
+              </label>
 
               <label className="block">
                 <div className={labelClass}>Serial Number</div>
