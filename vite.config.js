@@ -6,6 +6,7 @@ export default defineConfig({
   base: '/freyaAdmin2/',
   plugins: [react()],
   server: {
+    host: true,
     proxy: {
       // Proxies /api/* and /queries/* to the backend in dev
       // Set VITE_API_URL in .env for production

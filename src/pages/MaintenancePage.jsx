@@ -2,7 +2,6 @@ import { useState, useEffect } from "react";
 import { fetchCheckFormTemplates, fetchFactoryDBRecords } from "../services/api";
 import CheckFormBuilderModal from "../components/CheckFormBuilderModal";
 import CheckFormPreviewModal from "../components/CheckFormPreviewModal";
-import CheckFormSimulatorModal from "../components/CheckFormSimulatorModal";
 import InspectionHistoryModal from "../components/InspectionHistoryModal";
 
 const STATUS_STYLES = {
@@ -11,7 +10,14 @@ const STATUS_STYLES = {
   archived: "bg-surface-container text-outline",
 };
 
-function FormCard({ form, onPreview, onEdit, onSimulate }) {
+const TABLET_BASE = (import.meta.env.VITE_API_URL || "http://localhost:3000").replace(/\/+$/, "");
+
+function openOnTablet(form) {
+  const id = form._id?.$oid ?? form._id ?? "";
+  window.open(`${TABLET_BASE}/checkList2.html?templateId=${encodeURIComponent(id)}`, "_blank");
+}
+
+function FormCard({ form, onPreview, onEdit }) {
   return (
     <div className="rounded-2xl border border-outline-variant/20 bg-surface-container shadow-sm overflow-hidden">
       <div className="px-5 py-4">
@@ -54,11 +60,11 @@ function FormCard({ form, onPreview, onEdit, onSimulate }) {
           <>
             <button
               type="button"
-              onClick={onSimulate}
+              onClick={() => openOnTablet(form)}
               className="flex-1 py-2.5 text-xs font-bold text-on-surface hover:bg-surface-container-high transition flex items-center justify-center gap-1.5"
             >
-              <span className="material-symbols-outlined" style={{ fontSize: 14 }}>tablet</span>
-              Simulate
+              <span className="material-symbols-outlined" style={{ fontSize: 14 }}>open_in_new</span>
+              Open
             </button>
             <div className="w-px bg-outline-variant/20" />
           </>
@@ -89,7 +95,6 @@ export default function MaintenancePage() {
   const [builderOpen, setBuilderOpen] = useState(false);
   const [editTarget, setEditTarget] = useState(null);
   const [previewTarget, setPreviewTarget] = useState(null);
-  const [simulateTarget, setSimulateTarget] = useState(null);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [factories, setFactories] = useState([]);
   const [factoryFilter, setFactoryFilter] = useState("");
@@ -198,7 +203,6 @@ export default function MaintenancePage() {
                     form={form}
                     onPreview={() => setPreviewTarget(form)}
                     onEdit={() => openBuilder(form)}
-                    onSimulate={() => setSimulateTarget(form)}
                   />
                 ))}
               </div>
@@ -219,13 +223,6 @@ export default function MaintenancePage() {
         <CheckFormPreviewModal
           form={previewTarget}
           onClose={() => setPreviewTarget(null)}
-        />
-      )}
-
-      {simulateTarget && (
-        <CheckFormSimulatorModal
-          form={simulateTarget}
-          onClose={() => setSimulateTarget(null)}
         />
       )}
 
