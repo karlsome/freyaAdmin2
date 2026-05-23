@@ -92,6 +92,22 @@ function isSameCalendarDay(value, date) {
   return parsed ? parsed.getTime() === date.getTime() : false;
 }
 
+function formatAnsweredAt(value) {
+  if (!value) return "";
+
+  const normalizedValue = typeof value === "object" && value.$date ? value.$date : value;
+  const parsed = new Date(normalizedValue);
+  if (Number.isNaN(parsed.getTime())) return "";
+
+  return parsed.toLocaleString("ja-JP", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
 function getMachineScopedRecords(formId, machine, recordsByFormId) {
   return (recordsByFormId.get(formId) ?? []).filter((record) => {
     const recordMachineId = normalizeId(record.machineId);
@@ -574,6 +590,7 @@ function RecordDetailModal({ defaultTab = "submission", form, onClose, record })
                 const value = formatValue(field);
                 const fieldStatus = getFieldStatus(field);
                 const valueTone = getFieldValueTone(field, fieldStatus);
+                const answeredAtLabel = formatAnsweredAt(field.answeredAt);
                 const isProblemField = fieldStatus === "ng" || fieldStatus === "out-of-range";
                 const canOpenNgReason = isProblemField && hasTicketTabContent;
                 const problemFieldHint = getFieldTicketHint(field);
@@ -603,6 +620,12 @@ function RecordDetailModal({ defaultTab = "submission", form, onClose, record })
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-sm font-semibold text-on-surface">{field.label || <span className="italic text-outline">Untitled</span>}</p>
                         {field.description && <p className="mt-0.5 text-xs text-outline">{field.description}</p>}
+                        {answeredAtLabel && (
+                          <div className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-surface px-2.5 py-1 text-[11px] font-semibold text-outline">
+                            <span className="material-symbols-outlined" style={{ fontSize: 13 }}>schedule</span>
+                            Answered {answeredAtLabel}
+                          </div>
+                        )}
                       </div>
                       <div className="text-right">
                         <p className={`text-sm font-bold ${valueTone}`}>{value}</p>
@@ -1159,7 +1182,7 @@ export default function ChecklistSubmissionsPage() {
         <RecordDetailModal
           record={selectedCell.record}
           form={selectedCell.form}
-          defaultTab={selectedCell.record?.hasNG ? "tickets" : "submission"}
+          defaultTab="submission"
           onClose={() => setSelectedCell(null)}
         />,
         document.body
