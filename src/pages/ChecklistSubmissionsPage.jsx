@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import LiquidSegmentedControl from "../components/LiquidSegmentedControl";
 import { useLanguage } from "../contexts/LanguageContext";
 import { fetchCheckFormTemplates, fetchCheckFormRecords, fetchNgReportsByRecordIds, fetchSetsubiDBRecords } from "../services/api";
 
@@ -188,6 +189,11 @@ function getEntryCountLabel(entry) {
   return entry.hasForms ? "-" : "";
 }
 
+function getPreferredEntrySelection(entry) {
+  if (!entry) return null;
+  return entry.submissions.find((submission) => submission.record?.hasNG) ?? entry.primary ?? null;
+}
+
 function ScheduleStackCell({ entries, onSelect }) {
   return (
     <div className="mx-auto flex w-14 flex-col gap-1">
@@ -215,7 +221,7 @@ function ScheduleStackCell({ entries, onSelect }) {
           <button
             key={entry.schedule}
             type="button"
-            onClick={() => onSelect(entry.primary)}
+            onClick={() => onSelect(entry)}
             className="text-left transition hover:scale-[1.03]"
             title={`${entry.title}. Click to open the submitted record.`}
           >
@@ -306,8 +312,9 @@ function ImagePreviewLightbox({ image, onClose }) {
   );
 }
 
-function RecordDetailModal({ form, onClose, record }) {
-  const [activeTab, setActiveTab] = useState("submission");
+function RecordDetailModal({ defaultTab = "submission", form, onClose, record }) {
+  const normalizedDefaultTab = defaultTab === "tickets" ? "tickets" : "submission";
+  const [activeTab, setActiveTab] = useState(normalizedDefaultTab);
   const [tickets, setTickets] = useState([]);
   const [ticketsLoading, setTicketsLoading] = useState(false);
   const [previewImage, setPreviewImage] = useState(null);
@@ -323,11 +330,42 @@ function RecordDetailModal({ form, onClose, record }) {
   const formName = form?.name ?? record?.formName ?? "Checklist Submission";
   const recordFactory = form?.工場 ?? record?.factory ?? "";
   const recordSchedule = record?.schedule ?? form?.schedule ?? "";
+  const modalTabItems = useMemo(() => ([
+    {
+      key: "submission",
+      label: (
+        <span className="inline-flex items-center gap-2">
+          <span className="material-symbols-outlined" style={{ fontSize: 14 }}>fact_check</span>
+          <span>Submitted</span>
+        </span>
+      ),
+    },
+    {
+      key: "tickets",
+      label: (
+        <span className="inline-flex items-center gap-2">
+          <span className="material-symbols-outlined" style={{ fontSize: 14 }}>confirmation_number</span>
+          <span>NG Reasons</span>
+          <span
+            className={`rounded-full px-2 py-0.5 text-[10px] font-black ${
+              activeTab === "tickets"
+                ? "bg-white/20 text-on-primary"
+                : tickets.length > 0
+                  ? "bg-error/10 text-error"
+                  : "bg-outline/10 text-outline"
+            }`}
+          >
+            {tickets.length}
+          </span>
+        </span>
+      ),
+    },
+  ]), [activeTab, tickets.length]);
 
   useEffect(() => {
-    setActiveTab("submission");
+    setActiveTab(normalizedDefaultTab);
     setPreviewImage(null);
-  }, [recordId]);
+  }, [normalizedDefaultTab, recordId]);
 
   useEffect(() => {
     let cancelled = false;
@@ -470,34 +508,13 @@ function RecordDetailModal({ form, onClose, record }) {
           )}
         </div>
 
-        <div className="flex flex-shrink-0 gap-2 border-b border-outline-variant/20 px-6 py-3">
-          <button
-            type="button"
-            onClick={() => setActiveTab("submission")}
-            className={`inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-bold transition ${
-              activeTab === "submission"
-                ? "bg-primary/10 text-primary"
-                : "bg-surface-container text-on-surface hover:bg-surface-container-high"
-            }`}
-          >
-            <span className="material-symbols-outlined" style={{ fontSize: 14 }}>fact_check</span>
-            Submitted
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab("tickets")}
-            className={`inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-bold transition ${
-              activeTab === "tickets"
-                ? "bg-primary/10 text-primary"
-                : "bg-surface-container text-on-surface hover:bg-surface-container-high"
-            }`}
-          >
-            <span className="material-symbols-outlined" style={{ fontSize: 14 }}>confirmation_number</span>
-            NG Reasons
-            <span className={`rounded-full px-2 py-0.5 text-[10px] font-black ${tickets.length > 0 ? "bg-error/10 text-error" : "bg-outline/10 text-outline"}`}>
-              {tickets.length}
-            </span>
-          </button>
+        <div className="border-b border-outline-variant/20 px-6 py-3">
+          <LiquidSegmentedControl
+            items={modalTabItems}
+            activeKey={activeTab}
+            onChange={setActiveTab}
+            className="w-fit"
+          />
         </div>
 
         <div className="flex-1 overflow-y-auto px-6 py-5">
@@ -1042,7 +1059,7 @@ export default function ChecklistSubmissionsPage() {
                         >
                           <ScheduleStackCell
                             entries={entries}
-                            onSelect={(entry) => setSelectedCell(entry)}
+                            onSelect={(entry) => setSelectedCell(getPreferredEntrySelection(entry))}
                           />
                         </td>
                       );
@@ -1059,6 +1076,7 @@ export default function ChecklistSubmissionsPage() {
         <RecordDetailModal
           record={selectedCell.record}
           form={selectedCell.form}
+          defaultTab={selectedCell.record?.hasNG ? "tickets" : "submission"}
           onClose={() => setSelectedCell(null)}
         />,
         document.body
