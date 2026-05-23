@@ -75,72 +75,186 @@ function isCurrentPeriod(date, schedule) {
   return false;
 }
 
-function getCellData(machineId, date, forms, recordsByFormId) {
-  const machineForms = forms.filter((form) =>
-    (form.equipmentIds ?? []).some((id) => normalizeId(id) === machineId)
-  );
-
-  if (machineForms.length === 0) return { status: "none", record: null, form: null, hasNG: false };
-
-  for (const form of machineForms) {
-    const formRecords = recordsByFormId.get(normalizeId(form._id)) ?? [];
-    const exactRecord = formRecords.find((record) => {
-      const completedAt = new Date(record.completedAt);
-      completedAt.setHours(0, 0, 0, 0);
-      return completedAt.getTime() === date.getTime();
-    });
-
-    if (exactRecord) return { status: "green", record: exactRecord, form, hasNG: exactRecord.hasNG ?? false };
-    if (!isPeriodAnchor(date, form.schedule)) continue;
-    if (formRecords.some((record) => recordInPeriod(record, date, form.schedule))) continue;
-
-    if (isCurrentPeriod(date, form.schedule)) return { status: "orange", record: null, form, hasNG: false };
-    if (periodEnded(date, form.schedule)) return { status: "red", record: null, form, hasNG: false };
-  }
-
-  return { status: "none", record: null, form: null, hasNG: false };
+function normalizeMachineName(value) {
+  return String(value ?? "").trim().toLowerCase();
 }
 
-function Cell({ hasNG, onClick, status }) {
-  if (status === "green") {
-    return (
-      <button
-        type="button"
-        onClick={onClick}
-        className="relative mx-auto flex h-9 w-9 cursor-pointer items-center justify-center rounded-xl bg-emerald-500/20 transition hover:scale-110 hover:bg-emerald-500/40"
-      >
-        <div className="h-3.5 w-3.5 rounded-full bg-emerald-500" />
-        {hasNG && (
-          <div className="absolute right-1 top-1 h-2 w-2 rounded-full bg-error ring-1 ring-surface" />
-        )}
-      </button>
-    );
-  }
+function toDayStart(value) {
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return null;
+  parsed.setHours(0, 0, 0, 0);
+  return parsed;
+}
 
-  if (status === "red") {
-    return (
-      <div className="mx-auto flex h-9 w-9 items-center justify-center rounded-xl bg-error/10">
-        <div className="h-3.5 w-3.5 rounded-full bg-error" />
-      </div>
-    );
-  }
+function isSameCalendarDay(value, date) {
+  const parsed = toDayStart(value);
+  return parsed ? parsed.getTime() === date.getTime() : false;
+}
 
-  if (status === "orange") {
-    return (
-      <div className="mx-auto flex h-9 w-9 items-center justify-center rounded-xl bg-amber-500/15">
-        <div className="h-3.5 w-3.5 rounded-full bg-amber-500" />
-      </div>
-    );
-  }
+function getMachineScopedRecords(formId, machine, recordsByFormId) {
+  return (recordsByFormId.get(formId) ?? []).filter((record) => {
+    const recordMachineId = normalizeId(record.machineId);
+    if (recordMachineId) return recordMachineId === machine.id;
+    return normalizeMachineName(record.machineName) === normalizeMachineName(machine.name);
+  });
+}
 
-  return <div className="mx-auto h-9 w-9 rounded-xl" />;
+function getScheduleEntries(machine, date, forms, recordsByFormId) {
+  const machineForms = forms.filter((form) =>
+    (form.equipmentIds ?? []).some((id) => normalizeId(id) === machine.id)
+  );
+
+  return SCHEDULE_ORDER.map((schedule) => {
+    const formsForSchedule = machineForms.filter((form) => form.schedule === schedule);
+    if (formsForSchedule.length === 0) {
+      return {
+        schedule,
+        state: "none",
+        hasForms: false,
+        hasNG: false,
+        openCount: 0,
+        primary: null,
+        submissions: [],
+        submittedCount: 0,
+        title: `${SCHEDULE_META[schedule].label}: no checklist assigned`,
+      };
+    }
+
+    const submissions = [];
+    let dueCount = 0;
+    let missedCount = 0;
+
+    for (const form of formsForSchedule) {
+      const machineRecords = getMachineScopedRecords(normalizeId(form._id), machine, recordsByFormId);
+      const exactRecords = machineRecords
+        .filter((record) => isSameCalendarDay(record.completedAt, date))
+        .sort((left, right) => new Date(right.completedAt).getTime() - new Date(left.completedAt).getTime());
+
+      if (exactRecords.length > 0) {
+        submissions.push(...exactRecords.map((record) => ({ form, record })));
+        continue;
+      }
+
+      if (!isPeriodAnchor(date, schedule)) continue;
+      if (machineRecords.some((record) => recordInPeriod(record, date, schedule))) continue;
+
+      if (isCurrentPeriod(date, schedule)) {
+        dueCount += 1;
+      } else if (periodEnded(date, schedule)) {
+        missedCount += 1;
+      }
+    }
+
+    const submittedCount = submissions.length;
+    const openCount = dueCount + missedCount;
+    const state = submittedCount > 0 && openCount > 0
+      ? "partial"
+      : submittedCount > 0
+        ? "complete"
+        : missedCount > 0
+          ? "missed"
+          : dueCount > 0
+            ? "due"
+            : "none";
+
+    const title = submittedCount > 0 && openCount > 0
+      ? `${SCHEDULE_META[schedule].label}: ${submittedCount} submitted, ${openCount} still pending`
+      : submittedCount > 0
+        ? `${SCHEDULE_META[schedule].label}: ${submittedCount} submitted`
+        : missedCount > 0
+          ? `${SCHEDULE_META[schedule].label}: ${missedCount} missed`
+          : dueCount > 0
+            ? `${SCHEDULE_META[schedule].label}: ${dueCount} due`
+            : `${SCHEDULE_META[schedule].label}: no activity this day`;
+
+    return {
+      schedule,
+      state,
+      hasForms: true,
+      hasNG: submissions.some((entry) => entry.record.hasNG),
+      openCount,
+      primary: submissions[0] ?? null,
+      submissions,
+      submittedCount,
+      title,
+    };
+  });
+}
+
+function getEntryCountLabel(entry) {
+  if (entry.state === "partial") return `${entry.submittedCount}/${entry.submittedCount + entry.openCount}`;
+  if (entry.state === "complete") return String(entry.submittedCount);
+  if (entry.state === "due" || entry.state === "missed") return String(entry.openCount);
+  return entry.hasForms ? "-" : "";
+}
+
+function ScheduleStackCell({ entries, onSelect }) {
+  return (
+    <div className="mx-auto flex w-14 flex-col gap-1">
+      {entries.map((entry) => {
+        const interactive = Boolean(entry.primary);
+        const countLabel = getEntryCountLabel(entry);
+        const content = (
+          <div
+            className={`relative flex min-h-[1.45rem] items-center justify-between rounded-md border px-1.5 py-1 ${SLOT_STYLES[entry.state]}`}
+            title={entry.title}
+          >
+            <span className="text-[9px] font-black tracking-[0.16em]">{SCHEDULE_META[entry.schedule].short}</span>
+            <span className="text-[9px] font-black">{countLabel}</span>
+            {entry.hasNG && (
+              <span className="absolute right-0.5 top-0.5 h-1.5 w-1.5 rounded-full bg-error ring-1 ring-surface" />
+            )}
+          </div>
+        );
+
+        if (!interactive) {
+          return <div key={entry.schedule}>{content}</div>;
+        }
+
+        return (
+          <button
+            key={entry.schedule}
+            type="button"
+            onClick={() => onSelect(entry.primary)}
+            className="text-left transition hover:scale-[1.03]"
+            title={`${entry.title}. Click to open the submitted record.`}
+          >
+            {content}
+          </button>
+        );
+      })}
+    </div>
+  );
 }
 
 function RecordDetailModal({ form, onClose, record }) {
-  const fields = (form?.fields ?? []).filter((field) => field.type !== "name");
+  const recordAnswers = Array.isArray(record?.answers)
+    ? record.answers.filter((field) => field.type !== "name")
+    : [];
+  const fields = recordAnswers.length > 0
+    ? recordAnswers
+    : (form?.fields ?? []).filter((field) => field.type !== "name");
   const responses = record?.responses ?? {};
+  const formName = form?.name ?? record?.formName ?? "Checklist Submission";
+  const recordFactory = form?.工場 ?? record?.factory ?? "";
+  const recordSchedule = record?.schedule ?? form?.schedule ?? "";
 
   function formatValue(field) {
+    if (field.fieldId) {
+      const answerStatus = String(field.status ?? field.value ?? "").trim().toLowerCase();
+      if (field.type === "checkbox") {
+        if (answerStatus === "ok") return "✓  OK";
+        if (answerStatus === "ng") return "✗  NG";
+        return field.displayValue ?? field.value ?? "—";
+      }
+      if (field.displayValue !== undefined && field.displayValue !== null && field.displayValue !== "") {
+        return String(field.displayValue);
+      }
+      if (field.value === null || field.value === undefined || field.value === "") return "—";
+      if (field.type === "number" && field.unit) return `${field.value} ${field.unit}`;
+      return String(field.value);
+    }
+
     const value = responses[field.id];
     if (field.type === "checkbox") {
       if (value === "ok") return "✓  OK";
@@ -158,10 +272,10 @@ function RecordDetailModal({ form, onClose, record }) {
         <div className="flex flex-shrink-0 items-start justify-between border-b border-outline-variant/20 px-6 py-5">
           <div className="min-w-0 flex-1 pr-4">
             <p className="text-xs font-bold uppercase tracking-[0.18em] text-outline">Inspection Record</p>
-            <h3 className="mt-0.5 truncate text-lg font-black text-on-surface">{form?.name}</h3>
+            <h3 className="mt-0.5 truncate text-lg font-black text-on-surface">{formName}</h3>
             <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-outline">
-              {form?.工場 && <span>{form.工場}</span>}
-              {form?.schedule && <span className="capitalize">{form.schedule}</span>}
+              {recordFactory && <span>{recordFactory}</span>}
+              {recordSchedule && <span className="capitalize">{recordSchedule}</span>}
             </div>
           </div>
           <button
@@ -206,13 +320,17 @@ function RecordDetailModal({ form, onClose, record }) {
         <div className="flex flex-1 flex-col gap-3 overflow-y-auto px-6 py-5">
           {fields.length === 0 && <p className="text-sm text-outline">No fields recorded.</p>}
           {fields.map((field) => {
-            const photo = responses[`${field.id}_photo`];
+            const fieldId = field.fieldId ?? field.id;
+            const photo = field.fieldPhotoURL || responses[`${fieldId}_photo`];
             const value = formatValue(field);
-            const isOk = field.type === "checkbox" && responses[field.id] === "ok";
-            const isNg = field.type === "checkbox" && responses[field.id] === "ng";
+            const fieldStatus = field.fieldId
+              ? String(field.status ?? field.value ?? "").trim().toLowerCase()
+              : responses[field.id];
+            const isOk = field.type === "checkbox" && fieldStatus === "ok";
+            const isNg = field.type === "checkbox" && fieldStatus === "ng";
 
             return (
-              <div key={field.id} className="rounded-2xl border border-outline-variant/20 bg-surface-container px-4 py-3">
+              <div key={fieldId} className="rounded-2xl border border-outline-variant/20 bg-surface-container px-4 py-3">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-semibold text-on-surface">{field.label || <span className="italic text-outline">Untitled</span>}</p>
@@ -239,9 +357,19 @@ function RecordDetailModal({ form, onClose, record }) {
 const RANGES = [30, 60];
 
 const SCHEDULE_META = {
-  daily: { label: "Daily", icon: "today" },
-  weekly: { label: "Weekly", icon: "date_range" },
-  monthly: { label: "Monthly", icon: "calendar_month" },
+  daily: { label: "Daily", short: "D", icon: "today" },
+  weekly: { label: "Weekly", short: "W", icon: "date_range" },
+  monthly: { label: "Monthly", short: "M", icon: "calendar_month" },
+};
+
+const SCHEDULE_ORDER = ["daily", "weekly", "monthly"];
+
+const SLOT_STYLES = {
+  complete: "border-emerald-500/20 bg-emerald-500/12 text-emerald-600",
+  partial: "border-primary/25 bg-primary/10 text-primary",
+  due: "border-amber-500/20 bg-amber-500/12 text-amber-700",
+  missed: "border-error/20 bg-error/10 text-error",
+  none: "border-outline-variant/15 bg-surface-container-high/35 text-outline/55",
 };
 
 function SummaryCard({ detail, icon, iconClassName, label, value }) {
@@ -273,6 +401,24 @@ function LegendPill({ label, tone, withNg = false }) {
   );
 }
 
+function ScheduleFilterButton({ active, icon, label, onClick }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={active}
+      className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-bold transition ${
+        active
+          ? "border-primary/30 bg-primary/10 text-primary"
+          : "border-outline-variant/20 bg-surface text-on-surface hover:border-primary/20 hover:text-primary"
+      }`}
+    >
+      <span className="material-symbols-outlined" style={{ fontSize: 14 }}>{icon}</span>
+      {label}
+    </button>
+  );
+}
+
 export default function ChecklistSubmissionsPage() {
   const { t } = useLanguage();
   const [templates, setTemplates] = useState([]);
@@ -281,6 +427,7 @@ export default function ChecklistSubmissionsPage() {
   const [loading, setLoading] = useState(true);
   const [days, setDays] = useState(30);
   const [factoryFilter, setFactoryFilter] = useState("all");
+  const [activeSchedules, setActiveSchedules] = useState(SCHEDULE_ORDER);
   const [selectedCell, setSelectedCell] = useState(null);
   const scrollRef = useRef(null);
 
@@ -311,7 +458,7 @@ export default function ChecklistSubmissionsPage() {
   useEffect(() => {
     if (loading || !scrollRef.current) return;
     const machineColumnWidth = 160;
-    const cellWidth = 44;
+    const cellWidth = 64;
     const halfBefore = Math.floor(days / 2);
     const todayOffset = machineColumnWidth + halfBefore * cellWidth;
     const containerWidth = scrollRef.current.clientWidth;
@@ -389,6 +536,15 @@ export default function ChecklistSubmissionsPage() {
   );
 
   const selectedFactoryLabel = factoryFilter === "all" ? "All factories" : factoryFilter;
+
+  function toggleSchedule(schedule) {
+    setActiveSchedules((current) => {
+      if (current.includes(schedule)) {
+        return current.length === 1 ? current : current.filter((value) => value !== schedule);
+      }
+      return SCHEDULE_ORDER.filter((value) => current.includes(value) || value === schedule);
+    });
+  }
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -487,7 +643,7 @@ export default function ChecklistSubmissionsPage() {
             <LegendPill label="Completed with NG" tone="bg-emerald-500" withNg />
           </div>
           <p className="mt-4 text-sm leading-6 text-outline">
-            Click a completed marker to inspect the submitted checklist record and attached responses.
+            Turn Daily, Weekly, and Monthly on or off to focus the timeline. The active buttons control which cadence lanes appear inside each day cell.
           </p>
         </div>
       </div>
@@ -498,19 +654,22 @@ export default function ChecklistSubmissionsPage() {
             <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-outline">Timeline</p>
             <h3 className="mt-1 text-lg font-black text-on-surface">Checklist Submission Timeline</h3>
             <p className="mt-1 text-sm leading-6 text-outline">
-              Review completed, due, and missed checks across {selectedFactoryLabel === "All factories" ? "all tracked factories" : selectedFactoryLabel}.
+              Review completed, due, and missed checks across {selectedFactoryLabel === "All factories" ? "all tracked factories" : selectedFactoryLabel}. Show one cadence or compare multiple at the same time.
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
-            {Object.entries(SCHEDULE_META).map(([key, meta]) => (
-              <span
-                key={key}
-                className="inline-flex items-center gap-2 rounded-full border border-outline-variant/20 bg-surface px-3 py-1.5 text-xs font-bold text-on-surface"
-              >
-                <span className="material-symbols-outlined text-primary" style={{ fontSize: 14 }}>{meta.icon}</span>
-                {scheduleCounts[key]} {meta.label}
-              </span>
-            ))}
+            {SCHEDULE_ORDER.map((schedule) => {
+              const meta = SCHEDULE_META[schedule];
+              return (
+                <ScheduleFilterButton
+                  key={schedule}
+                  active={activeSchedules.includes(schedule)}
+                  icon={meta.icon}
+                  label={meta.label}
+                  onClick={() => toggleSchedule(schedule)}
+                />
+              );
+            })}
           </div>
         </div>
 
@@ -553,9 +712,12 @@ export default function ChecklistSubmissionsPage() {
                     return (
                       <th
                         key={date.toISOString()}
-                        className={`w-11 border-b border-r border-outline-variant/10 px-1 py-2 text-center text-xs font-bold ${isToday ? "bg-primary/10 text-primary" : "bg-surface text-outline"}`}
+                        className={`w-16 border-b border-r border-outline-variant/10 px-1 py-2 text-center text-xs font-bold ${isToday ? "bg-primary/10 text-primary" : "bg-surface text-outline"}`}
                       >
-                        {date.getDate()}
+                        <span className="block">{date.getDate()}</span>
+                        <span className="mt-0.5 block text-[9px] font-medium uppercase tracking-[0.12em] opacity-70">
+                          {date.toLocaleDateString("en", { weekday: "short" }).slice(0, 1)}
+                        </span>
                       </th>
                     );
                   })}
@@ -572,16 +734,16 @@ export default function ChecklistSubmissionsPage() {
                     </td>
                     {dates.map((date) => {
                       const isToday = date.getTime() === today.getTime();
-                      const { form, hasNG, record, status } = getCellData(machine.id, date, templates, recordsByFormId);
+                      const entries = getScheduleEntries(machine, date, templates, recordsByFormId)
+                        .filter((entry) => activeSchedules.includes(entry.schedule));
                       return (
                         <td
                           key={date.toISOString()}
-                          className={`border-b border-r border-outline-variant/10 p-1 ${isToday ? "bg-primary/5" : ""}`}
+                          className={`border-b border-r border-outline-variant/10 px-1 py-1.5 align-top ${isToday ? "bg-primary/5" : ""}`}
                         >
-                          <Cell
-                            status={status}
-                            hasNG={hasNG}
-                            onClick={status === "green" ? () => setSelectedCell({ record, form }) : undefined}
+                          <ScheduleStackCell
+                            entries={entries}
+                            onSelect={(entry) => setSelectedCell(entry)}
                           />
                         </td>
                       );

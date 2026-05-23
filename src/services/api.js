@@ -569,7 +569,7 @@ async function _buildProdQuery(factory, start, end, partNumbers, serialNumbers, 
 }
 
 async function _fetchRange(factory, start, end, partNumbers, serialNumbers, advancedFilters = []) {
-  const queries = await Promise.all(PROCESSES.map((p) => _buildProdQuery(factory, start, end, partNumbers, serialNumbers, advancedFilters)));
+  const queries = await Promise.all(PROCESSES.map(() => _buildProdQuery(factory, start, end, partNumbers, serialNumbers, advancedFilters)));
   const settled = await Promise.allSettled(
     PROCESSES.map((p, index) =>
       query("submittedDB", p.collection, queries[index])
@@ -1182,12 +1182,75 @@ export async function deleteCheckFormTemplate(recordId, username) {
   });
 }
 
+function normalizeMongoDate(value) {
+  if (!value) return "";
+  if (typeof value === "string") return value;
+  if (value instanceof Date) return value.toISOString();
+  if (typeof value === "object" && value.$date) return value.$date;
+  return "";
+}
+
+function normalizeCheckFormAnswerValue(answer) {
+  if (answer.type === "checkbox") {
+    return String(answer.status ?? answer.value ?? "").trim().toLowerCase();
+  }
+  if (answer.displayValue !== undefined && answer.displayValue !== null && answer.displayValue !== "") {
+    return answer.displayValue;
+  }
+  return answer.value ?? "";
+}
+
+function normalizeCheckFormResponses(answers = []) {
+  return answers.reduce((responseMap, answer) => {
+    responseMap[answer.fieldId] = normalizeCheckFormAnswerValue(answer);
+    if (answer.fieldPhotoURL) {
+      responseMap[`${answer.fieldId}_photo`] = answer.fieldPhotoURL;
+    }
+    return responseMap;
+  }, {});
+}
+
+function normalizeCheckFormRecord(record) {
+  const answers = Array.isArray(record.answers) ? record.answers : [];
+  const derivedHasNg = answers.some((answer) => {
+    const status = String(answer.status ?? "").trim().toLowerCase();
+    return status === "ng" || status === "out-of-range";
+  }) || (Array.isArray(record.tickets) && record.tickets.length > 0);
+
+  return {
+    ...record,
+    formId: String(record.formId ?? record.templateId ?? ""),
+    formName: record.formName ?? record.templateName ?? "",
+    schedule: String(record.schedule ?? "").trim().toLowerCase(),
+    machineId: String(record.machineId ?? record.equipmentId ?? ""),
+    machineName: record.machineName ?? record["加工設備"] ?? "",
+    completedBy: record.completedBy ?? record.workerName ?? "",
+    completedAt: normalizeMongoDate(
+      record.completedAt
+      ?? record.submittedAtClient
+      ?? record.createdAt
+      ?? record.updatedAt
+      ?? record.submittedAt
+    ),
+    periodStart: record.periodStart ?? record.startDate ?? "",
+    periodEnd: record.periodEnd ?? record.startDate ?? "",
+    factory: record.factory ?? record.工場 ?? "",
+    hasNG: typeof record.hasNG === "boolean" ? record.hasNG : derivedHasNg,
+    answers,
+    responses: record.responses ?? normalizeCheckFormResponses(answers),
+  };
+}
+
 export async function fetchCheckFormRecords(formIds = []) {
   if (formIds.length === 0) return [];
-  return query("submittedDB", "checkFormRecordsDB",
-    { formId: { $in: formIds } },
-    { sort: { completedAt: -1 } }
+  const records = await query(
+    "submittedDB",
+    "checkFormRecordsDB",
+    { $or: [{ formId: { $in: formIds } }, { templateId: { $in: formIds } }] },
+    { sort: { completedAt: -1, createdAt: -1 } }
   );
+
+  return Array.isArray(records) ? records.map(normalizeCheckFormRecord) : [];
 }
 
 export async function createCheckFormRecord(data) {
