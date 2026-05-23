@@ -227,10 +227,90 @@ function ScheduleStackCell({ entries, onSelect }) {
   );
 }
 
+function buildImageDownloadName(url, label) {
+  const safeLabel = String(label ?? "inspection-image")
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9_-]+/gi, "-")
+    .replace(/^-+|-+$/g, "") || "inspection-image";
+
+  try {
+    const pathname = new URL(url).pathname;
+    const fileName = decodeURIComponent(pathname.split("/").filter(Boolean).pop() ?? "");
+    if (fileName) return fileName;
+  } catch {
+    // Fall through to generated file name.
+  }
+
+  return `${safeLabel}.jpg`;
+}
+
+function ImagePreviewLightbox({ image, onClose }) {
+  useEffect(() => {
+    if (!image?.url) return undefined;
+
+    function handleKeyDown(event) {
+      if (event.key === "Escape") {
+        onClose();
+      }
+    }
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [image?.url, onClose]);
+
+  if (!image?.url) return null;
+
+  return createPortal(
+    <div className="fixed inset-0 z-[90] flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm" onClick={onClose}>
+      <div
+        className="flex max-h-[92vh] w-full max-w-4xl flex-col overflow-hidden rounded-[28px] border border-white/15 bg-slate-950/95 shadow-2xl"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <div className="flex items-start justify-between gap-4 border-b border-white/10 px-5 py-4 text-white">
+          <div className="min-w-0 flex-1">
+            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/50">Image Preview</p>
+            <p className="mt-1 truncate text-sm font-semibold text-white">{image.label || "Inspection image"}</p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex h-10 w-10 items-center justify-center rounded-2xl bg-white/10 text-white transition hover:bg-white/20"
+          >
+            <span className="material-symbols-outlined">close</span>
+          </button>
+        </div>
+
+        <div className="flex min-h-0 flex-1 items-center justify-center bg-black/30 px-4 py-4 sm:px-6">
+          <img
+            src={image.url}
+            alt={image.label || "Inspection image"}
+            className="max-h-[68vh] max-w-full rounded-2xl object-contain shadow-2xl"
+          />
+        </div>
+
+        <div className="flex flex-col gap-3 border-t border-white/10 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-xs text-white/65">Open the image here for a clearer view, then download it if needed.</p>
+          <a
+            href={image.url}
+            download={buildImageDownloadName(image.url, image.label)}
+            className="inline-flex items-center justify-center gap-2 rounded-2xl bg-white px-4 py-2 text-sm font-bold text-slate-950 transition hover:bg-white/90"
+          >
+            <span className="material-symbols-outlined" style={{ fontSize: 18 }}>download</span>
+            Download image
+          </a>
+        </div>
+      </div>
+    </div>,
+    document.body
+  );
+}
+
 function RecordDetailModal({ form, onClose, record }) {
   const [activeTab, setActiveTab] = useState("submission");
   const [tickets, setTickets] = useState([]);
   const [ticketsLoading, setTicketsLoading] = useState(false);
+  const [previewImage, setPreviewImage] = useState(null);
 
   const recordAnswers = Array.isArray(record?.answers)
     ? record.answers.filter((field) => field.type !== "name")
@@ -246,6 +326,7 @@ function RecordDetailModal({ form, onClose, record }) {
 
   useEffect(() => {
     setActiveTab("submission");
+    setPreviewImage(null);
   }, [recordId]);
 
   useEffect(() => {
@@ -330,11 +411,17 @@ function RecordDetailModal({ form, onClose, record }) {
     return "";
   }
 
+  function openImagePreview(url, label) {
+    if (!url) return;
+    setPreviewImage({ url, label });
+  }
+
   const hasTicketTabContent = record?.hasNG || tickets.length > 0;
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
-      <div className="glass-card flex max-h-[88vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl border border-outline-variant/20">
+    <>
+      <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
+        <div className="glass-card flex max-h-[88vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl border border-outline-variant/20">
         <div className="flex flex-shrink-0 items-start justify-between border-b border-outline-variant/20 px-6 py-5">
           <div className="min-w-0 flex-1 pr-4">
             <p className="text-xs font-bold uppercase tracking-[0.18em] text-outline">Inspection Record</p>
@@ -440,7 +527,18 @@ function RecordDetailModal({ form, onClose, record }) {
                     </div>
                     {photo && (
                       <div className="mt-3">
-                        <img src={photo} alt="添付画像" className="h-32 rounded-xl border border-outline-variant/20 object-cover" />
+                        <button
+                          type="button"
+                          onClick={() => openImagePreview(photo, field.label || "Submitted image")}
+                          className="group overflow-hidden rounded-xl border border-outline-variant/20 bg-surface transition hover:border-primary/30"
+                        >
+                          <img
+                            src={photo}
+                            alt="添付画像"
+                            className="h-32 max-w-full object-cover transition duration-300 group-hover:scale-[1.02]"
+                          />
+                        </button>
+                        <p className="mt-2 text-[11px] font-semibold text-primary">Click image to enlarge</p>
                       </div>
                     )}
                   </div>
@@ -527,12 +625,18 @@ function RecordDetailModal({ form, onClose, record }) {
                     {ticket.imageURLs.length > 0 && (
                       <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3">
                         {ticket.imageURLs.map((imageUrl) => (
-                          <img
+                          <button
                             key={imageUrl}
-                            src={imageUrl}
-                            alt={ticket.fieldLabel || "ticket"}
-                            className="h-28 w-full rounded-xl border border-outline-variant/20 object-cover"
-                          />
+                            type="button"
+                            onClick={() => openImagePreview(imageUrl, ticket.fieldLabel || "NG image")}
+                            className="group overflow-hidden rounded-xl border border-outline-variant/20 bg-surface transition hover:border-primary/30"
+                          >
+                            <img
+                              src={imageUrl}
+                              alt={ticket.fieldLabel || "ticket"}
+                              className="h-28 w-full object-cover transition duration-300 group-hover:scale-[1.02]"
+                            />
+                          </button>
                         ))}
                       </div>
                     )}
@@ -542,8 +646,10 @@ function RecordDetailModal({ form, onClose, record }) {
             </div>
           )}
         </div>
+        </div>
       </div>
-    </div>
+      <ImagePreviewLightbox image={previewImage} onClose={() => setPreviewImage(null)} />
+    </>
   );
 }
 
