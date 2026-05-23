@@ -1190,6 +1190,18 @@ function normalizeMongoDate(value) {
   return "";
 }
 
+function normalizeId(value) {
+  if (!value) return "";
+  if (typeof value === "string") return value;
+  if (typeof value === "object" && typeof value.$oid === "string") return value.$oid;
+  if (typeof value?.toHexString === "function") return value.toHexString();
+  if (typeof value?.toString === "function") {
+    const stringValue = value.toString();
+    return stringValue === "[object Object]" ? "" : stringValue;
+  }
+  return "";
+}
+
 function normalizeCheckFormAnswerValue(answer) {
   if (answer.type === "checkbox") {
     return String(answer.status ?? answer.value ?? "").trim().toLowerCase();
@@ -1241,6 +1253,35 @@ function normalizeCheckFormRecord(record) {
   };
 }
 
+function normalizeNgReport(report) {
+  return {
+    ...report,
+    recordId: normalizeId(report.checkFormRecordId ?? report.recordId ?? report.checkFormRecordID),
+    fieldId: String(report.fieldId ?? report.checkItemId ?? ""),
+    formId: String(report.formId ?? report.templateId ?? ""),
+    formName: report.formName ?? report.templateName ?? "",
+    machineId: String(report.machineId ?? report.equipmentId ?? ""),
+    machineName: report.machineName ?? report["加工設備"] ?? "",
+    completedBy: report.completedBy ?? report.workerName ?? "",
+    factory: report.factory ?? report.工場 ?? "",
+    createdAt: normalizeMongoDate(
+      report.createdAt
+      ?? report.completedAt
+      ?? report.updatedAt
+      ?? report.submittedAt
+    ),
+    fieldLabel: report.fieldLabel ?? "",
+    fieldType: report.fieldType ?? "",
+    answerValue: report.answerValue ?? report.value ?? "",
+    reason: report.reason ?? "",
+    imageURLs: Array.isArray(report.imageURLs) ? report.imageURLs.filter(Boolean) : [],
+    min: report.min ?? null,
+    max: report.max ?? null,
+    unit: report.unit ?? "",
+    status: report.status ?? "open",
+  };
+}
+
 export async function fetchCheckFormRecords(formIds = []) {
   if (formIds.length === 0) return [];
   const records = await query(
@@ -1275,10 +1316,24 @@ export async function createNgReport(data) {
 
 export async function fetchNgReports(formIds = []) {
   if (formIds.length === 0) return [];
-  return query("submittedDB", "ngReportsDB",
+  const reports = await query("submittedDB", "ngReportsDB",
     { formId: { $in: formIds } },
     { sort: { completedAt: -1 } }
   );
+
+  return Array.isArray(reports) ? reports.map(normalizeNgReport) : [];
+}
+
+export async function fetchNgReportsByRecordIds(recordIds = []) {
+  if (recordIds.length === 0) return [];
+  const reports = await query(
+    "submittedDB",
+    "ngReportsDB",
+    { checkFormRecordId: { $in: recordIds } },
+    { sort: { createdAt: -1, completedAt: -1 } }
+  );
+
+  return Array.isArray(reports) ? reports.map(normalizeNgReport) : [];
 }
 
 export async function fetchNgInspectionCount() {

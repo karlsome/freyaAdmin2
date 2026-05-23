@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useLanguage } from "../contexts/LanguageContext";
-import { fetchCheckFormTemplates, fetchCheckFormRecords, fetchSetsubiDBRecords } from "../services/api";
+import { fetchCheckFormTemplates, fetchCheckFormRecords, fetchNgReportsByRecordIds, fetchSetsubiDBRecords } from "../services/api";
 
 function normalizeId(id) {
   if (!id) return "";
@@ -228,6 +228,10 @@ function ScheduleStackCell({ entries, onSelect }) {
 }
 
 function RecordDetailModal({ form, onClose, record }) {
+  const [activeTab, setActiveTab] = useState("submission");
+  const [tickets, setTickets] = useState([]);
+  const [ticketsLoading, setTicketsLoading] = useState(false);
+
   const recordAnswers = Array.isArray(record?.answers)
     ? record.answers.filter((field) => field.type !== "name")
     : [];
@@ -235,16 +239,53 @@ function RecordDetailModal({ form, onClose, record }) {
     ? recordAnswers
     : (form?.fields ?? []).filter((field) => field.type !== "name");
   const responses = record?.responses ?? {};
+  const recordId = normalizeId(record?._id ?? record?.recordId);
   const formName = form?.name ?? record?.formName ?? "Checklist Submission";
   const recordFactory = form?.工場 ?? record?.factory ?? "";
   const recordSchedule = record?.schedule ?? form?.schedule ?? "";
+
+  useEffect(() => {
+    setActiveTab("submission");
+  }, [recordId]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadTickets() {
+      if (!recordId) {
+        setTickets([]);
+        return;
+      }
+
+      setTicketsLoading(true);
+      try {
+        const data = await fetchNgReportsByRecordIds([recordId]);
+        if (!cancelled) {
+          setTickets(Array.isArray(data) ? data : []);
+        }
+      } catch {
+        if (!cancelled) {
+          setTickets([]);
+        }
+      } finally {
+        if (!cancelled) {
+          setTicketsLoading(false);
+        }
+      }
+    }
+
+    loadTickets();
+    return () => {
+      cancelled = true;
+    };
+  }, [recordId]);
 
   function formatValue(field) {
     if (field.fieldId) {
       const answerStatus = String(field.status ?? field.value ?? "").trim().toLowerCase();
       if (field.type === "checkbox") {
-        if (answerStatus === "ok") return "✓  OK";
-        if (answerStatus === "ng") return "✗  NG";
+        if (answerStatus === "ok") return "OK";
+        if (answerStatus === "ng") return "NG";
         return field.displayValue ?? field.value ?? "—";
       }
       if (field.displayValue !== undefined && field.displayValue !== null && field.displayValue !== "") {
@@ -257,8 +298,8 @@ function RecordDetailModal({ form, onClose, record }) {
 
     const value = responses[field.id];
     if (field.type === "checkbox") {
-      if (value === "ok") return "✓  OK";
-      if (value === "ng") return "✗  NG";
+      if (value === "ok") return "OK";
+      if (value === "ng") return "NG";
       return "—";
     }
     if (value === null || value === undefined || value === "") return "—";
@@ -266,9 +307,34 @@ function RecordDetailModal({ form, onClose, record }) {
     return String(value);
   }
 
+  function getFieldStatus(field) {
+    if (field.fieldId) {
+      return String(field.status ?? field.value ?? "").trim().toLowerCase();
+    }
+    return field.type === "checkbox" ? String(responses[field.id] ?? "").trim().toLowerCase() : "";
+  }
+
+  function getFieldValueTone(field, status) {
+    if (field.type === "checkbox") {
+      if (status === "ok") return "text-emerald-500";
+      if (status === "ng") return "text-error";
+    }
+    if (status === "out-of-range") return "text-error";
+    return "text-on-surface";
+  }
+
+  function formatTicketRange(ticket) {
+    if (ticket.min !== null && ticket.max !== null) return `${ticket.min} to ${ticket.max}${ticket.unit ? ` ${ticket.unit}` : ""}`;
+    if (ticket.min !== null) return `>= ${ticket.min}${ticket.unit ? ` ${ticket.unit}` : ""}`;
+    if (ticket.max !== null) return `<= ${ticket.max}${ticket.unit ? ` ${ticket.unit}` : ""}`;
+    return "";
+  }
+
+  const hasTicketTabContent = record?.hasNG || tickets.length > 0;
+
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
-      <div className="glass-card flex max-h-[85vh] w-full max-w-lg flex-col overflow-hidden rounded-2xl border border-outline-variant/20">
+      <div className="glass-card flex max-h-[88vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl border border-outline-variant/20">
         <div className="flex flex-shrink-0 items-start justify-between border-b border-outline-variant/20 px-6 py-5">
           <div className="min-w-0 flex-1 pr-4">
             <p className="text-xs font-bold uppercase tracking-[0.18em] text-outline">Inspection Record</p>
@@ -317,37 +383,164 @@ function RecordDetailModal({ form, onClose, record }) {
           )}
         </div>
 
-        <div className="flex flex-1 flex-col gap-3 overflow-y-auto px-6 py-5">
-          {fields.length === 0 && <p className="text-sm text-outline">No fields recorded.</p>}
-          {fields.map((field) => {
-            const fieldId = field.fieldId ?? field.id;
-            const photo = field.fieldPhotoURL || responses[`${fieldId}_photo`];
-            const value = formatValue(field);
-            const fieldStatus = field.fieldId
-              ? String(field.status ?? field.value ?? "").trim().toLowerCase()
-              : responses[field.id];
-            const isOk = field.type === "checkbox" && fieldStatus === "ok";
-            const isNg = field.type === "checkbox" && fieldStatus === "ng";
+        <div className="flex flex-shrink-0 gap-2 border-b border-outline-variant/20 px-6 py-3">
+          <button
+            type="button"
+            onClick={() => setActiveTab("submission")}
+            className={`inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-bold transition ${
+              activeTab === "submission"
+                ? "bg-primary/10 text-primary"
+                : "bg-surface-container text-on-surface hover:bg-surface-container-high"
+            }`}
+          >
+            <span className="material-symbols-outlined" style={{ fontSize: 14 }}>fact_check</span>
+            Submitted
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab("tickets")}
+            className={`inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-bold transition ${
+              activeTab === "tickets"
+                ? "bg-primary/10 text-primary"
+                : "bg-surface-container text-on-surface hover:bg-surface-container-high"
+            }`}
+          >
+            <span className="material-symbols-outlined" style={{ fontSize: 14 }}>confirmation_number</span>
+            NG Reasons
+            <span className={`rounded-full px-2 py-0.5 text-[10px] font-black ${tickets.length > 0 ? "bg-error/10 text-error" : "bg-outline/10 text-outline"}`}>
+              {tickets.length}
+            </span>
+          </button>
+        </div>
 
-            return (
-              <div key={fieldId} className="rounded-2xl border border-outline-variant/20 bg-surface-container px-4 py-3">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-semibold text-on-surface">{field.label || <span className="italic text-outline">Untitled</span>}</p>
-                    {field.description && <p className="mt-0.5 text-xs text-outline">{field.description}</p>}
+        <div className="flex-1 overflow-y-auto px-6 py-5">
+          {activeTab === "submission" ? (
+            <div className="flex flex-col gap-3">
+              {fields.length === 0 && <p className="text-sm text-outline">No fields recorded.</p>}
+              {fields.map((field) => {
+                const fieldId = field.fieldId ?? field.id;
+                const photo = field.fieldPhotoURL || responses[`${fieldId}_photo`];
+                const value = formatValue(field);
+                const fieldStatus = getFieldStatus(field);
+                const valueTone = getFieldValueTone(field, fieldStatus);
+
+                return (
+                  <div key={fieldId} className="rounded-2xl border border-outline-variant/20 bg-surface-container px-4 py-3">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-semibold text-on-surface">{field.label || <span className="italic text-outline">Untitled</span>}</p>
+                        {field.description && <p className="mt-0.5 text-xs text-outline">{field.description}</p>}
+                      </div>
+                      <div className="text-right">
+                        <p className={`text-sm font-bold ${valueTone}`}>{value}</p>
+                        {fieldStatus === "out-of-range" && (
+                          <p className="mt-1 text-[10px] font-bold uppercase tracking-[0.12em] text-error">Out of range</p>
+                        )}
+                      </div>
+                    </div>
+                    {photo && (
+                      <div className="mt-3">
+                        <img src={photo} alt="添付画像" className="h-32 rounded-xl border border-outline-variant/20 object-cover" />
+                      </div>
+                    )}
                   </div>
-                  <span className={`flex-shrink-0 text-sm font-bold ${isOk ? "text-emerald-500" : isNg ? "text-error" : "text-on-surface"}`}>
-                    {value}
-                  </span>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="flex flex-col gap-3">
+              {ticketsLoading && (
+                <div className="flex items-center gap-3 py-8 text-outline">
+                  <span className="material-symbols-outlined animate-spin">progress_activity</span>
+                  Loading NG reasons…
                 </div>
-                {photo && (
-                  <div className="mt-2">
-                    <img src={photo} alt="添付画像" className="h-32 rounded-xl border border-outline-variant/20 object-cover" />
+              )}
+
+              {!ticketsLoading && tickets.length === 0 && (
+                <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-outline-variant/25 bg-surface-container/40 px-6 py-12 text-center text-outline">
+                  <span className="material-symbols-outlined" style={{ fontSize: 36 }}>task_alt</span>
+                  <div>
+                    <p className="text-sm font-semibold text-on-surface">No NG tickets found for this record</p>
+                    <p className="mt-1 text-sm leading-6 text-outline">
+                      {hasTicketTabContent
+                        ? "This record is flagged, but no ticket details were returned from ngReportsDB."
+                        : "This submission does not have any NG or out-of-range ticket reasons."}
+                    </p>
                   </div>
-                )}
-              </div>
-            );
-          })}
+                </div>
+              )}
+
+              {!ticketsLoading && tickets.map((ticket) => {
+                const expectedRange = formatTicketRange(ticket);
+                return (
+                  <article key={`${ticket.recordId}-${ticket.fieldId}-${ticket.createdAt}`} className="rounded-2xl border border-outline-variant/20 bg-surface-container px-4 py-4">
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <h4 className="truncate text-sm font-semibold text-on-surface">{ticket.fieldLabel || "Untitled field"}</h4>
+                          {ticket.fieldType && (
+                            <span className="rounded-full bg-outline/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.12em] text-outline">
+                              {ticket.fieldType}
+                            </span>
+                          )}
+                        </div>
+                        <div className="mt-2 flex flex-wrap gap-2 text-xs text-outline">
+                          {ticket.answerValue && (
+                            <span className="inline-flex items-center gap-1 rounded-full bg-surface px-2.5 py-1 font-semibold text-on-surface">
+                              <span className="material-symbols-outlined text-error" style={{ fontSize: 12 }}>warning</span>
+                              Submitted: {ticket.answerValue}
+                            </span>
+                          )}
+                          {expectedRange && (
+                            <span className="inline-flex items-center gap-1 rounded-full bg-surface px-2.5 py-1 font-semibold text-on-surface">
+                              <span className="material-symbols-outlined text-primary" style={{ fontSize: 12 }}>straighten</span>
+                              Allowed: {expectedRange}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <span className="rounded-full bg-error/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.12em] text-error">
+                        {ticket.status || "open"}
+                      </span>
+                    </div>
+
+                    <div className="mt-3 rounded-2xl bg-surface px-4 py-3">
+                      <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-outline">NG Reason</p>
+                      <p className="mt-1 text-sm leading-6 text-on-surface">{ticket.reason || "No reason provided."}</p>
+                    </div>
+
+                    <div className="mt-3 flex flex-wrap gap-3 text-xs text-outline">
+                      <span className="inline-flex items-center gap-1">
+                        <span className="material-symbols-outlined" style={{ fontSize: 14 }}>schedule</span>
+                        {ticket.createdAt
+                          ? new Date(ticket.createdAt).toLocaleString("ja-JP", { year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })
+                          : "—"}
+                      </span>
+                      {ticket.completedBy && (
+                        <span className="inline-flex items-center gap-1">
+                          <span className="material-symbols-outlined" style={{ fontSize: 14 }}>person</span>
+                          {ticket.completedBy}
+                        </span>
+                      )}
+                    </div>
+
+                    {ticket.imageURLs.length > 0 && (
+                      <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3">
+                        {ticket.imageURLs.map((imageUrl) => (
+                          <img
+                            key={imageUrl}
+                            src={imageUrl}
+                            alt={ticket.fieldLabel || "ticket"}
+                            className="h-28 w-full rounded-xl border border-outline-variant/20 object-cover"
+                          />
+                        ))}
+                      </div>
+                    )}
+                  </article>
+                );
+              })}
+            </div>
+          )}
         </div>
       </div>
     </div>
