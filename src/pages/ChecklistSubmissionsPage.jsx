@@ -194,6 +194,29 @@ function getPreferredEntrySelection(entry) {
   return entry.submissions.find((submission) => submission.record?.hasNG) ?? entry.primary ?? null;
 }
 
+function getFieldTicketHint(field) {
+  return {
+    fieldId: String(field?.fieldId ?? field?.id ?? "").trim(),
+    label: String(field?.label ?? "").trim().toLowerCase(),
+  };
+}
+
+function doesTicketMatchField(ticket, fieldHint) {
+  if (!ticket || !fieldHint) return false;
+
+  const ticketFieldId = String(ticket.fieldId ?? "").trim();
+  const ticketLabel = String(ticket.fieldLabel ?? "").trim().toLowerCase();
+
+  return (
+    (fieldHint.fieldId && ticketFieldId && fieldHint.fieldId === ticketFieldId)
+    || (fieldHint.label && ticketLabel && fieldHint.label === ticketLabel)
+  );
+}
+
+function getTicketKey(ticket) {
+  return `${ticket.recordId}-${ticket.fieldId || ticket.fieldLabel || "ticket"}-${ticket.createdAt || ""}`;
+}
+
 function ScheduleStackCell({ entries, onSelect }) {
   return (
     <div className="mx-auto flex w-14 flex-col gap-1">
@@ -318,6 +341,8 @@ function RecordDetailModal({ defaultTab = "submission", form, onClose, record })
   const [tickets, setTickets] = useState([]);
   const [ticketsLoading, setTicketsLoading] = useState(false);
   const [previewImage, setPreviewImage] = useState(null);
+  const [ticketFocusHint, setTicketFocusHint] = useState(null);
+  const ticketRefs = useRef(new Map());
 
   const recordAnswers = Array.isArray(record?.answers)
     ? record.answers.filter((field) => field.type !== "name")
@@ -365,6 +390,8 @@ function RecordDetailModal({ defaultTab = "submission", form, onClose, record })
   useEffect(() => {
     setActiveTab(normalizedDefaultTab);
     setPreviewImage(null);
+    setTicketFocusHint(null);
+    ticketRefs.current.clear();
   }, [normalizedDefaultTab, recordId]);
 
   useEffect(() => {
@@ -454,7 +481,27 @@ function RecordDetailModal({ defaultTab = "submission", form, onClose, record })
     setPreviewImage({ url, label });
   }
 
+  function openNgReasonForField(field) {
+    setTicketFocusHint(getFieldTicketHint(field));
+    setActiveTab("tickets");
+  }
+
   const hasTicketTabContent = record?.hasNG || tickets.length > 0;
+  const focusedTicket = useMemo(() => {
+    if (!ticketFocusHint) return null;
+    return tickets.find((ticket) => doesTicketMatchField(ticket, ticketFocusHint))
+      ?? (tickets.length === 1 ? tickets[0] : null);
+  }, [ticketFocusHint, tickets]);
+  const highlightedTicketKey = focusedTicket ? getTicketKey(focusedTicket) : "";
+
+  useEffect(() => {
+    if (activeTab !== "tickets" || ticketsLoading || !highlightedTicketKey) return;
+
+    const node = ticketRefs.current.get(highlightedTicketKey);
+    if (node) {
+      node.scrollIntoView({ block: "center", behavior: "smooth" });
+    }
+  }, [activeTab, highlightedTicketKey, ticketsLoading]);
 
   return (
     <>
@@ -527,9 +574,31 @@ function RecordDetailModal({ defaultTab = "submission", form, onClose, record })
                 const value = formatValue(field);
                 const fieldStatus = getFieldStatus(field);
                 const valueTone = getFieldValueTone(field, fieldStatus);
+                const isProblemField = fieldStatus === "ng" || fieldStatus === "out-of-range";
+                const canOpenNgReason = isProblemField && hasTicketTabContent;
+                const problemFieldHint = getFieldTicketHint(field);
+                const hasMatchingTicket = tickets.some((ticket) => doesTicketMatchField(ticket, problemFieldHint));
+                const cardIsClickable = canOpenNgReason && (hasMatchingTicket || ticketsLoading || tickets.length === 0);
 
                 return (
-                  <div key={fieldId} className="rounded-2xl border border-outline-variant/20 bg-surface-container px-4 py-3">
+                  <div
+                    key={fieldId}
+                    role={cardIsClickable ? "button" : undefined}
+                    tabIndex={cardIsClickable ? 0 : undefined}
+                    onClick={cardIsClickable ? () => openNgReasonForField(field) : undefined}
+                    onKeyDown={cardIsClickable ? (event) => {
+                      if (event.key === "Enter" || event.key === " ") {
+                        event.preventDefault();
+                        openNgReasonForField(field);
+                      }
+                    } : undefined}
+                    title={cardIsClickable ? "Click to open the NG reason" : undefined}
+                    className={`rounded-2xl border border-outline-variant/20 bg-surface-container px-4 py-3 ${
+                      cardIsClickable
+                        ? "cursor-pointer transition hover:border-primary/30 hover:bg-surface-container-high focus:outline-none focus:ring-2 focus:ring-primary/30"
+                        : ""
+                    }`}
+                  >
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-sm font-semibold text-on-surface">{field.label || <span className="italic text-outline">Untitled</span>}</p>
@@ -546,7 +615,10 @@ function RecordDetailModal({ defaultTab = "submission", form, onClose, record })
                       <div className="mt-3">
                         <button
                           type="button"
-                          onClick={() => openImagePreview(photo, field.label || "Submitted image")}
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            openImagePreview(photo, field.label || "Submitted image");
+                          }}
                           className="group overflow-hidden rounded-xl border border-outline-variant/20 bg-surface transition hover:border-primary/30"
                         >
                           <img
@@ -587,8 +659,19 @@ function RecordDetailModal({ defaultTab = "submission", form, onClose, record })
 
               {!ticketsLoading && tickets.map((ticket) => {
                 const expectedRange = formatTicketRange(ticket);
+                const ticketKey = getTicketKey(ticket);
+                const isHighlightedTicket = highlightedTicketKey === ticketKey;
                 return (
-                  <article key={`${ticket.recordId}-${ticket.fieldId}-${ticket.createdAt}`} className="rounded-2xl border border-outline-variant/20 bg-surface-container px-4 py-4">
+                  <article
+                    key={ticketKey}
+                    ref={(node) => {
+                      if (node) ticketRefs.current.set(ticketKey, node);
+                      else ticketRefs.current.delete(ticketKey);
+                    }}
+                    className={`rounded-2xl border border-outline-variant/20 bg-surface-container px-4 py-4 ${
+                      isHighlightedTicket ? "ring-2 ring-primary/25 shadow-[0_0_0_1px_rgba(99,102,241,0.15)]" : ""
+                    }`}
+                  >
                     <div className="flex flex-wrap items-start justify-between gap-3">
                       <div className="min-w-0 flex-1">
                         <div className="flex flex-wrap items-center gap-2">
