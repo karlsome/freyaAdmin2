@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
+import CheckFormImageLightboxModal from "./CheckFormImageLightboxModal";
 import { fetchNodaUserFullName } from "../services/nodaApi";
 
 const STATUS_STYLES = {
@@ -82,13 +83,13 @@ function ActivityItem({ icon, label, value }) {
   );
 }
 
-function FieldRow({ field }) {
+function FieldRow({ field, onPreviewImage }) {
   const typeMeta = FIELD_TYPE_META[field.type] ?? { label: field.type || "Field", icon: "help" };
   const hasRange = field.type === "number" && (field.min != null || field.max != null);
 
   return (
     <div className="rounded-2xl border border-outline-variant/20 bg-surface px-4 py-3">
-      <div className="flex items-start justify-between gap-3">
+      <div className="flex items-start gap-3">
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
             <span className="material-symbols-outlined text-primary" style={{ fontSize: 16 }}>{typeMeta.icon}</span>
@@ -98,9 +99,25 @@ function FieldRow({ field }) {
             <p className="mt-1 text-xs leading-5 text-outline">{field.description}</p>
           ) : null}
         </div>
-        <span className="inline-flex rounded-full bg-primary/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-primary">
-          {typeMeta.label}
-        </span>
+
+        <div className="grid w-[8.5rem] flex-shrink-0 grid-cols-[3rem_minmax(0,1fr)] items-center justify-items-end gap-2 self-start">
+          {field.imageURL ? (
+            <button
+              type="button"
+              onClick={() => onPreviewImage({ imageURL: field.imageURL, name: field.label || "Reference image" })}
+              className="flex h-12 w-12 overflow-hidden rounded-2xl border border-outline-variant/20 bg-surface-container transition hover:border-primary/35 hover:shadow-[0_8px_20px_rgba(67,97,238,0.14)]"
+              aria-label={`Preview reference image for ${field.label || "checklist field"}`}
+            >
+              <img src={field.imageURL} alt={field.label || "Reference image"} className="h-full w-full object-cover" />
+            </button>
+          ) : (
+            <span className="h-12 w-12" aria-hidden="true" />
+          )}
+
+          <span className="inline-flex rounded-full bg-primary/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-primary">
+            {typeMeta.label}
+          </span>
+        </div>
       </div>
       <div className="mt-3 flex flex-wrap gap-2 text-[11px] font-semibold">
         {field.required ? (
@@ -128,6 +145,7 @@ function FieldRow({ field }) {
 export default function CheckFormDetailModal({ form, scheduleMeta, machineNames, onClose, onEdit }) {
   const [createdByName, setCreatedByName] = useState(form.createdBy || "Unknown user");
   const [updatedByName, setUpdatedByName] = useState(form.updatedBy || "");
+  const [previewImage, setPreviewImage] = useState(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -241,7 +259,7 @@ export default function CheckFormDetailModal({ form, scheduleMeta, machineNames,
             </div>
             <div className="mt-4 space-y-2">
               {(form.fields ?? []).map((field) => (
-                <FieldRow key={field.id || field.label} field={field} />
+                <FieldRow key={field.id || field.label} field={field} onPreviewImage={setPreviewImage} />
               ))}
             </div>
           </section>
@@ -259,6 +277,8 @@ export default function CheckFormDetailModal({ form, scheduleMeta, machineNames,
           </button>
         </div>
       </div>
+
+      <CheckFormImageLightboxModal image={previewImage} onClose={() => setPreviewImage(null)} />
     </div>
   );
 

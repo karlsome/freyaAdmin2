@@ -11,6 +11,7 @@ import {
   deleteCheckFormTemplate,
   uploadCheckFormReferenceImage,
 } from "../services/api";
+import CheckFormImageLightboxModal from "./CheckFormImageLightboxModal";
 import CheckFormImageOverlayEditorModal from "./CheckFormImageOverlayEditorModal";
 import { getAuthUser } from "../utils/masterDB";
 
@@ -897,116 +898,138 @@ function FieldCard({
 }) {
   const typeMeta = getFieldTypeMeta(field.type);
   const hasRange = field.type === "number" && (field.min != null || field.max != null);
+  const fieldImageURL = normalizeImageURL(field.imageURL);
+  const [thumbnailPreviewImage, setThumbnailPreviewImage] = useState(null);
 
   return (
-    <div className={`overflow-hidden rounded-2xl border transition ${expanded ? "border-primary/35 bg-primary/5" : "border-outline-variant/20 bg-surface"}`}>
-      <div className="px-4 py-4">
-        <div className="flex items-start gap-3">
-          <button type="button" onClick={onToggle} className="flex min-w-0 flex-1 items-start gap-3 text-left">
-            <span className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-2xl text-sm font-black ${expanded ? "bg-primary text-on-primary" : "bg-surface-container text-on-surface"}`}>
-              {index + 1}
-            </span>
-            <span className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-2xl ${expanded ? "bg-primary text-on-primary" : "bg-surface-container text-primary"}`}>
-              <span className="material-symbols-outlined" style={{ fontSize: 18 }}>{typeMeta.icon}</span>
-            </span>
-            <div className="min-w-0 flex-1">
-              <div className="flex flex-wrap items-center gap-2">
-                <p className="truncate text-sm font-semibold text-on-surface">
-                  {field.label || (field.locked ? "名前" : `Untitled ${typeMeta.label.toLowerCase()} check`)}
-                </p>
-                <span className="inline-flex rounded-full bg-primary/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-primary">
-                  {typeMeta.label}
+    <>
+      <div className={`overflow-hidden rounded-2xl border transition ${expanded ? "border-primary/35 bg-primary/5" : "border-outline-variant/20 bg-surface"}`}>
+        <div className="px-4 py-4">
+          <div className="flex items-start gap-3">
+            <div className="flex min-w-0 flex-1 items-start gap-3">
+              <button type="button" onClick={onToggle} className="flex min-w-0 flex-1 items-start gap-3 text-left">
+                <span className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-2xl text-sm font-black ${expanded ? "bg-primary text-on-primary" : "bg-surface-container text-on-surface"}`}>
+                  {index + 1}
                 </span>
-                {field.locked ? (
-                  <span className="inline-flex rounded-full bg-surface-container px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-outline">
-                    Locked
-                  </span>
-                ) : null}
-                {field.required ? (
-                  <span className="inline-flex rounded-full bg-error/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-error">
-                    Required
-                  </span>
-                ) : null}
-                {field.photoRequired ? (
-                  <span className="inline-flex rounded-full bg-surface-container px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-on-surface">
-                    Photo
-                  </span>
-                ) : null}
-              </div>
-              <p className="mt-1 text-xs leading-5 text-outline">
-                {field.description || (field.locked ? "Every form includes the operator name field." : "Add a short instruction so operators know exactly what to check.")}
-              </p>
-              <div className="mt-2 flex flex-wrap gap-2 text-[11px] font-semibold">
-                {field.unit ? <span className="rounded-full bg-surface-container px-2.5 py-1 text-on-surface">Unit: {field.unit}</span> : null}
-                {hasRange ? (
-                  <span className="rounded-full bg-surface-container px-2.5 py-1 text-on-surface">
-                    Range: {field.min != null ? field.min : "-"} - {field.max != null ? field.max : "-"}
-                  </span>
-                ) : null}
-                {field.type === "select" && Array.isArray(field.options) && field.options.length > 0 ? (
-                  <span className="rounded-full bg-surface-container px-2.5 py-1 text-on-surface">{field.options.length} options</span>
-                ) : null}
-                {field.imageURL ? <span className="rounded-full bg-surface-container px-2.5 py-1 text-on-surface">Reference image</span> : null}
-              </div>
+                <span className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-2xl ${expanded ? "bg-primary text-on-primary" : "bg-surface-container text-primary"}`}>
+                  <span className="material-symbols-outlined" style={{ fontSize: 18 }}>{typeMeta.icon}</span>
+                </span>
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="truncate text-sm font-semibold text-on-surface">
+                      {field.label || (field.locked ? "名前" : `Untitled ${typeMeta.label.toLowerCase()} check`)}
+                    </p>
+                    <span className="inline-flex rounded-full bg-primary/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-primary">
+                      {typeMeta.label}
+                    </span>
+                    {field.locked ? (
+                      <span className="inline-flex rounded-full bg-surface-container px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-outline">
+                        Locked
+                      </span>
+                    ) : null}
+                    {field.required ? (
+                      <span className="inline-flex rounded-full bg-error/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-error">
+                        Required
+                      </span>
+                    ) : null}
+                    {field.photoRequired ? (
+                      <span className="inline-flex rounded-full bg-surface-container px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-on-surface">
+                        Photo
+                      </span>
+                    ) : null}
+                  </div>
+                  <p className="mt-1 text-xs leading-5 text-outline">
+                    {field.description || (field.locked ? "Every form includes the operator name field." : "Add a short instruction so operators know exactly what to check.")}
+                  </p>
+                  <div className="mt-2 flex flex-wrap gap-2 text-[11px] font-semibold">
+                    {field.unit ? <span className="rounded-full bg-surface-container px-2.5 py-1 text-on-surface">Unit: {field.unit}</span> : null}
+                    {hasRange ? (
+                      <span className="rounded-full bg-surface-container px-2.5 py-1 text-on-surface">
+                        Range: {field.min != null ? field.min : "-"} - {field.max != null ? field.max : "-"}
+                      </span>
+                    ) : null}
+                    {field.type === "select" && Array.isArray(field.options) && field.options.length > 0 ? (
+                      <span className="rounded-full bg-surface-container px-2.5 py-1 text-on-surface">{field.options.length} options</span>
+                    ) : null}
+                    {field.imageURL ? <span className="rounded-full bg-surface-container px-2.5 py-1 text-on-surface">Reference image</span> : null}
+                  </div>
+                </div>
+              </button>
+
+              {fieldImageURL ? (
+                <button
+                  type="button"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    setThumbnailPreviewImage({ imageURL: fieldImageURL, name: field.label || "Reference image" });
+                  }}
+                  className="mt-0.5 flex h-14 w-14 flex-shrink-0 overflow-hidden rounded-2xl border border-outline-variant/20 bg-surface-container transition hover:border-primary/35 hover:shadow-[0_8px_20px_rgba(67,97,238,0.14)]"
+                  aria-label={`Preview reference image for ${field.label || "checklist field"}`}
+                >
+                  <img src={fieldImageURL} alt={field.label || "Reference image"} className="h-full w-full object-cover" />
+                </button>
+              ) : null}
             </div>
-          </button>
 
-          <div className="flex flex-col items-end gap-2" onClick={(event) => event.stopPropagation()}>
-            {!field.locked ? (
-              <div className="flex items-center gap-1">
-                <button
-                  type="button"
-                  disabled={!canMoveUp}
-                  onClick={onMoveUp}
-                  className="flex h-8 w-8 items-center justify-center rounded-full text-outline transition hover:bg-surface-container hover:text-primary disabled:opacity-30"
-                >
-                  <span className="material-symbols-outlined" style={{ fontSize: 16 }}>arrow_upward</span>
-                </button>
-                <button
-                  type="button"
-                  disabled={!canMoveDown}
-                  onClick={onMoveDown}
-                  className="flex h-8 w-8 items-center justify-center rounded-full text-outline transition hover:bg-surface-container hover:text-primary disabled:opacity-30"
-                >
-                  <span className="material-symbols-outlined" style={{ fontSize: 16 }}>arrow_downward</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={onDelete}
-                  className="flex h-8 w-8 items-center justify-center rounded-full text-outline transition hover:bg-error/10 hover:text-error"
-                >
-                  <span className="material-symbols-outlined" style={{ fontSize: 16 }}>delete</span>
-                </button>
-              </div>
-            ) : null}
+            <div className="flex flex-col items-end gap-2" onClick={(event) => event.stopPropagation()}>
+              {!field.locked ? (
+                <div className="flex items-center gap-1">
+                  <button
+                    type="button"
+                    disabled={!canMoveUp}
+                    onClick={onMoveUp}
+                    className="flex h-8 w-8 items-center justify-center rounded-full text-outline transition hover:bg-surface-container hover:text-primary disabled:opacity-30"
+                  >
+                    <span className="material-symbols-outlined" style={{ fontSize: 16 }}>arrow_upward</span>
+                  </button>
+                  <button
+                    type="button"
+                    disabled={!canMoveDown}
+                    onClick={onMoveDown}
+                    className="flex h-8 w-8 items-center justify-center rounded-full text-outline transition hover:bg-surface-container hover:text-primary disabled:opacity-30"
+                  >
+                    <span className="material-symbols-outlined" style={{ fontSize: 16 }}>arrow_downward</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={onDelete}
+                    className="flex h-8 w-8 items-center justify-center rounded-full text-outline transition hover:bg-error/10 hover:text-error"
+                  >
+                    <span className="material-symbols-outlined" style={{ fontSize: 16 }}>delete</span>
+                  </button>
+                </div>
+              ) : null}
 
-            <button
-              type="button"
-              onClick={onToggle}
-              className="inline-flex items-center gap-1 rounded-full border border-outline-variant/20 bg-surface px-3 py-1.5 text-[11px] font-bold text-on-surface transition hover:bg-surface-container"
-            >
-              {expanded ? "Collapse" : "Edit"}
-              <span className="material-symbols-outlined" style={{ fontSize: 14 }}>{expanded ? "expand_less" : "expand_more"}</span>
-            </button>
+              <button
+                type="button"
+                onClick={onToggle}
+                className="inline-flex items-center gap-1 rounded-full border border-outline-variant/20 bg-surface px-3 py-1.5 text-[11px] font-bold text-on-surface transition hover:bg-surface-container"
+              >
+                {expanded ? "Collapse" : "Edit"}
+                <span className="material-symbols-outlined" style={{ fontSize: 14 }}>{expanded ? "expand_less" : "expand_more"}</span>
+              </button>
+            </div>
           </div>
         </div>
+
+        {expanded ? (
+          <div className="border-t border-outline-variant/20 px-4 py-4">
+            {field.locked ? (
+              <div className="rounded-2xl border border-outline-variant/20 bg-surface px-4 py-4">
+                <p className="text-sm font-semibold text-on-surface">This field is fixed</p>
+                <p className="mt-1 text-sm leading-6 text-outline">
+                  The operator name field is added automatically to every maintenance form and cannot be removed or edited.
+                </p>
+              </div>
+            ) : (
+              <FieldEditor field={field} onChange={onChange} username={username} />
+            )}
+          </div>
+        ) : null}
       </div>
 
-      {expanded ? (
-        <div className="border-t border-outline-variant/20 px-4 py-4">
-          {field.locked ? (
-            <div className="rounded-2xl border border-outline-variant/20 bg-surface px-4 py-4">
-              <p className="text-sm font-semibold text-on-surface">This field is fixed</p>
-              <p className="mt-1 text-sm leading-6 text-outline">
-                The operator name field is added automatically to every maintenance form and cannot be removed or edited.
-              </p>
-            </div>
-          ) : (
-            <FieldEditor field={field} onChange={onChange} username={username} />
-          )}
-        </div>
-      ) : null}
-    </div>
+      <CheckFormImageLightboxModal image={thumbnailPreviewImage} onClose={() => setThumbnailPreviewImage(null)} />
+    </>
   );
 }
 
