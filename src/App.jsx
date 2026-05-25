@@ -19,6 +19,7 @@ import InventoryPage from "./pages/InventoryPage";
 import FactoryStatusPage from "./pages/FactoryStatusPage";
 import FactoryStatusLogsPage from "./pages/FactoryStatusLogsPage";
 import MaintenancePage from "./pages/MaintenancePage";
+import ChecklistSubmissionsPage from "./pages/ChecklistSubmissionsPage";
 import LoginPage from "./pages/LoginPage";
 import {
   clearStoredAuthUser,
@@ -239,6 +240,7 @@ function App() {
                 <Route key={page} path={`/${page}`} element={<PlaceholderPage page={page} />} />
               ))}
               <Route path="/maintenance" element={<MaintenancePage />} />
+              <Route path="/maintenance/submissions" element={<ChecklistSubmissionsPage />} />
               <Route path="/masterDB" element={<MasterDBPage />} />
               <Route path="/factories" element={<FactoriesPage />} />
               <Route path="/sensors" element={<SensorsPage />} />

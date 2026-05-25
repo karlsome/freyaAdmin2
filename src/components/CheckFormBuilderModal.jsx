@@ -19,6 +19,12 @@ const FIELD_TYPES = [
   { value: "select",   label: "Select",   icon: "list" },
 ];
 
+const SCHEDULE_OPTIONS = [
+  { value: "daily", label: "Daily", hint: "Every day", icon: "today" },
+  { value: "weekly", label: "Weekly", hint: "Every Monday", icon: "date_range" },
+  { value: "monthly", label: "Monthly", hint: "1st day of month", icon: "calendar_month" },
+];
+
 const NAME_FIELD = {
   id: "field-名前",
   label: "名前",
@@ -48,13 +54,13 @@ function ensureNameField(fields) {
   return has ? fields : [NAME_FIELD, ...fields];
 }
 
-function emptyDraft() {
+function emptyDraft(presetSchedule = "") {
   return {
     name: "",
     description: "",
     工場: "",
     equipmentIds: [],
-    schedule: "",
+    schedule: presetSchedule,
     startDate: "",
     fields: [NAME_FIELD],
     status: "draft",
@@ -64,11 +70,11 @@ function emptyDraft() {
 const inputClass =
   "w-full rounded-2xl border border-outline-variant/30 bg-surface px-3 py-3 text-sm text-on-surface outline-none transition focus:border-primary/40";
 
-export default function CheckFormBuilderModal({ initial, onClose, onSaved }) {
+export default function CheckFormBuilderModal({ initial, onClose, onSaved, presetSchedule = "" }) {
   const [draft, setDraft] = useState(() =>
     initial
       ? { name: initial.name, description: initial.description ?? "", 工場: initial.工場 ?? "", equipmentIds: initial.equipmentIds ?? (initial.equipmentId ? [initial.equipmentId] : []), schedule: initial.schedule ?? "", startDate: initial.startDate ?? "", fields: ensureNameField(initial.fields ?? []), status: initial.status ?? "draft" }
-      : emptyDraft()
+      : emptyDraft(presetSchedule)
   );
   const [selectedFieldId, setSelectedFieldId] = useState(null);
   const [factories, setFactories] = useState([]);
@@ -96,6 +102,7 @@ export default function CheckFormBuilderModal({ initial, onClose, onSaved }) {
     : [];
 
   const selectedField = draft.fields.find((f) => f.id === selectedFieldId) ?? null;
+  const selectedScheduleOption = SCHEDULE_OPTIONS.find((option) => option.value === draft.schedule) ?? null;
 
   function setTop(key, val) {
     setDraft((d) => ({
@@ -200,8 +207,19 @@ export default function CheckFormBuilderModal({ initial, onClose, onSaved }) {
         <div className="flex flex-1 overflow-hidden">
           {/* Left: form meta + field list */}
           <div className="flex w-72 flex-shrink-0 flex-col border-r border-outline-variant/20 overflow-y-auto p-4 gap-3">
-            {/* Form name */}
+            <div className="rounded-2xl border border-primary/15 bg-primary/5 p-3">
+              <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-primary">
+                {initial ? "Update Flow" : "Start Here"}
+              </p>
+              <p className="mt-1 text-xs leading-5 text-on-surface">
+                {initial
+                  ? "Review the basics on the left, then update the selected check on the right."
+                  : "Pick the cadence, choose the factory and machines, then add the checks operators need to complete."}
+              </p>
+            </div>
+
             <div>
+              <p className="mb-1.5 text-xs font-bold uppercase tracking-[0.15em] text-outline">Form Name</p>
               <input
                 type="text"
                 placeholder="Form name *"
@@ -216,17 +234,19 @@ export default function CheckFormBuilderModal({ initial, onClose, onSaved }) {
                 </p>
               )}
             </div>
-            {/* Factory */}
-            <select value={draft.工場} onChange={(e) => setTop("工場", e.target.value)} className={inputClass}>
-              <option value="" disabled>Factory</option>
-              {factories.map((f) => (
-                <option key={f._id ?? f.工場} value={f.工場}>{f.工場}</option>
-              ))}
-            </select>
-            {/* Machine — multi-select checkboxes */}
+            <div>
+              <p className="mb-1.5 text-xs font-bold uppercase tracking-[0.15em] text-outline">Factory</p>
+              <select value={draft.工場} onChange={(e) => setTop("工場", e.target.value)} className={inputClass}>
+                <option value="" disabled>Select a factory</option>
+                {factories.map((f) => (
+                  <option key={f._id ?? f.工場} value={f.工場}>{f.工場}</option>
+                ))}
+              </select>
+            </div>
+
             <div className={`rounded-2xl border border-outline-variant/30 bg-surface px-3 py-2 text-sm transition ${!draft.工場 ? "opacity-40 pointer-events-none" : ""}`}>
               <div className="flex items-center justify-between mb-1">
-                <span className="text-xs font-bold uppercase tracking-[0.15em] text-outline">Machine</span>
+                <span className="text-xs font-bold uppercase tracking-[0.15em] text-outline">Machines</span>
                 {filteredEquipment.length > 0 && (
                   <button
                     type="button"
@@ -241,6 +261,7 @@ export default function CheckFormBuilderModal({ initial, onClose, onSaved }) {
                   </button>
                 )}
               </div>
+              <p className="mb-2 text-xs text-outline">Pick one or more machines that should use this form.</p>
               {!draft.工場 && <p className="text-xs text-outline py-1">Select a factory first</p>}
               {draft.工場 && filteredEquipment.length === 0 && <p className="text-xs text-outline py-1">No machines found</p>}
               {filteredEquipment.length > 0 && (
@@ -264,24 +285,51 @@ export default function CheckFormBuilderModal({ initial, onClose, onSaved }) {
                 </div>
               )}
             </div>
-            {/* Schedule */}
-            <select value={draft.schedule} onChange={(e) => setTop("schedule", e.target.value)} className={inputClass}>
-              <option value="" disabled>Frequency</option>
-              <option value="daily">Daily</option>
-              <option value="weekly">Weekly</option>
-              <option value="monthly">Monthly</option>
-            </select>
+
             <div>
-              <p className="mb-1.5 text-xs font-bold uppercase tracking-[0.15em] text-outline">Start Date</p>
+              <p className="mb-1.5 text-xs font-bold uppercase tracking-[0.15em] text-outline">Frequency</p>
+              <div className="grid grid-cols-3 gap-2">
+                {SCHEDULE_OPTIONS.map((option) => {
+                  const isActive = draft.schedule === option.value;
+                  return (
+                    <button
+                      key={option.value}
+                      type="button"
+                      aria-pressed={isActive}
+                      onClick={() => setTop("schedule", option.value)}
+                      className={`rounded-2xl border px-3 py-3 text-left transition ${
+                        isActive
+                          ? "border-primary/40 bg-primary/10 text-primary"
+                          : "border-outline-variant/30 bg-surface text-on-surface hover:border-primary/30 hover:bg-surface-container"
+                      }`}
+                    >
+                      <span className="material-symbols-outlined mb-2 block" style={{ fontSize: 18 }}>{option.icon}</span>
+                      <span className="block text-xs font-bold uppercase tracking-[0.12em]">{option.label}</span>
+                      <span className={`mt-1 block text-[11px] ${isActive ? "text-primary/80" : "text-outline"}`}>{option.hint}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div>
+              <p className="mb-1.5 text-xs font-bold uppercase tracking-[0.15em] text-outline">First Active Date</p>
               <input
                 type="date"
                 value={draft.startDate}
                 onChange={(e) => setTop("startDate", e.target.value)}
                 className={inputClass}
               />
+              <p className="mt-1.5 text-xs text-outline">
+                {selectedScheduleOption
+                  ? `${selectedScheduleOption.label} forms repeat ${selectedScheduleOption.hint.toLowerCase()}.`
+                  : "Choose a cadence so operators know when this form should appear."}
+              </p>
             </div>
+
             <div className="mt-1 border-t border-outline-variant/20 pt-3">
               <p className="mb-2 text-xs font-bold uppercase tracking-[0.15em] text-outline">Fields</p>
+              <p className="mb-2 text-xs text-outline">Add the checks operators should complete on the tablet.</p>
               {draft.fields.length === 0 && (
                 <p className="text-xs text-outline py-2">No fields yet.</p>
               )}
@@ -336,8 +384,12 @@ export default function CheckFormBuilderModal({ initial, onClose, onSaved }) {
             ) : (
               <div className="flex h-full flex-col items-center justify-center gap-3 text-outline">
                 <span className="material-symbols-outlined" style={{ fontSize: 36 }}>edit_note</span>
-                <p className="text-sm">Select a field to edit it, or add a new one.</p>
-                <p className="text-xs opacity-60">The 名前 field is added automatically to every form.</p>
+                <p className="text-sm font-semibold text-on-surface">Add a field on the left, then select it to define the check.</p>
+                <p className="text-xs text-outline/80 text-center max-w-sm leading-5">
+                  {selectedScheduleOption
+                    ? `This ${selectedScheduleOption.label.toLowerCase()} form will appear ${selectedScheduleOption.hint.toLowerCase()}. The 名前 field is added automatically to every form.`
+                    : "Choose a cadence, then add the checks this form should include. The 名前 field is added automatically to every form."}
+                </p>
               </div>
             )}
           </div>
