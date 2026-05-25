@@ -1,9 +1,8 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { fetchCheckFormTemplates, fetchFactoryDBRecords } from "../services/api";
+import { fetchCheckFormTemplates, fetchFactoryDBRecords, fetchSetsubiDBRecords } from "../services/api";
 import CheckFormBuilderModal from "../components/CheckFormBuilderModal";
-import CheckFormPreviewModal from "../components/CheckFormPreviewModal";
-import CheckFormSimulatorModal from "../components/CheckFormSimulatorModal";
+import CheckFormDetailModal from "../components/CheckFormDetailModal";
 
 const STATUS_STYLES = {
   active:   "bg-primary/10 text-primary",
@@ -39,16 +38,37 @@ function getScheduleMeta(schedule) {
   };
 }
 
-function FormCard({ form, onPreview, onEdit, onSimulate }) {
+function normalizeId(value) {
+  if (value == null) return "";
+  if (typeof value === "object") {
+    return String(value.$oid ?? value._id?.$oid ?? value._id ?? "").trim();
+  }
+  return String(value).trim();
+}
+
+function getFormEquipmentIds(form) {
+  if (Array.isArray(form?.equipmentIds)) return form.equipmentIds;
+  return form?.equipmentId ? [form.equipmentId] : [];
+}
+
+function getFormMachineNames(form, equipmentMap) {
+  return getFormEquipmentIds(form)
+    .map((equipmentId) => equipmentMap.get(normalizeId(equipmentId))?.name)
+    .filter(Boolean);
+}
+
+function FormCard({ form, machineNames, onOpen }) {
   const scheduleMeta = getScheduleMeta(form.schedule);
-  const equipmentCount = Array.isArray(form.equipmentIds)
-    ? form.equipmentIds.length
-    : form.equipmentId
-      ? 1
-      : 0;
+  const visibleMachineNames = machineNames.slice(0, 3);
+  const remainingMachineCount = Math.max(machineNames.length - visibleMachineNames.length, 0);
 
   return (
-    <div className="glass-card overflow-hidden rounded-2xl transition hover:border-primary/25 hover:shadow-md">
+    <button
+      type="button"
+      onClick={onOpen}
+      className="glass-card group w-full overflow-hidden rounded-2xl text-left transition hover:border-primary/25 hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+      aria-haspopup="dialog"
+    >
       <div className="px-5 py-4">
         <div className="mb-3 flex items-start justify-between gap-3">
           <div className="min-w-0">
@@ -63,21 +83,41 @@ function FormCard({ form, onPreview, onEdit, onSimulate }) {
             </div>
             <h5 className="text-sm font-bold leading-tight text-on-surface">{form.name}</h5>
           </div>
+          <span className="material-symbols-outlined text-outline transition group-hover:text-primary" style={{ fontSize: 18 }}>arrow_outward</span>
         </div>
         {form.description && (
           <p className="mb-3 text-xs leading-5 text-outline">{form.description}</p>
         )}
+        <div className="mb-3 flex flex-wrap gap-2">
+          {visibleMachineNames.length > 0 ? (
+            <>
+              {visibleMachineNames.map((machineName) => (
+                <span
+                  key={machineName}
+                  className="inline-flex items-center gap-1 rounded-full border border-outline-variant/20 bg-surface px-2.5 py-1 text-[11px] font-semibold text-on-surface"
+                >
+                  <span className="material-symbols-outlined text-primary" style={{ fontSize: 12 }}>precision_manufacturing</span>
+                  {machineName}
+                </span>
+              ))}
+              {remainingMachineCount > 0 && (
+                <span className="inline-flex items-center rounded-full border border-outline-variant/20 bg-surface-container px-2.5 py-1 text-[11px] font-semibold text-outline">
+                  +{remainingMachineCount} more
+                </span>
+              )}
+            </>
+          ) : (
+            <span className="inline-flex items-center gap-1 rounded-full border border-dashed border-outline-variant/20 bg-surface-container/70 px-2.5 py-1 text-[11px] font-semibold text-outline">
+              <span className="material-symbols-outlined" style={{ fontSize: 12 }}>precision_manufacturing</span>
+              No machines assigned
+            </span>
+          )}
+        </div>
         <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-outline">
           {form.工場 && (
             <span className="flex items-center gap-1">
               <span className="material-symbols-outlined" style={{ fontSize: 13 }}>factory</span>
               {form.工場}
-            </span>
-          )}
-          {equipmentCount > 0 && (
-            <span className="flex items-center gap-1">
-              <span className="material-symbols-outlined" style={{ fontSize: 13 }}>precision_manufacturing</span>
-              {equipmentCount} machine{equipmentCount === 1 ? "" : "s"}
             </span>
           )}
           <span className="flex items-center gap-1">
@@ -86,39 +126,14 @@ function FormCard({ form, onPreview, onEdit, onSimulate }) {
           </span>
         </div>
       </div>
-      <div className="flex border-t border-outline-variant/20">
-        <button
-          type="button"
-          onClick={onPreview}
-          className="flex-1 py-2.5 text-xs font-bold text-primary hover:bg-primary/5 transition flex items-center justify-center gap-1.5"
-        >
-          <span className="material-symbols-outlined" style={{ fontSize: 14 }}>visibility</span>
-          Preview
-        </button>
-        <div className="w-px bg-outline-variant/20" />
-        {form.status === "active" && (
-          <>
-            <button
-              type="button"
-              onClick={onSimulate}
-              className="flex-1 py-2.5 text-xs font-bold text-on-surface hover:bg-surface-container-high transition flex items-center justify-center gap-1.5"
-            >
-              <span className="material-symbols-outlined" style={{ fontSize: 14 }}>tablet</span>
-              Try Form
-            </button>
-            <div className="w-px bg-outline-variant/20" />
-          </>
-        )}
-        <button
-          type="button"
-          onClick={onEdit}
-          className="flex-1 py-2.5 text-xs font-bold text-on-surface hover:bg-surface-container-high transition flex items-center justify-center gap-1.5"
-        >
-          <span className="material-symbols-outlined" style={{ fontSize: 14 }}>edit</span>
-          Edit
-        </button>
+      <div className="flex items-center justify-between border-t border-outline-variant/20 px-5 py-3 text-xs font-bold">
+        <span className="text-outline">Click card to view details</span>
+        <span className="inline-flex items-center gap-1 text-primary">
+          Open
+          <span className="material-symbols-outlined" style={{ fontSize: 14 }}>arrow_forward</span>
+        </span>
       </div>
-    </div>
+    </button>
   );
 }
 
@@ -136,9 +151,9 @@ export default function MaintenancePage() {
   const [builderOpen, setBuilderOpen] = useState(false);
   const [builderPresetSchedule, setBuilderPresetSchedule] = useState("");
   const [editTarget, setEditTarget] = useState(null);
-  const [previewTarget, setPreviewTarget] = useState(null);
-  const [simulateTarget, setSimulateTarget] = useState(null);
+  const [detailTarget, setDetailTarget] = useState(null);
   const [factories, setFactories] = useState([]);
+  const [allEquipment, setAllEquipment] = useState([]);
   const [factoryFilter, setFactoryFilter] = useState("");
   const [activeSchedule, setActiveSchedule] = useState("");
 
@@ -158,6 +173,7 @@ export default function MaintenancePage() {
   useEffect(() => {
     load();
     fetchFactoryDBRecords().then((data) => setFactories(Array.isArray(data) ? data : [])).catch(() => {});
+    fetchSetsubiDBRecords().then((data) => setAllEquipment(Array.isArray(data) ? data : [])).catch(() => {});
   }, []);
 
   function openBuilder(form = null, presetSchedule = "") {
@@ -187,6 +203,7 @@ export default function MaintenancePage() {
   const selectedSchedule = activeSchedule || "daily";
   const selectedScheduleMeta = getScheduleMeta(selectedSchedule);
   const selectedTemplates = visibleTemplates.filter((t) => t.schedule === selectedSchedule);
+  const equipmentMap = new Map(allEquipment.map((equipment) => [normalizeId(equipment._id), equipment]));
 
   const scheduleCards = SCHEDULE_ORDER.map((schedule) => ({
     key: schedule,
@@ -362,9 +379,8 @@ export default function MaintenancePage() {
                   <FormCard
                     key={form._id}
                     form={form}
-                    onPreview={() => setPreviewTarget(form)}
-                    onEdit={() => openBuilder(form)}
-                    onSimulate={() => setSimulateTarget(form)}
+                    machineNames={getFormMachineNames(form, equipmentMap)}
+                    onOpen={() => setDetailTarget(form)}
                   />
                 ))}
               </div>
@@ -382,17 +398,17 @@ export default function MaintenancePage() {
         />
       )}
 
-      {previewTarget && (
-        <CheckFormPreviewModal
-          form={previewTarget}
-          onClose={() => setPreviewTarget(null)}
-        />
-      )}
-
-      {simulateTarget && (
-        <CheckFormSimulatorModal
-          form={simulateTarget}
-          onClose={() => setSimulateTarget(null)}
+      {detailTarget && (
+        <CheckFormDetailModal
+          form={detailTarget}
+          scheduleMeta={getScheduleMeta(detailTarget.schedule)}
+          machineNames={getFormMachineNames(detailTarget, equipmentMap)}
+          onClose={() => setDetailTarget(null)}
+          onEdit={() => {
+            const nextTarget = detailTarget;
+            setDetailTarget(null);
+            openBuilder(nextTarget);
+          }}
         />
       )}
     </div>

@@ -1,0 +1,266 @@
+import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
+import { fetchNodaUserFullName } from "../services/nodaApi";
+
+const STATUS_STYLES = {
+  active: "bg-primary/10 text-primary",
+  draft: "bg-outline/10 text-outline",
+  archived: "bg-surface-container text-outline",
+};
+
+const FIELD_TYPE_META = {
+  name: { label: "Name", icon: "person" },
+  checkbox: { label: "Checkbox", icon: "check_box" },
+  text: { label: "Text", icon: "short_text" },
+  number: { label: "Number", icon: "pin" },
+  select: { label: "Select", icon: "list" },
+  slider: { label: "Slider", icon: "linear_scale" },
+  photo: { label: "Photo", icon: "photo_camera" },
+};
+
+const actorNameCache = new Map();
+
+function formatDateTime(value) {
+  if (!value) return "—";
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return String(value);
+
+  return date.toLocaleString("ja-JP", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+function formatDate(value) {
+  if (!value) return "—";
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return String(value);
+
+  return date.toLocaleDateString("ja-JP", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
+}
+
+async function resolveActorName(username) {
+  const normalizedUsername = String(username || "").trim();
+  if (!normalizedUsername) return "Unknown user";
+  if (actorNameCache.has(normalizedUsername)) return actorNameCache.get(normalizedUsername);
+
+  const name = await fetchNodaUserFullName(normalizedUsername);
+  actorNameCache.set(normalizedUsername, name || normalizedUsername);
+  return actorNameCache.get(normalizedUsername);
+}
+
+function SummaryCard({ icon, label, value }) {
+  return (
+    <div className="rounded-2xl border border-outline-variant/20 bg-surface px-4 py-3">
+      <div className="flex items-center gap-2 text-outline">
+        <span className="material-symbols-outlined text-primary" style={{ fontSize: 16 }}>{icon}</span>
+        <span className="text-[10px] font-bold uppercase tracking-[0.18em]">{label}</span>
+      </div>
+      <p className="mt-2 text-sm font-bold text-on-surface">{value}</p>
+    </div>
+  );
+}
+
+function ActivityItem({ icon, label, value }) {
+  return (
+    <div className="rounded-2xl border border-outline-variant/20 bg-surface px-4 py-3">
+      <div className="flex items-center gap-2 text-outline">
+        <span className="material-symbols-outlined text-primary" style={{ fontSize: 16 }}>{icon}</span>
+        <span className="text-[10px] font-bold uppercase tracking-[0.18em]">{label}</span>
+      </div>
+      <p className="mt-2 text-sm font-semibold text-on-surface">{value}</p>
+    </div>
+  );
+}
+
+function FieldRow({ field }) {
+  const typeMeta = FIELD_TYPE_META[field.type] ?? { label: field.type || "Field", icon: "help" };
+  const hasRange = field.type === "number" && (field.min != null || field.max != null);
+
+  return (
+    <div className="rounded-2xl border border-outline-variant/20 bg-surface px-4 py-3">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2">
+            <span className="material-symbols-outlined text-primary" style={{ fontSize: 16 }}>{typeMeta.icon}</span>
+            <p className="truncate text-sm font-semibold text-on-surface">{field.label || "Untitled field"}</p>
+          </div>
+          {field.description ? (
+            <p className="mt-1 text-xs leading-5 text-outline">{field.description}</p>
+          ) : null}
+        </div>
+        <span className="inline-flex rounded-full bg-primary/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-primary">
+          {typeMeta.label}
+        </span>
+      </div>
+      <div className="mt-3 flex flex-wrap gap-2 text-[11px] font-semibold">
+        {field.required ? (
+          <span className="rounded-full bg-error/10 px-2.5 py-1 text-error">Required</span>
+        ) : null}
+        {field.photoRequired ? (
+          <span className="rounded-full bg-surface-container px-2.5 py-1 text-on-surface">Photo required</span>
+        ) : null}
+        {field.unit ? (
+          <span className="rounded-full bg-surface-container px-2.5 py-1 text-on-surface">Unit: {field.unit}</span>
+        ) : null}
+        {hasRange ? (
+          <span className="rounded-full bg-surface-container px-2.5 py-1 text-on-surface">
+            Range: {field.min != null ? field.min : "—"} - {field.max != null ? field.max : "—"}
+          </span>
+        ) : null}
+        {field.type === "select" && Array.isArray(field.options) && field.options.length > 0 ? (
+          <span className="rounded-full bg-surface-container px-2.5 py-1 text-on-surface">{field.options.length} options</span>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
+export default function CheckFormDetailModal({ form, scheduleMeta, machineNames, onClose, onEdit }) {
+  const [createdByName, setCreatedByName] = useState(form.createdBy || "Unknown user");
+  const [updatedByName, setUpdatedByName] = useState(form.updatedBy || "");
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadActorNames() {
+      const [createdName, updatedName] = await Promise.all([
+        resolveActorName(form.createdBy),
+        form.updatedBy ? resolveActorName(form.updatedBy) : Promise.resolve(""),
+      ]);
+
+      if (cancelled) return;
+      setCreatedByName(createdName);
+      setUpdatedByName(updatedName);
+    }
+
+    loadActorNames().catch(() => {
+      if (cancelled) return;
+      setCreatedByName(form.createdBy || "Unknown user");
+      setUpdatedByName(form.updatedBy || "");
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [form.createdBy, form.updatedBy]);
+
+  const hasEdits = Boolean(form.updatedAt || form.updatedBy);
+
+  const modal = (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm"
+      onClick={(event) => {
+        if (event.target === event.currentTarget) onClose();
+      }}
+    >
+      <div className="relative flex max-h-[90vh] w-full max-w-4xl flex-col overflow-hidden rounded-2xl border border-outline-variant/20 glass-card">
+        <div className="flex items-start justify-between border-b border-outline-variant/20 px-6 py-5">
+          <div className="min-w-0 flex-1 pr-4">
+            <div className="mb-2 flex flex-wrap items-center gap-2">
+              <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-primary">
+                <span className="material-symbols-outlined" style={{ fontSize: 12 }}>{scheduleMeta?.icon || "event_busy"}</span>
+                {scheduleMeta?.label || form.schedule || "Unscheduled"}
+              </span>
+              <span className={`inline-flex rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide ${STATUS_STYLES[form.status] ?? STATUS_STYLES.draft}`}>
+                {form.status}
+              </span>
+            </div>
+            <h2 className="text-xl font-black text-on-surface">{form.name}</h2>
+            <p className="mt-2 max-w-3xl text-sm leading-6 text-outline">
+              {form.description || "No description has been added for this maintenance form yet."}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-2xl bg-surface-container text-on-surface-variant transition hover:bg-surface-container-high"
+          >
+            <span className="material-symbols-outlined">close</span>
+          </button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto px-6 py-5">
+          <div className="grid gap-3 md:grid-cols-3">
+            <SummaryCard icon="factory" label="Factory" value={form.工場 || "Unassigned"} />
+            <SummaryCard icon="event" label="Start Date" value={formatDate(form.startDate)} />
+            <SummaryCard icon="list" label="Fields" value={`${form.fields?.length ?? 0} checks`} />
+          </div>
+
+          <section className="mt-5 rounded-2xl border border-outline-variant/20 bg-surface-container/40 p-4">
+            <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-outline">Applies To</p>
+            <div className="mt-3">
+              <p className="text-sm font-semibold text-on-surface">Machines</p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {machineNames.length > 0 ? (
+                  machineNames.map((machineName) => (
+                    <span
+                      key={machineName}
+                      className="inline-flex items-center gap-1 rounded-full border border-outline-variant/20 bg-surface px-3 py-1.5 text-xs font-semibold text-on-surface"
+                    >
+                      <span className="material-symbols-outlined text-primary" style={{ fontSize: 14 }}>precision_manufacturing</span>
+                      {machineName}
+                    </span>
+                  ))
+                ) : (
+                  <span className="inline-flex items-center gap-1 rounded-full border border-dashed border-outline-variant/20 bg-surface px-3 py-1.5 text-xs font-semibold text-outline">
+                    <span className="material-symbols-outlined" style={{ fontSize: 14 }}>precision_manufacturing</span>
+                    No machines assigned
+                  </span>
+                )}
+              </div>
+            </div>
+          </section>
+
+          <section className="mt-5 rounded-2xl border border-outline-variant/20 bg-surface-container/40 p-4">
+            <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-outline">Activity</p>
+            <div className="mt-3 grid gap-3 md:grid-cols-2">
+              <ActivityItem icon="person" label="Created By" value={createdByName || form.createdBy || "Unknown user"} />
+              <ActivityItem icon="schedule" label="Created At" value={formatDateTime(form.createdAt)} />
+              <ActivityItem icon="edit" label="Last Edited By" value={hasEdits ? (updatedByName || form.updatedBy || "Unknown user") : "Not edited yet"} />
+              <ActivityItem icon="history" label="Last Edited At" value={hasEdits ? formatDateTime(form.updatedAt) : "Not edited yet"} />
+            </div>
+          </section>
+
+          <section className="mt-5 rounded-2xl border border-outline-variant/20 bg-surface-container/40 p-4">
+            <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-outline">Checks</p>
+                <p className="mt-1 text-sm text-outline">Review the fields included in this form before editing.</p>
+              </div>
+              <p className="text-xs font-bold text-primary">{form.fields?.length ?? 0} total</p>
+            </div>
+            <div className="mt-4 space-y-2">
+              {(form.fields ?? []).map((field) => (
+                <FieldRow key={field.id || field.label} field={field} />
+              ))}
+            </div>
+          </section>
+        </div>
+
+        <div className="flex flex-col gap-3 border-t border-outline-variant/20 px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-xs leading-5 text-outline">Edit this form to update machine scope, cadence, metadata, or checklist fields.</p>
+          <button
+            type="button"
+            onClick={onEdit}
+            className="inline-flex items-center justify-center gap-2 rounded-2xl bg-primary px-4 py-3 text-sm font-bold text-on-primary transition hover:opacity-90"
+          >
+            <span className="material-symbols-outlined" style={{ fontSize: 18 }}>edit</span>
+            Edit Form
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+
+  return createPortal(modal, document.body);
+}
