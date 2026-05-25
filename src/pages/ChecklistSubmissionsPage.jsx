@@ -464,6 +464,21 @@ function ScheduleStackCell({ entries, onSelect }) {
   );
 }
 
+function ScheduleLaneLegendCell({ schedules }) {
+  return (
+    <div className="flex w-24 flex-col gap-1">
+      {schedules.map((schedule) => (
+        <div
+          key={schedule}
+          className="flex min-h-[1.45rem] items-center rounded-md px-2 py-1 text-[10px] font-black uppercase tracking-[0.14em] text-outline"
+        >
+          {SCHEDULE_META[schedule].label}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function buildImageDownloadName(url, label) {
   const safeLabel = String(label ?? "inspection-image")
     .trim()
@@ -1032,6 +1047,10 @@ const SCHEDULE_META = {
 
 const SCHEDULE_ORDER = ["daily", "weekly", "monthly"];
 
+const MACHINE_COLUMN_WIDTH = 160;
+const CADENCE_COLUMN_WIDTH = 104;
+const TIMELINE_CELL_WIDTH = 64;
+
 const SLOT_STYLES = {
   complete: "border-emerald-500/20 bg-emerald-500/12 text-emerald-600",
   partial: "border-primary/25 bg-primary/10 text-primary",
@@ -1154,15 +1173,13 @@ export default function ChecklistSubmissionsPage() {
   useEffect(() => {
     if (loading || !scrollRef.current || dates.length === 0) return;
 
-    const machineColumnWidth = 160;
-    const cellWidth = 64;
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const todayIndex = dates.findIndex((date) => date.getTime() === today.getTime());
     const anchorIndex = todayIndex >= 0 ? todayIndex : Math.floor(dates.length / 2);
-    const anchorOffset = machineColumnWidth + anchorIndex * cellWidth;
+    const anchorOffset = MACHINE_COLUMN_WIDTH + CADENCE_COLUMN_WIDTH + anchorIndex * TIMELINE_CELL_WIDTH;
     const containerWidth = scrollRef.current.clientWidth;
-    scrollRef.current.scrollLeft = anchorOffset - containerWidth / 2 + cellWidth / 2;
+    scrollRef.current.scrollLeft = anchorOffset - containerWidth / 2 + TIMELINE_CELL_WIDTH / 2;
   }, [dates, loading]);
 
   const equipmentMap = useMemo(() => {
@@ -1617,7 +1634,20 @@ export default function ChecklistSubmissionsPage() {
             <table className="min-w-full border-separate border-spacing-0">
               <thead>
                 <tr>
-                  <th className="sticky left-0 z-20 min-w-[160px] border-b border-r border-outline-variant/20 bg-surface px-4 py-2" />
+                  <th
+                    rowSpan={2}
+                    className="sticky left-0 z-20 border-b border-r border-outline-variant/20 bg-surface px-4 py-2 text-left text-xs font-bold uppercase tracking-[0.15em] text-outline"
+                    style={{ width: MACHINE_COLUMN_WIDTH, minWidth: MACHINE_COLUMN_WIDTH, maxWidth: MACHINE_COLUMN_WIDTH }}
+                  >
+                    Machine
+                  </th>
+                  <th
+                    rowSpan={2}
+                    className="sticky z-20 border-b border-r border-outline-variant/20 bg-surface px-3 py-2 text-left text-xs font-bold uppercase tracking-[0.15em] text-outline"
+                    style={{ left: MACHINE_COLUMN_WIDTH, width: CADENCE_COLUMN_WIDTH, minWidth: CADENCE_COLUMN_WIDTH, maxWidth: CADENCE_COLUMN_WIDTH }}
+                  >
+                    Cadence
+                  </th>
                   {monthGroups.map(({ label, count }, index) => (
                     <th
                       key={`${label}-${index}`}
@@ -1629,9 +1659,6 @@ export default function ChecklistSubmissionsPage() {
                   ))}
                 </tr>
                 <tr>
-                  <th className="sticky left-0 z-20 border-b border-r border-outline-variant/20 bg-surface px-4 py-2 text-left text-xs font-bold uppercase tracking-[0.15em] text-outline">
-                    Machine
-                  </th>
                   {dates.map((date) => {
                     const isToday = date.getTime() === today.getTime();
                     return (
@@ -1651,11 +1678,20 @@ export default function ChecklistSubmissionsPage() {
               <tbody>
                 {filteredMachines.map((machine, index) => (
                   <tr key={machine.id} className={index % 2 === 0 ? "bg-surface" : "bg-surface-container/30"}>
-                    <td className={`sticky left-0 z-10 min-w-[160px] max-w-[220px] border-b border-r border-outline-variant/20 px-4 py-2 ${index % 2 === 0 ? "bg-surface" : "bg-surface-container"}`}>
+                    <td
+                      className={`sticky left-0 z-10 border-b border-r border-outline-variant/20 px-4 py-2 ${index % 2 === 0 ? "bg-surface" : "bg-surface-container"}`}
+                      style={{ width: MACHINE_COLUMN_WIDTH, minWidth: MACHINE_COLUMN_WIDTH, maxWidth: MACHINE_COLUMN_WIDTH }}
+                    >
                       <p className="truncate text-sm font-semibold text-on-surface">{machine.name}</p>
                       {machine.factory && machine.factory !== "—" && (
                         <p className="truncate text-[10px] text-outline">{machine.factory}</p>
                       )}
+                    </td>
+                    <td
+                      className={`sticky z-10 border-b border-r border-outline-variant/20 px-3 py-2 align-top ${index % 2 === 0 ? "bg-surface" : "bg-surface-container"}`}
+                      style={{ left: MACHINE_COLUMN_WIDTH, width: CADENCE_COLUMN_WIDTH, minWidth: CADENCE_COLUMN_WIDTH, maxWidth: CADENCE_COLUMN_WIDTH }}
+                    >
+                      <ScheduleLaneLegendCell schedules={activeSchedules} />
                     </td>
                     {dates.map((date) => {
                       const isToday = date.getTime() === today.getTime();
