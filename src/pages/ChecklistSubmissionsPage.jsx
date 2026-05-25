@@ -253,6 +253,7 @@ function getScheduleEntries(machine, date, forms, recordsByFormId, options = {})
     }
 
     const submissions = [];
+    const dueForms = [];
     const missedForms = [];
     let dueCount = 0;
     let missedCount = 0;
@@ -286,6 +287,7 @@ function getScheduleEntries(machine, date, forms, recordsByFormId, options = {})
 
       if (isCurrentPeriod(date, schedule)) {
         dueCount += 1;
+        dueForms.push(form);
       } else if (periodEnded(date, schedule)) {
         missedCount += 1;
         missedForms.push(form);
@@ -337,6 +339,7 @@ function getScheduleEntries(machine, date, forms, recordsByFormId, options = {})
       state,
       hasForms: true,
       hasNG: submissions.some((entry) => entry.record.hasNG),
+      dueForms,
       mutedCount: focusRecordMode ? (mutedCount || openCount) : 0,
       missedForms,
       openCount,
@@ -399,6 +402,32 @@ function buildEntrySelection(entry, machine, date) {
     };
   }
 
+  if (entry.state === "due" && Array.isArray(entry.dueForms) && entry.dueForms.length > 0) {
+    const primaryDueForm = entry.dueForms[0];
+    const scheduledDate = formatDateInputValue(date);
+
+    return {
+      defaultTab: "submission",
+      form: primaryDueForm,
+      record: {
+        answers: [],
+        completedAt: "",
+        completedBy: "",
+        factory: machine.factory,
+        formId: normalizeId(primaryDueForm?._id),
+        formName: primaryDueForm?.name ?? "Checklist Submission",
+        machineId: machine.id,
+        machineName: machine.name,
+        periodEnd: scheduledDate,
+        periodStart: scheduledDate,
+        responses: {},
+        schedule: primaryDueForm?.schedule ?? entry.schedule,
+        status: "waiting",
+        waitingFormsCount: entry.dueForms.length,
+      },
+    };
+  }
+
   return null;
 }
 
@@ -429,7 +458,9 @@ function ScheduleStackCell({ entries, onSelect }) {
   return (
     <div className="mx-auto flex w-14 flex-col gap-1">
       {entries.map((entry) => {
-        const interactive = Boolean(entry.primary) || (entry.state === "missed" && entry.missedForms?.length > 0);
+        const interactive = Boolean(entry.primary)
+          || (entry.state === "missed" && entry.missedForms?.length > 0)
+          || (entry.state === "due" && entry.dueForms?.length > 0);
         const countLabel = getEntryCountLabel(entry);
         const content = (
           <div
@@ -454,7 +485,7 @@ function ScheduleStackCell({ entries, onSelect }) {
             type="button"
             onClick={() => onSelect(entry)}
             className="text-left transition hover:scale-[1.03]"
-            title={`${entry.title}. Click to ${entry.state === "missed" ? "review the missed checklist" : "open the submitted record"}.`}
+            title={`${entry.title}. Click to ${entry.state === "missed" ? "review the missed checklist" : entry.state === "due" ? "review the checklist waiting for submission" : "open the submitted record"}.`}
           >
             {content}
           </button>
@@ -560,6 +591,8 @@ function ImagePreviewLightbox({ image, onClose }) {
 
 function RecordDetailModal({ defaultTab = "submission", form, onClose, record }) {
   const isMissedRecord = record?.status === "missed";
+  const isWaitingRecord = record?.status === "waiting";
+  const isReferenceRecord = isMissedRecord || isWaitingRecord;
   const normalizedDefaultTab = defaultTab === "tickets" ? "tickets" : "submission";
   const [activeTab, setActiveTab] = useState(normalizedDefaultTab);
   const [tickets, setTickets] = useState([]);
@@ -580,13 +613,13 @@ function RecordDetailModal({ defaultTab = "submission", form, onClose, record })
   const recordFactory = form?.工場 ?? record?.factory ?? "";
   const recordSchedule = record?.schedule ?? form?.schedule ?? "";
   const modalTabItems = useMemo(() => {
-    if (isMissedRecord) {
+    if (isReferenceRecord) {
       return [{
         key: "submission",
         label: (
           <span className="inline-flex items-center gap-2">
             <span className="material-symbols-outlined" style={{ fontSize: 14 }}>fact_check</span>
-            <span>Missed Checklist</span>
+            <span>{isMissedRecord ? "Missed Checklist" : "Checklist Waiting For Submission"}</span>
           </span>
         ),
       }];
@@ -623,7 +656,7 @@ function RecordDetailModal({ defaultTab = "submission", form, onClose, record })
         ),
       },
     ];
-  }, [activeTab, isMissedRecord, tickets.length]);
+  }, [activeTab, isMissedRecord, isReferenceRecord, tickets.length]);
 
   useEffect(() => {
     setActiveTab(normalizedDefaultTab);
@@ -764,10 +797,12 @@ function RecordDetailModal({ defaultTab = "submission", form, onClose, record })
         </div>
 
         <div className="flex flex-shrink-0 flex-wrap gap-4 border-b border-outline-variant/20 px-6 py-4">
-          {isMissedRecord ? (
+          {isReferenceRecord ? (
             <>
-              <span className="rounded-full bg-error/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.14em] text-error">
-                Missed
+              <span className={`rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.14em] ${
+                isMissedRecord ? "bg-error/10 text-error" : "bg-amber-500/10 text-amber-700"
+              }`}>
+                {isMissedRecord ? "Missed" : "Waiting for submission"}
               </span>
               {record?.periodStart && (
                 <div className="flex items-center gap-2 text-sm">
@@ -781,9 +816,9 @@ function RecordDetailModal({ defaultTab = "submission", form, onClose, record })
                   <span className="font-semibold text-on-surface">{record.machineName}</span>
                 </div>
               )}
-              {record?.missedFormsCount > 1 && (
+              {(record?.missedFormsCount > 1 || record?.waitingFormsCount > 1) && (
                 <span className="rounded-full bg-surface-container px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.14em] text-outline">
-                  {record.missedFormsCount} missed checklists in this slot
+                  {isMissedRecord ? record.missedFormsCount : record.waitingFormsCount} {isMissedRecord ? "missed" : "waiting"} checklists in this slot
                 </span>
               )}
             </>
@@ -834,11 +869,11 @@ function RecordDetailModal({ defaultTab = "submission", form, onClose, record })
         <div className="flex-1 overflow-y-auto px-6 py-5">
           {activeTab === "submission" ? (
             <div className="flex flex-col gap-3">
-              {isMissedRecord && (
-                <div className="rounded-2xl border border-error/15 bg-error/5 px-4 py-3">
-                  <p className="text-sm font-semibold text-on-surface">This checklist was missed.</p>
+              {isReferenceRecord && (
+                <div className={`rounded-2xl px-4 py-3 ${isMissedRecord ? "border border-error/15 bg-error/5" : "border border-amber-500/15 bg-amber-500/5"}`}>
+                  <p className="text-sm font-semibold text-on-surface">{isMissedRecord ? "This checklist was missed." : "This checklist is waiting for submission."}</p>
                   <p className="mt-1 text-sm leading-6 text-outline">
-                    Questions are shown for reference only. No answers were submitted for this scheduled check{record?.missedFormsCount > 1 ? "; this modal is showing the first missed checklist in the selected slot." : "."}
+                    Questions are shown for reference only. No answers were submitted for this scheduled check{(record?.missedFormsCount > 1 || record?.waitingFormsCount > 1) ? `; this modal is showing the first ${isMissedRecord ? "missed" : "waiting"} checklist in the selected slot.` : "."}
                   </p>
                 </div>
               )}
@@ -846,7 +881,7 @@ function RecordDetailModal({ defaultTab = "submission", form, onClose, record })
               {fields.map((field) => {
                 const fieldId = field.fieldId ?? field.id;
                 const photo = field.fieldPhotoURL || responses[`${fieldId}_photo`];
-                const value = isMissedRecord ? "" : formatValue(field);
+                const value = isReferenceRecord ? "" : formatValue(field);
                 const fieldStatus = getFieldStatus(field);
                 const valueTone = getFieldValueTone(field, fieldStatus);
                 const answeredAtLabel = formatAnsweredAt(field.answeredAt);
@@ -887,12 +922,12 @@ function RecordDetailModal({ defaultTab = "submission", form, onClose, record })
                         )}
                       </div>
                       <div className="text-right">
-                        {isMissedRecord ? (
+                        {isReferenceRecord ? (
                           <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-outline">Not submitted</p>
                         ) : (
                           <p className={`text-sm font-bold ${valueTone}`}>{value}</p>
                         )}
-                        {!isMissedRecord && fieldStatus === "out-of-range" && (
+                        {!isReferenceRecord && fieldStatus === "out-of-range" && (
                           <p className="mt-1 text-[10px] font-bold uppercase tracking-[0.12em] text-error">Out of range</p>
                         )}
                       </div>
