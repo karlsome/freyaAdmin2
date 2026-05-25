@@ -199,6 +199,20 @@ function buildChecklistSubmissionKeyword(parts = []) {
     .join(" ");
 }
 
+function getChecklistRecordKey(record) {
+  const primaryId = normalizeId(record?._id ?? record?.recordId);
+  if (primaryId) return primaryId;
+
+  return [
+    normalizeId(record?.formId),
+    normalizeId(record?.machineId),
+    String(record?.machineName ?? "").trim(),
+    String(record?.completedAt ?? "").trim(),
+    String(record?.createdAt ?? "").trim(),
+    String(record?.completedBy ?? "").trim(),
+  ].join("::");
+}
+
 function getMachineScopedRecords(formId, machine, recordsByFormId) {
   return (recordsByFormId.get(formId) ?? []).filter((record) => {
     const recordMachineId = normalizeId(record.machineId);
@@ -207,7 +221,9 @@ function getMachineScopedRecords(formId, machine, recordsByFormId) {
   });
 }
 
-function getScheduleEntries(machine, date, forms, recordsByFormId) {
+function getScheduleEntries(machine, date, forms, recordsByFormId, options = {}) {
+  const { focusRecordKeys = null, focusRecordMode = false } = options;
+  const isFocusedRecord = (record) => !focusRecordMode || focusRecordKeys?.has(getChecklistRecordKey(record));
   const machineForms = forms.filter((form) =>
     getTemplateEquipmentIds(form).some((id) => normalizeId(id) === machine.id)
   );
@@ -231,20 +247,33 @@ function getScheduleEntries(machine, date, forms, recordsByFormId) {
     const submissions = [];
     let dueCount = 0;
     let missedCount = 0;
+    let mutedCount = 0;
 
     for (const form of formsForSchedule) {
       const machineRecords = getMachineScopedRecords(normalizeId(form._id), machine, recordsByFormId);
+      const focusedMachineRecords = focusRecordMode
+        ? machineRecords.filter((record) => isFocusedRecord(record))
+        : machineRecords;
       const exactRecords = machineRecords
         .filter((record) => isSameCalendarDay(record.completedAt, date))
         .sort((left, right) => new Date(right.completedAt).getTime() - new Date(left.completedAt).getTime());
+      const focusedExactRecords = focusRecordMode
+        ? exactRecords.filter((record) => isFocusedRecord(record))
+        : exactRecords;
 
-      if (exactRecords.length > 0) {
-        submissions.push(...exactRecords.map((record) => ({ form, record })));
+      if (focusedExactRecords.length > 0) {
+        submissions.push(...focusedExactRecords.map((record) => ({ form, record })));
+        continue;
+      }
+
+      if (focusRecordMode && exactRecords.length > 0) {
+        mutedCount += exactRecords.length;
         continue;
       }
 
       if (!isPeriodAnchor(date, schedule)) continue;
-      if (machineRecords.some((record) => recordInPeriod(record, date, schedule))) continue;
+      if (focusedMachineRecords.some((record) => recordInPeriod(record, date, schedule))) continue;
+      if (focusRecordMode && machineRecords.some((record) => recordInPeriod(record, date, schedule))) continue;
 
       if (isCurrentPeriod(date, schedule)) {
         dueCount += 1;
@@ -255,7 +284,7 @@ function getScheduleEntries(machine, date, forms, recordsByFormId) {
 
     const submittedCount = submissions.length;
     const openCount = dueCount + missedCount;
-    const state = submittedCount > 0 && openCount > 0
+    const fallbackState = submittedCount > 0 && openCount > 0
       ? "partial"
       : submittedCount > 0
         ? "complete"
@@ -264,8 +293,7 @@ function getScheduleEntries(machine, date, forms, recordsByFormId) {
           : dueCount > 0
             ? "due"
             : "none";
-
-    const title = submittedCount > 0 && openCount > 0
+    const fallbackTitle = submittedCount > 0 && openCount > 0
       ? `${SCHEDULE_META[schedule].label}: ${submittedCount} submitted, ${openCount} still pending`
       : submittedCount > 0
         ? `${SCHEDULE_META[schedule].label}: ${submittedCount} submitted`
@@ -275,11 +303,31 @@ function getScheduleEntries(machine, date, forms, recordsByFormId) {
             ? `${SCHEDULE_META[schedule].label}: ${dueCount} due`
             : `${SCHEDULE_META[schedule].label}: no activity this day`;
 
+    let state = fallbackState;
+    let title = fallbackTitle;
+
+    if (focusRecordMode) {
+      if (submittedCount > 0) {
+        state = "complete";
+        title = `${SCHEDULE_META[schedule].label}: ${submittedCount} submission${submittedCount === 1 ? "" : "s"} in the current Submitted By focus`;
+      } else if (mutedCount > 0) {
+        state = "muted";
+        title = `${SCHEDULE_META[schedule].label}: ${mutedCount} submission${mutedCount === 1 ? "" : "s"} outside the current Submitted By focus`;
+      } else if (missedCount > 0) {
+        state = "muted";
+        title = `${SCHEDULE_META[schedule].label}: ${missedCount} missed outside the current Submitted By focus`;
+      } else if (dueCount > 0) {
+        state = "muted";
+        title = `${SCHEDULE_META[schedule].label}: ${dueCount} due outside the current Submitted By focus`;
+      }
+    }
+
     return {
       schedule,
       state,
       hasForms: true,
       hasNG: submissions.some((entry) => entry.record.hasNG),
+      mutedCount: focusRecordMode ? (mutedCount || openCount) : 0,
       openCount,
       primary: submissions[0] ?? null,
       submissions,
@@ -292,6 +340,7 @@ function getScheduleEntries(machine, date, forms, recordsByFormId) {
 function getEntryCountLabel(entry) {
   if (entry.state === "partial") return `${entry.submittedCount}/${entry.submittedCount + entry.openCount}`;
   if (entry.state === "complete") return String(entry.submittedCount);
+  if (entry.state === "muted") return String(entry.mutedCount || entry.openCount || 0);
   if (entry.state === "due" || entry.state === "missed") return String(entry.openCount);
   return entry.hasForms ? "-" : "";
 }
@@ -880,6 +929,7 @@ const SLOT_STYLES = {
   partial: "border-primary/25 bg-primary/10 text-primary",
   due: "border-amber-500/20 bg-amber-500/12 text-amber-700",
   missed: "border-error/20 bg-error/10 text-error",
+  muted: "border-outline-variant/20 bg-surface-container text-outline/70",
   none: "border-outline-variant/15 bg-surface-container-high/35 text-outline/55",
 };
 
@@ -1259,6 +1309,20 @@ export default function ChecklistSubmissionsPage() {
     () => visibleRecords.filter((record) => record.hasNG).length,
     [visibleRecords]
   );
+  const submittedByFocusValues = useMemo(() => {
+    return [...new Set(
+      appliedAdvancedFilters
+        .filter((clause) => clause.field === "completedBy")
+        .flatMap((clause) => (Array.isArray(clause.value) ? clause.value : [clause.value]))
+        .map((value) => String(value ?? "").trim())
+        .filter(Boolean)
+    )];
+  }, [appliedAdvancedFilters]);
+  const submittedByFocusActive = submittedByFocusValues.length > 0;
+  const focusedRecordKeys = useMemo(
+    () => new Set(visibleRecords.map((record) => getChecklistRecordKey(record))),
+    [visibleRecords]
+  );
   const rangeDayCount = dates.length;
   const timelineRangeLabel = useMemo(
     () => `${formatTimelineRangeLabel(resolvedDateRange.startDate, resolvedDateRange.endDate)} (${rangeDayCount} days)`,
@@ -1369,9 +1433,12 @@ export default function ChecklistSubmissionsPage() {
             <LegendPill label="Missed" tone="bg-error" />
             <LegendPill label="Due" tone="bg-amber-500" />
             <LegendPill label="Completed with NG" tone="bg-emerald-500" withNg />
+            {submittedByFocusActive && <LegendPill label="Muted Context" tone="bg-outline" />}
           </div>
           <p className="mt-4 text-sm leading-6 text-outline">
-            Turn Daily, Weekly, and Monthly on or off to focus the timeline. The active buttons control which cadence lanes appear inside each day cell.
+            {submittedByFocusActive
+              ? `Turn Daily, Weekly, and Monthly on or off to focus the timeline. Activity outside the current Submitted By focus (${submittedByFocusValues.join(", ")}) is muted for context.`
+              : "Turn Daily, Weekly, and Monthly on or off to focus the timeline. The active buttons control which cadence lanes appear inside each day cell."}
           </p>
         </div>
       </div>
@@ -1384,6 +1451,11 @@ export default function ChecklistSubmissionsPage() {
             <p className="mt-1 text-sm leading-6 text-outline">
               Review completed, due, and missed checks across {filteredMachines.length.toLocaleString()} filtered machines and {visibleTemplates.length.toLocaleString()} active checklist forms. Show one cadence or compare multiple at the same time.
             </p>
+            {submittedByFocusActive && (
+              <p className="mt-2 text-xs font-semibold uppercase tracking-[0.14em] text-primary">
+                Submitted By focus active: only matching submissions stay highlighted.
+              </p>
+            )}
           </div>
           <div className="flex flex-wrap gap-2">
             {SCHEDULE_ORDER.map((schedule) => {
@@ -1462,7 +1534,10 @@ export default function ChecklistSubmissionsPage() {
                     </td>
                     {dates.map((date) => {
                       const isToday = date.getTime() === today.getTime();
-                      const entries = getScheduleEntries(machine, date, visibleTemplates, recordsByFormId)
+                      const entries = getScheduleEntries(machine, date, visibleTemplates, recordsByFormId, {
+                        focusRecordKeys: focusedRecordKeys,
+                        focusRecordMode: submittedByFocusActive,
+                      })
                         .filter((entry) => activeSchedules.includes(entry.schedule));
                       return (
                         <td
