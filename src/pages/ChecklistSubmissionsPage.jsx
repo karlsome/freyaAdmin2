@@ -1,28 +1,20 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import ChecklistSubmissionsFilterPanel from "../components/ChecklistSubmissionsFilterPanel";
 import LiquidSegmentedControl from "../components/LiquidSegmentedControl";
 import { useLanguage } from "../contexts/LanguageContext";
 import { fetchCheckFormTemplates, fetchCheckFormRecords, fetchNgReportsByRecordIds, fetchSetsubiDBRecords } from "../services/api";
+import {
+  CHECKLIST_SUBMISSION_ADVANCED_FILTER_FIELDS,
+  buildChecklistSubmissionAdvancedFilterClauses,
+  createChecklistSubmissionFilterRow,
+  matchesChecklistSubmissionAdvancedFilters,
+} from "../utils/checklistSubmissions";
 
 function normalizeId(id) {
   if (!id) return "";
   if (typeof id === "object" && id.$oid) return id.$oid;
   return String(id);
-}
-
-function getDates(days) {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const halfBefore = Math.floor(days / 2);
-  const dates = [];
-
-  for (let i = -halfBefore; i < days - halfBefore; i += 1) {
-    const date = new Date(today);
-    date.setDate(today.getDate() + i);
-    dates.push(date);
-  }
-
-  return dates;
 }
 
 function getWeekStart(date) {
@@ -87,6 +79,64 @@ function toDayStart(value) {
   return parsed;
 }
 
+function formatDateInputValue(value) {
+  const parsed = toDayStart(value);
+  if (!parsed) return "";
+
+  const year = parsed.getFullYear();
+  const month = String(parsed.getMonth() + 1).padStart(2, "0");
+  const day = String(parsed.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function createDefaultTimelineRange() {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const startDate = new Date(today);
+  startDate.setDate(today.getDate() - 15);
+
+  const endDate = new Date(today);
+  endDate.setDate(today.getDate() + 14);
+
+  return {
+    startDate: formatDateInputValue(startDate),
+    endDate: formatDateInputValue(endDate),
+  };
+}
+
+function resolveTimelineRange(startValue, endValue) {
+  const defaultRange = createDefaultTimelineRange();
+  const fallbackStart = toDayStart(defaultRange.startDate);
+  const fallbackEnd = toDayStart(defaultRange.endDate);
+  const parsedStart = toDayStart(startValue || defaultRange.startDate) ?? fallbackStart;
+  const parsedEnd = toDayStart(endValue || defaultRange.endDate) ?? fallbackEnd;
+
+  if (parsedStart.getTime() <= parsedEnd.getTime()) {
+    return { startDate: parsedStart, endDate: parsedEnd };
+  }
+
+  return { startDate: parsedEnd, endDate: parsedStart };
+}
+
+function getDatesInRange(startDate, endDate) {
+  const dates = [];
+  const cursor = new Date(startDate);
+
+  while (cursor.getTime() <= endDate.getTime()) {
+    dates.push(new Date(cursor));
+    cursor.setDate(cursor.getDate() + 1);
+  }
+
+  return dates;
+}
+
+function formatTimelineRangeLabel(startDate, endDate) {
+  const startLabel = startDate.toLocaleDateString("ja-JP", { year: "numeric", month: "short", day: "numeric" });
+  const endLabel = endDate.toLocaleDateString("ja-JP", { year: "numeric", month: "short", day: "numeric" });
+  return `${startLabel} - ${endLabel}`;
+}
+
 function isSameCalendarDay(value, date) {
   const parsed = toDayStart(value);
   return parsed ? parsed.getTime() === date.getTime() : false;
@@ -108,6 +158,20 @@ function formatAnsweredAt(value) {
   });
 }
 
+function getTemplateEquipmentIds(form) {
+  if (Array.isArray(form?.equipmentIds)) return form.equipmentIds;
+  if (form?.equipmentId) return [form.equipmentId];
+  return [];
+}
+
+function buildMachineFilterLabel(machineName, factory) {
+  const normalizedMachineName = String(machineName ?? "").trim() || "Unknown machine";
+  const normalizedFactory = String(factory ?? "").trim();
+
+  if (!normalizedFactory || normalizedFactory === "—") return normalizedMachineName;
+  return `${normalizedFactory} / ${normalizedMachineName}`;
+}
+
 function getMachineScopedRecords(formId, machine, recordsByFormId) {
   return (recordsByFormId.get(formId) ?? []).filter((record) => {
     const recordMachineId = normalizeId(record.machineId);
@@ -118,7 +182,7 @@ function getMachineScopedRecords(formId, machine, recordsByFormId) {
 
 function getScheduleEntries(machine, date, forms, recordsByFormId) {
   const machineForms = forms.filter((form) =>
-    (form.equipmentIds ?? []).some((id) => normalizeId(id) === machine.id)
+    getTemplateEquipmentIds(form).some((id) => normalizeId(id) === machine.id)
   );
 
   return SCHEDULE_ORDER.map((schedule) => {
@@ -776,8 +840,6 @@ function RecordDetailModal({ defaultTab = "submission", form, onClose, record })
   );
 }
 
-const RANGES = [30, 60];
-
 const SCHEDULE_META = {
   daily: { label: "Daily", short: "D", icon: "today" },
   weekly: { label: "Weekly", short: "W", icon: "date_range" },
@@ -847,11 +909,21 @@ export default function ChecklistSubmissionsPage() {
   const [allEquipment, setAllEquipment] = useState([]);
   const [records, setRecords] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [days, setDays] = useState(30);
-  const [factoryFilter, setFactoryFilter] = useState("all");
+  const [dateRange, setDateRange] = useState(() => createDefaultTimelineRange());
+  const [advancedRows, setAdvancedRows] = useState(() => [createChecklistSubmissionFilterRow()]);
+  const [appliedAdvancedFilters, setAppliedAdvancedFilters] = useState([]);
   const [activeSchedules, setActiveSchedules] = useState(SCHEDULE_ORDER);
   const [selectedCell, setSelectedCell] = useState(null);
   const scrollRef = useRef(null);
+
+  const resolvedDateRange = useMemo(
+    () => resolveTimelineRange(dateRange.startDate, dateRange.endDate),
+    [dateRange.endDate, dateRange.startDate]
+  );
+  const dates = useMemo(
+    () => getDatesInRange(resolvedDateRange.startDate, resolvedDateRange.endDate),
+    [resolvedDateRange.endDate, resolvedDateRange.startDate]
+  );
 
   useEffect(() => {
     async function load() {
@@ -878,14 +950,18 @@ export default function ChecklistSubmissionsPage() {
   }, []);
 
   useEffect(() => {
-    if (loading || !scrollRef.current) return;
+    if (loading || !scrollRef.current || dates.length === 0) return;
+
     const machineColumnWidth = 160;
     const cellWidth = 64;
-    const halfBefore = Math.floor(days / 2);
-    const todayOffset = machineColumnWidth + halfBefore * cellWidth;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const todayIndex = dates.findIndex((date) => date.getTime() === today.getTime());
+    const anchorIndex = todayIndex >= 0 ? todayIndex : Math.floor(dates.length / 2);
+    const anchorOffset = machineColumnWidth + anchorIndex * cellWidth;
     const containerWidth = scrollRef.current.clientWidth;
-    scrollRef.current.scrollLeft = todayOffset - containerWidth / 2 + cellWidth / 2;
-  }, [days, loading]);
+    scrollRef.current.scrollLeft = anchorOffset - containerWidth / 2 + cellWidth / 2;
+  }, [dates, loading]);
 
   const equipmentMap = useMemo(() => {
     const map = new Map();
@@ -898,38 +974,110 @@ export default function ChecklistSubmissionsPage() {
   const recordsByFormId = useMemo(() => {
     const map = new Map();
     for (const record of records) {
-      const list = map.get(record.formId) ?? [];
+      const formId = normalizeId(record.formId);
+      if (!formId) continue;
+
+      const list = map.get(formId) ?? [];
       list.push(record);
-      map.set(record.formId, list);
+      map.set(formId, list);
     }
     return map;
   }, [records]);
 
+  const machineAssignments = useMemo(() => {
+    const seen = new Set();
+    const result = [];
+
+    for (const form of templates) {
+      const formId = normalizeId(form._id);
+      const formName = String(form?.name ?? form?.formName ?? "Checklist Submission").trim() || "Checklist Submission";
+
+      for (const rawId of getTemplateEquipmentIds(form)) {
+        const machineId = normalizeId(rawId);
+        if (!machineId) continue;
+
+        const assignmentKey = `${formId}:${machineId}`;
+        if (seen.has(assignmentKey)) continue;
+        seen.add(assignmentKey);
+
+        const info = equipmentMap.get(machineId);
+        const machineName = info?.name ?? machineId;
+        const factory = info?.factory ?? form?.工場 ?? "—";
+
+        result.push({
+          factory,
+          formId,
+          formName,
+          machineId,
+          machineLabel: buildMachineFilterLabel(machineName, factory),
+          machineName,
+        });
+      }
+    }
+
+    return result.sort((left, right) => (
+      left.factory.localeCompare(right.factory, "ja")
+      || left.machineName.localeCompare(right.machineName, "ja")
+      || left.formName.localeCompare(right.formName, "ja")
+    ));
+  }, [equipmentMap, templates]);
+
   const machines = useMemo(() => {
     const seen = new Set();
     const result = [];
-    for (const form of templates) {
-      for (const rawId of form.equipmentIds ?? []) {
-        const id = normalizeId(rawId);
-        if (seen.has(id)) continue;
-        seen.add(id);
-        const info = equipmentMap.get(id);
-        result.push({ id, name: info?.name ?? id, factory: info?.factory ?? "—" });
-      }
+
+    for (const assignment of machineAssignments) {
+      if (seen.has(assignment.machineId)) continue;
+      seen.add(assignment.machineId);
+      result.push({ id: assignment.machineId, name: assignment.machineName, factory: assignment.factory });
     }
-    return result.sort((left, right) => left.factory.localeCompare(right.factory, "ja") || left.name.localeCompare(right.name, "ja"));
-  }, [equipmentMap, templates]);
 
-  const factories = useMemo(() => {
-    const factorySet = new Set(machines.map((machine) => machine.factory).filter(Boolean));
-    return [...factorySet].sort();
-  }, [machines]);
+    return result;
+  }, [machineAssignments]);
 
-  const filteredMachines = useMemo(() => (
-    factoryFilter === "all" ? machines : machines.filter((machine) => machine.factory === factoryFilter)
-  ), [factoryFilter, machines]);
+  const advancedFieldDefinitions = useMemo(() => {
+    const optionMap = {
+      factory: [...new Set(machineAssignments.map((assignment) => assignment.factory).filter(Boolean))]
+        .sort((left, right) => left.localeCompare(right, "ja")),
+      machineLabel: [...new Set(machineAssignments.map((assignment) => assignment.machineLabel).filter(Boolean))]
+        .sort((left, right) => left.localeCompare(right, "ja")),
+      formName: [...new Set(templates.map((form) => String(form?.name ?? form?.formName ?? "").trim()).filter(Boolean))]
+        .sort((left, right) => left.localeCompare(right, "ja")),
+    };
 
-  const dates = useMemo(() => getDates(days), [days]);
+    return CHECKLIST_SUBMISSION_ADVANCED_FILTER_FIELDS.map((field) => ({
+      ...field,
+      options: optionMap[field.field] ?? [],
+    }));
+  }, [machineAssignments, templates]);
+
+  const filteredAssignments = useMemo(() => {
+    if (!appliedAdvancedFilters.length) return machineAssignments;
+    return machineAssignments.filter((assignment) => matchesChecklistSubmissionAdvancedFilters(assignment, appliedAdvancedFilters));
+  }, [appliedAdvancedFilters, machineAssignments]);
+
+  const filteredMachineIds = useMemo(
+    () => new Set(filteredAssignments.map((assignment) => assignment.machineId)),
+    [filteredAssignments]
+  );
+  const filteredFormIds = useMemo(
+    () => new Set(filteredAssignments.map((assignment) => assignment.formId)),
+    [filteredAssignments]
+  );
+
+  const filteredMachines = useMemo(
+    () => machines.filter((machine) => filteredMachineIds.has(machine.id)),
+    [filteredMachineIds, machines]
+  );
+  const visibleTemplates = useMemo(
+    () => templates.filter((form) => filteredFormIds.has(normalizeId(form._id))),
+    [filteredFormIds, templates]
+  );
+  const filteredMachineNameSet = useMemo(
+    () => new Set(filteredMachines.map((machine) => normalizeMachineName(machine.name)).filter(Boolean)),
+    [filteredMachines]
+  );
+
   const monthGroups = useMemo(() => {
     const groups = [];
     for (const date of dates) {
@@ -944,20 +1092,43 @@ export default function ChecklistSubmissionsPage() {
   }, [dates]);
 
   const scheduleCounts = useMemo(() => (
-    templates.reduce((accumulator, template) => {
+    visibleTemplates.reduce((accumulator, template) => {
       if (template.schedule && accumulator[template.schedule] !== undefined) {
         accumulator[template.schedule] += 1;
       }
       return accumulator;
     }, { daily: 0, weekly: 0, monthly: 0 })
-  ), [templates]);
+  ), [visibleTemplates]);
+
+  const visibleRecords = useMemo(() => {
+    const startTime = resolvedDateRange.startDate.getTime();
+    const endTime = resolvedDateRange.endDate.getTime();
+
+    return records.filter((record) => {
+      const completedAt = toDayStart(record.completedAt);
+      if (!completedAt) return false;
+      if (completedAt.getTime() < startTime || completedAt.getTime() > endTime) return false;
+
+      const formId = normalizeId(record.formId);
+      if (!filteredFormIds.has(formId)) return false;
+
+      const machineId = normalizeId(record.machineId);
+      if (machineId) return filteredMachineIds.has(machineId);
+
+      return filteredMachineNameSet.has(normalizeMachineName(record.machineName));
+    });
+  }, [filteredFormIds, filteredMachineIds, filteredMachineNameSet, records, resolvedDateRange.endDate, resolvedDateRange.startDate]);
 
   const ngCount = useMemo(
-    () => records.filter((record) => record.hasNG).length,
-    [records]
+    () => visibleRecords.filter((record) => record.hasNG).length,
+    [visibleRecords]
   );
-
-  const selectedFactoryLabel = factoryFilter === "all" ? "All factories" : factoryFilter;
+  const rangeDayCount = dates.length;
+  const timelineRangeLabel = useMemo(
+    () => `${formatTimelineRangeLabel(resolvedDateRange.startDate, resolvedDateRange.endDate)} (${rangeDayCount} days)`,
+    [rangeDayCount, resolvedDateRange.endDate, resolvedDateRange.startDate]
+  );
+  const timelineScopeLabel = `${filteredMachines.length.toLocaleString()} machine${filteredMachines.length === 1 ? "" : "s"} • ${visibleTemplates.length.toLocaleString()} checklist${visibleTemplates.length === 1 ? "" : "s"}`;
 
   function toggleSchedule(schedule) {
     setActiveSchedules((current) => {
@@ -966,6 +1137,30 @@ export default function ChecklistSubmissionsPage() {
       }
       return SCHEDULE_ORDER.filter((value) => current.includes(value) || value === schedule);
     });
+  }
+
+  function handleDateChange(field, value) {
+    setDateRange((current) => ({ ...current, [field]: value }));
+  }
+
+  function handleUpdateAdvancedRow(rowId, patch) {
+    setAdvancedRows((current) => current.map((row) => (row.id === rowId ? { ...row, ...patch } : row)));
+  }
+
+  function handleRemoveAdvancedRow(rowId) {
+    setAdvancedRows((current) => {
+      const next = current.filter((row) => row.id !== rowId);
+      return next.length ? next : [createChecklistSubmissionFilterRow()];
+    });
+  }
+
+  function handleApplyAdvancedFilters() {
+    setAppliedAdvancedFilters(buildChecklistSubmissionAdvancedFilterClauses(advancedRows, advancedFieldDefinitions));
+  }
+
+  function handleClearAdvancedFilters() {
+    setAdvancedRows([createChecklistSubmissionFilterRow()]);
+    setAppliedAdvancedFilters([]);
   }
 
   const today = new Date();
@@ -981,7 +1176,7 @@ export default function ChecklistSubmissionsPage() {
       <div className="mb-6 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
         <SummaryCard
           label="Active Checklists"
-          value={templates.length.toLocaleString()}
+          value={visibleTemplates.length.toLocaleString()}
           detail={`${scheduleCounts.daily} daily • ${scheduleCounts.weekly} weekly • ${scheduleCounts.monthly} monthly`}
           icon="checklist"
           iconClassName="bg-primary/10 text-primary"
@@ -989,72 +1184,42 @@ export default function ChecklistSubmissionsPage() {
         <SummaryCard
           label="Tracked Machines"
           value={filteredMachines.length.toLocaleString()}
-          detail={factoryFilter === "all" ? `${machines.length} machines in scope` : `${selectedFactoryLabel} only`}
+          detail={appliedAdvancedFilters.length ? "Matching the current advanced timeline filters" : `${machines.length} machines in scope`}
           icon="precision_manufacturing"
           iconClassName="bg-tertiary/10 text-tertiary"
         />
         <SummaryCard
           label="Submitted Records"
-          value={records.length.toLocaleString()}
-          detail={`${days}-day review window centered on today`}
+          value={visibleRecords.length.toLocaleString()}
+          detail={`${rangeDayCount}-day selected window`}
           icon="task_alt"
           iconClassName="bg-emerald-500/10 text-emerald-500"
         />
         <SummaryCard
           label="NG Findings"
           value={ngCount.toLocaleString()}
-          detail={ngCount > 0 ? "Completed checks with NG markers" : "No NG markers in the loaded records"}
+          detail={ngCount > 0 ? "Completed checks with NG markers in the current scope" : "No NG markers in the current scope"}
           icon="warning"
           iconClassName="bg-error/10 text-error"
         />
       </div>
 
       <div className="mb-6 grid gap-3 xl:grid-cols-[minmax(0,1.4fr)_minmax(320px,0.6fr)]">
-        <div className="glass-card rounded-2xl p-5">
-          <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-outline">Filters</p>
-          <div className="mt-4 flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
-              <label className="block min-w-[220px]">
-                <span className="mb-2 block text-xs font-bold uppercase tracking-[0.18em] text-outline">Factory</span>
-                <select
-                  value={factoryFilter}
-                  onChange={(event) => setFactoryFilter(event.target.value)}
-                  className="w-full rounded-2xl border border-outline-variant/30 bg-surface-container px-4 py-3 text-sm font-bold text-on-surface outline-none transition hover:bg-surface-container-high focus:border-primary/40"
-                >
-                  <option value="all">All factories</option>
-                  {factories.map((factory) => (
-                    <option key={factory} value={factory}>{factory}</option>
-                  ))}
-                </select>
-              </label>
-              <div>
-                <span className="mb-2 block text-xs font-bold uppercase tracking-[0.18em] text-outline">Window</span>
-                <div className="flex rounded-2xl border border-outline-variant/30 bg-surface-container p-1">
-                  {RANGES.map((range) => (
-                    <button
-                      key={range}
-                      type="button"
-                      onClick={() => setDays(range)}
-                      className={`rounded-2xl px-4 py-2 text-xs font-bold transition ${days === range ? "bg-primary text-on-primary shadow-sm" : "text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface"}`}
-                    >
-                      {range}d
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              <span className="inline-flex items-center gap-2 rounded-full border border-outline-variant/20 bg-surface px-3 py-1.5 text-xs font-bold text-on-surface">
-                <span className="material-symbols-outlined text-primary" style={{ fontSize: 14 }}>factory</span>
-                {selectedFactoryLabel}
-              </span>
-              <span className="inline-flex items-center gap-2 rounded-full border border-outline-variant/20 bg-surface px-3 py-1.5 text-xs font-bold text-on-surface">
-                <span className="material-symbols-outlined text-primary" style={{ fontSize: 14 }}>calendar_month</span>
-                {days}-day window
-              </span>
-            </div>
-          </div>
-        </div>
+        <ChecklistSubmissionsFilterPanel
+          startDate={dateRange.startDate}
+          endDate={dateRange.endDate}
+          rangeLabel={timelineRangeLabel}
+          scopeLabel={timelineScopeLabel}
+          appliedAdvancedFilterCount={appliedAdvancedFilters.length}
+          fieldDefinitions={advancedFieldDefinitions}
+          advancedRows={advancedRows}
+          onDateChange={handleDateChange}
+          onAddAdvancedRow={() => setAdvancedRows((current) => [...current, createChecklistSubmissionFilterRow()])}
+          onUpdateAdvancedRow={handleUpdateAdvancedRow}
+          onRemoveAdvancedRow={handleRemoveAdvancedRow}
+          onApplyAdvancedFilters={handleApplyAdvancedFilters}
+          onClearAdvancedFilters={handleClearAdvancedFilters}
+        />
 
         <div className="glass-card rounded-2xl p-5">
           <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-outline">Status Guide</p>
@@ -1076,7 +1241,7 @@ export default function ChecklistSubmissionsPage() {
             <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-outline">Timeline</p>
             <h3 className="mt-1 text-lg font-black text-on-surface">Checklist Submission Timeline</h3>
             <p className="mt-1 text-sm leading-6 text-outline">
-              Review completed, due, and missed checks across {selectedFactoryLabel === "All factories" ? "all tracked factories" : selectedFactoryLabel}. Show one cadence or compare multiple at the same time.
+              Review completed, due, and missed checks across {filteredMachines.length.toLocaleString()} filtered machines and {visibleTemplates.length.toLocaleString()} active checklist forms. Show one cadence or compare multiple at the same time.
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -1106,7 +1271,7 @@ export default function ChecklistSubmissionsPage() {
           {!loading && filteredMachines.length === 0 && (
             <div className="flex flex-col items-center gap-3 py-24 text-outline">
               <span className="material-symbols-outlined" style={{ fontSize: 40 }}>precision_manufacturing</span>
-              <p className="text-sm">No machines found on active forms.</p>
+              <p className="text-sm">No machines match the current timeline filters.</p>
             </div>
           )}
 
@@ -1156,7 +1321,7 @@ export default function ChecklistSubmissionsPage() {
                     </td>
                     {dates.map((date) => {
                       const isToday = date.getTime() === today.getTime();
-                      const entries = getScheduleEntries(machine, date, templates, recordsByFormId)
+                      const entries = getScheduleEntries(machine, date, visibleTemplates, recordsByFormId)
                         .filter((entry) => activeSchedules.includes(entry.schedule));
                       return (
                         <td
