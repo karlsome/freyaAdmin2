@@ -83,21 +83,29 @@ function ActivityItem({ icon, label, value }) {
   );
 }
 
-function FieldRow({ field, onPreviewImage }) {
+function FieldRow({ field, order, onPreviewImage }) {
   const typeMeta = FIELD_TYPE_META[field.type] ?? { label: field.type || "Field", icon: "help" };
   const hasRange = field.type === "number" && (field.min != null || field.max != null);
+  const orderLabel = order + 1;
 
   return (
     <div className="rounded-2xl border border-outline-variant/20 bg-surface px-4 py-3">
       <div className="flex items-start gap-3">
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2">
-            <span className="material-symbols-outlined text-primary" style={{ fontSize: 16 }}>{typeMeta.icon}</span>
-            <p className="truncate text-sm font-semibold text-on-surface">{field.label || "Untitled field"}</p>
+        <div className="flex min-w-0 flex-1 items-start gap-3">
+          <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-2xl bg-surface-container text-sm font-black text-on-surface">
+            {orderLabel}
+          </span>
+          <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+            <span className="material-symbols-outlined" style={{ fontSize: 18 }}>{typeMeta.icon}</span>
+          </span>
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2">
+              <p className="truncate text-sm font-semibold text-on-surface">{field.label || "Untitled field"}</p>
+            </div>
+            {field.description ? (
+              <p className="mt-1 text-xs leading-5 text-outline">{field.description}</p>
+            ) : null}
           </div>
-          {field.description ? (
-            <p className="mt-1 text-xs leading-5 text-outline">{field.description}</p>
-          ) : null}
         </div>
 
         <div className="grid w-[8.5rem] flex-shrink-0 grid-cols-[3rem_minmax(0,1fr)] items-center justify-items-end gap-2 self-start">
@@ -255,11 +263,11 @@ export default function CheckFormDetailModal({ form, scheduleMeta, machineNames,
                 <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-outline">Checks</p>
                 <p className="mt-1 text-sm text-outline">Review the fields included in this form before editing.</p>
               </div>
-              <p className="text-xs font-bold text-primary">{form.fields?.length ?? 0} total</p>
+              <p className="text-xs font-bold text-primary">{form.fields?.length ?? 0} checks total</p>
             </div>
             <div className="mt-4 space-y-2">
-              {(form.fields ?? []).map((field) => (
-                <FieldRow key={field.id || field.label} field={field} onPreviewImage={setPreviewImage} />
+              {(form.fields ?? []).map((field, index) => (
+                <FieldRow key={field.id || field.label} field={field} order={index} onPreviewImage={setPreviewImage} />
               ))}
             </div>
           </section>
