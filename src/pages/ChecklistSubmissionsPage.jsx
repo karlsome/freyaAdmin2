@@ -199,6 +199,14 @@ function buildChecklistSubmissionKeyword(parts = []) {
     .join(" ");
 }
 
+function buildFocusSummaryValue(value) {
+  if (Array.isArray(value)) {
+    return value.map((entry) => String(entry ?? "").trim()).filter(Boolean).join(", ");
+  }
+
+  return String(value ?? "").trim();
+}
+
 function getChecklistRecordKey(record) {
   const primaryId = normalizeId(record?._id ?? record?.recordId);
   if (primaryId) return primaryId;
@@ -309,16 +317,16 @@ function getScheduleEntries(machine, date, forms, recordsByFormId, options = {})
     if (focusRecordMode) {
       if (submittedCount > 0) {
         state = "complete";
-        title = `${SCHEDULE_META[schedule].label}: ${submittedCount} submission${submittedCount === 1 ? "" : "s"} in the current Submitted By focus`;
+        title = `${SCHEDULE_META[schedule].label}: ${submittedCount} submission${submittedCount === 1 ? "" : "s"} in the current focus`;
       } else if (mutedCount > 0) {
         state = "muted";
-        title = `${SCHEDULE_META[schedule].label}: ${mutedCount} submission${mutedCount === 1 ? "" : "s"} outside the current Submitted By focus`;
+        title = `${SCHEDULE_META[schedule].label}: ${mutedCount} submission${mutedCount === 1 ? "" : "s"} outside the current focus`;
       } else if (missedCount > 0) {
         state = "muted";
-        title = `${SCHEDULE_META[schedule].label}: ${missedCount} missed outside the current Submitted By focus`;
+        title = `${SCHEDULE_META[schedule].label}: ${missedCount} missed outside the current focus`;
       } else if (dueCount > 0) {
         state = "muted";
-        title = `${SCHEDULE_META[schedule].label}: ${dueCount} due outside the current Submitted By focus`;
+        title = `${SCHEDULE_META[schedule].label}: ${dueCount} due outside the current focus`;
       }
     }
 
@@ -944,6 +952,12 @@ const RECORD_COMPATIBLE_FILTER_FIELDS = new Set([
   "lastCompletedAt",
 ]);
 
+const TIMELINE_FOCUS_FIELD_LABELS = {
+  completedBy: "Submitted By",
+  hasNGStatus: "NG Status",
+  formName: "Checklist Form",
+};
+
 function SummaryCard({ detail, icon, iconClassName, label, value }) {
   return (
     <div className="glass-card rounded-2xl p-5">
@@ -1309,16 +1323,27 @@ export default function ChecklistSubmissionsPage() {
     () => visibleRecords.filter((record) => record.hasNG).length,
     [visibleRecords]
   );
-  const submittedByFocusValues = useMemo(() => {
-    return [...new Set(
-      appliedAdvancedFilters
-        .filter((clause) => clause.field === "completedBy")
-        .flatMap((clause) => (Array.isArray(clause.value) ? clause.value : [clause.value]))
-        .map((value) => String(value ?? "").trim())
-        .filter(Boolean)
-    )];
+  const timelineFocusClauses = useMemo(() => {
+    return appliedAdvancedFilters.filter((clause) => TIMELINE_FOCUS_FIELD_LABELS[clause.field]);
   }, [appliedAdvancedFilters]);
-  const submittedByFocusActive = submittedByFocusValues.length > 0;
+  const timelineFocusSummary = useMemo(() => {
+    const summaryByField = timelineFocusClauses.reduce((map, clause) => {
+      const fieldLabel = TIMELINE_FOCUS_FIELD_LABELS[clause.field];
+      const nextValue = buildFocusSummaryValue(clause.value);
+      if (!fieldLabel || !nextValue) return map;
+
+      const currentValues = map.get(fieldLabel) ?? [];
+      currentValues.push(nextValue);
+      map.set(fieldLabel, currentValues);
+      return map;
+    }, new Map());
+
+    return Array.from(summaryByField.entries()).map(([label, values]) => {
+      const uniqueValues = [...new Set(values.filter(Boolean))];
+      return `${label}: ${uniqueValues.join(", ")}`;
+    });
+  }, [timelineFocusClauses]);
+  const timelineFocusActive = timelineFocusSummary.length > 0;
   const focusedRecordKeys = useMemo(
     () => new Set(visibleRecords.map((record) => getChecklistRecordKey(record))),
     [visibleRecords]
@@ -1433,11 +1458,11 @@ export default function ChecklistSubmissionsPage() {
             <LegendPill label="Missed" tone="bg-error" />
             <LegendPill label="Due" tone="bg-amber-500" />
             <LegendPill label="Completed with NG" tone="bg-emerald-500" withNg />
-            {submittedByFocusActive && <LegendPill label="Muted Context" tone="bg-outline" />}
+            {timelineFocusActive && <LegendPill label="Muted Context" tone="bg-outline" />}
           </div>
           <p className="mt-4 text-sm leading-6 text-outline">
-            {submittedByFocusActive
-              ? `Turn Daily, Weekly, and Monthly on or off to focus the timeline. Activity outside the current Submitted By focus (${submittedByFocusValues.join(", ")}) is muted for context.`
+            {timelineFocusActive
+              ? `Turn Daily, Weekly, and Monthly on or off to focus the timeline. Activity outside the current focus (${timelineFocusSummary.join(" • ")}) is muted for context.`
               : "Turn Daily, Weekly, and Monthly on or off to focus the timeline. The active buttons control which cadence lanes appear inside each day cell."}
           </p>
         </div>
@@ -1451,9 +1476,9 @@ export default function ChecklistSubmissionsPage() {
             <p className="mt-1 text-sm leading-6 text-outline">
               Review completed, due, and missed checks across {filteredMachines.length.toLocaleString()} filtered machines and {visibleTemplates.length.toLocaleString()} active checklist forms. Show one cadence or compare multiple at the same time.
             </p>
-            {submittedByFocusActive && (
+            {timelineFocusActive && (
               <p className="mt-2 text-xs font-semibold uppercase tracking-[0.14em] text-primary">
-                Submitted By focus active: only matching submissions stay highlighted.
+                Focus mode active: only matching submissions stay highlighted.
               </p>
             )}
           </div>
@@ -1536,7 +1561,7 @@ export default function ChecklistSubmissionsPage() {
                       const isToday = date.getTime() === today.getTime();
                       const entries = getScheduleEntries(machine, date, visibleTemplates, recordsByFormId, {
                         focusRecordKeys: focusedRecordKeys,
-                        focusRecordMode: submittedByFocusActive,
+                        focusRecordMode: timelineFocusActive,
                       })
                         .filter((entry) => activeSchedules.includes(entry.schedule));
                       return (
