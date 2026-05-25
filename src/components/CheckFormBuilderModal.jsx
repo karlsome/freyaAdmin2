@@ -334,10 +334,7 @@ export default function CheckFormBuilderModal({ initial, onClose, onSaved, prese
         }
       : emptyDraft(presetSchedule)
   );
-  const [expandedFieldId, setExpandedFieldId] = useState(() => {
-    const initialFields = initial ? ensureNameField(initial.fields ?? []) : [NAME_FIELD];
-    return initialFields.find((field) => !field.locked)?.id ?? initialFields[0]?.id ?? null;
-  });
+  const [expandedFieldId, setExpandedFieldId] = useState(null);
   const [factories, setFactories] = useState([]);
   const [allEquipment, setAllEquipment] = useState([]);
   const [allTemplates, setAllTemplates] = useState([]);
