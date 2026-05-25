@@ -136,7 +136,7 @@ function RecordDetailModal({ record, form, onClose }) {
 
   function formatValue(field) {
     const val = responses[field.id];
-    if (field.type === "checkbox") {
+    if (field.type === "toggle") {
       if (val === "ok") return "✓  OK";
       if (val === "ng") return "✗  NG";
       return "—";
@@ -202,8 +202,8 @@ function RecordDetailModal({ record, form, onClose }) {
           {fields.map(field => {
             const photo = responses[`${field.id}_photo`];
             const value = formatValue(field);
-            const isOK = field.type === "checkbox" && responses[field.id] === "ok";
-            const isNG = field.type === "checkbox" && responses[field.id] === "ng";
+            const isOK = field.type === "toggle" && responses[field.id] === "ok";
+            const isNG = field.type === "toggle" && responses[field.id] === "ng";
             return (
               <div key={field.id} className="rounded-2xl border border-outline-variant/20 bg-surface-container px-4 py-3">
                 <div className="flex items-start justify-between gap-3">

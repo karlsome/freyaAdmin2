@@ -33,7 +33,7 @@ function normalizeId(value) {
 }
 
 const FIELD_TYPES = [
-  { value: "checkbox", label: "Checkbox", icon: "check_box" },
+  { value: "toggle", label: "Toggle Buttons", icon: "task_alt" },
   { value: "text", label: "Text", icon: "short_text" },
   { value: "number", label: "Number", icon: "pin" },
   { value: "select", label: "Select", icon: "list" },
@@ -55,7 +55,7 @@ const NAME_FIELD = {
   locked: true,
 };
 
-function newField(type = "checkbox") {
+function newField(type = "toggle") {
   const id = crypto.randomUUID();
 
   return {
@@ -106,6 +106,18 @@ function emptyDraft(presetSchedule = "") {
 
 function getFieldTypeMeta(type) {
   return FIELD_TYPE_META[type] ?? { label: type || "Field", icon: "list" };
+}
+
+function renderFieldTypeGlyph(typeMeta, size = 16) {
+  if (typeMeta.value === "toggle") {
+    return (
+      <span className="inline-flex min-w-[1.9rem] items-center justify-center rounded-full border border-current/30 px-1.5 py-0.5 text-[10px] font-black leading-none tracking-[0.08em]">
+        OK
+      </span>
+    );
+  }
+
+  return <span className="material-symbols-outlined" style={{ fontSize: size }}>{typeMeta.icon}</span>;
 }
 
 function getMachineNames(equipmentIds = [], allEquipment = []) {
@@ -262,7 +274,7 @@ function FieldPreviewCard({ field }) {
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
-            <span className="material-symbols-outlined text-primary" style={{ fontSize: 16 }}>{typeMeta.icon}</span>
+            <span className="text-primary">{renderFieldTypeGlyph(typeMeta, 16)}</span>
             <p className="truncate text-sm font-semibold text-on-surface">{field.label || "Untitled check"}</p>
           </div>
           <p className="mt-1 text-xs leading-5 text-outline">
@@ -423,7 +435,7 @@ export default function CheckFormBuilderModal({ initial, onClose, onSaved, prese
     setTop("equipmentIds", allFilteredSelected ? [] : allIds);
   }
 
-  function addField(type = "checkbox") {
+  function addField(type = "toggle") {
     const field = newField(type);
     setDraft((current) => ({ ...current, fields: [...current.fields, field] }));
     setExpandedFieldId(field.id);
@@ -912,7 +924,7 @@ function FieldCard({
                   {index + 1}
                 </span>
                 <span className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-2xl ${expanded ? "bg-primary text-on-primary" : "bg-surface-container text-primary"}`}>
-                  <span className="material-symbols-outlined" style={{ fontSize: 18 }}>{typeMeta.icon}</span>
+                  {renderFieldTypeGlyph(typeMeta, 18)}
                 </span>
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
@@ -1467,7 +1479,7 @@ function FieldEditor({ field, onChange, username }) {
                     : "border-outline-variant/30 bg-surface text-outline hover:border-primary/30 hover:text-primary"
                 }`}
               >
-                <span className="material-symbols-outlined" style={{ fontSize: 16 }}>{type.icon}</span>
+                {renderFieldTypeGlyph(type, 16)}
                 {type.label}
               </button>
             ))}

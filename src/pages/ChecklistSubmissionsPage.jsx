@@ -700,7 +700,7 @@ function RecordDetailModal({ defaultTab = "submission", form, onClose, record })
   function formatValue(field) {
     if (field.fieldId) {
       const answerStatus = String(field.status ?? field.value ?? "").trim().toLowerCase();
-      if (field.type === "checkbox") {
+      if (field.type === "toggle") {
         if (answerStatus === "ok") return "OK";
         if (answerStatus === "ng") return "NG";
         return field.displayValue ?? field.value ?? "—";
@@ -714,7 +714,7 @@ function RecordDetailModal({ defaultTab = "submission", form, onClose, record })
     }
 
     const value = responses[field.id];
-    if (field.type === "checkbox") {
+    if (field.type === "toggle") {
       if (value === "ok") return "OK";
       if (value === "ng") return "NG";
       return "—";
@@ -728,11 +728,11 @@ function RecordDetailModal({ defaultTab = "submission", form, onClose, record })
     if (field.fieldId) {
       return String(field.status ?? field.value ?? "").trim().toLowerCase();
     }
-    return field.type === "checkbox" ? String(responses[field.id] ?? "").trim().toLowerCase() : "";
+    return field.type === "toggle" ? String(responses[field.id] ?? "").trim().toLowerCase() : "";
   }
 
   function getFieldValueTone(field, status) {
-    if (field.type === "checkbox") {
+    if (field.type === "toggle") {
       if (status === "ok") return "text-emerald-500";
       if (status === "ng") return "text-error";
     }

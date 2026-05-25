@@ -1222,7 +1222,7 @@ function normalizeId(value) {
 }
 
 function normalizeCheckFormAnswerValue(answer) {
-  if (answer.type === "checkbox") {
+  if (answer.type === "toggle") {
     return String(answer.status ?? answer.value ?? "").trim().toLowerCase();
   }
   if (answer.displayValue !== undefined && answer.displayValue !== null && answer.displayValue !== "") {

@@ -11,7 +11,7 @@ const STATUS_STYLES = {
 
 const FIELD_TYPE_META = {
   name: { label: "Name", icon: "person" },
-  checkbox: { label: "Checkbox", icon: "check_box" },
+  toggle: { label: "Toggle Buttons", icon: "task_alt" },
   text: { label: "Text", icon: "short_text" },
   number: { label: "Number", icon: "pin" },
   select: { label: "Select", icon: "list" },
@@ -20,6 +20,18 @@ const FIELD_TYPE_META = {
 };
 
 const actorNameCache = new Map();
+
+function renderFieldTypeGlyph(typeMeta, size = 16) {
+  if (typeMeta.label === "Toggle Buttons") {
+    return (
+      <span className="inline-flex min-w-[1.9rem] items-center justify-center rounded-full border border-current/30 px-1.5 py-0.5 text-[10px] font-black leading-none tracking-[0.08em]">
+        OK
+      </span>
+    );
+  }
+
+  return <span className="material-symbols-outlined" style={{ fontSize: size }}>{typeMeta.icon}</span>;
+}
 
 function formatDateTime(value) {
   if (!value) return "—";
@@ -96,7 +108,7 @@ function FieldRow({ field, order, onPreviewImage }) {
             {orderLabel}
           </span>
           <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary">
-            <span className="material-symbols-outlined" style={{ fontSize: 18 }}>{typeMeta.icon}</span>
+            {renderFieldTypeGlyph(typeMeta, 18)}
           </span>
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2">
