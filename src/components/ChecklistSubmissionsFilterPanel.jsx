@@ -11,6 +11,7 @@ export default function ChecklistSubmissionsFilterPanel({
   fieldDefinitions,
   advancedRows,
   onDateChange,
+  onResetDateRange,
   onAddAdvancedRow,
   onUpdateAdvancedRow,
   onRemoveAdvancedRow,
@@ -45,7 +46,16 @@ export default function ChecklistSubmissionsFilterPanel({
         </label>
 
         <div className="flex flex-col gap-1.5 xl:col-span-2">
-          <span className="text-[10px] font-bold uppercase tracking-wider text-outline">Current Scope</span>
+          <div className="flex items-center justify-between gap-3">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-outline">Current Scope</span>
+            <button
+              type="button"
+              onClick={onResetDateRange}
+              className="text-[10px] font-bold uppercase tracking-wider text-primary transition hover:opacity-70"
+            >
+              Reset Default 30d
+            </button>
+          </div>
           <div className="flex flex-wrap gap-2">
             <span className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-outline-variant/20 bg-surface px-3 py-2 text-xs font-bold text-on-surface">
               <span className="material-symbols-outlined text-primary" style={{ fontSize: 14 }}>calendar_month</span>
@@ -61,7 +71,7 @@ export default function ChecklistSubmissionsFilterPanel({
             </span>
           </div>
           <p className="text-xs leading-5 text-outline">
-            Use the date range for the timeline window. Use advanced filters to narrow the timeline to specific factories, machines, or checklist forms.
+            Use the date range for the timeline window. Advanced filters now cover machine scope, checklist form, schedule, operator, NG state, submission activity, counts, dates, and keyword search.
           </p>
         </div>
       </div>

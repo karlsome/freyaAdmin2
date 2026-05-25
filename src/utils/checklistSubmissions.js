@@ -7,10 +7,21 @@ export const CHECKLIST_SUBMISSION_OPERATOR_LABELS = {
   range: "Range",
 };
 
+export const CHECKLIST_SUBMISSION_SCHEDULE_OPTIONS = ["Daily", "Weekly", "Monthly"];
+export const CHECKLIST_SUBMISSION_NG_OPTIONS = ["With NG", "Without NG"];
+export const CHECKLIST_SUBMISSION_ACTIVITY_OPTIONS = ["Has submissions", "No submissions"];
+
 export const CHECKLIST_SUBMISSION_ADVANCED_FILTER_FIELDS = [
+  { field: "keyword", label: "Keyword", group: "Search", type: "text", operators: ["contains"] },
   { field: "factory", label: "Factory", group: "Scope", type: "select", operators: ["equals", "contains", "in"] },
   { field: "machineLabel", label: "Machine", group: "Machine", type: "select", operators: ["equals", "contains", "in"] },
   { field: "formName", label: "Checklist Form", group: "Form", type: "select", operators: ["equals", "contains", "in"] },
+  { field: "schedule", label: "Schedule", group: "Form", type: "select", operators: ["equals", "in"], options: CHECKLIST_SUBMISSION_SCHEDULE_OPTIONS },
+  { field: "completedBy", label: "Submitted By", group: "Submission", type: "select", operators: ["equals", "contains", "in"] },
+  { field: "hasNGStatus", label: "NG Status", group: "Submission", type: "select", operators: ["equals", "in"], options: CHECKLIST_SUBMISSION_NG_OPTIONS },
+  { field: "submissionActivity", label: "Submission Activity", group: "Submission", type: "select", operators: ["equals", "in"], options: CHECKLIST_SUBMISSION_ACTIVITY_OPTIONS },
+  { field: "recordCount", label: "Submission Count", group: "Submission", type: "number", operators: ["equals", "greater", "less", "range"] },
+  { field: "lastCompletedAt", label: "Last Submission Date", group: "Submission", type: "date", operators: ["equals", "greater", "less", "range"] },
 ];
 
 let checklistSubmissionFilterRowCount = 0;
@@ -34,46 +45,57 @@ function normalizeComparableValue(value, type) {
   return asTrimmedString(value).toLowerCase();
 }
 
+function normalizeComparableValues(value, type) {
+  const rawValues = Array.isArray(value) ? value : [value];
+
+  return rawValues
+    .map((entry) => normalizeComparableValue(entry, type))
+    .filter((entry) => entry != null && entry !== "");
+}
+
 function matchesChecklistSubmissionClause(item, clause) {
   const itemValue = item?.[clause.field];
+  const candidates = normalizeComparableValues(itemValue, clause.type);
 
   if (clause.operator === "range") {
-    const candidate = normalizeComparableValue(itemValue, clause.type);
     const valueFrom = normalizeComparableValue(clause.valueFrom, clause.type);
     const valueTo = normalizeComparableValue(clause.valueTo, clause.type);
 
-    if (candidate == null || valueFrom == null || valueTo == null) return false;
+    if (!candidates.length || valueFrom == null || valueTo == null) return false;
 
     const minimum = Math.min(valueFrom, valueTo);
     const maximum = Math.max(valueFrom, valueTo);
-    return candidate >= minimum && candidate <= maximum;
+    return candidates.some((candidate) => candidate >= minimum && candidate <= maximum);
   }
 
   if (clause.operator === "in") {
-    const candidate = normalizeComparableValue(itemValue, clause.type);
-    if (candidate == null) return false;
+    if (!candidates.length) return false;
 
-    return clause.value.some((value) => normalizeComparableValue(value, clause.type) === candidate);
+    return candidates.some((candidate) => (
+      clause.value.some((value) => normalizeComparableValue(value, clause.type) === candidate)
+    ));
   }
 
   if (clause.operator === "contains") {
-    return normalizeComparableValue(itemValue, "text")
-      .includes(normalizeComparableValue(clause.value, "text"));
+    const query = normalizeComparableValue(clause.value, "text");
+    if (!query) return false;
+
+    return normalizeComparableValues(itemValue, "text")
+      .some((candidate) => candidate.includes(query));
   }
 
   if (clause.operator === "greater") {
-    const candidate = normalizeComparableValue(itemValue, clause.type);
     const comparison = normalizeComparableValue(clause.value, clause.type);
-    return candidate != null && comparison != null && candidate > comparison;
+    return comparison != null && candidates.some((candidate) => candidate > comparison);
   }
 
   if (clause.operator === "less") {
-    const candidate = normalizeComparableValue(itemValue, clause.type);
     const comparison = normalizeComparableValue(clause.value, clause.type);
-    return candidate != null && comparison != null && candidate < comparison;
+    return comparison != null && candidates.some((candidate) => candidate < comparison);
   }
 
-  return normalizeComparableValue(itemValue, clause.type) === normalizeComparableValue(clause.value, clause.type);
+  const comparison = normalizeComparableValue(clause.value, clause.type);
+  return comparison != null && candidates.some((candidate) => candidate === comparison);
 }
 
 export function createChecklistSubmissionFilterRow() {

@@ -172,6 +172,33 @@ function buildMachineFilterLabel(machineName, factory) {
   return `${normalizedFactory} / ${normalizedMachineName}`;
 }
 
+function isDateWithinRange(value, startDate, endDate) {
+  const parsed = toDayStart(value);
+  if (!parsed) return false;
+
+  const time = parsed.getTime();
+  return time >= startDate.getTime() && time <= endDate.getTime();
+}
+
+function formatScheduleLabel(value) {
+  const normalizedValue = String(value ?? "").trim().toLowerCase();
+
+  if (normalizedValue === "daily") return "Daily";
+  if (normalizedValue === "weekly") return "Weekly";
+  if (normalizedValue === "monthly") return "Monthly";
+  if (!normalizedValue) return "";
+
+  return normalizedValue.charAt(0).toUpperCase() + normalizedValue.slice(1);
+}
+
+function buildChecklistSubmissionKeyword(parts = []) {
+  return parts
+    .flatMap((part) => (Array.isArray(part) ? part : [part]))
+    .map((value) => String(value ?? "").trim())
+    .filter(Boolean)
+    .join(" ");
+}
+
 function getMachineScopedRecords(formId, machine, recordsByFormId) {
   return (recordsByFormId.get(formId) ?? []).filter((record) => {
     const recordMachineId = normalizeId(record.machineId);
@@ -856,6 +883,17 @@ const SLOT_STYLES = {
   none: "border-outline-variant/15 bg-surface-container-high/35 text-outline/55",
 };
 
+const RECORD_COMPATIBLE_FILTER_FIELDS = new Set([
+  "keyword",
+  "factory",
+  "machineLabel",
+  "formName",
+  "schedule",
+  "completedBy",
+  "hasNGStatus",
+  "lastCompletedAt",
+]);
+
 function SummaryCard({ detail, icon, iconClassName, label, value }) {
   return (
     <div className="glass-card rounded-2xl p-5">
@@ -971,6 +1009,14 @@ export default function ChecklistSubmissionsPage() {
     return map;
   }, [allEquipment]);
 
+  const templatesById = useMemo(() => {
+    const map = new Map();
+    for (const template of templates) {
+      map.set(normalizeId(template._id), template);
+    }
+    return map;
+  }, [templates]);
+
   const recordsByFormId = useMemo(() => {
     const map = new Map();
     for (const record of records) {
@@ -1011,6 +1057,7 @@ export default function ChecklistSubmissionsPage() {
           machineId,
           machineLabel: buildMachineFilterLabel(machineName, factory),
           machineName,
+          schedule: formatScheduleLabel(form?.schedule),
         });
       }
     }
@@ -1035,26 +1082,77 @@ export default function ChecklistSubmissionsPage() {
     return result;
   }, [machineAssignments]);
 
+  const assignmentFilterItems = useMemo(() => {
+    return machineAssignments.map((assignment) => {
+      const scopedRecords = getMachineScopedRecords(
+        assignment.formId,
+        { id: assignment.machineId, name: assignment.machineName },
+        recordsByFormId
+      )
+        .filter((record) => isDateWithinRange(record.completedAt, resolvedDateRange.startDate, resolvedDateRange.endDate))
+        .sort((left, right) => new Date(right.completedAt).getTime() - new Date(left.completedAt).getTime());
+
+      const completedBy = [...new Set(
+        scopedRecords
+          .map((record) => String(record.completedBy ?? "").trim())
+          .filter(Boolean)
+      )].sort((left, right) => left.localeCompare(right, "ja"));
+
+      const lastCompletedAt = scopedRecords[0]?.completedAt
+        ? formatDateInputValue(scopedRecords[0].completedAt)
+        : "";
+      const hasNGStatus = scopedRecords.length
+        ? scopedRecords.some((record) => record.hasNG) ? "With NG" : "Without NG"
+        : "";
+      const submissionActivity = scopedRecords.length ? "Has submissions" : "No submissions";
+
+      return {
+        ...assignment,
+        completedBy,
+        hasNGStatus,
+        keyword: buildChecklistSubmissionKeyword([
+          assignment.factory,
+          assignment.machineName,
+          assignment.machineLabel,
+          assignment.formName,
+          assignment.schedule,
+          completedBy,
+          hasNGStatus,
+          submissionActivity,
+        ]),
+        lastCompletedAt,
+        recordCount: scopedRecords.length,
+        submissionActivity,
+      };
+    });
+  }, [machineAssignments, recordsByFormId, resolvedDateRange.endDate, resolvedDateRange.startDate]);
+
   const advancedFieldDefinitions = useMemo(() => {
     const optionMap = {
-      factory: [...new Set(machineAssignments.map((assignment) => assignment.factory).filter(Boolean))]
+      factory: [...new Set(assignmentFilterItems.map((assignment) => assignment.factory).filter(Boolean))]
         .sort((left, right) => left.localeCompare(right, "ja")),
-      machineLabel: [...new Set(machineAssignments.map((assignment) => assignment.machineLabel).filter(Boolean))]
+      machineLabel: [...new Set(assignmentFilterItems.map((assignment) => assignment.machineLabel).filter(Boolean))]
         .sort((left, right) => left.localeCompare(right, "ja")),
       formName: [...new Set(templates.map((form) => String(form?.name ?? form?.formName ?? "").trim()).filter(Boolean))]
         .sort((left, right) => left.localeCompare(right, "ja")),
+      schedule: [...new Set(assignmentFilterItems.map((assignment) => assignment.schedule).filter(Boolean))]
+        .sort((left, right) => left.localeCompare(right, "ja")),
+      completedBy: [...new Set(assignmentFilterItems.flatMap((assignment) => assignment.completedBy ?? []).filter(Boolean))]
+        .sort((left, right) => left.localeCompare(right, "ja")),
+      hasNGStatus: [...new Set(assignmentFilterItems.map((assignment) => assignment.hasNGStatus).filter(Boolean))],
+      submissionActivity: [...new Set(assignmentFilterItems.map((assignment) => assignment.submissionActivity).filter(Boolean))],
     };
 
     return CHECKLIST_SUBMISSION_ADVANCED_FILTER_FIELDS.map((field) => ({
       ...field,
-      options: optionMap[field.field] ?? [],
+      options: optionMap[field.field] ?? field.options ?? [],
     }));
-  }, [machineAssignments, templates]);
+  }, [assignmentFilterItems, templates]);
 
   const filteredAssignments = useMemo(() => {
-    if (!appliedAdvancedFilters.length) return machineAssignments;
-    return machineAssignments.filter((assignment) => matchesChecklistSubmissionAdvancedFilters(assignment, appliedAdvancedFilters));
-  }, [appliedAdvancedFilters, machineAssignments]);
+    if (!appliedAdvancedFilters.length) return assignmentFilterItems;
+    return assignmentFilterItems.filter((assignment) => matchesChecklistSubmissionAdvancedFilters(assignment, appliedAdvancedFilters));
+  }, [appliedAdvancedFilters, assignmentFilterItems]);
 
   const filteredMachineIds = useMemo(
     () => new Set(filteredAssignments.map((assignment) => assignment.machineId)),
@@ -1076,6 +1174,10 @@ export default function ChecklistSubmissionsPage() {
   const filteredMachineNameSet = useMemo(
     () => new Set(filteredMachines.map((machine) => normalizeMachineName(machine.name)).filter(Boolean)),
     [filteredMachines]
+  );
+  const recordFilterClauses = useMemo(
+    () => appliedAdvancedFilters.filter((clause) => RECORD_COMPATIBLE_FILTER_FIELDS.has(clause.field)),
+    [appliedAdvancedFilters]
   );
 
   const monthGroups = useMemo(() => {
@@ -1101,23 +1203,57 @@ export default function ChecklistSubmissionsPage() {
   ), [visibleTemplates]);
 
   const visibleRecords = useMemo(() => {
-    const startTime = resolvedDateRange.startDate.getTime();
-    const endTime = resolvedDateRange.endDate.getTime();
-
     return records.filter((record) => {
-      const completedAt = toDayStart(record.completedAt);
-      if (!completedAt) return false;
-      if (completedAt.getTime() < startTime || completedAt.getTime() > endTime) return false;
+      if (!isDateWithinRange(record.completedAt, resolvedDateRange.startDate, resolvedDateRange.endDate)) return false;
 
       const formId = normalizeId(record.formId);
       if (!filteredFormIds.has(formId)) return false;
 
       const machineId = normalizeId(record.machineId);
-      if (machineId) return filteredMachineIds.has(machineId);
+      const matchesMachine = machineId
+        ? filteredMachineIds.has(machineId)
+        : filteredMachineNameSet.has(normalizeMachineName(record.machineName));
 
-      return filteredMachineNameSet.has(normalizeMachineName(record.machineName));
-    });
-  }, [filteredFormIds, filteredMachineIds, filteredMachineNameSet, records, resolvedDateRange.endDate, resolvedDateRange.startDate]);
+      if (!matchesMachine) return false;
+      if (!recordFilterClauses.length) return true;
+
+      const template = templatesById.get(formId);
+      const equipmentInfo = equipmentMap.get(machineId);
+      const recordFactory = String(record.factory ?? template?.工場 ?? equipmentInfo?.factory ?? "").trim();
+      const recordMachineName = String(record.machineName ?? equipmentInfo?.name ?? machineId ?? "").trim();
+      const completedBy = String(record.completedBy ?? "").trim();
+      const recordItem = {
+        keyword: buildChecklistSubmissionKeyword([
+          recordFactory,
+          recordMachineName,
+          buildMachineFilterLabel(recordMachineName, recordFactory),
+          record.formName ?? template?.name,
+          formatScheduleLabel(record.schedule ?? template?.schedule),
+          completedBy,
+          record.hasNG ? "With NG" : "Without NG",
+        ]),
+        factory: recordFactory,
+        machineLabel: buildMachineFilterLabel(recordMachineName, recordFactory),
+        formName: String(record.formName ?? template?.name ?? "").trim(),
+        schedule: formatScheduleLabel(record.schedule ?? template?.schedule),
+        completedBy,
+        hasNGStatus: record.hasNG ? "With NG" : "Without NG",
+        lastCompletedAt: formatDateInputValue(record.completedAt),
+      };
+
+      return matchesChecklistSubmissionAdvancedFilters(recordItem, recordFilterClauses);
+    }).sort((left, right) => new Date(right.completedAt).getTime() - new Date(left.completedAt).getTime());
+  }, [
+    equipmentMap,
+    filteredFormIds,
+    filteredMachineIds,
+    filteredMachineNameSet,
+    recordFilterClauses,
+    records,
+    resolvedDateRange.endDate,
+    resolvedDateRange.startDate,
+    templatesById,
+  ]);
 
   const ngCount = useMemo(
     () => visibleRecords.filter((record) => record.hasNG).length,
@@ -1141,6 +1277,10 @@ export default function ChecklistSubmissionsPage() {
 
   function handleDateChange(field, value) {
     setDateRange((current) => ({ ...current, [field]: value }));
+  }
+
+  function handleResetDateRange() {
+    setDateRange(createDefaultTimelineRange());
   }
 
   function handleUpdateAdvancedRow(rowId, patch) {
@@ -1214,6 +1354,7 @@ export default function ChecklistSubmissionsPage() {
           fieldDefinitions={advancedFieldDefinitions}
           advancedRows={advancedRows}
           onDateChange={handleDateChange}
+          onResetDateRange={handleResetDateRange}
           onAddAdvancedRow={() => setAdvancedRows((current) => [...current, createChecklistSubmissionFilterRow()])}
           onUpdateAdvancedRow={handleUpdateAdvancedRow}
           onRemoveAdvancedRow={handleRemoveAdvancedRow}
