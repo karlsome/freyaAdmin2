@@ -5,11 +5,13 @@ import {
   fetchSetsubiDBRecords,
   fetchCheckFormTemplates,
   fetchCheckFormReferenceImages,
+  fetchCheckFormReferenceImageSource,
   createCheckFormTemplate,
   updateCheckFormTemplate,
   deleteCheckFormTemplate,
   uploadCheckFormReferenceImage,
 } from "../services/api";
+import CheckFormImageOverlayEditorModal from "./CheckFormImageOverlayEditorModal";
 import { getAuthUser } from "../utils/masterDB";
 
 function toBase64(file) {
@@ -1021,7 +1023,8 @@ function OverlayDialog({
   maxWidthClass = "max-w-5xl",
   zIndexClass = "z-[90]",
   overlayClassName = "bg-black/45 backdrop-blur-sm",
-  panelClassName = "",
+  panelClassName = "border border-outline-variant/20 bg-surface text-on-surface",
+  dividerClassName = "border-outline-variant/20",
   titleClassName = "text-on-surface",
   descriptionClassName = "text-outline",
   closeButtonClassName = "bg-surface-container text-on-surface hover:bg-surface-container-high",
@@ -1033,9 +1036,9 @@ function OverlayDialog({
           role="dialog"
           aria-modal="true"
           onMouseDown={(event) => event.stopPropagation()}
-          className={`flex w-full max-h-[88vh] flex-col overflow-hidden rounded-[28px] border border-outline-variant/20 bg-surface shadow-[0_32px_100px_rgba(15,23,42,0.22)] ${maxWidthClass} ${panelClassName}`}
+          className={`flex w-full max-h-[88vh] flex-col overflow-hidden rounded-[28px] shadow-[0_32px_100px_rgba(15,23,42,0.22)] ${maxWidthClass} ${panelClassName}`}
         >
-          <div className="flex items-start justify-between gap-4 border-b border-outline-variant/20 px-5 py-4 sm:px-6">
+          <div className={`flex items-start justify-between gap-4 border-b px-5 py-4 sm:px-6 ${dividerClassName}`}>
             <div className="min-w-0 flex-1">
               {eyebrow ? <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary">{eyebrow}</p> : null}
               <h3 className={`mt-1 text-lg font-black ${titleClassName}`}>{title}</h3>
@@ -1052,7 +1055,7 @@ function OverlayDialog({
           </div>
 
           <div className="min-h-0 flex-1 overflow-y-auto">{children}</div>
-          {footer ? <div className="border-t border-outline-variant/20 px-5 py-4 sm:px-6">{footer}</div> : null}
+          {footer ? <div className={`border-t px-5 py-4 sm:px-6 ${dividerClassName}`}>{footer}</div> : null}
         </div>
       </div>
     </div>,
@@ -1195,7 +1198,7 @@ function ReferenceImageLibraryModal({
   );
 }
 
-function ReferenceImagePreviewModal({ image, selectedImageURL, onClose, onSelectImage }) {
+function ReferenceImagePreviewModal({ image, selectedImageURL, onClose, onSelectImage, onEditOverlay, editingOverlay }) {
   if (!image?.imageURL) return null;
 
   const normalizedImageURL = normalizeImageURL(image.imageURL);
@@ -1210,12 +1213,23 @@ function ReferenceImagePreviewModal({ image, selectedImageURL, onClose, onSelect
       maxWidthClass="max-w-5xl"
       zIndexClass="z-[100]"
       overlayClassName="bg-black/75 backdrop-blur-sm"
-      panelClassName="border-white/10 bg-slate-950/95 text-white"
+      panelClassName="border border-white/10 bg-slate-950/95 text-white"
+      dividerClassName="border-white/10"
       titleClassName="text-white"
       descriptionClassName="text-white/65"
       closeButtonClassName="bg-white/10 text-white hover:bg-white/15"
       footer={(
         <div className="flex flex-wrap items-center justify-end gap-3">
+          <button
+            type="button"
+            onClick={() => onEditOverlay?.(image)}
+            disabled={!onEditOverlay || editingOverlay}
+            className={`rounded-2xl border border-white/15 px-4 py-2 text-xs font-bold text-white transition ${
+              !onEditOverlay || editingOverlay ? "opacity-50" : "hover:bg-white/10"
+            }`}
+          >
+            {editingOverlay ? "Preparing editor..." : "Edit overlay"}
+          </button>
           <a
             href={normalizedImageURL}
             target="_blank"
@@ -1250,10 +1264,12 @@ function ReferenceImagePreviewModal({ image, selectedImageURL, onClose, onSelect
 }
 
 function FieldEditor({ field, onChange, username }) {
+  const [preparingEditor, setPreparingEditor] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState("");
   const [pickerOpen, setPickerOpen] = useState(false);
   const [previewImage, setPreviewImage] = useState(null);
+  const [editorSession, setEditorSession] = useState(null);
   const [availableImages, setAvailableImages] = useState([]);
   const [loadingLibrary, setLoadingLibrary] = useState(false);
   const [libraryError, setLibraryError] = useState("");
@@ -1299,8 +1315,56 @@ function FieldEditor({ field, onChange, username }) {
 
     setPreviewImage({
       imageURL,
+      storagePath: image?.storagePath || "",
       name: image?.name || field.label || "Reference image",
     });
+  }
+
+  async function openEditorForNewUpload(file) {
+    if (!file) return;
+
+    setPreparingEditor(true);
+    setUploadError("");
+
+    try {
+      const dataURL = await toBase64(file);
+      setPickerOpen(false);
+      setPreviewImage(null);
+      setEditorSession({
+        mode: "new",
+        dataURL,
+        name: file.name || field.label || "Reference image",
+      });
+    } catch (error) {
+      const raw = error?.message || "";
+      setUploadError(raw.startsWith("<") ? "Unable to open the editor - check server is running." : raw || "Unable to open the editor.");
+    } finally {
+      setPreparingEditor(false);
+    }
+  }
+
+  async function openEditorForExistingImage(image) {
+    const imageURL = normalizeImageURL(image?.imageURL);
+    if (!imageURL) return;
+
+    setPreparingEditor(true);
+    setUploadError("");
+
+    try {
+      const result = await fetchCheckFormReferenceImageSource(imageURL);
+      setPickerOpen(false);
+      setPreviewImage(null);
+      setEditorSession({
+        mode: "edit",
+        dataURL: result?.dataURL,
+        name: result?.fileName || image?.name || field.label || "Reference image",
+      });
+    } catch (error) {
+      const raw = error?.message || "";
+      setUploadError(raw.startsWith("<") ? "Unable to load the image into the editor - check server is running." : raw || "Unable to open the editor.");
+    } finally {
+      setPreparingEditor(false);
+    }
   }
 
   function handleSelectImage(imageURL) {
@@ -1316,13 +1380,17 @@ function FieldEditor({ field, onChange, username }) {
     if (!file) return;
 
     event.target.value = "";
+    await openEditorForNewUpload(file);
+  }
+
+  async function handleOverlaySave(flattenedBase64) {
     setUploading(true);
     setUploadError("");
+    setLibraryError("");
 
     try {
-      const base64 = await toBase64(file);
       const result = await uploadCheckFormReferenceImage({
-        base64,
+        base64: flattenedBase64,
         folderKey: imageFolderKey,
         username,
       });
@@ -1330,13 +1398,21 @@ function FieldEditor({ field, onChange, username }) {
 
       onChange({ imageURL: nextImageURL, imageFolderKey: result?.folderKey || imageFolderKey });
       setAvailableImages((current) => normalizeReferenceLibraryImages([
-        { imageURL: nextImageURL, name: "Latest upload" },
+        {
+          imageURL: nextImageURL,
+          name: result?.fileName || "Latest upload",
+          storagePath: result?.storagePath || "",
+        },
         ...current,
       ]));
+      setEditorSession(null);
       setPickerOpen(false);
+      setPreviewImage(null);
     } catch (error) {
       const raw = error?.message || "";
-      setUploadError(raw.startsWith("<") ? "Upload failed - check server is running." : raw || "Upload failed.");
+      const message = raw.startsWith("<") ? "Upload failed - check server is running." : raw || "Upload failed.";
+      setUploadError(message);
+      throw new Error(message);
     } finally {
       setUploading(false);
     }
@@ -1420,13 +1496,13 @@ function FieldEditor({ field, onChange, username }) {
             <button
               type="button"
               onClick={handleLibraryToggle}
-              disabled={uploading}
+              disabled={uploading || preparingEditor}
               className="inline-flex items-center gap-2 rounded-2xl border border-outline-variant/30 bg-surface-container px-4 py-2 text-xs font-bold text-on-surface transition hover:bg-surface-container-high disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {uploading || loadingLibrary ? (
+              {uploading || loadingLibrary || preparingEditor ? (
                 <>
                   <span className="material-symbols-outlined animate-spin" style={{ fontSize: 15 }}>progress_activity</span>
-                  {uploading ? "Uploading..." : "Loading images..."}
+                  {uploading ? "Uploading..." : preparingEditor ? "Preparing editor..." : "Loading images..."}
                 </>
               ) : (
                 <>
@@ -1526,7 +1602,7 @@ function FieldEditor({ field, onChange, username }) {
         images={availableImages}
         selectedImageURL={selectedImageURL}
         loading={loadingLibrary}
-        uploading={uploading}
+        uploading={uploading || preparingEditor}
         onUploadNew={() => fileInputRef.current?.click()}
         onPreviewImage={handleOpenPreview}
         onSelectImage={handleSelectImage}
@@ -1537,6 +1613,16 @@ function FieldEditor({ field, onChange, username }) {
         selectedImageURL={selectedImageURL}
         onClose={() => setPreviewImage(null)}
         onSelectImage={handleSelectImage}
+        onEditOverlay={openEditorForExistingImage}
+        editingOverlay={preparingEditor}
+      />
+
+      <CheckFormImageOverlayEditorModal
+        open={Boolean(editorSession)}
+        sourceImage={editorSession}
+        mode={editorSession?.mode || "new"}
+        onClose={() => setEditorSession(null)}
+        onSave={handleOverlaySave}
       />
     </>
   );

@@ -1152,6 +1152,15 @@ export async function fetchCheckFormReferenceImages(folderKey) {
   return _getJson(`api/check-forms/reference-images?folderKey=${encodeURIComponent(normalizedFolderKey)}`);
 }
 
+export async function fetchCheckFormReferenceImageSource(imageURL) {
+  const normalizedImageURL = String(imageURL || "").trim();
+  if (!normalizedImageURL) {
+    throw new Error("imageURL is required");
+  }
+
+  return _postJson("api/check-forms/reference-images/source", { imageURL: normalizedImageURL });
+}
+
 export async function uploadCheckFormReferenceImage({ base64, folderKey, username }) {
   return _postJson("api/check-forms/reference-images", { base64, folderKey, username });
 }
