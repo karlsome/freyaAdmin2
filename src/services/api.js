@@ -1146,6 +1146,16 @@ export async function fetchCheckFormTemplates(factory) {
   return query("Sasaki_Coating_MasterDB", "checkFormTemplatesDB", q, { sort: { createdAt: -1 } });
 }
 
+export async function fetchCheckFormReferenceImages(folderKey) {
+  const normalizedFolderKey = String(folderKey || "").trim();
+  if (!normalizedFolderKey) return { folderKey: "", images: [] };
+  return _getJson(`api/check-forms/reference-images?folderKey=${encodeURIComponent(normalizedFolderKey)}`);
+}
+
+export async function uploadCheckFormReferenceImage({ base64, folderKey, username }) {
+  return _postJson("api/check-forms/reference-images", { base64, folderKey, username });
+}
+
 export async function createCheckFormTemplate(draft, username) {
   return _postJson("submitToMasterDB", {
     data: {

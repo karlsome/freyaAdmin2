@@ -4,10 +4,11 @@ import {
   fetchFactoryDBRecords,
   fetchSetsubiDBRecords,
   fetchCheckFormTemplates,
+  fetchCheckFormReferenceImages,
   createCheckFormTemplate,
   updateCheckFormTemplate,
   deleteCheckFormTemplate,
-  uploadEquipmentEventImage,
+  uploadCheckFormReferenceImage,
 } from "../services/api";
 import { getAuthUser } from "../utils/masterDB";
 
@@ -52,11 +53,14 @@ const NAME_FIELD = {
 };
 
 function newField(type = "checkbox") {
+  const id = crypto.randomUUID();
+
   return {
-    id: crypto.randomUUID(),
+    id,
     label: "",
     description: "",
     imageURL: "",
+    imageFolderKey: buildFieldImageFolderKey({ id }),
     type,
     required: true,
     photoRequired: false,
@@ -70,10 +74,12 @@ function newField(type = "checkbox") {
 function normalizeField(field) {
   if (!field || typeof field !== "object") return field;
 
-  if (typeof field.imageURL !== "string") return field;
-
   const imageURL = normalizeImageURL(field.imageURL);
-  return imageURL === field.imageURL ? field : { ...field, imageURL };
+  return {
+    ...field,
+    imageURL,
+    imageFolderKey: buildFieldImageFolderKey({ ...field, imageURL }),
+  };
 }
 
 function ensureNameField(fields) {
@@ -146,8 +152,69 @@ function normalizeImageURL(value) {
   return query ? `${prefix}${objectPath}?${query}` : `${prefix}${objectPath}`;
 }
 
+function sanitizeFieldFolderSegment(value, fallback = "field") {
+  const sanitized = String(value || "").trim().replace(/[^a-zA-Z0-9\u3000-\u9fff_-]+/g, "_");
+  return sanitized || fallback;
+}
+
+function extractFieldImageFolderKeyFromURL(value) {
+  const normalizedURL = normalizeImageURL(value);
+  if (!normalizedURL) return "";
+
+  try {
+    const parsed = new URL(normalizedURL);
+    const objectPath = decodeRepeatedly(parsed.pathname.split("/o/")[1] || "");
+    const segments = objectPath.split("/").filter(Boolean);
+
+    if (segments[0] !== "equipmentEvents" || segments[1] !== "checkform" || !segments[2]) {
+      return "";
+    }
+
+    return sanitizeFieldFolderSegment(segments[2], "");
+  } catch {
+    return "";
+  }
+}
+
+function buildFieldImageFolderKey(field = {}) {
+  const explicitKey = sanitizeFieldFolderSegment(field.imageFolderKey, "");
+  if (explicitKey) return explicitKey;
+
+  const imageKey = extractFieldImageFolderKeyFromURL(field.imageURL);
+  if (imageKey) return imageKey;
+
+  const safeLabel = sanitizeFieldFolderSegment(field.label, "field");
+  const safeId = sanitizeFieldFolderSegment(field.id, "id");
+  const suffix = safeId.slice(-8) || safeId || "field";
+  return safeLabel === "field" ? `field_${suffix}` : `${safeLabel}_${suffix}`;
+}
+
+function normalizeReferenceLibraryImages(images = []) {
+  if (!Array.isArray(images)) return [];
+
+  const seen = new Set();
+
+  return images.flatMap((image) => {
+    const imageURL = normalizeImageURL(image?.imageURL);
+    if (!imageURL || seen.has(imageURL)) return [];
+    seen.add(imageURL);
+    return [{ ...image, imageURL }];
+  });
+}
+
 const inputClass =
   "w-full rounded-2xl border border-outline-variant/30 bg-surface px-3 py-3 text-sm text-on-surface outline-none transition focus:border-primary/40";
+
+function getBuilderViewportSize() {
+  if (typeof window === "undefined") {
+    return { width: 1280, height: 900 };
+  }
+
+  return {
+    width: Math.round(window.visualViewport?.width ?? window.innerWidth),
+    height: Math.round(window.visualViewport?.height ?? window.innerHeight),
+  };
+}
 
 function SummaryCard({ icon, label, value }) {
   return (
@@ -250,6 +317,7 @@ function FieldPreviewCard({ field }) {
 }
 
 export default function CheckFormBuilderModal({ initial, onClose, onSaved, presetSchedule = "" }) {
+  const [viewportSize, setViewportSize] = useState(() => getBuilderViewportSize());
   const [draft, setDraft] = useState(() =>
     initial
       ? {
@@ -275,6 +343,21 @@ export default function CheckFormBuilderModal({ initial, onClose, onSaved, prese
   const [error, setError] = useState(null);
   const [showSuccess, setShowSuccess] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return undefined;
+
+    const syncViewportSize = () => setViewportSize(getBuilderViewportSize());
+    syncViewportSize();
+
+    window.addEventListener("resize", syncViewportSize);
+    window.visualViewport?.addEventListener("resize", syncViewportSize);
+
+    return () => {
+      window.removeEventListener("resize", syncViewportSize);
+      window.visualViewport?.removeEventListener("resize", syncViewportSize);
+    };
+  }, []);
 
   useEffect(() => {
     fetchFactoryDBRecords().then((data) => setFactories(Array.isArray(data) ? data : [])).catch(() => {});
@@ -313,6 +396,8 @@ export default function CheckFormBuilderModal({ initial, onClose, onSaved, prese
   const expandedField = draft.fields.find((field) => field.id === expandedFieldId) ?? null;
   const editableFieldCount = draft.fields.filter((field) => !field.locked).length;
   const requiredFieldCount = draft.fields.filter((field) => field.required).length;
+  const modalVerticalInset = viewportSize.width >= 640 ? 32 : 24;
+  const modalHeight = Math.max(viewportSize.height - modalVerticalInset, 320);
 
   function setTop(key, value) {
     setDraft((current) => ({
@@ -426,8 +511,11 @@ export default function CheckFormBuilderModal({ initial, onClose, onSaved, prese
   }
 
   const modal = (
-    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/40 px-3 py-3 backdrop-blur-sm sm:px-4 sm:py-4">
-      <div className="relative flex w-full max-w-6xl flex-col overflow-hidden rounded-2xl border border-outline-variant/20 glass-card max-h-[calc(100dvh-1.5rem)] sm:max-h-[calc(100dvh-2rem)]">
+    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto overscroll-contain bg-black/40 px-3 py-3 backdrop-blur-sm sm:px-4 sm:py-4">
+      <div
+        className="relative flex min-h-0 w-full max-w-6xl flex-col overflow-hidden rounded-2xl border border-outline-variant/20 glass-card"
+        style={{ height: `${modalHeight}px`, maxHeight: `${modalHeight}px` }}
+      >
         <div className="flex items-start justify-between border-b border-outline-variant/20 px-4 py-4 sm:px-6 sm:py-5">
           <div className="min-w-0 flex-1 pr-4">
             <p className="text-xs font-bold uppercase tracking-[0.18em] text-outline">
@@ -448,7 +536,7 @@ export default function CheckFormBuilderModal({ initial, onClose, onSaved, prese
         </div>
 
         <div className="min-h-0 flex-1 overflow-y-auto xl:overflow-hidden">
-          <div className="grid min-h-full xl:h-full xl:min-h-0 xl:grid-cols-[minmax(0,1fr)_340px]">
+          <div className="grid h-full min-h-0 xl:grid-cols-[minmax(0,1fr)_340px]">
             <div className="px-4 py-5 sm:px-6 xl:min-h-0 xl:overflow-y-auto">
               <section className="rounded-2xl border border-primary/15 bg-primary/5 p-4">
                 <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
@@ -923,10 +1011,305 @@ function FieldCard({
   );
 }
 
+function OverlayDialog({
+  onClose,
+  title,
+  description,
+  eyebrow,
+  children,
+  footer,
+  maxWidthClass = "max-w-5xl",
+  zIndexClass = "z-[90]",
+  overlayClassName = "bg-black/45 backdrop-blur-sm",
+  panelClassName = "",
+  titleClassName = "text-on-surface",
+  descriptionClassName = "text-outline",
+  closeButtonClassName = "bg-surface-container text-on-surface hover:bg-surface-container-high",
+}) {
+  return createPortal(
+    <div className={`fixed inset-0 ${zIndexClass} ${overlayClassName}`} onMouseDown={onClose}>
+      <div className="flex min-h-full items-center justify-center p-4 sm:p-6">
+        <div
+          role="dialog"
+          aria-modal="true"
+          onMouseDown={(event) => event.stopPropagation()}
+          className={`flex w-full max-h-[88vh] flex-col overflow-hidden rounded-[28px] border border-outline-variant/20 bg-surface shadow-[0_32px_100px_rgba(15,23,42,0.22)] ${maxWidthClass} ${panelClassName}`}
+        >
+          <div className="flex items-start justify-between gap-4 border-b border-outline-variant/20 px-5 py-4 sm:px-6">
+            <div className="min-w-0 flex-1">
+              {eyebrow ? <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary">{eyebrow}</p> : null}
+              <h3 className={`mt-1 text-lg font-black ${titleClassName}`}>{title}</h3>
+              {description ? <p className={`mt-1 text-sm leading-6 ${descriptionClassName}`}>{description}</p> : null}
+            </div>
+
+            <button
+              type="button"
+              onClick={onClose}
+              className={`flex h-11 w-11 items-center justify-center rounded-2xl transition ${closeButtonClassName}`}
+            >
+              <span className="material-symbols-outlined">close</span>
+            </button>
+          </div>
+
+          <div className="min-h-0 flex-1 overflow-y-auto">{children}</div>
+          {footer ? <div className="border-t border-outline-variant/20 px-5 py-4 sm:px-6">{footer}</div> : null}
+        </div>
+      </div>
+    </div>,
+    document.body
+  );
+}
+
+function ReferenceImageLibraryModal({
+  open,
+  onClose,
+  fieldLabel,
+  folderKey,
+  images,
+  selectedImageURL,
+  loading,
+  uploading,
+  onUploadNew,
+  onPreviewImage,
+  onSelectImage,
+}) {
+  if (!open) return null;
+
+  return (
+    <OverlayDialog
+      onClose={onClose}
+      eyebrow="Reference Image"
+      title="Image Library"
+      description="Upload a new reference image or reuse one already saved in this checklist folder."
+      maxWidthClass="max-w-6xl"
+      footer={(
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-xs text-outline">{images.length} saved images available in this folder.</p>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-2xl border border-outline-variant/20 px-4 py-2 text-xs font-bold text-on-surface transition hover:bg-surface-container"
+          >
+            Done
+          </button>
+        </div>
+      )}
+    >
+      <div className="space-y-4 px-5 py-5 sm:px-6">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="rounded-full bg-primary/10 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.18em] text-primary">Folder</span>
+          <span className="rounded-full border border-outline-variant/20 bg-surface-container px-3 py-1 text-xs font-semibold text-on-surface">{folderKey || "Unassigned"}</span>
+        </div>
+
+        {!loading && images.length === 0 ? (
+          <div className="rounded-3xl border border-outline-variant/20 bg-surface-container/50 px-4 py-4 text-sm leading-6 text-outline">
+            No saved images were found in this checklist folder yet. Start by uploading a new one.
+          </div>
+        ) : null}
+
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <button
+            type="button"
+            onClick={onUploadNew}
+            disabled={uploading}
+            className="flex aspect-[4/3] flex-col items-center justify-center gap-3 rounded-3xl border border-dashed border-primary/35 bg-primary/5 px-5 text-center transition hover:border-primary/60 hover:bg-primary/10 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <span className={`material-symbols-outlined text-primary ${uploading ? "animate-spin" : ""}`} style={{ fontSize: 30 }}>
+              {uploading ? "progress_activity" : "add_photo_alternate"}
+            </span>
+            <div>
+              <p className="text-sm font-black text-primary">{uploading ? "Uploading..." : "Upload new image"}</p>
+              <p className="mt-1 text-xs leading-5 text-primary/80">This will be added to the same checklist folder for reuse later.</p>
+            </div>
+          </button>
+
+          {loading ? (
+            Array.from({ length: 3 }).map((_, index) => (
+              <div key={`image-loading-${index}`} className="overflow-hidden rounded-3xl border border-outline-variant/20 bg-surface">
+                <div className="aspect-[4/3] animate-pulse bg-surface-container" />
+                <div className="space-y-2 p-3">
+                  <div className="h-3 w-2/3 animate-pulse rounded-full bg-surface-container" />
+                  <div className="h-3 w-1/2 animate-pulse rounded-full bg-surface-container" />
+                </div>
+              </div>
+            ))
+          ) : null}
+
+          {!loading && images.map((image) => {
+            const isSelected = image.imageURL === selectedImageURL;
+
+            return (
+              <div
+                key={image.storagePath || image.imageURL}
+                className={`overflow-hidden rounded-3xl border bg-surface transition ${
+                  isSelected
+                    ? "border-primary shadow-[0_0_0_2px_rgba(67,97,238,0.14)]"
+                    : "border-outline-variant/20"
+                }`}
+              >
+                <button
+                  type="button"
+                  onClick={() => onPreviewImage(image)}
+                  className="group relative block aspect-[4/3] w-full overflow-hidden bg-surface-container"
+                >
+                  <img
+                    src={image.imageURL}
+                    alt={image.name || fieldLabel || "Reference image"}
+                    className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.02]"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/15 to-transparent" />
+                  <span className="absolute left-3 top-3 rounded-full bg-white/85 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.14em] text-slate-900">
+                    {isSelected ? "Current" : "Saved"}
+                  </span>
+                  <span className="absolute inset-x-0 bottom-0 px-3 py-3 text-left text-xs font-bold text-white">
+                    Preview image
+                  </span>
+                </button>
+
+                <div className="flex items-center justify-between gap-3 p-3">
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-xs font-bold text-on-surface">{image.name || fieldLabel || "Saved image"}</p>
+                    <p className="mt-1 text-[11px] leading-5 text-outline">
+                      {isSelected ? "Currently selected for this check." : "Preview it first or assign it directly."}
+                    </p>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => onSelectImage(image.imageURL)}
+                    className={`rounded-2xl px-3 py-2 text-xs font-bold transition ${
+                      isSelected
+                        ? "bg-primary/10 text-primary"
+                        : "bg-primary text-on-primary hover:opacity-90"
+                    }`}
+                  >
+                    {isSelected ? "Selected" : "Use image"}
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </OverlayDialog>
+  );
+}
+
+function ReferenceImagePreviewModal({ image, selectedImageURL, onClose, onSelectImage }) {
+  if (!image?.imageURL) return null;
+
+  const normalizedImageURL = normalizeImageURL(image.imageURL);
+  const isSelected = normalizedImageURL === selectedImageURL;
+
+  return (
+    <OverlayDialog
+      onClose={onClose}
+      eyebrow="Preview"
+      title={image.name || "Reference image"}
+      description="Inspect the image at full size before assigning it to the checklist field."
+      maxWidthClass="max-w-5xl"
+      zIndexClass="z-[100]"
+      overlayClassName="bg-black/75 backdrop-blur-sm"
+      panelClassName="border-white/10 bg-slate-950/95 text-white"
+      titleClassName="text-white"
+      descriptionClassName="text-white/65"
+      closeButtonClassName="bg-white/10 text-white hover:bg-white/15"
+      footer={(
+        <div className="flex flex-wrap items-center justify-end gap-3">
+          <a
+            href={normalizedImageURL}
+            target="_blank"
+            rel="noreferrer"
+            className="rounded-2xl border border-white/15 px-4 py-2 text-xs font-bold text-white transition hover:bg-white/10"
+          >
+            Open in new tab
+          </a>
+          <button
+            type="button"
+            onClick={() => {
+              onSelectImage(normalizedImageURL);
+              onClose();
+            }}
+            disabled={isSelected}
+            className={`rounded-2xl px-4 py-2 text-xs font-bold transition ${
+              isSelected
+                ? "bg-white/10 text-white/60"
+                : "bg-primary text-on-primary hover:opacity-90"
+            }`}
+          >
+            {isSelected ? "Already selected" : "Use this image"}
+          </button>
+        </div>
+      )}
+    >
+      <div className="flex min-h-[50vh] items-center justify-center bg-black/25 p-4 sm:p-6">
+        <img src={normalizedImageURL} alt={image.name || "Reference image"} className="max-h-[72vh] max-w-full rounded-[24px] object-contain shadow-2xl" />
+      </div>
+    </OverlayDialog>
+  );
+}
+
 function FieldEditor({ field, onChange, username }) {
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState("");
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [previewImage, setPreviewImage] = useState(null);
+  const [availableImages, setAvailableImages] = useState([]);
+  const [loadingLibrary, setLoadingLibrary] = useState(false);
+  const [libraryError, setLibraryError] = useState("");
   const fileInputRef = useRef(null);
+  const imageFolderKey = buildFieldImageFolderKey(field);
+  const selectedImageURL = normalizeImageURL(field.imageURL);
+
+  async function loadImageLibrary(folderKey = imageFolderKey) {
+    if (!folderKey) {
+      setAvailableImages([]);
+      return;
+    }
+
+    setLoadingLibrary(true);
+    setLibraryError("");
+
+    try {
+      const result = await fetchCheckFormReferenceImages(folderKey);
+      setAvailableImages(normalizeReferenceLibraryImages(result?.images));
+    } catch (error) {
+      const raw = error?.message || "";
+      setAvailableImages([]);
+      setLibraryError(raw.startsWith("<") ? "Unable to load saved images - check server is running." : raw || "Unable to load saved images.");
+    } finally {
+      setLoadingLibrary(false);
+    }
+  }
+
+  async function handleLibraryToggle() {
+    if (pickerOpen) {
+      setPickerOpen(false);
+      return;
+    }
+
+    setPickerOpen(true);
+    setUploadError("");
+    await loadImageLibrary();
+  }
+
+  function handleOpenPreview(image) {
+    const imageURL = normalizeImageURL(image?.imageURL);
+    if (!imageURL) return;
+
+    setPreviewImage({
+      imageURL,
+      name: image?.name || field.label || "Reference image",
+    });
+  }
+
+  function handleSelectImage(imageURL) {
+    onChange({ imageURL: normalizeImageURL(imageURL), imageFolderKey });
+    setUploadError("");
+    setLibraryError("");
+    setPreviewImage(null);
+    setPickerOpen(false);
+  }
 
   async function handleImageChange(event) {
     const file = event.target.files?.[0];
@@ -938,13 +1321,19 @@ function FieldEditor({ field, onChange, username }) {
 
     try {
       const base64 = await toBase64(file);
-      const result = await uploadEquipmentEventImage({
+      const result = await uploadCheckFormReferenceImage({
         base64,
-        factoryName: "checkform",
-        equipmentName: field.label || "field",
+        folderKey: imageFolderKey,
         username,
       });
-      onChange({ imageURL: normalizeImageURL(result?.imageURL) });
+      const nextImageURL = normalizeImageURL(result?.imageURL);
+
+      onChange({ imageURL: nextImageURL, imageFolderKey: result?.folderKey || imageFolderKey });
+      setAvailableImages((current) => normalizeReferenceLibraryImages([
+        { imageURL: nextImageURL, name: "Latest upload" },
+        ...current,
+      ]));
+      setPickerOpen(false);
     } catch (error) {
       const raw = error?.message || "";
       setUploadError(raw.startsWith("<") ? "Upload failed - check server is running." : raw || "Upload failed.");
@@ -954,7 +1343,8 @@ function FieldEditor({ field, onChange, username }) {
   }
 
   return (
-    <div className="space-y-4">
+    <>
+      <div className="space-y-4">
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_280px]">
         <div>
           <label className="mb-1.5 block text-xs font-bold uppercase tracking-[0.15em] text-outline">Title</label>
@@ -1021,38 +1411,66 @@ function FieldEditor({ field, onChange, username }) {
           <div className="flex items-center justify-between gap-3">
             <div>
               <p className="text-xs font-bold uppercase tracking-[0.15em] text-outline">Reference Image</p>
-              <p className="mt-1 text-xs leading-5 text-outline">Upload a visual example or target state for this check.</p>
+              <p className="mt-1 text-xs leading-5 text-outline">Choose a saved image for this checklist or upload a new one into its folder.</p>
             </div>
           </div>
 
           <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleImageChange} />
-          <button
-            type="button"
-            onClick={() => fileInputRef.current?.click()}
-            disabled={uploading}
-            className="mt-3 inline-flex items-center gap-2 rounded-2xl border border-outline-variant/30 bg-surface-container px-4 py-2 text-xs font-bold text-on-surface transition hover:bg-surface-container-high disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {uploading ? (
-              <>
-                <span className="material-symbols-outlined animate-spin" style={{ fontSize: 15 }}>progress_activity</span>
-                Uploading...
-              </>
-            ) : (
-              <>
-                <span className="material-symbols-outlined" style={{ fontSize: 15 }}>attach_file</span>
-                {field.imageURL ? "Replace image" : "Upload image"}
-              </>
-            )}
-          </button>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={handleLibraryToggle}
+              disabled={uploading}
+              className="inline-flex items-center gap-2 rounded-2xl border border-outline-variant/30 bg-surface-container px-4 py-2 text-xs font-bold text-on-surface transition hover:bg-surface-container-high disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {uploading || loadingLibrary ? (
+                <>
+                  <span className="material-symbols-outlined animate-spin" style={{ fontSize: 15 }}>progress_activity</span>
+                  {uploading ? "Uploading..." : "Loading images..."}
+                </>
+              ) : (
+                <>
+                  <span className="material-symbols-outlined" style={{ fontSize: 15 }}>photo_library</span>
+                  {field.imageURL ? "Replace image" : "Choose image"}
+                </>
+              )}
+            </button>
 
-          {uploadError ? <p className="mt-2 text-xs text-error">{uploadError}</p> : null}
-
-          {field.imageURL ? (
-            <div className="relative mt-4 overflow-hidden rounded-2xl border border-outline-variant/20 bg-surface-container">
-              <img src={normalizeImageURL(field.imageURL)} alt="reference" className="h-40 w-full object-cover" />
+            {selectedImageURL ? (
               <button
                 type="button"
-                onClick={() => onChange({ imageURL: "" })}
+                onClick={() => handleOpenPreview({ imageURL: selectedImageURL, name: field.label || "Reference image" })}
+                className="inline-flex items-center gap-2 rounded-2xl border border-outline-variant/20 px-4 py-2 text-xs font-bold text-on-surface transition hover:bg-surface-container"
+              >
+                <span className="material-symbols-outlined" style={{ fontSize: 15 }}>open_in_full</span>
+                Preview image
+              </button>
+            ) : null}
+          </div>
+
+          {uploadError ? <p className="mt-2 text-xs text-error">{uploadError}</p> : null}
+          {libraryError ? <p className="mt-2 text-xs text-error">{libraryError}</p> : null}
+
+          {selectedImageURL ? (
+            <div className="relative mt-4 overflow-hidden rounded-2xl border border-outline-variant/20 bg-surface-container">
+              <img src={selectedImageURL} alt="reference" className="h-40 w-full object-cover" />
+              <div className="absolute inset-x-0 bottom-0 flex items-center justify-between gap-2 bg-gradient-to-t from-black/75 via-black/15 to-transparent px-3 py-3">
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-white/80">Current image</p>
+                  <p className="mt-1 text-xs font-semibold text-white">Open a preview to inspect details.</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => handleOpenPreview({ imageURL: selectedImageURL, name: field.label || "Reference image" })}
+                  className="inline-flex items-center gap-1 rounded-full bg-white/15 px-3 py-1.5 text-[11px] font-bold text-white backdrop-blur-sm transition hover:bg-white/20"
+                >
+                  <span className="material-symbols-outlined" style={{ fontSize: 14 }}>open_in_full</span>
+                  Preview
+                </button>
+              </div>
+              <button
+                type="button"
+                onClick={() => onChange({ imageURL: "", imageFolderKey })}
                 className="absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-full bg-error text-white"
               >
                 <span className="material-symbols-outlined" style={{ fontSize: 14 }}>close</span>
@@ -1098,7 +1516,29 @@ function FieldEditor({ field, onChange, username }) {
       {field.type === "select" ? (
         <SelectOptionsEditor options={field.options ?? []} onChange={(options) => onChange({ options })} />
       ) : null}
-    </div>
+      </div>
+
+      <ReferenceImageLibraryModal
+        open={pickerOpen}
+        onClose={() => setPickerOpen(false)}
+        fieldLabel={field.label}
+        folderKey={imageFolderKey}
+        images={availableImages}
+        selectedImageURL={selectedImageURL}
+        loading={loadingLibrary}
+        uploading={uploading}
+        onUploadNew={() => fileInputRef.current?.click()}
+        onPreviewImage={handleOpenPreview}
+        onSelectImage={handleSelectImage}
+      />
+
+      <ReferenceImagePreviewModal
+        image={previewImage}
+        selectedImageURL={selectedImageURL}
+        onClose={() => setPreviewImage(null)}
+        onSelectImage={handleSelectImage}
+      />
+    </>
   );
 }
 
