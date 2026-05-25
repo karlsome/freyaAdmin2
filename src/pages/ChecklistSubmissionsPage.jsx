@@ -253,6 +253,7 @@ function getScheduleEntries(machine, date, forms, recordsByFormId, options = {})
     }
 
     const submissions = [];
+    const missedForms = [];
     let dueCount = 0;
     let missedCount = 0;
     let mutedCount = 0;
@@ -287,6 +288,7 @@ function getScheduleEntries(machine, date, forms, recordsByFormId, options = {})
         dueCount += 1;
       } else if (periodEnded(date, schedule)) {
         missedCount += 1;
+        missedForms.push(form);
       }
     }
 
@@ -336,6 +338,7 @@ function getScheduleEntries(machine, date, forms, recordsByFormId, options = {})
       hasForms: true,
       hasNG: submissions.some((entry) => entry.record.hasNG),
       mutedCount: focusRecordMode ? (mutedCount || openCount) : 0,
+      missedForms,
       openCount,
       primary: submissions[0] ?? null,
       submissions,
@@ -356,6 +359,47 @@ function getEntryCountLabel(entry) {
 function getPreferredEntrySelection(entry) {
   if (!entry) return null;
   return entry.submissions.find((submission) => submission.record?.hasNG) ?? entry.primary ?? null;
+}
+
+function buildEntrySelection(entry, machine, date) {
+  if (!entry) return null;
+
+  const preferredSelection = getPreferredEntrySelection(entry);
+  if (preferredSelection) {
+    return {
+      defaultTab: "submission",
+      form: preferredSelection.form,
+      record: preferredSelection.record,
+    };
+  }
+
+  if (entry.state === "missed" && Array.isArray(entry.missedForms) && entry.missedForms.length > 0) {
+    const primaryMissedForm = entry.missedForms[0];
+    const scheduledDate = formatDateInputValue(date);
+
+    return {
+      defaultTab: "submission",
+      form: primaryMissedForm,
+      record: {
+        answers: [],
+        completedAt: "",
+        completedBy: "",
+        factory: machine.factory,
+        formId: normalizeId(primaryMissedForm?._id),
+        formName: primaryMissedForm?.name ?? "Checklist Submission",
+        machineId: machine.id,
+        machineName: machine.name,
+        missedFormsCount: entry.missedForms.length,
+        periodEnd: scheduledDate,
+        periodStart: scheduledDate,
+        responses: {},
+        schedule: primaryMissedForm?.schedule ?? entry.schedule,
+        status: "missed",
+      },
+    };
+  }
+
+  return null;
 }
 
 function getFieldTicketHint(field) {
@@ -385,7 +429,7 @@ function ScheduleStackCell({ entries, onSelect }) {
   return (
     <div className="mx-auto flex w-14 flex-col gap-1">
       {entries.map((entry) => {
-        const interactive = Boolean(entry.primary);
+        const interactive = Boolean(entry.primary) || (entry.state === "missed" && entry.missedForms?.length > 0);
         const countLabel = getEntryCountLabel(entry);
         const content = (
           <div
@@ -410,7 +454,7 @@ function ScheduleStackCell({ entries, onSelect }) {
             type="button"
             onClick={() => onSelect(entry)}
             className="text-left transition hover:scale-[1.03]"
-            title={`${entry.title}. Click to open the submitted record.`}
+            title={`${entry.title}. Click to ${entry.state === "missed" ? "review the missed checklist" : "open the submitted record"}.`}
           >
             {content}
           </button>
@@ -500,6 +544,7 @@ function ImagePreviewLightbox({ image, onClose }) {
 }
 
 function RecordDetailModal({ defaultTab = "submission", form, onClose, record }) {
+  const isMissedRecord = record?.status === "missed";
   const normalizedDefaultTab = defaultTab === "tickets" ? "tickets" : "submission";
   const [activeTab, setActiveTab] = useState(normalizedDefaultTab);
   const [tickets, setTickets] = useState([]);
@@ -519,37 +564,51 @@ function RecordDetailModal({ defaultTab = "submission", form, onClose, record })
   const formName = form?.name ?? record?.formName ?? "Checklist Submission";
   const recordFactory = form?.工場 ?? record?.factory ?? "";
   const recordSchedule = record?.schedule ?? form?.schedule ?? "";
-  const modalTabItems = useMemo(() => ([
-    {
-      key: "submission",
-      label: (
-        <span className="inline-flex items-center gap-2">
-          <span className="material-symbols-outlined" style={{ fontSize: 14 }}>fact_check</span>
-          <span>Submitted</span>
-        </span>
-      ),
-    },
-    {
-      key: "tickets",
-      label: (
-        <span className="inline-flex items-center gap-2">
-          <span className="material-symbols-outlined" style={{ fontSize: 14 }}>confirmation_number</span>
-          <span>NG Reasons</span>
-          <span
-            className={`rounded-full px-2 py-0.5 text-[10px] font-black ${
-              activeTab === "tickets"
-                ? "bg-white/20 text-on-primary"
-                : tickets.length > 0
-                  ? "bg-error/10 text-error"
-                  : "bg-outline/10 text-outline"
-            }`}
-          >
-            {tickets.length}
+  const modalTabItems = useMemo(() => {
+    if (isMissedRecord) {
+      return [{
+        key: "submission",
+        label: (
+          <span className="inline-flex items-center gap-2">
+            <span className="material-symbols-outlined" style={{ fontSize: 14 }}>fact_check</span>
+            <span>Missed Checklist</span>
           </span>
-        </span>
-      ),
-    },
-  ]), [activeTab, tickets.length]);
+        ),
+      }];
+    }
+
+    return [
+      {
+        key: "submission",
+        label: (
+          <span className="inline-flex items-center gap-2">
+            <span className="material-symbols-outlined" style={{ fontSize: 14 }}>fact_check</span>
+            <span>Submitted</span>
+          </span>
+        ),
+      },
+      {
+        key: "tickets",
+        label: (
+          <span className="inline-flex items-center gap-2">
+            <span className="material-symbols-outlined" style={{ fontSize: 14 }}>confirmation_number</span>
+            <span>NG Reasons</span>
+            <span
+              className={`rounded-full px-2 py-0.5 text-[10px] font-black ${
+                activeTab === "tickets"
+                  ? "bg-white/20 text-on-primary"
+                  : tickets.length > 0
+                    ? "bg-error/10 text-error"
+                    : "bg-outline/10 text-outline"
+              }`}
+            >
+              {tickets.length}
+            </span>
+          </span>
+        ),
+      },
+    ];
+  }, [activeTab, isMissedRecord, tickets.length]);
 
   useEffect(() => {
     setActiveTab(normalizedDefaultTab);
@@ -690,52 +749,89 @@ function RecordDetailModal({ defaultTab = "submission", form, onClose, record })
         </div>
 
         <div className="flex flex-shrink-0 flex-wrap gap-4 border-b border-outline-variant/20 px-6 py-4">
-          <div className="flex items-center gap-2 text-sm">
-            <span className="material-symbols-outlined text-primary" style={{ fontSize: 18 }}>person</span>
-            <span className="font-semibold text-on-surface">{record?.completedBy ?? "—"}</span>
-          </div>
-          <div className="flex items-center gap-2 text-sm">
-            <span className="material-symbols-outlined text-primary" style={{ fontSize: 18 }}>schedule</span>
-            <span className="text-on-surface">
-              {record?.completedAt
-                ? new Date(record.completedAt).toLocaleString("ja-JP", { year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })
-                : "—"}
-            </span>
-          </div>
-          {record?.periodStart && (
-            <div className="flex items-center gap-2 text-sm">
-              <span className="material-symbols-outlined text-outline" style={{ fontSize: 18 }}>date_range</span>
-              <span className="text-outline">{record.periodStart}{record.periodEnd !== record.periodStart ? ` → ${record.periodEnd}` : ""}</span>
-            </div>
-          )}
-          {record?.machineName && (
-            <div className="flex items-center gap-2 text-sm">
-              <span className="material-symbols-outlined text-primary" style={{ fontSize: 18 }}>precision_manufacturing</span>
-              <span className="font-semibold text-on-surface">{record.machineName}</span>
-            </div>
-          )}
-          {record?.deviceId === "simulator" && (
-            <span className="rounded-full bg-outline/10 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-outline">Simulator</span>
+          {isMissedRecord ? (
+            <>
+              <span className="rounded-full bg-error/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.14em] text-error">
+                Missed
+              </span>
+              {record?.periodStart && (
+                <div className="flex items-center gap-2 text-sm">
+                  <span className="material-symbols-outlined text-outline" style={{ fontSize: 18 }}>date_range</span>
+                  <span className="text-on-surface">Scheduled {record.periodStart}{record.periodEnd !== record.periodStart ? ` → ${record.periodEnd}` : ""}</span>
+                </div>
+              )}
+              {record?.machineName && (
+                <div className="flex items-center gap-2 text-sm">
+                  <span className="material-symbols-outlined text-primary" style={{ fontSize: 18 }}>precision_manufacturing</span>
+                  <span className="font-semibold text-on-surface">{record.machineName}</span>
+                </div>
+              )}
+              {record?.missedFormsCount > 1 && (
+                <span className="rounded-full bg-surface-container px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.14em] text-outline">
+                  {record.missedFormsCount} missed checklists in this slot
+                </span>
+              )}
+            </>
+          ) : (
+            <>
+              <div className="flex items-center gap-2 text-sm">
+                <span className="material-symbols-outlined text-primary" style={{ fontSize: 18 }}>person</span>
+                <span className="font-semibold text-on-surface">{record?.completedBy ?? "—"}</span>
+              </div>
+              <div className="flex items-center gap-2 text-sm">
+                <span className="material-symbols-outlined text-primary" style={{ fontSize: 18 }}>schedule</span>
+                <span className="text-on-surface">
+                  {record?.completedAt
+                    ? new Date(record.completedAt).toLocaleString("ja-JP", { year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })
+                    : "—"}
+                </span>
+              </div>
+              {record?.periodStart && (
+                <div className="flex items-center gap-2 text-sm">
+                  <span className="material-symbols-outlined text-outline" style={{ fontSize: 18 }}>date_range</span>
+                  <span className="text-outline">{record.periodStart}{record.periodEnd !== record.periodStart ? ` → ${record.periodEnd}` : ""}</span>
+                </div>
+              )}
+              {record?.machineName && (
+                <div className="flex items-center gap-2 text-sm">
+                  <span className="material-symbols-outlined text-primary" style={{ fontSize: 18 }}>precision_manufacturing</span>
+                  <span className="font-semibold text-on-surface">{record.machineName}</span>
+                </div>
+              )}
+              {record?.deviceId === "simulator" && (
+                <span className="rounded-full bg-outline/10 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-outline">Simulator</span>
+              )}
+            </>
           )}
         </div>
 
-        <div className="border-b border-outline-variant/20 px-6 py-3">
-          <LiquidSegmentedControl
-            items={modalTabItems}
-            activeKey={activeTab}
-            onChange={setActiveTab}
-            className="w-fit"
-          />
-        </div>
+        {modalTabItems.length > 1 && (
+          <div className="border-b border-outline-variant/20 px-6 py-3">
+            <LiquidSegmentedControl
+              items={modalTabItems}
+              activeKey={activeTab}
+              onChange={setActiveTab}
+              className="w-fit"
+            />
+          </div>
+        )}
 
         <div className="flex-1 overflow-y-auto px-6 py-5">
           {activeTab === "submission" ? (
             <div className="flex flex-col gap-3">
+              {isMissedRecord && (
+                <div className="rounded-2xl border border-error/15 bg-error/5 px-4 py-3">
+                  <p className="text-sm font-semibold text-on-surface">This checklist was missed.</p>
+                  <p className="mt-1 text-sm leading-6 text-outline">
+                    Questions are shown for reference only. No answers were submitted for this scheduled check{record?.missedFormsCount > 1 ? "; this modal is showing the first missed checklist in the selected slot." : "."}
+                  </p>
+                </div>
+              )}
               {fields.length === 0 && <p className="text-sm text-outline">No fields recorded.</p>}
               {fields.map((field) => {
                 const fieldId = field.fieldId ?? field.id;
                 const photo = field.fieldPhotoURL || responses[`${fieldId}_photo`];
-                const value = formatValue(field);
+                const value = isMissedRecord ? "" : formatValue(field);
                 const fieldStatus = getFieldStatus(field);
                 const valueTone = getFieldValueTone(field, fieldStatus);
                 const answeredAtLabel = formatAnsweredAt(field.answeredAt);
@@ -776,8 +872,12 @@ function RecordDetailModal({ defaultTab = "submission", form, onClose, record })
                         )}
                       </div>
                       <div className="text-right">
-                        <p className={`text-sm font-bold ${valueTone}`}>{value}</p>
-                        {fieldStatus === "out-of-range" && (
+                        {isMissedRecord ? (
+                          <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-outline">Not submitted</p>
+                        ) : (
+                          <p className={`text-sm font-bold ${valueTone}`}>{value}</p>
+                        )}
+                        {!isMissedRecord && fieldStatus === "out-of-range" && (
                           <p className="mt-1 text-[10px] font-bold uppercase tracking-[0.12em] text-error">Out of range</p>
                         )}
                       </div>
@@ -1571,7 +1671,7 @@ export default function ChecklistSubmissionsPage() {
                         >
                           <ScheduleStackCell
                             entries={entries}
-                            onSelect={(entry) => setSelectedCell(getPreferredEntrySelection(entry))}
+                            onSelect={(entry) => setSelectedCell(buildEntrySelection(entry, machine, date))}
                           />
                         </td>
                       );
@@ -1588,7 +1688,7 @@ export default function ChecklistSubmissionsPage() {
         <RecordDetailModal
           record={selectedCell.record}
           form={selectedCell.form}
-          defaultTab="submission"
+          defaultTab={selectedCell.defaultTab ?? "submission"}
           onClose={() => setSelectedCell(null)}
         />,
         document.body
