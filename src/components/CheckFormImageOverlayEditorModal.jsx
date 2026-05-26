@@ -12,6 +12,11 @@ const TOOL_OPTIONS = [
 const DEFAULT_COLOR = "#ef4444";
 const DEFAULT_STROKE_WIDTH = 5;
 const MIN_DRAW_SIZE = 8;
+const REFERENCE_IMAGE_EXPORT_MAX_DIMENSION = 2200;
+const REFERENCE_IMAGE_EXPORT_MIN_DIMENSION = 1200;
+const REFERENCE_IMAGE_EXPORT_MAX_BYTES = 4.5 * 1024 * 1024;
+const REFERENCE_IMAGE_EXPORT_QUALITY_STEPS = [0.9, 0.84, 0.78, 0.72, 0.66, 0.6];
+const REFERENCE_IMAGE_EXPORT_DOWNSCALE_RATIO = 0.82;
 
 function getViewportSize() {
   if (typeof window === "undefined") {
@@ -48,6 +53,89 @@ function loadImageElement(source) {
     image.onerror = () => reject(new Error("Unable to load image."));
     image.src = source;
   });
+}
+
+function estimateDataURLBytes(dataURL) {
+  const base64Payload = String(dataURL || "").split(",")[1] || "";
+  return Math.ceil((base64Payload.length * 3) / 4);
+}
+
+async function exportOptimizedReferenceImage({
+  stage,
+  sourceWidth,
+  sourceHeight,
+}) {
+  const exportSize = fitImageSize(
+    sourceWidth,
+    sourceHeight,
+    REFERENCE_IMAGE_EXPORT_MAX_DIMENSION,
+    REFERENCE_IMAGE_EXPORT_MAX_DIMENSION
+  );
+  const stageWidth = Math.max(stage.width() || 0, 1);
+  const stageHeight = Math.max(stage.height() || 0, 1);
+  const exportPixelRatio = Math.max(
+    exportSize.width / stageWidth,
+    exportSize.height / stageHeight,
+    1
+  );
+  const stageDataURL = stage.toDataURL({
+    pixelRatio: exportPixelRatio,
+    mimeType: "image/png",
+  });
+  const flattenedImage = await loadImageElement(stageDataURL);
+
+  let targetWidth = exportSize.width;
+  let targetHeight = exportSize.height;
+
+  while (true) {
+    const canvas = document.createElement("canvas");
+    canvas.width = targetWidth;
+    canvas.height = targetHeight;
+
+    const context = canvas.getContext("2d");
+    if (!context) {
+      throw new Error("Canvas context is unavailable.");
+    }
+
+    context.fillStyle = "#ffffff";
+    context.fillRect(0, 0, targetWidth, targetHeight);
+    context.drawImage(flattenedImage, 0, 0, targetWidth, targetHeight);
+
+    let smallestCandidate = "";
+    let smallestBytes = Number.POSITIVE_INFINITY;
+
+    for (const quality of REFERENCE_IMAGE_EXPORT_QUALITY_STEPS) {
+      const candidate = canvas.toDataURL("image/jpeg", quality);
+      const candidateBytes = estimateDataURLBytes(candidate);
+
+      if (candidateBytes < smallestBytes) {
+        smallestBytes = candidateBytes;
+        smallestCandidate = candidate;
+      }
+
+      if (candidateBytes <= REFERENCE_IMAGE_EXPORT_MAX_BYTES) {
+        return candidate;
+      }
+    }
+
+    if (Math.max(targetWidth, targetHeight) <= REFERENCE_IMAGE_EXPORT_MIN_DIMENSION) {
+      return smallestCandidate;
+    }
+
+    const currentLargestDimension = Math.max(targetWidth, targetHeight);
+    const nextLargestDimension = Math.max(
+      Math.round(currentLargestDimension * REFERENCE_IMAGE_EXPORT_DOWNSCALE_RATIO),
+      REFERENCE_IMAGE_EXPORT_MIN_DIMENSION
+    );
+    const resizeRatio = nextLargestDimension / currentLargestDimension;
+
+    if (resizeRatio >= 1) {
+      return smallestCandidate;
+    }
+
+    targetWidth = Math.max(1, Math.round(targetWidth * resizeRatio));
+    targetHeight = Math.max(1, Math.round(targetHeight * resizeRatio));
+  }
 }
 
 function createRectFromDraft(draft) {
@@ -462,9 +550,10 @@ export default function CheckFormImageOverlayEditorModal({
     setSaveError("");
 
     try {
-      const dataURL = stageRef.current.toDataURL({
-        pixelRatio: stageSize.pixelRatio,
-        mimeType: "image/png",
+      const dataURL = await exportOptimizedReferenceImage({
+        stage: stageRef.current,
+        sourceWidth: imageElement.width,
+        sourceHeight: imageElement.height,
       });
 
       await onSave(dataURL);
