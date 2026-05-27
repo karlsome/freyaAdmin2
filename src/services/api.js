@@ -319,6 +319,140 @@ export async function fetchSensorData(factoryName, date) {
   }
 }
 
+function buildSensorFactoryNameExpression() {
+  return {
+    $trim: {
+      input: {
+        $toString: {
+          $ifNull: ["$工場", ""],
+        },
+      },
+    },
+  };
+}
+
+export async function fetchSensorFactoryOverview(date = new Date().toISOString().split("T")[0]) {
+  const cacheKey = `sensorFactoryOverview:${date}`;
+  const cached = _getCached(cacheKey, SENSOR_TTL);
+  if (cached) return cached;
+
+  return _withInFlight(cacheKey, async () => {
+    const result = await query(
+      "submittedDB",
+      "tempHumidityDB",
+      {},
+      {
+        aggregation: [
+          {
+            $addFields: {
+              factoryName: buildSensorFactoryNameExpression(),
+            },
+          },
+          {
+            $facet: {
+              allFactories: [
+                { $match: { factoryName: { $ne: "" } } },
+                { $group: { _id: "$factoryName" } },
+                { $sort: { _id: 1 } },
+              ],
+              todayByFactory: [
+                { $match: { Date: date, factoryName: { $ne: "" } } },
+                {
+                  $addFields: {
+                    temperatureValue: buildSensorReadingTemperatureExpression(),
+                    humidityValue: buildSensorReadingHumidityExpression(),
+                  },
+                },
+                {
+                  $addFields: {
+                    wbgtValue: buildSensorReadingWBGTExpression(),
+                  },
+                },
+                { $sort: { factoryName: 1, device: 1, Time: -1, _id: -1 } },
+                {
+                  $group: {
+                    _id: {
+                      device: "$device",
+                      factory: "$factoryName",
+                    },
+                    latest: { $first: "$$ROOT" },
+                  },
+                },
+                {
+                  $group: {
+                    _id: "$_id.factory",
+                    highestTemp: { $max: "$latest.temperatureValue" },
+                    averageHumidity: { $avg: "$latest.humidityValue" },
+                    sensorCount: { $sum: 1 },
+                    wbgt: { $max: "$latest.wbgtValue" },
+                  },
+                },
+                {
+                  $project: {
+                    _id: 0,
+                    averageHumidity: { $round: ["$averageHumidity", 1] },
+                    factory: "$_id",
+                    highestTemp: { $round: ["$highestTemp", 1] },
+                    sensorCount: 1,
+                    wbgt: { $round: ["$wbgt", 1] },
+                  },
+                },
+                { $sort: { factory: 1 } },
+              ],
+            },
+          },
+        ],
+      }
+    );
+
+    const payload = extractAggregationResultDocument(result);
+    const knownFactories = mapAggregationFacetValues(payload?.allFactories);
+    const activeFactories = Array.isArray(payload?.todayByFactory) ? payload.todayByFactory : [];
+    const activeMap = new Map(activeFactories.map((factory) => [String(factory?.factory ?? "").trim(), factory]));
+    const allFactoryNames = Array.from(new Set([
+      ...knownFactories,
+      ...activeFactories.map((factory) => String(factory?.factory ?? "").trim()).filter(Boolean),
+    ])).sort((left, right) => left.localeCompare(right, "ja"));
+
+    const overview = allFactoryNames.map((name) => {
+      const summary = activeMap.get(name);
+
+      if (!summary) {
+        return {
+          name,
+          sensor: {
+            averageHumidity: null,
+            hasData: false,
+            hasHistorical: true,
+            highestTemp: null,
+            sensorCount: 0,
+            wbgt: null,
+          },
+        };
+      }
+
+      const highestTemp = Number(summary.highestTemp);
+      const averageHumidity = Number(summary.averageHumidity);
+      const wbgt = Number(summary.wbgt);
+
+      return {
+        name,
+        sensor: {
+          averageHumidity: Number.isFinite(averageHumidity) ? averageHumidity : null,
+          hasData: true,
+          hasHistorical: true,
+          highestTemp: Number.isFinite(highestTemp) ? highestTemp : null,
+          sensorCount: Number(summary.sensorCount) || 0,
+          wbgt: Number.isFinite(wbgt) ? wbgt : null,
+        },
+      };
+    });
+
+    _setCache(cacheKey, overview);
+    return overview;
+  });
+}
+
 // ─── Historical sensor data (for SensorDetailPage) ───────────────────────────
 export async function fetchHistoricalSensorData(factoryName, startDate, endDate) {
   try {
