@@ -493,6 +493,51 @@ function getTicketKey(ticket) {
   return `${ticket.recordId}-${ticket.fieldId || ticket.fieldLabel || "ticket"}-${ticket.createdAt || ""}`;
 }
 
+function normalizeTicketStatusValue(status) {
+  return String(status ?? "open").trim().toLowerCase() || "open";
+}
+
+function formatTicketStatusLabel(status) {
+  const normalizedStatus = String(status ?? "").trim();
+  if (!normalizedStatus) return "Open";
+
+  return normalizedStatus
+    .split(/[-_\s]+/)
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+}
+
+function getTicketStatusMeta(status) {
+  const normalizedStatus = normalizeTicketStatusValue(status);
+
+  if (normalizedStatus === "resolved" || normalizedStatus === "closed") {
+    return {
+      label: formatTicketStatusLabel(status),
+      badgeClassName: "bg-emerald-500/12 text-emerald-700 dark:text-emerald-300",
+    };
+  }
+
+  if (normalizedStatus === "open") {
+    return {
+      label: formatTicketStatusLabel(status),
+      badgeClassName: "bg-error/10 text-error",
+    };
+  }
+
+  if (normalizedStatus === "in progress" || normalizedStatus === "reviewing" || normalizedStatus === "pending") {
+    return {
+      label: formatTicketStatusLabel(status),
+      badgeClassName: "bg-amber-500/12 text-amber-700 dark:text-amber-300",
+    };
+  }
+
+  return {
+    label: formatTicketStatusLabel(status),
+    badgeClassName: "bg-outline/10 text-outline",
+  };
+}
+
 function ScheduleStackCell({ entries, onSelect }) {
   return (
     <div className="mx-auto flex w-14 flex-col gap-1">
@@ -1224,6 +1269,7 @@ function RecordDetailModal({ defaultTab = "submission", form, initialTicketFocus
                 const expectedRange = formatTicketRange(ticket);
                 const ticketKey = getTicketKey(ticket);
                 const isHighlightedTicket = highlightedTicketKey === ticketKey;
+                const statusMeta = getTicketStatusMeta(ticket.status);
                 return (
                   <article
                     key={ticketKey}
@@ -1260,8 +1306,8 @@ function RecordDetailModal({ defaultTab = "submission", form, initialTicketFocus
                           )}
                         </div>
                       </div>
-                      <span className="rounded-full bg-error/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.12em] text-error">
-                        {ticket.status || "open"}
+                      <span className={`rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.12em] ${statusMeta.badgeClassName}`}>
+                        {statusMeta.label}
                       </span>
                     </div>
 

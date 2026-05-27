@@ -549,6 +549,13 @@ function getTicketStatusMeta(status) {
     };
   }
 
+  if (normalizedStatus === "open") {
+    return {
+      label: formatTicketStatusLabel(status),
+      badgeClassName: "bg-error/10 text-error",
+    };
+  }
+
   if (normalizedStatus === "in progress" || normalizedStatus === "reviewing" || normalizedStatus === "pending") {
     return {
       label: formatTicketStatusLabel(status),
@@ -946,11 +953,14 @@ function TicketDetailModal({ actionBusy = false, onClose, onCloseTicket = null, 
                             From {formatTicketStatusLabel(entry.fromStatus)}
                           </span>
                         ) : null}
-                        {entry.toStatus ? (
-                          <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2.5 py-1 font-semibold text-primary">
-                            To {formatTicketStatusLabel(entry.toStatus)}
-                          </span>
-                        ) : null}
+                        {entry.toStatus ? (() => {
+                          const toStatusMeta = getTicketStatusMeta(entry.toStatus);
+                          return (
+                            <span className={joinClasses("inline-flex items-center gap-1 rounded-full px-2.5 py-1 font-semibold", toStatusMeta.badgeClassName)}>
+                              To {toStatusMeta.label}
+                            </span>
+                          );
+                        })() : null}
                       </div>
                     )}
 
