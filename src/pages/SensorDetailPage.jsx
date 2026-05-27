@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import DataTable from "../components/DataTable";
-import { fetchHistoricalSensorData, fetchHistoricalSensorReadingsPage, calcWBGT } from "../services/api";
+import { fetchHistoricalSensorExport, fetchHistoricalSensorOverview, fetchHistoricalSensorReadingsPage, calcWBGT } from "../services/api";
 import { getTempStatus, getHumidityStatus, getWBGTStatus } from "../utils/statusHelpers";
 import SensorTrendChart from "../components/SensorTrendChart";
 
@@ -11,6 +11,17 @@ const EMPTY_SENSOR_PAGINATION = {
   totalPages: 0,
   totalItems: 0,
   itemsPerPage: SENSOR_READINGS_PAGE_SIZE_OPTIONS[0],
+};
+const EMPTY_SENSOR_OVERVIEW = {
+  avgHumid: null,
+  avgTemp: null,
+  devices: [],
+  heatAlerts: 0,
+  latestDevices: [],
+  minTemp: null,
+  peakTemp: null,
+  totalReadings: 0,
+  trends: [],
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -74,22 +85,23 @@ function Sparkline({ values, color = "#6366f1", height = 28 }) {
 }
 
 // ─── Per-device summary card ──────────────────────────────────────────────────
-function SensorCard({ deviceId, readings }) {
-  const temps  = readings.map((r) => parseTemp(r.Temperature)).filter((t) => !isNaN(t));
-  const humids = readings.map((r) => parseHumid(r.Humidity)).filter((h) => !isNaN(h));
-  const latest = readings[0];
-  const latestTemp  = temps[0]  ?? null;
-  const latestHumid = humids[0] ?? null;
+function SensorCard({ device }) {
+  const latest = device?.latest ?? {};
+  const latestTemp = parseTemp(latest.Temperature);
+  const latestHumid = parseHumid(latest.Humidity);
   const wbgt = calcWBGT(latestTemp, latestHumid);
   const tempStatus = getTempStatus(latestTemp);
+  const humidityStatus = getHumidityStatus(latestHumid);
   const wbgtStatus = getWBGTStatus(wbgt);
+  const tempTrend = Array.isArray(device?.tempTrend) ? device.tempTrend.filter((value) => value != null) : [];
+  const humidityTrend = Array.isArray(device?.humidityTrend) ? device.humidityTrend.filter((value) => value != null) : [];
 
   return (
     <div className="glass-card rounded-2xl p-5 flex flex-col gap-4 hover:scale-[1.02] transition-all duration-300">
       <div className="flex items-start justify-between">
         <div>
           <p className="text-xs font-bold text-outline uppercase tracking-widest">Device</p>
-          <p className="text-base font-black text-on-surface">{deviceId}</p>
+          <p className="text-base font-black text-on-surface">{device?.deviceId || "Unknown"}</p>
         </div>
         <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full ${wbgtStatus.bg} ${wbgtStatus.color}`}>
           WBGT {wbgt ?? "—"}°C
@@ -98,19 +110,19 @@ function SensorCard({ deviceId, readings }) {
 
       <div className="grid grid-cols-2 gap-3">
         <div className={`p-3 rounded-xl ${tempStatus.bg}`}>
-          <p className={`text-lg font-black ${tempStatus.color}`}>{latestTemp ?? "—"}°C</p>
+          <p className={`text-lg font-black ${tempStatus.color}`}>{Number.isNaN(latestTemp) ? "—" : `${latestTemp}°C`}</p>
           <p className="text-[10px] text-on-surface-variant">Temperature</p>
-          <Sparkline values={temps.slice(0, 20).reverse()} color={latestTemp >= 30 ? "#f87171" : "#6366f1"} />
+          <Sparkline values={tempTrend} color={latestTemp >= 30 ? "#f87171" : "#6366f1"} />
         </div>
-        <div className={`p-3 rounded-xl ${getHumidityStatus(latestHumid).bg}`}>
-          <p className={`text-lg font-black ${getHumidityStatus(latestHumid).color}`}>{latestHumid ?? "—"}%</p>
+        <div className={`p-3 rounded-xl ${humidityStatus.bg}`}>
+          <p className={`text-lg font-black ${humidityStatus.color}`}>{Number.isNaN(latestHumid) ? "—" : `${latestHumid}%`}</p>
           <p className="text-[10px] text-on-surface-variant">Humidity</p>
-          <Sparkline values={humids.slice(0, 20).reverse()} color="#22d3ee" />
+          <Sparkline values={humidityTrend} color="#22d3ee" />
         </div>
       </div>
 
       <div className="text-[10px] text-outline">
-        Last: {latest?.Date} {latest?.Time} · {readings.length} readings
+        Last: {latest?.Date || "—"} {latest?.Time || ""} · {Number(device?.readingCount) || 0} readings
       </div>
     </div>
   );
@@ -121,11 +133,12 @@ export default function SensorDetailPage() {
   const { factoryName: encoded } = useParams();
   const factoryName = decodeURIComponent(encoded);
   const navigate    = useNavigate();
-  const requestIdRef = useRef(0);
+  const overviewRequestIdRef = useRef(0);
+  const tableRequestIdRef = useRef(0);
 
   const [range, setRange]       = useState(dateRangeDefault);
   const [deviceFilter, setDeviceFilter] = useState("all");
-  const [rawData, setRawData]   = useState([]);
+  const [overview, setOverview] = useState(EMPTY_SENSOR_OVERVIEW);
   const [loading, setLoading]   = useState(true);
   const [tableLoading, setTableLoading] = useState(true);
   const [tableError, setTableError] = useState("");
@@ -134,12 +147,49 @@ export default function SensorDetailPage() {
   const [pageSize, setPageSize] = useState(SENSOR_READINGS_PAGE_SIZE_OPTIONS[0]);
   const [tableRows, setTableRows] = useState([]);
   const [pagination, setPagination] = useState(EMPTY_SENSOR_PAGINATION);
+  const [exporting, setExporting] = useState(false);
 
   useEffect(() => {
-    setLoading(true);
-    fetchHistoricalSensorData(factoryName, range.start, range.end)
-      .then((data) => { setRawData(data ?? []); setLoading(false); });
-  }, [factoryName, range.start, range.end]);
+    let cancelled = false;
+    const requestId = ++overviewRequestIdRef.current;
+
+    async function loadOverview() {
+      setLoading(true);
+
+      try {
+        const data = await fetchHistoricalSensorOverview({
+          factoryName,
+          startDate: range.start,
+          endDate: range.end,
+          deviceId: deviceFilter,
+        });
+
+        if (cancelled || requestId !== overviewRequestIdRef.current) return;
+        setOverview(data || EMPTY_SENSOR_OVERVIEW);
+      } catch {
+        if (cancelled || requestId !== overviewRequestIdRef.current) return;
+        setOverview(EMPTY_SENSOR_OVERVIEW);
+      } finally {
+        if (!cancelled && requestId === overviewRequestIdRef.current) {
+          setLoading(false);
+        }
+      }
+    }
+
+    void loadOverview();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [deviceFilter, factoryName, range.end, range.start]);
+
+  useEffect(() => {
+    if (deviceFilter === "all") return;
+    if (overview.devices.length === 0) return;
+    if (!overview.devices.includes(deviceFilter)) {
+      setDeviceFilter("all");
+    }
+  }, [deviceFilter, overview.devices]);
 
   useEffect(() => {
     setPage(1);
@@ -147,7 +197,7 @@ export default function SensorDetailPage() {
 
   useEffect(() => {
     let cancelled = false;
-    const requestId = ++requestIdRef.current;
+    const requestId = ++tableRequestIdRef.current;
 
     async function loadReadingsPage() {
       setTableLoading(true);
@@ -164,7 +214,7 @@ export default function SensorDetailPage() {
           limit: pageSize,
         });
 
-        if (cancelled || requestId !== requestIdRef.current) return;
+        if (cancelled || requestId !== tableRequestIdRef.current) return;
 
         setTableRows(Array.isArray(result?.data) ? result.data : []);
         setPagination(result?.pagination || { ...EMPTY_SENSOR_PAGINATION, itemsPerPage: pageSize });
@@ -173,12 +223,12 @@ export default function SensorDetailPage() {
           setPage(result.pagination.currentPage);
         }
       } catch (loadError) {
-        if (cancelled || requestId !== requestIdRef.current) return;
+        if (cancelled || requestId !== tableRequestIdRef.current) return;
         setTableRows([]);
         setPagination({ ...EMPTY_SENSOR_PAGINATION, itemsPerPage: pageSize });
         setTableError(loadError.message || "Failed to load sensor readings.");
       } finally {
-        if (!cancelled && requestId === requestIdRef.current) {
+        if (!cancelled && requestId === tableRequestIdRef.current) {
           setTableLoading(false);
         }
       }
@@ -191,46 +241,59 @@ export default function SensorDetailPage() {
     };
   }, [deviceFilter, factoryName, page, pageSize, range.end, range.start, sortKey]);
 
-  const devices = useMemo(() => {
-    const ids = [...new Set(rawData.map((r) => r.device).filter(Boolean))];
-    return ids.sort();
-  }, [rawData]);
+  const devices = overview.devices;
+  const sensorKPIs = useMemo(() => ({
+    avgTemp: overview.avgTemp,
+    peakTemp: overview.peakTemp,
+    minTemp: overview.minTemp,
+    avgHumid: overview.avgHumid,
+    heatAlerts: overview.heatAlerts,
+  }), [overview.avgHumid, overview.avgTemp, overview.heatAlerts, overview.minTemp, overview.peakTemp]);
 
-  const filtered = useMemo(() => {
-    let rows = deviceFilter === "all" ? rawData : rawData.filter((r) => r.device === deviceFilter);
-    if (sortKey === "date_desc") rows = [...rows].sort((a, b) => `${b.Date} ${b.Time}`.localeCompare(`${a.Date} ${a.Time}`));
-    if (sortKey === "date_asc")  rows = [...rows].sort((a, b) => `${a.Date} ${a.Time}`.localeCompare(`${b.Date} ${b.Time}`));
-    if (sortKey === "temp_desc") rows = [...rows].sort((a, b) => parseTemp(b.Temperature) - parseTemp(a.Temperature));
-    if (sortKey === "temp_asc")  rows = [...rows].sort((a, b) => parseTemp(a.Temperature) - parseTemp(b.Temperature));
-    return rows;
-  }, [rawData, deviceFilter, sortKey]);
+  const deviceCards = useMemo(() => {
+    const trendMap = new Map();
 
-  // Group by device for summary cards
-  const byDevice = useMemo(() => {
-    const map = new Map();
-    filtered.forEach((r) => {
-      const id = r.device ?? "unknown";
-      if (!map.has(id)) map.set(id, []);
-      map.get(id).push(r);
+    overview.trends.forEach((row) => {
+      const deviceId = String(row?.device ?? "").trim() || "unknown";
+      if (!trendMap.has(deviceId)) {
+        trendMap.set(deviceId, { humidityTrend: [], tempTrend: [] });
+      }
+
+      const entry = trendMap.get(deviceId);
+      const temperature = Number(row?.Temperature);
+      const humidity = Number(row?.Humidity);
+
+      entry.tempTrend.push(Number.isFinite(temperature) ? temperature : null);
+      entry.humidityTrend.push(Number.isFinite(humidity) ? humidity : null);
     });
-    return map;
-  }, [filtered]);
 
-  // KPI stats over the filtered range
-  const sensorKPIs = useMemo(() => {
-    const temps  = filtered.map((r) => parseTemp(r.Temperature)).filter((v) => !isNaN(v));
-    const humids = filtered.map((r) => parseHumid(r.Humidity)).filter((v) => !isNaN(v));
-    const round1 = (n) => Math.round(n * 10) / 10;
-    const avgTemp   = temps.length  ? round1(temps.reduce((s, v)  => s + v, 0)  / temps.length)  : null;
-    const peakTemp  = temps.length  ? Math.max(...temps)  : null;
-    const minTemp   = temps.length  ? Math.min(...temps)  : null;
-    const avgHumid  = humids.length ? round1(humids.reduce((s, v) => s + v, 0) / humids.length) : null;
-    const heatAlerts = filtered.filter((r) => {
-      const wbgt = calcWBGT(parseTemp(r.Temperature), parseHumid(r.Humidity));
-      return wbgt !== null && wbgt > 28;
-    }).length;
-    return { avgTemp, peakTemp, minTemp, avgHumid, heatAlerts };
-  }, [filtered]);
+    return overview.latestDevices.map((device) => {
+      const trendEntry = trendMap.get(device.deviceId) || { humidityTrend: [], tempTrend: [] };
+      return {
+        ...device,
+        humidityTrend: trendEntry.humidityTrend,
+        tempTrend: trendEntry.tempTrend,
+      };
+    });
+  }, [overview.latestDevices, overview.trends]);
+
+  async function handleExport() {
+    if (exporting || overview.totalReadings === 0) return;
+
+    setExporting(true);
+    try {
+      const exportRows = await fetchHistoricalSensorExport({
+        factoryName,
+        startDate: range.start,
+        endDate: range.end,
+        deviceId: deviceFilter,
+        sortKey,
+      });
+      exportCSV(exportRows, factoryName);
+    } finally {
+      setExporting(false);
+    }
+  }
 
   const tableColumns = useMemo(() => ([
     {
@@ -329,16 +392,16 @@ export default function SensorDetailPage() {
             {factoryName} — Sensor Data
           </h2>
           <p className="text-on-surface-variant text-sm mt-1">
-            {range.start} → {range.end} · {filtered.length.toLocaleString()} readings
+            {range.start} → {range.end} · {overview.totalReadings.toLocaleString()} readings
           </p>
         </div>
         <button
-          onClick={() => exportCSV(filtered, factoryName)}
-          disabled={!filtered.length}
+          onClick={handleExport}
+          disabled={overview.totalReadings === 0 || exporting}
           className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold bg-surface-container border border-outline-variant/20 text-on-surface-variant hover:bg-surface-container-high hover:text-primary transition-all disabled:opacity-40"
         >
           <span className="material-symbols-outlined" style={{ fontSize: 16 }}>download</span>
-          Export CSV
+          {exporting ? "Exporting..." : "Export CSV"}
         </button>
       </div>
 
@@ -468,26 +531,26 @@ export default function SensorDetailPage() {
                 <span className="material-symbols-outlined text-amber-500" style={{ fontSize: 14 }}>thermostat</span>
                 Temperature Trend (daily avg)
               </p>
-              <SensorTrendChart readings={filtered} type="temp" height={180} />
+              <SensorTrendChart readings={overview.trends} type="temp" height={180} />
             </div>
             <div className="glass-card rounded-2xl p-5">
               <p className="text-[10px] text-outline font-bold uppercase tracking-widest mb-3 flex items-center gap-2">
                 <span className="material-symbols-outlined text-cyan-400" style={{ fontSize: 14 }}>water_drop</span>
                 Humidity Trend (daily avg)
               </p>
-              <SensorTrendChart readings={filtered} type="humid" height={180} />
+              <SensorTrendChart readings={overview.trends} type="humid" height={180} />
             </div>
           </div>
 
           {/* ── Device summary cards ── */}
-          {byDevice.size > 0 && (
+          {deviceCards.length > 0 && (
             <div className="mb-8">
               <p className="text-[10px] text-outline font-bold uppercase tracking-widest mb-4">
-                {byDevice.size} Device{byDevice.size !== 1 ? "s" : ""} — Latest Readings
+                {deviceCards.length} Device{deviceCards.length !== 1 ? "s" : ""} — Latest Readings
               </p>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-                {Array.from(byDevice.entries()).map(([id, readings]) => (
-                  <SensorCard key={id} deviceId={id} readings={readings} />
+                {deviceCards.map((device) => (
+                  <SensorCard key={device.deviceId} device={device} />
                 ))}
               </div>
             </div>
