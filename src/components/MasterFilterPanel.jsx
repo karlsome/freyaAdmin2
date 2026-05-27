@@ -1,52 +1,6 @@
-import { useState } from "react";
 import AdvancedFilterSection from "./AdvancedFilterSection";
 import FormField from "./FormField";
-
-function TagInput({ tags, onAdd, onRemove, placeholder }) {
-  const [value, setValue] = useState("");
-
-  function commit() {
-    const next = value.trim();
-    if (!next) return;
-    onAdd(next);
-    setValue("");
-  }
-
-  return (
-    <div
-      className="ui-control-surface min-h-10 cursor-text rounded-xl border border-outline-variant/20 px-3 py-1.5 transition-colors focus-within:border-primary/40"
-      onClick={(event) => event.currentTarget.querySelector("input")?.focus()}
-    >
-      <div className="flex flex-wrap items-center gap-1">
-        {tags.map((tag) => (
-          <span key={tag} className="inline-flex items-center gap-1 rounded-full bg-amber-400 px-2 py-0.5 text-[11px] font-bold text-amber-950 shrink-0">
-            {tag}
-            <button type="button" onClick={() => onRemove(tag)} className="leading-none hover:text-error">×</button>
-          </span>
-        ))}
-
-        <input
-          type="text"
-          value={value}
-          placeholder={tags.length ? "" : placeholder}
-          className="min-w-24 flex-1 bg-transparent text-xs text-on-surface outline-none placeholder:text-outline"
-          onChange={(event) => setValue(event.target.value)}
-          onKeyDown={(event) => {
-            if (event.key === "Enter" || event.key === ",") {
-              event.preventDefault();
-              commit();
-            }
-
-            if (event.key === "Backspace" && !value && tags.length) {
-              onRemove(tags[tags.length - 1]);
-            }
-          }}
-          onBlur={commit}
-        />
-      </div>
-    </div>
-  );
-}
+import TagInput from "./TagInput";
 
 export default function MasterFilterPanel({
   simpleFilters,
@@ -151,6 +105,7 @@ export default function MasterFilterPanel({
             onAdd={onAddSearchTag}
             onRemove={onRemoveSearchTag}
             placeholder="Press Enter to add search terms"
+            tagClassName="bg-amber-400 text-amber-950"
           />
         </div>
       </div>

@@ -2,6 +2,7 @@ import { useState } from "react";
 import { fetchDistinctValues } from "../services/api";
 import AdvancedFilterSection from "./AdvancedFilterSection";
 import FormField from "./FormField";
+import TagInput from "./TagInput";
 
 const APPROVAL_STATUS_VALUES = [
   "pending",
@@ -52,41 +53,6 @@ function hasFilterValue(row) {
 
 let _rowId = 0;
 function newRow() { return { id: ++_rowId, field: "", operator: "equals", value: "" }; }
-
-// ─── TagInput ─────────────────────────────────────────────────────────────────
-function TagInput({ tags, onAdd, onRemove, placeholder }) {
-  const [val, setVal] = useState("");
-  const commit = () => {
-    const t = val.trim().toUpperCase();
-    if (t && !tags.includes(t)) onAdd(t);
-    setVal("");
-  };
-  return (
-    <div
-            className="ui-control-surface min-h-10 flex flex-wrap gap-1 items-center px-3 py-1.5 rounded-xl
-              border border-outline-variant/20 focus-within:border-primary/40 transition-colors cursor-text"
-      onClick={(e) => e.currentTarget.querySelector("input")?.focus()}
-    >
-      {tags.map((t) => (
-        <span key={t} className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary/15 text-primary text-[11px] font-bold">
-          {t}
-          <button type="button" onClick={() => onRemove(t)} className="hover:text-error leading-none">×</button>
-        </span>
-      ))}
-      <input
-        type="text"
-        value={val}
-        placeholder={tags.length ? "" : placeholder}
-        className="flex-1 min-w-24 bg-transparent outline-none text-xs text-on-surface placeholder:text-outline"
-        onChange={(e) => setVal(e.target.value)}
-        onKeyDown={(e) => {
-          if (e.key === "Enter" || e.key === ",") { e.preventDefault(); commit(); }
-        }}
-        onBlur={commit}
-      />
-    </div>
-  );
-}
 
 // ─── ProductionFilterBar ──────────────────────────────────────────────────────
 // Props:
@@ -168,6 +134,7 @@ export default function ProductionFilterBar({
             onAdd={(t) => setPartNumbers((v) => [...v, t])}
             onRemove={(t) => setPartNumbers((v) => v.filter((x) => x !== t))}
             placeholder="Enter to add…"
+            uppercase
           />
         </FormField>
         <FormField label="背番号 (Serial No.)">
@@ -176,6 +143,7 @@ export default function ProductionFilterBar({
             onAdd={(t) => setSerialNumbers((v) => [...v, t])}
             onRemove={(t) => setSerialNumbers((v) => v.filter((x) => x !== t))}
             placeholder="Enter to add…"
+            uppercase
           />
         </FormField>
 
