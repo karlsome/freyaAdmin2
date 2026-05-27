@@ -1,5 +1,6 @@
 import { useState } from "react";
 import AdvancedFilterSection from "./AdvancedFilterSection";
+import FormField from "./FormField";
 
 function TagInput({ tags, onAdd, onRemove, placeholder }) {
   const [value, setValue] = useState("");
@@ -75,8 +76,7 @@ export default function MasterFilterPanel({
   return (
     <div className="glass-card rounded-2xl p-5 mb-6">
       <div className="grid items-end gap-3 lg:grid-cols-2 xl:grid-cols-6">
-        <div className="xl:col-span-1 flex flex-col gap-1.5">
-          <label className="text-[10px] font-bold uppercase tracking-wider text-outline">Factory / 工場</label>
+        <FormField label="Factory / 工場" className="xl:col-span-1">
           <select
             value={simpleFilters.factory}
             onChange={(event) => onSimpleFilterChange("factory", event.target.value)}
@@ -87,10 +87,9 @@ export default function MasterFilterPanel({
               <option key={option} value={option}>{option}</option>
             ))}
           </select>
-        </div>
+        </FormField>
 
-        <div className="xl:col-span-1 flex flex-col gap-1.5">
-          <label className="text-[10px] font-bold uppercase tracking-wider text-outline">R/L</label>
+        <FormField label="R/L" className="xl:col-span-1">
           <select
             value={simpleFilters.rl}
             onChange={(event) => onSimpleFilterChange("rl", event.target.value)}
@@ -101,10 +100,9 @@ export default function MasterFilterPanel({
               <option key={option} value={option}>{option}</option>
             ))}
           </select>
-        </div>
+        </FormField>
 
-        <div className="xl:col-span-1 flex flex-col gap-1.5">
-          <label className="text-[10px] font-bold uppercase tracking-wider text-outline">Color</label>
+        <FormField label="Color" className="xl:col-span-1">
           <select
             value={simpleFilters.color}
             onChange={(event) => onSimpleFilterChange("color", event.target.value)}
@@ -115,10 +113,9 @@ export default function MasterFilterPanel({
               <option key={option} value={option}>{option}</option>
             ))}
           </select>
-        </div>
+        </FormField>
 
-        <div className="xl:col-span-1 flex flex-col gap-1.5">
-          <label className="text-[10px] font-bold uppercase tracking-wider text-outline">{processLabel}</label>
+        <FormField label={processLabel} className="xl:col-span-1">
           <select
             value={simpleFilters.process}
             onChange={(event) => onSimpleFilterChange("process", event.target.value)}
@@ -129,7 +126,7 @@ export default function MasterFilterPanel({
               <option key={option} value={option}>{option}</option>
             ))}
           </select>
-        </div>
+        </FormField>
 
         <div className="lg:col-span-2 xl:col-span-2 flex flex-col gap-1.5">
           <div className="flex items-center gap-2">

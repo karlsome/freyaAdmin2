@@ -1,4 +1,5 @@
 import AdvancedFilterSection from "./AdvancedFilterSection";
+import FormField from "./FormField";
 import { TICKET_SUBMISSION_OPERATOR_LABELS } from "../utils/ticketSubmissions";
 
 export default function TicketSubmissionsFilterPanel({
@@ -34,8 +35,7 @@ export default function TicketSubmissionsFilterPanel({
   return (
     <div className={`glass-card rounded-2xl p-5 ${className}`.trim()}>
       <div className="grid items-end gap-3 lg:grid-cols-2 xl:grid-cols-6">
-        <label className="flex flex-col gap-1.5 xl:col-span-2">
-          <span className="text-[10px] font-bold uppercase tracking-wider text-outline">Search Tickets</span>
+        <FormField label="Search Tickets" className="xl:col-span-2">
           <input
             type="search"
             value={keyword}
@@ -43,10 +43,9 @@ export default function TicketSubmissionsFilterPanel({
             placeholder="Search by factory, machine, form, field, reason, operator, record ID..."
             className="h-10 w-full rounded-xl border border-outline-variant/20 bg-white px-3 text-sm text-on-surface outline-none transition-colors focus:border-primary/40"
           />
-        </label>
+        </FormField>
 
-        <label className="flex flex-col gap-1.5">
-          <span className="text-[10px] font-bold uppercase tracking-wider text-outline">Factory</span>
+        <FormField label="Factory">
           <select
             value={factory}
             onChange={(event) => onFactoryChange(event.target.value)}
@@ -57,10 +56,9 @@ export default function TicketSubmissionsFilterPanel({
               <option key={option} value={option}>{option}</option>
             ))}
           </select>
-        </label>
+        </FormField>
 
-        <label className="flex flex-col gap-1.5">
-          <span className="text-[10px] font-bold uppercase tracking-wider text-outline">Ticket Status</span>
+        <FormField label="Ticket Status">
           <select
             value={status}
             onChange={(event) => onStatusChange(event.target.value)}
@@ -71,27 +69,25 @@ export default function TicketSubmissionsFilterPanel({
               <option key={option.value} value={option.value}>{option.label}</option>
             ))}
           </select>
-        </label>
+        </FormField>
 
-        <label className="flex flex-col gap-1.5">
-          <span className="text-[10px] font-bold uppercase tracking-wider text-outline">From Date</span>
+        <FormField label="From Date">
           <input
             type="date"
             value={startDate}
             onChange={(event) => onDateChange("startDate", event.target.value)}
             className="h-10 w-full rounded-xl border border-outline-variant/20 bg-white px-3 text-sm text-on-surface outline-none transition-colors focus:border-primary/40"
           />
-        </label>
+        </FormField>
 
-        <label className="flex flex-col gap-1.5">
-          <span className="text-[10px] font-bold uppercase tracking-wider text-outline">To Date</span>
+        <FormField label="To Date">
           <input
             type="date"
             value={endDate}
             onChange={(event) => onDateChange("endDate", event.target.value)}
             className="h-10 w-full rounded-xl border border-outline-variant/20 bg-white px-3 text-sm text-on-surface outline-none transition-colors focus:border-primary/40"
           />
-        </label>
+        </FormField>
       </div>
 
       <div className="mt-4 flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">

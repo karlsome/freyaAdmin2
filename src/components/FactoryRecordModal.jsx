@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import FormField from "./FormField";
 import ModalShell from "./ModalShell";
 
 function buildInitialDraft(record) {
@@ -62,65 +63,59 @@ export default function FactoryRecordModal({
             className="max-h-[82vh] overflow-y-auto px-6 py-6 scrollbar-hide"
           >
             <div className="grid gap-4 sm:grid-cols-2">
-              <label className="block">
-                <div className="mb-2 text-[11px] font-bold uppercase tracking-[0.18em] text-outline">工場</div>
+              <FormField label="工場" variant="form">
                 <input
                   type="text"
                   value={draft["工場"]}
                   onChange={(event) => setDraft((current) => ({ ...current, 工場: event.target.value }))}
                   className="w-full rounded-2xl border border-outline-variant/30 bg-surface px-3 py-3 text-sm text-on-surface outline-none transition focus:border-primary/40"
                 />
-              </label>
+              </FormField>
 
-              <label className="block">
-                <div className="mb-2 text-[11px] font-bold uppercase tracking-[0.18em] text-outline">Location</div>
+              <FormField label="Location" variant="form">
                 <input
                   type="text"
                   value={draft.location}
                   onChange={(event) => setDraft((current) => ({ ...current, location: event.target.value }))}
                   className="w-full rounded-2xl border border-outline-variant/30 bg-surface px-3 py-3 text-sm text-on-surface outline-none transition focus:border-primary/40"
                 />
-              </label>
+              </FormField>
 
-              <label className="block">
-                <div className="mb-2 text-[11px] font-bold uppercase tracking-[0.18em] text-outline">Geo Tag</div>
+              <FormField label="Geo Tag" variant="form">
                 <input
                   type="text"
                   value={draft.geotag}
                   onChange={(event) => setDraft((current) => ({ ...current, geotag: event.target.value }))}
                   className="w-full rounded-2xl border border-outline-variant/30 bg-surface px-3 py-3 text-sm text-on-surface outline-none transition focus:border-primary/40"
                 />
-              </label>
+              </FormField>
 
-              <label className="block">
-                <div className="mb-2 text-[11px] font-bold uppercase tracking-[0.18em] text-outline">Phone</div>
+              <FormField label="Phone" variant="form">
                 <input
                   type="text"
                   value={draft.phone}
                   onChange={(event) => setDraft((current) => ({ ...current, phone: event.target.value }))}
                   className="w-full rounded-2xl border border-outline-variant/30 bg-surface px-3 py-3 text-sm text-on-surface outline-none transition focus:border-primary/40"
                 />
-              </label>
+              </FormField>
 
-              <label className="block">
-                <div className="mb-2 text-[11px] font-bold uppercase tracking-[0.18em] text-outline">Latitude</div>
+              <FormField label="Latitude" variant="form">
                 <input
                   type="text"
                   value={draft.latitude}
                   onChange={(event) => setDraft((current) => ({ ...current, latitude: event.target.value }))}
                   className="w-full rounded-2xl border border-outline-variant/30 bg-surface px-3 py-3 text-sm text-on-surface outline-none transition focus:border-primary/40"
                 />
-              </label>
+              </FormField>
 
-              <label className="block">
-                <div className="mb-2 text-[11px] font-bold uppercase tracking-[0.18em] text-outline">Longitude</div>
+              <FormField label="Longitude" variant="form">
                 <input
                   type="text"
                   value={draft.longitude}
                   onChange={(event) => setDraft((current) => ({ ...current, longitude: event.target.value }))}
                   className="w-full rounded-2xl border border-outline-variant/30 bg-surface px-3 py-3 text-sm text-on-surface outline-none transition focus:border-primary/40"
                 />
-              </label>
+              </FormField>
             </div>
 
             <div className="mt-6 flex items-center justify-between gap-4 border-t border-outline-variant/20 pt-5">

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { fetchDistinctValues } from "../services/api";
 import AdvancedFilterSection from "./AdvancedFilterSection";
+import FormField from "./FormField";
 
 const APPROVAL_STATUS_VALUES = [
   "pending",
@@ -145,42 +146,38 @@ export default function ProductionFilterBar({
     <div className="glass-card rounded-2xl p-5 mb-6">
       {/* Core filters grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 mb-4">
-        <div className="flex flex-col gap-1.5">
-          <label className="text-[10px] font-bold uppercase tracking-wider text-outline">From</label>
+        <FormField label="From">
           <input
             type="date"
             value={dateFrom}
             onChange={(e) => setDateFrom(e.target.value)}
             className="h-10 px-3 rounded-xl bg-white border border-outline-variant/20 text-sm text-on-surface outline-none focus:border-primary/40 transition-colors"
           />
-        </div>
-        <div className="flex flex-col gap-1.5">
-          <label className="text-[10px] font-bold uppercase tracking-wider text-outline">To</label>
+        </FormField>
+        <FormField label="To">
           <input
             type="date"
             value={dateTo}
             onChange={(e) => setDateTo(e.target.value)}
             className="h-10 px-3 rounded-xl bg-white border border-outline-variant/20 text-sm text-on-surface outline-none focus:border-primary/40 transition-colors"
           />
-        </div>
-        <div className="flex flex-col gap-1.5">
-          <label className="text-[10px] font-bold uppercase tracking-wider text-outline">品番 (Part No.)</label>
+        </FormField>
+        <FormField label="品番 (Part No.)">
           <TagInput
             tags={partNumbers}
             onAdd={(t) => setPartNumbers((v) => [...v, t])}
             onRemove={(t) => setPartNumbers((v) => v.filter((x) => x !== t))}
             placeholder="Enter to add…"
           />
-        </div>
-        <div className="flex flex-col gap-1.5">
-          <label className="text-[10px] font-bold uppercase tracking-wider text-outline">背番号 (Serial No.)</label>
+        </FormField>
+        <FormField label="背番号 (Serial No.)">
           <TagInput
             tags={serialNumbers}
             onAdd={(t) => setSerialNumbers((v) => [...v, t])}
             onRemove={(t) => setSerialNumbers((v) => v.filter((x) => x !== t))}
             placeholder="Enter to add…"
           />
-        </div>
+        </FormField>
 
         {/* Extra filters injected by the parent page */}
         {children}

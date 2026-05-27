@@ -1,4 +1,5 @@
 import AdvancedFilterSection from "./AdvancedFilterSection";
+import FormField from "./FormField";
 import { CHECKLIST_SUBMISSION_OPERATOR_LABELS } from "../utils/checklistSubmissions";
 
 export default function ChecklistSubmissionsFilterPanel({
@@ -25,25 +26,23 @@ export default function ChecklistSubmissionsFilterPanel({
   return (
     <div className={`glass-card rounded-2xl p-5 ${className}`.trim()}>
       <div className="grid items-end gap-3 lg:grid-cols-2 xl:grid-cols-4">
-        <label className="flex flex-col gap-1.5">
-          <span className="text-[10px] font-bold uppercase tracking-wider text-outline">From Date</span>
+        <FormField label="From Date">
           <input
             type="date"
             value={startDate}
             onChange={(event) => onDateChange("startDate", event.target.value)}
             className="h-10 w-full rounded-xl border border-outline-variant/20 bg-white px-3 text-sm text-on-surface outline-none transition-colors focus:border-primary/40"
           />
-        </label>
+        </FormField>
 
-        <label className="flex flex-col gap-1.5">
-          <span className="text-[10px] font-bold uppercase tracking-wider text-outline">To Date</span>
+        <FormField label="To Date">
           <input
             type="date"
             value={endDate}
             onChange={(event) => onDateChange("endDate", event.target.value)}
             className="h-10 w-full rounded-xl border border-outline-variant/20 bg-white px-3 text-sm text-on-surface outline-none transition-colors focus:border-primary/40"
           />
-        </label>
+        </FormField>
 
         <div className="flex flex-col gap-1.5 xl:col-span-2">
           <div className="flex items-center justify-between gap-3">

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { uploadEquipmentEventImage } from "../services/api";
+import FormField from "./FormField";
 import ModalShell from "./ModalShell";
 
 function toBase64(file) {
@@ -116,10 +117,7 @@ export default function SetsubiRecordModal({
           >
             <div className="grid gap-4">
 
-              <label className="block">
-                <div className="mb-2 text-[11px] font-bold uppercase tracking-[0.18em] text-outline">
-                  設備名 <span className="text-error">*</span>
-                </div>
+              <FormField label="設備名" variant="form" required>
                 <input
                   type="text"
                   value={draft.name}
@@ -128,10 +126,9 @@ export default function SetsubiRecordModal({
                   className="w-full rounded-2xl border border-outline-variant/30 bg-surface px-3 py-3 text-sm text-on-surface outline-none transition focus:border-primary/40"
                   required
                 />
-              </label>
+              </FormField>
 
-              <label className="block">
-                <div className="mb-2 text-[11px] font-bold uppercase tracking-[0.18em] text-outline">工場 (Location)</div>
+              <FormField label="工場 (Location)" variant="form">
                 {factories.length > 0 ? (
                   <select
                     value={draft["工場"]}
@@ -152,20 +149,18 @@ export default function SetsubiRecordModal({
                     className="w-full rounded-2xl border border-outline-variant/30 bg-surface px-3 py-3 text-sm text-on-surface outline-none transition focus:border-primary/40"
                   />
                 )}
-              </label>
+              </FormField>
 
-              <label className="block">
-                <div className="mb-2 text-[11px] font-bold uppercase tracking-[0.18em] text-outline">Installation Date</div>
+              <FormField label="Installation Date" variant="form">
                 <input
                   type="date"
                   value={draft.installationDate}
                   onChange={(e) => set("installationDate", e.target.value)}
                   className="w-full rounded-2xl border border-outline-variant/30 bg-surface px-3 py-3 text-sm text-on-surface outline-none transition focus:border-primary/40"
                 />
-              </label>
+              </FormField>
 
-              <div>
-                <div className="mb-2 text-[11px] font-bold uppercase tracking-[0.18em] text-outline">Image</div>
+              <FormField label="Image" variant="form">
 
                 <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
 
@@ -201,7 +196,7 @@ export default function SetsubiRecordModal({
                     </button>
                   </div>
                 )}
-              </div>
+              </FormField>
             </div>
 
             <div className="mt-6 flex items-center justify-between gap-4 border-t border-outline-variant/20 pt-5">

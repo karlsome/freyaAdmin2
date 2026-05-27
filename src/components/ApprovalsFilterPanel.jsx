@@ -1,4 +1,5 @@
 import AdvancedFilterSection from "./AdvancedFilterSection";
+import FormField from "./FormField";
 import { APPROVAL_STATUS_OPTIONS } from "../utils/approvals";
 
 export default function ApprovalsFilterPanel({
@@ -22,8 +23,7 @@ export default function ApprovalsFilterPanel({
   return (
     <div className="glass-card mb-6 rounded-[28px] p-5">
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 xl:grid-cols-[180px_180px_180px_minmax(0,1fr)_auto]">
-        <div className="flex flex-col gap-1.5">
-          <label className="text-[10px] font-bold uppercase tracking-[0.18em] text-outline">Factory</label>
+        <FormField label="Factory">
           <select
             value={filters.factory}
             onChange={(event) => onFilterChange("factory", event.target.value)}
@@ -34,10 +34,9 @@ export default function ApprovalsFilterPanel({
               <option key={factory} value={factory}>{factory}</option>
             ))}
           </select>
-        </div>
+        </FormField>
 
-        <div className="flex flex-col gap-1.5">
-          <label className="text-[10px] font-bold uppercase tracking-[0.18em] text-outline">Status</label>
+        <FormField label="Status">
           <select
             value={filters.status}
             onChange={(event) => onFilterChange("status", event.target.value)}
@@ -47,20 +46,18 @@ export default function ApprovalsFilterPanel({
               <option key={option.value || "all"} value={option.value}>{option.label}</option>
             ))}
           </select>
-        </div>
+        </FormField>
 
-        <div className="flex flex-col gap-1.5">
-          <label className="text-[10px] font-bold uppercase tracking-[0.18em] text-outline">Date</label>
+        <FormField label="Date">
           <input
             type="date"
             value={filters.date}
             onChange={(event) => onFilterChange("date", event.target.value)}
             className="h-11 rounded-2xl border border-outline-variant/20 bg-white px-4 text-sm text-on-surface outline-none transition focus:border-primary/40 dark:bg-surface-container"
           />
-        </div>
+        </FormField>
 
-        <div className="flex flex-col gap-1.5">
-          <label className="text-[10px] font-bold uppercase tracking-[0.18em] text-outline">Search</label>
+        <FormField label="Search">
           <input
             type="text"
             value={searchInput}
@@ -68,7 +65,7 @@ export default function ApprovalsFilterPanel({
             placeholder="Part no., serial no., worker..."
             className="h-11 rounded-2xl border border-outline-variant/20 bg-white px-4 text-sm text-on-surface outline-none transition focus:border-primary/40 dark:bg-surface-container"
           />
-        </div>
+        </FormField>
 
         <div className="flex items-end">
           <button
