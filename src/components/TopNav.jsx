@@ -1,5 +1,6 @@
 import { getAuthDisplayName, getAuthInitials } from "../utils/auth";
 import { useLanguage } from "../contexts/LanguageContext";
+import IconButton from "./IconButton";
 
 export default function TopNav({ authUser, isDark, onLogout, onOpenMobileNav, onOpenSettings, onToggleTheme }) {
   const displayName = getAuthDisplayName(authUser);
@@ -13,14 +14,14 @@ export default function TopNav({ authUser, isDark, onLogout, onOpenMobileNav, on
 
       {/* Search */}
       <div className="flex min-w-0 flex-1 items-center gap-3 sm:gap-4 md:gap-6">
-        <button
-          type="button"
+        <IconButton
+          icon="menu"
           onClick={onOpenMobileNav}
-          className="flex h-10 w-10 items-center justify-center rounded-xl text-outline transition-all hover:bg-primary/10 hover:text-primary md:hidden"
-          aria-label="Open navigation menu"
-        >
-          <span className="material-symbols-outlined">menu</span>
-        </button>
+          variant="ghost"
+          rounded="xl"
+          ariaLabel="Open navigation menu"
+          className="md:hidden"
+        />
 
         <div className="relative w-full min-w-0 max-w-md">
           <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline" style={{ fontSize: 18 }}>

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useLanguage } from "../contexts/LanguageContext";
+import IconButton from "./IconButton";
 
 const navItems = [
   { icon: "dashboard",                labelKey: "dashboard",           page: "dashboard" },
@@ -102,14 +103,13 @@ export default function Sidebar({ activePage, badges = {}, mobileOpen = false, o
           </div>
 
           {isMobile && (
-            <button
-              type="button"
+            <IconButton
+              icon="close"
               onClick={() => onClose?.()}
-              className="flex h-10 w-10 items-center justify-center rounded-xl text-outline transition-all hover:bg-primary/10 hover:text-primary"
-              aria-label="Close navigation menu"
-            >
-              <span className="material-symbols-outlined">close</span>
-            </button>
+              variant="ghost"
+              rounded="xl"
+              ariaLabel="Close navigation menu"
+            />
           )}
         </div>
 

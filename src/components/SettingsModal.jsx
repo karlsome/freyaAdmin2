@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { useLanguage } from "../contexts/LanguageContext";
+import IconButton from "./IconButton";
 
 const LANGUAGES = [
   { code: "en", label: "English", nativeLabel: "English", flag: "🇺🇸" },
@@ -41,14 +42,15 @@ export default function SettingsModal({ isOpen, onClose }) {
               </div>
               <h2 className="text-lg font-bold text-on-surface">{t("settings")}</h2>
             </div>
-            <button
-              type="button"
+            <IconButton
+              icon="close"
               onClick={onClose}
-              className="flex h-9 w-9 items-center justify-center rounded-xl text-outline transition-all hover:bg-primary/10 hover:text-primary"
-              aria-label="Close"
-            >
-              <span className="material-symbols-outlined" style={{ fontSize: 20 }}>close</span>
-            </button>
+              variant="ghost"
+              size="md"
+              rounded="xl"
+              iconSize={20}
+              ariaLabel="Close"
+            />
           </div>
 
           {/* Language section */}

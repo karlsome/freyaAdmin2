@@ -1,6 +1,7 @@
 import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import AdvancedFilterSection from "../components/AdvancedFilterSection";
 import DataTable from "../components/DataTable";
+import IconButton from "../components/IconButton";
 import StatSummaryCard from "../components/StatSummaryCard";
 import InventoryAddModal from "../components/inventory/InventoryAddModal";
 import InventoryBatchResetModal from "../components/inventory/InventoryBatchResetModal";
@@ -431,17 +432,14 @@ export default function InventoryPage() {
       sortable: false,
       width: 90,
       renderCell: (row) => (
-        <button
-          type="button"
-          onClick={(event) => {
-            event.stopPropagation();
-            setTransactionState({ open: true, backNumber: row.背番号 });
-          }}
-          className="flex h-9 w-9 items-center justify-center rounded-2xl text-outline transition hover:bg-primary/10 hover:text-primary"
-          title="View transactions"
-        >
-          <span className="material-symbols-outlined" style={{ fontSize: 18 }}>history</span>
-        </button>
+        <IconButton
+          icon="history"
+          onClick={(event) => { event.stopPropagation(); setTransactionState({ open: true, backNumber: row.背番号 }); }}
+          variant="ghost"
+          size="md"
+          iconSize={18}
+          ariaLabel="View transactions"
+        />
       ),
       disableCellWrapper: true,
     },

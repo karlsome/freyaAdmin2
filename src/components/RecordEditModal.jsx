@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import IconButton from "./IconButton";
 import MasterProductPickerModal from "./MasterProductPickerModal";
 import FieldOptionPickerModal from "./FieldOptionPickerModal";
 
@@ -534,13 +535,12 @@ export default function RecordEditModal({
                   {subtitle ? <p className="mt-1 text-sm text-on-surface-variant">{subtitle}</p> : null}
                 </div>
 
-                <button
-                  type="button"
+                <IconButton
+                  icon="close"
                   onClick={() => onClose?.()}
-                  className="flex h-10 w-10 items-center justify-center rounded-2xl border border-outline-variant/20 bg-white/80 text-on-surface transition hover:bg-surface-container dark:bg-surface-container"
-                >
-                  <span className="material-symbols-outlined">close</span>
-                </button>
+                  variant="outlined"
+                  ariaLabel="Close dialog"
+                />
               </div>
             </div>
 

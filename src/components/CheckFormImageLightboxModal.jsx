@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { createPortal } from "react-dom";
+import IconButton from "./IconButton";
 
 export default function CheckFormImageLightboxModal({ image, onClose }) {
   const imageURL = String(image?.imageURL || "").trim();
@@ -38,13 +39,7 @@ export default function CheckFormImageLightboxModal({ image, onClose }) {
               <p className="mt-1 text-sm leading-6 text-white/65">Click outside or press Escape to close.</p>
             </div>
 
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white/10 text-white transition hover:bg-white/15"
-            >
-              <span className="material-symbols-outlined">close</span>
-            </button>
+            <IconButton icon="close" onClick={onClose} variant="light" size="xl" ariaLabel="Close dialog" />
           </div>
 
           <div className="flex min-h-[50vh] items-center justify-center bg-black/25 p-4 sm:p-6">

@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { formatMasterValue, getMasterPreviewFields, getMasterRecordIdentity, getMasterTabUI } from "../utils/masterDB";
+import IconButton from "./IconButton";
 import ModalShell from "./ModalShell";
 
 function PreviewCard({ record, changes, previewFields, tabKey }) {
@@ -229,8 +230,8 @@ export default function MasterBatchEditModal({
                         <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-outline">{field}</div>
                         <div className="mt-1 text-sm font-bold text-on-surface">{String(value)}</div>
                       </div>
-                      <button
-                        type="button"
+                      <IconButton
+                        icon="delete"
                         onClick={() => {
                           setChanges((current) => {
                             const next = { ...current };
@@ -238,10 +239,11 @@ export default function MasterBatchEditModal({
                             return next;
                           });
                         }}
-                        className="flex h-9 w-9 items-center justify-center rounded-2xl bg-error/10 text-error transition hover:bg-error/15"
-                      >
-                        <span className="material-symbols-outlined" style={{ fontSize: 18 }}>delete</span>
-                      </button>
+                        variant="danger"
+                        size="md"
+                        iconSize={18}
+                        ariaLabel="Remove change"
+                      />
                     </div>
                   )) : (
                     <div className="rounded-2xl border border-dashed border-outline-variant/30 px-4 py-6 text-sm text-on-surface-variant">

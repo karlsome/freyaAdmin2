@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import IconButton from "./IconButton";
 
 export default function ModalShell({
   open,
@@ -40,11 +41,6 @@ export default function ModalShell({
       ? "items-start pt-10 pb-4"
       : "items-center py-4";
 
-  const closeButtonClass =
-    closeButtonVariant === "outlined"
-      ? "flex h-10 w-10 items-center justify-center rounded-2xl border border-outline-variant/20 bg-white/80 text-on-surface transition hover:bg-surface-container dark:bg-surface-container"
-      : "flex h-10 w-10 items-center justify-center rounded-2xl bg-surface-container text-on-surface-variant transition hover:bg-surface-container-high hover:text-on-surface";
-
   return (
     <div
       className={`fixed inset-0 ${zIndex} bg-black/${overlayOpacity} backdrop-blur-sm`}
@@ -66,14 +62,12 @@ export default function ModalShell({
                   <p className="mt-1 text-sm text-on-surface-variant">{subtitle}</p>
                 ) : null}
               </div>
-              <button
-                type="button"
+              <IconButton
+                icon="close"
                 onClick={onClose}
-                className={closeButtonClass}
-                aria-label="Close dialog"
-              >
-                <span className="material-symbols-outlined">close</span>
-              </button>
+                variant={closeButtonVariant === "outlined" ? "outlined" : "default"}
+                ariaLabel="Close dialog"
+              />
             </div>
           </div>
 

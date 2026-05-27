@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { filterSelectableProducts } from "../utils/productPDFs";
+import IconButton from "./IconButton";
 
 export default function ProductPDFProductSelectorModal({
   open,
@@ -75,13 +76,7 @@ export default function ProductPDFProductSelectorModal({
                 </p>
               </div>
 
-              <button
-                type="button"
-                onClick={onClose}
-                className="flex h-9 w-9 items-center justify-center rounded-2xl bg-surface-container text-on-surface-variant transition hover:bg-surface-container-high hover:text-on-surface"
-              >
-                <span className="material-symbols-outlined">close</span>
-              </button>
+              <IconButton icon="close" onClick={onClose} size="md" ariaLabel="Close dialog" />
             </div>
 
             <input

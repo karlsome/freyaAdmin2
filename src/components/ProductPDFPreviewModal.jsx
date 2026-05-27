@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 import { formatProductPDFTitle } from "../utils/productPDFs";
+import IconButton from "./IconButton";
 
 export default function ProductPDFPreviewModal({ item, onClose }) {
   const modalRef = useRef(null);
@@ -38,13 +39,7 @@ export default function ProductPDFPreviewModal({ item, onClose }) {
               <p className="mt-1 text-sm text-white/60">{item.fileName || "Untitled file"}</p>
             </div>
 
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex h-10 w-10 items-center justify-center rounded-2xl bg-white/10 text-white transition hover:bg-white/15"
-            >
-              <span className="material-symbols-outlined">close</span>
-            </button>
+            <IconButton icon="close" onClick={onClose} variant="light" ariaLabel="Close dialog" />
           </div>
 
           <div className="flex min-h-[60vh] items-center justify-center bg-black/30 p-4">

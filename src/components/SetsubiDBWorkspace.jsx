@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import IconButton from "./IconButton";
 import {
   archiveEquipmentRecord,
   createMasterRecord,
@@ -251,10 +252,7 @@ function EventDetailModal({ event, canEdit, username, role, onClose, onSaved, on
                   <p className="mt-1 text-sm text-on-surface-variant">{event["工場"]}</p>
                 )}
               </div>
-              <button type="button" onClick={onClose}
-                className="flex h-11 w-11 items-center justify-center rounded-2xl bg-surface-container text-on-surface-variant transition hover:bg-surface-container-high hover:text-on-surface">
-                <span className="material-symbols-outlined">close</span>
-              </button>
+              <IconButton icon="close" onClick={onClose} size="xl" ariaLabel="Close dialog" />
             </div>
           </div>
 
@@ -1109,10 +1107,7 @@ export default function SetsubiDBWorkspace({ refreshToken, onFlash }) {
           <div className="flex min-h-full items-start justify-center px-4 pb-4 pt-10">
             <div className="w-full max-w-4xl">
               <div className="mb-3 flex justify-end">
-                <button type="button" onClick={() => setBinOpen(false)}
-                  className="flex h-10 w-10 items-center justify-center rounded-2xl bg-white/20 text-white transition hover:bg-white/30">
-                  <span className="material-symbols-outlined">close</span>
-                </button>
+                <IconButton icon="close" onClick={() => setBinOpen(false)} variant="light" ariaLabel="Close" className="bg-white/20 hover:bg-white/30" />
               </div>
               <EquipmentHistoryBinWorkspace
                 refreshToken={binRefresh}
