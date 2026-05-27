@@ -23,6 +23,7 @@ const navItems = [
   { icon: "checklist",                labelKey: "maintenance",         page: "maintenance",
     children: [
       { icon: "table_chart",          labelKey: "checklistSubmissions", page: "maintenance/submissions" },
+      { icon: "confirmation_number",  labelKey: "submittedTickets",     page: "maintenance/submissions/tickets" },
     ]
   },
   { icon: "lan",                      labelKey: "scna",                page: "scna" },

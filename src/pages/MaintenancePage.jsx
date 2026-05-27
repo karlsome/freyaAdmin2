@@ -245,6 +245,14 @@ export default function MaintenancePage() {
             </button>
             <button
               type="button"
+              onClick={() => navigate("/maintenance/submissions/tickets")}
+              className="inline-flex items-center gap-2 rounded-2xl border border-outline-variant/30 bg-surface-container px-4 py-3 text-sm font-bold text-on-surface transition hover:bg-surface-container-high"
+            >
+              <span className="material-symbols-outlined" style={{ fontSize: 18 }}>confirmation_number</span>
+              View Submitted Tickets
+            </button>
+            <button
+              type="button"
               onClick={() => openBuilder(null, selectedSchedule)}
               className="inline-flex items-center gap-2 rounded-2xl bg-primary px-4 py-3 text-sm font-bold text-on-primary transition hover:opacity-90"
             >

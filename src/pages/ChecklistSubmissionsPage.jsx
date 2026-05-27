@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import ChecklistSubmissionsFilterPanel from "../components/ChecklistSubmissionsFilterPanel";
 import LiquidSegmentedControl from "../components/LiquidSegmentedControl";
 import { useLanguage } from "../contexts/LanguageContext";
-import { fetchCheckFormTemplates, fetchCheckFormRecords, fetchNgReportsByRecordIds, fetchSetsubiDBRecords } from "../services/api";
+import { fetchCheckFormRecordById, fetchCheckFormTemplates, fetchCheckFormRecords, fetchNgReportsByRecordIds, fetchSetsubiDBRecords } from "../services/api";
 import {
   CHECKLIST_SUBMISSION_ADVANCED_FILTER_FIELDS,
   buildChecklistSubmissionAdvancedFilterClauses,
@@ -726,7 +727,7 @@ function SubmissionPickerModal({ dateLabel, factory, machineName, onClose, onSel
   );
 }
 
-function RecordDetailModal({ defaultTab = "submission", form, onBack = null, onClose, record }) {
+function RecordDetailModal({ defaultTab = "submission", form, initialTicketFocusHint = null, onBack = null, onClose, record }) {
   const isMissedRecord = record?.status === "missed";
   const isWaitingRecord = record?.status === "waiting";
   const isReferenceRecord = isMissedRecord || isWaitingRecord;
@@ -798,9 +799,9 @@ function RecordDetailModal({ defaultTab = "submission", form, onBack = null, onC
   useEffect(() => {
     setActiveTab(normalizedDefaultTab);
     setPreviewImage(null);
-    setTicketFocusHint(null);
+    setTicketFocusHint(initialTicketFocusHint ?? null);
     ticketRefs.current.clear();
-  }, [normalizedDefaultTab, recordId]);
+  }, [initialTicketFocusHint, normalizedDefaultTab, recordId]);
 
   useEffect(() => {
     let cancelled = false;
@@ -1315,6 +1316,8 @@ function ScheduleFilterButton({ active, icon, label, onClick }) {
 }
 
 export default function ChecklistSubmissionsPage() {
+  const location = useLocation();
+  const navigate = useNavigate();
   const { t } = useLanguage();
   const [templates, setTemplates] = useState([]);
   const [allEquipment, setAllEquipment] = useState([]);
@@ -1400,6 +1403,48 @@ export default function ChecklistSubmissionsPage() {
     }
     return map;
   }, [records]);
+
+  useEffect(() => {
+    const requestedRecord = location.state?.openChecklistSubmissionRecord;
+    const requestedRecordId = normalizeId(requestedRecord?.recordId);
+
+    if (loading || !requestedRecordId) return undefined;
+
+    let cancelled = false;
+
+    async function openRequestedRecord() {
+      let targetRecord = records.find((record) => normalizeId(record?._id ?? record?.recordId) === requestedRecordId) ?? null;
+
+      if (!targetRecord) {
+        try {
+          targetRecord = await fetchCheckFormRecordById(requestedRecordId);
+        } catch (error) {
+          console.error(error);
+        }
+      }
+
+      if (!cancelled && targetRecord) {
+        const targetFormId = normalizeId(targetRecord.formId ?? requestedRecord?.formId);
+        setSelectedCell({
+          mode: "detail",
+          defaultTab: requestedRecord?.defaultTab === "tickets" ? "tickets" : "submission",
+          form: templatesById.get(targetFormId) ?? null,
+          initialTicketFocusHint: requestedRecord?.ticketFocusHint ?? null,
+          record: targetRecord,
+        });
+      }
+
+      if (!cancelled) {
+        navigate(location.pathname, { replace: true, state: null });
+      }
+    }
+
+    void openRequestedRecord();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [loading, location.pathname, location.state, navigate, records, templatesById]);
 
   const machineAssignments = useMemo(() => {
     const seen = new Set();
@@ -1928,6 +1973,7 @@ export default function ChecklistSubmissionsPage() {
           record={selectedCell.record}
           form={selectedCell.form}
           defaultTab={selectedCell.defaultTab ?? "submission"}
+          initialTicketFocusHint={selectedCell.initialTicketFocusHint ?? null}
           onBack={selectedCell.returnToPicker ? () => setSelectedCell(selectedCell.returnToPicker) : null}
           onClose={() => setSelectedCell(null)}
         />,

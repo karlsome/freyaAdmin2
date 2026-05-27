@@ -1301,6 +1301,349 @@ function normalizeNgReport(report) {
   };
 }
 
+function escapeRegexPattern(value) {
+  return String(value ?? "").replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function toDayStartTimestamp(value) {
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return null;
+  parsed.setHours(0, 0, 0, 0);
+  return parsed.getTime();
+}
+
+function toDayEndTimestamp(value) {
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return null;
+  parsed.setHours(23, 59, 59, 999);
+  return parsed.getTime();
+}
+
+function buildMongoIfNullChain(paths = [], fallback = "") {
+  return [...paths].reverse().reduce((accumulator, path) => ({ $ifNull: [path, accumulator] }), fallback);
+}
+
+function buildMongoStringExpression(paths = [], fallback = "") {
+  return { $toString: buildMongoIfNullChain(paths, fallback) };
+}
+
+function buildNgTicketNormalizationStages() {
+  const createdAtSource = buildMongoIfNullChain(["$createdAt", "$completedAt", "$updatedAt", "$submittedAt"], null);
+  const imageArraySource = {
+    $cond: [
+      { $isArray: "$imageURLs" },
+      "$imageURLs",
+      [],
+    ],
+  };
+
+  return [
+    {
+      $project: {
+        _id: 1,
+        recordId: buildMongoStringExpression(["$checkFormRecordId", "$recordId", "$checkFormRecordID"]),
+        fieldId: buildMongoStringExpression(["$fieldId", "$checkItemId"]),
+        formId: buildMongoStringExpression(["$formId", "$templateId"]),
+        formName: buildMongoStringExpression(["$formName", "$templateName"]),
+        machineId: buildMongoStringExpression(["$machineId", "$equipmentId"]),
+        machineName: buildMongoStringExpression(["$machineName", "$加工設備"]),
+        completedBy: buildMongoStringExpression(["$completedBy", "$workerName"]),
+        factory: buildMongoStringExpression(["$factory", "$工場"]),
+        createdAtRaw: createdAtSource,
+        fieldLabel: buildMongoStringExpression(["$fieldLabel"]),
+        fieldType: buildMongoStringExpression(["$fieldType"]),
+        answerValue: buildMongoStringExpression(["$answerValue", "$value"]),
+        reason: buildMongoStringExpression(["$reason"]),
+        imageURLs: imageArraySource,
+        min: { $ifNull: ["$min", null] },
+        max: { $ifNull: ["$max", null] },
+        unit: buildMongoStringExpression(["$unit"]),
+        status: { $toLower: buildMongoStringExpression(["$status"], "open") },
+      },
+    },
+    {
+      $addFields: {
+        createdAt: {
+          $convert: {
+            input: "$createdAtRaw",
+            to: "date",
+            onError: null,
+            onNull: null,
+          },
+        },
+        imageCount: { $size: "$imageURLs" },
+      },
+    },
+    {
+      $addFields: {
+        createdAtMs: {
+          $cond: [
+            { $ne: ["$createdAt", null] },
+            { $toLong: "$createdAt" },
+            null,
+          ],
+        },
+        hasImages: { $gt: ["$imageCount", 0] },
+      },
+    },
+    {
+      $project: {
+        createdAtRaw: 0,
+      },
+    },
+  ];
+}
+
+function buildNgTicketTextCondition(field, value, { exact = false } = {}) {
+  const normalizedValue = String(value ?? "").trim();
+  if (!normalizedValue) return null;
+
+  const escapedValue = escapeRegexPattern(normalizedValue);
+  return {
+    [field]: {
+      $regex: exact ? `^${escapedValue}$` : escapedValue,
+      $options: "i",
+    },
+  };
+}
+
+function buildNgTicketKeywordCondition(value) {
+  const normalizedValue = String(value ?? "").trim();
+  if (!normalizedValue) return null;
+
+  const searchableFields = [
+    "recordId",
+    "factory",
+    "machineName",
+    "formName",
+    "fieldLabel",
+    "fieldType",
+    "answerValue",
+    "reason",
+    "completedBy",
+    "status",
+  ];
+
+  return {
+    $or: searchableFields
+      .map((field) => buildNgTicketTextCondition(field, normalizedValue))
+      .filter(Boolean),
+  };
+}
+
+function normalizeNgTicketImageFilterValue(value) {
+  const normalizedValue = String(value ?? "").trim().toLowerCase();
+  if (normalizedValue === "with images") return true;
+  if (normalizedValue === "without images") return false;
+  return null;
+}
+
+function buildNgTicketAdvancedClauseCondition(clause) {
+  if (!clause?.field || !clause?.operator) return null;
+
+  if (clause.field === "keyword") {
+    return buildNgTicketKeywordCondition(clause.value);
+  }
+
+  if (clause.field === "hasImages") {
+    if (clause.operator === "in") {
+      const values = (Array.isArray(clause.value) ? clause.value : [clause.value])
+        .map(normalizeNgTicketImageFilterValue)
+        .filter((value) => value !== null);
+
+      if (!values.length) return null;
+      return { hasImages: { $in: [...new Set(values)] } };
+    }
+
+    const imageFilterValue = normalizeNgTicketImageFilterValue(clause.value);
+    return imageFilterValue === null ? null : { hasImages: imageFilterValue };
+  }
+
+  if (clause.type === "date") {
+    const fieldName = "createdAtMs";
+
+    if (clause.operator === "range") {
+      const startValue = toDayStartTimestamp(clause.valueFrom);
+      const endValue = toDayEndTimestamp(clause.valueTo);
+      if (startValue == null || endValue == null) return null;
+
+      return {
+        [fieldName]: {
+          $gte: Math.min(startValue, endValue),
+          $lte: Math.max(startValue, endValue),
+        },
+      };
+    }
+
+    const equalsStart = toDayStartTimestamp(clause.value);
+    const equalsEnd = toDayEndTimestamp(clause.value);
+    if (equalsStart == null || equalsEnd == null) return null;
+
+    if (clause.operator === "equals") {
+      return {
+        [fieldName]: {
+          $gte: equalsStart,
+          $lte: equalsEnd,
+        },
+      };
+    }
+
+    if (clause.operator === "greater") {
+      return { [fieldName]: { $gt: equalsEnd } };
+    }
+
+    if (clause.operator === "less") {
+      return { [fieldName]: { $lt: equalsStart } };
+    }
+
+    return null;
+  }
+
+  if (clause.type === "number") {
+    const fieldName = clause.field;
+
+    if (clause.operator === "range") {
+      const valueFrom = Number(clause.valueFrom);
+      const valueTo = Number(clause.valueTo);
+      if (!Number.isFinite(valueFrom) || !Number.isFinite(valueTo)) return null;
+
+      return {
+        [fieldName]: {
+          $gte: Math.min(valueFrom, valueTo),
+          $lte: Math.max(valueFrom, valueTo),
+        },
+      };
+    }
+
+    const comparisonValue = Number(clause.value);
+    if (!Number.isFinite(comparisonValue)) return null;
+
+    if (clause.operator === "equals") return { [fieldName]: comparisonValue };
+    if (clause.operator === "greater") return { [fieldName]: { $gt: comparisonValue } };
+    if (clause.operator === "less") return { [fieldName]: { $lt: comparisonValue } };
+    if (clause.operator === "in") {
+      const values = (Array.isArray(clause.value) ? clause.value : [clause.value])
+        .map((value) => Number(value))
+        .filter((value) => Number.isFinite(value));
+
+      return values.length ? { [fieldName]: { $in: values } } : null;
+    }
+
+    return null;
+  }
+
+  const fieldName = clause.field;
+
+  if (clause.operator === "contains") {
+    return buildNgTicketTextCondition(fieldName, clause.value);
+  }
+
+  if (clause.operator === "equals") {
+    return buildNgTicketTextCondition(fieldName, clause.value, { exact: true });
+  }
+
+  if (clause.operator === "in") {
+    const values = (Array.isArray(clause.value) ? clause.value : [clause.value])
+      .map((value) => String(value ?? "").trim())
+      .filter(Boolean);
+
+    if (!values.length) return null;
+
+    return {
+      $or: values.map((value) => buildNgTicketTextCondition(fieldName, value, { exact: true })),
+    };
+  }
+
+  return null;
+}
+
+function buildNgTicketMatchConditions({ advancedFilters = [], filters = {} } = {}) {
+  const conditions = [];
+  const keywordCondition = buildNgTicketKeywordCondition(filters.keyword);
+  if (keywordCondition) conditions.push(keywordCondition);
+
+  const factoryCondition = buildNgTicketTextCondition("factory", filters.factory, { exact: true });
+  if (factoryCondition) conditions.push(factoryCondition);
+
+  const statusCondition = buildNgTicketTextCondition("status", filters.status, { exact: true });
+  if (statusCondition) conditions.push(statusCondition);
+
+  const startTimestamp = toDayStartTimestamp(filters.startDate);
+  const endTimestamp = toDayEndTimestamp(filters.endDate);
+  if (startTimestamp != null || endTimestamp != null) {
+    const timestampFilter = {};
+    if (startTimestamp != null) timestampFilter.$gte = startTimestamp;
+    if (endTimestamp != null) timestampFilter.$lte = endTimestamp;
+    conditions.push({ createdAtMs: timestampFilter });
+  }
+
+  const clausesByField = (Array.isArray(advancedFilters) ? advancedFilters : []).reduce((map, clause) => {
+    const fieldKey = String(clause?.field ?? "").trim();
+    if (!fieldKey) return map;
+
+    const fieldClauses = map.get(fieldKey) ?? [];
+    fieldClauses.push(clause);
+    map.set(fieldKey, fieldClauses);
+    return map;
+  }, new Map());
+
+  clausesByField.forEach((fieldClauses) => {
+    const alternatives = fieldClauses
+      .map((clause) => buildNgTicketAdvancedClauseCondition(clause))
+      .filter(Boolean);
+
+    if (alternatives.length === 1) {
+      conditions.push(alternatives[0]);
+    } else if (alternatives.length > 1) {
+      conditions.push({ $or: alternatives });
+    }
+  });
+
+  return conditions;
+}
+
+function buildNgTicketSortStage(sort = {}) {
+  const allowedSortFields = new Map([
+    ["createdAt", "createdAtMs"],
+    ["factory", "factory"],
+    ["machineName", "machineName"],
+    ["formName", "formName"],
+    ["fieldLabel", "fieldLabel"],
+    ["completedBy", "completedBy"],
+    ["status", "status"],
+    ["imageCount", "imageCount"],
+  ]);
+
+  const sortField = allowedSortFields.get(String(sort?.column ?? "").trim()) ?? "createdAtMs";
+  const sortDirection = Number(sort?.direction) === 1 ? 1 : -1;
+
+  return {
+    [sortField]: sortDirection,
+    createdAtMs: sortField === "createdAtMs" ? sortDirection : -1,
+    _id: -1,
+  };
+}
+
+function buildNgTicketFilteredAggregationStages({ filters = {}, advancedFilters = [] } = {}) {
+  const matchConditions = buildNgTicketMatchConditions({ filters, advancedFilters });
+
+  return [
+    ...buildNgTicketNormalizationStages(),
+    ...(matchConditions.length ? [{ $match: { $and: matchConditions } }] : []),
+  ];
+}
+
+function extractAggregationResultDocument(result) {
+  if (Array.isArray(result)) return result[0] ?? {};
+  return result ?? {};
+}
+
+function mapAggregationFacetValues(items = []) {
+  return items
+    .map((item) => String(item?._id ?? "").trim())
+    .filter(Boolean);
+}
+
 export async function fetchCheckFormRecords(formIds = []) {
   if (formIds.length === 0) return [];
   const records = await query(
@@ -1311,6 +1654,21 @@ export async function fetchCheckFormRecords(formIds = []) {
   );
 
   return Array.isArray(records) ? records.map(normalizeCheckFormRecord) : [];
+}
+
+export async function fetchCheckFormRecordById(recordId) {
+  const normalizedRecordId = normalizeId(recordId);
+  if (!normalizedRecordId) return null;
+
+  const records = await query(
+    "submittedDB",
+    "checkFormRecordsDB",
+    { _id: normalizedRecordId },
+    { limit: 1 }
+  );
+
+  if (!Array.isArray(records) || records.length === 0) return null;
+  return normalizeCheckFormRecord(records[0]);
 }
 
 export async function createCheckFormRecord(data) {
@@ -1353,6 +1711,209 @@ export async function fetchNgReportsByRecordIds(recordIds = []) {
   );
 
   return Array.isArray(reports) ? reports.map(normalizeNgReport) : [];
+}
+
+export async function fetchNgTicketFilterOptions() {
+  const cacheKey = "ngTicketFilterOptions";
+  const cached = _getCached(cacheKey, MASTER_TTL);
+  if (cached) return cached;
+
+  const result = await query(
+    "submittedDB",
+    "ngReportsDB",
+    {},
+    {
+      aggregation: [
+        ...buildNgTicketNormalizationStages(),
+        {
+          $facet: {
+            factories: [
+              { $match: { factory: { $ne: "" } } },
+              { $group: { _id: "$factory" } },
+              { $sort: { _id: 1 } },
+            ],
+            machineNames: [
+              { $match: { machineName: { $ne: "" } } },
+              { $group: { _id: "$machineName" } },
+              { $sort: { _id: 1 } },
+            ],
+            formNames: [
+              { $match: { formName: { $ne: "" } } },
+              { $group: { _id: "$formName" } },
+              { $sort: { _id: 1 } },
+            ],
+            completedBy: [
+              { $match: { completedBy: { $ne: "" } } },
+              { $group: { _id: "$completedBy" } },
+              { $sort: { _id: 1 } },
+            ],
+            statuses: [
+              { $match: { status: { $ne: "" } } },
+              { $group: { _id: "$status" } },
+              { $sort: { _id: 1 } },
+            ],
+            fieldLabels: [
+              { $match: { fieldLabel: { $ne: "" } } },
+              { $group: { _id: "$fieldLabel" } },
+              { $sort: { _id: 1 } },
+            ],
+            fieldTypes: [
+              { $match: { fieldType: { $ne: "" } } },
+              { $group: { _id: "$fieldType" } },
+              { $sort: { _id: 1 } },
+            ],
+          },
+        },
+      ],
+    }
+  );
+
+  const payload = extractAggregationResultDocument(result);
+  const options = {
+    factories: mapAggregationFacetValues(payload.factories),
+    machineNames: mapAggregationFacetValues(payload.machineNames),
+    formNames: mapAggregationFacetValues(payload.formNames),
+    completedBy: mapAggregationFacetValues(payload.completedBy),
+    statuses: mapAggregationFacetValues(payload.statuses),
+    fieldLabels: mapAggregationFacetValues(payload.fieldLabels),
+    fieldTypes: mapAggregationFacetValues(payload.fieldTypes),
+  };
+
+  _setCache(cacheKey, options);
+  return options;
+}
+
+export async function fetchNgTicketPage({ filters = {}, advancedFilters = [], page = 1, limit = 10, sort = {} } = {}) {
+  const safeLimit = Math.max(1, Number(limit) || 10);
+  const safePage = Math.max(1, Number(page) || 1);
+  const skip = (safePage - 1) * safeLimit;
+  const sortStage = buildNgTicketSortStage(sort);
+
+  const result = await query(
+    "submittedDB",
+    "ngReportsDB",
+    {},
+    {
+      aggregation: [
+        ...buildNgTicketFilteredAggregationStages({ filters, advancedFilters }),
+        {
+          $facet: {
+            data: [
+              { $sort: sortStage },
+              { $skip: skip },
+              { $limit: safeLimit },
+            ],
+            totalCount: [
+              { $count: "count" },
+            ],
+            summary: [
+              {
+                $group: {
+                  _id: null,
+                  totalTickets: { $sum: 1 },
+                  imageTickets: { $sum: { $cond: ["$hasImages", 1, 0] } },
+                  recordIds: { $addToSet: "$recordId" },
+                  machineKeys: {
+                    $addToSet: {
+                      $cond: [
+                        { $ne: ["$machineId", ""] },
+                        "$machineId",
+                        "$machineName",
+                      ],
+                    },
+                  },
+                  operatorNames: { $addToSet: "$completedBy" },
+                },
+              },
+              {
+                $project: {
+                  _id: 0,
+                  totalTickets: 1,
+                  imageTickets: 1,
+                  recordCount: {
+                    $size: {
+                      $filter: {
+                        input: "$recordIds",
+                        as: "value",
+                        cond: { $ne: ["$$value", ""] },
+                      },
+                    },
+                  },
+                  machineCount: {
+                    $size: {
+                      $filter: {
+                        input: "$machineKeys",
+                        as: "value",
+                        cond: { $ne: ["$$value", ""] },
+                      },
+                    },
+                  },
+                  operatorCount: {
+                    $size: {
+                      $filter: {
+                        input: "$operatorNames",
+                        as: "value",
+                        cond: { $ne: ["$$value", ""] },
+                      },
+                    },
+                  },
+                },
+              },
+            ],
+          },
+        },
+      ],
+    }
+  );
+
+  const payload = extractAggregationResultDocument(result);
+  const totalItems = Number(payload?.totalCount?.[0]?.count) || 0;
+  const totalPages = totalItems > 0 ? Math.ceil(totalItems / safeLimit) : 0;
+
+  if (totalItems > 0 && safePage > 1 && (!Array.isArray(payload?.data) || payload.data.length === 0)) {
+    return fetchNgTicketPage({
+      filters,
+      advancedFilters,
+      page: totalPages,
+      limit: safeLimit,
+      sort,
+    });
+  }
+
+  const summary = payload?.summary?.[0] ?? {};
+
+  return {
+    data: Array.isArray(payload?.data) ? payload.data.map(normalizeNgReport) : [],
+    summary: {
+      totalTickets: Number(summary.totalTickets) || totalItems,
+      imageTickets: Number(summary.imageTickets) || 0,
+      recordCount: Number(summary.recordCount) || 0,
+      machineCount: Number(summary.machineCount) || 0,
+      operatorCount: Number(summary.operatorCount) || 0,
+    },
+    pagination: {
+      currentPage: totalPages > 0 ? Math.min(safePage, totalPages) : 1,
+      totalPages,
+      totalItems,
+      itemsPerPage: safeLimit,
+    },
+  };
+}
+
+export async function fetchNgTicketExport({ filters = {}, advancedFilters = [], sort = {} } = {}) {
+  const result = await query(
+    "submittedDB",
+    "ngReportsDB",
+    {},
+    {
+      aggregation: [
+        ...buildNgTicketFilteredAggregationStages({ filters, advancedFilters }),
+        { $sort: buildNgTicketSortStage(sort) },
+      ],
+    }
+  );
+
+  return Array.isArray(result) ? result.map(normalizeNgReport) : [];
 }
 
 export async function fetchNgInspectionCount() {
