@@ -1272,9 +1272,24 @@ function normalizeCheckFormRecord(record) {
   };
 }
 
+function normalizeNgStatusHistoryEntry(entry) {
+  if (!entry || typeof entry !== "object") return null;
+
+  return {
+    action: String(entry.action ?? "").trim(),
+    comment: String(entry.comment ?? entry.note ?? "").trim(),
+    fromStatus: String(entry.fromStatus ?? "").trim().toLowerCase(),
+    timestamp: normalizeMongoDate(entry.timestamp ?? entry.createdAt ?? entry.updatedAt),
+    toStatus: String(entry.toStatus ?? "").trim().toLowerCase(),
+    user: String(entry.user ?? entry.actorName ?? "").trim(),
+    username: String(entry.username ?? entry.actorUsername ?? "").trim(),
+  };
+}
+
 function normalizeNgReport(report) {
   return {
     ...report,
+    ticketId: normalizeId(report._id ?? report.ticketId),
     recordId: normalizeId(report.checkFormRecordId ?? report.recordId ?? report.checkFormRecordID),
     fieldId: String(report.fieldId ?? report.checkItemId ?? ""),
     formId: String(report.formId ?? report.templateId ?? ""),
@@ -1297,7 +1312,13 @@ function normalizeNgReport(report) {
     min: report.min ?? null,
     max: report.max ?? null,
     unit: report.unit ?? "",
+    closedAt: normalizeMongoDate(report.closedAt),
+    closedBy: report.closedBy ?? "",
+    closedByUsername: report.closedByUsername ?? "",
     status: report.status ?? "open",
+    statusHistory: Array.isArray(report.statusHistory)
+      ? report.statusHistory.map(normalizeNgStatusHistoryEntry).filter(Boolean)
+      : [],
   };
 }
 
@@ -1329,6 +1350,7 @@ function buildMongoStringExpression(paths = [], fallback = "") {
 
 function buildNgTicketNormalizationStages() {
   const createdAtSource = buildMongoIfNullChain(["$createdAt", "$completedAt", "$updatedAt", "$submittedAt"], null);
+  const closedAtSource = buildMongoIfNullChain(["$closedAt"], null);
   const imageArraySource = {
     $cond: [
       { $isArray: "$imageURLs" },
@@ -1341,6 +1363,7 @@ function buildNgTicketNormalizationStages() {
     {
       $project: {
         _id: 1,
+        ticketId: { $toString: "$_id" },
         recordId: buildMongoStringExpression(["$checkFormRecordId", "$recordId", "$checkFormRecordID"]),
         fieldId: buildMongoStringExpression(["$fieldId", "$checkItemId"]),
         formId: buildMongoStringExpression(["$formId", "$templateId"]),
@@ -1348,8 +1371,11 @@ function buildNgTicketNormalizationStages() {
         machineId: buildMongoStringExpression(["$machineId", "$equipmentId"]),
         machineName: buildMongoStringExpression(["$machineName", "$加工設備"]),
         completedBy: buildMongoStringExpression(["$completedBy", "$workerName"]),
+        closedBy: buildMongoStringExpression(["$closedBy"]),
+        closedByUsername: buildMongoStringExpression(["$closedByUsername"]),
         factory: buildMongoStringExpression(["$factory", "$工場"]),
         createdAtRaw: createdAtSource,
+        closedAtRaw: closedAtSource,
         fieldLabel: buildMongoStringExpression(["$fieldLabel"]),
         fieldType: buildMongoStringExpression(["$fieldType"]),
         answerValue: buildMongoStringExpression(["$answerValue", "$value"]),
@@ -1357,6 +1383,7 @@ function buildNgTicketNormalizationStages() {
         imageURLs: imageArraySource,
         min: { $ifNull: ["$min", null] },
         max: { $ifNull: ["$max", null] },
+        statusHistory: { $ifNull: ["$statusHistory", []] },
         unit: buildMongoStringExpression(["$unit"]),
         status: { $toLower: buildMongoStringExpression(["$status"], "open") },
       },
@@ -1366,6 +1393,14 @@ function buildNgTicketNormalizationStages() {
         createdAt: {
           $convert: {
             input: "$createdAtRaw",
+            to: "date",
+            onError: null,
+            onNull: null,
+          },
+        },
+        closedAt: {
+          $convert: {
+            input: "$closedAtRaw",
             to: "date",
             onError: null,
             onNull: null,
@@ -1389,6 +1424,7 @@ function buildNgTicketNormalizationStages() {
     {
       $project: {
         createdAtRaw: 0,
+        closedAtRaw: 0,
       },
     },
   ];
@@ -1683,11 +1719,32 @@ export async function createCheckFormRecord(data) {
 
 export async function createNgReport(data) {
   return _postJson("submitToMasterDB", {
-    data: { ...data, submittedAt: new Date().toISOString() },
+    data: {
+      ...data,
+      status: String(data?.status ?? "open").trim().toLowerCase() || "open",
+      statusHistory: Array.isArray(data?.statusHistory) ? data.statusHistory : [],
+      submittedAt: new Date().toISOString(),
+    },
     username: data.completedBy || "simulator",
     role: "worker",
     collectionName: "ngReportsDB",
     dbName: "submittedDB",
+  });
+}
+
+export async function updateNgTicketRecord({ ticketId, update, username, role }) {
+  const normalizedTicketId = typeof ticketId === "object"
+    ? ticketId
+    : normalizeId(ticketId);
+  if (!normalizedTicketId) throw new Error("A ticket ID is required.");
+
+  return _postJson("queries", {
+    dbName: "submittedDB",
+    collectionName: "ngReportsDB",
+    query: { _id: normalizedTicketId },
+    update,
+    username,
+    role,
   });
 }
 

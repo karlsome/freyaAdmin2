@@ -5,8 +5,8 @@ import DataTable from "../components/DataTable";
 import StatSummaryCard from "../components/StatSummaryCard";
 import TicketSubmissionsFilterPanel from "../components/TicketSubmissionsFilterPanel";
 import { useLanguage } from "../contexts/LanguageContext";
-import { fetchNgTicketExport, fetchNgTicketFilterOptions, fetchNgTicketPage } from "../services/api";
-import { readStoredAuthUser } from "../utils/auth";
+import { fetchNgTicketExport, fetchNgTicketFilterOptions, fetchNgTicketPage, updateNgTicketRecord } from "../services/api";
+import { getAuthDisplayName, readStoredAuthUser } from "../utils/auth";
 import {
   buildTicketSubmissionAdvancedFilterClauses,
   buildTicketSubmissionExportMatrix,
@@ -527,6 +527,7 @@ function buildImageDownloadName(url, label) {
 
 function getTicketKey(ticket) {
   return [
+    String(ticket?.ticketId ?? "").trim(),
     String(ticket?._id?.$oid ?? ticket?._id ?? "").trim(),
     String(ticket?.recordId ?? "").trim(),
     String(ticket?.fieldId ?? "").trim(),
@@ -534,8 +535,12 @@ function getTicketKey(ticket) {
   ].filter(Boolean).join("::") || "ticket-row";
 }
 
+function normalizeTicketStatusValue(status) {
+  return String(status ?? "open").trim().toLowerCase() || "open";
+}
+
 function getTicketStatusMeta(status) {
-  const normalizedStatus = String(status ?? "open").trim().toLowerCase();
+  const normalizedStatus = normalizeTicketStatusValue(status);
 
   if (normalizedStatus === "resolved" || normalizedStatus === "closed") {
     return {
@@ -555,6 +560,26 @@ function getTicketStatusMeta(status) {
     label: formatTicketStatusLabel(status),
     badgeClassName: "bg-error/10 text-error",
   };
+}
+
+function formatTicketHistoryAction(entry = {}) {
+  if (entry.action) return entry.action;
+
+  const fromStatus = normalizeTicketStatusValue(entry.fromStatus);
+  const toStatus = normalizeTicketStatusValue(entry.toStatus);
+
+  if (toStatus === "closed") return "Ticket Closed";
+  if (fromStatus === "closed" && toStatus === "open") return "Ticket Reopened";
+  if (toStatus === "open") return "Ticket Opened";
+  return "Status Updated";
+}
+
+function sortTicketHistoryEntries(entries = []) {
+  return [...entries].sort((left, right) => {
+    const leftTime = new Date(left?.timestamp ?? 0).getTime();
+    const rightTime = new Date(right?.timestamp ?? 0).getTime();
+    return rightTime - leftTime;
+  });
 }
 
 function SummaryCard({ accent, icon, label, subtitle, value }) {
@@ -644,10 +669,15 @@ function ImagePreviewLightbox({ image, onClose }) {
   );
 }
 
-function TicketDetailModal({ onClose, onOpenChecklistSubmission = null, ticket }) {
+function TicketDetailModal({ actionBusy = false, onClose, onCloseTicket = null, onOpenChecklistSubmission = null, onReopenTicket = null, ticket }) {
   const [previewImage, setPreviewImage] = useState(null);
   const statusMeta = getTicketStatusMeta(ticket?.status);
   const expectedRange = formatTicketRange(ticket);
+  const normalizedStatus = normalizeTicketStatusValue(ticket?.status);
+  const historyEntries = useMemo(
+    () => sortTicketHistoryEntries(Array.isArray(ticket?.statusHistory) ? ticket.statusHistory : []),
+    [ticket?.statusHistory]
+  );
 
   useEffect(() => {
     function handleKeyDown(event) {
@@ -709,16 +739,40 @@ function TicketDetailModal({ onClose, onOpenChecklistSubmission = null, ticket }
               )}
             </div>
 
-            {onOpenChecklistSubmission && ticket.recordId && (
-              <button
-                type="button"
-                onClick={onOpenChecklistSubmission}
-                className="inline-flex items-center justify-center gap-2 rounded-xl border border-outline-variant/20 bg-white px-4 py-2 text-sm font-bold text-on-surface transition hover:border-primary/30 hover:text-primary"
-              >
-                <span className="material-symbols-outlined" style={{ fontSize: 16 }}>arrow_outward</span>
-                Open Checklist Submission
-              </button>
-            )}
+            <div className="flex flex-wrap items-center justify-end gap-2">
+              {normalizedStatus === "closed" ? (
+                <button
+                  type="button"
+                  onClick={onReopenTicket}
+                  disabled={actionBusy || !onReopenTicket}
+                  className="inline-flex items-center justify-center gap-2 rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-2 text-sm font-bold text-emerald-700 transition hover:border-emerald-500/35 hover:bg-emerald-500/15 disabled:cursor-not-allowed disabled:opacity-50 dark:text-emerald-300"
+                >
+                  <span className="material-symbols-outlined" style={{ fontSize: 16 }}>history</span>
+                  {actionBusy ? "Reopening..." : "Reopen Ticket"}
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={onCloseTicket}
+                  disabled={actionBusy || !onCloseTicket}
+                  className="inline-flex items-center justify-center gap-2 rounded-xl border border-error/20 bg-error/10 px-4 py-2 text-sm font-bold text-error transition hover:border-error/35 hover:bg-error/15 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  <span className="material-symbols-outlined" style={{ fontSize: 16 }}>task_alt</span>
+                  {actionBusy ? "Closing..." : "Close Ticket"}
+                </button>
+              )}
+
+              {onOpenChecklistSubmission && ticket.recordId && (
+                <button
+                  type="button"
+                  onClick={onOpenChecklistSubmission}
+                  className="inline-flex items-center justify-center gap-2 rounded-xl border border-outline-variant/20 bg-white px-4 py-2 text-sm font-bold text-on-surface transition hover:border-primary/30 hover:text-primary"
+                >
+                  <span className="material-symbols-outlined" style={{ fontSize: 16 }}>arrow_outward</span>
+                  Open Checklist Submission
+                </button>
+              )}
+            </div>
           </div>
 
           <div className="flex-1 overflow-y-auto px-6 py-5">
@@ -746,7 +800,7 @@ function TicketDetailModal({ onClose, onOpenChecklistSubmission = null, ticket }
               </div>
             </div>
 
-            <div className="mt-4 grid gap-4 md:grid-cols-2">
+            <div className="mt-4 grid gap-4 md:grid-cols-3">
               <article className="rounded-2xl border border-outline-variant/20 bg-surface-container px-4 py-4">
                 <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-outline">Checklist Form</p>
                 <p className="mt-2 text-sm font-semibold text-on-surface">{ticket.formName || "—"}</p>
@@ -756,6 +810,70 @@ function TicketDetailModal({ onClose, onOpenChecklistSubmission = null, ticket }
                 <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-outline">Machine</p>
                 <p className="mt-2 text-sm font-semibold text-on-surface">{ticket.machineName || "—"}</p>
               </article>
+
+              <article className="rounded-2xl border border-outline-variant/20 bg-surface-container px-4 py-4">
+                <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-outline">Latest Closure</p>
+                {ticket.closedAt ? (
+                  <>
+                    <p className="mt-2 text-sm font-semibold text-on-surface">{ticket.closedBy || ticket.closedByUsername || "Unknown user"}</p>
+                    <p className="mt-1 text-xs text-outline">{formatTicketDateTime(ticket.closedAt)}</p>
+                  </>
+                ) : (
+                  <p className="mt-2 text-sm font-semibold text-on-surface">No closure recorded</p>
+                )}
+              </article>
+            </div>
+
+            <div className="mt-5 rounded-2xl border border-outline-variant/20 bg-surface-container px-5 py-4">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-outline">Status History</p>
+                  <p className="mt-1 text-sm text-outline">Tracks each close and reopen action for this ticket.</p>
+                </div>
+                <span className="inline-flex items-center rounded-full bg-white/75 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.14em] text-outline">
+                  {historyEntries.length} event{historyEntries.length === 1 ? "" : "s"}
+                </span>
+              </div>
+
+              <div className="mt-4 space-y-3">
+                {historyEntries.length === 0 ? (
+                  <div className="rounded-2xl border border-dashed border-outline-variant/25 bg-white/50 px-4 py-4 text-sm text-outline">
+                    No ticket status changes recorded yet.
+                  </div>
+                ) : historyEntries.map((entry, index) => (
+                  <article
+                    key={`${entry.timestamp || "ticket-history"}-${entry.action || index}-${entry.user || entry.username || "anonymous"}`}
+                    className="rounded-2xl border border-outline-variant/15 bg-white/70 px-4 py-4 dark:bg-surface"
+                  >
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div>
+                        <p className="text-sm font-bold text-on-surface">{formatTicketHistoryAction(entry)}</p>
+                        <p className="mt-1 text-xs text-outline">{entry.user || entry.username || "Unknown user"}</p>
+                      </div>
+                      <p className="text-xs font-medium text-outline">{formatTicketDateTime(entry.timestamp)}</p>
+                    </div>
+
+                    {(entry.fromStatus || entry.toStatus) && (
+                      <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-outline">
+                        {entry.fromStatus ? (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-surface-container px-2.5 py-1 font-semibold text-on-surface">
+                            From {formatTicketStatusLabel(entry.fromStatus)}
+                          </span>
+                        ) : null}
+                        {entry.toStatus ? (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2.5 py-1 font-semibold text-primary">
+                            To {formatTicketStatusLabel(entry.toStatus)}
+                          </span>
+                        ) : null}
+                      </div>
+                    )}
+
+                    {entry.comment ? (
+                      <p className="mt-3 text-sm leading-6 text-on-surface">{entry.comment}</p>
+                    ) : null}
+                  </article>
+                ))}
+              </div>
             </div>
 
             {Array.isArray(ticket.imageURLs) && ticket.imageURLs.length > 0 && (
@@ -798,6 +916,7 @@ export default function TicketSubmissionsPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const { t } = useLanguage();
   const [authUser] = useState(() => readStoredAuthUser());
+  const actorName = useMemo(() => getAuthDisplayName(authUser), [authUser]);
   const initialViewRef = useRef(null);
   const requestIdRef = useRef(0);
   if (initialViewRef.current == null) {
@@ -821,7 +940,9 @@ export default function TicketSubmissionsPage() {
   const [exportChoiceOpen, setExportChoiceOpen] = useState(false);
   const [error, setError] = useState("");
   const [actionNotice, setActionNotice] = useState(null);
+  const [refreshNonce, setRefreshNonce] = useState(0);
   const [selectedTicket, setSelectedTicket] = useState(null);
+  const [statusAction, setStatusAction] = useState(null);
   const presetStorageKey = useMemo(() => buildTicketPresetStorageKey(authUser?.username), [authUser?.username]);
   const [presetName, setPresetName] = useState("");
   const [savedPresets, setSavedPresets] = useState(() => readTicketSubmissionPresets(buildTicketPresetStorageKey(authUser?.username)));
@@ -889,13 +1010,26 @@ export default function TicketSubmissionsPage() {
     };
   }, []);
 
+  const normalizedTicketStatuses = useMemo(() => {
+    const statusSet = new Set(["open", "closed"]);
+
+    filterOptions.statuses.forEach((status) => {
+      const normalizedStatus = normalizeTicketStatusValue(status);
+      if (normalizedStatus) {
+        statusSet.add(normalizedStatus);
+      }
+    });
+
+    return Array.from(statusSet);
+  }, [filterOptions.statuses]);
+
   const advancedFieldDefinitions = useMemo(() => {
     const optionMap = {
       factory: filterOptions.factories,
       machineName: filterOptions.machineNames,
       formName: filterOptions.formNames,
       completedBy: filterOptions.completedBy,
-      status: filterOptions.statuses.map(formatTicketStatusLabel),
+      status: normalizedTicketStatuses.map(formatTicketStatusLabel),
       fieldLabel: filterOptions.fieldLabels,
       fieldType: filterOptions.fieldTypes,
       hasImages: TICKET_SUBMISSION_IMAGE_OPTIONS,
@@ -905,14 +1039,14 @@ export default function TicketSubmissionsPage() {
       ...field,
       options: optionMap[field.field] ?? field.options ?? [],
     }));
-  }, [filterOptions.completedBy, filterOptions.factories, filterOptions.fieldLabels, filterOptions.fieldTypes, filterOptions.formNames, filterOptions.machineNames, filterOptions.statuses]);
+  }, [filterOptions.completedBy, filterOptions.factories, filterOptions.fieldLabels, filterOptions.fieldTypes, filterOptions.formNames, filterOptions.machineNames, normalizedTicketStatuses]);
 
   const statusOptions = useMemo(() => {
-    return filterOptions.statuses.map((status) => ({
+    return normalizedTicketStatuses.map((status) => ({
       value: status,
       label: formatTicketStatusLabel(status),
     }));
-  }, [filterOptions.statuses]);
+  }, [normalizedTicketStatuses]);
 
   useEffect(() => {
     let cancelled = false;
@@ -964,7 +1098,7 @@ export default function TicketSubmissionsPage() {
     return () => {
       cancelled = true;
     };
-  }, [appliedAdvancedFilters, dateRange.endDate, dateRange.startDate, deferredKeyword, filters.factory, filters.status, page, pageSize, sort]);
+  }, [appliedAdvancedFilters, dateRange.endDate, dateRange.startDate, deferredKeyword, filters.factory, filters.status, page, pageSize, refreshNonce, sort]);
 
   const columns = useMemo(() => ([
     {
@@ -1304,6 +1438,102 @@ export default function TicketSubmissionsPage() {
     });
   }
 
+  async function handleUpdateTicketStatus(ticket, nextStatus) {
+    if (!ticket) return;
+
+    if (!authUser?.username || !authUser?.role) {
+      setActionNotice({ type: "error", message: "Sign in again before updating ticket status." });
+      return;
+    }
+
+    const currentStatus = normalizeTicketStatusValue(ticket.status);
+    const normalizedNextStatus = normalizeTicketStatusValue(nextStatus);
+    if (!normalizedNextStatus || currentStatus === normalizedNextStatus) return;
+
+    const ticketId = ticket?._id ?? ticket?.ticketId;
+    if (!ticketId) {
+      setActionNotice({ type: "error", message: "This ticket is missing its record ID, so the status could not be updated." });
+      return;
+    }
+
+    const timestamp = new Date().toISOString();
+    const historyEntry = {
+      action: normalizedNextStatus === "closed" ? "Ticket Closed" : "Ticket Reopened",
+      fromStatus: currentStatus,
+      toStatus: normalizedNextStatus,
+      timestamp,
+      user: actorName,
+      username: authUser.username,
+    };
+
+    const update = normalizedNextStatus === "closed"
+      ? {
+        $set: {
+          status: "closed",
+          closedAt: timestamp,
+          closedBy: actorName,
+          closedByUsername: authUser.username,
+        },
+        $push: {
+          statusHistory: historyEntry,
+        },
+      }
+      : {
+        $set: {
+          status: "open",
+        },
+        $push: {
+          statusHistory: historyEntry,
+        },
+      };
+
+    const ticketKey = getTicketKey(ticket);
+    setStatusAction({ nextStatus: normalizedNextStatus, ticketKey });
+    setError("");
+
+    try {
+      await updateNgTicketRecord({
+        ticketId,
+        update,
+        username: authUser.username,
+        role: authUser.role,
+      });
+
+      const optimisticTicket = {
+        ...ticket,
+        closedAt: normalizedNextStatus === "closed" ? timestamp : ticket.closedAt,
+        closedBy: normalizedNextStatus === "closed" ? actorName : ticket.closedBy,
+        closedByUsername: normalizedNextStatus === "closed" ? authUser.username : ticket.closedByUsername,
+        status: normalizedNextStatus,
+        statusHistory: [
+          ...(Array.isArray(ticket.statusHistory) ? ticket.statusHistory : []),
+          historyEntry,
+        ],
+      };
+
+      setRows((current) => current.map((row) => (getTicketKey(row) === ticketKey ? optimisticTicket : row)));
+      setSelectedTicket((current) => (
+        current && getTicketKey(current) === ticketKey
+          ? optimisticTicket
+          : current
+      ));
+      setRefreshNonce((current) => current + 1);
+      setActionNotice({
+        type: "success",
+        message: normalizedNextStatus === "closed"
+          ? "Ticket closed. Closure history was recorded."
+          : "Ticket reopened. History was recorded.",
+      });
+    } catch (updateError) {
+      setActionNotice({
+        type: "error",
+        message: updateError.message || "Failed to update the ticket status.",
+      });
+    } finally {
+      setStatusAction(null);
+    }
+  }
+
   return (
     <section className="h-screen overflow-y-auto px-6 pb-16 pt-24 scrollbar-hide md:px-8">
       <div className="mb-8">
@@ -1443,9 +1673,12 @@ export default function TicketSubmissionsPage() {
 
       {selectedTicket && createPortal(
         <TicketDetailModal
+          actionBusy={Boolean(statusAction && getTicketKey(selectedTicket) === statusAction.ticketKey)}
           ticket={selectedTicket}
+          onCloseTicket={() => handleUpdateTicketStatus(selectedTicket, "closed")}
           onOpenChecklistSubmission={() => handleOpenChecklistSubmission(selectedTicket)}
           onClose={() => setSelectedTicket(null)}
+          onReopenTicket={() => handleUpdateTicketStatus(selectedTicket, "open")}
         />,
         document.body
       )}
