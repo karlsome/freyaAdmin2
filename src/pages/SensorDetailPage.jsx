@@ -142,6 +142,7 @@ export default function SensorDetailPage() {
   const navigate    = useNavigate();
   const overviewRequestIdRef = useRef(0);
   const tableRequestIdRef = useRef(0);
+  const defaultRange = useMemo(() => dateRangeDefault(), []);
 
   const [range, setRange]       = useState(dateRangeDefault);
   const [deviceFilter, setDeviceFilter] = useState("all");
@@ -307,6 +308,17 @@ export default function SensorDetailPage() {
     setDeviceFilter(normalizedDeviceId);
   }
 
+  function handleResetFilters() {
+    setRange(defaultRange);
+    setDeviceFilter("all");
+    setSortKey("date_desc");
+  }
+
+  const hasActiveFilters = deviceFilter !== "all"
+    || sortKey !== "date_desc"
+    || range.start !== defaultRange.start
+    || range.end !== defaultRange.end;
+
   const tableColumns = useMemo(() => ([
     {
       key: "Date",
@@ -464,6 +476,16 @@ export default function SensorDetailPage() {
             <option value="temp_asc">Temp Low → High</option>
           </select>
         </div>
+        {hasActiveFilters ? (
+          <button
+            type="button"
+            onClick={handleResetFilters}
+            className="inline-flex items-center gap-2 rounded-lg border border-error/20 bg-error/10 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-error transition hover:bg-error/15"
+          >
+            <span className="material-symbols-outlined" style={{ fontSize: 14 }}>restart_alt</span>
+            Reset Filters
+          </button>
+        ) : null}
         <div className="ml-auto flex gap-2">
           {["7d", "14d", "30d"].map((preset) => {
             const days = parseInt(preset);
