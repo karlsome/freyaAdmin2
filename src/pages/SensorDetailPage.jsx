@@ -85,7 +85,7 @@ function Sparkline({ values, color = "#6366f1", height = 28 }) {
 }
 
 // ─── Per-device summary card ──────────────────────────────────────────────────
-function SensorCard({ device }) {
+function SensorCard({ device, isActive = false, onSelect = null }) {
   const latest = device?.latest ?? {};
   const latestTemp = parseTemp(latest.Temperature);
   const latestHumid = parseHumid(latest.Humidity);
@@ -97,7 +97,14 @@ function SensorCard({ device }) {
   const humidityTrend = Array.isArray(device?.humidityTrend) ? device.humidityTrend.filter((value) => value != null) : [];
 
   return (
-    <div className="glass-card rounded-2xl p-5 flex flex-col gap-4 hover:scale-[1.02] transition-all duration-300">
+    <button
+      type="button"
+      onClick={() => onSelect?.(device?.deviceId || "all")}
+      aria-pressed={isActive}
+      className={`glass-card flex w-full flex-col gap-4 rounded-2xl p-5 text-left transition-[box-shadow,border-color,background-color] duration-300 hover:border-primary/20 hover:shadow-[0_14px_32px_rgba(15,23,42,0.08)] focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/35 ${
+        isActive ? "border-primary/35 bg-primary/5 shadow-[0_14px_32px_rgba(99,102,241,0.12)]" : ""
+      }`}
+    >
       <div className="flex items-start justify-between">
         <div>
           <p className="text-xs font-bold text-outline uppercase tracking-widest">Device</p>
@@ -124,7 +131,7 @@ function SensorCard({ device }) {
       <div className="text-[10px] text-outline">
         Last: {latest?.Date || "—"} {latest?.Time || ""} · {Number(device?.readingCount) || 0} readings
       </div>
-    </div>
+    </button>
   );
 }
 
@@ -293,6 +300,11 @@ export default function SensorDetailPage() {
     } finally {
       setExporting(false);
     }
+  }
+
+  function handleSelectDevice(nextDeviceId) {
+    const normalizedDeviceId = String(nextDeviceId ?? "").trim() || "all";
+    setDeviceFilter(normalizedDeviceId);
   }
 
   const tableColumns = useMemo(() => ([
@@ -550,7 +562,12 @@ export default function SensorDetailPage() {
               </p>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
                 {deviceCards.map((device) => (
-                  <SensorCard key={device.deviceId} device={device} />
+                  <SensorCard
+                    key={device.deviceId}
+                    device={device}
+                    isActive={deviceFilter === device.deviceId}
+                    onSelect={handleSelectDevice}
+                  />
                 ))}
               </div>
             </div>
