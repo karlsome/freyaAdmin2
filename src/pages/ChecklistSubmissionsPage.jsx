@@ -359,21 +359,57 @@ function getEntryCountLabel(entry) {
   return entry.hasForms ? "-" : "";
 }
 
+function sortSubmissionEntries(submissions = []) {
+  return [...submissions].sort((left, right) => {
+    const leftTime = new Date(left?.record?.completedAt ?? 0).getTime();
+    const rightTime = new Date(right?.record?.completedAt ?? 0).getTime();
+
+    if (rightTime !== leftTime) return rightTime - leftTime;
+
+    const leftFormName = String(left?.form?.name ?? left?.record?.formName ?? "").trim();
+    const rightFormName = String(right?.form?.name ?? right?.record?.formName ?? "").trim();
+    return leftFormName.localeCompare(rightFormName, "ja");
+  });
+}
+
+function buildRecordSelection(submission, defaultTab = "submission", returnToPicker = null) {
+  if (!submission) return null;
+
+  return {
+    mode: "detail",
+    defaultTab,
+    form: submission.form,
+    record: submission.record,
+    returnToPicker,
+  };
+}
+
 function getPreferredEntrySelection(entry) {
   if (!entry) return null;
-  return entry.submissions.find((submission) => submission.record?.hasNG) ?? entry.primary ?? null;
+
+  const orderedSubmissions = sortSubmissionEntries(entry.submissions ?? []);
+  return orderedSubmissions.find((submission) => submission.record?.hasNG) ?? orderedSubmissions[0] ?? null;
 }
 
 function buildEntrySelection(entry, machine, date) {
   if (!entry) return null;
 
+  const orderedSubmissions = sortSubmissionEntries(entry.submissions ?? []);
+
+  if (orderedSubmissions.length > 1) {
+    return {
+      mode: "picker",
+      dateLabel: formatDateInputValue(date),
+      factory: machine.factory,
+      machineName: machine.name,
+      schedule: entry.schedule,
+      submissions: orderedSubmissions,
+    };
+  }
+
   const preferredSelection = getPreferredEntrySelection(entry);
   if (preferredSelection) {
-    return {
-      defaultTab: "submission",
-      form: preferredSelection.form,
-      record: preferredSelection.record,
-    };
+    return buildRecordSelection(preferredSelection);
   }
 
   if (entry.state === "missed" && Array.isArray(entry.missedForms) && entry.missedForms.length > 0) {
@@ -381,6 +417,7 @@ function buildEntrySelection(entry, machine, date) {
     const scheduledDate = formatDateInputValue(date);
 
     return {
+      mode: "detail",
       defaultTab: "submission",
       form: primaryMissedForm,
       record: {
@@ -407,6 +444,7 @@ function buildEntrySelection(entry, machine, date) {
     const scheduledDate = formatDateInputValue(date);
 
     return {
+      mode: "detail",
       defaultTab: "submission",
       form: primaryDueForm,
       record: {
@@ -589,7 +627,106 @@ function ImagePreviewLightbox({ image, onClose }) {
   );
 }
 
-function RecordDetailModal({ defaultTab = "submission", form, onClose, record }) {
+function SubmissionPickerModal({ dateLabel, factory, machineName, onClose, onSelect, schedule, submissions }) {
+  useEffect(() => {
+    function handleKeyDown(event) {
+      if (event.key === "Escape") {
+        onClose();
+      }
+    }
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [onClose]);
+
+  const scheduleLabel = SCHEDULE_META[schedule]?.label ?? formatScheduleLabel(schedule);
+
+  return (
+    <div className="fixed inset-0 z-[65] flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm" onClick={onClose}>
+      <div
+        className="glass-card flex max-h-[78vh] w-full max-w-lg flex-col overflow-hidden rounded-2xl border border-outline-variant/20"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <div className="flex items-start justify-between gap-4 border-b border-outline-variant/20 px-6 py-5">
+          <div className="min-w-0 flex-1">
+            <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-outline">Multiple Submissions</p>
+            <h3 className="mt-1 text-lg font-black text-on-surface">Choose a checklist record</h3>
+            <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-outline">
+              {machineName && <span>{machineName}</span>}
+              {factory && factory !== "—" && <span>{factory}</span>}
+              {scheduleLabel && <span>{scheduleLabel}</span>}
+              {dateLabel && <span>{dateLabel}</span>}
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-2xl bg-surface-container text-on-surface-variant transition hover:bg-surface-container-high"
+          >
+            <span className="material-symbols-outlined">close</span>
+          </button>
+        </div>
+
+        <div className="overflow-y-auto px-6 py-5">
+          <div className="flex flex-col gap-3">
+            {submissions.map((submission, index) => {
+              const submissionKey = getChecklistRecordKey(submission.record) || `${index}`;
+              const submissionFormName = submission.form?.name ?? submission.record?.formName ?? "Checklist Submission";
+              const completedBy = String(submission.record?.completedBy ?? "").trim() || "Unknown operator";
+              const completedAtLabel = submission.record?.completedAt
+                ? new Date(submission.record.completedAt).toLocaleString("ja-JP", {
+                  year: "numeric",
+                  month: "short",
+                  day: "numeric",
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })
+                : "No timestamp";
+
+              return (
+                <button
+                  key={submissionKey}
+                  type="button"
+                  onClick={() => onSelect(submission)}
+                  className="group rounded-2xl border border-outline-variant/20 bg-surface-container px-4 py-4 text-left transition hover:border-primary/30 hover:bg-surface-container-high"
+                >
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-black uppercase tracking-[0.14em] text-primary">
+                          Record {index + 1}
+                        </span>
+                        <h4 className="truncate text-sm font-semibold text-on-surface">{submissionFormName}</h4>
+                        {submission.record?.hasNG && (
+                          <span className="rounded-full bg-error/10 px-2 py-0.5 text-[10px] font-black uppercase tracking-[0.12em] text-error">
+                            NG
+                          </span>
+                        )}
+                      </div>
+                      <div className="mt-3 flex flex-wrap gap-3 text-xs text-outline">
+                        <span className="inline-flex items-center gap-1">
+                          <span className="material-symbols-outlined" style={{ fontSize: 14 }}>schedule</span>
+                          {completedAtLabel}
+                        </span>
+                        <span className="inline-flex items-center gap-1">
+                          <span className="material-symbols-outlined" style={{ fontSize: 14 }}>person</span>
+                          {completedBy}
+                        </span>
+                      </div>
+                    </div>
+                    <span className="material-symbols-outlined text-outline transition group-hover:translate-x-0.5 group-hover:text-primary">chevron_right</span>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function RecordDetailModal({ defaultTab = "submission", form, onBack = null, onClose, record }) {
   const isMissedRecord = record?.status === "missed";
   const isWaitingRecord = record?.status === "waiting";
   const isReferenceRecord = isMissedRecord || isWaitingRecord;
@@ -781,6 +918,16 @@ function RecordDetailModal({ defaultTab = "submission", form, onClose, record })
         <div className="glass-card flex max-h-[88vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl border border-outline-variant/20">
         <div className="flex flex-shrink-0 items-start justify-between border-b border-outline-variant/20 px-6 py-5">
           <div className="min-w-0 flex-1 pr-4">
+            {onBack && (
+              <button
+                type="button"
+                onClick={onBack}
+                className="mb-3 inline-flex items-center gap-2 rounded-full bg-surface-container px-3 py-1.5 text-xs font-bold uppercase tracking-[0.14em] text-on-surface transition hover:bg-surface-container-high"
+              >
+                <span className="material-symbols-outlined" style={{ fontSize: 16 }}>arrow_back</span>
+                Back to submissions
+              </button>
+            )}
             <p className="text-xs font-bold uppercase tracking-[0.18em] text-outline">Inspection Record</p>
             <h3 className="mt-0.5 truncate text-lg font-black text-on-surface">{formName}</h3>
             <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-outline">
@@ -1763,11 +1910,25 @@ export default function ChecklistSubmissionsPage() {
         </div>
       </div>
 
-      {selectedCell && createPortal(
+      {selectedCell?.mode === "picker" && createPortal(
+        <SubmissionPickerModal
+          submissions={selectedCell.submissions}
+          machineName={selectedCell.machineName}
+          factory={selectedCell.factory}
+          schedule={selectedCell.schedule}
+          dateLabel={selectedCell.dateLabel}
+          onSelect={(submission) => setSelectedCell(buildRecordSelection(submission, "submission", selectedCell))}
+          onClose={() => setSelectedCell(null)}
+        />,
+        document.body
+      )}
+
+      {selectedCell?.mode !== "picker" && selectedCell && createPortal(
         <RecordDetailModal
           record={selectedCell.record}
           form={selectedCell.form}
           defaultTab={selectedCell.defaultTab ?? "submission"}
+          onBack={selectedCell.returnToPicker ? () => setSelectedCell(selectedCell.returnToPicker) : null}
           onClose={() => setSelectedCell(null)}
         />,
         document.body
