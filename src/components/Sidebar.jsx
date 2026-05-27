@@ -35,6 +35,21 @@ function hasActiveChild(item, activePage) {
   return Boolean(item.children?.some((child) => isActiveFor(child, activePage)));
 }
 
+function matchesNavPage(page, activePage) {
+  return activePage === page || activePage.startsWith(`${page}/`);
+}
+
+function getActiveChildPage(item, activePage) {
+  if (!item.children?.length) return "";
+
+  const matchingChildren = item.children.filter((child) => matchesNavPage(child.page, activePage));
+  if (matchingChildren.length === 0) return "";
+
+  return matchingChildren.reduce((bestMatch, child) => (
+    child.page.length > bestMatch.page.length ? child : bestMatch
+  )).page;
+}
+
 function isActiveFor(item, activePage) {
   if (activePage === item.page) return true;
   if (
@@ -103,6 +118,7 @@ export default function Sidebar({ activePage, badges = {}, mobileOpen = false, o
             const isActive = isActiveFor(item, activePage);
             const hasChildren = !!item.children?.length;
             const isOpen = openItems.has(item.page) || hasActiveChild(item, activePage);
+            const activeChildPage = getActiveChildPage(item, activePage);
             const label = t(item.labelKey);
 
             return (
@@ -178,7 +194,7 @@ export default function Sidebar({ activePage, badges = {}, mobileOpen = false, o
                       <div className="absolute bottom-0 top-0 left-0 w-px rounded-full bg-outline-variant/30" />
 
                       {item.children.map((child, idx) => {
-                        const childActive = activePage === child.page || activePage.startsWith(child.page + "/");
+                        const childActive = activeChildPage === child.page;
                         const isLast = idx === item.children.length - 1;
                         const childLabel = t(child.labelKey);
 
