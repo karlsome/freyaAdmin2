@@ -141,13 +141,16 @@ export default function SensorDetailPage() {
   const factoryName = decodeURIComponent(encoded);
   const navigate    = useNavigate();
   const overviewRequestIdRef = useRef(0);
+  const cardOverviewRequestIdRef = useRef(0);
   const tableRequestIdRef = useRef(0);
   const defaultRange = useMemo(() => dateRangeDefault(), []);
 
   const [range, setRange]       = useState(dateRangeDefault);
   const [deviceFilter, setDeviceFilter] = useState("all");
   const [overview, setOverview] = useState(EMPTY_SENSOR_OVERVIEW);
+  const [cardOverview, setCardOverview] = useState(EMPTY_SENSOR_OVERVIEW);
   const [loading, setLoading]   = useState(true);
+  const [cardLoading, setCardLoading] = useState(true);
   const [tableLoading, setTableLoading] = useState(true);
   const [tableError, setTableError] = useState("");
   const [sortKey, setSortKey]   = useState("date_desc");
@@ -190,6 +193,40 @@ export default function SensorDetailPage() {
       cancelled = true;
     };
   }, [deviceFilter, factoryName, range.end, range.start]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const requestId = ++cardOverviewRequestIdRef.current;
+
+    async function loadCardOverview() {
+      setCardLoading(true);
+
+      try {
+        const data = await fetchHistoricalSensorOverview({
+          factoryName,
+          startDate: range.start,
+          endDate: range.end,
+          deviceId: "all",
+        });
+
+        if (cancelled || requestId !== cardOverviewRequestIdRef.current) return;
+        setCardOverview(data || EMPTY_SENSOR_OVERVIEW);
+      } catch {
+        if (cancelled || requestId !== cardOverviewRequestIdRef.current) return;
+        setCardOverview(EMPTY_SENSOR_OVERVIEW);
+      } finally {
+        if (!cancelled && requestId === cardOverviewRequestIdRef.current) {
+          setCardLoading(false);
+        }
+      }
+    }
+
+    void loadCardOverview();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [factoryName, range.end, range.start]);
 
   useEffect(() => {
     if (deviceFilter === "all") return;
@@ -261,7 +298,7 @@ export default function SensorDetailPage() {
   const deviceCards = useMemo(() => {
     const trendMap = new Map();
 
-    overview.trends.forEach((row) => {
+    cardOverview.trends.forEach((row) => {
       const deviceId = String(row?.device ?? "").trim() || "unknown";
       if (!trendMap.has(deviceId)) {
         trendMap.set(deviceId, { humidityTrend: [], tempTrend: [] });
@@ -275,7 +312,7 @@ export default function SensorDetailPage() {
       entry.humidityTrend.push(Number.isFinite(humidity) ? humidity : null);
     });
 
-    return overview.latestDevices.map((device) => {
+    return cardOverview.latestDevices.map((device) => {
       const trendEntry = trendMap.get(device.deviceId) || { humidityTrend: [], tempTrend: [] };
       return {
         ...device,
@@ -283,7 +320,7 @@ export default function SensorDetailPage() {
         tempTrend: trendEntry.tempTrend,
       };
     });
-  }, [overview.latestDevices, overview.trends]);
+  }, [cardOverview.latestDevices, cardOverview.trends]);
 
   async function handleExport() {
     if (exporting || overview.totalReadings === 0) return;
@@ -577,7 +614,7 @@ export default function SensorDetailPage() {
           </div>
 
           {/* ── Device summary cards ── */}
-          {deviceCards.length > 0 && (
+          {!cardLoading && deviceCards.length > 0 && (
             <div className="mb-8">
               <p className="text-[10px] text-outline font-bold uppercase tracking-widest mb-4">
                 {deviceCards.length} Device{deviceCards.length !== 1 ? "s" : ""} — Latest Readings
