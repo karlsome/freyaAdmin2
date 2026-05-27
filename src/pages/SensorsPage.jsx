@@ -1,5 +1,6 @@
+import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useDashboardData } from "../hooks/useDashboardData";
+import { fetchSensorFactoryOverview } from "../services/api";
 import { getTempStatus, getHumidityStatus, getWBGTStatus } from "../utils/statusHelpers";
 
 // ─── Per-factory sensor card ──────────────────────────────────────────────────
@@ -10,9 +11,10 @@ function FactorySensorCard({ factory, onClick }) {
   const wbgtStatus  = getWBGTStatus(sensor.wbgt);
 
   return (
-    <div
+    <button
+      type="button"
       onClick={onClick}
-      className="glass-card rounded-2xl p-5 cursor-pointer hover:scale-[1.02] hover:shadow-[0_0_20px_rgba(99,102,241,0.12)] transition-all duration-300"
+      className="glass-card cursor-pointer rounded-2xl p-5 text-left transition-[box-shadow,border-color,background-color] duration-300 hover:border-primary/20 hover:shadow-[0_14px_32px_rgba(15,23,42,0.08)] focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/35"
     >
       {/* Header */}
       <div className="flex items-start justify-between mb-4">
@@ -52,7 +54,7 @@ function FactorySensorCard({ factory, onClick }) {
           <span className="material-symbols-outlined" style={{ fontSize: 14 }}>arrow_forward</span>
         </div>
       </div>
-    </div>
+    </button>
   );
 }
 
@@ -91,7 +93,29 @@ function SummaryStrip({ factories }) {
 // ─── Page ────────────────────────────────────────────────────────────────────
 export default function SensorsPage() {
   const navigate  = useNavigate();
-  const { factories, loading, refresh } = useDashboardData();
+  const [factories, setFactories] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  const refresh = useCallback(async () => {
+    setLoading(true);
+    setError("");
+
+    try {
+      const today = new Date().toISOString().split("T")[0];
+      const result = await fetchSensorFactoryOverview(today);
+      setFactories(Array.isArray(result) ? result : []);
+    } catch (loadError) {
+      setFactories([]);
+      setError(loadError.message || "Failed to load factory sensor data.");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void refresh();
+  }, [refresh]);
 
   const withData    = factories.filter((f) => f.sensor.hasData);
   const withoutData = factories.filter((f) => !f.sensor.hasData);
@@ -134,6 +158,12 @@ export default function SensorsPage() {
       ) : (
         <SummaryStrip factories={factories} />
       )}
+
+      {!loading && error ? (
+        <div className="mb-8 rounded-2xl border border-error/20 bg-error/5 p-4 text-sm text-error">
+          {error}
+        </div>
+      ) : null}
 
       {loading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">

@@ -27,6 +27,7 @@ const EMPTY_SENSOR_OVERVIEW = {
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function parseTemp(v) { return parseFloat(String(v ?? "").replace("°C", "").trim()); }
 function parseHumid(v) { return parseFloat(String(v ?? "").replace("%", "").trim()); }
+function normalizeDeviceId(value) { return String(value ?? "").trim(); }
 
 function toISO(d) { return d.toISOString().split("T")[0]; }
 
@@ -102,13 +103,21 @@ function SensorCard({ device, isActive = false, onSelect = null }) {
       onClick={() => onSelect?.(device?.deviceId || "all")}
       aria-pressed={isActive}
       className={`glass-card flex w-full flex-col gap-4 rounded-2xl p-5 text-left transition-[box-shadow,border-color,background-color] duration-300 hover:border-primary/20 hover:shadow-[0_14px_32px_rgba(15,23,42,0.08)] focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/35 ${
-        isActive ? "border-primary/35 bg-primary/5 shadow-[0_14px_32px_rgba(99,102,241,0.12)]" : ""
+        isActive ? "border-primary/45 bg-primary/10 ring-2 ring-primary/20 shadow-[0_16px_36px_rgba(99,102,241,0.16)]" : ""
       }`}
     >
       <div className="flex items-start justify-between">
         <div>
           <p className="text-xs font-bold text-outline uppercase tracking-widest">Device</p>
-          <p className="text-base font-black text-on-surface">{device?.deviceId || "Unknown"}</p>
+          <div className="mt-1 flex flex-wrap items-center gap-2">
+            <p className={`text-base font-black ${isActive ? "text-primary" : "text-on-surface"}`}>{device?.deviceId || "Unknown"}</p>
+            {isActive ? (
+              <span className="inline-flex items-center gap-1 rounded-full bg-primary px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">
+                <span className="material-symbols-outlined" style={{ fontSize: 12 }}>check</span>
+                Selected
+              </span>
+            ) : null}
+          </div>
         </div>
         <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full ${wbgtStatus.bg} ${wbgtStatus.color}`}>
           WBGT {wbgt ?? "—"}°C
@@ -286,7 +295,11 @@ export default function SensorDetailPage() {
     };
   }, [deviceFilter, factoryName, page, pageSize, range.end, range.start, sortKey]);
 
-  const devices = overview.devices;
+  const devices = useMemo(() => Array.from(new Set(
+    (Array.isArray(overview.devices) ? overview.devices : [])
+      .map((deviceId) => normalizeDeviceId(deviceId))
+      .filter(Boolean)
+  )), [overview.devices]);
   const sensorKPIs = useMemo(() => ({
     avgTemp: overview.avgTemp,
     peakTemp: overview.peakTemp,
@@ -313,9 +326,11 @@ export default function SensorDetailPage() {
     });
 
     return cardOverview.latestDevices.map((device) => {
-      const trendEntry = trendMap.get(device.deviceId) || { humidityTrend: [], tempTrend: [] };
+      const normalizedDeviceId = normalizeDeviceId(device?.deviceId) || "unknown";
+      const trendEntry = trendMap.get(normalizedDeviceId) || { humidityTrend: [], tempTrend: [] };
       return {
         ...device,
+        deviceId: normalizedDeviceId,
         humidityTrend: trendEntry.humidityTrend,
         tempTrend: trendEntry.tempTrend,
       };
@@ -341,7 +356,7 @@ export default function SensorDetailPage() {
   }
 
   function handleSelectDevice(nextDeviceId) {
-    const normalizedDeviceId = String(nextDeviceId ?? "").trim() || "all";
+    const normalizedDeviceId = normalizeDeviceId(nextDeviceId) || "all";
     setDeviceFilter(normalizedDeviceId);
   }
 
@@ -493,7 +508,7 @@ export default function SensorDetailPage() {
           <span className="text-[10px] text-outline font-bold uppercase tracking-wider">Device</span>
           <select
             value={deviceFilter}
-            onChange={(e) => setDeviceFilter(e.target.value)}
+            onChange={(e) => setDeviceFilter(normalizeDeviceId(e.target.value) || "all")}
             className="bg-surface-container-lowest border border-outline-variant/20 rounded-lg px-3 py-1.5 text-xs text-on-surface focus:ring-2 focus:ring-primary/20 outline-none transition-all"
           >
             <option value="all">All Devices</option>
@@ -624,7 +639,7 @@ export default function SensorDetailPage() {
                   <SensorCard
                     key={device.deviceId}
                     device={device}
-                    isActive={deviceFilter === device.deviceId}
+                    isActive={normalizeDeviceId(deviceFilter) === normalizeDeviceId(device.deviceId)}
                     onSelect={handleSelectDevice}
                   />
                 ))}
