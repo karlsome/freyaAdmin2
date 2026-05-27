@@ -217,7 +217,7 @@ export default function MaintenancePage() {
   }));
 
   return (
-    <div className="px-6 pb-6 pt-24 md:px-8">
+    <section className="h-screen overflow-y-auto px-6 pb-16 pt-24 scrollbar-hide md:px-8">
       <section>
         <div className="mb-6 flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
           <div>
@@ -419,6 +419,6 @@ export default function MaintenancePage() {
           }}
         />
       )}
-    </div>
+    </section>
   );
 }
