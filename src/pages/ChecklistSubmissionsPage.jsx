@@ -732,11 +732,12 @@ function RecordDetailModal({ defaultTab = "submission", form, onClose, record })
   }
 
   function getFieldValueTone(field, status) {
+    if (status === "ng") return "text-error";
+    if (status === "out-of-range") return "text-error";
+
     if (field.type === "toggle") {
       if (status === "ok") return "text-emerald-500";
-      if (status === "ng") return "text-error";
     }
-    if (status === "out-of-range") return "text-error";
     return "text-on-surface";
   }
 
@@ -886,6 +887,7 @@ function RecordDetailModal({ defaultTab = "submission", form, onClose, record })
                 const valueTone = getFieldValueTone(field, fieldStatus);
                 const answeredAtLabel = formatAnsweredAt(field.answeredAt);
                 const isProblemField = fieldStatus === "ng" || fieldStatus === "out-of-range";
+                const isNgValue = fieldStatus === "ng";
                 const canOpenNgReason = isProblemField && hasTicketTabContent;
                 const problemFieldHint = getFieldTicketHint(field);
                 const hasMatchingTicket = tickets.some((ticket) => doesTicketMatchField(ticket, problemFieldHint));
@@ -904,9 +906,15 @@ function RecordDetailModal({ defaultTab = "submission", form, onClose, record })
                       }
                     } : undefined}
                     title={cardIsClickable ? "Click to open the NG reason" : undefined}
-                    className={`rounded-2xl border border-outline-variant/20 bg-surface-container px-4 py-3 ${
+                    className={`rounded-2xl border px-4 py-3 ${
+                      isProblemField
+                        ? "border-red-400/70 bg-red-50"
+                        : "border-outline-variant/20 bg-surface-container"
+                    } ${
                       cardIsClickable
-                        ? "cursor-pointer transition hover:border-primary/30 hover:bg-surface-container-high focus:outline-none focus:ring-2 focus:ring-primary/30"
+                        ? isProblemField
+                          ? "cursor-pointer transition hover:border-red-500 hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-red-300"
+                          : "cursor-pointer transition hover:border-primary/30 hover:bg-surface-container-high focus:outline-none focus:ring-2 focus:ring-primary/30"
                         : ""
                     }`}
                   >
@@ -925,7 +933,7 @@ function RecordDetailModal({ defaultTab = "submission", form, onClose, record })
                         {isReferenceRecord ? (
                           <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-outline">Not submitted</p>
                         ) : (
-                          <p className={`text-sm font-bold ${valueTone}`}>{value}</p>
+                          <p className={`text-sm ${isNgValue ? "font-black tracking-[0.04em] text-red-600" : `font-bold ${valueTone}`}`}>{value}</p>
                         )}
                         {!isReferenceRecord && fieldStatus === "out-of-range" && (
                           <p className="mt-1 text-[10px] font-bold uppercase tracking-[0.12em] text-error">Out of range</p>
