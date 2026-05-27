@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { fetchMasterImage } from "../services/api";
+import CollapsibleSection from "./CollapsibleSection";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 export const PROCESS_ACCENT = {
@@ -187,29 +188,13 @@ function StructuredValueCard({ value, depth = 0 }) {
 
 // ─── PhotosSection ────────────────────────────────────────────────────────────
 function PhotosSection({ checkImages, labelImages, totalCount }) {
-  const [open, setOpen] = useState(false);
-
   return (
-    <div className="px-6 py-0 border-t border-white/10">
-      <button
-        className="w-full flex items-center justify-between gap-2 py-4 text-[10px] font-bold uppercase
-                   tracking-wider text-outline hover:text-on-surface transition-colors"
-        onClick={() => setOpen((v) => !v)}
-      >
-        <span className="flex items-center gap-1.5">
-          <span className="material-symbols-outlined" style={{ fontSize: 14 }}>photo_library</span>
-          Uploaded Photos
-          <span className="px-1.5 py-0.5 rounded-full bg-surface-container text-[9px] font-bold normal-case tracking-normal">
-            {totalCount}
-          </span>
-        </span>
-        <span className="material-symbols-outlined" style={{ fontSize: 14 }}>
-          {open ? "keyboard_arrow_up" : "keyboard_arrow_down"}
-        </span>
-      </button>
-
-      {open && (
-        <div className="pb-5 space-y-5">
+    <CollapsibleSection
+      icon="photo_library"
+      label="Uploaded Photos"
+      badge={<span className="px-1.5 py-0.5 rounded-full bg-surface-container text-[9px] font-bold normal-case tracking-normal">{totalCount}</span>}
+    >
+      <div className="pb-5 space-y-5">
           {checkImages.length > 0 && (
             <div className="grid grid-cols-2 gap-3">
               {checkImages.map(({ label, url }) => (
@@ -246,14 +231,12 @@ function PhotosSection({ checkImages, labelImages, totalCount }) {
             </div>
           )}
         </div>
-      )}
-    </div>
+    </CollapsibleSection>
   );
 }
 
 // ─── BreakTimeSection ─────────────────────────────────────────────────────────
 function BreakTimeSection({ record }) {
-  const [open, setOpen] = useState(false);
 
   const data = record.Break_Time_Data ?? {};
   const breaks = Object.entries(data)
@@ -265,63 +248,46 @@ function BreakTimeSection({ record }) {
   const totalMin = record.Total_Break_Minutes ?? 0;
 
   return (
-    <div className="px-6 py-0 border-t border-white/10">
-      <button
-        className="w-full flex items-center justify-between gap-2 py-4 text-[10px] font-bold uppercase
-                   tracking-wider text-outline hover:text-on-surface transition-colors"
-        onClick={() => setOpen((v) => !v)}
-      >
-        <span className="flex items-center gap-1.5">
-          <span className="material-symbols-outlined" style={{ fontSize: 14 }}>coffee</span>
-          Break Times
-          <span className="px-1.5 py-0.5 rounded-full bg-surface-container text-[9px] font-bold normal-case tracking-normal">
-            {totalMin} min
-          </span>
-        </span>
-        <span className="material-symbols-outlined" style={{ fontSize: 14 }}>
-          {open ? "keyboard_arrow_up" : "keyboard_arrow_down"}
-        </span>
-      </button>
-
-      {open && (
-        <div className="pb-4">
-          <div className="rounded-2xl overflow-hidden border border-white/10">
-            <table className="ui-table-data w-full">
-              <thead className="bg-surface-container-high/40">
-                <tr>
-                  {["Break", "Start", "End", "Duration"].map((h) => (
-                    <th key={h} className="ui-table-heading px-4 py-2 text-left uppercase tracking-wider text-outline">{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-white/5">
-                {breaks.map(({ key, start, end }) => {
-                  const s = new Date(`2000-01-01T${start}`);
-                  const e = new Date(`2000-01-01T${end}`);
-                  const mins = e > s ? Math.round((e - s) / 60000) : null;
-                  return (
-                    <tr key={key} className="hover:bg-surface-container/40 transition-colors">
-                      <td className="px-4 py-2.5 font-bold text-on-surface capitalize">{key.replace(/([0-9]+)/, " $1")}</td>
-                      <td className="px-4 py-2.5 font-mono text-on-surface-variant">{start}</td>
-                      <td className="px-4 py-2.5 font-mono text-on-surface-variant">{end}</td>
-                      <td className="px-4 py-2.5 text-outline">{mins != null ? `${mins} min` : "—"}</td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-          <p className="text-[10px] text-outline mt-2 text-right">Total: {totalMin} min ({record.Total_Break_Hours ?? 0} hrs)</p>
+    <CollapsibleSection
+      icon="coffee"
+      label="Break Times"
+      badge={<span className="px-1.5 py-0.5 rounded-full bg-surface-container text-[9px] font-bold normal-case tracking-normal">{totalMin} min</span>}
+    >
+      <div className="pb-4">
+        <div className="rounded-2xl overflow-hidden border border-white/10">
+          <table className="ui-table-data w-full">
+            <thead className="bg-surface-container-high/40">
+              <tr>
+                {["Break", "Start", "End", "Duration"].map((h) => (
+                  <th key={h} className="ui-table-heading px-4 py-2 text-left uppercase tracking-wider text-outline">{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-white/5">
+              {breaks.map(({ key, start, end }) => {
+                const s = new Date(`2000-01-01T${start}`);
+                const e = new Date(`2000-01-01T${end}`);
+                const mins = e > s ? Math.round((e - s) / 60000) : null;
+                return (
+                  <tr key={key} className="hover:bg-surface-container/40 transition-colors">
+                    <td className="px-4 py-2.5 font-bold text-on-surface capitalize">{key.replace(/([0-9]+)/, " $1")}</td>
+                    <td className="px-4 py-2.5 font-mono text-on-surface-variant">{start}</td>
+                    <td className="px-4 py-2.5 font-mono text-on-surface-variant">{end}</td>
+                    <td className="px-4 py-2.5 text-outline">{mins != null ? `${mins} min` : "—"}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
         </div>
-      )}
-    </div>
+        <p className="text-[10px] text-outline mt-2 text-right">Total: {totalMin} min ({record.Total_Break_Hours ?? 0} hrs)</p>
+      </div>
+    </CollapsibleSection>
   );
 }
 
 // ─── MaintenanceSection ───────────────────────────────────────────────────────
 function MaintenanceSection({ record }) {
-  const [open, setOpen] = useState(false);
-
   const maint = record.Maintenance_Data ?? {};
   const records = Array.isArray(maint.records) ? maint.records.filter((r) => r.startTime || r.comment) : [];
 
@@ -330,69 +296,54 @@ function MaintenanceSection({ record }) {
   const totalMin = maint.totalMinutes ?? record.Total_Trouble_Minutes ?? 0;
 
   return (
-    <div className="px-6 py-0 border-t border-white/10">
-      <button
-        className="w-full flex items-center justify-between gap-2 py-4 text-[10px] font-bold uppercase
-                   tracking-wider text-outline hover:text-on-surface transition-colors"
-        onClick={() => setOpen((v) => !v)}
-      >
-        <span className="flex items-center gap-1.5">
-          <span className="material-symbols-outlined" style={{ fontSize: 14 }}>build</span>
-          Maintenance / Trouble
-          <span className="px-1.5 py-0.5 rounded-full bg-amber-400/15 text-amber-400 text-[9px] font-bold normal-case tracking-normal">
-            {records.length} record{records.length > 1 ? "s" : ""}
-          </span>
-        </span>
-        <span className="material-symbols-outlined" style={{ fontSize: 14 }}>
-          {open ? "keyboard_arrow_up" : "keyboard_arrow_down"}
-        </span>
-      </button>
-
-      {open && (
-        <div className="pb-5 space-y-3">
-          {records.map((rec) => {
-            const photos = Array.isArray(rec.photos) ? rec.photos.filter(Boolean) : [];
-            const s = rec.startTime ? new Date(`2000-01-01T${rec.startTime}`) : null;
-            const e = rec.endTime   ? new Date(`2000-01-01T${rec.endTime}`)   : null;
-            const mins = (s && e && e > s) ? Math.round((e - s) / 60000) : null;
-            return (
-              <div key={rec.id ?? rec.timestamp} className="glass-card rounded-2xl p-4 space-y-2">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex-1 space-y-1.5">
-                    <div className="flex items-center gap-3 flex-wrap">
-                      {rec.startTime && (
-                        <span className="text-xs font-mono font-bold text-on-surface">
-                          {rec.startTime}{rec.endTime ? ` → ${rec.endTime}` : ""}
-                        </span>
-                      )}
-                      {mins != null && (
-                        <span className="px-2 py-0.5 rounded-full bg-amber-400/15 text-amber-400 text-[10px] font-bold">
-                          {mins} min
-                        </span>
-                      )}
-                    </div>
-                    {rec.comment && (
-                      <p className="text-xs text-on-surface-variant">{rec.comment}</p>
+    <CollapsibleSection
+      icon="build"
+      label="Maintenance / Trouble"
+      badge={<span className="px-1.5 py-0.5 rounded-full bg-amber-400/15 text-amber-400 text-[9px] font-bold normal-case tracking-normal">{records.length} record{records.length > 1 ? "s" : ""}</span>}
+    >
+      <div className="pb-5 space-y-3">
+        {records.map((rec) => {
+          const photos = Array.isArray(rec.photos) ? rec.photos.filter(Boolean) : [];
+          const s = rec.startTime ? new Date(`2000-01-01T${rec.startTime}`) : null;
+          const e = rec.endTime   ? new Date(`2000-01-01T${rec.endTime}`)   : null;
+          const mins = (s && e && e > s) ? Math.round((e - s) / 60000) : null;
+          return (
+            <div key={rec.id ?? rec.timestamp} className="glass-card rounded-2xl p-4 space-y-2">
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex-1 space-y-1.5">
+                  <div className="flex items-center gap-3 flex-wrap">
+                    {rec.startTime && (
+                      <span className="text-xs font-mono font-bold text-on-surface">
+                        {rec.startTime}{rec.endTime ? ` → ${rec.endTime}` : ""}
+                      </span>
+                    )}
+                    {mins != null && (
+                      <span className="px-2 py-0.5 rounded-full bg-amber-400/15 text-amber-400 text-[10px] font-bold">
+                        {mins} min
+                      </span>
                     )}
                   </div>
+                  {rec.comment && (
+                    <p className="text-xs text-on-surface-variant">{rec.comment}</p>
+                  )}
                 </div>
-                {photos.length > 0 && (
-                  <div className="grid grid-cols-3 gap-2 pt-1">
-                    {photos.map((url, i) => (
-                      <a key={i} href={url} target="_blank" rel="noreferrer"
-                        className="block rounded-2xl overflow-hidden border border-white/10 hover:border-amber-400/40 transition-colors cursor-zoom-in">
-                        <img src={url} alt={`Maintenance photo ${i + 1}`} className="w-full aspect-square object-cover bg-black/20" />
-                      </a>
-                    ))}
-                  </div>
-                )}
               </div>
-            );
-          })}
-          <p className="text-[10px] text-outline text-right">Total trouble: {totalMin} min ({maint.totalHours ?? record.Total_Trouble_Hours ?? 0} hrs)</p>
-        </div>
-      )}
-    </div>
+              {photos.length > 0 && (
+                <div className="grid grid-cols-3 gap-2 pt-1">
+                  {photos.map((url, i) => (
+                    <a key={i} href={url} target="_blank" rel="noreferrer"
+                      className="block rounded-2xl overflow-hidden border border-white/10 hover:border-amber-400/40 transition-colors cursor-zoom-in">
+                      <img src={url} alt={`Maintenance photo ${i + 1}`} className="w-full aspect-square object-cover bg-black/20" />
+                    </a>
+                  ))}
+                </div>
+              )}
+            </div>
+          );
+        })}
+        <p className="text-[10px] text-outline text-right">Total trouble: {totalMin} min ({maint.totalHours ?? record.Total_Trouble_Hours ?? 0} hrs)</p>
+      </div>
+    </CollapsibleSection>
   );
 }
 
@@ -403,10 +354,9 @@ function MaintenanceSection({ record }) {
 //   onClose     — callback to close the modal
 //   onLotClick  — optional callback(lot: string) when a 材料ロット chip is clicked
 export default function RecordDetailModal({ record, processName, onClose, onLotClick }) {
-  const [imageData,     setImageData]     = useState(null);
-  const [imageLoading,  setImageLoading]  = useState(true);
-  const [allFieldsOpen, setAllFieldsOpen] = useState(false);
-  const [copied,        setCopied]        = useState(false);
+  const [imageData,    setImageData]    = useState(null);
+  const [imageLoading, setImageLoading] = useState(true);
+  const [copied,       setCopied]       = useState(false);
 
   function copyLink() {
     navigator.clipboard.writeText(window.location.href).then(() => {
@@ -585,39 +535,27 @@ export default function RecordDetailModal({ record, processName, onClose, onLotC
         <MaintenanceSection record={record} />
 
         {/* All fields — collapsible */}
-        <div className="px-6 py-4">
-          <button
-            className="w-full flex items-center justify-between gap-2 text-[10px] font-bold uppercase
-                       tracking-wider text-outline hover:text-on-surface transition-colors"
-            onClick={() => setAllFieldsOpen((v) => !v)}
-          >
-            <span>All Fields</span>
-            <span className="material-symbols-outlined" style={{ fontSize: 14 }}>
-              {allFieldsOpen ? "keyboard_arrow_up" : "keyboard_arrow_down"}
-            </span>
-          </button>
-          {allFieldsOpen && (
-            <div className="space-y-0 mt-3">
-              {entries.map(([k, v]) => {
-                const normalizedValue = parseStructuredValue(v);
-                const structured = isStructuredValue(normalizedValue);
-                return (
-                  <div
-                    key={k}
-                    className="grid grid-cols-1 gap-2 py-3 border-b border-white/5 last:border-0 md:grid-cols-[minmax(120px,160px)_1fr] md:gap-4"
-                  >
-                    <span className="text-[11px] font-bold text-outline md:pt-1">{k}</span>
-                    {structured ? (
-                      <StructuredValueCard value={normalizedValue} />
-                    ) : (
-                      <PrimitiveFieldValue value={normalizedValue} align="right" />
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
+        <CollapsibleSection label="All Fields" wrapperClassName="px-6 py-4">
+          <div className="space-y-0 mt-3">
+            {entries.map(([k, v]) => {
+              const normalizedValue = parseStructuredValue(v);
+              const structured = isStructuredValue(normalizedValue);
+              return (
+                <div
+                  key={k}
+                  className="grid grid-cols-1 gap-2 py-3 border-b border-white/5 last:border-0 md:grid-cols-[minmax(120px,160px)_1fr] md:gap-4"
+                >
+                  <span className="text-[11px] font-bold text-outline md:pt-1">{k}</span>
+                  {structured ? (
+                    <StructuredValueCard value={normalizedValue} />
+                  ) : (
+                    <PrimitiveFieldValue value={normalizedValue} align="right" />
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </CollapsibleSection>
       </div>
     </div>
   );
