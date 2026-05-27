@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import AdvancedFilterSection from "../components/AdvancedFilterSection";
 import DataTable from "../components/DataTable";
 import StatSummaryCard from "../components/StatSummaryCard";
+import StatusChip from "../components/StatusChip";
 import FactoryStatusLogsModal from "../components/factoryStatus/FactoryStatusLogsModal";
 import {
   fetchFactoryStatusFactories,
@@ -56,16 +57,6 @@ function joinClasses(...classes) {
   return classes.filter(Boolean).join(" ");
 }
 
-function StatusBadge({ statusKey }) {
-  const meta = getFactoryStatusBadgeMeta(statusKey);
-
-  return (
-    <span className={joinClasses("planner-data-text inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-bold", meta.badgeClassName)}>
-      <span className="material-symbols-outlined" style={{ fontSize: 14 }}>{meta.icon}</span>
-      {meta.label}
-    </span>
-  );
-}
 
 function SummaryCard({ icon, label, value, subtitle, accent, loading = false }) {
   return (
@@ -299,7 +290,10 @@ export default function FactoryStatusPage() {
       key: "statusKey",
       label: "Status",
       width: 120,
-      renderCell: (row) => <StatusBadge statusKey={row.statusKey} />,
+      renderCell: (row) => {
+        const meta = getFactoryStatusBadgeMeta(row.statusKey);
+        return <StatusChip icon={meta.icon} label={meta.label} className={`planner-data-text ${meta.badgeClassName}`} />;
+      },
       disableCellWrapper: true,
     },
     {

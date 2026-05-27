@@ -2,6 +2,7 @@ import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import DataTable from "../components/DataTable";
 import IconButton from "../components/IconButton";
 import StatSummaryCard from "../components/StatSummaryCard";
+import StatusChip from "../components/StatusChip";
 import NodaBulkRequestModal from "../components/noda/NodaBulkRequestModal";
 import NodaDetailModal from "../components/noda/NodaDetailModal";
 import NodaGenSyncModal from "../components/noda/NodaGenSyncModal";
@@ -64,16 +65,6 @@ function FlashBanner({ flash, onClose }) {
   );
 }
 
-function StatusBadge({ request }) {
-  const meta = getNodaStatusMeta(resolveNodaDisplayStatus(request));
-
-  return (
-    <span className={joinNodaClasses("inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-bold", meta.badgeClassName)}>
-      <span className="material-symbols-outlined" style={{ fontSize: 14 }}>{meta.icon}</span>
-      {meta.label}
-    </span>
-  );
-}
 
 function CompletedAtCell({ value }) {
   if (!value) {
@@ -374,7 +365,10 @@ export default function NodaPage() {
       key: "status",
       label: "Status",
       width: 170,
-      renderCell: (row) => <StatusBadge request={row} />,
+      renderCell: (row) => {
+        const meta = getNodaStatusMeta(resolveNodaDisplayStatus(row));
+        return <StatusChip icon={meta.icon} label={meta.label} className={meta.badgeClassName} />;
+      },
       disableCellWrapper: true,
     },
     {

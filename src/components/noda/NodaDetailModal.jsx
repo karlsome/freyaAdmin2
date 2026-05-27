@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Papa from "papaparse";
 import NodaModalFrame from "./NodaModalFrame";
+import StatusChip from "../StatusChip";
 import {
   addItemsToNodaRequest,
   checkNodaInventory,
@@ -72,13 +73,7 @@ function readCsvWithShiftJisFallback(file) {
 
 function StatusBadge({ request }) {
   const meta = getNodaStatusMeta(resolveNodaDisplayStatus(request));
-
-  return (
-    <span className={joinNodaClasses("inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-bold", meta.badgeClassName)}>
-      <span className="material-symbols-outlined" style={{ fontSize: 14 }}>{meta.icon}</span>
-      {meta.label}
-    </span>
-  );
+  return <StatusChip icon={meta.icon} label={meta.label} className={meta.badgeClassName} />;
 }
 
 function InventoryBadge({ lineItem }) {
