@@ -1,8 +1,17 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { fetchHistoricalSensorData, calcWBGT } from "../services/api";
+import DataTable from "../components/DataTable";
+import { fetchHistoricalSensorData, fetchHistoricalSensorReadingsPage, calcWBGT } from "../services/api";
 import { getTempStatus, getHumidityStatus, getWBGTStatus } from "../utils/statusHelpers";
 import SensorTrendChart from "../components/SensorTrendChart";
+
+const SENSOR_READINGS_PAGE_SIZE_OPTIONS = [15, 50, 100];
+const EMPTY_SENSOR_PAGINATION = {
+  currentPage: 1,
+  totalPages: 0,
+  totalItems: 0,
+  itemsPerPage: SENSOR_READINGS_PAGE_SIZE_OPTIONS[0],
+};
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function parseTemp(v) { return parseFloat(String(v ?? "").replace("°C", "").trim()); }
@@ -15,6 +24,14 @@ function dateRangeDefault() {
   const start = new Date();
   start.setDate(start.getDate() - 6);
   return { start: toISO(start), end: toISO(end) };
+}
+
+function buildSensorReadingsPageInfo({ filteredCount, page, pageSize }) {
+  if (!filteredCount) return "0 readings shown";
+
+  const start = (page - 1) * pageSize + 1;
+  const end = Math.min(page * pageSize, filteredCount);
+  return `${filteredCount.toLocaleString()} readings, showing ${start.toLocaleString()}-${end.toLocaleString()}`;
 }
 
 // ─── CSV export ───────────────────────────────────────────────────────────────
@@ -104,18 +121,75 @@ export default function SensorDetailPage() {
   const { factoryName: encoded } = useParams();
   const factoryName = decodeURIComponent(encoded);
   const navigate    = useNavigate();
+  const requestIdRef = useRef(0);
 
   const [range, setRange]       = useState(dateRangeDefault);
   const [deviceFilter, setDeviceFilter] = useState("all");
   const [rawData, setRawData]   = useState([]);
   const [loading, setLoading]   = useState(true);
+  const [tableLoading, setTableLoading] = useState(true);
+  const [tableError, setTableError] = useState("");
   const [sortKey, setSortKey]   = useState("date_desc");
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(SENSOR_READINGS_PAGE_SIZE_OPTIONS[0]);
+  const [tableRows, setTableRows] = useState([]);
+  const [pagination, setPagination] = useState(EMPTY_SENSOR_PAGINATION);
 
   useEffect(() => {
     setLoading(true);
     fetchHistoricalSensorData(factoryName, range.start, range.end)
       .then((data) => { setRawData(data ?? []); setLoading(false); });
   }, [factoryName, range.start, range.end]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [deviceFilter, factoryName, range.end, range.start, sortKey]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const requestId = ++requestIdRef.current;
+
+    async function loadReadingsPage() {
+      setTableLoading(true);
+      setTableError("");
+
+      try {
+        const result = await fetchHistoricalSensorReadingsPage({
+          factoryName,
+          startDate: range.start,
+          endDate: range.end,
+          deviceId: deviceFilter,
+          sortKey,
+          page,
+          limit: pageSize,
+        });
+
+        if (cancelled || requestId !== requestIdRef.current) return;
+
+        setTableRows(Array.isArray(result?.data) ? result.data : []);
+        setPagination(result?.pagination || { ...EMPTY_SENSOR_PAGINATION, itemsPerPage: pageSize });
+
+        if (result?.pagination?.currentPage && result.pagination.currentPage !== page) {
+          setPage(result.pagination.currentPage);
+        }
+      } catch (loadError) {
+        if (cancelled || requestId !== requestIdRef.current) return;
+        setTableRows([]);
+        setPagination({ ...EMPTY_SENSOR_PAGINATION, itemsPerPage: pageSize });
+        setTableError(loadError.message || "Failed to load sensor readings.");
+      } finally {
+        if (!cancelled && requestId === requestIdRef.current) {
+          setTableLoading(false);
+        }
+      }
+    }
+
+    void loadReadingsPage();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [deviceFilter, factoryName, page, pageSize, range.end, range.start, sortKey]);
 
   const devices = useMemo(() => {
     const ids = [...new Set(rawData.map((r) => r.device).filter(Boolean))];
@@ -157,6 +231,86 @@ export default function SensorDetailPage() {
     }).length;
     return { avgTemp, peakTemp, minTemp, avgHumid, heatAlerts };
   }, [filtered]);
+
+  const tableColumns = useMemo(() => ([
+    {
+      key: "Date",
+      label: "Date",
+      width: 128,
+      renderCell: (row) => <span className="text-on-surface-variant">{row.Date || "—"}</span>,
+      disableCellWrapper: true,
+    },
+    {
+      key: "Time",
+      label: "Time",
+      width: 116,
+      renderCell: (row) => <span className="text-on-surface-variant">{row.Time || "—"}</span>,
+      disableCellWrapper: true,
+    },
+    {
+      key: "device",
+      label: "Device",
+      width: 224,
+      renderCell: (row) => <span className="font-mono text-on-surface">{row.device || "—"}</span>,
+      disableCellWrapper: true,
+    },
+    {
+      key: "temperature",
+      label: "Temp",
+      width: 128,
+      sortable: false,
+      renderCell: (row) => {
+        const temperature = parseTemp(row.Temperature);
+        const meta = getTempStatus(temperature);
+        return <span className={`font-bold ${meta.color}`}>{Number.isNaN(temperature) ? "—" : `${temperature}°C`}</span>;
+      },
+      disableCellWrapper: true,
+    },
+    {
+      key: "humidity",
+      label: "Humidity",
+      width: 132,
+      sortable: false,
+      renderCell: (row) => {
+        const humidity = parseHumid(row.Humidity);
+        const meta = getHumidityStatus(humidity);
+        return <span className={`font-bold ${meta.color}`}>{Number.isNaN(humidity) ? "—" : `${humidity}%`}</span>;
+      },
+      disableCellWrapper: true,
+    },
+    {
+      key: "wbgt",
+      label: "WBGT",
+      width: 124,
+      sortable: false,
+      renderCell: (row) => {
+        const temperature = parseTemp(row.Temperature);
+        const humidity = parseHumid(row.Humidity);
+        const wbgt = calcWBGT(temperature, humidity);
+        const meta = getWBGTStatus(wbgt);
+        return <span className={`font-bold ${meta.color}`}>{wbgt ?? "—"}°C</span>;
+      },
+      disableCellWrapper: true,
+    },
+    {
+      key: "status",
+      label: "Status",
+      width: 116,
+      sortable: false,
+      renderCell: (row) => {
+        const temperature = parseTemp(row.Temperature);
+        const humidity = parseHumid(row.Humidity);
+        const wbgt = calcWBGT(temperature, humidity);
+        const meta = getWBGTStatus(wbgt);
+        return (
+          <span className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-bold ${meta.bg} ${meta.color}`}>
+            {row.sensorStatus ?? "OK"}
+          </span>
+        );
+      },
+      disableCellWrapper: true,
+    },
+  ]), []);
 
   return (
     <section className="pt-24 pb-16 px-8 overflow-y-auto h-screen scrollbar-hide">
@@ -344,56 +498,42 @@ export default function SensorDetailPage() {
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-base font-bold text-on-surface">All Readings</h3>
               <span className="text-[10px] text-outline font-bold uppercase tracking-wider">
-                {filtered.length.toLocaleString()} rows
+                {(pagination.totalItems || tableRows.length).toLocaleString()} rows
               </span>
             </div>
-            {filtered.length ? (
-              <div className="overflow-x-auto">
-                <table className="ui-table-data w-full">
-                  <thead>
-                    <tr className="text-outline uppercase tracking-widest text-left border-b border-outline-variant/20">
-                      {["Date", "Time", "Device", "Temp", "Humidity", "WBGT", "Status"].map((h) => (
-                        <th key={h} className="ui-table-heading pb-3 pr-6">{h}</th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filtered.slice(0, 500).map((r, i) => {
-                      const t  = parseTemp(r.Temperature);
-                      const h  = parseHumid(r.Humidity);
-                      const wbgt   = calcWBGT(t, h);
-                      const ts = getTempStatus(t);
-                      const ws = getWBGTStatus(wbgt);
-                      return (
-                        <tr key={i} className="hover:bg-surface-container transition-colors border-b border-outline-variant/10">
-                          <td className="py-2.5 pr-6 text-on-surface-variant">{r.Date}</td>
-                          <td className="py-2.5 pr-6 text-on-surface-variant">{r.Time}</td>
-                          <td className="py-2.5 pr-6 font-mono text-on-surface">{r.device}</td>
-                          <td className={`py-2.5 pr-6 font-bold ${ts.color}`}>{isNaN(t) ? "—" : `${t}°C`}</td>
-                          <td className={`py-2.5 pr-6 font-bold ${getHumidityStatus(h).color}`}>{isNaN(h) ? "—" : `${h}%`}</td>
-                          <td className={`py-2.5 pr-6 font-bold ${ws.color}`}>{wbgt ?? "—"}°C</td>
-                          <td className="py-2.5 pr-6">
-                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${ws.bg} ${ws.color}`}>
-                              {r.sensorStatus ?? "OK"}
-                            </span>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-                {filtered.length > 500 && (
-                  <p className="text-center text-[10px] text-outline mt-4">
-                    Showing 500 of {filtered.length.toLocaleString()} — use Export CSV for full data
-                  </p>
-                )}
-              </div>
-            ) : (
-              <div className="flex flex-col items-center justify-center h-32 gap-2 text-outline">
-                <span className="material-symbols-outlined text-3xl">search_off</span>
-                <p className="text-xs">No sensor data found for this range</p>
-              </div>
-            )}
+            <DataTable
+              columns={tableColumns}
+              rows={tableRows}
+              loading={tableLoading}
+              error={tableError}
+              page={pagination.currentPage || page}
+              pageSize={pagination.itemsPerPage || pageSize}
+              filteredCount={pagination.totalItems || tableRows.length}
+              totalPages={pagination.totalPages || 0}
+              onPageChange={(nextPage) => setPage(nextPage)}
+              onPageSizeChange={(nextPageSize) => {
+                setPageSize(nextPageSize);
+                setPage(1);
+              }}
+              pageSizeOptions={SENSOR_READINGS_PAGE_SIZE_OPTIONS}
+              pageSizeLabel="Rows"
+              rowKey={(row) => `${row.Date || ""}-${row.Time || ""}-${row.device || "sensor"}`}
+              renderPageInfo={({ filteredCount, page: currentPage, pageSize: currentPageSize }) => (
+                <span>{buildSensorReadingsPageInfo({ filteredCount, page: currentPage, pageSize: currentPageSize })}</span>
+              )}
+              emptyTitle="No sensor readings found"
+              emptyMessage="Adjust the date range or device filter to load sensor readings."
+              layoutStorageKey="sensor-readings-table-layout"
+              enableColumnResize
+              enableColumnReorder
+              stickyHeader
+              stickyHeaderOffset={0}
+              className="overflow-hidden rounded-2xl"
+              topBarClassName="hidden"
+              bottomBarClassName="flex flex-col gap-4 border-t border-outline-variant/15 px-1 pt-4 md:flex-row md:items-center md:justify-between"
+              rowClassName="border-b border-outline-variant/10 transition hover:bg-surface-container"
+              rowsSelectClassName="h-10 rounded-2xl border border-outline-variant/30 bg-white px-3 text-sm text-on-surface outline-none transition focus:border-primary/40 dark:bg-surface-container"
+            />
           </div>
         </>
       )}

@@ -332,6 +332,144 @@ export async function fetchHistoricalSensorData(factoryName, startDate, endDate)
   }
 }
 
+function buildSensorReadingTemperatureExpression() {
+  return {
+    $convert: {
+      input: {
+        $trim: {
+          input: {
+            $replaceAll: {
+              input: { $toString: { $ifNull: ["$Temperature", ""] } },
+              find: "°C",
+              replacement: "",
+            },
+          },
+        },
+      },
+      to: "double",
+      onError: null,
+      onNull: null,
+    },
+  };
+}
+
+function buildSensorReadingHumidityExpression() {
+  return {
+    $convert: {
+      input: {
+        $trim: {
+          input: {
+            $replaceAll: {
+              input: { $toString: { $ifNull: ["$Humidity", ""] } },
+              find: "%",
+              replacement: "",
+            },
+          },
+        },
+      },
+      to: "double",
+      onError: null,
+      onNull: null,
+    },
+  };
+}
+
+function buildSensorReadingSortStage(sortKey) {
+  if (sortKey === "date_asc") return { Date: 1, Time: 1, _id: 1 };
+  if (sortKey === "temp_desc") return { temperatureValue: -1, Date: -1, Time: -1, _id: -1 };
+  if (sortKey === "temp_asc") return { temperatureValue: 1, Date: -1, Time: -1, _id: -1 };
+  return { Date: -1, Time: -1, _id: -1 };
+}
+
+export async function fetchHistoricalSensorReadingsPage({
+  factoryName,
+  startDate,
+  endDate,
+  deviceId = "all",
+  sortKey = "date_desc",
+  page = 1,
+  limit = 15,
+} = {}) {
+  const safeLimit = Math.max(1, Number(limit) || 15);
+  const safePage = Math.max(1, Number(page) || 1);
+  const skip = (safePage - 1) * safeLimit;
+  const filter = {
+    工場: factoryName,
+    Date: { $gte: startDate, $lte: endDate },
+  };
+
+  if (deviceId && deviceId !== "all") {
+    filter.device = deviceId;
+  }
+
+  const result = await query(
+    "submittedDB",
+    "tempHumidityDB",
+    filter,
+    {
+      aggregation: [
+        { $match: filter },
+        {
+          $addFields: {
+            temperatureValue: buildSensorReadingTemperatureExpression(),
+            humidityValue: buildSensorReadingHumidityExpression(),
+          },
+        },
+        {
+          $facet: {
+            data: [
+              { $sort: buildSensorReadingSortStage(sortKey) },
+              { $skip: skip },
+              { $limit: safeLimit },
+              {
+                $project: {
+                  _id: 1,
+                  Date: 1,
+                  Time: 1,
+                  device: 1,
+                  Temperature: 1,
+                  Humidity: 1,
+                  sensorStatus: 1,
+                  工場: 1,
+                },
+              },
+            ],
+            totalCount: [
+              { $count: "count" },
+            ],
+          },
+        },
+      ],
+    }
+  );
+
+  const payload = extractAggregationResultDocument(result);
+  const totalItems = Number(payload?.totalCount?.[0]?.count) || 0;
+  const totalPages = totalItems > 0 ? Math.ceil(totalItems / safeLimit) : 0;
+
+  if (totalItems > 0 && safePage > 1 && (!Array.isArray(payload?.data) || payload.data.length === 0)) {
+    return fetchHistoricalSensorReadingsPage({
+      factoryName,
+      startDate,
+      endDate,
+      deviceId,
+      sortKey,
+      page: totalPages,
+      limit: safeLimit,
+    });
+  }
+
+  return {
+    data: Array.isArray(payload?.data) ? payload.data : [],
+    pagination: {
+      currentPage: totalPages > 0 ? Math.min(safePage, totalPages) : 1,
+      totalPages,
+      totalItems,
+      itemsPerPage: safeLimit,
+    },
+  };
+}
+
 // ─── Environmental data (shared server-side weather batch) ──────────────────
 function _todayKey() {
   return new Date().toISOString().split("T")[0];
