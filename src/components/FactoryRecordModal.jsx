@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import ModalShell from "./ModalShell";
 
 function buildInitialDraft(record) {
   if (!record) {
@@ -44,30 +45,14 @@ export default function FactoryRecordModal({
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm">
-      <div className="flex min-h-full items-center justify-center p-4">
-        <div className="glass-card w-full max-w-3xl rounded-2xl overflow-hidden">
-          <div className="border-b border-outline-variant/20 px-6 py-5">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-outline">{record ? "Edit Factory" : "Create Factory"}</div>
-                <h3 className="mt-2 text-2xl font-black text-on-surface">
-                  {record ? "Edit Factory Record" : "Add Factory Record"}
-                </h3>
-                <p className="mt-1 text-sm text-on-surface-variant">
-                  {record ? "Update the selected factory details." : "Create a new factory entry."}
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={onClose}
-                className="flex h-11 w-11 items-center justify-center rounded-2xl bg-surface-container text-on-surface-variant transition hover:bg-surface-container-high hover:text-on-surface"
-              >
-                <span className="material-symbols-outlined">close</span>
-              </button>
-            </div>
-          </div>
-
+    <ModalShell
+      open={open}
+      onClose={onClose}
+      eyebrow={record ? "Edit Factory" : "Create Factory"}
+      title={record ? "Edit Factory Record" : "Add Factory Record"}
+      subtitle={record ? "Update the selected factory details." : "Create a new factory entry."}
+      maxWidth="max-w-3xl"
+    >
           <form
             onSubmit={(event) => {
               event.preventDefault();
@@ -158,8 +143,6 @@ export default function FactoryRecordModal({
               </div>
             </div>
           </form>
-        </div>
-      </div>
-    </div>
+    </ModalShell>
   );
 }

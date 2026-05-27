@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import ModalShell from "./ModalShell";
 
 function joinClasses(...classes) {
   return classes.filter(Boolean).join(" ");
@@ -62,19 +63,6 @@ export default function FieldOptionPickerModal({
     };
   }, [loadOptions, open]);
 
-  useEffect(() => {
-    if (!open) return undefined;
-
-    function handleKeyDown(event) {
-      if (event.key === "Escape") {
-        onClose?.();
-      }
-    }
-
-    document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [onClose, open]);
-
   const filteredOptions = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
     if (!normalizedQuery) return options;
@@ -84,30 +72,17 @@ export default function FieldOptionPickerModal({
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-[90] bg-black/45 backdrop-blur-sm" onClick={() => onClose?.()}>
-      <div className="flex min-h-full items-center justify-center p-4">
-        <div
-          className="glass-card flex w-full max-w-3xl flex-col overflow-hidden rounded-2xl"
-          onClick={(event) => event.stopPropagation()}
-        >
-          <div className="border-b border-outline-variant/20 px-5 py-4">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <div className="text-[10px] font-bold uppercase tracking-[0.22em] text-outline">Value Picker</div>
-                <h3 className="mt-1 text-xl font-black text-on-surface">{title}</h3>
-                {helperText ? <p className="mt-1 text-sm text-on-surface-variant">{helperText}</p> : null}
-              </div>
-
-              <button
-                type="button"
-                onClick={() => onClose?.()}
-                className="flex h-10 w-10 items-center justify-center rounded-2xl border border-outline-variant/20 bg-white/80 text-on-surface transition hover:bg-surface-container dark:bg-surface-container"
-              >
-                <span className="material-symbols-outlined">close</span>
-              </button>
-            </div>
-          </div>
-
+    <ModalShell
+      open={!!open}
+      onClose={onClose}
+      eyebrow="Value Picker"
+      title={title}
+      subtitle={helperText || undefined}
+      maxWidth="max-w-3xl"
+      zIndex="z-[90]"
+      overlayOpacity="45"
+      closeButtonVariant="outlined"
+    >
           <div className="border-b border-outline-variant/15 px-5 py-4">
             <input
               type="text"
@@ -157,8 +132,6 @@ export default function FieldOptionPickerModal({
               </div>
             )}
           </div>
-        </div>
-      </div>
-    </div>
+    </ModalShell>
   );
 }

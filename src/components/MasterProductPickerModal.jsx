@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import ModalShell from "./ModalShell";
 
 function joinClasses(...classes) {
   return classes.filter(Boolean).join(" ");
@@ -55,47 +56,21 @@ export default function MasterProductPickerModal({
     };
   }, [loadOptions, open, query]);
 
-  useEffect(() => {
-    if (!open) return undefined;
-
-    function handleKeyDown(event) {
-      if (event.key === "Escape") {
-        onClose?.();
-      }
-    }
-
-    document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [open, onClose]);
-
   if (!open) return null;
 
   const title = focusField === "背番号" ? "背番号検索" : "品番検索";
 
   return (
-    <div className="fixed inset-0 z-[90] bg-black/45 backdrop-blur-sm" onClick={() => onClose?.()}>
-      <div className="flex min-h-full items-center justify-center p-4">
-        <div
-          className="glass-card flex w-full max-w-5xl flex-col overflow-hidden rounded-2xl"
-          onClick={(event) => event.stopPropagation()}
-        >
-          <div className="border-b border-outline-variant/20 px-5 py-4">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <div className="text-[10px] font-bold uppercase tracking-[0.22em] text-outline">Master Picker</div>
-                <h3 className="mt-1 text-xl font-black text-on-surface">{title}</h3>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => onClose?.()}
-                className="flex h-10 w-10 items-center justify-center rounded-2xl border border-outline-variant/20 bg-white/80 text-on-surface transition hover:bg-surface-container dark:bg-surface-container"
-              >
-                <span className="material-symbols-outlined">close</span>
-              </button>
-            </div>
-          </div>
-
+    <ModalShell
+      open={open}
+      onClose={onClose}
+      eyebrow="Master Picker"
+      title={title}
+      maxWidth="max-w-5xl"
+      zIndex="z-[90]"
+      overlayOpacity="45"
+      closeButtonVariant="outlined"
+    >
           <div className="border-b border-outline-variant/15 px-5 py-4">
             <input
               type="text"
@@ -152,8 +127,6 @@ export default function MasterProductPickerModal({
           <div className="border-t border-outline-variant/15 bg-surface-container-low/60 px-5 py-3 text-xs text-on-surface-variant">
             行をクリックすると品番と背番号が同時に更新されます
           </div>
-        </div>
-      </div>
-    </div>
+    </ModalShell>
   );
 }

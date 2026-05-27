@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
+import ModalShell from "./ModalShell";
 
 export default function ProductPDFBulkMatchModal({
   open,
@@ -7,34 +8,12 @@ export default function ProductPDFBulkMatchModal({
   onClose,
   onConfirm,
 }) {
-  const modalRef = useRef(null);
   const [manualAssignments, setManualAssignments] = useState({});
 
   useEffect(() => {
     if (!open) return;
     setManualAssignments({});
   }, [open, matchData]);
-
-  useEffect(() => {
-    if (!open) return undefined;
-
-    function handleKeyDown(event) {
-      if (event.key === "Escape") onClose();
-    }
-
-    function handleMouseDown(event) {
-      if (modalRef.current && !modalRef.current.contains(event.target)) {
-        onClose();
-      }
-    }
-
-    document.addEventListener("keydown", handleKeyDown);
-    document.addEventListener("mousedown", handleMouseDown);
-    return () => {
-      document.removeEventListener("keydown", handleKeyDown);
-      document.removeEventListener("mousedown", handleMouseDown);
-    };
-  }, [open, onClose]);
 
   if (!open || !matchData) return null;
 
@@ -56,29 +35,33 @@ export default function ProductPDFBulkMatchModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm">
-      <div className="flex min-h-full items-center justify-center p-4">
-        <div ref={modalRef} className="glass-card flex w-full max-w-4xl flex-col overflow-hidden rounded-2xl">
-          <div className="border-b border-outline-variant/20 px-6 py-5">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-outline">Bulk Match Review</div>
-                <h3 className="mt-1 text-xl font-bold text-on-surface">Review filename matches</h3>
-                <p className="mt-2 text-sm text-on-surface-variant">
-                  {totalFiles} files selected. {matched.length} matched automatically, {toAssign.length} need manual assignment.
-                </p>
-              </div>
-
-              <button
-                type="button"
-                onClick={onClose}
-                className="flex h-9 w-9 items-center justify-center rounded-2xl bg-surface-container text-on-surface-variant transition hover:bg-surface-container-high hover:text-on-surface"
-              >
-                <span className="material-symbols-outlined">close</span>
-              </button>
-            </div>
-          </div>
-
+    <ModalShell
+      open={open}
+      onClose={onClose}
+      eyebrow="Bulk Match Review"
+      title="Review filename matches"
+      subtitle={`${totalFiles} files selected. ${matched.length} matched automatically, ${toAssign.length} need manual assignment.`}
+      maxWidth="max-w-4xl"
+      overlayOpacity="50"
+      footer={
+        <div className="flex items-center justify-end gap-3">
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-2xl border border-outline-variant/20 px-4 py-2 text-xs font-bold text-on-surface transition hover:bg-surface-container"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={handleConfirm}
+            className="rounded-2xl bg-primary px-4 py-2 text-xs font-bold text-on-primary transition hover:opacity-90"
+          >
+            Confirm Upload
+          </button>
+        </div>
+      }
+    >
           <div className="max-h-[60vh] space-y-4 overflow-y-auto px-6 py-5 scrollbar-hide">
             <section className="rounded-2xl border border-outline-variant/15 bg-surface-container-low px-4 py-4">
               <div className="text-xs font-bold uppercase tracking-[0.18em] text-outline">Matched Files</div>
@@ -131,25 +114,6 @@ export default function ProductPDFBulkMatchModal({
               </div>
             </section>
           </div>
-
-          <div className="flex items-center justify-end gap-3 border-t border-outline-variant/20 px-6 py-4">
-            <button
-              type="button"
-              onClick={onClose}
-              className="rounded-2xl border border-outline-variant/20 px-4 py-2 text-xs font-bold text-on-surface transition hover:bg-surface-container"
-            >
-              Cancel
-            </button>
-            <button
-              type="button"
-              onClick={handleConfirm}
-              className="rounded-2xl bg-primary px-4 py-2 text-xs font-bold text-on-primary transition hover:opacity-90"
-            >
-              Confirm Upload
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
+    </ModalShell>
   );
 }

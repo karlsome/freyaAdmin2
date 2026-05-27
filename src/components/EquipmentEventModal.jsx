@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { fetchWorkerNames, uploadEquipmentEventImage } from "../services/api";
+import ModalShell from "./ModalShell";
 
 const CATEGORY_TAGS = ["メンテナンス", "修理", "部品交換", "テスト", "その他"];
 
@@ -137,26 +138,15 @@ export default function EquipmentEventModal({
   }
 
   return createPortal(
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-black/40 backdrop-blur-sm">
-      <div className="flex min-h-full items-start justify-center px-4 pb-4 pt-10">
-        <div className="glass-card w-full max-w-lg rounded-2xl overflow-hidden">
-
-          <div className="border-b border-outline-variant/20 px-6 py-5">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-outline">事案登録</div>
-                <h3 className="mt-2 text-2xl font-black text-on-surface">事案を追加</h3>
-                <p className="mt-1 text-sm text-on-surface-variant">
-                  設備に関する故障・修理・アップグレードなどを記録します。
-                </p>
-              </div>
-              <button type="button" onClick={onClose}
-                className="flex h-11 w-11 items-center justify-center rounded-2xl bg-surface-container text-on-surface-variant transition hover:bg-surface-container-high hover:text-on-surface">
-                <span className="material-symbols-outlined">close</span>
-              </button>
-            </div>
-          </div>
-
+    <ModalShell
+      open={open}
+      onClose={onClose}
+      eyebrow="事案登録"
+      title="事案を追加"
+      subtitle="設備に関する故障・修理・アップグレードなどを記録します。"
+      maxWidth="max-w-lg"
+      align="start"
+    >
           <form onSubmit={handleSubmit} className="max-h-[82vh] overflow-y-auto px-6 py-6 scrollbar-hide">
             <div className="grid gap-4">
 
@@ -330,9 +320,7 @@ export default function EquipmentEventModal({
             </div>
           </form>
 
-        </div>
-      </div>
-    </div>,
+    </ModalShell>,
     document.body
   );
 }
