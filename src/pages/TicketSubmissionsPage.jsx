@@ -608,21 +608,40 @@ function TicketStatusPill({ status }) {
   );
 }
 
-function ImagePreviewLightbox({ image, onClose }) {
+function ImagePreviewLightbox({ preview, onClose, onNavigate }) {
+  const images = Array.isArray(preview?.images) ? preview.images : [];
+  const activeIndex = Number.isInteger(preview?.activeIndex) ? preview.activeIndex : 0;
+  const activeImage = images[activeIndex] || null;
+  const hasMultipleImages = images.length > 1;
+  const canGoPrevious = activeIndex > 0;
+  const canGoNext = activeIndex < images.length - 1;
+
   useEffect(() => {
-    if (!image?.url) return undefined;
+    if (!activeImage?.url) return undefined;
 
     function handleKeyDown(event) {
       if (event.key === "Escape") {
+        event.preventDefault();
         onClose();
+        return;
+      }
+
+      if (!hasMultipleImages) return;
+
+      if (event.key === "ArrowLeft" && canGoPrevious) {
+        event.preventDefault();
+        onNavigate(-1);
+      } else if (event.key === "ArrowRight" && canGoNext) {
+        event.preventDefault();
+        onNavigate(1);
       }
     }
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [image?.url, onClose]);
+  }, [activeImage?.url, canGoNext, canGoPrevious, hasMultipleImages, onClose, onNavigate]);
 
-  if (!image?.url) return null;
+  if (!activeImage?.url) return null;
 
   return createPortal(
     <div className="fixed inset-0 z-[90] flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm" onClick={onClose}>
@@ -633,7 +652,10 @@ function ImagePreviewLightbox({ image, onClose }) {
         <div className="flex items-start justify-between gap-4 border-b border-white/10 px-5 py-4 text-white">
           <div className="min-w-0 flex-1">
             <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/50">Image Preview</p>
-            <p className="mt-1 truncate text-sm font-semibold text-white">{image.label || "Ticket image"}</p>
+            <p className="mt-1 truncate text-sm font-semibold text-white">{activeImage.label || "Ticket image"}</p>
+            {hasMultipleImages ? (
+              <p className="mt-1 text-xs text-white/60">Image {activeIndex + 1} of {images.length}</p>
+            ) : null}
           </div>
           <button
             type="button"
@@ -644,19 +666,47 @@ function ImagePreviewLightbox({ image, onClose }) {
           </button>
         </div>
 
-        <div className="flex min-h-0 flex-1 items-center justify-center bg-black/30 px-4 py-4 sm:px-6">
+        <div className="relative flex min-h-0 flex-1 items-center justify-center bg-black/30 px-4 py-4 sm:px-6">
+          {hasMultipleImages ? (
+            <button
+              type="button"
+              onClick={() => onNavigate(-1)}
+              disabled={!canGoPrevious}
+              aria-label="Show previous image"
+              className="absolute left-4 top-1/2 z-10 flex h-12 w-12 -translate-y-1/2 items-center justify-center rounded-full bg-slate-950/70 text-white shadow-lg transition hover:bg-slate-950/85 disabled:cursor-not-allowed disabled:opacity-35 sm:left-6"
+            >
+              <span className="material-symbols-outlined" style={{ fontSize: 28 }}>chevron_left</span>
+            </button>
+          ) : null}
+
           <img
-            src={image.url}
-            alt={image.label || "Ticket image"}
+            src={activeImage.url}
+            alt={activeImage.label || "Ticket image"}
             className="max-h-[68vh] max-w-full rounded-2xl object-contain shadow-2xl"
           />
+
+          {hasMultipleImages ? (
+            <button
+              type="button"
+              onClick={() => onNavigate(1)}
+              disabled={!canGoNext}
+              aria-label="Show next image"
+              className="absolute right-4 top-1/2 z-10 flex h-12 w-12 -translate-y-1/2 items-center justify-center rounded-full bg-slate-950/70 text-white shadow-lg transition hover:bg-slate-950/85 disabled:cursor-not-allowed disabled:opacity-35 sm:right-6"
+            >
+              <span className="material-symbols-outlined" style={{ fontSize: 28 }}>chevron_right</span>
+            </button>
+          ) : null}
         </div>
 
         <div className="flex flex-col gap-3 border-t border-white/10 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-xs text-white/65">Open the image here for a clearer view, then download it if needed.</p>
+          <p className="text-xs text-white/65">
+            {hasMultipleImages
+              ? "Use the left and right arrow keys or the side buttons to browse images, then download the current one if needed."
+              : "Open the image here for a clearer view, then download it if needed."}
+          </p>
           <a
-            href={image.url}
-            download={buildImageDownloadName(image.url, image.label)}
+            href={activeImage.url}
+            download={buildImageDownloadName(activeImage.url, activeImage.label)}
             className="inline-flex items-center justify-center gap-2 rounded-2xl bg-white px-4 py-2 text-sm font-bold text-slate-950 transition hover:bg-white/90"
           >
             <span className="material-symbols-outlined" style={{ fontSize: 18 }}>download</span>
@@ -678,17 +728,53 @@ function TicketDetailModal({ actionBusy = false, onClose, onCloseTicket = null, 
     () => sortTicketHistoryEntries(Array.isArray(ticket?.statusHistory) ? ticket.statusHistory : []),
     [ticket?.statusHistory]
   );
+  const previewImages = useMemo(() => {
+    if (!Array.isArray(ticket?.imageURLs)) return [];
+
+    return ticket.imageURLs
+      .filter(Boolean)
+      .map((imageUrl, index) => ({
+        url: imageUrl,
+        label: `${ticket?.fieldLabel || "Ticket image"} ${index + 1}`,
+      }));
+  }, [ticket?.fieldLabel, ticket?.imageURLs]);
 
   useEffect(() => {
     function handleKeyDown(event) {
-      if (event.key === "Escape") {
+      if (event.key === "Escape" && !previewImage?.images?.length) {
         onClose();
       }
     }
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [onClose]);
+  }, [onClose, previewImage?.images?.length]);
+
+  function openPreviewImage(index) {
+    if (!previewImages[index]?.url) return;
+
+    setPreviewImage({
+      activeIndex: index,
+      images: previewImages,
+    });
+  }
+
+  function handlePreviewNavigate(direction) {
+    setPreviewImage((current) => {
+      const images = Array.isArray(current?.images) ? current.images : [];
+      const currentIndex = Number.isInteger(current?.activeIndex) ? current.activeIndex : 0;
+      const nextIndex = currentIndex + direction;
+
+      if (nextIndex < 0 || nextIndex >= images.length) {
+        return current;
+      }
+
+      return {
+        ...current,
+        activeIndex: nextIndex,
+      };
+    });
+  }
 
   if (!ticket) return null;
 
@@ -889,7 +975,7 @@ function TicketDetailModal({ actionBusy = false, onClose, onCloseTicket = null, 
                     <button
                       key={`${imageUrl}-${index}`}
                       type="button"
-                      onClick={() => setPreviewImage({ url: imageUrl, label: `${ticket.fieldLabel || "Ticket image"} ${index + 1}` })}
+                      onClick={() => openPreviewImage(index)}
                       className="group overflow-hidden rounded-2xl border border-outline-variant/20 bg-surface transition hover:border-primary/30"
                     >
                       <img
@@ -906,7 +992,7 @@ function TicketDetailModal({ actionBusy = false, onClose, onCloseTicket = null, 
         </div>
       </div>
 
-      <ImagePreviewLightbox image={previewImage} onClose={() => setPreviewImage(null)} />
+      <ImagePreviewLightbox preview={previewImage} onClose={() => setPreviewImage(null)} onNavigate={handlePreviewNavigate} />
     </>
   );
 }

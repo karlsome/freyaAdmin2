@@ -33,7 +33,7 @@ export default function TicketSubmissionsFilterPanel({
 
   return (
     <div className={`glass-card rounded-2xl p-5 ${className}`.trim()}>
-      <div className="grid items-end gap-3 lg:grid-cols-2 xl:grid-cols-5">
+      <div className="grid items-end gap-3 lg:grid-cols-2 xl:grid-cols-6">
         <label className="flex flex-col gap-1.5 xl:col-span-2">
           <span className="text-[10px] font-bold uppercase tracking-wider text-outline">Search Tickets</span>
           <input
