@@ -1,6 +1,6 @@
 import { createPortal } from "react-dom";
 import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import DataTable from "../components/DataTable";
 import StatSummaryCard from "../components/StatSummaryCard";
 import TicketSubmissionsFilterPanel from "../components/TicketSubmissionsFilterPanel";
@@ -41,6 +41,7 @@ const EMPTY_FILTER_OPTIONS = {
 };
 
 const MAX_SAVED_TICKET_PRESETS = 8;
+const DEFAULT_TICKET_SORT = { column: "createdAt", direction: -1 };
 
 function toDayStart(value) {
   const parsed = new Date(value);
@@ -168,7 +169,133 @@ function buildTicketFocusHint(ticket) {
   };
 }
 
-function SavedPresetManagerCard({ activePresetId, draftName, onApply, onDelete, onDraftNameChange, onSave, presets }) {
+function createTicketRowsFromClauses(clauses = []) {
+  return clauses.map((clause) => ({
+    ...createTicketSubmissionFilterRow(),
+    field: String(clause?.field ?? "").trim(),
+    operator: String(clause?.operator ?? "").trim(),
+    value: clause?.operator === "range"
+      ? ""
+      : Array.isArray(clause?.value)
+        ? [...clause.value]
+        : clause?.value ?? "",
+    valueFrom: clause?.operator === "range" ? String(clause?.valueFrom ?? "") : "",
+    valueTo: clause?.operator === "range" ? String(clause?.valueTo ?? "") : "",
+  }));
+}
+
+function parseTicketAdvancedFiltersParam(rawValue) {
+  if (!rawValue) return [];
+
+  try {
+    const parsed = JSON.parse(rawValue);
+    if (!Array.isArray(parsed)) return [];
+
+    return cloneTicketAdvancedClauses(parsed.filter((clause) => clause && typeof clause === "object"));
+  } catch {
+    return [];
+  }
+}
+
+function parseTicketViewState(searchParams) {
+  const defaultDateRange = createDefaultDateRange();
+  const parsedAdvancedFilters = parseTicketAdvancedFiltersParam(searchParams.get("advanced"));
+  const parsedPageSize = Number(searchParams.get("pageSize"));
+  const pageSize = TICKET_SUBMISSION_PAGE_SIZE_OPTIONS.includes(parsedPageSize)
+    ? parsedPageSize
+    : TICKET_SUBMISSION_PAGE_SIZE_OPTIONS[0];
+  const page = Math.max(1, Number(searchParams.get("page")) || 1);
+  const sortDirection = Number(searchParams.get("direction")) === 1 ? 1 : -1;
+  const sortColumn = String(searchParams.get("sort") ?? DEFAULT_TICKET_SORT.column).trim() || DEFAULT_TICKET_SORT.column;
+
+  return {
+    filters: {
+      keyword: String(searchParams.get("keyword") ?? "").trim(),
+      factory: String(searchParams.get("factory") ?? "").trim(),
+      status: String(searchParams.get("status") ?? "").trim(),
+    },
+    dateRange: {
+      startDate: String(searchParams.get("startDate") ?? defaultDateRange.startDate).trim() || defaultDateRange.startDate,
+      endDate: String(searchParams.get("endDate") ?? defaultDateRange.endDate).trim() || defaultDateRange.endDate,
+    },
+    advancedRows: parsedAdvancedFilters.length > 0
+      ? createTicketRowsFromClauses(parsedAdvancedFilters)
+      : [createTicketSubmissionFilterRow()],
+    appliedAdvancedFilters: parsedAdvancedFilters,
+    page,
+    pageSize,
+    sort: {
+      column: sortColumn,
+      direction: sortDirection,
+    },
+  };
+}
+
+function buildTicketViewSearchParams({ appliedAdvancedFilters, dateRange, filters, page, pageSize, sort }) {
+  const params = new URLSearchParams();
+
+  if (filters.keyword) params.set("keyword", filters.keyword);
+  if (filters.factory) params.set("factory", filters.factory);
+  if (filters.status) params.set("status", filters.status);
+  if (dateRange.startDate) params.set("startDate", dateRange.startDate);
+  if (dateRange.endDate) params.set("endDate", dateRange.endDate);
+  if (Array.isArray(appliedAdvancedFilters) && appliedAdvancedFilters.length > 0) {
+    params.set("advanced", JSON.stringify(appliedAdvancedFilters));
+  }
+  if (page > 1) params.set("page", String(page));
+  if (pageSize !== TICKET_SUBMISSION_PAGE_SIZE_OPTIONS[0]) params.set("pageSize", String(pageSize));
+  if (sort?.column && sort.column !== DEFAULT_TICKET_SORT.column) params.set("sort", sort.column);
+  if (Number(sort?.direction) === 1) params.set("direction", "1");
+
+  return params;
+}
+
+async function copyTextToClipboard(value) {
+  const text = String(value ?? "");
+  if (!text) return false;
+
+  if (navigator?.clipboard?.writeText) {
+    await navigator.clipboard.writeText(text);
+    return true;
+  }
+
+  const textarea = document.createElement("textarea");
+  textarea.value = text;
+  textarea.setAttribute("readonly", "true");
+  textarea.style.position = "absolute";
+  textarea.style.left = "-9999px";
+  document.body.appendChild(textarea);
+  textarea.select();
+  const successful = document.execCommand("copy");
+  document.body.removeChild(textarea);
+  return successful;
+}
+
+function ActionNoticeBanner({ notice, onClose }) {
+  if (!notice?.message) return null;
+
+  const tone = notice.type === "error"
+    ? "border-error/20 bg-error/10 text-error"
+    : notice.type === "warning"
+      ? "border-amber-500/20 bg-amber-500/10 text-amber-700 dark:text-amber-300"
+      : "border-emerald-500/20 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300";
+
+  return (
+    <div className={`mb-6 rounded-3xl border px-5 py-4 ${tone}`}>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <p className="text-[10px] font-bold uppercase tracking-[0.18em]">Status</p>
+          <p className="mt-1 text-sm font-medium">{notice.message}</p>
+        </div>
+        <button type="button" onClick={onClose} className="text-current/70 transition hover:text-current">
+          <span className="material-symbols-outlined">close</span>
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function SavedPresetManagerCard({ activePresetId, draftName, editingPresetId, onApply, onCancelEdit, onDelete, onDraftNameChange, onRename, onSave, presets }) {
   return (
     <div className="glass-card rounded-2xl p-5">
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -191,7 +318,7 @@ function SavedPresetManagerCard({ activePresetId, draftName, onApply, onDelete, 
           type="text"
           value={draftName}
           onChange={(event) => onDraftNameChange(event.target.value)}
-          placeholder="Name this filter view"
+          placeholder={editingPresetId ? "Rename this preset" : "Name this filter view"}
           className="h-11 flex-1 rounded-xl border border-outline-variant/20 bg-white px-3 text-sm text-on-surface outline-none transition-colors focus:border-primary/40"
         />
         <button
@@ -200,9 +327,19 @@ function SavedPresetManagerCard({ activePresetId, draftName, onApply, onDelete, 
           disabled={!draftName.trim()}
           className="inline-flex items-center justify-center gap-2 rounded-xl kinetic-gradient px-4 py-2.5 text-sm font-bold text-white shadow-[0_0_20px_rgba(99,102,241,0.25)] transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
         >
-          <span className="material-symbols-outlined" style={{ fontSize: 16 }}>bookmark_added</span>
-          Save Current View
+          <span className="material-symbols-outlined" style={{ fontSize: 16 }}>{editingPresetId ? "drive_file_rename_outline" : "bookmark_added"}</span>
+          {editingPresetId ? "Rename Preset" : "Save Current View"}
         </button>
+        {editingPresetId && (
+          <button
+            type="button"
+            onClick={onCancelEdit}
+            className="inline-flex items-center justify-center gap-2 rounded-xl border border-outline-variant/20 bg-white px-4 py-2.5 text-sm font-bold text-on-surface transition hover:border-primary/30 hover:text-primary"
+          >
+            <span className="material-symbols-outlined" style={{ fontSize: 16 }}>close</span>
+            Cancel
+          </button>
+        )}
       </div>
 
       <div className="mt-4 flex flex-col gap-3">
@@ -241,6 +378,14 @@ function SavedPresetManagerCard({ activePresetId, draftName, onApply, onDelete, 
                   </button>
                   <button
                     type="button"
+                    onClick={() => onRename(preset)}
+                    className="inline-flex items-center gap-2 rounded-xl border border-outline-variant/20 bg-white px-3 py-2 text-xs font-bold text-on-surface transition hover:border-primary/30 hover:text-primary"
+                  >
+                    <span className="material-symbols-outlined" style={{ fontSize: 14 }}>drive_file_rename_outline</span>
+                    Rename
+                  </button>
+                  <button
+                    type="button"
                     onClick={() => onDelete(preset)}
                     className="inline-flex items-center gap-2 rounded-xl border border-error/20 bg-error/5 px-3 py-2 text-xs font-bold text-error transition hover:bg-error/10"
                   >
@@ -257,28 +402,106 @@ function SavedPresetManagerCard({ activePresetId, draftName, onApply, onDelete, 
   );
 }
 
-function ExportTicketResultsCard({ disabled, exporting, filteredCount, onExport }) {
+function ExportTicketResultsCard({ disabled, exporting, filteredCount, onCopyShareLink, onExport, shareButtonLabel }) {
   return (
     <div className="glass-card rounded-2xl p-5">
       <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-outline">Export</p>
       <h3 className="mt-1 text-lg font-black text-on-surface">Filtered Ticket CSV</h3>
       <p className="mt-3 text-sm leading-6 text-outline">
-        Export the current filtered ticket result set with the same server-side filters and sort order used by the table.
+        Export the current ticket view or the full submitted-ticket history. Large all-data exports may take longer than filtered exports.
       </p>
       <div className="mt-4 flex items-center justify-between gap-3 rounded-2xl border border-outline-variant/20 bg-surface px-4 py-3">
         <div>
           <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-outline">Current Export Scope</p>
           <p className="mt-1 text-sm font-semibold text-on-surface">{formatTicketNumber(filteredCount)} matching tickets</p>
         </div>
-        <button
-          type="button"
-          onClick={onExport}
-          disabled={disabled || exporting}
-          className="inline-flex items-center justify-center gap-2 rounded-xl kinetic-gradient px-4 py-2.5 text-sm font-bold text-white shadow-[0_0_20px_rgba(99,102,241,0.25)] transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
-        >
-          <span className="material-symbols-outlined" style={{ fontSize: 16 }}>download</span>
-          {exporting ? "Exporting..." : "Export CSV"}
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={onCopyShareLink}
+            className="inline-flex items-center justify-center gap-2 rounded-xl border border-outline-variant/20 bg-white px-4 py-2.5 text-sm font-bold text-on-surface transition hover:border-primary/30 hover:text-primary"
+          >
+            <span className="material-symbols-outlined" style={{ fontSize: 16 }}>link</span>
+            {shareButtonLabel}
+          </button>
+          <button
+            type="button"
+            onClick={onExport}
+            disabled={disabled || exporting}
+            className="inline-flex items-center justify-center gap-2 rounded-xl kinetic-gradient px-4 py-2.5 text-sm font-bold text-white shadow-[0_0_20px_rgba(99,102,241,0.25)] transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            <span className="material-symbols-outlined" style={{ fontSize: 16 }}>download</span>
+            {exporting ? "Preparing CSV..." : "Export CSV"}
+          </button>
+        </div>
+      </div>
+      <p className="mt-3 text-xs leading-5 text-outline">
+        Share link copies the current filters, advanced filters, sort, page size, and page into URL query params.
+      </p>
+    </div>
+  );
+}
+
+function ExportChoiceModal({ filteredCount, onClose, onExportAll, onExportFiltered }) {
+  useEffect(() => {
+    function handleKeyDown(event) {
+      if (event.key === "Escape") {
+        onClose();
+      }
+    }
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [onClose]);
+
+  return (
+    <div className="fixed inset-0 z-[75] flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm" onClick={onClose}>
+      <div
+        className="glass-card flex w-full max-w-xl flex-col overflow-hidden rounded-2xl border border-outline-variant/20"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <div className="flex items-start justify-between gap-4 border-b border-outline-variant/20 px-6 py-5">
+          <div className="min-w-0 flex-1">
+            <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-outline">Export Choice</p>
+            <h3 className="mt-1 text-lg font-black text-on-surface">Choose what to export</h3>
+            <p className="mt-2 text-sm leading-6 text-outline">
+              The current view may already be narrowed by date range, quick filters, advanced filters, or sort. Choose whether to export that filtered view or the full ticket history.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-2xl bg-surface-container text-on-surface-variant transition hover:bg-surface-container-high"
+          >
+            <span className="material-symbols-outlined">close</span>
+          </button>
+        </div>
+
+        <div className="grid gap-3 px-6 py-5 sm:grid-cols-2">
+          <button
+            type="button"
+            onClick={onExportFiltered}
+            className="rounded-2xl border border-primary/20 bg-primary/5 px-4 py-4 text-left transition hover:border-primary/35 hover:bg-primary/10"
+          >
+            <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-primary">Current View</p>
+            <p className="mt-2 text-base font-black text-on-surface">Export filtered data</p>
+            <p className="mt-2 text-sm leading-6 text-outline">
+              Exports the same filtered ticket set currently shown in the table. Matching tickets: {formatTicketNumber(filteredCount)}.
+            </p>
+          </button>
+
+          <button
+            type="button"
+            onClick={onExportAll}
+            className="rounded-2xl border border-outline-variant/20 bg-surface-container px-4 py-4 text-left transition hover:border-primary/30 hover:bg-surface-container-high"
+          >
+            <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-outline">Full History</p>
+            <p className="mt-2 text-base font-black text-on-surface">Export all data</p>
+            <p className="mt-2 text-sm leading-6 text-outline">
+              Ignores the current filters and exports every submitted ticket. This may take longer for larger datasets.
+            </p>
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -572,16 +795,22 @@ function TicketDetailModal({ onClose, onOpenChecklistSubmission = null, ticket }
 
 export default function TicketSubmissionsPage() {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { t } = useLanguage();
   const [authUser] = useState(() => readStoredAuthUser());
+  const initialViewRef = useRef(null);
   const requestIdRef = useRef(0);
-  const [filters, setFilters] = useState({ keyword: "", factory: "", status: "" });
-  const [dateRange, setDateRange] = useState(() => createDefaultDateRange());
-  const [advancedRows, setAdvancedRows] = useState(() => [createTicketSubmissionFilterRow()]);
-  const [appliedAdvancedFilters, setAppliedAdvancedFilters] = useState([]);
-  const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(TICKET_SUBMISSION_PAGE_SIZE_OPTIONS[0]);
-  const [sort, setSort] = useState({ column: "createdAt", direction: -1 });
+  if (initialViewRef.current == null) {
+    initialViewRef.current = parseTicketViewState(searchParams);
+  }
+
+  const [filters, setFilters] = useState(() => initialViewRef.current.filters);
+  const [dateRange, setDateRange] = useState(() => initialViewRef.current.dateRange);
+  const [advancedRows, setAdvancedRows] = useState(() => initialViewRef.current.advancedRows);
+  const [appliedAdvancedFilters, setAppliedAdvancedFilters] = useState(() => initialViewRef.current.appliedAdvancedFilters);
+  const [page, setPage] = useState(() => initialViewRef.current.page);
+  const [pageSize, setPageSize] = useState(() => initialViewRef.current.pageSize);
+  const [sort, setSort] = useState(() => initialViewRef.current.sort);
   const [rows, setRows] = useState([]);
   const [summary, setSummary] = useState(EMPTY_TICKET_SUMMARY);
   const [pagination, setPagination] = useState(EMPTY_PAGINATION);
@@ -589,12 +818,16 @@ export default function TicketSubmissionsPage() {
   const [loading, setLoading] = useState(false);
   const [loadingFilterOptions, setLoadingFilterOptions] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const [exportChoiceOpen, setExportChoiceOpen] = useState(false);
   const [error, setError] = useState("");
+  const [actionNotice, setActionNotice] = useState(null);
   const [selectedTicket, setSelectedTicket] = useState(null);
   const presetStorageKey = useMemo(() => buildTicketPresetStorageKey(authUser?.username), [authUser?.username]);
   const [presetName, setPresetName] = useState("");
   const [savedPresets, setSavedPresets] = useState(() => readTicketSubmissionPresets(buildTicketPresetStorageKey(authUser?.username)));
   const [activePresetId, setActivePresetId] = useState("");
+  const [editingPresetId, setEditingPresetId] = useState("");
+  const [shareButtonLabel, setShareButtonLabel] = useState("Copy Share Link");
 
   const deferredKeyword = useDeferredValue(filters.keyword);
 
@@ -602,12 +835,32 @@ export default function TicketSubmissionsPage() {
     setSavedPresets(readTicketSubmissionPresets(presetStorageKey));
     setPresetName("");
     setActivePresetId("");
+    setEditingPresetId("");
   }, [presetStorageKey]);
 
   useEffect(() => {
     if (!hasBrowserStorage()) return;
     window.localStorage.setItem(presetStorageKey, JSON.stringify(savedPresets));
   }, [presetStorageKey, savedPresets]);
+
+  useEffect(() => {
+    if (!actionNotice) return undefined;
+    const timeoutId = window.setTimeout(() => setActionNotice(null), 4000);
+    return () => window.clearTimeout(timeoutId);
+  }, [actionNotice]);
+
+  useEffect(() => {
+    const params = buildTicketViewSearchParams({
+      appliedAdvancedFilters,
+      dateRange,
+      filters,
+      page,
+      pageSize,
+      sort,
+    });
+
+    setSearchParams(params, { replace: true });
+  }, [appliedAdvancedFilters, dateRange, filters, page, pageSize, setSearchParams, sort]);
 
   useEffect(() => {
     let cancelled = false;
@@ -741,15 +994,19 @@ export default function TicketSubmissionsPage() {
       label: "Check Item",
       width: 220,
       renderCell: (row) => (
-        <div className="min-w-0">
-          <p className="truncate font-semibold text-on-surface">{row.fieldLabel || "Untitled field"}</p>
-          {row.fieldType && (
-            <span className="mt-2 inline-flex rounded-full bg-outline/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.12em] text-outline">
-              {row.fieldType}
-            </span>
-          )}
-        </div>
+        <span className="font-semibold text-on-surface">{row.fieldLabel || "Untitled field"}</span>
       ),
+      disableCellWrapper: true,
+    },
+    {
+      key: "fieldType",
+      label: "Input Type",
+      width: 126,
+      renderCell: (row) => row.fieldType ? (
+        <span className="inline-flex rounded-full bg-outline/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.14em] text-outline">
+          {row.fieldType}
+        </span>
+      ) : "—",
       disableCellWrapper: true,
     },
     {
@@ -864,6 +1121,25 @@ export default function TicketSubmissionsPage() {
     const trimmedName = presetName.trim();
     if (!trimmedName) return;
 
+    if (editingPresetId) {
+      const duplicatePreset = savedPresets.find((preset) => preset.id !== editingPresetId && preset.name.trim().toLowerCase() === trimmedName.toLowerCase());
+      if (duplicatePreset) {
+        setActionNotice({ type: "error", message: "A preset with that name already exists." });
+        return;
+      }
+
+      setSavedPresets((current) => current.map((preset) => (
+        preset.id === editingPresetId
+          ? { ...preset, name: trimmedName, updatedAt: new Date().toISOString() }
+          : preset
+      )));
+      setPresetName(trimmedName);
+      setActivePresetId(editingPresetId === activePresetId ? editingPresetId : activePresetId);
+      setEditingPresetId("");
+      setActionNotice({ type: "success", message: "Saved preset renamed." });
+      return;
+    }
+
     const now = new Date().toISOString();
     let nextActivePresetId = "";
 
@@ -888,6 +1164,7 @@ export default function TicketSubmissionsPage() {
 
     setPresetName(trimmedName);
     setActivePresetId(nextActivePresetId);
+    setActionNotice({ type: "success", message: "Current ticket view saved." });
   }
 
   function handleApplyPreset(preset) {
@@ -910,13 +1187,24 @@ export default function TicketSubmissionsPage() {
     );
     setPageSize(TICKET_SUBMISSION_PAGE_SIZE_OPTIONS.includes(Number(preset?.pageSize)) ? Number(preset.pageSize) : TICKET_SUBMISSION_PAGE_SIZE_OPTIONS[0]);
     setSort({
-      column: String(preset?.sort?.column ?? "createdAt"),
+      column: String(preset?.sort?.column ?? DEFAULT_TICKET_SORT.column),
       direction: Number(preset?.sort?.direction) === 1 ? 1 : -1,
     });
     setPresetName(preset.name);
     setActivePresetId(preset.id);
+    setEditingPresetId("");
     setPage(1);
     setSelectedTicket(null);
+  }
+
+  function handleStartRenamePreset(preset) {
+    setEditingPresetId(preset.id);
+    setPresetName(preset.name);
+  }
+
+  function handleCancelPresetEdit() {
+    setEditingPresetId("");
+    setPresetName("");
   }
 
   function handleDeletePreset(preset) {
@@ -924,36 +1212,79 @@ export default function TicketSubmissionsPage() {
     if (preset.id === activePresetId) {
       setActivePresetId("");
     }
+    if (preset.id === editingPresetId) {
+      setEditingPresetId("");
+    }
     if (preset.name === presetName) {
       setPresetName("");
     }
   }
 
-  async function handleExportTickets() {
+  async function runTicketExport(scope = "filtered") {
     if (exporting) return;
 
+    setExportChoiceOpen(false);
     setExporting(true);
     setError("");
 
     try {
       const exportRows = await fetchNgTicketExport({
-        filters: {
-          keyword: deferredKeyword,
-          factory: filters.factory,
-          status: filters.status,
-          startDate: dateRange.startDate,
-          endDate: dateRange.endDate,
-        },
-        advancedFilters: appliedAdvancedFilters,
+        filters: scope === "all"
+          ? {}
+          : {
+            keyword: deferredKeyword,
+            factory: filters.factory,
+            status: filters.status,
+            startDate: dateRange.startDate,
+            endDate: dateRange.endDate,
+          },
+        advancedFilters: scope === "all" ? [] : appliedAdvancedFilters,
         sort,
       });
 
-      if (!Array.isArray(exportRows) || exportRows.length === 0) return;
+      if (!Array.isArray(exportRows) || exportRows.length === 0) {
+        setActionNotice({ type: "warning", message: "No tickets matched the selected export scope." });
+        return;
+      }
+
       downloadTicketCsvFile(buildTicketExportFileName(), buildTicketSubmissionExportMatrix(exportRows));
+      setActionNotice({
+        type: "success",
+        message: scope === "all"
+          ? "All submitted ticket data exported."
+          : "Filtered ticket data exported.",
+      });
     } catch (loadError) {
       setError(loadError.message || "Failed to export submitted tickets.");
     } finally {
       setExporting(false);
+    }
+  }
+
+  function handleOpenExportDialog() {
+    if (exporting) return;
+    setExportChoiceOpen(true);
+  }
+
+  async function handleCopyShareLink() {
+    const params = buildTicketViewSearchParams({
+      appliedAdvancedFilters,
+      dateRange,
+      filters,
+      page,
+      pageSize,
+      sort,
+    });
+    const query = params.toString();
+    const shareUrl = `${window.location.origin}${window.location.pathname}${query ? `?${query}` : ""}`;
+
+    try {
+      await copyTextToClipboard(shareUrl);
+      setShareButtonLabel("Link Copied");
+      setActionNotice({ type: "success", message: "Share link copied with the current ticket view." });
+      window.setTimeout(() => setShareButtonLabel("Copy Share Link"), 2200);
+    } catch {
+      setActionNotice({ type: "error", message: "Could not copy the share link." });
     }
   }
 
@@ -982,6 +1313,8 @@ export default function TicketSubmissionsPage() {
           Review every submitted NG ticket in one place. Filters and pagination run on the server so large ticket history stays responsive even under heavy usage.
         </p>
       </div>
+
+      <ActionNoticeBanner notice={actionNotice} onClose={() => setActionNotice(null)} />
 
       <div className="mb-6 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
         <SummaryCard
@@ -1049,18 +1382,23 @@ export default function TicketSubmissionsPage() {
         <SavedPresetManagerCard
           activePresetId={activePresetId}
           draftName={presetName}
+          editingPresetId={editingPresetId}
           presets={savedPresets}
           onDraftNameChange={setPresetName}
           onSave={handleSavePreset}
           onApply={handleApplyPreset}
+          onRename={handleStartRenamePreset}
+          onCancelEdit={handleCancelPresetEdit}
           onDelete={handleDeletePreset}
         />
 
         <ExportTicketResultsCard
           filteredCount={pagination.totalItems || summary.totalTickets}
-          disabled={loading || exporting || (pagination.totalItems || summary.totalTickets) === 0}
+          disabled={loading || exporting}
           exporting={exporting}
-          onExport={handleExportTickets}
+          onCopyShareLink={handleCopyShareLink}
+          onExport={handleOpenExportDialog}
+          shareButtonLabel={shareButtonLabel}
         />
       </div>
 
@@ -1108,6 +1446,16 @@ export default function TicketSubmissionsPage() {
           ticket={selectedTicket}
           onOpenChecklistSubmission={() => handleOpenChecklistSubmission(selectedTicket)}
           onClose={() => setSelectedTicket(null)}
+        />,
+        document.body
+      )}
+
+      {exportChoiceOpen && createPortal(
+        <ExportChoiceModal
+          filteredCount={pagination.totalItems || summary.totalTickets}
+          onClose={() => setExportChoiceOpen(false)}
+          onExportFiltered={() => runTicketExport("filtered")}
+          onExportAll={() => runTicketExport("all")}
         />,
         document.body
       )}
