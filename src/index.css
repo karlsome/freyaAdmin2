@@ -498,15 +498,12 @@ select:-webkit-autofill:focus {
   animation: app-shell-sidebar-enter 760ms cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
-.app-main-shell {
-  will-change: transform, opacity, filter;
-}
-
 .app-main-shell--handoff-target {
   view-transition-name: auth-shell-handoff;
 }
 
 .app-main-shell--enter {
+  will-change: transform, opacity, filter;
   animation: app-shell-main-enter 880ms cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 

@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { createPortal } from "react-dom";
 
 export default function PlannerModalShell({
   open,
@@ -22,8 +23,8 @@ export default function PlannerModalShell({
 
   if (!open) return null;
 
-  return (
-    <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/55 p-4 backdrop-blur-sm" onClick={onClose}>
+  const modal = (
+    <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm" onClick={onClose}>
       <div
         className={`glass-card flex max-h-[90vh] w-full flex-col overflow-hidden rounded-2xl ${maxWidthClassName}`.trim()}
         onClick={(event) => event.stopPropagation()}
@@ -51,4 +52,6 @@ export default function PlannerModalShell({
       </div>
     </div>
   );
+
+  return createPortal(modal, document.body);
 }

@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { createPortal } from "react-dom";
 
 function joinClasses(...classes) {
   return classes.filter(Boolean).join(" ");
@@ -38,8 +39,8 @@ export default function NodaModalFrame({
 
   if (!open) return null;
 
-  return (
-    <div className="fixed inset-0 z-[70] bg-black/45 backdrop-blur-sm">
+  const modal = (
+    <div className="fixed inset-0 z-[70] bg-black/40 backdrop-blur-sm">
       <div className="flex min-h-full items-center justify-center p-4 lg:p-6">
         <div className={joinClasses("glass-card flex max-h-[92vh] w-full flex-col overflow-hidden rounded-2xl", maxWidthClassName)}>
           <div className="border-b border-separator/35 px-5 py-4 lg:px-6">
@@ -84,4 +85,6 @@ export default function NodaModalFrame({
       </div>
     </div>
   );
+
+  return createPortal(modal, document.body);
 }

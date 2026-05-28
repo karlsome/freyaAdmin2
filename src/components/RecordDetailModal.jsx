@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { fetchMasterImage } from "../services/api";
 import CollapsibleSection from "./CollapsibleSection";
 
@@ -404,9 +405,9 @@ export default function RecordDetailModal({ record, processName, onClose, onLotC
 
   const processAccent = PROCESS_ACCENT[processName];
 
-  return (
+  const modal = (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/50 backdrop-blur-md"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-3 sm:p-4 backdrop-blur-sm"
       onClick={onClose}
     >
       <div
@@ -566,4 +567,6 @@ export default function RecordDetailModal({ record, processName, onClose, onLotC
       </div>
     </div>
   );
+
+  return createPortal(modal, document.body);
 }

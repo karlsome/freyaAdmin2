@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { fetchApprovalMasterReference } from "../services/approvalsApi";
 import IconButton from "./IconButton";
 import {
@@ -329,8 +330,8 @@ export default function ApprovalsDetailModal({
   const mismatch = getApprovalDateTimeMismatch(sourceRecord);
   const canEditRecord = mode !== "recycle" && hasApprovalAccess(authUser);
 
-  return (
-    <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-md">
+  const modal = (
+    <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm">
       <div className="flex min-h-full items-center justify-center p-4 lg:p-6">
         <div ref={modalRef} className="dashboard-section flex max-h-[92vh] w-full max-w-7xl flex-col overflow-hidden rounded-2xl">
 
@@ -650,4 +651,6 @@ export default function ApprovalsDetailModal({
       </div>
     </div>
   );
+
+  return createPortal(modal, document.body);
 }

@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { createPortal } from "react-dom";
 import IconButton from "./IconButton";
 
 export default function ModalShell({
@@ -12,7 +13,7 @@ export default function ModalShell({
   maxWidth = "max-w-3xl",
   zIndex = "z-50",
   align = "center",
-  overlayOpacity = "50",
+  overlayOpacity = "40",
   closeButtonVariant = "default",
   cardClassName,
   footerClassName,
@@ -41,9 +42,9 @@ export default function ModalShell({
       ? "items-start pt-10 pb-4"
       : "items-center py-4";
 
-  return (
+  const modal = (
     <div
-      className={`fixed inset-0 ${zIndex} bg-black/${overlayOpacity} backdrop-blur-md`}
+      className={`fixed inset-0 ${zIndex} bg-black/${overlayOpacity} backdrop-blur-sm`}
       onClick={onClose}
     >
       <div className={`flex min-h-full ${alignClass} justify-center px-4`}>
@@ -84,4 +85,6 @@ export default function ModalShell({
       </div>
     </div>
   );
+
+  return createPortal(modal, document.body);
 }
