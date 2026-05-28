@@ -417,7 +417,7 @@ export default function RecordDetailModal({ record, processName, onClose, onLotC
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="sticky top-0 z-10 rounded-t-2xl px-5 sm:px-6 py-4 flex items-center justify-between
+        <div className="sticky top-0 z-10 rounded-t-2xl px-6 py-5 flex items-center justify-between
                         border-b border-separator/40 bg-surface/90 backdrop-blur-md">
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2.5">
@@ -448,7 +448,7 @@ export default function RecordDetailModal({ record, processName, onClose, onLotC
         </div>
 
         {/* Product image */}
-        <div className="px-5 sm:px-6 pt-5 pb-2">
+        <div className="px-6 pt-5 pb-2">
           {imageLoading ? (
             <div className="w-full h-40 rounded-xl bg-surface-container/70 animate-pulse" />
           ) : imageData?.imageURL ? (
@@ -476,7 +476,7 @@ export default function RecordDetailModal({ record, processName, onClose, onLotC
         </div>
 
         {/* Stats strip */}
-        <div className="grid grid-cols-3 gap-2.5 px-5 sm:px-6 py-4 border-b border-separator/30">
+        <div className="grid grid-cols-3 gap-2.5 px-6 py-4 border-b border-separator/30">
           {[
             { label: "Total",    value: qty.toLocaleString(), color: "text-on-surface",  bg: "bg-surface-container/60" },
             { label: "Total NG", value: ng,                   color: ng > 0 ? "text-error" : "text-on-surface", bg: ng > 0 ? "bg-error/8" : "bg-surface-container/60" },
@@ -490,7 +490,7 @@ export default function RecordDetailModal({ record, processName, onClose, onLotC
         </div>
 
         {/* Key metrics */}
-        <div className="px-5 sm:px-6 py-4 grid grid-cols-2 gap-x-4 gap-y-3 border-b border-separator/30">
+        <div className="px-6 py-4 grid grid-cols-2 gap-x-4 gap-y-3 border-b border-separator/30">
           {keyFields.map(([label, value]) => (
             <div key={label} className="flex flex-col gap-0.5">
               <span className="text-[10px] font-bold uppercase tracking-wider text-outline">{label}</span>
@@ -543,7 +543,7 @@ export default function RecordDetailModal({ record, processName, onClose, onLotC
         <MaintenanceSection record={record} />
 
         {/* All fields — collapsible */}
-        <CollapsibleSection label="All Fields" wrapperClassName="px-5 sm:px-6 py-4">
+        <CollapsibleSection label="All Fields" wrapperClassName="px-6 py-4">
           <div className="space-y-0 mt-3">
             {entries.map(([k, v]) => {
               const normalizedValue = parseStructuredValue(v);
