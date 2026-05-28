@@ -490,7 +490,7 @@ export default function SensorDetailPage() {
             value={range.start}
             max={range.end}
             onChange={(e) => setRange((r) => ({ ...r, start: e.target.value }))}
-            className="bg-surface-container-lowest border border-outline-variant/20 rounded-lg px-3 py-1.5 text-xs text-on-surface focus:ring-2 focus:ring-primary/20 focus:border-primary/30 outline-none transition-all"
+            className="bg-surface-container-lowest border border-outline-variant/20 rounded-lg px-3 py-1.5 text-xs text-on-surface focus:ring-2 focus:ring-primary/20 focus:border-primary/30 outline-none transition-all duration-150"
           />
         </div>
         <div className="flex items-center gap-2">
@@ -501,7 +501,7 @@ export default function SensorDetailPage() {
             min={range.start}
             max={toISO(new Date())}
             onChange={(e) => setRange((r) => ({ ...r, end: e.target.value }))}
-            className="bg-surface-container-lowest border border-outline-variant/20 rounded-lg px-3 py-1.5 text-xs text-on-surface focus:ring-2 focus:ring-primary/20 focus:border-primary/30 outline-none transition-all"
+            className="bg-surface-container-lowest border border-outline-variant/20 rounded-lg px-3 py-1.5 text-xs text-on-surface focus:ring-2 focus:ring-primary/20 focus:border-primary/30 outline-none transition-all duration-150"
           />
         </div>
         <div className="flex items-center gap-2">
@@ -509,7 +509,7 @@ export default function SensorDetailPage() {
           <select
             value={deviceFilter}
             onChange={(e) => setDeviceFilter(normalizeDeviceId(e.target.value) || "all")}
-            className="bg-surface-container-lowest border border-outline-variant/20 rounded-lg px-3 py-1.5 text-xs text-on-surface focus:ring-2 focus:ring-primary/20 outline-none transition-all"
+            className="bg-surface-container-lowest border border-outline-variant/20 rounded-lg px-3 py-1.5 text-xs text-on-surface focus:ring-2 focus:ring-primary/20 outline-none transition-all duration-150"
           >
             <option value="all">All Devices</option>
             {devices.map((d) => <option key={d} value={d}>{d}</option>)}
@@ -520,7 +520,7 @@ export default function SensorDetailPage() {
           <select
             value={sortKey}
             onChange={(e) => setSortKey(e.target.value)}
-            className="bg-surface-container-lowest border border-outline-variant/20 rounded-lg px-3 py-1.5 text-xs text-on-surface focus:ring-2 focus:ring-primary/20 outline-none transition-all"
+            className="bg-surface-container-lowest border border-outline-variant/20 rounded-lg px-3 py-1.5 text-xs text-on-surface focus:ring-2 focus:ring-primary/20 outline-none transition-all duration-150"
           >
             <option value="date_desc">Latest First</option>
             <option value="date_asc">Oldest First</option>

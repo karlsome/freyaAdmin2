@@ -196,14 +196,14 @@ export default function FactoryStatusLogsModal({
           <button
             type="button"
             onClick={() => onOpenFullPage?.()}
-            className="planner-data-text rounded-2xl border border-outline-variant/20 px-4 py-2 text-sm font-bold text-on-surface transition hover:bg-surface-container"
+            className="planner-data-text rounded-2xl border border-separator/40 px-4 py-2 text-sm font-bold text-on-surface transition hover:bg-surface-container"
           >
             Open Full Logs Page
           </button>
           <button
             type="button"
             onClick={onClose}
-            className="planner-data-text rounded-2xl border border-outline-variant/20 px-4 py-2 text-sm font-bold text-on-surface transition hover:bg-surface-container"
+            className="planner-data-text rounded-2xl border border-separator/40 px-4 py-2 text-sm font-bold text-on-surface transition hover:bg-surface-container"
           >
             Close
           </button>

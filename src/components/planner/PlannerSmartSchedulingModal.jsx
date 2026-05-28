@@ -34,7 +34,7 @@ export default function PlannerSmartSchedulingModal({
           <button
             type="button"
             onClick={onClose}
-            className="rounded-2xl border border-outline-variant/20 px-4 py-2 text-sm font-bold text-on-surface transition hover:bg-surface-container"
+            className="rounded-2xl border border-separator/40 px-4 py-2 text-sm font-bold text-on-surface transition hover:bg-surface-container"
           >
             Cancel
           </button>
@@ -55,7 +55,7 @@ export default function PlannerSmartSchedulingModal({
           type="time"
           value={timeLimit}
           onChange={(event) => setTimeLimit(event.target.value)}
-          className="planner-data-text mt-2 h-11 w-full max-w-xs rounded-2xl border border-outline-variant/20 px-4 outline-none transition focus:border-primary/40"
+          className="planner-data-text mt-2 h-11 w-full max-w-xs rounded-2xl border border-separator/40 px-4 outline-none transition focus:border-primary/40"
         />
         <p className="mt-2 text-on-surface-variant">The scheduler will fit complete boxes before this time, with the same grace-period logic used in the original planner.</p>
       </div>

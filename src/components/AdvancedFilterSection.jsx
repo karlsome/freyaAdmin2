@@ -187,7 +187,7 @@ function getStylePreset(variant, framed) {
         : "flex items-center gap-1.5 text-xs font-bold text-outline transition-colors hover:text-on-surface mb-3",
       content: framed ? "border-t border-outline-variant/15 px-4 py-4" : "mb-4",
       stack: "space-y-3",
-      controlBase: "w-full rounded-2xl border border-outline-variant/20 bg-white px-4 text-sm text-on-surface outline-none transition focus:border-primary/40 dark:bg-surface-container",
+      controlBase: "w-full rounded-2xl border border-separator/40 bg-white px-4 text-sm text-on-surface outline-none transition focus:border-primary/40 dark:bg-surface-container",
       fieldControl: "h-10 min-w-[190px] flex-1",
       operatorControl: "h-10 min-w-[160px] flex-1 disabled:cursor-not-allowed disabled:opacity-40",
       valueWrap: "min-w-[220px] flex-[2]",
@@ -203,23 +203,23 @@ function getStylePreset(variant, framed) {
   }
 
   return {
-    wrapper: framed ? "mt-4 rounded-xl border border-white/10 bg-surface-container/30 overflow-hidden" : "",
+    wrapper: framed ? "mt-4 rounded-xl border border-separator/35 bg-surface-container/30 overflow-hidden" : "",
     toggle: framed
       ? "flex w-full items-center justify-between gap-2 px-4 py-3 text-left text-xs font-bold text-outline transition-colors hover:text-on-surface"
       : "flex items-center gap-1.5 text-xs font-bold text-outline transition-colors hover:text-on-surface mb-3",
-    content: framed ? "border-t border-white/10 px-4 py-4" : "mb-4",
+    content: framed ? "border-t border-separator/30 px-4 py-4" : "mb-4",
     stack: framed ? "space-y-3" : "space-y-2",
-    controlBase: "w-full rounded-xl border border-outline-variant/20 bg-white px-3 text-xs text-on-surface outline-none transition-colors focus:border-primary/40",
+    controlBase: "w-full rounded-xl border border-separator/40 bg-white px-3 text-xs text-on-surface outline-none transition-colors focus:border-primary/40",
     fieldControl: "h-9 min-w-[180px] flex-1",
     operatorControl: "h-9 min-w-[150px] flex-1 disabled:opacity-40 disabled:cursor-not-allowed",
     valueWrap: "min-w-[200px] flex-[2]",
     deleteButton: "rounded-xl p-2 text-outline transition-colors hover:bg-error/10 hover:text-error",
     addButton: "mt-1 flex items-center gap-1.5 rounded-xl border border-dashed border-white/20 px-3 py-1.5 text-xs font-bold text-outline transition-colors hover:border-primary/40 hover:text-on-surface",
-    summaryPanel: "rounded-xl border border-white/10 bg-surface-container/40 px-4 py-3",
+    summaryPanel: "rounded-xl border border-separator/35 bg-surface-container/40 px-4 py-3",
     summaryTitle: "text-[10px] font-bold uppercase tracking-wider text-outline",
     summaryDescription: "mt-1 text-xs text-on-surface-variant",
     clearButton: "text-[10px] font-bold uppercase tracking-wider text-error",
-    footer: `flex flex-wrap items-center gap-3${framed ? " border-t border-white/10 pt-4" : " pt-4"}`,
+    footer: `flex flex-wrap items-center gap-3${framed ? " border-t border-separator/30 pt-4" : " pt-4"}`,
     multiSelect: "min-h-28 py-2",
   };
 }

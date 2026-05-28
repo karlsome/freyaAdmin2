@@ -10,14 +10,14 @@ import { getAuthUser } from "../utils/masterDB";
 
 function ConfirmModal({ message, onConfirm, onCancel }) {
   return createPortal(
-    <div className="fixed inset-0 z-[60] overflow-y-auto bg-black/40 backdrop-blur-sm">
+    <div className="fixed inset-0 z-[60] overflow-y-auto bg-black/50 backdrop-blur-md">
       <div className="flex min-h-full items-start justify-center px-4 pb-4 pt-10">
-        <div className="glass-card w-full max-w-sm rounded-2xl overflow-hidden">
+        <div className="dashboard-section w-full max-w-sm rounded-2xl overflow-hidden">
           <div className="px-6 py-6">
             <p className="text-sm text-on-surface">{message}</p>
             <div className="mt-6 flex justify-end gap-3">
               <button type="button" onClick={onCancel}
-                className="rounded-2xl border border-outline-variant/20 px-4 py-2 text-xs font-bold text-on-surface transition hover:bg-surface-container">
+                className="rounded-2xl border border-separator/40 px-4 py-2 text-xs font-bold text-on-surface transition hover:bg-surface-container">
                 Cancel
               </button>
               <button type="button" onClick={onConfirm}
@@ -99,14 +99,14 @@ export default function SetsubiArchiveWorkspace({ onFlash, onClose }) {
   }
 
   return createPortal(
-    <div className="fixed inset-0 z-[55] overflow-y-auto bg-black/40 backdrop-blur-sm">
+    <div className="fixed inset-0 z-[55] overflow-y-auto bg-black/50 backdrop-blur-md">
       <div className="flex min-h-full items-start justify-center px-4 pb-4 pt-10">
         <div className="w-full max-w-4xl">
           <div className="mb-3 flex justify-end">
             <IconButton icon="close" onClick={onClose} variant="light" ariaLabel="Close dialog" className="bg-white/20 hover:bg-white/30" />
           </div>
 
-          <section className="glass-card rounded-3xl p-6">
+          <section className="dashboard-section rounded-2xl p-6">
             <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
               <div>
                 <p className="text-xs font-bold uppercase tracking-[0.18em] text-outline">設備</p>
@@ -140,13 +140,13 @@ export default function SetsubiArchiveWorkspace({ onFlash, onClose }) {
             )}
 
             {!loading && !error && filtered.length === 0 && (
-              <div className="rounded-2xl border border-outline-variant/20 bg-surface px-5 py-10 text-center text-sm text-on-surface-variant">
+              <div className="rounded-2xl border border-separator/40 bg-surface px-5 py-10 text-center text-sm text-on-surface-variant">
                 {records.length === 0 ? "アーカイブは空です。" : "No records matched the search."}
               </div>
             )}
 
             {!loading && !error && filtered.length > 0 && (
-              <div className="overflow-hidden rounded-2xl border border-outline-variant/20">
+              <div className="overflow-hidden rounded-2xl border border-separator/40">
                 <table className="w-full border-collapse text-sm">
                   <thead>
                     <tr className="border-b border-outline-variant/20 bg-surface-container">
@@ -170,7 +170,7 @@ export default function SetsubiArchiveWorkspace({ onFlash, onClose }) {
                           <td className="px-4 py-3">
                             <div className="flex items-center gap-2">
                               {record.imageURL && (
-                                <img src={record.imageURL} alt="" className="h-8 w-8 rounded-lg object-cover border border-outline-variant/20 flex-shrink-0" />
+                                <img src={record.imageURL} alt="" className="h-8 w-8 rounded-lg object-cover border border-separator/40 flex-shrink-0" />
                               )}
                               <p className="font-semibold text-on-surface">{record.name || "—"}</p>
                             </div>

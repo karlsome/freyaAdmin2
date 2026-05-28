@@ -13,8 +13,8 @@ function QueueRow({ item, index, total, onMove, onQuantityChange, onRemove }) {
         </div>
 
         <div className="flex items-center gap-2">
-          <button type="button" onClick={() => onMove(index, -1)} disabled={index === 0} className="rounded-2xl border border-outline-variant/20 px-2 py-1 text-xs font-bold text-on-surface transition hover:bg-surface-container disabled:opacity-40">↑</button>
-          <button type="button" onClick={() => onMove(index, 1)} disabled={index === total - 1} className="rounded-2xl border border-outline-variant/20 px-2 py-1 text-xs font-bold text-on-surface transition hover:bg-surface-container disabled:opacity-40">↓</button>
+          <button type="button" onClick={() => onMove(index, -1)} disabled={index === 0} className="rounded-2xl border border-separator/40 px-2 py-1 text-xs font-bold text-on-surface transition hover:bg-surface-container disabled:opacity-40">↑</button>
+          <button type="button" onClick={() => onMove(index, 1)} disabled={index === total - 1} className="rounded-2xl border border-separator/40 px-2 py-1 text-xs font-bold text-on-surface transition hover:bg-surface-container disabled:opacity-40">↓</button>
           <button type="button" onClick={() => onRemove(item._id)} className="rounded-2xl border border-error/20 px-2 py-1 text-xs font-bold text-error transition hover:bg-error/10">Remove</button>
         </div>
       </div>
@@ -27,7 +27,7 @@ function QueueRow({ item, index, total, onMove, onQuantityChange, onRemove }) {
           max={item.remainingQuantity}
           value={item.quantity}
           onChange={(event) => onQuantityChange(item._id, Number(event.target.value || 0))}
-          className="planner-data-text mt-2 h-11 w-full rounded-2xl border border-outline-variant/20 px-4 outline-none transition focus:border-primary/40"
+          className="planner-data-text mt-2 h-11 w-full rounded-2xl border border-separator/40 px-4 outline-none transition focus:border-primary/40"
         />
       </div>
     </div>
@@ -94,7 +94,7 @@ export default function PlannerSlotSchedulingModal({
           <button
             type="button"
             onClick={onClose}
-            className="rounded-2xl border border-outline-variant/20 px-4 py-2 text-sm font-bold text-on-surface transition hover:bg-surface-container"
+            className="rounded-2xl border border-separator/40 px-4 py-2 text-sm font-bold text-on-surface transition hover:bg-surface-container"
           >
             Cancel
           </button>
@@ -111,7 +111,7 @@ export default function PlannerSlotSchedulingModal({
     >
       <div className="planner-data-text grid gap-5 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)]">
         <div className="rounded-2xl border border-outline-variant/15 bg-surface-container-low p-4">
-          <div className="ui-control-surface flex h-11 items-center gap-3 rounded-2xl border border-outline-variant/20 px-4">
+          <div className="ui-control-surface flex h-11 items-center gap-3 rounded-2xl border border-separator/40 px-4">
             <span className="material-symbols-outlined text-outline" style={{ fontSize: 18 }}>search</span>
             <input
               type="text"

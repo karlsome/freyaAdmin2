@@ -463,7 +463,7 @@ export default function NodaDetailModal({ open, requestId, mode = "view", authUs
           <button
             type="button"
             onClick={() => setViewMode("view")}
-            className="rounded-2xl border border-outline-variant/25 px-4 py-2.5 text-sm font-semibold text-on-surface transition hover:bg-surface-container"
+            className="rounded-2xl border border-separator/45 px-4 py-2.5 text-sm font-semibold text-on-surface transition hover:bg-surface-container"
           >
             Cancel Edit
           </button>
@@ -471,7 +471,7 @@ export default function NodaDetailModal({ open, requestId, mode = "view", authUs
         <button
           type="button"
           onClick={() => onClose?.()}
-          className="rounded-2xl border border-outline-variant/25 px-4 py-2.5 text-sm font-semibold text-on-surface transition hover:bg-surface-container"
+          className="rounded-2xl border border-separator/45 px-4 py-2.5 text-sm font-semibold text-on-surface transition hover:bg-surface-container"
         >
           Close
         </button>
@@ -499,7 +499,7 @@ export default function NodaDetailModal({ open, requestId, mode = "view", authUs
         ) : null}
 
         {loading ? (
-          <div className="rounded-2xl border border-outline-variant/20 bg-surface-container-low/35 px-6 py-12 text-center text-sm text-on-surface-variant">
+          <div className="rounded-2xl border border-separator/40 bg-surface-container-low/35 px-6 py-12 text-center text-sm text-on-surface-variant">
             Loading request details…
           </div>
         ) : null}
@@ -697,7 +697,7 @@ export default function NodaDetailModal({ open, requestId, mode = "view", authUs
                         "rounded-2xl px-4 py-2.5 text-sm font-bold transition",
                         bulkTab === "existing"
                           ? "bg-primary text-white"
-                          : "border border-outline-variant/25 text-on-surface hover:bg-surface-container"
+                          : "border border-separator/45 text-on-surface hover:bg-surface-container"
                       )}
                     >
                       Existing Items
@@ -709,7 +709,7 @@ export default function NodaDetailModal({ open, requestId, mode = "view", authUs
                         "rounded-2xl px-4 py-2.5 text-sm font-bold transition",
                         bulkTab === "add"
                           ? "bg-primary text-white"
-                          : "border border-outline-variant/25 text-on-surface hover:bg-surface-container"
+                          : "border border-separator/45 text-on-surface hover:bg-surface-container"
                       )}
                     >
                       Add More Items
@@ -759,7 +759,7 @@ export default function NodaDetailModal({ open, requestId, mode = "view", authUs
                                         type="button"
                                         onClick={() => handleSaveLineQuantity(lineItem)}
                                         disabled={busy}
-                                        className="rounded-2xl border border-outline-variant/25 px-3 py-2 text-xs font-bold text-on-surface transition hover:bg-surface-container"
+                                        className="rounded-2xl border border-separator/45 px-3 py-2 text-xs font-bold text-on-surface transition hover:bg-surface-container"
                                       >
                                         Save
                                       </button>
@@ -868,7 +868,7 @@ export default function NodaDetailModal({ open, requestId, mode = "view", authUs
                         </label>
                       </div>
 
-                      <div className="mt-4 rounded-2xl border border-outline-variant/20 bg-surface-container-low/35 px-4 py-3 text-sm text-on-surface-variant">
+                      <div className="mt-4 rounded-2xl border border-separator/40 bg-surface-container-low/35 px-4 py-3 text-sm text-on-surface-variant">
                         {inventoryPreview?.exists
                           ? `Available ${inventoryPreview.available} • Reserved now ${inventoryPreview.reserved} • Shortfall ${inventoryPreview.shortfall}`
                           : inventoryPreview?.message || "Enter a serial number to preview inventory availability."}
@@ -892,7 +892,7 @@ export default function NodaDetailModal({ open, requestId, mode = "view", authUs
                           <button
                             type="button"
                             onClick={() => setAddCart([])}
-                            className="rounded-2xl border border-outline-variant/25 px-3 py-2 text-sm font-semibold text-on-surface transition hover:bg-surface-container"
+                            className="rounded-2xl border border-separator/45 px-3 py-2 text-sm font-semibold text-on-surface transition hover:bg-surface-container"
                           >
                             Clear
                           </button>
@@ -900,7 +900,7 @@ export default function NodaDetailModal({ open, requestId, mode = "view", authUs
                       </div>
                       <div className="mt-4 space-y-3">
                         {addCart.length ? addCart.map((item) => (
-                          <div key={item.背番号} className="rounded-2xl border border-outline-variant/20 bg-surface-container-low/35 p-4">
+                          <div key={item.背番号} className="rounded-2xl border border-separator/40 bg-surface-container-low/35 p-4">
                             <div className="flex items-start justify-between gap-4">
                               <div>
                                 <div className="font-black text-on-surface">{item.背番号}</div>

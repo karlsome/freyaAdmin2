@@ -147,11 +147,11 @@ function RecordDetailModal({ record, form, onClose }) {
   }
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-      <div className="w-full max-w-lg max-h-[85vh] flex flex-col rounded-2xl border border-outline-variant/20 glass-card overflow-hidden">
+    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 backdrop-blur-md p-4">
+      <div className="w-full max-w-lg max-h-[85vh] flex flex-col rounded-2xl dashboard-section overflow-hidden">
 
         {/* Header */}
-        <div className="flex flex-shrink-0 items-start justify-between border-b border-outline-variant/20 px-6 py-5">
+        <div className="flex flex-shrink-0 items-start justify-between border-b border-separator/35 px-6 py-5">
           <div className="min-w-0 flex-1 pr-4">
             <p className="text-xs font-bold uppercase tracking-[0.18em] text-outline">Inspection Record</p>
             <h3 className="mt-0.5 truncate text-lg font-black text-on-surface">{form?.name}</h3>
@@ -160,13 +160,13 @@ function RecordDetailModal({ record, form, onClose }) {
               {form?.schedule && <span className="capitalize">{form.schedule}</span>}
             </div>
           </div>
-          <button type="button" onClick={onClose} className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-2xl bg-surface-container text-on-surface-variant transition hover:bg-surface-container-high">
-            <span className="material-symbols-outlined">close</span>
+          <button type="button" onClick={onClose} className="p-2 rounded-xl flex-shrink-0 text-outline hover:bg-surface-container hover:text-on-surface transition-all duration-150 active:scale-95">
+            <span className="material-symbols-outlined" style={{ fontSize: 18 }}>close</span>
           </button>
         </div>
 
         {/* Meta */}
-        <div className="flex flex-shrink-0 flex-wrap gap-4 border-b border-outline-variant/20 px-6 py-4">
+        <div className="flex flex-shrink-0 flex-wrap gap-4 border-b border-separator/30 px-6 py-4">
           <div className="flex items-center gap-2 text-sm">
             <span className="material-symbols-outlined text-primary" style={{ fontSize: 18 }}>person</span>
             <span className="font-semibold text-on-surface">{record?.completedBy ?? "—"}</span>
@@ -205,7 +205,7 @@ function RecordDetailModal({ record, form, onClose }) {
             const isOK = field.type === "toggle" && responses[field.id] === "ok";
             const isNG = field.type === "toggle" && responses[field.id] === "ng";
             return (
-              <div key={field.id} className="rounded-2xl border border-outline-variant/20 bg-surface-container px-4 py-3">
+              <div key={field.id} className="rounded-2xl border border-separator/40 bg-surface-container px-4 py-3">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0 flex-1">
                     <p className="font-semibold text-sm text-on-surface truncate">{field.label || <span className="italic text-outline">Untitled</span>}</p>
@@ -217,7 +217,7 @@ function RecordDetailModal({ record, form, onClose }) {
                 </div>
                 {photo && (
                   <div className="mt-2">
-                    <img src={photo} alt="添付画像" className="h-32 rounded-xl object-cover border border-outline-variant/20" />
+                    <img src={photo} alt="添付画像" className="h-32 rounded-xl object-cover border border-separator/40" />
                   </div>
                 )}
               </div>
@@ -338,7 +338,7 @@ export default function InspectionHistoryModal({ onClose }) {
   const modal = (
     <div className="fixed inset-0 z-50 flex flex-col bg-surface">
       {/* Header */}
-      <div className="flex flex-shrink-0 items-center justify-between border-b border-outline-variant/20 px-6 py-4">
+      <div className="flex flex-shrink-0 items-center justify-between border-b border-separator/35 px-6 py-4">
         <div>
           <p className="text-xs font-bold uppercase tracking-[0.18em] text-outline">メンテナンス</p>
           <h2 className="mt-0.5 text-xl font-black text-on-surface">Inspection History</h2>

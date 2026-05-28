@@ -111,7 +111,7 @@ export default function ProcessPanel({ processName, rows, onRowClick, showFactor
   return (
     <div className="glass-card rounded-2xl overflow-hidden flex flex-col">
       {/* Panel header */}
-      <div className="px-5 py-4 flex items-center justify-between gap-3 border-b border-white/10">
+      <div className="px-5 py-4 flex items-center justify-between gap-3 border-b border-separator/30">
         <div className="flex items-center gap-2.5 min-w-0">
           <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${accent.dot}`} />
           <h4 className="text-sm font-bold text-on-surface truncate">{processName} Process</h4>
@@ -137,7 +137,7 @@ export default function ProcessPanel({ processName, rows, onRowClick, showFactor
             placeholder="Search…"
             value={search}
             onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-            className="h-7 px-2.5 rounded-lg bg-surface-container border border-white/10 text-[11px]
+            className="h-7 px-2.5 rounded-lg bg-surface-container border border-separator/35 text-[11px]
                        text-on-surface placeholder:text-outline outline-none focus:border-primary/40 w-28 transition-colors"
           />
         </div>
@@ -159,7 +159,7 @@ export default function ProcessPanel({ processName, rows, onRowClick, showFactor
               <TH col="Defect_Rate"      label="不良率"   right />
             </tr>
           </thead>
-          <tbody className="divide-y divide-white/5">
+          <tbody className="divide-y divide-separator/20">
             {pageRows.length === 0 ? (
               <tr>
                 <td colSpan={showFactoryColumn ? 9 : 8} className="px-5 py-10 text-center text-outline text-xs">
@@ -200,7 +200,7 @@ export default function ProcessPanel({ processName, rows, onRowClick, showFactor
       </div>
 
       {totalPages > 1 && (
-        <div className="flex flex-col gap-4 border-t border-outline-variant/20 px-5 py-4 md:flex-row md:items-center md:justify-between">
+        <div className="flex flex-col gap-4 border-t border-separator/30 px-5 py-4 md:flex-row md:items-center md:justify-between">
           <span className="text-sm text-on-surface-variant">{totalItems} records, showing {pageStart}-{pageEnd}</span>
           <PaginationControls
             page={page}
@@ -214,7 +214,7 @@ export default function ProcessPanel({ processName, rows, onRowClick, showFactor
 
       {/* Summary collapsible */}
       {summary.length > 0 && (
-        <div ref={summaryRef} className="border-t border-white/10">
+        <div ref={summaryRef} className="border-t border-separator/30">
           <button
             className="w-full px-5 py-3 flex items-center gap-2 text-xs font-bold text-outline hover:text-on-surface transition-colors"
             onClick={() => setShowSummary((v) => !v)}
@@ -236,7 +236,7 @@ export default function ProcessPanel({ processName, rows, onRowClick, showFactor
                     <th className="ui-table-heading text-right pb-2">不良率</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-white/5">
+                <tbody className="divide-y divide-separator/20">
                   {summary.map((s, i) => {
                     const rate = s.total > 0 ? ((s.ng / s.total) * 100).toFixed(2) : "0.00";
                     return (

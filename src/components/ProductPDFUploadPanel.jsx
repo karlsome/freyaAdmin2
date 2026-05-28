@@ -49,14 +49,14 @@ export default function ProductPDFUploadPanel({
       </button>
 
       {uploadExpanded && (
-        <div className="border-t border-outline-variant/20 px-5 py-5 space-y-5">
+        <div className="border-t border-separator/30 px-5 py-5 space-y-5">
           <div className="grid gap-4 lg:grid-cols-3">
             <div>
               <label className="mb-2 block text-[11px] font-bold uppercase tracking-[0.18em] text-outline">Filter Type</label>
               <select
                 value={filterType}
                 onChange={(event) => onFilterTypeChange(event.target.value)}
-                className="h-11 w-full rounded-2xl border border-outline-variant/20 bg-white px-4 text-sm text-on-surface outline-none transition focus:border-primary/40"
+                className="h-11 w-full rounded-2xl border border-separator/40 bg-white px-4 text-sm text-on-surface outline-none transition focus:border-primary/40"
               >
                 <option value="model">モデル (Model)</option>
                 <option value="serial">背番号 (Serial Number)</option>
@@ -69,7 +69,7 @@ export default function ProductPDFUploadPanel({
                 <select
                   value={selectedModel}
                   onChange={(event) => onSelectedModelChange(event.target.value)}
-                  className="h-11 w-full rounded-2xl border border-outline-variant/20 bg-white px-4 text-sm text-on-surface outline-none transition focus:border-primary/40"
+                  className="h-11 w-full rounded-2xl border border-separator/40 bg-white px-4 text-sm text-on-surface outline-none transition focus:border-primary/40"
                 >
                   <option value="">Select model…</option>
                   {modelOptions.map((model) => (
@@ -83,7 +83,7 @@ export default function ProductPDFUploadPanel({
                 <button
                   type="button"
                   onClick={onOpenProductSelector}
-                  className="ui-control-surface flex h-11 w-full items-center justify-between rounded-2xl border border-outline-variant/20 px-4 text-sm font-medium transition"
+                  className="ui-control-surface flex h-11 w-full items-center justify-between rounded-2xl border border-separator/40 px-4 text-sm font-medium transition"
                 >
                   <span>{selectedSerialNumbers.length ? `${selectedSerialNumbers.length} selected` : "Select products…"}</span>
                   <span className="material-symbols-outlined text-base text-on-surface-variant">chevron_right</span>
@@ -102,7 +102,7 @@ export default function ProductPDFUploadPanel({
                   Show all
                 </button>
               </div>
-              <div className="ui-control-surface flex h-11 items-center rounded-2xl border border-outline-variant/20 px-4 text-sm text-on-surface-variant">
+              <div className="ui-control-surface flex h-11 items-center rounded-2xl border border-separator/40 px-4 text-sm text-on-surface-variant">
                 {selectedSerialNumbers.length ? `${selectedSerialNumbers.length} product${selectedSerialNumbers.length === 1 ? "" : "s"} selected` : "None selected"}
               </div>
             </div>
@@ -133,7 +133,7 @@ export default function ProductPDFUploadPanel({
               <button
                 type="button"
                 onClick={onOpenProductSelector}
-                className="rounded-full border border-outline-variant/20 px-3 py-1.5 text-xs font-bold text-on-surface transition hover:bg-surface-container"
+                className="rounded-full border border-separator/40 px-3 py-1.5 text-xs font-bold text-on-surface transition hover:bg-surface-container"
               >
                 +{selectedSerialNumbers.length - visibleTags.length} more
               </button>
@@ -150,7 +150,7 @@ export default function ProductPDFUploadPanel({
                 type="file"
                 accept=".pdf,application/pdf"
                 onChange={(event) => onSingleFileChange(event.target.files?.[0] || null)}
-                className="mt-4 block w-full rounded-2xl border border-outline-variant/20 bg-surface px-4 py-3 text-sm text-on-surface"
+                className="mt-4 block w-full rounded-2xl border border-separator/40 bg-surface px-4 py-3 text-sm text-on-surface"
               />
               <div className="mt-2 text-xs text-on-surface-variant">{singleFile ? singleFile.name : "No PDF selected"}</div>
 
@@ -161,7 +161,7 @@ export default function ProductPDFUploadPanel({
                     if (singleInputRef.current) singleInputRef.current.value = "";
                     onClearSingleFile();
                   }}
-                  className="rounded-xl border border-outline-variant/20 px-3 py-2 text-xs font-bold text-on-surface transition hover:bg-surface-container"
+                  className="rounded-xl border border-separator/40 px-3 py-2 text-xs font-bold text-on-surface transition hover:bg-surface-container"
                 >
                   Clear
                 </button>
@@ -169,7 +169,7 @@ export default function ProductPDFUploadPanel({
                   type="button"
                   onClick={onUploadSingle}
                   disabled={singleUploading || !singleFile || !selectedSerialNumbers.length}
-                  className="rounded-xl bg-primary px-4 py-2 text-xs font-bold text-on-primary transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="rounded-xl bg-primary px-4 py-2 text-xs font-bold text-on-primary hover:opacity-90 active:scale-95 transition-all duration-150 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {singleUploading ? "Uploading…" : `Upload ${typeMeta.label}`}
                 </button>
@@ -186,7 +186,7 @@ export default function ProductPDFUploadPanel({
                 accept=".pdf,application/pdf"
                 multiple
                 onChange={(event) => onBulkFilesChange(Array.from(event.target.files || []))}
-                className="mt-4 block w-full rounded-2xl border border-outline-variant/20 bg-surface px-4 py-3 text-sm text-on-surface"
+                className="mt-4 block w-full rounded-2xl border border-separator/40 bg-surface px-4 py-3 text-sm text-on-surface"
               />
               <div className="mt-2 text-xs text-on-surface-variant">
                 {bulkFiles.length ? `${bulkFiles.length} file${bulkFiles.length === 1 ? "" : "s"} selected` : "No PDFs selected"}
@@ -199,7 +199,7 @@ export default function ProductPDFUploadPanel({
                     if (bulkInputRef.current) bulkInputRef.current.value = "";
                     onClearBulkFiles();
                   }}
-                  className="rounded-xl border border-outline-variant/20 px-3 py-2 text-xs font-bold text-on-surface transition hover:bg-surface-container"
+                  className="rounded-xl border border-separator/40 px-3 py-2 text-xs font-bold text-on-surface transition hover:bg-surface-container"
                 >
                   Clear
                 </button>

@@ -117,7 +117,7 @@ export default function ProductionFilterBar({
             type="date"
             value={dateFrom}
             onChange={(e) => setDateFrom(e.target.value)}
-            className="h-10 px-3 rounded-xl bg-white border border-outline-variant/20 text-sm text-on-surface outline-none focus:border-primary/40 transition-colors"
+            className="h-10 px-3 rounded-xl bg-white border border-separator/40 text-sm text-on-surface outline-none focus:border-primary/40 transition-colors"
           />
         </FormField>
         <FormField label="To">
@@ -125,7 +125,7 @@ export default function ProductionFilterBar({
             type="date"
             value={dateTo}
             onChange={(e) => setDateTo(e.target.value)}
-            className="h-10 px-3 rounded-xl bg-white border border-outline-variant/20 text-sm text-on-surface outline-none focus:border-primary/40 transition-colors"
+            className="h-10 px-3 rounded-xl bg-white border border-separator/40 text-sm text-on-surface outline-none focus:border-primary/40 transition-colors"
           />
         </FormField>
         <FormField label="品番 (Part No.)">
@@ -185,8 +185,8 @@ export default function ProductionFilterBar({
         {onLotFinderOpen && (
           <button
             onClick={onLotFinderOpen}
-            className="flex items-center gap-2 px-5 py-2.5 rounded-xl glass-card border border-white/10 text-sm font-bold
-                       text-on-surface hover:border-primary/30 hover:scale-[1.02] transition-all"
+            className="flex items-center gap-2 px-5 py-2.5 rounded-xl glass-card border border-separator/35 text-sm font-bold
+                       text-on-surface hover:border-primary/30 hover:scale-[1.02] transition-all duration-150"
           >
             <span className="material-symbols-outlined" style={{ fontSize: 16 }}>manage_search</span>
             Manufacturing Lot Finder

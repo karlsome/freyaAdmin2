@@ -574,9 +574,9 @@ export default function CheckFormImageOverlayEditorModal({
           role="dialog"
           aria-modal="true"
           onMouseDown={(event) => event.stopPropagation()}
-          className="flex w-full max-w-7xl max-h-[92vh] flex-col overflow-hidden rounded-[32px] border border-outline-variant/20 bg-surface shadow-[0_32px_120px_rgba(15,23,42,0.28)]"
+          className="flex w-full max-w-7xl max-h-[92vh] flex-col overflow-hidden rounded-[32px] border border-separator/40 bg-surface shadow-[0_32px_120px_rgba(15,23,42,0.28)]"
         >
-          <div className="flex flex-wrap items-start justify-between gap-4 border-b border-outline-variant/20 px-5 py-4 sm:px-6">
+          <div className="flex flex-wrap items-start justify-between gap-4 border-b border-separator/35 px-5 py-4 sm:px-6">
             <div className="min-w-0 flex-1">
               <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary">Overlay Editor</p>
               <h3 className="mt-1 text-lg font-black text-on-surface">{mode === "edit" ? "Edit reference image" : "Prepare new reference image"}</h3>
@@ -591,7 +591,7 @@ export default function CheckFormImageOverlayEditorModal({
           <div className="min-h-0 flex-1 overflow-y-auto px-5 py-5 sm:px-6">
             <div className="grid gap-5 xl:grid-cols-[280px_minmax(0,1fr)]">
               <div className="space-y-4">
-                <div className="rounded-3xl border border-outline-variant/20 bg-surface-container/40 p-4">
+                <div className="rounded-3xl border border-separator/40 bg-surface-container/40 p-4">
                   <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-outline">Tools</p>
                   <div className="mt-3 flex flex-wrap gap-2">
                     {TOOL_OPTIONS.map((option) => (
@@ -609,7 +609,7 @@ export default function CheckFormImageOverlayEditorModal({
                   </p>
                 </div>
 
-                <div className="rounded-3xl border border-outline-variant/20 bg-surface-container/40 p-4">
+                <div className="rounded-3xl border border-separator/40 bg-surface-container/40 p-4">
                   <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-outline">Style</p>
                   <div className="mt-3 space-y-4">
                     <label className="block text-xs font-semibold text-on-surface">
@@ -618,7 +618,7 @@ export default function CheckFormImageOverlayEditorModal({
                         type="color"
                         value={strokeColor}
                         onChange={(event) => setStrokeColor(event.target.value)}
-                        className="mt-2 h-11 w-full rounded-2xl border border-outline-variant/20 bg-transparent p-1"
+                        className="mt-2 h-11 w-full rounded-2xl border border-separator/40 bg-transparent p-1"
                       />
                     </label>
 
@@ -638,7 +638,7 @@ export default function CheckFormImageOverlayEditorModal({
                   </div>
                 </div>
 
-                <div className="rounded-3xl border border-outline-variant/20 bg-surface-container/40 p-4">
+                <div className="rounded-3xl border border-separator/40 bg-surface-container/40 p-4">
                   <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-outline">Actions</p>
                   <div className="mt-3 flex flex-wrap gap-2">
                     <button
@@ -650,7 +650,7 @@ export default function CheckFormImageOverlayEditorModal({
                         setSelectedId("");
                       }}
                       disabled={historyState.index === 0}
-                      className="inline-flex items-center gap-2 rounded-2xl border border-outline-variant/20 px-3 py-2 text-xs font-bold text-on-surface transition hover:bg-surface disabled:opacity-40"
+                      className="inline-flex items-center gap-2 rounded-2xl border border-separator/40 px-3 py-2 text-xs font-bold text-on-surface transition hover:bg-surface disabled:opacity-40"
                     >
                       <span className="material-symbols-outlined" style={{ fontSize: 16 }}>undo</span>
                       Undo
@@ -665,7 +665,7 @@ export default function CheckFormImageOverlayEditorModal({
                         setSelectedId("");
                       }}
                       disabled={historyState.index >= historyState.entries.length - 1}
-                      className="inline-flex items-center gap-2 rounded-2xl border border-outline-variant/20 px-3 py-2 text-xs font-bold text-on-surface transition hover:bg-surface disabled:opacity-40"
+                      className="inline-flex items-center gap-2 rounded-2xl border border-separator/40 px-3 py-2 text-xs font-bold text-on-surface transition hover:bg-surface disabled:opacity-40"
                     >
                       <span className="material-symbols-outlined" style={{ fontSize: 16 }}>redo</span>
                       Redo
@@ -692,7 +692,7 @@ export default function CheckFormImageOverlayEditorModal({
               </div>
 
               <div className="space-y-3">
-                <div className="rounded-3xl border border-outline-variant/20 bg-surface-container/30 p-3">
+                <div className="rounded-3xl border border-separator/40 bg-surface-container/30 p-3">
                   <div className="flex flex-wrap items-center justify-between gap-3">
                     <div>
                       <p className="text-sm font-black text-on-surface">{sourceImage?.name || "Reference image"}</p>
@@ -704,13 +704,13 @@ export default function CheckFormImageOverlayEditorModal({
                   </div>
                 </div>
 
-                <div className="overflow-auto rounded-[28px] border border-outline-variant/20 bg-slate-900/95 p-3">
+                <div className="overflow-auto rounded-[28px] border border-separator/40 bg-slate-900/95 p-3">
                   {loadingImage ? (
                     <div className="flex min-h-[320px] items-center justify-center text-sm text-white/70">Loading image...</div>
                   ) : null}
 
                   {loadError ? (
-                    <div className="flex min-h-[320px] items-center justify-center rounded-[24px] border border-white/10 bg-white/5 px-6 text-center text-sm text-white/70">
+                    <div className="flex min-h-[320px] items-center justify-center rounded-[24px] border border-separator/35 bg-white/5 px-6 text-center text-sm text-white/70">
                       {loadError}
                     </div>
                   ) : null}
@@ -765,7 +765,7 @@ export default function CheckFormImageOverlayEditorModal({
             </div>
           </div>
 
-          <div className="border-t border-outline-variant/20 px-5 py-4 sm:px-6">
+          <div className="border-t border-separator/30 px-5 py-4 sm:px-6">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <p className="text-xs leading-5 text-outline">
                 {mode === "edit"
@@ -777,7 +777,7 @@ export default function CheckFormImageOverlayEditorModal({
                 <button
                   type="button"
                   onClick={onClose}
-                  className="rounded-2xl border border-outline-variant/20 px-4 py-2 text-xs font-bold text-on-surface transition hover:bg-surface-container"
+                  className="rounded-2xl border border-separator/40 px-4 py-2 text-xs font-bold text-on-surface transition hover:bg-surface-container"
                 >
                   Cancel
                 </button>
@@ -785,7 +785,7 @@ export default function CheckFormImageOverlayEditorModal({
                   type="button"
                   onClick={handleSave}
                   disabled={saving || loadingImage || !imageElement}
-                  className="rounded-2xl bg-primary px-4 py-2 text-xs font-bold text-on-primary transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="rounded-xl bg-primary px-4 py-2 text-xs font-bold text-on-primary hover:opacity-90 active:scale-95 transition-all duration-150 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {saving ? "Saving..." : mode === "edit" ? "Save as new image" : "Upload image"}
                 </button>

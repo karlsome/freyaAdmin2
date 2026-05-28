@@ -48,7 +48,7 @@ export default function PlannerDuplicateChoiceModal({
             type="button"
             disabled={busy}
             onClick={() => onResolve("cancel")}
-            className="rounded-2xl border border-outline-variant/20 px-5 py-4 text-left transition hover:bg-surface-container disabled:cursor-not-allowed disabled:opacity-50"
+            className="rounded-2xl border border-separator/40 px-5 py-4 text-left transition hover:bg-surface-container disabled:cursor-not-allowed disabled:opacity-50"
           >
             <div className="font-bold text-on-surface">Cancel</div>
             <div className="mt-1 text-on-surface-variant">Keep the existing goal unchanged.</div>

@@ -46,7 +46,7 @@ export default function PlannerModalShell({
         <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5">{children}</div>
 
         {footer ? (
-          <div className="border-t border-outline-variant/15 px-6 py-4">{footer}</div>
+          <div className="border-t border-separator/30 px-6 py-4">{footer}</div>
         ) : null}
       </div>
     </div>

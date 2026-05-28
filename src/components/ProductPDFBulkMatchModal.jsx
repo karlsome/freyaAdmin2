@@ -48,14 +48,14 @@ export default function ProductPDFBulkMatchModal({
           <button
             type="button"
             onClick={onClose}
-            className="rounded-2xl border border-outline-variant/20 px-4 py-2 text-xs font-bold text-on-surface transition hover:bg-surface-container"
+            className="rounded-2xl border border-separator/40 px-4 py-2 text-xs font-bold text-on-surface transition hover:bg-surface-container"
           >
             Cancel
           </button>
           <button
             type="button"
             onClick={handleConfirm}
-            className="rounded-2xl bg-primary px-4 py-2 text-xs font-bold text-on-primary transition hover:opacity-90"
+            className="rounded-xl bg-primary px-4 py-2 text-xs font-bold text-on-primary hover:opacity-90 active:scale-95 transition-all duration-150"
           >
             Confirm Upload
           </button>
@@ -93,7 +93,7 @@ export default function ProductPDFBulkMatchModal({
                         ...current,
                         [index]: event.target.value,
                       }))}
-                      className="mt-3 h-11 w-full rounded-2xl border border-outline-variant/20 bg-white px-4 text-sm text-on-surface outline-none transition focus:border-primary/40"
+                      className="mt-3 h-11 w-full rounded-2xl border border-separator/40 bg-white px-4 text-sm text-on-surface outline-none transition focus:border-primary/40"
                     >
                       <option value="">Skip this file</option>
                       {selectedSerialNumbers.map((serialNumber) => (

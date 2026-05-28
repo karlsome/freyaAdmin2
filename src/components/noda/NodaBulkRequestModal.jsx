@@ -647,7 +647,7 @@ export default function NodaBulkRequestModal({ open, authUser, onClose, onSubmit
           <button
             type="button"
             onClick={() => setStep((current) => Math.max(1, current - 1))}
-            className="rounded-2xl border border-outline-variant/25 px-4 py-2.5 text-sm font-semibold text-on-surface transition hover:bg-surface-container"
+            className="rounded-2xl border border-separator/45 px-4 py-2.5 text-sm font-semibold text-on-surface transition hover:bg-surface-container"
           >
             Back
           </button>
@@ -655,7 +655,7 @@ export default function NodaBulkRequestModal({ open, authUser, onClose, onSubmit
         <button
           type="button"
           onClick={() => onClose?.()}
-          className="rounded-2xl border border-outline-variant/25 px-4 py-2.5 text-sm font-semibold text-on-surface transition hover:bg-surface-container"
+          className="rounded-2xl border border-separator/45 px-4 py-2.5 text-sm font-semibold text-on-surface transition hover:bg-surface-container"
         >
           Close
         </button>
@@ -743,7 +743,7 @@ export default function NodaBulkRequestModal({ open, authUser, onClose, onSubmit
               <button
                 type="button"
                 onClick={() => setDuplicateChoice(null)}
-                className="rounded-2xl border border-outline-variant/25 px-4 py-2.5 text-sm font-semibold text-on-surface transition hover:bg-surface-container"
+                className="rounded-2xl border border-separator/45 px-4 py-2.5 text-sm font-semibold text-on-surface transition hover:bg-surface-container"
               >
                 Cancel
               </button>
@@ -752,7 +752,7 @@ export default function NodaBulkRequestModal({ open, authUser, onClose, onSubmit
         ) : null}
 
         {csvReview ? (
-          <div className="rounded-[28px] border border-outline-variant/20 bg-surface-container-low/35 p-5">
+          <div className="rounded-[28px] border border-separator/40 bg-surface-container-low/35 p-5">
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
                 <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary">CSV Review</p>
@@ -782,7 +782,7 @@ export default function NodaBulkRequestModal({ open, authUser, onClose, onSubmit
                         ]),
                       ]
                     )}
-                    className="rounded-2xl border border-outline-variant/25 px-4 py-2.5 text-sm font-semibold text-on-surface transition hover:bg-surface-container"
+                    className="rounded-2xl border border-separator/45 px-4 py-2.5 text-sm font-semibold text-on-surface transition hover:bg-surface-container"
                   >
                     Export Shortfall CSV
                   </button>
@@ -790,7 +790,7 @@ export default function NodaBulkRequestModal({ open, authUser, onClose, onSubmit
                 <button
                   type="button"
                   onClick={() => setCsvReview(null)}
-                  className="rounded-2xl border border-outline-variant/25 px-4 py-2.5 text-sm font-semibold text-on-surface transition hover:bg-surface-container"
+                  className="rounded-2xl border border-separator/45 px-4 py-2.5 text-sm font-semibold text-on-surface transition hover:bg-surface-container"
                 >
                   Cancel Review
                 </button>
@@ -982,7 +982,7 @@ export default function NodaBulkRequestModal({ open, authUser, onClose, onSubmit
                       setDraft((current) => ({ ...current, cart: [] }));
                       clearNodaCartDraftStorage();
                     }}
-                    className="rounded-2xl border border-outline-variant/25 px-3 py-2 text-sm font-semibold text-on-surface transition hover:bg-surface-container"
+                    className="rounded-2xl border border-separator/45 px-3 py-2 text-sm font-semibold text-on-surface transition hover:bg-surface-container"
                   >
                     Clear Draft
                   </button>
@@ -991,7 +991,7 @@ export default function NodaBulkRequestModal({ open, authUser, onClose, onSubmit
 
               <div className="mt-4 space-y-3">
                 {draft.cart.length ? draft.cart.map((item) => (
-                  <div key={item.背番号} className="rounded-[24px] border border-outline-variant/20 bg-surface-container-low/35 p-4">
+                  <div key={item.背番号} className="rounded-[24px] border border-separator/40 bg-surface-container-low/35 p-4">
                     <div className="flex items-start justify-between gap-4">
                       <div className="min-w-0 flex-1">
                         <div className="flex flex-wrap items-center gap-2">
@@ -1037,7 +1037,7 @@ export default function NodaBulkRequestModal({ open, authUser, onClose, onSubmit
               <button
                 type="button"
                 onClick={refreshReview}
-                className="rounded-2xl border border-outline-variant/25 px-4 py-2.5 text-sm font-semibold text-on-surface transition hover:bg-surface-container"
+                className="rounded-2xl border border-separator/45 px-4 py-2.5 text-sm font-semibold text-on-surface transition hover:bg-surface-container"
               >
                 Refresh Availability
               </button>

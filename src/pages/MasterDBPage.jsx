@@ -593,7 +593,7 @@ export default function MasterDBPage() {
       {isSpecialTab ? (
         <Suspense
           fallback={(
-            <div className="glass-card rounded-3xl px-6 py-10 text-sm font-medium text-on-surface-variant">
+            <div className="dashboard-section rounded-2xl px-6 py-10 text-sm font-medium text-on-surface-variant">
               Loading workspace…
             </div>
           )}

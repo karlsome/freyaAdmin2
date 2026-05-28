@@ -394,7 +394,7 @@ export default function FactoryStatusPage() {
           </div>
         ) : null}
 
-        <div className="glass-card mb-6 rounded-2xl p-5">
+        <div className="dashboard-section mb-6 rounded-2xl p-5">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
               <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-outline">Filters</p>

@@ -188,7 +188,7 @@ export default function SetsubiRecordModal({
                 {draft.imageURL && (
                   <div className="mt-3 group relative inline-block">
                     <img src={draft.imageURL} alt="equipment"
-                      className="h-16 w-16 rounded-xl object-cover border border-outline-variant/20" />
+                      className="h-16 w-16 rounded-xl object-cover border border-separator/40" />
                     <button type="button"
                       onClick={() => set("imageURL", "")}
                       className="absolute -right-1.5 -top-1.5 hidden h-5 w-5 items-center justify-center rounded-full bg-error text-white group-hover:flex">
@@ -218,14 +218,14 @@ export default function SetsubiRecordModal({
                 <button
                   type="button"
                   onClick={onClose}
-                  className="rounded-2xl border border-outline-variant/20 px-4 py-2 text-xs font-bold text-on-surface transition hover:bg-surface-container"
+                  className="rounded-2xl border border-separator/40 px-4 py-2 text-xs font-bold text-on-surface transition hover:bg-surface-container"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={!hasData || submitting}
-                  className="rounded-2xl bg-primary px-4 py-2 text-xs font-bold text-on-primary transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="rounded-xl bg-primary px-4 py-2 text-xs font-bold text-on-primary hover:opacity-90 active:scale-95 transition-all duration-150 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {submitting ? "Saving…" : isEdit ? "Save Changes" : "Add Equipment"}
                 </button>

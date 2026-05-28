@@ -27,7 +27,7 @@ export default function ApprovalsFilterPanel({
           <select
             value={filters.factory}
             onChange={(event) => onFilterChange("factory", event.target.value)}
-            className="h-11 rounded-2xl border border-outline-variant/20 bg-white px-4 text-sm text-on-surface outline-none transition focus:border-primary/40 dark:bg-surface-container"
+            className="h-11 rounded-2xl border border-separator/40 bg-white px-4 text-sm text-on-surface outline-none transition focus:border-primary/40 dark:bg-surface-container"
           >
             <option value="">All Factories</option>
             {factories.map((factory) => (
@@ -40,7 +40,7 @@ export default function ApprovalsFilterPanel({
           <select
             value={filters.status}
             onChange={(event) => onFilterChange("status", event.target.value)}
-            className="h-11 rounded-2xl border border-outline-variant/20 bg-white px-4 text-sm text-on-surface outline-none transition focus:border-primary/40 dark:bg-surface-container"
+            className="h-11 rounded-2xl border border-separator/40 bg-white px-4 text-sm text-on-surface outline-none transition focus:border-primary/40 dark:bg-surface-container"
           >
             {APPROVAL_STATUS_OPTIONS.map((option) => (
               <option key={option.value || "all"} value={option.value}>{option.label}</option>
@@ -53,7 +53,7 @@ export default function ApprovalsFilterPanel({
             type="date"
             value={filters.date}
             onChange={(event) => onFilterChange("date", event.target.value)}
-            className="h-11 rounded-2xl border border-outline-variant/20 bg-white px-4 text-sm text-on-surface outline-none transition focus:border-primary/40 dark:bg-surface-container"
+            className="h-11 rounded-2xl border border-separator/40 bg-white px-4 text-sm text-on-surface outline-none transition focus:border-primary/40 dark:bg-surface-container"
           />
         </FormField>
 
@@ -63,7 +63,7 @@ export default function ApprovalsFilterPanel({
             value={searchInput}
             onChange={(event) => onSearchChange(event.target.value)}
             placeholder="Part no., serial no., worker..."
-            className="h-11 rounded-2xl border border-outline-variant/20 bg-white px-4 text-sm text-on-surface outline-none transition focus:border-primary/40 dark:bg-surface-container"
+            className="h-11 rounded-2xl border border-separator/40 bg-white px-4 text-sm text-on-surface outline-none transition focus:border-primary/40 dark:bg-surface-container"
           />
         </FormField>
 
@@ -71,7 +71,7 @@ export default function ApprovalsFilterPanel({
           <button
             type="button"
             onClick={onClearFilters}
-            className="h-11 rounded-2xl border border-outline-variant/20 bg-white px-4 text-sm font-bold text-on-surface transition hover:bg-surface-container dark:bg-surface-container"
+            className="h-11 rounded-2xl border border-separator/40 bg-white px-4 text-sm font-bold text-on-surface transition hover:bg-surface-container dark:bg-surface-container"
           >
             Reset Filters
           </button>
@@ -115,7 +115,7 @@ export default function ApprovalsFilterPanel({
             <button
               type="button"
               onClick={onClearAdvancedFilters}
-              className="flex items-center gap-2 rounded-2xl border border-outline-variant/20 bg-white px-5 py-2.5 text-sm font-bold text-on-surface transition hover:bg-surface-container dark:bg-surface-container"
+              className="flex items-center gap-2 rounded-2xl border border-separator/40 bg-white px-5 py-2.5 text-sm font-bold text-on-surface transition hover:bg-surface-container dark:bg-surface-container"
             >
               <span className="material-symbols-outlined" style={{ fontSize: 16 }}>refresh</span>
               Reset Advanced Filters

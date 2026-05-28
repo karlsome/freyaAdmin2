@@ -89,7 +89,7 @@ export default function FieldOptionPickerModal({
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               placeholder="Search values..."
-              className="planner-data-text h-12 w-full rounded-2xl border border-outline-variant/20 bg-white px-4 text-on-surface outline-none transition focus:border-primary/40 dark:bg-surface-container"
+              className="planner-data-text h-12 w-full rounded-2xl border border-separator/40 bg-white px-4 text-on-surface outline-none transition focus:border-primary/40 dark:bg-surface-container"
               autoFocus
             />
             <div className="mt-2 flex flex-wrap items-center justify-between gap-2 text-xs text-on-surface-variant">

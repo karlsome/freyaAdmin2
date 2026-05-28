@@ -12,7 +12,7 @@ export default function ModalShell({
   maxWidth = "max-w-3xl",
   zIndex = "z-50",
   align = "center",
-  overlayOpacity = "40",
+  overlayOpacity = "50",
   closeButtonVariant = "default",
   cardClassName,
   footerClassName,
@@ -43,15 +43,15 @@ export default function ModalShell({
 
   return (
     <div
-      className={`fixed inset-0 ${zIndex} bg-black/${overlayOpacity} backdrop-blur-sm`}
+      className={`fixed inset-0 ${zIndex} bg-black/${overlayOpacity} backdrop-blur-md`}
       onClick={onClose}
     >
       <div className={`flex min-h-full ${alignClass} justify-center px-4`}>
         <div
-          className={["glass-card flex w-full flex-col overflow-hidden rounded-2xl", maxWidth, cardClassName].filter(Boolean).join(" ")}
+          className={["dashboard-section flex w-full flex-col overflow-hidden rounded-2xl", maxWidth, cardClassName].filter(Boolean).join(" ")}
           onClick={(e) => e.stopPropagation()}
         >
-          <div className="border-b border-outline-variant/20 px-6 py-5">
+          <div className="border-b border-separator/35 px-6 py-5">
             <div className="flex items-start justify-between gap-4">
               <div>
                 {eyebrow ? (
@@ -74,7 +74,7 @@ export default function ModalShell({
           {children}
 
           {footer ? (
-            <div className={footerClassName ?? "border-t border-outline-variant/15 px-6 py-4"}>
+            <div className={footerClassName ?? "border-t border-separator/30 px-6 py-4"}>
               {footer}
             </div>
           ) : null}

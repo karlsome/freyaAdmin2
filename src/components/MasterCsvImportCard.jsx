@@ -5,7 +5,7 @@ function PreviewTable({ rows }) {
   const columns = Object.keys(previewRows[0] || {});
 
   return (
-    <div className="mt-5 overflow-hidden rounded-2xl border border-outline-variant/30 bg-surface-container-low">
+    <div className="mt-5 overflow-hidden rounded-2xl border border-separator/50 bg-surface-container-low">
       <div className="border-b border-outline-variant/30 px-4 py-3 text-xs font-bold uppercase tracking-[0.2em] text-outline">
         CSV Preview
       </div>

@@ -251,7 +251,7 @@ export default function FactoryDBWorkspace({ refreshToken, onFlash }) {
   ];
 
   return (
-    <section className="glass-card rounded-3xl p-6">
+    <section className="dashboard-section rounded-2xl p-6">
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <p className="text-xs font-bold uppercase tracking-[0.18em] text-outline">工場</p>
@@ -265,7 +265,7 @@ export default function FactoryDBWorkspace({ refreshToken, onFlash }) {
             <button
               type="button"
               onClick={openCreateModal}
-              className="inline-flex items-center justify-center rounded-2xl bg-primary px-4 py-3 text-sm font-bold text-on-primary transition hover:opacity-90"
+              className="inline-flex items-center justify-center rounded-xl bg-primary px-4 py-3 text-sm font-bold text-on-primary hover:opacity-90 active:scale-95 transition-all duration-150"
             >
               Add Factory
             </button>
@@ -312,10 +312,10 @@ export default function FactoryDBWorkspace({ refreshToken, onFlash }) {
       />
 
       {successModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-md">
           <div className="flex min-h-full items-center justify-center p-4">
-            <div className="glass-card w-full max-w-md rounded-2xl overflow-hidden">
-              <div className="border-b border-outline-variant/20 px-6 py-5">
+            <div className="dashboard-section w-full max-w-md rounded-2xl overflow-hidden">
+              <div className="border-b border-separator/35 px-6 py-5">
                 <h3 className="text-2xl font-black text-on-surface">Success</h3>
               </div>
               <div className="px-6 py-6">
@@ -323,7 +323,7 @@ export default function FactoryDBWorkspace({ refreshToken, onFlash }) {
                 <div className="mt-6 flex justify-end">
                   <button
                     onClick={() => setSuccessModalOpen(false)}
-                    className="rounded-2xl bg-primary px-4 py-2 text-xs font-bold text-on-primary transition hover:opacity-90"
+                    className="rounded-xl bg-primary px-4 py-2 text-xs font-bold text-on-primary hover:opacity-90 active:scale-95 transition-all duration-150"
                   >
                     OK
                   </button>

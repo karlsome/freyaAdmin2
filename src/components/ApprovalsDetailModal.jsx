@@ -73,7 +73,7 @@ function ActionButton({ tone = "primary", onClick, disabled, children }) {
     primary: "bg-primary text-on-primary hover:opacity-90",
     danger: "bg-error text-on-error hover:opacity-90",
     warning: "bg-amber-500 text-black hover:opacity-90",
-    neutral: "border border-outline-variant/25 bg-white text-on-surface hover:bg-surface-container dark:bg-surface-container",
+    neutral: "border border-separator/45 bg-white text-on-surface hover:bg-surface-container dark:bg-surface-container",
   };
 
   return (
@@ -100,12 +100,12 @@ function PrimitiveFieldValue({ value, align = "right" }) {
         <button
           type="button"
           onClick={() => window.open(value, "_blank", "noopener,noreferrer")}
-          className="overflow-hidden rounded-2xl border border-outline-variant/20 bg-surface transition hover:-translate-y-0.5"
+          className="overflow-hidden rounded-2xl border border-separator/40 bg-surface transition hover:-translate-y-0.5"
         >
           <img
             src={value}
             alt="Record field"
-            className="max-h-28 rounded-2xl border border-outline-variant/20 bg-surface object-contain"
+            className="max-h-28 rounded-2xl border border-separator/40 bg-surface object-contain"
           />
         </button>
       </div>
@@ -135,14 +135,14 @@ function StructuredValueCard({ value, depth = 0 }) {
 
     if (items.length === 0) {
       return (
-        <div className="rounded-2xl border border-outline-variant/20 bg-surface-container/40 px-3 py-2 text-[11px] text-outline">
+        <div className="rounded-2xl border border-separator/40 bg-surface-container/40 px-3 py-2 text-[11px] text-outline">
           Empty array
         </div>
       );
     }
 
     return (
-      <div className="space-y-2 rounded-2xl border border-outline-variant/20 bg-surface-container/40 p-3">
+      <div className="space-y-2 rounded-2xl border border-separator/40 bg-surface-container/40 p-3">
         <div className="flex items-center justify-between gap-2">
           <span className="text-[10px] font-bold uppercase tracking-wider text-outline">Array</span>
           <span className="rounded-full bg-surface px-2 py-0.5 text-[10px] font-bold text-on-surface-variant">
@@ -185,14 +185,14 @@ function StructuredValueCard({ value, depth = 0 }) {
 
   if (objectEntries.length === 0) {
     return (
-      <div className="rounded-2xl border border-outline-variant/20 bg-surface-container/40 px-3 py-2 text-[11px] text-outline">
+      <div className="rounded-2xl border border-separator/40 bg-surface-container/40 px-3 py-2 text-[11px] text-outline">
         Empty object
       </div>
     );
   }
 
   return (
-    <div className="space-y-2 rounded-2xl border border-outline-variant/20 bg-surface-container/40 p-3">
+    <div className="space-y-2 rounded-2xl border border-separator/40 bg-surface-container/40 p-3">
       <div className="flex items-center justify-between gap-2">
         <span className="text-[10px] font-bold uppercase tracking-wider text-outline">Object</span>
         <span className="rounded-full bg-surface px-2 py-0.5 text-[10px] font-bold text-on-surface-variant">
@@ -330,11 +330,11 @@ export default function ApprovalsDetailModal({
   const canEditRecord = mode !== "recycle" && hasApprovalAccess(authUser);
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/45 backdrop-blur-sm">
+    <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-md">
       <div className="flex min-h-full items-center justify-center p-4 lg:p-6">
-        <div ref={modalRef} className="glass-card flex max-h-[92vh] w-full max-w-7xl flex-col overflow-hidden rounded-2xl">
+        <div ref={modalRef} className="dashboard-section flex max-h-[92vh] w-full max-w-7xl flex-col overflow-hidden rounded-2xl">
 
-          <div className="border-b border-outline-variant/20 px-5 py-4 lg:px-6">
+          <div className="border-b border-separator/35 px-5 py-4 lg:px-6">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
               <div>
                 <div className="text-[10px] font-bold uppercase tracking-[0.22em] text-outline">Approval Record</div>

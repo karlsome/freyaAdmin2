@@ -607,7 +607,7 @@ export default function ProductPDFsWorkspace({ refreshToken = 0, onFlash }) {
               setTrashPage(1);
               setTrashOpen(true);
             }}
-            className="inline-flex items-center gap-2 rounded-2xl border border-outline-variant/20 bg-surface-container px-4 py-2 text-xs font-bold text-on-surface transition hover:bg-surface-container-high"
+            className="inline-flex items-center gap-2 rounded-2xl border border-separator/40 bg-surface-container px-4 py-2 text-xs font-bold text-on-surface transition hover:bg-surface-container-high"
           >
             <span className="material-symbols-outlined" style={{ fontSize: 16 }}>delete</span>
             Open Trash

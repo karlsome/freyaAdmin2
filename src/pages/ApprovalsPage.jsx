@@ -1214,19 +1214,19 @@ export default function ApprovalsPage() {
         <ApprovalsStatsStrip stats={stats} authUser={authUser} activeKey={activeStatsKey} onSelect={handleStatSelect} />
       ) : (
         <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-3">
-          <div className="glass-card rounded-3xl p-4">
+          <div className="dashboard-section rounded-2xl p-4">
             <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-outline">Recycle Bin</div>
             <div className="planner-data-text mt-2 text-3xl font-black text-on-surface tabular-nums">{binRows.length.toLocaleString()}</div>
             <p className="mt-1 text-xs text-on-surface-variant">Soft-deleted approval records</p>
           </div>
-          <div className="glass-card rounded-3xl p-4">
+          <div className="dashboard-section rounded-2xl p-4">
             <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-outline">Restorable</div>
             <div className="planner-data-text mt-2 text-3xl font-black text-on-surface tabular-nums">
               {binRows.length.toLocaleString()}
             </div>
             <p className="mt-1 text-xs text-on-surface-variant">Available for restore using original collection metadata</p>
           </div>
-          <div className="glass-card rounded-3xl p-4">
+          <div className="dashboard-section rounded-2xl p-4">
             <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-outline">Role</div>
             <div className="planner-data-text mt-2 text-lg font-black text-on-surface">{authUser?.role || "Unknown"}</div>
             <p className="mt-1 text-xs text-on-surface-variant">Recycle bin tools follow original role restrictions</p>
@@ -1235,7 +1235,7 @@ export default function ApprovalsPage() {
       )}
 
       {activeTab === "recycleBin" ? (
-        <div className="glass-card mb-6 rounded-[28px] p-5">
+        <div className="dashboard-section mb-6 rounded-2xl p-5">
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_auto]">
             <div className="flex flex-col gap-1.5">
               <label className="text-[10px] font-bold uppercase tracking-[0.18em] text-outline">Search Recycle Bin</label>
@@ -1289,7 +1289,7 @@ export default function ApprovalsPage() {
       )}
 
       {activeTab !== "recycleBin" && viewMode === "batch" ? (
-        <div className="glass-card mb-6 rounded-[28px] p-5">
+        <div className="dashboard-section mb-6 rounded-2xl p-5">
           <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
             <div>
               <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-outline">Batch Mode</div>
@@ -1319,7 +1319,7 @@ export default function ApprovalsPage() {
                 type="button"
                 onClick={handleBatchApprove}
                 disabled={actionBusy || !batchSelectedCount}
-                className="rounded-2xl bg-primary px-4 py-2 text-xs font-bold text-on-primary transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+                className="rounded-xl bg-primary px-4 py-2 text-xs font-bold text-on-primary hover:opacity-90 active:scale-95 transition-all duration-150 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 Approve Selected ({batchSelectedCount})
               </button>
@@ -1388,9 +1388,9 @@ export default function ApprovalsPage() {
         stickyHeaderOffset={0}
         stickyHeaderCellClassName="bg-surface-container-high shadow-[inset_0_-1px_0_rgba(148,163,184,0.18)]"
         layoutStorageKey={activeTab === "recycleBin" ? "approvals_bin_table" : `approvals_${activeTab}_${viewMode}`}
-        className="glass-card mb-8 overflow-hidden rounded-[28px]"
-        topBarClassName="flex flex-col gap-4 border-b border-outline-variant/20 px-5 py-4 md:flex-row md:items-center md:justify-between"
-        bottomBarClassName="flex flex-col gap-4 border-t border-outline-variant/20 px-5 py-4 md:flex-row md:items-center md:justify-between"
+        className="dashboard-section mb-8 overflow-hidden rounded-2xl"
+        topBarClassName="flex flex-col gap-4 border-b border-separator/35 px-5 py-4 md:flex-row md:items-center md:justify-between"
+        bottomBarClassName="flex flex-col gap-4 border-t border-separator/30 px-5 py-4 md:flex-row md:items-center md:justify-between"
         tableClassName="ui-table-data w-full border-separate border-spacing-0"
         tableViewportClassName="max-h-[68vh] overflow-auto"
       />

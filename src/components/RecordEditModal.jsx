@@ -321,7 +321,7 @@ export default function RecordEditModal({
 
     if (kind === "boolean") {
       return (
-        <label className="planner-data-text flex items-center gap-3 rounded-2xl border border-outline-variant/20 bg-white px-3 py-3 font-medium text-on-surface dark:bg-surface-container">
+        <label className="planner-data-text flex items-center gap-3 rounded-2xl border border-separator/40 bg-white px-3 py-3 font-medium text-on-surface dark:bg-surface-container">
           <input
             type="checkbox"
             checked={Boolean(value)}
@@ -333,7 +333,7 @@ export default function RecordEditModal({
       );
     }
 
-    const inputClassName = "planner-data-text w-full rounded-2xl border border-outline-variant/20 bg-white px-3 py-2.5 text-on-surface outline-none transition focus:border-primary/40 dark:bg-surface-container";
+    const inputClassName = "planner-data-text w-full rounded-2xl border border-separator/40 bg-white px-3 py-2.5 text-on-surface outline-none transition focus:border-primary/40 dark:bg-surface-container";
 
     return (
       <div>
@@ -402,7 +402,7 @@ export default function RecordEditModal({
             type="button"
             onClick={() => handleArrayAdd(path)}
             disabled={busy}
-            className="rounded-2xl border border-outline-variant/20 bg-white px-4 py-2 text-xs font-bold text-on-surface transition hover:bg-surface-container disabled:cursor-not-allowed disabled:opacity-50 dark:bg-surface-container"
+            className="rounded-2xl border border-separator/40 bg-white px-4 py-2 text-xs font-bold text-on-surface transition hover:bg-surface-container disabled:cursor-not-allowed disabled:opacity-50 dark:bg-surface-container"
           >
             Add Item
           </button>
@@ -461,14 +461,14 @@ export default function RecordEditModal({
             <div key={field.focusField} className="rounded-2xl border border-outline-variant/15 bg-surface-container-low px-3 py-3">
               <div className="mb-1 text-[10px] font-bold uppercase tracking-[0.18em] text-outline">{field.label}</div>
               <div className="flex items-center gap-2">
-                <div className="planner-data-text min-h-[42px] flex-1 rounded-2xl border border-outline-variant/20 bg-white px-3 py-2.5 font-medium text-on-surface dark:bg-surface-container">
+                <div className="planner-data-text min-h-[42px] flex-1 rounded-2xl border border-separator/40 bg-white px-3 py-2.5 font-medium text-on-surface dark:bg-surface-container">
                   {formatDisplayValue(field.value)}
                 </div>
                 <button
                   type="button"
                   onClick={() => openLinkedPicker(field.focusField)}
                   disabled={busy || !linkedProductPaths || typeof loadLinkedProductOptions !== "function"}
-                  className="rounded-2xl bg-primary px-3 py-2 text-xs font-bold text-on-primary transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="rounded-xl bg-primary px-3 py-2 text-xs font-bold text-on-primary hover:opacity-90 active:scale-95 transition-all duration-150 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   Change
                 </button>
@@ -485,14 +485,14 @@ export default function RecordEditModal({
         <div key={item.path} className={item.span === "full" ? "md:col-span-2" : ""}>
           <div className="mb-1 text-[10px] font-bold uppercase tracking-[0.18em] text-outline">{item.label}</div>
           <div className="flex items-center gap-2 rounded-2xl border border-outline-variant/15 bg-surface-container-low px-3 py-3">
-            <div className="planner-data-text min-h-[42px] flex-1 rounded-2xl border border-outline-variant/20 bg-white px-3 py-2.5 font-medium text-on-surface dark:bg-surface-container">
+            <div className="planner-data-text min-h-[42px] flex-1 rounded-2xl border border-separator/40 bg-white px-3 py-2.5 font-medium text-on-surface dark:bg-surface-container">
               {formatDisplayValue(value)}
             </div>
             <button
               type="button"
               onClick={() => openFieldPicker(item)}
               disabled={busy || typeof loadFieldPickerOptions !== "function"}
-              className="rounded-2xl bg-primary px-3 py-2 text-xs font-bold text-on-primary transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+              className="rounded-xl bg-primary px-3 py-2 text-xs font-bold text-on-primary hover:opacity-90 active:scale-95 transition-all duration-150 disabled:cursor-not-allowed disabled:opacity-50"
             >
               Change
             </button>
@@ -524,10 +524,10 @@ export default function RecordEditModal({
       <div className="fixed inset-0 z-[80] bg-black/50 backdrop-blur-sm" onClick={() => onClose?.()}>
         <div className="flex min-h-full items-center justify-center p-4 lg:p-6">
           <div
-            className="glass-card flex max-h-[92vh] w-full max-w-6xl flex-col overflow-hidden rounded-2xl"
+            className="dashboard-section flex max-h-[92vh] w-full max-w-6xl flex-col overflow-hidden rounded-2xl"
             onClick={(event) => event.stopPropagation()}
           >
-            <div className="border-b border-outline-variant/20 px-5 py-4 lg:px-6">
+            <div className="border-b border-separator/35 px-5 py-4 lg:px-6">
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <div className="text-[10px] font-bold uppercase tracking-[0.22em] text-outline">Edit Record</div>
@@ -573,7 +573,7 @@ export default function RecordEditModal({
                     value={note}
                     onChange={(event) => setNote(event.target.value)}
                     placeholder={notePlaceholder}
-                    className="planner-data-text h-11 w-full rounded-2xl border border-outline-variant/20 bg-white px-4 text-on-surface outline-none transition focus:border-primary/40 dark:bg-surface-container"
+                    className="planner-data-text h-11 w-full rounded-2xl border border-separator/40 bg-white px-4 text-on-surface outline-none transition focus:border-primary/40 dark:bg-surface-container"
                   />
                 </div>
 
@@ -592,7 +592,7 @@ export default function RecordEditModal({
                   type="button"
                   disabled={busy}
                   onClick={() => onClose?.()}
-                  className="rounded-2xl border border-outline-variant/20 bg-white px-4 py-2.5 text-xs font-bold text-on-surface transition hover:bg-surface-container disabled:cursor-not-allowed disabled:opacity-50 dark:bg-surface-container"
+                  className="rounded-2xl border border-separator/40 bg-white px-4 py-2.5 text-xs font-bold text-on-surface transition hover:bg-surface-container disabled:cursor-not-allowed disabled:opacity-50 dark:bg-surface-container"
                 >
                   Cancel
                 </button>
@@ -601,7 +601,7 @@ export default function RecordEditModal({
                   type="button"
                   disabled={busy}
                   onClick={() => onSave?.({ draft, note })}
-                  className="rounded-2xl bg-primary px-4 py-2.5 text-xs font-bold text-on-primary transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="rounded-xl bg-primary px-4 py-2.5 text-xs font-bold text-on-primary hover:opacity-90 active:scale-95 transition-all duration-150 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {saveLabel}
                 </button>

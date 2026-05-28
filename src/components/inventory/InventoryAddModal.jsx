@@ -136,7 +136,7 @@ export default function InventoryAddModal({
           <button
             type="button"
             onClick={onClose}
-            className="rounded-2xl border border-outline-variant/20 px-4 py-2 text-sm font-bold text-on-surface transition hover:bg-surface-container"
+            className="rounded-2xl border border-separator/40 px-4 py-2 text-sm font-bold text-on-surface transition hover:bg-surface-container"
           >
             Cancel
           </button>
@@ -203,7 +203,7 @@ export default function InventoryAddModal({
           {errors.quantity ? <p className="mt-2 text-sm text-error">{errors.quantity}</p> : null}
         </label>
 
-        <div className="rounded-2xl border border-outline-variant/20 bg-surface-container-low/35 px-4 py-3 text-sm text-on-surface-variant">
+        <div className="rounded-2xl border border-separator/40 bg-surface-container-low/35 px-4 py-3 text-sm text-on-surface-variant">
           {lookupBusy
             ? "Checking master data..."
             : lookupHint || "Blur part number or serial number to auto-fill the missing field from master data."}

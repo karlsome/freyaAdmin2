@@ -218,7 +218,7 @@ function normalizeReferenceLibraryImages(images = []) {
 }
 
 const inputClass =
-  "w-full rounded-2xl border border-outline-variant/30 bg-surface px-3 py-3 text-sm text-on-surface outline-none transition focus:border-primary/40";
+  "w-full rounded-2xl border border-separator/50 bg-surface px-3 py-3 text-sm text-on-surface outline-none transition focus:border-primary/40";
 
 function getBuilderViewportSize() {
   if (typeof window === "undefined") {
@@ -233,7 +233,7 @@ function getBuilderViewportSize() {
 
 function SummaryCard({ icon, label, value }) {
   return (
-    <div className="rounded-2xl border border-outline-variant/20 bg-surface px-4 py-3">
+    <div className="rounded-2xl border border-separator/40 bg-surface px-4 py-3">
       <div className="flex items-center gap-2 text-outline">
         <span className="material-symbols-outlined text-primary" style={{ fontSize: 16 }}>{icon}</span>
         <span className="text-[10px] font-bold uppercase tracking-[0.18em]">{label}</span>
@@ -245,7 +245,7 @@ function SummaryCard({ icon, label, value }) {
 
 function ToggleRow({ checked, onToggle, label, description }) {
   return (
-    <div className="flex items-start justify-between gap-4 rounded-2xl border border-outline-variant/20 bg-surface px-4 py-3">
+    <div className="flex items-start justify-between gap-4 rounded-2xl border border-separator/40 bg-surface px-4 py-3">
       <div>
         <p className="text-sm font-semibold text-on-surface">{label}</p>
         <p className="mt-1 text-xs leading-5 text-outline">{description}</p>
@@ -270,7 +270,7 @@ function FieldPreviewCard({ field }) {
   const hasRange = field.type === "number" && (field.min != null || field.max != null);
 
   return (
-    <div className="rounded-2xl border border-outline-variant/20 bg-surface px-4 py-4">
+    <div className="rounded-2xl border border-separator/40 bg-surface px-4 py-4">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
@@ -310,7 +310,7 @@ function FieldPreviewCard({ field }) {
       </div>
 
       {field.imageURL ? (
-        <div className="mt-4 overflow-hidden rounded-2xl border border-outline-variant/20 bg-surface-container">
+        <div className="mt-4 overflow-hidden rounded-2xl border border-separator/40 bg-surface-container">
           <img src={normalizeImageURL(field.imageURL)} alt={field.label || "Field reference"} className="h-40 w-full object-cover" />
         </div>
       ) : null}
@@ -320,7 +320,7 @@ function FieldPreviewCard({ field }) {
           <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-outline">Options</p>
           <div className="mt-2 flex flex-wrap gap-2">
             {field.options.map((option) => (
-              <span key={option} className="rounded-full border border-outline-variant/20 bg-surface-container px-2.5 py-1 text-xs font-semibold text-on-surface">
+              <span key={option} className="rounded-full border border-separator/40 bg-surface-container px-2.5 py-1 text-xs font-semibold text-on-surface">
                 {option}
               </span>
             ))}
@@ -523,12 +523,12 @@ export default function CheckFormBuilderModal({ initial, onClose, onSaved, prese
   }
 
   const modal = (
-    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto overscroll-contain bg-black/40 px-3 py-3 backdrop-blur-sm sm:px-4 sm:py-4">
+    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto overscroll-contain bg-black/50 px-3 py-3 backdrop-blur-md sm:px-4 sm:py-4">
       <div
-        className="relative flex min-h-0 w-full max-w-6xl flex-col overflow-hidden rounded-2xl border border-outline-variant/20 glass-card"
+        className="relative flex min-h-0 w-full max-w-6xl flex-col overflow-hidden rounded-2xl border border-separator/40 glass-card"
         style={{ height: `${modalHeight}px`, maxHeight: `${modalHeight}px` }}
       >
-        <div className="flex items-start justify-between border-b border-outline-variant/20 px-4 py-4 sm:px-6 sm:py-5">
+        <div className="flex items-start justify-between border-b border-separator/35 px-4 py-4 sm:px-6 sm:py-5">
           <div className="min-w-0 flex-1 pr-4">
             <p className="text-xs font-bold uppercase tracking-[0.18em] text-outline">
               {initial ? "Edit Form" : "New Form"}
@@ -568,7 +568,7 @@ export default function CheckFormBuilderModal({ initial, onClose, onSaved, prese
                 </div>
               </section>
 
-              <section className="mt-5 rounded-2xl border border-outline-variant/20 bg-surface-container/40 p-4">
+              <section className="mt-5 rounded-2xl border border-separator/40 bg-surface-container/40 p-4">
                 <div className="mb-4">
                   <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-outline">Form Setup</p>
                   <p className="mt-1 text-sm text-outline">Define the name, description, factory, cadence, and activation date before editing the checks.</p>
@@ -656,7 +656,7 @@ export default function CheckFormBuilderModal({ initial, onClose, onSaved, prese
                 </div>
               </section>
 
-              <section className="mt-5 rounded-2xl border border-outline-variant/20 bg-surface-container/40 p-4">
+              <section className="mt-5 rounded-2xl border border-separator/40 bg-surface-container/40 p-4">
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                   <div>
                     <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-outline">Machine Scope</p>
@@ -666,7 +666,7 @@ export default function CheckFormBuilderModal({ initial, onClose, onSaved, prese
                     <button
                       type="button"
                       onClick={toggleAllMachines}
-                      className="inline-flex items-center gap-2 rounded-full border border-outline-variant/20 bg-surface px-3 py-2 text-xs font-bold text-on-surface transition hover:bg-surface-container"
+                      className="inline-flex items-center gap-2 rounded-full border border-separator/40 bg-surface px-3 py-2 text-xs font-bold text-on-surface transition hover:bg-surface-container"
                     >
                       <span className="material-symbols-outlined" style={{ fontSize: 14 }}>{allFilteredSelected ? "remove_done" : "done_all"}</span>
                       {allFilteredSelected ? "Clear all" : "Select all"}
@@ -709,7 +709,7 @@ export default function CheckFormBuilderModal({ initial, onClose, onSaved, prese
                 </div>
               </section>
 
-              <section className="mt-5 rounded-2xl border border-outline-variant/20 bg-surface-container/40 p-4">
+              <section className="mt-5 rounded-2xl border border-separator/40 bg-surface-container/40 p-4">
                 <div>
                   <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-outline">Checks</p>
                   <p className="mt-1 text-sm text-outline">Each field card contains the full setup for that check. Use the number on the left to track checklist order, then add a new item at the bottom when needed.</p>
@@ -748,7 +748,7 @@ export default function CheckFormBuilderModal({ initial, onClose, onSaved, prese
             </div>
 
             <aside className="border-t border-outline-variant/20 bg-surface/50 px-4 py-5 sm:px-6 xl:min-h-0 xl:overflow-y-auto xl:border-l xl:border-t-0">
-              <div className="rounded-2xl border border-outline-variant/20 bg-surface px-4 py-4">
+              <div className="rounded-2xl border border-separator/40 bg-surface px-4 py-4">
                 <div className="mb-2 flex flex-wrap items-center gap-2">
                   <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-primary">
                     <span className="material-symbols-outlined" style={{ fontSize: 12 }}>{selectedScheduleOption?.icon || "event_busy"}</span>
@@ -771,14 +771,14 @@ export default function CheckFormBuilderModal({ initial, onClose, onSaved, prese
                 <SummaryCard icon="priority_high" label="Required" value={`${requiredFieldCount} fields`} />
               </div>
 
-              <div className="mt-4 rounded-2xl border border-outline-variant/20 bg-surface px-4 py-4">
+              <div className="mt-4 rounded-2xl border border-separator/40 bg-surface px-4 py-4">
                 <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-outline">Selected Machines</p>
                 <div className="mt-3 flex flex-wrap gap-2">
                   {selectedMachineNames.length > 0 ? (
                     selectedMachineNames.map((machineName) => (
                       <span
                         key={machineName}
-                        className="inline-flex items-center gap-1 rounded-full border border-outline-variant/20 bg-surface-container px-2.5 py-1 text-xs font-semibold text-on-surface"
+                        className="inline-flex items-center gap-1 rounded-full border border-separator/40 bg-surface-container px-2.5 py-1 text-xs font-semibold text-on-surface"
                       >
                         <span className="material-symbols-outlined text-primary" style={{ fontSize: 14 }}>precision_manufacturing</span>
                         {machineName}
@@ -790,7 +790,7 @@ export default function CheckFormBuilderModal({ initial, onClose, onSaved, prese
                 </div>
               </div>
 
-              <div className="mt-4 rounded-2xl border border-outline-variant/20 bg-surface px-4 py-4">
+              <div className="mt-4 rounded-2xl border border-separator/40 bg-surface px-4 py-4">
                 <div className="mb-3 flex items-center justify-between gap-3">
                   <div>
                     <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-outline">Field Focus</p>
@@ -838,7 +838,7 @@ export default function CheckFormBuilderModal({ initial, onClose, onSaved, prese
                   type="button"
                   onClick={() => setConfirmingDelete(false)}
                   disabled={busy}
-                  className="rounded-2xl border border-outline-variant/20 px-3 py-1.5 text-xs font-bold text-on-surface transition hover:bg-surface-container"
+                  className="rounded-2xl border border-separator/40 px-3 py-1.5 text-xs font-bold text-on-surface transition hover:bg-surface-container"
                 >
                   Cancel
                 </button>
@@ -850,7 +850,7 @@ export default function CheckFormBuilderModal({ initial, onClose, onSaved, prese
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 rounded-2xl border border-outline-variant/20 bg-surface-container px-4 py-2 text-sm font-bold text-on-surface transition hover:bg-surface-container-high sm:flex-none"
+              className="flex-1 rounded-2xl border border-separator/40 bg-surface-container px-4 py-2 text-sm font-bold text-on-surface transition hover:bg-surface-container-high sm:flex-none"
             >
               Cancel
             </button>
@@ -858,7 +858,7 @@ export default function CheckFormBuilderModal({ initial, onClose, onSaved, prese
               type="button"
               disabled={busy || nameConflict}
               onClick={() => save("draft")}
-              className="flex-1 rounded-2xl border border-outline-variant/20 bg-surface-container px-4 py-2 text-sm font-bold text-on-surface transition hover:bg-surface-container-high disabled:opacity-50 sm:flex-none"
+              className="flex-1 rounded-2xl border border-separator/40 bg-surface-container px-4 py-2 text-sm font-bold text-on-surface transition hover:bg-surface-container-high disabled:opacity-50 sm:flex-none"
             >
               {busy ? "Saving..." : "Save Draft"}
             </button>
@@ -866,7 +866,7 @@ export default function CheckFormBuilderModal({ initial, onClose, onSaved, prese
               type="button"
               disabled={busy || nameConflict}
               onClick={() => save("active")}
-              className="flex-1 rounded-2xl bg-primary px-4 py-2 text-sm font-bold text-on-primary transition hover:opacity-90 disabled:opacity-50 sm:flex-none"
+              className="flex-1 rounded-xl bg-primary px-4 py-2 text-sm font-bold text-on-primary hover:opacity-90 active:scale-95 transition-all duration-150 disabled:opacity-50 sm:flex-none"
             >
               {busy ? "Saving..." : "Deploy"}
             </button>
@@ -975,7 +975,7 @@ function FieldCard({
                     event.stopPropagation();
                     setThumbnailPreviewImage({ imageURL: fieldImageURL, name: field.label || "Reference image" });
                   }}
-                  className="mt-0.5 flex h-14 w-14 flex-shrink-0 overflow-hidden rounded-2xl border border-outline-variant/20 bg-surface-container transition hover:border-primary/35 hover:shadow-[0_8px_20px_rgba(67,97,238,0.14)]"
+                  className="mt-0.5 flex h-14 w-14 flex-shrink-0 overflow-hidden rounded-2xl border border-separator/40 bg-surface-container transition hover:border-primary/35 hover:shadow-[0_8px_20px_rgba(67,97,238,0.14)]"
                   aria-label={`Preview reference image for ${field.label || "checklist field"}`}
                 >
                   <img src={fieldImageURL} alt={field.label || "Reference image"} className="h-full w-full object-cover" />
@@ -1015,7 +1015,7 @@ function FieldCard({
               <button
                 type="button"
                 onClick={onToggle}
-                className="inline-flex items-center gap-1 rounded-full border border-outline-variant/20 bg-surface px-3 py-1.5 text-[11px] font-bold text-on-surface transition hover:bg-surface-container"
+                className="inline-flex items-center gap-1 rounded-full border border-separator/40 bg-surface px-3 py-1.5 text-[11px] font-bold text-on-surface transition hover:bg-surface-container"
               >
                 {expanded ? "Collapse" : "Edit"}
                 <span className="material-symbols-outlined" style={{ fontSize: 14 }}>{expanded ? "expand_less" : "expand_more"}</span>
@@ -1027,7 +1027,7 @@ function FieldCard({
         {expanded ? (
           <div className="border-t border-outline-variant/20 px-4 py-4">
             {field.locked ? (
-              <div className="rounded-2xl border border-outline-variant/20 bg-surface px-4 py-4">
+              <div className="rounded-2xl border border-separator/40 bg-surface px-4 py-4">
                 <p className="text-sm font-semibold text-on-surface">This field is fixed</p>
                 <p className="mt-1 text-sm leading-6 text-outline">
                   The operator name field is added automatically to every maintenance form and cannot be removed or edited.
@@ -1054,8 +1054,8 @@ function OverlayDialog({
   footer,
   maxWidthClass = "max-w-5xl",
   zIndexClass = "z-[90]",
-  overlayClassName = "bg-black/45 backdrop-blur-sm",
-  panelClassName = "border border-outline-variant/20 bg-surface text-on-surface",
+  overlayClassName = "bg-black/50 backdrop-blur-md",
+  panelClassName = "border border-separator/40 bg-surface text-on-surface",
   dividerClassName = "border-outline-variant/20",
   titleClassName = "text-on-surface",
   descriptionClassName = "text-outline",
@@ -1123,7 +1123,7 @@ function ReferenceImageLibraryModal({
           <button
             type="button"
             onClick={onClose}
-            className="rounded-2xl border border-outline-variant/20 px-4 py-2 text-xs font-bold text-on-surface transition hover:bg-surface-container"
+            className="rounded-2xl border border-separator/40 px-4 py-2 text-xs font-bold text-on-surface transition hover:bg-surface-container"
           >
             Done
           </button>
@@ -1133,11 +1133,11 @@ function ReferenceImageLibraryModal({
       <div className="space-y-4 px-5 py-5 sm:px-6">
         <div className="flex flex-wrap items-center gap-2">
           <span className="rounded-full bg-primary/10 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.18em] text-primary">Folder</span>
-          <span className="rounded-full border border-outline-variant/20 bg-surface-container px-3 py-1 text-xs font-semibold text-on-surface">{folderKey || "Unassigned"}</span>
+          <span className="rounded-full border border-separator/40 bg-surface-container px-3 py-1 text-xs font-semibold text-on-surface">{folderKey || "Unassigned"}</span>
         </div>
 
         {!loading && images.length === 0 ? (
-          <div className="rounded-3xl border border-outline-variant/20 bg-surface-container/50 px-4 py-4 text-sm leading-6 text-outline">
+          <div className="rounded-3xl border border-separator/40 bg-surface-container/50 px-4 py-4 text-sm leading-6 text-outline">
             No saved images were found in this checklist folder yet. Start by uploading a new one.
           </div>
         ) : null}
@@ -1160,7 +1160,7 @@ function ReferenceImageLibraryModal({
 
           {loading ? (
             Array.from({ length: 3 }).map((_, index) => (
-              <div key={`image-loading-${index}`} className="overflow-hidden rounded-3xl border border-outline-variant/20 bg-surface">
+              <div key={`image-loading-${index}`} className="overflow-hidden rounded-3xl border border-separator/40 bg-surface">
                 <div className="aspect-[4/3] animate-pulse bg-surface-container" />
                 <div className="space-y-2 p-3">
                   <div className="h-3 w-2/3 animate-pulse rounded-full bg-surface-container" />
@@ -1245,7 +1245,7 @@ function ReferenceImagePreviewModal({ image, selectedImageURL, onClose, onSelect
       maxWidthClass="max-w-5xl"
       zIndexClass="z-[100]"
       overlayClassName="bg-black/75 backdrop-blur-sm"
-      panelClassName="border border-white/10 bg-slate-950/95 text-white"
+      panelClassName="border border-separator/35 bg-slate-950/95 text-white"
       dividerClassName="border-white/10"
       titleClassName="text-white"
       descriptionClassName="text-white/65"
@@ -1515,7 +1515,7 @@ function FieldEditor({ field, onChange, username }) {
           />
         </div>
 
-        <div className="rounded-2xl border border-outline-variant/20 bg-surface px-4 py-4">
+        <div className="rounded-2xl border border-separator/40 bg-surface px-4 py-4">
           <div className="flex items-center justify-between gap-3">
             <div>
               <p className="text-xs font-bold uppercase tracking-[0.15em] text-outline">Reference Image</p>
@@ -1529,7 +1529,7 @@ function FieldEditor({ field, onChange, username }) {
               type="button"
               onClick={handleLibraryToggle}
               disabled={uploading || preparingEditor}
-              className="inline-flex items-center gap-2 rounded-2xl border border-outline-variant/30 bg-surface-container px-4 py-2 text-xs font-bold text-on-surface transition hover:bg-surface-container-high disabled:cursor-not-allowed disabled:opacity-50"
+              className="inline-flex items-center gap-2 rounded-2xl border border-separator/50 bg-surface-container px-4 py-2 text-xs font-bold text-on-surface transition hover:bg-surface-container-high disabled:cursor-not-allowed disabled:opacity-50"
             >
               {uploading || loadingLibrary || preparingEditor ? (
                 <>
@@ -1548,7 +1548,7 @@ function FieldEditor({ field, onChange, username }) {
               <button
                 type="button"
                 onClick={() => handleOpenPreview({ imageURL: selectedImageURL, name: field.label || "Reference image" })}
-                className="inline-flex items-center gap-2 rounded-2xl border border-outline-variant/20 px-4 py-2 text-xs font-bold text-on-surface transition hover:bg-surface-container"
+                className="inline-flex items-center gap-2 rounded-2xl border border-separator/40 px-4 py-2 text-xs font-bold text-on-surface transition hover:bg-surface-container"
               >
                 <span className="material-symbols-outlined" style={{ fontSize: 15 }}>open_in_full</span>
                 Preview image
@@ -1560,7 +1560,7 @@ function FieldEditor({ field, onChange, username }) {
           {libraryError ? <p className="mt-2 text-xs text-error">{libraryError}</p> : null}
 
           {selectedImageURL ? (
-            <div className="relative mt-4 overflow-hidden rounded-2xl border border-outline-variant/20 bg-surface-container">
+            <div className="relative mt-4 overflow-hidden rounded-2xl border border-separator/40 bg-surface-container">
               <img src={selectedImageURL} alt="reference" className="h-40 w-full object-cover" />
               <div className="absolute inset-x-0 bottom-0 flex items-center justify-between gap-2 bg-gradient-to-t from-black/75 via-black/15 to-transparent px-3 py-3">
                 <div>
@@ -1675,7 +1675,7 @@ function SelectOptionsEditor({ options, onChange }) {
   }
 
   return (
-    <div className="rounded-2xl border border-outline-variant/20 bg-surface px-4 py-4">
+    <div className="rounded-2xl border border-separator/40 bg-surface px-4 py-4">
       <div className="flex items-center justify-between gap-3">
         <div>
           <p className="text-xs font-bold uppercase tracking-[0.15em] text-outline">Options</p>
@@ -1685,7 +1685,7 @@ function SelectOptionsEditor({ options, onChange }) {
 
       <div className="mt-3 flex flex-wrap gap-1.5">
         {options.map((option) => (
-          <span key={option} className="flex items-center gap-1 rounded-full border border-outline-variant/20 bg-surface-container px-2.5 py-1 text-xs font-medium text-on-surface">
+          <span key={option} className="flex items-center gap-1 rounded-full border border-separator/40 bg-surface-container px-2.5 py-1 text-xs font-medium text-on-surface">
             {option}
             <button type="button" onClick={() => removeOption(option)} className="text-outline transition hover:text-error">
               <span className="material-symbols-outlined" style={{ fontSize: 12 }}>close</span>
@@ -1706,9 +1706,9 @@ function SelectOptionsEditor({ options, onChange }) {
               addOption();
             }
           }}
-          className="flex-1 rounded-2xl border border-outline-variant/30 bg-surface-container px-3 py-2 text-sm text-on-surface outline-none transition focus:border-primary/40"
+          className="flex-1 rounded-2xl border border-separator/50 bg-surface-container px-3 py-2 text-sm text-on-surface outline-none transition focus:border-primary/40"
         />
-        <button type="button" onClick={addOption} className="rounded-2xl bg-primary px-4 py-2 text-sm font-bold text-on-primary transition hover:opacity-90">
+        <button type="button" onClick={addOption} className="rounded-xl bg-primary px-4 py-2 text-sm font-bold text-on-primary hover:opacity-90 active:scale-95 transition-all duration-150">
           Add
         </button>
       </div>

@@ -77,7 +77,7 @@ export default function MasterProductPickerModal({
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               placeholder="品番または背番号で検索..."
-              className="h-14 w-full rounded-2xl border border-outline-variant/20 bg-white px-4 text-base text-on-surface outline-none transition focus:border-primary/40 dark:bg-surface-container"
+              className="h-14 w-full rounded-2xl border border-separator/40 bg-white px-4 text-base text-on-surface outline-none transition focus:border-primary/40 dark:bg-surface-container"
               autoFocus
             />
             <div className="mt-2 text-sm text-on-surface-variant">
