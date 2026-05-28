@@ -48,7 +48,7 @@ export default function ModalShell({
     >
       <div className={`flex min-h-full ${alignClass} justify-center px-4`}>
         <div
-          className={["dashboard-section flex w-full flex-col overflow-hidden rounded-2xl", maxWidth, cardClassName].filter(Boolean).join(" ")}
+          className={["glass-card flex w-full flex-col overflow-hidden rounded-2xl", maxWidth, cardClassName].filter(Boolean).join(" ")}
           onClick={(e) => e.stopPropagation()}
         >
           <div className="border-b border-separator/35 px-6 py-5">
