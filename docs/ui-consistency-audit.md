@@ -79,12 +79,15 @@ All spacing follows an **8px grid**. Only these values are permitted:
 
 ### Dashboard row items
 
-| Component | Row padding | List spacing |
-|---|---|---|
-| Issues feed items | `p-3` | `space-y-2.5` |
-| Recent submissions rows | `px-3 py-3` | `space-y-2` |
-| Factory table header | `px-3 py-3` | — |
-| Factory table rows | `px-3 py-3` | `space-y-1` |
+| Component | Row padding | List spacing | Notes |
+|---|---|---|---|
+| Issues feed items | `p-3` | `space-y-2.5` | Tag row gap: `gap-2`; item header mb: `mb-2` |
+| Recent submissions rows | `px-3 py-3` | `space-y-2` | Row header gap: `gap-2` |
+| Factory table header | `px-3 py-3` | — | Header-to-rows margin: `mb-2` |
+| Factory table rows | `px-3 py-3` | `space-y-1` | — |
+| Factory mobile cards | `p-4` | `space-y-3` | Inner stat grid: `gap-3` |
+| KPI strip section label | — | — | `mb-3` above each grid; section gap: `gap-2` |
+| StatSummaryCard | `p-4` | — | Icon-to-content gap: `gap-3` |
 
 ---
 
@@ -790,7 +793,92 @@ The aurora/lava-lamp background animation (`.aurora-bg`, `.aurora-blob-*`) is da
 
 ---
 
-## 29. Known Open Issues (low priority)
+## 29. Per-Component Canonical Spacing
+
+This section documents the exact spacing values applied to each specific component. Use it as a ground truth when editing an existing component or creating one that mirrors it.
+
+### Dashboard components
+
+#### `DashboardKPIStrip` + `StatSummaryCard`
+
+| Element | Class |
+|---|---|
+| KPI strip outer gap between rows | `space-y-5` |
+| KPI strip bottom margin | `mb-8` |
+| Section label ("Overall", "By Process") | `text-[10px] font-bold uppercase tracking-widest text-outline mb-3` |
+| Section label icon/line gap | `gap-2` |
+| Grid of stat cards | `grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4` |
+| `StatSummaryCard` padding | `p-4` |
+| `StatSummaryCard` icon-to-content gap | `gap-3` |
+| `StatSummaryCard` icon container | `w-10 h-10 rounded-xl` |
+
+#### `DashboardFactorySummary`
+
+| Element | Class |
+|---|---|
+| Desktop header row padding | `px-3 py-3` |
+| Desktop header row bottom margin | `mb-2` |
+| Desktop table row padding | `px-3 py-3` |
+| Desktop table row list spacing | `space-y-1` |
+| Mobile card list spacing | `space-y-3` |
+| Mobile card padding | `p-4` |
+| Mobile card inner stat grid gap | `gap-3` |
+
+#### `DashboardRecentSubmissions`
+
+| Element | Class |
+|---|---|
+| Row padding | `px-3 py-3` |
+| Row list spacing | `space-y-2` |
+| Row header (factory · equipment) gap | `gap-2` |
+| Row detail (part · worker) indent | `pl-5` |
+
+#### `DashboardIssuesFeed`
+
+| Element | Class |
+|---|---|
+| Item card padding | `p-3` |
+| Item list spacing | `space-y-2.5` |
+| Item header section bottom margin | `mb-2` |
+| Issue tag row gap | `gap-2` |
+| Issue tag padding | `px-2 py-0.5` (pill, `rounded-full`) |
+| Issue tag icon size | `style={{ fontSize: 11 }}` |
+
+---
+
+### Modal components — applied fixes
+
+All modal headers, bodies, and footers now use these values with **no responsive overrides**:
+
+| Zone | Class |
+|---|---|
+| Header | `px-6 py-5` |
+| Scrollable body | `px-6 py-5` |
+| Footer / action bar | `px-6 py-4` |
+| Sidebar panel | `px-6 py-5` |
+
+The table below documents the specific change applied to each modal file:
+
+| File | What was fixed |
+|---|---|
+| `RecordEditModal.jsx` | Header/body/footer `px-5 lg:px-6` → `px-6`; 4 field cards `px-3 py-3` → `px-4 py-3` |
+| `MasterDetailDrawer.jsx` | Field grid `gap-2` → `gap-3`; field cards `px-3 py-2` → `px-4 py-3` |
+| `CheckFormBuilderModal.jsx` | Header/footer `px-4 sm:px-6` → `px-6`; toast `py-3.5` → `py-3` |
+| `MasterBatchEditModal.jsx` | Sidebar/body `px-5` → `px-6`; change-list cards `px-3 py-3` → `px-4 py-3` |
+| `ProductPDFBulkMatchModal.jsx` | All item cards `px-3 py-2` / `px-3 py-3` → `px-4 py-3` |
+| `NodaDetailModal.jsx` | Cancel/Close navigation buttons `py-2.5` → `py-2` |
+| `EquipmentEventModal.jsx` | Tag buttons `px-3.5 py-1.5` → `px-3 py-1` |
+| `SettingsModal.jsx` | Language option buttons `py-3.5` → `py-3` |
+| `ProductPDFTrashModal.jsx` | All action + pagination buttons `px-3 py-2` → `px-4 py-2` |
+| `PlannerSlotSchedulingModal.jsx` | Goal list `space-y-2` → `space-y-3` |
+| `RecordDetailModal.jsx` | Header `px-5 sm:px-6 py-4` → `px-6 py-5`; body sections `px-5 sm:px-6` → `px-6` |
+| `ApprovalsDetailModal.jsx` | Header `px-5 py-4 lg:px-6` → `px-6 py-5`; body/sidebar `px-5` → `px-6` |
+
+> **NodaDetailModal exception:** The large approve/reject/submit CTAs inside the modal body intentionally use `py-2.5 text-sm` for visual prominence. Only the secondary Cancel/Close navigation buttons use `py-2`.
+
+---
+
+## 30. Known Open Issues (low priority)
 
 | Issue | Location | Notes |
 |---|---|---|
@@ -801,7 +889,7 @@ The aurora/lava-lamp background animation (`.aurora-bg`, `.aurora-blob-*`) is da
 
 ---
 
-## 30. Verification Checklist
+## 31. Verification Checklist
 
 When reviewing a new component, confirm:
 
