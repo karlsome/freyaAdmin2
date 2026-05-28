@@ -223,7 +223,7 @@ export default function CheckFormDetailModal({ form, scheduleMeta, machineNames,
             onClick={onClose}
             className="p-2 rounded-xl flex-shrink-0 text-outline hover:bg-surface-container hover:text-on-surface transition-all duration-150 active:scale-95"
           >
-            <span className="material-symbols-outlined" style={{ fontSize: 18 }}>close</span>
+            <span className="material-symbols-outlined">close</span>
           </button>
         </div>
 

@@ -394,9 +394,9 @@ export default function InspectionHistoryModal({ onClose }) {
           <button
             type="button"
             onClick={onClose}
-            className="p-2 rounded-xl flex-shrink-0 text-outline hover:bg-surface-container hover:text-on-surface transition-all duration-150 active:scale-95"
+            className="flex h-9 w-9 items-center justify-center rounded-xl text-outline hover:bg-primary/5 hover:text-primary transition"
           >
-            <span className="material-symbols-outlined" style={{ fontSize: 18 }}>close</span>
+            <span className="material-symbols-outlined">close</span>
           </button>
         </div>
       </div>

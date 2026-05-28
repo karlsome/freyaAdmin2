@@ -65,10 +65,10 @@ export default function NodaModalFrame({
               <button
                 type="button"
                 onClick={() => onClose?.()}
-                className="p-2 rounded-xl flex-shrink-0 text-outline hover:bg-surface-container hover:text-on-surface transition-all duration-150 active:scale-95"
+                className="flex h-10 w-10 items-center justify-center rounded-2xl border border-separator/40 bg-white/80 text-on-surface transition hover:bg-surface-container dark:bg-surface-container"
                 aria-label="Close dialog"
               >
-                <span className="material-symbols-outlined" style={{ fontSize: 18 }}>close</span>
+                <span className="material-symbols-outlined">close</span>
               </button>
             </div>
           </div>
