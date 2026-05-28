@@ -195,7 +195,7 @@ function PhotosSection({ checkImages, labelImages, totalCount }) {
       label="Uploaded Photos"
       badge={<span className="px-1.5 py-0.5 rounded-full bg-surface-container text-[9px] font-bold normal-case tracking-normal">{totalCount}</span>}
     >
-      <div className="pb-5 space-y-5">
+      <div className="pb-5 space-y-4">
           {checkImages.length > 0 && (
             <div className="grid grid-cols-2 gap-3">
               {checkImages.map(({ label, url }) => (
@@ -254,13 +254,13 @@ function BreakTimeSection({ record }) {
       label="Break Times"
       badge={<span className="px-1.5 py-0.5 rounded-full bg-surface-container text-[9px] font-bold normal-case tracking-normal">{totalMin} min</span>}
     >
-      <div className="pb-4">
+      <div className="pb-5">
         <div className="rounded-xl overflow-hidden border border-separator/30">
           <table className="ui-table-data w-full">
             <thead className="bg-surface-container-high/40">
               <tr>
                 {["Break", "Start", "End", "Duration"].map((h) => (
-                  <th key={h} className="ui-table-heading px-4 py-2 text-left uppercase tracking-wider text-outline">{h}</th>
+                  <th key={h} className="ui-table-heading px-3 py-3 text-left uppercase tracking-wider text-outline">{h}</th>
                 ))}
               </tr>
             </thead>
@@ -271,10 +271,10 @@ function BreakTimeSection({ record }) {
                 const mins = e > s ? Math.round((e - s) / 60000) : null;
                 return (
                   <tr key={key} className="hover:bg-surface-container/40 transition-colors">
-                    <td className="px-4 py-2.5 font-bold text-on-surface capitalize">{key.replace(/([0-9]+)/, " $1")}</td>
-                    <td className="px-4 py-2.5 font-mono text-on-surface-variant">{start}</td>
-                    <td className="px-4 py-2.5 font-mono text-on-surface-variant">{end}</td>
-                    <td className="px-4 py-2.5 text-outline">{mins != null ? `${mins} min` : "—"}</td>
+                    <td className="px-3 py-3 font-bold text-on-surface capitalize">{key.replace(/([0-9]+)/, " $1")}</td>
+                    <td className="px-3 py-3 font-mono text-on-surface-variant">{start}</td>
+                    <td className="px-3 py-3 font-mono text-on-surface-variant">{end}</td>
+                    <td className="px-3 py-3 text-outline">{mins != null ? `${mins} min` : "—"}</td>
                   </tr>
                 );
               })}
@@ -302,7 +302,7 @@ function MaintenanceSection({ record }) {
       label="Maintenance / Trouble"
       badge={<span className="px-1.5 py-0.5 rounded-full bg-amber-400/15 text-amber-400 text-[9px] font-bold normal-case tracking-normal">{records.length} record{records.length > 1 ? "s" : ""}</span>}
     >
-      <div className="pb-5 space-y-3">
+      <div className="pb-5 space-y-4">
         {records.map((rec) => {
           const photos = Array.isArray(rec.photos) ? rec.photos.filter(Boolean) : [];
           const s = rec.startTime ? new Date(`2000-01-01T${rec.startTime}`) : null;
@@ -417,7 +417,7 @@ export default function RecordDetailModal({ record, processName, onClose, onLotC
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="sticky top-0 z-10 rounded-t-2xl px-5 sm:px-6 py-4 flex items-center justify-between
+        <div className="sticky top-0 z-10 rounded-t-2xl px-6 py-5 flex items-center justify-between
                         border-b border-separator/40 bg-surface/90 backdrop-blur-md">
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2.5">
@@ -448,7 +448,7 @@ export default function RecordDetailModal({ record, processName, onClose, onLotC
         </div>
 
         {/* Product image */}
-        <div className="px-5 sm:px-6 pt-5 pb-2">
+        <div className="px-6 pt-5 pb-2">
           {imageLoading ? (
             <div className="w-full h-40 rounded-xl bg-surface-container/70 animate-pulse" />
           ) : imageData?.imageURL ? (
@@ -476,7 +476,7 @@ export default function RecordDetailModal({ record, processName, onClose, onLotC
         </div>
 
         {/* Stats strip */}
-        <div className="grid grid-cols-3 gap-2.5 px-5 sm:px-6 py-4 border-b border-separator/30">
+        <div className="grid grid-cols-3 gap-2.5 px-6 py-4 border-b border-separator/30">
           {[
             { label: "Total",    value: qty.toLocaleString(), color: "text-on-surface",  bg: "bg-surface-container/60" },
             { label: "Total NG", value: ng,                   color: ng > 0 ? "text-error" : "text-on-surface", bg: ng > 0 ? "bg-error/8" : "bg-surface-container/60" },
@@ -490,7 +490,7 @@ export default function RecordDetailModal({ record, processName, onClose, onLotC
         </div>
 
         {/* Key metrics */}
-        <div className="px-5 sm:px-6 py-4 grid grid-cols-2 gap-x-4 gap-y-3 border-b border-separator/30">
+        <div className="px-6 py-4 grid grid-cols-2 gap-x-4 gap-y-3 border-b border-separator/30">
           {keyFields.map(([label, value]) => (
             <div key={label} className="flex flex-col gap-0.5">
               <span className="text-[10px] font-bold uppercase tracking-wider text-outline">{label}</span>
@@ -543,7 +543,7 @@ export default function RecordDetailModal({ record, processName, onClose, onLotC
         <MaintenanceSection record={record} />
 
         {/* All fields — collapsible */}
-        <CollapsibleSection label="All Fields" wrapperClassName="px-5 sm:px-6 py-4">
+        <CollapsibleSection label="All Fields" wrapperClassName="px-6 py-4">
           <div className="space-y-0 mt-3">
             {entries.map(([k, v]) => {
               const normalizedValue = parseStructuredValue(v);

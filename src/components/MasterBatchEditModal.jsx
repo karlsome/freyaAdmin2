@@ -133,7 +133,7 @@ export default function MasterBatchEditModal({
       }
     >
           <div className="grid min-h-0 flex-1 gap-0 xl:grid-cols-[360px,minmax(0,1fr)]">
-            <div className="border-r border-outline-variant/20 bg-surface-container-low px-5 py-5 overflow-y-auto scrollbar-hide">
+            <div className="border-r border-outline-variant/20 bg-surface-container-low px-6 py-5 overflow-y-auto scrollbar-hide">
               <div className="rounded-2xl bg-surface px-4 py-4 border border-separator/40">
                 <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-outline">Available Fields</div>
                 <div className="mt-4 flex flex-wrap gap-2">
@@ -225,7 +225,7 @@ export default function MasterBatchEditModal({
 
                 <div className="mt-4 space-y-2">
                   {Object.keys(changes).length ? Object.entries(changes).map(([field, value]) => (
-                    <div key={field} className="flex items-center justify-between gap-3 rounded-2xl bg-surface-container-low px-3 py-3">
+                    <div key={field} className="flex items-center justify-between gap-3 rounded-2xl bg-surface-container-low px-4 py-3">
                       <div>
                         <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-outline">{field}</div>
                         <div className="mt-1 text-sm font-bold text-on-surface">{String(value)}</div>
@@ -254,7 +254,7 @@ export default function MasterBatchEditModal({
               </div>
             </div>
 
-            <div className="min-h-0 overflow-y-auto px-5 py-5 scrollbar-hide bg-surface-container-lowest/60">
+            <div className="min-h-0 overflow-y-auto px-6 py-5 scrollbar-hide bg-surface-container-lowest/60">
               <div className="mb-4 flex items-center justify-between gap-4">
                 <div>
                   <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-outline">Live Preview</div>

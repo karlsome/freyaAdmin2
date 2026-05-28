@@ -24,7 +24,7 @@ export default function StatSummaryCard({
     <RootTag
       {...(onClick ? { type: "button", onClick } : {})}
       className={joinClasses(
-        "glass-card rounded-2xl p-4 flex flex-col gap-2.5",
+        "glass-card rounded-2xl p-4 flex flex-col gap-3",
         onClick ? "w-full text-left card-hover-lift" : "",
         active ? "ring-2 ring-primary/40 border-primary/30" : "",
         className,

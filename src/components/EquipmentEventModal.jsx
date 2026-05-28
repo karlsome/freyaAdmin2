@@ -282,7 +282,7 @@ export default function EquipmentEventModal({
                     const selected = draft.tags.includes(tag);
                     return (
                       <button key={tag} type="button" onClick={() => toggleTag(tag)}
-                        className={`rounded-full px-3.5 py-1.5 text-xs font-bold transition ${
+                        className={`rounded-full px-3 py-1 text-xs font-bold transition ${
                           selected
                             ? "bg-primary text-on-primary shadow-sm"
                             : "border border-outline-variant/30 bg-surface text-on-surface hover:bg-surface-container"

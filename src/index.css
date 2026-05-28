@@ -10,9 +10,9 @@
   --c-surface:                  255 255 255;
   --c-surface-container:        248 249 250;
   --c-surface-container-lowest: 255 255 255;
-  --c-surface-container-low:    244 243 249;
-  --c-surface-container-high:   236 233 244;
-  --c-surface-container-highest:228 225 233;
+  --c-surface-container-low:    246 247 248;
+  --c-surface-container-high:   237 238 240;
+  --c-surface-container-highest:228 229 232;
   --c-on-surface:               17 17 22;
   --c-on-surface-variant:       54 54 66;
   --c-on-background:            17 17 22;
@@ -365,7 +365,7 @@ select:-webkit-autofill:focus {
 
 /* ─── Glass card ────────────────────────────────────────────────────────────── */
 .glass-card {
-  background: rgba(252, 251, 255, 0.90);
+  background: rgba(252, 253, 253, 0.90);
   -webkit-backdrop-filter: blur(14px) saturate(1.4);
   backdrop-filter: blur(14px) saturate(1.4);
   border: 1px solid rgba(205, 207, 216, 0.60);
@@ -387,7 +387,7 @@ select:-webkit-autofill:focus {
 
 /* ─── Dashboard section (elevated major card) ───────────────────────────────── */
 .dashboard-section {
-  background: rgba(252, 251, 255, 0.94);
+  background: rgba(252, 253, 253, 0.94);
   -webkit-backdrop-filter: blur(14px) saturate(1.4);
   backdrop-filter: blur(14px) saturate(1.4);
   border: 1px solid rgba(198, 200, 214, 0.70);

@@ -150,13 +150,13 @@ export default function MasterDetailDrawer({
             </div>
 
             {/* Fields */}
-            <div className="px-4 py-4 grid gap-2 grid-cols-2 content-start">
+            <div className="px-4 py-4 grid gap-3 grid-cols-2 content-start">
               {visibleFields.map((field) => {
                 const value = draft[field.field] ?? "";
                 const multiline = field.type === "textarea" || String(value).length > 120;
 
                 return (
-                  <div key={field.field} className={`rounded-2xl border border-outline-variant/15 bg-surface-container-low px-3 py-2 ${multiline ? "col-span-2" : ""}`}>
+                  <div key={field.field} className={`rounded-2xl border border-outline-variant/15 bg-surface-container-low px-4 py-3 ${multiline ? "col-span-2" : ""}`}>
                     <div className="mb-1 text-[11px] font-bold uppercase tracking-wider text-outline">{field.label}</div>
                     {editing ? (
                       multiline ? (

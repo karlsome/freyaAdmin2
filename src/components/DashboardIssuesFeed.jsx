@@ -57,7 +57,7 @@ export default function DashboardIssuesFeed({ issues, loading, onRecordClick }) 
           </div>
         </div>
       ) : (
-        <div className="flex-1 overflow-y-auto scrollbar-hide space-y-2">
+        <div className="flex-1 overflow-y-auto scrollbar-hide space-y-2.5">
           {issues.map((r, idx) => {
             const defRate     = getDefectRate(r);
             const hasMaint    = Number(r.Total_Trouble_Hours) > 0;
@@ -80,7 +80,7 @@ export default function DashboardIssuesFeed({ issues, loading, onRecordClick }) 
                   }
                 `}
               >
-                <div className="flex items-start justify-between gap-2 mb-1.5">
+                <div className="flex items-start justify-between gap-2 mb-2">
                   <div className="flex items-center gap-2 min-w-0">
                     <span className="text-xs font-bold text-on-surface truncate">{r["工場"]}</span>
                     <span className="text-[10px] text-outline truncate">{r["設備"]}</span>
@@ -90,7 +90,7 @@ export default function DashboardIssuesFeed({ issues, loading, onRecordClick }) 
                 <div className="text-[11px] text-on-surface-variant truncate mb-2">
                   {r["品番"]} · {r["背番号"]} · {r["Worker_Name"]}
                 </div>
-                <div className="flex flex-wrap gap-1.5">
+                <div className="flex flex-wrap gap-2">
                   {highNg && (
                     <IssueTag color="bg-error/12 text-error border border-error/20">
                       <span className="material-symbols-outlined" style={{ fontSize: 11 }}>report</span>

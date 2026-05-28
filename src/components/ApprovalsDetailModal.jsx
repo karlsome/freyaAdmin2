@@ -335,7 +335,7 @@ export default function ApprovalsDetailModal({
       <div className="flex min-h-full items-center justify-center p-4 lg:p-6">
         <div ref={modalRef} className="dashboard-section flex max-h-[92vh] w-full max-w-7xl flex-col overflow-hidden rounded-2xl">
 
-          <div className="border-b border-separator/35 px-5 py-4 lg:px-6">
+          <div className="border-b border-separator/35 px-6 py-5">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
               <div>
                 <div className="text-[10px] font-bold uppercase tracking-[0.22em] text-outline">Approval Record</div>
@@ -362,7 +362,7 @@ export default function ApprovalsDetailModal({
           </div>
 
           <div className="grid min-h-0 flex-1 grid-cols-1 overflow-hidden lg:grid-cols-[minmax(0,1.2fr)_360px]">
-            <div className="min-h-0 overflow-y-auto px-5 py-5 lg:px-6">
+            <div className="min-h-0 overflow-y-auto px-6 py-5">
               <div className="mb-5 grid grid-cols-1 gap-4 md:grid-cols-3">
                 {[
                   { label: "Quantity", value: quantity.toLocaleString(), tone: "text-on-surface" },
@@ -535,7 +535,7 @@ export default function ApprovalsDetailModal({
               </div>
             </div>
 
-            <aside className="min-h-0 overflow-y-auto border-t border-outline-variant/20 bg-surface-container-lowest/60 px-5 py-5 lg:border-l lg:border-t-0 lg:px-6">
+            <aside className="min-h-0 overflow-y-auto border-t border-outline-variant/20 bg-surface-container-lowest/60 px-6 py-5 lg:border-l lg:border-t-0">
               <div className="mt-5 rounded-2xl border border-outline-variant/15 bg-white/80 p-4 dark:bg-surface-container">
                 <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-outline">Submitted Images</div>
 
