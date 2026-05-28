@@ -200,7 +200,7 @@ function PhotosSection({ checkImages, labelImages, totalCount }) {
               {checkImages.map(({ label, url }) => (
                 <div key={label}>
                   <p className="text-[10px] font-bold text-outline mb-1.5">{label}</p>
-                  <a href={url} target="_blank" rel="noreferrer" className="block rounded-2xl overflow-hidden border border-white/10 hover:border-primary/40 transition-colors cursor-zoom-in">
+                  <a href={url} target="_blank" rel="noreferrer" className="block rounded-2xl overflow-hidden border border-separator/35 hover:border-primary/45 transition-all duration-150 cursor-zoom-in">
                     <img src={url} alt={label} className="w-full object-cover max-h-36 bg-black/20" />
                   </a>
                 </div>
@@ -217,7 +217,7 @@ function PhotosSection({ checkImages, labelImages, totalCount }) {
                     href={url}
                     target="_blank"
                     rel="noreferrer"
-                    className="block rounded-2xl overflow-hidden border border-white/10 hover:border-primary/40 transition-colors cursor-zoom-in"
+                    className="block rounded-2xl overflow-hidden border border-separator/35 hover:border-primary/45 transition-all duration-150 cursor-zoom-in"
                   >
                     <img
                       src={url}
@@ -254,7 +254,7 @@ function BreakTimeSection({ record }) {
       badge={<span className="px-1.5 py-0.5 rounded-full bg-surface-container text-[9px] font-bold normal-case tracking-normal">{totalMin} min</span>}
     >
       <div className="pb-4">
-        <div className="rounded-2xl overflow-hidden border border-white/10">
+        <div className="rounded-xl overflow-hidden border border-separator/30">
           <table className="ui-table-data w-full">
             <thead className="bg-surface-container-high/40">
               <tr>
@@ -263,7 +263,7 @@ function BreakTimeSection({ record }) {
                 ))}
               </tr>
             </thead>
-            <tbody className="divide-y divide-white/5">
+            <tbody className="divide-y divide-separator/20">
               {breaks.map(({ key, start, end }) => {
                 const s = new Date(`2000-01-01T${start}`);
                 const e = new Date(`2000-01-01T${end}`);
@@ -332,7 +332,7 @@ function MaintenanceSection({ record }) {
                 <div className="grid grid-cols-3 gap-2 pt-1">
                   {photos.map((url, i) => (
                     <a key={i} href={url} target="_blank" rel="noreferrer"
-                      className="block rounded-2xl overflow-hidden border border-white/10 hover:border-amber-400/40 transition-colors cursor-zoom-in">
+                      className="block rounded-2xl overflow-hidden border border-separator/35 hover:border-amber-400/45 transition-all duration-150 cursor-zoom-in">
                       <img src={url} alt={`Maintenance photo ${i + 1}`} className="w-full aspect-square object-cover bg-black/20" />
                     </a>
                   ))}
@@ -402,30 +402,36 @@ export default function RecordDetailModal({ record, processName, onClose, onLotC
     ["製造ロット", record["製造ロット"]],
   ].filter(([, v]) => v != null);
 
+  const processAccent = PROCESS_ACCENT[processName];
+
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/50 backdrop-blur-md"
       onClick={onClose}
     >
       <div
-        className="glass-card rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto
-                   border border-purple-400/40 shadow-[0_0_60px_rgba(99,102,241,0.15)] scrollbar-hide"
+        className="dashboard-section rounded-2xl w-full max-w-2xl max-h-[92vh] overflow-y-auto
+                   shadow-[0_0_80px_rgba(99,102,241,0.18),0_24px_48px_rgba(0,0,0,0.22)] scrollbar-hide"
+        style={{ border: processAccent ? undefined : undefined }}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="sticky top-0 z-10 glass-card rounded-t-2xl px-6 py-5 flex items-center justify-between border-b border-white/10">
-          <div>
-            <div className="flex items-center gap-2">
-              <span className={`w-2.5 h-2.5 rounded-full ${PROCESS_ACCENT[processName]?.dot ?? "bg-primary"}`} />
-              <h3 className="text-base font-bold text-on-surface">{processName} Process — Record Details</h3>
+        <div className="sticky top-0 z-10 rounded-t-2xl px-5 sm:px-6 py-4 flex items-center justify-between
+                        border-b border-separator/40 bg-surface/90 backdrop-blur-md">
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2.5">
+              <span className={`w-3 h-3 rounded-full flex-shrink-0 shadow-sm ${processAccent?.dot ?? "bg-primary"}`} />
+              <h3 className="text-sm sm:text-base font-bold text-on-surface truncate">
+                {processName} Process — Record Details
+              </h3>
             </div>
-            <p className="text-[11px] text-outline mt-0.5 font-mono">{record["品番"]} / {record["背番号"]}</p>
+            <p className="text-[11px] text-outline mt-0.5 font-mono ml-5.5">{record["品番"]} / {record["背番号"]}</p>
           </div>
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-0.5 flex-shrink-0 ml-2">
             <button
               onClick={copyLink}
               title="Copy shareable link"
-              className="p-2 rounded-2xl hover:bg-surface-container text-outline hover:text-primary transition-colors"
+              className="p-2 rounded-xl hover:bg-surface-container text-outline hover:text-primary transition-all duration-150"
             >
               <span className="material-symbols-outlined" style={{ fontSize: 18 }}>
                 {copied ? "check" : "link"}
@@ -433,7 +439,7 @@ export default function RecordDetailModal({ record, processName, onClose, onLotC
             </button>
             <button
               onClick={onClose}
-              className="p-2 rounded-2xl hover:bg-surface-container text-outline hover:text-on-surface transition-colors"
+              className="p-2 rounded-xl hover:bg-surface-container text-outline hover:text-on-surface transition-all duration-150"
             >
               <span className="material-symbols-outlined" style={{ fontSize: 18 }}>close</span>
             </button>
@@ -441,16 +447,16 @@ export default function RecordDetailModal({ record, processName, onClose, onLotC
         </div>
 
         {/* Product image */}
-        <div className="px-6 pt-5 pb-2">
+        <div className="px-5 sm:px-6 pt-5 pb-2">
           {imageLoading ? (
-            <div className="w-full h-40 rounded-2xl bg-surface-container/60 animate-pulse" />
+            <div className="w-full h-40 rounded-xl bg-surface-container/70 animate-pulse" />
           ) : imageData?.imageURL ? (
             <a
               href={imageData.imageURL}
               target="_blank"
               rel="noreferrer"
-              className="block w-full overflow-hidden rounded-2xl border border-emerald-400/30
-                         hover:border-emerald-400/60 transition-colors cursor-zoom-in"
+              className="block w-full overflow-hidden rounded-xl border border-separator/40
+                         hover:border-primary/40 hover:shadow-md transition-all duration-150 cursor-zoom-in"
             >
               <img
                 src={imageData.imageURL}
@@ -460,8 +466,8 @@ export default function RecordDetailModal({ record, processName, onClose, onLotC
               />
             </a>
           ) : (
-            <div className="w-full h-10 flex items-center justify-center rounded-2xl bg-surface-container/30
-                            text-[11px] text-outline gap-1.5">
+            <div className="w-full h-10 flex items-center justify-center rounded-xl bg-surface-container/40
+                            border border-separator/30 text-[11px] text-outline gap-1.5">
               <span className="material-symbols-outlined" style={{ fontSize: 14 }}>image_not_supported</span>
               No image available
             </div>
@@ -469,25 +475,25 @@ export default function RecordDetailModal({ record, processName, onClose, onLotC
         </div>
 
         {/* Stats strip */}
-        <div className="grid grid-cols-3 gap-3 px-6 py-4 border-b border-white/10">
+        <div className="grid grid-cols-3 gap-2.5 px-5 sm:px-6 py-4 border-b border-separator/30">
           {[
-            { label: "Total",    value: qty.toLocaleString(), color: "text-on-surface" },
-            { label: "Total NG", value: ng,                   color: ng > 0 ? "text-error" : "text-on-surface" },
-            { label: "不良率",   value: `${defRate}%`,        color: defColor },
-          ].map(({ label, value, color }) => (
-            <div key={label} className="glass-card rounded-2xl px-4 py-3 text-center">
-              <p className={`text-2xl font-black ${color}`}>{value}</p>
-              <p className="text-[10px] font-bold text-outline uppercase tracking-wider mt-1">{label}</p>
+            { label: "Total",    value: qty.toLocaleString(), color: "text-on-surface",  bg: "bg-surface-container/60" },
+            { label: "Total NG", value: ng,                   color: ng > 0 ? "text-error" : "text-on-surface", bg: ng > 0 ? "bg-error/8" : "bg-surface-container/60" },
+            { label: "不良率",   value: `${defRate}%`,        color: defColor, bg: "bg-surface-container/60" },
+          ].map(({ label, value, color, bg }) => (
+            <div key={label} className={`rounded-xl px-3 py-3 text-center border border-separator/30 ${bg}`}>
+              <p className={`text-xl sm:text-2xl font-black leading-none ${color}`}>{value}</p>
+              <p className="text-[10px] font-bold text-outline uppercase tracking-wider mt-1.5">{label}</p>
             </div>
           ))}
         </div>
 
         {/* Key metrics */}
-        <div className="px-6 py-4 grid grid-cols-2 gap-3 border-b border-white/10">
+        <div className="px-5 sm:px-6 py-4 grid grid-cols-2 gap-x-4 gap-y-3 border-b border-separator/30">
           {keyFields.map(([label, value]) => (
             <div key={label} className="flex flex-col gap-0.5">
               <span className="text-[10px] font-bold uppercase tracking-wider text-outline">{label}</span>
-              <span className="text-sm font-bold text-on-surface">{value}</span>
+              <span className="text-sm font-semibold text-on-surface">{value}</span>
             </div>
           ))}
           {materialLots.length > 0 ? (
@@ -499,7 +505,8 @@ export default function RecordDetailModal({ record, processName, onClose, onLotC
                     key={lot}
                     onClick={() => onLotClick?.(lot)}
                     className="px-2.5 py-1 rounded-full bg-primary/10 text-primary text-[11px] font-mono font-bold
-                               hover:bg-primary/25 hover:scale-[1.04] transition-all border border-primary/20"
+                               hover:bg-primary/22 hover:shadow-sm active:scale-95 transition-all duration-150
+                               border border-primary/25"
                   >
                     {lot}
                   </button>
@@ -509,7 +516,7 @@ export default function RecordDetailModal({ record, processName, onClose, onLotC
           ) : record["材料ロット"] != null && (
             <div className="flex flex-col gap-0.5">
               <span className="text-[10px] font-bold uppercase tracking-wider text-outline">材料ロット</span>
-              <span className="text-sm font-bold text-on-surface">{record["材料ロット"]}</span>
+              <span className="text-sm font-semibold text-on-surface">{record["材料ロット"]}</span>
             </div>
           )}
         </div>
@@ -535,7 +542,7 @@ export default function RecordDetailModal({ record, processName, onClose, onLotC
         <MaintenanceSection record={record} />
 
         {/* All fields — collapsible */}
-        <CollapsibleSection label="All Fields" wrapperClassName="px-6 py-4">
+        <CollapsibleSection label="All Fields" wrapperClassName="px-5 sm:px-6 py-4">
           <div className="space-y-0 mt-3">
             {entries.map(([k, v]) => {
               const normalizedValue = parseStructuredValue(v);
@@ -543,7 +550,7 @@ export default function RecordDetailModal({ record, processName, onClose, onLotC
               return (
                 <div
                   key={k}
-                  className="grid grid-cols-1 gap-2 py-3 border-b border-white/5 last:border-0 md:grid-cols-[minmax(120px,160px)_1fr] md:gap-4"
+                  className="grid grid-cols-1 gap-2 py-3 border-b border-separator/20 last:border-0 md:grid-cols-[minmax(120px,160px)_1fr] md:gap-4"
                 >
                   <span className="text-[11px] font-bold text-outline md:pt-1">{k}</span>
                   {structured ? (

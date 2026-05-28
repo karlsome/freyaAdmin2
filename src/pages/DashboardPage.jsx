@@ -26,27 +26,31 @@ export default function DashboardPage() {
     <section className="pt-20 sm:pt-24 pb-24 sm:pb-16 px-4 sm:px-6 md:px-8 overflow-y-auto h-screen scrollbar-hide">
 
       {/* ── Header ── */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between mb-6 sm:mb-8">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-6 sm:mb-8">
         <div>
-          <h2 className="text-2xl sm:text-3xl font-bold font-headline tracking-tight text-on-surface">{t("dashboard")}</h2>
-          <p className="text-on-surface-variant mt-1 text-sm">{today}</p>
+          <h2 className="text-2xl sm:text-3xl font-black font-headline tracking-tight text-on-surface leading-tight">
+            {t("dashboard")}
+          </h2>
+          <p className="text-on-surface-variant mt-1 text-sm font-medium">{today}</p>
         </div>
         <button
           onClick={refresh}
           disabled={loading}
-          className="flex w-full sm:w-auto items-center justify-center gap-2 px-4 py-2 rounded-xl text-xs font-bold bg-surface-container
-                     border border-outline-variant/20 text-on-surface-variant hover:bg-surface-container-high
-                     hover:text-primary transition-all disabled:opacity-50"
+          className="flex w-full sm:w-auto items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold
+                     bg-surface-container border border-separator/60 text-on-surface-variant
+                     hover:bg-surface-container-high hover:text-primary hover:border-primary/30
+                     active:scale-95 transition-all duration-150 disabled:opacity-50 shadow-sm"
         >
-          <span className={`material-symbols-outlined ${loading ? "animate-spin" : ""}`} style={{ fontSize: 16 }}>refresh</span>
-          {refreshLabel ? `${t("refresh")} ${refreshLabel}` : t("refresh")}
+          <span className={`material-symbols-outlined ${loading ? "animate-spin" : ""}`} style={{ fontSize: 15 }}>refresh</span>
+          {refreshLabel ? `${t("refresh")} · ${refreshLabel}` : t("refresh")}
         </button>
       </div>
 
       {/* ── Error banner ── */}
       {error && (
-        <div className="glass-card rounded-2xl p-4 mb-6 flex items-center gap-3 text-error border border-error/20">
-          <span className="material-symbols-outlined flex-shrink-0">error</span>
+        <div className="rounded-2xl p-4 mb-6 flex items-center gap-3 text-error
+                        bg-error/8 border border-error/25 shadow-sm">
+          <span className="material-symbols-outlined flex-shrink-0" style={{ fontSize: 20 }}>error</span>
           <p className="text-sm font-bold">Backend unreachable — data may be stale. ({error})</p>
         </div>
       )}

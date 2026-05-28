@@ -30,6 +30,8 @@ export default {
         "on-error-container":       "rgb(var(--c-on-error-container) / <alpha-value>)",
         "outline":                  "rgb(var(--c-outline) / <alpha-value>)",
         "outline-variant":          "rgb(var(--c-outline-variant) / <alpha-value>)",
+        "lavender":                 "rgb(var(--c-lavender) / <alpha-value>)",
+        "separator":                "rgb(var(--c-separator) / <alpha-value>)",
       },
       fontFamily: {
         headline: ["DM Sans", "sans-serif"],
