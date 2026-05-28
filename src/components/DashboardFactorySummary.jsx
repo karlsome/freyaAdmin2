@@ -110,14 +110,14 @@ export default function DashboardFactorySummary({ factories, loading, onNavigate
 
       {/* Desktop table */}
       <div className="hidden md:block">
-        <div className="grid grid-cols-[1fr_88px_88px_80px_60px_130px] gap-3 px-3 py-2.5
-                        rounded-xl bg-surface-container-high/40 border border-separator/30 mb-1.5">
+        <div className="grid grid-cols-[1fr_88px_88px_80px_60px_130px] gap-3 px-3 py-3
+                        rounded-xl bg-surface-container-high/40 border border-separator/30 mb-2">
           {["Factory", "Combined", "Combined NG", "Defect %", "Trouble", ""].map((h) => (
             <span key={h} className="text-[10px] font-bold uppercase tracking-wider text-outline">{h}</span>
           ))}
         </div>
 
-        <div className="space-y-0.5">
+        <div className="space-y-1">
           {factories.map((f) => {
             const ds = getDefectStatus(f.defectRate);
             const hasTrouble = f.troubleHours > 0;
@@ -126,7 +126,7 @@ export default function DashboardFactorySummary({ factories, loading, onNavigate
               <button
                 key={f.name}
                 onClick={() => onNavigateToFactory?.(f.name)}
-                className="w-full grid grid-cols-[1fr_88px_88px_80px_60px_130px] gap-3 items-center px-3 py-2.5
+                className="w-full grid grid-cols-[1fr_88px_88px_80px_60px_130px] gap-3 items-center px-3 py-3
                            rounded-xl text-left hover:bg-primary/8 hover:shadow-[inset_3px_0_0_rgb(var(--c-primary))]
                            border border-transparent hover:border-primary/15 transition-all duration-150 group"
               >

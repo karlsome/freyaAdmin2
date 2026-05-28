@@ -62,7 +62,7 @@ export default function DashboardRecentSubmissions({ recent, loading, onRecordCl
           <p className="text-sm font-bold">No submissions yet today</p>
         </div>
       ) : (
-        <div className="flex-1 overflow-y-auto scrollbar-hide space-y-1.5">
+        <div className="flex-1 overflow-y-auto scrollbar-hide space-y-2">
           {recent.map((r) => {
             const recordTotal = getProcessedQuantity(r);
             const recordNG    = Number(r.Total_NG) || 0;
@@ -73,11 +73,11 @@ export default function DashboardRecentSubmissions({ recent, loading, onRecordCl
               <button
                 key={r._id?.$oid ?? `${r["工場"]}-${r["設備"]}-${r.createdAt}`}
                 onClick={() => onRecordClick?.(r)}
-                className="w-full text-left px-3 py-2.5 rounded-xl bg-surface-container/45 border border-separator/35
+                className="w-full text-left px-3 py-3 rounded-xl bg-surface-container/45 border border-separator/35
                            hover:bg-surface-container hover:border-primary/30 hover:shadow-sm
                            transition-all duration-150 group"
               >
-                <div className="flex items-center gap-2.5 mb-1">
+                <div className="flex items-center gap-2 mb-1">
                   <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 shadow-sm ${dotColor}`} />
                   <span className="text-xs font-bold text-on-surface truncate flex-1 group-hover:text-primary transition-colors">
                     {r["工場"]} · {r["設備"]}
