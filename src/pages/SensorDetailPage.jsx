@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import DataTable from "../components/DataTable";
+import PageHeader from "../components/PageHeader";
 import { fetchHistoricalSensorExport, fetchHistoricalSensorOverview, fetchHistoricalSensorReadingsPage, calcWBGT } from "../services/api";
 import { getTempStatus, getHumidityStatus, getWBGTStatus } from "../utils/statusHelpers";
 import SensorTrendChart from "../components/SensorTrendChart";
@@ -476,33 +477,36 @@ export default function SensorDetailPage() {
 
   return (
     <section className="pt-24 pb-16 px-8 overflow-y-auto h-screen scrollbar-hide">
-
-      {/* ── Header ── */}
-      <div className="flex items-center gap-4 mb-8">
-        <button
-          onClick={() => navigate(-1)}
-          className="p-2 rounded-xl hover:bg-surface-container text-outline hover:text-primary transition-colors"
-        >
-          <span className="material-symbols-outlined">arrow_back</span>
-        </button>
-        <div className="flex-1">
-          <h2 className="text-3xl font-bold tracking-tight text-on-surface flex items-center gap-3">
+      <PageHeader
+        leading={(
+          <button
+            onClick={() => navigate(-1)}
+            className="p-2 rounded-xl hover:bg-surface-container text-outline hover:text-primary transition-colors"
+          >
+            <span className="material-symbols-outlined">arrow_back</span>
+          </button>
+        )}
+        bodyClassName="items-start"
+        title={(
+          <>
             <span className="material-symbols-outlined text-tertiary">sensors</span>
-            {factoryName} — Sensor Data
-          </h2>
-          <p className="text-on-surface-variant text-sm mt-1">
-            {range.start} → {range.end} · {overview.totalReadings.toLocaleString()} readings
-          </p>
-        </div>
-        <button
-          onClick={handleExport}
-          disabled={overview.totalReadings === 0 || exporting}
-          className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold bg-surface-container border border-outline-variant/20 text-on-surface-variant hover:bg-surface-container-high hover:text-primary transition-all disabled:opacity-40"
-        >
-          <span className="material-symbols-outlined" style={{ fontSize: 16 }}>download</span>
-          {exporting ? "Exporting..." : "Export CSV"}
-        </button>
-      </div>
+            {factoryName} - Sensor Data
+          </>
+        )}
+        titleClassName="flex items-center gap-3"
+        subtitle={`${range.start} → ${range.end} · ${overview.totalReadings.toLocaleString()} readings`}
+        className="mb-8 md:flex-row md:items-center md:justify-between"
+        actions={(
+          <button
+            onClick={handleExport}
+            disabled={overview.totalReadings === 0 || exporting}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold bg-surface-container border border-outline-variant/20 text-on-surface-variant hover:bg-surface-container-high hover:text-primary transition-all disabled:opacity-40"
+          >
+            <span className="material-symbols-outlined" style={{ fontSize: 16 }}>download</span>
+            {exporting ? "Exporting..." : "Export CSV"}
+          </button>
+        )}
+      />
 
       {/* ── Filter bar ── */}
       <div className="glass-card rounded-2xl p-4 flex flex-wrap items-center gap-4 mb-8">

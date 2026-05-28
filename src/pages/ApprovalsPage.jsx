@@ -5,6 +5,7 @@ import ApprovalsDetailModal from "../components/ApprovalsDetailModal";
 import RecordEditModal from "../components/RecordEditModal";
 import ApprovalsStatsStrip from "../components/ApprovalsStatsStrip";
 import ApprovalsFilterPanel from "../components/ApprovalsFilterPanel";
+import PageHeader from "../components/PageHeader";
 import { fetchDistinctValues } from "../services/api";
 import {
   approveApprovalDeleteRequest,
@@ -1166,27 +1167,26 @@ export default function ApprovalsPage() {
   return (
     <section className="h-screen overflow-y-auto px-4 pb-24 pt-20 scrollbar-hide sm:px-6 sm:pb-16 sm:pt-24 md:px-8">
       <FlashBanner flash={flash} onClose={() => setFlash(null)} />
-
-      <div className="mb-6 flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
-        <div>
-          <div className="text-[10px] font-bold uppercase tracking-[0.22em] text-outline">Approvals</div>
-          <h1 className="mt-2 text-3xl font-black text-on-surface">Production Approval Desk</h1>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-3">
-          {activeTab !== "recycleBin" ? (
-            <LiquidSegmentedControl items={APPROVAL_VIEW_MODES} activeKey={viewMode} onChange={(next) => setViewMode(next)} />
-          ) : null}
-          <button
-            type="button"
-            onClick={() => setRefreshNonce((current) => current + 1)}
-            className="flex h-11 items-center gap-2 rounded-2xl border border-outline-variant/20 bg-white px-4 text-sm font-bold text-on-surface transition hover:bg-surface-container dark:bg-surface-container"
-          >
-            <span className="material-symbols-outlined" style={{ fontSize: 18 }}>refresh</span>
-            Refresh
-          </button>
-        </div>
-      </div>
+      <PageHeader
+        eyebrow="Approvals"
+        eyebrowClassName="text-[10px]"
+        title="Production Approval Desk"
+        actions={(
+          <>
+            {activeTab !== "recycleBin" ? (
+              <LiquidSegmentedControl items={APPROVAL_VIEW_MODES} activeKey={viewMode} onChange={(next) => setViewMode(next)} />
+            ) : null}
+            <button
+              type="button"
+              onClick={() => setRefreshNonce((current) => current + 1)}
+              className="flex h-11 items-center gap-2 rounded-2xl border border-outline-variant/20 bg-white px-4 text-sm font-bold text-on-surface transition hover:bg-surface-container dark:bg-surface-container"
+            >
+              <span className="material-symbols-outlined" style={{ fontSize: 18 }}>refresh</span>
+              Refresh
+            </button>
+          </>
+        )}
+      />
 
       <div className="mb-4 flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
         <div className="max-w-full overflow-x-auto scrollbar-hide">

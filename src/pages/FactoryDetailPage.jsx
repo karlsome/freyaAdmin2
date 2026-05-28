@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import PageHeader from "../components/PageHeader";
 import {
   fetchCombinedEnvironmentalData,
   fetchCombinedSensorData,
@@ -315,39 +316,36 @@ export default function FactoryDetailPage({ combined = false }) {
 
   return (
     <section className="pt-24 pb-20 px-4 md:px-8 overflow-y-auto h-screen scrollbar-hide">
-
-      {/* ── Page header ── */}
-      <div className="flex items-start gap-4 mb-8">
-        <button
-          onClick={() => navigate(combined ? "/factories" : "/dashboard")}
-          className="p-2 rounded-xl hover:bg-surface-container text-outline hover:text-primary transition-colors mt-1"
-        >
-          <span className="material-symbols-outlined">arrow_back</span>
-        </button>
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-3 flex-wrap">
-            <h2 className="text-3xl font-black tracking-tight text-on-surface font-headline">{pageTitle}</h2>
-            {!loading && (
-              <span className={`flex items-center gap-1.5 text-[10px] font-bold px-3 py-1 rounded-full ${defStatus.bg} ${defStatus.color}`}>
-                <span className={`w-1.5 h-1.5 rounded-full ${defStatus.dot}`} />
-                {defStatus.label}
-              </span>
-            )}
-          </div>
-          <p className="text-on-surface-variant text-sm mt-1">
-            {combined ? "All Factories Combined —" : "Factory Overview —"}&nbsp;
-            {dateFrom === dateTo ? dateFrom : `${dateFrom} → ${dateTo}`}
-          </p>
-        </div>
-        <button
-          onClick={() => navigate(combined ? "/sensors" : `/sensors/${encoded}`)}
-          className="flex-shrink-0 flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold
-                     kinetic-gradient text-white shadow-[0_0_15px_rgba(99,102,241,0.3)] hover:opacity-90 transition-opacity"
-        >
-          <span className="material-symbols-outlined" style={{ fontSize: 16 }}>sensors</span>
-          {combined ? "Sensor Overview" : "Sensor History"}
-        </button>
-      </div>
+      <PageHeader
+        leading={(
+          <button
+            onClick={() => navigate(combined ? "/factories" : "/dashboard")}
+            className="mt-1 p-2 rounded-xl hover:bg-surface-container text-outline hover:text-primary transition-colors"
+          >
+            <span className="material-symbols-outlined">arrow_back</span>
+          </button>
+        )}
+        bodyClassName="items-start"
+        title={pageTitle}
+        titleMeta={!loading ? (
+          <span className={`flex items-center gap-1.5 text-[10px] font-bold px-3 py-1 rounded-full ${defStatus.bg} ${defStatus.color}`}>
+            <span className={`w-1.5 h-1.5 rounded-full ${defStatus.dot}`} />
+            {defStatus.label}
+          </span>
+        ) : null}
+        subtitle={`${combined ? "All Factories Combined -" : "Factory Overview -"} ${dateFrom === dateTo ? dateFrom : `${dateFrom} → ${dateTo}`}`}
+        className="mb-8 md:flex-row md:items-start md:justify-between"
+        actions={(
+          <button
+            onClick={() => navigate(combined ? "/sensors" : `/sensors/${encoded}`)}
+            className="flex-shrink-0 flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold
+                       kinetic-gradient text-white shadow-[0_0_15px_rgba(99,102,241,0.3)] hover:opacity-90 transition-opacity"
+          >
+            <span className="material-symbols-outlined" style={{ fontSize: 16 }}>sensors</span>
+            {combined ? "Sensor Overview" : "Sensor History"}
+          </button>
+        )}
+      />
 
       {/* ── Summary strip ── */}
       <div className="space-y-3 mb-6">

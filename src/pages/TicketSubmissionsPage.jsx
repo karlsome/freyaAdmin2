@@ -3,6 +3,7 @@ import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import DataTable from "../components/DataTable";
 import IconButton from "../components/IconButton";
+import PageHeader from "../components/PageHeader";
 import StatSummaryCard from "../components/StatSummaryCard";
 import TicketSubmissionsFilterPanel from "../components/TicketSubmissionsFilterPanel";
 import { useLanguage } from "../contexts/LanguageContext";
@@ -1627,13 +1628,14 @@ export default function TicketSubmissionsPage() {
 
   return (
     <section className="h-screen overflow-y-auto px-6 pb-16 pt-24 scrollbar-hide md:px-8">
-      <div className="mb-8">
-        <p className="text-xs font-bold uppercase tracking-[0.18em] text-outline">メンテナンス</p>
-        <h2 className="mt-1 text-2xl font-black tracking-tight text-on-surface">{t("submittedTickets")}</h2>
-        <p className="mt-2 max-w-3xl text-sm leading-6 text-outline">
-          Review every submitted NG ticket in one place. Filters and pagination run on the server so large ticket history stays responsive even under heavy usage.
-        </p>
-      </div>
+      <PageHeader
+        eyebrow="メンテナンス"
+        eyebrowClassName="text-xs tracking-[0.18em]"
+        title={t("submittedTickets")}
+        subtitle="Review every submitted NG ticket in one place. Filters and pagination run on the server so large ticket history stays responsive even under heavy usage."
+        subtitleClassName="max-w-3xl leading-6 text-outline"
+        className="mb-8"
+      />
 
       <ActionNoticeBanner notice={actionNotice} onClose={() => setActionNotice(null)} />
 

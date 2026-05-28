@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { fetchCheckFormTemplates, fetchFactoryDBRecords, fetchSetsubiDBRecords } from "../services/api";
 import CheckFormBuilderModal from "../components/CheckFormBuilderModal";
 import CheckFormDetailModal from "../components/CheckFormDetailModal";
+import PageHeader from "../components/PageHeader";
 
 const STATUS_STYLES = {
   active:   "bg-primary/10 text-primary",
@@ -219,48 +220,49 @@ export default function MaintenancePage() {
   return (
     <section className="h-screen overflow-y-auto px-6 pb-16 pt-24 scrollbar-hide md:px-8">
       <section>
-        <div className="mb-6 flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
-          <div>
-            <p className="text-xs font-bold uppercase tracking-[0.18em] text-outline">メンテナンス</p>
-            <h3 className="mt-1 text-2xl font-black text-on-surface">Maintenance Forms</h3>
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <select
-              value={factoryFilter}
-              onChange={(e) => setFactoryFilter(e.target.value)}
-              className="rounded-2xl border border-outline-variant/30 bg-surface-container px-4 py-3 text-sm font-bold text-on-surface outline-none transition hover:bg-surface-container-high"
-            >
-              <option value="">All Factories</option>
-              {factories.map((f) => (
-                <option key={f._id ?? f.工場} value={f.工場}>{f.工場}</option>
-              ))}
-            </select>
-            <button
-              type="button"
-              onClick={() => navigate("/maintenance/submissions")}
-              className="inline-flex items-center gap-2 rounded-2xl border border-outline-variant/30 bg-surface-container px-4 py-3 text-sm font-bold text-on-surface transition hover:bg-surface-container-high"
-            >
-              <span className="material-symbols-outlined" style={{ fontSize: 18 }}>table_chart</span>
-              View Inspection History
-            </button>
-            <button
-              type="button"
-              onClick={() => navigate("/maintenance/submissions/tickets")}
-              className="inline-flex items-center gap-2 rounded-2xl border border-outline-variant/30 bg-surface-container px-4 py-3 text-sm font-bold text-on-surface transition hover:bg-surface-container-high"
-            >
-              <span className="material-symbols-outlined" style={{ fontSize: 18 }}>confirmation_number</span>
-              View Submitted Tickets
-            </button>
-            <button
-              type="button"
-              onClick={() => openBuilder(null, selectedSchedule)}
-              className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-bold text-on-primary hover:opacity-90 active:scale-95 transition-all duration-150"
-            >
-              <span className="material-symbols-outlined" style={{ fontSize: 18 }}>add</span>
-              New {selectedScheduleMeta.label} Form
-            </button>
-          </div>
-        </div>
+        <PageHeader
+          eyebrow="メンテナンス"
+          title="Maintenance Forms"
+          actionsClassName="gap-2"
+          actions={(
+            <>
+              <select
+                value={factoryFilter}
+                onChange={(e) => setFactoryFilter(e.target.value)}
+                className="rounded-2xl border border-outline-variant/30 bg-surface-container px-4 py-3 text-sm font-bold text-on-surface outline-none transition hover:bg-surface-container-high"
+              >
+                <option value="">All Factories</option>
+                {factories.map((f) => (
+                  <option key={f._id ?? f.工場} value={f.工場}>{f.工場}</option>
+                ))}
+              </select>
+              <button
+                type="button"
+                onClick={() => navigate("/maintenance/submissions")}
+                className="inline-flex items-center gap-2 rounded-2xl border border-outline-variant/30 bg-surface-container px-4 py-3 text-sm font-bold text-on-surface transition hover:bg-surface-container-high"
+              >
+                <span className="material-symbols-outlined" style={{ fontSize: 18 }}>table_chart</span>
+                View Inspection History
+              </button>
+              <button
+                type="button"
+                onClick={() => navigate("/maintenance/submissions/tickets")}
+                className="inline-flex items-center gap-2 rounded-2xl border border-outline-variant/30 bg-surface-container px-4 py-3 text-sm font-bold text-on-surface transition hover:bg-surface-container-high"
+              >
+                <span className="material-symbols-outlined" style={{ fontSize: 18 }}>confirmation_number</span>
+                View Submitted Tickets
+              </button>
+              <button
+                type="button"
+                onClick={() => openBuilder(null, selectedSchedule)}
+                className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-bold text-on-primary hover:opacity-90 active:scale-95 transition-all duration-150"
+              >
+                <span className="material-symbols-outlined" style={{ fontSize: 18 }}>add</span>
+                New {selectedScheduleMeta.label} Form
+              </button>
+            </>
+          )}
+        />
 
         <div className="mb-6 grid gap-3 lg:grid-cols-3">
           {scheduleCards.map((schedule) => {

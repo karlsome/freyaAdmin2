@@ -2,6 +2,7 @@ import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import AdvancedFilterSection from "../components/AdvancedFilterSection";
 import DataTable from "../components/DataTable";
 import IconButton from "../components/IconButton";
+import PageHeader from "../components/PageHeader";
 import StatSummaryCard from "../components/StatSummaryCard";
 import InventoryAddModal from "../components/inventory/InventoryAddModal";
 import InventoryBatchResetModal from "../components/inventory/InventoryBatchResetModal";
@@ -448,52 +449,52 @@ export default function InventoryPage() {
   return (
     <section className="h-screen overflow-y-auto scrollbar-hide px-8 pb-16 pt-24">
       <div className="w-full">
-        <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
-          <div>
-            <p className="text-[11px] font-bold uppercase tracking-[0.24em] text-primary">Warehouse Ledger</p>
-            <h1 className="mt-2 text-3xl font-black text-on-surface">Inventory</h1>
-            <p className="mt-2 max-w-3xl text-sm text-on-surface-variant">
-              Track the latest inventory state by serial number, inspect transaction history, add stock manually, and run controlled reset workflows.
-            </p>
-          </div>
-
-          <div className="flex flex-wrap gap-3">
-            <button
-              type="button"
-              onClick={() => setRefreshNonce((current) => current + 1)}
-              disabled={loading || modelLoading}
-              className="rounded-2xl border border-separator/45 px-4 py-2.5 text-sm font-semibold text-on-surface transition hover:bg-surface-container disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              Refresh
-            </button>
-            <button
-              type="button"
-              onClick={handleExport}
-              disabled={exporting || modelLoading}
-              className="rounded-2xl border border-separator/45 px-4 py-2.5 text-sm font-semibold text-on-surface transition hover:bg-surface-container disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {exporting ? "Exporting..." : "Export CSV"}
-            </button>
-            {canAdminReset ? (
+        <PageHeader
+          eyebrow="Warehouse Ledger"
+          eyebrowClassName="tracking-[0.24em] text-primary"
+          title="Inventory"
+          subtitle="Track the latest inventory state by serial number, inspect transaction history, add stock manually, and run controlled reset workflows."
+          subtitleClassName="max-w-3xl"
+          className="md:flex-row md:items-start md:justify-between"
+          actions={(
+            <>
               <button
                 type="button"
-                onClick={() => setBatchResetOpen(true)}
-                className="rounded-2xl border border-error/20 bg-error/8 px-4 py-2.5 text-sm font-bold text-error transition hover:bg-error/12"
+                onClick={() => setRefreshNonce((current) => current + 1)}
+                disabled={loading || modelLoading}
+                className="rounded-2xl border border-separator/45 px-4 py-2.5 text-sm font-semibold text-on-surface transition hover:bg-surface-container disabled:cursor-not-allowed disabled:opacity-60"
               >
-                Batch Reset
+                Refresh
               </button>
-            ) : null}
-            {canAdd ? (
               <button
                 type="button"
-                onClick={() => setAddModalOpen(true)}
-                className="rounded-2xl bg-primary px-4 py-2.5 text-sm font-bold text-white transition hover:opacity-90"
+                onClick={handleExport}
+                disabled={exporting || modelLoading}
+                className="rounded-2xl border border-separator/45 px-4 py-2.5 text-sm font-semibold text-on-surface transition hover:bg-surface-container disabled:cursor-not-allowed disabled:opacity-60"
               >
-                Add Inventory
+                {exporting ? "Exporting..." : "Export CSV"}
               </button>
-            ) : null}
-          </div>
-        </div>
+              {canAdminReset ? (
+                <button
+                  type="button"
+                  onClick={() => setBatchResetOpen(true)}
+                  className="rounded-2xl border border-error/20 bg-error/8 px-4 py-2.5 text-sm font-bold text-error transition hover:bg-error/12"
+                >
+                  Batch Reset
+                </button>
+              ) : null}
+              {canAdd ? (
+                <button
+                  type="button"
+                  onClick={() => setAddModalOpen(true)}
+                  className="rounded-2xl bg-primary px-4 py-2.5 text-sm font-bold text-white transition hover:opacity-90"
+                >
+                  Add Inventory
+                </button>
+              ) : null}
+            </>
+          )}
+        />
 
         <FlashBanner flash={flash} onClose={() => setFlash(null)} />
 

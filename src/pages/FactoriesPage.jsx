@@ -1,6 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { useDashboardData } from "../hooks/useDashboardData";
 import FactoryCard from "../components/FactoryCard";
+import PageHeader from "../components/PageHeader";
 import RecordDetailModal from "../components/RecordDetailModal";
 import { getDefectStatus } from "../utils/statusHelpers";
 import { useRecordModal } from "../hooks/useRecordModal";
@@ -19,23 +20,25 @@ export default function FactoriesPage() {
 
   return (
     <section className="pt-24 pb-16 px-8 overflow-y-auto h-screen scrollbar-hide">
-
-      {/* ── Page header ── */}
-      <div className="flex items-end justify-between mb-8">
-        <div>
-          <h2 className="text-3xl font-bold font-headline tracking-tight text-on-surface">{t("factoryListTitle")}</h2>
-          <p className="text-on-surface-variant mt-1 text-sm">
-            {total} facilit{total === 1 ? "y" : "ies"} &mdash; {normal} normal, {warnings} warning{warnings !== 1 ? "s" : ""}, {critical} critical
-          </p>
-        </div>
-        <button
-          onClick={refresh}
-          className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold bg-surface-container border border-outline-variant/20 text-on-surface-variant hover:bg-surface-container-high hover:text-primary transition-all duration-150"
-        >
-          <span className="material-symbols-outlined" style={{ fontSize: 16 }}>refresh</span>
-          {t("refresh")}
-        </button>
-      </div>
+      <PageHeader
+        title={t("factoryListTitle")}
+        subtitle={(
+          <>
+            {total} facilit{total === 1 ? "y" : "ies"} {"-"} {normal} normal, {warnings} warning{warnings !== 1 ? "s" : ""}, {critical} critical
+          </>
+        )}
+        className="mb-8 md:flex-row md:items-end md:justify-between"
+        actionsClassName="md:justify-end"
+        actions={(
+          <button
+            onClick={refresh}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold bg-surface-container border border-outline-variant/20 text-on-surface-variant hover:bg-surface-container-high hover:text-primary transition-all duration-150"
+          >
+            <span className="material-symbols-outlined" style={{ fontSize: 16 }}>refresh</span>
+            {t("refresh")}
+          </button>
+        )}
+      />
 
       {/* ── Error banner ── */}
       {error && (

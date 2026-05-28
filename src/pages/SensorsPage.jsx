@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import PageHeader from "../components/PageHeader";
 import { fetchSensorFactoryOverview } from "../services/api";
 import { getTempStatus, getHumidityStatus, getWBGTStatus } from "../utils/statusHelpers";
 
@@ -122,32 +123,32 @@ export default function SensorsPage() {
 
   return (
     <section className="pt-24 pb-16 px-8 overflow-y-auto h-screen scrollbar-hide">
-
-      {/* ── Page header ── */}
-      <div className="flex items-center justify-between mb-8">
-        <div>
-          <h2 className="text-3xl font-bold tracking-tight text-on-surface flex items-center gap-3">
+      <PageHeader
+        title={(
+          <>
             <span className="material-symbols-outlined text-tertiary" style={{ fontVariationSettings: "'FILL' 1" }}>sensors</span>
             Factory Sensors
-          </h2>
-          <p className="text-on-surface-variant text-sm mt-1">
-            Live temperature &amp; humidity monitoring across all facilities
-          </p>
-        </div>
-        <button
-          onClick={refresh}
-          disabled={loading}
-          className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-primary/10 text-primary text-xs font-bold hover:bg-primary/15 transition-colors disabled:opacity-50"
-        >
-          <span
-            className={`material-symbols-outlined ${loading ? "animate-spin" : ""}`}
-            style={{ fontSize: 16 }}
+          </>
+        )}
+        titleClassName="flex items-center gap-3"
+        subtitle="Live temperature & humidity monitoring across all facilities"
+        className="mb-8 md:flex-row md:items-center md:justify-between"
+        actions={(
+          <button
+            onClick={refresh}
+            disabled={loading}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-primary/10 text-primary text-xs font-bold hover:bg-primary/15 transition-colors disabled:opacity-50"
           >
-            refresh
-          </span>
-          Refresh
-        </button>
-      </div>
+            <span
+              className={`material-symbols-outlined ${loading ? "animate-spin" : ""}`}
+              style={{ fontSize: 16 }}
+            >
+              refresh
+            </span>
+            Refresh
+          </button>
+        )}
+      />
 
       {loading ? (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">

@@ -4,6 +4,7 @@ import DashboardKPIStrip from "../components/DashboardKPIStrip";
 import DashboardIssuesFeed from "../components/DashboardIssuesFeed";
 import DashboardRecentSubmissions from "../components/DashboardRecentSubmissions";
 import DashboardFactorySummary from "../components/DashboardFactorySummary";
+import PageHeader from "../components/PageHeader";
 import RecordDetailModal from "../components/RecordDetailModal";
 import { useRecordModal } from "../hooks/useRecordModal";
 import { useLanguage } from "../contexts/LanguageContext";
@@ -24,27 +25,25 @@ export default function DashboardPage() {
 
   return (
     <section className="pt-20 sm:pt-24 pb-24 sm:pb-16 px-4 sm:px-6 md:px-8 overflow-y-auto h-screen scrollbar-hide">
-
-      {/* ── Header ── */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-6 sm:mb-8">
-        <div>
-          <h2 className="text-2xl sm:text-3xl font-black font-headline tracking-tight text-on-surface leading-tight">
-            {t("dashboard")}
-          </h2>
-          <p className="text-on-surface-variant mt-1 text-sm font-medium">{today}</p>
-        </div>
-        <button
-          onClick={refresh}
-          disabled={loading}
-          className="flex w-full sm:w-auto items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold
-                     bg-surface-container border border-separator/60 text-on-surface-variant
-                     hover:bg-surface-container-high hover:text-primary hover:border-primary/30
-                     active:scale-95 transition-all duration-150 disabled:opacity-50 shadow-sm"
-        >
-          <span className={`material-symbols-outlined ${loading ? "animate-spin" : ""}`} style={{ fontSize: 15 }}>refresh</span>
-          {refreshLabel ? `${t("refresh")} · ${refreshLabel}` : t("refresh")}
-        </button>
-      </div>
+      <PageHeader
+        title={t("dashboard")}
+        subtitle={today}
+        className="sm:mb-8"
+        actionsClassName="w-full sm:w-auto sm:justify-end"
+        actions={(
+          <button
+            onClick={refresh}
+            disabled={loading}
+            className="flex w-full sm:w-auto items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold
+                       bg-surface-container border border-separator/60 text-on-surface-variant
+                       hover:bg-surface-container-high hover:text-primary hover:border-primary/30
+                       active:scale-95 transition-all duration-150 disabled:opacity-50 shadow-sm"
+          >
+            <span className={`material-symbols-outlined ${loading ? "animate-spin" : ""}`} style={{ fontSize: 15 }}>refresh</span>
+            {refreshLabel ? `${t("refresh")} · ${refreshLabel}` : t("refresh")}
+          </button>
+        )}
+      />
 
       {/* ── Error banner ── */}
       {error && (

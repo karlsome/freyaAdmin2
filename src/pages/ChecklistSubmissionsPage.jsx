@@ -4,6 +4,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import ChecklistSubmissionsFilterPanel from "../components/ChecklistSubmissionsFilterPanel";
 import IconButton from "../components/IconButton";
 import LiquidSegmentedControl from "../components/LiquidSegmentedControl";
+import PageHeader from "../components/PageHeader";
 import { useLanguage } from "../contexts/LanguageContext";
 import { fetchCheckFormRecordById, fetchCheckFormTemplates, fetchCheckFormRecords, fetchNgReportsByRecordIds, fetchSetsubiDBRecords } from "../services/api";
 import {
@@ -1876,10 +1877,12 @@ export default function ChecklistSubmissionsPage() {
 
   return (
     <section className="h-screen overflow-y-auto px-6 pb-16 pt-24 scrollbar-hide md:px-8">
-      <div className="mb-8">
-        <p className="text-xs font-bold uppercase tracking-[0.18em] text-outline">メンテナンス</p>
-        <h2 className="mt-1 text-2xl font-black tracking-tight text-on-surface">{t("checklistSubmissions")}</h2>
-      </div>
+      <PageHeader
+        eyebrow="メンテナンス"
+        eyebrowClassName="text-xs tracking-[0.18em]"
+        title={t("checklistSubmissions")}
+        className="mb-8"
+      />
 
       <div className="mb-6 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
         <SummaryCard

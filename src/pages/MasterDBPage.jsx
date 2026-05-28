@@ -4,6 +4,7 @@ import MasterBatchEditModal from "../components/MasterBatchEditModal";
 import MasterCsvImportCard from "../components/MasterCsvImportCard";
 import MasterDetailDrawer from "../components/MasterDetailDrawer";
 import MasterFilterPanel from "../components/MasterFilterPanel";
+import PageHeader from "../components/PageHeader";
 import MasterRecordModal from "../components/MasterRecordModal";
 import MasterStatsStrip from "../components/MasterStatsStrip";
 import MasterTable from "../components/MasterTable";
@@ -551,33 +552,34 @@ export default function MasterDBPage() {
 
   return (
     <section className="pt-24 pb-16 px-4 md:px-8 overflow-y-auto h-screen scrollbar-hide">
-      <div className="mb-8 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-        <div className="min-w-0">
-          <h2 className="text-3xl font-bold tracking-tight text-on-surface sm:text-4xl">Master Product Management</h2>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-3 self-start md:self-auto md:justify-end">
-          <button
-            type="button"
-            onClick={handleRefresh}
-            className="flex items-center justify-center gap-2 rounded-xl border border-outline-variant/20 bg-surface-container px-4 py-2 text-xs font-bold text-on-surface-variant transition-all hover:bg-surface-container-high hover:text-primary"
-          >
-            <span className="material-symbols-outlined" style={{ fontSize: 16 }}>refresh</span>
-            Refresh
-          </button>
-
-          {!isSpecialTab && (
+      <PageHeader
+        title="Master Product Management"
+        className="mb-8 md:flex-row md:items-end md:justify-between"
+        actionsClassName="self-start md:self-auto md:justify-end"
+        actions={(
+          <>
             <button
               type="button"
-              onClick={() => setAddModalOpen(true)}
-              className="flex items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2 text-xs font-bold text-white transition-all hover:opacity-90"
+              onClick={handleRefresh}
+              className="flex items-center justify-center gap-2 rounded-xl border border-outline-variant/20 bg-surface-container px-4 py-2 text-xs font-bold text-on-surface-variant transition-all hover:bg-surface-container-high hover:text-primary"
             >
-              <span className="material-symbols-outlined" style={{ fontSize: 16 }}>add</span>
-              Add New Record
+              <span className="material-symbols-outlined" style={{ fontSize: 16 }}>refresh</span>
+              Refresh
             </button>
-          )}
-        </div>
-      </div>
+
+            {!isSpecialTab && (
+              <button
+                type="button"
+                onClick={() => setAddModalOpen(true)}
+                className="flex items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2 text-xs font-bold text-white transition-all hover:opacity-90"
+              >
+                <span className="material-symbols-outlined" style={{ fontSize: 16 }}>add</span>
+                Add New Record
+              </button>
+            )}
+          </>
+        )}
+      />
 
       <FlashBanner flash={flash} onClose={() => setFlash(null)} />
 

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import AdvancedFilterSection from "../components/AdvancedFilterSection";
 import DataTable from "../components/DataTable";
+import PageHeader from "../components/PageHeader";
 import StatSummaryCard from "../components/StatSummaryCard";
 import StatusChip from "../components/StatusChip";
 import FactoryStatusLogsModal from "../components/factoryStatus/FactoryStatusLogsModal";
@@ -357,36 +358,36 @@ export default function FactoryStatusPage() {
   return (
     <section className="h-screen overflow-y-auto scrollbar-hide px-8 pb-16 pt-24">
       <div className="w-full">
-        <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
-          <div>
-            <p className="text-[11px] font-bold uppercase tracking-[0.24em] text-primary">Live Operations</p>
-            <h1 className="mt-2 text-3xl font-black text-on-surface">Factory Status</h1>
-            <p className="mt-2 max-w-4xl text-sm text-on-surface-variant">
-              Track live machine activity from tablet logs, compare goals versus actual production, and review the current machine state by factory.
-            </p>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-3">
-            <button
-              type="button"
-              onClick={() => openLogsPage()}
-              className="rounded-2xl border border-outline-variant/25 px-4 py-2.5 text-sm font-semibold text-on-surface transition hover:bg-surface-container"
-            >
-              Logs Page
-            </button>
-            <div className="planner-data-text rounded-2xl border border-outline-variant/20 bg-surface-container-low/40 px-4 py-2.5 text-sm text-on-surface-variant">
-              {generatedAt ? `Updated ${formatFactoryStatusDateTime(generatedAt)}` : "Waiting for first load..."}
-            </div>
-            <button
-              type="button"
-              onClick={() => setRefreshNonce((current) => current + 1)}
-              disabled={loadingSnapshot || loadingFactories}
-              className="rounded-2xl border border-outline-variant/25 px-4 py-2.5 text-sm font-semibold text-on-surface transition hover:bg-surface-container disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {loadingSnapshot ? "Refreshing..." : "Refresh"}
-            </button>
-          </div>
-        </div>
+        <PageHeader
+          eyebrow="Live Operations"
+          eyebrowClassName="tracking-[0.24em] text-primary"
+          title="Factory Status"
+          subtitle="Track live machine activity from tablet logs, compare goals versus actual production, and review the current machine state by factory."
+          subtitleClassName="max-w-4xl"
+          className="md:flex-row md:items-start md:justify-between"
+          actions={(
+            <>
+              <button
+                type="button"
+                onClick={() => openLogsPage()}
+                className="rounded-2xl border border-outline-variant/25 px-4 py-2.5 text-sm font-semibold text-on-surface transition hover:bg-surface-container"
+              >
+                Logs Page
+              </button>
+              <div className="planner-data-text rounded-2xl border border-outline-variant/20 bg-surface-container-low/40 px-4 py-2.5 text-sm text-on-surface-variant">
+                {generatedAt ? `Updated ${formatFactoryStatusDateTime(generatedAt)}` : "Waiting for first load..."}
+              </div>
+              <button
+                type="button"
+                onClick={() => setRefreshNonce((current) => current + 1)}
+                disabled={loadingSnapshot || loadingFactories}
+                className="rounded-2xl border border-outline-variant/25 px-4 py-2.5 text-sm font-semibold text-on-surface transition hover:bg-surface-container disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {loadingSnapshot ? "Refreshing..." : "Refresh"}
+              </button>
+            </>
+          )}
+        />
 
         {error ? (
           <div className="planner-data-text mb-6 rounded-2xl border border-error/20 bg-error/10 px-5 py-4 text-sm text-error">

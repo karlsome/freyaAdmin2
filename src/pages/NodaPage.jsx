@@ -1,6 +1,7 @@
 import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import DataTable from "../components/DataTable";
 import IconButton from "../components/IconButton";
+import PageHeader from "../components/PageHeader";
 import StatSummaryCard from "../components/StatSummaryCard";
 import StatusChip from "../components/StatusChip";
 import NodaBulkRequestModal from "../components/noda/NodaBulkRequestModal";
@@ -469,66 +470,66 @@ export default function NodaPage() {
   return (
     <section className="h-screen overflow-y-auto scrollbar-hide px-8 pb-16 pt-24">
       <div className="w-full">
-        <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
-          <div>
-            <p className="text-[11px] font-bold uppercase tracking-[0.24em] text-primary">Warehouse Workflow</p>
-            <h1 className="mt-2 text-3xl font-black text-on-surface">Noda</h1>
-            <p className="mt-2 max-w-3xl text-sm text-on-surface-variant">
-              Manage Noda warehouse picking requests, inspect FIFO inventory impact, upload bulk CSV orders, and sync remaining work from GEN.
-            </p>
-          </div>
-
-          <div className="flex flex-wrap gap-3">
-            <button
-              type="button"
-              onClick={() => setRefreshNonce((current) => current + 1)}
-              className="rounded-2xl border border-outline-variant/25 px-4 py-2.5 text-sm font-semibold text-on-surface transition hover:bg-surface-container"
-            >
-              Refresh
-            </button>
-            <button
-              type="button"
-              onClick={handleExport}
-              className="rounded-2xl border border-outline-variant/25 px-4 py-2.5 text-sm font-semibold text-on-surface transition hover:bg-surface-container"
-            >
-              Export CSV
-            </button>
-            {canManage ? (
+        <PageHeader
+          eyebrow="Warehouse Workflow"
+          eyebrowClassName="tracking-[0.24em] text-primary"
+          title="Noda"
+          subtitle="Manage Noda warehouse picking requests, inspect FIFO inventory impact, upload bulk CSV orders, and sync remaining work from GEN."
+          subtitleClassName="max-w-3xl"
+          className="md:flex-row md:items-start md:justify-between"
+          actions={(
+            <>
               <button
                 type="button"
-                onClick={handleManualInventoryCheck}
-                disabled={checkingInventory}
-                aria-busy={checkingInventory}
-                className="inline-flex min-w-[168px] items-center justify-center gap-2 rounded-2xl border border-outline-variant/25 px-4 py-2.5 text-sm font-semibold text-on-surface transition hover:bg-surface-container disabled:cursor-not-allowed disabled:opacity-60"
+                onClick={() => setRefreshNonce((current) => current + 1)}
+                className="rounded-2xl border border-outline-variant/25 px-4 py-2.5 text-sm font-semibold text-on-surface transition hover:bg-surface-container"
               >
-                {checkingInventory ? (
-                  <>
-                    <span className="material-symbols-outlined animate-spin" style={{ fontSize: 18 }}>autorenew</span>
-                    Checking Inventory...
-                  </>
-                ) : "Check Inventory"}
+                Refresh
               </button>
-            ) : null}
-            {canManage ? (
               <button
                 type="button"
-                onClick={() => setGenModalOpen(true)}
-                className="rounded-2xl border border-primary/20 bg-primary/8 px-4 py-2.5 text-sm font-bold text-primary transition hover:bg-primary/12"
+                onClick={handleExport}
+                className="rounded-2xl border border-outline-variant/25 px-4 py-2.5 text-sm font-semibold text-on-surface transition hover:bg-surface-container"
               >
-                Sync From GEN
+                Export CSV
               </button>
-            ) : null}
-            {canManage ? (
-              <button
-                type="button"
-                onClick={() => setAddModalOpen(true)}
-                className="rounded-2xl bg-primary px-4 py-2.5 text-sm font-bold text-white transition hover:opacity-90"
-              >
-                New Bulk Request
-              </button>
-            ) : null}
-          </div>
-        </div>
+              {canManage ? (
+                <button
+                  type="button"
+                  onClick={handleManualInventoryCheck}
+                  disabled={checkingInventory}
+                  aria-busy={checkingInventory}
+                  className="inline-flex min-w-[168px] items-center justify-center gap-2 rounded-2xl border border-outline-variant/25 px-4 py-2.5 text-sm font-semibold text-on-surface transition hover:bg-surface-container disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {checkingInventory ? (
+                    <>
+                      <span className="material-symbols-outlined animate-spin" style={{ fontSize: 18 }}>autorenew</span>
+                      Checking Inventory...
+                    </>
+                  ) : "Check Inventory"}
+                </button>
+              ) : null}
+              {canManage ? (
+                <button
+                  type="button"
+                  onClick={() => setGenModalOpen(true)}
+                  className="rounded-2xl border border-primary/20 bg-primary/8 px-4 py-2.5 text-sm font-bold text-primary transition hover:bg-primary/12"
+                >
+                  Sync From GEN
+                </button>
+              ) : null}
+              {canManage ? (
+                <button
+                  type="button"
+                  onClick={() => setAddModalOpen(true)}
+                  className="rounded-2xl bg-primary px-4 py-2.5 text-sm font-bold text-white transition hover:opacity-90"
+                >
+                  New Bulk Request
+                </button>
+              ) : null}
+            </>
+          )}
+        />
 
         <FlashBanner flash={flash} onClose={() => setFlash(null)} />
 

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Papa from "papaparse";
 import LiquidSegmentedControl from "../components/LiquidSegmentedControl";
+import PageHeader from "../components/PageHeader";
 import PlannerFilters from "../components/planner/PlannerFilters";
 import PlannerGoalsPanel from "../components/planner/PlannerGoalsPanel";
 import PlannerSelectedSummary from "../components/planner/PlannerSelectedSummary";
@@ -890,33 +891,33 @@ export default function PlannerPage() {
   return (
     <section className="h-screen overflow-y-auto px-4 pb-24 pt-20 scrollbar-hide sm:px-6 sm:pb-16 sm:pt-24 md:px-8">
       <FlashBanner flash={flash} onClose={() => setFlash(null)} />
-
-      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <h2 className="text-2xl font-black tracking-tight text-on-surface sm:text-3xl">Production Planning</h2>
-          <p className="mt-1 text-sm text-on-surface-variant">Goal-based production planning migrated from the original Freya Admin workflow.</p>
-        </div>
-
-        <div className="flex flex-wrap gap-2">
-          <button
-            type="button"
-            onClick={() => setBreakModalOpen(true)}
-            className="flex items-center gap-2 rounded-2xl border border-outline-variant/20 bg-surface-container px-4 py-2 text-xs font-bold text-on-surface transition hover:bg-surface-container-high"
-          >
-            <span className="material-symbols-outlined" style={{ fontSize: 16 }}>schedule</span>
-            Break Times
-          </button>
-          <button
-            type="button"
-            onClick={() => loadPlannerData()}
-            disabled={loadingFactories || dataLoading}
-            className="flex items-center gap-2 rounded-2xl border border-outline-variant/20 bg-surface-container px-4 py-2 text-xs font-bold text-on-surface transition hover:bg-surface-container-high disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            <span className={`material-symbols-outlined ${dataLoading ? "animate-spin" : ""}`} style={{ fontSize: 16 }}>refresh</span>
-            Refresh
-          </button>
-        </div>
-      </div>
+      <PageHeader
+        title="Production Planning"
+        subtitle="Goal-based production planning migrated from the original Freya Admin workflow."
+        className="sm:flex-row sm:items-end sm:justify-between"
+        actionsClassName="gap-2"
+        actions={(
+          <>
+            <button
+              type="button"
+              onClick={() => setBreakModalOpen(true)}
+              className="flex items-center gap-2 rounded-2xl border border-outline-variant/20 bg-surface-container px-4 py-2 text-xs font-bold text-on-surface transition hover:bg-surface-container-high"
+            >
+              <span className="material-symbols-outlined" style={{ fontSize: 16 }}>schedule</span>
+              Break Times
+            </button>
+            <button
+              type="button"
+              onClick={() => loadPlannerData()}
+              disabled={loadingFactories || dataLoading}
+              className="flex items-center gap-2 rounded-2xl border border-outline-variant/20 bg-surface-container px-4 py-2 text-xs font-bold text-on-surface transition hover:bg-surface-container-high disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <span className={`material-symbols-outlined ${dataLoading ? "animate-spin" : ""}`} style={{ fontSize: 16 }}>refresh</span>
+              Refresh
+            </button>
+          </>
+        )}
+      />
 
       <PlannerFilters
         factories={factories}
