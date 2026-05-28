@@ -122,7 +122,7 @@ export default function PlannerSlotSchedulingModal({
             />
           </div>
 
-          <div className="mt-4 max-h-[58vh] space-y-2 overflow-y-auto">
+          <div className="mt-4 max-h-[58vh] space-y-3 overflow-y-auto">
             {availableGoals.map((goal) => {
               const queued = queue.some((item) => item._id === goal._id);
               return (

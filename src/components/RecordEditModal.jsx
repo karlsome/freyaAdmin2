@@ -374,7 +374,7 @@ export default function RecordEditModal({
             const structured = Array.isArray(item) || isPlainObject(item);
 
             return (
-              <div key={itemPath} className="rounded-2xl border border-outline-variant/15 bg-surface-container-low px-3 py-3">
+              <div key={itemPath} className="rounded-2xl border border-outline-variant/15 bg-surface-container-low px-4 py-3">
                 <div className="mb-3 flex items-center justify-between gap-3">
                   <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-outline">Item {index + 1}</div>
                   <button
@@ -429,7 +429,7 @@ export default function RecordEditModal({
 
             return (
               <div key={childPath} className={structured ? "md:col-span-2" : ""}>
-                <div className="rounded-2xl border border-outline-variant/15 bg-surface-container-low px-3 py-3">
+                <div className="rounded-2xl border border-outline-variant/15 bg-surface-container-low px-4 py-3">
                   {structured ? (
                     <>
                       <div className="mb-2 text-[10px] font-bold uppercase tracking-[0.18em] text-outline">{childKey}</div>
@@ -458,7 +458,7 @@ export default function RecordEditModal({
             { label: item.partNumberLabel, value: partNumberValue, focusField: "品番" },
             { label: item.serialNumberLabel, value: serialNumberValue, focusField: "背番号" },
           ].map((field) => (
-            <div key={field.focusField} className="rounded-2xl border border-outline-variant/15 bg-surface-container-low px-3 py-3">
+            <div key={field.focusField} className="rounded-2xl border border-outline-variant/15 bg-surface-container-low px-4 py-3">
               <div className="mb-1 text-[10px] font-bold uppercase tracking-[0.18em] text-outline">{field.label}</div>
               <div className="flex items-center gap-2">
                 <div className="planner-data-text min-h-[42px] flex-1 rounded-2xl border border-separator/40 bg-white px-3 py-2.5 font-medium text-on-surface dark:bg-surface-container">
@@ -484,7 +484,7 @@ export default function RecordEditModal({
       return (
         <div key={item.path} className={item.span === "full" ? "md:col-span-2" : ""}>
           <div className="mb-1 text-[10px] font-bold uppercase tracking-[0.18em] text-outline">{item.label}</div>
-          <div className="flex items-center gap-2 rounded-2xl border border-outline-variant/15 bg-surface-container-low px-3 py-3">
+          <div className="flex items-center gap-2 rounded-2xl border border-outline-variant/15 bg-surface-container-low px-4 py-3">
             <div className="planner-data-text min-h-[42px] flex-1 rounded-2xl border border-separator/40 bg-white px-3 py-2.5 font-medium text-on-surface dark:bg-surface-container">
               {formatDisplayValue(value)}
             </div>
@@ -527,7 +527,7 @@ export default function RecordEditModal({
             className="dashboard-section flex max-h-[92vh] w-full max-w-6xl flex-col overflow-hidden rounded-2xl"
             onClick={(event) => event.stopPropagation()}
           >
-            <div className="border-b border-separator/35 px-5 py-4 lg:px-6">
+            <div className="border-b border-separator/35 px-6 py-5">
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <div className="text-[10px] font-bold uppercase tracking-[0.22em] text-outline">Edit Record</div>
@@ -544,7 +544,7 @@ export default function RecordEditModal({
               </div>
             </div>
 
-            <div className="min-h-0 flex-1 overflow-y-auto px-5 py-5 lg:px-6">
+            <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5">
               <div className="space-y-5">
                 {sections.map((section) => (
                   <div key={section.key} className="rounded-2xl border border-outline-variant/15 bg-white/80 px-4 py-4 dark:bg-surface-container">
@@ -564,7 +564,7 @@ export default function RecordEditModal({
               </div>
             </div>
 
-            <div className="border-t border-outline-variant/20 bg-surface-container-low/50 px-5 py-4 lg:px-6">
+            <div className="border-t border-outline-variant/20 bg-surface-container-low/50 px-6 py-4">
               <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_auto_auto_auto] xl:items-end">
                 <div>
                   <div className="mb-1 text-[10px] font-bold uppercase tracking-[0.18em] text-outline">{noteLabel}</div>

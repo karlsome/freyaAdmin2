@@ -68,7 +68,7 @@ export default function SettingsModal({ isOpen, onClose }) {
                     key={code}
                     type="button"
                     onClick={() => changeLanguage(code)}
-                    className={`w-full flex items-center gap-3 rounded-2xl border px-4 py-3.5 text-left transition-all ${
+                    className={`w-full flex items-center gap-3 rounded-2xl border px-4 py-3 text-left transition-all ${
                       isActive
                         ? "border-primary/40 bg-primary/8 dark:bg-primary/12"
                         : "border-white/10 bg-white/5 hover:border-primary/20 hover:bg-primary/5 dark:border-white/8 dark:bg-white/3"

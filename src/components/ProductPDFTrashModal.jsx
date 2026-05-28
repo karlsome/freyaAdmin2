@@ -74,7 +74,7 @@ export default function ProductPDFTrashModal({
                   type="button"
                   onClick={onRecoverAll}
                   disabled={disableBulkActions}
-                  className="rounded-2xl border border-emerald-500/20 bg-emerald-500/10 px-3 py-2 text-xs font-bold text-emerald-700 transition hover:bg-emerald-500/15 disabled:cursor-not-allowed disabled:opacity-50 dark:text-emerald-300"
+                  className="rounded-2xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-2 text-xs font-bold text-emerald-700 transition hover:bg-emerald-500/15 disabled:cursor-not-allowed disabled:opacity-50 dark:text-emerald-300"
                 >
                   Recover All
                 </button>
@@ -82,7 +82,7 @@ export default function ProductPDFTrashModal({
                   type="button"
                   onClick={onDeleteAll}
                   disabled={disableBulkActions}
-                  className="rounded-2xl border border-error/20 bg-error/10 px-3 py-2 text-xs font-bold text-error transition hover:bg-error/15 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="rounded-2xl border border-error/20 bg-error/10 px-4 py-2 text-xs font-bold text-error transition hover:bg-error/15 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   Delete All
                 </button>
@@ -138,7 +138,7 @@ export default function ProductPDFTrashModal({
                               type="button"
                               onClick={() => onRecover(item)}
                               disabled={actionBusy}
-                              className="rounded-2xl border border-emerald-500/20 bg-emerald-500/10 px-3 py-2 text-xs font-bold text-emerald-700 transition hover:bg-emerald-500/15 disabled:cursor-not-allowed disabled:opacity-50 dark:text-emerald-300"
+                              className="rounded-2xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-2 text-xs font-bold text-emerald-700 transition hover:bg-emerald-500/15 disabled:cursor-not-allowed disabled:opacity-50 dark:text-emerald-300"
                             >
                               Recover
                             </button>
@@ -146,7 +146,7 @@ export default function ProductPDFTrashModal({
                               type="button"
                               onClick={() => onDeletePermanent(item)}
                               disabled={actionBusy}
-                              className="rounded-2xl border border-error/20 bg-error/10 px-3 py-2 text-xs font-bold text-error transition hover:bg-error/15 disabled:cursor-not-allowed disabled:opacity-50"
+                              className="rounded-2xl border border-error/20 bg-error/10 px-4 py-2 text-xs font-bold text-error transition hover:bg-error/15 disabled:cursor-not-allowed disabled:opacity-50"
                             >
                               Delete Permanently
                             </button>
@@ -183,18 +183,18 @@ export default function ProductPDFTrashModal({
                   type="button"
                   onClick={() => onPageChange(page - 1)}
                   disabled={page <= 1 || loading}
-                  className="rounded-2xl border border-separator/40 px-3 py-2 text-xs font-bold text-on-surface transition hover:bg-surface-container disabled:cursor-not-allowed disabled:opacity-50"
+                  className="rounded-2xl border border-separator/40 px-4 py-2 text-xs font-bold text-on-surface transition hover:bg-surface-container disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   Previous
                 </button>
-                <div className="rounded-2xl bg-surface-container px-3 py-2 text-xs font-bold text-on-surface-variant">
+                <div className="rounded-2xl bg-surface-container px-4 py-2 text-xs font-bold text-on-surface-variant">
                   Page {page} / {totalPages}
                 </div>
                 <button
                   type="button"
                   onClick={() => onPageChange(page + 1)}
                   disabled={page >= totalPages || loading}
-                  className="rounded-2xl border border-separator/40 px-3 py-2 text-xs font-bold text-on-surface transition hover:bg-surface-container disabled:cursor-not-allowed disabled:opacity-50"
+                  className="rounded-2xl border border-separator/40 px-4 py-2 text-xs font-bold text-on-surface transition hover:bg-surface-container disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   Next
                 </button>

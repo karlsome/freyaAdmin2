@@ -656,7 +656,7 @@ export default function NodaDetailModal({ open, requestId, mode = "view", authUs
           <button
             type="button"
             onClick={() => setViewMode("view")}
-            className="rounded-2xl border border-separator/45 px-4 py-2.5 text-sm font-semibold text-on-surface transition hover:bg-surface-container"
+            className="rounded-2xl border border-separator/45 px-4 py-2 text-sm font-semibold text-on-surface transition hover:bg-surface-container"
           >
             Cancel Edit
           </button>
@@ -664,7 +664,7 @@ export default function NodaDetailModal({ open, requestId, mode = "view", authUs
         <button
           type="button"
           onClick={() => onClose?.()}
-          className="rounded-2xl border border-separator/45 px-4 py-2.5 text-sm font-semibold text-on-surface transition hover:bg-surface-container"
+          className="rounded-2xl border border-separator/45 px-4 py-2 text-sm font-semibold text-on-surface transition hover:bg-surface-container"
         >
           Close
         </button>

@@ -67,12 +67,12 @@ export default function ProductPDFBulkMatchModal({
               <div className="text-xs font-bold uppercase tracking-[0.18em] text-outline">Matched Files</div>
               <div className="mt-3 space-y-2">
                 {matched.length ? matched.map((item) => (
-                  <div key={`${item.file.name}-${item.serialNumber}`} className="flex items-center justify-between gap-3 rounded-2xl bg-surface px-3 py-2 text-sm">
+                  <div key={`${item.file.name}-${item.serialNumber}`} className="flex items-center justify-between gap-3 rounded-2xl bg-surface px-4 py-3 text-sm">
                     <span className="truncate text-on-surface">{item.file.name}</span>
                     <span className="shrink-0 font-bold text-primary">{item.serialNumber}</span>
                   </div>
                 )) : (
-                  <div className="rounded-2xl bg-surface px-3 py-3 text-sm text-on-surface-variant">No automatic matches were found.</div>
+                  <div className="rounded-2xl bg-surface px-4 py-3 text-sm text-on-surface-variant">No automatic matches were found.</div>
                 )}
               </div>
             </section>
@@ -81,7 +81,7 @@ export default function ProductPDFBulkMatchModal({
               <div className="text-xs font-bold uppercase tracking-[0.18em] text-outline">Manual Assignment</div>
               <div className="mt-3 space-y-3">
                 {toAssign.length ? toAssign.map((item, index) => (
-                  <div key={`${item.file.name}-${index}`} className="rounded-2xl bg-surface px-3 py-3">
+                  <div key={`${item.file.name}-${index}`} className="rounded-2xl bg-surface px-4 py-3">
                     <div className="text-sm font-bold text-on-surface">{item.file.name}</div>
                     <div className="mt-1 text-xs text-on-surface-variant">
                       {item.candidates?.length ? `Candidates: ${item.candidates.join(", ")}` : "No filename match found"}
@@ -102,7 +102,7 @@ export default function ProductPDFBulkMatchModal({
                     </select>
                   </div>
                 )) : (
-                  <div className="rounded-2xl bg-surface px-3 py-3 text-sm text-on-surface-variant">Every file was matched automatically.</div>
+                  <div className="rounded-2xl bg-surface px-4 py-3 text-sm text-on-surface-variant">Every file was matched automatically.</div>
                 )}
               </div>
             </section>

@@ -528,7 +528,7 @@ export default function CheckFormBuilderModal({ initial, onClose, onSaved, prese
         className="relative flex min-h-0 w-full max-w-6xl flex-col overflow-hidden rounded-2xl border border-separator/40 glass-card"
         style={{ height: `${modalHeight}px`, maxHeight: `${modalHeight}px` }}
       >
-        <div className="flex items-start justify-between border-b border-separator/35 px-4 py-4 sm:px-6 sm:py-5">
+        <div className="flex items-start justify-between border-b border-separator/35 px-6 py-5">
           <div className="min-w-0 flex-1 pr-4">
             <p className="text-xs font-bold uppercase tracking-[0.18em] text-outline">
               {initial ? "Edit Form" : "New Form"}
@@ -810,7 +810,7 @@ export default function CheckFormBuilderModal({ initial, onClose, onSaved, prese
           </div>
         </div>
 
-        <div className="flex shrink-0 flex-col gap-3 border-t border-outline-variant/20 px-4 py-4 sm:px-6 lg:flex-row lg:items-center lg:justify-between">
+        <div className="flex shrink-0 flex-col gap-3 border-t border-outline-variant/20 px-6 py-4 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex flex-1 flex-col gap-2 lg:flex-row lg:items-center">
             {error ? <p className="text-xs text-error">{error}</p> : null}
             {initial && !error && !confirmingDelete ? (
@@ -878,7 +878,7 @@ export default function CheckFormBuilderModal({ initial, onClose, onSaved, prese
 
   const toast = showSuccess ? (
     <div className="fixed bottom-6 left-1/2 z-[60] -translate-x-1/2">
-      <div className="flex items-center gap-3 rounded-2xl bg-on-surface px-5 py-3.5 shadow-2xl">
+      <div className="flex items-center gap-3 rounded-2xl bg-on-surface px-5 py-3 shadow-2xl">
         <span className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-primary">
           <span className="material-symbols-outlined text-on-primary" style={{ fontSize: 16, fontVariationSettings: "'FILL' 1" }}>check</span>
         </span>
