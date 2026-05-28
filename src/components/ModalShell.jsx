@@ -62,12 +62,14 @@ export default function ModalShell({
                   <p className="mt-1 text-sm text-on-surface-variant">{subtitle}</p>
                 ) : null}
               </div>
-              <IconButton
-                icon="close"
+              <button
+                type="button"
                 onClick={onClose}
-                variant={closeButtonVariant === "outlined" ? "outlined" : "default"}
-                ariaLabel="Close dialog"
-              />
+                aria-label="Close dialog"
+                className="p-2 rounded-xl flex-shrink-0 text-outline hover:bg-surface-container hover:text-on-surface transition-all duration-150 active:scale-95"
+              >
+                <span className="material-symbols-outlined" style={{ fontSize: 18 }}>close</span>
+              </button>
             </div>
           </div>
 
