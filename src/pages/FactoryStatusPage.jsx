@@ -356,7 +356,7 @@ export default function FactoryStatusPage() {
 
   return (
     <section className="h-screen overflow-y-auto scrollbar-hide px-8 pb-16 pt-24">
-      <div className="mx-auto max-w-[1600px]">
+      <div className="w-full">
         <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
           <div>
             <p className="text-[11px] font-bold uppercase tracking-[0.24em] text-primary">Live Operations</p>
