@@ -148,7 +148,7 @@ function RecordDetailModal({ record, form, onClose }) {
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 backdrop-blur-md p-4">
-      <div className="w-full max-w-lg max-h-[85vh] flex flex-col rounded-2xl glass-card overflow-hidden">
+      <div className="w-full max-w-lg max-h-[85vh] flex flex-col rounded-2xl dashboard-section overflow-hidden">
 
         {/* Header */}
         <div className="flex flex-shrink-0 items-start justify-between border-b border-separator/35 px-6 py-5">
