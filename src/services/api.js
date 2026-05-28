@@ -875,6 +875,24 @@ export async function fetchHistoricalSensorExport({
   return Array.isArray(result) ? result : [];
 }
 
+// ─── IoT device names (Sasaki_Coating_MasterDB → ioTNames) ───────────────────
+export async function fetchIoTDeviceNames(factoryName) {
+  const filter = factoryName ? { factoryName } : {};
+  return query("Sasaki_Coating_MasterDB", "ioTNames", filter);
+}
+
+export async function saveIoTDeviceName({ deviceId, factoryName, name, imageURLs, username }) {
+  return _postJson("api/iot-device-names/save", { deviceId, factoryName, name, imageURLs, username });
+}
+
+export async function uploadIoTDeviceImage({ base64, deviceId, factoryName, username }) {
+  return _postJson("api/upload-iot-device-image", { base64, deviceId, factoryName, username });
+}
+
+export async function deleteIoTDeviceImage({ deviceId, factoryName, imageUrl, username }) {
+  return _postJson("api/iot-device-names/delete-image", { deviceId, factoryName, imageUrl, username });
+}
+
 // ─── Environmental data (shared server-side weather batch) ──────────────────
 function _todayKey() {
   return new Date().toISOString().split("T")[0];

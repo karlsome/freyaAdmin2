@@ -1,10 +1,12 @@
-import { useState, useEffect, useMemo, useRef } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import DataTable from "../components/DataTable";
 import PageHeader from "../components/PageHeader";
-import { fetchHistoricalSensorExport, fetchHistoricalSensorOverview, fetchHistoricalSensorReadingsPage, calcWBGT } from "../services/api";
+import { fetchHistoricalSensorExport, fetchHistoricalSensorOverview, fetchHistoricalSensorReadingsPage, calcWBGT, fetchIoTDeviceNames, saveIoTDeviceName, uploadIoTDeviceImage, deleteIoTDeviceImage } from "../services/api";
 import { getTempStatus, getHumidityStatus, getWBGTStatus } from "../utils/statusHelpers";
 import SensorTrendChart from "../components/SensorTrendChart";
+import DeviceNamingModal from "../components/DeviceNamingModal";
+import { getAuthUser } from "../utils/masterDB";
 
 const SENSOR_READINGS_PAGE_SIZE_OPTIONS = [15, 50, 100];
 const EMPTY_SENSOR_PAGINATION = {
@@ -94,7 +96,7 @@ function Sparkline({ values, color = "#6366f1", height = 28 }) {
 }
 
 // ─── Per-device summary card ──────────────────────────────────────────────────
-function SensorCard({ device, isActive = false, onSelect = null }) {
+function SensorCard({ device, isActive = false, onSelect = null, onEdit = null }) {
   const latest = device?.latest ?? {};
   const latestTemp = parseTemp(latest.Temperature);
   const latestHumid = parseHumid(latest.Humidity);
@@ -104,6 +106,7 @@ function SensorCard({ device, isActive = false, onSelect = null }) {
   const wbgtStatus = getWBGTStatus(wbgt);
   const tempTrend = Array.isArray(device?.tempTrend) ? device.tempTrend.filter((value) => value != null) : [];
   const humidityTrend = Array.isArray(device?.humidityTrend) ? device.humidityTrend.filter((value) => value != null) : [];
+  const displayName = device?.displayName || null;
 
   return (
     <button
@@ -114,11 +117,13 @@ function SensorCard({ device, isActive = false, onSelect = null }) {
         isActive ? "border-primary/45 bg-primary/10 ring-2 ring-primary/20 shadow-[0_16px_36px_rgba(99,102,241,0.16)]" : ""
       }`}
     >
-      <div className="flex items-start justify-between">
-        <div>
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0 flex-1">
           <p className="text-xs font-bold text-outline uppercase tracking-widest">Device</p>
           <div className="mt-1 flex flex-wrap items-center gap-2">
-            <p className={`text-base font-black ${isActive ? "text-primary" : "text-on-surface"}`}>{device?.deviceId || "Unknown"}</p>
+            <p className={`text-base font-black truncate ${isActive ? "text-primary" : "text-on-surface"}`}>
+              {displayName || device?.deviceId || "Unknown"}
+            </p>
             {isActive ? (
               <span className="inline-flex items-center gap-1 rounded-full bg-primary px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">
                 <span className="material-symbols-outlined" style={{ fontSize: 12 }}>check</span>
@@ -126,10 +131,25 @@ function SensorCard({ device, isActive = false, onSelect = null }) {
               </span>
             ) : null}
           </div>
+          {displayName && (
+            <p className="mt-0.5 font-mono text-[10px] text-outline truncate">{device?.deviceId}</p>
+          )}
         </div>
-        <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full ${wbgtStatus.bg} ${wbgtStatus.color}`}>
-          WBGT {wbgt ?? "—"}°C
-        </span>
+        <div className="flex flex-col items-end gap-2 flex-shrink-0">
+          <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full ${wbgtStatus.bg} ${wbgtStatus.color}`}>
+            WBGT {wbgt ?? "—"}°C
+          </span>
+          {onEdit && (
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); onEdit(device); }}
+              className="p-1 rounded-lg text-outline hover:text-primary hover:bg-primary/10 transition-all duration-150"
+              title="Rename device"
+            >
+              <span className="material-symbols-outlined" style={{ fontSize: 14 }}>edit</span>
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="grid grid-cols-2 gap-3">
@@ -176,6 +196,81 @@ export default function SensorDetailPage() {
   const [tableRows, setTableRows] = useState([]);
   const [pagination, setPagination] = useState(EMPTY_SENSOR_PAGINATION);
   const [exporting, setExporting] = useState(false);
+
+  // IoT device naming
+  const [iotNamesMap, setIoTNamesMap] = useState(new Map());
+  const [namingDevice, setNamingDevice] = useState(null);
+  const [savingName, setSavingName] = useState(false);
+
+  const loadIoTNames = useCallback(async () => {
+    try {
+      const records = await fetchIoTDeviceNames(factoryName);
+      const nextMap = new Map();
+      if (Array.isArray(records)) {
+        records.forEach((r) => {
+          if (r?.deviceId) {
+            nextMap.set(String(r.deviceId).trim(), {
+              name: r.name || "",
+              imageURLs: Array.isArray(r.imageURLs) ? r.imageURLs : [],
+            });
+          }
+        });
+      }
+      setIoTNamesMap(nextMap);
+    } catch {
+      // non-fatal — device IDs will show as-is
+    }
+  }, [factoryName]);
+
+  useEffect(() => {
+    void loadIoTNames();
+  }, [loadIoTNames]);
+
+  function getDisplayName(deviceId) {
+    return iotNamesMap.get(String(deviceId || "").trim())?.name || null;
+  }
+
+  function handleOpenNaming(device) {
+    const id = String(device?.deviceId || "").trim();
+    const existing = iotNamesMap.get(id) || { name: "", imageURLs: [] };
+    setNamingDevice({ deviceId: id, name: existing.name, imageURLs: existing.imageURLs });
+  }
+
+  async function handleSaveName({ name, imageURLs }) {
+    if (!namingDevice) return;
+    setSavingName(true);
+    try {
+      const authUser = getAuthUser();
+      await saveIoTDeviceName({
+        deviceId: namingDevice.deviceId,
+        factoryName,
+        name,
+        imageURLs,
+        username: authUser?.username || "",
+      });
+      setIoTNamesMap((prev) => {
+        const next = new Map(prev);
+        next.set(namingDevice.deviceId, { name, imageURLs });
+        return next;
+      });
+      setNamingDevice(null);
+    } catch (err) {
+      // surface error without closing the modal — the modal has its own error display
+      console.error("Failed to save device name:", err);
+    } finally {
+      setSavingName(false);
+    }
+  }
+
+  async function handleUploadDeviceImage({ base64, deviceId, factoryName: fn }) {
+    const authUser = getAuthUser();
+    return uploadIoTDeviceImage({ base64, deviceId, factoryName: fn, username: authUser?.username || "" });
+  }
+
+  async function handleDeleteDeviceImage({ deviceId, factoryName: fn, imageUrl }) {
+    const authUser = getAuthUser();
+    return deleteIoTDeviceImage({ deviceId, factoryName: fn, imageUrl, username: authUser?.username || "" });
+  }
 
   useEffect(() => {
     let cancelled = false;
@@ -336,14 +431,16 @@ export default function SensorDetailPage() {
     return cardOverview.latestDevices.map((device) => {
       const normalizedDeviceId = normalizeDeviceId(device?.deviceId) || "unknown";
       const trendEntry = trendMap.get(normalizedDeviceId) || { humidityTrend: [], tempTrend: [] };
+      const iotEntry = iotNamesMap.get(normalizedDeviceId);
       return {
         ...device,
         deviceId: normalizedDeviceId,
         humidityTrend: trendEntry.humidityTrend,
         tempTrend: trendEntry.tempTrend,
+        displayName: iotEntry?.name || null,
       };
     });
-  }, [cardOverview.latestDevices, cardOverview.trends]);
+  }, [cardOverview.latestDevices, cardOverview.trends, iotNamesMap]);
 
   async function handleExport() {
     if (exporting || overview.totalReadings === 0) return;
@@ -414,7 +511,17 @@ export default function SensorDetailPage() {
       key: "device",
       label: "Device",
       width: 224,
-      renderCell: (row) => <span className="font-mono text-on-surface">{row.device || "—"}</span>,
+      renderCell: (row) => {
+        const friendlyName = getDisplayName(row.device);
+        return friendlyName ? (
+          <div>
+            <span className="text-sm font-semibold text-on-surface">{friendlyName}</span>
+            <p className="font-mono text-[10px] text-outline">{row.device || "—"}</p>
+          </div>
+        ) : (
+          <span className="font-mono text-on-surface">{row.device || "—"}</span>
+        );
+      },
       disableCellWrapper: true,
     },
     {
@@ -473,7 +580,7 @@ export default function SensorDetailPage() {
       },
       disableCellWrapper: true,
     },
-  ]), []);
+  ]), [iotNamesMap]);
 
   return (
     <section className="pt-24 pb-16 px-8 overflow-y-auto h-screen scrollbar-hide">
@@ -668,6 +775,7 @@ export default function SensorDetailPage() {
                     device={device}
                     isActive={normalizeDeviceId(deviceFilter) === normalizeDeviceId(device.deviceId)}
                     onSelect={handleSelectDevice}
+                    onEdit={handleOpenNaming}
                   />
                 ))}
               </div>
@@ -721,6 +829,19 @@ export default function SensorDetailPage() {
           </div>
         </>
       )}
+
+      <DeviceNamingModal
+        open={namingDevice !== null}
+        deviceId={namingDevice?.deviceId || ""}
+        factoryName={factoryName}
+        initialName={namingDevice?.name || ""}
+        initialImageURLs={namingDevice?.imageURLs || []}
+        saving={savingName}
+        onClose={() => setNamingDevice(null)}
+        onSave={handleSaveName}
+        onUploadImage={handleUploadDeviceImage}
+        onDeleteImage={handleDeleteDeviceImage}
+      />
     </section>
   );
 }
