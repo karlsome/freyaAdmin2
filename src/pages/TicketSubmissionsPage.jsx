@@ -784,7 +784,7 @@ function TicketDetailModal({ actionBusy = false, onClose, onCloseTicket = null, 
     <>
       <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm" onClick={onClose}>
         <div
-          className="dashboard-section flex max-h-[92vh] w-full flex-col overflow-hidden rounded-2xl"
+          className="dashboard-section flex max-h-[88vh] w-full max-w-3xl flex-col overflow-hidden rounded-2xl"
           onClick={(event) => event.stopPropagation()}
         >
           <div className="flex items-start justify-between gap-4 border-b border-separator/35 px-6 py-5">
