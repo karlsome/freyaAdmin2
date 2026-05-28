@@ -314,7 +314,7 @@ export default function FactoryDBWorkspace({ refreshToken, onFlash }) {
       {successModalOpen && (
         <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-md">
           <div className="flex min-h-full items-center justify-center p-4">
-            <div className="glass-card w-full max-w-md rounded-2xl overflow-hidden">
+            <div className="dashboard-section w-full max-w-md rounded-2xl overflow-hidden">
               <div className="border-b border-separator/35 px-6 py-5">
                 <h3 className="text-2xl font-black text-on-surface">Success</h3>
               </div>

@@ -12,7 +12,7 @@ function ConfirmModal({ message, onConfirm, onCancel }) {
   return createPortal(
     <div className="fixed inset-0 z-[60] overflow-y-auto bg-black/50 backdrop-blur-md">
       <div className="flex min-h-full items-start justify-center px-4 pb-4 pt-10">
-        <div className="glass-card w-full max-w-sm rounded-2xl overflow-hidden">
+        <div className="dashboard-section w-full max-w-sm rounded-2xl overflow-hidden">
           <div className="px-6 py-6">
             <p className="text-sm text-on-surface">{message}</p>
             <div className="mt-6 flex justify-end gap-3">

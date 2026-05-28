@@ -201,7 +201,7 @@ export default function CheckFormDetailModal({ form, scheduleMeta, machineNames,
         if (event.target === event.currentTarget) onClose();
       }}
     >
-      <div className="relative flex max-h-[90vh] w-full max-w-4xl flex-col overflow-hidden rounded-2xl glass-card">
+      <div className="relative flex max-h-[90vh] w-full max-w-4xl flex-col overflow-hidden rounded-2xl dashboard-section">
         <div className="flex items-start justify-between border-b border-separator/35 px-6 py-5">
           <div className="min-w-0 flex-1 pr-4">
             <div className="mb-2 flex flex-wrap items-center gap-2">

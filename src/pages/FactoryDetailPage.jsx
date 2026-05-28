@@ -97,7 +97,7 @@ function MfgLotModal({ onClose, initialLot = "" }) {
       onClick={onClose}
     >
       <div
-        className="glass-card rounded-2xl w-full max-w-xl max-h-[85vh] overflow-y-auto
+        className="dashboard-section rounded-2xl w-full max-w-xl max-h-[85vh] overflow-y-auto
                    shadow-[0_0_80px_rgba(99,102,241,0.18),0_24px_48px_rgba(0,0,0,0.22)] scrollbar-hide"
         onClick={(e) => e.stopPropagation()}
       >
