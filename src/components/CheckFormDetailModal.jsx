@@ -73,7 +73,7 @@ async function resolveActorName(username) {
 
 function SummaryCard({ icon, label, value }) {
   return (
-    <div className="rounded-2xl border border-outline-variant/20 bg-surface px-4 py-3">
+    <div className="rounded-2xl border border-separator/35 bg-surface px-4 py-3">
       <div className="flex items-center gap-2 text-outline">
         <span className="material-symbols-outlined text-primary" style={{ fontSize: 16 }}>{icon}</span>
         <span className="text-[10px] font-bold uppercase tracking-[0.18em]">{label}</span>
@@ -85,7 +85,7 @@ function SummaryCard({ icon, label, value }) {
 
 function ActivityItem({ icon, label, value }) {
   return (
-    <div className="rounded-2xl border border-outline-variant/20 bg-surface px-4 py-3">
+    <div className="rounded-2xl border border-separator/35 bg-surface px-4 py-3">
       <div className="flex items-center gap-2 text-outline">
         <span className="material-symbols-outlined text-primary" style={{ fontSize: 16 }}>{icon}</span>
         <span className="text-[10px] font-bold uppercase tracking-[0.18em]">{label}</span>
@@ -101,7 +101,7 @@ function FieldRow({ field, order, onPreviewImage }) {
   const orderLabel = order + 1;
 
   return (
-    <div className="rounded-2xl border border-outline-variant/20 bg-surface px-4 py-3">
+    <div className="rounded-2xl border border-separator/35 bg-surface px-4 py-3">
       <div className="flex items-start gap-3">
         <div className="flex min-w-0 flex-1 items-start gap-3">
           <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-2xl bg-surface-container text-sm font-black text-on-surface">
@@ -125,7 +125,7 @@ function FieldRow({ field, order, onPreviewImage }) {
             <button
               type="button"
               onClick={() => onPreviewImage({ imageURL: field.imageURL, name: field.label || "Reference image" })}
-              className="flex h-12 w-12 overflow-hidden rounded-2xl border border-outline-variant/20 bg-surface-container transition hover:border-primary/35 hover:shadow-[0_8px_20px_rgba(67,97,238,0.14)]"
+              className="flex h-12 w-12 overflow-hidden rounded-2xl border border-separator/40 bg-surface-container transition hover:border-primary/35 hover:shadow-[0_8px_20px_rgba(67,97,238,0.14)]"
               aria-label={`Preview reference image for ${field.label || "checklist field"}`}
             >
               <img src={field.imageURL} alt={field.label || "Reference image"} className="h-full w-full object-cover" />
@@ -196,13 +196,13 @@ export default function CheckFormDetailModal({ form, scheduleMeta, machineNames,
 
   const modal = (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-md"
       onClick={(event) => {
         if (event.target === event.currentTarget) onClose();
       }}
     >
-      <div className="relative flex max-h-[90vh] w-full max-w-4xl flex-col overflow-hidden rounded-2xl border border-outline-variant/20 glass-card">
-        <div className="flex items-start justify-between border-b border-outline-variant/20 px-6 py-5">
+      <div className="relative flex max-h-[90vh] w-full max-w-4xl flex-col overflow-hidden rounded-2xl dashboard-section">
+        <div className="flex items-start justify-between border-b border-separator/35 px-6 py-5">
           <div className="min-w-0 flex-1 pr-4">
             <div className="mb-2 flex flex-wrap items-center gap-2">
               <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-primary">
@@ -221,9 +221,9 @@ export default function CheckFormDetailModal({ form, scheduleMeta, machineNames,
           <button
             type="button"
             onClick={onClose}
-            className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-2xl bg-surface-container text-on-surface-variant transition hover:bg-surface-container-high"
+            className="p-2 rounded-xl flex-shrink-0 text-outline hover:bg-surface-container hover:text-on-surface transition-all duration-150 active:scale-95"
           >
-            <span className="material-symbols-outlined">close</span>
+            <span className="material-symbols-outlined" style={{ fontSize: 18 }}>close</span>
           </button>
         </div>
 
@@ -234,7 +234,7 @@ export default function CheckFormDetailModal({ form, scheduleMeta, machineNames,
             <SummaryCard icon="list" label="Fields" value={`${form.fields?.length ?? 0} checks`} />
           </div>
 
-          <section className="mt-5 rounded-2xl border border-outline-variant/20 bg-surface-container/40 p-4">
+          <section className="mt-5 rounded-2xl border border-separator/30 bg-surface-container/40 p-4">
             <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-outline">Applies To</p>
             <div className="mt-3">
               <p className="text-sm font-semibold text-on-surface">Machines</p>
@@ -243,14 +243,14 @@ export default function CheckFormDetailModal({ form, scheduleMeta, machineNames,
                   machineNames.map((machineName) => (
                     <span
                       key={machineName}
-                      className="inline-flex items-center gap-1 rounded-full border border-outline-variant/20 bg-surface px-3 py-1.5 text-xs font-semibold text-on-surface"
+                      className="inline-flex items-center gap-1 rounded-full border border-separator/35 bg-surface px-3 py-1.5 text-xs font-semibold text-on-surface"
                     >
                       <span className="material-symbols-outlined text-primary" style={{ fontSize: 14 }}>precision_manufacturing</span>
                       {machineName}
                     </span>
                   ))
                 ) : (
-                  <span className="inline-flex items-center gap-1 rounded-full border border-dashed border-outline-variant/20 bg-surface px-3 py-1.5 text-xs font-semibold text-outline">
+                  <span className="inline-flex items-center gap-1 rounded-full border border-dashed border-separator/35 bg-surface px-3 py-1.5 text-xs font-semibold text-outline">
                     <span className="material-symbols-outlined" style={{ fontSize: 14 }}>precision_manufacturing</span>
                     No machines assigned
                   </span>
@@ -259,7 +259,7 @@ export default function CheckFormDetailModal({ form, scheduleMeta, machineNames,
             </div>
           </section>
 
-          <section className="mt-5 rounded-2xl border border-outline-variant/20 bg-surface-container/40 p-4">
+          <section className="mt-5 rounded-2xl border border-separator/30 bg-surface-container/40 p-4">
             <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-outline">Activity</p>
             <div className="mt-3 grid gap-3 md:grid-cols-2">
               <ActivityItem icon="person" label="Created By" value={createdByName || form.createdBy || "Unknown user"} />
@@ -269,7 +269,7 @@ export default function CheckFormDetailModal({ form, scheduleMeta, machineNames,
             </div>
           </section>
 
-          <section className="mt-5 rounded-2xl border border-outline-variant/20 bg-surface-container/40 p-4">
+          <section className="mt-5 rounded-2xl border border-separator/30 bg-surface-container/40 p-4">
             <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
               <div>
                 <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-outline">Checks</p>
@@ -285,12 +285,12 @@ export default function CheckFormDetailModal({ form, scheduleMeta, machineNames,
           </section>
         </div>
 
-        <div className="flex flex-col gap-3 border-t border-outline-variant/20 px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col gap-3 border-t border-separator/30 px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-xs leading-5 text-outline">Edit this form to update machine scope, cadence, metadata, or checklist fields.</p>
           <button
             type="button"
             onClick={onEdit}
-            className="inline-flex items-center justify-center gap-2 rounded-2xl bg-primary px-4 py-3 text-sm font-bold text-on-primary transition hover:opacity-90"
+            className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-on-primary hover:opacity-90 active:scale-95 transition-all duration-150"
           >
             <span className="material-symbols-outlined" style={{ fontSize: 18 }}>edit</span>
             Edit Form

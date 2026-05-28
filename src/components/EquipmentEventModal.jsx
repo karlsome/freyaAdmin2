@@ -152,7 +152,7 @@ export default function EquipmentEventModal({
             <div className="grid gap-4">
 
               {/* Equipment (read-only) */}
-              <div className="rounded-2xl border border-outline-variant/20 bg-surface-container px-4 py-3">
+              <div className="rounded-2xl border border-separator/40 bg-surface-container px-4 py-3">
                 <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-outline">設備</p>
                 <p className="mt-0.5 text-sm font-bold text-on-surface">{equipment?.name || "—"}</p>
                 {equipment?.["工場"] && (
@@ -197,7 +197,7 @@ export default function EquipmentEventModal({
                         ? workerNames.filter((n) => n.toLowerCase().includes(q))
                         : workerNames;
                       return filtered.length > 0 ? (
-                        <ul className="absolute z-50 mt-1 max-h-48 w-full overflow-y-auto rounded-2xl border border-outline-variant/20 bg-surface shadow-lg">
+                        <ul className="absolute z-50 mt-1 max-h-48 w-full overflow-y-auto rounded-2xl border border-separator/40 bg-surface shadow-lg">
                           {filtered.map((name) => (
                             <li key={name}>
                               <button
@@ -256,11 +256,11 @@ export default function EquipmentEventModal({
                         <div key={url} className="group relative">
                           {isVideo ? (
                             <video src={url}
-                              className="h-16 w-16 rounded-xl object-cover border border-outline-variant/20 bg-black"
+                              className="h-16 w-16 rounded-xl object-cover border border-separator/40 bg-black"
                               muted playsInline />
                           ) : (
                             <img src={url} alt="添付画像"
-                              className="h-16 w-16 rounded-xl object-cover border border-outline-variant/20" />
+                              className="h-16 w-16 rounded-xl object-cover border border-separator/40" />
                           )}
                           <button type="button"
                             onClick={() => removeImage(url)}
@@ -300,11 +300,11 @@ export default function EquipmentEventModal({
               <p className="text-sm text-on-surface-variant">発生事案・カテゴリは必須です。</p>
               <div className="flex items-center gap-3">
                 <button type="button" onClick={onClose}
-                  className="rounded-2xl border border-outline-variant/20 px-4 py-2 text-xs font-bold text-on-surface transition hover:bg-surface-container">
+                  className="rounded-2xl border border-separator/40 px-4 py-2 text-xs font-bold text-on-surface transition hover:bg-surface-container">
                   Cancel
                 </button>
                 <button type="submit" disabled={!hasData || submitting || uploading}
-                  className="rounded-2xl bg-primary px-4 py-2 text-xs font-bold text-on-primary transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50">
+                  className="rounded-xl bg-primary px-4 py-2 text-xs font-bold text-on-primary hover:opacity-90 active:scale-95 transition-all duration-150 disabled:cursor-not-allowed disabled:opacity-50">
                   {submitting ? "保存中…" : "事案を登録"}
                 </button>
               </div>

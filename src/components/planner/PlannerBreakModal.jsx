@@ -45,7 +45,7 @@ export default function PlannerBreakModal({
           <button
             type="button"
             onClick={onClose}
-            className="rounded-2xl border border-outline-variant/20 px-4 py-2 text-sm font-bold text-on-surface transition hover:bg-surface-container"
+            className="rounded-2xl border border-separator/40 px-4 py-2 text-sm font-bold text-on-surface transition hover:bg-surface-container"
           >
             Cancel
           </button>
@@ -68,24 +68,24 @@ export default function PlannerBreakModal({
               value={item.name || ""}
               onChange={(event) => updateBreak(item.id, { name: event.target.value })}
               placeholder="Break name"
-              className="planner-data-text h-11 rounded-2xl border border-outline-variant/20 px-4 outline-none transition focus:border-primary/40"
+              className="planner-data-text h-11 rounded-2xl border border-separator/40 px-4 outline-none transition focus:border-primary/40"
             />
             <input
               type="time"
               value={item.start || ""}
               onChange={(event) => updateBreak(item.id, { start: event.target.value })}
-              className="planner-data-text h-11 rounded-2xl border border-outline-variant/20 px-4 outline-none transition focus:border-primary/40"
+              className="planner-data-text h-11 rounded-2xl border border-separator/40 px-4 outline-none transition focus:border-primary/40"
             />
             <input
               type="time"
               value={item.end || ""}
               onChange={(event) => updateBreak(item.id, { end: event.target.value })}
-              className="planner-data-text h-11 rounded-2xl border border-outline-variant/20 px-4 outline-none transition focus:border-primary/40"
+              className="planner-data-text h-11 rounded-2xl border border-separator/40 px-4 outline-none transition focus:border-primary/40"
             />
             <select
               value={item.equipment || ""}
               onChange={(event) => updateBreak(item.id, { equipment: event.target.value || null })}
-              className="planner-data-text h-11 rounded-2xl border border-outline-variant/20 px-4 outline-none transition focus:border-primary/40"
+              className="planner-data-text h-11 rounded-2xl border border-separator/40 px-4 outline-none transition focus:border-primary/40"
             >
               <option value="">All equipment</option>
               {equipmentOptions.map((equipment) => (

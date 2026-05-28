@@ -34,7 +34,7 @@ export default function PlannerGoalsPanel({
               type="button"
               onClick={() => fileInputRef.current?.click()}
               disabled={importing}
-              className="flex items-center gap-2 rounded-2xl border border-outline-variant/20 bg-surface-container px-4 py-2 text-xs font-bold text-on-surface transition hover:bg-surface-container-high disabled:cursor-not-allowed disabled:opacity-50"
+              className="flex items-center gap-2 rounded-2xl border border-separator/40 bg-surface-container px-4 py-2 text-xs font-bold text-on-surface transition hover:bg-surface-container-high disabled:cursor-not-allowed disabled:opacity-50"
             >
               <span className="material-symbols-outlined" style={{ fontSize: 16 }}>upload</span>
               {importing ? "Reading CSV…" : "Upload CSV"}
@@ -64,7 +64,7 @@ export default function PlannerGoalsPanel({
         <div className="mt-4 flex flex-col gap-3 lg:flex-row lg:items-center">
           <div className="flex-1">
             <label htmlFor={inputId} className="sr-only">Search goals</label>
-            <div className="ui-control-surface flex h-11 items-center gap-3 rounded-2xl border border-outline-variant/20 px-4">
+            <div className="ui-control-surface flex h-11 items-center gap-3 rounded-2xl border border-separator/40 px-4">
               <span className="material-symbols-outlined text-outline" style={{ fontSize: 18 }}>search</span>
               <input
                 id={inputId}

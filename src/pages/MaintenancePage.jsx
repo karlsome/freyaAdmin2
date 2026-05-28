@@ -126,7 +126,7 @@ function FormCard({ form, machineNames, onOpen }) {
           </span>
         </div>
       </div>
-      <div className="flex items-center justify-between border-t border-outline-variant/20 px-5 py-3 text-xs font-bold">
+      <div className="flex items-center justify-between border-t border-separator/30 px-5 py-3 text-xs font-bold">
         <span className="text-outline">Click card to view details</span>
         <span className="inline-flex items-center gap-1 text-primary">
           Open
@@ -254,7 +254,7 @@ export default function MaintenancePage() {
             <button
               type="button"
               onClick={() => openBuilder(null, selectedSchedule)}
-              className="inline-flex items-center gap-2 rounded-2xl bg-primary px-4 py-3 text-sm font-bold text-on-primary transition hover:opacity-90"
+              className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-bold text-on-primary hover:opacity-90 active:scale-95 transition-all duration-150"
             >
               <span className="material-symbols-outlined" style={{ fontSize: 18 }}>add</span>
               New {selectedScheduleMeta.label} Form
@@ -304,7 +304,7 @@ export default function MaintenancePage() {
           })}
         </div>
 
-        <div className="glass-card mb-6 rounded-2xl p-4">
+        <div className="dashboard-section mb-6 rounded-2xl p-4">
           <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
             <div>
               <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-outline">Selected Cadence</p>
@@ -350,7 +350,7 @@ export default function MaintenancePage() {
             <button
               type="button"
               onClick={() => openBuilder(null, selectedSchedule)}
-              className="inline-flex items-center gap-2 rounded-2xl bg-primary px-4 py-3 text-sm font-bold text-on-primary transition hover:opacity-90"
+              className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-bold text-on-primary hover:opacity-90 active:scale-95 transition-all duration-150"
             >
               <span className="material-symbols-outlined" style={{ fontSize: 18 }}>add</span>
               Create {selectedScheduleMeta.label} Form
@@ -370,7 +370,7 @@ export default function MaintenancePage() {
             <button
               type="button"
               onClick={() => openBuilder(null, selectedSchedule)}
-              className="inline-flex items-center gap-2 rounded-2xl bg-primary px-4 py-3 text-sm font-bold text-on-primary transition hover:opacity-90"
+              className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-bold text-on-primary hover:opacity-90 active:scale-95 transition-all duration-150"
             >
               <span className="material-symbols-outlined" style={{ fontSize: 18 }}>add</span>
               Create {selectedScheduleMeta.label} Form

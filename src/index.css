@@ -13,9 +13,9 @@
   --c-surface-container-low:    244 243 249;
   --c-surface-container-high:   236 233 244;
   --c-surface-container-highest:228 225 233;
-  --c-on-surface:               27 27 31;
-  --c-on-surface-variant:       70 70 79;
-  --c-on-background:            27 27 31;
+  --c-on-surface:               17 17 22;
+  --c-on-surface-variant:       54 54 66;
+  --c-on-background:            17 17 22;
   --c-primary:                  73 75 214;
   --c-primary-container:        128 131 255;
   --c-on-primary:               255 255 255;
@@ -27,8 +27,10 @@
   --c-error-container:          255 218 214;
   --c-on-error:                 255 255 255;
   --c-on-error-container:       65 0 2;
-  --c-outline:                  118 118 128;
-  --c-outline-variant:          226 228 233;
+  --c-outline:                  96 96 110;
+  --c-outline-variant:          205 207 216;
+  --c-lavender:                 138 120 255;
+  --c-separator:                214 216 226;
   --c-form-control-bg:          255 255 255;
   --c-form-control-bg-hover:    248 249 250;
   --c-form-control-text:        27 27 31;
@@ -49,9 +51,9 @@
   --c-surface-container-low:    25 28 34;
   --c-surface-container-high:   39 42 49;
   --c-surface-container-highest:50 53 60;
-  --c-on-surface:               225 226 235;
-  --c-on-surface-variant:       199 196 215;
-  --c-on-background:            225 226 235;
+  --c-on-surface:               232 233 242;
+  --c-on-surface-variant:       192 190 210;
+  --c-on-background:            232 233 242;
   --c-primary:                  192 193 255;
   --c-primary-container:        128 131 255;
   --c-on-primary:               16 0 169;
@@ -63,8 +65,10 @@
   --c-error-container:          147 0 10;
   --c-on-error:                 105 0 5;
   --c-on-error-container:       255 218 214;
-  --c-outline:                  144 143 160;
-  --c-outline-variant:          70 69 84;
+  --c-outline:                  155 154 172;
+  --c-outline-variant:          76 75 92;
+  --c-lavender:                 172 158 255;
+  --c-separator:                60 60 76;
   --c-form-control-bg:          29 32 38;
   --c-form-control-bg-hover:    39 42 49;
   --c-form-control-text:        225 226 235;
@@ -361,22 +365,73 @@ select:-webkit-autofill:focus {
 
 /* ─── Glass card ────────────────────────────────────────────────────────────── */
 .glass-card {
-  background: rgba(250, 249, 255, 0.82);
+  background: rgba(252, 251, 255, 0.90);
   -webkit-backdrop-filter: blur(14px) saturate(1.4);
   backdrop-filter: blur(14px) saturate(1.4);
-  border: 1px solid rgba(226, 228, 233, 0.3);
+  border: 1px solid rgba(205, 207, 216, 0.60);
   box-shadow:
-    0 1px 3px rgba(0, 0, 0, 0.05),
-    inset 1px 1px 0 rgba(255, 255, 255, 0.7);
+    0 2px 8px rgba(0, 0, 0, 0.06),
+    0 1px 2px rgba(0, 0, 0, 0.03),
+    inset 1px 1px 0 rgba(255, 255, 255, 0.88);
 }
 .dark .glass-card {
-  background: rgba(20, 16, 40, 0.52);
+  background: rgba(22, 18, 42, 0.60);
   -webkit-backdrop-filter: blur(22px) saturate(1.5);
   backdrop-filter: blur(22px) saturate(1.5);
-  border: 1px solid rgba(70, 69, 84, 0.3);
+  border: 1px solid rgba(78, 76, 96, 0.50);
   box-shadow:
-    0 2px 8px rgba(0, 0, 0, 0.3),
-    inset 1px 1px 0 rgba(255, 255, 255, 0.03);
+    0 4px 16px rgba(0, 0, 0, 0.38),
+    0 1px 4px rgba(0, 0, 0, 0.22),
+    inset 1px 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+/* ─── Dashboard section (elevated major card) ───────────────────────────────── */
+.dashboard-section {
+  background: rgba(252, 251, 255, 0.94);
+  -webkit-backdrop-filter: blur(14px) saturate(1.4);
+  backdrop-filter: blur(14px) saturate(1.4);
+  border: 1px solid rgba(198, 200, 214, 0.70);
+  box-shadow:
+    0 4px 20px rgba(0, 0, 0, 0.08),
+    0 2px 6px rgba(0, 0, 0, 0.04),
+    inset 1px 1px 0 rgba(255, 255, 255, 0.92);
+}
+.dark .dashboard-section {
+  background: rgba(24, 20, 44, 0.68);
+  -webkit-backdrop-filter: blur(22px) saturate(1.5);
+  backdrop-filter: blur(22px) saturate(1.5);
+  border: 1px solid rgba(84, 82, 102, 0.55);
+  box-shadow:
+    0 6px 28px rgba(0, 0, 0, 0.44),
+    0 2px 8px rgba(0, 0, 0, 0.28),
+    inset 1px 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+/* ─── Hover elevation for interactive cards ─────────────────────────────────── */
+.card-hover-lift {
+  transition: transform 160ms cubic-bezier(0.34, 1.4, 0.64, 1),
+              box-shadow 160ms ease,
+              border-color 160ms ease;
+}
+.card-hover-lift:hover {
+  transform: translateY(-2px);
+  box-shadow:
+    0 8px 24px rgba(0, 0, 0, 0.10),
+    0 3px 8px rgba(0, 0, 0, 0.06);
+}
+.dark .card-hover-lift:hover {
+  box-shadow:
+    0 8px 28px rgba(0, 0, 0, 0.48),
+    0 3px 10px rgba(0, 0, 0, 0.32);
+}
+
+/* ─── Fade-in-up entrance animation ────────────────────────────────────────── */
+@keyframes fade-in-up {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.animate-fade-in-up {
+  animation: fade-in-up 220ms cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
 /* ─── Kinetic gradient (logo + accent elements) ─────────────────────────────── */
@@ -443,15 +498,12 @@ select:-webkit-autofill:focus {
   animation: app-shell-sidebar-enter 760ms cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
-.app-main-shell {
-  will-change: transform, opacity, filter;
-}
-
 .app-main-shell--handoff-target {
   view-transition-name: auth-shell-handoff;
 }
 
 .app-main-shell--enter {
+  will-change: transform, opacity, filter;
   animation: app-shell-main-enter 880ms cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 

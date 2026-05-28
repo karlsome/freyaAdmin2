@@ -27,7 +27,7 @@ function FieldRow({
   onChangeEN,
 }) {
   const baseClassName = editable
-    ? "w-full rounded-2xl border border-outline-variant/20 bg-surface px-4 py-3 text-sm text-on-surface outline-none transition focus:border-primary/40"
+    ? "w-full rounded-2xl border border-separator/40 bg-surface px-4 py-3 text-sm text-on-surface outline-none transition focus:border-primary/40"
     : "w-full rounded-2xl border border-outline-variant/15 bg-surface-container px-4 py-3 text-sm text-on-surface";
 
   return (
@@ -104,7 +104,7 @@ export default function FuryoDefinitionPanel({
 
   return (
     <div className="glass-card flex h-[min(74vh,820px)] flex-col overflow-hidden rounded-3xl">
-      <div className="border-b border-outline-variant/20 px-6 py-5">
+      <div className="border-b border-separator/35 px-6 py-5">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div>
             <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-outline">Defect Definition</div>
@@ -153,7 +153,7 @@ export default function FuryoDefinitionPanel({
         </div>
       </div>
 
-      <div className="flex flex-col gap-4 border-t border-outline-variant/20 px-6 py-4 md:flex-row md:items-center md:justify-between">
+      <div className="flex flex-col gap-4 border-t border-separator/30 px-6 py-4 md:flex-row md:items-center md:justify-between">
         <div className="text-sm text-on-surface-variant">
           {canEdit
             ? editMode
@@ -169,14 +169,14 @@ export default function FuryoDefinitionPanel({
                 <button
                   type="button"
                   onClick={onClear}
-                  className="rounded-xl border border-outline-variant/20 px-4 py-2 text-xs font-bold text-on-surface transition hover:bg-surface-container"
+                  className="rounded-xl border border-separator/40 px-4 py-2 text-xs font-bold text-on-surface transition hover:bg-surface-container"
                 >
                   Clear
                 </button>
                 <button
                   type="button"
                   onClick={onCancelEdit}
-                  className="rounded-xl border border-outline-variant/20 px-4 py-2 text-xs font-bold text-on-surface transition hover:bg-surface-container"
+                  className="rounded-xl border border-separator/40 px-4 py-2 text-xs font-bold text-on-surface transition hover:bg-surface-container"
                 >
                   Cancel
                 </button>
@@ -184,7 +184,7 @@ export default function FuryoDefinitionPanel({
                   type="button"
                   onClick={onSave}
                   disabled={!hasChanges || saving}
-                  className="rounded-xl bg-primary px-5 py-2 text-xs font-bold text-on-primary transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="rounded-xl bg-primary px-5 py-2 text-xs font-bold text-on-primary hover:opacity-90 active:scale-95 transition-all duration-150 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {saving ? "Saving…" : "Save"}
                 </button>

@@ -320,7 +320,7 @@ function SavedPresetManagerCard({ activePresetId, draftName, editingPresetId, on
           value={draftName}
           onChange={(event) => onDraftNameChange(event.target.value)}
           placeholder={editingPresetId ? "Rename this preset" : "Name this filter view"}
-          className="h-11 flex-1 rounded-xl border border-outline-variant/20 bg-white px-3 text-sm text-on-surface outline-none transition-colors focus:border-primary/40"
+          className="h-11 flex-1 rounded-xl border border-separator/40 bg-white px-3 text-sm text-on-surface outline-none transition-colors focus:border-primary/40"
         />
         <button
           type="button"
@@ -335,7 +335,7 @@ function SavedPresetManagerCard({ activePresetId, draftName, editingPresetId, on
           <button
             type="button"
             onClick={onCancelEdit}
-            className="inline-flex items-center justify-center gap-2 rounded-xl border border-outline-variant/20 bg-white px-4 py-2.5 text-sm font-bold text-on-surface transition hover:border-primary/30 hover:text-primary"
+            className="inline-flex items-center justify-center gap-2 rounded-xl border border-separator/40 bg-white px-4 py-2.5 text-sm font-bold text-on-surface transition hover:border-primary/30 hover:text-primary"
           >
             <span className="material-symbols-outlined" style={{ fontSize: 16 }}>close</span>
             Cancel
@@ -372,7 +372,7 @@ function SavedPresetManagerCard({ activePresetId, draftName, editingPresetId, on
                   <button
                     type="button"
                     onClick={() => onApply(preset)}
-                    className="inline-flex items-center gap-2 rounded-xl border border-outline-variant/20 bg-white px-3 py-2 text-xs font-bold text-on-surface transition hover:border-primary/30 hover:text-primary"
+                    className="inline-flex items-center gap-2 rounded-xl border border-separator/40 bg-white px-3 py-2 text-xs font-bold text-on-surface transition hover:border-primary/30 hover:text-primary"
                   >
                     <span className="material-symbols-outlined" style={{ fontSize: 14 }}>visibility</span>
                     Apply
@@ -380,7 +380,7 @@ function SavedPresetManagerCard({ activePresetId, draftName, editingPresetId, on
                   <button
                     type="button"
                     onClick={() => onRename(preset)}
-                    className="inline-flex items-center gap-2 rounded-xl border border-outline-variant/20 bg-white px-3 py-2 text-xs font-bold text-on-surface transition hover:border-primary/30 hover:text-primary"
+                    className="inline-flex items-center gap-2 rounded-xl border border-separator/40 bg-white px-3 py-2 text-xs font-bold text-on-surface transition hover:border-primary/30 hover:text-primary"
                   >
                     <span className="material-symbols-outlined" style={{ fontSize: 14 }}>drive_file_rename_outline</span>
                     Rename
@@ -411,7 +411,7 @@ function ExportTicketResultsCard({ disabled, exporting, filteredCount, onCopySha
       <p className="mt-3 text-sm leading-6 text-outline">
         Export the current ticket view or the full submitted-ticket history. Large all-data exports may take longer than filtered exports.
       </p>
-      <div className="mt-4 flex items-center justify-between gap-3 rounded-2xl border border-outline-variant/20 bg-surface px-4 py-3">
+      <div className="mt-4 flex items-center justify-between gap-3 rounded-2xl border border-separator/40 bg-surface px-4 py-3">
         <div>
           <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-outline">Current Export Scope</p>
           <p className="mt-1 text-sm font-semibold text-on-surface">{formatTicketNumber(filteredCount)} matching tickets</p>
@@ -420,7 +420,7 @@ function ExportTicketResultsCard({ disabled, exporting, filteredCount, onCopySha
           <button
             type="button"
             onClick={onCopyShareLink}
-            className="inline-flex items-center justify-center gap-2 rounded-xl border border-outline-variant/20 bg-white px-4 py-2.5 text-sm font-bold text-on-surface transition hover:border-primary/30 hover:text-primary"
+            className="inline-flex items-center justify-center gap-2 rounded-xl border border-separator/40 bg-white px-4 py-2.5 text-sm font-bold text-on-surface transition hover:border-primary/30 hover:text-primary"
           >
             <span className="material-symbols-outlined" style={{ fontSize: 16 }}>link</span>
             {shareButtonLabel}
@@ -458,10 +458,10 @@ function ExportChoiceModal({ filteredCount, onClose, onExportAll, onExportFilter
   return (
     <div className="fixed inset-0 z-[75] flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm" onClick={onClose}>
       <div
-        className="glass-card flex w-full max-w-xl flex-col overflow-hidden rounded-2xl border border-outline-variant/20"
+        className="dashboard-section flex w-full max-w-xl flex-col overflow-hidden rounded-2xl"
         onClick={(event) => event.stopPropagation()}
       >
-        <div className="flex items-start justify-between gap-4 border-b border-outline-variant/20 px-6 py-5">
+        <div className="flex items-start justify-between gap-4 border-b border-separator/35 px-6 py-5">
           <div className="min-w-0 flex-1">
             <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-outline">Export Choice</p>
             <h3 className="mt-1 text-lg font-black text-on-surface">Choose what to export</h3>
@@ -472,9 +472,9 @@ function ExportChoiceModal({ filteredCount, onClose, onExportAll, onExportFilter
           <button
             type="button"
             onClick={onClose}
-            className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-2xl bg-surface-container text-on-surface-variant transition hover:bg-surface-container-high"
+            className="p-2 rounded-xl flex-shrink-0 text-outline hover:bg-surface-container hover:text-on-surface transition-all duration-150 active:scale-95"
           >
-            <span className="material-symbols-outlined">close</span>
+            <span className="material-symbols-outlined" style={{ fontSize: 18 }}>close</span>
           </button>
         </div>
 
@@ -494,7 +494,7 @@ function ExportChoiceModal({ filteredCount, onClose, onExportAll, onExportFilter
           <button
             type="button"
             onClick={onExportAll}
-            className="rounded-2xl border border-outline-variant/20 bg-surface-container px-4 py-4 text-left transition hover:border-primary/30 hover:bg-surface-container-high"
+            className="rounded-2xl border border-separator/40 bg-surface-container px-4 py-4 text-left transition hover:border-primary/30 hover:bg-surface-container-high"
           >
             <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-outline">Full History</p>
             <p className="mt-2 text-base font-black text-on-surface">Export all data</p>
@@ -657,7 +657,7 @@ function ImagePreviewLightbox({ preview, onClose, onNavigate }) {
         className="flex max-h-[92vh] w-full max-w-4xl flex-col overflow-hidden rounded-[28px] border border-white/15 bg-slate-950/95 shadow-2xl"
         onClick={(event) => event.stopPropagation()}
       >
-        <div className="flex items-start justify-between gap-4 border-b border-white/10 px-5 py-4 text-white">
+        <div className="flex items-start justify-between gap-4 border-b border-separator/30 px-5 py-4 text-white">
           <div className="min-w-0 flex-1">
             <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/50">Image Preview</p>
             <p className="mt-1 truncate text-sm font-semibold text-white">{activeImage.label || "Ticket image"}</p>
@@ -700,7 +700,7 @@ function ImagePreviewLightbox({ preview, onClose, onNavigate }) {
           ) : null}
         </div>
 
-        <div className="flex flex-col gap-3 border-t border-white/10 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col gap-3 border-t border-separator/30 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-xs text-white/65">
             {hasMultipleImages
               ? "Use the left and right arrow keys or the side buttons to browse images, then download the current one if needed."
@@ -784,10 +784,10 @@ function TicketDetailModal({ actionBusy = false, onClose, onCloseTicket = null, 
     <>
       <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm" onClick={onClose}>
         <div
-          className="glass-card flex max-h-[88vh] w-full max-w-3xl flex-col overflow-hidden rounded-2xl border border-outline-variant/20"
+          className="dashboard-section flex max-h-[88vh] w-full max-w-3xl flex-col overflow-hidden rounded-2xl"
           onClick={(event) => event.stopPropagation()}
         >
-          <div className="flex items-start justify-between gap-4 border-b border-outline-variant/20 px-6 py-5">
+          <div className="flex items-start justify-between gap-4 border-b border-separator/35 px-6 py-5">
             <div className="min-w-0 flex-1">
               <p className="text-xs font-bold uppercase tracking-[0.18em] text-outline">Submitted Ticket</p>
               <h3 className="mt-1 truncate text-lg font-black text-on-surface">{ticket.fieldLabel || "Untitled ticket"}</h3>
@@ -800,13 +800,13 @@ function TicketDetailModal({ actionBusy = false, onClose, onCloseTicket = null, 
             <button
               type="button"
               onClick={onClose}
-              className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-2xl bg-surface-container text-on-surface-variant transition hover:bg-surface-container-high"
+              className="p-2 rounded-xl flex-shrink-0 text-outline hover:bg-surface-container hover:text-on-surface transition-all duration-150 active:scale-95"
             >
-              <span className="material-symbols-outlined">close</span>
+              <span className="material-symbols-outlined" style={{ fontSize: 18 }}>close</span>
             </button>
           </div>
 
-          <div className="flex flex-col gap-3 border-b border-outline-variant/20 px-6 py-4 text-sm lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex flex-col gap-3 border-b border-separator/35 px-6 py-4 text-sm lg:flex-row lg:items-center lg:justify-between">
             <div className="flex flex-wrap gap-3">
               <span className={joinClasses("inline-flex items-center rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.14em]", statusMeta.badgeClassName)}>
                 {statusMeta.label}
@@ -854,7 +854,7 @@ function TicketDetailModal({ actionBusy = false, onClose, onCloseTicket = null, 
                 <button
                   type="button"
                   onClick={onOpenChecklistSubmission}
-                  className="inline-flex items-center justify-center gap-2 rounded-xl border border-outline-variant/20 bg-white px-4 py-2 text-sm font-bold text-on-surface transition hover:border-primary/30 hover:text-primary"
+                  className="inline-flex items-center justify-center gap-2 rounded-xl border border-separator/40 bg-white px-4 py-2 text-sm font-bold text-on-surface transition hover:border-primary/30 hover:text-primary"
                 >
                   <span className="material-symbols-outlined" style={{ fontSize: 16 }}>arrow_outward</span>
                   Open Checklist Submission
@@ -865,23 +865,23 @@ function TicketDetailModal({ actionBusy = false, onClose, onCloseTicket = null, 
 
           <div className="flex-1 overflow-y-auto px-6 py-5">
             <div className="grid gap-4 lg:grid-cols-[minmax(0,1.3fr)_minmax(240px,0.7fr)]">
-              <article className="rounded-2xl border border-outline-variant/20 bg-surface-container px-5 py-4">
+              <article className="rounded-2xl border border-separator/40 bg-surface-container px-5 py-4">
                 <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-outline">NG Reason</p>
                 <p className="mt-2 text-sm leading-6 text-on-surface">{ticket.reason || "No reason provided."}</p>
               </article>
 
               <div className="grid gap-4">
-                <article className="rounded-2xl border border-outline-variant/20 bg-surface-container px-4 py-4">
+                <article className="rounded-2xl border border-separator/40 bg-surface-container px-4 py-4">
                   <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-outline">Submitted Value</p>
                   <p className="mt-2 text-sm font-semibold text-on-surface">{ticket.answerValue || "—"}</p>
                 </article>
 
-                <article className="rounded-2xl border border-outline-variant/20 bg-surface-container px-4 py-4">
+                <article className="rounded-2xl border border-separator/40 bg-surface-container px-4 py-4">
                   <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-outline">Allowed Range</p>
                   <p className="mt-2 text-sm font-semibold text-on-surface">{expectedRange || "No range configured"}</p>
                 </article>
 
-                <article className="rounded-2xl border border-outline-variant/20 bg-surface-container px-4 py-4">
+                <article className="rounded-2xl border border-separator/40 bg-surface-container px-4 py-4">
                   <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-outline">Image Evidence</p>
                   <p className="mt-2 text-sm font-semibold text-on-surface">{formatTicketNumber(ticket.imageCount ?? ticket.imageURLs?.length ?? 0)} image{(ticket.imageCount ?? ticket.imageURLs?.length ?? 0) === 1 ? "" : "s"}</p>
                 </article>
@@ -889,17 +889,17 @@ function TicketDetailModal({ actionBusy = false, onClose, onCloseTicket = null, 
             </div>
 
             <div className="mt-4 grid gap-4 md:grid-cols-3">
-              <article className="rounded-2xl border border-outline-variant/20 bg-surface-container px-4 py-4">
+              <article className="rounded-2xl border border-separator/40 bg-surface-container px-4 py-4">
                 <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-outline">Checklist Form</p>
                 <p className="mt-2 text-sm font-semibold text-on-surface">{ticket.formName || "—"}</p>
               </article>
 
-              <article className="rounded-2xl border border-outline-variant/20 bg-surface-container px-4 py-4">
+              <article className="rounded-2xl border border-separator/40 bg-surface-container px-4 py-4">
                 <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-outline">Machine</p>
                 <p className="mt-2 text-sm font-semibold text-on-surface">{ticket.machineName || "—"}</p>
               </article>
 
-              <article className="rounded-2xl border border-outline-variant/20 bg-surface-container px-4 py-4">
+              <article className="rounded-2xl border border-separator/40 bg-surface-container px-4 py-4">
                 <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-outline">Latest Closure</p>
                 {ticket.closedAt ? (
                   <>
@@ -912,7 +912,7 @@ function TicketDetailModal({ actionBusy = false, onClose, onCloseTicket = null, 
               </article>
             </div>
 
-            <div className="mt-5 rounded-2xl border border-outline-variant/20 bg-surface-container px-5 py-4">
+            <div className="mt-5 rounded-2xl border border-separator/40 bg-surface-container px-5 py-4">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
                   <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-outline">Status History</p>
@@ -981,7 +981,7 @@ function TicketDetailModal({ actionBusy = false, onClose, onCloseTicket = null, 
                       key={`${imageUrl}-${index}`}
                       type="button"
                       onClick={() => openPreviewImage(index)}
-                      className="group overflow-hidden rounded-2xl border border-outline-variant/20 bg-surface transition hover:border-primary/30"
+                      className="group overflow-hidden rounded-2xl border border-separator/40 bg-surface transition hover:border-primary/30"
                     >
                       <img
                         src={imageUrl}
@@ -1759,7 +1759,7 @@ export default function TicketSubmissionsPage() {
         topBarClassName="flex flex-col gap-4 border-b border-outline-variant/15 px-5 py-4 md:flex-row md:items-center md:justify-between"
         bottomBarClassName="flex flex-col gap-4 border-t border-outline-variant/15 px-5 py-4 md:flex-row md:items-center md:justify-between"
         rowClassName="border-b border-outline-variant/10 transition hover:bg-primary/5"
-        rowsSelectClassName="h-10 rounded-2xl border border-outline-variant/30 bg-white px-3 text-sm text-on-surface outline-none transition focus:border-primary/40 dark:bg-surface-container"
+        rowsSelectClassName="h-10 rounded-2xl border border-separator/50 bg-white px-3 text-sm text-on-surface outline-none transition focus:border-primary/40 dark:bg-surface-container"
       />
 
       {selectedTicket && createPortal(

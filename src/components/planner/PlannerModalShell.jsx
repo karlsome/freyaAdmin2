@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { createPortal } from "react-dom";
 
 export default function PlannerModalShell({
   open,
@@ -22,8 +23,8 @@ export default function PlannerModalShell({
 
   if (!open) return null;
 
-  return (
-    <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/55 p-4 backdrop-blur-sm" onClick={onClose}>
+  const modal = (
+    <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm" onClick={onClose}>
       <div
         className={`glass-card flex max-h-[90vh] w-full flex-col overflow-hidden rounded-2xl ${maxWidthClassName}`.trim()}
         onClick={(event) => event.stopPropagation()}
@@ -36,19 +37,21 @@ export default function PlannerModalShell({
           <button
             type="button"
             onClick={onClose}
-            className="flex h-10 w-10 items-center justify-center rounded-2xl bg-surface-container text-on-surface-variant transition hover:bg-surface-container-high hover:text-on-surface"
+            className="p-2 rounded-xl flex-shrink-0 text-outline hover:bg-surface-container hover:text-on-surface transition-all duration-150 active:scale-95"
             aria-label="Close dialog"
           >
-            <span className="material-symbols-outlined">close</span>
+            <span className="material-symbols-outlined" style={{ fontSize: 18 }}>close</span>
           </button>
         </div>
 
         <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5">{children}</div>
 
         {footer ? (
-          <div className="border-t border-outline-variant/15 px-6 py-4">{footer}</div>
+          <div className="border-t border-separator/30 px-6 py-4">{footer}</div>
         ) : null}
       </div>
     </div>
   );
+
+  return createPortal(modal, document.body);
 }

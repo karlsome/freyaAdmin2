@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Papa from "papaparse";
 import NodaModalFrame from "./NodaModalFrame";
+import DataTable from "../DataTable";
 import EmptyState from "../EmptyState";
 import StatusChip from "../StatusChip";
 import {
@@ -89,6 +90,48 @@ function InventoryBadge({ lineItem }) {
   return <span className="inline-flex rounded-full bg-emerald-500/10 px-2.5 py-1 text-xs font-bold text-emerald-700 dark:text-emerald-300">OK</span>;
 }
 
+function sortNodaLineItems(items = [], sort = {}) {
+  const column = String(sort?.column ?? "").trim();
+  const direction = Number(sort?.direction) === -1 ? -1 : 1;
+  if (!column) return items;
+
+  const collator = new Intl.Collator("ja", { numeric: true, sensitivity: "base" });
+
+  return [...items].sort((left, right) => {
+    let leftValue;
+    let rightValue;
+
+    switch (column) {
+      case "lineNumber":
+        leftValue = Number(left?.lineNumber) || 0;
+        rightValue = Number(right?.lineNumber) || 0;
+        break;
+      case "quantity":
+        leftValue = Number(left?.quantity) || 0;
+        rightValue = Number(right?.quantity) || 0;
+        break;
+      case "reservedQuantity":
+        leftValue = Number(left?.reservedQuantity ?? left?.quantity) || 0;
+        rightValue = Number(right?.reservedQuantity ?? right?.quantity) || 0;
+        break;
+      case "shortfallQuantity":
+        leftValue = Number(left?.shortfallQuantity) || 0;
+        rightValue = Number(right?.shortfallQuantity) || 0;
+        break;
+      default:
+        leftValue = String(left?.[column] ?? "");
+        rightValue = String(right?.[column] ?? "");
+        break;
+    }
+
+    if (typeof leftValue === "number" && typeof rightValue === "number") {
+      return (leftValue - rightValue) * direction;
+    }
+
+    return collator.compare(String(leftValue), String(rightValue)) * direction;
+  });
+}
+
 export default function NodaDetailModal({ open, requestId, mode = "view", authUser, onClose, onSubmitted }) {
   const canManageRequest = canManageNodaRequests(authUser);
   const [request, setRequest] = useState(null);
@@ -100,6 +143,7 @@ export default function NodaDetailModal({ open, requestId, mode = "view", authUs
   const [singleForm, setSingleForm] = useState({ status: "", 品番: "", 背番号: "", date: "", quantity: "" });
   const [pickupDate, setPickupDate] = useState("");
   const [lineQuantities, setLineQuantities] = useState({});
+  const [lineItemSort, setLineItemSort] = useState({ column: "", direction: 1 });
   const [addForm, setAddForm] = useState({ partNumber: "", backNumber: "", quantity: "" });
   const [addCart, setAddCart] = useState([]);
   const [inventoryPreview, setInventoryPreview] = useState(null);
@@ -142,6 +186,7 @@ export default function NodaDetailModal({ open, requestId, mode = "view", authUs
     if (!open) return;
     setViewMode(canManageRequest ? mode : "view");
     setBulkTab("existing");
+    setLineItemSort({ column: "", direction: 1 });
     void loadRequest();
   }, [canManageRequest, loadRequest, mode, open]);
 
@@ -185,6 +230,154 @@ export default function NodaDetailModal({ open, requestId, mode = "view", authUs
     if (!request) return [];
     return isBulkRequest ? request.lineItems || [] : [request];
   }, [isBulkRequest, request]);
+  const sortedSummaryItems = useMemo(
+    () => sortNodaLineItems(summaryItems, lineItemSort),
+    [lineItemSort, summaryItems]
+  );
+
+  function handleLineItemSort(column) {
+    setLineItemSort((current) => {
+      if (current.column === column) {
+        return { column, direction: current.direction === 1 ? -1 : 1 };
+      }
+
+      return { column, direction: 1 };
+    });
+  }
+
+  const lineItemColumns = [
+    {
+      key: "lineNumber",
+      label: "Line",
+      width: 88,
+      renderCell: (lineItem) => <span className="text-on-surface">{lineItem.lineNumber}</span>,
+      disableCellWrapper: true,
+    },
+    {
+      key: "品番",
+      label: "品番",
+      width: 164,
+      renderCell: (lineItem) => <span className="font-semibold text-on-surface">{lineItem.品番 || "—"}</span>,
+      disableCellWrapper: true,
+    },
+    {
+      key: "背番号",
+      label: "背番号",
+      width: 164,
+      renderCell: (lineItem) => <span className="text-on-surface">{lineItem.背番号 || "—"}</span>,
+      disableCellWrapper: true,
+    },
+    {
+      key: "quantity",
+      label: "Quantity",
+      width: 168,
+      renderCell: (lineItem) => (
+        canManageRequest && viewMode === "edit" ? (
+          <div className="flex items-center gap-2">
+            <input
+              type="number"
+              min="1"
+              value={lineQuantities[lineItem.lineNumber] ?? lineItem.quantity}
+              onChange={(event) => setLineQuantities((current) => ({
+                ...current,
+                [lineItem.lineNumber]: event.target.value,
+              }))}
+              className="h-10 w-24 rounded-2xl border border-outline-variant/30 bg-white px-3 text-sm text-on-surface outline-none transition focus:border-primary/40 dark:bg-surface-container"
+            />
+            <button
+              type="button"
+              onClick={() => handleSaveLineQuantity(lineItem)}
+              disabled={busy}
+              className="rounded-2xl border border-separator/45 px-3 py-2 text-xs font-bold text-on-surface transition hover:bg-surface-container"
+            >
+              Save
+            </button>
+          </div>
+        ) : (
+          <span className="text-on-surface">{lineItem.quantity}</span>
+        )
+      ),
+      disableCellWrapper: true,
+    },
+    {
+      key: "reservedQuantity",
+      label: "Reserved",
+      width: 116,
+      renderCell: (lineItem) => <span className="text-on-surface">{lineItem.reservedQuantity ?? lineItem.quantity}</span>,
+      disableCellWrapper: true,
+    },
+    {
+      key: "shortfallQuantity",
+      label: "Shortfall",
+      width: 116,
+      renderCell: (lineItem) => <span className="text-on-surface">{lineItem.shortfallQuantity ?? 0}</span>,
+      disableCellWrapper: true,
+    },
+    {
+      key: "inventoryStatus",
+      label: "Inventory",
+      width: 124,
+      renderCell: (lineItem) => <InventoryBadge lineItem={lineItem} />,
+      disableCellWrapper: true,
+    },
+    {
+      key: "status",
+      label: "Status",
+      width: 152,
+      renderCell: (lineItem) => {
+        const lineMeta = getNodaStatusMeta(lineItem.status);
+
+        return canManageRequest && viewMode === "edit" ? (
+          <select
+            value={lineItem.status}
+            onChange={(event) => handleUpdateLineStatus(lineItem, event.target.value)}
+            disabled={busy}
+            className="h-10 rounded-2xl border border-outline-variant/30 bg-white px-3 text-sm text-on-surface outline-none transition focus:border-primary/40 dark:bg-surface-container"
+          >
+            <option value="pending">Pending</option>
+            <option value="in-progress">In Progress</option>
+            <option value="completed" disabled={lineItem.status === "in-progress"}>Completed</option>
+          </select>
+        ) : (
+          <span className={joinNodaClasses("inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-bold", lineMeta.badgeClassName)}>
+            <span className="material-symbols-outlined" style={{ fontSize: 14 }}>{lineMeta.icon}</span>
+            {lineMeta.label}
+          </span>
+        );
+      },
+      disableCellWrapper: true,
+    },
+    ...(canManageRequest && viewMode === "edit" ? [{
+      key: "actions",
+      label: "Actions",
+      sortable: false,
+      width: 124,
+      align: "right",
+      renderCell: (lineItem) => (
+        <div className="flex items-center justify-end gap-2">
+          <button
+            type="button"
+            onClick={() => handleUpdateLineStatus(lineItem, "completed")}
+            disabled={busy || lineItem.status === "completed" || lineItem.status === "in-progress"}
+            className="flex h-9 w-9 items-center justify-center rounded-2xl text-emerald-700 transition hover:bg-emerald-500/10 disabled:opacity-40 dark:text-emerald-300"
+            title="Mark completed"
+          >
+            <span className="material-symbols-outlined" style={{ fontSize: 18 }}>check_circle</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => handleDeleteLineItem(lineItem)}
+            disabled={busy}
+            className="flex h-9 w-9 items-center justify-center rounded-2xl text-error transition hover:bg-error/10 disabled:opacity-40"
+            title="Delete line"
+          >
+            <span className="material-symbols-outlined" style={{ fontSize: 18 }}>delete</span>
+          </button>
+        </div>
+      ),
+      disableCellWrapper: true,
+    }] : []),
+  ];
 
   async function resolveActorName() {
     if (!authUser?.username) {
@@ -463,7 +656,7 @@ export default function NodaDetailModal({ open, requestId, mode = "view", authUs
           <button
             type="button"
             onClick={() => setViewMode("view")}
-            className="rounded-2xl border border-outline-variant/25 px-4 py-2.5 text-sm font-semibold text-on-surface transition hover:bg-surface-container"
+            className="rounded-2xl border border-separator/45 px-4 py-2.5 text-sm font-semibold text-on-surface transition hover:bg-surface-container"
           >
             Cancel Edit
           </button>
@@ -471,7 +664,7 @@ export default function NodaDetailModal({ open, requestId, mode = "view", authUs
         <button
           type="button"
           onClick={() => onClose?.()}
-          className="rounded-2xl border border-outline-variant/25 px-4 py-2.5 text-sm font-semibold text-on-surface transition hover:bg-surface-container"
+          className="rounded-2xl border border-separator/45 px-4 py-2.5 text-sm font-semibold text-on-surface transition hover:bg-surface-container"
         >
           Close
         </button>
@@ -499,7 +692,7 @@ export default function NodaDetailModal({ open, requestId, mode = "view", authUs
         ) : null}
 
         {loading ? (
-          <div className="rounded-2xl border border-outline-variant/20 bg-surface-container-low/35 px-6 py-12 text-center text-sm text-on-surface-variant">
+          <div className="rounded-2xl border border-separator/40 bg-surface-container-low/35 px-6 py-12 text-center text-sm text-on-surface-variant">
             Loading request details…
           </div>
         ) : null}
@@ -697,7 +890,7 @@ export default function NodaDetailModal({ open, requestId, mode = "view", authUs
                         "rounded-2xl px-4 py-2.5 text-sm font-bold transition",
                         bulkTab === "existing"
                           ? "bg-primary text-white"
-                          : "border border-outline-variant/25 text-on-surface hover:bg-surface-container"
+                          : "border border-separator/45 text-on-surface hover:bg-surface-container"
                       )}
                     >
                       Existing Items
@@ -709,7 +902,7 @@ export default function NodaDetailModal({ open, requestId, mode = "view", authUs
                         "rounded-2xl px-4 py-2.5 text-sm font-bold transition",
                         bulkTab === "add"
                           ? "bg-primary text-white"
-                          : "border border-outline-variant/25 text-on-surface hover:bg-surface-container"
+                          : "border border-separator/45 text-on-surface hover:bg-surface-container"
                       )}
                     >
                       Add More Items
@@ -719,107 +912,29 @@ export default function NodaDetailModal({ open, requestId, mode = "view", authUs
 
                 {bulkTab === "existing" || !canEditBulkItems ? (
                   <div className="glass-card rounded-2xl p-5">
-                    <div className="overflow-x-auto rounded-2xl border border-outline-variant/15">
-                      <table className="min-w-full text-sm">
-                        <thead className="bg-surface-container-high/50 text-left text-on-surface-variant">
-                          <tr>
-                            <th className="px-4 py-3">Line</th>
-                            <th className="px-4 py-3">品番</th>
-                            <th className="px-4 py-3">背番号</th>
-                            <th className="px-4 py-3">Quantity</th>
-                            <th className="px-4 py-3">Reserved</th>
-                            <th className="px-4 py-3">Shortfall</th>
-                            <th className="px-4 py-3">Inventory</th>
-                            <th className="px-4 py-3">Status</th>
-                            {viewMode === "edit" ? <th className="px-4 py-3">Actions</th> : null}
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {summaryItems.map((lineItem) => {
-                            const lineMeta = getNodaStatusMeta(lineItem.status);
-                            return (
-                              <tr key={lineItem.lineNumber} className="border-t border-outline-variant/10">
-                                <td className="px-4 py-3 text-on-surface">{lineItem.lineNumber}</td>
-                                <td className="px-4 py-3 text-on-surface">{lineItem.品番}</td>
-                                <td className="px-4 py-3 text-on-surface">{lineItem.背番号}</td>
-                                <td className="px-4 py-3">
-                                  {canManageRequest && viewMode === "edit" ? (
-                                    <div className="flex items-center gap-2">
-                                      <input
-                                        type="number"
-                                        min="1"
-                                        value={lineQuantities[lineItem.lineNumber] ?? lineItem.quantity}
-                                        onChange={(event) => setLineQuantities((current) => ({
-                                          ...current,
-                                          [lineItem.lineNumber]: event.target.value,
-                                        }))}
-                                        className="h-10 w-24 rounded-2xl border border-outline-variant/30 bg-white px-3 text-sm text-on-surface outline-none transition focus:border-primary/40 dark:bg-surface-container"
-                                      />
-                                      <button
-                                        type="button"
-                                        onClick={() => handleSaveLineQuantity(lineItem)}
-                                        disabled={busy}
-                                        className="rounded-2xl border border-outline-variant/25 px-3 py-2 text-xs font-bold text-on-surface transition hover:bg-surface-container"
-                                      >
-                                        Save
-                                      </button>
-                                    </div>
-                                  ) : (
-                                    <span className="text-on-surface">{lineItem.quantity}</span>
-                                  )}
-                                </td>
-                                <td className="px-4 py-3 text-on-surface">{lineItem.reservedQuantity ?? lineItem.quantity}</td>
-                                <td className="px-4 py-3 text-on-surface">{lineItem.shortfallQuantity ?? 0}</td>
-                                <td className="px-4 py-3"><InventoryBadge lineItem={lineItem} /></td>
-                                <td className="px-4 py-3">
-                                  {canManageRequest && viewMode === "edit" ? (
-                                    <select
-                                      value={lineItem.status}
-                                      onChange={(event) => handleUpdateLineStatus(lineItem, event.target.value)}
-                                      disabled={busy}
-                                      className="h-10 rounded-2xl border border-outline-variant/30 bg-white px-3 text-sm text-on-surface outline-none transition focus:border-primary/40 dark:bg-surface-container"
-                                    >
-                                      <option value="pending">Pending</option>
-                                      <option value="in-progress">In Progress</option>
-                                      <option value="completed" disabled={lineItem.status === "in-progress"}>Completed</option>
-                                    </select>
-                                  ) : (
-                                    <span className={joinNodaClasses("inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-bold", lineMeta.badgeClassName)}>
-                                      <span className="material-symbols-outlined" style={{ fontSize: 14 }}>{lineMeta.icon}</span>
-                                      {lineMeta.label}
-                                    </span>
-                                  )}
-                                </td>
-                                {canManageRequest && viewMode === "edit" ? (
-                                  <td className="px-4 py-3">
-                                    <div className="flex items-center gap-2">
-                                      <button
-                                        type="button"
-                                        onClick={() => handleUpdateLineStatus(lineItem, "completed")}
-                                        disabled={busy || lineItem.status === "completed" || lineItem.status === "in-progress"}
-                                        className="flex h-9 w-9 items-center justify-center rounded-2xl text-emerald-700 transition hover:bg-emerald-500/10 disabled:opacity-40 dark:text-emerald-300"
-                                        title="Mark completed"
-                                      >
-                                        <span className="material-symbols-outlined" style={{ fontSize: 18 }}>check_circle</span>
-                                      </button>
-                                      <button
-                                        type="button"
-                                        onClick={() => handleDeleteLineItem(lineItem)}
-                                        disabled={busy}
-                                        className="flex h-9 w-9 items-center justify-center rounded-2xl text-error transition hover:bg-error/10 disabled:opacity-40"
-                                        title="Delete line"
-                                      >
-                                        <span className="material-symbols-outlined" style={{ fontSize: 18 }}>delete</span>
-                                      </button>
-                                    </div>
-                                  </td>
-                                ) : null}
-                              </tr>
-                            );
-                          })}
-                        </tbody>
-                      </table>
-                    </div>
+                    <DataTable
+                      columns={lineItemColumns}
+                      rows={sortedSummaryItems}
+                      sort={lineItemSort}
+                      onSort={handleLineItemSort}
+                      rowKey={(lineItem) => lineItem.lineNumber}
+                      renderPageInfo={null}
+                      emptyTitle="No line items"
+                      emptyMessage="This request does not contain any line items."
+                      enableColumnResize
+                      enableColumnReorder
+                      layoutStorageKey="freyaAdmin2.noda-detail-line-items-layout"
+                      stickyHeader
+                      stickyHeaderOffset={0}
+                      className="overflow-hidden rounded-2xl border border-outline-variant/15"
+                      topBarClassName="flex justify-end px-1 pb-4"
+                      tableClassName="ui-table-data min-w-full"
+                      tableViewportClassName="overflow-x-auto"
+                      headClassName="bg-surface-container-high/50 border-b border-outline-variant/15"
+                      headerCellClassName="px-4 py-3 text-left whitespace-nowrap"
+                      cellClassName="px-4 py-3 align-top"
+                      rowClassName="border-b border-outline-variant/10 transition hover:bg-surface-container"
+                    />
                   </div>
                 ) : null}
 
@@ -868,7 +983,7 @@ export default function NodaDetailModal({ open, requestId, mode = "view", authUs
                         </label>
                       </div>
 
-                      <div className="mt-4 rounded-2xl border border-outline-variant/20 bg-surface-container-low/35 px-4 py-3 text-sm text-on-surface-variant">
+                      <div className="mt-4 rounded-2xl border border-separator/40 bg-surface-container-low/35 px-4 py-3 text-sm text-on-surface-variant">
                         {inventoryPreview?.exists
                           ? `Available ${inventoryPreview.available} • Reserved now ${inventoryPreview.reserved} • Shortfall ${inventoryPreview.shortfall}`
                           : inventoryPreview?.message || "Enter a serial number to preview inventory availability."}
@@ -892,7 +1007,7 @@ export default function NodaDetailModal({ open, requestId, mode = "view", authUs
                           <button
                             type="button"
                             onClick={() => setAddCart([])}
-                            className="rounded-2xl border border-outline-variant/25 px-3 py-2 text-sm font-semibold text-on-surface transition hover:bg-surface-container"
+                            className="rounded-2xl border border-separator/45 px-3 py-2 text-sm font-semibold text-on-surface transition hover:bg-surface-container"
                           >
                             Clear
                           </button>
@@ -900,7 +1015,7 @@ export default function NodaDetailModal({ open, requestId, mode = "view", authUs
                       </div>
                       <div className="mt-4 space-y-3">
                         {addCart.length ? addCart.map((item) => (
-                          <div key={item.背番号} className="rounded-2xl border border-outline-variant/20 bg-surface-container-low/35 p-4">
+                          <div key={item.背番号} className="rounded-2xl border border-separator/40 bg-surface-container-low/35 p-4">
                             <div className="flex items-start justify-between gap-4">
                               <div>
                                 <div className="font-black text-on-surface">{item.背番号}</div>

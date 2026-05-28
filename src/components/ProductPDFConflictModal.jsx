@@ -34,14 +34,14 @@ export default function ProductPDFConflictModal({ open, conflicts, onClose, onCo
           <button
             type="button"
             onClick={onClose}
-            className="rounded-2xl border border-outline-variant/20 px-4 py-2 text-xs font-bold text-on-surface transition hover:bg-surface-container"
+            className="rounded-2xl border border-separator/40 px-4 py-2 text-xs font-bold text-on-surface transition hover:bg-surface-container"
           >
             Cancel
           </button>
           <button
             type="button"
             onClick={() => onConfirm(resolutions)}
-            className="rounded-2xl bg-primary px-4 py-2 text-xs font-bold text-on-primary transition hover:opacity-90"
+            className="rounded-xl bg-primary px-4 py-2 text-xs font-bold text-on-primary hover:opacity-90 active:scale-95 transition-all duration-150"
           >
             Continue Upload
           </button>
@@ -73,7 +73,7 @@ export default function ProductPDFConflictModal({ open, conflicts, onClose, onCo
                           ...current,
                           [item.背番号]: event.target.value,
                         }))}
-                        className="h-11 rounded-2xl border border-outline-variant/20 bg-surface px-4 text-sm text-on-surface outline-none transition focus:border-primary/40"
+                        className="h-11 rounded-2xl border border-separator/40 bg-surface px-4 text-sm text-on-surface outline-none transition focus:border-primary/40"
                       >
                         {pdfCount > 1 ? (
                           <>

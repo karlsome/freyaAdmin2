@@ -34,7 +34,7 @@ export default function MasterFilterPanel({
           <select
             value={simpleFilters.factory}
             onChange={(event) => onSimpleFilterChange("factory", event.target.value)}
-            className="h-10 w-full rounded-xl border border-outline-variant/20 bg-white px-3 text-sm text-on-surface outline-none transition-colors focus:border-primary/40"
+            className="h-10 w-full rounded-xl border border-separator/40 bg-white px-3 text-sm text-on-surface outline-none transition-colors focus:border-primary/40"
           >
             <option value="">All Factory</option>
             {filterOptions.factories.map((option) => (
@@ -47,7 +47,7 @@ export default function MasterFilterPanel({
           <select
             value={simpleFilters.rl}
             onChange={(event) => onSimpleFilterChange("rl", event.target.value)}
-            className="h-10 w-full rounded-xl border border-outline-variant/20 bg-white px-3 text-sm text-on-surface outline-none transition-colors focus:border-primary/40"
+            className="h-10 w-full rounded-xl border border-separator/40 bg-white px-3 text-sm text-on-surface outline-none transition-colors focus:border-primary/40"
           >
             <option value="">All R/L</option>
             {filterOptions.rl.map((option) => (
@@ -60,7 +60,7 @@ export default function MasterFilterPanel({
           <select
             value={simpleFilters.color}
             onChange={(event) => onSimpleFilterChange("color", event.target.value)}
-            className="h-10 w-full rounded-xl border border-outline-variant/20 bg-white px-3 text-sm text-on-surface outline-none transition-colors focus:border-primary/40"
+            className="h-10 w-full rounded-xl border border-separator/40 bg-white px-3 text-sm text-on-surface outline-none transition-colors focus:border-primary/40"
           >
             <option value="">All Color</option>
             {filterOptions.colors.map((option) => (
@@ -73,7 +73,7 @@ export default function MasterFilterPanel({
           <select
             value={simpleFilters.process}
             onChange={(event) => onSimpleFilterChange("process", event.target.value)}
-            className="h-10 w-full rounded-xl border border-outline-variant/20 bg-white px-3 text-sm text-on-surface outline-none transition-colors focus:border-primary/40"
+            className="h-10 w-full rounded-xl border border-separator/40 bg-white px-3 text-sm text-on-surface outline-none transition-colors focus:border-primary/40"
           >
             <option value="">{processAllLabel}</option>
             {filterOptions.processes.map((option) => (
@@ -88,7 +88,7 @@ export default function MasterFilterPanel({
             <select
               value={searchLogicMode}
               onChange={(event) => onSearchLogicModeChange(event.target.value)}
-              className="h-7 rounded-lg border border-outline-variant/20 bg-white px-2 text-[10px] font-bold text-on-surface outline-none transition-colors focus:border-primary/40"
+              className="h-7 rounded-lg border border-separator/40 bg-white px-2 text-[10px] font-bold text-on-surface outline-none transition-colors focus:border-primary/40"
             >
               <option value="OR">Match Any</option>
               <option value="AND">Match All</option>
@@ -148,7 +148,7 @@ export default function MasterFilterPanel({
             <button
               type="button"
               onClick={onClearAdvancedFilters}
-              className="flex items-center gap-2 rounded-xl border border-white/10 glass-card px-5 py-2.5 text-sm font-bold text-on-surface transition-all hover:border-primary/30"
+              className="flex items-center gap-2 rounded-xl border border-separator/35 glass-card px-5 py-2.5 text-sm font-bold text-on-surface transition-all hover:border-primary/30"
             >
               <span className="material-symbols-outlined" style={{ fontSize: 16 }}>refresh</span>
               Reset Advanced Filters

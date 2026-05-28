@@ -10,14 +10,14 @@ import SetsubiArchiveWorkspace from "./SetsubiArchiveWorkspace";
 
 function ConfirmModal({ message, onConfirm, onCancel }) {
   return createPortal(
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-black/40 backdrop-blur-sm">
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-black/50 backdrop-blur-md">
       <div className="flex min-h-full items-start justify-center px-4 pb-4 pt-10">
-        <div className="glass-card w-full max-w-sm rounded-2xl overflow-hidden">
+        <div className="dashboard-section w-full max-w-sm rounded-2xl overflow-hidden">
           <div className="px-6 py-6">
             <p className="text-sm text-on-surface">{message}</p>
             <div className="mt-6 flex justify-end gap-3">
               <button type="button" onClick={onCancel}
-                className="rounded-2xl border border-outline-variant/20 px-4 py-2 text-xs font-bold text-on-surface transition hover:bg-surface-container">
+                className="rounded-2xl border border-separator/40 px-4 py-2 text-xs font-bold text-on-surface transition hover:bg-surface-container">
                 Cancel
               </button>
               <button type="button" onClick={onConfirm}
@@ -142,13 +142,13 @@ export default function EquipmentHistoryBinWorkspace({ refreshToken, onFlash }) 
       )}
 
       {!loading && !error && filtered.length === 0 && (
-        <div className="rounded-2xl border border-outline-variant/20 bg-surface px-5 py-10 text-center text-sm text-on-surface-variant">
+        <div className="rounded-2xl border border-separator/40 bg-surface px-5 py-10 text-center text-sm text-on-surface-variant">
           {records.length === 0 ? "リサイクルビンは空です。" : "No records matched the search."}
         </div>
       )}
 
       {!loading && !error && filtered.length > 0 && (
-        <div className="overflow-hidden rounded-2xl border border-outline-variant/20">
+        <div className="overflow-hidden rounded-2xl border border-separator/40">
           <table className="w-full border-collapse text-sm">
             <thead>
               <tr className="border-b border-outline-variant/20 bg-surface-container">

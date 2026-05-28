@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { createPortal } from "react-dom";
 import IconButton from "./IconButton";
 
 export default function ModalShell({
@@ -41,17 +42,17 @@ export default function ModalShell({
       ? "items-start pt-10 pb-4"
       : "items-center py-4";
 
-  return (
+  const modal = (
     <div
       className={`fixed inset-0 ${zIndex} bg-black/${overlayOpacity} backdrop-blur-sm`}
       onClick={onClose}
     >
       <div className={`flex min-h-full ${alignClass} justify-center px-4`}>
         <div
-          className={["glass-card flex w-full flex-col overflow-hidden rounded-2xl", maxWidth, cardClassName].filter(Boolean).join(" ")}
+          className={["dashboard-section flex w-full flex-col overflow-hidden rounded-2xl", maxWidth, cardClassName].filter(Boolean).join(" ")}
           onClick={(e) => e.stopPropagation()}
         >
-          <div className="border-b border-outline-variant/20 px-6 py-5">
+          <div className="border-b border-separator/35 px-6 py-5">
             <div className="flex items-start justify-between gap-4">
               <div>
                 {eyebrow ? (
@@ -62,19 +63,21 @@ export default function ModalShell({
                   <p className="mt-1 text-sm text-on-surface-variant">{subtitle}</p>
                 ) : null}
               </div>
-              <IconButton
-                icon="close"
+              <button
+                type="button"
                 onClick={onClose}
-                variant={closeButtonVariant === "outlined" ? "outlined" : "default"}
-                ariaLabel="Close dialog"
-              />
+                aria-label="Close dialog"
+                className="p-2 rounded-xl flex-shrink-0 text-outline hover:bg-surface-container hover:text-on-surface transition-all duration-150 active:scale-95"
+              >
+                <span className="material-symbols-outlined" style={{ fontSize: 18 }}>close</span>
+              </button>
             </div>
           </div>
 
           {children}
 
           {footer ? (
-            <div className={footerClassName ?? "border-t border-outline-variant/15 px-6 py-4"}>
+            <div className={footerClassName ?? "border-t border-separator/30 px-6 py-4"}>
               {footer}
             </div>
           ) : null}
@@ -82,4 +85,6 @@ export default function ModalShell({
       </div>
     </div>
   );
+
+  return createPortal(modal, document.body);
 }

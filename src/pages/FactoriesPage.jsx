@@ -30,7 +30,7 @@ export default function FactoriesPage() {
         </div>
         <button
           onClick={refresh}
-          className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold bg-surface-container border border-outline-variant/20 text-on-surface-variant hover:bg-surface-container-high hover:text-primary transition-all"
+          className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold bg-surface-container border border-outline-variant/20 text-on-surface-variant hover:bg-surface-container-high hover:text-primary transition-all duration-150"
         >
           <span className="material-symbols-outlined" style={{ fontSize: 16 }}>refresh</span>
           {t("refresh")}

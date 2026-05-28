@@ -1,6 +1,6 @@
 //This component displays a paginated, sortable, and searchable table of production records for a specific process (Kensa, Press, SRS, or Slit). It also includes a summary section that aggregates data by part number and worker ID. The component is designed to be reusable for different processes by passing the appropriate props.
-import { useState, useEffect, useRef } from "react";
-import PaginationControls from "./PaginationControls";
+import { useEffect, useMemo, useRef, useState } from "react";
+import DataTable from "./DataTable";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const ITEMS_PER_PAGE = 25;
@@ -95,23 +95,113 @@ export default function ProcessPanel({ processName, rows, onRowClick, showFactor
   const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE);
   const pageRows   = sorted.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE);
   const summary    = groupSummary(sorted);
-  const arrow = (col) => sort.col === col ? (sort.dir > 0 ? " ↑" : " ↓") : "";
   const pageStart = totalItems ? (page - 1) * ITEMS_PER_PAGE + 1 : 0;
   const pageEnd = Math.min(page * ITEMS_PER_PAGE, totalItems);
 
-  const TH = ({ col, label, right }) => (
-    <th
-      className={`ui-table-heading px-4 py-2.5 uppercase tracking-wider text-outline cursor-pointer
-                  hover:text-on-surface-variant transition-colors select-none whitespace-nowrap
-                  ${right ? "text-right" : "text-left"}`}
-      onClick={() => handleSort(col)}
-    >{label}{arrow(col)}</th>
-  );
+  const tableColumns = useMemo(() => {
+    const baseColumns = [
+      {
+        key: "品番",
+        label: "品番",
+        width: 164,
+        renderCell: (row) => <span className="font-bold text-on-surface">{row["品番"] ?? "—"}</span>,
+        disableCellWrapper: true,
+      },
+      {
+        key: "背番号",
+        label: "背番号",
+        width: 144,
+        renderCell: (row) => <span className="text-on-surface-variant">{row["背番号"] ?? "—"}</span>,
+        disableCellWrapper: true,
+      },
+      {
+        key: "Worker_Name",
+        label: "作業者",
+        width: 148,
+        renderCell: (row) => <span className="text-on-surface-variant">{row.Worker_Name ?? "—"}</span>,
+        disableCellWrapper: true,
+      },
+      {
+        key: "Date",
+        label: "日付",
+        width: 132,
+        renderCell: (row) => <span className="text-outline">{row.Date ?? "—"}</span>,
+        disableCellWrapper: true,
+      },
+      {
+        key: "Process_Quantity",
+        label: "Total",
+        width: 108,
+        align: "right",
+        renderCell: (row) => {
+          const quantity = Number(row.Process_Quantity) || Number(row.Total) || 0;
+          return <span className="font-bold text-on-surface">{quantity.toLocaleString()}</span>;
+        },
+        disableCellWrapper: true,
+      },
+      {
+        key: "Total_NG",
+        label: "Total NG",
+        width: 112,
+        align: "right",
+        renderCell: (row) => {
+          const totalNg = Number(row.Total_NG) || 0;
+          return <span className={totalNg > 0 ? "font-bold text-error" : "font-bold text-outline"}>{totalNg}</span>;
+        },
+        disableCellWrapper: true,
+      },
+      {
+        key: "Work_Hours",
+        label: "稼働時間",
+        sortKey: "Work_Hours",
+        width: 112,
+        align: "right",
+        renderCell: (row) => {
+          const hours = calcWorkHours(row.Time_start, row.Time_end);
+          return <span className="text-on-surface-variant">{hours != null ? `${hours.toFixed(2)}h` : "—"}</span>;
+        },
+        disableCellWrapper: true,
+      },
+      {
+        key: "Defect_Rate",
+        label: "不良率",
+        sortKey: "Defect_Rate",
+        width: 112,
+        align: "right",
+        renderCell: (row) => {
+          const quantity = Number(row.Process_Quantity) || Number(row.Total) || 0;
+          const totalNg = Number(row.Total_NG) || 0;
+          const rate = quantity > 0 ? ((totalNg / quantity) * 100).toFixed(2) : "0.00";
+          return (
+            <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold ${defectChip(rate)}`}>
+              {rate}%
+            </span>
+          );
+        },
+        disableCellWrapper: true,
+      },
+    ];
+
+    if (!showFactoryColumn) return baseColumns;
+
+    return [
+      baseColumns[0],
+      baseColumns[1],
+      {
+        key: "工場",
+        label: "工場",
+        width: 120,
+        renderCell: (row) => <span className="whitespace-nowrap text-on-surface-variant">{row["工場"] ?? "—"}</span>,
+        disableCellWrapper: true,
+      },
+      ...baseColumns.slice(2),
+    ];
+  }, [showFactoryColumn]);
 
   return (
     <div className="glass-card rounded-2xl overflow-hidden flex flex-col">
       {/* Panel header */}
-      <div className="px-5 py-4 flex items-center justify-between gap-3 border-b border-white/10">
+      <div className="px-5 py-4 flex items-center justify-between gap-3 border-b border-separator/30">
         <div className="flex items-center gap-2.5 min-w-0">
           <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${accent.dot}`} />
           <h4 className="text-sm font-bold text-on-surface truncate">{processName} Process</h4>
@@ -137,84 +227,50 @@ export default function ProcessPanel({ processName, rows, onRowClick, showFactor
             placeholder="Search…"
             value={search}
             onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-            className="h-7 px-2.5 rounded-lg bg-surface-container border border-white/10 text-[11px]
+            className="h-7 px-2.5 rounded-lg bg-surface-container border border-separator/35 text-[11px]
                        text-on-surface placeholder:text-outline outline-none focus:border-primary/40 w-28 transition-colors"
           />
         </div>
       </div>
 
-      {/* Table */}
-      <div className="overflow-x-auto flex-1">
-        <table className="ui-table-data w-full min-w-[640px]">
-          <thead className="bg-surface-container-high/40 sticky top-0">
-            <tr>
-              <TH col="品番"             label="品番" />
-              <TH col="背番号"           label="背番号" />
-              {showFactoryColumn && <TH col="工場"     label="工場" />}
-              <TH col="Worker_Name"      label="作業者" />
-              <TH col="Date"             label="日付" />
-              <TH col="Process_Quantity" label="Total"   right />
-              <TH col="Total_NG"         label="Total NG" right />
-              <TH col="Work_Hours"       label="稼働時間" right />
-              <TH col="Defect_Rate"      label="不良率"   right />
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-white/5">
-            {pageRows.length === 0 ? (
-              <tr>
-                <td colSpan={showFactoryColumn ? 9 : 8} className="px-5 py-10 text-center text-outline text-xs">
-                  {search ? "No results match your search" : "No data available"}
-                </td>
-              </tr>
-            ) : pageRows.map((r, i) => {
-              const qty     = Number(r.Process_Quantity) || Number(r.Total) || 0;
-              const ng      = Number(r.Total_NG) || 0;
-              const defRate = qty > 0 ? ((ng / qty) * 100).toFixed(2) : "0.00";
-              const hrs     = calcWorkHours(r.Time_start, r.Time_end);
-              return (
-                <tr
-                  key={i}
-                  className="hover:bg-primary/10 hover:shadow-[inset_3px_0_0_rgb(var(--c-primary))] cursor-pointer transition-all duration-150"
-                  onClick={() => onRowClick(r, processName)}
-                >
-                  <td className="px-4 py-2.5 font-bold text-on-surface">{r["品番"] ?? "—"}</td>
-                  <td className="px-4 py-2.5 text-on-surface-variant">{r["背番号"] ?? "—"}</td>
-                  {showFactoryColumn && <td className="px-4 py-2.5 text-on-surface-variant whitespace-nowrap">{r["工場"] ?? "—"}</td>}
-                  <td className="px-4 py-2.5 text-on-surface-variant">{r.Worker_Name ?? "—"}</td>
-                  <td className="px-4 py-2.5 text-outline whitespace-nowrap">{r.Date ?? "—"}</td>
-                  <td className="px-4 py-2.5 text-right font-bold text-on-surface">{qty.toLocaleString()}</td>
-                  <td className={`px-4 py-2.5 text-right font-bold ${ng > 0 ? "text-error" : "text-outline"}`}>{ng}</td>
-                  <td className="px-4 py-2.5 text-right text-on-surface-variant whitespace-nowrap">
-                    {hrs != null ? `${hrs.toFixed(2)}h` : "—"}
-                  </td>
-                  <td className="px-4 py-2.5 text-right">
-                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold ${defectChip(defRate)}`}>
-                      {defRate}%
-                    </span>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
-
-      {totalPages > 1 && (
-        <div className="flex flex-col gap-4 border-t border-outline-variant/20 px-5 py-4 md:flex-row md:items-center md:justify-between">
+      <DataTable
+        columns={tableColumns}
+        rows={pageRows}
+        sort={sort}
+        page={page}
+        pageSize={ITEMS_PER_PAGE}
+        filteredCount={totalItems}
+        totalPages={totalPages}
+        onSort={handleSort}
+        onPageChange={setPage}
+        rowKey={(row, index) => `${processName}-${row["品番"] || "part"}-${row["背番号"] || "serial"}-${row.Date || index}`}
+        onRowClick={onRowClick ? (row) => onRowClick(row, processName) : undefined}
+        renderPageInfo={() => (
           <span className="text-sm text-on-surface-variant">{totalItems} records, showing {pageStart}-{pageEnd}</span>
-          <PaginationControls
-            page={page}
-            totalPages={totalPages}
-            onPageChange={setPage}
-            previousLabel="前へ"
-            nextLabel="次へ"
-          />
-        </div>
-      )}
+        )}
+        emptyTitle={search ? "No results match your search" : "No data available"}
+        emptyMessage={search ? "Adjust the search term to find matching production records." : "No production records are available for this process."}
+        enableColumnResize
+        enableColumnReorder
+        layoutStorageKey={`freyaAdmin2.process-panel-layout:${processName}:${showFactoryColumn ? "factory" : "default"}`}
+        stickyHeader
+        stickyHeaderOffset={0}
+        className="flex min-h-0 flex-1 flex-col overflow-hidden"
+        topBarClassName="flex justify-end px-1 pb-4"
+        bottomBarClassName="flex flex-col gap-4 border-t border-separator/30 px-1 pt-4 md:flex-row md:items-center md:justify-between"
+        tableClassName="ui-table-data min-w-[720px]"
+        tableViewportClassName="min-h-0 overflow-auto"
+        headClassName="bg-surface-container-high/40 border-b border-outline-variant/20"
+        headerCellClassName="px-4 py-2.5 text-left whitespace-nowrap"
+        cellClassName="px-4 py-2.5 align-top"
+        rowClassName="border-b border-outline-variant/10 transition hover:bg-primary/10"
+        previousLabel="前へ"
+        nextLabel="次へ"
+      />
 
       {/* Summary collapsible */}
       {summary.length > 0 && (
-        <div ref={summaryRef} className="border-t border-white/10">
+        <div ref={summaryRef} className="border-t border-separator/30">
           <button
             className="w-full px-5 py-3 flex items-center gap-2 text-xs font-bold text-outline hover:text-on-surface transition-colors"
             onClick={() => setShowSummary((v) => !v)}
@@ -236,7 +292,7 @@ export default function ProcessPanel({ processName, rows, onRowClick, showFactor
                     <th className="ui-table-heading text-right pb-2">不良率</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-white/5">
+                <tbody className="divide-y divide-separator/20">
                   {summary.map((s, i) => {
                     const rate = s.total > 0 ? ((s.ng / s.total) * 100).toFixed(2) : "0.00";
                     return (

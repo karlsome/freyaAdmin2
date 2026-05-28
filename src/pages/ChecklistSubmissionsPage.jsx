@@ -654,7 +654,7 @@ function ImagePreviewLightbox({ preview, onClose, onNavigate }) {
         className="flex max-h-[92vh] w-full max-w-4xl flex-col overflow-hidden rounded-[28px] border border-white/15 bg-slate-950/95 shadow-2xl"
         onClick={(event) => event.stopPropagation()}
       >
-        <div className="flex items-start justify-between gap-4 border-b border-white/10 px-5 py-4 text-white">
+        <div className="flex items-start justify-between gap-4 border-b border-separator/30 px-5 py-4 text-white">
           <div className="min-w-0 flex-1">
             <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/50">Image Preview</p>
             <p className="mt-1 truncate text-sm font-semibold text-white">{activeImage.label || "Inspection image"}</p>
@@ -697,7 +697,7 @@ function ImagePreviewLightbox({ preview, onClose, onNavigate }) {
           ) : null}
         </div>
 
-        <div className="flex flex-col gap-3 border-t border-white/10 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col gap-3 border-t border-separator/30 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-xs text-white/65">
             {hasMultipleImages
               ? "Use the left and right arrow keys or the side buttons to browse images, then download the current one if needed."
@@ -738,7 +738,7 @@ function SubmissionPickerModal({ dateLabel, factory, machineName, onClose, onSel
         className="glass-card flex max-h-[78vh] w-full max-w-lg flex-col overflow-hidden rounded-2xl border border-outline-variant/20"
         onClick={(event) => event.stopPropagation()}
       >
-        <div className="flex items-start justify-between gap-4 border-b border-outline-variant/20 px-6 py-5">
+        <div className="flex items-start justify-between gap-4 border-b border-separator/35 px-6 py-5">
           <div className="min-w-0 flex-1">
             <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-outline">Multiple Submissions</p>
             <h3 className="mt-1 text-lg font-black text-on-surface">Choose a checklist record</h3>
@@ -752,9 +752,9 @@ function SubmissionPickerModal({ dateLabel, factory, machineName, onClose, onSel
           <button
             type="button"
             onClick={onClose}
-            className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-2xl bg-surface-container text-on-surface-variant transition hover:bg-surface-container-high"
+            className="p-2 rounded-xl flex-shrink-0 text-outline hover:bg-surface-container hover:text-on-surface transition-all duration-150 active:scale-95"
           >
-            <span className="material-symbols-outlined">close</span>
+            <span className="material-symbols-outlined" style={{ fontSize: 18 }}>close</span>
           </button>
         </div>
 
@@ -779,7 +779,7 @@ function SubmissionPickerModal({ dateLabel, factory, machineName, onClose, onSel
                   key={submissionKey}
                   type="button"
                   onClick={() => onSelect(submission)}
-                  className="group rounded-2xl border border-outline-variant/20 bg-surface-container px-4 py-4 text-left transition hover:border-primary/30 hover:bg-surface-container-high"
+                  className="group rounded-2xl border border-separator/40 bg-surface-container px-4 py-4 text-left transition hover:border-primary/30 hover:bg-surface-container-high"
                 >
                   <div className="flex items-start justify-between gap-4">
                     <div className="min-w-0 flex-1">
@@ -1042,8 +1042,8 @@ function RecordDetailModal({ defaultTab = "submission", form, initialTicketFocus
   return (
     <>
       <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
-        <div className="glass-card flex max-h-[88vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl border border-outline-variant/20">
-        <div className="flex flex-shrink-0 items-start justify-between border-b border-outline-variant/20 px-6 py-5">
+        <div className="dashboard-section flex max-h-[88vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl">
+        <div className="flex flex-shrink-0 items-start justify-between border-b border-separator/35 px-6 py-5">
           <div className="min-w-0 flex-1 pr-4">
             {onBack && (
               <button
@@ -1065,13 +1065,13 @@ function RecordDetailModal({ defaultTab = "submission", form, initialTicketFocus
           <button
             type="button"
             onClick={onClose}
-            className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-2xl bg-surface-container text-on-surface-variant transition hover:bg-surface-container-high"
+            className="p-2 rounded-xl flex-shrink-0 text-outline hover:bg-surface-container hover:text-on-surface transition-all duration-150 active:scale-95"
           >
-            <span className="material-symbols-outlined">close</span>
+            <span className="material-symbols-outlined" style={{ fontSize: 18 }}>close</span>
           </button>
         </div>
 
-        <div className="flex flex-shrink-0 flex-wrap gap-4 border-b border-outline-variant/20 px-6 py-4">
+        <div className="flex flex-shrink-0 flex-wrap gap-4 border-b border-separator/35 px-6 py-4">
           {isReferenceRecord ? (
             <>
               <span className={`rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.14em] ${
@@ -1131,7 +1131,7 @@ function RecordDetailModal({ defaultTab = "submission", form, initialTicketFocus
         </div>
 
         {modalTabItems.length > 1 && (
-          <div className="border-b border-outline-variant/20 px-6 py-3">
+          <div className="border-b border-separator/35 px-6 py-3">
             <LiquidSegmentedControl
               items={modalTabItems}
               activeKey={activeTab}
@@ -1222,7 +1222,7 @@ function RecordDetailModal({ defaultTab = "submission", form, initialTicketFocus
                             event.stopPropagation();
                             openImagePreview(photo, field.label || "Submitted image");
                           }}
-                          className="group overflow-hidden rounded-xl border border-outline-variant/20 bg-surface transition hover:border-primary/30"
+                          className="group overflow-hidden rounded-xl border border-separator/40 bg-surface transition hover:border-primary/30"
                         >
                           <img
                             src={photo}
@@ -1272,7 +1272,7 @@ function RecordDetailModal({ defaultTab = "submission", form, initialTicketFocus
                       if (node) ticketRefs.current.set(ticketKey, node);
                       else ticketRefs.current.delete(ticketKey);
                     }}
-                    className={`rounded-2xl border border-outline-variant/20 bg-surface-container px-4 py-4 ${
+                    className={`rounded-2xl border border-separator/40 bg-surface-container px-4 py-4 ${
                       isHighlightedTicket ? "ring-2 ring-primary/25 shadow-[0_0_0_1px_rgba(99,102,241,0.15)]" : ""
                     }`}
                   >
@@ -1333,7 +1333,7 @@ function RecordDetailModal({ defaultTab = "submission", form, initialTicketFocus
                             key={`${imageUrl}-${imageIndex}`}
                             type="button"
                             onClick={() => openTicketImagePreview(ticket, imageIndex)}
-                            className="group overflow-hidden rounded-xl border border-outline-variant/20 bg-surface transition hover:border-primary/30"
+                            className="group overflow-hidden rounded-xl border border-separator/40 bg-surface transition hover:border-primary/30"
                           >
                             <img
                               src={imageUrl}
@@ -1414,7 +1414,7 @@ function SummaryCard({ detail, icon, iconClassName, label, value }) {
 
 function LegendPill({ label, tone, withNg = false }) {
   return (
-    <span className="inline-flex items-center gap-2 rounded-full border border-outline-variant/20 bg-surface px-3 py-1.5 text-xs font-bold text-on-surface">
+    <span className="inline-flex items-center gap-2 rounded-full border border-separator/40 bg-surface px-3 py-1.5 text-xs font-bold text-on-surface">
       <span className="relative h-3 w-3 flex-shrink-0">
         <span className={`absolute inset-0 rounded-full ${tone}`} />
         {withNg && <span className="absolute right-0 top-0 h-1.5 w-1.5 rounded-full bg-error ring-1 ring-surface" />}
@@ -1947,8 +1947,8 @@ export default function ChecklistSubmissionsPage() {
         </div>
       </div>
 
-      <div className="glass-card overflow-hidden rounded-2xl">
-        <div className="flex flex-col gap-4 border-b border-outline-variant/20 px-6 py-5 lg:flex-row lg:items-center lg:justify-between">
+      <div className="dashboard-section overflow-hidden rounded-2xl">
+        <div className="flex flex-col gap-4 border-b border-separator/35 px-6 py-5 lg:flex-row lg:items-center lg:justify-between">
           <div>
             <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-outline">Timeline</p>
             <h3 className="mt-1 text-lg font-black text-on-surface">Checklist Submission Timeline</h3>

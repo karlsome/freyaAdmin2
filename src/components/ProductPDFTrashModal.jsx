@@ -61,7 +61,7 @@ export default function ProductPDFTrashModal({
     <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm">
       <div className="flex min-h-full items-center justify-center p-4">
         <div ref={modalRef} className="glass-card flex w-full max-w-6xl flex-col overflow-hidden rounded-2xl">
-          <div className="border-b border-outline-variant/20 px-6 py-5">
+          <div className="border-b border-separator/35 px-6 py-5">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
               <div>
                 <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-outline">Trash</div>
@@ -160,7 +160,7 @@ export default function ProductPDFTrashModal({
             )}
           </div>
 
-          <div className="flex flex-col gap-4 border-t border-outline-variant/20 px-6 py-4 md:flex-row md:items-center md:justify-between">
+          <div className="flex flex-col gap-4 border-t border-separator/30 px-6 py-4 md:flex-row md:items-center md:justify-between">
             <div className="flex flex-wrap items-center gap-3 text-sm text-on-surface-variant">
               <span>Showing {start}-{end} of {totalCount}</span>
               <label className="flex items-center gap-2">
@@ -168,7 +168,7 @@ export default function ProductPDFTrashModal({
                 <select
                   value={pageSize}
                   onChange={(event) => onPageSizeChange(Number(event.target.value))}
-                  className="h-10 rounded-2xl border border-outline-variant/20 bg-surface-container px-3 text-sm text-on-surface outline-none transition focus:border-primary/40"
+                  className="h-10 rounded-2xl border border-separator/40 bg-surface-container px-3 text-sm text-on-surface outline-none transition focus:border-primary/40"
                 >
                   {PAGE_SIZE_OPTIONS.map((option) => (
                     <option key={option} value={option}>{option}</option>
@@ -183,7 +183,7 @@ export default function ProductPDFTrashModal({
                   type="button"
                   onClick={() => onPageChange(page - 1)}
                   disabled={page <= 1 || loading}
-                  className="rounded-2xl border border-outline-variant/20 px-3 py-2 text-xs font-bold text-on-surface transition hover:bg-surface-container disabled:cursor-not-allowed disabled:opacity-50"
+                  className="rounded-2xl border border-separator/40 px-3 py-2 text-xs font-bold text-on-surface transition hover:bg-surface-container disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   Previous
                 </button>
@@ -194,7 +194,7 @@ export default function ProductPDFTrashModal({
                   type="button"
                   onClick={() => onPageChange(page + 1)}
                   disabled={page >= totalPages || loading}
-                  className="rounded-2xl border border-outline-variant/20 px-3 py-2 text-xs font-bold text-on-surface transition hover:bg-surface-container disabled:cursor-not-allowed disabled:opacity-50"
+                  className="rounded-2xl border border-separator/40 px-3 py-2 text-xs font-bold text-on-surface transition hover:bg-surface-container disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   Next
                 </button>

@@ -166,7 +166,7 @@ export default function InventoryTransactionsModal({
           <button
             type="button"
             onClick={onClose}
-            className="planner-data-text rounded-2xl border border-outline-variant/20 px-4 py-2 text-sm font-bold text-on-surface transition hover:bg-surface-container"
+            className="planner-data-text rounded-2xl border border-separator/40 px-4 py-2 text-sm font-bold text-on-surface transition hover:bg-surface-container"
           >
             Close
           </button>
@@ -183,7 +183,7 @@ export default function InventoryTransactionsModal({
         ) : null}
 
         {loading ? (
-          <div className="planner-data-text rounded-2xl border border-outline-variant/20 bg-surface-container-low/35 px-6 py-12 text-center text-sm text-on-surface-variant">
+          <div className="planner-data-text rounded-2xl border border-separator/40 bg-surface-container-low/35 px-6 py-12 text-center text-sm text-on-surface-variant">
             Loading inventory transactions...
           </div>
         ) : null}
@@ -247,7 +247,7 @@ export default function InventoryTransactionsModal({
                 </div>
 
                 <div className="mt-4 grid gap-3 md:grid-cols-2">
-                  <label className="planner-data-text flex items-center gap-3 rounded-2xl border border-outline-variant/20 bg-white/80 px-4 py-3 text-sm font-medium text-on-surface dark:bg-surface-container">
+                  <label className="planner-data-text flex items-center gap-3 rounded-2xl border border-separator/40 bg-white/80 px-4 py-3 text-sm font-medium text-on-surface dark:bg-surface-container">
                     <input
                       type="checkbox"
                       checked={resetPhysical}
@@ -256,7 +256,7 @@ export default function InventoryTransactionsModal({
                     />
                     Reset physical stock and available stock
                   </label>
-                  <label className="planner-data-text flex items-center gap-3 rounded-2xl border border-outline-variant/20 bg-white/80 px-4 py-3 text-sm font-medium text-on-surface dark:bg-surface-container">
+                  <label className="planner-data-text flex items-center gap-3 rounded-2xl border border-separator/40 bg-white/80 px-4 py-3 text-sm font-medium text-on-surface dark:bg-surface-container">
                     <input
                       type="checkbox"
                       checked={resetReserved}

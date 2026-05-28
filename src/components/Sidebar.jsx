@@ -276,11 +276,11 @@ export default function Sidebar({ activePage, badges = {}, mobileOpen = false, o
 
   return (
     <>
-      <aside className={`group fixed left-0 top-0 z-50 hidden h-full w-16 overflow-hidden sidebar-glass py-6 font-headline text-sm font-medium transition-[width] duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] hover:w-64 md:flex md:flex-col ${className}`}>
+      <aside className={`group fixed left-0 top-0 z-[45] hidden h-full w-16 overflow-hidden sidebar-glass py-6 font-headline text-sm font-medium transition-[width] duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] hover:w-64 md:flex md:flex-col ${className}`}>
         {renderSidebarContent(false)}
       </aside>
 
-      <div className={`fixed inset-0 z-50 md:hidden ${mobileOpen ? "" : "pointer-events-none"}`}>
+      <div className={`fixed inset-0 z-[45] md:hidden ${mobileOpen ? "" : "pointer-events-none"}`}>
         <button
           type="button"
           onClick={() => onClose?.()}

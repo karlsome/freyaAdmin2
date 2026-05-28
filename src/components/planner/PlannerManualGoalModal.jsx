@@ -58,7 +58,7 @@ export default function PlannerManualGoalModal({
           <button
             type="button"
             onClick={onClose}
-            className="rounded-2xl border border-outline-variant/20 px-4 py-2 text-sm font-bold text-on-surface transition hover:bg-surface-container"
+            className="rounded-2xl border border-separator/40 px-4 py-2 text-sm font-bold text-on-surface transition hover:bg-surface-container"
           >
             Cancel
           </button>
@@ -81,13 +81,13 @@ export default function PlannerManualGoalModal({
               type="date"
               value={date}
               onChange={(event) => setDate(event.target.value)}
-              className="planner-data-text mt-2 h-11 w-full rounded-2xl border border-outline-variant/20 px-4 outline-none transition focus:border-primary/40"
+              className="planner-data-text mt-2 h-11 w-full rounded-2xl border border-separator/40 px-4 outline-none transition focus:border-primary/40"
             />
           </div>
 
           <div className="rounded-2xl border border-outline-variant/15 bg-surface-container-low p-4">
             <label className="planner-data-label text-outline">Search Product</label>
-            <div className="ui-control-surface mt-2 flex h-11 items-center gap-3 rounded-2xl border border-outline-variant/20 px-4">
+            <div className="ui-control-surface mt-2 flex h-11 items-center gap-3 rounded-2xl border border-separator/40 px-4">
               <span className="material-symbols-outlined text-outline" style={{ fontSize: 18 }}>search</span>
               <input
                 type="text"
@@ -106,7 +106,7 @@ export default function PlannerManualGoalModal({
               min="1"
               value={targetQuantity}
               onChange={(event) => setTargetQuantity(event.target.value)}
-              className="planner-data-text mt-2 h-11 w-full rounded-2xl border border-outline-variant/20 px-4 outline-none transition focus:border-primary/40"
+              className="planner-data-text mt-2 h-11 w-full rounded-2xl border border-separator/40 px-4 outline-none transition focus:border-primary/40"
             />
           </div>
 

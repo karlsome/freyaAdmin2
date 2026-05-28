@@ -41,7 +41,7 @@ export default function TicketSubmissionsFilterPanel({
             value={keyword}
             onChange={(event) => onKeywordChange(event.target.value)}
             placeholder="Search by factory, machine, form, field, reason, operator, record ID..."
-            className="h-10 w-full rounded-xl border border-outline-variant/20 bg-white px-3 text-sm text-on-surface outline-none transition-colors focus:border-primary/40"
+            className="h-10 w-full rounded-xl border border-separator/40 bg-white px-3 text-sm text-on-surface outline-none transition-colors focus:border-primary/40"
           />
         </FormField>
 
@@ -49,7 +49,7 @@ export default function TicketSubmissionsFilterPanel({
           <select
             value={factory}
             onChange={(event) => onFactoryChange(event.target.value)}
-            className="h-10 w-full rounded-xl border border-outline-variant/20 bg-white px-3 text-sm text-on-surface outline-none transition-colors focus:border-primary/40"
+            className="h-10 w-full rounded-xl border border-separator/40 bg-white px-3 text-sm text-on-surface outline-none transition-colors focus:border-primary/40"
           >
             <option value="">All factories</option>
             {factoryOptions.map((option) => (
@@ -62,7 +62,7 @@ export default function TicketSubmissionsFilterPanel({
           <select
             value={status}
             onChange={(event) => onStatusChange(event.target.value)}
-            className="h-10 w-full rounded-xl border border-outline-variant/20 bg-white px-3 text-sm text-on-surface outline-none transition-colors focus:border-primary/40"
+            className="h-10 w-full rounded-xl border border-separator/40 bg-white px-3 text-sm text-on-surface outline-none transition-colors focus:border-primary/40"
           >
             <option value="">All statuses</option>
             {statusOptions.map((option) => (
@@ -76,7 +76,7 @@ export default function TicketSubmissionsFilterPanel({
             type="date"
             value={startDate}
             onChange={(event) => onDateChange("startDate", event.target.value)}
-            className="h-10 w-full rounded-xl border border-outline-variant/20 bg-white px-3 text-sm text-on-surface outline-none transition-colors focus:border-primary/40"
+            className="h-10 w-full rounded-xl border border-separator/40 bg-white px-3 text-sm text-on-surface outline-none transition-colors focus:border-primary/40"
           />
         </FormField>
 
@@ -85,26 +85,26 @@ export default function TicketSubmissionsFilterPanel({
             type="date"
             value={endDate}
             onChange={(event) => onDateChange("endDate", event.target.value)}
-            className="h-10 w-full rounded-xl border border-outline-variant/20 bg-white px-3 text-sm text-on-surface outline-none transition-colors focus:border-primary/40"
+            className="h-10 w-full rounded-xl border border-separator/40 bg-white px-3 text-sm text-on-surface outline-none transition-colors focus:border-primary/40"
           />
         </FormField>
       </div>
 
       <div className="mt-4 flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
         <div className="flex flex-wrap gap-2">
-          <span className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-outline-variant/20 bg-surface px-3 py-2 text-xs font-bold text-on-surface">
+          <span className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-separator/40 bg-surface px-3 py-2 text-xs font-bold text-on-surface">
             <span className="material-symbols-outlined text-primary" style={{ fontSize: 14 }}>calendar_month</span>
             {rangeLabel}
           </span>
-          <span className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-outline-variant/20 bg-surface px-3 py-2 text-xs font-bold text-on-surface">
+          <span className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-separator/40 bg-surface px-3 py-2 text-xs font-bold text-on-surface">
             <span className="material-symbols-outlined text-primary" style={{ fontSize: 14 }}>confirmation_number</span>
             {scopeLabel}
           </span>
-          <span className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-outline-variant/20 bg-surface px-3 py-2 text-xs font-bold text-on-surface">
+          <span className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-separator/40 bg-surface px-3 py-2 text-xs font-bold text-on-surface">
             <span className="material-symbols-outlined text-primary" style={{ fontSize: 14 }}>database</span>
             {paginationLabel}
           </span>
-          <span className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-outline-variant/20 bg-surface px-3 py-2 text-xs font-bold text-on-surface">
+          <span className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-separator/40 bg-surface px-3 py-2 text-xs font-bold text-on-surface">
             <span className="material-symbols-outlined text-primary" style={{ fontSize: 14 }}>filter_alt</span>
             {appliedFilterLabel}
           </span>
@@ -113,7 +113,7 @@ export default function TicketSubmissionsFilterPanel({
         <button
           type="button"
           onClick={onResetBasicFilters}
-          className="inline-flex items-center justify-center gap-2 rounded-xl border border-outline-variant/20 bg-surface px-4 py-2.5 text-sm font-bold text-on-surface transition hover:border-primary/30 hover:text-primary"
+          className="inline-flex items-center justify-center gap-2 rounded-xl border border-separator/40 bg-surface px-4 py-2.5 text-sm font-bold text-on-surface transition hover:border-primary/30 hover:text-primary"
         >
           <span className="material-symbols-outlined" style={{ fontSize: 16 }}>refresh</span>
           Reset Basic Filters
@@ -154,7 +154,7 @@ export default function TicketSubmissionsFilterPanel({
               <button
                 type="button"
                 onClick={onClearAdvancedFilters}
-                className="flex items-center gap-2 rounded-xl border border-white/10 glass-card px-5 py-2.5 text-sm font-bold text-on-surface transition-all hover:border-primary/30"
+                className="flex items-center gap-2 rounded-xl border border-separator/35 glass-card px-5 py-2.5 text-sm font-bold text-on-surface transition-all hover:border-primary/30"
               >
                 <span className="material-symbols-outlined" style={{ fontSize: 16 }}>restart_alt</span>
                 Reset Advanced Filters

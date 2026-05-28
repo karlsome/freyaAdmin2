@@ -46,6 +46,13 @@ function buildSensorReadingsPageInfo({ filteredCount, page, pageSize }) {
   return `${filteredCount.toLocaleString()} readings, showing ${start.toLocaleString()}-${end.toLocaleString()}`;
 }
 
+function getSensorTableSort(sortKey) {
+  if (sortKey === "date_asc") return { column: "date", direction: 1 };
+  if (sortKey === "temp_desc") return { column: "temperature", direction: -1 };
+  if (sortKey === "temp_asc") return { column: "temperature", direction: 1 };
+  return { column: "date", direction: -1 };
+}
+
 // ─── CSV export ───────────────────────────────────────────────────────────────
 function exportCSV(rows, factoryName) {
   const headers = ["Date", "Time", "Device", "Temperature_C", "Humidity_pct", "WBGT_C", "Status", "Factory"];
@@ -366,15 +373,31 @@ export default function SensorDetailPage() {
     setSortKey("date_desc");
   }
 
+  function handleTableSort(column) {
+    setSortKey((current) => {
+      if (column === "date") {
+        return current === "date_asc" ? "date_desc" : "date_asc";
+      }
+
+      if (column === "temperature") {
+        return current === "temp_asc" ? "temp_desc" : "temp_asc";
+      }
+
+      return current;
+    });
+  }
+
   const hasActiveFilters = deviceFilter !== "all"
     || sortKey !== "date_desc"
     || range.start !== defaultRange.start
     || range.end !== defaultRange.end;
+  const tableSort = useMemo(() => getSensorTableSort(sortKey), [sortKey]);
 
   const tableColumns = useMemo(() => ([
     {
       key: "Date",
       label: "Date",
+      sortKey: "date",
       width: 128,
       renderCell: (row) => <span className="text-on-surface-variant">{row.Date || "—"}</span>,
       disableCellWrapper: true,
@@ -396,8 +419,8 @@ export default function SensorDetailPage() {
     {
       key: "temperature",
       label: "Temp",
+      sortKey: "temperature",
       width: 128,
-      sortable: false,
       renderCell: (row) => {
         const temperature = parseTemp(row.Temperature);
         const meta = getTempStatus(temperature);
@@ -490,7 +513,7 @@ export default function SensorDetailPage() {
             value={range.start}
             max={range.end}
             onChange={(e) => setRange((r) => ({ ...r, start: e.target.value }))}
-            className="bg-surface-container-lowest border border-outline-variant/20 rounded-lg px-3 py-1.5 text-xs text-on-surface focus:ring-2 focus:ring-primary/20 focus:border-primary/30 outline-none transition-all"
+            className="bg-surface-container-lowest border border-outline-variant/20 rounded-lg px-3 py-1.5 text-xs text-on-surface focus:ring-2 focus:ring-primary/20 focus:border-primary/30 outline-none transition-all duration-150"
           />
         </div>
         <div className="flex items-center gap-2">
@@ -501,7 +524,7 @@ export default function SensorDetailPage() {
             min={range.start}
             max={toISO(new Date())}
             onChange={(e) => setRange((r) => ({ ...r, end: e.target.value }))}
-            className="bg-surface-container-lowest border border-outline-variant/20 rounded-lg px-3 py-1.5 text-xs text-on-surface focus:ring-2 focus:ring-primary/20 focus:border-primary/30 outline-none transition-all"
+            className="bg-surface-container-lowest border border-outline-variant/20 rounded-lg px-3 py-1.5 text-xs text-on-surface focus:ring-2 focus:ring-primary/20 focus:border-primary/30 outline-none transition-all duration-150"
           />
         </div>
         <div className="flex items-center gap-2">
@@ -509,7 +532,7 @@ export default function SensorDetailPage() {
           <select
             value={deviceFilter}
             onChange={(e) => setDeviceFilter(normalizeDeviceId(e.target.value) || "all")}
-            className="bg-surface-container-lowest border border-outline-variant/20 rounded-lg px-3 py-1.5 text-xs text-on-surface focus:ring-2 focus:ring-primary/20 outline-none transition-all"
+            className="bg-surface-container-lowest border border-outline-variant/20 rounded-lg px-3 py-1.5 text-xs text-on-surface focus:ring-2 focus:ring-primary/20 outline-none transition-all duration-150"
           >
             <option value="all">All Devices</option>
             {devices.map((d) => <option key={d} value={d}>{d}</option>)}
@@ -520,7 +543,7 @@ export default function SensorDetailPage() {
           <select
             value={sortKey}
             onChange={(e) => setSortKey(e.target.value)}
-            className="bg-surface-container-lowest border border-outline-variant/20 rounded-lg px-3 py-1.5 text-xs text-on-surface focus:ring-2 focus:ring-primary/20 outline-none transition-all"
+            className="bg-surface-container-lowest border border-outline-variant/20 rounded-lg px-3 py-1.5 text-xs text-on-surface focus:ring-2 focus:ring-primary/20 outline-none transition-all duration-150"
           >
             <option value="date_desc">Latest First</option>
             <option value="date_asc">Oldest First</option>
@@ -660,10 +683,12 @@ export default function SensorDetailPage() {
               rows={tableRows}
               loading={tableLoading}
               error={tableError}
+              sort={tableSort}
               page={pagination.currentPage || page}
               pageSize={pagination.itemsPerPage || pageSize}
               filteredCount={pagination.totalItems || tableRows.length}
               totalPages={pagination.totalPages || 0}
+              onSort={handleTableSort}
               onPageChange={(nextPage) => setPage(nextPage)}
               onPageSizeChange={(nextPageSize) => {
                 setPageSize(nextPageSize);
@@ -683,7 +708,8 @@ export default function SensorDetailPage() {
               stickyHeader
               stickyHeaderOffset={0}
               className="overflow-hidden rounded-2xl"
-              topBarClassName="hidden"
+              topBarClassName="mb-4 flex flex-wrap items-center justify-end gap-3 px-1"
+              topInfoClassName="hidden"
               bottomBarClassName="flex flex-col gap-4 border-t border-outline-variant/15 px-1 pt-4 md:flex-row md:items-center md:justify-between"
               rowClassName="border-b border-outline-variant/10 transition hover:bg-surface-container"
               rowsSelectClassName="h-10 rounded-2xl border border-outline-variant/30 bg-white px-3 text-sm text-on-surface outline-none transition focus:border-primary/40 dark:bg-surface-container"

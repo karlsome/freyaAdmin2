@@ -41,7 +41,7 @@ export default function TopNav({ authUser, isDark, onLogout, onOpenMobileNav, on
         {/* Theme toggle */}
         <button
           onClick={onToggleTheme}
-          className="p-2 text-outline hover:text-primary hover:bg-primary/10 rounded-xl transition-all"
+          className="p-2 text-outline hover:text-primary hover:bg-primary/10 rounded-xl transition-all duration-150"
           title={isDark ? t("switchToLight") : t("switchToDark")}
         >
           <span className="material-symbols-outlined">

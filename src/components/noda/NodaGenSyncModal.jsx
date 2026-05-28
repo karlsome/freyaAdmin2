@@ -121,7 +121,7 @@ function DuplicateSelectionStep({ duplicateGroups, duplicateSelections, onToggle
           const selectedTotal = selectedRows.reduce((sum, row) => sum + (row.quantity || 0), 0);
 
           return (
-            <div key={group.背番号} className="rounded-[24px] border border-outline-variant/20 bg-surface-container-low/35 p-5">
+            <div key={group.背番号} className="rounded-[24px] border border-separator/40 bg-surface-container-low/35 p-5">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
                   <h3 className="text-base font-black text-on-surface">{group.背番号}</h3>
@@ -209,7 +209,7 @@ function ComparisonStep({ availableItems, existingRequestsCount, nextRequestNumb
         {availableItems.map((item) => {
           const quantity = quantities[item.背番号] ?? item.remainingQty;
           return (
-            <div key={item.背番号} className="rounded-[24px] border border-outline-variant/20 bg-surface-container-low/35 p-5">
+            <div key={item.背番号} className="rounded-[24px] border border-separator/40 bg-surface-container-low/35 p-5">
               <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
@@ -502,7 +502,7 @@ export default function NodaGenSyncModal({ open, authUser, onClose, onSubmitted 
             <button
               type="button"
               onClick={() => onClose?.()}
-              className="rounded-2xl border border-outline-variant/25 px-4 py-2.5 text-sm font-semibold text-on-surface transition hover:bg-surface-container"
+              className="rounded-2xl border border-separator/45 px-4 py-2.5 text-sm font-semibold text-on-surface transition hover:bg-surface-container"
             >
               Cancel
             </button>
@@ -538,7 +538,7 @@ export default function NodaGenSyncModal({ open, authUser, onClose, onSubmitted 
         ) : null}
 
         {progress.value > 0 ? (
-          <div className="rounded-[24px] border border-outline-variant/20 bg-surface-container-low/35 p-4">
+          <div className="rounded-[24px] border border-separator/40 bg-surface-container-low/35 p-4">
             <div className="h-3 overflow-hidden rounded-full bg-surface-container-high">
               <div
                 className="h-full rounded-full bg-primary transition-all duration-300"
@@ -549,7 +549,7 @@ export default function NodaGenSyncModal({ open, authUser, onClose, onSubmitted 
         ) : null}
 
         {phase === "date" ? (
-          <div className="rounded-[24px] border border-outline-variant/20 bg-surface-container-low/35 p-5">
+          <div className="rounded-[24px] border border-separator/40 bg-surface-container-low/35 p-5">
             <label className="block text-xs font-bold uppercase tracking-[0.18em] text-outline">
               Delivery Date
             </label>

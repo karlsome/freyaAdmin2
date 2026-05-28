@@ -87,7 +87,7 @@ export default function MasterDetailDrawer({
                   type="button"
                   onClick={() => onSave(draft)}
                   disabled={saving}
-                  className="rounded-2xl bg-primary px-4 py-2 text-xs font-bold text-on-primary transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="rounded-xl bg-primary px-4 py-2 text-xs font-bold text-on-primary hover:opacity-90 active:scale-95 transition-all duration-150 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {saving ? "Saving…" : "Save Changes"}
                 </button>
@@ -96,7 +96,7 @@ export default function MasterDetailDrawer({
               <button
                 type="button"
                 onClick={() => setEditing(true)}
-                className="rounded-2xl bg-primary px-4 py-2 text-xs font-bold text-on-primary transition hover:opacity-90"
+                className="rounded-xl bg-primary px-4 py-2 text-xs font-bold text-on-primary hover:opacity-90 active:scale-95 transition-all duration-150"
               >
                 Edit Record
               </button>
@@ -141,7 +141,7 @@ export default function MasterDetailDrawer({
                     type="button"
                     onClick={() => inputRef.current?.click()}
                     disabled={uploading}
-                    className="absolute bottom-3 right-3 rounded-2xl bg-primary px-3 py-1.5 text-xs font-bold text-on-primary transition hover:opacity-90 disabled:opacity-50"
+                    className="absolute bottom-3 right-3 rounded-xl bg-primary px-3 py-1.5 text-xs font-bold text-on-primary hover:opacity-90 active:scale-95 transition-all duration-150 disabled:opacity-50"
                   >
                     {uploading ? "Uploading…" : record.imageURL ? "Update Image" : "Upload Image"}
                   </button>

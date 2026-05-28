@@ -37,7 +37,7 @@ function EventCard({ event }) {
   const tags = Array.isArray(event.tags) ? event.tags : [];
 
   return (
-    <div className="rounded-2xl border border-outline-variant/20 bg-surface p-4">
+    <div className="rounded-2xl border border-separator/40 bg-surface p-4">
       <div className="mb-2 flex items-center justify-between gap-3">
         {event.eventDate ? (
           <span className="rounded-xl bg-primary/10 px-2.5 py-1 text-[11px] font-bold text-primary">
@@ -66,7 +66,7 @@ function EventCard({ event }) {
         <div className="mt-3 flex flex-wrap gap-2">
           {images.map((url) => (
             <button key={url} type="button" onClick={() => setLightboxURL(url)}
-              className="overflow-hidden rounded-xl border border-outline-variant/20 transition hover:opacity-80">
+              className="overflow-hidden rounded-xl border border-separator/40 transition hover:opacity-80">
               <img src={url} alt="添付画像" className="h-14 w-14 object-cover" />
             </button>
           ))}
@@ -145,7 +145,7 @@ export default function EquipmentViewModal({ open, equipment, onClose }) {
             <section className="mb-6">
               <p className="mb-3 text-[11px] font-bold uppercase tracking-[0.18em] text-outline">設備情報</p>
               {equipment.imageURL && (
-                <div className="mb-3 overflow-hidden rounded-2xl border border-outline-variant/20 bg-surface-container">
+                <div className="mb-3 overflow-hidden rounded-2xl border border-separator/40 bg-surface-container">
                   <img
                     src={equipment.imageURL}
                     alt={equipment.name || "equipment"}
@@ -154,7 +154,7 @@ export default function EquipmentViewModal({ open, equipment, onClose }) {
                   />
                 </div>
               )}
-              <dl className="grid grid-cols-2 gap-4 rounded-2xl border border-outline-variant/20 bg-surface-container px-5 py-4">
+              <dl className="grid grid-cols-2 gap-4 rounded-2xl border border-separator/40 bg-surface-container px-5 py-4">
                 <DetailRow label="設備名" value={equipment.name} />
                 <DetailRow label="工場" value={equipment["工場"]} />
                 <DetailRow label="設置日" value={equipment.installationDate} />
@@ -183,7 +183,7 @@ export default function EquipmentViewModal({ open, equipment, onClose }) {
               )}
 
               {!historyLoading && !historyError && history.length === 0 && (
-                <div className="rounded-2xl border border-outline-variant/20 bg-surface px-4 py-6 text-center text-sm text-on-surface-variant italic">
+                <div className="rounded-2xl border border-separator/40 bg-surface px-4 py-6 text-center text-sm text-on-surface-variant italic">
                   事案の記録はまだありません。
                 </div>
               )}

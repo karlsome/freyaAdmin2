@@ -12,7 +12,7 @@ export default function FuryoModelListPanel({
 }) {
   return (
     <div className="glass-card flex h-[min(74vh,820px)] flex-col overflow-hidden rounded-3xl">
-      <div className="border-b border-outline-variant/20 px-5 py-4">
+      <div className="border-b border-separator/35 px-5 py-4">
         <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-outline">Models</div>
         <h3 className="mt-1 text-lg font-bold text-on-surface">モデル一覧</h3>
         <input
@@ -20,7 +20,7 @@ export default function FuryoModelListPanel({
           value={searchValue}
           onChange={(event) => onSearchChange(event.target.value)}
           placeholder="モデルを検索..."
-          className="mt-4 w-full rounded-2xl border border-outline-variant/20 bg-surface-container px-4 py-3 text-sm text-on-surface outline-none transition focus:border-primary/40"
+          className="mt-4 w-full rounded-2xl border border-separator/40 bg-surface-container px-4 py-3 text-sm text-on-surface outline-none transition focus:border-primary/40"
         />
       </div>
 

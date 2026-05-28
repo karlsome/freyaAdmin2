@@ -38,17 +38,17 @@ import SetsubiRecordModal from "./SetsubiRecordModal";
 function SuccessModal({ message, onClose }) {
   if (!message) return null;
   return (
-    <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm">
+    <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-md">
       <div className="flex min-h-full items-start justify-center px-4 pb-4 pt-10">
-        <div className="glass-card w-full max-w-md rounded-2xl overflow-hidden">
-          <div className="border-b border-outline-variant/20 px-6 py-5">
+        <div className="dashboard-section w-full max-w-md rounded-2xl overflow-hidden">
+          <div className="border-b border-separator/35 px-6 py-5">
             <h3 className="text-2xl font-black text-on-surface">Success</h3>
           </div>
           <div className="px-6 py-6">
             <p className="text-sm text-on-surface-variant">{message}</p>
             <div className="mt-6 flex justify-end">
               <button type="button" onClick={onClose}
-                className="rounded-2xl bg-primary px-4 py-2 text-xs font-bold text-on-primary transition hover:opacity-90">
+                className="rounded-xl bg-primary px-4 py-2 text-xs font-bold text-on-primary hover:opacity-90 active:scale-95 transition-all duration-150">
                 OK
               </button>
             </div>
@@ -90,7 +90,7 @@ function EventCard({ event, onOpen }) {
     <button
       type="button"
       onClick={() => onOpen(event)}
-      className="w-full rounded-2xl border border-outline-variant/20 bg-surface p-4 text-left transition hover:border-outline-variant/40 hover:bg-surface-container/50"
+      className="w-full rounded-2xl border border-separator/40 bg-surface p-4 text-left transition hover:border-outline-variant/40 hover:bg-surface-container/50"
     >
       <p className="text-sm font-semibold text-on-surface">{event["発生事案"] || "—"}</p>
       <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1">
@@ -236,12 +236,12 @@ function EventDetailModal({ event, canEdit, username, role, onClose, onSaved, on
   const imageURLs = mode === "edit" ? draft?.imageURLs ?? [] : (Array.isArray(event.imageURLs) ? event.imageURLs : []);
 
   return createPortal(
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-black/40 backdrop-blur-sm">
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-black/50 backdrop-blur-md">
       <div className="flex min-h-full items-start justify-center px-4 pb-4 pt-10">
-        <div className="glass-card w-full max-w-lg rounded-2xl overflow-hidden">
+        <div className="dashboard-section w-full max-w-lg rounded-2xl overflow-hidden">
 
           {/* Header */}
-          <div className="border-b border-outline-variant/20 px-6 py-5">
+          <div className="border-b border-separator/35 px-6 py-5">
             <div className="flex items-start justify-between gap-4">
               <div>
                 <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-outline">事案詳細</div>
@@ -293,7 +293,7 @@ function EventDetailModal({ event, canEdit, username, role, onClose, onSaved, on
                     <div className="flex flex-wrap gap-2">
                       {imageURLs.map((url) => (
                         <button key={url} type="button" onClick={() => setLightboxURL(url)}
-                          className="overflow-hidden rounded-xl border border-outline-variant/20 transition hover:opacity-80">
+                          className="overflow-hidden rounded-xl border border-separator/40 transition hover:opacity-80">
                           {isVideoUrl(url) ? (
                             <video src={url} className="h-16 w-16 object-cover bg-black" muted playsInline />
                           ) : (
@@ -367,9 +367,9 @@ function EventDetailModal({ event, canEdit, username, role, onClose, onSaved, on
                       {imageURLs.map((url) => (
                         <div key={url} className="group relative">
                           {isVideoUrl(url) ? (
-                            <video src={url} className="h-16 w-16 rounded-xl object-cover border border-outline-variant/20 bg-black" muted playsInline />
+                            <video src={url} className="h-16 w-16 rounded-xl object-cover border border-separator/40 bg-black" muted playsInline />
                           ) : (
-                            <img src={url} alt="添付画像" className="h-16 w-16 rounded-xl object-cover border border-outline-variant/20" />
+                            <img src={url} alt="添付画像" className="h-16 w-16 rounded-xl object-cover border border-separator/40" />
                           )}
                           <button type="button" onClick={() => removeImage(url)}
                             className="absolute -right-1.5 -top-1.5 hidden h-5 w-5 items-center justify-center rounded-full bg-error text-white group-hover:flex">
@@ -385,7 +385,7 @@ function EventDetailModal({ event, canEdit, username, role, onClose, onSaved, on
           </div>
 
           {/* Footer */}
-          <div className="flex items-center justify-between gap-3 border-t border-outline-variant/20 px-6 py-4">
+          <div className="flex items-center justify-between gap-3 border-t border-separator/30 px-6 py-4">
             {canEdit && mode === "edit" ? (
               <button type="button" onClick={handleDelete} disabled={busy}
                 className="rounded-2xl border border-error/20 bg-error/10 px-4 py-2 text-xs font-bold text-error transition hover:bg-error/20 disabled:opacity-50">
@@ -395,18 +395,18 @@ function EventDetailModal({ event, canEdit, username, role, onClose, onSaved, on
 
             <div className="flex items-center gap-3">
               <button type="button" onClick={mode === "edit" ? () => setMode("view") : onClose}
-                className="rounded-2xl border border-outline-variant/20 px-4 py-2 text-xs font-bold text-on-surface transition hover:bg-surface-container">
+                className="rounded-2xl border border-separator/40 px-4 py-2 text-xs font-bold text-on-surface transition hover:bg-surface-container">
                 {mode === "edit" ? "Cancel" : "Close"}
               </button>
               {canEdit && mode === "view" && (
                 <button type="button" onClick={enterEdit}
-                  className="rounded-2xl bg-primary px-4 py-2 text-xs font-bold text-on-primary transition hover:opacity-90">
+                  className="rounded-xl bg-primary px-4 py-2 text-xs font-bold text-on-primary hover:opacity-90 active:scale-95 transition-all duration-150">
                   Edit
                 </button>
               )}
               {mode === "edit" && (
                 <button type="button" onClick={handleSave} disabled={busy || uploading || !draft?.発生事案?.trim()}
-                  className="rounded-2xl bg-primary px-4 py-2 text-xs font-bold text-on-primary transition hover:opacity-90 disabled:opacity-50">
+                  className="rounded-xl bg-primary px-4 py-2 text-xs font-bold text-on-primary hover:opacity-90 active:scale-95 transition-all duration-150 disabled:opacity-50">
                   {busy ? "保存中…" : "変更を保存"}
                 </button>
               )}
@@ -449,9 +449,9 @@ function EquipmentDetailPanel({ equipment, onClose, onEdit, onAddEvent, onViewDe
   if (!equipment) return null;
 
   return (
-    <div className="rounded-2xl border border-outline-variant/20 bg-surface-container shadow-sm overflow-hidden">
+    <div className="rounded-2xl border border-separator/40 bg-surface-container shadow-sm overflow-hidden">
       {/* Header */}
-      <div className="flex items-start justify-between gap-4 border-b border-outline-variant/20 px-6 py-5">
+      <div className="flex items-start justify-between gap-4 border-b border-separator/35 px-6 py-5">
         <div>
           <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-outline">設備詳細</p>
           <h3 className="mt-1 text-xl font-black text-on-surface">{equipment.name || "—"}</h3>
@@ -469,13 +469,13 @@ function EquipmentDetailPanel({ equipment, onClose, onEdit, onAddEvent, onViewDe
           )}
           {onEdit && (
             <button type="button" onClick={() => onEdit(equipment)}
-              className="flex h-9 items-center gap-1.5 rounded-2xl border border-outline-variant/20 bg-surface px-3 text-xs font-bold text-on-surface transition hover:bg-surface-container-high">
+              className="flex h-9 items-center gap-1.5 rounded-2xl border border-separator/40 bg-surface px-3 text-xs font-bold text-on-surface transition hover:bg-surface-container-high">
               <span className="material-symbols-outlined" style={{ fontSize: 15 }}>edit</span>
               Edit
             </button>
           )}
           <button type="button" onClick={onClose}
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-surface text-on-surface-variant transition hover:bg-surface-container-high hover:text-on-surface">
+            className="p-2 rounded-xl flex-shrink-0 text-outline hover:bg-surface-container hover:text-on-surface transition-all duration-150 active:scale-95">
             <span className="material-symbols-outlined" style={{ fontSize: 18 }}>close</span>
           </button>
         </div>
@@ -484,7 +484,7 @@ function EquipmentDetailPanel({ equipment, onClose, onEdit, onAddEvent, onViewDe
       <div className="overflow-y-auto px-6 py-6" style={{ maxHeight: "calc(100vh - 220px)" }}>
         {/* Image */}
         {equipment.imageURL && (
-          <div className="mb-4 overflow-hidden rounded-2xl border border-outline-variant/20 bg-surface">
+          <div className="mb-4 overflow-hidden rounded-2xl border border-separator/40 bg-surface">
             <img
               src={equipment.imageURL}
               alt={equipment.name || "equipment"}
@@ -497,7 +497,7 @@ function EquipmentDetailPanel({ equipment, onClose, onEdit, onAddEvent, onViewDe
         {/* Equipment details */}
         <section className="mb-6">
           <p className="mb-3 text-[10px] font-bold uppercase tracking-[0.18em] text-outline">設備情報</p>
-          <dl className="grid grid-cols-2 gap-3 rounded-2xl border border-outline-variant/20 bg-surface px-5 py-4">
+          <dl className="grid grid-cols-2 gap-3 rounded-2xl border border-separator/40 bg-surface px-5 py-4">
             {[
               { label: "設備名", value: equipment.name },
               { label: "工場",   value: equipment["工場"] },
@@ -532,7 +532,7 @@ function EquipmentDetailPanel({ equipment, onClose, onEdit, onAddEvent, onViewDe
             <div className="rounded-2xl bg-error/10 px-4 py-3 text-sm text-error">{historyError}</div>
           )}
           {!historyLoading && !historyError && history.length === 0 && (
-            <div className="rounded-2xl border border-outline-variant/20 bg-surface px-4 py-6 text-center text-sm italic text-on-surface-variant">
+            <div className="rounded-2xl border border-separator/40 bg-surface px-4 py-6 text-center text-sm italic text-on-surface-variant">
               事案の記録はまだありません。
             </div>
           )}
@@ -577,7 +577,7 @@ function FactoryBox({ factory, equipment, selectedId, onView }) {
   const visible = expanded ? equipment : equipment.slice(0, 1);
 
   return (
-    <div className="rounded-2xl border border-outline-variant/20 bg-surface-container shadow-sm overflow-hidden">
+    <div className="rounded-2xl border border-separator/40 bg-surface-container shadow-sm overflow-hidden">
       {/* Header + equipment rows */}
       <div className="p-4">
         <div className="mb-3 flex items-center gap-2">
@@ -589,7 +589,7 @@ function FactoryBox({ factory, equipment, selectedId, onView }) {
 
         <div className="flex flex-col gap-1.5">
           {equipment.length === 0 ? (
-            <div className="rounded-xl border border-outline-variant/20 bg-surface px-3 py-2 text-center">
+            <div className="rounded-xl border border-separator/40 bg-surface px-3 py-2 text-center">
               <p className="text-[10px] italic text-on-surface-variant/50">No equipment recorded yet.</p>
             </div>
           ) : (
@@ -855,7 +855,7 @@ export default function SetsubiDBWorkspace({ refreshToken, onFlash }) {
   // ── Render ───────────────────────────────────────────────────────────────────
 
   return (
-    <section className="glass-card rounded-2xl p-6">
+    <section className="dashboard-section rounded-2xl p-6">
       {/* Page header */}
       <div className="mb-4 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
@@ -869,13 +869,13 @@ export default function SetsubiDBWorkspace({ refreshToken, onFlash }) {
             </span>
           )}
           <button type="button" onClick={() => setBinOpen(true)}
-            className="inline-flex items-center gap-2 rounded-2xl border border-outline-variant/20 bg-surface-container px-4 py-3 text-sm font-bold text-on-surface transition hover:bg-surface-container-high">
+            className="inline-flex items-center gap-2 rounded-2xl border border-separator/40 bg-surface-container px-4 py-3 text-sm font-bold text-on-surface transition hover:bg-surface-container-high">
             <span className="material-symbols-outlined" style={{ fontSize: 16 }}>delete</span>
             Recycle Bin
           </button>
           {canEdit && (
             <button type="button" onClick={() => openCreateEquipModal()}
-              className="inline-flex items-center gap-2 rounded-2xl bg-primary px-4 py-3 text-sm font-bold text-on-primary transition hover:opacity-90">
+              className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-bold text-on-primary hover:opacity-90 active:scale-95 transition-all duration-150">
               <span className="material-symbols-outlined" style={{ fontSize: 16 }}>add</span>
               Add Equipment
             </button>
@@ -885,7 +885,7 @@ export default function SetsubiDBWorkspace({ refreshToken, onFlash }) {
 
       {/* View toggle */}
       <div className="mb-6 flex items-center">
-        <div className="flex overflow-hidden rounded-2xl border border-outline-variant/20 bg-surface-container">
+        <div className="flex overflow-hidden rounded-2xl border border-separator/40 bg-surface-container">
           {[
             { key: "factory", label: "View by factory", icon: "factory" },
             { key: "all",     label: "View all records", icon: "list" },
@@ -920,7 +920,7 @@ export default function SetsubiDBWorkspace({ refreshToken, onFlash }) {
             <div className="rounded-2xl bg-error/10 px-5 py-4 text-sm font-medium text-error">{error}</div>
           )}
           {!loading && !error && factories.length === 0 && (
-            <div className="rounded-2xl border border-outline-variant/20 bg-surface px-5 py-8 text-center text-sm text-on-surface-variant">
+            <div className="rounded-2xl border border-separator/40 bg-surface px-5 py-8 text-center text-sm text-on-surface-variant">
               No factory records found in factoryDB.
             </div>
           )}
@@ -969,7 +969,7 @@ export default function SetsubiDBWorkspace({ refreshToken, onFlash }) {
             <select
               value={listFilterFactory}
               onChange={(e) => setListFilterFactory(e.target.value)}
-              className="rounded-2xl border border-outline-variant/20 bg-surface px-3 py-2 text-sm text-on-surface outline-none transition focus:border-primary/40"
+              className="rounded-2xl border border-separator/40 bg-surface px-3 py-2 text-sm text-on-surface outline-none transition focus:border-primary/40"
             >
               <option value="">All Factories</option>
               {factoryNames.map((f) => <option key={f} value={f}>{f}</option>)}
@@ -984,7 +984,7 @@ export default function SetsubiDBWorkspace({ refreshToken, onFlash }) {
                   className={`rounded-full px-3 py-1.5 text-xs font-bold transition ${
                     listFilterTag === tag
                       ? "bg-primary text-on-primary"
-                      : "border border-outline-variant/20 bg-surface text-on-surface hover:bg-surface-container"
+                      : "border border-separator/40 bg-surface text-on-surface hover:bg-surface-container"
                   }`}
                 >
                   {tag}
@@ -995,7 +995,7 @@ export default function SetsubiDBWorkspace({ refreshToken, onFlash }) {
             <button
               type="button"
               onClick={() => setListSortDir((d) => d === "desc" ? "asc" : "desc")}
-              className="ml-auto inline-flex items-center gap-1.5 rounded-2xl border border-outline-variant/20 bg-surface px-3 py-2 text-xs font-bold text-on-surface transition hover:bg-surface-container"
+              className="ml-auto inline-flex items-center gap-1.5 rounded-2xl border border-separator/40 bg-surface px-3 py-2 text-xs font-bold text-on-surface transition hover:bg-surface-container"
             >
               <span className="material-symbols-outlined" style={{ fontSize: 15 }}>
                 {listSortDir === "desc" ? "arrow_downward" : "arrow_upward"}
@@ -1014,7 +1014,7 @@ export default function SetsubiDBWorkspace({ refreshToken, onFlash }) {
             <div className="rounded-2xl bg-error/10 px-5 py-4 text-sm font-medium text-error">{allHistoryError}</div>
           )}
           {!allHistoryLoading && !allHistoryError && filteredSortedHistory.length === 0 && (
-            <div className="rounded-2xl border border-outline-variant/20 bg-surface px-5 py-10 text-center text-sm text-on-surface-variant">
+            <div className="rounded-2xl border border-separator/40 bg-surface px-5 py-10 text-center text-sm text-on-surface-variant">
               {allHistory.length === 0 ? "事案の記録はまだありません。" : "No records matched the current filters."}
             </div>
           )}
@@ -1028,7 +1028,7 @@ export default function SetsubiDBWorkspace({ refreshToken, onFlash }) {
                     key={key}
                     type="button"
                     onClick={() => setViewingEvent(event)}
-                    className="w-full rounded-2xl border border-outline-variant/20 bg-surface px-4 py-3 text-left transition hover:border-outline-variant/40 hover:bg-surface-container/50"
+                    className="w-full rounded-2xl border border-separator/40 bg-surface px-4 py-3 text-left transition hover:border-outline-variant/40 hover:bg-surface-container/50"
                   >
                     <div className="flex items-start justify-between gap-4">
                       <div className="min-w-0 flex-1">
@@ -1103,7 +1103,7 @@ export default function SetsubiDBWorkspace({ refreshToken, onFlash }) {
       )}
 
       {binOpen && createPortal(
-        <div className="fixed inset-0 z-50 overflow-y-auto bg-black/40 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-black/50 backdrop-blur-md">
           <div className="flex min-h-full items-start justify-center px-4 pb-4 pt-10">
             <div className="w-full max-w-4xl">
               <div className="mb-3 flex justify-end">

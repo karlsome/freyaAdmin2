@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { createPortal } from "react-dom";
 
 function joinClasses(...classes) {
   return classes.filter(Boolean).join(" ");
@@ -38,15 +39,15 @@ export default function NodaModalFrame({
 
   if (!open) return null;
 
-  return (
-    <div className="fixed inset-0 z-[70] bg-black/45 backdrop-blur-sm">
+  const modal = (
+    <div className="fixed inset-0 z-[70] bg-black/40 backdrop-blur-sm">
       <div className="flex min-h-full items-center justify-center p-4 lg:p-6">
         <div className={joinClasses("glass-card flex max-h-[92vh] w-full flex-col overflow-hidden rounded-2xl", maxWidthClassName)}>
-          <div className="border-b border-outline-variant/20 px-5 py-4 lg:px-6">
+          <div className="border-b border-separator/35 px-5 py-4 lg:px-6">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
               <div className={joinClasses("min-w-0", showIcon ? "flex items-start gap-4" : "") }>
                 {showIcon ? (
-                  <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-2xl border border-outline-variant/20 bg-white/80 text-primary dark:bg-surface-container">
+                  <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-2xl border border-separator/40 bg-white/80 text-primary dark:bg-surface-container">
                     <span className="material-symbols-outlined" style={{ fontVariationSettings: "'FILL' 1" }}>
                       {icon}
                     </span>
@@ -65,10 +66,10 @@ export default function NodaModalFrame({
               <button
                 type="button"
                 onClick={() => onClose?.()}
-                className="flex h-10 w-10 items-center justify-center rounded-2xl border border-outline-variant/20 bg-white/80 text-on-surface transition hover:bg-surface-container dark:bg-surface-container"
+                className="p-2 rounded-xl flex-shrink-0 text-outline hover:bg-surface-container hover:text-on-surface transition-all duration-150 active:scale-95"
                 aria-label="Close dialog"
               >
-                <span className="material-symbols-outlined">close</span>
+                <span className="material-symbols-outlined" style={{ fontSize: 18 }}>close</span>
               </button>
             </div>
           </div>
@@ -84,4 +85,6 @@ export default function NodaModalFrame({
       </div>
     </div>
   );
+
+  return createPortal(modal, document.body);
 }

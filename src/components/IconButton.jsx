@@ -13,7 +13,7 @@ const ROUNDED = {
 
 const VARIANT = {
   default:  "bg-surface-container text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface",
-  outlined: "border border-outline-variant/20 bg-white/80 text-on-surface hover:bg-surface-container dark:bg-surface-container",
+  outlined: "border border-separator/45 bg-white/80 text-on-surface hover:bg-surface-container dark:bg-surface-container",
   ghost:    "text-outline hover:bg-primary/10 hover:text-primary",
   light:    "bg-white/10 text-white hover:bg-white/20",
   danger:   "bg-error/10 text-error hover:bg-error/15",
@@ -40,7 +40,7 @@ export default function IconButton({
       aria-label={ariaLabel}
       title={title}
       className={[
-        "flex items-center justify-center transition",
+        "flex items-center justify-center transition-all duration-150 active:scale-95",
         SIZE[size] ?? SIZE.lg,
         ROUNDED[rounded] ?? ROUNDED["2xl"],
         VARIANT[variant] ?? VARIANT.default,
