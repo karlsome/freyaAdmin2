@@ -1,4 +1,5 @@
 import { formatDuration, sortScheduledProducts } from "../../utils/planner";
+import EmptyState from "../EmptyState";
 
 export default function PlannerTableView({ scheduledProducts = [], onRemoveItem }) {
   const items = sortScheduledProducts(scheduledProducts);
@@ -8,9 +9,7 @@ export default function PlannerTableView({ scheduledProducts = [], onRemoveItem 
 
   if (!items.length) {
     return (
-      <div className="rounded-3xl border border-dashed border-outline-variant/20 bg-surface-container-low px-6 py-14 text-center text-on-surface-variant">
-        No products in the current plan.
-      </div>
+      <EmptyState className="rounded-3xl bg-surface-container-low py-14">No products in the current plan.</EmptyState>
     );
   }
 

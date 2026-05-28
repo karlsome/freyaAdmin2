@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Papa from "papaparse";
 import NodaModalFrame from "./NodaModalFrame";
+import EmptyState from "../EmptyState";
 import StatusChip from "../StatusChip";
 import {
   addItemsToNodaRequest,
@@ -915,9 +916,7 @@ export default function NodaDetailModal({ open, requestId, mode = "view", authUs
                             </div>
                           </div>
                         )) : (
-                          <div className="rounded-2xl border border-dashed border-outline-variant/25 px-6 py-12 text-center text-sm text-on-surface-variant">
-                            No pending additions yet.
-                          </div>
+                          <EmptyState>No pending additions yet.</EmptyState>
                         )}
                       </div>
 

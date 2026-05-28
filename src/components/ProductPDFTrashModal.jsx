@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import EmptyState from "./EmptyState";
 import IconButton from "./IconButton";
 import {
   formatProductPDFDateTime,
@@ -100,9 +101,7 @@ export default function ProductPDFTrashModal({
                 {error}
               </div>
             ) : !items.length ? (
-              <div className="rounded-2xl border border-dashed border-outline-variant/20 bg-surface-container-low px-6 py-12 text-center text-sm text-on-surface-variant">
-                Trash is empty.
-              </div>
+              <EmptyState className="bg-surface-container-low">Trash is empty.</EmptyState>
             ) : (
               <div className="space-y-3">
                 {items.map((item) => {

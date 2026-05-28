@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import AdvancedFilterSection from "../AdvancedFilterSection";
+import EmptyState from "../EmptyState";
 import PlannerModalShell from "../planner/PlannerModalShell";
 import {
   batchResetInventory,
@@ -306,13 +307,9 @@ export default function InventoryBatchResetModal({
           </div>
 
           {loading ? (
-            <div className="mt-4 rounded-2xl border border-outline-variant/20 bg-surface-container-low/35 px-6 py-12 text-center text-sm text-on-surface-variant">
-              Loading inventory items...
-            </div>
+            <EmptyState variant="filled" className="mt-4">Loading inventory items...</EmptyState>
           ) : results.length === 0 ? (
-            <div className="mt-4 rounded-2xl border border-outline-variant/20 bg-surface-container-low/35 px-6 py-12 text-center text-sm text-on-surface-variant">
-              No inventory items matched the current filters.
-            </div>
+            <EmptyState variant="filled" className="mt-4">No inventory items matched the current filters.</EmptyState>
           ) : (
             <div className="mt-4 overflow-x-auto rounded-2xl border border-outline-variant/15">
               <table className="ui-table-data min-w-full">

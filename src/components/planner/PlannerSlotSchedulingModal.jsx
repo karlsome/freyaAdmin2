@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import PlannerModalShell from "./PlannerModalShell";
+import EmptyState from "../EmptyState";
 
 function QueueRow({ item, index, total, onMove, onQuantityChange, onRemove }) {
   return (
@@ -147,9 +148,7 @@ export default function PlannerSlotSchedulingModal({
             })}
 
             {!availableGoals.length ? (
-              <div className="rounded-2xl border border-dashed border-outline-variant/20 bg-surface px-4 py-10 text-center text-on-surface-variant">
-                No goals with remaining quantity are available for the selected date.
-              </div>
+              <EmptyState className="bg-surface px-4 py-10">No goals with remaining quantity are available for the selected date.</EmptyState>
             ) : null}
           </div>
         </div>
@@ -184,9 +183,7 @@ export default function PlannerSlotSchedulingModal({
             ))}
 
             {!queue.length ? (
-              <div className="rounded-2xl border border-dashed border-outline-variant/20 bg-surface px-4 py-10 text-center text-on-surface-variant">
-                Add goals from the left panel to build a scheduling queue.
-              </div>
+              <EmptyState className="bg-surface px-4 py-10">Add goals from the left panel to build a scheduling queue.</EmptyState>
             ) : null}
           </div>
         </div>

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { filterSelectableProducts } from "../utils/productPDFs";
+import EmptyState from "./EmptyState";
 import IconButton from "./IconButton";
 
 export default function ProductPDFProductSelectorModal({
@@ -145,9 +146,7 @@ export default function ProductPDFProductSelectorModal({
                 })}
               </div>
             ) : (
-              <div className="rounded-2xl border border-dashed border-outline-variant/20 bg-surface-container-low px-6 py-10 text-center text-sm text-on-surface-variant">
-                No products matched the current search.
-              </div>
+              <EmptyState className="bg-surface-container-low py-10">No products matched the current search.</EmptyState>
             )}
           </div>
 

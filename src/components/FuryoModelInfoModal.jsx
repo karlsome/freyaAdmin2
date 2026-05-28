@@ -1,3 +1,4 @@
+import EmptyState from "./EmptyState";
 import ModalShell from "./ModalShell";
 
 export default function FuryoModelInfoModal({ model = "", loading, error, products = [], onClose }) {
@@ -19,9 +20,7 @@ export default function FuryoModelInfoModal({ model = "", loading, error, produc
             ) : error ? (
               <div className="rounded-2xl border border-error/20 bg-error/10 px-6 py-10 text-center text-sm font-medium text-error">{error}</div>
             ) : !products.length ? (
-              <div className="rounded-2xl border border-dashed border-outline-variant/20 bg-surface-container-low px-6 py-10 text-center text-sm text-on-surface-variant">
-                No products were found for this model.
-              </div>
+              <EmptyState className="bg-surface-container-low py-10">No products were found for this model.</EmptyState>
             ) : (
               <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
                 {products.map((product, index) => (

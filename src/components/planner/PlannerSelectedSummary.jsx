@@ -1,4 +1,5 @@
 import { useState } from "react";
+import EmptyState from "../EmptyState";
 
 import {
   getEffectiveWorkMinutes,
@@ -110,9 +111,7 @@ export default function PlannerSelectedSummary({
       ) : null}
 
       {!collapsed && !scheduledProducts.length ? (
-        <div className="planner-data-text mt-5 rounded-3xl border border-dashed border-outline-variant/20 bg-surface-container-low px-6 py-10 text-center text-on-surface-variant">
-          No products scheduled yet.
-        </div>
+        <EmptyState className="planner-data-text mt-5 rounded-3xl bg-surface-container-low py-10">No products scheduled yet.</EmptyState>
       ) : null}
 
       {!collapsed && scheduledProducts.length ? (
@@ -134,9 +133,7 @@ export default function PlannerSelectedSummary({
 
           <div className="mt-5 space-y-3">
             {equipmentNames.length === 0 ? (
-              <div className="planner-data-text rounded-2xl border border-dashed border-outline-variant/20 bg-surface-container-low px-4 py-6 text-center text-on-surface-variant">
-                No scheduled products match the current search.
-              </div>
+              <EmptyState className="planner-data-text bg-surface-container-low px-4 py-6">No scheduled products match the current search.</EmptyState>
             ) : equipmentNames.map((equipment) => {
               const items = equipmentMap[equipment];
               const firstStart = Math.min(...items.map((item) => Number(item.startTime?.split(":")[0]) * 60 + Number(item.startTime?.split(":")[1])));
