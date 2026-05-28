@@ -1,6 +1,8 @@
 // ─── Issues feed: records with maintenance or high defect rate ────────────────
 // Props: issues (from useTodayData), loading, onRecordClick(record)
 
+import { getDefectRate } from "../utils/statusHelpers";
+
 function IssueTag({ children, color }) {
   return (
     <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold ${color}`}>
@@ -57,9 +59,7 @@ export default function DashboardIssuesFeed({ issues, loading, onRecordClick }) 
       ) : (
         <div className="flex-1 overflow-y-auto scrollbar-hide space-y-2">
           {issues.map((r, idx) => {
-            const recordTotal = Number(r.Total) || 0;
-            const recordNG    = Number(r.Total_NG) || 0;
-            const defRate     = recordTotal > 0 ? (recordNG / recordTotal) * 100 : 0;
+            const defRate     = getDefectRate(r);
             const hasMaint    = Number(r.Total_Trouble_Hours) > 0;
             const highNg      = defRate >= 2;
             const isCritical  = highNg && defRate >= 5;

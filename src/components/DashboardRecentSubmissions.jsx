@@ -1,6 +1,8 @@
 // ─── Live feed of the most recently submitted records ─────────────────────────
 // Props: recent (from useTodayData), loading, onRecordClick(record)
 
+import { getDefectRate, getProcessedQuantity } from "../utils/statusHelpers";
+
 function timeAgo(isoStr) {
   if (!isoStr) return "";
   const diff = Date.now() - new Date(isoStr).getTime();
@@ -62,9 +64,9 @@ export default function DashboardRecentSubmissions({ recent, loading, onRecordCl
       ) : (
         <div className="flex-1 overflow-y-auto scrollbar-hide space-y-1.5">
           {recent.map((r) => {
-            const recordTotal = Number(r.Total) || 0;
+            const recordTotal = getProcessedQuantity(r);
             const recordNG    = Number(r.Total_NG) || 0;
-            const defRate     = recordTotal > 0 ? (recordNG / recordTotal) * 100 : 0;
+            const defRate     = getDefectRate(r);
             const dotColor    = PROCESS_DOT[r._process] ?? "bg-outline";
 
             return (

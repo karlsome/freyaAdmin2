@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { fetchTodayAllRecords, fetchMasterFactories } from "../services/api";
+import { getDefectRate, getProcessedQuantity } from "../utils/statusHelpers";
 
 /**
  * Fetches all production records for today across all factories and processes.
@@ -38,7 +39,7 @@ export function useTodayData() {
   const kpis = (() => {
     let total = 0, totalNG = 0, workHours = 0, troubleHours = 0, breakHours = 0;
     records.forEach((r) => {
-      total        += Number(r.Total)               || 0;
+      total        += getProcessedQuantity(r);
       totalNG      += Number(r.Total_NG)            || 0;
       workHours    += Number(r.Total_Work_Hours)    || 0;
       troubleHours += Number(r.Total_Trouble_Hours) || 0;
@@ -52,9 +53,7 @@ export function useTodayData() {
   const issues = records
     .filter((r) => {
       const hasMaintenance = Number(r.Total_Trouble_Hours) > 0;
-      const recordTotal    = Number(r.Total) || 0;
-      const recordNG       = Number(r.Total_NG) || 0;
-      const highNG         = recordTotal > 0 && (recordNG / recordTotal) * 100 >= 2;
+      const highNG         = getDefectRate(r) >= 2;
       return hasMaintenance || highNG;
     })
     .sort((a, b) => new Date(b.createdAt ?? 0) - new Date(a.createdAt ?? 0))
@@ -71,7 +70,7 @@ export function useTodayData() {
     const recs = records.filter((r) => r._process === name);
     let total = 0, workHours = 0, totalNG = 0;
     recs.forEach((r) => {
-      total     += Number(r.Total)            || 0;
+      total     += getProcessedQuantity(r);
       totalNG   += Number(r.Total_NG)         || 0;
       workHours += Number(r.Total_Work_Hours) || 0;
     });
@@ -83,7 +82,7 @@ export function useTodayData() {
     const recs = records.filter((r) => r["工場"] === name);
     let ftotal = 0, ftotalNG = 0, fTrouble = 0;
     recs.forEach((r) => {
-      ftotal   += Number(r.Total)               ?? 0;
+      ftotal   += getProcessedQuantity(r);
       ftotalNG += Number(r.Total_NG)            ?? 0;
       fTrouble += Number(r.Total_Trouble_Hours) ?? 0;
     });

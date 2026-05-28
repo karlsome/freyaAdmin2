@@ -1,4 +1,14 @@
 // ─── Defect Rate ─────────────────────────────────────────────────────────────
+export function getProcessedQuantity(record) {
+  return Number(record?.Process_Quantity) || Number(record?.Total) || 0;
+}
+
+export function getDefectRate(record) {
+  const quantity = getProcessedQuantity(record);
+  const totalNg = Number(record?.Total_NG) || 0;
+  return quantity > 0 ? (totalNg / quantity) * 100 : 0;
+}
+
 export function getDefectStatus(rate) {
   if (rate >= 2.0) return {
     level: "high",
