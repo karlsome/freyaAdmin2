@@ -502,7 +502,7 @@ export default function DataTable({
               <button
                 type="button"
                 onClick={handleResetColumns}
-                className="inline-flex h-10 items-center gap-2 rounded-2xl border border-outline-variant/30 px-3.5 text-sm font-bold text-on-surface transition hover:bg-surface-container"
+                className="inline-flex h-10 items-center gap-2 rounded-2xl border border-outline-variant/30 px-4 text-sm font-bold text-on-surface transition hover:bg-surface-container"
               >
                 <span className="material-symbols-outlined" style={{ fontSize: 18 }}>restart_alt</span>
                 {resetColumnsLabel}

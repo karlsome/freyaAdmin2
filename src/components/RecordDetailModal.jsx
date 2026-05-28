@@ -195,7 +195,7 @@ function PhotosSection({ checkImages, labelImages, totalCount }) {
       label="Uploaded Photos"
       badge={<span className="px-1.5 py-0.5 rounded-full bg-surface-container text-[9px] font-bold normal-case tracking-normal">{totalCount}</span>}
     >
-      <div className="pb-5 space-y-5">
+      <div className="pb-5 space-y-4">
           {checkImages.length > 0 && (
             <div className="grid grid-cols-2 gap-3">
               {checkImages.map(({ label, url }) => (
@@ -254,7 +254,7 @@ function BreakTimeSection({ record }) {
       label="Break Times"
       badge={<span className="px-1.5 py-0.5 rounded-full bg-surface-container text-[9px] font-bold normal-case tracking-normal">{totalMin} min</span>}
     >
-      <div className="pb-4">
+      <div className="pb-5">
         <div className="rounded-xl overflow-hidden border border-separator/30">
           <table className="ui-table-data w-full">
             <thead className="bg-surface-container-high/40">
@@ -302,7 +302,7 @@ function MaintenanceSection({ record }) {
       label="Maintenance / Trouble"
       badge={<span className="px-1.5 py-0.5 rounded-full bg-amber-400/15 text-amber-400 text-[9px] font-bold normal-case tracking-normal">{records.length} record{records.length > 1 ? "s" : ""}</span>}
     >
-      <div className="pb-5 space-y-3">
+      <div className="pb-5 space-y-4">
         {records.map((rec) => {
           const photos = Array.isArray(rec.photos) ? rec.photos.filter(Boolean) : [];
           const s = rec.startTime ? new Date(`2000-01-01T${rec.startTime}`) : null;
