@@ -735,7 +735,7 @@ function SubmissionPickerModal({ dateLabel, factory, machineName, onClose, onSel
   return (
     <div className="fixed inset-0 z-[65] flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm" onClick={onClose}>
       <div
-        className="dashboard-section flex max-h-[92vh] w-full flex-col overflow-hidden rounded-2xl"
+        className="glass-card flex max-h-[92vh] w-full flex-col overflow-hidden rounded-2xl"
         onClick={(event) => event.stopPropagation()}
       >
         <div className="flex items-start justify-between gap-4 border-b border-separator/35 px-6 py-5">
@@ -1042,7 +1042,7 @@ function RecordDetailModal({ defaultTab = "submission", form, initialTicketFocus
   return (
     <>
       <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
-        <div className="dashboard-section flex max-h-[92vh] w-full flex-col overflow-hidden rounded-2xl">
+        <div className="glass-card flex max-h-[92vh] w-full flex-col overflow-hidden rounded-2xl">
         <div className="flex flex-shrink-0 items-start justify-between border-b border-separator/35 px-6 py-5">
           <div className="min-w-0 flex-1 pr-4">
             {onBack && (

@@ -332,7 +332,7 @@ export default function ApprovalsDetailModal({
   return (
     <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-md">
       <div className="flex min-h-full items-center justify-center p-4 lg:p-6">
-        <div ref={modalRef} className="dashboard-section flex max-h-[92vh] w-full max-w-7xl flex-col overflow-hidden rounded-2xl">
+        <div ref={modalRef} className="glass-card flex max-h-[92vh] w-full max-w-7xl flex-col overflow-hidden rounded-2xl">
 
           <div className="border-b border-separator/35 px-5 py-4 lg:px-6">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
