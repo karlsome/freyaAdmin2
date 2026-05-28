@@ -541,9 +541,9 @@ export default function CheckFormBuilderModal({ initial, onClose, onSaved, prese
           <button
             type="button"
             onClick={onClose}
-            className="p-2 rounded-xl flex-shrink-0 text-outline hover:bg-surface-container hover:text-on-surface transition-all duration-150 active:scale-95"
+            className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-2xl bg-surface-container text-on-surface-variant transition hover:bg-surface-container-high"
           >
-            <span className="material-symbols-outlined" style={{ fontSize: 18 }}>close</span>
+            <span className="material-symbols-outlined">close</span>
           </button>
         </div>
 
@@ -1080,9 +1080,9 @@ function OverlayDialog({
             <button
               type="button"
               onClick={onClose}
-              className="p-2 rounded-xl flex-shrink-0 text-outline hover:bg-surface-container hover:text-on-surface transition-all duration-150 active:scale-95"
+              className={`flex h-11 w-11 items-center justify-center rounded-2xl transition ${closeButtonClassName}`}
             >
-              <span className="material-symbols-outlined" style={{ fontSize: 18 }}>close</span>
+              <span className="material-symbols-outlined">close</span>
             </button>
           </div>
 

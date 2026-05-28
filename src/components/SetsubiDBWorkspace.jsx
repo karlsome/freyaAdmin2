@@ -475,7 +475,7 @@ function EquipmentDetailPanel({ equipment, onClose, onEdit, onAddEvent, onViewDe
             </button>
           )}
           <button type="button" onClick={onClose}
-            className="p-2 rounded-xl flex-shrink-0 text-outline hover:bg-surface-container hover:text-on-surface transition-all duration-150 active:scale-95">
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-surface text-on-surface-variant transition hover:bg-surface-container-high hover:text-on-surface">
             <span className="material-symbols-outlined" style={{ fontSize: 18 }}>close</span>
           </button>
         </div>
