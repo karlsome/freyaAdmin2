@@ -2,7 +2,7 @@
 
 **Last updated:** 2026-05-28  
 **Branch:** claude/freya-admin-light-mode-KQgcx  
-**Scope:** Full codebase — light mode neutralization + complete spacing audit applied.
+**Scope:** Full codebase — light mode neutralization + complete spacing and modal UI audit applied.
 
 ---
 
@@ -248,9 +248,343 @@ border: 1px solid rgba(205, 207, 216, 0.60);
 
 ---
 
-## 8. Section Header Pattern
+## 8. Modal Size Variants
 
-Use this pattern for every panel/section title — dashboard, modals, and pages.
+Choose the modal width based on content complexity, not preference. Never pick a larger size just to "have more room."
+
+| Tailwind class | ~Width | When to use |
+|---|---|---|
+| `max-w-md` | 448 px | Destructive confirms, single-input prompts, simple warnings |
+| `max-w-2xl` | 672 px | Quick-edit forms (2–4 fields), compact detail views |
+| `max-w-3xl` | 768 px | Standard detail modals (4–8 fields, no sidebar) |
+| `max-w-5xl` | 1024 px | Full record detail with image or embedded table |
+| `max-w-6xl` | 1152 px | Workspace modals with a sidebar (NodaDetailModal, CheckFormBuilderModal) |
+| `max-w-7xl` | 1280 px | Bulk-edit, PDF tools, or full data-entry workspaces |
+
+**Max height:** Always `max-h-[92vh]` — never set a fixed pixel height on a modal.
+
+**Width responsiveness:** Modals always have `w-full` so they collapse correctly on small screens. Never add horizontal padding to the backdrop below `p-4`.
+
+---
+
+## 9. Modal Typography Rules
+
+Modal typography is more constrained than page-level typography. Follow this table exactly.
+
+| Role | Class | Notes |
+|---|---|---|
+| Eyebrow (above title) | `text-[10px] font-bold uppercase tracking-[0.22em] text-outline` | One line only; identifies module/record type |
+| Modal title | `text-xl font-black text-on-surface` | Standard for `max-w-3xl` and up |
+| Modal title (extra-large) | `text-2xl font-black text-on-surface` | Only for `max-w-6xl` / `max-w-7xl` workspace modals |
+| Subtitle / supporting line | `text-sm text-on-surface-variant` | Immediately below title; concise summary |
+| Section heading (inside body) | `text-[10px] font-bold uppercase tracking-[0.18em] text-outline` | Marks a logical group of fields |
+| Field label | `text-[10px] font-bold uppercase tracking-[0.18em] text-outline` | Same class as section heading — do not invent alternatives |
+| Field value (primary) | `text-sm font-semibold text-on-surface` | The main readable datum |
+| Field value (secondary) | `text-sm font-medium text-on-surface-variant` | Supporting or contextual data |
+| Caption / hint | `text-[11px] text-outline` | Usage tips, metadata under a value |
+| Timestamp / ID | `text-xs font-mono text-on-surface-variant` | Raw IDs, timestamps, record numbers |
+| Paragraph body | `text-sm text-on-surface-variant leading-relaxed` | Multi-sentence descriptions, instructions |
+| Stats strip value | `text-xl sm:text-2xl font-black leading-none text-on-surface` | Large KPI numbers in header strip |
+| Stats strip label | `text-[10px] font-bold uppercase tracking-[0.18em] text-outline` | Below the KPI number |
+| Stats strip sub-label | `text-[10px] text-outline` | Optional third line (unit, qualifier) |
+
+**Tracking rule:** `tracking-[0.22em]` is reserved for eyebrows only. All other ALL CAPS labels use `tracking-[0.18em]`. Do not use `tracking-wider` or `tracking-widest` inside modals.
+
+**Weight rule:** `font-black` appears only on modal titles and KPI numbers — nowhere else inside the modal body.
+
+---
+
+## 10. Modal Internal Spacing
+
+### Vertical rhythm
+
+| Gap | Value | Where |
+|---|---|---|
+| Eyebrow → Title | `mt-1` | In the header block |
+| Title → Subtitle | `mt-1` | In the header block |
+| Between field label and value | `mt-1` | Inside a field card |
+| Between sibling field cards | `gap-3` | In a `grid` layout |
+| Between fields in a `space-y` list | `space-y-4` | Standard section body |
+| Between major sections | `mb-5` or `space-y-5` | Separating thematic blocks |
+| After a section heading (label row) | `mb-3` | Before the field grid |
+| List of compact items | `space-y-3` | Goal lists, step lists |
+| Tightly-related items (table rows) | `space-y-1` or `space-y-2` | Dense data rows |
+
+### Section container sizing
+
+| Content type | Padding |
+|---|---|
+| Section container (holds fields) | `px-4 py-4` |
+| Single field card (label + value) | `px-4 py-3` |
+| Inline row inside a container | `px-3 py-3` |
+| Warning / alert box | `px-4 py-4` |
+
+**No fractional spacing inside modals.** Every padding and gap value must be a whole number on the Tailwind scale: `1`, `2`, `3`, `4`, `5`, `6`.
+
+---
+
+## 11. Modal Divider Hierarchy
+
+Three opacity tiers — use the lighter tier for finer distinctions.
+
+| Divider position | Class |
+|---|---|
+| Header bottom border | `border-b border-separator/40` |
+| Section-to-section divider (inside body) | `border-b border-separator/35` |
+| Item-to-item divider (inside a list) | `border-b border-separator/30` |
+| Footer top border | `border-t border-outline-variant/20` |
+
+Never use `border-separator/50` or higher inside a modal body — that weight belongs on page-level containers.
+
+---
+
+## 12. Modal Stats Strip
+
+A row of at-a-glance KPIs shown just below the modal header (before the scrollable body). Used in record detail modals.
+
+```jsx
+<div className="grid grid-cols-2 sm:grid-cols-4 gap-3 px-6 py-4
+                border-b border-separator/35 bg-surface-container-low/40">
+  <div className="rounded-xl px-3 py-3 text-center border border-separator/30 bg-surface-container/50">
+    <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-outline mb-1">Processed</p>
+    <p className="text-xl sm:text-2xl font-black leading-none text-on-surface">1,240</p>
+    <p className="text-[10px] text-outline mt-1">units</p>
+  </div>
+  {/* ... more cells */}
+</div>
+```
+
+Rules:
+- Grid is `grid-cols-2 sm:grid-cols-4` — never single-column or 3-column
+- Each cell: `rounded-xl px-3 py-3 text-center border border-separator/30`
+- Value: `text-xl sm:text-2xl font-black leading-none`
+- Status-colored values: use `text-error`, `text-amber-500`, `text-emerald-500` — not custom colors
+- The strip sits *outside* the scrollable body — it stays pinned below the header
+
+---
+
+## 13. Field Cards (label + value pairs)
+
+Standard pattern for displaying a named data field. Used in detail modals, drawers, and sidebar panels.
+
+```jsx
+{/* Single field card */}
+<div className="rounded-2xl border border-outline-variant/15 bg-surface-container-low px-4 py-3">
+  <div className="flex items-center gap-2 text-outline">
+    <span className="material-symbols-outlined text-primary" style={{ fontSize: 16 }}>icon_name</span>
+    <span className="text-[10px] font-bold uppercase tracking-[0.18em]">Label</span>
+  </div>
+  <p className="mt-2 text-sm font-semibold text-on-surface">Value</p>
+</div>
+
+{/* Section container card (wraps multiple fields) */}
+<div className="rounded-2xl border border-outline-variant/15 bg-surface-container-low px-4 py-4">
+  <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-outline mb-3">Section Name</p>
+  <div className="grid grid-cols-2 gap-3">
+    {/* ...field cards... */}
+  </div>
+</div>
+```
+
+Rules:
+- Field card always uses `rounded-2xl` — never `rounded-xl`
+- Label row uses `gap-2` between icon and text — never `gap-1` or `gap-3`
+- Icon inside field card label: `style={{ fontSize: 16 }}` — not 18 or 20
+- `mt-2` between label row and value (not `mt-1`) when an icon is present
+- `mt-1` between label text only (no icon) and value
+
+---
+
+## 14. Semantic Alert Boxes
+
+Used for warnings, errors, confirmations, and info inside modal bodies.
+
+```jsx
+{/* Error / destructive */}
+<div className="rounded-2xl border border-error/20 bg-error/10 px-4 py-4 flex gap-3">
+  <span className="material-symbols-outlined text-error flex-shrink-0" style={{ fontSize: 18 }}>report</span>
+  <div>
+    <p className="text-sm font-bold text-on-surface">Heading</p>
+    <p className="text-xs text-on-surface-variant mt-1">Detail message explaining the issue.</p>
+  </div>
+</div>
+
+{/* Warning */}
+<div className="rounded-2xl border border-amber-500/20 bg-amber-500/10 px-4 py-4 flex gap-3">
+  <span className="material-symbols-outlined text-amber-500 flex-shrink-0" style={{ fontSize: 18 }}>warning</span>
+  ...
+</div>
+
+{/* Success */}
+<div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-4 flex gap-3">
+  <span className="material-symbols-outlined text-emerald-500 flex-shrink-0" style={{ fontSize: 18 }}>check_circle</span>
+  ...
+</div>
+
+{/* Info */}
+<div className="rounded-2xl border border-primary/20 bg-primary/10 px-4 py-4 flex gap-3">
+  <span className="material-symbols-outlined text-primary flex-shrink-0" style={{ fontSize: 18 }}>info</span>
+  ...
+</div>
+```
+
+Rules:
+- Always `rounded-2xl` — never `rounded-xl` for alert boxes
+- Icon and text column layout: `flex gap-3`, icon `flex-shrink-0`
+- Heading: `text-sm font-bold text-on-surface`
+- Body: `text-xs text-on-surface-variant mt-1`
+- Never use `font-black` or `text-base` in alert boxes
+
+---
+
+## 15. Modal Image Display
+
+Images displayed inside modals (e.g., product photos, PDF previews, QR codes).
+
+```jsx
+{/* Standard image container */}
+<div className="rounded-2xl overflow-hidden border border-separator/30 bg-surface-container">
+  <img src={url} alt={altText} className="w-full object-contain" />
+</div>
+
+{/* With caption */}
+<div className="rounded-2xl overflow-hidden border border-separator/30 bg-surface-container">
+  <img src={url} alt={altText} className="w-full object-contain" />
+  <p className="text-[11px] text-outline text-center px-3 py-2 border-t border-separator/20">{caption}</p>
+</div>
+
+{/* Thumbnail grid (multiple images) */}
+<div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+  {images.map(img => (
+    <div key={img.id} className="rounded-xl overflow-hidden border border-separator/30 aspect-square bg-surface-container">
+      <img src={img.url} alt={img.label} className="w-full h-full object-cover" />
+    </div>
+  ))}
+</div>
+```
+
+Rules:
+- Single image container: `rounded-2xl`
+- Thumbnail: `rounded-xl` (smaller context, `aspect-square` for consistency)
+- Background behind the image: always `bg-surface-container` (not transparent)
+- No drop shadow on images — only the border distinguishes them
+
+---
+
+## 16. Modal Sidebar Layout
+
+Large modals (`max-w-6xl` / `max-w-7xl`) may have a fixed right sidebar for metadata, controls, or navigation.
+
+```jsx
+<div className="flex flex-1 min-h-0 overflow-hidden">
+
+  {/* Main scrollable content */}
+  <div className="flex-1 overflow-y-auto px-6 py-5 space-y-4">
+    ...
+  </div>
+
+  {/* Right sidebar */}
+  <div className="w-72 flex-shrink-0 border-l border-separator/30
+                  overflow-y-auto px-6 py-5 space-y-4
+                  bg-surface-container-low/30">
+    ...
+  </div>
+
+</div>
+```
+
+Rules:
+- Sidebar width: `w-72` (288 px). Never use `w-64` or `w-80` unless there is a clear layout reason.
+- Sidebar uses its own `overflow-y-auto` — it scrolls independently from the main content.
+- Separator: `border-l border-separator/30` — same lighter tier as item dividers.
+- Sidebar padding is identical to main body: `px-6 py-5`.
+- On small screens (`< lg`) the sidebar collapses or stacks below — implement with `hidden lg:flex` on the sidebar, or a tab pattern.
+
+---
+
+## 17. Modal Action Buttons
+
+Action buttons live in the modal footer. Footer layout and button conventions:
+
+```jsx
+{/* Footer */}
+<div className="border-t border-outline-variant/20 px-6 py-4
+                bg-surface-container-low/50 flex items-center justify-end gap-3">
+
+  {/* Cancel / Close — always leftmost of the pair */}
+  <button className="rounded-xl border border-separator/50 px-4 py-2
+                     text-xs font-bold text-on-surface-variant
+                     hover:bg-surface-container hover:text-primary hover:border-primary/30
+                     active:scale-95 transition-all duration-150">
+    Cancel
+  </button>
+
+  {/* Primary action */}
+  <button className="rounded-xl bg-primary px-4 py-2
+                     text-xs font-bold text-on-primary
+                     hover:opacity-90 active:scale-95 transition-all duration-150">
+    Save
+  </button>
+
+  {/* Destructive action */}
+  <button className="rounded-xl bg-error px-4 py-2
+                     text-xs font-bold text-on-error
+                     hover:opacity-90 active:scale-95 transition-all duration-150">
+    Delete
+  </button>
+
+</div>
+```
+
+Rules:
+- Button padding: `px-4 py-2` always — never `px-5`, `py-3`, `px-6`
+- Font size: `text-xs font-bold` — never `text-sm` in footer buttons
+- Gap between buttons: `gap-3` — never `gap-2` or `gap-4`
+- Order (left to right): Cancel → Secondary → Primary / Destructive
+- `active:scale-95` is required on all footer buttons
+- For prominent CTA inside the *body* (not footer), use `py-2.5` and `text-sm` — this is the only sanctioned exception to the `py-2` rule
+
+---
+
+## 18. Status / Property Chips Inside Fields
+
+Inline tags and chips that appear as values within field cards or record rows.
+
+```jsx
+{/* Status tag (inside IssuesFeed, field cards, etc.) */}
+<span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full
+                 text-[10px] font-bold
+                 bg-error/12 text-error border border-error/20">
+  <span className="material-symbols-outlined" style={{ fontSize: 11 }}>report</span>
+  2.5% NG
+</span>
+
+{/* Process label chip */}
+<span className="text-[10px] text-outline bg-surface-container px-1.5 py-0.5 rounded-md">
+  Kensa
+</span>
+
+{/* Approval status chip */}
+<span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full
+                 text-[10px] font-bold
+                 bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
+  <span className="material-symbols-outlined" style={{ fontSize: 11 }}>check_circle</span>
+  Approved
+</span>
+```
+
+Rules:
+- Icon inside a chip: `style={{ fontSize: 11 }}` — always 11 px, never larger
+- Chip gap: `gap-1` between icon and text
+- Pill shape: `rounded-full` — never `rounded-xl` for inline tags
+- Small process labels that are not interactive: `rounded-md` (no border, no icon)
+- Opacity tiers: background `/{10 or 12}`, border `/{20}` — keep them paired
+
+---
+
+## 19. Section Header Pattern
+
+Use this pattern for every panel/section title — dashboard pages, modals, and drawers.
 
 ```jsx
 <div className="flex items-center gap-2 mb-1">
@@ -264,11 +598,17 @@ Use this pattern for every panel/section title — dashboard, modals, and pages.
 <p className="text-[11px] text-outline mb-4 ml-10">Supporting description indented under icon</p>
 ```
 
-For error-state sections swap `bg-primary/10 text-primary` → `bg-error/10 text-error`.
+Rules:
+- Icon badge: `w-8 h-8 rounded-lg` — not `rounded-xl` or `rounded-2xl`
+- Icon size: `style={{ fontSize: 18 }}` — always 18 px for section header icons
+- Heading: `text-sm font-bold` — not `text-base` or `text-xs`
+- `mb-1` after the header row, then `mb-4` after the subtitle — these keep spacing even
+- For error-state sections: swap `bg-primary/10 text-primary` → `bg-error/10 text-error`
+- Count badge (right): `ml-auto text-[10px] text-outline` (plain text) or `ml-auto px-2.5 py-1 rounded-full bg-error/12 text-error text-[11px] font-black border border-error/20` (colored pill for issue counts)
 
 ---
 
-## 9. Icon Containers
+## 20. Icon Containers
 
 | Context | Size | Shape | Background |
 |---|---|---|---|
@@ -279,7 +619,7 @@ For error-state sections swap `bg-primary/10 text-primary` → `bg-error/10 text
 
 ---
 
-## 10. Button Standards
+## 21. Button Standards
 
 **Primary action:**
 ```jsx
@@ -314,7 +654,7 @@ Rules:
 
 ---
 
-## 11. Interactive Rows (clickable list items)
+## 22. Interactive Rows (clickable list items)
 
 ```jsx
 {/* Standard list row */}
@@ -339,7 +679,9 @@ Rules:
 
 ---
 
-## 12. Field Cards (label + value pairs)
+## 23. Field Cards — Page Context (label + value pairs)
+
+> For field cards inside modals (with icon in label row), see Section 13. These patterns apply to drawers, sidebars, and non-modal page panels.
 
 ```jsx
 {/* Standard field card */}
@@ -359,7 +701,7 @@ Rules:
 
 ---
 
-## 13. Status Badges / Tags
+## 24. Status Badges / Tags
 
 ```jsx
 {/* Pill badge */}
@@ -383,7 +725,7 @@ Rules:
 
 ---
 
-## 14. Loading Skeletons
+## 25. Loading Skeletons
 
 ```jsx
 {/* Block skeleton (card/row placeholder) */}
@@ -398,7 +740,7 @@ Rules:
 
 ---
 
-## 15. Process Color Accents
+## 26. Process Color Accents
 
 | Process | Dot color | Icon color | Background |
 |---|---|---|---|
@@ -418,7 +760,7 @@ In the KPI strip (higher contrast variant):
 
 ---
 
-## 16. KPI Strip Layout
+## 27. KPI Strip Layout
 
 ```jsx
 <div className="space-y-5 mb-8">
@@ -438,7 +780,7 @@ In the KPI strip (higher contrast variant):
 
 ---
 
-## 17. Dark Mode
+## 28. Dark Mode
 
 Dark mode is toggled via the `.dark` class on `<html>`. All color tokens have dark overrides in `src/index.css`.
 
@@ -448,7 +790,7 @@ The aurora/lava-lamp background animation (`.aurora-bg`, `.aurora-blob-*`) is da
 
 ---
 
-## 18. Known Open Issues (low priority)
+## 29. Known Open Issues (low priority)
 
 | Issue | Location | Notes |
 |---|---|---|
@@ -459,21 +801,40 @@ The aurora/lava-lamp background animation (`.aurora-bg`, `.aurora-blob-*`) is da
 
 ---
 
-## 19. Verification Checklist
+## 30. Verification Checklist
 
 When reviewing a new component, confirm:
 
+**Spacing**
 - [ ] All spacing uses 8px-grid values — no `gap-2.5`, `py-2.5`, `px-3.5`, `mb-1.5`, etc.
-- [ ] Cards use `px-4 py-3` (field) or `px-4 py-4` / `p-4` (container) — not `px-3 py-2` or `px-3 py-3`
-- [ ] Modal header is `px-6 py-5`, body `px-6 py-5`, footer `px-6 py-4` — no responsive overrides inside modals
+- [ ] Cards use `px-4 py-3` (field) or `px-4 py-4` / `p-4` (container) — not `px-3 py-2`
 - [ ] Table cells are `px-3 py-3` in both `<th>` and `<td>`
+- [ ] No asymmetric gap classes (`gap-x-N gap-y-M` where N ≠ M)
+
+**Modal-specific**
+- [ ] Modal width chosen from the allowed variants (`max-w-md` → `max-w-7xl`) — never custom pixel widths
+- [ ] Modal header `px-6 py-5`, body `px-6 py-5`, footer `px-6 py-4` — no responsive overrides (`sm:px-6`, `lg:px-6`) inside modals
+- [ ] Eyebrow uses `tracking-[0.22em]`; all other ALL CAPS labels use `tracking-[0.18em]`
+- [ ] Modal title is `text-xl font-black` (or `text-2xl` for `max-w-6xl`+)
+- [ ] Field label icon is `style={{ fontSize: 16 }}` — not 18 or 20
+- [ ] Dividers follow the three-tier opacity rule: `40` header, `35` section, `30` item
+- [ ] Stats strip cells are `rounded-xl px-3 py-3 text-center border border-separator/30`
+- [ ] Alert boxes (`rounded-2xl`, correct semantic color, `flex gap-3`, `flex-shrink-0` on icon)
+- [ ] Images wrapped in `rounded-2xl overflow-hidden border border-separator/30 bg-surface-container`
+- [ ] Sidebar width is `w-72` with `border-l border-separator/30`
+- [ ] Footer buttons `px-4 py-2 text-xs font-bold`, gap `gap-3`, `active:scale-95`
+- [ ] Status chips use `rounded-full` with icon `style={{ fontSize: 11 }}`
+
+**Buttons**
 - [ ] Buttons are `px-4 py-2` — never `px-3.5`, `py-2.5`, `py-3.5`
+- [ ] Primary buttons have `active:scale-95`
+- [ ] All transitions use `transition-all duration-150`
+
+**Design tokens**
 - [ ] Border radius: data containers `rounded-2xl`, controls `rounded-xl`, pills `rounded-full`
 - [ ] Light mode surface containers use neutral grays — no `244 243 249` / `236 233 244` values
-- [ ] Glass card and dashboard-section backgrounds are `rgba(252, 253, 253, ...)` — no blue-biased `255` channel
+- [ ] Glass card and dashboard-section backgrounds are `rgba(252, 253, 253, ...)` — not `rgba(252, 251, 255, ...)`
 - [ ] Structural borders use `border-separator/*` — never `border-white/*`
-- [ ] Frosted-glass appearance on modals (not flat opaque)
 - [ ] Interactive rows have `hover:bg-surface-container hover:border-primary/30 transition-all duration-150`
-- [ ] Primary buttons have `active:scale-95`
 - [ ] Section headers use icon-badge pattern (`w-8 h-8 rounded-lg bg-primary/10`)
 - [ ] Dark mode untouched if only doing light mode work
