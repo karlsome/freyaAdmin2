@@ -2,6 +2,7 @@ import { createPortal } from "react-dom";
 import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import DataTable from "../components/DataTable";
+import IconButton from "../components/IconButton";
 import StatSummaryCard from "../components/StatSummaryCard";
 import TicketSubmissionsFilterPanel from "../components/TicketSubmissionsFilterPanel";
 import { useLanguage } from "../contexts/LanguageContext";
@@ -664,13 +665,7 @@ function ImagePreviewLightbox({ preview, onClose, onNavigate }) {
               <p className="mt-1 text-xs text-white/60">Image {activeIndex + 1} of {images.length}</p>
             ) : null}
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="flex h-10 w-10 items-center justify-center rounded-2xl bg-white/10 text-white transition hover:bg-white/20"
-          >
-            <span className="material-symbols-outlined">close</span>
-          </button>
+          <IconButton icon="close" onClick={onClose} variant="light" ariaLabel="Close dialog" />
         </div>
 
         <div className="relative flex min-h-0 flex-1 items-center justify-center bg-black/30 px-4 py-4 sm:px-6">

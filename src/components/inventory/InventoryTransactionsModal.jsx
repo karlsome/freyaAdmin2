@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import EmptyState from "../EmptyState";
 import PlannerModalShell from "../planner/PlannerModalShell";
 import { fetchInventoryTransactions, resetInventoryItem } from "../../services/inventoryApi";
 import {
@@ -188,9 +189,7 @@ export default function InventoryTransactionsModal({
         ) : null}
 
         {!loading && !error && !currentItem ? (
-          <div className="planner-data-text rounded-2xl border border-outline-variant/20 bg-surface-container-low/35 px-6 py-12 text-center text-sm text-on-surface-variant">
-            No inventory transactions were found for this serial number.
-          </div>
+          <EmptyState variant="filled" className="planner-data-text">No inventory transactions were found for this serial number.</EmptyState>
         ) : null}
 
         {!loading && currentItem ? (

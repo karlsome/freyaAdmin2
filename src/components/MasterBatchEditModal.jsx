@@ -1,5 +1,7 @@
 import { useMemo, useState } from "react";
 import { formatMasterValue, getMasterPreviewFields, getMasterRecordIdentity, getMasterTabUI } from "../utils/masterDB";
+import IconButton from "./IconButton";
+import ModalShell from "./ModalShell";
 
 function PreviewCard({ record, changes, previewFields, tabKey }) {
   const identity = getMasterRecordIdentity(record, tabKey);
@@ -95,27 +97,41 @@ export default function MasterBatchEditModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/45 backdrop-blur-sm">
-      <div className="flex min-h-full items-center justify-center p-4">
-        <div className="glass-card flex max-h-[88vh] w-full max-w-7xl flex-col overflow-hidden rounded-2xl">
-          <div className="border-b border-outline-variant/20 px-6 py-5">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-outline">Batch Edit</div>
-                <h3 className="mt-2 text-2xl font-black text-on-surface">Update {totalCount} filtered {tabUI.recordLabel.toLowerCase()}s</h3>
-                <p className="mt-1 text-sm text-on-surface-variant">Choose one field at a time, build a change set, then apply it across every record that matched the current advanced filter query.</p>
-              </div>
+    <ModalShell
+      open={!!open}
+      onClose={onClose}
+      eyebrow="Batch Edit"
+      title={`Update ${totalCount} filtered ${tabUI.recordLabel.toLowerCase()}s`}
+      subtitle="Choose one field at a time, build a change set, then apply it across every record that matched the current advanced filter query."
+      maxWidth="max-w-7xl"
+      overlayOpacity="45"
+      cardClassName="max-h-[88vh]"
+      footer={
+        <div className="flex items-center justify-between gap-4">
+          <p className="text-sm text-on-surface-variant">
+            The update runs against every record currently matched by the advanced filter query.
+          </p>
 
-              <button
-                type="button"
-                onClick={onClose}
-                className="flex h-11 w-11 items-center justify-center rounded-2xl bg-surface-container text-on-surface-variant transition hover:bg-surface-container-high hover:text-on-surface"
-              >
-                <span className="material-symbols-outlined">close</span>
-              </button>
-            </div>
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-2xl border border-outline-variant/20 px-4 py-2 text-xs font-bold text-on-surface transition hover:bg-surface-container"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={() => onSubmit(changes)}
+              disabled={!Object.keys(changes).length || submitting}
+              className="rounded-2xl bg-primary px-4 py-2 text-xs font-bold text-on-primary transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {submitting ? "Updating…" : "Apply Updates"}
+            </button>
           </div>
-
+        </div>
+      }
+    >
           <div className="grid min-h-0 flex-1 gap-0 xl:grid-cols-[360px,minmax(0,1fr)]">
             <div className="border-r border-outline-variant/20 bg-surface-container-low px-5 py-5 overflow-y-auto scrollbar-hide">
               <div className="rounded-2xl bg-surface px-4 py-4 border border-outline-variant/20">
@@ -214,8 +230,8 @@ export default function MasterBatchEditModal({
                         <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-outline">{field}</div>
                         <div className="mt-1 text-sm font-bold text-on-surface">{String(value)}</div>
                       </div>
-                      <button
-                        type="button"
+                      <IconButton
+                        icon="delete"
                         onClick={() => {
                           setChanges((current) => {
                             const next = { ...current };
@@ -223,10 +239,11 @@ export default function MasterBatchEditModal({
                             return next;
                           });
                         }}
-                        className="flex h-9 w-9 items-center justify-center rounded-2xl bg-error/10 text-error transition hover:bg-error/15"
-                      >
-                        <span className="material-symbols-outlined" style={{ fontSize: 18 }}>delete</span>
-                      </button>
+                        variant="danger"
+                        size="md"
+                        iconSize={18}
+                        ariaLabel="Remove change"
+                      />
                     </div>
                   )) : (
                     <div className="rounded-2xl border border-dashed border-outline-variant/30 px-4 py-6 text-sm text-on-surface-variant">
@@ -261,34 +278,6 @@ export default function MasterBatchEditModal({
               </div>
             </div>
           </div>
-
-          <div className="border-t border-outline-variant/20 px-6 py-4">
-            <div className="flex items-center justify-between gap-4">
-              <p className="text-sm text-on-surface-variant">
-                The update runs against every record currently matched by the advanced filter query.
-              </p>
-
-              <div className="flex items-center gap-3">
-                <button
-                  type="button"
-                  onClick={onClose}
-                  className="rounded-2xl border border-outline-variant/20 px-4 py-2 text-xs font-bold text-on-surface transition hover:bg-surface-container"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="button"
-                  onClick={() => onSubmit(changes)}
-                  disabled={!Object.keys(changes).length || submitting}
-                  className="rounded-2xl bg-primary px-4 py-2 text-xs font-bold text-on-primary transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  {submitting ? "Updating…" : "Apply Updates"}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
+    </ModalShell>
   );
 }

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { fetchApprovalMasterReference } from "../services/approvalsApi";
+import IconButton from "./IconButton";
 import {
   canApproveApproval,
   canApproveDeleteRequest,
@@ -349,13 +350,12 @@ export default function ApprovalsDetailModal({
                   {statusMeta.label}
                 </span>
 
-                <button
-                  type="button"
+                <IconButton
+                  icon="close"
                   onClick={onClose}
-                  className="flex h-10 w-10 items-center justify-center rounded-2xl border border-outline-variant/20 bg-white/80 text-on-surface transition hover:bg-surface-container dark:bg-surface-container"
-                >
-                  <span className="material-symbols-outlined">close</span>
-                </button>
+                  variant="outlined"
+                  ariaLabel="Close dialog"
+                />
               </div>
             </div>
           </div>

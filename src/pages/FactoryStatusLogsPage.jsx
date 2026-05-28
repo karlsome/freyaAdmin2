@@ -2,6 +2,7 @@ import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import DataTable from "../components/DataTable";
 import StatSummaryCard from "../components/StatSummaryCard";
+import StatusChip from "../components/StatusChip";
 import {
   fetchFactoryStatusFactories,
   fetchFactoryStatusLogs,
@@ -76,15 +77,6 @@ function SummaryCard({ icon, label, value, subtitle, accent, loading = false }) 
   );
 }
 
-function StatusPill({ status }) {
-  const meta = getFactoryStatusLogStatusMeta(status);
-
-  return (
-    <span className={joinClasses("planner-data-text inline-flex rounded-full px-2.5 py-1 text-[11px] font-bold", meta.badgeClassName)}>
-      {meta.label}
-    </span>
-  );
-}
 
 export default function FactoryStatusLogsPage() {
   const navigate = useNavigate();
@@ -289,7 +281,10 @@ export default function FactoryStatusLogsPage() {
       key: "status",
       label: "Status",
       width: 130,
-      renderCell: (row) => <StatusPill status={row.status} />,
+      renderCell: (row) => {
+        const meta = getFactoryStatusLogStatusMeta(row.status);
+        return <StatusChip label={meta.label} className={`planner-data-text ${meta.badgeClassName}`} />;
+      },
       disableCellWrapper: true,
     },
     {

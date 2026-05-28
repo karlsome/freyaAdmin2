@@ -1,4 +1,6 @@
 import { useEffect, useRef } from "react";
+import EmptyState from "./EmptyState";
+import IconButton from "./IconButton";
 import {
   formatProductPDFDateTime,
   formatProductPDFTitle,
@@ -84,13 +86,7 @@ export default function ProductPDFTrashModal({
                 >
                   Delete All
                 </button>
-                <button
-                  type="button"
-                  onClick={onClose}
-                  className="flex h-9 w-9 items-center justify-center rounded-2xl bg-surface-container text-on-surface-variant transition hover:bg-surface-container-high hover:text-on-surface"
-                >
-                  <span className="material-symbols-outlined">close</span>
-                </button>
+                <IconButton icon="close" onClick={onClose} size="md" ariaLabel="Close dialog" />
               </div>
             </div>
           </div>
@@ -105,9 +101,7 @@ export default function ProductPDFTrashModal({
                 {error}
               </div>
             ) : !items.length ? (
-              <div className="rounded-2xl border border-dashed border-outline-variant/20 bg-surface-container-low px-6 py-12 text-center text-sm text-on-surface-variant">
-                Trash is empty.
-              </div>
+              <EmptyState className="bg-surface-container-low">Trash is empty.</EmptyState>
             ) : (
               <div className="space-y-3">
                 {items.map((item) => {

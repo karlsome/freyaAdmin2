@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import PlannerModalShell from "./PlannerModalShell";
+import EmptyState from "../EmptyState";
 import { getProductCapacity } from "../../utils/planner";
 
 export default function PlannerManualGoalModal({
@@ -145,9 +146,7 @@ export default function PlannerManualGoalModal({
             })}
 
             {!filteredProducts.length ? (
-              <div className="rounded-2xl border border-dashed border-outline-variant/20 bg-surface px-4 py-10 text-center text-on-surface-variant">
-                No products match the current search.
-              </div>
+              <EmptyState className="bg-surface px-4 py-10">No products match the current search.</EmptyState>
             ) : null}
           </div>
         </div>

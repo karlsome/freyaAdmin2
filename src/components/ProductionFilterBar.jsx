@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { fetchDistinctValues } from "../services/api";
 import AdvancedFilterSection from "./AdvancedFilterSection";
+import FormField from "./FormField";
+import TagInput from "./TagInput";
 
 const APPROVAL_STATUS_VALUES = [
   "pending",
@@ -51,41 +53,6 @@ function hasFilterValue(row) {
 
 let _rowId = 0;
 function newRow() { return { id: ++_rowId, field: "", operator: "equals", value: "" }; }
-
-// ─── TagInput ─────────────────────────────────────────────────────────────────
-function TagInput({ tags, onAdd, onRemove, placeholder }) {
-  const [val, setVal] = useState("");
-  const commit = () => {
-    const t = val.trim().toUpperCase();
-    if (t && !tags.includes(t)) onAdd(t);
-    setVal("");
-  };
-  return (
-    <div
-            className="ui-control-surface min-h-10 flex flex-wrap gap-1 items-center px-3 py-1.5 rounded-xl
-              border border-outline-variant/20 focus-within:border-primary/40 transition-colors cursor-text"
-      onClick={(e) => e.currentTarget.querySelector("input")?.focus()}
-    >
-      {tags.map((t) => (
-        <span key={t} className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary/15 text-primary text-[11px] font-bold">
-          {t}
-          <button type="button" onClick={() => onRemove(t)} className="hover:text-error leading-none">×</button>
-        </span>
-      ))}
-      <input
-        type="text"
-        value={val}
-        placeholder={tags.length ? "" : placeholder}
-        className="flex-1 min-w-24 bg-transparent outline-none text-xs text-on-surface placeholder:text-outline"
-        onChange={(e) => setVal(e.target.value)}
-        onKeyDown={(e) => {
-          if (e.key === "Enter" || e.key === ",") { e.preventDefault(); commit(); }
-        }}
-        onBlur={commit}
-      />
-    </div>
-  );
-}
 
 // ─── ProductionFilterBar ──────────────────────────────────────────────────────
 // Props:
@@ -145,42 +112,40 @@ export default function ProductionFilterBar({
     <div className="glass-card rounded-2xl p-5 mb-6">
       {/* Core filters grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 mb-4">
-        <div className="flex flex-col gap-1.5">
-          <label className="text-[10px] font-bold uppercase tracking-wider text-outline">From</label>
+        <FormField label="From">
           <input
             type="date"
             value={dateFrom}
             onChange={(e) => setDateFrom(e.target.value)}
             className="h-10 px-3 rounded-xl bg-white border border-outline-variant/20 text-sm text-on-surface outline-none focus:border-primary/40 transition-colors"
           />
-        </div>
-        <div className="flex flex-col gap-1.5">
-          <label className="text-[10px] font-bold uppercase tracking-wider text-outline">To</label>
+        </FormField>
+        <FormField label="To">
           <input
             type="date"
             value={dateTo}
             onChange={(e) => setDateTo(e.target.value)}
             className="h-10 px-3 rounded-xl bg-white border border-outline-variant/20 text-sm text-on-surface outline-none focus:border-primary/40 transition-colors"
           />
-        </div>
-        <div className="flex flex-col gap-1.5">
-          <label className="text-[10px] font-bold uppercase tracking-wider text-outline">品番 (Part No.)</label>
+        </FormField>
+        <FormField label="品番 (Part No.)">
           <TagInput
             tags={partNumbers}
             onAdd={(t) => setPartNumbers((v) => [...v, t])}
             onRemove={(t) => setPartNumbers((v) => v.filter((x) => x !== t))}
             placeholder="Enter to add…"
+            uppercase
           />
-        </div>
-        <div className="flex flex-col gap-1.5">
-          <label className="text-[10px] font-bold uppercase tracking-wider text-outline">背番号 (Serial No.)</label>
+        </FormField>
+        <FormField label="背番号 (Serial No.)">
           <TagInput
             tags={serialNumbers}
             onAdd={(t) => setSerialNumbers((v) => [...v, t])}
             onRemove={(t) => setSerialNumbers((v) => v.filter((x) => x !== t))}
             placeholder="Enter to add…"
+            uppercase
           />
-        </div>
+        </FormField>
 
         {/* Extra filters injected by the parent page */}
         {children}

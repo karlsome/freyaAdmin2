@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Arrow, Circle, Image as KonvaImage, Layer, Rect, Stage, Transformer } from "react-konva";
+import IconButton from "./IconButton";
 
 const TOOL_OPTIONS = [
   { value: "select", label: "Select", icon: "arrow_selector_tool" },
@@ -584,13 +585,7 @@ export default function CheckFormImageOverlayEditorModal({
               </p>
             </div>
 
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex h-11 w-11 items-center justify-center rounded-2xl bg-surface-container text-on-surface transition hover:bg-surface-container-high"
-            >
-              <span className="material-symbols-outlined">close</span>
-            </button>
+            <IconButton icon="close" onClick={onClose} size="xl" ariaLabel="Close dialog" />
           </div>
 
           <div className="min-h-0 flex-1 overflow-y-auto px-5 py-5 sm:px-6">

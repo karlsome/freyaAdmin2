@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
+import ModalShell from "./ModalShell";
 
 function ImageLightbox({ url, onClose }) {
   if (!url) return null;
@@ -119,31 +120,26 @@ export default function EquipmentViewModal({ open, equipment, onClose }) {
   if (!open || !equipment) return null;
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm">
-      <div className="flex min-h-full items-start justify-center px-4 pb-4 pt-10">
-        <div className="glass-card w-full max-w-xl rounded-2xl overflow-hidden">
-
-          <div className="border-b border-outline-variant/20 px-6 py-5">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-outline">設備詳細</div>
-                <h3 className="mt-2 text-2xl font-black text-on-surface">
-                  {equipment.name || "—"}
-                </h3>
-                {equipment["工場"] && (
-                  <p className="mt-1 text-sm text-on-surface-variant">{equipment["工場"]}</p>
-                )}
-              </div>
-              <button
-                type="button"
-                onClick={onClose}
-                className="flex h-11 w-11 items-center justify-center rounded-2xl bg-surface-container text-on-surface-variant transition hover:bg-surface-container-high hover:text-on-surface"
-              >
-                <span className="material-symbols-outlined">close</span>
-              </button>
-            </div>
-          </div>
-
+    <ModalShell
+      open={!!open}
+      onClose={onClose}
+      eyebrow="設備詳細"
+      title={equipment.name || "—"}
+      subtitle={equipment["工場"] || undefined}
+      maxWidth="max-w-xl"
+      align="start"
+      footer={
+        <div className="flex justify-end">
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-2xl bg-surface-container px-5 py-2.5 text-xs font-bold text-on-surface transition hover:bg-surface-container-high"
+          >
+            閉じる
+          </button>
+        </div>
+      }
+    >
           <div className="max-h-[80vh] overflow-y-auto px-6 py-6 scrollbar-hide">
 
             <section className="mb-6">
@@ -204,18 +200,6 @@ export default function EquipmentViewModal({ open, equipment, onClose }) {
 
           </div>
 
-          <div className="border-t border-outline-variant/20 px-6 py-4 flex justify-end">
-            <button
-              type="button"
-              onClick={onClose}
-              className="rounded-2xl bg-surface-container px-5 py-2.5 text-xs font-bold text-on-surface transition hover:bg-surface-container-high"
-            >
-              閉じる
-            </button>
-          </div>
-
-        </div>
-      </div>
-    </div>
+    </ModalShell>
   );
 }

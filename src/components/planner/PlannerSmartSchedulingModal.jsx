@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import PlannerModalShell from "./PlannerModalShell";
+import EmptyState from "../EmptyState";
 
 export default function PlannerSmartSchedulingModal({
   open,
@@ -61,9 +62,7 @@ export default function PlannerSmartSchedulingModal({
 
       <div className="mt-5 space-y-5">
         {!equipmentNames.length ? (
-          <div className="planner-data-text rounded-2xl border border-dashed border-outline-variant/20 bg-surface px-4 py-12 text-center text-on-surface-variant">
-            No historical equipment matches were found for the current goals.
-          </div>
+          <EmptyState className="planner-data-text bg-surface px-4">No historical equipment matches were found for the current goals.</EmptyState>
         ) : equipmentNames.map((equipment) => (
           <section key={equipment} className="planner-data-text rounded-2xl border border-outline-variant/15 bg-surface-container-low p-4">
             <div className="mb-3 flex items-center justify-between gap-3">

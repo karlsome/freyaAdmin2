@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { uploadEquipmentEventImage } from "../services/api";
+import FormField from "./FormField";
+import ModalShell from "./ModalShell";
 
 function toBase64(file) {
   return new Promise((resolve, reject) => {
@@ -96,35 +98,15 @@ export default function SetsubiRecordModal({
   const isEdit = Boolean(record);
 
   return createPortal(
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-black/40 backdrop-blur-sm">
-      <div className="flex min-h-full items-start justify-center px-4 pb-4 pt-10">
-        <div className="glass-card w-full max-w-lg rounded-2xl overflow-hidden">
-
-          <div className="border-b border-outline-variant/20 px-6 py-5">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-outline">
-                  {isEdit ? "Edit Equipment" : "Add Equipment"}
-                </div>
-                <h3 className="mt-2 text-2xl font-black text-on-surface">
-                  {isEdit ? "Edit Equipment Record" : "Add Equipment Record"}
-                </h3>
-                <p className="mt-1 text-sm text-on-surface-variant">
-                  {isEdit
-                    ? "Update the selected equipment details."
-                    : "Create a new equipment entry in setsubiDB."}
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={onClose}
-                className="flex h-11 w-11 items-center justify-center rounded-2xl bg-surface-container text-on-surface-variant transition hover:bg-surface-container-high hover:text-on-surface"
-              >
-                <span className="material-symbols-outlined">close</span>
-              </button>
-            </div>
-          </div>
-
+    <ModalShell
+      open={open}
+      onClose={onClose}
+      eyebrow={isEdit ? "Edit Equipment" : "Add Equipment"}
+      title={isEdit ? "Edit Equipment Record" : "Add Equipment Record"}
+      subtitle={isEdit ? "Update the selected equipment details." : "Create a new equipment entry in setsubiDB."}
+      maxWidth="max-w-lg"
+      align="start"
+    >
           <form
             onSubmit={(event) => {
               event.preventDefault();
@@ -135,10 +117,7 @@ export default function SetsubiRecordModal({
           >
             <div className="grid gap-4">
 
-              <label className="block">
-                <div className="mb-2 text-[11px] font-bold uppercase tracking-[0.18em] text-outline">
-                  設備名 <span className="text-error">*</span>
-                </div>
+              <FormField label="設備名" variant="form" required>
                 <input
                   type="text"
                   value={draft.name}
@@ -147,10 +126,9 @@ export default function SetsubiRecordModal({
                   className="w-full rounded-2xl border border-outline-variant/30 bg-surface px-3 py-3 text-sm text-on-surface outline-none transition focus:border-primary/40"
                   required
                 />
-              </label>
+              </FormField>
 
-              <label className="block">
-                <div className="mb-2 text-[11px] font-bold uppercase tracking-[0.18em] text-outline">工場 (Location)</div>
+              <FormField label="工場 (Location)" variant="form">
                 {factories.length > 0 ? (
                   <select
                     value={draft["工場"]}
@@ -171,20 +149,18 @@ export default function SetsubiRecordModal({
                     className="w-full rounded-2xl border border-outline-variant/30 bg-surface px-3 py-3 text-sm text-on-surface outline-none transition focus:border-primary/40"
                   />
                 )}
-              </label>
+              </FormField>
 
-              <label className="block">
-                <div className="mb-2 text-[11px] font-bold uppercase tracking-[0.18em] text-outline">Installation Date</div>
+              <FormField label="Installation Date" variant="form">
                 <input
                   type="date"
                   value={draft.installationDate}
                   onChange={(e) => set("installationDate", e.target.value)}
                   className="w-full rounded-2xl border border-outline-variant/30 bg-surface px-3 py-3 text-sm text-on-surface outline-none transition focus:border-primary/40"
                 />
-              </label>
+              </FormField>
 
-              <div>
-                <div className="mb-2 text-[11px] font-bold uppercase tracking-[0.18em] text-outline">Image</div>
+              <FormField label="Image" variant="form">
 
                 <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
 
@@ -220,7 +196,7 @@ export default function SetsubiRecordModal({
                     </button>
                   </div>
                 )}
-              </div>
+              </FormField>
             </div>
 
             <div className="mt-6 flex items-center justify-between gap-4 border-t border-outline-variant/20 pt-5">
@@ -257,9 +233,7 @@ export default function SetsubiRecordModal({
             </div>
           </form>
 
-        </div>
-      </div>
-    </div>,
+    </ModalShell>,
     document.body
   );
 }

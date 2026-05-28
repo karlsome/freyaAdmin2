@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
+import IconButton from "./IconButton";
 import {
   fetchSetsubiArchive,
   permanentDeleteEquipmentRecord,
@@ -102,10 +103,7 @@ export default function SetsubiArchiveWorkspace({ onFlash, onClose }) {
       <div className="flex min-h-full items-start justify-center px-4 pb-4 pt-10">
         <div className="w-full max-w-4xl">
           <div className="mb-3 flex justify-end">
-            <button type="button" onClick={onClose}
-              className="flex h-10 w-10 items-center justify-center rounded-2xl bg-white/20 text-white transition hover:bg-white/30">
-              <span className="material-symbols-outlined">close</span>
-            </button>
+            <IconButton icon="close" onClick={onClose} variant="light" ariaLabel="Close dialog" className="bg-white/20 hover:bg-white/30" />
           </div>
 
           <section className="glass-card rounded-3xl p-6">

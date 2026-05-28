@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import DataTable from "../DataTable";
 import PlannerModalShell from "../planner/PlannerModalShell";
+import StatusChip from "../StatusChip";
 import { fetchFactoryStatusLogs } from "../../services/factoryStatusApi";
 import {
   buildFactoryStatusLogPageInfo,
@@ -38,15 +39,6 @@ function SummaryTile({ label, value, toneClassName = "text-on-surface" }) {
   );
 }
 
-function StatusPill({ status }) {
-  const meta = getFactoryStatusLogStatusMeta(status);
-
-  return (
-    <span className={joinClasses("planner-data-text inline-flex rounded-full px-2.5 py-1 text-[11px] font-bold", meta.badgeClassName)}>
-      {meta.label}
-    </span>
-  );
-}
 
 export default function FactoryStatusLogsModal({
   open,
@@ -149,7 +141,10 @@ export default function FactoryStatusLogsModal({
       key: "status",
       label: "Status",
       width: 130,
-      renderCell: (row) => <StatusPill status={row.status} />,
+      renderCell: (row) => {
+        const meta = getFactoryStatusLogStatusMeta(row.status);
+        return <StatusChip label={meta.label} className={`planner-data-text ${meta.badgeClassName}`} />;
+      },
       disableCellWrapper: true,
     },
     {

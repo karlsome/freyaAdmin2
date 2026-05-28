@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
+import ModalShell from "./ModalShell";
 import { formatMasterValue, getMasterRecordIdentity, getMasterTabUI } from "../utils/masterDB";
 
 function getVisibleFields(fieldDefinitions, record) {
@@ -30,7 +31,6 @@ export default function MasterDetailDrawer({
   onUploadImage,
   tabKey = "masterDB",
 }) {
-  const modalRef = useRef(null);
   const inputRef = useRef(null);
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(() => {
@@ -40,27 +40,6 @@ export default function MasterDetailDrawer({
     });
     return nextDraft;
   });
-
-  useEffect(() => {
-    if (!open) return undefined;
-
-    function handleKeyDown(event) {
-      if (event.key === "Escape") onClose();
-    }
-
-    function handleMouseDown(event) {
-      if (modalRef.current && !modalRef.current.contains(event.target)) {
-        onClose();
-      }
-    }
-
-    document.addEventListener("keydown", handleKeyDown);
-    document.addEventListener("mousedown", handleMouseDown);
-    return () => {
-      document.removeEventListener("keydown", handleKeyDown);
-      document.removeEventListener("mousedown", handleMouseDown);
-    };
-  }, [open, onClose]);
 
   if (!open || !record) return null;
 
@@ -78,27 +57,54 @@ export default function MasterDetailDrawer({
   const visibleFields = getVisibleFields(fieldDefinitions, record);
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm">
-      <div className="flex min-h-full items-center justify-center p-4">
-        <div ref={modalRef} className="glass-card w-full max-w-2xl rounded-2xl overflow-hidden">
-
-          {/* Header */}
-          <div className="border-b border-outline-variant/20 px-5 py-4">
-            <div className="flex items-center justify-between gap-4">
-              <div>
-                <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-outline">{tabUI.recordLabel}</div>
-                <h3 className="text-base font-bold text-on-surface">{title}</h3>
-              </div>
+    <ModalShell
+      open={open}
+      onClose={onClose}
+      eyebrow={tabUI.recordLabel}
+      title={title}
+      maxWidth="max-w-2xl"
+      footer={
+        <div className="flex items-center justify-between gap-3">
+          <div className="text-sm text-on-surface-variant">
+            {editing ? "Editing live master record." : "Read-only mode."}
+          </div>
+          <div className="flex items-center gap-3">
+            {editing ? (
+              <>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const nextDraft = {};
+                    visibleFields.forEach((field) => { nextDraft[field.field] = record[field.field] ?? ""; });
+                    setDraft(nextDraft);
+                    setEditing(false);
+                  }}
+                  className="rounded-2xl border border-outline-variant/20 px-4 py-2 text-xs font-bold text-on-surface transition hover:bg-surface-container"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onSave(draft)}
+                  disabled={saving}
+                  className="rounded-2xl bg-primary px-4 py-2 text-xs font-bold text-on-primary transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {saving ? "Saving…" : "Save Changes"}
+                </button>
+              </>
+            ) : (
               <button
                 type="button"
-                onClick={onClose}
-                className="flex h-8 w-8 items-center justify-center rounded-2xl bg-surface-container text-on-surface-variant transition hover:bg-surface-container-high hover:text-on-surface"
+                onClick={() => setEditing(true)}
+                className="rounded-2xl bg-primary px-4 py-2 text-xs font-bold text-on-primary transition hover:opacity-90"
               >
-                <span className="material-symbols-outlined">close</span>
+                Edit Record
               </button>
-            </div>
+            )}
           </div>
-
+        </div>
+      }
+    >
           {/* Body */}
           <div className="max-h-[72vh] overflow-y-auto scrollbar-hide">
 
@@ -179,49 +185,6 @@ export default function MasterDetailDrawer({
             </div>
           </div>
 
-          {/* Footer */}
-          <div className="border-t border-outline-variant/20 px-5 py-3 flex items-center justify-between gap-3">
-            <div className="text-sm text-on-surface-variant">
-              {editing ? "Editing live master record." : "Read-only mode."}
-            </div>
-            <div className="flex items-center gap-3">
-              {editing ? (
-                <>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const nextDraft = {};
-                      visibleFields.forEach((field) => { nextDraft[field.field] = record[field.field] ?? ""; });
-                      setDraft(nextDraft);
-                      setEditing(false);
-                    }}
-                    className="rounded-2xl border border-outline-variant/20 px-4 py-2 text-xs font-bold text-on-surface transition hover:bg-surface-container"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => onSave(draft)}
-                    disabled={saving}
-                    className="rounded-2xl bg-primary px-4 py-2 text-xs font-bold text-on-primary transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    {saving ? "Saving…" : "Save Changes"}
-                  </button>
-                </>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => setEditing(true)}
-                  className="rounded-2xl bg-primary px-4 py-2 text-xs font-bold text-on-primary transition hover:opacity-90"
-                >
-                  Edit Record
-                </button>
-              )}
-            </div>
-          </div>
-
-        </div>
-      </div>
-    </div>
+    </ModalShell>
   );
 }

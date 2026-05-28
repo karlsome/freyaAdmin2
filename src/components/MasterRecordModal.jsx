@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import ModalShell from "./ModalShell";
 
 function buildInitialDraft(fieldDefinitions) {
   return fieldDefinitions.reduce((draft, field) => {
@@ -29,27 +30,14 @@ export default function MasterRecordModal({
   const hasData = Object.values(draft).some((value) => String(value).trim());
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm">
-      <div className="flex min-h-full items-center justify-center p-4">
-        <div className="glass-card w-full max-w-5xl rounded-2xl overflow-hidden">
-          <div className="border-b border-outline-variant/20 px-6 py-5">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-outline">Create {recordLabel}</div>
-                <h3 className="mt-2 text-2xl font-black text-on-surface">Add New {tabLabel} Record</h3>
-                <p className="mt-1 text-sm text-on-surface-variant">Build a new entry with the full dynamic field set from the current schema.</p>
-              </div>
-
-              <button
-                type="button"
-                onClick={onClose}
-                className="flex h-11 w-11 items-center justify-center rounded-2xl bg-surface-container text-on-surface-variant transition hover:bg-surface-container-high hover:text-on-surface"
-              >
-                <span className="material-symbols-outlined">close</span>
-              </button>
-            </div>
-          </div>
-
+    <ModalShell
+      open={true}
+      onClose={onClose}
+      eyebrow={`Create ${recordLabel}`}
+      title={`Add New ${tabLabel} Record`}
+      subtitle="Build a new entry with the full dynamic field set from the current schema."
+      maxWidth="max-w-5xl"
+    >
           <form
             onSubmit={(event) => {
               event.preventDefault();
@@ -152,8 +140,6 @@ export default function MasterRecordModal({
               </div>
             </div>
           </form>
-        </div>
-      </div>
-    </div>
+    </ModalShell>
   );
 }
