@@ -48,7 +48,7 @@ export default function DashboardFactorySummary({ factories, loading, onNavigate
       <p className="text-[11px] text-outline mb-4 ml-10">Click a row to open factory detail</p>
 
       {/* Mobile cards */}
-      <div className="space-y-2.5 md:hidden">
+      <div className="space-y-3 md:hidden">
         {factories.map((f) => {
           const ds = getDefectStatus(f.defectRate);
           const hasTrouble = f.troubleHours > 0;
@@ -67,7 +67,7 @@ export default function DashboardFactorySummary({ factories, loading, onNavigate
                 </span>
               </div>
 
-              <div className="grid grid-cols-2 gap-x-4 gap-y-2.5 mb-3">
+              <div className="grid grid-cols-2 gap-3 mb-3">
                 <div>
                   <p className="text-[10px] font-bold uppercase tracking-wider text-outline mb-0.5">Combined</p>
                   <p className="text-sm font-bold text-on-surface tabular-nums">

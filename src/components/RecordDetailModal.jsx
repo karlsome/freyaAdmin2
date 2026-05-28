@@ -260,7 +260,7 @@ function BreakTimeSection({ record }) {
             <thead className="bg-surface-container-high/40">
               <tr>
                 {["Break", "Start", "End", "Duration"].map((h) => (
-                  <th key={h} className="ui-table-heading px-4 py-2 text-left uppercase tracking-wider text-outline">{h}</th>
+                  <th key={h} className="ui-table-heading px-3 py-3 text-left uppercase tracking-wider text-outline">{h}</th>
                 ))}
               </tr>
             </thead>
@@ -271,10 +271,10 @@ function BreakTimeSection({ record }) {
                 const mins = e > s ? Math.round((e - s) / 60000) : null;
                 return (
                   <tr key={key} className="hover:bg-surface-container/40 transition-colors">
-                    <td className="px-4 py-2.5 font-bold text-on-surface capitalize">{key.replace(/([0-9]+)/, " $1")}</td>
-                    <td className="px-4 py-2.5 font-mono text-on-surface-variant">{start}</td>
-                    <td className="px-4 py-2.5 font-mono text-on-surface-variant">{end}</td>
-                    <td className="px-4 py-2.5 text-outline">{mins != null ? `${mins} min` : "—"}</td>
+                    <td className="px-3 py-3 font-bold text-on-surface capitalize">{key.replace(/([0-9]+)/, " $1")}</td>
+                    <td className="px-3 py-3 font-mono text-on-surface-variant">{start}</td>
+                    <td className="px-3 py-3 font-mono text-on-surface-variant">{end}</td>
+                    <td className="px-3 py-3 text-outline">{mins != null ? `${mins} min` : "—"}</td>
                   </tr>
                 );
               })}
