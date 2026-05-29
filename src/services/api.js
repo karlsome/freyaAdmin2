@@ -385,6 +385,12 @@ export async function fetchSensorFactoryOverview(date = new Date().toISOString()
                     averageHumidity: { $avg: "$latest.humidityValue" },
                     sensorCount: { $sum: 1 },
                     wbgt: { $max: "$latest.wbgtValue" },
+                    deviceLatest: {
+                      $push: {
+                        date: "$latest.Date",
+                        time: "$latest.Time",
+                      },
+                    },
                   },
                 },
                 {
@@ -395,6 +401,7 @@ export async function fetchSensorFactoryOverview(date = new Date().toISOString()
                     highestTemp: { $round: ["$highestTemp", 1] },
                     sensorCount: 1,
                     wbgt: { $round: ["$wbgt", 1] },
+                    deviceLatest: 1,
                   },
                 },
                 { $sort: { factory: 1 } },
@@ -426,6 +433,7 @@ export async function fetchSensorFactoryOverview(date = new Date().toISOString()
             hasHistorical: true,
             highestTemp: null,
             sensorCount: 0,
+            offlineCount: 0,
             wbgt: null,
           },
         };
@@ -434,6 +442,21 @@ export async function fetchSensorFactoryOverview(date = new Date().toISOString()
       const highestTemp = Number(summary.highestTemp);
       const averageHumidity = Number(summary.averageHumidity);
       const wbgt = Number(summary.wbgt);
+      const now = Date.now();
+      const offlineThresholdMs = 30 * 60 * 1000;
+      const offlineCount = Array.isArray(summary.deviceLatest)
+        ? summary.deviceLatest.reduce((count, entry) => {
+            const dateValue = String(entry?.date ?? "").trim();
+            const timeValue = String(entry?.time ?? "").trim() || "00:00:00";
+            if (!dateValue) return count + 1;
+            const parsed = new Date(`${dateValue}T${timeValue}`);
+            const timestamp = Number.isNaN(parsed.getTime())
+              ? new Date(`${dateValue} ${timeValue}`).getTime()
+              : parsed.getTime();
+            if (!Number.isFinite(timestamp)) return count + 1;
+            return now - timestamp >= offlineThresholdMs ? count + 1 : count;
+          }, 0)
+        : 0;
 
       return {
         name,
@@ -443,6 +466,7 @@ export async function fetchSensorFactoryOverview(date = new Date().toISOString()
           hasHistorical: true,
           highestTemp: Number.isFinite(highestTemp) ? highestTemp : null,
           sensorCount: Number(summary.sensorCount) || 0,
+          offlineCount,
           wbgt: Number.isFinite(wbgt) ? wbgt : null,
         },
       };
