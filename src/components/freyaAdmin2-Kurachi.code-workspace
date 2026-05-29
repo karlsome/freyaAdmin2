@@ -5,7 +5,18 @@
 		},
 		{
 			"path": "../../../Kurachi"
+		},
+		{
+			"path": "../../../FreyaAdmin"
+		},
+		{
+			"path": "../../../shotstack-studio-sdk"
+		},
+		{
+			"path": "../../../shotstack-studio-sdk-demos"
 		}
 	],
-	"settings": {}
+	"settings": {
+		"liveServer.settings.multiRootWorkspaceName": "FreyaAdmin"
+	}
 }

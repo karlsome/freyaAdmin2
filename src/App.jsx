@@ -23,6 +23,8 @@ import MaintenancePage from "./pages/MaintenancePage";
 import ChecklistSubmissionsPage from "./pages/ChecklistSubmissionsPage";
 import TicketSubmissionsPage from "./pages/TicketSubmissionsPage";
 import LoginPage from "./pages/LoginPage";
+import VideoManualPage from "./pages/VideoManualPage";
+import VideoManualProjectPage from "./pages/VideoManualProjectPage";
 import {
   clearStoredAuthUser,
   isAuthenticatedUser,
@@ -38,7 +40,6 @@ const placeholderPages = [
   "customerManagement",
   "equipment",
   "scna",
-  "videoManual",
 ];
 
 const SHELL_INTRO_DURATION_MS = 900;
@@ -238,6 +239,8 @@ function App() {
               <Route path="/inventory" element={<InventoryPage />} />
               <Route path="/factoryStatus" element={<FactoryStatusPage />} />
               <Route path="/factoryStatus/logs" element={<FactoryStatusLogsPage />} />
+              <Route path="/videoManual" element={<VideoManualPage />} />
+              <Route path="/videoManual/project/:projectId" element={<VideoManualProjectPage />} />
               {placeholderPages.map((page) => (
                 <Route key={page} path={`/${page}`} element={<PlaceholderPage page={page} />} />
               ))}

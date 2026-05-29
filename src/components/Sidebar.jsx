@@ -53,7 +53,7 @@ function getActiveChildPage(item, activePage) {
 }
 
 function isActiveFor(item, activePage) {
-  if (activePage === item.page) return true;
+  if (matchesNavPage(item.page, activePage)) return true;
   if (
     item.page === "factories" &&
     (activePage.startsWith("factory/") ||

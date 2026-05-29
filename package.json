@@ -10,6 +10,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@shotstack/shotstack-studio": "file:../shotstack-studio-sdk",
     "konva": "^10.3.0",
     "papaparse": "^5.5.3",
     "pdfjs-dist": "^5.6.205",
