@@ -6,6 +6,7 @@ import { fetchHistoricalSensorExport, fetchHistoricalSensorOverview, fetchHistor
 import { getTempStatus, getHumidityStatus, getWBGTStatus } from "../utils/statusHelpers";
 import SensorTrendChart from "../components/SensorTrendChart";
 import DeviceNamingModal from "../components/DeviceNamingModal";
+import SensorDevicePhotoPreviewModal from "../components/SensorDevicePhotoPreviewModal";
 import { getAuthUser } from "../utils/masterDB";
 
 const SENSOR_READINGS_PAGE_SIZE_OPTIONS = [15, 50, 100];
@@ -96,7 +97,7 @@ function Sparkline({ values, color = "#6366f1", height = 28 }) {
 }
 
 // ─── Per-device summary card ──────────────────────────────────────────────────
-function SensorCard({ device, isActive = false, onSelect = null, onEdit = null }) {
+function SensorCard({ device, isActive = false, onSelect = null, onEdit = null, onPreviewPhotos = null }) {
   const latest = device?.latest ?? {};
   const latestTemp = parseTemp(latest.Temperature);
   const latestHumid = parseHumid(latest.Humidity);
@@ -107,26 +108,36 @@ function SensorCard({ device, isActive = false, onSelect = null, onEdit = null }
   const tempTrend = Array.isArray(device?.tempTrend) ? device.tempTrend.filter((value) => value != null) : [];
   const humidityTrend = Array.isArray(device?.humidityTrend) ? device.humidityTrend.filter((value) => value != null) : [];
   const displayName = device?.displayName || null;
+  const photoCount = Array.isArray(device?.imageURLs) ? device.imageURLs.filter(Boolean).length : 0;
+
+  function handleCardKeyDown(event) {
+    if (event.target !== event.currentTarget) return;
+    if (event.key !== "Enter" && event.key !== " ") return;
+    event.preventDefault();
+    onSelect?.(device?.deviceId || "all");
+  }
 
   return (
-    <button
-      type="button"
+    <div
+      role="button"
+      tabIndex={0}
       onClick={() => onSelect?.(device?.deviceId || "all")}
+      onKeyDown={handleCardKeyDown}
       aria-pressed={isActive}
-      className={`glass-card flex w-full flex-col gap-4 rounded-2xl p-5 text-left transition-[box-shadow,border-color,background-color] duration-300 hover:border-primary/20 hover:shadow-[0_14px_32px_rgba(15,23,42,0.08)] focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/35 ${
+      className={`glass-card flex w-full cursor-pointer flex-col gap-4 rounded-2xl p-5 text-left transition-all duration-150 hover:border-primary/30 hover:shadow-[0_14px_32px_rgba(15,23,42,0.08)] focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/35 ${
         isActive ? "border-primary/45 bg-primary/10 ring-2 ring-primary/20 shadow-[0_16px_36px_rgba(99,102,241,0.16)]" : ""
       }`}
     >
-      <div className="flex items-start justify-between gap-2">
+      <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
-          <p className="text-xs font-bold text-outline uppercase tracking-widest">Device</p>
+          <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-outline">Device</p>
           <div className="mt-1 flex flex-wrap items-center gap-2">
             <p className={`text-base font-black truncate ${isActive ? "text-primary" : "text-on-surface"}`}>
               {displayName || device?.deviceId || "Unknown"}
             </p>
             {isActive ? (
-              <span className="inline-flex items-center gap-1 rounded-full bg-primary px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">
-                <span className="material-symbols-outlined" style={{ fontSize: 12 }}>check</span>
+              <span className="inline-flex items-center gap-1 rounded-full border border-primary/20 bg-primary/10 px-2.5 py-1 text-[10px] font-bold text-primary">
+                <span className="material-symbols-outlined" style={{ fontSize: 11 }}>check</span>
                 Selected
               </span>
             ) : null}
@@ -136,19 +147,39 @@ function SensorCard({ device, isActive = false, onSelect = null, onEdit = null }
           )}
         </div>
         <div className="flex flex-col items-end gap-2 flex-shrink-0">
-          <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full ${wbgtStatus.bg} ${wbgtStatus.color}`}>
+          <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-[10px] font-bold ${wbgtStatus.bg} ${wbgtStatus.color}`}>
             WBGT {wbgt ?? "—"}°C
           </span>
-          {onEdit && (
-            <button
-              type="button"
-              onClick={(e) => { e.stopPropagation(); onEdit(device); }}
-              className="p-1 rounded-lg text-outline hover:text-primary hover:bg-primary/10 transition-all duration-150"
-              title="Rename device"
-            >
-              <span className="material-symbols-outlined" style={{ fontSize: 14 }}>edit</span>
-            </button>
-          )}
+          <div className="flex items-center gap-2">
+            {photoCount > 0 && onPreviewPhotos ? (
+              <button
+                type="button"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onPreviewPhotos(device);
+                }}
+                className="inline-flex items-center gap-1 rounded-xl border border-separator/50 bg-surface px-3 py-1 text-[10px] font-bold text-on-surface-variant transition-all duration-150 hover:border-primary/30 hover:bg-surface-container hover:text-primary active:scale-95"
+                title={`View ${photoCount} device photo${photoCount === 1 ? "" : "s"}`}
+              >
+                <span className="material-symbols-outlined" style={{ fontSize: 11 }}>photo_library</span>
+                {photoCount}
+              </button>
+            ) : null}
+
+            {onEdit ? (
+              <button
+                type="button"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onEdit(device);
+                }}
+                className="rounded-xl p-2 text-outline transition-all duration-150 hover:bg-surface-container hover:text-primary"
+                title="Rename device"
+              >
+                <span className="material-symbols-outlined" style={{ fontSize: 18 }}>edit</span>
+              </button>
+            ) : null}
+          </div>
         </div>
       </div>
 
@@ -168,7 +199,7 @@ function SensorCard({ device, isActive = false, onSelect = null, onEdit = null }
       <div className="text-[10px] text-outline">
         Last: {latest?.Date || "—"} {latest?.Time || ""} · {Number(device?.readingCount) || 0} readings
       </div>
-    </button>
+    </div>
   );
 }
 
@@ -201,6 +232,7 @@ export default function SensorDetailPage() {
   const [iotNamesMap, setIoTNamesMap] = useState(new Map());
   const [namingDevice, setNamingDevice] = useState(null);
   const [savingName, setSavingName] = useState(false);
+  const [photoPreview, setPhotoPreview] = useState(null);
 
   const loadIoTNames = useCallback(async () => {
     try {
@@ -234,6 +266,39 @@ export default function SensorDetailPage() {
     const id = String(device?.deviceId || "").trim();
     const existing = iotNamesMap.get(id) || { name: "", imageURLs: [] };
     setNamingDevice({ deviceId: id, name: existing.name, imageURLs: existing.imageURLs });
+  }
+
+  function handleOpenPhotoPreview(device) {
+    const imageURLs = Array.isArray(device?.imageURLs) ? device.imageURLs.filter(Boolean) : [];
+    if (imageURLs.length === 0) return;
+
+    setPhotoPreview({
+      activeIndex: 0,
+      deviceId: normalizeDeviceId(device?.deviceId),
+      displayName: device?.displayName || "",
+      factoryName,
+      images: imageURLs.map((url, index) => ({
+        url,
+        label: `${device?.displayName || device?.deviceId || "Device"} photo ${index + 1}`,
+      })),
+    });
+  }
+
+  function handleNavigatePhotoPreview(direction) {
+    setPhotoPreview((current) => {
+      if (!current) return current;
+
+      const imageCount = Array.isArray(current.images) ? current.images.length : 0;
+      if (!imageCount) return current;
+
+      const nextIndex = current.activeIndex + direction;
+      if (nextIndex < 0 || nextIndex >= imageCount) return current;
+
+      return {
+        ...current,
+        activeIndex: nextIndex,
+      };
+    });
   }
 
   async function handleSaveName({ name, imageURLs }) {
@@ -438,6 +503,7 @@ export default function SensorDetailPage() {
         humidityTrend: trendEntry.humidityTrend,
         tempTrend: trendEntry.tempTrend,
         displayName: iotEntry?.name || null,
+        imageURLs: Array.isArray(iotEntry?.imageURLs) ? iotEntry.imageURLs : [],
       };
     });
   }, [cardOverview.latestDevices, cardOverview.trends, iotNamesMap]);
@@ -776,6 +842,7 @@ export default function SensorDetailPage() {
                     isActive={normalizeDeviceId(deviceFilter) === normalizeDeviceId(device.deviceId)}
                     onSelect={handleSelectDevice}
                     onEdit={handleOpenNaming}
+                    onPreviewPhotos={handleOpenPhotoPreview}
                   />
                 ))}
               </div>
@@ -841,6 +908,12 @@ export default function SensorDetailPage() {
         onSave={handleSaveName}
         onUploadImage={handleUploadDeviceImage}
         onDeleteImage={handleDeleteDeviceImage}
+      />
+
+      <SensorDevicePhotoPreviewModal
+        preview={photoPreview}
+        onClose={() => setPhotoPreview(null)}
+        onNavigate={handleNavigatePhotoPreview}
       />
     </section>
   );
