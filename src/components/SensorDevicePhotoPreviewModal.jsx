@@ -32,12 +32,16 @@ export default function SensorDevicePhotoPreviewModal({ preview, onClose, onNavi
   const hasMultipleImages = images.length > 1;
   const canGoPrevious = activeIndex > 0;
   const canGoNext = activeIndex < images.length - 1;
-  const title = String(preview?.displayName ?? "").trim() || String(preview?.deviceId ?? "").trim() || "Device photos";
-  const subtitleParts = [
-    preview?.displayName ? String(preview?.deviceId ?? "").trim() : "",
-    String(preview?.factoryName ?? "").trim(),
-    hasMultipleImages ? `Photo ${activeIndex + 1} of ${images.length}` : "",
-  ].filter(Boolean);
+  const title = String(preview?.displayName ?? "").trim() || String(preview?.deviceId ?? "").trim() || "Photos";
+  const eyebrow = String(preview?.eyebrow ?? "").trim() || "Photos";
+  const customSubtitle = String(preview?.subtitle ?? "").trim();
+  const subtitleParts = customSubtitle
+    ? [customSubtitle, hasMultipleImages ? `Photo ${activeIndex + 1} of ${images.length}` : ""].filter(Boolean)
+    : [
+        preview?.displayName ? String(preview?.deviceId ?? "").trim() : "",
+        String(preview?.factoryName ?? "").trim(),
+        hasMultipleImages ? `Photo ${activeIndex + 1} of ${images.length}` : "",
+      ].filter(Boolean);
 
   useEffect(() => {
     if (!activeImage?.url) return undefined;
@@ -68,7 +72,7 @@ export default function SensorDevicePhotoPreviewModal({ preview, onClose, onNavi
 
   return createPortal(
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm"
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm"
       onMouseDown={(event) => {
         if (event.target === event.currentTarget) onClose();
       }}
@@ -76,13 +80,13 @@ export default function SensorDevicePhotoPreviewModal({ preview, onClose, onNavi
       <div
         role="dialog"
         aria-modal="true"
-        aria-label={`Device photos for ${title}`}
+        aria-label={`Photos for ${title}`}
         onMouseDown={(event) => event.stopPropagation()}
         className="dashboard-section flex max-h-[92vh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl"
       >
         <div className="sticky top-0 z-10 flex items-start justify-between gap-4 rounded-t-2xl border-b border-separator/40 bg-surface/90 px-6 py-5 backdrop-blur-md">
           <div className="min-w-0 flex-1">
-            <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-outline">Device Photos</p>
+            <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-outline">{eyebrow}</p>
             <h2 className="mt-1 truncate text-xl font-black text-on-surface">{title}</h2>
             {subtitleParts.length > 0 ? (
               <p className="mt-1 text-sm text-on-surface-variant">{subtitleParts.join(" • ")}</p>
@@ -138,7 +142,7 @@ export default function SensorDevicePhotoPreviewModal({ preview, onClose, onNavi
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
                 <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-outline">Current Photo</p>
-                <p className="mt-1 text-sm font-semibold text-on-surface">{activeImage.label || `Device photo ${activeIndex + 1}`}</p>
+                <p className="mt-1 text-sm font-semibold text-on-surface">{activeImage.label || `Photo ${activeIndex + 1}`}</p>
               </div>
               <p className="text-[11px] text-outline">
                 {hasMultipleImages
@@ -153,7 +157,7 @@ export default function SensorDevicePhotoPreviewModal({ preview, onClose, onNavi
           <p className="text-[11px] text-outline">
             {hasMultipleImages
               ? `Photo ${activeIndex + 1} of ${images.length}`
-              : "Single photo attached to this device"}
+              : "Single photo attached"}
           </p>
 
           <div className="flex flex-wrap items-center justify-end gap-3">

@@ -44,6 +44,7 @@ export default function DeviceDetailModal({ device, open, onClose }) {
   }
 
   const preview = previewIndex != null && images[previewIndex] ? {
+    eyebrow: "Device Photos",
     images: images.map((url) => ({ url })),
     activeIndex: previewIndex,
     displayName: deviceName,

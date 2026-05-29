@@ -337,6 +337,7 @@ export default function SensorDetailPage() {
 
     setPhotoPreview({
       activeIndex: 0,
+      eyebrow: "Device Photos",
       deviceId: normalizeDeviceId(device?.deviceId),
       displayName: device?.displayName || "",
       factoryName,
