@@ -151,9 +151,9 @@ function SensorCard({ device, isActive = false, onSelect = null, onEdit = null, 
   const isOffline = Boolean(device?.isOffline);
   const lastSeenLabel = formatSensorLastSeen(device?.minutesSinceLastReading);
   const cardStateClassName = isOffline
-    ? `sensor-device-card--offline border-error/35 bg-error/5 hover:border-error/45 ${isActive ? "ring-2 ring-error/15" : ""}`
+    ? `sensor-device-card--offline border-error/35 hover:border-error/45 ${isActive ? "ring-1 ring-inset ring-error/15" : ""}`
     : isActive
-      ? "border-primary/45 bg-primary/10 ring-2 ring-primary/20 shadow-[0_16px_36px_rgba(99,102,241,0.16)]"
+      ? "bg-primary/[0.06] shadow-[0_16px_36px_rgba(99,102,241,0.14)]"
       : "";
   const titleClassName = isOffline ? "text-error" : isActive ? "text-primary" : "text-on-surface";
 
@@ -171,8 +171,14 @@ function SensorCard({ device, isActive = false, onSelect = null, onEdit = null, 
       onClick={() => onSelect?.(device?.deviceId || "all")}
       onKeyDown={handleCardKeyDown}
       aria-pressed={isActive}
-      className={`glass-card flex w-full cursor-pointer flex-col gap-4 rounded-2xl p-5 text-left transition-all duration-150 hover:border-primary/30 hover:shadow-[0_14px_32px_rgba(15,23,42,0.08)] focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/35 ${cardStateClassName}`}
+      className={`glass-card relative flex w-full cursor-pointer flex-col gap-4 overflow-hidden rounded-2xl p-5 text-left transition-all duration-150 hover:border-primary/30 hover:shadow-[0_14px_32px_rgba(15,23,42,0.08)] focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/35 ${cardStateClassName}`}
     >
+      {isActive ? (
+        <span
+          aria-hidden="true"
+          className="pointer-events-none absolute left-2 top-3 bottom-3 w-1 rounded-full bg-primary shadow-[0_0_12px_rgba(99,102,241,0.35)]"
+        />
+      ) : null}
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
           <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-outline">Device</p>
