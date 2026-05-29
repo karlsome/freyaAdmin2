@@ -8,6 +8,7 @@ const navItems = [
     children: [
       { icon: "overview",             labelKey: "overview",            page: "factory/overview" },
       { icon: "sensors",              labelKey: "sensors",             page: "sensors" },
+      { icon: "developer_board",     labelKey: "devices",             page: "devices" },
     ]
   },
   { icon: "precision_manufacturing",   labelKey: "factoryStatus",       page: "factoryStatus" },
@@ -57,7 +58,9 @@ function isActiveFor(item, activePage) {
     item.page === "factories" &&
     (activePage.startsWith("factory/") ||
       activePage === "sensors" ||
-      activePage.startsWith("sensors/"))
+      activePage.startsWith("sensors/") ||
+      activePage === "devices" ||
+      activePage.startsWith("devices/"))
   ) return true;
   if (item.children) return item.children.some((c) => isActiveFor(c, activePage));
   return false;

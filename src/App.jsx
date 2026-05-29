@@ -10,6 +10,7 @@ import FactoriesPage from "./pages/FactoriesPage";
 import FactoryDetailPage from "./pages/FactoryDetailPage";
 import SensorDetailPage from "./pages/SensorDetailPage";
 import SensorsPage from "./pages/SensorsPage";
+import DevicesPage from "./pages/DevicesPage";
 import PlaceholderPage from "./pages/PlaceholderPage";
 import MasterDBPage from "./pages/MasterDBPage";
 import PlannerPage from "./pages/PlannerPage";
@@ -246,6 +247,7 @@ function App() {
               <Route path="/masterDB" element={<MasterDBPage />} />
               <Route path="/factories" element={<FactoriesPage />} />
               <Route path="/sensors" element={<SensorsPage />} />
+              <Route path="/devices" element={<DevicesPage />} />
               <Route path="/factory/overview" element={<FactoryDetailPage combined />} />
               <Route path="/factory/:factoryName" element={<FactoryDetailPage />} />
               <Route path="/sensors/:factoryName" element={<SensorDetailPage />} />

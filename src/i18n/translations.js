@@ -23,6 +23,7 @@ const translations = {
     financials: "Financials",
     overview: "Overview",
     sensors: "Sensors",
+    devices: "Devices",
 
     // Settings
     settings: "Settings",
@@ -188,6 +189,7 @@ const translations = {
     financials: "財務",
     overview: "概要",
     sensors: "センサー",
+    devices: "デバイス",
 
     // Settings
     settings: "設定",

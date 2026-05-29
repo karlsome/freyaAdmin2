@@ -4,6 +4,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import DataTable from "../components/DataTable";
 import IconButton from "../components/IconButton";
 import PageHeader from "../components/PageHeader";
+import SensorDevicePhotoPreviewModal from "../components/SensorDevicePhotoPreviewModal";
 import StatSummaryCard from "../components/StatSummaryCard";
 import TicketSubmissionsFilterPanel from "../components/TicketSubmissionsFilterPanel";
 import { useLanguage } from "../contexts/LanguageContext";
@@ -509,24 +510,6 @@ function ExportChoiceModal({ filteredCount, onClose, onExportAll, onExportFilter
   );
 }
 
-function buildImageDownloadName(url, label) {
-  const safeLabel = String(label ?? "ticket-image")
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9_-]+/gi, "-")
-    .replace(/^-+|-+$/g, "") || "ticket-image";
-
-  try {
-    const pathname = new URL(url).pathname;
-    const fileName = decodeURIComponent(pathname.split("/").filter(Boolean).pop() ?? "");
-    if (fileName) return fileName;
-  } catch {
-    // Fall back to generated file name.
-  }
-
-  return `${safeLabel}.jpg`;
-}
-
 function getTicketKey(ticket) {
   return [
     String(ticket?.ticketId ?? "").trim(),
@@ -617,111 +600,6 @@ function TicketStatusPill({ status }) {
   );
 }
 
-function ImagePreviewLightbox({ preview, onClose, onNavigate }) {
-  const images = Array.isArray(preview?.images) ? preview.images : [];
-  const activeIndex = Number.isInteger(preview?.activeIndex) ? preview.activeIndex : 0;
-  const activeImage = images[activeIndex] || null;
-  const hasMultipleImages = images.length > 1;
-  const canGoPrevious = activeIndex > 0;
-  const canGoNext = activeIndex < images.length - 1;
-
-  useEffect(() => {
-    if (!activeImage?.url) return undefined;
-
-    function handleKeyDown(event) {
-      if (event.key === "Escape") {
-        event.preventDefault();
-        onClose();
-        return;
-      }
-
-      if (!hasMultipleImages) return;
-
-      if (event.key === "ArrowLeft" && canGoPrevious) {
-        event.preventDefault();
-        onNavigate(-1);
-      } else if (event.key === "ArrowRight" && canGoNext) {
-        event.preventDefault();
-        onNavigate(1);
-      }
-    }
-
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [activeImage?.url, canGoNext, canGoPrevious, hasMultipleImages, onClose, onNavigate]);
-
-  if (!activeImage?.url) return null;
-
-  return createPortal(
-    <div className="fixed inset-0 z-[90] flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm" onClick={onClose}>
-      <div
-        className="flex max-h-[92vh] w-full max-w-4xl flex-col overflow-hidden rounded-[28px] border border-white/15 bg-slate-950/95 shadow-2xl"
-        onClick={(event) => event.stopPropagation()}
-      >
-        <div className="flex items-start justify-between gap-4 border-b border-separator/30 px-5 py-4 text-white">
-          <div className="min-w-0 flex-1">
-            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/50">Image Preview</p>
-            <p className="mt-1 truncate text-sm font-semibold text-white">{activeImage.label || "Ticket image"}</p>
-            {hasMultipleImages ? (
-              <p className="mt-1 text-xs text-white/60">Image {activeIndex + 1} of {images.length}</p>
-            ) : null}
-          </div>
-          <IconButton icon="close" onClick={onClose} variant="light" ariaLabel="Close dialog" />
-        </div>
-
-        <div className="relative flex min-h-0 flex-1 items-center justify-center bg-black/30 px-4 py-4 sm:px-6">
-          {hasMultipleImages ? (
-            <button
-              type="button"
-              onClick={() => onNavigate(-1)}
-              disabled={!canGoPrevious}
-              aria-label="Show previous image"
-              className="absolute left-4 top-1/2 z-10 flex h-12 w-12 -translate-y-1/2 items-center justify-center rounded-full bg-slate-950/70 text-white shadow-lg transition hover:bg-slate-950/85 disabled:cursor-not-allowed disabled:opacity-35 sm:left-6"
-            >
-              <span className="material-symbols-outlined" style={{ fontSize: 28 }}>chevron_left</span>
-            </button>
-          ) : null}
-
-          <img
-            src={activeImage.url}
-            alt={activeImage.label || "Ticket image"}
-            className="max-h-[68vh] max-w-full rounded-2xl object-contain shadow-2xl"
-          />
-
-          {hasMultipleImages ? (
-            <button
-              type="button"
-              onClick={() => onNavigate(1)}
-              disabled={!canGoNext}
-              aria-label="Show next image"
-              className="absolute right-4 top-1/2 z-10 flex h-12 w-12 -translate-y-1/2 items-center justify-center rounded-full bg-slate-950/70 text-white shadow-lg transition hover:bg-slate-950/85 disabled:cursor-not-allowed disabled:opacity-35 sm:right-6"
-            >
-              <span className="material-symbols-outlined" style={{ fontSize: 28 }}>chevron_right</span>
-            </button>
-          ) : null}
-        </div>
-
-        <div className="flex flex-col gap-3 border-t border-separator/30 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-xs text-white/65">
-            {hasMultipleImages
-              ? "Use the left and right arrow keys or the side buttons to browse images, then download the current one if needed."
-              : "Open the image here for a clearer view, then download it if needed."}
-          </p>
-          <a
-            href={activeImage.url}
-            download={buildImageDownloadName(activeImage.url, activeImage.label)}
-            className="inline-flex items-center justify-center gap-2 rounded-2xl bg-white px-4 py-2 text-sm font-bold text-slate-950 transition hover:bg-white/90"
-          >
-            <span className="material-symbols-outlined" style={{ fontSize: 18 }}>download</span>
-            Download image
-          </a>
-        </div>
-      </div>
-    </div>,
-    document.body
-  );
-}
-
 function TicketDetailModal({ actionBusy = false, onClose, onCloseTicket = null, onOpenChecklistSubmission = null, onReopenTicket = null, ticket }) {
   const [previewImage, setPreviewImage] = useState(null);
   const statusMeta = getTicketStatusMeta(ticket?.status);
@@ -783,10 +661,10 @@ function TicketDetailModal({ actionBusy = false, onClose, onCloseTicket = null, 
 
   return (
     <>
-      <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm" onClick={onClose}>
+      <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
         <div
           className="dashboard-section flex max-h-[88vh] w-full max-w-3xl flex-col overflow-hidden rounded-2xl"
-          onClick={(event) => event.stopPropagation()}
+          onMouseDown={(event) => event.stopPropagation()}
         >
           <div className="flex items-start justify-between gap-4 border-b border-separator/35 px-6 py-5">
             <div className="min-w-0 flex-1">
@@ -998,7 +876,11 @@ function TicketDetailModal({ actionBusy = false, onClose, onCloseTicket = null, 
         </div>
       </div>
 
-      <ImagePreviewLightbox preview={previewImage} onClose={() => setPreviewImage(null)} onNavigate={handlePreviewNavigate} />
+      <SensorDevicePhotoPreviewModal
+        preview={previewImage ? { ...previewImage, eyebrow: "Ticket Photos", displayName: ticket?.fieldLabel || "Ticket image", subtitle: ticket?.factory || ticket?.formName || undefined } : null}
+        onClose={() => setPreviewImage(null)}
+        onNavigate={handlePreviewNavigate}
+      />
     </>
   );
 }

@@ -46,9 +46,17 @@ function FactorySensorCard({ factory, onClick }) {
 
       {/* Footer */}
       <div className="flex items-center justify-between text-xs text-outline">
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-1.5 flex-wrap">
           <span className="material-symbols-outlined" style={{ fontSize: 14 }}>sensors</span>
           <span>{sensor.sensorCount} device{sensor.sensorCount !== 1 ? "s" : ""}</span>
+          {sensor.offlineCount > 0 ? (
+            <>
+              <span className="text-outline/60">|</span>
+              <span className="font-bold text-error">
+                {sensor.offlineCount} device{sensor.offlineCount !== 1 ? "s" : ""} offline
+              </span>
+            </>
+          ) : null}
         </div>
         <div className="flex items-center gap-1 text-primary font-bold text-[11px]">
           <span>Details</span>

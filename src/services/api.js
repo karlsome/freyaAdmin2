@@ -385,6 +385,12 @@ export async function fetchSensorFactoryOverview(date = new Date().toISOString()
                     averageHumidity: { $avg: "$latest.humidityValue" },
                     sensorCount: { $sum: 1 },
                     wbgt: { $max: "$latest.wbgtValue" },
+                    deviceLatest: {
+                      $push: {
+                        date: "$latest.Date",
+                        time: "$latest.Time",
+                      },
+                    },
                   },
                 },
                 {
@@ -395,6 +401,7 @@ export async function fetchSensorFactoryOverview(date = new Date().toISOString()
                     highestTemp: { $round: ["$highestTemp", 1] },
                     sensorCount: 1,
                     wbgt: { $round: ["$wbgt", 1] },
+                    deviceLatest: 1,
                   },
                 },
                 { $sort: { factory: 1 } },
@@ -426,6 +433,7 @@ export async function fetchSensorFactoryOverview(date = new Date().toISOString()
             hasHistorical: true,
             highestTemp: null,
             sensorCount: 0,
+            offlineCount: 0,
             wbgt: null,
           },
         };
@@ -434,6 +442,21 @@ export async function fetchSensorFactoryOverview(date = new Date().toISOString()
       const highestTemp = Number(summary.highestTemp);
       const averageHumidity = Number(summary.averageHumidity);
       const wbgt = Number(summary.wbgt);
+      const now = Date.now();
+      const offlineThresholdMs = 30 * 60 * 1000;
+      const offlineCount = Array.isArray(summary.deviceLatest)
+        ? summary.deviceLatest.reduce((count, entry) => {
+            const dateValue = String(entry?.date ?? "").trim();
+            const timeValue = String(entry?.time ?? "").trim() || "00:00:00";
+            if (!dateValue) return count + 1;
+            const parsed = new Date(`${dateValue}T${timeValue}`);
+            const timestamp = Number.isNaN(parsed.getTime())
+              ? new Date(`${dateValue} ${timeValue}`).getTime()
+              : parsed.getTime();
+            if (!Number.isFinite(timestamp)) return count + 1;
+            return now - timestamp >= offlineThresholdMs ? count + 1 : count;
+          }, 0)
+        : 0;
 
       return {
         name,
@@ -443,6 +466,7 @@ export async function fetchSensorFactoryOverview(date = new Date().toISOString()
           hasHistorical: true,
           highestTemp: Number.isFinite(highestTemp) ? highestTemp : null,
           sensorCount: Number(summary.sensorCount) || 0,
+          offlineCount,
           wbgt: Number.isFinite(wbgt) ? wbgt : null,
         },
       };
@@ -873,6 +897,66 @@ export async function fetchHistoricalSensorExport({
   );
 
   return Array.isArray(result) ? result : [];
+}
+
+// ─── IoT device names (Sasaki_Coating_MasterDB → ioTNames) ───────────────────
+export async function fetchIoTDeviceNames(factoryName) {
+  const filter = factoryName ? { factoryName } : {};
+  return query("Sasaki_Coating_MasterDB", "ioTNames", filter);
+}
+
+export async function fetchAllIoTDevicesWithUsers() {
+  const result = await query(
+    "Sasaki_Coating_MasterDB",
+    "ioTNames",
+    {},
+    {
+      aggregation: [
+        {
+          $lookup: {
+            from: "users",
+            localField: "username",
+            foreignField: "username",
+            as: "registeredBy",
+          },
+        },
+        {
+          $addFields: {
+            registeredBy: { $arrayElemAt: ["$registeredBy", 0] },
+          },
+        },
+        {
+          $project: {
+            factoryName: 1,
+            deviceId: 1,
+            name: 1,
+            imageURLs: 1,
+            createdAt: 1,
+            updatedAt: 1,
+            username: 1,
+            "registeredBy.firstName": 1,
+            "registeredBy.lastName": 1,
+            "registeredBy.email": 1,
+          },
+        },
+        { $sort: { factoryName: 1, name: 1 } },
+      ],
+    }
+  );
+
+  return Array.isArray(result) ? result : [];
+}
+
+export async function saveIoTDeviceName({ deviceId, factoryName, name, imageURLs, username }) {
+  return _postJson("api/iot-device-names/save", { deviceId, factoryName, name, imageURLs, username });
+}
+
+export async function uploadIoTDeviceImage({ base64, deviceId, factoryName, username }) {
+  return _postJson("api/upload-iot-device-image", { base64, deviceId, factoryName, username });
+}
+
+export async function deleteIoTDeviceImage({ deviceId, factoryName, imageUrl, username }) {
+  return _postJson("api/iot-device-names/delete-image", { deviceId, factoryName, imageUrl, username });
 }
 
 // ─── Environmental data (shared server-side weather batch) ──────────────────

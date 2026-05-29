@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { fetchMasterImage } from "../services/api";
 import CollapsibleSection from "./CollapsibleSection";
+import SensorDevicePhotoPreviewModal from "./SensorDevicePhotoPreviewModal";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 export const PROCESS_ACCENT = {
@@ -188,7 +189,7 @@ function StructuredValueCard({ value, depth = 0 }) {
 }
 
 // ─── PhotosSection ────────────────────────────────────────────────────────────
-function PhotosSection({ checkImages, labelImages, totalCount }) {
+function PhotosSection({ checkImages, labelImages, totalCount, onPreview }) {
   return (
     <CollapsibleSection
       icon="photo_library"
@@ -198,12 +199,16 @@ function PhotosSection({ checkImages, labelImages, totalCount }) {
       <div className="pb-5 space-y-4">
           {checkImages.length > 0 && (
             <div className="grid grid-cols-2 gap-3">
-              {checkImages.map(({ label, url }) => (
+              {checkImages.map(({ label, url }, index) => (
                 <div key={label}>
                   <p className="text-[10px] font-bold text-outline mb-1.5">{label}</p>
-                  <a href={url} target="_blank" rel="noreferrer" className="block rounded-2xl overflow-hidden border border-separator/35 hover:border-primary/45 transition-all duration-150 cursor-zoom-in">
+                  <button
+                    type="button"
+                    onClick={() => onPreview?.("check", index)}
+                    className="block w-full rounded-2xl overflow-hidden border border-separator/35 hover:border-primary/45 transition-all duration-150 cursor-zoom-in active:scale-95"
+                  >
                     <img src={url} alt={label} className="w-full object-cover max-h-36 bg-black/20" />
-                  </a>
+                  </button>
                 </div>
               ))}
             </div>
@@ -213,12 +218,11 @@ function PhotosSection({ checkImages, labelImages, totalCount }) {
               <p className="text-[10px] font-bold text-outline mb-2">材料ラベル ({labelImages.length})</p>
               <div className="grid grid-cols-4 gap-2">
                 {labelImages.map((url, i) => (
-                  <a
+                  <button
                     key={i}
-                    href={url}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="block rounded-2xl overflow-hidden border border-separator/35 hover:border-primary/45 transition-all duration-150 cursor-zoom-in"
+                    type="button"
+                    onClick={() => onPreview?.("label", i)}
+                    className="block w-full rounded-2xl overflow-hidden border border-separator/35 hover:border-primary/45 transition-all duration-150 cursor-zoom-in active:scale-95"
                   >
                     <img
                       src={url}
@@ -226,7 +230,7 @@ function PhotosSection({ checkImages, labelImages, totalCount }) {
                       className="w-full aspect-square object-cover bg-black/20"
                     />
                     <p className="text-[9px] text-outline text-center py-1">材料ラベル {i + 1}</p>
-                  </a>
+                  </button>
                 ))}
               </div>
             </div>
@@ -288,7 +292,7 @@ function BreakTimeSection({ record }) {
 }
 
 // ─── MaintenanceSection ───────────────────────────────────────────────────────
-function MaintenanceSection({ record }) {
+function MaintenanceSection({ record, onPreview }) {
   const maint = record.Maintenance_Data ?? {};
   const records = Array.isArray(maint.records) ? maint.records.filter((r) => r.startTime || r.comment) : [];
 
@@ -332,10 +336,14 @@ function MaintenanceSection({ record }) {
               {photos.length > 0 && (
                 <div className="grid grid-cols-3 gap-2 pt-1">
                   {photos.map((url, i) => (
-                    <a key={i} href={url} target="_blank" rel="noreferrer"
-                      className="block rounded-2xl overflow-hidden border border-separator/35 hover:border-amber-400/45 transition-all duration-150 cursor-zoom-in">
+                    <button
+                      key={i}
+                      type="button"
+                      onClick={() => onPreview?.(rec, i)}
+                      className="block w-full rounded-2xl overflow-hidden border border-separator/35 hover:border-amber-400/45 transition-all duration-150 cursor-zoom-in active:scale-95"
+                    >
                       <img src={url} alt={`Maintenance photo ${i + 1}`} className="w-full aspect-square object-cover bg-black/20" />
-                    </a>
+                    </button>
                   ))}
                 </div>
               )}
@@ -358,6 +366,7 @@ export default function RecordDetailModal({ record, processName, onClose, onLotC
   const [imageData,    setImageData]    = useState(null);
   const [imageLoading, setImageLoading] = useState(true);
   const [copied,       setCopied]       = useState(false);
+  const [photoPreview, setPhotoPreview] = useState(null);
 
   function copyLink() {
     navigator.clipboard.writeText(window.location.href).then(() => {
@@ -408,13 +417,15 @@ export default function RecordDetailModal({ record, processName, onClose, onLotC
   const modal = (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-3 sm:p-4 backdrop-blur-sm"
-      onClick={onClose}
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) onClose();
+      }}
     >
       <div
         className="dashboard-section rounded-2xl w-full max-w-2xl max-h-[92vh] overflow-y-auto
                    shadow-[0_0_80px_rgba(99,102,241,0.18),0_24px_48px_rgba(0,0,0,0.22)] scrollbar-hide"
         style={{ border: processAccent ? undefined : undefined }}
-        onClick={(e) => e.stopPropagation()}
+        onMouseDown={(e) => e.stopPropagation()}
       >
         {/* Header */}
         <div className="sticky top-0 z-10 rounded-t-2xl px-6 py-5 flex items-center justify-between
@@ -452,10 +463,15 @@ export default function RecordDetailModal({ record, processName, onClose, onLotC
           {imageLoading ? (
             <div className="w-full h-40 rounded-xl bg-surface-container/70 animate-pulse" />
           ) : imageData?.imageURL ? (
-            <a
-              href={imageData.imageURL}
-              target="_blank"
-              rel="noreferrer"
+            <button
+              type="button"
+              onClick={() => setPhotoPreview({
+                eyebrow: "Master Image",
+                displayName: imageData["品名"] ?? record["品番"] ?? "Master image",
+                subtitle: `${record["品番"] ?? ""}${record["背番号"] ? ` / ${record["背番号"]}` : ""}`.trim() || undefined,
+                images: [{ url: imageData.imageURL, label: imageData["品名"] ?? record["品番"] ?? "Master image" }],
+                activeIndex: 0,
+              })}
               className="block w-full overflow-hidden rounded-xl border border-separator/40
                          hover:border-primary/40 hover:shadow-md transition-all duration-150 cursor-zoom-in"
             >
@@ -463,9 +479,9 @@ export default function RecordDetailModal({ record, processName, onClose, onLotC
                 src={imageData.imageURL}
                 alt={imageData["品名"] ?? record["品番"]}
                 className="w-full max-h-52 object-contain bg-black/20"
-                onError={(e) => { e.currentTarget.closest("a").classList.add("hidden"); }}
+                onError={(e) => { e.currentTarget.closest("button").classList.add("hidden"); }}
               />
-            </a>
+            </button>
           ) : (
             <div className="w-full h-10 flex items-center justify-center rounded-xl bg-surface-container/40
                             border border-separator/30 text-[11px] text-outline gap-1.5">
@@ -533,14 +549,43 @@ export default function RecordDetailModal({ record, processName, onClose, onLotC
             : record["材料ラベル画像"] ? [record["材料ラベル画像"]] : [];
           const totalCount = checkImages.length + labelImages.length;
           if (totalCount === 0) return null;
-          return <PhotosSection checkImages={checkImages} labelImages={labelImages} totalCount={totalCount} />;
+
+          function handleOpenPreview(group, index) {
+            const combined = [
+              ...checkImages.map((image) => ({ url: image.url, label: image.label })),
+              ...labelImages.map((url, i) => ({ url, label: `材料ラベル ${i + 1}` })),
+            ];
+            const activeIndex = group === "label" ? checkImages.length + index : index;
+            setPhotoPreview({
+              eyebrow: "Record Photos",
+              displayName: `${processName ?? "Record"} Photos`,
+              subtitle: `${record["品番"] ?? ""} / ${record["背番号"] ?? ""}`.trim() || undefined,
+              images: combined,
+              activeIndex,
+            });
+          }
+
+          return <PhotosSection checkImages={checkImages} labelImages={labelImages} totalCount={totalCount} onPreview={handleOpenPreview} />;
         })()}
 
         {/* Break times — collapsible */}
         <BreakTimeSection record={record} />
 
         {/* Maintenance — collapsible */}
-        <MaintenanceSection record={record} />
+        <MaintenanceSection
+          record={record}
+          onPreview={(rec, index) => {
+            const photos = Array.isArray(rec?.photos) ? rec.photos.filter(Boolean) : [];
+            if (!photos.length) return;
+            setPhotoPreview({
+              eyebrow: "Maintenance Photos",
+              displayName: "Maintenance / Trouble",
+              subtitle: rec?.comment || (rec?.startTime ? `${rec.startTime}${rec?.endTime ? ` → ${rec.endTime}` : ""}` : undefined),
+              images: photos.map((url, i) => ({ url, label: `Maintenance photo ${i + 1}` })),
+              activeIndex: index,
+            });
+          }}
+        />
 
         {/* All fields — collapsible */}
         <CollapsibleSection label="All Fields" wrapperClassName="px-6 py-4">
@@ -565,6 +610,17 @@ export default function RecordDetailModal({ record, processName, onClose, onLotC
           </div>
         </CollapsibleSection>
       </div>
+      <SensorDevicePhotoPreviewModal
+        preview={photoPreview}
+        onClose={() => setPhotoPreview(null)}
+        onNavigate={(direction) => setPhotoPreview((current) => {
+          if (!current) return current;
+          const images = Array.isArray(current.images) ? current.images : [];
+          const next = (Number.isInteger(current.activeIndex) ? current.activeIndex : 0) + direction;
+          if (next < 0 || next >= images.length) return current;
+          return { ...current, activeIndex: next };
+        })}
+      />
     </div>
   );
 
