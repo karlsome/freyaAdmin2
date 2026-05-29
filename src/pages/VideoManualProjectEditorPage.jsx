@@ -119,7 +119,7 @@ export default function VideoManualProjectEditorPage() {
     try {
       const editData = editRef.current?.getEdit();
       return editData?.timeline?.tracks?.[trackIndex]?.clips?.[clipIndex] || null;
-    } catch (_) {
+    } catch {
       return null;
     }
   }, []);
@@ -165,7 +165,9 @@ export default function VideoManualProjectEditorPage() {
       setTimelineBackground(editData?.timeline?.background || DEFAULT_VIDEO_MANUAL_TEMPLATE.timeline.background);
       setOutputSize(getOutputSize(editData));
       setOutputFps(getOutputFps(editData));
-    } catch (_) {}
+    } catch (error) {
+      console.warn("Failed to sync editor settings", error);
+    }
   }, []);
 
   const syncSelectedClip = useCallback((selection) => {
@@ -200,12 +202,12 @@ export default function VideoManualProjectEditorPage() {
 
     function disposeSDK() {
       unsubs.splice(0).forEach((unsubscribe) => {
-        try { unsubscribe?.(); } catch (_) {}
+        try { unsubscribe?.(); } catch { /* Ignore SDK listener cleanup errors. */ }
       });
-      try { controls?.dispose?.(); } catch (_) {}
-      try { ui?.dispose?.(); } catch (_) {}
-      try { canvas?.dispose?.(); } catch (_) {}
-      try { edit?.dispose?.(); } catch (_) {}
+      try { controls?.dispose?.(); } catch { /* Ignore SDK disposal errors. */ }
+      try { ui?.dispose?.(); } catch { /* Ignore SDK disposal errors. */ }
+      try { canvas?.dispose?.(); } catch { /* Ignore SDK disposal errors. */ }
+      try { edit?.dispose?.(); } catch { /* Ignore SDK disposal errors. */ }
     }
 
     async function initSDK() {
@@ -534,6 +536,104 @@ export default function VideoManualProjectEditorPage() {
     showNotice("Animation applied.");
   }, [readClipAt, selectedClip, showNotice]);
 
+  const handleUpdateSelectedClip = useCallback(async (updates, statusMessage = "Clip updated.") => {
+    const edit = editRef.current;
+    const selection = selectedClip || edit?.getSelectedClipInfo?.();
+    if (!edit || !selection) return;
+
+    try {
+      await edit.updateClip(selection.trackIndex, selection.clipIndex, updates);
+      const updatedClip = readClipAt(selection.trackIndex, selection.clipIndex);
+      setSelectedClip((current) => ({
+        ...(current || selection),
+        trackIndex: selection.trackIndex,
+        clipIndex: selection.clipIndex,
+        clip: updatedClip || { ...(selection.clip || {}), ...updates },
+      }));
+      syncSteps();
+      syncEditorSettings();
+      showNotice(statusMessage);
+    } catch (error) {
+      console.error("Failed to update selected clip", error);
+      showNotice(error.message || "Clip update failed.", "error");
+    }
+  }, [readClipAt, selectedClip, showNotice, syncEditorSettings, syncSteps]);
+
+  const handleDeleteSelectedClip = useCallback(async () => {
+    const edit = editRef.current;
+    const selection = selectedClip || edit?.getSelectedClipInfo?.();
+    if (!edit || !selection) return;
+
+    try {
+      const clipCount = (edit.getEdit()?.timeline?.tracks || []).reduce((total, track) => total + (track.clips?.length || 0), 0);
+      if (clipCount <= 1) {
+        showNotice("The last clip cannot be deleted.", "error");
+        return;
+      }
+
+      await edit.deleteClip(selection.trackIndex, selection.clipIndex);
+      setSelectedClip(null);
+      setAddDrawerOpen(false);
+      syncSteps();
+      showNotice("Clip deleted.");
+    } catch (error) {
+      console.error("Failed to delete selected clip", error);
+      showNotice(error.message || "Delete failed.", "error");
+    }
+  }, [selectedClip, showNotice, syncSteps]);
+
+  const handleTrimSelectedClip = useCallback(async () => {
+    const edit = editRef.current;
+    const selection = selectedClip || edit?.getSelectedClipInfo?.();
+    if (!edit || !selection) return;
+
+    const clip = readClipAt(selection.trackIndex, selection.clipIndex) || selection.clip;
+    if (clip?.asset?.type !== "video") {
+      showNotice("Trim is available for video clips only.", "error");
+      return;
+    }
+
+    const clipStart = Number(clip.start);
+    const clipLength = Number(clip.length);
+    const playhead = getPlaybackTime();
+    if (!Number.isFinite(clipStart) || !Number.isFinite(clipLength) || clipLength <= 0) {
+      showNotice("This clip cannot be trimmed because its timing is invalid.", "error");
+      return;
+    }
+
+    const splitOffset = playhead - clipStart;
+    if (splitOffset <= 0.05 || splitOffset >= clipLength - 0.05) {
+      showNotice("Move the playhead inside the selected video to trim it.", "error");
+      return;
+    }
+
+    try {
+      const sourceTrim = Number(clip.asset?.trim) || 0;
+      const firstLength = Number(splitOffset.toFixed(3));
+      const secondClip = cloneJson(clip, {});
+      delete secondClip.id;
+      delete secondClip.alias;
+      secondClip.start = Number(playhead.toFixed(3));
+      secondClip.length = Number((clipLength - splitOffset).toFixed(3));
+      secondClip.asset = {
+        ...(secondClip.asset || {}),
+        trim: Number((sourceTrim + splitOffset).toFixed(3)),
+      };
+
+      await edit.updateClip(selection.trackIndex, selection.clipIndex, { length: firstLength });
+      await Promise.resolve(edit.addClip(selection.trackIndex, secondClip));
+      edit.seek?.(playhead + 0.001);
+
+      const updatedClip = readClipAt(selection.trackIndex, selection.clipIndex);
+      setSelectedClip({ ...selection, clip: updatedClip || { ...clip, length: firstLength } });
+      syncSteps();
+      showNotice(`Clip split at ${playhead.toFixed(2)}s.`);
+    } catch (error) {
+      console.error("Failed to trim selected clip", error);
+      showNotice(error.message || "Trim failed.", "error");
+    }
+  }, [getPlaybackTime, readClipAt, selectedClip, showNotice, syncSteps]);
+
   const handleComingSoon = useCallback((label) => {
     showNotice(`${label} is coming soon.`);
   }, [showNotice]);
@@ -600,6 +700,9 @@ export default function VideoManualProjectEditorPage() {
               onSetBackgroundColor={handleSetBackgroundColor}
               onSetOutputPreset={handleSetOutputPreset}
               onSetOutputFps={handleSetOutputFps}
+              onUpdateSelectedClip={handleUpdateSelectedClip}
+              onTrimSelectedClip={handleTrimSelectedClip}
+              onDeleteSelectedClip={handleDeleteSelectedClip}
               onApplyAnimationPreset={handleApplyAnimationPreset}
               onComingSoon={handleComingSoon}
             />

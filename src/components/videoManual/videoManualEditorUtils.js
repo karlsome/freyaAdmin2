@@ -70,7 +70,7 @@ export function cloneJson(value, fallback) {
   if (value === undefined || value === null) return fallback;
   try {
     return structuredClone(value);
-  } catch (_) {
+  } catch {
     return JSON.parse(JSON.stringify(value));
   }
 }
@@ -89,6 +89,33 @@ export function getClipCategory(clip) {
   if (["svg", "shape"].includes(assetType)) return "shapes";
   if (["video", "image", "audio"].includes(assetType)) return "media";
   return null;
+}
+
+export function normalizeHexColor(color) {
+  if (typeof color !== "string") return "";
+  const trimmed = color.trim();
+  if (/^#[0-9a-f]{6}$/i.test(trimmed)) return trimmed;
+  if (/^#[0-9a-f]{3}$/i.test(trimmed)) {
+    return `#${trimmed.slice(1).split("").map((part) => part + part).join("")}`;
+  }
+  return "";
+}
+
+export function extractShapeStyle(svgSource) {
+  if (typeof svgSource !== "string") return {};
+
+  const readAttr = (name) => {
+    const match = svgSource.match(new RegExp(`${name}=["']([^"']+)["']`, "i"));
+    return match?.[1] || "";
+  };
+
+  const strokeWidth = Number(readAttr("stroke-width"));
+  return {
+    shapeType: readAttr("data-vmfa-shape") || readAttr("data-vmss-shape") || "rect",
+    fill: normalizeHexColor(readAttr("fill")) || "#fecaca",
+    stroke: normalizeHexColor(readAttr("stroke")) || "#ef4444",
+    strokeWidth: Number.isFinite(strokeWidth) && strokeWidth > 0 ? strokeWidth : 3,
+  };
 }
 
 export function createShapeSvg(shapeType, width, height, options = {}) {
@@ -190,7 +217,7 @@ export function normalizePlayableMediaSource(sourceUrl, apiBaseUrl) {
       previewUrl: `${apiBaseUrl}/api/video-manual-media/${safeFileName}?url=${encodeURIComponent(parsed.toString())}`,
       publicUrl: parsed.toString(),
     };
-  } catch (_) {
+  } catch {
     return { previewUrl: sourceUrl, publicUrl: sourceUrl };
   }
 }
@@ -221,7 +248,7 @@ export function buildUploadedAsset(file, result, forcedType) {
 export function getTrackCount(edit) {
   try {
     return edit?.getEdit()?.timeline?.tracks?.length || 0;
-  } catch (_) {
+  } catch {
     return 0;
   }
 }

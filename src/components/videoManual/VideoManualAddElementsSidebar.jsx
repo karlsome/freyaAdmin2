@@ -1,4 +1,6 @@
 import { useEffect, useRef } from "react";
+import VideoManualClipPropertiesPanel from "./VideoManualClipPropertiesPanel";
+import { getClipCategory } from "./videoManualEditorUtils";
 
 const ADD_CATEGORIES = [
   { id: "text", label: "Text", icon: "text_fields" },
@@ -103,11 +105,17 @@ export default function VideoManualAddElementsSidebar({
   onSetBackgroundColor,
   onSetOutputPreset,
   onSetOutputFps,
+  onUpdateSelectedClip,
+  onTrimSelectedClip,
+  onDeleteSelectedClip,
   onApplyAnimationPreset,
   onComingSoon,
 }) {
   const shellRef = useRef(null);
   const activeMeta = ADD_CATEGORIES.find((category) => category.id === activeCategory) || ADD_CATEGORIES[0];
+  const selectedCategory = getClipCategory(selectedClip?.clip);
+  const showingProperties = !!selectedClip && !!selectedCategory && selectedCategory === activeCategory;
+  const drawerTitle = showingProperties ? `${activeMeta.label} Properties` : activeMeta.label;
 
   useEffect(() => {
     if (!isOpen) return undefined;
@@ -137,6 +145,18 @@ export default function VideoManualAddElementsSidebar({
   }, [isOpen, onClose]);
 
   const renderPanel = () => {
+    if (showingProperties) {
+      return (
+        <VideoManualClipPropertiesPanel
+          selectedClip={selectedClip}
+          onUpdateClip={onUpdateSelectedClip}
+          onTrimClip={onTrimSelectedClip}
+          onDeleteClip={onDeleteSelectedClip}
+          onOpenAnimationPanel={() => onSelectCategory("animation")}
+        />
+      );
+    }
+
     if (activeCategory === "text") {
       return (
         <div className="space-y-5">
@@ -281,7 +301,7 @@ export default function VideoManualAddElementsSidebar({
         style={{ width: "min(330px, calc(100vw - 120px))" }}
       >
         <div className="flex items-center justify-between border-b border-slate-100 px-4 py-4 dark:border-slate-800">
-          <span className="text-xs font-black uppercase tracking-[0.22em] text-slate-500 dark:text-slate-400">{activeMeta.label}</span>
+          <span className="text-xs font-black uppercase tracking-[0.22em] text-slate-500 dark:text-slate-400">{drawerTitle}</span>
           <button type="button" onClick={onClose} className="flex h-8 w-8 items-center justify-center rounded-full text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800 dark:hover:text-white">
             <Icon className="text-[18px]">close</Icon>
           </button>
