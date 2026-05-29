@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Edit, Canvas, Controls, Timeline, UIController } from "@shotstack/shotstack-studio";
-import PageHeader from "../components/PageHeader";
 import {
   fetchVideoManualProject,
   patchVideoManualProject,
@@ -19,6 +18,17 @@ export default function VideoManualProjectPage() {
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState("");
   const [saveSuccess, setSaveSuccess] = useState("");
+
+  // Editor UI State
+  const [activeRightTab, setActiveRightTab] = useState("Shapes");
+  const rightTabs = [
+    { id: "Text", icon: "text_fields" },
+    { id: "Shapes", icon: "category" },
+    { id: "Media", icon: "video_library" },
+    { id: "Anim", icon: "show_chart" },
+    { id: "Background", icon: "palette" },
+    { id: "Advanced", icon: "settings" },
+  ];
 
   // Refs for the SDK instances and DOM mount points
   const editRef = useRef(null);
@@ -52,13 +62,11 @@ export default function VideoManualProjectPage() {
     return () => { cancelled = true; };
   }, [projectId]);
 
-  // Mount the Shotstack SDK once the project is loaded and the DOM elements are ready
+  // Mount the Shotstack SDK
   useEffect(() => {
     if (!project || sdkInitialized.current) return;
     if (!studioElRef.current || !timelineElRef.current) return;
 
-    // Mark initialized immediately — blocks the StrictMode second invocation
-    // from racing the first one on the same DOM element.
     sdkInitialized.current = true;
 
     const template = project.edit || { timeline: { tracks: [] } };
@@ -78,6 +86,8 @@ export default function VideoManualProjectPage() {
       try {
         edit = new Edit(template);
         canvas = new Canvas(edit);
+        
+        // Render UI Controller so strict requirements are met, but without any buttons
         const ui = UIController.create(edit, canvas);
 
         await canvas.load();
@@ -113,10 +123,6 @@ export default function VideoManualProjectPage() {
     return () => {
       cancelled = true;
       sdkInitialized.current = false;
-      // Only dispose via refs — if refs are null, initSDK is still in-flight
-      // and will call disposeSDK() itself via the cancelled checks above.
-      // Calling canvas.dispose() while canvas.load() is awaiting app.init()
-      // would destroy a mid-initializing pixi app and cause the crash.
       if (editRef.current) {
         try { canvasRef.current?.dispose(); } catch (_) {}
         try { editRef.current?.dispose(); } catch (_) {}
@@ -156,7 +162,6 @@ export default function VideoManualProjectPage() {
       await patchVideoManualProject(projectId, { edit: currentEdit });
       const { revisionNumber } = await createVideoManualRevision(projectId, currentEdit);
       setSaveSuccess(`Revision ${revisionNumber} created.`);
-      // Refresh project to update revision count
       const refreshed = await fetchVideoManualProject(projectId);
       setProject(refreshed);
       setTimeout(() => setSaveSuccess(""), 4000);
@@ -167,89 +172,265 @@ export default function VideoManualProjectPage() {
     }
   }, [projectId, saving]);
 
+  // Insert actions replacing Shotstack UI module
+  const handleAddText = () => {
+    if (!editRef.current) return;
+    editRef.current.addTrack(0, {
+      clips: [{
+        asset: {
+          type: "rich-text",
+          text: "Change Text",
+          font: { family: "Work Sans", size: 48, weight: 600, color: "#ffffff", opacity: 1 },
+          align: { horizontal: "center", vertical: "middle" }
+        },
+        start: editRef.current.player?.currentTime || 0,
+        length: 5,
+        width: 500,
+        height: 200
+      }]
+    });
+  };
+
+  const handleAddShape = (shapeType) => {
+    if (!editRef.current) return;
+    editRef.current.addTrack(0, {
+      clips: [{
+        asset: {
+          type: "shape",
+          shape: shapeType,
+          width: 200,
+          height: 200,
+          rectangle: shapeType === 'rectangle' ? { width: 200, height: 200 } : undefined,
+          fill: { color: "#ffffff", opacity: 0.5 }
+        },
+        start: editRef.current.player?.currentTime || 0,
+        length: 5,
+        width: 200,
+        height: 200
+      }]
+    });
+  };
+
   return (
-    <div className="flex h-screen flex-col overflow-hidden pt-16">
-      {/* Top bar */}
-      <div className="flex flex-shrink-0 items-center justify-between gap-3 border-b border-outline-variant/15 bg-surface px-4 py-2 sm:px-6">
-        <div className="flex min-w-0 items-center gap-3">
-          <button
-            type="button"
+    <div className="flex h-screen flex-col overflow-hidden bg-[#f4f6f8] font-sans">
+      
+      {/* 1. Header (Legacy style match) */}
+      <header className="flex h-14 flex-shrink-0 items-center justify-between border-b border-gray-200 bg-white px-4 text-sm z-10 shadow-sm relative">
+        <div className="flex items-center gap-2">
+          <button 
             onClick={() => navigate("/videoManual")}
-            className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg border border-separator/50 text-on-surface-variant transition-all duration-150 hover:border-primary/30 hover:bg-surface-container hover:text-primary active:scale-95"
-            title="Back to browser"
+            className="flex items-center gap-1 rounded bg-gray-100 px-3 py-1.5 text-gray-700 hover:bg-gray-200"
           >
-            <span className="material-symbols-outlined" style={{ fontSize: 18 }}>arrow_back</span>
+            <span className="material-symbols-outlined text-[16px]">arrow_back</span>
+            Projects
           </button>
-          <div className="min-w-0">
-            <p className="truncate text-sm font-bold text-on-surface leading-tight">
-              {loadingProject ? "Loading…" : (project?.title || "Untitled Project")}
-            </p>
-            <p className="text-[10px] text-outline leading-tight">
-              {project ? `Rev. ${project.currentRevisionNumber ?? 0}` : "Shotstack Workspace"}
-            </p>
+          
+          <div className="mx-2 h-6 w-px bg-gray-300"></div>
+          
+          {/* Undo / Redo controls */}
+          <button className="flex h-8 w-8 items-center justify-center rounded text-gray-500 hover:bg-gray-100">
+            <span className="material-symbols-outlined text-[18px]">undo</span>
+          </button>
+          <button className="flex h-8 w-8 items-center justify-center rounded text-gray-500 hover:bg-gray-100">
+            <span className="material-symbols-outlined text-[18px]">redo</span>
+          </button>
+          
+          <div className="mx-2 h-6 w-px bg-gray-300"></div>
+          
+          <button onClick={handleSaveRevision} disabled={saving} className="flex items-center gap-1 rounded bg-gray-100 px-3 py-1.5 text-gray-700 hover:bg-gray-200">
+            <span className="material-symbols-outlined text-[16px]">save</span>
+            Save Revision
+          </button>
+          
+          <button className="flex items-center gap-1 rounded bg-gray-100 px-3 py-1.5 text-gray-700 hover:bg-gray-200">
+            <span className="material-symbols-outlined text-[16px]">history</span>
+            History
+          </button>
+        </div>
+
+        {/* Center Title */}
+        <div className="absolute left-1/2 flex -translate-x-1/2 flex-col items-center">
+          <span className="font-bold text-gray-900">{project?.title || "Project"}</span>
+          <span className="text-[10px] text-gray-500">Project loaded</span>
+        </div>
+
+        <div className="flex items-center gap-3">
+          <div className="flex items-center rounded border border-gray-300 bg-white">
+            <button className="px-2 py-1 text-gray-600 hover:bg-gray-100">
+              <span className="material-symbols-outlined text-[16px]">remove</span>
+            </button>
+            <div className="border-x border-gray-300 px-3 py-1 text-sm text-gray-700">
+              Auto-Fit Page
+            </div>
+            <button className="px-2 py-1 text-gray-600 hover:bg-gray-100">
+              <span className="material-symbols-outlined text-[16px]">add</span>
+            </button>
           </div>
-        </div>
-
-        <div className="flex flex-shrink-0 items-center gap-2">
-          {saveError ? (
-            <span className="text-xs text-error font-medium">{saveError}</span>
-          ) : saveSuccess ? (
-            <span className="text-xs text-success font-medium">{saveSuccess}</span>
-          ) : null}
-          <button
-            type="button"
-            onClick={handleSave}
-            disabled={saving || loadingProject || !project}
-            className="rounded-xl border border-separator/50 px-3 py-1.5 text-xs font-bold text-on-surface-variant transition-all duration-150 hover:border-primary/30 hover:bg-surface-container hover:text-primary active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
+          <button 
+            onClick={handleSave} 
+            disabled={saving} 
+            className="flex items-center gap-1 rounded bg-[#3c82f6] px-4 py-1.5 text-white hover:bg-blue-600"
           >
-            {saving ? "Saving…" : "Save"}
-          </button>
-          <button
-            type="button"
-            onClick={handleSaveRevision}
-            disabled={saving || loadingProject || !project}
-            className="rounded-xl bg-primary px-3 py-1.5 text-xs font-bold text-on-primary transition-all duration-150 hover:opacity-90 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
-          >
-            {saving ? "Saving…" : "Save Revision"}
+            <span className="material-symbols-outlined text-[16px]">download</span>
+            Export
           </button>
         </div>
-      </div>
-
-      {/* Error banner */}
-      {projectError ? (
-        <div className="flex flex-shrink-0 items-start gap-3 border-b border-error/20 bg-error/10 px-4 py-3">
-          <span className="material-symbols-outlined flex-shrink-0 text-error" style={{ fontSize: 18 }}>report</span>
-          <p className="text-xs font-medium text-on-surface">{projectError}</p>
+      </header>
+      
+      {/* Messages */}
+      {(projectError || saveError || saveSuccess) && (
+        <div className={`flex justify-center p-1 text-xs font-semibold text-white ${projectError || saveError ? 'bg-red-500' : 'bg-green-500'}`}>
+          {projectError || saveError || saveSuccess}
         </div>
-      ) : null}
+      )}
 
-      {/* Loading skeleton */}
+      {/* Main Workspace Frame */}
       {loadingProject ? (
         <div className="flex flex-1 items-center justify-center">
-          <div className="flex flex-col items-center gap-3 text-outline">
-            <span className="material-symbols-outlined animate-spin" style={{ fontSize: 32 }}>progress_activity</span>
-            <p className="text-sm font-medium">Loading project…</p>
-          </div>
+          <span className="material-symbols-outlined animate-spin text-[32px] text-gray-400">progress_activity</span>
         </div>
-      ) : null}
+      ) : (
+        <div className="flex min-h-0 flex-1 flex-col relative w-full">
+          
+          {/* Top content: Left Sidebar + Central Canvas + Right Sidebar */}
+          <div className="flex flex-1 min-h-0 relative">
+            
+            {/* 2. Left Sidebar (STEPS) */}
+            <aside className="w-[180px] sm:w-[220px] flex-shrink-0 border-r border-gray-200 bg-white flex flex-col z-10">
+              <div className="flex items-center justify-between border-b border-gray-100 p-3">
+                <span className="text-xs font-bold tracking-widest text-gray-500">STEPS</span>
+                <span className="text-xs text-gray-400">1</span>
+              </div>
+              <div className="flex-1 overflow-y-auto p-2">
+                {/* Mock Step Card */}
+                <div className="flex flex-col gap-1 rounded-md border border-blue-100 bg-[#f4f8ff] p-3 shadow-sm select-none cursor-pointer relative overflow-hidden group">
+                  <div className="absolute left-0 top-0 bottom-0 w-1 bg-blue-500"></div>
+                  <div className="flex items-center gap-2">
+                    <span className="flex h-5 w-5 items-center justify-center rounded-sm bg-blue-500 text-[10px] font-bold text-white">1</span>
+                    <span className="text-sm font-semibold text-gray-800">Step 1</span>
+                  </div>
+                  <span className="text-xs text-gray-500 pl-7">0:00.0 - 0:07.7</span>
+                  <span className="text-[10px] text-gray-400 pl-7 italic mt-1 group-hover:text-blue-500">Add description...</span>
+                </div>
+              </div>
+              <div className="border-t border-gray-100 p-2">
+                 <button className="flex w-full items-center justify-center gap-1 rounded bg-gray-100 p-2 text-sm text-gray-600 hover:bg-gray-200">
+                    <span className="material-symbols-outlined text-[16px]">add</span> Add Step
+                 </button>
+              </div>
+            </aside>
 
-      {/* Shotstack editor — always rendered once project is available so refs attach */}
-      {!loadingProject && project ? (
-        <div className="flex min-h-0 flex-1 flex-col">
-          {/* Canvas area */}
-          <div
-            ref={studioElRef}
-            data-shotstack-studio
-            className="min-h-0 flex-1 w-full"
-          />
-          {/* Timeline */}
-          <div
-            ref={timelineElRef}
-            data-shotstack-timeline
-            className="h-[260px] w-full flex-shrink-0"
-          />
+            {/* 3. Center Canvas Video wrapper */}
+            <main className="flex-1 relative flex flex-col items-center justify-center bg-gray-100 p-4 min-w-0">
+               <div 
+                 ref={studioElRef} 
+                 data-shotstack-studio
+                 className="w-full h-full max-w-[900px] border border-black/5 bg-black shadow-lg rounded overflow-hidden" 
+               />
+               <style dangerouslySetInnerHTML={{__html: `
+                 .shotstack-ui { display: none !important; }
+               `}} />
+            </main>
+
+            {/* 4. Right Sidebar Area */}
+            <div className="flex justify-end relative h-full flex-shrink-0 z-10 isolate">
+              
+              {/* Expandable Options Panel */}
+              <div className="h-full border-l border-gray-200 bg-white" style={{ display: activeRightTab ? 'block' : 'none', width: '260px' }}>
+                <div className="border-b border-gray-100 px-4 py-3">
+                  <span className="text-xs font-bold tracking-widest text-gray-500 uppercase">{activeRightTab}</span>
+                </div>
+                
+                <div className="p-4">
+                  {/* Dynamic Panel Content based on selected tab */}
+                  {activeRightTab === 'Text' && (
+                     <div className="flex flex-col gap-3">
+                        <span className="text-sm text-gray-600 font-medium border-b pb-1">Text Tools</span>
+                        <div className="grid grid-cols-2 gap-3">
+                            <button onClick={handleAddText} className="flex h-24 flex-col items-center justify-center gap-2 rounded-xl bg-gray-50 border border-gray-100 hover:bg-gray-100 hover:border-gray-300">
+                                <span className="material-symbols-outlined text-[32px] font-light">text_fields</span>
+                                <span className="text-sm font-semibold">Heading</span>
+                            </button>
+                        </div>
+                     </div>
+                  )}
+
+                  {activeRightTab === 'Shapes' && (
+                    <div className="flex flex-col gap-3">
+                        <span className="text-sm text-gray-600 font-medium border-b pb-1">Shape Tools</span>
+                        <div className="grid grid-cols-2 gap-3">
+                            <button onClick={() => handleAddShape('rectangle')} className="flex h-24 flex-col items-center justify-center gap-2 rounded-xl bg-gray-50 border border-gray-100 hover:bg-gray-100 hover:border-blue-300 transition-colors">
+                                <span className="material-symbols-outlined text-[32px] font-light">crop_5_4</span>
+                                <span className="text-sm font-semibold">Rectangle</span>
+                            </button>
+                            <button onClick={() => handleAddShape('ellipse')} className="flex h-24 flex-col items-center justify-center gap-2 rounded-xl bg-gray-50 border border-gray-100 hover:bg-gray-100 hover:border-blue-300 transition-colors">
+                                <span className="material-symbols-outlined text-[32px] font-light">circle</span>
+                                <span className="text-sm font-semibold">Circle</span>
+                            </button>
+                            <button className="flex h-24 flex-col items-center justify-center gap-2 rounded-xl bg-gray-50 border border-gray-100 hover:bg-gray-100 hover:border-blue-300 transition-colors">
+                                <span className="material-symbols-outlined text-[32px] font-light">call_made</span>
+                                <span className="text-sm font-semibold">Arrow</span>
+                            </button>
+                            <button className="flex h-24 flex-col items-center justify-center gap-2 rounded-xl bg-gray-50 border border-gray-100 hover:bg-gray-100 hover:border-blue-300 transition-colors">
+                                <span className="material-symbols-outlined text-[32px] font-light">horizontal_rule</span>
+                                <span className="text-sm font-semibold">Line</span>
+                            </button>
+                        </div>
+                    </div>
+                  )}
+
+                  {activeRightTab === 'Media' && (
+                    <div className="flex flex-col gap-3 items-center justify-center p-6 text-gray-400">
+                        <span className="material-symbols-outlined text-[48px]">video_library</span>
+                        <span className="text-sm text-center">Media library integration goes here.</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Tool Icons Column */}
+              <div className="w-[84px] bg-white border-l border-gray-200 flex flex-col items-center pt-2">
+                 <div className="px-2 pb-2 mb-2 w-full text-center border-b border-gray-100">
+                    <span className="text-[10px] font-bold tracking-widest text-gray-500">ADD</span>
+                 </div>
+                 
+                 {rightTabs.map(tab => {
+                   const isActive = activeRightTab === tab.id;
+                   return (
+                     <button
+                       key={tab.id}
+                       onClick={() => setActiveRightTab(tab.id)}
+                       className={`flex flex-col items-center justify-center w-[60px] h-[64px] mb-2 rounded-2xl transition-colors ${
+                         isActive 
+                           ? 'bg-[#06b6d4] text-white shadow-md' 
+                           : 'bg-gray-50 text-gray-600 hover:bg-gray-100'
+                       }`}
+                     >
+                       <span className={`material-symbols-outlined ${isActive ? 'filled' : ''} text-[24px]`}>
+                         {tab.icon}
+                       </span>
+                       <span className={`text-[10px] mt-1 ${isActive ? 'font-medium' : 'font-medium opacity-80'}`}>
+                         {tab.id}
+                       </span>
+                     </button>
+                   );
+                 })}
+              </div>
+            </div>
+
+          </div>
+
+          {/* 5. Bottom Timeline */}
+          <div className="h-[280px] w-full flex-shrink-0 border-t border-gray-200 bg-white relative z-20">
+              <div 
+                ref={timelineElRef}
+                data-shotstack-timeline
+                className="w-full h-full"
+              />
+          </div>
+
         </div>
-      ) : null}
+      )}
     </div>
   );
 }
