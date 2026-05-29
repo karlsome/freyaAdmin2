@@ -221,6 +221,7 @@ export default function VideoManualProjectEditorPage() {
         timeline = new Timeline(edit, timelineElRef.current);
         await timeline.load();
         if (cancelled) { disposeSDK(); return; }
+        timeline.setZoom?.(90);
         controls = new Controls(edit);
         await controls.load();
         if (cancelled) { disposeSDK(); return; }
@@ -605,7 +606,17 @@ export default function VideoManualProjectEditorPage() {
           </div>
 
           <div className="relative z-20 h-[280px] flex-shrink-0 border-t border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-950">
-            <div ref={timelineElRef} data-shotstack-timeline className="h-full w-full" />
+            <div ref={timelineElRef} data-shotstack-timeline className="video-manual-timeline-host h-full w-full" />
+            <style dangerouslySetInnerHTML={{ __html: `
+              .video-manual-timeline-host .ss-ruler-marker:first-child {
+                align-items: flex-start;
+                transform: translateX(0);
+              }
+
+              .video-manual-timeline-host .ss-ruler-marker:first-child .ss-ruler-marker-label {
+                padding-left: 4px;
+              }
+            ` }} />
           </div>
         </div>
       )}
