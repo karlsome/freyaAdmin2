@@ -253,7 +253,7 @@ function SensorCard({ device, isActive = false, onSelect = null, onEdit = null, 
                 event.stopPropagation();
                 onEdit(device);
               }}
-              className="rounded-xl p-1.5 text-outline transition-all duration-150 hover:bg-surface-container hover:text-primary"
+              className="rounded-xl p-2 text-outline transition-all duration-150 hover:bg-surface-container hover:text-primary active:scale-95"
               title="Rename device"
             >
               <span className="material-symbols-outlined" style={{ fontSize: 16 }}>edit</span>

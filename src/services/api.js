@@ -905,6 +905,48 @@ export async function fetchIoTDeviceNames(factoryName) {
   return query("Sasaki_Coating_MasterDB", "ioTNames", filter);
 }
 
+export async function fetchAllIoTDevicesWithUsers() {
+  const result = await query(
+    "Sasaki_Coating_MasterDB",
+    "ioTNames",
+    {},
+    {
+      aggregation: [
+        {
+          $lookup: {
+            from: "users",
+            localField: "username",
+            foreignField: "username",
+            as: "registeredBy",
+          },
+        },
+        {
+          $addFields: {
+            registeredBy: { $arrayElemAt: ["$registeredBy", 0] },
+          },
+        },
+        {
+          $project: {
+            factoryName: 1,
+            deviceId: 1,
+            name: 1,
+            imageURLs: 1,
+            createdAt: 1,
+            updatedAt: 1,
+            username: 1,
+            "registeredBy.firstName": 1,
+            "registeredBy.lastName": 1,
+            "registeredBy.email": 1,
+          },
+        },
+        { $sort: { factoryName: 1, name: 1 } },
+      ],
+    }
+  );
+
+  return Array.isArray(result) ? result : [];
+}
+
 export async function saveIoTDeviceName({ deviceId, factoryName, name, imageURLs, username }) {
   return _postJson("api/iot-device-names/save", { deviceId, factoryName, name, imageURLs, username });
 }
