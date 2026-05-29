@@ -627,7 +627,7 @@ export default function SensorDetailPage() {
 
   function handleSelectDevice(nextDeviceId) {
     const normalizedDeviceId = normalizeDeviceId(nextDeviceId) || "all";
-    setDeviceFilter(normalizedDeviceId);
+    setDeviceFilter((current) => (current === normalizedDeviceId ? "all" : normalizedDeviceId));
   }
 
   function handleResetFilters() {
