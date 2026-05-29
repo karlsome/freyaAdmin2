@@ -10,6 +10,7 @@ import SensorDevicePhotoPreviewModal from "../components/SensorDevicePhotoPrevie
 import { getAuthUser } from "../utils/masterDB";
 
 const SENSOR_READINGS_PAGE_SIZE_OPTIONS = [15, 50, 100];
+const SENSOR_DEVICE_OFFLINE_THRESHOLD_MS = 30 * 60 * 1000;
 const EMPTY_SENSOR_PAGINATION = {
   currentPage: 1,
   totalPages: 0,
@@ -32,6 +33,44 @@ const EMPTY_SENSOR_OVERVIEW = {
 function parseTemp(v) { return parseFloat(String(v ?? "").replace("°C", "").trim()); }
 function parseHumid(v) { return parseFloat(String(v ?? "").replace("%", "").trim()); }
 function normalizeDeviceId(value) { return String(value ?? "").trim(); }
+
+function parseSensorTimestamp(dateValue, timeValue) {
+  const normalizedDate = String(dateValue ?? "").trim();
+  const normalizedTime = String(timeValue ?? "").trim() || "00:00:00";
+
+  if (!normalizedDate) return null;
+
+  const isoCandidate = new Date(`${normalizedDate}T${normalizedTime}`);
+  if (!Number.isNaN(isoCandidate.getTime())) {
+    return isoCandidate;
+  }
+
+  const fallbackCandidate = new Date(`${normalizedDate} ${normalizedTime}`);
+  if (!Number.isNaN(fallbackCandidate.getTime())) {
+    return fallbackCandidate;
+  }
+
+  return null;
+}
+
+function getMinutesSinceTimestamp(timestamp, currentTimestamp = Date.now()) {
+  if (!(timestamp instanceof Date) || Number.isNaN(timestamp.getTime())) {
+    return null;
+  }
+
+  return Math.max(0, Math.floor((currentTimestamp - timestamp.getTime()) / 60000));
+}
+
+function formatSensorLastSeen(minutesSinceLastReading) {
+  if (minutesSinceLastReading == null) return "Last seen unknown";
+  if (minutesSinceLastReading < 1) return "Last seen just now";
+  if (minutesSinceLastReading < 60) return `Last seen ${minutesSinceLastReading} min ago`;
+
+  const hours = Math.floor(minutesSinceLastReading / 60);
+  const minutes = minutesSinceLastReading % 60;
+  if (minutes === 0) return `Last seen ${hours} hr ago`;
+  return `Last seen ${hours} hr ${minutes} min ago`;
+}
 
 function toISO(d) { return d.toISOString().split("T")[0]; }
 
@@ -109,6 +148,14 @@ function SensorCard({ device, isActive = false, onSelect = null, onEdit = null, 
   const humidityTrend = Array.isArray(device?.humidityTrend) ? device.humidityTrend.filter((value) => value != null) : [];
   const displayName = device?.displayName || null;
   const photoCount = Array.isArray(device?.imageURLs) ? device.imageURLs.filter(Boolean).length : 0;
+  const isOffline = Boolean(device?.isOffline);
+  const lastSeenLabel = formatSensorLastSeen(device?.minutesSinceLastReading);
+  const cardStateClassName = isOffline
+    ? `sensor-device-card--offline border-error/35 bg-error/5 hover:border-error/45 ${isActive ? "ring-2 ring-error/15" : ""}`
+    : isActive
+      ? "border-primary/45 bg-primary/10 ring-2 ring-primary/20 shadow-[0_16px_36px_rgba(99,102,241,0.16)]"
+      : "";
+  const titleClassName = isOffline ? "text-error" : isActive ? "text-primary" : "text-on-surface";
 
   function handleCardKeyDown(event) {
     if (event.target !== event.currentTarget) return;
@@ -124,21 +171,25 @@ function SensorCard({ device, isActive = false, onSelect = null, onEdit = null, 
       onClick={() => onSelect?.(device?.deviceId || "all")}
       onKeyDown={handleCardKeyDown}
       aria-pressed={isActive}
-      className={`glass-card flex w-full cursor-pointer flex-col gap-4 rounded-2xl p-5 text-left transition-all duration-150 hover:border-primary/30 hover:shadow-[0_14px_32px_rgba(15,23,42,0.08)] focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/35 ${
-        isActive ? "border-primary/45 bg-primary/10 ring-2 ring-primary/20 shadow-[0_16px_36px_rgba(99,102,241,0.16)]" : ""
-      }`}
+      className={`glass-card flex w-full cursor-pointer flex-col gap-4 rounded-2xl p-5 text-left transition-all duration-150 hover:border-primary/30 hover:shadow-[0_14px_32px_rgba(15,23,42,0.08)] focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/35 ${cardStateClassName}`}
     >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
           <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-outline">Device</p>
           <div className="mt-1 flex flex-wrap items-center gap-2">
-            <p className={`text-base font-black truncate ${isActive ? "text-primary" : "text-on-surface"}`}>
+            <p className={`text-base font-black truncate ${titleClassName}`}>
               {displayName || device?.deviceId || "Unknown"}
             </p>
             {isActive ? (
               <span className="inline-flex items-center gap-1 rounded-full border border-primary/20 bg-primary/10 px-2.5 py-1 text-[10px] font-bold text-primary">
                 <span className="material-symbols-outlined" style={{ fontSize: 11 }}>check</span>
                 Selected
+              </span>
+            ) : null}
+            {isOffline ? (
+              <span className="inline-flex items-center gap-1 rounded-full border border-error/20 bg-error/10 px-2.5 py-1 text-[10px] font-bold text-error">
+                <span className="h-2 w-2 rounded-full bg-error" aria-hidden="true" />
+                Offline
               </span>
             ) : null}
           </div>
@@ -197,7 +248,10 @@ function SensorCard({ device, isActive = false, onSelect = null, onEdit = null, 
       </div>
 
       <div className="text-[10px] text-outline">
-        Last: {latest?.Date || "—"} {latest?.Time || ""} · {Number(device?.readingCount) || 0} readings
+        <span className={isOffline ? "font-bold text-error" : undefined}>
+          {isOffline ? `Offline · ${lastSeenLabel}` : `Last: ${latest?.Date || "—"} ${latest?.Time || ""}`}
+        </span>
+        <span> · {Number(device?.readingCount) || 0} readings</span>
       </div>
     </div>
   );
@@ -227,6 +281,7 @@ export default function SensorDetailPage() {
   const [tableRows, setTableRows] = useState([]);
   const [pagination, setPagination] = useState(EMPTY_SENSOR_PAGINATION);
   const [exporting, setExporting] = useState(false);
+  const [currentTimestamp, setCurrentTimestamp] = useState(() => Date.now());
 
   // IoT device naming
   const [iotNamesMap, setIoTNamesMap] = useState(new Map());
@@ -336,6 +391,14 @@ export default function SensorDetailPage() {
     const authUser = getAuthUser();
     return deleteIoTDeviceImage({ deviceId, factoryName: fn, imageUrl, username: authUser?.username || "" });
   }
+
+  useEffect(() => {
+    const intervalId = window.setInterval(() => {
+      setCurrentTimestamp(Date.now());
+    }, 60 * 1000);
+
+    return () => window.clearInterval(intervalId);
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -497,6 +560,10 @@ export default function SensorDetailPage() {
       const normalizedDeviceId = normalizeDeviceId(device?.deviceId) || "unknown";
       const trendEntry = trendMap.get(normalizedDeviceId) || { humidityTrend: [], tempTrend: [] };
       const iotEntry = iotNamesMap.get(normalizedDeviceId);
+      const latestTimestamp = parseSensorTimestamp(device?.latest?.Date, device?.latest?.Time);
+      const minutesSinceLastReading = getMinutesSinceTimestamp(latestTimestamp, currentTimestamp);
+      const isOffline = minutesSinceLastReading == null || minutesSinceLastReading >= SENSOR_DEVICE_OFFLINE_THRESHOLD_MS / 60000;
+
       return {
         ...device,
         deviceId: normalizedDeviceId,
@@ -504,9 +571,11 @@ export default function SensorDetailPage() {
         tempTrend: trendEntry.tempTrend,
         displayName: iotEntry?.name || null,
         imageURLs: Array.isArray(iotEntry?.imageURLs) ? iotEntry.imageURLs : [],
+        isOffline,
+        minutesSinceLastReading,
       };
     });
-  }, [cardOverview.latestDevices, cardOverview.trends, iotNamesMap]);
+  }, [cardOverview.latestDevices, cardOverview.trends, currentTimestamp, iotNamesMap]);
 
   async function handleExport() {
     if (exporting || overview.totalReadings === 0) return;
