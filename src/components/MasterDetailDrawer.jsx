@@ -1,5 +1,6 @@
 import { useRef, useState } from "react";
 import ModalShell from "./ModalShell";
+import SensorDevicePhotoPreviewModal from "./SensorDevicePhotoPreviewModal";
 import { formatMasterValue, getMasterRecordIdentity, getMasterTabUI } from "../utils/masterDB";
 
 function getVisibleFields(fieldDefinitions, record) {
@@ -33,6 +34,7 @@ export default function MasterDetailDrawer({
 }) {
   const inputRef = useRef(null);
   const [editing, setEditing] = useState(false);
+  const [photoPreview, setPhotoPreview] = useState(null);
   const [draft, setDraft] = useState(() => {
     const nextDraft = {};
     getVisibleFields(fieldDefinitions, record).forEach((field) => {
@@ -111,7 +113,18 @@ export default function MasterDetailDrawer({
             {/* Image */}
             <div className="relative overflow-hidden border-b border-outline-variant/20 bg-surface-container/40 backdrop-blur-sm">
               {record.imageURL ? (
-                <img src={record.imageURL} alt={title} className="w-full max-h-48 object-contain" />
+                <button
+                  type="button"
+                  onClick={() => setPhotoPreview({
+                    eyebrow: tabUI.recordLabel || "Master Record",
+                    displayName: title,
+                    images: [{ url: record.imageURL, label: title }],
+                    activeIndex: 0,
+                  })}
+                  className="block w-full cursor-zoom-in"
+                >
+                  <img src={record.imageURL} alt={title} className="w-full max-h-48 object-contain" />
+                </button>
               ) : (
                 <div className="flex h-20 items-center justify-center gap-3 text-on-surface-variant">
                   <span className="material-symbols-outlined" style={{ fontSize: 28 }}>image_not_supported</span>
@@ -185,6 +198,11 @@ export default function MasterDetailDrawer({
             </div>
           </div>
 
+      <SensorDevicePhotoPreviewModal
+        preview={photoPreview}
+        onClose={() => setPhotoPreview(null)}
+        onNavigate={() => {}}
+      />
     </ModalShell>
   );
 }
