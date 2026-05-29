@@ -538,7 +538,7 @@ export default function VideoManualProjectEditorPage() {
   }, [showNotice]);
 
   return (
-    <div className="flex h-screen flex-col overflow-hidden bg-slate-100 font-sans dark:bg-slate-950">
+    <div className="mt-16 flex h-[calc(100vh-4rem)] min-h-0 flex-col overflow-hidden bg-slate-100 font-sans dark:bg-slate-950">
       <VideoManualEditorToolbar
         projectTitle={project?.title || "Video Manual"}
         saving={saving}
