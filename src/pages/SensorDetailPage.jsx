@@ -207,36 +207,6 @@ function SensorCard({ device, isActive = false, onSelect = null, onEdit = null, 
           <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-[10px] font-bold ${wbgtStatus.bg} ${wbgtStatus.color}`}>
             WBGT {wbgt ?? "—"}°C
           </span>
-          <div className="flex items-center gap-2">
-            {photoCount > 0 && onPreviewPhotos ? (
-              <button
-                type="button"
-                onClick={(event) => {
-                  event.stopPropagation();
-                  onPreviewPhotos(device);
-                }}
-                className="inline-flex items-center gap-1 rounded-xl border border-separator/50 bg-surface px-3 py-1 text-[10px] font-bold text-on-surface-variant transition-all duration-150 hover:border-primary/30 hover:bg-surface-container hover:text-primary active:scale-95"
-                title={`View ${photoCount} device photo${photoCount === 1 ? "" : "s"}`}
-              >
-                <span className="material-symbols-outlined" style={{ fontSize: 11 }}>photo_library</span>
-                {photoCount}
-              </button>
-            ) : null}
-
-            {onEdit ? (
-              <button
-                type="button"
-                onClick={(event) => {
-                  event.stopPropagation();
-                  onEdit(device);
-                }}
-                className="rounded-xl p-2 text-outline transition-all duration-150 hover:bg-surface-container hover:text-primary"
-                title="Rename device"
-              >
-                <span className="material-symbols-outlined" style={{ fontSize: 18 }}>edit</span>
-              </button>
-            ) : null}
-          </div>
         </div>
       </div>
 
@@ -253,11 +223,43 @@ function SensorCard({ device, isActive = false, onSelect = null, onEdit = null, 
         </div>
       </div>
 
-      <div className="text-[10px] text-outline">
-        <span className={isOffline ? "font-bold text-error" : undefined}>
-          {isOffline ? `Offline · ${lastSeenLabel}` : `Last: ${latest?.Date || "—"} ${latest?.Time || ""}`}
-        </span>
-        <span> · {Number(device?.readingCount) || 0} readings</span>
+      <div className="flex items-center justify-between gap-3 text-[10px] text-outline">
+        <div className="min-w-0 flex-1 truncate">
+          <span className={isOffline ? "font-bold text-error" : undefined}>
+            {isOffline ? `Offline · ${lastSeenLabel}` : `Last: ${latest?.Date || "—"} ${latest?.Time || ""}`}
+          </span>
+          <span> · {Number(device?.readingCount) || 0} readings</span>
+        </div>
+        <div className="flex flex-shrink-0 items-center gap-1">
+          {photoCount > 0 && onPreviewPhotos ? (
+            <button
+              type="button"
+              onClick={(event) => {
+                event.stopPropagation();
+                onPreviewPhotos(device);
+              }}
+              className="inline-flex items-center gap-1 rounded-xl border border-separator/50 bg-surface px-2.5 py-1 text-[10px] font-bold text-on-surface-variant transition-all duration-150 hover:border-primary/30 hover:bg-surface-container hover:text-primary active:scale-95"
+              title={`View ${photoCount} device photo${photoCount === 1 ? "" : "s"}`}
+            >
+              <span className="material-symbols-outlined" style={{ fontSize: 11 }}>photo_library</span>
+              {photoCount}
+            </button>
+          ) : null}
+
+          {onEdit ? (
+            <button
+              type="button"
+              onClick={(event) => {
+                event.stopPropagation();
+                onEdit(device);
+              }}
+              className="rounded-xl p-1.5 text-outline transition-all duration-150 hover:bg-surface-container hover:text-primary"
+              title="Rename device"
+            >
+              <span className="material-symbols-outlined" style={{ fontSize: 16 }}>edit</span>
+            </button>
+          ) : null}
+        </div>
       </div>
     </div>
   );
