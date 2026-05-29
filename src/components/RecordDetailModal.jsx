@@ -417,13 +417,15 @@ export default function RecordDetailModal({ record, processName, onClose, onLotC
   const modal = (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-3 sm:p-4 backdrop-blur-sm"
-      onClick={onClose}
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) onClose();
+      }}
     >
       <div
         className="dashboard-section rounded-2xl w-full max-w-2xl max-h-[92vh] overflow-y-auto
                    shadow-[0_0_80px_rgba(99,102,241,0.18),0_24px_48px_rgba(0,0,0,0.22)] scrollbar-hide"
         style={{ border: processAccent ? undefined : undefined }}
-        onClick={(e) => e.stopPropagation()}
+        onMouseDown={(e) => e.stopPropagation()}
       >
         {/* Header */}
         <div className="sticky top-0 z-10 rounded-t-2xl px-6 py-5 flex items-center justify-between
@@ -461,10 +463,15 @@ export default function RecordDetailModal({ record, processName, onClose, onLotC
           {imageLoading ? (
             <div className="w-full h-40 rounded-xl bg-surface-container/70 animate-pulse" />
           ) : imageData?.imageURL ? (
-            <a
-              href={imageData.imageURL}
-              target="_blank"
-              rel="noreferrer"
+            <button
+              type="button"
+              onClick={() => setPhotoPreview({
+                eyebrow: "Master Image",
+                displayName: imageData["品名"] ?? record["品番"] ?? "Master image",
+                subtitle: `${record["品番"] ?? ""}${record["背番号"] ? ` / ${record["背番号"]}` : ""}`.trim() || undefined,
+                images: [{ url: imageData.imageURL, label: imageData["品名"] ?? record["品番"] ?? "Master image" }],
+                activeIndex: 0,
+              })}
               className="block w-full overflow-hidden rounded-xl border border-separator/40
                          hover:border-primary/40 hover:shadow-md transition-all duration-150 cursor-zoom-in"
             >
@@ -472,9 +479,9 @@ export default function RecordDetailModal({ record, processName, onClose, onLotC
                 src={imageData.imageURL}
                 alt={imageData["品名"] ?? record["品番"]}
                 className="w-full max-h-52 object-contain bg-black/20"
-                onError={(e) => { e.currentTarget.closest("a").classList.add("hidden"); }}
+                onError={(e) => { e.currentTarget.closest("button").classList.add("hidden"); }}
               />
-            </a>
+            </button>
           ) : (
             <div className="w-full h-10 flex items-center justify-center rounded-xl bg-surface-container/40
                             border border-separator/30 text-[11px] text-outline gap-1.5">

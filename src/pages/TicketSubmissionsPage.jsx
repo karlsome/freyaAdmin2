@@ -661,10 +661,10 @@ function TicketDetailModal({ actionBusy = false, onClose, onCloseTicket = null, 
 
   return (
     <>
-      <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm" onClick={onClose}>
+      <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
         <div
           className="dashboard-section flex max-h-[88vh] w-full max-w-3xl flex-col overflow-hidden rounded-2xl"
-          onClick={(event) => event.stopPropagation()}
+          onMouseDown={(event) => event.stopPropagation()}
         >
           <div className="flex items-start justify-between gap-4 border-b border-separator/35 px-6 py-5">
             <div className="min-w-0 flex-1">

@@ -1,7 +1,10 @@
-import { useEffect, useRef, useState } from "react";
+import { createContext, useContext, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { fetchApprovalMasterReference } from "../services/approvalsApi";
 import IconButton from "./IconButton";
+import SensorDevicePhotoPreviewModal from "./SensorDevicePhotoPreviewModal";
+
+const PhotoPreviewContext = createContext(() => {});
 import {
   canApproveApproval,
   canApproveDeleteRequest,
@@ -94,13 +97,19 @@ function ActionButton({ tone = "primary", onClick, disabled, children }) {
 
 function PrimitiveFieldValue({ value, align = "right" }) {
   const formatted = formatApprovalValue(parseStructuredValue(value));
+  const openPreview = useContext(PhotoPreviewContext);
 
   if (isImageUrl(value)) {
     return (
       <div className={`flex ${align === "right" ? "justify-end" : "justify-start"}`}>
         <button
           type="button"
-          onClick={() => window.open(value, "_blank", "noopener,noreferrer")}
+          onClick={() => openPreview({
+            eyebrow: "Record Photo",
+            displayName: "Record image",
+            images: [{ url: value, label: "Record image" }],
+            activeIndex: 0,
+          })}
           className="overflow-hidden rounded-2xl border border-separator/40 bg-surface transition hover:-translate-y-0.5"
         >
           <img
@@ -252,6 +261,7 @@ export default function ApprovalsDetailModal({
   const sourceRecord = mode === "recycle" ? record?.originalDoc || {} : record || {};
   const [masterImageUrl, setMasterImageUrl] = useState("");
   const [masterImageLoading, setMasterImageLoading] = useState(false);
+  const [photoPreview, setPhotoPreview] = useState(null);
 
   useEffect(() => {
     if (!open) return undefined;
@@ -331,6 +341,7 @@ export default function ApprovalsDetailModal({
   const canEditRecord = mode !== "recycle" && hasApprovalAccess(authUser);
 
   const modal = (
+    <PhotoPreviewContext.Provider value={setPhotoPreview}>
     <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm">
       <div className="flex min-h-full items-center justify-center p-4 lg:p-6">
         <div ref={modalRef} className="dashboard-section flex max-h-[92vh] w-full max-w-7xl flex-col overflow-hidden rounded-2xl">
@@ -541,11 +552,17 @@ export default function ApprovalsDetailModal({
 
                 {images.length ? (
                   <div className="mt-4 grid grid-cols-1 gap-3">
-                    {images.map((image) => (
+                    {images.map((image, index) => (
                       <button
                         key={`${image.sourceKey}-${image.url}`}
                         type="button"
-                        onClick={() => window.open(image.url, "_blank", "noopener,noreferrer")}
+                        onClick={() => setPhotoPreview({
+                          eyebrow: "Submitted Images",
+                          displayName: image.label || "Submitted image",
+                          subtitle: subtitle || title || undefined,
+                          images: images.map((img) => ({ url: img.url, label: img.label })),
+                          activeIndex: index,
+                        })}
                         className="overflow-hidden rounded-2xl border border-outline-variant/15 bg-surface-container-low text-left transition hover:-translate-y-0.5"
                       >
                         <img src={image.url} alt={image.label} className="h-40 w-full object-cover" />
@@ -574,7 +591,13 @@ export default function ApprovalsDetailModal({
                   ) : masterImageUrl ? (
                     <button
                       type="button"
-                      onClick={() => window.open(masterImageUrl, "_blank", "noopener,noreferrer")}
+                      onClick={() => setPhotoPreview({
+                        eyebrow: "Master Reference",
+                        displayName: "Master reference",
+                        subtitle: title || undefined,
+                        images: [{ url: masterImageUrl, label: "Master reference" }],
+                        activeIndex: 0,
+                      })}
                       className="block w-full"
                     >
                       <img src={masterImageUrl} alt="Master reference" className="h-52 w-full object-contain bg-black/5" />
@@ -650,6 +673,17 @@ export default function ApprovalsDetailModal({
         </div>
       </div>
     </div>
+    <SensorDevicePhotoPreviewModal
+      preview={photoPreview}
+      onClose={() => setPhotoPreview(null)}
+      onNavigate={(delta) => setPhotoPreview((prev) => {
+        if (!prev || !prev.images?.length) return prev;
+        const len = prev.images.length;
+        const next = ((prev.activeIndex + delta) % len + len) % len;
+        return { ...prev, activeIndex: next };
+      })}
+    />
+    </PhotoPreviewContext.Provider>
   );
 
   return createPortal(modal, document.body);

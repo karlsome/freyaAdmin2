@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import CheckFormImageLightboxModal from "./CheckFormImageLightboxModal";
+import SensorDevicePhotoPreviewModal from "./SensorDevicePhotoPreviewModal";
 import { fetchNodaUserFullName } from "../services/nodaApi";
 
 const STATUS_STYLES = {
@@ -124,7 +124,12 @@ function FieldRow({ field, order, onPreviewImage }) {
           {field.imageURL ? (
             <button
               type="button"
-              onClick={() => onPreviewImage({ imageURL: field.imageURL, name: field.label || "Reference image" })}
+              onClick={() => onPreviewImage({
+                eyebrow: "Reference Image",
+                displayName: field.label || "Reference image",
+                images: [{ url: field.imageURL, label: field.label || "Reference image" }],
+                activeIndex: 0,
+              })}
               className="flex h-12 w-12 overflow-hidden rounded-2xl border border-separator/40 bg-surface-container transition hover:border-primary/35 hover:shadow-[0_8px_20px_rgba(67,97,238,0.14)]"
               aria-label={`Preview reference image for ${field.label || "checklist field"}`}
             >
@@ -197,7 +202,7 @@ export default function CheckFormDetailModal({ form, scheduleMeta, machineNames,
   const modal = (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-md"
-      onClick={(event) => {
+      onMouseDown={(event) => {
         if (event.target === event.currentTarget) onClose();
       }}
     >
@@ -298,7 +303,11 @@ export default function CheckFormDetailModal({ form, scheduleMeta, machineNames,
         </div>
       </div>
 
-      <CheckFormImageLightboxModal image={previewImage} onClose={() => setPreviewImage(null)} />
+      <SensorDevicePhotoPreviewModal
+        preview={previewImage}
+        onClose={() => setPreviewImage(null)}
+        onNavigate={() => {}}
+      />
     </div>
   );
 
