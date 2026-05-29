@@ -24,7 +24,7 @@ import ChecklistSubmissionsPage from "./pages/ChecklistSubmissionsPage";
 import TicketSubmissionsPage from "./pages/TicketSubmissionsPage";
 import LoginPage from "./pages/LoginPage";
 import VideoManualPage from "./pages/VideoManualPage";
-import VideoManualProjectPage from "./pages/VideoManualProjectPage";
+import VideoManualProjectEditorPage from "./pages/VideoManualProjectEditorPage";
 import {
   clearStoredAuthUser,
   isAuthenticatedUser,
@@ -240,7 +240,7 @@ function App() {
               <Route path="/factoryStatus" element={<FactoryStatusPage />} />
               <Route path="/factoryStatus/logs" element={<FactoryStatusLogsPage />} />
               <Route path="/videoManual" element={<VideoManualPage />} />
-              <Route path="/videoManual/project/:projectId" element={<VideoManualProjectPage />} />
+              <Route path="/videoManual/project/:projectId" element={<VideoManualProjectEditorPage />} />
               {placeholderPages.map((page) => (
                 <Route key={page} path={`/${page}`} element={<PlaceholderPage page={page} />} />
               ))}

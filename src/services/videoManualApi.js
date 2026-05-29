@@ -139,3 +139,62 @@ export async function fetchVideoManualRevision(revisionId) {
 
   return request(`api/video-manuals-studio/revisions/${revisionId}`);
 }
+
+export function getVideoManualApiBaseUrl() {
+  return BASE_URL.replace(/\/$/, "");
+}
+
+export async function fetchVideoManualPlaylistAssets(playlistId) {
+  if (!playlistId) return [];
+
+  const data = await request(`api/video-manuals-studio/playlists/${playlistId}/assets`);
+  return Array.isArray(data) ? data : [];
+}
+
+export function uploadVideoManualPlaylistAsset(playlistId, file, { onProgress = null } = {}) {
+  if (!playlistId) {
+    return Promise.reject(new Error("playlistId is required"));
+  }
+  if (!file) {
+    return Promise.reject(new Error("file is required"));
+  }
+
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open("POST", `${getVideoManualApiBaseUrl()}/api/video-manuals-studio/upload-asset`);
+    xhr.setRequestHeader("Content-Type", file.type || "application/octet-stream");
+    xhr.setRequestHeader("X-File-Name", file.name);
+    xhr.setRequestHeader("X-Upload-Folder", "videoManuals/shotstackAssets");
+    xhr.setRequestHeader("X-Playlist-Id", playlistId);
+
+    Object.entries(buildAuthHeaders()).forEach(([header, value]) => {
+      xhr.setRequestHeader(header, value);
+    });
+
+    xhr.upload.addEventListener("progress", (progressEvent) => {
+      if (!progressEvent.lengthComputable) return;
+      onProgress?.(progressEvent.loaded, progressEvent.total, progressEvent);
+    });
+
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        try {
+          resolve(JSON.parse(xhr.responseText));
+        } catch (error) {
+          reject(error);
+        }
+        return;
+      }
+
+      let errorMessage = `${xhr.status} ${xhr.statusText}`;
+      try {
+        errorMessage = JSON.parse(xhr.responseText).error || errorMessage;
+      } catch (_) {}
+      reject(new Error(errorMessage));
+    };
+
+    xhr.onerror = () => reject(new Error("Network error during upload"));
+    xhr.onabort = () => reject(new Error("Upload canceled"));
+    xhr.send(file);
+  });
+}
