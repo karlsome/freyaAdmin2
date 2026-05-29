@@ -469,6 +469,36 @@ export default function SensorDetailPage() {
   }, [factoryName, range.end, range.start]);
 
   useEffect(() => {
+    let cancelled = false;
+
+    async function refreshCardOverviewSilently() {
+      try {
+        const data = await fetchHistoricalSensorOverview({
+          factoryName,
+          startDate: range.start,
+          endDate: range.end,
+          deviceId: "all",
+        });
+
+        if (cancelled) return;
+        const requestId = ++cardOverviewRequestIdRef.current;
+        setCardOverview(data || EMPTY_SENSOR_OVERVIEW);
+        setCurrentTimestamp(Date.now());
+        cardOverviewRequestIdRef.current = requestId;
+      } catch {
+        // Silent background refresh — keep stale data on failure.
+      }
+    }
+
+    const intervalId = window.setInterval(refreshCardOverviewSilently, 5 * 60 * 1000);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(intervalId);
+    };
+  }, [factoryName, range.end, range.start]);
+
+  useEffect(() => {
     if (deviceFilter === "all") return;
     if (overview.devices.length === 0) return;
     if (!overview.devices.includes(deviceFilter)) {
