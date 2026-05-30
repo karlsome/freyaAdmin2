@@ -440,7 +440,14 @@ export function createAnimatedClipStateSnapshot(clip) {
     rotate: Array.isArray(clip.transform?.rotate?.angle) ? cloneJson(clip.transform.rotate.angle, null) : null,
   };
 
-  return Object.values(snapshot).some(Boolean) ? snapshot : null;
+  if (!Object.values(snapshot).some(Boolean)) return null;
+
+  const width = Number(clip.width);
+  const height = Number(clip.height);
+  if (Number.isFinite(width) && width > 0) snapshot.width = width;
+  if (Number.isFinite(height) && height > 0) snapshot.height = height;
+
+  return snapshot;
 }
 
 export function buildKeyframeUpdatePayload(clip, targetTime, values, sourceClip = null) {

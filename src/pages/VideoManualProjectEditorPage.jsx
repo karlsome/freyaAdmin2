@@ -51,6 +51,88 @@ import {
 const CANVAS_ZOOM_STEP = 1.12;
 const CANVAS_MIN_ZOOM = 0.1;
 const CANVAS_MAX_ZOOM = 4;
+const KEYFRAME_DIMENSION_CHANGE_EPSILON = 0.5;
+
+function getPositiveDimension(value) {
+  const numericValue = Number(value);
+  return Number.isFinite(numericValue) && numericValue > 0 ? numericValue : null;
+}
+
+function getVisualScaleFromDimensions(currentClip, sourceClip, targetTime) {
+  if (!currentClip || !sourceClip) return null;
+
+  const baseWidth = getPositiveDimension(sourceClip.width);
+  const baseHeight = getPositiveDimension(sourceClip.height);
+  const currentWidth = getPositiveDimension(currentClip.width);
+  const currentHeight = getPositiveDimension(currentClip.height);
+  const scaleRatios = [];
+
+  if (baseWidth && currentWidth && Math.abs(currentWidth - baseWidth) > KEYFRAME_DIMENSION_CHANGE_EPSILON) {
+    scaleRatios.push(currentWidth / baseWidth);
+  }
+  if (baseHeight && currentHeight && Math.abs(currentHeight - baseHeight) > KEYFRAME_DIMENSION_CHANGE_EPSILON) {
+    scaleRatios.push(currentHeight / baseHeight);
+  }
+
+  if (!scaleRatios.length) return null;
+
+  const resizeRatio = scaleRatios.reduce((sum, ratio) => sum + ratio, 0) / scaleRatios.length;
+  const sourceScale = getKeyframedScalarValueAtTime(sourceClip.scale, targetTime, 1, 3);
+  return normalizeKeyframeFieldValue("scale", sourceScale * resizeRatio);
+}
+
+function buildDimensionRestoreUpdate(currentClip, sourceClip) {
+  if (!currentClip || !sourceClip) return {};
+
+  const update = {};
+  const baseWidth = getPositiveDimension(sourceClip.width);
+  const baseHeight = getPositiveDimension(sourceClip.height);
+  const currentWidth = getPositiveDimension(currentClip.width);
+  const currentHeight = getPositiveDimension(currentClip.height);
+
+  if (baseWidth && currentWidth && Math.abs(currentWidth - baseWidth) > KEYFRAME_DIMENSION_CHANGE_EPSILON) {
+    update.width = baseWidth;
+  }
+  if (baseHeight && currentHeight && Math.abs(currentHeight - baseHeight) > KEYFRAME_DIMENSION_CHANGE_EPSILON) {
+    update.height = baseHeight;
+  }
+
+  return update;
+}
+
+function buildKeyframeSourceClipFromSnapshot(clip, snapshot) {
+  if (!clip || !snapshot) return clip;
+
+  const width = getPositiveDimension(snapshot.width);
+  const height = getPositiveDimension(snapshot.height);
+
+  const hasOffsetSource = snapshot.offsetX || snapshot.offsetY;
+  const hasRotateSource = snapshot.rotate;
+
+  return {
+    ...clip,
+    ...(width ? { width } : {}),
+    ...(height ? { height } : {}),
+    ...(snapshot.scale ? { scale: snapshot.scale } : {}),
+    ...(snapshot.opacity ? { opacity: snapshot.opacity } : {}),
+    ...(hasOffsetSource ? {
+      offset: {
+        ...(clip.offset || {}),
+        ...(snapshot.offsetX ? { x: snapshot.offsetX } : {}),
+        ...(snapshot.offsetY ? { y: snapshot.offsetY } : {}),
+      },
+    } : {}),
+    ...(hasRotateSource ? {
+      transform: {
+        ...(clip.transform || {}),
+        rotate: {
+          ...((clip.transform || {}).rotate || {}),
+          angle: snapshot.rotate,
+        },
+      },
+    } : {}),
+  };
+}
 
 export default function VideoManualProjectEditorPage() {
   const navigate = useNavigate();
@@ -96,6 +178,7 @@ export default function VideoManualProjectEditorPage() {
   const keyframeEditModeRef = useRef(null);
   const syncingAnimatedClipUpdateRef = useRef(false);
   const animatedClipStateByIdRef = useRef({});
+  const visualResizeSourceByIdRef = useRef({});
 
   useEffect(() => {
     selectedClipRef.current = selectedClip;
@@ -349,14 +432,16 @@ export default function VideoManualProjectEditorPage() {
     if (editModeContext) {
       const targetTime = Number(editModeContext.time.toFixed(3));
       const sourceClip = editModeContext.sourceClip || previousClip;
+      const resizeScale = getVisualScaleFromDimensions(currentClip, sourceClip, targetTime);
       const liveValues = {
         offsetX: getStaticNumericValue(currentClip.offset?.x, getKeyframedScalarValueAtTime(sourceClip.offset?.x, targetTime, 0, 4)),
         offsetY: getStaticNumericValue(currentClip.offset?.y, getKeyframedScalarValueAtTime(sourceClip.offset?.y, targetTime, 0, 4)),
-        scale: getStaticNumericValue(currentClip.scale, getKeyframedScalarValueAtTime(sourceClip.scale, targetTime, 1, 3)),
+        scale: resizeScale ?? getStaticNumericValue(currentClip.scale, getKeyframedScalarValueAtTime(sourceClip.scale, targetTime, 1, 3)),
         opacity: getStaticNumericValue(currentClip.opacity, getKeyframedScalarValueAtTime(sourceClip.opacity, targetTime, 1, 3)),
         rotate: getStaticNumericValue(currentClip.transform?.rotate?.angle, getKeyframedScalarValueAtTime(sourceClip.transform?.rotate?.angle, targetTime, 0, 2)),
       };
       update = buildKeyframeUpdatePayload(previousClip, targetTime, liveValues, sourceClip) || {};
+      update = { ...buildDimensionRestoreUpdate(currentClip, sourceClip), ...update };
     } else {
       const scaleSegments = shiftAnimatedSegments(previousClip.scale || rememberedState?.scale, currentClip.scale, relativeTime, 1, clipLength);
       if (scaleSegments) update.scale = scaleSegments;
@@ -429,8 +514,22 @@ export default function VideoManualProjectEditorPage() {
           : null;
         const activeKeyframe = getActiveKeyframeForClip(previousClip, playbackTime);
         const targetTime = editModeContext?.time ?? activeKeyframe?.time ?? relativeTime;
-        const sourceClip = editModeContext?.sourceClip || previousClip;
+        const rememberedState = animatedClipStateByIdRef.current[clipId] || null;
+        const sourceClip = editModeContext?.sourceClip
+          || visualResizeSourceByIdRef.current[clipId]
+          || buildKeyframeSourceClipFromSnapshot(previousClip, rememberedState);
         const values = getKeyframeValuesForClip(sourceClip, targetTime);
+        const candidateClip = {
+          ...previousClip,
+          ...updates,
+          ...(updates.offset ? { offset: { ...(previousClip.offset || {}), ...updates.offset } } : {}),
+          ...(updates.transform ? { transform: { ...(previousClip.transform || {}), ...updates.transform } } : {}),
+        };
+        const resizeScale = getVisualScaleFromDimensions(candidateClip, sourceClip, targetTime);
+        const dimensionRestore = buildDimensionRestoreUpdate(candidateClip, sourceClip);
+        if (resizeScale != null && !visualResizeSourceByIdRef.current[clipId]) {
+          visualResizeSourceByIdRef.current[clipId] = cloneJson(sourceClip, sourceClip);
+        }
         let touchedAnimatedProperty = false;
 
         const applyField = (field, value, assignValue) => {
@@ -455,12 +554,16 @@ export default function VideoManualProjectEditorPage() {
         if (updates.transform?.rotate && Object.prototype.hasOwnProperty.call(updates.transform.rotate, "angle")) {
           applyField("rotate", updates.transform.rotate.angle, (value) => { values.rotate = value; });
         }
+        if (resizeScale != null) {
+          applyField("scale", resizeScale, (value) => { values.scale = value; });
+        }
 
         if (touchedAnimatedProperty) {
           const keyframeUpdate = buildKeyframeUpdatePayload(previousClip, targetTime, values, sourceClip);
           if (keyframeUpdate) {
             nextUpdates = {
               ...updates,
+              ...dimensionRestore,
               ...keyframeUpdate,
               ...(updates.offset || keyframeUpdate.offset ? { offset: { ...(updates.offset || {}), ...(keyframeUpdate.offset || {}) } } : {}),
               ...(updates.transform || keyframeUpdate.transform ? { transform: { ...(updates.transform || {}), ...(keyframeUpdate.transform || {}) } } : {}),
@@ -497,6 +600,7 @@ export default function VideoManualProjectEditorPage() {
         const resolvedFinalConfig = documentClip && hasAnyAnimatedProperties(documentClip)
           ? cloneJson(documentClip, finalConfig)
           : finalConfig;
+        delete visualResizeSourceByIdRef.current[clipId];
         return originalCommitClipUpdate(clipId, initialConfig, resolvedFinalConfig);
       };
     }
@@ -621,16 +725,17 @@ export default function VideoManualProjectEditorPage() {
     return () => window.clearInterval(timer);
   }, [getPlaybackTime, refreshTimelineKeyframeDiamonds, syncSelectedClipFromDocument]);
 
-  const readLiveClipValues = useCallback((selection, clip, relativeTime) => {
+  const readLiveClipValues = useCallback((selection, clip, relativeTime, sourceClip = null) => {
     const edit = editRef.current;
     const clipId = edit?.getClipId?.(selection.trackIndex, selection.clipIndex);
     const player = clipId ? edit?.getPlayerByClipId?.(clipId) : null;
     const liveOffset = player?.calculateMoveOffset?.(0, 0);
+    const resizeScale = getVisualScaleFromDimensions(clip, sourceClip, relativeTime);
 
     return {
       offsetX: roundNumericValue(liveOffset?.x ?? getKeyframedScalarValueAtTime(clip.offset?.x, relativeTime, 0, 4), 4, 0),
       offsetY: roundNumericValue(liveOffset?.y ?? getKeyframedScalarValueAtTime(clip.offset?.y, relativeTime, 0, 4), 4, 0),
-      scale: getKeyframedScalarValueAtTime(clip.scale, relativeTime, 1, 3),
+      scale: resizeScale ?? getKeyframedScalarValueAtTime(clip.scale, relativeTime, 1, 3),
       opacity: roundNumericValue(player?.getOpacity?.() ?? getKeyframedScalarValueAtTime(clip.opacity, relativeTime, 1, 3), 3, 1),
       rotate: roundNumericValue(player?.getRotation?.() ?? getKeyframedScalarValueAtTime(clip.transform?.rotate?.angle, relativeTime, 0, 2), 2, 0),
     };
@@ -952,9 +1057,16 @@ export default function VideoManualProjectEditorPage() {
     }
 
     const targetTime = sameTimeKeyframe ?? relativeTime;
-    const liveValues = readLiveClipValues(selection, clip, targetTime);
-    const updates = buildKeyframeUpdatePayload(clip, targetTime, liveValues);
-    if (!updates) {
+    const clipId = edit.getClipId?.(selection.trackIndex, selection.clipIndex);
+    const rememberedState = clipId ? animatedClipStateByIdRef.current[clipId] || null : null;
+    const sourceClip = buildKeyframeSourceClipFromSnapshot(clip, rememberedState);
+    const liveValues = readLiveClipValues(selection, clip, targetTime, sourceClip);
+    const dimensionRestore = buildDimensionRestoreUpdate(clip, sourceClip);
+    const updates = {
+      ...dimensionRestore,
+      ...(buildKeyframeUpdatePayload(clip, targetTime, liveValues, sourceClip) || {}),
+    };
+    if (!Object.keys(updates).length) {
       showNotice("Unable to record keyframe.", "error");
       return;
     }
@@ -1032,15 +1144,18 @@ export default function VideoManualProjectEditorPage() {
       return;
     }
 
-    const liveValues = readLiveClipValues(selection, currentClip, activeKeyframeEditMode.time);
+    const liveValues = readLiveClipValues(selection, currentClip, activeKeyframeEditMode.time, sourceClip);
     const values = {
       ...getKeyframeValuesForClip(sourceClip, activeKeyframeEditMode.time),
       ...liveValues,
       ...(keyframeDraft?.values || {}),
     };
-    const updates = buildKeyframeUpdatePayload(currentClip, activeKeyframeEditMode.time, values, sourceClip);
+    const updates = {
+      ...buildDimensionRestoreUpdate(currentClip, sourceClip),
+      ...(buildKeyframeUpdatePayload(currentClip, activeKeyframeEditMode.time, values, sourceClip) || {}),
+    };
 
-    if (!updates) {
+    if (!Object.keys(updates).length) {
       showNotice("Unable to record keyframe.", "error");
       return;
     }
