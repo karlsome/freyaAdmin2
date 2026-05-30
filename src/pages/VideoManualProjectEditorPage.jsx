@@ -48,6 +48,10 @@ import {
   uploadVideoManualPlaylistAsset,
 } from "../services/videoManualApi";
 
+const CANVAS_ZOOM_STEP = 1.12;
+const CANVAS_MIN_ZOOM = 0.1;
+const CANVAS_MAX_ZOOM = 4;
+
 export default function VideoManualProjectEditorPage() {
   const navigate = useNavigate();
   const { projectId } = useParams();
@@ -683,11 +687,49 @@ export default function VideoManualProjectEditorPage() {
     });
   }, [syncEditorSettings, syncSteps]);
 
-  const handleZoom = useCallback((amount) => {
+  const handleZoom = useCallback((direction) => {
     const canvas = canvasRef.current;
     if (canvas?.setZoom) {
       const currentZoom = canvas.getZoom ? canvas.getZoom() : 1;
-      canvas.setZoom(Math.max(0.1, currentZoom + amount));
+      const zoomDirection = Math.sign(direction);
+      if (!zoomDirection) return;
+      const nextZoom = zoomDirection > 0 ? currentZoom * CANVAS_ZOOM_STEP : currentZoom / CANVAS_ZOOM_STEP;
+      const targetZoom = Math.max(CANVAS_MIN_ZOOM, Math.min(CANVAS_MAX_ZOOM, nextZoom));
+      let viewport = null;
+      try {
+        viewport = canvas.getViewportContainer?.() || null;
+      } catch {
+        viewport = null;
+      }
+      const canvasElement = canvas.application?.canvas;
+
+      if (!viewport || !canvasElement || currentZoom <= 0) {
+        canvas.setZoom(targetZoom);
+        return;
+      }
+
+      const viewportCenter = {
+        x: canvasElement.width / 2,
+        y: canvasElement.height / 2,
+      };
+      const contentCenter = {
+        x: (viewportCenter.x - viewport.position.x) / currentZoom,
+        y: (viewportCenter.y - viewport.position.y) / currentZoom,
+      };
+
+      canvas.setZoom(targetZoom);
+      const appliedZoom = canvas.getZoom ? canvas.getZoom() : targetZoom;
+      viewport.position.x = viewportCenter.x - contentCenter.x * appliedZoom;
+      viewport.position.y = viewportCenter.y - contentCenter.y * appliedZoom;
+
+      if (typeof canvas.syncContentTransforms === "function") {
+        canvas.syncContentTransforms();
+      } else if (canvas.overlayContainer) {
+        canvas.overlayContainer.scale.x = appliedZoom;
+        canvas.overlayContainer.scale.y = appliedZoom;
+        canvas.overlayContainer.position.x = viewport.position.x;
+        canvas.overlayContainer.position.y = viewport.position.y;
+      }
       return;
     }
     window.dispatchEvent(new Event("resize"));
@@ -1200,9 +1242,9 @@ export default function VideoManualProjectEditorPage() {
         onRedo={handleRedo}
         onSaveRevision={handleSaveRevision}
         onShowHistory={() => handleComingSoon("History")}
-        onZoomOut={() => handleZoom(-0.25)}
+        onZoomOut={() => handleZoom(-1)}
         onAutoFit={handleAutoFit}
-        onZoomIn={() => handleZoom(0.25)}
+        onZoomIn={() => handleZoom(1)}
         onExport={handleSave}
       />
 
