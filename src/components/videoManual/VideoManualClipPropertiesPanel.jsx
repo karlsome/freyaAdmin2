@@ -1,4 +1,4 @@
-import { createShapeSvg, extractShapeStyle, getClipCategory, normalizeHexColor } from "./videoManualEditorUtils";
+import { createShapeSvg, extractShapeStyle, getClipCategory, getClipRelativePlaybackTime, getKeyframedScalarValueAtTime, normalizeHexColor } from "./videoManualEditorUtils";
 
 const FONT_OPTIONS = ["Work Sans", "Montserrat", "Open Sans", "Roboto", "Lato", "Merriweather", "Playfair Display", "Oswald"];
 const FONT_WEIGHTS = [300, 400, 500, 600, 700, 800];
@@ -12,14 +12,6 @@ function Icon({ children, className = "text-[16px]" }) {
 function staticNumber(value, fallback = 0) {
   const numericValue = Number(value);
   return Number.isFinite(numericValue) ? numericValue : fallback;
-}
-
-function readScale(value) {
-  return Array.isArray(value) ? staticNumber(value[0]?.from ?? value[0]?.to, 1) : staticNumber(value, 1);
-}
-
-function readOpacity(value) {
-  return Array.isArray(value) ? staticNumber(value[0]?.from ?? value[0]?.to, 1) : staticNumber(value, 1);
 }
 
 function formatInputNumber(value, fallback = 0, decimals = 4) {
@@ -89,8 +81,10 @@ function ColorField({ label, value, onChange }) {
 
 export default function VideoManualClipPropertiesPanel({
   selectedClip,
+  playbackTime = 0,
   onUpdateClip,
   onOpenAnimationPanel,
+  onAddKeyframe,
 }) {
   const clip = selectedClip?.clip || {};
   const asset = clip.asset || {};
@@ -112,13 +106,14 @@ export default function VideoManualClipPropertiesPanel({
 
   const width = Math.max(1, Math.round(staticNumber(clip.width, assetType === "image" ? 400 : 600)));
   const height = Math.max(1, Math.round(staticNumber(clip.height, isText ? 150 : 300)));
+  const keyframeTime = getClipRelativePlaybackTime(clip, playbackTime);
   const start = formatInputNumber(clip.start, 0, 3);
   const length = Math.max(0.1, formatInputNumber(clip.length, 5, 3));
-  const scale = formatInputNumber(readScale(clip.scale), 1, 3);
-  const opacity = formatInputNumber(readOpacity(clip.opacity), 1, 2);
+  const scale = formatInputNumber(getKeyframedScalarValueAtTime(clip.scale, keyframeTime, 1, 3), 1, 3);
+  const opacity = formatInputNumber(getKeyframedScalarValueAtTime(clip.opacity, keyframeTime, 1, 2), 1, 2);
   const offset = clip.offset || {};
   const rotate = clip.transform?.rotate?.angle;
-  const rotation = formatInputNumber(Array.isArray(rotate) ? rotate[0]?.from ?? rotate[0]?.to : rotate, 0, 2);
+  const rotation = formatInputNumber(getKeyframedScalarValueAtTime(rotate, keyframeTime, 0, 2), 0, 2);
   const transitionIn = clip.transition?.in || "";
   const transitionOut = clip.transition?.out || "";
   const effect = clip.effect || "";
@@ -269,8 +264,8 @@ export default function VideoManualClipPropertiesPanel({
           <div className="grid grid-cols-2 gap-2">
             <NumberField label="Scale" min="0.05" step="0.05" value={scale} onChange={(value) => updateNumber(value, (number) => ({ scale: Math.max(0.05, Number(number.toFixed(3))) }), "Scale updated.")} />
             <NumberField label="Opacity" min="0" max="1" step="0.05" value={opacity} onChange={(value) => updateNumber(value, (number) => ({ opacity: Math.max(0, Math.min(1, Number(number.toFixed(2)))) }), "Opacity updated.")} />
-            <NumberField label="X Position" min="-1" max="1" step="0.05" value={formatInputNumber(offset.x, 0, 4)} onChange={(value) => updateNumber(value, (number) => ({ offset: { ...offset, x: Number(number.toFixed(4)) } }), "X position updated.")} />
-            <NumberField label="Y Position" min="-1" max="1" step="0.05" value={formatInputNumber(offset.y, 0, 4)} onChange={(value) => updateNumber(value, (number) => ({ offset: { ...offset, y: Number(number.toFixed(4)) } }), "Y position updated.")} />
+            <NumberField label="X Position" min="-1" max="1" step="0.05" value={formatInputNumber(getKeyframedScalarValueAtTime(offset.x, keyframeTime, 0, 4), 0, 4)} onChange={(value) => updateNumber(value, (number) => ({ offset: { ...offset, x: Number(number.toFixed(4)) } }), "X position updated.")} />
+            <NumberField label="Y Position" min="-1" max="1" step="0.05" value={formatInputNumber(getKeyframedScalarValueAtTime(offset.y, keyframeTime, 0, 4), 0, 4)} onChange={(value) => updateNumber(value, (number) => ({ offset: { ...offset, y: Number(number.toFixed(4)) } }), "Y position updated.")} />
           </div>
           <NumberField label="Rotation" min="-360" max="360" step="1" value={rotation} onChange={(value) => updateNumber(value, (number) => ({ transform: { ...(clip.transform || {}), rotate: { ...(clip.transform?.rotate || {}), angle: Number(number.toFixed(2)) } } }), "Rotation updated.")} />
         </Section>
@@ -303,9 +298,14 @@ export default function VideoManualClipPropertiesPanel({
             </button>
           )}
         >
-          <p className="rounded-lg border border-dashed border-slate-200 bg-slate-50 px-2.5 py-2 text-[11px] font-semibold text-slate-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-400">
-            Use the Animation tab for presets and keyframe motion controls.
-          </p>
+          <button
+            type="button"
+            onClick={onAddKeyframe}
+            className="flex w-full items-center justify-center gap-1.5 rounded-lg bg-amber-50 px-3 py-2 text-[11px] font-bold text-amber-700 transition hover:bg-amber-100 dark:bg-amber-500/10 dark:text-amber-200 dark:hover:bg-amber-500/20"
+          >
+            <svg width="9" height="9" viewBox="0 0 8 8" aria-hidden="true"><rect x="1" y="1" width="6" height="6" fill="currentColor" transform="rotate(45 4 4)" /></svg>
+            Add Keyframe T={keyframeTime.toFixed(2)}s
+          </button>
         </Section>
       </div>
     </div>

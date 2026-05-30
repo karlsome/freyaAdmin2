@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 import VideoManualClipPropertiesPanel from "./VideoManualClipPropertiesPanel";
+import VideoManualKeyframePanel from "./VideoManualKeyframePanel";
 import { getClipCategory } from "./videoManualEditorUtils";
 
 const ADD_CATEGORIES = [
@@ -94,6 +95,10 @@ export default function VideoManualAddElementsSidebar({
   isOpen,
   activeCategory,
   selectedClip,
+  playbackTime,
+  activeKeyframe,
+  keyframeDraft,
+  isKeyframeEditMode,
   outputSize,
   outputFps,
   backgroundColor,
@@ -106,6 +111,12 @@ export default function VideoManualAddElementsSidebar({
   onSetOutputPreset,
   onSetOutputFps,
   onUpdateSelectedClip,
+  onAddKeyframe,
+  onEnterKeyframeEditMode,
+  onRecordKeyframeEditMode,
+  onCancelKeyframeEditMode,
+  onDeleteKeyframe,
+  onChangeKeyframeDraftValue,
   onApplyAnimationPreset,
   onComingSoon,
 }) {
@@ -147,8 +158,10 @@ export default function VideoManualAddElementsSidebar({
       return (
         <VideoManualClipPropertiesPanel
           selectedClip={selectedClip}
+          playbackTime={playbackTime}
           onUpdateClip={onUpdateSelectedClip}
           onOpenAnimationPanel={() => onSelectCategory("animation")}
+          onAddKeyframe={onAddKeyframe}
         />
       );
     }
@@ -206,21 +219,21 @@ export default function VideoManualAddElementsSidebar({
     }
 
     if (activeCategory === "animation") {
-      const disabled = !selectedClip;
       return (
-        <div className="space-y-3">
-          <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 dark:border-slate-800 dark:bg-slate-900">
-            <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">Selected</p>
-            <p className="mt-1 truncate text-xs font-bold text-slate-700 dark:text-slate-100">{selectedClip?.clip?.asset?.type || "No clip selected"}</p>
-          </div>
-          <div className="grid gap-2">
-            <WideButton icon="opacity" trailingIcon="add" onClick={() => onApplyAnimationPreset("fadeIn")} disabled={disabled}>Fade In</WideButton>
-            <WideButton icon="blur_on" trailingIcon="add" onClick={() => onApplyAnimationPreset("fadeOut")} disabled={disabled}>Fade Out</WideButton>
-            <WideButton icon="zoom_in_map" trailingIcon="add" onClick={() => onApplyAnimationPreset("zoomIn")} disabled={disabled}>Zoom In</WideButton>
-            <WideButton icon="east" trailingIcon="add" onClick={() => onApplyAnimationPreset("slideLeft")} disabled={disabled}>Slide Left</WideButton>
-            <WideButton icon="graphic_eq" trailingIcon="add" onClick={() => onApplyAnimationPreset("pulse")} disabled={disabled}>Pulse</WideButton>
-          </div>
-        </div>
+        <VideoManualKeyframePanel
+          selectedClip={selectedClip}
+          playbackTime={playbackTime}
+          activeKeyframe={activeKeyframe}
+          keyframeDraft={keyframeDraft}
+          isKeyframeEditMode={isKeyframeEditMode}
+          onAddKeyframe={onAddKeyframe}
+          onEnterEditMode={onEnterKeyframeEditMode}
+          onRecordEditMode={onRecordKeyframeEditMode}
+          onCancelEditMode={onCancelKeyframeEditMode}
+          onDeleteKeyframe={onDeleteKeyframe}
+          onChangeDraftValue={onChangeKeyframeDraftValue}
+          onApplyAnimationPreset={onApplyAnimationPreset}
+        />
       );
     }
 

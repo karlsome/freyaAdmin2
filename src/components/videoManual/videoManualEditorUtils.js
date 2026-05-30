@@ -66,6 +66,10 @@ export const SHAPE_DIMENSIONS = {
   line: { width: 240, height: 120 },
 };
 
+export const KEYFRAME_SAME_TIME_TOLERANCE = 0.05;
+export const KEYFRAME_MIN_SPACING = 0.25;
+export const ACTIVE_KEYFRAME_THRESHOLD = 0.1;
+
 export function cloneJson(value, fallback) {
   if (value === undefined || value === null) return fallback;
   try {
@@ -73,6 +77,496 @@ export function cloneJson(value, fallback) {
   } catch {
     return JSON.parse(JSON.stringify(value));
   }
+}
+
+export function getStaticNumericValue(value, fallback = 0) {
+  if (Array.isArray(value)) return fallback;
+  const numericValue = Number(value);
+  return Number.isFinite(numericValue) ? numericValue : fallback;
+}
+
+export function roundNumericValue(value, decimals = 4, fallback = 0) {
+  const numericValue = Number(value);
+  if (!Number.isFinite(numericValue)) return fallback;
+  return Number(numericValue.toFixed(decimals));
+}
+
+export function getClipRelativePlaybackTime(clip, playbackTime = 0) {
+  const clipStart = getStaticNumericValue(clip?.start, 0);
+  const clipLength = getStaticNumericValue(clip?.length, 5);
+  const resolvedTime = Number(playbackTime);
+  return Number(Math.max(0, Math.min(clipLength, (Number.isFinite(resolvedTime) ? resolvedTime : 0) - clipStart)).toFixed(3));
+}
+
+export function normalizeKeyframeFieldValue(field, value) {
+  const numericValue = Number(value);
+  if (!Number.isFinite(numericValue)) return null;
+
+  if (field === "offsetX" || field === "offsetY") return Number(numericValue.toFixed(4));
+  if (field === "scale") return Math.max(0.05, Number(numericValue.toFixed(3)));
+  if (field === "opacity") return Math.max(0, Math.min(1, Number(numericValue.toFixed(2))));
+  if (field === "rotate") return Number(numericValue.toFixed(2));
+  return null;
+}
+
+export function segmentsToKeyframePoints(segments) {
+  if (!Array.isArray(segments) || !segments.length) return [];
+
+  const sorted = [...segments].sort((left, right) => (Number(left?.start) || 0) - (Number(right?.start) || 0));
+  const points = [];
+
+  sorted.forEach((segment, index) => {
+    const start = Number(segment?.start) || 0;
+    const length = Number(segment?.length) || 0;
+    const from = Number(segment?.from);
+    const to = Number(segment?.to);
+
+    if (index === 0 && Number.isFinite(from)) {
+      points.push({ time: Number(start.toFixed(3)), value: from });
+    }
+    if (Number.isFinite(to)) {
+      points.push({ time: Number((start + length).toFixed(3)), value: to });
+    }
+  });
+
+  return points;
+}
+
+export function normalizeKeyframePoints(points, clipLength) {
+  if (!Array.isArray(points) || !points.length) return [];
+
+  const normalizedClipLength = Number(Math.max(0.001, Number(clipLength) || 0.001).toFixed(3));
+  const sorted = points
+    .map((point) => {
+      const time = Number(point?.time);
+      const value = Number(point?.value);
+      return {
+        time: Number(Math.max(0, Math.min(normalizedClipLength, Number.isFinite(time) ? time : 0)).toFixed(3)),
+        value: Number((Number.isFinite(value) ? value : 0).toFixed(4)),
+      };
+    })
+    .sort((left, right) => left.time - right.time);
+
+  const deduped = [];
+  sorted.forEach((point) => {
+    const previous = deduped[deduped.length - 1] || null;
+    if (previous && Math.abs(previous.time - point.time) <= KEYFRAME_SAME_TIME_TOLERANCE) {
+      deduped[deduped.length - 1] = point;
+      return;
+    }
+    deduped.push(point);
+  });
+
+  return deduped;
+}
+
+export function segmentsToExplicitKeyframePoints(segments, clipLength) {
+  const anchorPoints = Array.isArray(segments)
+    ? segments
+      .filter((segment) => Math.abs(Number(segment?.length) || 0) <= 0.001)
+      .map((segment) => ({
+        time: Number((Number(segment?.start) || 0).toFixed(3)),
+        value: Number((Number(segment?.to ?? segment?.from) || 0).toFixed(4)),
+      }))
+    : [];
+
+  if (anchorPoints.length) return normalizeKeyframePoints(anchorPoints, clipLength);
+
+  const points = segmentsToKeyframePoints(segments);
+  if (!points.length) return points;
+
+  const tailIndex = points.length - 1;
+  const tailPoint = points[tailIndex];
+  const previousPoint = points[tailIndex - 1] || null;
+  const roundedClipLength = Number((Number(clipLength) || 0).toFixed(3));
+
+  if (
+    tailPoint
+    && previousPoint
+    && Math.abs(tailPoint.time - roundedClipLength) <= 0.001
+    && Math.abs(tailPoint.value - previousPoint.value) <= 0.0001
+  ) {
+    points.pop();
+  }
+
+  return normalizeKeyframePoints(points, clipLength);
+}
+
+export function sanitizeGeneratedKeyframes(segments, clipLength) {
+  if (!Array.isArray(segments) || !segments.length) return null;
+
+  const normalizedClipLength = Number(Math.max(0.001, Number(clipLength) || 0.001).toFixed(3));
+  const sorted = segments
+    .map((segment) => {
+      const start = Number(Math.max(0, Math.min(normalizedClipLength, Number(segment?.start) || 0)).toFixed(3));
+      const maxLength = Math.max(0, normalizedClipLength - start);
+      const length = Number(Math.min(Math.max(0, Number(segment?.length) || 0), maxLength).toFixed(3));
+      return {
+        start,
+        length,
+        from: Number((Number(segment?.from) || 0).toFixed(4)),
+        to: Number((Number(segment?.to) || 0).toFixed(4)),
+        interpolation: segment?.interpolation || "linear",
+        ...(segment?.easing ? { easing: segment.easing } : {}),
+      };
+    })
+    .sort((left, right) => left.start - right.start || left.length - right.length);
+
+  const sanitized = [];
+  sorted.forEach((segment) => {
+    const previous = sanitized[sanitized.length - 1] || null;
+    if (previous) {
+      const previousEnd = Number((previous.start + previous.length).toFixed(3));
+      if (previousEnd > segment.start) {
+        previous.length = Number(Math.max(0, segment.start - previous.start).toFixed(3));
+      }
+    }
+
+    const last = sanitized[sanitized.length - 1] || null;
+    if (
+      last
+      && Math.abs(last.start - segment.start) <= 0.001
+      && Math.abs(last.length - segment.length) <= 0.001
+      && Math.abs(last.from - segment.from) <= 0.0001
+      && Math.abs(last.to - segment.to) <= 0.0001
+    ) {
+      return;
+    }
+
+    sanitized.push(segment);
+  });
+
+  return sanitized.length ? sanitized : null;
+}
+
+export function keyframePointsToSegments(points, clipLength) {
+  const sorted = normalizeKeyframePoints(points, clipLength);
+  if (!sorted.length) return null;
+
+  const normalizedClipLength = Number(Math.max(0.001, Number(clipLength) || 0.001).toFixed(3));
+  const segments = [];
+  const firstPoint = sorted[0];
+
+  if (firstPoint.time > 0) {
+    segments.push({
+      start: 0,
+      length: Number(firstPoint.time.toFixed(3)),
+      from: Number(firstPoint.value.toFixed(4)),
+      to: Number(firstPoint.value.toFixed(4)),
+      interpolation: "linear",
+    });
+  }
+
+  sorted.forEach((point) => {
+    segments.push({
+      start: Number(point.time.toFixed(3)),
+      length: 0,
+      from: Number(point.value.toFixed(4)),
+      to: Number(point.value.toFixed(4)),
+      interpolation: "linear",
+    });
+  });
+
+  for (let index = 0; index < sorted.length - 1; index += 1) {
+    const currentPoint = sorted[index];
+    const nextPoint = sorted[index + 1];
+    const duration = Number((nextPoint.time - currentPoint.time).toFixed(3));
+    if (duration <= 0.001) continue;
+
+    segments.push({
+      start: Number(currentPoint.time.toFixed(3)),
+      length: duration,
+      from: Number(currentPoint.value.toFixed(4)),
+      to: Number(nextPoint.value.toFixed(4)),
+      interpolation: "linear",
+    });
+  }
+
+  const lastPoint = sorted[sorted.length - 1];
+  if (lastPoint.time < normalizedClipLength) {
+    segments.push({
+      start: Number(lastPoint.time.toFixed(3)),
+      length: Number((normalizedClipLength - lastPoint.time).toFixed(3)),
+      from: Number(lastPoint.value.toFixed(4)),
+      to: Number(lastPoint.value.toFixed(4)),
+      interpolation: "linear",
+    });
+  }
+
+  return sanitizeGeneratedKeyframes(segments, clipLength);
+}
+
+export function interpolateKeyframeAtTime(segments, time, fallback = 0) {
+  if (!Array.isArray(segments) || !segments.length) return fallback;
+
+  const sorted = [...segments].sort((left, right) => (Number(left?.start) || 0) - (Number(right?.start) || 0));
+  const targetTime = Number(time) || 0;
+
+  for (const segment of sorted) {
+    const start = Number(segment?.start) || 0;
+    const length = Number(segment?.length) || 0;
+    const end = start + length;
+
+    if (targetTime >= start && targetTime <= end) {
+      if (!length) return Number(segment?.from) || fallback;
+      const progress = (targetTime - start) / length;
+      const from = Number(segment?.from) || 0;
+      const to = Number(segment?.to) || 0;
+      return from + (to - from) * progress;
+    }
+  }
+
+  if (targetTime < (Number(sorted[0]?.start) || 0)) return Number(sorted[0]?.from) || fallback;
+  return Number(sorted[sorted.length - 1]?.to) || fallback;
+}
+
+export function getKeyframedScalarValueAtTime(propertyValue, time, fallback = 0, decimals = 4) {
+  if (Array.isArray(propertyValue)) {
+    return roundNumericValue(interpolateKeyframeAtTime(propertyValue, time, fallback), decimals, fallback);
+  }
+
+  return roundNumericValue(getStaticNumericValue(propertyValue, fallback), decimals, fallback);
+}
+
+export function getAllKeyframeTimesForClip(clip) {
+  const times = new Set();
+  const clipLength = getStaticNumericValue(clip?.length, 5);
+  const addTimes = (segments) => {
+    if (!Array.isArray(segments)) return;
+    segmentsToExplicitKeyframePoints(segments, clipLength).forEach((point) => times.add(Number(point.time.toFixed(2))));
+  };
+
+  addTimes(clip?.scale);
+  addTimes(clip?.opacity);
+  addTimes(clip?.offset?.x);
+  addTimes(clip?.offset?.y);
+  addTimes(clip?.transform?.rotate?.angle);
+
+  return Array.from(times).sort((left, right) => left - right);
+}
+
+export function getNearestKeyframe(times, targetTime, threshold = ACTIVE_KEYFRAME_THRESHOLD) {
+  if (!Array.isArray(times) || !times.length) return null;
+
+  let nearest = null;
+  times.forEach((time) => {
+    const delta = Math.abs(time - targetTime);
+    if (!nearest || delta < nearest.delta) nearest = { time, delta };
+  });
+
+  if (!nearest || nearest.delta > threshold) return null;
+  return nearest;
+}
+
+export function getKeyframeValuesForClip(clip, time) {
+  return {
+    offsetX: getKeyframedScalarValueAtTime(clip?.offset?.x, time, 0, 4),
+    offsetY: getKeyframedScalarValueAtTime(clip?.offset?.y, time, 0, 4),
+    scale: getKeyframedScalarValueAtTime(clip?.scale, time, 1, 3),
+    opacity: getKeyframedScalarValueAtTime(clip?.opacity, time, 1, 3),
+    rotate: getKeyframedScalarValueAtTime(clip?.transform?.rotate?.angle, time, 0, 2),
+  };
+}
+
+export function getActiveKeyframeForClip(clip, playbackTime, threshold = ACTIVE_KEYFRAME_THRESHOLD) {
+  if (!clip) return null;
+  const relativeTime = getClipRelativePlaybackTime(clip, playbackTime);
+  const nearest = getNearestKeyframe(getAllKeyframeTimesForClip(clip), relativeTime, threshold);
+  if (!nearest) return null;
+
+  return {
+    time: nearest.time,
+    delta: nearest.delta,
+    values: getKeyframeValuesForClip(clip, nearest.time),
+  };
+}
+
+export function hasAnyAnimatedProperties(clip) {
+  return Boolean(
+    Array.isArray(clip?.scale)
+    || Array.isArray(clip?.opacity)
+    || Array.isArray(clip?.offset?.x)
+    || Array.isArray(clip?.offset?.y)
+    || Array.isArray(clip?.transform?.rotate?.angle)
+  );
+}
+
+export function buildKeyframedPropertyValue(existingValue, nextValue, clipLength, time) {
+  const numericValue = Number(nextValue);
+  if (!Number.isFinite(numericValue)) return null;
+
+  const currentPoints = Array.isArray(existingValue)
+    ? segmentsToExplicitKeyframePoints(existingValue, clipLength)
+    : [];
+  const nextPoints = [...currentPoints];
+  const normalizedTime = Number((Number(time) || 0).toFixed(3));
+  const normalizedValue = Number(numericValue.toFixed(4));
+  const pointIndex = nextPoints.findIndex((point) => Math.abs(point.time - normalizedTime) <= KEYFRAME_SAME_TIME_TOLERANCE);
+
+  if (pointIndex >= 0) {
+    nextPoints[pointIndex] = { time: nextPoints[pointIndex].time, value: normalizedValue };
+  } else {
+    nextPoints.push({ time: normalizedTime, value: normalizedValue });
+  }
+
+  return keyframePointsToSegments(nextPoints, clipLength);
+}
+
+export function shiftAnimatedSegments(previousSegments, nextValue, relativeTime, fallback = 0, clipLength = null) {
+  if (!Array.isArray(previousSegments) || !Number.isFinite(Number(nextValue))) return null;
+
+  const oldValue = interpolateKeyframeAtTime(previousSegments, relativeTime, fallback);
+  const delta = Number(nextValue) - oldValue;
+  const shifted = previousSegments.map((segment) => ({
+    ...segment,
+    from: Number((Number(segment.from) + delta).toFixed(4)),
+    to: Number((Number(segment.to) + delta).toFixed(4)),
+  }));
+
+  const resolvedClipLength = Number.isFinite(Number(clipLength))
+    ? Number(clipLength)
+    : Math.max(...shifted.map((segment) => (Number(segment.start) || 0) + (Number(segment.length) || 0)), 0.001);
+  return sanitizeGeneratedKeyframes(shifted, resolvedClipLength);
+}
+
+export function createAnimatedClipStateSnapshot(clip) {
+  if (!clip) return null;
+
+  const snapshot = {
+    scale: Array.isArray(clip.scale) ? cloneJson(clip.scale, null) : null,
+    opacity: Array.isArray(clip.opacity) ? cloneJson(clip.opacity, null) : null,
+    offsetX: Array.isArray(clip.offset?.x) ? cloneJson(clip.offset.x, null) : null,
+    offsetY: Array.isArray(clip.offset?.y) ? cloneJson(clip.offset.y, null) : null,
+    rotate: Array.isArray(clip.transform?.rotate?.angle) ? cloneJson(clip.transform.rotate.angle, null) : null,
+  };
+
+  return Object.values(snapshot).some(Boolean) ? snapshot : null;
+}
+
+export function buildKeyframeUpdatePayload(clip, targetTime, values, sourceClip = null) {
+  if (!clip || !values) return null;
+
+  const clipLength = getStaticNumericValue(clip.length, 5);
+  const source = sourceClip || clip;
+  const scaleValue = normalizeKeyframeFieldValue("scale", values.scale);
+  const opacityValue = normalizeKeyframeFieldValue("opacity", values.opacity);
+  const offsetXValue = normalizeKeyframeFieldValue("offsetX", values.offsetX);
+  const offsetYValue = normalizeKeyframeFieldValue("offsetY", values.offsetY);
+  const rotateValue = normalizeKeyframeFieldValue("rotate", values.rotate);
+
+  const scaleSegments = buildKeyframedPropertyValue(source.scale, scaleValue, clipLength, targetTime);
+  const opacitySegments = buildKeyframedPropertyValue(source.opacity, opacityValue, clipLength, targetTime);
+  const offsetXSegments = buildKeyframedPropertyValue(source.offset?.x, offsetXValue, clipLength, targetTime);
+  const offsetYSegments = buildKeyframedPropertyValue(source.offset?.y, offsetYValue, clipLength, targetTime);
+  const rotateSegments = buildKeyframedPropertyValue(source.transform?.rotate?.angle, rotateValue, clipLength, targetTime);
+
+  const update = {};
+  if (scaleSegments) update.scale = scaleSegments;
+  if (opacitySegments) update.opacity = opacitySegments;
+  if (offsetXSegments || offsetYSegments) {
+    update.offset = {
+      ...(clip.offset || {}),
+      ...(offsetXSegments ? { x: offsetXSegments } : {}),
+      ...(offsetYSegments ? { y: offsetYSegments } : {}),
+    };
+  }
+  if (rotateSegments) {
+    update.transform = {
+      ...(clip.transform || {}),
+      rotate: {
+        ...((clip.transform || {}).rotate || {}),
+        angle: rotateSegments,
+      },
+    };
+  }
+
+  return Object.keys(update).length ? update : null;
+}
+
+export function removeKeyframeAtTime(clip, targetTime) {
+  if (!clip) return null;
+
+  const clipLength = getStaticNumericValue(clip.length, 5);
+  const removeAtTime = (segments, fallback) => {
+    if (!Array.isArray(segments)) return segments;
+    const nextPoints = segmentsToExplicitKeyframePoints(segments, clipLength)
+      .filter((point) => Math.abs(point.time - targetTime) > KEYFRAME_SAME_TIME_TOLERANCE);
+    if (!nextPoints.length) return fallback;
+    return keyframePointsToSegments(nextPoints, clipLength) || fallback;
+  };
+
+  const update = {};
+  if (Array.isArray(clip.scale)) update.scale = removeAtTime(clip.scale, getStaticNumericValue(clip.scale, 1));
+  if (Array.isArray(clip.opacity)) update.opacity = removeAtTime(clip.opacity, getStaticNumericValue(clip.opacity, 1));
+  if (Array.isArray(clip.offset?.x) || Array.isArray(clip.offset?.y)) {
+    update.offset = {
+      ...(clip.offset || {}),
+      ...(Array.isArray(clip.offset?.x) ? { x: removeAtTime(clip.offset.x, getStaticNumericValue(clip.offset.x, 0)) } : {}),
+      ...(Array.isArray(clip.offset?.y) ? { y: removeAtTime(clip.offset.y, getStaticNumericValue(clip.offset.y, 0)) } : {}),
+    };
+  }
+  if (Array.isArray(clip.transform?.rotate?.angle)) {
+    update.transform = {
+      ...(clip.transform || {}),
+      rotate: {
+        ...((clip.transform || {}).rotate || {}),
+        angle: removeAtTime(clip.transform.rotate.angle, getStaticNumericValue(clip.transform.rotate.angle, 0)),
+      },
+    };
+  }
+
+  return Object.keys(update).length ? update : null;
+}
+
+export function buildAnimatedScalarUpdateForClip(clip, updates, playbackTime) {
+  if (!clip || !updates || !hasAnyAnimatedProperties(clip)) {
+    return { blocked: false, updates };
+  }
+
+  const activeKeyframe = getActiveKeyframeForClip(clip, playbackTime);
+  const nextUpdates = cloneJson(updates, updates);
+  const clipLength = getStaticNumericValue(clip.length, 5);
+  let touchedAnimatedScalar = false;
+  let blocked = false;
+
+  const applyField = (field, sourceValue, nextValue, assignValue) => {
+    if (Array.isArray(nextValue)) return;
+    const normalizedValue = normalizeKeyframeFieldValue(field, nextValue);
+    if (normalizedValue == null) return;
+
+    touchedAnimatedScalar = true;
+    if (!activeKeyframe) {
+      blocked = true;
+      return;
+    }
+
+    const segments = buildKeyframedPropertyValue(sourceValue, normalizedValue, clipLength, activeKeyframe.time);
+    if (segments) assignValue(segments);
+  };
+
+  if (Object.prototype.hasOwnProperty.call(updates, "scale")) {
+    applyField("scale", clip.scale, updates.scale, (segments) => { nextUpdates.scale = segments; });
+  }
+  if (Object.prototype.hasOwnProperty.call(updates, "opacity")) {
+    applyField("opacity", clip.opacity, updates.opacity, (segments) => { nextUpdates.opacity = segments; });
+  }
+  if (updates.offset && Object.prototype.hasOwnProperty.call(updates.offset, "x")) {
+    nextUpdates.offset = { ...(nextUpdates.offset || {}) };
+    applyField("offsetX", clip.offset?.x, updates.offset.x, (segments) => { nextUpdates.offset.x = segments; });
+  }
+  if (updates.offset && Object.prototype.hasOwnProperty.call(updates.offset, "y")) {
+    nextUpdates.offset = { ...(nextUpdates.offset || {}) };
+    applyField("offsetY", clip.offset?.y, updates.offset.y, (segments) => { nextUpdates.offset.y = segments; });
+  }
+  if (updates.transform?.rotate && Object.prototype.hasOwnProperty.call(updates.transform.rotate, "angle")) {
+    nextUpdates.transform = { ...(nextUpdates.transform || {}), rotate: { ...(nextUpdates.transform?.rotate || {}) } };
+    applyField("rotate", clip.transform?.rotate?.angle, updates.transform.rotate.angle, (segments) => { nextUpdates.transform.rotate.angle = segments; });
+  }
+
+  return {
+    blocked: touchedAnimatedScalar && blocked,
+    updates: nextUpdates,
+  };
 }
 
 export function getOutputSize(editData) {

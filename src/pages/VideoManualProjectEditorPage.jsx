@@ -8,20 +8,36 @@ import VideoManualEditorToolbar from "../components/videoManual/VideoManualEdito
 import VideoManualStepsPanel from "../components/videoManual/VideoManualStepsPanel";
 import {
   buildRevisionSnapshot,
+  buildAnimatedScalarUpdateForClip,
+  buildKeyframeUpdatePayload,
   buildUploadedAsset,
   cloneJson,
+  createAnimatedClipStateSnapshot,
   createShapeSvg,
   decorateAssetForPreview,
   DEFAULT_VIDEO_MANUAL_TEMPLATE,
+  getActiveKeyframeForClip,
   getAssetLibraryTypeLabel,
+  getAllKeyframeTimesForClip,
   getClipCategory,
+  getClipRelativePlaybackTime,
+  getKeyframedScalarValueAtTime,
+  getKeyframeValuesForClip,
   getOutputFps,
   getOutputSize,
+  getStaticNumericValue,
   getTrackCount,
+  hasAnyAnimatedProperties,
+  KEYFRAME_MIN_SPACING,
+  KEYFRAME_SAME_TIME_TOLERANCE,
   measureImageClipSize,
+  normalizeKeyframeFieldValue,
   normalizePlayableMediaSource,
   normalizePlaylistAssetType,
+  removeKeyframeAtTime,
+  roundNumericValue,
   SHAPE_DIMENSIONS,
+  shiftAnimatedSegments,
 } from "../components/videoManual/videoManualEditorUtils";
 import {
   createVideoManualRevision,
@@ -45,6 +61,9 @@ export default function VideoManualProjectEditorPage() {
   const [addDrawerOpen, setAddDrawerOpen] = useState(false);
   const [steps, setSteps] = useState([]);
   const [selectedClip, setSelectedClip] = useState(null);
+  const [playbackTime, setPlaybackTime] = useState(0);
+  const [keyframeDraft, setKeyframeDraft] = useState(null);
+  const [keyframeEditMode, setKeyframeEditMode] = useState(null);
   const [timelineBackground, setTimelineBackground] = useState(DEFAULT_VIDEO_MANUAL_TEMPLATE.timeline.background);
   const [outputSize, setOutputSize] = useState(DEFAULT_VIDEO_MANUAL_TEMPLATE.output.size);
   const [outputFps, setOutputFps] = useState(DEFAULT_VIDEO_MANUAL_TEMPLATE.output.fps);
@@ -68,6 +87,41 @@ export default function VideoManualProjectEditorPage() {
   const sdkInitialized = useRef(false);
   const noticeTimerRef = useRef(null);
   const assetSourceMapRef = useRef({});
+  const selectedClipRef = useRef(null);
+  const playbackTimeRef = useRef(0);
+  const keyframeEditModeRef = useRef(null);
+  const syncingAnimatedClipUpdateRef = useRef(false);
+  const animatedClipStateByIdRef = useRef({});
+
+  useEffect(() => {
+    selectedClipRef.current = selectedClip;
+  }, [selectedClip]);
+
+  useEffect(() => {
+    playbackTimeRef.current = playbackTime;
+  }, [playbackTime]);
+
+  useEffect(() => {
+    keyframeEditModeRef.current = keyframeEditMode;
+  }, [keyframeEditMode]);
+
+  const activeKeyframe = useMemo(() => {
+    if (!selectedClip?.clip) return null;
+    return getActiveKeyframeForClip(selectedClip.clip, playbackTime);
+  }, [playbackTime, selectedClip]);
+
+  const activeKeyframeEditMode = useMemo(() => {
+    if (!selectedClip || !activeKeyframe || !keyframeEditMode) return null;
+    if (keyframeEditMode.trackIndex !== selectedClip.trackIndex || keyframeEditMode.clipIndex !== selectedClip.clipIndex) return null;
+    if (Math.abs(keyframeEditMode.time - activeKeyframe.time) > KEYFRAME_SAME_TIME_TOLERANCE) return null;
+    return keyframeEditMode;
+  }, [activeKeyframe, keyframeEditMode, selectedClip]);
+
+  useEffect(() => {
+    if (!keyframeEditMode || activeKeyframeEditMode) return;
+    setKeyframeDraft(null);
+    setKeyframeEditMode(null);
+  }, [activeKeyframeEditMode, keyframeEditMode]);
 
   const apiBaseUrl = useMemo(() => getVideoManualApiBaseUrl(), []);
   const playlistId = useMemo(() => (project?.playlistId ? String(project.playlistId) : ""), [project?.playlistId]);
@@ -174,11 +228,15 @@ export default function VideoManualProjectEditorPage() {
   const syncSelectedClip = useCallback((selection) => {
     if (!selection) {
       setSelectedClip(null);
+      setKeyframeDraft(null);
+      setKeyframeEditMode(null);
       return;
     }
 
     const clip = selection.clip || readClipAt(selection.trackIndex, selection.clipIndex);
     setSelectedClip({ ...selection, clip });
+    setKeyframeDraft(null);
+    setKeyframeEditMode(null);
 
     const category = getClipCategory(clip);
     if (category) {
@@ -186,6 +244,261 @@ export default function VideoManualProjectEditorPage() {
       setAddDrawerOpen(true);
     }
   }, [readClipAt]);
+
+  const syncSelectedClipFromDocument = useCallback(() => {
+    setSelectedClip((current) => {
+      if (!current) return current;
+      const clip = readClipAt(current.trackIndex, current.clipIndex);
+      if (!clip || clip === current.clip) return current;
+      return { ...current, clip };
+    });
+  }, [readClipAt]);
+
+  const refreshTimelineKeyframeDiamonds = useCallback(() => {
+    const timelineElement = timelineElRef.current;
+    const edit = editRef.current;
+    if (!timelineElement || !edit) return;
+
+    timelineElement.querySelectorAll(".video-manual-kf-diamonds").forEach((element) => element.remove());
+
+    const editData = edit.getEdit?.();
+    if (!editData?.timeline?.tracks) return;
+
+    const selection = selectedClipRef.current;
+    const active = selection?.clip ? getActiveKeyframeForClip(selection.clip, playbackTimeRef.current) : null;
+
+    editData.timeline.tracks.forEach((track, trackIndex) => {
+      (track.clips || []).forEach((clip, clipIndex) => {
+        const keyframeTimes = getAllKeyframeTimesForClip(clip);
+        if (!keyframeTimes.length) return;
+
+        const clipElement = timelineElement.querySelector(`.ss-clip[data-track-index="${trackIndex}"][data-clip-index="${clipIndex}"]`);
+        if (!clipElement) return;
+
+        const clipLength = getStaticNumericValue(clip.length, 5);
+        if (clipLength <= 0) return;
+
+        if (window.getComputedStyle(clipElement).position === "static") clipElement.style.position = "relative";
+
+        const container = document.createElement("div");
+        container.className = "video-manual-kf-diamonds pointer-events-none absolute inset-0 overflow-hidden";
+
+        keyframeTimes.forEach((time) => {
+          const percent = Math.max(0, Math.min(1, time / clipLength)) * 100;
+          const isActive = selection
+            && selection.trackIndex === trackIndex
+            && selection.clipIndex === clipIndex
+            && active
+            && Math.abs(active.time - time) <= KEYFRAME_SAME_TIME_TOLERANCE;
+          const marker = document.createElement("div");
+          marker.className = "video-manual-kf-diamond absolute top-0 text-amber-500";
+          marker.style.cssText = `left:${percent}%;transform:translateX(-50%) scale(${isActive ? 1.25 : 1});filter:${isActive ? "drop-shadow(0 0 4px rgba(14,165,233,0.45))" : "none"};color:${isActive ? "#0ea5e9" : "#f59e0b"};`;
+          marker.innerHTML = `<svg width="${isActive ? "10" : "8"}" height="${isActive ? "10" : "8"}" viewBox="0 0 8 8" style="display:block"><rect x="1" y="1" width="6" height="6" fill="currentColor" transform="rotate(45 4 4)"/></svg>`;
+          container.appendChild(marker);
+        });
+
+        clipElement.appendChild(container);
+      });
+    });
+  }, []);
+
+  const scheduleTimelineKeyframeRefresh = useCallback(() => {
+    window.requestAnimationFrame(() => refreshTimelineKeyframeDiamonds());
+  }, [refreshTimelineKeyframeDiamonds]);
+
+  const rememberAnimatedClipStateByLocation = useCallback((trackIndex, clipIndex) => {
+    const edit = editRef.current;
+    const clipId = edit?.getClipId?.(trackIndex, clipIndex);
+    const clip = readClipAt(trackIndex, clipIndex);
+    if (!clipId) return;
+
+    const snapshot = createAnimatedClipStateSnapshot(clip);
+    if (snapshot) {
+      animatedClipStateByIdRef.current[clipId] = snapshot;
+    } else {
+      delete animatedClipStateByIdRef.current[clipId];
+    }
+  }, [readClipAt]);
+
+  const syncAnimatedClipUpdateFromEvent = useCallback((change) => {
+    if (syncingAnimatedClipUpdateRef.current || !change?.previous?.clip || !change?.current?.clip) return false;
+
+    const edit = editRef.current;
+    const previousClip = change.previous.clip;
+    const currentClip = change.current.clip;
+    const { trackIndex, clipIndex } = change.current;
+    const clipId = edit?.getClipId?.(trackIndex, clipIndex);
+    if (!edit || !clipId || !edit.updateClipInDocument || !edit.resolveClip) return false;
+
+    const rememberedState = animatedClipStateByIdRef.current[clipId] || null;
+    const clipLength = getStaticNumericValue(currentClip.length ?? previousClip.length, 5);
+    const clipStart = getStaticNumericValue(currentClip.start ?? previousClip.start, 0);
+    const relativeTime = Number(Math.max(0, Math.min(clipLength, (Number(edit.playbackTime) || 0) - clipStart)).toFixed(3));
+    const editModeContext = keyframeEditModeRef.current
+      && keyframeEditModeRef.current.trackIndex === trackIndex
+      && keyframeEditModeRef.current.clipIndex === clipIndex
+      ? keyframeEditModeRef.current
+      : null;
+
+    let update = {};
+
+    if (editModeContext) {
+      const targetTime = Number(editModeContext.time.toFixed(3));
+      const sourceClip = editModeContext.sourceClip || previousClip;
+      const liveValues = {
+        offsetX: getStaticNumericValue(currentClip.offset?.x, getKeyframedScalarValueAtTime(sourceClip.offset?.x, targetTime, 0, 4)),
+        offsetY: getStaticNumericValue(currentClip.offset?.y, getKeyframedScalarValueAtTime(sourceClip.offset?.y, targetTime, 0, 4)),
+        scale: getStaticNumericValue(currentClip.scale, getKeyframedScalarValueAtTime(sourceClip.scale, targetTime, 1, 3)),
+        opacity: getStaticNumericValue(currentClip.opacity, getKeyframedScalarValueAtTime(sourceClip.opacity, targetTime, 1, 3)),
+        rotate: getStaticNumericValue(currentClip.transform?.rotate?.angle, getKeyframedScalarValueAtTime(sourceClip.transform?.rotate?.angle, targetTime, 0, 2)),
+      };
+      update = buildKeyframeUpdatePayload(previousClip, targetTime, liveValues, sourceClip) || {};
+    } else {
+      const scaleSegments = shiftAnimatedSegments(previousClip.scale || rememberedState?.scale, currentClip.scale, relativeTime, 1, clipLength);
+      if (scaleSegments) update.scale = scaleSegments;
+
+      const opacitySegments = shiftAnimatedSegments(previousClip.opacity || rememberedState?.opacity, currentClip.opacity, relativeTime, 1, clipLength);
+      if (opacitySegments) update.opacity = opacitySegments;
+
+      const offsetXSegments = shiftAnimatedSegments(previousClip.offset?.x || rememberedState?.offsetX, currentClip.offset?.x, relativeTime, 0, clipLength);
+      const offsetYSegments = shiftAnimatedSegments(previousClip.offset?.y || rememberedState?.offsetY, currentClip.offset?.y, relativeTime, 0, clipLength);
+      if (offsetXSegments || offsetYSegments) {
+        update.offset = {
+          ...(currentClip.offset || {}),
+          ...(offsetXSegments ? { x: offsetXSegments } : {}),
+          ...(offsetYSegments ? { y: offsetYSegments } : {}),
+        };
+      }
+
+      const rotateSegments = shiftAnimatedSegments(previousClip.transform?.rotate?.angle || rememberedState?.rotate, currentClip.transform?.rotate?.angle, relativeTime, 0, clipLength);
+      if (rotateSegments) {
+        update.transform = {
+          ...(currentClip.transform || {}),
+          rotate: {
+            ...((currentClip.transform || {}).rotate || {}),
+            angle: rotateSegments,
+          },
+        };
+      }
+    }
+
+    if (!Object.keys(update).length) return false;
+
+    syncingAnimatedClipUpdateRef.current = true;
+    try {
+      edit.updateClipInDocument(clipId, update);
+      edit.resolveClip(clipId);
+      canvasRef.current?.refresh?.();
+      timelineRef.current?.refresh?.();
+      rememberAnimatedClipStateByLocation(trackIndex, clipIndex);
+      scheduleTimelineKeyframeRefresh();
+    } finally {
+      syncingAnimatedClipUpdateRef.current = false;
+    }
+
+    return true;
+  }, [rememberAnimatedClipStateByLocation, scheduleTimelineKeyframeRefresh]);
+
+  const installAnimatedLiveUpdateInterceptor = useCallback((edit) => {
+    if (!edit || edit.__vmfaAnimatedLiveUpdateInterceptor || typeof edit.updateClipInDocument !== "function") return;
+
+    const originalUpdateClipInDocument = edit.updateClipInDocument.bind(edit);
+    const originalCommitClipUpdate = typeof edit.commitClipUpdate === "function" ? edit.commitClipUpdate.bind(edit) : null;
+
+    edit.updateClipInDocument = (clipId, updates = {}) => {
+      if (syncingAnimatedClipUpdateRef.current) {
+        return originalUpdateClipInDocument(clipId, updates);
+      }
+
+      const location = edit.getDocument?.()?.getClipById?.(clipId) || null;
+      const previousClip = location?.clip ? cloneJson(location.clip, null) : null;
+      let nextUpdates = updates;
+      let convertedAnimatedUpdate = false;
+
+      if (previousClip && hasAnyAnimatedProperties(previousClip)) {
+        const playbackTime = Number(edit.playbackTime) || 0;
+        const relativeTime = getClipRelativePlaybackTime(previousClip, playbackTime);
+        const editModeContext = keyframeEditModeRef.current
+          && keyframeEditModeRef.current.trackIndex === location.trackIndex
+          && keyframeEditModeRef.current.clipIndex === location.clipIndex
+          ? keyframeEditModeRef.current
+          : null;
+        const activeKeyframe = getActiveKeyframeForClip(previousClip, playbackTime);
+        const targetTime = editModeContext?.time ?? activeKeyframe?.time ?? relativeTime;
+        const sourceClip = editModeContext?.sourceClip || previousClip;
+        const values = getKeyframeValuesForClip(sourceClip, targetTime);
+        let touchedAnimatedProperty = false;
+
+        const applyField = (field, value, assignValue) => {
+          const normalizedValue = normalizeKeyframeFieldValue(field, value);
+          if (normalizedValue == null) return;
+          touchedAnimatedProperty = true;
+          assignValue(normalizedValue);
+        };
+
+        if (updates.offset && Object.prototype.hasOwnProperty.call(updates.offset, "x")) {
+          applyField("offsetX", updates.offset.x, (value) => { values.offsetX = value; });
+        }
+        if (updates.offset && Object.prototype.hasOwnProperty.call(updates.offset, "y")) {
+          applyField("offsetY", updates.offset.y, (value) => { values.offsetY = value; });
+        }
+        if (Object.prototype.hasOwnProperty.call(updates, "scale")) {
+          applyField("scale", updates.scale, (value) => { values.scale = value; });
+        }
+        if (Object.prototype.hasOwnProperty.call(updates, "opacity")) {
+          applyField("opacity", updates.opacity, (value) => { values.opacity = value; });
+        }
+        if (updates.transform?.rotate && Object.prototype.hasOwnProperty.call(updates.transform.rotate, "angle")) {
+          applyField("rotate", updates.transform.rotate.angle, (value) => { values.rotate = value; });
+        }
+
+        if (touchedAnimatedProperty) {
+          const keyframeUpdate = buildKeyframeUpdatePayload(previousClip, targetTime, values, sourceClip);
+          if (keyframeUpdate) {
+            nextUpdates = {
+              ...updates,
+              ...keyframeUpdate,
+              ...(updates.offset || keyframeUpdate.offset ? { offset: { ...(updates.offset || {}), ...(keyframeUpdate.offset || {}) } } : {}),
+              ...(updates.transform || keyframeUpdate.transform ? { transform: { ...(updates.transform || {}), ...(keyframeUpdate.transform || {}) } } : {}),
+            };
+            convertedAnimatedUpdate = true;
+          }
+        }
+      }
+
+      const result = originalUpdateClipInDocument(clipId, nextUpdates);
+
+      if (convertedAnimatedUpdate && location) {
+        window.requestAnimationFrame(() => {
+          const updatedClip = readClipAt(location.trackIndex, location.clipIndex);
+          if (updatedClip) {
+            setSelectedClip((current) => {
+              if (!current) return current;
+              if (current.trackIndex !== location.trackIndex || current.clipIndex !== location.clipIndex) return current;
+              return { ...current, clip: updatedClip };
+            });
+            rememberAnimatedClipStateByLocation(location.trackIndex, location.clipIndex);
+          }
+          scheduleTimelineKeyframeRefresh();
+        });
+      }
+
+      return result;
+    };
+
+    if (originalCommitClipUpdate) {
+      edit.commitClipUpdate = (clipId, initialConfig, finalConfig) => {
+        const location = edit.getDocument?.()?.getClipById?.(clipId) || null;
+        const documentClip = location?.clip || null;
+        const resolvedFinalConfig = documentClip && hasAnyAnimatedProperties(documentClip)
+          ? cloneJson(documentClip, finalConfig)
+          : finalConfig;
+        return originalCommitClipUpdate(clipId, initialConfig, resolvedFinalConfig);
+      };
+    }
+
+    edit.__vmfaAnimatedLiveUpdateInterceptor = true;
+  }, [readClipAt, rememberAnimatedClipStateByLocation, scheduleTimelineKeyframeRefresh]);
 
   useEffect(() => {
     if (!project || sdkInitialized.current) return undefined;
@@ -214,6 +527,7 @@ export default function VideoManualProjectEditorPage() {
     async function initSDK() {
       try {
         edit = new Edit(template);
+        installAnimatedLiveUpdateInterceptor(edit);
         canvas = new Canvas(edit);
         ui = UIController.create(edit, canvas);
 
@@ -238,6 +552,8 @@ export default function VideoManualProjectEditorPage() {
         const syncAll = () => {
           syncSteps();
           syncEditorSettings();
+          syncSelectedClipFromDocument();
+          scheduleTimelineKeyframeRefresh();
         };
 
         ["track:added", "track:removed", "clip:added", "clip:deleted", "edit:changed", "timeline:backgroundChanged", "output:resized", "output:fpsChanged"].forEach((eventName) => {
@@ -246,17 +562,22 @@ export default function VideoManualProjectEditorPage() {
 
         unsubs.push(edit.events.on("clip:selected", syncSelectedClip));
         unsubs.push(edit.events.on("selection:cleared", () => syncSelectedClip(null)));
-        unsubs.push(edit.events.on("clip:updated", ({ current }) => {
+        unsubs.push(edit.events.on("clip:updated", (change) => {
+          syncAnimatedClipUpdateFromEvent(change);
+          const { current } = change || {};
           syncAll();
+          if (current) rememberAnimatedClipStateByLocation(current.trackIndex, current.clipIndex);
           setSelectedClip((previous) => {
             if (!previous) return previous;
+            if (!current) return previous;
             if (previous.trackIndex !== current.trackIndex || previous.clipIndex !== current.clipIndex) return previous;
-            return { ...previous, clip: current.clip };
+            return { ...previous, clip: readClipAt(current.trackIndex, current.clipIndex) || current.clip };
           });
         }));
 
         edit.play();
         syncAll();
+        scheduleTimelineKeyframeRefresh();
       } catch (error) {
         disposeSDK();
         if (!cancelled) {
@@ -278,11 +599,37 @@ export default function VideoManualProjectEditorPage() {
       uiRef.current = null;
       setSelectedClip(null);
     };
-  }, [project, syncEditorSettings, syncSelectedClip, syncSteps]);
+  }, [installAnimatedLiveUpdateInterceptor, project, readClipAt, rememberAnimatedClipStateByLocation, scheduleTimelineKeyframeRefresh, syncAnimatedClipUpdateFromEvent, syncEditorSettings, syncSelectedClip, syncSelectedClipFromDocument, syncSteps]);
 
   const getPlaybackTime = useCallback(() => {
     const playbackTime = Number(editRef.current?.playbackTime || 0);
     return Number.isFinite(playbackTime) ? Math.max(0, playbackTime) : 0;
+  }, []);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      const nextPlaybackTime = Number(getPlaybackTime().toFixed(3));
+      setPlaybackTime((current) => (Math.abs(current - nextPlaybackTime) > 0.01 ? nextPlaybackTime : current));
+      syncSelectedClipFromDocument();
+      refreshTimelineKeyframeDiamonds();
+    }, 150);
+
+    return () => window.clearInterval(timer);
+  }, [getPlaybackTime, refreshTimelineKeyframeDiamonds, syncSelectedClipFromDocument]);
+
+  const readLiveClipValues = useCallback((selection, clip, relativeTime) => {
+    const edit = editRef.current;
+    const clipId = edit?.getClipId?.(selection.trackIndex, selection.clipIndex);
+    const player = clipId ? edit?.getPlayerByClipId?.(clipId) : null;
+    const liveOffset = player?.calculateMoveOffset?.(0, 0);
+
+    return {
+      offsetX: roundNumericValue(liveOffset?.x ?? getKeyframedScalarValueAtTime(clip.offset?.x, relativeTime, 0, 4), 4, 0),
+      offsetY: roundNumericValue(liveOffset?.y ?? getKeyframedScalarValueAtTime(clip.offset?.y, relativeTime, 0, 4), 4, 0),
+      scale: getKeyframedScalarValueAtTime(clip.scale, relativeTime, 1, 3),
+      opacity: roundNumericValue(player?.getOpacity?.() ?? getKeyframedScalarValueAtTime(clip.opacity, relativeTime, 1, 3), 3, 1),
+      rotate: roundNumericValue(player?.getRotation?.() ?? getKeyframedScalarValueAtTime(clip.transform?.rotate?.angle, relativeTime, 0, 2), 2, 0),
+    };
   }, []);
 
   const rememberAssetSource = useCallback((previewUrl, publicUrl) => {
@@ -534,31 +881,233 @@ export default function VideoManualProjectEditorPage() {
 
     await edit.updateClip(selection.trackIndex, selection.clipIndex, updates);
     setSelectedClip({ trackIndex: selection.trackIndex, clipIndex: selection.clipIndex, clip: readClipAt(selection.trackIndex, selection.clipIndex) });
+    scheduleTimelineKeyframeRefresh();
     showNotice("Animation applied.");
-  }, [readClipAt, selectedClip, showNotice]);
+  }, [readClipAt, scheduleTimelineKeyframeRefresh, selectedClip, showNotice]);
+
+  const handleAddKeyframeAtCurrentTime = useCallback(async () => {
+    const edit = editRef.current;
+    const selection = selectedClipRef.current || edit?.getSelectedClipInfo?.();
+    if (!edit || !selection) {
+      showNotice("Select a clip first.", "error");
+      return;
+    }
+
+    const clip = readClipAt(selection.trackIndex, selection.clipIndex) || selection.clip;
+    if (!clip) return;
+
+    const relativeTime = getClipRelativePlaybackTime(clip, getPlaybackTime());
+    const keyframeTimes = getAllKeyframeTimesForClip(clip);
+    const sameTimeKeyframe = keyframeTimes.find((time) => Math.abs(time - relativeTime) <= KEYFRAME_SAME_TIME_TOLERANCE);
+    const blockingKeyframe = keyframeTimes.find((time) => {
+      const delta = Math.abs(time - relativeTime);
+      return delta > KEYFRAME_SAME_TIME_TOLERANCE && delta < KEYFRAME_MIN_SPACING;
+    });
+
+    if (blockingKeyframe != null) {
+      showNotice(`Keyframes must be at least ${KEYFRAME_MIN_SPACING.toFixed(2)}s apart.`, "error");
+      return;
+    }
+
+    const targetTime = sameTimeKeyframe ?? relativeTime;
+    const liveValues = readLiveClipValues(selection, clip, targetTime);
+    const updates = buildKeyframeUpdatePayload(clip, targetTime, liveValues);
+    if (!updates) {
+      showNotice("Unable to record keyframe.", "error");
+      return;
+    }
+
+    try {
+      await edit.updateClip(selection.trackIndex, selection.clipIndex, updates);
+      const updatedClip = readClipAt(selection.trackIndex, selection.clipIndex);
+      const clipStart = getStaticNumericValue(clip.start, 0);
+      const clipLength = getStaticNumericValue(clip.length, 5);
+      const seekTime = Number((clipStart + Math.max(0, Math.min(targetTime, Math.max(0, clipLength - 0.001)))).toFixed(3));
+      edit.seek?.(seekTime);
+      setPlaybackTime(seekTime);
+      setSelectedClip({ trackIndex: selection.trackIndex, clipIndex: selection.clipIndex, clip: updatedClip || { ...clip, ...updates } });
+      setKeyframeDraft(null);
+      setKeyframeEditMode(null);
+      setActiveAddCategory("animation");
+      setAddDrawerOpen(true);
+      scheduleTimelineKeyframeRefresh();
+      showNotice(`${sameTimeKeyframe != null ? "Keyframe updated" : "Keyframe recorded"} at T=${targetTime.toFixed(2)}s.`);
+    } catch (error) {
+      console.error("Failed to add keyframe", error);
+      showNotice(error.message || "Keyframe update failed.", "error");
+    }
+  }, [getPlaybackTime, readClipAt, readLiveClipValues, scheduleTimelineKeyframeRefresh, showNotice]);
+
+  const handleEnterKeyframeEditMode = useCallback(() => {
+    const selection = selectedClipRef.current;
+    const clip = selection ? readClipAt(selection.trackIndex, selection.clipIndex) || selection.clip : null;
+    const currentActiveKeyframe = clip ? getActiveKeyframeForClip(clip, getPlaybackTime()) : null;
+    if (!selection || !clip || !currentActiveKeyframe) {
+      showNotice("Move the playhead onto a keyframe first.", "error");
+      return;
+    }
+
+    setKeyframeDraft(null);
+    setKeyframeEditMode({
+      trackIndex: selection.trackIndex,
+      clipIndex: selection.clipIndex,
+      time: currentActiveKeyframe.time,
+      baseline: { ...currentActiveKeyframe.values },
+      sourceClip: cloneJson(clip, {}),
+    });
+    showNotice("Keyframe edit mode enabled.");
+  }, [getPlaybackTime, readClipAt, showNotice]);
+
+  const handleChangeKeyframeDraftValue = useCallback((field, value) => {
+    const selection = selectedClipRef.current;
+    const normalizedValue = normalizeKeyframeFieldValue(field, value);
+    if (!selection || normalizedValue == null) return;
+
+    setKeyframeDraft((current) => ({
+      trackIndex: selection.trackIndex,
+      clipIndex: selection.clipIndex,
+      time: activeKeyframe?.time ?? keyframeEditMode?.time ?? 0,
+      values: {
+        ...(current?.values || {}),
+        [field]: normalizedValue,
+      },
+    }));
+  }, [activeKeyframe?.time, keyframeEditMode?.time]);
+
+  const handleRecordKeyframeEditMode = useCallback(async () => {
+    const edit = editRef.current;
+    const selection = selectedClipRef.current;
+    if (!edit || !selection || !activeKeyframeEditMode) {
+      showNotice("Move the playhead onto the same keyframe before recording.", "error");
+      return;
+    }
+
+    const currentClip = readClipAt(selection.trackIndex, selection.clipIndex) || selection.clip;
+    const sourceClip = activeKeyframeEditMode.sourceClip || currentClip;
+    const sourceActiveKeyframe = getActiveKeyframeForClip(sourceClip, getPlaybackTime());
+    if (!sourceActiveKeyframe || Math.abs(sourceActiveKeyframe.time - activeKeyframeEditMode.time) > KEYFRAME_SAME_TIME_TOLERANCE) {
+      showNotice("Move the playhead onto the same keyframe before recording.", "error");
+      return;
+    }
+
+    const liveValues = readLiveClipValues(selection, currentClip, activeKeyframeEditMode.time);
+    const values = {
+      ...getKeyframeValuesForClip(sourceClip, activeKeyframeEditMode.time),
+      ...liveValues,
+      ...(keyframeDraft?.values || {}),
+    };
+    const updates = buildKeyframeUpdatePayload(currentClip, activeKeyframeEditMode.time, values, sourceClip);
+
+    if (!updates) {
+      showNotice("Unable to record keyframe.", "error");
+      return;
+    }
+
+    try {
+      await edit.updateClip(selection.trackIndex, selection.clipIndex, updates);
+      const updatedClip = readClipAt(selection.trackIndex, selection.clipIndex);
+      setSelectedClip({ trackIndex: selection.trackIndex, clipIndex: selection.clipIndex, clip: updatedClip || { ...currentClip, ...updates } });
+      setKeyframeDraft(null);
+      setKeyframeEditMode(null);
+      scheduleTimelineKeyframeRefresh();
+      showNotice(`Keyframe recorded at T=${activeKeyframeEditMode.time.toFixed(2)}s.`);
+    } catch (error) {
+      console.error("Failed to record keyframe", error);
+      showNotice(error.message || "Keyframe record failed.", "error");
+    }
+  }, [activeKeyframeEditMode, getPlaybackTime, keyframeDraft?.values, readClipAt, readLiveClipValues, scheduleTimelineKeyframeRefresh, showNotice]);
+
+  const handleCancelKeyframeEditMode = useCallback(async () => {
+    const edit = editRef.current;
+    const selection = selectedClipRef.current;
+    const sourceClip = keyframeEditMode?.sourceClip;
+
+    if (edit && selection && sourceClip) {
+      const updates = {};
+      if (Object.prototype.hasOwnProperty.call(sourceClip, "scale")) updates.scale = cloneJson(sourceClip.scale, sourceClip.scale);
+      if (Object.prototype.hasOwnProperty.call(sourceClip, "opacity")) updates.opacity = cloneJson(sourceClip.opacity, sourceClip.opacity);
+      if (sourceClip.offset || selection.clip?.offset) updates.offset = cloneJson(sourceClip.offset || {}, {});
+      if (sourceClip.transform || selection.clip?.transform) updates.transform = cloneJson(sourceClip.transform || {}, {});
+
+      if (Object.keys(updates).length) {
+        try {
+          await edit.updateClip(selection.trackIndex, selection.clipIndex, updates);
+          const updatedClip = readClipAt(selection.trackIndex, selection.clipIndex);
+          setSelectedClip({ trackIndex: selection.trackIndex, clipIndex: selection.clipIndex, clip: updatedClip || { ...selection.clip, ...updates } });
+        } catch (error) {
+          console.error("Failed to restore keyframe edit source", error);
+        }
+      }
+    }
+
+    setKeyframeDraft(null);
+    setKeyframeEditMode(null);
+    scheduleTimelineKeyframeRefresh();
+    showNotice("Keyframe edit cancelled.");
+  }, [keyframeEditMode?.sourceClip, readClipAt, scheduleTimelineKeyframeRefresh, showNotice]);
+
+  const handleDeleteKeyframe = useCallback(async () => {
+    const edit = editRef.current;
+    const selection = selectedClipRef.current || edit?.getSelectedClipInfo?.();
+    if (!edit || !selection) return;
+
+    const clip = readClipAt(selection.trackIndex, selection.clipIndex) || selection.clip;
+    const currentActiveKeyframe = clip ? getActiveKeyframeForClip(clip, getPlaybackTime()) : null;
+    if (!clip || !currentActiveKeyframe) {
+      showNotice("Move the playhead onto a keyframe first.", "error");
+      return;
+    }
+
+    const updates = removeKeyframeAtTime(clip, currentActiveKeyframe.time);
+    if (!updates) {
+      showNotice("No keyframe to remove at the current playhead.", "error");
+      return;
+    }
+
+    try {
+      await edit.updateClip(selection.trackIndex, selection.clipIndex, updates);
+      const updatedClip = readClipAt(selection.trackIndex, selection.clipIndex);
+      setSelectedClip({ trackIndex: selection.trackIndex, clipIndex: selection.clipIndex, clip: updatedClip || { ...clip, ...updates } });
+      setKeyframeDraft(null);
+      setKeyframeEditMode(null);
+      scheduleTimelineKeyframeRefresh();
+      showNotice(`Keyframe removed at T=${currentActiveKeyframe.time.toFixed(2)}s.`);
+    } catch (error) {
+      console.error("Failed to delete keyframe", error);
+      showNotice(error.message || "Keyframe delete failed.", "error");
+    }
+  }, [getPlaybackTime, readClipAt, scheduleTimelineKeyframeRefresh, showNotice]);
 
   const handleUpdateSelectedClip = useCallback(async (updates, statusMessage = "Clip updated.") => {
     const edit = editRef.current;
     const selection = selectedClip || edit?.getSelectedClipInfo?.();
     if (!edit || !selection) return;
 
+    const clip = readClipAt(selection.trackIndex, selection.clipIndex) || selection.clip;
+    const animatedUpdate = buildAnimatedScalarUpdateForClip(clip, updates, getPlaybackTime());
+    if (animatedUpdate.blocked) {
+      showNotice("Move the playhead onto a keyframe, or add a new one first.", "error");
+      return;
+    }
+
     try {
-      await edit.updateClip(selection.trackIndex, selection.clipIndex, updates);
+      await edit.updateClip(selection.trackIndex, selection.clipIndex, animatedUpdate.updates);
       const updatedClip = readClipAt(selection.trackIndex, selection.clipIndex);
       setSelectedClip((current) => ({
         ...(current || selection),
         trackIndex: selection.trackIndex,
         clipIndex: selection.clipIndex,
-        clip: updatedClip || { ...(selection.clip || {}), ...updates },
+        clip: updatedClip || { ...(selection.clip || {}), ...animatedUpdate.updates },
       }));
       syncSteps();
       syncEditorSettings();
+      scheduleTimelineKeyframeRefresh();
       showNotice(statusMessage);
     } catch (error) {
       console.error("Failed to update selected clip", error);
       showNotice(error.message || "Clip update failed.", "error");
     }
-  }, [readClipAt, selectedClip, showNotice, syncEditorSettings, syncSteps]);
+  }, [getPlaybackTime, readClipAt, scheduleTimelineKeyframeRefresh, selectedClip, showNotice, syncEditorSettings, syncSteps]);
 
   const handleDeleteSelectedClip = useCallback(async () => {
     const edit = editRef.current;
@@ -576,12 +1125,13 @@ export default function VideoManualProjectEditorPage() {
       setSelectedClip(null);
       setAddDrawerOpen(false);
       syncSteps();
+      scheduleTimelineKeyframeRefresh();
       showNotice("Clip deleted.");
     } catch (error) {
       console.error("Failed to delete selected clip", error);
       showNotice(error.message || "Delete failed.", "error");
     }
-  }, [selectedClip, showNotice, syncSteps]);
+  }, [scheduleTimelineKeyframeRefresh, selectedClip, showNotice, syncSteps]);
 
   const handleTrimSelectedClip = useCallback(async () => {
     const edit = editRef.current;
@@ -628,12 +1178,13 @@ export default function VideoManualProjectEditorPage() {
       const updatedClip = readClipAt(selection.trackIndex, selection.clipIndex);
       setSelectedClip({ ...selection, clip: updatedClip || { ...clip, length: firstLength } });
       syncSteps();
+      scheduleTimelineKeyframeRefresh();
       showNotice(`Clip split at ${playhead.toFixed(2)}s.`);
     } catch (error) {
       console.error("Failed to trim selected clip", error);
       showNotice(error.message || "Trim failed.", "error");
     }
-  }, [getPlaybackTime, readClipAt, selectedClip, showNotice, syncSteps]);
+  }, [getPlaybackTime, readClipAt, scheduleTimelineKeyframeRefresh, selectedClip, showNotice, syncSteps]);
 
   const handleComingSoon = useCallback((label) => {
     showNotice(`${label} is coming soon.`);
@@ -687,6 +1238,10 @@ export default function VideoManualProjectEditorPage() {
               isOpen={addDrawerOpen}
               activeCategory={activeAddCategory}
               selectedClip={selectedClip}
+              playbackTime={playbackTime}
+              activeKeyframe={activeKeyframe}
+              keyframeDraft={keyframeDraft}
+              isKeyframeEditMode={!!activeKeyframeEditMode}
               outputSize={outputSize}
               outputFps={outputFps}
               backgroundColor={timelineBackground}
@@ -702,6 +1257,12 @@ export default function VideoManualProjectEditorPage() {
               onSetOutputPreset={handleSetOutputPreset}
               onSetOutputFps={handleSetOutputFps}
               onUpdateSelectedClip={handleUpdateSelectedClip}
+              onAddKeyframe={handleAddKeyframeAtCurrentTime}
+              onEnterKeyframeEditMode={handleEnterKeyframeEditMode}
+              onRecordKeyframeEditMode={handleRecordKeyframeEditMode}
+              onCancelKeyframeEditMode={handleCancelKeyframeEditMode}
+              onDeleteKeyframe={handleDeleteKeyframe}
+              onChangeKeyframeDraftValue={handleChangeKeyframeDraftValue}
               onApplyAnimationPreset={handleApplyAnimationPreset}
               onComingSoon={handleComingSoon}
             />
