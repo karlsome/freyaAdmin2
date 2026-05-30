@@ -5,7 +5,7 @@ const FONT_WEIGHTS = [300, 400, 500, 600, 700, 800];
 const TRANSITION_OPTIONS = ["", "fade", "zoom", "slideLeft", "slideRight", "slideUp", "slideDown", "carouselLeft", "carouselRight", "carouselUp", "carouselDown", "reveal", "wipeRight", "wipeLeft"];
 const EFFECT_OPTIONS = ["", "zoomIn", "zoomOut", "slideLeft", "slideRight", "slideUp", "slideDown"];
 
-function Icon({ children, className = "text-[18px]" }) {
+function Icon({ children, className = "text-[16px]" }) {
   return <span className={`material-symbols-outlined ${className}`}>{children}</span>;
 }
 
@@ -29,27 +29,27 @@ function formatInputNumber(value, fallback = 0, decimals = 4) {
 
 function Section({ title, children, action }) {
   return (
-    <section className="border-t border-slate-200 pt-4 dark:border-slate-800">
-      <div className="mb-3 flex items-center justify-between gap-3">
-        <h4 className="text-sm font-black text-slate-950 dark:text-white">{title}</h4>
+    <section className="border-t border-slate-200 pt-3 dark:border-slate-800">
+      <div className="mb-2 flex items-center justify-between gap-2">
+        <h4 className="text-xs font-bold text-slate-950 dark:text-white">{title}</h4>
         {action}
       </div>
-      <div className="space-y-3">{children}</div>
+      <div className="space-y-2">{children}</div>
     </section>
   );
 }
 
 function Field({ label, children }) {
   return (
-    <label className="block space-y-1.5 text-xs font-black text-slate-500 dark:text-slate-400">
+    <label className="block space-y-1 text-[11px] font-semibold text-slate-500 dark:text-slate-400">
       <span>{label}</span>
       {children}
     </label>
   );
 }
 
-const inputClass = "w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-bold text-slate-700 outline-none transition focus:border-cyan-400 focus:ring-2 focus:ring-cyan-500/10 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100";
-const colorInputClass = "h-11 w-full cursor-pointer rounded-xl border border-slate-200 bg-white p-1 dark:border-slate-700 dark:bg-slate-900";
+const inputClass = "w-full rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 outline-none transition focus:border-cyan-400 focus:ring-2 focus:ring-cyan-500/10 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100";
+const colorInputClass = "h-9 w-full cursor-pointer rounded-lg border border-slate-200 bg-white p-1 dark:border-slate-700 dark:bg-slate-900";
 
 function NumberField({ label, value, min, max, step = "0.1", onChange }) {
   return (
@@ -171,13 +171,13 @@ export default function VideoManualClipPropertiesPanel({
 
   return (
     <div className="flex min-h-full flex-col">
-      <div className="flex-1 space-y-5 pb-4">
-        <div className="flex items-start justify-between gap-3">
+      <div className="flex-1 space-y-3 pb-3">
+        <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">
-            <p className="truncate text-base font-black text-slate-950 dark:text-white">{title}</p>
-            <p className="text-sm font-bold text-slate-500 dark:text-slate-400">Track {Number(selectedClip?.trackIndex ?? 0) + 1}</p>
+            <p className="truncate text-sm font-bold text-slate-950 dark:text-white">{title}</p>
+            <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">Track {Number(selectedClip?.trackIndex ?? 0) + 1}</p>
           </div>
-          <span className="rounded-full border border-slate-200 px-3 py-1 text-[10px] font-black uppercase tracking-[0.14em] text-slate-600 dark:border-slate-700 dark:text-slate-300">
+          <span className="rounded-full border border-slate-200 px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.14em] text-slate-600 dark:border-slate-700 dark:text-slate-300">
             {pill}
           </span>
         </div>
@@ -187,7 +187,7 @@ export default function VideoManualClipPropertiesPanel({
             type="button"
             onClick={onTrimClip}
             disabled={!canTrim}
-            className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-slate-100 text-sm font-black text-slate-600 transition hover:bg-slate-200 disabled:cursor-not-allowed disabled:opacity-45 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
+            className="inline-flex h-8 items-center justify-center gap-1.5 rounded-lg bg-slate-100 text-xs font-bold text-slate-600 transition hover:bg-slate-200 disabled:cursor-not-allowed disabled:opacity-45 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
             title={canTrim ? "Split the selected video at the playhead" : "Trim is available for video clips"}
           >
             <Icon>content_cut</Icon>
@@ -196,7 +196,7 @@ export default function VideoManualClipPropertiesPanel({
           <button
             type="button"
             onClick={onDeleteClip}
-            className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-red-50 text-sm font-black text-red-600 transition hover:bg-red-100 dark:bg-red-500/10 dark:text-red-300 dark:hover:bg-red-500/20"
+            className="inline-flex h-8 items-center justify-center gap-1.5 rounded-lg bg-red-50 text-xs font-bold text-red-600 transition hover:bg-red-100 dark:bg-red-500/10 dark:text-red-300 dark:hover:bg-red-500/20"
           >
             <Icon>delete</Icon>
             Delete
@@ -211,15 +211,15 @@ export default function VideoManualClipPropertiesPanel({
                   rows={3}
                   value={asset.text || ""}
                   onChange={(event) => updateAsset({ text: event.target.value }, "Text updated.")}
-                  className={`${inputClass} min-h-[92px] resize-y`}
+                  className={`${inputClass} min-h-[74px] resize-y`}
                 />
               </Field>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 gap-2">
                 <SelectField label="Font" value={fontFamily} options={FONT_OPTIONS} onChange={(value) => updateTextFont({ family: value }, "Font family updated.")} />
                 <NumberField label="Font Size" min="8" step="1" value={fontSize} onChange={(value) => updateNumber(value, (number) => ({ asset: { ...asset, font: { ...font, size: Math.max(8, Math.round(number)) } } }), "Font size updated.")} />
                 <SelectField label="Weight" value={String(fontWeight)} options={FONT_WEIGHTS.map(String)} onChange={(value) => updateTextFont({ weight: Number(value) }, "Font weight updated.")} />
               </div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 gap-2">
                 <SelectField label="Horizontal Align" value={align.horizontal || "center"} options={["left", "center", "right"]} onChange={(value) => updateAsset({ align: { ...align, horizontal: value } }, "Alignment updated.")} />
                 <SelectField label="Vertical Align" value={align.vertical || "middle"} options={["top", "middle", "bottom"]} onChange={(value) => updateAsset({ align: { ...align, vertical: value } }, "Alignment updated.")} />
               </div>
@@ -228,7 +228,7 @@ export default function VideoManualClipPropertiesPanel({
 
             <Section title="Color">
               <ColorField label="Text Color" value={textColor} onChange={(value) => updateTextFont({ color: value }, "Text color updated.")} />
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 gap-2">
                 <ColorField label="Background" value={textBackgroundColor} onChange={(value) => updateTextBackground({ color: value }, "Background color updated.")} />
                 <NumberField label="BG Opacity" min="0" max="1" step="0.05" value={textBackgroundOpacity} onChange={(value) => updateNumber(value, (number) => ({ asset: { ...asset, background: { ...background, opacity: Math.max(0, Math.min(1, Number(number.toFixed(2)))) } } }), "Background opacity updated.")} />
                 <ColorField label="Stroke Color" value={strokeColor} onChange={(value) => updateTextStroke({ color: value }, "Stroke color updated.")} />
@@ -240,7 +240,7 @@ export default function VideoManualClipPropertiesPanel({
 
         {isMedia ? (
           <Section title={mediaKind}>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 gap-2">
               {assetType === "video" ? (
                 <NumberField label="Trim" min="0" step="0.1" value={mediaTrim} onChange={(value) => updateNumber(value, (number) => ({ asset: { ...asset, trim: Math.max(0, Number(number.toFixed(3))) } }), "Trim updated.")} />
               ) : null}
@@ -252,9 +252,9 @@ export default function VideoManualClipPropertiesPanel({
               <button
                 type="button"
                 onClick={() => updateAsset({ volume: mediaVolume > 0 ? 0 : 1 }, mediaVolume > 0 ? "Muted." : "Unmuted.")}
-                className={`inline-flex h-9 items-center justify-center gap-2 rounded-xl px-3 text-xs font-black transition ${mediaVolume <= 0 ? "bg-cyan-500 text-white hover:bg-cyan-600" : "bg-slate-100 text-slate-700 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"}`}
+                className={`inline-flex h-8 items-center justify-center gap-1.5 rounded-lg px-2.5 text-[11px] font-bold transition ${mediaVolume <= 0 ? "bg-cyan-500 text-white hover:bg-cyan-600" : "bg-slate-100 text-slate-700 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"}`}
               >
-                <Icon className="text-[16px]">{mediaVolume <= 0 ? "volume_off" : "volume_up"}</Icon>
+                <Icon className="text-[15px]">{mediaVolume <= 0 ? "volume_off" : "volume_up"}</Icon>
                 {mediaVolume <= 0 ? "Unmute" : "Mute"}
               </button>
             ) : null}
@@ -263,7 +263,7 @@ export default function VideoManualClipPropertiesPanel({
 
         {assetType === "video" ? (
           <Section title="Crop">
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 gap-2">
               {["top", "right", "bottom", "left"].map((field) => (
                 <NumberField
                   key={field}
@@ -281,7 +281,7 @@ export default function VideoManualClipPropertiesPanel({
 
         {isShape ? (
           <Section title="Shape">
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 gap-2">
               <ColorField label="Fill" value={shapeFill} onChange={(value) => updateShapeStyle({ fill: value })} />
               <ColorField label="Stroke" value={shapeStroke} onChange={(value) => updateShapeStyle({ stroke: value })} />
             </div>
@@ -290,7 +290,7 @@ export default function VideoManualClipPropertiesPanel({
         ) : null}
 
         <Section title="Transform">
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 gap-2">
             <NumberField label="Scale" min="0.05" step="0.05" value={scale} onChange={(value) => updateNumber(value, (number) => ({ scale: Math.max(0.05, Number(number.toFixed(3))) }), "Scale updated.")} />
             <NumberField label="Opacity" min="0" max="1" step="0.05" value={opacity} onChange={(value) => updateNumber(value, (number) => ({ opacity: Math.max(0, Math.min(1, Number(number.toFixed(2)))) }), "Opacity updated.")} />
             <NumberField label="X Position" min="-1" max="1" step="0.05" value={formatInputNumber(offset.x, 0, 4)} onChange={(value) => updateNumber(value, (number) => ({ offset: { ...offset, x: Number(number.toFixed(4)) } }), "X position updated.")} />
@@ -300,11 +300,11 @@ export default function VideoManualClipPropertiesPanel({
         </Section>
 
         <Section title="Timing">
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 gap-2">
             <NumberField label="Start" min="0" step="0.1" value={start} onChange={(value) => updateNumber(value, (number) => ({ start: Math.max(0, Number(number.toFixed(3))) }), "Start updated.")} />
             <NumberField label="Length" min="0.1" step="0.1" value={length} onChange={(value) => updateNumber(value, (number) => ({ length: Math.max(0.1, Number(number.toFixed(3))) }), "Length updated.")} />
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 gap-2">
             <SelectField label="Transition In" value={transitionIn} options={TRANSITION_OPTIONS} onChange={(value) => update({ transition: value || transitionOut ? { ...(clip.transition || {}), in: value || undefined } : undefined }, "Transition updated.")} />
             <SelectField label="Transition Out" value={transitionOut} options={TRANSITION_OPTIONS} onChange={(value) => update({ transition: transitionIn || value ? { ...(clip.transition || {}), out: value || undefined } : undefined }, "Transition updated.")} />
           </div>
@@ -312,7 +312,7 @@ export default function VideoManualClipPropertiesPanel({
         </Section>
 
         <Section title="Size & Position">
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 gap-2">
             <NumberField label="Width" min="1" step="1" value={width} onChange={(value) => updateNumber(value, (number) => ({ width: Math.max(1, Math.round(number)) }), "Width updated.")} />
             <NumberField label="Height" min="1" step="1" value={height} onChange={(value) => updateNumber(value, (number) => ({ height: Math.max(1, Math.round(number)) }), "Height updated.")} />
           </div>
@@ -321,13 +321,13 @@ export default function VideoManualClipPropertiesPanel({
         <Section
           title="Animation"
           action={(
-            <button type="button" onClick={onOpenAnimationPanel} className="inline-flex h-8 items-center gap-1 rounded-full border border-slate-200 px-3 text-xs font-black text-slate-600 transition hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800">
-              <Icon className="text-[15px]">show_chart</Icon>
+            <button type="button" onClick={onOpenAnimationPanel} className="inline-flex h-7 items-center gap-1 rounded-full border border-slate-200 px-2.5 text-[11px] font-bold text-slate-600 transition hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800">
+              <Icon className="text-[14px]">show_chart</Icon>
               Animation
             </button>
           )}
         >
-          <p className="rounded-xl border border-dashed border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-400">
+          <p className="rounded-lg border border-dashed border-slate-200 bg-slate-50 px-2.5 py-2 text-[11px] font-semibold text-slate-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-400">
             Use the Animation tab for presets and keyframe motion controls.
           </p>
         </Section>
