@@ -90,8 +90,6 @@ function ColorField({ label, value, onChange }) {
 export default function VideoManualClipPropertiesPanel({
   selectedClip,
   onUpdateClip,
-  onTrimClip,
-  onDeleteClip,
   onOpenAnimationPanel,
 }) {
   const clip = selectedClip?.clip || {};
@@ -104,7 +102,6 @@ export default function VideoManualClipPropertiesPanel({
   const mediaKind = assetType === "audio" ? "Audio" : assetType === "image" ? "Image" : "Video";
   const title = isText ? "Selected Text" : isShape ? "Selected Shape" : `Selected ${mediaKind}`;
   const pill = isText ? "Text" : isShape ? "Shapes" : "Media";
-  const canTrim = assetType === "video";
 
   const update = (updates, message) => onUpdateClip(updates, message);
   const updateNumber = (value, buildUpdate, message) => {
@@ -180,27 +177,6 @@ export default function VideoManualClipPropertiesPanel({
           <span className="rounded-full border border-slate-200 px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.14em] text-slate-600 dark:border-slate-700 dark:text-slate-300">
             {pill}
           </span>
-        </div>
-
-        <div className="grid grid-cols-2 gap-2">
-          <button
-            type="button"
-            onClick={onTrimClip}
-            disabled={!canTrim}
-            className="inline-flex h-8 items-center justify-center gap-1.5 rounded-lg bg-slate-100 text-xs font-bold text-slate-600 transition hover:bg-slate-200 disabled:cursor-not-allowed disabled:opacity-45 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
-            title={canTrim ? "Split the selected video at the playhead" : "Trim is available for video clips"}
-          >
-            <Icon>content_cut</Icon>
-            Trim
-          </button>
-          <button
-            type="button"
-            onClick={onDeleteClip}
-            className="inline-flex h-8 items-center justify-center gap-1.5 rounded-lg bg-red-50 text-xs font-bold text-red-600 transition hover:bg-red-100 dark:bg-red-500/10 dark:text-red-300 dark:hover:bg-red-500/20"
-          >
-            <Icon>delete</Icon>
-            Delete
-          </button>
         </div>
 
         {isText ? (

@@ -106,8 +106,6 @@ export default function VideoManualAddElementsSidebar({
   onSetOutputPreset,
   onSetOutputFps,
   onUpdateSelectedClip,
-  onTrimSelectedClip,
-  onDeleteSelectedClip,
   onApplyAnimationPreset,
   onComingSoon,
 }) {
@@ -150,8 +148,6 @@ export default function VideoManualAddElementsSidebar({
         <VideoManualClipPropertiesPanel
           selectedClip={selectedClip}
           onUpdateClip={onUpdateSelectedClip}
-          onTrimClip={onTrimSelectedClip}
-          onDeleteClip={onDeleteSelectedClip}
           onOpenAnimationPanel={() => onSelectCategory("animation")}
         />
       );

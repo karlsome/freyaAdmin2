@@ -3,6 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { Canvas, Controls, Edit, Timeline, UIController } from "@shotstack/shotstack-studio";
 import VideoManualAddElementsSidebar from "../components/videoManual/VideoManualAddElementsSidebar";
 import VideoManualAssetLibraryModal from "../components/videoManual/VideoManualAssetLibraryModal";
+import VideoManualClipActionBar from "../components/videoManual/VideoManualClipActionBar";
 import VideoManualEditorToolbar from "../components/videoManual/VideoManualEditorToolbar";
 import VideoManualStepsPanel from "../components/videoManual/VideoManualStepsPanel";
 import {
@@ -701,15 +702,14 @@ export default function VideoManualProjectEditorPage() {
               onSetOutputPreset={handleSetOutputPreset}
               onSetOutputFps={handleSetOutputFps}
               onUpdateSelectedClip={handleUpdateSelectedClip}
-              onTrimSelectedClip={handleTrimSelectedClip}
-              onDeleteSelectedClip={handleDeleteSelectedClip}
               onApplyAnimationPreset={handleApplyAnimationPreset}
               onComingSoon={handleComingSoon}
             />
           </div>
 
-          <div className="relative z-20 h-[280px] flex-shrink-0 border-t border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-950">
-            <div ref={timelineElRef} data-shotstack-timeline className="video-manual-timeline-host h-full w-full" />
+          <div className="relative z-20 flex h-[280px] flex-shrink-0 flex-col border-t border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-950">
+            <VideoManualClipActionBar selectedClip={selectedClip} onTrimClip={handleTrimSelectedClip} onDeleteClip={handleDeleteSelectedClip} />
+            <div ref={timelineElRef} data-shotstack-timeline className="video-manual-timeline-host min-h-0 flex-1 w-full" />
             <style dangerouslySetInnerHTML={{ __html: `
               .video-manual-timeline-host .ss-ruler-marker:first-child {
                 align-items: flex-start;
