@@ -2610,6 +2610,13 @@ export async function fetchNgInspectionCount() {
   return Array.isArray(recs) ? recs.length : 0;
 }
 
+export async function fetchCameraStreamUrl() {
+  const res = await fetch(`${BASE_URL}api/camera-stream-url`);
+  const data = await _readJson(res);
+  if (!res.ok) throw new Error(data?.error || `Camera stream URL fetch failed (${res.status})`);
+  return String(data.url || "");
+}
+
 export async function translateJapaneseText(text) {
   const query = new URLSearchParams({
     q: text,
