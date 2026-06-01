@@ -4,9 +4,7 @@ import IconButton from "./IconButton";
 import {
   archiveEquipmentRecord,
   createMasterRecord,
-  createWorkerRecord,
   fetchAllEquipmentHistory,
-  fetchEquipmentHistory,
   fetchFactoryDBRecords,
   fetchSetsubiDBRecords,
   updateMasterRecord,
@@ -29,7 +27,6 @@ function toBase64(file) {
     reader.readAsDataURL(file);
   });
 }
-import EquipmentEventModal from "./EquipmentEventModal";
 import EquipmentHistoryBinWorkspace from "./EquipmentHistoryBinWorkspace";
 import SetsubiRecordModal from "./SetsubiRecordModal";
 
@@ -80,35 +77,6 @@ function MediaLightbox({ url, onClose }) {
       </div>
     </div>,
     document.body
-  );
-}
-
-function EventCard({ event, onOpen }) {
-  const tags = Array.isArray(event.tags) ? event.tags : [];
-
-  return (
-    <button
-      type="button"
-      onClick={() => onOpen(event)}
-      className="w-full rounded-2xl border border-separator/40 bg-surface p-4 text-left transition hover:border-outline-variant/40 hover:bg-surface-container/50"
-    >
-      <p className="text-sm font-semibold text-on-surface">{event["発生事案"] || "—"}</p>
-      <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1">
-        {event.eventDate
-          ? <span className="text-[11px] font-bold text-primary">{event.eventDate}</span>
-          : <span className="text-[11px] text-on-surface-variant/50">日付未記入</span>}
-        {event["名前"] && <span className="text-[11px] text-on-surface-variant">{event["名前"]}</span>}
-      </div>
-      {tags.length > 0 && (
-        <div className="mt-2 flex flex-wrap gap-1">
-          {tags.map((tag) => (
-            <span key={tag} className="rounded-full bg-surface-container px-2 py-0.5 text-[10px] font-bold text-on-surface-variant">
-              {tag}
-            </span>
-          ))}
-        </div>
-      )}
-    </button>
   );
 }
 
@@ -423,30 +391,23 @@ function EventDetailModal({ event, canEdit, username, role, onClose, onSaved, on
 
 // ── Right-hand detail panel (inline, not a popup) ────────────────────────────
 
-function EquipmentDetailPanel({ equipment, onClose, onEdit, onAddEvent, onViewDetail, refreshKey }) {
-  const [history, setHistory] = useState([]);
-  const [historyLoading, setHistoryLoading] = useState(false);
-  const [historyError, setHistoryError] = useState("");
-
-  useEffect(() => {
-    if (!equipment) return undefined;
-    const equipmentId = equipment._id?.$oid ?? equipment._id;
-    if (!equipmentId) return undefined;
-
-    let active = true;
-    setHistory([]);
-    setHistoryError("");
-    setHistoryLoading(true);
-
-    fetchEquipmentHistory(String(equipmentId))
-      .then((records) => { if (active) setHistory(Array.isArray(records) ? records : []); })
-      .catch((err) => { if (active) setHistoryError(err?.message || "Failed to load history."); })
-      .finally(() => { if (active) setHistoryLoading(false); });
-
-    return () => { active = false; };
-  }, [equipment, refreshKey]);
-
+function EquipmentDetailPanel({ equipment, onClose, onEdit }) {
   if (!equipment) return null;
+
+  const fields = [
+    { label: "設備名",            value: equipment.name },
+    { label: "工場",              value: equipment["工場"] },
+    { label: "設置日",            value: equipment.installationDate },
+    { label: "Model",            value: equipment.model },
+    { label: "Size",             value: equipment.size },
+    { label: "Serial No.",       value: equipment.serialNo },
+    { label: "Manufacture Date", value: equipment.manufactureDate },
+    { label: "Voltage",          value: equipment.voltage },
+    { label: "Manufacturer",     value: equipment.manufacturer },
+    { label: "Contact Via",      value: equipment.contactVia },
+    { label: "No. of Heads",     value: equipment.numberOfHeads },
+    { label: "Length",           value: equipment.lengthMm ? `${equipment.lengthMm} mm` : undefined },
+  ];
 
   return (
     <div className="rounded-2xl border border-separator/40 bg-surface-container shadow-sm overflow-hidden">
@@ -460,13 +421,6 @@ function EquipmentDetailPanel({ equipment, onClose, onEdit, onAddEvent, onViewDe
           )}
         </div>
         <div className="flex shrink-0 items-center gap-2">
-          {onAddEvent && (
-            <button type="button" onClick={() => onAddEvent(equipment)}
-              className="inline-flex items-center gap-1 rounded-xl bg-primary/10 px-2.5 py-1.5 text-[10px] font-bold text-primary transition hover:bg-primary/20">
-              <span className="material-symbols-outlined" style={{ fontSize: 12 }}>add</span>
-              事案を追加
-            </button>
-          )}
           {onEdit && (
             <button type="button" onClick={() => onEdit(equipment)}
               className="flex h-9 items-center gap-1.5 rounded-2xl border border-separator/40 bg-surface px-3 text-xs font-bold text-on-surface transition hover:bg-surface-container-high">
@@ -482,7 +436,6 @@ function EquipmentDetailPanel({ equipment, onClose, onEdit, onAddEvent, onViewDe
       </div>
 
       <div className="overflow-y-auto px-6 py-6" style={{ maxHeight: "calc(100vh - 220px)" }}>
-        {/* Image */}
         {equipment.imageURL && (
           <div className="mb-4 overflow-hidden rounded-2xl border border-separator/40 bg-surface">
             <img
@@ -494,15 +447,10 @@ function EquipmentDetailPanel({ equipment, onClose, onEdit, onAddEvent, onViewDe
           </div>
         )}
 
-        {/* Equipment details */}
-        <section className="mb-6">
+        <section>
           <p className="mb-3 text-[10px] font-bold uppercase tracking-[0.18em] text-outline">設備情報</p>
           <dl className="grid grid-cols-2 gap-3 rounded-2xl border border-separator/40 bg-surface px-5 py-4">
-            {[
-              { label: "設備名", value: equipment.name },
-              { label: "工場",   value: equipment["工場"] },
-              { label: "設置日", value: equipment.installationDate },
-            ].map(({ label, value }) =>
+            {fields.map(({ label, value }) =>
               value ? (
                 <div key={label} className="flex flex-col gap-0.5">
                   <dt className="text-[10px] font-bold uppercase tracking-[0.18em] text-outline">{label}</dt>
@@ -511,38 +459,6 @@ function EquipmentDetailPanel({ equipment, onClose, onEdit, onAddEvent, onViewDe
               ) : null
             )}
           </dl>
-        </section>
-
-        {/* Event history */}
-        <section>
-          <div className="mb-3 flex items-center justify-between">
-            <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-outline">事案履歴</p>
-            {!historyLoading && (
-              <span className="text-[11px] text-on-surface-variant">{history.length} 件</span>
-            )}
-          </div>
-
-          {historyLoading && (
-            <div className="flex items-center gap-2 py-4 text-sm text-on-surface-variant">
-              <span className="material-symbols-outlined animate-spin" style={{ fontSize: 16 }}>progress_activity</span>
-              読み込み中…
-            </div>
-          )}
-          {!historyLoading && historyError && (
-            <div className="rounded-2xl bg-error/10 px-4 py-3 text-sm text-error">{historyError}</div>
-          )}
-          {!historyLoading && !historyError && history.length === 0 && (
-            <div className="rounded-2xl border border-separator/40 bg-surface px-4 py-6 text-center text-sm italic text-on-surface-variant">
-              事案の記録はまだありません。
-            </div>
-          )}
-          {!historyLoading && !historyError && history.length > 0 && (
-            <div className="flex flex-col gap-3">
-              {history.map((event, i) => (
-                <EventCard key={event._id?.$oid ?? event._id ?? i} event={event} onOpen={onViewDetail} />
-              ))}
-            </div>
-          )}
         </section>
       </div>
     </div>
@@ -646,11 +562,6 @@ export default function SetsubiDBWorkspace({ refreshToken, onFlash }) {
   const [editingRecord, setEditingRecord] = useState(null);
   const [defaultFactory, setDefaultFactory] = useState("");
   const [equipSubmitting, setEquipSubmitting] = useState(false);
-
-  // Event (事案) modal
-  const [eventModalOpen, setEventModalOpen] = useState(false);
-  const [eventModalEquipment, setEventModalEquipment] = useState(null);
-  const [eventSubmitting, setEventSubmitting] = useState(false);
 
   // Inline detail panel
   const [viewingEquipment, setViewingEquipment] = useState(null);
@@ -768,6 +679,15 @@ export default function SetsubiDBWorkspace({ refreshToken, onFlash }) {
         工場: draft["工場"] || undefined,
         installationDate: draft.installationDate || undefined,
         imageURL: draft.imageURL || undefined,
+        model: draft.model || undefined,
+        size: draft.size || undefined,
+        serialNo: draft.serialNo || undefined,
+        manufactureDate: draft.manufactureDate || undefined,
+        voltage: draft.voltage || undefined,
+        manufacturer: draft.manufacturer || undefined,
+        contactVia: draft.contactVia || undefined,
+        numberOfHeads: draft.numberOfHeads || undefined,
+        lengthMm: draft.lengthMm || undefined,
       };
       const username = authUser?.username || "unknown";
       if (editingRecord) {
@@ -808,45 +728,6 @@ export default function SetsubiDBWorkspace({ refreshToken, onFlash }) {
       onFlash?.({ type: "error", message: err?.message || "Failed to archive equipment record." });
     } finally {
       setEquipSubmitting(false);
-    }
-  }
-
-  // ── Event (事案) CRUD ────────────────────────────────────────────────────────
-
-  function openEventModal(equipment) {
-    setEventModalEquipment(equipment);
-    setEventModalOpen(true);
-  }
-
-  function closeEventModal() {
-    setEventModalOpen(false);
-    setEventModalEquipment(null);
-  }
-
-  async function handleSaveEvent(draft) {
-    setEventSubmitting(true);
-    try {
-      const payload = {
-        equipmentId: draft.equipmentId || undefined,
-        equipmentName: draft.equipmentName || undefined,
-        工場: draft["工場"] || undefined,
-        発生事案: draft["発生事案"] || undefined,
-        詳細: draft["詳細"] || undefined,
-        名前: draft["名前"] || undefined,
-        eventDate: draft.eventDate || undefined,
-        tags: draft.tags?.length ? draft.tags : undefined,
-        imageURLs: draft.imageURLs?.length ? draft.imageURLs : undefined,
-      };
-      await createMasterRecord({ data: payload, username: authUser?.username || "unknown", role: authUser?.role, tabKey: "equipmentHistoryDB" });
-      if (draft._newWorkerName) {
-        createWorkerRecord(draft._newWorkerName).catch(() => {});
-      }
-      setSuccessMessage("事案を登録しました。");
-      closeEventModal();
-    } catch (err) {
-      onFlash?.({ type: "error", message: err?.message || "Failed to save event record." });
-    } finally {
-      setEventSubmitting(false);
     }
   }
 
@@ -950,9 +831,6 @@ export default function SetsubiDBWorkspace({ refreshToken, onFlash }) {
                     equipment={viewingEquipment}
                     onClose={() => setViewingEquipment(null)}
                     onEdit={canEdit ? openEditEquipModal : undefined}
-                    onAddEvent={canEdit ? openEventModal : undefined}
-                    onViewDetail={setViewingEvent}
-                    refreshKey={historyRefreshKey}
                   />
                 </div>
               )}
@@ -1070,15 +948,6 @@ export default function SetsubiDBWorkspace({ refreshToken, onFlash }) {
         onClose={closeEquipModal}
         onSubmit={handleSaveEquipment}
         onArchive={editingRecord ? handleArchiveEquipment : undefined}
-      />
-
-      <EquipmentEventModal
-        open={eventModalOpen}
-        equipment={eventModalEquipment}
-        submitting={eventSubmitting}
-        username={authUser?.username || "unknown"}
-        onClose={closeEventModal}
-        onSubmit={handleSaveEvent}
       />
 
       <SuccessModal message={successMessage} onClose={() => setSuccessMessage("")} />
