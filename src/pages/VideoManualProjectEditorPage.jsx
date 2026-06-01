@@ -53,10 +53,28 @@ const CANVAS_MIN_ZOOM = 0.1;
 const CANVAS_MAX_ZOOM = 4;
 const TIMELINE_DEFAULT_HEIGHT = 280;
 const TIMELINE_MIN_HEIGHT = 180;
-const TIMELINE_MAX_HEIGHT = 560;
+const TIMELINE_MAX_HEIGHT = 720;
+const TIMELINE_ACTION_BAR_HEIGHT = 36;
+const TIMELINE_TOOLBAR_HEIGHT = 64;
+const TIMELINE_RULER_HEIGHT = 32;
+const TIMELINE_FIT_PADDING = 16;
 const EDITOR_CANVAS_MIN_HEIGHT = 180;
 const TIMELINE_RESIZE_KEYBOARD_STEP = 24;
 const KEYFRAME_DIMENSION_CHANGE_EPSILON = 0.5;
+const TIMELINE_TRACK_HEIGHTS = {
+  video: 72,
+  image: 72,
+  audio: 48,
+  text: 36,
+  "rich-text": 36,
+  shape: 36,
+  caption: 36,
+  html: 48,
+  luma: 72,
+  svg: 72,
+  empty: 48,
+  default: 48,
+};
 
 function clampNumber(value, min, max) {
   return Math.max(min, Math.min(max, value));
@@ -65,6 +83,20 @@ function clampNumber(value, min, max) {
 function getPositiveDimension(value) {
   const numericValue = Number(value);
   return Number.isFinite(numericValue) && numericValue > 0 ? numericValue : null;
+}
+
+function getTimelineTrackHeight(track) {
+  const assetType = track?.clips?.[0]?.asset?.type || "empty";
+  return TIMELINE_TRACK_HEIGHTS[assetType] || TIMELINE_TRACK_HEIGHTS.default;
+}
+
+function getTimelineFitHeight(editData) {
+  const tracks = editData?.timeline?.tracks || [];
+  const tracksHeight = tracks.reduce((total, track) => total + getTimelineTrackHeight(track), 0);
+  return Math.max(
+    TIMELINE_DEFAULT_HEIGHT,
+    TIMELINE_ACTION_BAR_HEIGHT + TIMELINE_TOOLBAR_HEIGHT + TIMELINE_RULER_HEIGHT + tracksHeight + TIMELINE_FIT_PADDING,
+  );
 }
 
 function getVisualScaleFromDimensions(currentClip, sourceClip, targetTime) {
@@ -192,6 +224,7 @@ export default function VideoManualProjectEditorPage() {
   const animatedClipStateByIdRef = useRef({});
   const visualResizeSourceByIdRef = useRef({});
   const timelineResizeFrameRef = useRef(null);
+  const timelineHeightUserSetRef = useRef(false);
 
   useEffect(() => {
     selectedClipRef.current = selectedClip;
@@ -265,9 +298,11 @@ export default function VideoManualProjectEditorPage() {
     if (!project) return;
     const editData = project.edit || DEFAULT_VIDEO_MANUAL_TEMPLATE;
     assetSourceMapRef.current = { ...(project.assetSourceMap || {}) };
+    timelineHeightUserSetRef.current = false;
     setTimelineBackground(editData?.timeline?.background || DEFAULT_VIDEO_MANUAL_TEMPLATE.timeline.background);
     setOutputSize(getOutputSize(editData));
     setOutputFps(getOutputFps(editData));
+    setTimelineHeight(getTimelineFitHeight(editData));
   }, [project]);
 
   const readClipAt = useCallback((trackIndex, clipIndex) => {
@@ -424,6 +459,19 @@ export default function VideoManualProjectEditorPage() {
     });
   }, [scheduleTimelineKeyframeRefresh]);
 
+  const fitTimelineToEdit = useCallback((force = false) => {
+    if (!force && timelineHeightUserSetRef.current) return;
+
+    const editData = editRef.current?.getEdit?.() || project?.edit || DEFAULT_VIDEO_MANUAL_TEMPLATE;
+    const fitHeight = getTimelineFitHeight(editData);
+    setTimelineHeight((currentHeight) => {
+      const { min, max } = getTimelineHeightBounds();
+      const targetHeight = force ? fitHeight : Math.max(currentHeight, fitHeight);
+      const nextHeight = Math.round(clampNumber(targetHeight, min, max));
+      return nextHeight === currentHeight ? currentHeight : nextHeight;
+    });
+  }, [getTimelineHeightBounds, project?.edit]);
+
   useEffect(() => () => {
     if (timelineResizeFrameRef.current) window.cancelAnimationFrame(timelineResizeFrameRef.current);
   }, []);
@@ -461,6 +509,7 @@ export default function VideoManualProjectEditorPage() {
     const handlePointerMove = (moveEvent) => {
       moveEvent.preventDefault();
       const { min, max } = getTimelineHeightBounds();
+      timelineHeightUserSetRef.current = true;
       setTimelineHeight(Math.round(clampNumber(startHeight + startY - moveEvent.clientY, min, max)));
     };
 
@@ -488,6 +537,7 @@ export default function VideoManualProjectEditorPage() {
     else if (event.key !== "Home" && event.key !== "End") return;
 
     event.preventDefault();
+    timelineHeightUserSetRef.current = true;
     setTimelineHeight((currentHeight) => {
       const { min, max } = getTimelineHeightBounds();
       if (event.key === "Home") return min;
@@ -764,6 +814,7 @@ export default function VideoManualProjectEditorPage() {
           syncSteps();
           syncEditorSettings();
           syncSelectedClipFromDocument();
+          fitTimelineToEdit();
           scheduleTimelineKeyframeRefresh();
         };
 
@@ -786,7 +837,8 @@ export default function VideoManualProjectEditorPage() {
           });
         }));
 
-        edit.play();
+        edit.pause?.();
+        fitTimelineToEdit(true);
         syncAll();
         scheduleTimelineKeyframeRefresh();
       } catch (error) {
@@ -810,7 +862,7 @@ export default function VideoManualProjectEditorPage() {
       uiRef.current = null;
       setSelectedClip(null);
     };
-  }, [installAnimatedLiveUpdateInterceptor, project, readClipAt, rememberAnimatedClipStateByLocation, scheduleTimelineKeyframeRefresh, syncAnimatedClipUpdateFromEvent, syncEditorSettings, syncSelectedClip, syncSelectedClipFromDocument, syncSteps]);
+  }, [fitTimelineToEdit, installAnimatedLiveUpdateInterceptor, project, readClipAt, rememberAnimatedClipStateByLocation, scheduleTimelineKeyframeRefresh, syncAnimatedClipUpdateFromEvent, syncEditorSettings, syncSelectedClip, syncSelectedClipFromDocument, syncSteps]);
 
   const getPlaybackTime = useCallback(() => {
     const playbackTime = Number(editRef.current?.playbackTime || 0);
@@ -1544,7 +1596,10 @@ export default function VideoManualProjectEditorPage() {
               title="Drag to resize timeline"
               onPointerDown={handleTimelineResizePointerDown}
               onKeyDown={handleTimelineResizeKeyDown}
-              onDoubleClick={() => setTimelineHeight(TIMELINE_DEFAULT_HEIGHT)}
+              onDoubleClick={() => {
+                timelineHeightUserSetRef.current = false;
+                fitTimelineToEdit(true);
+              }}
               className={`group absolute -top-4 left-0 right-0 z-30 flex h-8 cursor-row-resize touch-none items-center justify-center outline-none ${timelineResizing ? "bg-blue-500/10" : ""}`}
             >
               <span className={`flex h-5 w-20 items-center justify-center gap-1 rounded-full border shadow-sm ring-1 ring-black/5 transition-all duration-200 ease-out group-hover:w-28 group-hover:gap-1.5 group-focus-visible:w-28 group-focus-visible:gap-1.5 ${timelineResizing ? "w-28 gap-1.5 border-blue-400 bg-blue-50 ring-blue-400/30" : "border-slate-200 bg-white group-hover:border-blue-300 group-hover:bg-blue-50 group-hover:ring-blue-300/30 group-focus-visible:border-blue-400 group-focus-visible:bg-blue-50 group-focus-visible:ring-2 group-focus-visible:ring-blue-400/40 dark:border-slate-700 dark:bg-slate-900 dark:ring-white/10 dark:group-hover:border-blue-500 dark:group-hover:bg-slate-800"}`}>
