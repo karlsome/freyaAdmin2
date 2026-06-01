@@ -51,7 +51,16 @@ import {
 const CANVAS_ZOOM_STEP = 1.12;
 const CANVAS_MIN_ZOOM = 0.1;
 const CANVAS_MAX_ZOOM = 4;
+const TIMELINE_DEFAULT_HEIGHT = 280;
+const TIMELINE_MIN_HEIGHT = 180;
+const TIMELINE_MAX_HEIGHT = 560;
+const EDITOR_CANVAS_MIN_HEIGHT = 180;
+const TIMELINE_RESIZE_KEYBOARD_STEP = 24;
 const KEYFRAME_DIMENSION_CHANGE_EPSILON = 0.5;
+
+function clampNumber(value, min, max) {
+  return Math.max(min, Math.min(max, value));
+}
 
 function getPositiveDimension(value) {
   const numericValue = Number(value);
@@ -150,6 +159,8 @@ export default function VideoManualProjectEditorPage() {
   const [playbackTime, setPlaybackTime] = useState(0);
   const [keyframeDraft, setKeyframeDraft] = useState(null);
   const [keyframeEditMode, setKeyframeEditMode] = useState(null);
+  const [timelineHeight, setTimelineHeight] = useState(TIMELINE_DEFAULT_HEIGHT);
+  const [timelineResizing, setTimelineResizing] = useState(false);
   const [timelineBackground, setTimelineBackground] = useState(DEFAULT_VIDEO_MANUAL_TEMPLATE.timeline.background);
   const [outputSize, setOutputSize] = useState(DEFAULT_VIDEO_MANUAL_TEMPLATE.output.size);
   const [outputFps, setOutputFps] = useState(DEFAULT_VIDEO_MANUAL_TEMPLATE.output.fps);
@@ -164,6 +175,7 @@ export default function VideoManualProjectEditorPage() {
   });
 
   const editRef = useRef(null);
+  const editorBodyRef = useRef(null);
   const canvasRef = useRef(null);
   const timelineRef = useRef(null);
   const controlsRef = useRef(null);
@@ -179,6 +191,7 @@ export default function VideoManualProjectEditorPage() {
   const syncingAnimatedClipUpdateRef = useRef(false);
   const animatedClipStateByIdRef = useRef({});
   const visualResizeSourceByIdRef = useRef({});
+  const timelineResizeFrameRef = useRef(null);
 
   useEffect(() => {
     selectedClipRef.current = selectedClip;
@@ -392,6 +405,96 @@ export default function VideoManualProjectEditorPage() {
   const scheduleTimelineKeyframeRefresh = useCallback(() => {
     window.requestAnimationFrame(() => refreshTimelineKeyframeDiamonds());
   }, [refreshTimelineKeyframeDiamonds]);
+
+  const getTimelineHeightBounds = useCallback(() => {
+    const editorBodyHeight = editorBodyRef.current?.getBoundingClientRect().height || 0;
+    const layoutMaxHeight = editorBodyHeight > 0 ? editorBodyHeight - EDITOR_CANVAS_MIN_HEIGHT : TIMELINE_MAX_HEIGHT;
+    const max = Math.max(TIMELINE_MIN_HEIGHT, Math.min(TIMELINE_MAX_HEIGHT, layoutMaxHeight));
+    return { min: TIMELINE_MIN_HEIGHT, max };
+  }, []);
+
+  const resizeEditorSurfaces = useCallback(() => {
+    if (timelineResizeFrameRef.current) window.cancelAnimationFrame(timelineResizeFrameRef.current);
+    timelineResizeFrameRef.current = window.requestAnimationFrame(() => {
+      timelineResizeFrameRef.current = null;
+      canvasRef.current?.resize?.();
+      timelineRef.current?.resize?.();
+      timelineRef.current?.refresh?.();
+      scheduleTimelineKeyframeRefresh();
+    });
+  }, [scheduleTimelineKeyframeRefresh]);
+
+  useEffect(() => () => {
+    if (timelineResizeFrameRef.current) window.cancelAnimationFrame(timelineResizeFrameRef.current);
+  }, []);
+
+  useEffect(() => {
+    resizeEditorSurfaces();
+  }, [resizeEditorSurfaces, timelineHeight]);
+
+  useEffect(() => {
+    const editorBody = editorBodyRef.current;
+    if (!project || !editorBody || typeof ResizeObserver === "undefined") return undefined;
+
+    const resizeObserver = new ResizeObserver(() => {
+      setTimelineHeight((currentHeight) => {
+        const { min, max } = getTimelineHeightBounds();
+        return Math.round(clampNumber(currentHeight, min, max));
+      });
+      resizeEditorSurfaces();
+    });
+
+    resizeObserver.observe(editorBody);
+    return () => resizeObserver.disconnect();
+  }, [getTimelineHeightBounds, project, resizeEditorSurfaces]);
+
+  const handleTimelineResizePointerDown = useCallback((event) => {
+    if (event.button != null && event.button !== 0) return;
+
+    event.preventDefault();
+    const startY = event.clientY;
+    const startHeight = timelineHeight;
+    const handleElement = event.currentTarget;
+    handleElement.setPointerCapture?.(event.pointerId);
+    setTimelineResizing(true);
+
+    const handlePointerMove = (moveEvent) => {
+      moveEvent.preventDefault();
+      const { min, max } = getTimelineHeightBounds();
+      setTimelineHeight(Math.round(clampNumber(startHeight + startY - moveEvent.clientY, min, max)));
+    };
+
+    const stopResize = () => {
+      handleElement.releasePointerCapture?.(event.pointerId);
+      window.removeEventListener("pointermove", handlePointerMove);
+      window.removeEventListener("pointerup", stopResize);
+      window.removeEventListener("pointercancel", stopResize);
+      setTimelineResizing(false);
+      resizeEditorSurfaces();
+    };
+
+    window.addEventListener("pointermove", handlePointerMove, { passive: false });
+    window.addEventListener("pointerup", stopResize);
+    window.addEventListener("pointercancel", stopResize);
+  }, [getTimelineHeightBounds, resizeEditorSurfaces, timelineHeight]);
+
+  const handleTimelineResizeKeyDown = useCallback((event) => {
+    let delta = 0;
+
+    if (event.key === "ArrowUp") delta = TIMELINE_RESIZE_KEYBOARD_STEP;
+    else if (event.key === "ArrowDown") delta = -TIMELINE_RESIZE_KEYBOARD_STEP;
+    else if (event.key === "PageUp") delta = TIMELINE_RESIZE_KEYBOARD_STEP * 3;
+    else if (event.key === "PageDown") delta = -TIMELINE_RESIZE_KEYBOARD_STEP * 3;
+    else if (event.key !== "Home" && event.key !== "End") return;
+
+    event.preventDefault();
+    setTimelineHeight((currentHeight) => {
+      const { min, max } = getTimelineHeightBounds();
+      if (event.key === "Home") return min;
+      if (event.key === "End") return max;
+      return Math.round(clampNumber(currentHeight + delta, min, max));
+    });
+  }, [getTimelineHeightBounds]);
 
   const rememberAnimatedClipStateByLocation = useCallback((trackIndex, clipIndex) => {
     const edit = editRef.current;
@@ -643,7 +746,7 @@ export default function VideoManualProjectEditorPage() {
         if (cancelled) { disposeSDK(); return; }
         await edit.load();
         if (cancelled) { disposeSDK(); return; }
-        timeline = new Timeline(edit, timelineElRef.current);
+        timeline = new Timeline(edit, timelineElRef.current, { resizable: false });
         await timeline.load();
         if (cancelled) { disposeSDK(); return; }
         timeline.setZoom?.(90);
@@ -1378,7 +1481,7 @@ export default function VideoManualProjectEditorPage() {
           {projectError || "Project not found."}
         </div>
       ) : (
-        <div className="relative flex min-h-0 flex-1 flex-col">
+        <div ref={editorBodyRef} className={`relative flex min-h-0 flex-1 flex-col ${timelineResizing ? "select-none" : ""}`}>
           <div className="relative flex min-h-0 flex-1 overflow-hidden">
             <VideoManualStepsPanel steps={steps} onSelectStep={(step) => editRef.current?.seek?.(step.startTime)} onAddStep={handleAddStep} />
 
@@ -1425,7 +1528,31 @@ export default function VideoManualProjectEditorPage() {
             />
           </div>
 
-          <div className="relative z-20 flex h-[280px] flex-shrink-0 flex-col border-t border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-950">
+          <div
+            className="relative z-20 flex flex-shrink-0 flex-col border-t border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-950"
+            style={{ height: timelineHeight }}
+          >
+            <div
+              role="separator"
+              aria-label="Resize timeline"
+              aria-orientation="horizontal"
+              aria-valuemin={TIMELINE_MIN_HEIGHT}
+              aria-valuemax={TIMELINE_MAX_HEIGHT}
+              aria-valuenow={timelineHeight}
+              aria-valuetext={`${timelineHeight}px`}
+              tabIndex={0}
+              title="Drag to resize timeline"
+              onPointerDown={handleTimelineResizePointerDown}
+              onKeyDown={handleTimelineResizeKeyDown}
+              onDoubleClick={() => setTimelineHeight(TIMELINE_DEFAULT_HEIGHT)}
+              className={`group absolute -top-4 left-0 right-0 z-30 flex h-8 cursor-row-resize touch-none items-center justify-center outline-none ${timelineResizing ? "bg-blue-500/10" : ""}`}
+            >
+              <span className={`flex h-5 w-20 items-center justify-center gap-1 rounded-full border shadow-sm ring-1 ring-black/5 transition-all duration-200 ease-out group-hover:w-28 group-hover:gap-1.5 group-focus-visible:w-28 group-focus-visible:gap-1.5 ${timelineResizing ? "w-28 gap-1.5 border-blue-400 bg-blue-50 ring-blue-400/30" : "border-slate-200 bg-white group-hover:border-blue-300 group-hover:bg-blue-50 group-hover:ring-blue-300/30 group-focus-visible:border-blue-400 group-focus-visible:bg-blue-50 group-focus-visible:ring-2 group-focus-visible:ring-blue-400/40 dark:border-slate-700 dark:bg-slate-900 dark:ring-white/10 dark:group-hover:border-blue-500 dark:group-hover:bg-slate-800"}`}>
+                <span className={`h-1.5 w-1.5 rounded-full ${timelineResizing ? "bg-blue-500" : "bg-slate-400 group-hover:bg-blue-500 dark:bg-slate-500"}`} />
+                <span className={`h-1.5 w-1.5 rounded-full ${timelineResizing ? "bg-blue-500" : "bg-slate-400 group-hover:bg-blue-500 dark:bg-slate-500"}`} />
+                <span className={`h-1.5 w-1.5 rounded-full ${timelineResizing ? "bg-blue-500" : "bg-slate-400 group-hover:bg-blue-500 dark:bg-slate-500"}`} />
+              </span>
+            </div>
             <VideoManualClipActionBar selectedClip={selectedClip} onTrimClip={handleTrimSelectedClip} onDeleteClip={handleDeleteSelectedClip} />
             <div ref={timelineElRef} data-shotstack-timeline className="video-manual-timeline-host min-h-0 flex-1 w-full" />
             <style dangerouslySetInnerHTML={{ __html: `
@@ -1436,6 +1563,11 @@ export default function VideoManualProjectEditorPage() {
 
               .video-manual-timeline-host .ss-ruler-marker:first-child .ss-ruler-marker-label {
                 padding-left: 4px;
+              }
+
+              .video-manual-timeline-host .ss-timeline-divider {
+                display: none !important;
+                pointer-events: none !important;
               }
             ` }} />
           </div>
