@@ -61,6 +61,7 @@ const TIMELINE_FIT_PADDING = 16;
 const EDITOR_CANVAS_MIN_HEIGHT = 180;
 const TIMELINE_RESIZE_KEYBOARD_STEP = 24;
 const KEYFRAME_DIMENSION_CHANGE_EPSILON = 0.5;
+const SHOTSTACK_SCROLLABLE_POPUP_SELECTOR = ".ss-toolbar-popup, .ss-media-toolbar-popup, .ss-canvas-toolbar-popup";
 const TIMELINE_TRACK_HEIGHTS = {
   video: 72,
   image: 72,
@@ -83,6 +84,10 @@ function clampNumber(value, min, max) {
 function getPositiveDimension(value) {
   const numericValue = Number(value);
   return Number.isFinite(numericValue) && numericValue > 0 ? numericValue : null;
+}
+
+function isShotstackScrollablePopupTarget(target) {
+  return target instanceof Element && !!target.closest(SHOTSTACK_SCROLLABLE_POPUP_SELECTOR);
 }
 
 function getTimelineTrackHeight(track) {
@@ -791,6 +796,19 @@ export default function VideoManualProjectEditorPage() {
         installAnimatedLiveUpdateInterceptor(edit);
         canvas = new Canvas(edit);
         ui = UIController.create(edit, canvas);
+
+        const studioRoot = studioElRef.current;
+        const lockCanvasWheel = (event) => {
+          if (isShotstackScrollablePopupTarget(event.target)) return;
+          event.preventDefault();
+          event.stopPropagation();
+          event.stopImmediatePropagation?.();
+          canvas?.centerEdit?.();
+        };
+        if (studioRoot) {
+          studioRoot.addEventListener("wheel", lockCanvasWheel, { passive: false, capture: true });
+          unsubs.push(() => studioRoot.removeEventListener("wheel", lockCanvasWheel, { capture: true }));
+        }
 
         await canvas.load();
         if (cancelled) { disposeSDK(); return; }
