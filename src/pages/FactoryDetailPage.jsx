@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import Hls from "hls.js";
 import PageHeader from "../components/PageHeader";
 import {
+  BASE_URL,
   fetchCombinedEnvironmentalData,
   fetchCombinedSensorData,
   fetchProductionByPeriod,
@@ -209,7 +210,6 @@ function MfgLotModal({ onClose, initialLot = "" }) {
 }
 
 // ─── Camera modal ─────────────────────────────────────────────────────────────
-const STREAM_BASE = (import.meta.env.VITE_API_URL?.trim() || "http://localhost:3000/").replace(/\/?$/, "/");
 
 function CameraModal({ onClose }) {
   const videoRef = useRef(null);
@@ -217,23 +217,30 @@ function CameraModal({ onClose }) {
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
-
     const token = getAuthUser()?.authToken || getAuthUser()?.token || "";
-    const src = `${STREAM_BASE}api/cam`;
+    const src = `${BASE_URL}api/cam`;
 
     if (Hls.isSupported()) {
       const hls = new Hls({
         xhrSetup: (xhr) => {
-          xhr.setRequestHeader("Authorization", `Bearer ${token}`);
+          if (token) xhr.setRequestHeader("Authorization", `Bearer ${token}`);
         },
+        liveSyncDurationCount: 3,
+        liveMaxLatencyDurationCount: 10,
+        lowLatencyMode: false,
+        liveBackBufferLength: 0,
+      });
+      hls.on(Hls.Events.ERROR, (_, data) => {
+        if (data.fatal) {
+          if (data.type === Hls.ErrorTypes.MEDIA_ERROR) hls.recoverMediaError();
+          else hls.destroy();
+        }
       });
       hls.loadSource(src);
       hls.attachMedia(video);
       hls.on(Hls.Events.MANIFEST_PARSED, () => { video.play().catch(() => {}); });
       return () => hls.destroy();
     }
-
-    // Safari — native HLS support
     if (video.canPlayType("application/vnd.apple.mpegurl")) {
       video.src = src;
       video.play().catch(() => {});
@@ -270,13 +277,14 @@ function CameraModal({ onClose }) {
             style={{ maxHeight: "70vh" }}
             controls
             playsInline
+            muted
           />
         </div>
       </div>
     </div>
   );
 }
-
+console.log('API URL:', import.meta.env.VITE_API_URL);
 // ─── Main page ────────────────────────────────────────────────────────────────
 export default function FactoryDetailPage({ combined = false }) {
   const { factoryName: encoded } = useParams();

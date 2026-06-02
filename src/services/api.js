@@ -13,7 +13,7 @@ const LOCAL_URL = "http://localhost:3000/";
 const ENV_URL = import.meta.env.VITE_API_URL?.trim();
 
 // Local dev falls back to localhost. Hosted builds must provide VITE_API_URL.
-const BASE_URL = (ENV_URL || LOCAL_URL).replace(/\/?$/, "/");
+export const BASE_URL = (ENV_URL || LOCAL_URL).replace(/\/?$/, "/");
 
 // ─── Cache ────────────────────────────────────────────────────────────────────
 const _cache = new Map();
@@ -1587,6 +1587,23 @@ export async function createWorkerRecord(name) {
     username: "system",
     role: "admin",
     collectionName: "workerDB",
+  });
+}
+
+// ─── Equipment history (submittedDB › setsubiHistory) ─────────────────────────
+
+export async function fetchSetsubiHistoryRecords({ factory, equipmentId } = {}) {
+  const q = { _deleted: { $ne: true } };
+  if (factory) q["工場"] = factory;
+  if (equipmentId) q.equipmentId = equipmentId;
+  return query("submittedDB", "setsubiHistory", q, { sort: { date: -1, createdAt: -1 } });
+}
+
+export async function createSetsubiHistoryRecord(data) {
+  return _postJson("queries", {
+    dbName: "submittedDB",
+    collectionName: "setsubiHistory",
+    insertData: { ...data, createdAt: new Date().toISOString() },
   });
 }
 
