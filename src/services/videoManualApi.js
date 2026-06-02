@@ -56,7 +56,10 @@ async function request(endpoint, { method = "GET", headers, body } = {}) {
     const message = typeof data === "string"
       ? data
       : data?.error || data?.message || `API ${res.status}`;
-    throw new Error(message);
+    const error = new Error(message);
+    error.status = res.status;
+    if (typeof data === "object" && data?.code) error.code = data.code;
+    throw error;
   }
 
   return data;
@@ -140,6 +143,69 @@ export async function fetchVideoManualRevision(revisionId) {
   return request(`api/video-manuals-studio/revisions/${revisionId}`);
 }
 
+export async function deployVideoManualRevision(projectId, revisionId, options = {}) {
+  if (!projectId) {
+    throw new Error("projectId is required");
+  }
+  if (!revisionId) {
+    throw new Error("revisionId is required");
+  }
+
+  return request(`api/video-manuals-studio/projects/${projectId}/deploy`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ revisionId, ...options }),
+  });
+}
+
+export async function undeployVideoManualProject(projectId) {
+  if (!projectId) {
+    throw new Error("projectId is required");
+  }
+
+  return request(`api/video-manuals-studio/projects/${projectId}/undeploy`, {
+    method: "POST",
+  });
+}
+
+export async function renderVideoManualEdit(editJson, projectTitle = "Video Manual") {
+  if (!editJson || typeof editJson !== "object") {
+    throw new Error("editJson is required");
+  }
+
+  return request("api/video-manuals/render", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ editJson, projectTitle }),
+  });
+}
+
+export async function fetchVideoManualRenderStatus(renderId) {
+  if (!renderId) {
+    throw new Error("renderId is required");
+  }
+
+  return request(`api/video-manuals/render-status/${renderId}`);
+}
+
+export async function deployVideoManualRenderedRevision(projectId, revisionId, { renderId, downloadUrl = null } = {}) {
+  if (!projectId) {
+    throw new Error("projectId is required");
+  }
+  if (!revisionId) {
+    throw new Error("revisionId is required");
+  }
+  if (!renderId) {
+    throw new Error("renderId is required");
+  }
+
+  return request(`api/video-manuals-studio/projects/${projectId}/deploy-render`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ revisionId, renderId, downloadUrl }),
+  });
+}
+
 export function getVideoManualApiBaseUrl() {
   return BASE_URL.replace(/\/$/, "");
 }
@@ -189,7 +255,9 @@ export function uploadVideoManualPlaylistAsset(playlistId, file, { onProgress = 
       let errorMessage = `${xhr.status} ${xhr.statusText}`;
       try {
         errorMessage = JSON.parse(xhr.responseText).error || errorMessage;
-      } catch (_) {}
+      } catch {
+        // Keep the HTTP status text for non-JSON upload errors.
+      }
       reject(new Error(errorMessage));
     };
 

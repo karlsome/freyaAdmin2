@@ -41,15 +41,22 @@ import {
   shiftAnimatedSegments,
 } from "../components/videoManual/videoManualEditorUtils";
 import {
+  canDeployVideoManualProjects,
   createVideoManualRevision,
+  deployVideoManualRenderedRevision,
+  deployVideoManualRevision,
+  fetchVideoManualRenderStatus,
   fetchVideoManualPlaylistAssets,
   fetchVideoManualProject,
   fetchVideoManualRevision,
   fetchVideoManualRevisions,
   getVideoManualApiBaseUrl,
   patchVideoManualProject,
+  renderVideoManualEdit,
+  undeployVideoManualProject,
   uploadVideoManualPlaylistAsset,
 } from "../services/videoManualApi";
+import { readStoredAuthUser } from "../utils/auth";
 
 const CANVAS_ZOOM_STEP = 1.12;
 const CANVAS_MIN_ZOOM = 0.1;
@@ -65,6 +72,8 @@ const EDITOR_CANVAS_MIN_HEIGHT = 180;
 const TIMELINE_RESIZE_KEYBOARD_STEP = 24;
 const KEYFRAME_DIMENSION_CHANGE_EPSILON = 0.5;
 const MEDIA_RESIZE_OFFSET_EPSILON = 0.001;
+const VIDEO_MANUAL_RENDER_POLL_INTERVAL_MS = 5000;
+const VIDEO_MANUAL_RENDER_MAX_POLLS = 120;
 const SHOTSTACK_SCROLLABLE_POPUP_SELECTOR = ".ss-toolbar-popup, .ss-media-toolbar-popup, .ss-canvas-toolbar-popup";
 const RESIZABLE_MEDIA_ASSET_TYPES = new Set(["image", "video"]);
 const TIMELINE_TRACK_HEIGHTS = {
@@ -88,6 +97,35 @@ function getRevisionId(revision) {
 
 function getRevisionDisplayName(revision) {
   return revision?.revisionName || (revision?.revisionNumber ? `Revision ${revision.revisionNumber}` : "revision");
+}
+
+function prepareVideoManualEditForRender(editJson, assetSourceMap = {}) {
+  const preparedEdit = cloneJson(editJson, null);
+  if (!preparedEdit) throw new Error("Revision snapshot is missing edit data.");
+
+  const unresolvedSources = [];
+  (preparedEdit.timeline?.tracks || []).forEach((track) => {
+    (track.clips || []).forEach((clip) => {
+      if (!clip?.asset?.src || typeof clip.asset.src !== "string") return;
+
+      const currentSrc = clip.asset.src;
+      const mappedSrc = assetSourceMap[currentSrc];
+      if (mappedSrc) {
+        clip.asset.src = mappedSrc;
+        return;
+      }
+
+      if (currentSrc.startsWith("blob:") || currentSrc.includes("/api/video-manuals/stream/")) {
+        unresolvedSources.push(currentSrc);
+      }
+    });
+  });
+
+  if (unresolvedSources.length) {
+    throw new Error("Some uploaded assets are still using preview URLs. Wait for upload to finish, then try deploy again.");
+  }
+
+  return preparedEdit;
 }
 
 function clampNumber(value, min, max) {
@@ -398,6 +436,7 @@ export default function VideoManualProjectEditorPage() {
   const navigate = useNavigate();
   const { projectId } = useParams();
 
+  const [authUser] = useState(() => readStoredAuthUser());
   const [project, setProject] = useState(null);
   const [loadingProject, setLoadingProject] = useState(true);
   const [projectError, setProjectError] = useState("");
@@ -432,6 +471,7 @@ export default function VideoManualProjectEditorPage() {
   });
   const [revisionPreview, setRevisionPreview] = useState(null);
   const [revisionActionId, setRevisionActionId] = useState("");
+  const [deploymentStatus, setDeploymentStatus] = useState(null);
 
   const editRef = useRef(null);
   const editorBodyRef = useRef(null);
@@ -477,6 +517,7 @@ export default function VideoManualProjectEditorPage() {
     if (Math.abs(keyframeEditMode.time - activeKeyframe.time) > KEYFRAME_SAME_TIME_TOLERANCE) return null;
     return keyframeEditMode;
   }, [activeKeyframe, keyframeEditMode, selectedClip]);
+  const canDeployProjects = useMemo(() => canDeployVideoManualProjects(authUser?.role), [authUser?.role]);
 
   useEffect(() => {
     if (!keyframeEditMode || activeKeyframeEditMode) return;
@@ -1331,6 +1372,161 @@ export default function VideoManualProjectEditorPage() {
     }
   }, [loadEditIntoStudio, project, projectId, showNotice]);
 
+  const waitForVideoManualRender = useCallback(async (renderId) => {
+    for (let attempt = 0; attempt < VIDEO_MANUAL_RENDER_MAX_POLLS; attempt += 1) {
+      const result = await fetchVideoManualRenderStatus(renderId);
+      const status = String(result?.status || "").toLowerCase();
+      const progress = Number.isFinite(Number(result?.progress)) ? Number(result.progress) : null;
+
+      if (status === "done") return result;
+      if (status === "failed") throw new Error(result?.message || "Render failed on Shotstack.");
+
+      setDeploymentStatus({
+        type: "info",
+        status: status ? status.toUpperCase() : "RENDERING",
+        title: "Rendering video",
+        message: progress == null ? "Shotstack is processing the selected revision." : `Shotstack is processing the selected revision (${progress}%).`,
+        progress,
+      });
+
+      await new Promise((resolve) => window.setTimeout(resolve, VIDEO_MANUAL_RENDER_POLL_INTERVAL_MS));
+    }
+
+    throw new Error("Render timeout after 10 minutes.");
+  }, []);
+
+  const handleDeployRevision = useCallback(async (revision) => {
+    const revisionId = getRevisionId(revision);
+    if (!revisionId || !projectId) return;
+    if (!canDeployProjects) {
+      showNotice("Your role cannot deploy revisions.", "error");
+      return;
+    }
+    if (revisionPreview) {
+      showNotice("Back to current before deploying a revision.", "error");
+      return;
+    }
+    if (!window.confirm(`Deploy ${getRevisionDisplayName(revision)} to the factory side?`)) return;
+
+    setRevisionActionId(`${revisionId}:deploy`);
+    setDeploymentStatus({
+      type: "info",
+      status: "CHECKING",
+      title: "Preparing deployment",
+      message: "Checking whether this revision already has a reusable deployed video.",
+      progress: null,
+    });
+
+    try {
+      const fullRevision = await fetchVideoManualRevision(revisionId);
+      let deployData = null;
+
+      try {
+        deployData = await deployVideoManualRevision(projectId, revisionId, { reuseExistingDeployment: true });
+      } catch (error) {
+        if (error.status !== 409 || error.code !== "DEPLOYED_VIDEO_REUSE_MISSING") throw error;
+      }
+
+      if (!deployData) {
+        setDeploymentStatus({
+          type: "info",
+          status: "SUBMITTING",
+          title: "Rendering video",
+          message: "No reusable MP4 was found. Submitting this revision to Shotstack.",
+          progress: null,
+        });
+
+        const snapshot = fullRevision?.snapshot || {};
+        const editJson = prepareVideoManualEditForRender(snapshot.edit || DEFAULT_VIDEO_MANUAL_TEMPLATE, snapshot.assetSourceMap || {});
+        const renderStart = await renderVideoManualEdit(editJson, snapshot.title || project?.title || "Video Manual");
+        const renderId = renderStart?.renderId;
+        if (!renderId) throw new Error("Render request did not return a render id.");
+
+        const renderResult = await waitForVideoManualRender(renderId);
+        setDeploymentStatus({
+          type: "info",
+          status: "UPLOADING",
+          title: "Uploading render",
+          message: "Shotstack finished rendering. Saving the final MP4 to Firebase Storage.",
+          progress: null,
+        });
+
+        deployData = await deployVideoManualRenderedRevision(projectId, revisionId, {
+          renderId,
+          downloadUrl: renderResult?.downloadUrl || null,
+        });
+      }
+
+      const nextProject = await fetchVideoManualProject(projectId);
+      setProject(nextProject);
+      await loadRevisionHistory({ open: true });
+      setDeploymentStatus({
+        type: "success",
+        status: "DEPLOYED",
+        title: "Deployment complete",
+        message: `${deployData?.revisionName || getRevisionDisplayName(fullRevision)} is now live on the factory side.`,
+        progress: 100,
+        downloadUrl: deployData?.deployedVideoUrl || nextProject?.deployedVideoUrl || "",
+      });
+      showNotice(`Deployed ${deployData?.revisionName || getRevisionDisplayName(fullRevision)}.`);
+    } catch (error) {
+      setDeploymentStatus({
+        type: "error",
+        status: "FAILED",
+        title: "Deployment failed",
+        message: error.message || "The revision could not be deployed.",
+        progress: null,
+      });
+      showNotice(error.message || "Deployment failed.", "error");
+    } finally {
+      setRevisionActionId("");
+    }
+  }, [canDeployProjects, loadRevisionHistory, project?.title, projectId, revisionPreview, showNotice, waitForVideoManualRender]);
+
+  const handleUndeployProject = useCallback(async () => {
+    if (!projectId || !project?.deployedRevisionId) return;
+    if (!canDeployProjects) {
+      showNotice("Your role cannot undeploy revisions.", "error");
+      return;
+    }
+    if (!window.confirm(`Hide "${project?.title || "Untitled Project"}" from the factory side?`)) return;
+
+    setRevisionActionId("undeploy");
+    setDeploymentStatus({
+      type: "info",
+      status: "UNDEPLOYING",
+      title: "Removing live revision",
+      message: "The project will no longer be shown as deployed on the factory side.",
+      progress: null,
+    });
+
+    try {
+      await undeployVideoManualProject(projectId);
+      const nextProject = await fetchVideoManualProject(projectId);
+      setProject(nextProject);
+      await loadRevisionHistory({ open: true });
+      setDeploymentStatus({
+        type: "success",
+        status: "UNDEPLOYED",
+        title: "Project undeployed",
+        message: "No revision is currently live on the factory side.",
+        progress: 100,
+      });
+      showNotice("Project undeployed.");
+    } catch (error) {
+      setDeploymentStatus({
+        type: "error",
+        status: "FAILED",
+        title: "Undeploy failed",
+        message: error.message || "The project could not be undeployed.",
+        progress: null,
+      });
+      showNotice(error.message || "Undeploy failed.", "error");
+    } finally {
+      setRevisionActionId("");
+    }
+  }, [canDeployProjects, loadRevisionHistory, project?.deployedRevisionId, project?.title, projectId, showNotice]);
+
   const handleUndo = useCallback(() => {
     editRef.current?.undo?.().then(() => {
       syncSteps();
@@ -2063,10 +2259,17 @@ export default function VideoManualProjectEditorPage() {
         error={revisionHistory.error}
         previewRevision={revisionPreview}
         actionId={revisionActionId}
-        onClose={() => setRevisionHistory((current) => ({ ...current, open: false }))}
+        canDeploy={canDeployProjects}
+        deploymentStatus={deploymentStatus}
+        onClose={() => {
+          setRevisionHistory((current) => ({ ...current, open: false }));
+          if (!revisionActionId) setDeploymentStatus(null);
+        }}
         onRefresh={() => loadRevisionHistory({ open: true })}
         onPreview={handlePreviewRevision}
         onRestore={handleRestoreRevision}
+        onDeploy={handleDeployRevision}
+        onUndeploy={handleUndeployProject}
         onBackToCurrent={handleExitRevisionPreview}
       />
     </div>
