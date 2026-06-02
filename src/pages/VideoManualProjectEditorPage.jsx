@@ -5,6 +5,7 @@ import VideoManualAddElementsSidebar from "../components/videoManual/VideoManual
 import VideoManualAssetLibraryModal from "../components/videoManual/VideoManualAssetLibraryModal";
 import VideoManualClipActionBar from "../components/videoManual/VideoManualClipActionBar";
 import VideoManualEditorToolbar from "../components/videoManual/VideoManualEditorToolbar";
+import VideoManualExportStatusModal from "../components/videoManual/VideoManualExportStatusModal";
 import VideoManualRevisionHistoryModal from "../components/videoManual/VideoManualRevisionHistoryModal";
 import VideoManualStepsPanel from "../components/videoManual/VideoManualStepsPanel";
 import {
@@ -149,6 +150,51 @@ function prepareVideoManualEditForRender(editJson, assetSourceMap = {}) {
 
 function buildVideoManualDeploymentFileName(title, revisionNumber) {
   return `${String(title || "video-manual").trim() || "video-manual"}-rev-${revisionNumber || "deploy"}.mp4`;
+}
+
+function normalizeVideoManualComparableValue(value) {
+  if (Array.isArray(value)) {
+    return value.map((entry) => normalizeVideoManualComparableValue(entry));
+  }
+  if (value && typeof value === "object") {
+    return Object.keys(value).sort().reduce((accumulator, key) => {
+      accumulator[key] = normalizeVideoManualComparableValue(value[key]);
+      return accumulator;
+    }, {});
+  }
+  return value;
+}
+
+function buildVideoManualComparableSignature(value, fallback) {
+  return JSON.stringify(normalizeVideoManualComparableValue(cloneJson(value, fallback)));
+}
+
+function triggerVideoManualUrlDownload(downloadUrl, fileName = "video-manual.mp4", { openInNewTab = false } = {}) {
+  const anchor = document.createElement("a");
+  anchor.href = downloadUrl;
+  anchor.download = fileName;
+  if (openInNewTab) {
+    anchor.target = "_blank";
+    anchor.rel = "noopener";
+  }
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+}
+
+function openVideoManualUrl(downloadUrl) {
+  if (!downloadUrl) return;
+  window.open(downloadUrl, "_blank", "noopener,noreferrer");
+}
+
+function buildVideoManualDownloadActionUrl(apiBaseUrl, downloadUrl, fileName = "video-manual.mp4") {
+  if (!downloadUrl || !apiBaseUrl) return "";
+
+  const proxyUrl = new URL(`${String(apiBaseUrl).replace(/\/$/, "")}/api/video-manual-media`);
+  proxyUrl.searchParams.set("url", downloadUrl);
+  proxyUrl.searchParams.set("download", "1");
+  if (fileName) proxyUrl.searchParams.set("fileName", fileName);
+  return proxyUrl.toString();
 }
 
 function clampNumber(value, min, max) {
@@ -495,6 +541,8 @@ export default function VideoManualProjectEditorPage() {
   const [revisionPreview, setRevisionPreview] = useState(null);
   const [revisionActionId, setRevisionActionId] = useState("");
   const [deploymentStatus, setDeploymentStatus] = useState(null);
+  const [exportModalOpen, setExportModalOpen] = useState(false);
+  const [exportBusy, setExportBusy] = useState(false);
 
   const editRef = useRef(null);
   const editorBodyRef = useRef(null);
@@ -516,6 +564,7 @@ export default function VideoManualProjectEditorPage() {
   const revisionPreviewSourceRef = useRef(null);
   const timelineResizeFrameRef = useRef(null);
   const timelineHeightUserSetRef = useRef(false);
+  const exportInFlightRef = useRef(false);
 
   useEffect(() => {
     selectedClipRef.current = selectedClip;
@@ -558,6 +607,19 @@ export default function VideoManualProjectEditorPage() {
   }, []);
 
   useEffect(() => () => window.clearTimeout(noticeTimerRef.current), []);
+
+  useEffect(() => {
+    if (!exportBusy) return undefined;
+
+    const handleBeforeUnload = (event) => {
+      event.preventDefault();
+      event.returnValue = "";
+      return "";
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [exportBusy]);
 
   useEffect(() => {
     let cancelled = false;
@@ -1260,25 +1322,6 @@ export default function VideoManualProjectEditorPage() {
     }
   }, [projectId]);
 
-  const handleSave = useCallback(async () => {
-    if (!editRef.current || saving) return;
-    if (revisionPreview) {
-      showNotice("Back to current before saving the working copy.", "error");
-      return;
-    }
-
-    setSaving(true);
-    try {
-      const currentEdit = editRef.current.getEdit();
-      await patchVideoManualProject(projectId, { edit: currentEdit, assetSourceMap: assetSourceMapRef.current });
-      showNotice("Project saved.");
-    } catch (error) {
-      showNotice(error.message || "Save failed.", "error");
-    } finally {
-      setSaving(false);
-    }
-  }, [projectId, revisionPreview, saving, showNotice]);
-
   const handleSaveRevision = useCallback(async () => {
     if (!editRef.current || saving) return;
     if (revisionPreview) {
@@ -1467,41 +1510,82 @@ export default function VideoManualProjectEditorPage() {
     }
   }, []);
 
-  const handleDeployRevision = useCallback(async (revision) => {
-    const revisionId = getRevisionId(revision);
-    if (!revisionId || !projectId) return;
-    if (!canDeployProjects) {
-      showNotice("Your role cannot deploy revisions.", "error");
-      return;
-    }
+  const ensureRevisionForExport = useCallback(async () => {
     if (revisionPreview) {
-      showNotice("Back to current before deploying a revision.", "error");
-      return;
+      throw new Error("Back to current before exporting.");
     }
-    if (!window.confirm(`Deploy ${getRevisionDisplayName(revision)} to the factory side?`)) return;
+    if (!projectId || !project || !editRef.current) {
+      throw new Error("Open a project first.");
+    }
 
-    setRevisionActionId(`${revisionId}:deploy`);
+    const currentEdit = editRef.current.getEdit();
+    const currentAssetSourceMap = { ...assetSourceMapRef.current };
+    const savedEditSignature = buildVideoManualComparableSignature(project?.edit, DEFAULT_VIDEO_MANUAL_TEMPLATE);
+    const currentEditSignature = buildVideoManualComparableSignature(currentEdit, DEFAULT_VIDEO_MANUAL_TEMPLATE);
+    const savedAssetSourceSignature = buildVideoManualComparableSignature(project?.assetSourceMap, {});
+    const currentAssetSourceSignature = buildVideoManualComparableSignature(currentAssetSourceMap, {});
+    const hasUnsavedChanges = savedEditSignature !== currentEditSignature || savedAssetSourceSignature !== currentAssetSourceSignature;
+
+    if (!hasUnsavedChanges && project?.lastRevisionId) {
+      return fetchVideoManualRevision(String(project.lastRevisionId));
+    }
+
+    const nextRevisionNumber = (Number(project?.currentRevisionNumber) || 0) + 1;
+    const defaultRevisionName = `${project?.title || "Untitled Project"} Rev ${String(nextRevisionNumber).padStart(2, "0")}`;
+    const revisionName = window.prompt("Export requires a saved revision. Revision name:", defaultRevisionName);
+    if (!revisionName || !revisionName.trim()) {
+      return null;
+    }
+
+    setSaving(true);
+    try {
+      await patchVideoManualProject(projectId, { edit: currentEdit, assetSourceMap: currentAssetSourceMap });
+      const snapshot = buildRevisionSnapshot(project, currentEdit, currentAssetSourceMap);
+      const { revisionId, revisionNumber } = await createVideoManualRevision(projectId, snapshot, revisionName.trim());
+      const nextProject = await fetchVideoManualProject(projectId);
+      setProject(nextProject);
+      if (revisionHistory.open) {
+        await loadRevisionHistory({ open: true });
+      }
+      showNotice(`Revision ${revisionNumber} created for export.`);
+      return fetchVideoManualRevision(String(revisionId));
+    } finally {
+      setSaving(false);
+    }
+  }, [loadRevisionHistory, project, projectId, revisionHistory.open, revisionPreview, showNotice]);
+
+  const runRevisionDeployment = useCallback(async (revision, {
+    reasonLabel = "Deployment",
+    showHistoryAfter = true,
+    actionId = null,
+    successStatus = "DEPLOYED",
+    completionTitle = "Deployment complete",
+    buildCompletionMessage = (resolvedName) => `${resolvedName} is now live on the factory side.`,
+  } = {}) => {
+    const revisionId = getRevisionId(revision);
+    if (!revisionId || !projectId) {
+      throw new Error("Open a project first.");
+    }
+
+    const normalizedReasonLabel = String(reasonLabel || "Deployment").trim() || "Deployment";
+    setRevisionActionId(actionId || `${revisionId}:deploy`);
     setDeploymentStatus({
       type: "info",
       status: "CHECKING",
-      title: "Preparing deployment",
+      title: `Preparing ${normalizedReasonLabel.toLowerCase()}`,
       message: "Checking whether this revision already has a reusable deployed video.",
       progress: null,
     });
 
     try {
-      const fullRevision = await fetchVideoManualRevision(revisionId);
+      const fullRevision = revision?.snapshot ? revision : await fetchVideoManualRevision(revisionId);
       let deployData = null;
       let usedLocalFallback = false;
 
-      try {
-        deployData = await deployVideoManualRevision(projectId, revisionId, {
-          reuseExistingDeployment: true,
-          allowMissingReusableDeployment: true,
-        });
-      } catch (error) {
-        if (error.status !== 409 || error.code !== "DEPLOYED_VIDEO_REUSE_MISSING") throw error;
-      }
+      deployData = await deployVideoManualRevision(projectId, revisionId, {
+        reuseExistingDeployment: true,
+        allowMissingReusableDeployment: true,
+      });
 
       if (deployData?.needsRender) {
         deployData = null;
@@ -1583,33 +1667,190 @@ export default function VideoManualProjectEditorPage() {
 
       const nextProject = await fetchVideoManualProject(projectId);
       setProject(nextProject);
-      await loadRevisionHistory({ open: true });
+      if (showHistoryAfter || revisionHistory.open) {
+        await loadRevisionHistory({ open: true });
+      }
+
+      const resolvedName = deployData?.revisionName || getRevisionDisplayName(fullRevision);
+      const resolvedDownloadUrl = deployData?.deployedVideoUrl || nextProject?.deployedVideoUrl || "";
+      const resolvedFileName = deployData?.deployedVideoFileName
+        || nextProject?.deployedVideoFileName
+        || buildVideoManualDeploymentFileName(nextProject?.title || project?.title || "Video Manual", deployData?.revisionNumber || fullRevision?.revisionNumber);
+      const resolvedDownloadActionUrl = buildVideoManualDownloadActionUrl(apiBaseUrl, resolvedDownloadUrl, resolvedFileName);
+
       setDeploymentStatus({
         type: "success",
-        status: "DEPLOYED",
-        title: "Deployment complete",
-        message: `${deployData?.revisionName || getRevisionDisplayName(fullRevision)} is now live on the factory side.`,
+        status: successStatus,
+        title: completionTitle,
+        message: buildCompletionMessage(resolvedName, nextProject, deployData, fullRevision),
         progress: 100,
-        downloadUrl: deployData?.deployedVideoUrl || nextProject?.deployedVideoUrl || "",
+        downloadUrl: resolvedDownloadUrl,
+        openUrl: resolvedDownloadUrl,
+        copyUrl: resolvedDownloadUrl,
+        downloadActionUrl: resolvedDownloadActionUrl,
+        fileName: resolvedFileName,
       });
+
+      return { deployData, nextProject, fullRevision, usedLocalFallback };
+    } catch (error) {
+      setDeploymentStatus({
+        type: "error",
+        status: "FAILED",
+        title: `${normalizedReasonLabel} failed`,
+        message: error.message || `The ${normalizedReasonLabel.toLowerCase()} could not be completed.`,
+        progress: null,
+      });
+      throw error;
+    } finally {
+      setRevisionActionId("");
+    }
+  }, [apiBaseUrl, exportRevisionSnapshotAsBlob, loadRevisionHistory, project?.title, projectId, revisionHistory.open, waitForVideoManualRender]);
+
+  const handleToolbarBack = useCallback(() => {
+    if (exportInFlightRef.current || exportBusy) {
+      showNotice("An export is still in progress. Wait for it to finish before leaving this page.", "error");
+      return;
+    }
+
+    navigate("/videoManual");
+  }, [exportBusy, navigate, showNotice]);
+
+  const handleDeployRevision = useCallback(async (revision) => {
+    const revisionId = getRevisionId(revision);
+    if (!revisionId || !projectId) return;
+    if (!canDeployProjects) {
+      showNotice("Your role cannot deploy revisions.", "error");
+      return;
+    }
+    if (revisionPreview) {
+      showNotice("Back to current before deploying a revision.", "error");
+      return;
+    }
+    if (!window.confirm(`Deploy ${getRevisionDisplayName(revision)} to the factory side?`)) return;
+
+    try {
+      const { deployData, fullRevision, usedLocalFallback } = await runRevisionDeployment(revision, {
+        reasonLabel: "Deployment",
+        showHistoryAfter: true,
+        actionId: `${revisionId}:deploy`,
+        completionTitle: "Deployment complete",
+        buildCompletionMessage: (resolvedName) => `${resolvedName} is now live on the factory side.`,
+      });
+
       showNotice(
         usedLocalFallback
           ? `Deployed ${deployData?.revisionName || getRevisionDisplayName(fullRevision)} using the browser export fallback.`
           : `Deployed ${deployData?.revisionName || getRevisionDisplayName(fullRevision)}.`
       );
     } catch (error) {
+      showNotice(error.message || "Deployment failed.", "error");
+    }
+  }, [canDeployProjects, projectId, revisionPreview, runRevisionDeployment, showNotice]);
+
+  const handleExport = useCallback(async () => {
+    if (exportInFlightRef.current) {
+      showNotice("An export is already in progress. Wait for it to finish before starting another one.", "error");
+      return;
+    }
+    if (!canDeployProjects) {
+      showNotice("Your role cannot export videos.", "error");
+      return;
+    }
+
+    let exportModalWasOpened = false;
+    exportInFlightRef.current = true;
+    setExportBusy(true);
+    setRevisionActionId("export");
+
+    try {
+      const revision = await ensureRevisionForExport();
+      if (!revision) return;
+
+      exportModalWasOpened = true;
       setDeploymentStatus({
-        type: "error",
-        status: "FAILED",
-        title: "Deployment failed",
-        message: error.message || "The revision could not be deployed.",
+        type: "info",
+        status: "PREPARING",
+        title: "Preparing export",
+        message: "Checking whether this revision already has a flattened video ready to download.",
         progress: null,
       });
-      showNotice(error.message || "Deployment failed.", "error");
+      setExportModalOpen(true);
+
+      const { deployData, fullRevision, usedLocalFallback } = await runRevisionDeployment(revision, {
+        reasonLabel: "Export",
+        showHistoryAfter: false,
+        actionId: "export",
+        successStatus: "COMPLETE",
+        completionTitle: "Export Complete!",
+        buildCompletionMessage: () => "The flattened deployed video is ready in Firebase Storage.",
+      });
+
+      const resolvedName = deployData?.revisionName || getRevisionDisplayName(fullRevision);
+
+      showNotice(
+        usedLocalFallback
+          ? `${resolvedName} is ready using the browser export fallback.`
+          : `${resolvedName} is ready.`
+      );
+    } catch (error) {
+      if (exportModalWasOpened) {
+        setDeploymentStatus({
+        type: "error",
+        status: "FAILED",
+        title: "Export Failed",
+        message: error.message || "The video could not be exported.",
+        progress: null,
+        });
+        setExportModalOpen(true);
+      }
+      showNotice(error.message || "Export failed.", "error");
     } finally {
+      exportInFlightRef.current = false;
+      setExportBusy(false);
       setRevisionActionId("");
     }
-  }, [canDeployProjects, exportRevisionSnapshotAsBlob, loadRevisionHistory, project?.title, projectId, revisionPreview, showNotice, waitForVideoManualRender]);
+  }, [canDeployProjects, ensureRevisionForExport, runRevisionDeployment, showNotice]);
+
+  const handleCloseExportModal = useCallback(() => {
+    if (exportInFlightRef.current || exportBusy) return;
+    setExportModalOpen(false);
+  }, [exportBusy]);
+
+  const handleDownloadExportedVideo = useCallback(() => {
+    const downloadActionUrl = deploymentStatus?.downloadActionUrl || deploymentStatus?.downloadUrl || "";
+    const fileName = deploymentStatus?.fileName || project?.deployedVideoFileName || "video-manual.mp4";
+    if (!downloadActionUrl) {
+      showNotice("No exported video is available to download.", "error");
+      return;
+    }
+
+    triggerVideoManualUrlDownload(downloadActionUrl, fileName);
+  }, [deploymentStatus, project?.deployedVideoFileName, showNotice]);
+
+  const handleOpenExportUrl = useCallback(() => {
+    const openUrl = deploymentStatus?.openUrl || deploymentStatus?.downloadUrl || "";
+    if (!openUrl) {
+      showNotice("No exported video URL is available.", "error");
+      return;
+    }
+
+    openVideoManualUrl(openUrl);
+  }, [deploymentStatus, showNotice]);
+
+  const handleCopyExportUrl = useCallback(async () => {
+    const copyUrl = deploymentStatus?.copyUrl || deploymentStatus?.downloadUrl || "";
+    if (!copyUrl) {
+      showNotice("No exported video URL is available to copy.", "error");
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(copyUrl);
+      showNotice("Export URL copied.");
+    } catch (error) {
+      showNotice(error?.message || "Could not copy export URL.", "error");
+    }
+  }, [deploymentStatus, showNotice]);
 
   const handleUndeployProject = useCallback(async () => {
     if (!projectId || !project?.deployedRevisionId) return;
@@ -2228,8 +2469,9 @@ export default function VideoManualProjectEditorPage() {
     <div className="mt-16 flex h-[calc(100vh-4rem)] min-h-0 flex-col overflow-hidden bg-slate-100 font-sans dark:bg-slate-950">
       <VideoManualEditorToolbar
         projectTitle={project?.title || "Video Manual"}
-        saving={saving || Boolean(revisionPreview) || Boolean(revisionActionId)}
-        onBack={() => navigate("/videoManual")}
+        saving={saving || exportBusy || Boolean(revisionPreview) || Boolean(revisionActionId)}
+        busy={exportBusy}
+        onBack={handleToolbarBack}
         onUndo={handleUndo}
         onRedo={handleRedo}
         onSaveRevision={handleSaveRevision}
@@ -2237,7 +2479,7 @@ export default function VideoManualProjectEditorPage() {
         onZoomOut={() => handleZoom(-1)}
         onAutoFit={handleAutoFit}
         onZoomIn={() => handleZoom(1)}
-        onExport={handleSave}
+        onExport={handleExport}
       />
 
       {(projectError || notice.message) ? (
@@ -2377,6 +2619,22 @@ export default function VideoManualProjectEditorPage() {
         onRefresh={() => loadAssetLibrary(assetLibrary.type)}
         onUpload={handleUploadAsset}
         onUseAsset={insertPlaylistAsset}
+      />
+
+      <VideoManualExportStatusModal
+        open={exportModalOpen}
+        status={deploymentStatus}
+        busy={exportBusy}
+        onClose={handleCloseExportModal}
+        onDownload={typeof deploymentStatus?.downloadActionUrl === "string" && deploymentStatus.downloadActionUrl
+          ? handleDownloadExportedVideo
+          : null}
+        onOpenUrl={typeof deploymentStatus?.openUrl === "string" && deploymentStatus.openUrl
+          ? handleOpenExportUrl
+          : null}
+        onCopyUrl={typeof deploymentStatus?.copyUrl === "string" && deploymentStatus.copyUrl
+          ? handleCopyExportUrl
+          : null}
       />
 
       <VideoManualRevisionHistoryModal

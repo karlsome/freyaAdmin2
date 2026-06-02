@@ -34,6 +34,7 @@ function IconButton({ icon, onClick, title, disabled = false }) {
 export default function VideoManualEditorToolbar({
   projectTitle,
   saving,
+  busy = false,
   onBack,
   onUndo,
   onRedo,
@@ -47,7 +48,7 @@ export default function VideoManualEditorToolbar({
   return (
     <header className="relative z-30 flex h-14 flex-shrink-0 items-center gap-3 border-b border-slate-200 bg-white px-4 text-sm shadow-sm dark:border-slate-800 dark:bg-slate-950">
       <div className="flex min-w-0 flex-1 items-center gap-2">
-        <ToolbarButton icon="arrow_back" onClick={onBack}>Projects</ToolbarButton>
+        <ToolbarButton icon="arrow_back" onClick={onBack} disabled={busy}>Projects</ToolbarButton>
 
         <div className="mx-1 h-6 w-px bg-slate-200 dark:bg-slate-800" />
 
@@ -57,8 +58,8 @@ export default function VideoManualEditorToolbar({
         <div className="mx-1 hidden h-6 w-px bg-slate-200 dark:bg-slate-800 sm:block" />
 
         <div className="hidden items-center gap-2 lg:flex">
-          <ToolbarButton icon="save" onClick={onSaveRevision} disabled={saving}>Save Revision</ToolbarButton>
-          <ToolbarButton icon="history" onClick={onShowHistory}>History</ToolbarButton>
+          <ToolbarButton icon="save" onClick={onSaveRevision} disabled={saving || busy}>Save Revision</ToolbarButton>
+          <ToolbarButton icon="history" onClick={onShowHistory} disabled={busy}>History</ToolbarButton>
         </div>
       </div>
 
@@ -99,11 +100,11 @@ export default function VideoManualEditorToolbar({
         <button
           type="button"
           onClick={onExport}
-          disabled={saving}
+          disabled={saving || busy}
           className="inline-flex h-10 items-center gap-2 rounded-lg bg-blue-500 px-4 text-sm font-black text-white shadow-sm transition hover:bg-blue-600 disabled:cursor-not-allowed disabled:opacity-60"
         >
-          <Icon className="text-[18px]">download</Icon>
-          Export
+          <Icon className={busy ? "animate-spin text-[18px]" : "text-[18px]"}>{busy ? "progress_activity" : "download"}</Icon>
+          {busy ? "Exporting" : "Export"}
         </button>
       </div>
     </header>

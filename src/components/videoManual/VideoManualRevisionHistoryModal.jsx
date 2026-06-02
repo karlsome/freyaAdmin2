@@ -51,6 +51,9 @@ export default function VideoManualRevisionHistoryModal({
   const hasAction = Boolean(actionId);
   const hasLiveDeployment = Boolean(project?.deployedRevisionId);
   const deploymentDownloadUrl = deploymentStatus?.downloadUrl || project?.deployedVideoUrl || "";
+  const deploymentOpenUrl = deploymentStatus?.openUrl || deploymentDownloadUrl;
+  const deploymentCopyUrl = deploymentStatus?.copyUrl || deploymentOpenUrl;
+  const deploymentDownloadActionUrl = deploymentStatus?.downloadActionUrl || deploymentOpenUrl;
 
   return (
     <div className="fixed inset-0 z-[345] flex items-center justify-center bg-slate-950/55 px-4 backdrop-blur-sm">
@@ -129,19 +132,27 @@ export default function VideoManualRevisionHistoryModal({
                 <p className="mt-1 text-sm font-black text-slate-900 dark:text-white">{deploymentStatus.title}</p>
                 {deploymentStatus.message ? <p className="mt-1 text-xs font-semibold text-slate-500 dark:text-slate-400">{deploymentStatus.message}</p> : null}
               </div>
-              {deploymentStatus.type === "success" && deploymentDownloadUrl ? (
+              {deploymentStatus.type === "success" && (deploymentDownloadActionUrl || deploymentOpenUrl) ? (
                 <div className="flex shrink-0 items-center gap-2">
                   <button
                     type="button"
-                    onClick={() => window.open(deploymentDownloadUrl, "_blank")}
+                    onClick={() => window.open(deploymentDownloadActionUrl || deploymentOpenUrl, "_blank")}
                     className="inline-flex h-9 items-center gap-1.5 rounded-xl bg-emerald-600 px-3 text-xs font-black text-white transition hover:bg-emerald-700"
                   >
-                    <Icon className="text-[16px]">open_in_new</Icon>
-                    Open Video
+                    <Icon className="text-[16px]">download</Icon>
+                    Download Video
                   </button>
                   <button
                     type="button"
-                    onClick={() => navigator.clipboard?.writeText(deploymentDownloadUrl).catch(() => {})}
+                    onClick={() => window.open(deploymentOpenUrl, "_blank")}
+                    className="inline-flex h-9 items-center gap-1.5 rounded-xl bg-emerald-50 px-3 text-xs font-black text-emerald-700 transition hover:bg-emerald-100 dark:bg-emerald-500/15 dark:text-emerald-200"
+                  >
+                    <Icon className="text-[16px]">open_in_new</Icon>
+                    Open URL
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => navigator.clipboard?.writeText(deploymentCopyUrl).catch(() => {})}
                     className="inline-flex h-9 items-center gap-1.5 rounded-xl bg-white px-3 text-xs font-black text-emerald-700 transition hover:bg-emerald-100 dark:bg-emerald-500/15 dark:text-emerald-200"
                   >
                     <Icon className="text-[16px]">content_copy</Icon>
