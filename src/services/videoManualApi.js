@@ -206,6 +206,41 @@ export async function deployVideoManualRenderedRevision(projectId, revisionId, {
   });
 }
 
+export async function deployVideoManualUploadedRevision(projectId, revisionId, file, { fileName = "video-manual.mp4", mimeType = "video/mp4" } = {}) {
+  if (!projectId) {
+    throw new Error("projectId is required");
+  }
+  if (!revisionId) {
+    throw new Error("revisionId is required");
+  }
+  if (!file) {
+    throw new Error("file is required");
+  }
+
+  const res = await fetch(`${BASE_URL}api/video-manuals-studio/projects/${projectId}/deploy-upload`, {
+    method: "POST",
+    headers: buildAuthHeaders({
+      "Content-Type": mimeType,
+      "X-Revision-Id": revisionId,
+      "X-File-Name": fileName,
+    }),
+    body: file,
+  });
+
+  const data = await readJson(res);
+  if (!res.ok) {
+    const message = typeof data === "string"
+      ? data
+      : data?.error || data?.message || `API ${res.status}`;
+    const error = new Error(message);
+    error.status = res.status;
+    if (typeof data === "object" && data?.code) error.code = data.code;
+    throw error;
+  }
+
+  return data;
+}
+
 export function getVideoManualApiBaseUrl() {
   return BASE_URL.replace(/\/$/, "");
 }

@@ -696,7 +696,12 @@ export function normalizePlayableMediaSource(sourceUrl, apiBaseUrl) {
 
   try {
     const parsed = new URL(sourceUrl, window.location.href);
-    if (parsed.pathname.includes("/api/video-manuals/stream/") || parsed.pathname.includes("/api/video-manual-media/")) {
+    if (parsed.pathname.includes("/api/video-manual-media/")) {
+      const upstreamUrl = parsed.searchParams.get("url");
+      return { previewUrl: parsed.toString(), publicUrl: upstreamUrl || parsed.toString() };
+    }
+
+    if (parsed.pathname.includes("/api/video-manuals/stream/")) {
       return { previewUrl: parsed.toString(), publicUrl: parsed.toString() };
     }
 

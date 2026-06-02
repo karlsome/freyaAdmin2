@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { Canvas, Controls, Edit, Timeline, UIController } from "@shotstack/shotstack-studio";
+import { Canvas, Controls, Edit, Timeline, UIController, VideoExporter } from "@shotstack/shotstack-studio";
 import VideoManualAddElementsSidebar from "../components/videoManual/VideoManualAddElementsSidebar";
 import VideoManualAssetLibraryModal from "../components/videoManual/VideoManualAssetLibraryModal";
 import VideoManualClipActionBar from "../components/videoManual/VideoManualClipActionBar";
@@ -44,6 +44,7 @@ import {
   canDeployVideoManualProjects,
   createVideoManualRevision,
   deployVideoManualRenderedRevision,
+  deployVideoManualUploadedRevision,
   deployVideoManualRevision,
   fetchVideoManualRenderStatus,
   fetchVideoManualPlaylistAssets,
@@ -99,6 +100,23 @@ function getRevisionDisplayName(revision) {
   return revision?.revisionName || (revision?.revisionNumber ? `Revision ${revision.revisionNumber}` : "revision");
 }
 
+function getPublicRenderSource(sourceUrl, assetSourceMap = {}) {
+  const mappedSrc = assetSourceMap[sourceUrl];
+  if (mappedSrc && mappedSrc !== sourceUrl) return mappedSrc;
+
+  try {
+    const parsed = new URL(sourceUrl, window.location.href);
+    if (parsed.pathname.includes("/api/video-manual-media/")) {
+      const upstreamUrl = parsed.searchParams.get("url");
+      if (upstreamUrl) return upstreamUrl;
+    }
+  } catch {
+    return mappedSrc || sourceUrl;
+  }
+
+  return mappedSrc || sourceUrl;
+}
+
 function prepareVideoManualEditForRender(editJson, assetSourceMap = {}) {
   const preparedEdit = cloneJson(editJson, null);
   if (!preparedEdit) throw new Error("Revision snapshot is missing edit data.");
@@ -109,14 +127,15 @@ function prepareVideoManualEditForRender(editJson, assetSourceMap = {}) {
       if (!clip?.asset?.src || typeof clip.asset.src !== "string") return;
 
       const currentSrc = clip.asset.src;
-      const mappedSrc = assetSourceMap[currentSrc];
+      const mappedSrc = getPublicRenderSource(currentSrc, assetSourceMap);
       if (mappedSrc) {
         clip.asset.src = mappedSrc;
-        return;
       }
 
-      if (currentSrc.startsWith("blob:") || currentSrc.includes("/api/video-manuals/stream/")) {
-        unresolvedSources.push(currentSrc);
+      if (clip.asset.src.startsWith("blob:")
+        || clip.asset.src.includes("/api/video-manuals/stream/")
+        || clip.asset.src.includes("/api/video-manual-media/")) {
+        unresolvedSources.push(clip.asset.src);
       }
     });
   });
@@ -126,6 +145,10 @@ function prepareVideoManualEditForRender(editJson, assetSourceMap = {}) {
   }
 
   return preparedEdit;
+}
+
+function buildVideoManualDeploymentFileName(title, revisionNumber) {
+  return `${String(title || "video-manual").trim() || "video-manual"}-rev-${revisionNumber || "deploy"}.mp4`;
 }
 
 function clampNumber(value, min, max) {
@@ -1395,6 +1418,56 @@ export default function VideoManualProjectEditorPage() {
     throw new Error("Render timeout after 10 minutes.");
   }, []);
 
+  const exportRevisionSnapshotAsBlob = useCallback(async (snapshot) => {
+    if (typeof VideoEncoder === "undefined") {
+      throw new Error("This browser cannot create an MP4 fallback because WebCodecs is not available.");
+    }
+
+    const template = cloneJson(snapshot?.edit || DEFAULT_VIDEO_MANUAL_TEMPLATE, cloneJson(DEFAULT_VIDEO_MANUAL_TEMPLATE, DEFAULT_VIDEO_MANUAL_TEMPLATE));
+    const outputSize = template?.output?.size || DEFAULT_VIDEO_MANUAL_TEMPLATE.output.size;
+    const outputFps = Number(template?.output?.fps) || DEFAULT_VIDEO_MANUAL_TEMPLATE.output.fps;
+    const existingStudioRoot = studioElRef.current;
+    const restoreMainRoot = existingStudioRoot?.hasAttribute("data-shotstack-studio") ?? false;
+    const tempRoot = document.createElement("div");
+
+    tempRoot.setAttribute("data-shotstack-studio", "");
+    tempRoot.style.position = "fixed";
+    tempRoot.style.left = "-20000px";
+    tempRoot.style.top = "0";
+    tempRoot.style.width = `${outputSize?.width || DEFAULT_VIDEO_MANUAL_TEMPLATE.output.size.width}px`;
+    tempRoot.style.height = `${outputSize?.height || DEFAULT_VIDEO_MANUAL_TEMPLATE.output.size.height}px`;
+    tempRoot.style.opacity = "0";
+    tempRoot.style.pointerEvents = "none";
+    tempRoot.style.overflow = "hidden";
+
+    let exportEdit = null;
+    let exportCanvas = null;
+    let exporter = null;
+
+    try {
+      if (restoreMainRoot) {
+        existingStudioRoot.removeAttribute("data-shotstack-studio");
+      }
+      document.body.appendChild(tempRoot);
+
+      exportEdit = new Edit(template);
+      exportCanvas = new Canvas(exportEdit);
+      await exportCanvas.load();
+      await exportEdit.load();
+
+      exporter = new VideoExporter(exportEdit, exportCanvas);
+      return await exporter.exportBlob(outputFps);
+    } finally {
+      try { exporter?.dispose?.(); } catch { /* Ignore fallback exporter cleanup errors. */ }
+      try { exportCanvas?.dispose?.(); } catch { /* Ignore fallback canvas cleanup errors. */ }
+      try { exportEdit?.dispose?.(); } catch { /* Ignore fallback edit cleanup errors. */ }
+      tempRoot.remove();
+      if (restoreMainRoot) {
+        existingStudioRoot?.setAttribute("data-shotstack-studio", "");
+      }
+    }
+  }, []);
+
   const handleDeployRevision = useCallback(async (revision) => {
     const revisionId = getRevisionId(revision);
     if (!revisionId || !projectId) return;
@@ -1420,6 +1493,7 @@ export default function VideoManualProjectEditorPage() {
     try {
       const fullRevision = await fetchVideoManualRevision(revisionId);
       let deployData = null;
+      let usedLocalFallback = false;
 
       try {
         deployData = await deployVideoManualRevision(projectId, revisionId, { reuseExistingDeployment: true });
@@ -1428,6 +1502,9 @@ export default function VideoManualProjectEditorPage() {
       }
 
       if (!deployData) {
+        const snapshot = fullRevision?.snapshot || {};
+        const deployFileName = buildVideoManualDeploymentFileName(snapshot.title || project?.title || "Video Manual", fullRevision?.revisionNumber);
+
         setDeploymentStatus({
           type: "info",
           status: "SUBMITTING",
@@ -1436,25 +1513,57 @@ export default function VideoManualProjectEditorPage() {
           progress: null,
         });
 
-        const snapshot = fullRevision?.snapshot || {};
         const editJson = prepareVideoManualEditForRender(snapshot.edit || DEFAULT_VIDEO_MANUAL_TEMPLATE, snapshot.assetSourceMap || {});
-        const renderStart = await renderVideoManualEdit(editJson, snapshot.title || project?.title || "Video Manual");
-        const renderId = renderStart?.renderId;
-        if (!renderId) throw new Error("Render request did not return a render id.");
 
-        const renderResult = await waitForVideoManualRender(renderId);
-        setDeploymentStatus({
-          type: "info",
-          status: "UPLOADING",
-          title: "Uploading render",
-          message: "Shotstack finished rendering. Saving the final MP4 to Firebase Storage.",
-          progress: null,
-        });
+        try {
+          const renderStart = await renderVideoManualEdit(editJson, snapshot.title || project?.title || "Video Manual");
+          const renderId = renderStart?.renderId;
+          if (!renderId) throw new Error("Render request did not return a render id.");
 
-        deployData = await deployVideoManualRenderedRevision(projectId, revisionId, {
-          renderId,
-          downloadUrl: renderResult?.downloadUrl || null,
-        });
+          const renderResult = await waitForVideoManualRender(renderId);
+          setDeploymentStatus({
+            type: "info",
+            status: "UPLOADING",
+            title: "Uploading render",
+            message: "Shotstack finished rendering. Saving the final MP4 to Firebase Storage.",
+            progress: null,
+          });
+
+          deployData = await deployVideoManualRenderedRevision(projectId, revisionId, {
+            renderId,
+            downloadUrl: renderResult?.downloadUrl || null,
+          });
+        } catch (renderError) {
+          const primaryMessage = renderError?.message || "Shotstack render failed.";
+
+          setDeploymentStatus({
+            type: "info",
+            status: "LOCAL_EXPORT",
+            title: "Rendering locally",
+            message: "Shotstack sandbox rejected the cloud render. Exporting the selected revision in the browser instead.",
+            progress: null,
+          });
+
+          try {
+            const exportedBlob = await exportRevisionSnapshotAsBlob(snapshot);
+            usedLocalFallback = true;
+
+            setDeploymentStatus({
+              type: "info",
+              status: "UPLOADING",
+              title: "Uploading local export",
+              message: "The browser export finished. Saving the final MP4 to Firebase Storage.",
+              progress: null,
+            });
+
+            deployData = await deployVideoManualUploadedRevision(projectId, revisionId, exportedBlob, {
+              fileName: deployFileName,
+              mimeType: "video/mp4",
+            });
+          } catch (fallbackError) {
+            throw new Error(`${primaryMessage} Local export fallback also failed: ${fallbackError?.message || "Unknown error."}`);
+          }
+        }
       }
 
       const nextProject = await fetchVideoManualProject(projectId);
@@ -1468,7 +1577,11 @@ export default function VideoManualProjectEditorPage() {
         progress: 100,
         downloadUrl: deployData?.deployedVideoUrl || nextProject?.deployedVideoUrl || "",
       });
-      showNotice(`Deployed ${deployData?.revisionName || getRevisionDisplayName(fullRevision)}.`);
+      showNotice(
+        usedLocalFallback
+          ? `Deployed ${deployData?.revisionName || getRevisionDisplayName(fullRevision)} using the browser export fallback.`
+          : `Deployed ${deployData?.revisionName || getRevisionDisplayName(fullRevision)}.`
+      );
     } catch (error) {
       setDeploymentStatus({
         type: "error",
@@ -1481,7 +1594,7 @@ export default function VideoManualProjectEditorPage() {
     } finally {
       setRevisionActionId("");
     }
-  }, [canDeployProjects, loadRevisionHistory, project?.title, projectId, revisionPreview, showNotice, waitForVideoManualRender]);
+  }, [canDeployProjects, exportRevisionSnapshotAsBlob, loadRevisionHistory, project?.title, projectId, revisionPreview, showNotice, waitForVideoManualRender]);
 
   const handleUndeployProject = useCallback(async () => {
     if (!projectId || !project?.deployedRevisionId) return;
