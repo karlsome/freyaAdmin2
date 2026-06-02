@@ -51,7 +51,7 @@ export default function VideoManualExportStatusModal({
   const canShowActions = !busy && type === "success";
 
   return (
-    <div className="fixed inset-0 z-[360] flex items-center justify-center bg-slate-950/55 px-4 backdrop-blur-sm">
+    <div className="fixed inset-0 z-[2147483000] flex items-center justify-center bg-slate-950/55 px-4 backdrop-blur-sm">
       <section
         role="dialog"
         aria-modal="true"
