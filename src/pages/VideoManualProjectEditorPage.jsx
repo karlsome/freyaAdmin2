@@ -1426,8 +1426,9 @@ export default function VideoManualProjectEditorPage() {
     const template = cloneJson(snapshot?.edit || DEFAULT_VIDEO_MANUAL_TEMPLATE, cloneJson(DEFAULT_VIDEO_MANUAL_TEMPLATE, DEFAULT_VIDEO_MANUAL_TEMPLATE));
     const outputSize = template?.output?.size || DEFAULT_VIDEO_MANUAL_TEMPLATE.output.size;
     const outputFps = Number(template?.output?.fps) || DEFAULT_VIDEO_MANUAL_TEMPLATE.output.fps;
-    const existingStudioRoot = studioElRef.current;
-    const restoreMainRoot = existingStudioRoot?.hasAttribute("data-shotstack-studio") ?? false;
+    const liveEdit = editRef.current;
+    const liveCanvas = canvasRef.current;
+    const liveWasPlaying = liveEdit?.isPlaying === true;
     const tempRoot = document.createElement("div");
 
     tempRoot.setAttribute("data-shotstack-studio", "");
@@ -1445,10 +1446,9 @@ export default function VideoManualProjectEditorPage() {
     let exporter = null;
 
     try {
-      if (restoreMainRoot) {
-        existingStudioRoot.removeAttribute("data-shotstack-studio");
-      }
-      document.body.appendChild(tempRoot);
+      liveEdit?.pause?.();
+      liveCanvas?.pauseTicker?.();
+      document.body.prepend(tempRoot);
 
       exportEdit = new Edit(template);
       exportCanvas = new Canvas(exportEdit);
@@ -1462,9 +1462,8 @@ export default function VideoManualProjectEditorPage() {
       try { exportCanvas?.dispose?.(); } catch { /* Ignore fallback canvas cleanup errors. */ }
       try { exportEdit?.dispose?.(); } catch { /* Ignore fallback edit cleanup errors. */ }
       tempRoot.remove();
-      if (restoreMainRoot) {
-        existingStudioRoot?.setAttribute("data-shotstack-studio", "");
-      }
+      liveCanvas?.resumeTicker?.();
+      if (liveWasPlaying) liveEdit?.play?.();
     }
   }, []);
 
@@ -1496,9 +1495,16 @@ export default function VideoManualProjectEditorPage() {
       let usedLocalFallback = false;
 
       try {
-        deployData = await deployVideoManualRevision(projectId, revisionId, { reuseExistingDeployment: true });
+        deployData = await deployVideoManualRevision(projectId, revisionId, {
+          reuseExistingDeployment: true,
+          allowMissingReusableDeployment: true,
+        });
       } catch (error) {
         if (error.status !== 409 || error.code !== "DEPLOYED_VIDEO_REUSE_MISSING") throw error;
+      }
+
+      if (deployData?.needsRender) {
+        deployData = null;
       }
 
       if (!deployData) {
@@ -1507,61 +1513,70 @@ export default function VideoManualProjectEditorPage() {
 
         setDeploymentStatus({
           type: "info",
-          status: "SUBMITTING",
-          title: "Rendering video",
-          message: "No reusable MP4 was found. Submitting this revision to Shotstack.",
+          status: "PREPARING",
+          title: "Preparing video",
+          message: "No reusable MP4 was found. Creating a flattened deployment video.",
           progress: null,
         });
 
         const editJson = prepareVideoManualEditForRender(snapshot.edit || DEFAULT_VIDEO_MANUAL_TEMPLATE, snapshot.assetSourceMap || {});
 
         try {
-          const renderStart = await renderVideoManualEdit(editJson, snapshot.title || project?.title || "Video Manual");
-          const renderId = renderStart?.renderId;
-          if (!renderId) throw new Error("Render request did not return a render id.");
-
-          const renderResult = await waitForVideoManualRender(renderId);
-          setDeploymentStatus({
-            type: "info",
-            status: "UPLOADING",
-            title: "Uploading render",
-            message: "Shotstack finished rendering. Saving the final MP4 to Firebase Storage.",
-            progress: null,
-          });
-
-          deployData = await deployVideoManualRenderedRevision(projectId, revisionId, {
-            renderId,
-            downloadUrl: renderResult?.downloadUrl || null,
-          });
-        } catch (renderError) {
-          const primaryMessage = renderError?.message || "Shotstack render failed.";
-
           setDeploymentStatus({
             type: "info",
             status: "LOCAL_EXPORT",
             title: "Rendering locally",
-            message: "Shotstack sandbox rejected the cloud render. Exporting the selected revision in the browser instead.",
+            message: "Generating the deployment MP4 in the browser.",
+            progress: null,
+          });
+
+          const exportedBlob = await exportRevisionSnapshotAsBlob(snapshot);
+          usedLocalFallback = true;
+
+          setDeploymentStatus({
+            type: "info",
+            status: "UPLOADING",
+            title: "Uploading local export",
+            message: "The browser export finished. Saving the final MP4 to Firebase Storage.",
+            progress: null,
+          });
+
+          deployData = await deployVideoManualUploadedRevision(projectId, revisionId, exportedBlob, {
+            fileName: deployFileName,
+            mimeType: "video/mp4",
+          });
+        } catch (localExportError) {
+          const primaryMessage = localExportError?.message || "Local browser export failed.";
+
+          setDeploymentStatus({
+            type: "info",
+            status: "SUBMITTING",
+            title: "Trying Shotstack",
+            message: "The browser export failed, so the app is trying the Shotstack sandbox instead.",
             progress: null,
           });
 
           try {
-            const exportedBlob = await exportRevisionSnapshotAsBlob(snapshot);
-            usedLocalFallback = true;
+            const renderStart = await renderVideoManualEdit(editJson, snapshot.title || project?.title || "Video Manual");
+            const renderId = renderStart?.renderId;
+            if (!renderId) throw new Error("Render request did not return a render id.");
+
+            const renderResult = await waitForVideoManualRender(renderId);
 
             setDeploymentStatus({
               type: "info",
               status: "UPLOADING",
-              title: "Uploading local export",
-              message: "The browser export finished. Saving the final MP4 to Firebase Storage.",
+              title: "Uploading render",
+              message: "Shotstack finished rendering. Saving the final MP4 to Firebase Storage.",
               progress: null,
             });
 
-            deployData = await deployVideoManualUploadedRevision(projectId, revisionId, exportedBlob, {
-              fileName: deployFileName,
-              mimeType: "video/mp4",
+            deployData = await deployVideoManualRenderedRevision(projectId, revisionId, {
+              renderId,
+              downloadUrl: renderResult?.downloadUrl || null,
             });
-          } catch (fallbackError) {
-            throw new Error(`${primaryMessage} Local export fallback also failed: ${fallbackError?.message || "Unknown error."}`);
+          } catch (shotstackError) {
+            throw new Error(`${primaryMessage} Shotstack fallback also failed: ${shotstackError?.message || "Unknown error."}`);
           }
         }
       }
