@@ -5,6 +5,7 @@ import VideoManualAddElementsSidebar from "../components/videoManual/VideoManual
 import VideoManualAssetLibraryModal from "../components/videoManual/VideoManualAssetLibraryModal";
 import VideoManualClipActionBar from "../components/videoManual/VideoManualClipActionBar";
 import VideoManualEditorToolbar from "../components/videoManual/VideoManualEditorToolbar";
+import VideoManualRevisionHistoryModal from "../components/videoManual/VideoManualRevisionHistoryModal";
 import VideoManualStepsPanel from "../components/videoManual/VideoManualStepsPanel";
 import {
   buildRevisionSnapshot,
@@ -43,6 +44,8 @@ import {
   createVideoManualRevision,
   fetchVideoManualPlaylistAssets,
   fetchVideoManualProject,
+  fetchVideoManualRevision,
+  fetchVideoManualRevisions,
   getVideoManualApiBaseUrl,
   patchVideoManualProject,
   uploadVideoManualPlaylistAsset,
@@ -78,6 +81,14 @@ const TIMELINE_TRACK_HEIGHTS = {
   empty: 48,
   default: 48,
 };
+
+function getRevisionId(revision) {
+  return String(revision?._id?.$oid || revision?._id || revision?.revisionId || "");
+}
+
+function getRevisionDisplayName(revision) {
+  return revision?.revisionName || (revision?.revisionNumber ? `Revision ${revision.revisionNumber}` : "revision");
+}
 
 function clampNumber(value, min, max) {
   return Math.max(min, Math.min(max, value));
@@ -413,6 +424,14 @@ export default function VideoManualProjectEditorPage() {
     uploading: false,
     uploadProgress: null,
   });
+  const [revisionHistory, setRevisionHistory] = useState({
+    open: false,
+    loading: false,
+    error: "",
+    revisions: [],
+  });
+  const [revisionPreview, setRevisionPreview] = useState(null);
+  const [revisionActionId, setRevisionActionId] = useState("");
 
   const editRef = useRef(null);
   const editorBodyRef = useRef(null);
@@ -431,6 +450,7 @@ export default function VideoManualProjectEditorPage() {
   const syncingAnimatedClipUpdateRef = useRef(false);
   const animatedClipStateByIdRef = useRef({});
   const visualResizeSourceByIdRef = useRef({});
+  const revisionPreviewSourceRef = useRef(null);
   const timelineResizeFrameRef = useRef(null);
   const timelineHeightUserSetRef = useRef(false);
 
@@ -1133,8 +1153,56 @@ export default function VideoManualProjectEditorPage() {
     assetSourceMapRef.current = { ...assetSourceMapRef.current, [previewUrl]: publicUrl };
   }, []);
 
+  const loadEditIntoStudio = useCallback(async (editData, assetSourceMap = {}) => {
+    const edit = editRef.current;
+    if (!edit?.loadEdit) throw new Error("Editor is not ready.");
+
+    const nextEdit = cloneJson(editData || DEFAULT_VIDEO_MANUAL_TEMPLATE, cloneJson(DEFAULT_VIDEO_MANUAL_TEMPLATE, DEFAULT_VIDEO_MANUAL_TEMPLATE));
+    await edit.loadEdit(nextEdit);
+    edit.pause?.();
+
+    assetSourceMapRef.current = { ...(assetSourceMap || {}) };
+    animatedClipStateByIdRef.current = {};
+    visualResizeSourceByIdRef.current = {};
+    timelineHeightUserSetRef.current = false;
+    setSelectedClip(null);
+    setKeyframeDraft(null);
+    setKeyframeEditMode(null);
+    setTimelineBackground(nextEdit?.timeline?.background || DEFAULT_VIDEO_MANUAL_TEMPLATE.timeline.background);
+    setOutputSize(getOutputSize(nextEdit));
+    setOutputFps(getOutputFps(nextEdit));
+    syncSteps();
+    syncEditorSettings();
+    fitTimelineToEdit(true);
+    canvasRef.current?.refresh?.();
+    timelineRef.current?.refresh?.();
+    scheduleTimelineKeyframeRefresh();
+  }, [fitTimelineToEdit, scheduleTimelineKeyframeRefresh, syncEditorSettings, syncSteps]);
+
+  const loadRevisionHistory = useCallback(async ({ open = true } = {}) => {
+    if (!projectId) return;
+
+    setRevisionHistory((current) => ({ ...current, open: open || current.open, loading: true, error: "" }));
+    try {
+      const revisions = await fetchVideoManualRevisions(projectId);
+      setRevisionHistory((current) => ({ ...current, open: open || current.open, loading: false, error: "", revisions }));
+    } catch (error) {
+      setRevisionHistory((current) => ({
+        ...current,
+        open: open || current.open,
+        loading: false,
+        error: error.message || "Failed to load revisions.",
+      }));
+    }
+  }, [projectId]);
+
   const handleSave = useCallback(async () => {
     if (!editRef.current || saving) return;
+    if (revisionPreview) {
+      showNotice("Back to current before saving the working copy.", "error");
+      return;
+    }
+
     setSaving(true);
     try {
       const currentEdit = editRef.current.getEdit();
@@ -1145,25 +1213,123 @@ export default function VideoManualProjectEditorPage() {
     } finally {
       setSaving(false);
     }
-  }, [projectId, saving, showNotice]);
+  }, [projectId, revisionPreview, saving, showNotice]);
 
   const handleSaveRevision = useCallback(async () => {
     if (!editRef.current || saving) return;
+    if (revisionPreview) {
+      showNotice("Back to current before saving a new revision.", "error");
+      return;
+    }
+
+    const nextRevisionNumber = (Number(project?.currentRevisionNumber) || 0) + 1;
+    const defaultRevisionName = `${project?.title || "Untitled Project"} Rev ${String(nextRevisionNumber).padStart(2, "0")}`;
+    const revisionName = window.prompt("Revision name:", defaultRevisionName);
+    if (!revisionName || !revisionName.trim()) return;
+
     setSaving(true);
     try {
       const currentEdit = editRef.current.getEdit();
       const assetSourceMap = assetSourceMapRef.current;
       await patchVideoManualProject(projectId, { edit: currentEdit, assetSourceMap });
       const snapshot = buildRevisionSnapshot(project, currentEdit, assetSourceMap);
-      const { revisionNumber } = await createVideoManualRevision(projectId, snapshot);
+      const { revisionNumber } = await createVideoManualRevision(projectId, snapshot, revisionName.trim());
       setProject(await fetchVideoManualProject(projectId));
+      await loadRevisionHistory({ open: true });
       showNotice(`Revision ${revisionNumber} created.`);
     } catch (error) {
       showNotice(error.message || "Revision save failed.", "error");
     } finally {
       setSaving(false);
     }
-  }, [project, projectId, saving, showNotice]);
+  }, [loadRevisionHistory, project, projectId, revisionPreview, saving, showNotice]);
+
+  const handleShowHistory = useCallback(() => {
+    loadRevisionHistory({ open: true });
+  }, [loadRevisionHistory]);
+
+  const handlePreviewRevision = useCallback(async (revision) => {
+    const revisionId = getRevisionId(revision);
+    if (!revisionId) return;
+
+    setRevisionActionId(`${revisionId}:preview`);
+    try {
+      if (!revisionPreviewSourceRef.current && editRef.current) {
+        revisionPreviewSourceRef.current = {
+          edit: cloneJson(editRef.current.getEdit(), DEFAULT_VIDEO_MANUAL_TEMPLATE),
+          assetSourceMap: { ...assetSourceMapRef.current },
+        };
+      }
+
+      const nextRevision = await fetchVideoManualRevision(revisionId);
+      const snapshot = nextRevision?.snapshot || {};
+      await loadEditIntoStudio(snapshot.edit || DEFAULT_VIDEO_MANUAL_TEMPLATE, snapshot.assetSourceMap || {});
+      setRevisionPreview(nextRevision);
+      showNotice(`Previewing ${getRevisionDisplayName(nextRevision)}.`);
+      await loadRevisionHistory({ open: true });
+    } catch (error) {
+      showNotice(error.message || "Revision preview failed.", "error");
+    } finally {
+      setRevisionActionId("");
+    }
+  }, [loadEditIntoStudio, loadRevisionHistory, showNotice]);
+
+  const handleExitRevisionPreview = useCallback(async () => {
+    if (!revisionPreview) return;
+
+    const previewSource = revisionPreviewSourceRef.current || {
+      edit: project?.edit || DEFAULT_VIDEO_MANUAL_TEMPLATE,
+      assetSourceMap: project?.assetSourceMap || {},
+    };
+
+    setRevisionActionId("current");
+    try {
+      await loadEditIntoStudio(previewSource.edit, previewSource.assetSourceMap);
+      revisionPreviewSourceRef.current = null;
+      setRevisionPreview(null);
+      showNotice("Back to current working copy.");
+    } catch (error) {
+      showNotice(error.message || "Failed to return to current project.", "error");
+    } finally {
+      setRevisionActionId("");
+    }
+  }, [loadEditIntoStudio, project?.assetSourceMap, project?.edit, revisionPreview, showNotice]);
+
+  const handleRestoreRevision = useCallback(async (revision) => {
+    const revisionId = getRevisionId(revision);
+    if (!revisionId || !projectId) return;
+    if (!window.confirm("Restore this revision as the current working copy?")) return;
+
+    setRevisionActionId(`${revisionId}:restore`);
+    try {
+      const nextRevision = await fetchVideoManualRevision(revisionId);
+      const snapshot = nextRevision?.snapshot || {};
+      const restoredEdit = snapshot.edit || DEFAULT_VIDEO_MANUAL_TEMPLATE;
+      const restoredAssetSourceMap = snapshot.assetSourceMap || {};
+
+      await patchVideoManualProject(projectId, {
+        title: snapshot.title || project?.title || "Video Manual",
+        description: snapshot.description || project?.description || "",
+        status: snapshot.status || project?.status || "draft",
+        edit: restoredEdit,
+        assetSourceMap: restoredAssetSourceMap,
+        settings: snapshot.settings || project?.settings || {},
+        schemaVersion: snapshot.schemaVersion || project?.schemaVersion || 2,
+      });
+
+      const nextProject = await fetchVideoManualProject(projectId);
+      setProject(nextProject);
+      await loadEditIntoStudio(nextProject.edit || restoredEdit, nextProject.assetSourceMap || restoredAssetSourceMap);
+      revisionPreviewSourceRef.current = null;
+      setRevisionPreview(null);
+      setRevisionHistory((current) => ({ ...current, open: false }));
+      showNotice(`Restored ${getRevisionDisplayName(nextRevision)}.`);
+    } catch (error) {
+      showNotice(error.message || "Revision restore failed.", "error");
+    } finally {
+      setRevisionActionId("");
+    }
+  }, [loadEditIntoStudio, project, projectId, showNotice]);
 
   const handleUndo = useCallback(() => {
     editRef.current?.undo?.().then(() => {
@@ -1738,12 +1904,12 @@ export default function VideoManualProjectEditorPage() {
     <div className="mt-16 flex h-[calc(100vh-4rem)] min-h-0 flex-col overflow-hidden bg-slate-100 font-sans dark:bg-slate-950">
       <VideoManualEditorToolbar
         projectTitle={project?.title || "Video Manual"}
-        saving={saving}
+        saving={saving || Boolean(revisionPreview) || Boolean(revisionActionId)}
         onBack={() => navigate("/videoManual")}
         onUndo={handleUndo}
         onRedo={handleRedo}
         onSaveRevision={handleSaveRevision}
-        onShowHistory={() => handleComingSoon("History")}
+        onShowHistory={handleShowHistory}
         onZoomOut={() => handleZoom(-1)}
         onAutoFit={handleAutoFit}
         onZoomIn={() => handleZoom(1)}
@@ -1753,6 +1919,20 @@ export default function VideoManualProjectEditorPage() {
       {(projectError || notice.message) ? (
         <div className={`relative z-20 flex justify-center px-4 py-1.5 text-xs font-black text-white ${projectError || notice.type === "error" ? "bg-red-500" : "bg-emerald-500"}`}>
           {projectError || notice.message}
+        </div>
+      ) : null}
+
+      {revisionPreview ? (
+        <div className="relative z-20 flex flex-wrap items-center justify-center gap-3 bg-sky-500 px-4 py-2 text-xs font-black text-white">
+          <span>Previewing {getRevisionDisplayName(revisionPreview)}. Edits are not saved until you restore this revision.</span>
+          <button
+            type="button"
+            onClick={handleExitRevisionPreview}
+            disabled={Boolean(revisionActionId)}
+            className="rounded-lg bg-white/15 px-3 py-1 text-[11px] transition hover:bg-white/25 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            Back to Current
+          </button>
         </div>
       ) : null}
 
@@ -1873,6 +2053,21 @@ export default function VideoManualProjectEditorPage() {
         onRefresh={() => loadAssetLibrary(assetLibrary.type)}
         onUpload={handleUploadAsset}
         onUseAsset={insertPlaylistAsset}
+      />
+
+      <VideoManualRevisionHistoryModal
+        open={revisionHistory.open}
+        project={project}
+        revisions={revisionHistory.revisions}
+        loading={revisionHistory.loading}
+        error={revisionHistory.error}
+        previewRevision={revisionPreview}
+        actionId={revisionActionId}
+        onClose={() => setRevisionHistory((current) => ({ ...current, open: false }))}
+        onRefresh={() => loadRevisionHistory({ open: true })}
+        onPreview={handlePreviewRevision}
+        onRestore={handleRestoreRevision}
+        onBackToCurrent={handleExitRevisionPreview}
       />
     </div>
   );
