@@ -61,7 +61,9 @@ const TIMELINE_FIT_PADDING = 16;
 const EDITOR_CANVAS_MIN_HEIGHT = 180;
 const TIMELINE_RESIZE_KEYBOARD_STEP = 24;
 const KEYFRAME_DIMENSION_CHANGE_EPSILON = 0.5;
+const MEDIA_RESIZE_OFFSET_EPSILON = 0.001;
 const SHOTSTACK_SCROLLABLE_POPUP_SELECTOR = ".ss-toolbar-popup, .ss-media-toolbar-popup, .ss-canvas-toolbar-popup";
+const RESIZABLE_MEDIA_ASSET_TYPES = new Set(["image", "video"]);
 const TIMELINE_TRACK_HEIGHTS = {
   video: 72,
   image: 72,
@@ -84,6 +86,207 @@ function clampNumber(value, min, max) {
 function getPositiveDimension(value) {
   const numericValue = Number(value);
   return Number.isFinite(numericValue) && numericValue > 0 ? numericValue : null;
+}
+
+function hasOwnValue(object, key) {
+  return Object.prototype.hasOwnProperty.call(object || {}, key);
+}
+
+function isResizableMediaClip(clip) {
+  return RESIZABLE_MEDIA_ASSET_TYPES.has(clip?.asset?.type);
+}
+
+function getEditCanvasSize(edit) {
+  const editSize = edit?.size || getOutputSize(edit?.getEdit?.());
+  const width = getPositiveDimension(editSize?.width);
+  const height = getPositiveDimension(editSize?.height);
+  return {
+    width: width || DEFAULT_VIDEO_MANUAL_TEMPLATE.output.size.width,
+    height: height || DEFAULT_VIDEO_MANUAL_TEMPLATE.output.size.height,
+  };
+}
+
+function relativeToAbsoluteClipPosition(containerSize, entitySize, anchor = "center", relativePosition = { x: 0, y: 0 }) {
+  switch (anchor) {
+    case "topLeft":
+      return { x: relativePosition.x * containerSize.width, y: -relativePosition.y * containerSize.height };
+    case "topRight":
+      return { x: (relativePosition.x + 1) * containerSize.width - entitySize.width, y: -relativePosition.y * containerSize.height };
+    case "bottomLeft":
+      return { x: relativePosition.x * containerSize.width, y: (-relativePosition.y + 1) * containerSize.height - entitySize.height };
+    case "bottomRight":
+      return { x: (relativePosition.x + 1) * containerSize.width - entitySize.width, y: (-relativePosition.y + 1) * containerSize.height - entitySize.height };
+    case "left":
+      return { x: relativePosition.x * containerSize.width, y: (-relativePosition.y + 0.5) * containerSize.height - entitySize.height / 2 };
+    case "right":
+      return { x: (relativePosition.x + 1) * containerSize.width - entitySize.width, y: (-relativePosition.y + 0.5) * containerSize.height - entitySize.height / 2 };
+    case "top":
+      return { x: (relativePosition.x + 0.5) * containerSize.width - entitySize.width / 2, y: -relativePosition.y * containerSize.height };
+    case "bottom":
+      return { x: (relativePosition.x + 0.5) * containerSize.width - entitySize.width / 2, y: (-relativePosition.y + 1) * containerSize.height - entitySize.height };
+    case "center":
+    default:
+      return { x: (relativePosition.x + 0.5) * containerSize.width - entitySize.width / 2, y: (-relativePosition.y + 0.5) * containerSize.height - entitySize.height / 2 };
+  }
+}
+
+function absoluteToRelativeClipPosition(containerSize, entitySize, anchor = "center", absolutePosition = { x: 0, y: 0 }) {
+  switch (anchor) {
+    case "topLeft":
+      return { x: absolutePosition.x / containerSize.width, y: -(absolutePosition.y / containerSize.height) };
+    case "topRight":
+      return { x: (absolutePosition.x + entitySize.width) / containerSize.width - 1, y: -(absolutePosition.y / containerSize.height) };
+    case "bottomLeft":
+      return { x: absolutePosition.x / containerSize.width, y: -((absolutePosition.y + entitySize.height) / containerSize.height - 1) };
+    case "bottomRight":
+      return { x: (absolutePosition.x + entitySize.width) / containerSize.width - 1, y: -((absolutePosition.y + entitySize.height) / containerSize.height - 1) };
+    case "left":
+      return { x: absolutePosition.x / containerSize.width, y: -((absolutePosition.y + entitySize.height / 2) / containerSize.height - 0.5) };
+    case "right":
+      return { x: (absolutePosition.x + entitySize.width) / containerSize.width - 1, y: -((absolutePosition.y + entitySize.height / 2) / containerSize.height - 0.5) };
+    case "top":
+      return { x: (absolutePosition.x + entitySize.width / 2) / containerSize.width - 0.5, y: -(absolutePosition.y / containerSize.height) };
+    case "bottom":
+      return { x: (absolutePosition.x + entitySize.width / 2) / containerSize.width - 0.5, y: -((absolutePosition.y + entitySize.height) / containerSize.height - 1) };
+    case "center":
+    default:
+      return { x: (absolutePosition.x + entitySize.width / 2) / containerSize.width - 0.5, y: -((absolutePosition.y + entitySize.height / 2) / containerSize.height - 0.5) };
+  }
+}
+
+function getStableResizeAxisPosition({ axis, previousPosition, previousSize, nextSize, previousOffset, nextOffset, canvasSize }) {
+  const sizeDelta = nextSize - previousSize;
+  if (Math.abs(sizeDelta) <= KEYFRAME_DIMENSION_CHANGE_EPSILON) return previousPosition;
+
+  const expectedOffsetDelta = sizeDelta / 2 / canvasSize;
+  const actualOffsetDelta = nextOffset - previousOffset;
+  const firstEdgePinned = axis === "x"
+    ? Math.abs(actualOffsetDelta - expectedOffsetDelta) <= MEDIA_RESIZE_OFFSET_EPSILON
+    : Math.abs(actualOffsetDelta + expectedOffsetDelta) <= MEDIA_RESIZE_OFFSET_EPSILON;
+  const secondEdgePinned = axis === "x"
+    ? Math.abs(actualOffsetDelta + expectedOffsetDelta) <= MEDIA_RESIZE_OFFSET_EPSILON
+    : Math.abs(actualOffsetDelta - expectedOffsetDelta) <= MEDIA_RESIZE_OFFSET_EPSILON;
+
+  if (firstEdgePinned) return previousPosition;
+  if (secondEdgePinned) return previousPosition + previousSize - nextSize;
+  return previousPosition;
+}
+
+function buildStableMediaResizeUpdate(previousClip, updates, edit) {
+  if (!isResizableMediaClip(previousClip) || !updates?.offset) return null;
+
+  const previousWidth = getPositiveDimension(previousClip.width);
+  const previousHeight = getPositiveDimension(previousClip.height);
+  const nextWidth = getPositiveDimension(hasOwnValue(updates, "width") ? updates.width : previousClip.width);
+  const nextHeight = getPositiveDimension(hasOwnValue(updates, "height") ? updates.height : previousClip.height);
+  if (!previousWidth || !previousHeight || !nextWidth || !nextHeight) return null;
+
+  const widthChanged = Math.abs(nextWidth - previousWidth) > KEYFRAME_DIMENSION_CHANGE_EPSILON;
+  const heightChanged = Math.abs(nextHeight - previousHeight) > KEYFRAME_DIMENSION_CHANGE_EPSILON;
+  if (!widthChanged && !heightChanged) return null;
+
+  const hasNextOffsetX = hasOwnValue(updates.offset, "x");
+  const hasNextOffsetY = hasOwnValue(updates.offset, "y");
+  if ((widthChanged && !hasNextOffsetX) || (heightChanged && !hasNextOffsetY)) return null;
+
+  const canvasSize = getEditCanvasSize(edit);
+  const relativeTime = getClipRelativePlaybackTime(previousClip, Number(edit?.playbackTime) || 0);
+  const previousOffset = {
+    x: getKeyframedScalarValueAtTime(previousClip.offset?.x, relativeTime, 0, 4),
+    y: getKeyframedScalarValueAtTime(previousClip.offset?.y, relativeTime, 0, 4),
+  };
+  const nextOffset = {
+    x: hasNextOffsetX ? getStaticNumericValue(updates.offset.x, previousOffset.x) : previousOffset.x,
+    y: hasNextOffsetY ? getStaticNumericValue(updates.offset.y, previousOffset.y) : previousOffset.y,
+  };
+  const previousSize = { width: previousWidth, height: previousHeight };
+  const nextSize = { width: nextWidth, height: nextHeight };
+  const previousPosition = relativeToAbsoluteClipPosition(canvasSize, previousSize, previousClip.position || "center", previousOffset);
+  const nextPosition = { ...previousPosition };
+
+  if (widthChanged) {
+    nextPosition.x = getStableResizeAxisPosition({
+      axis: "x",
+      previousPosition: previousPosition.x,
+      previousSize: previousWidth,
+      nextSize: nextWidth,
+      previousOffset: previousOffset.x,
+      nextOffset: nextOffset.x,
+      canvasSize: canvasSize.width,
+    });
+  }
+  if (heightChanged) {
+    nextPosition.y = getStableResizeAxisPosition({
+      axis: "y",
+      previousPosition: previousPosition.y,
+      previousSize: previousHeight,
+      nextSize: nextHeight,
+      previousOffset: previousOffset.y,
+      nextOffset: nextOffset.y,
+      canvasSize: canvasSize.height,
+    });
+  }
+
+  const correctedOffset = absoluteToRelativeClipPosition(canvasSize, nextSize, previousClip.position || "center", nextPosition);
+  const normalizedOffset = {
+    ...(previousClip.offset || {}),
+    ...(updates.offset || {}),
+    ...(widthChanged ? { x: roundNumericValue(correctedOffset.x, 4, nextOffset.x) } : {}),
+    ...(heightChanged ? { y: roundNumericValue(correctedOffset.y, 4, nextOffset.y) } : {}),
+  };
+  const offsetChanged = Math.abs(getStaticNumericValue(normalizedOffset.x, nextOffset.x) - nextOffset.x) > MEDIA_RESIZE_OFFSET_EPSILON
+    || Math.abs(getStaticNumericValue(normalizedOffset.y, nextOffset.y) - nextOffset.y) > MEDIA_RESIZE_OFFSET_EPSILON;
+
+  if (!offsetChanged) return null;
+  return { ...updates, offset: normalizedOffset };
+}
+
+function getSdkResizeBaselineOffset(offsetValue) {
+  return Array.isArray(offsetValue) ? 0 : getStaticNumericValue(offsetValue, 0);
+}
+
+function buildStableAnimatedMediaResizeUpdate(sourceClip, updates, targetTime) {
+  if (!isResizableMediaClip(sourceClip) || !updates?.offset) return null;
+
+  const sourceWidth = getPositiveDimension(sourceClip.width);
+  const sourceHeight = getPositiveDimension(sourceClip.height);
+  const nextWidth = getPositiveDimension(hasOwnValue(updates, "width") ? updates.width : sourceClip.width);
+  const nextHeight = getPositiveDimension(hasOwnValue(updates, "height") ? updates.height : sourceClip.height);
+  if (!sourceWidth || !sourceHeight || !nextWidth || !nextHeight) return null;
+
+  const widthChanged = Math.abs(nextWidth - sourceWidth) > KEYFRAME_DIMENSION_CHANGE_EPSILON;
+  const heightChanged = Math.abs(nextHeight - sourceHeight) > KEYFRAME_DIMENSION_CHANGE_EPSILON;
+  if (!widthChanged && !heightChanged) return null;
+
+  const hasNextOffsetX = hasOwnValue(updates.offset, "x");
+  const hasNextOffsetY = hasOwnValue(updates.offset, "y");
+  if ((widthChanged && !hasNextOffsetX) || (heightChanged && !hasNextOffsetY)) return null;
+
+  const sourceScale = getKeyframedScalarValueAtTime(sourceClip.scale, targetTime, 1, 3);
+  const sourceOffset = {
+    x: getKeyframedScalarValueAtTime(sourceClip.offset?.x, targetTime, 0, 4),
+    y: getKeyframedScalarValueAtTime(sourceClip.offset?.y, targetTime, 0, 4),
+  };
+  const sdkBaselineOffset = {
+    x: getSdkResizeBaselineOffset(sourceClip.offset?.x),
+    y: getSdkResizeBaselineOffset(sourceClip.offset?.y),
+  };
+  const normalizedOffset = { ...(updates.offset || {}) };
+
+  if (hasNextOffsetX) {
+    const sdkOffsetX = getStaticNumericValue(updates.offset.x, sdkBaselineOffset.x);
+    normalizedOffset.x = roundNumericValue(sourceOffset.x + (sdkOffsetX - sdkBaselineOffset.x) * sourceScale, 4, sourceOffset.x);
+  }
+  if (hasNextOffsetY) {
+    const sdkOffsetY = getStaticNumericValue(updates.offset.y, sdkBaselineOffset.y);
+    normalizedOffset.y = roundNumericValue(sourceOffset.y + (sdkOffsetY - sdkBaselineOffset.y) * sourceScale, 4, sourceOffset.y);
+  }
+
+  const offsetChanged = Math.abs(getStaticNumericValue(normalizedOffset.x, sourceOffset.x) - getStaticNumericValue(updates.offset.x, sourceOffset.x)) > MEDIA_RESIZE_OFFSET_EPSILON
+    || Math.abs(getStaticNumericValue(normalizedOffset.y, sourceOffset.y) - getStaticNumericValue(updates.offset.y, sourceOffset.y)) > MEDIA_RESIZE_OFFSET_EPSILON;
+
+  if (!offsetChanged) return null;
+  return { ...updates, offset: normalizedOffset };
 }
 
 function isShotstackScrollablePopupTarget(target) {
@@ -661,8 +864,13 @@ export default function VideoManualProjectEditorPage() {
       const previousClip = location?.clip ? cloneJson(location.clip, null) : null;
       let nextUpdates = updates;
       let convertedAnimatedUpdate = false;
+      const previousClipHasAnimations = previousClip ? hasAnyAnimatedProperties(previousClip) : false;
 
-      if (previousClip && hasAnyAnimatedProperties(previousClip)) {
+      if (previousClip && !previousClipHasAnimations) {
+        nextUpdates = buildStableMediaResizeUpdate(previousClip, updates, edit) || nextUpdates;
+      }
+
+      if (previousClip && previousClipHasAnimations) {
         const playbackTime = Number(edit.playbackTime) || 0;
         const relativeTime = getClipRelativePlaybackTime(previousClip, playbackTime);
         const editModeContext = keyframeEditModeRef.current
@@ -676,12 +884,13 @@ export default function VideoManualProjectEditorPage() {
         const sourceClip = editModeContext?.sourceClip
           || visualResizeSourceByIdRef.current[clipId]
           || buildKeyframeSourceClipFromSnapshot(previousClip, rememberedState);
+        const liveUpdates = buildStableAnimatedMediaResizeUpdate(sourceClip, nextUpdates, targetTime) || nextUpdates;
         const values = getKeyframeValuesForClip(sourceClip, targetTime);
         const candidateClip = {
           ...previousClip,
-          ...updates,
-          ...(updates.offset ? { offset: { ...(previousClip.offset || {}), ...updates.offset } } : {}),
-          ...(updates.transform ? { transform: { ...(previousClip.transform || {}), ...updates.transform } } : {}),
+          ...liveUpdates,
+          ...(liveUpdates.offset ? { offset: { ...(previousClip.offset || {}), ...liveUpdates.offset } } : {}),
+          ...(liveUpdates.transform ? { transform: { ...(previousClip.transform || {}), ...liveUpdates.transform } } : {}),
         };
         const resizeScale = getVisualScaleFromDimensions(candidateClip, sourceClip, targetTime);
         const dimensionRestore = buildDimensionRestoreUpdate(candidateClip, sourceClip);
@@ -697,20 +906,20 @@ export default function VideoManualProjectEditorPage() {
           assignValue(normalizedValue);
         };
 
-        if (updates.offset && Object.prototype.hasOwnProperty.call(updates.offset, "x")) {
-          applyField("offsetX", updates.offset.x, (value) => { values.offsetX = value; });
+        if (liveUpdates.offset && Object.prototype.hasOwnProperty.call(liveUpdates.offset, "x")) {
+          applyField("offsetX", liveUpdates.offset.x, (value) => { values.offsetX = value; });
         }
-        if (updates.offset && Object.prototype.hasOwnProperty.call(updates.offset, "y")) {
-          applyField("offsetY", updates.offset.y, (value) => { values.offsetY = value; });
+        if (liveUpdates.offset && Object.prototype.hasOwnProperty.call(liveUpdates.offset, "y")) {
+          applyField("offsetY", liveUpdates.offset.y, (value) => { values.offsetY = value; });
         }
-        if (Object.prototype.hasOwnProperty.call(updates, "scale")) {
-          applyField("scale", updates.scale, (value) => { values.scale = value; });
+        if (Object.prototype.hasOwnProperty.call(liveUpdates, "scale")) {
+          applyField("scale", liveUpdates.scale, (value) => { values.scale = value; });
         }
-        if (Object.prototype.hasOwnProperty.call(updates, "opacity")) {
-          applyField("opacity", updates.opacity, (value) => { values.opacity = value; });
+        if (Object.prototype.hasOwnProperty.call(liveUpdates, "opacity")) {
+          applyField("opacity", liveUpdates.opacity, (value) => { values.opacity = value; });
         }
-        if (updates.transform?.rotate && Object.prototype.hasOwnProperty.call(updates.transform.rotate, "angle")) {
-          applyField("rotate", updates.transform.rotate.angle, (value) => { values.rotate = value; });
+        if (liveUpdates.transform?.rotate && Object.prototype.hasOwnProperty.call(liveUpdates.transform.rotate, "angle")) {
+          applyField("rotate", liveUpdates.transform.rotate.angle, (value) => { values.rotate = value; });
         }
         if (resizeScale != null) {
           applyField("scale", resizeScale, (value) => { values.scale = value; });
@@ -720,11 +929,11 @@ export default function VideoManualProjectEditorPage() {
           const keyframeUpdate = buildKeyframeUpdatePayload(previousClip, targetTime, values, sourceClip);
           if (keyframeUpdate) {
             nextUpdates = {
-              ...updates,
+              ...liveUpdates,
               ...dimensionRestore,
               ...keyframeUpdate,
-              ...(updates.offset || keyframeUpdate.offset ? { offset: { ...(updates.offset || {}), ...(keyframeUpdate.offset || {}) } } : {}),
-              ...(updates.transform || keyframeUpdate.transform ? { transform: { ...(updates.transform || {}), ...(keyframeUpdate.transform || {}) } } : {}),
+              ...(liveUpdates.offset || keyframeUpdate.offset ? { offset: { ...(liveUpdates.offset || {}), ...(keyframeUpdate.offset || {}) } } : {}),
+              ...(liveUpdates.transform || keyframeUpdate.transform ? { transform: { ...(liveUpdates.transform || {}), ...(keyframeUpdate.transform || {}) } } : {}),
             };
             convertedAnimatedUpdate = true;
           }
@@ -755,7 +964,12 @@ export default function VideoManualProjectEditorPage() {
       edit.commitClipUpdate = (clipId, initialConfig, finalConfig) => {
         const location = edit.getDocument?.()?.getClipById?.(clipId) || null;
         const documentClip = location?.clip || null;
-        const resolvedFinalConfig = documentClip && hasAnyAnimatedProperties(documentClip)
+        const stableMediaFinalConfig = initialConfig && finalConfig && !hasAnyAnimatedProperties(finalConfig)
+          ? buildStableMediaResizeUpdate(initialConfig, finalConfig, edit)
+          : null;
+        const resolvedFinalConfig = stableMediaFinalConfig
+          ? stableMediaFinalConfig
+          : documentClip && hasAnyAnimatedProperties(documentClip)
           ? cloneJson(documentClip, finalConfig)
           : finalConfig;
         delete visualResizeSourceByIdRef.current[clipId];
