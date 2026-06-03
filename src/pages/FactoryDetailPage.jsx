@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { useParams, useNavigate } from "react-router-dom";
 import Hls from "hls.js";
+import { useParams, useNavigate } from "react-router-dom";
 import PageHeader from "../components/PageHeader";
 import {
   BASE_URL,
@@ -211,14 +211,21 @@ function MfgLotModal({ onClose, initialLot = "" }) {
 
 // ─── Camera modal ─────────────────────────────────────────────────────────────
 
-function CameraModal({ onClose }) {
+const CAM_LABELS = [
+  { id: 'tapo_cam',  label: 'CAM 1' },
+  { id: 'tapo_cam2', label: 'CAM 2' },
+  { id: 'tapo_cam3', label: 'CAM 3' },
+];
+
+function CameraModal({ onClose, stream = 'tapo_cam' }) {
   const videoRef = useRef(null);
+  const [activeStream, setActiveStream] = useState(stream);
 
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
     const token = getAuthUser()?.authToken || getAuthUser()?.token || "";
-    const src = `${BASE_URL}api/cam`;
+    const src = `${BASE_URL}api/cam?stream=${activeStream}`;
 
     if (Hls.isSupported()) {
       const hls = new Hls({
@@ -245,7 +252,10 @@ function CameraModal({ onClose }) {
       video.src = src;
       video.play().catch(() => {});
     }
-  }, []);
+  }, [activeStream]);
+
+  const activeLabel = CAM_LABELS.find(c => c.id === activeStream)?.label ?? 'CAM 1';
+  const otherCams = CAM_LABELS.filter(c => c.id !== activeStream);
 
   return (
     <div
@@ -260,7 +270,7 @@ function CameraModal({ onClose }) {
         <div className="flex items-center justify-between gap-4 border-b border-separator/40 px-6 py-5">
           <div>
             <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-outline">小瀬 — Live Camera</p>
-            <h2 className="mt-1 text-xl font-black text-on-surface">Live Feed</h2>
+            <h2 className="mt-1 text-xl font-black text-on-surface">Live Feed — {activeLabel}</h2>
           </div>
           <button
             type="button"
@@ -270,7 +280,7 @@ function CameraModal({ onClose }) {
             <span className="material-symbols-outlined" style={{ fontSize: 18 }}>close</span>
           </button>
         </div>
-        <div className="flex-1 bg-black flex items-center justify-center" style={{ minHeight: "60vh" }}>
+        <div className="relative flex-1 bg-black flex items-center justify-center" style={{ minHeight: "60vh" }}>
           <video
             ref={videoRef}
             className="w-full h-full"
@@ -279,6 +289,17 @@ function CameraModal({ onClose }) {
             playsInline
             muted
           />
+          <div className="absolute bottom-4 right-4 flex gap-2">
+            {otherCams.map(c => (
+              <button
+                key={c.id}
+                onClick={() => setActiveStream(c.id)}
+                className="px-3 py-1.5 rounded-lg bg-black/60 backdrop-blur-sm text-white text-xs font-bold hover:bg-black/80 transition-all border border-white/20 active:scale-95"
+              >
+                {c.label}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
     </div>
