@@ -729,11 +729,28 @@ export function normalizePlayableMediaSource(sourceUrl, apiBaseUrl) {
 }
 
 export function decorateAssetForPreview(asset, apiBaseUrl) {
+  const assetType = normalizePlaylistAssetType(asset?.type, asset?.mimeType);
   const downloadUrl = asset?.downloadUrl || asset?.url || "";
-  const normalized = normalizePlayableMediaSource(downloadUrl, apiBaseUrl);
+  const normalizedOriginal = normalizePlayableMediaSource(downloadUrl, apiBaseUrl);
+  const previewSource = assetType === "video" ? String(asset?.previewUrl || "").trim() : downloadUrl;
+  const thumbnailSource = assetType === "video"
+    ? String(asset?.thumbnailUrl || "").trim()
+    : downloadUrl;
+  const normalizedPreview = previewSource
+    ? normalizePlayableMediaSource(previewSource, apiBaseUrl)
+    : null;
+  const normalizedThumbnail = thumbnailSource
+    ? normalizePlayableMediaSource(thumbnailSource, apiBaseUrl)
+    : null;
+
   return {
     ...asset,
-    previewUrl: normalized?.previewUrl || downloadUrl,
+    originalUrl: normalizedOriginal?.previewUrl || downloadUrl,
+    originalPublicUrl: normalizedOriginal?.publicUrl || downloadUrl,
+    previewUrl: normalizedPreview?.previewUrl || "",
+    previewPublicUrl: normalizedPreview?.publicUrl || previewSource || "",
+    thumbnailPreviewUrl: normalizedThumbnail?.previewUrl || "",
+    thumbnailPublicUrl: normalizedThumbnail?.publicUrl || thumbnailSource || "",
   };
 }
 
@@ -746,6 +763,12 @@ export function buildUploadedAsset(file, result, forcedType) {
     type: normalizePlaylistAssetType(forcedType || result.type, result.mimeType || file.type),
     storagePath: result.storagePath,
     downloadUrl: result.url,
+    previewUrl: result.previewUrl || null,
+    thumbnailUrl: result.thumbnailUrl || null,
+    processingStatus: result.processingStatus || "ready",
+    processingError: result.processingError || null,
+    processingStartedAt: result.processingStartedAt || null,
+    processingCompletedAt: result.processingCompletedAt || null,
     uploadedAt: result.uploadedAt || new Date().toISOString(),
     size: file.size,
   };

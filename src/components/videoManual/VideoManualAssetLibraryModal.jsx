@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   formatFileSize,
   getAssetLibraryAccept,
@@ -16,33 +16,83 @@ function getAssetId(asset) {
   return String(asset?.assetId || asset?._id || "");
 }
 
-function getPreviewUrl(asset) {
-  return asset?.previewUrl || asset?.downloadUrl || asset?.url || "";
+function getDisplayImageUrl(asset) {
+  return asset?.thumbnailUrl || asset?.thumbnailPreviewUrl || "";
+}
+
+function getHoverPreviewUrl(asset) {
+  return asset?.previewUrl || "";
+}
+
+function getPreviewStatus(asset) {
+  return String(asset?.processingStatus || "").trim().toLowerCase();
 }
 
 function AssetPreview({ asset }) {
   const type = normalizePlaylistAssetType(asset?.type, asset?.mimeType);
-  const previewUrl = getPreviewUrl(asset);
+  const imageUrl = getDisplayImageUrl(asset);
+  const hoverPreviewUrl = getHoverPreviewUrl(asset);
+  const previewStatus = getPreviewStatus(asset);
   const label = asset?.name || asset?.fileName || "Asset";
+  const videoRef = useRef(null);
+  const [isHovering, setIsHovering] = useState(false);
 
   if (type === "image") {
-    return <img src={previewUrl} alt={label} className="h-full w-full object-cover" />;
+    return <img src={asset?.previewUrl || asset?.originalUrl || asset?.downloadUrl || asset?.url || ""} alt={label} className="h-full w-full object-cover" />;
   }
 
   if (type === "video") {
+    const startPreviewPlayback = () => {
+      if (!hoverPreviewUrl) return;
+      setIsHovering(true);
+      const video = videoRef.current;
+      if (!video) return;
+      video.currentTime = 0;
+      video.play().catch(() => {});
+    };
+
+    const stopPreviewPlayback = () => {
+      setIsHovering(false);
+      const video = videoRef.current;
+      if (!video) return;
+      video.pause();
+      video.currentTime = 0;
+    };
+
     return (
-      <video
-        className="h-full w-full object-cover"
-        muted
-        playsInline
-        preload="metadata"
-        src={previewUrl}
-        onMouseEnter={(event) => event.currentTarget.play().catch(() => {})}
-        onMouseLeave={(event) => {
-          event.currentTarget.pause();
-          event.currentTarget.currentTime = 0;
-        }}
-      />
+      <div className="relative h-full w-full" onMouseEnter={startPreviewPlayback} onMouseLeave={stopPreviewPlayback}>
+        {imageUrl ? (
+          <img
+            src={imageUrl}
+            alt={label}
+            className={`h-full w-full object-cover transition-opacity duration-150 ${isHovering && hoverPreviewUrl ? "opacity-0" : "opacity-100"}`}
+          />
+        ) : (
+          <div className="flex h-full w-full items-center justify-center bg-slate-200 text-slate-500 dark:bg-slate-900 dark:text-slate-400">
+            <Icon className="text-[44px]">video_library</Icon>
+          </div>
+        )}
+        {hoverPreviewUrl ? (
+          <video
+            ref={videoRef}
+            className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-150 ${isHovering ? "opacity-100" : "opacity-0"}`}
+            muted
+            playsInline
+            preload="none"
+            src={hoverPreviewUrl}
+          />
+        ) : null}
+        {previewStatus === "processing" ? (
+          <div className="absolute inset-0 flex items-center justify-center bg-slate-950/38 px-4 text-center text-[11px] font-black uppercase tracking-[0.18em] text-white">
+            Processing Preview
+          </div>
+        ) : null}
+        {previewStatus === "failed" ? (
+          <div className="absolute inset-0 flex items-center justify-center bg-red-950/45 px-4 text-center text-[11px] font-black uppercase tracking-[0.18em] text-white">
+            Preview Failed
+          </div>
+        ) : null}
+      </div>
     );
   }
 
@@ -63,10 +113,27 @@ export default function VideoManualAssetLibraryModal({
   uploadProgress,
   onClose,
   onRefresh,
+  onSilentRefresh,
   onUpload,
   onUseAsset,
 }) {
   const fileInputRef = useRef(null);
+  
+  // Set up polling if any filtered items are still processing
+  useEffect(() => {
+    if (!open) return;
+    const hasProcessing = (Array.isArray(items) ? items : []).some(
+      (asset) => getPreviewStatus(asset) === "processing"
+    );
+    if (!hasProcessing) return;
+
+    const intervalId = setInterval(() => {
+      onSilentRefresh?.();
+    }, 4000);
+
+    return () => clearInterval(intervalId);
+  }, [open, items, onSilentRefresh]);
+
   if (!open) return null;
 
   const normalizedType = normalizePlaylistAssetType(type);
@@ -138,9 +205,19 @@ export default function VideoManualAssetLibraryModal({
             const assetType = normalizePlaylistAssetType(asset?.type, asset?.mimeType);
             const assetId = getAssetId(asset);
             const name = asset?.name || asset?.fileName || "Untitled Asset";
+            const previewStatus = getPreviewStatus(asset);
             const uploadedAt = asset?.uploadedAt ? new Date(asset.uploadedAt).toLocaleDateString() : "";
             const sizeLabel = formatFileSize(asset?.size);
             const metaLabel = [uploadedAt, sizeLabel].filter(Boolean).join(" | ");
+            const previewLabel = assetType === "video"
+              ? previewStatus === "processing"
+                ? "Preview processing"
+                : previewStatus === "failed"
+                  ? "Preview failed"
+                  : asset?.previewUrl
+                    ? "Hover preview ready"
+                    : "Preview unavailable"
+              : getAssetUsageLabel(asset);
 
             return (
               <article key={assetId || name} className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition hover:border-cyan-300 hover:shadow-md dark:border-slate-800 dark:bg-slate-950 dark:hover:border-cyan-500">
@@ -148,8 +225,8 @@ export default function VideoManualAssetLibraryModal({
                   <AssetPreview asset={asset} />
                   {assetType === "video" ? (
                     <div className="pointer-events-none absolute inset-x-0 bottom-0 flex items-center justify-between bg-gradient-to-t from-black/70 to-transparent px-3 py-2 text-[10px] font-black uppercase tracking-[0.2em] text-white">
-                      <span>Hover Preview</span>
-                      <Icon className="text-[16px]">play_arrow</Icon>
+                      <span className="truncate mr-2">{previewStatus === "processing" ? "Processing" : previewStatus === "failed" ? "Unavailable" : asset?.previewUrl ? name : "No Preview"}</span>
+                      <Icon className="text-[16px] shrink-0">play_arrow</Icon>
                     </div>
                   ) : null}
                 </div>
@@ -160,7 +237,10 @@ export default function VideoManualAssetLibraryModal({
                       <span className="shrink-0 rounded-full bg-cyan-50 px-2 py-1 text-[10px] font-black uppercase tracking-wide text-cyan-700 dark:bg-cyan-500/15 dark:text-cyan-200">{getAssetLibraryTypeLabel(assetType)}</span>
                     </div>
                     <p className="mt-1 text-xs font-semibold text-slate-400">{metaLabel || "Shared playlist asset"}</p>
-                    <p className="mt-2 text-xs font-bold text-slate-500 dark:text-slate-400">{getAssetUsageLabel(asset)}</p>
+                    <p className="mt-2 text-xs font-bold text-slate-500 dark:text-slate-400">{previewLabel}</p>
+                    {assetType === "video" && previewStatus === "failed" && asset?.processingError ? (
+                      <p className="mt-2 text-[11px] font-semibold text-red-500 dark:text-red-300">{asset.processingError}</p>
+                    ) : null}
                   </div>
                   <div className="flex justify-end">
                     <button type="button" onClick={() => onUseAsset(asset)} className="rounded-xl bg-cyan-500 px-3 py-2 text-xs font-black text-white transition hover:bg-cyan-600">

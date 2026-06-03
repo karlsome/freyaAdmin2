@@ -2012,18 +2012,22 @@ export default function VideoManualProjectEditorPage() {
     showNotice(`${shapeType === "rect" ? "Rectangle" : shapeType[0].toUpperCase() + shapeType.slice(1)} added.`);
   }, [getPlaybackTime, showNotice, syncSteps]);
 
-  const loadAssetLibrary = useCallback(async (libraryType = assetLibrary.type) => {
+  const loadAssetLibrary = useCallback(async (libraryType = assetLibrary.type, silent = false) => {
     if (!playlistId) {
       setAssetLibrary((current) => ({ ...current, open: true, type: libraryType, loading: false, error: "Open a project from a playlist first." }));
       return;
     }
 
-    setAssetLibrary((current) => ({ ...current, open: true, type: libraryType, loading: true, error: "" }));
+    if (!silent) {
+      setAssetLibrary((current) => ({ ...current, open: true, type: libraryType, loading: true, error: "" }));
+    }
     try {
       const assets = await fetchVideoManualPlaylistAssets(playlistId);
       setAssetLibrary((current) => ({ ...current, items: assets.map((asset) => decorateAssetForPreview(asset, apiBaseUrl)), loading: false, error: "" }));
     } catch (error) {
-      setAssetLibrary((current) => ({ ...current, loading: false, error: error.message || "Failed to load playlist library." }));
+      if (!silent) {
+        setAssetLibrary((current) => ({ ...current, loading: false, error: error.message || "Failed to load playlist library." }));
+      }
     }
   }, [apiBaseUrl, assetLibrary.type, playlistId]);
 
@@ -2617,6 +2621,7 @@ export default function VideoManualProjectEditorPage() {
         uploadProgress={assetLibrary.uploadProgress}
         onClose={() => setAssetLibrary((current) => ({ ...current, open: false }))}
         onRefresh={() => loadAssetLibrary(assetLibrary.type)}
+        onSilentRefresh={() => loadAssetLibrary(assetLibrary.type, true)}
         onUpload={handleUploadAsset}
         onUseAsset={insertPlaylistAsset}
       />
