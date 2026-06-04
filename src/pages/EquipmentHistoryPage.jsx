@@ -9,6 +9,7 @@ import {
   uploadEquipmentEventImage,
 } from "../services/api";
 import { getAuthUser } from "../utils/masterDB";
+import PageHeader from "../components/PageHeader";
 
 const inputCls =
   "w-full rounded-xl border border-outline-variant/30 bg-surface px-3 py-3 text-sm text-on-surface outline-none transition-all duration-150 focus:border-primary/40";
@@ -556,14 +557,12 @@ export default function EquipmentHistoryPage() {
     : "Equipment History";
 
   return (
-    <div className="p-6 space-y-6">
-      {/* Page header */}
-      <div>
-        <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-outline">設備</p>
-        <h1 className="mt-1 text-2xl font-black tracking-tight text-on-surface sm:text-3xl">
-          Equipment History
-        </h1>
-      </div>
+    <section className="pt-24 pb-16 px-8 overflow-y-auto h-screen scrollbar-hide">
+      <PageHeader
+        eyebrow="設備"
+        title="Equipment History"
+        className="mb-8"
+      />
 
       {/* Filter bar */}
       <div className="dashboard-section rounded-2xl p-5">
@@ -815,6 +814,6 @@ export default function EquipmentHistoryPage() {
           onClose={() => setViewingEvent(null)}
         />
       )}
-    </div>
+    </section>
   );
 }
