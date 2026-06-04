@@ -13,7 +13,6 @@ import {
   lookupMaterialLot,
   query,
 } from "../services/api";
-import { getAuthUser } from "../utils/masterDB";
 import { getDefectStatus, getTempStatus, getHumidityStatus, getWBGTStatus } from "../utils/statusHelpers";
 import LiquidSegmentedControl from "../components/LiquidSegmentedControl";
 import RecordDetailModal from "../components/RecordDetailModal";
@@ -224,13 +223,15 @@ function CameraModal({ onClose, stream = 'tapo_cam' }) {
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
-    const token = getAuthUser()?.authToken || getAuthUser()?.token || "";
     const src = `${BASE_URL}api/cam?stream=${activeStream}`;
+    const camUser = import.meta.env.VITE_CAM_USER || '';
+    const camPass = import.meta.env.VITE_CAM_PASS || '';
+    const basicAuth = camUser ? 'Basic ' + btoa(`${camUser}:${camPass}`) : '';
 
     if (Hls.isSupported()) {
       const hls = new Hls({
         xhrSetup: (xhr) => {
-          if (token) xhr.setRequestHeader("Authorization", `Bearer ${token}`);
+          if (basicAuth) xhr.setRequestHeader("Authorization", basicAuth);
         },
         liveSyncDurationCount: 3,
         liveMaxLatencyDurationCount: 10,
