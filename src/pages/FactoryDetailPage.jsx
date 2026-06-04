@@ -1,7 +1,9 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
+import Hls from "hls.js";
 import { useParams, useNavigate } from "react-router-dom";
 import PageHeader from "../components/PageHeader";
 import {
+  BASE_URL,
   fetchCombinedEnvironmentalData,
   fetchCombinedSensorData,
   fetchProductionByPeriod,
@@ -11,6 +13,7 @@ import {
   lookupMaterialLot,
   query,
 } from "../services/api";
+import { getAuthUser } from "../utils/masterDB";
 import { getDefectStatus, getTempStatus, getHumidityStatus, getWBGTStatus } from "../utils/statusHelpers";
 import LiquidSegmentedControl from "../components/LiquidSegmentedControl";
 import RecordDetailModal from "../components/RecordDetailModal";
@@ -206,6 +209,103 @@ function MfgLotModal({ onClose, initialLot = "" }) {
   );
 }
 
+// ─── Camera modal ─────────────────────────────────────────────────────────────
+
+const CAM_LABELS = [
+  { id: 'tapo_cam',  label: 'CAM 1' },
+  { id: 'tapo_cam2', label: 'CAM 2' },
+  { id: 'tapo_cam3', label: 'CAM 3' },
+];
+
+function CameraModal({ onClose, stream = 'tapo_cam' }) {
+  const videoRef = useRef(null);
+  const [activeStream, setActiveStream] = useState(stream);
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+    const token = getAuthUser()?.authToken || getAuthUser()?.token || "";
+    const src = `${BASE_URL}api/cam?stream=${activeStream}`;
+
+    if (Hls.isSupported()) {
+      const hls = new Hls({
+        xhrSetup: (xhr) => {
+          if (token) xhr.setRequestHeader("Authorization", `Bearer ${token}`);
+        },
+        liveSyncDurationCount: 3,
+        liveMaxLatencyDurationCount: 10,
+        lowLatencyMode: false,
+        liveBackBufferLength: 0,
+      });
+      hls.on(Hls.Events.ERROR, (_, data) => {
+        if (data.fatal) {
+          if (data.type === Hls.ErrorTypes.MEDIA_ERROR) hls.recoverMediaError();
+          else hls.destroy();
+        }
+      });
+      hls.loadSource(src);
+      hls.attachMedia(video);
+      hls.on(Hls.Events.MANIFEST_PARSED, () => { video.play().catch(() => {}); });
+      return () => hls.destroy();
+    }
+    if (video.canPlayType("application/vnd.apple.mpegurl")) {
+      video.src = src;
+      video.play().catch(() => {});
+    }
+  }, [activeStream]);
+
+  const activeLabel = CAM_LABELS.find(c => c.id === activeStream)?.label ?? 'CAM 1';
+  const otherCams = CAM_LABELS.filter(c => c.id !== activeStream);
+
+  return (
+    <div
+      className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4"
+      onClick={onClose}
+    >
+      <div
+        className="dashboard-section rounded-2xl w-full max-w-5xl flex flex-col overflow-hidden"
+        style={{ maxHeight: "92vh" }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between gap-4 border-b border-separator/40 px-6 py-5">
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-outline">小瀬 — Live Camera</p>
+            <h2 className="mt-1 text-xl font-black text-on-surface">Live Feed — {activeLabel}</h2>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="p-2 rounded-xl text-outline hover:bg-surface-container hover:text-on-surface transition-all duration-150 active:scale-95"
+          >
+            <span className="material-symbols-outlined" style={{ fontSize: 18 }}>close</span>
+          </button>
+        </div>
+        <div className="relative flex-1 bg-black flex items-center justify-center" style={{ minHeight: "60vh" }}>
+          <video
+            ref={videoRef}
+            className="w-full h-full"
+            style={{ maxHeight: "70vh" }}
+            controls
+            playsInline
+            muted
+          />
+          <div className="absolute bottom-4 right-4 flex gap-2">
+            {otherCams.map(c => (
+              <button
+                key={c.id}
+                onClick={() => setActiveStream(c.id)}
+                className="px-3 py-1.5 rounded-lg bg-black/60 backdrop-blur-sm text-white text-xs font-bold hover:bg-black/80 transition-all border border-white/20 active:scale-95"
+              >
+                {c.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+console.log('API URL:', import.meta.env.VITE_API_URL);
 // ─── Main page ────────────────────────────────────────────────────────────────
 export default function FactoryDetailPage({ combined = false }) {
   const { factoryName: encoded } = useParams();
@@ -227,6 +327,8 @@ export default function FactoryDetailPage({ combined = false }) {
   const { modalRecord, modalProcess, openRecord, closeRecord } = useRecordModal();
   const [showLotModal,    setShowLotModal]    = useState(false);
   const [lotModalInitial, setLotModalInitial] = useState("");
+
+  const [cameraModalOpen, setCameraModalOpen] = useState(false);
 
   const loadData = useCallback(async (from = dateFrom, to = dateTo, parts = partNumbers, serials = serialNumbers, filters = []) => {
     setLoading(true);
@@ -336,14 +438,26 @@ export default function FactoryDetailPage({ combined = false }) {
         subtitle={`${combined ? "All Factories Combined -" : "Factory Overview -"} ${dateFrom === dateTo ? dateFrom : `${dateFrom} → ${dateTo}`}`}
         className="mb-8 md:flex-row md:items-start md:justify-between"
         actions={(
-          <button
-            onClick={() => navigate(combined ? "/sensors" : `/sensors/${encoded}`)}
-            className="flex-shrink-0 flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold
-                       kinetic-gradient text-white shadow-[0_0_15px_rgba(99,102,241,0.3)] hover:opacity-90 transition-opacity"
-          >
-            <span className="material-symbols-outlined" style={{ fontSize: 16 }}>sensors</span>
-            {combined ? "Sensor Overview" : "Sensor History"}
-          </button>
+          <>
+            {!combined && factoryName === "小瀬" && (
+              <button
+                onClick={() => setCameraModalOpen(true)}
+                className="flex-shrink-0 flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold border border-separator/40 bg-surface text-on-surface hover:bg-surface-container hover:border-primary/30 hover:text-primary active:scale-95 transition-all duration-150"
+              >
+                <span className="material-symbols-outlined" style={{ fontSize: 16 }}>videocam</span>
+                View Live Feed
+              </button>
+            )}
+
+            <button
+              onClick={() => navigate(combined ? "/sensors" : `/sensors/${encoded}`)}
+              className="flex-shrink-0 flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold
+                         kinetic-gradient text-white shadow-[0_0_15px_rgba(99,102,241,0.3)] hover:opacity-90 transition-opacity"
+            >
+              <span className="material-symbols-outlined" style={{ fontSize: 16 }}>sensors</span>
+              {combined ? "Sensor Overview" : "Sensor History"}
+            </button>
+          </>
         )}
       />
 
@@ -498,6 +612,10 @@ export default function FactoryDetailPage({ combined = false }) {
           initialLot={lotModalInitial}
           onClose={() => { setShowLotModal(false); setLotModalInitial(""); }}
         />
+      )}
+
+      {cameraModalOpen && (
+        <CameraModal onClose={() => setCameraModalOpen(false)} />
       )}
     </section>
   );

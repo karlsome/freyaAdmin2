@@ -21,6 +21,7 @@ import FactoryStatusPage from "./pages/FactoryStatusPage";
 import FactoryStatusLogsPage from "./pages/FactoryStatusLogsPage";
 import MaintenancePage from "./pages/MaintenancePage";
 import ChecklistSubmissionsPage from "./pages/ChecklistSubmissionsPage";
+import EquipmentHistoryPage from "./pages/EquipmentHistoryPage";
 import TicketSubmissionsPage from "./pages/TicketSubmissionsPage";
 import LoginPage from "./pages/LoginPage";
 import {
@@ -36,7 +37,6 @@ const placeholderPages = [
   "financials",
   "userManagement",
   "customerManagement",
-  "equipment",
   "scna",
   "videoManual",
 ];
@@ -241,6 +241,7 @@ function App() {
               {placeholderPages.map((page) => (
                 <Route key={page} path={`/${page}`} element={<PlaceholderPage page={page} />} />
               ))}
+              <Route path="/equipment" element={<EquipmentHistoryPage />} />
               <Route path="/maintenance" element={<MaintenancePage />} />
               <Route path="/maintenance/submissions" element={<ChecklistSubmissionsPage />} />
               <Route path="/maintenance/submissions/tickets" element={<TicketSubmissionsPage />} />
