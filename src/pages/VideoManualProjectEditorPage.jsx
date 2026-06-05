@@ -42,11 +42,13 @@ import {
   shiftAnimatedSegments,
 } from "../components/videoManual/videoManualEditorUtils";
 import {
+  canPermanentlyDeleteVideoManualAssets,
   canDeployVideoManualProjects,
   createVideoManualRevision,
   deployVideoManualRenderedRevision,
   deployVideoManualUploadedRevision,
   deployVideoManualRevision,
+  fetchVideoManualPlaylistAssetRecycleBin,
   fetchVideoManualRenderStatus,
   fetchVideoManualPlaylistAssets,
   fetchVideoManualProject,
@@ -54,7 +56,11 @@ import {
   fetchVideoManualRevisions,
   getVideoManualApiBaseUrl,
   patchVideoManualProject,
+  permanentlyDeleteVideoManualPlaylistAssets,
+  previewVideoManualPlaylistAssetDelete,
   renderVideoManualEdit,
+  restoreVideoManualPlaylistAssets,
+  softDeleteVideoManualPlaylistAssets,
   undeployVideoManualProject,
   uploadVideoManualPlaylistAsset,
 } from "../services/videoManualApi";
@@ -527,8 +533,11 @@ export default function VideoManualProjectEditorPage() {
     open: false,
     type: "video",
     items: [],
+    recycleItems: [],
     loading: false,
+    recycleLoading: false,
     error: "",
+    recycleError: "",
     uploading: false,
     uploadProgress: null,
   });
@@ -590,6 +599,7 @@ export default function VideoManualProjectEditorPage() {
     return keyframeEditMode;
   }, [activeKeyframe, keyframeEditMode, selectedClip]);
   const canDeployProjects = useMemo(() => canDeployVideoManualProjects(authUser?.role), [authUser?.role]);
+  const canPermanentlyDeleteAssets = useMemo(() => canPermanentlyDeleteVideoManualAssets(authUser?.role), [authUser?.role]);
 
   useEffect(() => {
     if (!keyframeEditMode || activeKeyframeEditMode) return;
@@ -2031,6 +2041,113 @@ export default function VideoManualProjectEditorPage() {
     }
   }, [apiBaseUrl, assetLibrary.type, playlistId]);
 
+  const loadAssetRecycleBin = useCallback(async (libraryType = assetLibrary.type, silent = false) => {
+    if (!playlistId) {
+      setAssetLibrary((current) => ({
+        ...current,
+        open: true,
+        type: libraryType,
+        recycleItems: [],
+        recycleLoading: false,
+        recycleError: "Open a project from a playlist first.",
+      }));
+      return [];
+    }
+
+    if (!silent) {
+      setAssetLibrary((current) => ({ ...current, open: true, type: libraryType, recycleLoading: true, recycleError: "" }));
+    }
+    try {
+      const recycleItems = await fetchVideoManualPlaylistAssetRecycleBin(playlistId);
+      const decoratedItems = recycleItems.map((asset) => decorateAssetForPreview(asset, apiBaseUrl));
+      setAssetLibrary((current) => ({ ...current, recycleItems: decoratedItems, recycleLoading: false, recycleError: "" }));
+      return decoratedItems;
+    } catch (error) {
+      if (!silent) {
+        setAssetLibrary((current) => ({ ...current, recycleLoading: false, recycleError: error.message || "Failed to load recycle bin." }));
+      }
+      return [];
+    }
+  }, [apiBaseUrl, assetLibrary.type, playlistId]);
+
+  const previewAssetDelete = useCallback(async (assetIds = []) => {
+    if (!playlistId) {
+      throw new Error("Open a project from a playlist first.");
+    }
+
+    try {
+      const result = await previewVideoManualPlaylistAssetDelete(playlistId, assetIds);
+      return {
+        ...result,
+        assets: Array.isArray(result?.assets) ? result.assets.map((asset) => decorateAssetForPreview(asset, apiBaseUrl)) : [],
+      };
+    } catch (error) {
+      showNotice(error.message || "Failed to inspect selected assets.", "error");
+      throw error;
+    }
+  }, [apiBaseUrl, playlistId, showNotice]);
+
+  const softDeleteAssetLibraryItems = useCallback(async (assetIds = []) => {
+    if (!playlistId) {
+      throw new Error("Open a project from a playlist first.");
+    }
+
+    try {
+      const result = await softDeleteVideoManualPlaylistAssets(playlistId, assetIds);
+      await Promise.all([
+        loadAssetLibrary(assetLibrary.type, true),
+        loadAssetRecycleBin(assetLibrary.type, true),
+      ]);
+      showNotice(`${Number(result?.deletedCount || 0)} asset(s) moved to recycle bin.`);
+      return result;
+    } catch (error) {
+      showNotice(error.message || "Failed to move assets to recycle bin.", "error");
+      throw error;
+    }
+  }, [assetLibrary.type, loadAssetLibrary, loadAssetRecycleBin, playlistId, showNotice]);
+
+  const restoreAssetLibraryItems = useCallback(async (assetIds = []) => {
+    if (!playlistId) {
+      throw new Error("Open a project from a playlist first.");
+    }
+
+    try {
+      const result = await restoreVideoManualPlaylistAssets(playlistId, assetIds);
+      await Promise.all([
+        loadAssetLibrary(assetLibrary.type, true),
+        loadAssetRecycleBin(assetLibrary.type, true),
+      ]);
+      showNotice(`${Number(result?.restoredCount || 0)} asset(s) restored.`);
+      return result;
+    } catch (error) {
+      showNotice(error.message || "Failed to restore assets.", "error");
+      throw error;
+    }
+  }, [assetLibrary.type, loadAssetLibrary, loadAssetRecycleBin, playlistId, showNotice]);
+
+  const permanentlyDeleteAssetLibraryItems = useCallback(async (assetIds = []) => {
+    if (!playlistId) {
+      throw new Error("Open a project from a playlist first.");
+    }
+
+    try {
+      const result = await permanentlyDeleteVideoManualPlaylistAssets(playlistId, assetIds);
+      await Promise.all([
+        loadAssetLibrary(assetLibrary.type, true),
+        loadAssetRecycleBin(assetLibrary.type, true),
+      ]);
+      showNotice(`${Number(result?.deletedCount || 0)} asset(s) permanently deleted from Firebase and recycle bin.`);
+      return result;
+    } catch (error) {
+      showNotice(error.message || "Failed to permanently delete assets.", "error");
+      throw error;
+    }
+  }, [assetLibrary.type, loadAssetLibrary, loadAssetRecycleBin, playlistId, showNotice]);
+
+  const refreshAssetLibrary = useCallback(() => loadAssetLibrary(assetLibrary.type), [assetLibrary.type, loadAssetLibrary]);
+  const silentRefreshAssetLibrary = useCallback(() => loadAssetLibrary(assetLibrary.type, true), [assetLibrary.type, loadAssetLibrary]);
+  const refreshAssetRecycleBin = useCallback(() => loadAssetRecycleBin(assetLibrary.type), [assetLibrary.type, loadAssetRecycleBin]);
+
   const insertPlaylistAsset = useCallback(async (asset) => {
     const edit = editRef.current;
     if (!edit || !asset) return;
@@ -2615,15 +2732,24 @@ export default function VideoManualProjectEditorPage() {
         open={assetLibrary.open}
         type={assetLibrary.type}
         items={assetLibrary.items}
+        recycleItems={assetLibrary.recycleItems}
         loading={assetLibrary.loading}
+        recycleLoading={assetLibrary.recycleLoading}
         error={assetLibrary.error}
+        recycleError={assetLibrary.recycleError}
         uploading={assetLibrary.uploading}
         uploadProgress={assetLibrary.uploadProgress}
+        canPermanentlyDelete={canPermanentlyDeleteAssets}
         onClose={() => setAssetLibrary((current) => ({ ...current, open: false }))}
-        onRefresh={() => loadAssetLibrary(assetLibrary.type)}
-        onSilentRefresh={() => loadAssetLibrary(assetLibrary.type, true)}
+        onRefresh={refreshAssetLibrary}
+        onSilentRefresh={silentRefreshAssetLibrary}
+        onLoadRecycleBin={refreshAssetRecycleBin}
         onUpload={handleUploadAsset}
         onUseAsset={insertPlaylistAsset}
+        onPreviewDelete={previewAssetDelete}
+        onSoftDelete={softDeleteAssetLibraryItems}
+        onRestoreAssets={restoreAssetLibraryItems}
+        onPermanentDelete={permanentlyDeleteAssetLibraryItems}
       />
 
       <VideoManualExportStatusModal

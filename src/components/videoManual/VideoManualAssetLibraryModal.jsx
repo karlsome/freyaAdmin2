@@ -107,21 +107,51 @@ export default function VideoManualAssetLibraryModal({
   open,
   type,
   items,
+  recycleItems,
   loading,
+  recycleLoading,
   error,
+  recycleError,
   uploading,
   uploadProgress,
+  canPermanentlyDelete,
   onClose,
   onRefresh,
   onSilentRefresh,
+  onLoadRecycleBin,
   onUpload,
   onUseAsset,
+  onPreviewDelete,
+  onSoftDelete,
+  onRestoreAssets,
+  onPermanentDelete,
 }) {
   const fileInputRef = useRef(null);
-  
-  // Set up polling if any filtered items are still processing
+  const [editMode, setEditMode] = useState(false);
+  const [showRecycleBin, setShowRecycleBin] = useState(false);
+  const [selectedAssetIds, setSelectedAssetIds] = useState([]);
+  const [actionBusy, setActionBusy] = useState(false);
+
+  const normalizedType = normalizePlaylistAssetType(type);
+  const libraryItems = (Array.isArray(items) ? items : []).filter((asset) => normalizePlaylistAssetType(asset?.type, asset?.mimeType) === normalizedType);
+  const recycleBinItems = (Array.isArray(recycleItems) ? recycleItems : []).filter((asset) => normalizePlaylistAssetType(asset?.type, asset?.mimeType) === normalizedType);
+  const displayedItems = showRecycleBin ? recycleBinItems : libraryItems;
+
   useEffect(() => {
     if (!open) return;
+    setEditMode(false);
+    setShowRecycleBin(false);
+    setSelectedAssetIds([]);
+    setActionBusy(false);
+  }, [open, type]);
+
+  useEffect(() => {
+    if (!editMode) setSelectedAssetIds([]);
+  }, [editMode, showRecycleBin]);
+
+  // Set up polling if any filtered items are still processing.
+  useEffect(() => {
+    if (!open || showRecycleBin) return;
     const hasProcessing = (Array.isArray(items) ? items : []).some(
       (asset) => getPreviewStatus(asset) === "processing"
     );
@@ -132,13 +162,107 @@ export default function VideoManualAssetLibraryModal({
     }, 4000);
 
     return () => clearInterval(intervalId);
-  }, [open, items, onSilentRefresh]);
+  }, [open, items, onSilentRefresh, showRecycleBin]);
+
+  useEffect(() => {
+    if (!open || !showRecycleBin) return;
+    onLoadRecycleBin?.();
+  }, [onLoadRecycleBin, open, showRecycleBin]);
 
   if (!open) return null;
 
-  const normalizedType = normalizePlaylistAssetType(type);
-  const filteredItems = (Array.isArray(items) ? items : []).filter((asset) => normalizePlaylistAssetType(asset?.type, asset?.mimeType) === normalizedType);
   const title = getAssetLibraryTypeLabel(normalizedType);
+
+  const listLoading = showRecycleBin ? recycleLoading : loading;
+  const listError = showRecycleBin ? recycleError : error;
+
+  const selectedSet = new Set(selectedAssetIds);
+  const selectedAssets = displayedItems.filter((asset) => selectedSet.has(getAssetId(asset)));
+
+  const toggleAssetSelection = (asset) => {
+    const assetId = getAssetId(asset);
+    if (!assetId) return;
+    setSelectedAssetIds((current) => (
+      current.includes(assetId) ? current.filter((id) => id !== assetId) : [...current, assetId]
+    ));
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedAssets.length === displayedItems.length) {
+      setSelectedAssetIds([]);
+      return;
+    }
+    setSelectedAssetIds(displayedItems.map((asset) => getAssetId(asset)).filter(Boolean));
+  };
+
+  const handleDeleteSelected = async () => {
+    if (!selectedAssets.length || !onPreviewDelete || !onSoftDelete) return;
+
+    setActionBusy(true);
+    try {
+      const preview = await onPreviewDelete(selectedAssets.map((asset) => getAssetId(asset)));
+      const previewAssets = Array.isArray(preview?.assets) ? preview.assets : [];
+      const usedAssets = previewAssets.filter((asset) => Number(asset?.usageCount || 0) > 0);
+      const warningLines = usedAssets.map((asset) => {
+        const projectNames = Array.isArray(asset?.usageProjects)
+          ? asset.usageProjects.map((project) => project?.title).filter(Boolean)
+          : [];
+        const usageLabel = projectNames.length ? projectNames.join(", ") : `${asset?.usageCount || 0} project(s)`;
+        return `- ${asset?.name || asset?.fileName || "Untitled Asset"}: ${usageLabel}`;
+      });
+
+      const confirmMessage = [
+        `Move ${selectedAssets.length} selected ${title.toLowerCase()} to recycle bin?`,
+        "",
+        "Assets in recycle bin are auto-purged after 60 days.",
+        warningLines.length ? "" : null,
+        warningLines.length ? "Warning: these assets are currently used:" : null,
+        ...(warningLines.length ? warningLines : []),
+      ].filter(Boolean).join("\n");
+
+      if (!window.confirm(confirmMessage)) return;
+      await onSoftDelete(selectedAssets.map((asset) => getAssetId(asset)));
+      setSelectedAssetIds([]);
+    } catch {
+      // Parent callbacks surface notices.
+    } finally {
+      setActionBusy(false);
+    }
+  };
+
+  const handleRestoreSelected = async () => {
+    if (!selectedAssets.length || !onRestoreAssets) return;
+
+    if (!window.confirm(`Restore ${selectedAssets.length} selected ${title.toLowerCase()} from recycle bin?`)) return;
+    setActionBusy(true);
+    try {
+      await onRestoreAssets(selectedAssets.map((asset) => getAssetId(asset)));
+      setSelectedAssetIds([]);
+    } catch {
+      // Parent callbacks surface notices.
+    } finally {
+      setActionBusy(false);
+    }
+  };
+
+  const handlePermanentDeleteSelected = async () => {
+    if (!selectedAssets.length || !onPermanentDelete || !canPermanentlyDelete) return;
+
+    const confirmed = window.confirm(
+      `Permanently delete ${selectedAssets.length} selected ${title.toLowerCase()} from recycle bin? This also deletes files from Firebase Storage and cannot be undone.`
+    );
+    if (!confirmed) return;
+
+    setActionBusy(true);
+    try {
+      await onPermanentDelete(selectedAssets.map((asset) => getAssetId(asset)));
+      setSelectedAssetIds([]);
+    } catch {
+      // Parent callbacks surface notices.
+    } finally {
+      setActionBusy(false);
+    }
+  };
 
   return (
     <div className="fixed inset-0 z-[340] flex items-center justify-center bg-slate-950/55 px-4 backdrop-blur-sm">
@@ -147,22 +271,41 @@ export default function VideoManualAssetLibraryModal({
           <div className="min-w-0 flex-1">
             <p className="text-xs font-black uppercase tracking-[0.24em] text-cyan-600 dark:text-cyan-300">Playlist Media Library</p>
             <h3 className="mt-1 truncate text-2xl font-black text-slate-900 dark:text-white">{title}</h3>
-            <p className="mt-2 text-sm font-semibold text-slate-500 dark:text-slate-400">{uploading ? `Uploading ${uploadProgress ?? 0}%` : "Browse uploaded files for this playlist."}</p>
+            <p className="mt-2 text-sm font-semibold text-slate-500 dark:text-slate-400">{uploading ? `Uploading ${uploadProgress ?? 0}%` : (showRecycleBin ? "Recycle bin keeps deleted assets for 60 days." : "Browse uploaded files for this playlist.")}</p>
           </div>
           <div className="flex items-center gap-2">
             <button
               type="button"
-              onClick={onRefresh}
-              disabled={loading || uploading}
+              onClick={() => setShowRecycleBin((current) => !current)}
+              className={`inline-flex h-10 items-center gap-2 rounded-xl px-3 text-xs font-black transition ${showRecycleBin ? "bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-200" : "bg-slate-100 text-slate-700 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"}`}
+              title="Recycle Bin"
+            >
+              <Icon className="text-[18px]">delete</Icon>
+              {showRecycleBin ? "Library" : "Recycle Bin"}
+            </button>
+            <button
+              type="button"
+              onClick={() => setEditMode((current) => !current)}
+              disabled={listLoading || actionBusy}
+              className={`inline-flex h-10 items-center gap-2 rounded-xl px-3 text-xs font-black transition ${editMode ? "bg-cyan-100 text-cyan-700 dark:bg-cyan-500/20 dark:text-cyan-200" : "bg-slate-100 text-slate-700 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"} disabled:cursor-not-allowed disabled:opacity-50`}
+              title="Edit"
+            >
+              <Icon className="text-[18px]">edit</Icon>
+              {editMode ? "Done" : "Edit"}
+            </button>
+            <button
+              type="button"
+              onClick={showRecycleBin ? onLoadRecycleBin : onRefresh}
+              disabled={listLoading || uploading || actionBusy}
               className="flex h-10 w-10 items-center justify-center rounded-xl text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 disabled:cursor-not-allowed disabled:opacity-50 dark:hover:bg-slate-800 dark:hover:text-white"
               title="Refresh"
             >
-              <Icon className={loading ? "animate-spin text-[20px]" : "text-[20px]"}>refresh</Icon>
+              <Icon className={listLoading ? "animate-spin text-[20px]" : "text-[20px]"}>refresh</Icon>
             </button>
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
-              disabled={uploading}
+              disabled={uploading || showRecycleBin}
               className="inline-flex h-10 items-center gap-2 rounded-xl bg-cyan-500 px-4 text-sm font-black text-white transition hover:bg-cyan-600 disabled:cursor-not-allowed disabled:opacity-60"
             >
               <Icon className="text-[18px]">upload</Icon>
@@ -185,23 +328,67 @@ export default function VideoManualAssetLibraryModal({
           </div>
         ) : null}
 
+        {editMode ? (
+          <div className="flex flex-wrap items-center gap-2 border-b border-slate-200 px-6 py-3 dark:border-slate-800">
+            <button
+              type="button"
+              onClick={toggleSelectAll}
+              disabled={!displayedItems.length || listLoading || actionBusy}
+              className="rounded-lg border border-slate-200 bg-slate-100 px-3 py-1.5 text-[11px] font-black text-slate-700 transition hover:bg-slate-200 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
+            >
+              {selectedAssets.length === displayedItems.length && displayedItems.length ? "Unselect All" : "Select All"}
+            </button>
+            <span className="text-xs font-bold text-slate-500 dark:text-slate-400">{selectedAssets.length} selected</span>
+
+            {!showRecycleBin ? (
+              <button
+                type="button"
+                onClick={handleDeleteSelected}
+                disabled={!selectedAssets.length || actionBusy || listLoading}
+                className="ml-auto rounded-lg bg-amber-500 px-3 py-1.5 text-[11px] font-black text-white transition hover:bg-amber-600 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Move To Recycle Bin
+              </button>
+            ) : (
+              <>
+                <button
+                  type="button"
+                  onClick={handleRestoreSelected}
+                  disabled={!selectedAssets.length || actionBusy || listLoading}
+                  className="ml-auto rounded-lg bg-emerald-500 px-3 py-1.5 text-[11px] font-black text-white transition hover:bg-emerald-600 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  Restore
+                </button>
+                <button
+                  type="button"
+                  onClick={handlePermanentDeleteSelected}
+                  disabled={!selectedAssets.length || actionBusy || listLoading || !canPermanentlyDelete}
+                  className="rounded-lg bg-red-500 px-3 py-1.5 text-[11px] font-black text-white transition hover:bg-red-600 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  Permanently Delete
+                </button>
+              </>
+            )}
+          </div>
+        ) : null}
+
         <div className="grid flex-1 grid-cols-1 gap-4 overflow-y-auto bg-slate-50 px-6 py-6 md:grid-cols-2 xl:grid-cols-3 dark:bg-slate-900/40">
-          {loading ? (
+          {listLoading ? (
             <p className="col-span-full py-12 text-center text-sm font-bold text-slate-400">Loading playlist library...</p>
           ) : null}
 
-          {!loading && error ? (
-            <p className="col-span-full rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-center text-sm font-bold text-red-600 dark:border-red-900/50 dark:bg-red-950/30 dark:text-red-300">{error}</p>
+          {!listLoading && listError ? (
+            <p className="col-span-full rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-center text-sm font-bold text-red-600 dark:border-red-900/50 dark:bg-red-950/30 dark:text-red-300">{listError}</p>
           ) : null}
 
-          {!loading && !error && filteredItems.length === 0 ? (
+          {!listLoading && !listError && displayedItems.length === 0 ? (
             <div className="col-span-full rounded-2xl border border-dashed border-slate-300 bg-white/80 px-6 py-12 text-center dark:border-slate-700 dark:bg-slate-950/40">
-              <p className="text-base font-black text-slate-700 dark:text-slate-200">No {title.toLowerCase()} in this playlist yet.</p>
-              <p className="mt-2 text-sm font-semibold text-slate-500 dark:text-slate-400">Upload a file to add it to this project.</p>
+              <p className="text-base font-black text-slate-700 dark:text-slate-200">{showRecycleBin ? `No ${title.toLowerCase()} in recycle bin.` : `No ${title.toLowerCase()} in this playlist yet.`}</p>
+              <p className="mt-2 text-sm font-semibold text-slate-500 dark:text-slate-400">{showRecycleBin ? "Deleted assets appear here for up to 60 days." : "Upload a file to add it to this project."}</p>
             </div>
           ) : null}
 
-          {!loading && !error ? filteredItems.map((asset) => {
+          {!listLoading && !listError ? displayedItems.map((asset) => {
             const assetType = normalizePlaylistAssetType(asset?.type, asset?.mimeType);
             const assetId = getAssetId(asset);
             const name = asset?.name || asset?.fileName || "Untitled Asset";
@@ -209,6 +396,8 @@ export default function VideoManualAssetLibraryModal({
             const uploadedAt = asset?.uploadedAt ? new Date(asset.uploadedAt).toLocaleDateString() : "";
             const sizeLabel = formatFileSize(asset?.size);
             const metaLabel = [uploadedAt, sizeLabel].filter(Boolean).join(" | ");
+            const usageProjects = Array.isArray(asset?.usageProjects) ? asset.usageProjects.map((project) => project?.title).filter(Boolean) : [];
+            const recycleDaysRemaining = Number.isFinite(Number(asset?.daysRemaining)) ? Number(asset.daysRemaining) : null;
             const previewLabel = assetType === "video"
               ? previewStatus === "processing"
                 ? "Preview processing"
@@ -219,9 +408,20 @@ export default function VideoManualAssetLibraryModal({
                     : "Preview unavailable"
               : getAssetUsageLabel(asset);
 
+            const isSelected = selectedSet.has(assetId);
+
             return (
-              <article key={assetId || name} className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition hover:border-cyan-300 hover:shadow-md dark:border-slate-800 dark:bg-slate-950 dark:hover:border-cyan-500">
+              <article key={assetId || name} className={`overflow-hidden rounded-2xl border bg-white shadow-sm transition dark:bg-slate-950 ${isSelected ? "border-cyan-500 ring-2 ring-cyan-500/20" : "border-slate-200 hover:border-cyan-300 hover:shadow-md dark:border-slate-800 dark:hover:border-cyan-500"}`}>
                 <div className="relative aspect-video overflow-hidden bg-slate-100 dark:bg-slate-900">
+                  {editMode ? (
+                    <button
+                      type="button"
+                      onClick={() => toggleAssetSelection(asset)}
+                      className={`absolute left-2 top-2 z-10 inline-flex h-6 w-6 items-center justify-center rounded-md border text-white ${isSelected ? "border-cyan-500 bg-cyan-500" : "border-white/70 bg-black/35"}`}
+                    >
+                      {isSelected ? <Icon className="text-[15px]">check</Icon> : null}
+                    </button>
+                  ) : null}
                   <AssetPreview asset={asset} />
                   {assetType === "video" ? (
                     <div className="pointer-events-none absolute inset-x-0 bottom-0 flex items-center justify-between bg-gradient-to-t from-black/70 to-transparent px-3 py-2 text-[10px] font-black uppercase tracking-[0.2em] text-white">
@@ -238,15 +438,23 @@ export default function VideoManualAssetLibraryModal({
                     </div>
                     <p className="mt-1 text-xs font-semibold text-slate-400">{metaLabel || "Shared playlist asset"}</p>
                     <p className="mt-2 text-xs font-bold text-slate-500 dark:text-slate-400">{previewLabel}</p>
+                    {usageProjects.length ? (
+                      <p className="mt-1 text-[11px] font-semibold text-amber-600 dark:text-amber-300">Used in: {usageProjects.join(", ")}</p>
+                    ) : null}
+                    {showRecycleBin && recycleDaysRemaining != null ? (
+                      <p className="mt-1 text-[11px] font-semibold text-red-500 dark:text-red-300">Auto-delete in {recycleDaysRemaining} day{recycleDaysRemaining === 1 ? "" : "s"}</p>
+                    ) : null}
                     {assetType === "video" && previewStatus === "failed" && asset?.processingError ? (
                       <p className="mt-2 text-[11px] font-semibold text-red-500 dark:text-red-300">{asset.processingError}</p>
                     ) : null}
                   </div>
-                  <div className="flex justify-end">
-                    <button type="button" onClick={() => onUseAsset(asset)} className="rounded-xl bg-cyan-500 px-3 py-2 text-xs font-black text-white transition hover:bg-cyan-600">
-                      Use {getAssetLibraryItemLabel(assetType)}
-                    </button>
-                  </div>
+                  {!editMode && !showRecycleBin ? (
+                    <div className="flex justify-end">
+                      <button type="button" onClick={() => onUseAsset(asset)} className="rounded-xl bg-cyan-500 px-3 py-2 text-xs font-black text-white transition hover:bg-cyan-600">
+                        Use {getAssetLibraryItemLabel(assetType)}
+                      </button>
+                    </div>
+                  ) : null}
                 </div>
               </article>
             );

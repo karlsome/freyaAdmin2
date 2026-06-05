@@ -8,6 +8,7 @@ const PLAYLIST_MANAGE_ROLES = ["admin", "課長", "部長", "係長"];
 const PROJECT_EDIT_ROLES = ["admin", "課長", "部長", "係長", "班長"];
 const PROJECT_DEPLOY_ROLES = ["admin", "課長", "部長", "係長", "班長"];
 const PROJECT_PERMANENT_DELETE_ROLES = ["admin", "課長", "部長", "係長"];
+const ASSET_PERMANENT_DELETE_ROLES = ["admin"];
 
 function encodeBase64Unicode(value) {
   const bytes = new TextEncoder().encode(value);
@@ -79,6 +80,10 @@ export function canDeployVideoManualProjects(role = "") {
 
 export function canPermanentlyDeleteVideoManualProjects(role = "") {
   return PROJECT_PERMANENT_DELETE_ROLES.includes(String(role || ""));
+}
+
+export function canPermanentlyDeleteVideoManualAssets(role = "") {
+  return ASSET_PERMANENT_DELETE_ROLES.includes(String(role || ""));
 }
 
 export async function fetchVideoManualPlaylists() {
@@ -250,6 +255,89 @@ export async function fetchVideoManualPlaylistAssets(playlistId) {
 
   const data = await request(`api/video-manuals-studio/playlists/${playlistId}/assets`);
   return Array.isArray(data) ? data : [];
+}
+
+export async function previewVideoManualPlaylistAssetDelete(playlistId, assetIds) {
+  if (!playlistId) {
+    throw new Error("playlistId is required");
+  }
+
+  const normalizedAssetIds = Array.isArray(assetIds)
+    ? Array.from(new Set(assetIds.map((assetId) => String(assetId || "").trim()).filter(Boolean)))
+    : [];
+  if (!normalizedAssetIds.length) {
+    throw new Error("assetIds is required");
+  }
+
+  return request(`api/video-manuals-studio/playlists/${playlistId}/assets/delete-preview`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ assetIds: normalizedAssetIds }),
+  });
+}
+
+export async function softDeleteVideoManualPlaylistAssets(playlistId, assetIds) {
+  if (!playlistId) {
+    throw new Error("playlistId is required");
+  }
+
+  const normalizedAssetIds = Array.isArray(assetIds)
+    ? Array.from(new Set(assetIds.map((assetId) => String(assetId || "").trim()).filter(Boolean)))
+    : [];
+  if (!normalizedAssetIds.length) {
+    throw new Error("assetIds is required");
+  }
+
+  return request(`api/video-manuals-studio/playlists/${playlistId}/assets/soft-delete`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ assetIds: normalizedAssetIds }),
+  });
+}
+
+export async function fetchVideoManualPlaylistAssetRecycleBin(playlistId) {
+  if (!playlistId) return [];
+
+  const data = await request(`api/video-manuals-studio/playlists/${playlistId}/assets/recycle-bin`);
+  return Array.isArray(data) ? data : [];
+}
+
+export async function restoreVideoManualPlaylistAssets(playlistId, assetIds) {
+  if (!playlistId) {
+    throw new Error("playlistId is required");
+  }
+
+  const normalizedAssetIds = Array.isArray(assetIds)
+    ? Array.from(new Set(assetIds.map((assetId) => String(assetId || "").trim()).filter(Boolean)))
+    : [];
+  if (!normalizedAssetIds.length) {
+    throw new Error("assetIds is required");
+  }
+
+  return request(`api/video-manuals-studio/playlists/${playlistId}/assets/restore`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ assetIds: normalizedAssetIds }),
+  });
+}
+
+export async function permanentlyDeleteVideoManualPlaylistAssets(playlistId, assetIds) {
+  if (!playlistId) {
+    throw new Error("playlistId is required");
+  }
+
+  const normalizedAssetIds = Array.isArray(assetIds)
+    ? Array.from(new Set(assetIds.map((assetId) => String(assetId || "").trim()).filter(Boolean)))
+    : [];
+  if (!normalizedAssetIds.length) {
+    throw new Error("assetIds is required");
+  }
+
+  return request(`api/video-manuals-studio/playlists/${playlistId}/assets/permanent`, {
+    method: "DELETE",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ assetIds: normalizedAssetIds }),
+  });
 }
 
 export function uploadVideoManualPlaylistAsset(playlistId, file, { onProgress = null } = {}) {
