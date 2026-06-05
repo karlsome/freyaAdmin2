@@ -109,12 +109,26 @@ export default function PceFilesWorkspace({ onFlash }) {
   const machineSuffix = MACHINE_TYPES.find((m) => m.key === selectedMachine)?.suffix;
   const previewFiles = selectedCodes.map((c) => `${c}_${machineSuffix}.pce`);
 
-  const step1Done = !!selectedMachine;
+  const previewCode = selectedCodes[0] ?? null;
+  const selectedNumber = selectedNumbers.size === 1 ? [...selectedNumbers][0] : null;
+  const previewImageUrl = useMemo(() => {
+    if (!selectedNumber) return null;
+    const candidates = masterData.filter((r) => {
+      const code = String(r.背番号 || "").trim();
+      return code.startsWith(selectedNumber) && r.imageURL;
+    });
+    return candidates[0]?.imageURL ?? null;
+  }, [selectedNumber, masterData]);
+
+  const step1Done = !!file;
   const step2Done = selectedCodes.length > 0;
-  const step3Done = !!file;
+  const step3Done = !!selectedMachine;
 
   function toggleNumber(n) {
-    setSelectedNumbers((prev) => { const s = new Set(prev); s.has(n) ? s.delete(n) : s.add(n); return s; });
+    setSelectedNumbers((prev) => {
+      const next = prev.has(n) && prev.size === 1 ? new Set() : new Set([n]);
+      return next;
+    });
     setUploadResults(null);
   }
   function toggleSuffix(s) {
@@ -143,7 +157,7 @@ export default function PceFilesWorkspace({ onFlash }) {
       const fileBase64 = await toBase64(file);
       const result = await uploadPceFiles({ fileBase64, sebanggoList: selectedCodes, machineSuffix });
       setUploadResults(result.files);
-      onFlash?.({ type: "success", message: `${result.files.length} file${result.files.length === 1 ? "" : "s"} created successfully.` });
+      onFlash?.({ type: "success", message: `${result.files.length} file${result.files.length === 1 ? "" : "s"} created successfully and saved to Google Drive > freyaAdmin pce` });
     } catch (err) {
       onFlash?.({ type: "error", message: err.message || "Upload failed." });
     } finally {
@@ -165,25 +179,42 @@ export default function PceFilesWorkspace({ onFlash }) {
   return (
     <div className="flex gap-4 items-stretch min-h-0">
 
-      {/* Panel 1 — Machine type */}
+      {/* Panel 1 — File upload */}
       <div className="dashboard-section rounded-2xl overflow-hidden flex flex-col w-44 flex-shrink-0">
-        <PanelHeader step={1} active={!step1Done} done={step1Done} title="Machine Type" />
-        <div className="px-3 py-4 flex flex-col gap-2 flex-1">
-          {MACHINE_TYPES.map((m) => (
-            <button
-              key={m.key}
-              type="button"
-              onClick={() => handleMachineSelect(m.key)}
-              className={[
-                "rounded-xl border px-3 py-2.5 text-xs font-bold text-left transition-all duration-150 leading-snug",
-                selectedMachine === m.key
-                  ? "border-primary/40 bg-primary/10 text-primary"
-                  : "border-outline-variant/20 bg-surface-container text-on-surface hover:border-primary/30 hover:bg-primary/5 hover:text-primary",
-              ].join(" ")}
-            >
-              {m.label}
-            </button>
-          ))}
+        <PanelHeader step={1} active={!step1Done} done={step1Done} title="Upload File" sub={file ? file.name : "Drop or click to browse"} />
+        <div className="px-3 py-4 flex flex-col gap-3 flex-1">
+          <div
+            onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
+            onDragLeave={() => setDragging(false)}
+            onDrop={(e) => { e.preventDefault(); setDragging(false); const f = e.dataTransfer.files?.[0]; if (f) handleFileAccept(f); }}
+            onClick={() => fileInputRef.current?.click()}
+            className={[
+              "h-24 flex flex-col items-center justify-center gap-1.5 rounded-xl border-2 border-dashed cursor-pointer text-center transition-all duration-200 px-3",
+              dragging ? "border-primary bg-primary/10"
+                : file ? "border-emerald-500/40 bg-emerald-500/5"
+                : "border-outline-variant/30 hover:border-primary/40 hover:bg-primary/5",
+            ].join(" ")}
+          >
+            <span className={`material-symbols-outlined ${file ? "text-emerald-500" : "text-on-surface-variant/50"}`} style={{ fontSize: 26 }}>
+              {file ? "check_circle" : "upload_file"}
+            </span>
+            {file ? (
+              <>
+                <p className="text-xs font-bold text-on-surface break-all leading-tight">{file.name}</p>
+                <p className="text-[11px] text-on-surface-variant">{(file.size / 1024).toFixed(1)} KB · <span className="text-primary">replace</span></p>
+              </>
+            ) : (
+              <p className="text-xs text-on-surface-variant">.pce files only</p>
+            )}
+          </div>
+          <input ref={fileInputRef} type="file" accept=".pce" className="hidden"
+            onChange={(e) => { if (e.target.files?.[0]) handleFileAccept(e.target.files[0]); }} />
+          {file && (
+            <div className="flex items-start gap-2 rounded-lg border border-amber-500/20 bg-amber-500/5 px-3 py-2">
+              <span className="material-symbols-outlined text-amber-500 flex-shrink-0" style={{ fontSize: 14 }}>warning</span>
+              <p className="text-[11px] text-amber-700 dark:text-amber-300 leading-snug">Filename will be replaced</p>
+            </div>
+          )}
         </div>
       </div>
 
@@ -214,43 +245,40 @@ export default function PceFilesWorkspace({ onFlash }) {
         </div>
       </div>
 
-      {/* Panel 3 — File upload */}
+      {/* Panel 3 — Machine type */}
       <div className="dashboard-section rounded-2xl overflow-hidden flex flex-col flex-1 min-w-48">
-        <PanelHeader step={3} active={step2Done && !step3Done} done={step3Done} title="Upload File" sub={file ? file.name : "Drop or click to browse"} />
+        <PanelHeader step={3} active={step2Done && !step3Done} done={step3Done} title="Machine Type" />
         <div className="px-4 py-4 flex flex-col gap-3 flex-1">
-          <div
-            onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
-            onDragLeave={() => setDragging(false)}
-            onDrop={(e) => { e.preventDefault(); setDragging(false); const f = e.dataTransfer.files?.[0]; if (f) handleFileAccept(f); }}
-            onClick={() => fileInputRef.current?.click()}
-            className={[
-              "flex-1 flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed cursor-pointer text-center transition-all duration-200 px-4 py-6",
-              dragging ? "border-primary bg-primary/10"
-                : file ? "border-emerald-500/40 bg-emerald-500/5"
-                : "border-outline-variant/30 hover:border-primary/40 hover:bg-primary/5",
-            ].join(" ")}
-          >
-            <span className={`material-symbols-outlined ${file ? "text-emerald-500" : "text-on-surface-variant/50"}`} style={{ fontSize: 32 }}>
-              {file ? "check_circle" : "upload_file"}
-            </span>
-            {file ? (
-              <>
-                <p className="text-xs font-bold text-on-surface break-all">{file.name}</p>
-                <p className="text-[11px] text-on-surface-variant">{(file.size / 1024).toFixed(1)} KB</p>
-                <p className="text-[11px] text-primary">click to replace</p>
-              </>
+          <div className="flex gap-2">
+            {MACHINE_TYPES.map((m) => (
+              <button
+                key={m.key}
+                type="button"
+                onClick={() => handleMachineSelect(m.key)}
+                className={[
+                  "flex-1 rounded-xl border px-3 py-2.5 text-xs font-bold text-center transition-all duration-150 leading-snug",
+                  selectedMachine === m.key
+                    ? "border-primary/40 bg-primary/10 text-primary"
+                    : "border-outline-variant/20 bg-surface-container text-on-surface hover:border-primary/30 hover:bg-primary/5 hover:text-primary",
+                ].join(" ")}
+              >
+                {m.label}
+              </button>
+            ))}
+          </div>
+          {/* Image preview */}
+          <div className="flex-1 rounded-xl border border-outline-variant/20 overflow-hidden bg-surface-container min-h-24">
+            {previewImageUrl ? (
+              <img src={previewImageUrl} alt={previewCode} className="w-full h-full object-contain" />
             ) : (
-              <p className="text-xs text-on-surface-variant">.pce files only</p>
+              <div className="flex flex-col items-center justify-center h-full gap-1.5 py-6">
+                <span className="material-symbols-outlined text-on-surface-variant/30" style={{ fontSize: 28 }}>image</span>
+                <p className="text-[11px] text-on-surface-variant/50">
+                  {selectedNumber ? `No image found for ${selectedNumber}xx` : "Select a number to preview"}
+                </p>
+              </div>
             )}
           </div>
-          <input ref={fileInputRef} type="file" accept=".pce" className="hidden"
-            onChange={(e) => { if (e.target.files?.[0]) handleFileAccept(e.target.files[0]); }} />
-          {file && (
-            <div className="flex items-start gap-2 rounded-lg border border-amber-500/20 bg-amber-500/5 px-3 py-2">
-              <span className="material-symbols-outlined text-amber-500 flex-shrink-0" style={{ fontSize: 14 }}>warning</span>
-              <p className="text-[11px] text-amber-700 dark:text-amber-300 leading-snug">Filename will be replaced</p>
-            </div>
-          )}
         </div>
       </div>
 
