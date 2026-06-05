@@ -1,4 +1,4 @@
-import { useDeferredValue, useEffect, useMemo, useState } from "react";
+import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import PageHeader from "../components/PageHeader";
 import {
@@ -55,85 +55,107 @@ function buildPlaylistSearchText(playlist) {
     .toLocaleLowerCase();
 }
 
-function getProjectBadge(project) {
-  if (project?.deployedRevisionId) {
-    return {
-      label: "Live",
-      className: "border-emerald-500/20 bg-emerald-500/10 text-emerald-500",
-    };
-  }
-
-  if (Number(project?.currentRevisionNumber || 0) > 0) {
-    return {
-      label: `Rev ${project.currentRevisionNumber}`,
-      className: "border-primary/20 bg-primary/10 text-primary",
-    };
-  }
-
+function getProjectPreviewMedia(project) {
   return {
-    label: "Draft",
-    className: "border-separator/35 bg-surface-container text-on-surface-variant",
+    previewUrl: String(project?.previewUrl || project?.deployedVideoUrl || "").trim(),
+    thumbnailUrl: String(project?.previewThumbnailUrl || "").trim(),
   };
 }
 
 function ProjectCard({ project, onOpen }) {
-  const badge = getProjectBadge(project);
-  const deployedLabel = project?.deployedRevisionName || (project?.deployedRevisionNumber ? `Revision ${project.deployedRevisionNumber}` : "Not deployed");
+  const [showInfo, setShowInfo] = useState(false);
+  const [isHoveringPreview, setIsHoveringPreview] = useState(false);
+  const videoRef = useRef(null);
+  const { previewUrl, thumbnailUrl } = getProjectPreviewMedia(project);
+  const latestRevision = Number(project?.currentRevisionNumber || 0) > 0 ? `Revision ${project.currentRevisionNumber}` : "None";
+  const deployedRevision = project?.deployedRevisionName || (project?.deployedRevisionNumber ? `Revision ${project.deployedRevisionNumber}` : "Not deployed");
+  const previewStatus = String(project?.previewStatus || "").trim().toLowerCase();
+
+  useEffect(() => {
+    if (!videoRef.current || !previewUrl) return;
+
+    if (isHoveringPreview) {
+      videoRef.current.currentTime = 0;
+      videoRef.current.play().catch(() => {});
+      return;
+    }
+
+    videoRef.current.pause();
+    videoRef.current.currentTime = 0;
+  }, [isHoveringPreview, previewUrl]);
 
   return (
-    <article className="glass-card rounded-2xl p-4 card-hover-lift flex h-full flex-col gap-4">
-      <div className="flex items-start gap-3">
-        <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
-          <span className="material-symbols-outlined" style={{ fontSize: 18 }}>movie</span>
-        </div>
-
+    <article className="glass-card rounded-2xl p-4 card-hover-lift flex h-full flex-col gap-3">
+      <div className="flex items-start gap-2">
         <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2">
-            <h3 className="min-w-0 flex-1 truncate text-sm font-bold text-on-surface">{project?.title || "Untitled Project"}</h3>
-            <span className={`inline-flex items-center rounded-full border px-3 py-1 text-[10px] font-bold ${badge.className}`}>
-              {badge.label}
-            </span>
-          </div>
-
-          <p className="mt-2 line-clamp-2 text-sm font-medium text-on-surface-variant">
+          <h3 className="truncate text-sm font-bold text-on-surface">{project?.title || "Untitled Project"}</h3>
+          <p className="mt-1 line-clamp-2 text-sm text-on-surface-variant">
             {project?.description || "No project description yet."}
           </p>
         </div>
+
+        <div className="relative flex-shrink-0">
+          <button
+            type="button"
+            onClick={(event) => {
+              event.stopPropagation();
+              setShowInfo((value) => !value);
+            }}
+            className="flex h-7 w-7 items-center justify-center rounded-full border border-separator/50 bg-surface-container-low text-on-surface-variant transition-all duration-150 hover:border-primary/30 hover:text-primary"
+            aria-label="Project information"
+          >
+            <span className="text-xs font-black">i</span>
+          </button>
+
+          {showInfo ? (
+            <div className="absolute right-0 top-9 z-10 w-56 rounded-xl border border-separator/40 bg-surface px-3 py-3 shadow-lg">
+              <div className="space-y-2 text-xs text-on-surface-variant">
+                <p><span className="font-bold text-on-surface">Created by:</span> {project?.createdBy || "Unknown"}</p>
+                <p><span className="font-bold text-on-surface">Last edited:</span> {formatDateTime(project?.lastEditedAt || project?.updatedAt)}</p>
+                <p><span className="font-bold text-on-surface">Deployed:</span> {deployedRevision}</p>
+                <p><span className="font-bold text-on-surface">Latest:</span> {latestRevision}</p>
+              </div>
+            </div>
+          ) : null}
+        </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
-        <div className="rounded-2xl border border-outline-variant/15 bg-surface-container-low px-4 py-3">
-          <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-outline">Tracks</div>
-          <div className="mt-1 text-sm font-semibold text-on-surface">{project?.tracksCount || 0}</div>
-        </div>
-        <div className="rounded-2xl border border-outline-variant/15 bg-surface-container-low px-4 py-3">
-          <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-outline">Revisions</div>
-          <div className="mt-1 text-sm font-semibold text-on-surface">{project?.currentRevisionNumber || 0}</div>
-        </div>
-        <div className="rounded-2xl border border-outline-variant/15 bg-surface-container-low px-4 py-3">
-          <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-outline">Updated</div>
-          <div className="mt-1 text-sm font-semibold text-on-surface">{formatDateTime(project?.lastEditedAt || project?.updatedAt)}</div>
-        </div>
-        <div className="rounded-2xl border border-outline-variant/15 bg-surface-container-low px-4 py-3">
-          <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-outline">Deployment</div>
-          <div className="mt-1 text-sm font-semibold text-on-surface">{deployedLabel}</div>
-        </div>
-      </div>
+      <button
+        type="button"
+        onClick={() => onOpen(project)}
+        onMouseEnter={() => setIsHoveringPreview(true)}
+        onMouseLeave={() => setIsHoveringPreview(false)}
+        className="relative mt-auto block aspect-video w-full overflow-hidden rounded-xl border border-separator/35 bg-surface-container-low"
+      >
+        {thumbnailUrl ? (
+          <img
+            src={thumbnailUrl}
+            alt={`${project?.title || "Project"} thumbnail`}
+            className={`h-full w-full object-cover transition-opacity duration-150 ${isHoveringPreview && previewUrl ? "opacity-0" : "opacity-100"}`}
+            loading="lazy"
+          />
+        ) : (
+          <div className="flex h-full w-full items-center justify-center text-on-surface-variant">
+            <span className="material-symbols-outlined" style={{ fontSize: 26 }}>movie</span>
+          </div>
+        )}
 
-      <div className="mt-auto flex items-center justify-between gap-3 border-t border-separator/30 pt-4">
-        <div className="min-w-0">
-          <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-outline">Last editor</div>
-          <div className="mt-1 truncate text-sm font-semibold text-on-surface">{project?.lastEditedBy || project?.createdBy || "Unknown"}</div>
-        </div>
+        {previewUrl ? (
+          <video
+            ref={videoRef}
+            src={previewUrl}
+            muted
+            loop
+            playsInline
+            preload="metadata"
+            className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-150 ${isHoveringPreview ? "opacity-100" : "opacity-0"}`}
+          />
+        ) : null}
 
-        <button
-          type="button"
-          onClick={() => onOpen(project)}
-          className="rounded-xl bg-primary px-4 py-2 text-xs font-bold text-on-primary transition-all duration-150 hover:opacity-90 active:scale-95"
-        >
-          Open Project
-        </button>
-      </div>
+        <div className="absolute left-2 top-2 inline-flex items-center rounded-full bg-black/55 px-2.5 py-1 text-[10px] font-bold text-white">
+          {previewStatus === "processing" ? "Preview processing" : previewStatus === "failed" ? "Preview failed" : previewUrl ? "Hover to preview" : "No preview yet"}
+        </div>
+      </button>
     </article>
   );
 }
