@@ -19,6 +19,7 @@ import {
   decorateAssetForPreview,
   DEFAULT_VIDEO_MANUAL_TEMPLATE,
   getActiveKeyframeForClip,
+  getAssetLibraryItemLabel,
   getAssetLibraryTypeLabel,
   getAllKeyframeTimesForClip,
   getClipCategory,
@@ -2205,13 +2206,13 @@ export default function VideoManualProjectEditorPage() {
         uploadProgress: null,
         items: [uploadedAsset, ...current.items.filter((item) => String(item.assetId || item._id || "") !== String(uploadedAsset.assetId))],
       }));
-      await insertPlaylistAsset(uploadedAsset);
+      showNotice(`${getAssetLibraryItemLabel(assetType)} uploaded. Click Use ${getAssetLibraryItemLabel(assetType)} to add it to the timeline.`);
       loadAssetLibrary(assetType);
     } catch (error) {
       setAssetLibrary((current) => ({ ...current, uploading: false, uploadProgress: null, error: error.message || "Upload failed." }));
       showNotice(error.message || "Upload failed.", "error");
     }
-  }, [apiBaseUrl, assetLibrary.type, insertPlaylistAsset, loadAssetLibrary, playlistId, showNotice]);
+  }, [apiBaseUrl, assetLibrary.type, loadAssetLibrary, playlistId, showNotice]);
 
   const handleSetBackgroundColor = useCallback(async (color) => {
     const edit = editRef.current;
