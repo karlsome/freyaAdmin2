@@ -10,6 +10,8 @@ import {
 } from "../services/videoManualApi";
 import { readStoredAuthUser } from "../utils/auth";
 
+const PROJECT_PREVIEW_POLL_INTERVAL_MS = 4000;
+
 function formatDateTime(value, fallback = "Not updated yet") {
   if (!value) return fallback;
 
@@ -258,6 +260,29 @@ export default function VideoManualPage() {
       cancelled = true;
     };
   }, [selectedPlaylistId]);
+
+  useEffect(() => {
+    if (!selectedPlaylistId || projectsLoading || projectsError) return undefined;
+
+    const hasProcessingPreviews = projects.some((project) => String(project?.previewStatus || "").trim().toLowerCase() === "processing");
+    if (!hasProcessingPreviews) return undefined;
+
+    let cancelled = false;
+    const timerId = window.setInterval(async () => {
+      try {
+        const nextProjects = await fetchVideoManualPlaylistProjects(selectedPlaylistId);
+        if (cancelled) return;
+        setProjects(nextProjects);
+      } catch {
+        // Keep silent polling to avoid disruptive errors during background refresh.
+      }
+    }, PROJECT_PREVIEW_POLL_INTERVAL_MS);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(timerId);
+    };
+  }, [projects, projectsError, projectsLoading, selectedPlaylistId]);
 
   const filteredPlaylists = useMemo(() => (
     filterItemsByQuery(playlists, deferredPlaylistQuery, buildPlaylistSearchText)
