@@ -12,6 +12,70 @@ function Icon({ children, className = "text-[20px]" }) {
   return <span className={`material-symbols-outlined ${className}`}>{children}</span>;
 }
 
+function VideoPreviewModal({ asset, onClose }) {
+  const videoRef = useRef(null);
+  const name = asset?.name || asset?.fileName || "Asset";
+  const videoUrl = asset?.originalUrl || asset?.downloadUrl || asset?.url || asset?.previewUrl || "";
+
+  useEffect(() => {
+    const handler = (event) => {
+      if (event.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", handler);
+    return () => document.removeEventListener("keydown", handler);
+  }, [onClose]);
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (video && videoUrl) {
+      video.play().catch(() => {});
+    }
+  }, [videoUrl]);
+
+  return (
+    <div
+      className="fixed inset-0 z-[400] flex items-center justify-center bg-black/80 px-4 backdrop-blur-sm"
+      onClick={onClose}
+    >
+      <div
+        className="relative flex w-full max-w-4xl flex-col overflow-hidden rounded-2xl bg-black shadow-2xl"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <div className="flex items-center justify-between gap-3 border-b border-white/10 px-4 py-3">
+          <p className="min-w-0 truncate text-sm font-bold text-white">{name}</p>
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex h-8 w-8 items-center justify-center rounded-full text-slate-400 transition hover:bg-white/10 hover:text-white"
+            title="Close preview"
+          >
+            <Icon className="text-[20px]">close</Icon>
+          </button>
+        </div>
+        <div className="relative aspect-video w-full bg-black">
+          {videoUrl ? (
+            <video
+              ref={videoRef}
+              className="h-full w-full"
+              src={videoUrl}
+              controls
+              playsInline
+              preload="metadata"
+            />
+          ) : (
+            <div className="flex h-full w-full items-center justify-center text-slate-400">
+              <div className="text-center">
+                <Icon className="text-[48px]">videocam_off</Icon>
+                <p className="mt-2 text-sm font-semibold">No playable source available</p>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function getAssetId(asset) {
   return String(asset?.assetId || asset?._id || "");
 }
@@ -131,6 +195,7 @@ export default function VideoManualAssetLibraryModal({
   const [showRecycleBin, setShowRecycleBin] = useState(false);
   const [selectedAssetIds, setSelectedAssetIds] = useState([]);
   const [actionBusy, setActionBusy] = useState(false);
+  const [previewAsset, setPreviewAsset] = useState(null);
 
   const normalizedType = normalizePlaylistAssetType(type);
   const libraryItems = (Array.isArray(items) ? items : []).filter((asset) => normalizePlaylistAssetType(asset?.type, asset?.mimeType) === normalizedType);
@@ -143,6 +208,7 @@ export default function VideoManualAssetLibraryModal({
     setShowRecycleBin(false);
     setSelectedAssetIds([]);
     setActionBusy(false);
+    setPreviewAsset(null);
   }, [open, type]);
 
   useEffect(() => {
@@ -422,6 +488,18 @@ export default function VideoManualAssetLibraryModal({
                       {isSelected ? <Icon className="text-[15px]">check</Icon> : null}
                     </button>
                   ) : null}
+                  {!editMode && assetType === "video" ? (
+                    <button
+                      type="button"
+                      onClick={() => setPreviewAsset(asset)}
+                      className="absolute inset-0 z-10 flex items-center justify-center bg-transparent group"
+                      title="Click to preview clip"
+                    >
+                      <span className="flex h-10 w-10 items-center justify-center rounded-full bg-black/50 text-white opacity-0 transition-opacity duration-150 group-hover:opacity-100">
+                        <Icon className="text-[22px]">play_circle</Icon>
+                      </span>
+                    </button>
+                  ) : null}
                   <AssetPreview asset={asset} />
                   {assetType === "video" ? (
                     <div className="pointer-events-none absolute inset-x-0 bottom-0 flex items-center justify-between bg-gradient-to-t from-black/70 to-transparent px-3 py-2 text-[10px] font-black uppercase tracking-[0.2em] text-white">
@@ -473,6 +551,10 @@ export default function VideoManualAssetLibraryModal({
           if (file) onUpload(file);
         }}
       />
+
+      {previewAsset ? (
+        <VideoPreviewModal asset={previewAsset} onClose={() => setPreviewAsset(null)} />
+      ) : null}
     </div>
   );
 }
