@@ -154,6 +154,14 @@ export default function PceFilesWorkspace({ onFlash }) {
       return { ...current, process: next };
     });
   }
+  function handleSelectAllEquipment(names) {
+    setPage(1);
+    setSimpleFilters((current) => ({ ...current, process: [...new Set(names)] }));
+  }
+  function handleClearEquipmentSelection() {
+    setPage(1);
+    setSimpleFilters((current) => ({ ...current, process: [] }));
+  }
   function handleSort(column) {
     setPage(1);
     setSort((current) => (current.column === column ? { column, direction: current.direction * -1 } : { column, direction: 1 }));
@@ -184,16 +192,58 @@ export default function PceFilesWorkspace({ onFlash }) {
     return map;
   }, [setsubiList]);
 
-  // Equipment names available for the selected factory (setsubiDB.name scoped by setsubiDB.工場),
-  // used to populate the Equipment multi-select once a factory is chosen
+  // Equipment options for the selected factory (setsubiDB.name scoped by setsubiDB.工場), used to
+  // populate the Equipment multi-select once a factory is chosen. Records that share both
+  // noOfHead and tableLength are grouped under a text heading (e.g. "1 head 1200mm") with their
+  // own checkboxes underneath; records missing either field fall into an unheaded group.
   const equipmentOptionsForFactory = useMemo(() => {
     const factory = String(simpleFilters.factory || "").trim();
     if (!factory) return [];
-    const names = setsubiList
+
+    const groups = new Map();
+    const ungroupedNames = new Set();
+
+    setsubiList
       .filter((record) => String(record?.工場 || "").trim() === factory)
-      .map((record) => String(record?.name || "").trim())
-      .filter(Boolean);
-    return [...new Set(names)].sort((a, b) => a.localeCompare(b, "ja"));
+      .forEach((record) => {
+        const name = String(record?.name || "").trim();
+        if (!name) return;
+        const heads = String(record?.noOfHead ?? "").trim();
+        const length = String(record?.tableLength ?? "").trim();
+        if (heads && length) {
+          const key = `${heads}|${length}`;
+          if (!groups.has(key)) {
+            groups.set(key, {
+              key,
+              heading: `${heads} head${heads === "1" ? "" : "s"} ${length}mm`,
+              heads: Number(heads) || 0,
+              length: Number(length) || 0,
+              names: new Set(),
+            });
+          }
+          groups.get(key).names.add(name);
+        } else {
+          ungroupedNames.add(name);
+        }
+      });
+
+    const groupedSections = [...groups.values()]
+      .sort((a, b) => a.heads - b.heads || a.length - b.length)
+      .map(({ key, heading, names }) => ({
+        key,
+        heading,
+        options: [...names].sort((a, b) => a.localeCompare(b, "ja")).map((name) => ({ key: name, label: name })),
+      }));
+
+    const ungroupedSections = ungroupedNames.size
+      ? [{
+          key: "__ungrouped",
+          heading: null,
+          options: [...ungroupedNames].sort((a, b) => a.localeCompare(b, "ja")).map((name) => ({ key: name, label: name })),
+        }]
+      : [];
+
+    return [...groupedSections, ...ungroupedSections];
   }, [setsubiList, simpleFilters.factory]);
 
   const selectedCodesList = useMemo(
@@ -374,6 +424,8 @@ export default function PceFilesWorkspace({ onFlash }) {
             equipmentOptions={equipmentOptionsForFactory}
             selectedEquipment={Array.isArray(simpleFilters.process) ? simpleFilters.process : []}
             onToggleEquipment={handleToggleEquipment}
+            onSelectAllEquipment={handleSelectAllEquipment}
+            onClearEquipmentSelection={handleClearEquipmentSelection}
           />
         </div>
 
