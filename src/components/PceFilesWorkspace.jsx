@@ -1,25 +1,25 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import { fetchPceMasterData, uploadPceFiles } from "../services/api";
-
-const MACHINE_TYPES = [
-  { key: "1h_12", label: "1 head 1200mm", suffix: "1h_12" },
-  { key: "1h_20", label: "1 head 2000mm", suffix: "1h_20" },
-  { key: "2h_12", label: "2 head 1200mm", suffix: "2h_12" },
-];
-
-const NUMBERS = ["1", "2", "3", "4", "5", "6", "7", "8"];
-const SUFFIXES = ["GD", "GN", "GL", "PD", "PM", "TD", "TL", "TN"];
-
-const SEBANGGO_RE = /^[1-8][GPT].$/;
-
-function buildValidCodes(records) {
-  const seen = new Set();
-  for (const r of records) {
-    const code = String(r.背番号 || "").trim();
-    if (code && !seen.has(code) && SEBANGGO_RE.test(code)) seen.add(code);
-  }
-  return seen;
-}
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  fetchMasterDistinctField,
+  fetchMasterFilterOptions,
+  fetchMasterPage,
+  fetchMasterSchema,
+  fetchSetsubiDBRecords,
+  uploadPceFiles,
+} from "../services/api";
+import {
+  MASTER_PAGE_SIZE_OPTIONS,
+  buildMasterAdvancedQuery,
+  buildMasterFieldDefinitions,
+  buildSearchFields,
+  cleanMasterRecords,
+  createMasterFilterRow,
+  formatMasterValue,
+  getMasterTabUI,
+  getMasterTableColumns,
+} from "../utils/masterDB";
+import DataTable from "./DataTable";
+import MasterFilterPanel from "./MasterFilterPanel";
 
 function toBase64(file) {
   return new Promise((resolve, reject) => {
@@ -49,97 +49,265 @@ function PanelHeader({ step, active, done, title, sub }) {
   );
 }
 
-function ToggleBtn({ label, selected, onClick, mono = false, className = "" }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={[
-        "rounded-lg border px-3 py-1.5 text-xs font-bold transition-all duration-150 text-center",
-        mono ? "font-mono" : "",
-        selected
-          ? "border-primary/40 bg-primary/10 text-primary"
-          : "border-outline-variant/20 bg-surface-container text-on-surface-variant hover:border-primary/30 hover:text-primary hover:bg-primary/5",
-        className,
-      ].join(" ")}
-    >
-      {label}
-    </button>
-  );
-}
-
 export default function PceFilesWorkspace({ onFlash }) {
-  const [masterData, setMasterData] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [selectedMachine, setSelectedMachine] = useState(null);
-  const [selectedNumbers, setSelectedNumbers] = useState(new Set());
-  const [selectedSuffixes, setSelectedSuffixes] = useState(new Set());
+  // ── Step 1: file upload ─────────────────────────────────────────────────────
   const [file, setFile] = useState(null);
   const [dragging, setDragging] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [uploadResults, setUploadResults] = useState(null);
   const fileInputRef = useRef(null);
 
+  // ── Step 2: 背番号 selection (same filtering/table data flow as 内装品 DB) ──
+  const [masterRecords, setMasterRecords] = useState([]);
+  const [schemaFields, setSchemaFields] = useState([]);
+  const [filterOptions, setFilterOptions] = useState({ factories: [], rl: [], colors: [], processes: [] });
+  const [simpleFilters, setSimpleFilters] = useState({ factory: "", rl: "", color: "", process: "" });
+  const [searchTags, setSearchTags] = useState([]);
+  const [searchLogicMode, setSearchLogicMode] = useState("OR");
+  const [advancedRows, setAdvancedRows] = useState([createMasterFilterRow()]);
+  const [advancedQuery, setAdvancedQuery] = useState({});
+  const [sort, setSort] = useState({ column: null, direction: 1 });
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
+  const [totalPages, setTotalPages] = useState(0);
+  const [filteredCount, setFilteredCount] = useState(0);
+  const [tableLoading, setTableLoading] = useState(false);
+  const [tableError, setTableError] = useState("");
+  // Map of 背番号 → that row's 加工設備 value, used to derive noOfHead/tableLength for the filename
+  const [selectedRows, setSelectedRows] = useState(() => new Map());
+  const requestIdRef = useRef(0);
+  const distinctCacheRef = useRef(new Map());
+
+  // Equipment records (for noOfHead / tableLength lookup, keyed by 加工設備 → name)
+  const [setsubiList, setSetsubiList] = useState([]);
+
+  const tabUI = getMasterTabUI("masterDB");
+  const fieldDefinitions = useMemo(
+    () => buildMasterFieldDefinitions(schemaFields, masterRecords, "masterDB"),
+    [schemaFields, masterRecords]
+  );
+
   useEffect(() => {
     let cancelled = false;
-    setLoading(true);
-    fetchPceMasterData()
-      .then((data) => { if (!cancelled) setMasterData(Array.isArray(data) ? data : []); })
-      .catch((err) => { if (!cancelled) onFlash?.({ type: "error", message: err.message || "Failed to load master data." }); })
-      .finally(() => { if (!cancelled) setLoading(false); });
+    async function loadMeta() {
+      try {
+        const [nextSchema, nextFilters] = await Promise.all([
+          fetchMasterSchema("masterDB"),
+          fetchMasterFilterOptions("masterDB"),
+        ]);
+        if (cancelled) return;
+        setSchemaFields(Array.isArray(nextSchema) ? nextSchema : []);
+        setFilterOptions(nextFilters);
+      } catch (err) {
+        if (!cancelled) onFlash?.({ type: "error", message: err.message || "Failed to load filter metadata." });
+      }
+    }
+    loadMeta();
     return () => { cancelled = true; };
   }, []);
 
-  const validCodeSet = useMemo(() => buildValidCodes(masterData), [masterData]);
+  useEffect(() => {
+    let cancelled = false;
+    const requestId = ++requestIdRef.current;
 
-  const selectedCodes = useMemo(() => {
-    if (!selectedNumbers.size || !selectedSuffixes.size) return [];
-    const result = [];
-    for (const n of NUMBERS) {
-      if (!selectedNumbers.has(n)) continue;
-      for (const s of SUFFIXES) {
-        if (!selectedSuffixes.has(s)) continue;
-        const code = `${n}${s}`;
-        if (validCodeSet.has(code)) result.push(code);
+    async function loadRecords() {
+      setTableLoading(true);
+      setTableError("");
+      try {
+        const result = await fetchMasterPage({
+          tabKey: "masterDB",
+          page,
+          limit: pageSize,
+          sort,
+          simpleFilters,
+          advancedFilters: advancedQuery,
+          searchTags,
+          searchFields: buildSearchFields(buildMasterFieldDefinitions(schemaFields, [], "masterDB")),
+          searchLogicMode,
+        });
+
+        if (cancelled || requestId !== requestIdRef.current) return;
+        setMasterRecords(cleanMasterRecords(result.data));
+        setFilteredCount(result.filteredCount);
+        setTotalPages(result.totalPages);
+      } catch (err) {
+        if (cancelled || requestId !== requestIdRef.current) return;
+        setTableError(err.message || "Failed to load master records.");
+        setMasterRecords([]);
+        setFilteredCount(0);
+        setTotalPages(0);
+      } finally {
+        if (!cancelled && requestId === requestIdRef.current) setTableLoading(false);
       }
     }
-    return result;
-  }, [selectedNumbers, selectedSuffixes, validCodeSet]);
 
-  const machineSuffix = MACHINE_TYPES.find((m) => m.key === selectedMachine)?.suffix;
-  const previewFiles = selectedCodes.map((c) => `${c}_${machineSuffix}.pce`);
+    loadRecords();
+    return () => { cancelled = true; };
+  }, [page, pageSize, sort, simpleFilters, advancedQuery, searchTags, schemaFields, searchLogicMode]);
 
-  const previewCode = selectedCodes[0] ?? null;
-  const selectedNumber = selectedNumbers.size === 1 ? [...selectedNumbers][0] : null;
-  const previewImageUrl = useMemo(() => {
-    if (!selectedNumber) return null;
-    const candidates = masterData.filter((r) => {
-      const code = String(r.背番号 || "").trim();
-      return code.startsWith(selectedNumber) && r.imageURL;
+  useEffect(() => {
+    let cancelled = false;
+    fetchSetsubiDBRecords()
+      .then((records) => {
+        if (cancelled) return;
+        const usable = (Array.isArray(records) ? records : []).filter((record) => (
+          String(record?.noOfHead ?? "").trim() !== "" && String(record?.tableLength ?? "").trim() !== ""
+        ));
+        setSetsubiList(usable);
+      })
+      .catch((err) => { if (!cancelled) onFlash?.({ type: "error", message: err.message || "Failed to load equipment list." }); });
+    return () => { cancelled = true; };
+  }, []);
+
+  const loadDistinctOptions = useCallback(async (field) => {
+    const cacheKey = `masterDB:${field}`;
+    if (distinctCacheRef.current.has(cacheKey)) return distinctCacheRef.current.get(cacheKey);
+    const values = await fetchMasterDistinctField(field, "masterDB");
+    distinctCacheRef.current.set(cacheKey, values);
+    return values;
+  }, []);
+
+  function handleSimpleFilterChange(key, value) {
+    setPage(1);
+    setSimpleFilters((current) => ({ ...current, [key]: value }));
+  }
+  function handleAddSearchTag(tag) {
+    const trimmed = String(tag).trim();
+    if (!trimmed || searchTags.includes(trimmed)) return;
+    setPage(1);
+    setSearchTags((current) => [...current, trimmed]);
+  }
+  function handleRemoveSearchTag(tag) {
+    setPage(1);
+    setSearchTags((current) => current.filter((item) => item !== tag));
+  }
+  function handleClearSearchTags() {
+    setPage(1);
+    setSearchTags([]);
+  }
+  function handleSearchLogicModeChange(mode) {
+    setPage(1);
+    setSearchLogicMode(mode);
+  }
+  function handleAddAdvancedRow() {
+    setAdvancedRows((current) => [...current, createMasterFilterRow()]);
+  }
+  function handleUpdateAdvancedRow(rowId, patch) {
+    setAdvancedRows((current) => current.map((row) => (row.id === rowId ? { ...row, ...patch } : row)));
+  }
+  function handleRemoveAdvancedRow(rowId) {
+    setAdvancedRows((current) => {
+      const next = current.filter((row) => row.id !== rowId);
+      return next.length ? next : [createMasterFilterRow()];
     });
-    return candidates[0]?.imageURL ?? null;
-  }, [selectedNumber, masterData]);
+  }
+  function handleApplyAdvancedFilters() {
+    setPage(1);
+    setAdvancedQuery(buildMasterAdvancedQuery(advancedRows, fieldDefinitions));
+  }
+  function handleClearAdvancedFilters() {
+    setPage(1);
+    setAdvancedRows([createMasterFilterRow()]);
+    setAdvancedQuery({});
+  }
+  function handleSort(column) {
+    setPage(1);
+    setSort((current) => (current.column === column ? { column, direction: current.direction * -1 } : { column, direction: 1 }));
+  }
 
-  const step1Done = !!file;
-  const step2Done = selectedCodes.length > 0;
-  const step3Done = !!selectedMachine;
-
-  function toggleNumber(n) {
-    setSelectedNumbers((prev) => {
-      const next = prev.has(n) && prev.size === 1 ? new Set() : new Set([n]);
+  function toggleRowSelection(record) {
+    const code = String(record?.背番号 || "").trim();
+    if (!code) return;
+    setSelectedRows((prev) => {
+      const next = new Map(prev);
+      if (next.has(code)) next.delete(code);
+      else next.set(code, String(record?.加工設備 || "").trim());
       return next;
     });
     setUploadResults(null);
   }
-  function toggleSuffix(s) {
-    setSelectedSuffixes((prev) => { const ns = new Set(prev); ns.has(s) ? ns.delete(s) : ns.add(s); return ns; });
-    setUploadResults(null);
-  }
 
-  function handleMachineSelect(key) {
-    setSelectedMachine(key);
-    setUploadResults(null);
-  }
+  // setsubiDB equipment records keyed by name, so each row's 加工設備 value can resolve noOfHead/tableLength
+  const setsubiByName = useMemo(() => {
+    const map = new Map();
+    setsubiList.forEach((record) => {
+      const name = String(record?.name || "").trim();
+      if (name) map.set(name, record);
+    });
+    return map;
+  }, [setsubiList]);
+
+  const selectedCodesList = useMemo(
+    () => [...selectedRows.keys()].sort((a, b) => a.localeCompare(b, "ja")),
+    [selectedRows]
+  );
+
+  // For each selected 背番号, resolve its filename from that row's own 加工設備 value
+  const previewEntries = useMemo(() => selectedCodesList.map((code) => {
+    const equipment = selectedRows.get(code) || "";
+    const machine = equipment ? setsubiByName.get(equipment) : null;
+    let suffix = null;
+    if (machine) {
+      const heads = String(machine.noOfHead).trim();
+      const lengthDigits = String(machine.tableLength).trim().slice(0, 2);
+      if (heads && lengthDigits) suffix = `${heads}h_${lengthDigits}`;
+    }
+    return {
+      code,
+      equipment,
+      suffix,
+      fileName: suffix ? `${code}_${suffix}.pce` : null,
+    };
+  }), [selectedCodesList, selectedRows, setsubiByName]);
+
+  const validPreviewEntries = useMemo(() => previewEntries.filter((entry) => entry.fileName), [previewEntries]);
+  const invalidPreviewEntries = useMemo(() => previewEntries.filter((entry) => !entry.fileName), [previewEntries]);
+  const previewFiles = validPreviewEntries.map((entry) => entry.fileName);
+
+  const tableColumns = useMemo(() => {
+    const selectColumn = {
+      key: "__select",
+      label: "",
+      sortable: false,
+      resizable: false,
+      reorderable: false,
+      width: 44,
+      minWidth: 44,
+      maxWidth: 44,
+      headerCellClassName: "px-3 py-2.5 text-left whitespace-nowrap",
+      cellClassName: "px-3 py-2.5 align-top",
+      disableCellWrapper: true,
+      renderCell: (record) => {
+        const code = String(record?.背番号 || "").trim();
+        if (!code) return null;
+        return (
+          <input
+            type="checkbox"
+            checked={selectedRows.has(code)}
+            onChange={() => toggleRowSelection(record)}
+            onClick={(event) => event.stopPropagation()}
+            className="h-4 w-4 rounded border-outline-variant/40 text-primary focus:ring-primary/30"
+          />
+        );
+      },
+    };
+
+    const dataColumns = getMasterTableColumns(masterRecords, schemaFields, "masterDB")
+      .filter((column) => column.key !== "型番" && column.key !== "imageURL")
+      .map((column) => ({
+        ...column,
+        width: 168,
+        minWidth: 120,
+        headerCellClassName: "px-3 py-2.5 text-left whitespace-nowrap",
+        headerButtonClassName: "ui-table-heading inline-flex items-center gap-2 uppercase tracking-wider text-on-surface-variant transition hover:text-on-surface",
+        cellClassName: "px-3 py-2.5 align-top text-on-surface",
+        contentClassName: "block w-full",
+        getCellTitle: (record) => formatMasterValue(record[column.key]),
+        renderCell: (record) => formatMasterValue(record[column.key]),
+      }));
+
+    return [selectColumn, ...dataColumns];
+  }, [masterRecords, schemaFields, selectedRows]);
 
   function handleFileAccept(f) {
     if (!f.name.toLowerCase().endsWith(".pce")) {
@@ -151,13 +319,23 @@ export default function PceFilesWorkspace({ onFlash }) {
   }
 
   async function handleUpload() {
-    if (!file || !selectedCodes.length || !machineSuffix) return;
+    if (!file || !validPreviewEntries.length) return;
     setUploading(true);
     try {
       const fileBase64 = await toBase64(file);
-      const result = await uploadPceFiles({ fileBase64, sebanggoList: selectedCodes, machineSuffix });
-      setUploadResults(result.files);
-      onFlash?.({ type: "success", message: `${result.files.length} file${result.files.length === 1 ? "" : "s"} created successfully and saved to Google Drive > freyaAdmin pce` });
+      // Group by suffix so each upload call still sends a single machineSuffix, as the backend expects
+      const groups = new Map();
+      validPreviewEntries.forEach(({ code, suffix }) => {
+        if (!groups.has(suffix)) groups.set(suffix, []);
+        groups.get(suffix).push(code);
+      });
+      const allFiles = [];
+      for (const [suffix, codes] of groups) {
+        const result = await uploadPceFiles({ fileBase64, sebanggoList: codes, machineSuffix: suffix });
+        allFiles.push(...result.files);
+      }
+      setUploadResults(allFiles);
+      onFlash?.({ type: "success", message: `${allFiles.length} file${allFiles.length === 1 ? "" : "s"} created successfully and saved to Google Drive > freyaAdmin pce` });
     } catch (err) {
       onFlash?.({ type: "error", message: err.message || "Upload failed." });
     } finally {
@@ -166,157 +344,185 @@ export default function PceFilesWorkspace({ onFlash }) {
   }
 
   function handleReset() {
-    setSelectedMachine(null);
-    setSelectedNumbers(new Set());
-    setSelectedSuffixes(new Set());
+    setSelectedRows(new Map());
     setFile(null);
     setUploadResults(null);
   }
 
+  const step1Done = !!file;
+  const step2Done = selectedCodesList.length > 0;
   const fileCount = previewFiles.length;
-  const canUpload = step1Done && step2Done && step3Done && !uploading;
+  const canUpload = step1Done && step2Done && validPreviewEntries.length > 0 && !uploading;
 
   return (
-    <div className="flex gap-4 items-stretch min-h-0">
+    <div className="flex flex-col gap-4">
+      {/* Row: Upload File + Filtering side by side (stretched to equal height) */}
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-stretch">
 
-      {/* Panel 1 — File upload */}
-      <div className="dashboard-section rounded-2xl overflow-hidden flex flex-col w-44 flex-shrink-0">
-        <PanelHeader step={1} active={!step1Done} done={step1Done} title="Upload File" sub={file ? file.name : "Drop or click to browse"} />
-        <div className="px-3 py-4 flex flex-col gap-3 flex-1">
-          <div
-            onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
-            onDragLeave={() => setDragging(false)}
-            onDrop={(e) => { e.preventDefault(); setDragging(false); const f = e.dataTransfer.files?.[0]; if (f) handleFileAccept(f); }}
-            onClick={() => fileInputRef.current?.click()}
-            className={[
-              "h-24 flex flex-col items-center justify-center gap-1.5 rounded-xl border-2 border-dashed cursor-pointer text-center transition-all duration-200 px-3",
-              dragging ? "border-primary bg-primary/10"
-                : file ? "border-emerald-500/40 bg-emerald-500/5"
-                : "border-outline-variant/30 hover:border-primary/40 hover:bg-primary/5",
-            ].join(" ")}
-          >
-            <span className={`material-symbols-outlined ${file ? "text-emerald-500" : "text-on-surface-variant/50"}`} style={{ fontSize: 26 }}>
-              {file ? "check_circle" : "upload_file"}
-            </span>
-            {file ? (
-              <>
-                <p className="text-xs font-bold text-on-surface break-all leading-tight">{file.name}</p>
-                <p className="text-[11px] text-on-surface-variant">{(file.size / 1024).toFixed(1)} KB · <span className="text-primary">replace</span></p>
-              </>
-            ) : (
-              <p className="text-xs text-on-surface-variant">.pce files only</p>
+        {/* Panel 1 — File upload */}
+        <div className="dashboard-section rounded-2xl overflow-hidden flex flex-col w-full lg:w-64 lg:flex-shrink-0">
+          <PanelHeader step={1} active={!step1Done} done={step1Done} title="Upload File" sub={file ? file.name : "Drop or click to browse"} />
+          <div className="px-3 py-4 flex flex-col gap-3 flex-1">
+            <div
+              onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
+              onDragLeave={() => setDragging(false)}
+              onDrop={(e) => { e.preventDefault(); setDragging(false); const f = e.dataTransfer.files?.[0]; if (f) handleFileAccept(f); }}
+              onClick={() => fileInputRef.current?.click()}
+              className={[
+                "h-24 flex flex-col items-center justify-center gap-1.5 rounded-xl border-2 border-dashed cursor-pointer text-center transition-all duration-200 px-3",
+                dragging ? "border-primary bg-primary/10"
+                  : file ? "border-emerald-500/40 bg-emerald-500/5"
+                  : "border-outline-variant/30 hover:border-primary/40 hover:bg-primary/5",
+              ].join(" ")}
+            >
+              <span className={`material-symbols-outlined ${file ? "text-emerald-500" : "text-on-surface-variant/50"}`} style={{ fontSize: 26 }}>
+                {file ? "check_circle" : "upload_file"}
+              </span>
+              {file ? (
+                <>
+                  <p className="text-xs font-bold text-on-surface break-all leading-tight">{file.name}</p>
+                  <p className="text-[11px] text-on-surface-variant">{(file.size / 1024).toFixed(1)} KB · <span className="text-primary">replace</span></p>
+                </>
+              ) : (
+                <p className="text-xs text-on-surface-variant">.pce files only</p>
+              )}
+            </div>
+            <input ref={fileInputRef} type="file" accept=".pce" className="hidden"
+              onChange={(e) => { if (e.target.files?.[0]) handleFileAccept(e.target.files[0]); }} />
+            {file && (
+              <div className="flex items-start gap-2 rounded-lg border border-amber-500/20 bg-amber-500/5 px-3 py-2">
+                <span className="material-symbols-outlined text-amber-500 flex-shrink-0" style={{ fontSize: 14 }}>warning</span>
+                <p className="text-[11px] text-amber-700 dark:text-amber-300 leading-snug">Filename will be replaced</p>
+              </div>
             )}
           </div>
-          <input ref={fileInputRef} type="file" accept=".pce" className="hidden"
-            onChange={(e) => { if (e.target.files?.[0]) handleFileAccept(e.target.files[0]); }} />
-          {file && (
-            <div className="flex items-start gap-2 rounded-lg border border-amber-500/20 bg-amber-500/5 px-3 py-2">
-              <span className="material-symbols-outlined text-amber-500 flex-shrink-0" style={{ fontSize: 14 }}>warning</span>
-              <p className="text-[11px] text-amber-700 dark:text-amber-300 leading-snug">Filename will be replaced</p>
-            </div>
-          )}
         </div>
+
+        {/* Filtering — same filter block as 内装品 DB, scoped to the 背番号 list below */}
+        <div className="flex-1 min-w-0">
+          <MasterFilterPanel
+            simpleFilters={simpleFilters}
+            filterOptions={filterOptions}
+            searchTags={searchTags}
+            searchLogicMode={searchLogicMode}
+            fieldDefinitions={fieldDefinitions}
+            advancedRows={advancedRows}
+            canBatchEdit={false}
+            batchCount={0}
+            onSimpleFilterChange={handleSimpleFilterChange}
+            onAddSearchTag={handleAddSearchTag}
+            onRemoveSearchTag={handleRemoveSearchTag}
+            onClearSearchTags={handleClearSearchTags}
+            onSearchLogicModeChange={handleSearchLogicModeChange}
+            onUpdateAdvancedRow={handleUpdateAdvancedRow}
+            onAddAdvancedRow={handleAddAdvancedRow}
+            onRemoveAdvancedRow={handleRemoveAdvancedRow}
+            onApplyAdvancedFilters={handleApplyAdvancedFilters}
+            onClearAdvancedFilters={handleClearAdvancedFilters}
+            onOpenBatchEdit={() => {}}
+            loadDistinctOptions={loadDistinctOptions}
+            processLabel={tabUI.processFilterLabel}
+            processAllLabel={tabUI.processAllLabel}
+            optionsCacheKey="pceFilesMasterDB"
+          />
+        </div>
+
       </div>
 
-      {/* Panel 2 — 背番号 */}
-      <div className="dashboard-section rounded-2xl overflow-hidden flex flex-col w-48 flex-shrink-0">
+      {/* Step 2 — 背番号 results: same table information as 内装品 DB */}
+      <div className="dashboard-section rounded-2xl overflow-hidden flex flex-col">
         <PanelHeader
           step={2}
           active={step1Done && !step2Done}
           done={step2Done}
           title="背番号"
-          sub={loading ? "Loading…" : step2Done ? `${selectedCodes.length} code${selectedCodes.length === 1 ? "" : "s"} selected` : "Select number + suffix"}
+          sub={step2Done ? `${selectedCodesList.length} record${selectedCodesList.length === 1 ? "" : "s"} selected` : "Filter the list and check rows to select 背番号"}
         />
-        <div className="px-3 py-4 flex gap-3 flex-1">
-          {/* Number column */}
-          <div className="flex flex-col gap-1.5">
-            <p className="text-[10px] font-black uppercase tracking-wider text-on-surface-variant mb-1 px-1">#</p>
-            {NUMBERS.map((n) => (
-              <ToggleBtn key={n} label={n} selected={selectedNumbers.has(n)} onClick={() => toggleNumber(n)} mono />
-            ))}
-          </div>
-          {/* Suffix column */}
-          <div className="flex flex-col gap-1.5 flex-1">
-            <p className="text-[10px] font-black uppercase tracking-wider text-on-surface-variant mb-1 px-1">Type</p>
-            {SUFFIXES.map((s) => (
-              <ToggleBtn key={s} label={s} selected={selectedSuffixes.has(s)} onClick={() => toggleSuffix(s)} mono className="w-full" />
-            ))}
-          </div>
+        <div className="px-4 py-4 flex flex-col gap-4">
+          <DataTable
+            columns={tableColumns}
+            rows={masterRecords}
+            loading={tableLoading}
+            error={tableError}
+            sort={sort}
+            page={page}
+            pageSize={pageSize}
+            filteredCount={filteredCount}
+            totalPages={totalPages}
+            onSort={handleSort}
+            onPageChange={(nextPage) => { if (nextPage < 1 || nextPage > totalPages) return; setPage(nextPage); }}
+            onPageSizeChange={(nextPageSize) => { setPage(1); setPageSize(nextPageSize); }}
+            pageSizeOptions={MASTER_PAGE_SIZE_OPTIONS}
+            rowKey={(record, index) => `${record._id?.$oid || record._id || index}`}
+            loadingMessage="Loading master records…"
+            errorTitle="Could not load master records"
+            emptyTitle="No matching records"
+            emptyMessage="Adjust the filters, search tags, or advanced query and try again."
+            enableColumnResize
+            enableColumnReorder
+            layoutStorageKey="freyaAdmin2.pceMasterTableLayout"
+            stickyHeader
+            stickyHeaderOffset={0}
+            stickyHeaderCellClassName="bg-surface-container-high shadow-[inset_0_-1px_0_rgba(148,163,184,0.18)]"
+            defaultColumnWidth={168}
+            defaultMinColumnWidth={120}
+            tableClassName="ui-table-data w-full border-separate border-spacing-0"
+            tableViewportClassName="max-h-[60vh] overflow-auto"
+            headClassName="bg-surface-container-high/40 border-b border-outline-variant/20"
+            rowClassName="border-b border-outline-variant/10 transition hover:bg-primary/5"
+          />
         </div>
       </div>
 
-      {/* Panel 3 — Machine type */}
-      <div className="dashboard-section rounded-2xl overflow-hidden flex flex-col flex-1 min-w-48">
-        <PanelHeader step={3} active={step2Done && !step3Done} done={step3Done} title="Machine Type" />
-        <div className="px-4 py-4 flex flex-col gap-3 flex-1">
-          <div className="flex gap-2">
-            {MACHINE_TYPES.map((m) => (
-              <button
-                key={m.key}
-                type="button"
-                onClick={() => handleMachineSelect(m.key)}
-                className={[
-                  "flex-1 rounded-xl border px-3 py-2.5 text-xs font-bold text-center transition-all duration-150 leading-snug",
-                  selectedMachine === m.key
-                    ? "border-primary/40 bg-primary/10 text-primary"
-                    : "border-outline-variant/20 bg-surface-container text-on-surface hover:border-primary/30 hover:bg-primary/5 hover:text-primary",
-                ].join(" ")}
-              >
-                {m.label}
-              </button>
-            ))}
-          </div>
-          {/* Image preview */}
-          <div className="flex-1 rounded-xl border border-outline-variant/20 overflow-hidden bg-surface-container min-h-24">
-            {previewImageUrl ? (
-              <img src={previewImageUrl} alt={previewCode} className="w-full h-full object-contain" />
-            ) : (
-              <div className="flex flex-col items-center justify-center h-full gap-1.5 py-6">
-                <span className="material-symbols-outlined text-on-surface-variant/30" style={{ fontSize: 28 }}>image</span>
-                <p className="text-[11px] text-on-surface-variant/50">
-                  {selectedNumber ? `No image found for ${selectedNumber}xx` : "Select a number to preview"}
-                </p>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* Panel 4 — Preview */}
-      <div className="dashboard-section rounded-2xl overflow-hidden flex flex-col flex-1 min-w-48">
-        <PanelHeader step={4} active={step3Done && !uploadResults} done={!!uploadResults} title="Preview" sub={uploadResults ? "Upload complete" : fileCount ? `${fileCount} file${fileCount === 1 ? "" : "s"} to create` : "Waiting for selections"} />
-        <div className="px-4 py-4 flex flex-col gap-2 flex-1">
+      {/* Step 3 — Preview (filenames derive noOfHead/tableLength from each row's own 加工設備 value) */}
+      <div className="dashboard-section rounded-2xl overflow-hidden flex flex-col">
+        <PanelHeader step={3} active={step2Done && !uploadResults} done={!!uploadResults} title="Preview" sub={uploadResults ? "Upload complete" : fileCount ? `${fileCount} file${fileCount === 1 ? "" : "s"} to create` : "Waiting for selections"} />
+        <div className="px-4 py-4 flex flex-col gap-2">
           {uploadResults ? (
             <>
-              <ul className="flex-1 space-y-1.5 overflow-y-auto">
+              <ul className="grid grid-flow-col grid-rows-5 auto-cols-[minmax(180px,1fr)] gap-1.5 overflow-x-auto pb-1">
                 {uploadResults.map((f) => (
-                  <li key={f.id} className="flex items-center gap-2 rounded-lg border border-emerald-500/20 bg-emerald-500/5 px-3 py-2">
+                  <li key={f.id} className="flex items-center gap-2 rounded-lg border border-emerald-500/20 bg-emerald-500/5 px-3 py-2 min-w-0">
                     <span className="material-symbols-outlined text-emerald-500 flex-shrink-0" style={{ fontSize: 15 }}>check_circle</span>
                     <span className="font-mono text-xs font-bold text-on-surface truncate">{f.name}</span>
                   </li>
                 ))}
               </ul>
               <button type="button" onClick={handleReset}
-                className="mt-2 flex items-center justify-center gap-1.5 rounded-xl border border-outline-variant/20 bg-surface-container px-4 py-2 text-xs font-bold text-on-surface hover:bg-surface-container-high transition-all">
+                className="mt-2 self-start flex items-center justify-center gap-1.5 rounded-xl border border-outline-variant/20 bg-surface-container px-4 py-2 text-xs font-bold text-on-surface hover:bg-surface-container-high transition-all">
                 <span className="material-symbols-outlined" style={{ fontSize: 15 }}>add</span>
                 New upload
               </button>
             </>
-          ) : previewFiles.length > 0 ? (
+          ) : step2Done ? (
             <>
-              <ul className="flex-1 space-y-1.5 overflow-y-auto mb-2">
+              <ul className="grid grid-flow-col grid-rows-5 auto-cols-[minmax(180px,1fr)] gap-1.5 overflow-x-auto pb-1 mb-2">
                 {previewFiles.map((name) => (
-                  <li key={name} className="flex items-center gap-2 rounded-lg border border-outline-variant/15 bg-surface-container px-3 py-2">
+                  <li key={name} className="flex items-center gap-2 rounded-lg border border-outline-variant/15 bg-surface-container px-3 py-2 min-w-0">
                     <span className="material-symbols-outlined text-primary flex-shrink-0" style={{ fontSize: 15 }}>description</span>
                     <span className="font-mono text-xs font-bold text-on-surface truncate">{name}</span>
                   </li>
                 ))}
               </ul>
+              {invalidPreviewEntries.length > 0 && (
+                <div className="flex items-start gap-2 rounded-lg border border-amber-500/20 bg-amber-500/5 px-3 py-2">
+                  <span className="material-symbols-outlined text-amber-500 flex-shrink-0" style={{ fontSize: 14 }}>warning</span>
+                  <p className="text-[11px] text-amber-700 dark:text-amber-300 leading-snug">
+                    {invalidPreviewEntries.length} row{invalidPreviewEntries.length === 1 ? "" : "s"} skipped — no matching equipment record for{" "}
+                    {invalidPreviewEntries.map((entry, index) => (
+                      <span key={entry.code}>
+                        {index > 0 && ", "}
+                        <span className="font-mono font-bold">{entry.code}</span> ("{entry.equipment || "—"}")
+                      </span>
+                    ))}
+                  </p>
+                </div>
+              )}
               <button
                 type="button"
                 onClick={handleUpload}
                 disabled={!canUpload}
-                className="flex items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-xs font-bold text-on-primary transition-all hover:opacity-90 active:scale-95 disabled:opacity-40"
+                className="self-start flex items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-xs font-bold text-on-primary transition-all hover:opacity-90 active:scale-95 disabled:opacity-40"
               >
                 {uploading
                   ? <span className="material-symbols-outlined animate-spin" style={{ fontSize: 16 }}>progress_activity</span>
@@ -325,11 +531,9 @@ export default function PceFilesWorkspace({ onFlash }) {
               </button>
             </>
           ) : (
-            <div className="flex-1 flex items-center justify-center">
-              <p className="text-xs text-on-surface-variant text-center leading-relaxed">
-                Complete steps 1–3<br />to see a preview
-              </p>
-            </div>
+            <p className="text-xs text-on-surface-variant text-center leading-relaxed py-4">
+              Complete steps 1–2 to see a preview
+            </p>
           )}
         </div>
       </div>
