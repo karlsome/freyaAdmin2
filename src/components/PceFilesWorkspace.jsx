@@ -1,6 +1,5 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
-  fetchMasterDistinctField,
   fetchMasterFilterOptions,
   fetchMasterPage,
   fetchMasterSchema,
@@ -9,11 +8,7 @@ import {
 } from "../services/api";
 import {
   MASTER_PAGE_SIZE_OPTIONS,
-  buildMasterAdvancedQuery,
-  buildMasterFieldDefinitions,
-  buildSearchFields,
   cleanMasterRecords,
-  createMasterFilterRow,
   formatMasterValue,
   getMasterTabUI,
   getMasterTableColumns,
@@ -61,11 +56,8 @@ export default function PceFilesWorkspace({ onFlash }) {
   const [masterRecords, setMasterRecords] = useState([]);
   const [schemaFields, setSchemaFields] = useState([]);
   const [filterOptions, setFilterOptions] = useState({ factories: [], rl: [], colors: [], processes: [] });
-  const [simpleFilters, setSimpleFilters] = useState({ factory: "", rl: "", color: "", process: "" });
-  const [searchTags, setSearchTags] = useState([]);
-  const [searchLogicMode, setSearchLogicMode] = useState("OR");
-  const [advancedRows, setAdvancedRows] = useState([createMasterFilterRow()]);
-  const [advancedQuery, setAdvancedQuery] = useState({});
+  // process is an array of selected 加工設備 names (multi-select, scoped to the chosen factory)
+  const [simpleFilters, setSimpleFilters] = useState({ factory: "", process: [] });
   const [sort, setSort] = useState({ column: null, direction: 1 });
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
@@ -76,16 +68,11 @@ export default function PceFilesWorkspace({ onFlash }) {
   // Map of 背番号 → that row's 加工設備 value, used to derive noOfHead/tableLength for the filename
   const [selectedRows, setSelectedRows] = useState(() => new Map());
   const requestIdRef = useRef(0);
-  const distinctCacheRef = useRef(new Map());
 
   // Equipment records (for noOfHead / tableLength lookup, keyed by 加工設備 → name)
   const [setsubiList, setSetsubiList] = useState([]);
 
   const tabUI = getMasterTabUI("masterDB");
-  const fieldDefinitions = useMemo(
-    () => buildMasterFieldDefinitions(schemaFields, masterRecords, "masterDB"),
-    [schemaFields, masterRecords]
-  );
 
   useEffect(() => {
     let cancelled = false;
@@ -120,10 +107,6 @@ export default function PceFilesWorkspace({ onFlash }) {
           limit: pageSize,
           sort,
           simpleFilters,
-          advancedFilters: advancedQuery,
-          searchTags,
-          searchFields: buildSearchFields(buildMasterFieldDefinitions(schemaFields, [], "masterDB")),
-          searchLogicMode,
         });
 
         if (cancelled || requestId !== requestIdRef.current) return;
@@ -143,72 +126,33 @@ export default function PceFilesWorkspace({ onFlash }) {
 
     loadRecords();
     return () => { cancelled = true; };
-  }, [page, pageSize, sort, simpleFilters, advancedQuery, searchTags, schemaFields, searchLogicMode]);
+  }, [page, pageSize, sort, simpleFilters, schemaFields]);
 
   useEffect(() => {
     let cancelled = false;
     fetchSetsubiDBRecords()
       .then((records) => {
         if (cancelled) return;
-        const usable = (Array.isArray(records) ? records : []).filter((record) => (
-          String(record?.noOfHead ?? "").trim() !== "" && String(record?.tableLength ?? "").trim() !== ""
-        ));
-        setSetsubiList(usable);
+        setSetsubiList(Array.isArray(records) ? records : []);
       })
       .catch((err) => { if (!cancelled) onFlash?.({ type: "error", message: err.message || "Failed to load equipment list." }); });
     return () => { cancelled = true; };
   }, []);
 
-  const loadDistinctOptions = useCallback(async (field) => {
-    const cacheKey = `masterDB:${field}`;
-    if (distinctCacheRef.current.has(cacheKey)) return distinctCacheRef.current.get(cacheKey);
-    const values = await fetchMasterDistinctField(field, "masterDB");
-    distinctCacheRef.current.set(cacheKey, values);
-    return values;
-  }, []);
-
   function handleSimpleFilterChange(key, value) {
     setPage(1);
-    setSimpleFilters((current) => ({ ...current, [key]: value }));
+    setSimpleFilters((current) => (
+      // changing the factory invalidates the previously selected equipment (it's scoped per-factory)
+      key === "factory" ? { ...current, factory: value, process: [] } : { ...current, [key]: value }
+    ));
   }
-  function handleAddSearchTag(tag) {
-    const trimmed = String(tag).trim();
-    if (!trimmed || searchTags.includes(trimmed)) return;
+  function handleToggleEquipment(name) {
     setPage(1);
-    setSearchTags((current) => [...current, trimmed]);
-  }
-  function handleRemoveSearchTag(tag) {
-    setPage(1);
-    setSearchTags((current) => current.filter((item) => item !== tag));
-  }
-  function handleClearSearchTags() {
-    setPage(1);
-    setSearchTags([]);
-  }
-  function handleSearchLogicModeChange(mode) {
-    setPage(1);
-    setSearchLogicMode(mode);
-  }
-  function handleAddAdvancedRow() {
-    setAdvancedRows((current) => [...current, createMasterFilterRow()]);
-  }
-  function handleUpdateAdvancedRow(rowId, patch) {
-    setAdvancedRows((current) => current.map((row) => (row.id === rowId ? { ...row, ...patch } : row)));
-  }
-  function handleRemoveAdvancedRow(rowId) {
-    setAdvancedRows((current) => {
-      const next = current.filter((row) => row.id !== rowId);
-      return next.length ? next : [createMasterFilterRow()];
+    setSimpleFilters((current) => {
+      const list = Array.isArray(current.process) ? current.process : [];
+      const next = list.includes(name) ? list.filter((item) => item !== name) : [...list, name];
+      return { ...current, process: next };
     });
-  }
-  function handleApplyAdvancedFilters() {
-    setPage(1);
-    setAdvancedQuery(buildMasterAdvancedQuery(advancedRows, fieldDefinitions));
-  }
-  function handleClearAdvancedFilters() {
-    setPage(1);
-    setAdvancedRows([createMasterFilterRow()]);
-    setAdvancedQuery({});
   }
   function handleSort(column) {
     setPage(1);
@@ -228,14 +172,29 @@ export default function PceFilesWorkspace({ onFlash }) {
   }
 
   // setsubiDB equipment records keyed by name, so each row's 加工設備 value can resolve noOfHead/tableLength
+  // (only records with both fields present can produce a usable filename suffix)
   const setsubiByName = useMemo(() => {
     const map = new Map();
     setsubiList.forEach((record) => {
       const name = String(record?.name || "").trim();
-      if (name) map.set(name, record);
+      const heads = String(record?.noOfHead ?? "").trim();
+      const length = String(record?.tableLength ?? "").trim();
+      if (name && heads && length) map.set(name, record);
     });
     return map;
   }, [setsubiList]);
+
+  // Equipment names available for the selected factory (setsubiDB.name scoped by setsubiDB.工場),
+  // used to populate the Equipment multi-select once a factory is chosen
+  const equipmentOptionsForFactory = useMemo(() => {
+    const factory = String(simpleFilters.factory || "").trim();
+    if (!factory) return [];
+    const names = setsubiList
+      .filter((record) => String(record?.工場 || "").trim() === factory)
+      .map((record) => String(record?.name || "").trim())
+      .filter(Boolean);
+    return [...new Set(names)].sort((a, b) => a.localeCompare(b, "ja"));
+  }, [setsubiList, simpleFilters.factory]);
 
   const selectedCodesList = useMemo(
     () => [...selectedRows.keys()].sort((a, b) => a.localeCompare(b, "ja")),
@@ -403,27 +362,18 @@ export default function PceFilesWorkspace({ onFlash }) {
           <MasterFilterPanel
             simpleFilters={simpleFilters}
             filterOptions={filterOptions}
-            searchTags={searchTags}
-            searchLogicMode={searchLogicMode}
-            fieldDefinitions={fieldDefinitions}
-            advancedRows={advancedRows}
-            canBatchEdit={false}
-            batchCount={0}
             onSimpleFilterChange={handleSimpleFilterChange}
-            onAddSearchTag={handleAddSearchTag}
-            onRemoveSearchTag={handleRemoveSearchTag}
-            onClearSearchTags={handleClearSearchTags}
-            onSearchLogicModeChange={handleSearchLogicModeChange}
-            onUpdateAdvancedRow={handleUpdateAdvancedRow}
-            onAddAdvancedRow={handleAddAdvancedRow}
-            onRemoveAdvancedRow={handleRemoveAdvancedRow}
-            onApplyAdvancedFilters={handleApplyAdvancedFilters}
-            onClearAdvancedFilters={handleClearAdvancedFilters}
-            onOpenBatchEdit={() => {}}
-            loadDistinctOptions={loadDistinctOptions}
             processLabel={tabUI.processFilterLabel}
             processAllLabel={tabUI.processAllLabel}
             optionsCacheKey="pceFilesMasterDB"
+            showRL={false}
+            showColor={false}
+            showSearchTags={false}
+            showAdvancedFilters={false}
+            equipmentVariant="multiSelect"
+            equipmentOptions={equipmentOptionsForFactory}
+            selectedEquipment={Array.isArray(simpleFilters.process) ? simpleFilters.process : []}
+            onToggleEquipment={handleToggleEquipment}
           />
         </div>
 
