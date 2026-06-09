@@ -405,8 +405,8 @@ function EquipmentDetailPanel({ equipment, onClose, onEdit }) {
     { label: "Voltage",          value: equipment.voltage },
     { label: "Manufacturer",     value: equipment.manufacturer },
     { label: "Contact Via",      value: equipment.contactVia },
-    { label: "No. of Heads",     value: equipment.numberOfHeads },
-    { label: "Length",           value: equipment.lengthMm ? `${equipment.lengthMm} mm` : undefined },
+    { label: "No. of Heads",     value: equipment.noOfHead },
+    { label: "Length",           value: equipment.tableLength ? `${equipment.tableLength} mm` : undefined },
   ];
 
   return (
@@ -686,8 +686,8 @@ export default function SetsubiDBWorkspace({ refreshToken, onFlash }) {
         voltage: draft.voltage || undefined,
         manufacturer: draft.manufacturer || undefined,
         contactVia: draft.contactVia || undefined,
-        numberOfHeads: draft.numberOfHeads || undefined,
-        lengthMm: draft.lengthMm || undefined,
+        noOfHead: draft.noOfHead || undefined,
+        tableLength: draft.tableLength || undefined,
       };
       const username = authUser?.username || "unknown";
       if (editingRecord) {

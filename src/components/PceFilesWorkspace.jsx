@@ -65,8 +65,10 @@ export default function PceFilesWorkspace({ onFlash }) {
   const [filteredCount, setFilteredCount] = useState(0);
   const [tableLoading, setTableLoading] = useState(false);
   const [tableError, setTableError] = useState("");
-  // Map of 背番号 → that row's 加工設備 value, used to derive noOfHead/tableLength for the filename
-  const [selectedRows, setSelectedRows] = useState(() => new Map());
+  // Set of selected 背番号 codes
+  const [selectedRows, setSelectedRows] = useState(() => new Set());
+  // Single selected group key (e.g. "1|1200") driving filename generation
+  const [selectedGroupKey, setSelectedGroupKey] = useState(null);
   const requestIdRef = useRef(0);
 
   // Equipment records (for noOfHead / tableLength lookup, keyed by 加工設備 → name)
@@ -142,25 +144,17 @@ export default function PceFilesWorkspace({ onFlash }) {
   function handleSimpleFilterChange(key, value) {
     setPage(1);
     setSimpleFilters((current) => (
-      // changing the factory invalidates the previously selected equipment (it's scoped per-factory)
       key === "factory" ? { ...current, factory: value, process: [] } : { ...current, [key]: value }
     ));
+    if (key === "factory") {
+      setSelectedGroupKey(null);
+      setSelectedRows(new Set());
+      setUploadResults(null);
+    }
   }
-  function handleToggleEquipment(name) {
-    setPage(1);
-    setSimpleFilters((current) => {
-      const list = Array.isArray(current.process) ? current.process : [];
-      const next = list.includes(name) ? list.filter((item) => item !== name) : [...list, name];
-      return { ...current, process: next };
-    });
-  }
-  function handleSelectAllEquipment(names) {
-    setPage(1);
-    setSimpleFilters((current) => ({ ...current, process: [...new Set(names)] }));
-  }
-  function handleClearEquipmentSelection() {
-    setPage(1);
-    setSimpleFilters((current) => ({ ...current, process: [] }));
+  function handleToggleGroup(groupKey) {
+    setSelectedGroupKey((prev) => prev === groupKey ? null : groupKey);
+    setUploadResults(null);
   }
   function handleSort(column) {
     setPage(1);
@@ -171,26 +165,13 @@ export default function PceFilesWorkspace({ onFlash }) {
     const code = String(record?.背番号 || "").trim();
     if (!code) return;
     setSelectedRows((prev) => {
-      const next = new Map(prev);
+      const next = new Set(prev);
       if (next.has(code)) next.delete(code);
-      else next.set(code, String(record?.加工設備 || "").trim());
+      else next.add(code);
       return next;
     });
     setUploadResults(null);
   }
-
-  // setsubiDB equipment records keyed by name, so each row's 加工設備 value can resolve noOfHead/tableLength
-  // (only records with both fields present can produce a usable filename suffix)
-  const setsubiByName = useMemo(() => {
-    const map = new Map();
-    setsubiList.forEach((record) => {
-      const name = String(record?.name || "").trim();
-      const heads = String(record?.noOfHead ?? "").trim();
-      const length = String(record?.tableLength ?? "").trim();
-      if (name && heads && length) map.set(name, record);
-    });
-    return map;
-  }, [setsubiList]);
 
   // Equipment options for the selected factory (setsubiDB.name scoped by setsubiDB.工場), used to
   // populate the Equipment multi-select once a factory is chosen. Records that share both
@@ -229,9 +210,11 @@ export default function PceFilesWorkspace({ onFlash }) {
 
     const groupedSections = [...groups.values()]
       .sort((a, b) => a.heads - b.heads || a.length - b.length)
-      .map(({ key, heading, names }) => ({
+      .map(({ key, heading, heads, length, names }) => ({
         key,
         heading,
+        heads,
+        length,
         options: [...names].sort((a, b) => a.localeCompare(b, "ja")).map((name) => ({ key: name, label: name })),
       }));
 
@@ -246,28 +229,20 @@ export default function PceFilesWorkspace({ onFlash }) {
     return [...groupedSections, ...ungroupedSections];
   }, [setsubiList, simpleFilters.factory]);
 
-  const selectedCodesList = useMemo(
-    () => [...selectedRows.keys()].sort((a, b) => a.localeCompare(b, "ja")),
-    [selectedRows]
-  );
-
-  // For each selected 背番号, resolve its filename from that row's own 加工設備 value
-  const previewEntries = useMemo(() => selectedCodesList.map((code) => {
-    const equipment = selectedRows.get(code) || "";
-    const machine = equipment ? setsubiByName.get(equipment) : null;
-    let suffix = null;
-    if (machine) {
-      const heads = String(machine.noOfHead).trim();
-      const lengthDigits = String(machine.tableLength).trim().slice(0, 2);
-      if (heads && lengthDigits) suffix = `${heads}h_${lengthDigits}`;
-    }
-    return {
+  // For each selected 背番号, generate one preview entry for the chosen group configuration
+  const previewEntries = useMemo(() => {
+    if (!selectedRows.size || !selectedGroupKey) return [];
+    const g = equipmentOptionsForFactory.find((g) => g.key === selectedGroupKey);
+    if (!g) return [];
+    const headsStr = String(g.heads ?? "").trim();
+    const lengthDigits = String(g.length ?? "").trim().slice(0, 2);
+    const suffix = headsStr && lengthDigits ? `${headsStr}h_${lengthDigits}` : null;
+    return [...selectedRows].map((code) => ({
       code,
-      equipment,
       suffix,
       fileName: suffix ? `${code}_${suffix}.pce` : null,
-    };
-  }), [selectedCodesList, selectedRows, setsubiByName]);
+    }));
+  }, [selectedRows, selectedGroupKey, equipmentOptionsForFactory]);
 
   const validPreviewEntries = useMemo(() => previewEntries.filter((entry) => entry.fileName), [previewEntries]);
   const invalidPreviewEntries = useMemo(() => previewEntries.filter((entry) => !entry.fileName), [previewEntries]);
@@ -353,15 +328,16 @@ export default function PceFilesWorkspace({ onFlash }) {
   }
 
   function handleReset() {
-    setSelectedRows(new Map());
+    setSelectedRows(new Set());
+    setSelectedGroupKey(null);
     setFile(null);
     setUploadResults(null);
   }
 
   const step1Done = !!file;
-  const step2Done = selectedCodesList.length > 0;
+  const step2Done = selectedRows.size > 0;
   const fileCount = previewFiles.length;
-  const canUpload = step1Done && step2Done && validPreviewEntries.length > 0 && !uploading;
+  const canUpload = step1Done && selectedRows.size > 0 && !!selectedGroupKey && validPreviewEntries.length > 0 && !uploading;
 
   return (
     <div className="flex flex-col gap-4">
@@ -420,12 +396,10 @@ export default function PceFilesWorkspace({ onFlash }) {
             showColor={false}
             showSearchTags={false}
             showAdvancedFilters={false}
-            equipmentVariant="multiSelect"
+            equipmentVariant="groupSelect"
             equipmentOptions={equipmentOptionsForFactory}
-            selectedEquipment={Array.isArray(simpleFilters.process) ? simpleFilters.process : []}
-            onToggleEquipment={handleToggleEquipment}
-            onSelectAllEquipment={handleSelectAllEquipment}
-            onClearEquipmentSelection={handleClearEquipmentSelection}
+            selectedGroups={selectedGroupKey ? [selectedGroupKey] : []}
+            onToggleGroup={handleToggleGroup}
           />
         </div>
 
@@ -438,7 +412,7 @@ export default function PceFilesWorkspace({ onFlash }) {
           active={step1Done && !step2Done}
           done={step2Done}
           title="背番号"
-          sub={step2Done ? `${selectedCodesList.length} record${selectedCodesList.length === 1 ? "" : "s"} selected` : "Filter the list and check rows to select 背番号"}
+          sub={step2Done ? `${selectedRows.size} row${selectedRows.size === 1 ? "" : "s"} selected` : "Filter the list and select 背番号 rows"}
         />
         <div className="px-4 py-4 flex flex-col gap-4">
           <DataTable
@@ -476,7 +450,7 @@ export default function PceFilesWorkspace({ onFlash }) {
         </div>
       </div>
 
-      {/* Step 3 — Preview (filenames derive noOfHead/tableLength from each row's own 加工設備 value) */}
+      {/* Step 3 — Preview */}
       <div className="dashboard-section rounded-2xl overflow-hidden flex flex-col">
         <PanelHeader step={3} active={step2Done && !uploadResults} done={!!uploadResults} title="Preview" sub={uploadResults ? "Upload complete" : fileCount ? `${fileCount} file${fileCount === 1 ? "" : "s"} to create` : "Waiting for selections"} />
         <div className="px-4 py-4 flex flex-col gap-2">
@@ -510,13 +484,7 @@ export default function PceFilesWorkspace({ onFlash }) {
                 <div className="flex items-start gap-2 rounded-lg border border-amber-500/20 bg-amber-500/5 px-3 py-2">
                   <span className="material-symbols-outlined text-amber-500 flex-shrink-0" style={{ fontSize: 14 }}>warning</span>
                   <p className="text-[11px] text-amber-700 dark:text-amber-300 leading-snug">
-                    {invalidPreviewEntries.length} row{invalidPreviewEntries.length === 1 ? "" : "s"} skipped — no matching equipment record for{" "}
-                    {invalidPreviewEntries.map((entry, index) => (
-                      <span key={entry.code}>
-                        {index > 0 && ", "}
-                        <span className="font-mono font-bold">{entry.code}</span> ("{entry.equipment || "—"}")
-                      </span>
-                    ))}
+                    {invalidPreviewEntries.length} configuration{invalidPreviewEntries.length === 1 ? "" : "s"} skipped — could not resolve head/length data
                   </p>
                 </div>
               )}

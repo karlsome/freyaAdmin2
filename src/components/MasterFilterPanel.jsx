@@ -36,13 +36,22 @@ export default function MasterFilterPanel({
   onToggleEquipment,
   onSelectAllEquipment,
   onClearEquipmentSelection,
+  // groupSelect variant props
+  selectedGroups = [],
+  onToggleGroup,
+  onSelectAllGroups,
+  onClearGroups,
 }) {
   const isMultiSelectEquipment = equipmentVariant === "multiSelect";
-  const equipmentNeedsFactory = isMultiSelectEquipment && !String(simpleFilters.factory || "").trim();
+  const isGroupSelectEquipment = equipmentVariant === "groupSelect";
+  const equipmentNeedsFactory = (isMultiSelectEquipment || isGroupSelectEquipment) && !String(simpleFilters.factory || "").trim();
   const equipmentAllNames = isMultiSelectEquipment
     ? equipmentOptions.flatMap((group) => group.options.map((option) => option.key))
     : [];
-  const equipmentSpanClass = isMultiSelectEquipment && !showRL && !showColor
+  const allGroupKeys = isGroupSelectEquipment
+    ? equipmentOptions.filter((g) => g.key !== "__ungrouped").map((g) => g.key)
+    : [];
+  const equipmentSpanClass = (isMultiSelectEquipment || isGroupSelectEquipment) && !showRL && !showColor
     ? (showSearchTags ? "xl:col-span-3" : "xl:col-span-5")
     : "xl:col-span-1";
 
@@ -93,7 +102,46 @@ export default function MasterFilterPanel({
         )}
 
         <FormField label={processLabel} className={equipmentSpanClass}>
-          {isMultiSelectEquipment ? (
+          {isGroupSelectEquipment ? (
+            <div
+              className={[
+                "w-full rounded-xl border px-3 py-2 transition-colors",
+                equipmentNeedsFactory || !equipmentOptions.length ? "flex min-h-[2.5rem] items-center" : "min-h-[2.5rem]",
+                equipmentNeedsFactory
+                  ? "border-separator/25 bg-surface-container/50 cursor-not-allowed"
+                  : "border-separator/40 bg-white",
+              ].join(" ")}
+            >
+              {equipmentNeedsFactory ? (
+                <p className="text-[11px] text-on-surface-variant">Select a factory first</p>
+              ) : equipmentOptions.length ? (
+                <div className="flex flex-col gap-2">
+                  <div className="flex items-start gap-x-6 gap-y-3 overflow-x-auto pb-1">
+                    {equipmentOptions.filter((g) => g.key !== "__ungrouped").map((group) => (
+                      <div key={group.key} className="flex flex-shrink-0 flex-col gap-1">
+                        <label className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-outline cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={selectedGroups.includes(group.key)}
+                            onChange={() => onToggleGroup?.(group.key)}
+                            className="h-3.5 w-3.5 rounded border-outline-variant/40 text-primary focus:ring-primary/30"
+                          />
+                          {group.heading}
+                        </label>
+                        <div className="flex flex-col gap-0.5 pl-5">
+                          {group.options.map((option) => (
+                            <span key={option.key} className="text-xs text-on-surface-variant truncate">{option.label}</span>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <p className="text-[11px] text-on-surface-variant">No equipment found for this factory</p>
+              )}
+            </div>
+          ) : isMultiSelectEquipment ? (
             <div
               className={[
                 "w-full rounded-xl border px-3 py-2 transition-colors",
