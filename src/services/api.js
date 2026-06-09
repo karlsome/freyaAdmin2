@@ -2634,6 +2634,36 @@ export async function fetchCameraStreamUrl() {
   return String(data.url || "");
 }
 
+// ─── PCE File Upload ──────────────────────────────────────────────────────────
+export async function fetchPceMasterData() {
+  return _withInFlight('pce-master-data', async () => {
+    const cached = _getCached('pce-master-data', MASTER_TTL);
+    if (cached) return cached;
+    const data = await _getJson('api/masterdb/pce-data');
+    _setCache('pce-master-data', data);
+    return data;
+  });
+}
+
+export async function uploadPceFiles({ fileBase64, sebanggoList, machineSuffix }) {
+  const res = await fetch(`${BASE_URL}api/pce/upload`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ fileBase64, sebanggoList, machineSuffix }),
+  });
+  const data = await res.json();
+  if (!res.ok) {
+    if (res.status === 409 && data.conflicts?.length) {
+      throw new Error(`Already exists in Drive — ${data.conflicts.join(", ")}`);
+    }
+    const detail = data?.google
+      ? JSON.stringify(data.google)
+      : data?.details || data?.error || `API ${res.status}`;
+    throw new Error(`${data?.error || "Upload failed"} — ${detail}`);
+  }
+  return data;
+}
+
 export async function translateJapaneseText(text) {
   const query = new URLSearchParams({
     q: text,

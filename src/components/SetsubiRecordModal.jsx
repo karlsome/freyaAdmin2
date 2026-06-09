@@ -18,7 +18,7 @@ function buildInitialDraft(record) {
       name: "", 工場: "", installationDate: "", imageURL: "",
       model: "", size: "", serialNo: "", manufactureDate: "",
       voltage: "", manufacturer: "", contactVia: "",
-      numberOfHeads: "", lengthMm: "",
+      noOfHead: "", tableLength: "",
     };
   }
   return {
@@ -33,8 +33,8 @@ function buildInitialDraft(record) {
     voltage: record.voltage || "",
     manufacturer: record.manufacturer || "",
     contactVia: record.contactVia || "",
-    numberOfHeads: record.numberOfHeads != null ? String(record.numberOfHeads) : "",
-    lengthMm: record.lengthMm != null ? String(record.lengthMm) : "",
+    noOfHead: record.noOfHead != null ? String(record.noOfHead) : "",
+    tableLength: record.tableLength != null ? String(record.tableLength) : "",
   };
 }
 
@@ -251,8 +251,8 @@ export default function SetsubiRecordModal({
           <div className="grid grid-cols-2 gap-3">
             <FormField label="Number of Heads" variant="form">
               <select
-                value={draft.numberOfHeads}
-                onChange={(e) => set("numberOfHeads", e.target.value)}
+                value={draft.noOfHead}
+                onChange={(e) => set("noOfHead", e.target.value)}
                 className={inputCls}
               >
                 <option value="">— Select —</option>
@@ -264,8 +264,8 @@ export default function SetsubiRecordModal({
             <FormField label="Length (mm)" variant="form">
               <input
                 type="number"
-                value={draft.lengthMm}
-                onChange={(e) => set("lengthMm", e.target.value)}
+                value={draft.tableLength}
+                onChange={(e) => set("tableLength", e.target.value)}
                 placeholder="e.g. 3500"
                 min="0"
                 className={inputCls}
