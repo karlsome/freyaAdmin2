@@ -24,7 +24,7 @@ export default function TagInput({
     >
       <div className="flex flex-wrap items-center gap-1">
         {tags.map((tag) => (
-          <span key={tag} className={`inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-bold ${tagClassName}`}>
+          <span key={tag} className={`inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold ${tagClassName}`}>
             {tag}
             <button type="button" onClick={() => onRemove(tag)} className="leading-none hover:text-error">×</button>
           </span>

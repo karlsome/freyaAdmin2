@@ -22,12 +22,12 @@ export default function FactoryCard({ factory, onClick, onDefectClick }) {
       {/* ── Header ── */}
       <div className="flex items-start justify-between">
         <div>
-          <h4 className="text-base font-bold text-on-surface leading-tight">{name}</h4>
+          <h4 className="text-base font-semibold text-on-surface leading-tight">{name}</h4>
           <p className="text-[10px] text-on-surface-variant mt-0.5">
             {total.toLocaleString()} kensa units today
           </p>
         </div>
-        <span className={`flex items-center gap-1.5 text-[10px] font-bold px-2 py-1 rounded-full ${defectStatus.bg} ${defectStatus.color}`}>
+        <span className={`flex items-center gap-1.5 text-[10px] font-semibold px-2 py-1 rounded-full ${defectStatus.bg} ${defectStatus.color}`}>
           <span className={`w-1.5 h-1.5 rounded-full ${defectStatus.dot}`}></span>
           {defectStatus.label}
         </span>
@@ -37,26 +37,26 @@ export default function FactoryCard({ factory, onClick, onDefectClick }) {
       <div className="grid grid-cols-3 gap-2 pb-3 border-b border-outline-variant/20">
         <div>
           <p className="text-[10px] text-on-surface-variant uppercase tracking-widest mb-1">Total</p>
-          <p className="text-sm font-black text-on-surface">{total.toLocaleString()}</p>
+          <p className="text-sm font-semibold text-on-surface">{total.toLocaleString()}</p>
         </div>
         <div>
           <p className="text-[10px] text-on-surface-variant uppercase tracking-widest mb-1">NG</p>
-          <p className="text-sm font-black text-on-surface">{totalNG.toLocaleString()}</p>
+          <p className="text-sm font-semibold text-on-surface">{totalNG.toLocaleString()}</p>
         </div>
         <div>
           <p className="text-[10px] text-on-surface-variant uppercase tracking-widest mb-1">Defect</p>
-          <p className={`text-sm font-black ${defectStatus.valueColor}`}>{defectRate.toFixed(2)}%</p>
+          <p className={`text-sm font-semibold ${defectStatus.valueColor}`}>{defectRate.toFixed(2)}%</p>
         </div>
       </div>
 
       {/* ── Top defects ── */}
       <div className="flex-1 flex flex-col">
         <div className="flex items-center justify-between mb-2.5">
-          <p className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">
+          <p className="text-[10px] font-semibold text-on-surface-variant uppercase tracking-widest">
             Top Defects
           </p>
           {topDefects.length > 0 && (
-            <span className="text-[10px] font-bold text-error bg-error/10 px-2 py-0.5 rounded-full">
+            <span className="text-[10px] font-semibold text-error bg-error/10 px-2 py-0.5 rounded-full">
               {topDefects.length} part{topDefects.length !== 1 ? "s" : ""}
             </span>
           )}
@@ -72,9 +72,9 @@ export default function FactoryCard({ factory, onClick, onDefectClick }) {
             {/* Column headers */}
             <div className="grid grid-cols-[1.5rem_1fr_3rem_3.5rem] gap-x-2 px-1 mb-1">
               <span />
-              <span className="text-[9px] font-bold text-outline uppercase tracking-widest">背番号</span>
-              <span className="text-[9px] font-bold text-outline uppercase tracking-widest text-right">NG</span>
-              <span className="text-[9px] font-bold text-outline uppercase tracking-widest text-right">Rate</span>
+              <span className="text-[9px] font-semibold text-outline uppercase tracking-widest">背番号</span>
+              <span className="text-[9px] font-semibold text-outline uppercase tracking-widest text-right">NG</span>
+              <span className="text-[9px] font-semibold text-outline uppercase tracking-widest text-right">Rate</span>
             </div>
 
             {topDefects.map((d, i) => {
@@ -86,15 +86,15 @@ export default function FactoryCard({ factory, onClick, onDefectClick }) {
                   className="grid grid-cols-[1.5rem_1fr_3rem_3.5rem] gap-x-2 items-center px-1 py-1.5 rounded-lg hover:bg-primary/10 hover:shadow-[inset_3px_0_0_rgb(var(--c-primary))] transition-all duration-150"
                 >
                   {/* Rank badge */}
-                  <span className={`text-[9px] font-black w-5 h-5 rounded-md flex items-center justify-center ${RANK_COLORS[i] ?? RANK_COLORS[4]}`}>
+                  <span className={`text-[9px] font-semibold w-5 h-5 rounded-md flex items-center justify-center ${RANK_COLORS[i] ?? RANK_COLORS[4]}`}>
                     {i + 1}
                   </span>
                   {/* 背番号 */}
                   <span className="text-xs font-mono text-on-surface truncate">{d.sebanggo}</span>
                   {/* NG qty */}
-                  <span className="text-xs font-bold text-right text-error">{d.ng.toLocaleString()}</span>
+                  <span className="text-xs font-semibold text-right text-error">{d.ng.toLocaleString()}</span>
                   {/* Defect rate */}
-                  <span className={`text-xs font-bold text-right ${rowStatus.valueColor}`}>
+                  <span className={`text-xs font-semibold text-right ${rowStatus.valueColor}`}>
                     {d.defectRate.toFixed(2)}%
                   </span>
                 </div>

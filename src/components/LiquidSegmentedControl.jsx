@@ -101,7 +101,7 @@ export default function LiquidSegmentedControl({
               if (!item.disabled) onChange(item.key);
             }}
             className={[
-              "relative z-10 rounded-lg px-4 py-1.5 text-xs font-bold transition-colors duration-300",
+              "relative z-10 rounded-lg px-4 py-1.5 text-xs font-semibold transition-colors duration-300",
               active
                 ? "border border-transparent bg-transparent text-on-primary"
                 : "text-on-surface-variant hover:text-on-surface",

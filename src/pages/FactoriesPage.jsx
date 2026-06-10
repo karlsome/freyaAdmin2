@@ -32,7 +32,7 @@ export default function FactoriesPage() {
         actions={(
           <button
             onClick={refresh}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold bg-surface-container border border-outline-variant/20 text-on-surface-variant hover:bg-surface-container-high hover:text-primary transition-all duration-150"
+            className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold bg-surface-container border border-outline-variant/20 text-on-surface-variant hover:bg-surface-container-high hover:text-primary transition-all duration-150"
           >
             <span className="material-symbols-outlined" style={{ fontSize: 16 }}>refresh</span>
             {t("refresh")}
@@ -44,7 +44,7 @@ export default function FactoriesPage() {
       {error && (
         <div className="glass-card rounded-2xl p-6 mb-6 flex items-center gap-4 text-error">
           <span className="material-symbols-outlined">error</span>
-          <p className="text-sm font-bold">Backend unreachable — showing last cached data. ({error})</p>
+          <p className="text-sm font-semibold">Backend unreachable — showing last cached data. ({error})</p>
         </div>
       )}
 

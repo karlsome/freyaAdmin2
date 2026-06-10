@@ -6,7 +6,7 @@ function PreviewTable({ rows }) {
 
   return (
     <div className="mt-5 overflow-hidden rounded-2xl border border-separator/50 bg-surface-container-low">
-      <div className="border-b border-outline-variant/30 px-4 py-3 text-xs font-bold uppercase tracking-[0.2em] text-outline">
+      <div className="border-b border-outline-variant/30 px-4 py-3 text-xs font-semibold uppercase tracking-[0.2em] text-outline">
         CSV Preview
       </div>
       <div className="overflow-x-auto">
@@ -59,7 +59,7 @@ export default function MasterCsvImportCard({
               </span>
             </div>
             <div>
-              <h3 className="text-lg font-black text-on-surface">CSV Import</h3>
+              <h3 className="text-lg font-semibold text-on-surface">CSV Import</h3>
               <p className="text-sm text-on-surface-variant">
                 Parse Shift-JIS files, preview the first rows, then insert everything into the current master collection.
               </p>
@@ -68,7 +68,7 @@ export default function MasterCsvImportCard({
         </div>
 
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-          <label className="inline-flex cursor-pointer items-center justify-center rounded-xl border border-dashed border-primary/35 bg-primary/5 px-4 py-2 text-xs font-bold text-primary transition hover:bg-primary/10">
+          <label className="inline-flex cursor-pointer items-center justify-center rounded-xl border border-dashed border-primary/35 bg-primary/5 px-4 py-2 text-xs font-semibold text-primary transition hover:bg-primary/10">
             <input
               type="file"
               accept=".csv"
@@ -82,7 +82,7 @@ export default function MasterCsvImportCard({
             type="button"
             onClick={onImport}
             disabled={!parsedRows.length || importing}
-            className="flex items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2 text-xs font-bold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+            className="flex items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2 text-xs font-semibold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
           >
             <span className="material-symbols-outlined" style={{ fontSize: 18 }}>
               cloud_upload

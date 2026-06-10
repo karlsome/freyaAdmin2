@@ -20,12 +20,12 @@ function getColumnWidth(columnKey) {
 
 function renderImageCell(record) {
   return record.imageURL ? (
-    <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/12 px-2 py-0.5 text-[10px] font-bold text-emerald-600 dark:text-emerald-300">
+    <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/12 px-2 py-0.5 text-[10px] font-semibold text-emerald-600 dark:text-emerald-300">
       <span className="material-symbols-outlined" style={{ fontSize: 14 }}>image</span>
       あり
     </span>
   ) : (
-    <span className="inline-flex items-center gap-1 rounded-full bg-surface-container px-2 py-0.5 text-[10px] font-bold text-outline">
+    <span className="inline-flex items-center gap-1 rounded-full bg-surface-container px-2 py-0.5 text-[10px] font-semibold text-outline">
       <span className="material-symbols-outlined" style={{ fontSize: 14 }}>image_not_supported</span>
       なし
     </span>
@@ -72,7 +72,7 @@ export default function MasterTable({
       headerButtonClassName: "ui-table-heading inline-flex items-center gap-2 uppercase tracking-wider text-on-surface-variant transition hover:text-on-surface",
       cellClassName: [
         "px-3 py-2.5 align-top",
-        emphasis ? "font-bold text-primary" : "text-on-surface",
+        emphasis ? "font-semibold text-primary" : "text-on-surface",
       ].join(" "),
       contentClassName: "block w-full",
       getCellTitle: (record) => formatMasterValue(record[column.key]),

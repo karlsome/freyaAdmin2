@@ -24,7 +24,7 @@ export default function DashboardKPIStrip({ kpis, byProcess = [], loading }) {
     <div className="space-y-5 mb-8">
       {/* ── Row 1: Overall KPIs ── */}
       <div>
-        <p className="text-[10px] font-bold uppercase tracking-widest text-outline mb-3 flex items-center gap-2">
+        <p className="text-[10px] font-semibold uppercase tracking-widest text-outline mb-3 flex items-center gap-2">
           <span className="w-3 h-px bg-separator inline-block" />
           Overall
         </p>
@@ -67,7 +67,7 @@ export default function DashboardKPIStrip({ kpis, byProcess = [], loading }) {
       {/* ── Row 2: Per-process breakdown ── */}
       {byProcess.length > 0 && (
         <div>
-          <p className="text-[10px] font-bold uppercase tracking-widest text-outline mb-3 flex items-center gap-2">
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-outline mb-3 flex items-center gap-2">
             <span className="w-3 h-px bg-separator inline-block" />
             By Process
           </p>

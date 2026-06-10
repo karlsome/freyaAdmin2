@@ -55,7 +55,7 @@ function FlashBanner({ flash, onClose }) {
     <div className={`mb-6 rounded-3xl border px-5 py-4 ${tone}`}>
       <div className="flex items-start justify-between gap-4">
         <div>
-          <div className="text-[11px] font-bold uppercase tracking-[0.18em]">Status</div>
+          <div className="text-[11px] font-semibold uppercase tracking-[0.18em]">Status</div>
           <p className="mt-1 text-sm font-medium">{flash.message}</p>
         </div>
         <button type="button" onClick={onClose} className="text-current/70 transition hover:text-current">
@@ -563,7 +563,7 @@ export default function MasterDBPage() {
             <button
               type="button"
               onClick={handleRefresh}
-              className="flex items-center justify-center gap-2 rounded-xl border border-outline-variant/20 bg-surface-container px-4 py-2 text-xs font-bold text-on-surface-variant transition-all hover:bg-surface-container-high hover:text-primary"
+              className="flex items-center justify-center gap-2 rounded-xl border border-outline-variant/20 bg-surface-container px-4 py-2 text-xs font-semibold text-on-surface-variant transition-all hover:bg-surface-container-high hover:text-primary"
             >
               <span className="material-symbols-outlined" style={{ fontSize: 16 }}>refresh</span>
               Refresh
@@ -573,7 +573,7 @@ export default function MasterDBPage() {
               <button
                 type="button"
                 onClick={() => setAddModalOpen(true)}
-                className="flex items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2 text-xs font-bold text-white transition-all hover:opacity-90"
+                className="flex items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2 text-xs font-semibold text-white transition-all hover:opacity-90"
               >
                 <span className="material-symbols-outlined" style={{ fontSize: 16 }}>add</span>
                 Add New Record
@@ -588,7 +588,7 @@ export default function MasterDBPage() {
       <MasterTabNav tabs={MASTER_TABS} activeTab={activeTab} onSelect={handleTabSelect} />
 
       {!isSpecialTab && batchPreparing && (
-        <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-surface px-3 py-1.5 text-xs font-bold text-on-surface shadow-sm">
+        <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-surface px-3 py-1.5 text-xs font-semibold text-on-surface shadow-sm">
           <span className="material-symbols-outlined animate-spin" style={{ fontSize: 16 }}>progress_activity</span>
           Preparing batch edit…
         </div>

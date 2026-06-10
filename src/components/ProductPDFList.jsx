@@ -73,7 +73,7 @@ export default function ProductPDFList({
       label: "背番号",
       sortKey: "sebanggo",
       width: 260,
-      renderCell: (row) => <span className="font-bold text-on-surface">{formatProductPDFTitle(row, 6)}</span>,
+      renderCell: (row) => <span className="font-semibold text-on-surface">{formatProductPDFTitle(row, 6)}</span>,
       getCellTitle: (row) => formatProductPDFTitle(row, 20),
     },
     {
@@ -126,7 +126,7 @@ export default function ProductPDFList({
             type="button"
             onClick={() => onPreviewItem(row)}
             disabled={!row?.imageURL}
-            className="rounded-xl border border-outline-variant/20 px-3 py-1.5 text-xs font-bold text-on-surface transition hover:bg-surface-container disabled:cursor-not-allowed disabled:opacity-50"
+            className="rounded-xl border border-outline-variant/20 px-3 py-1.5 text-xs font-semibold text-on-surface transition hover:bg-surface-container disabled:cursor-not-allowed disabled:opacity-50"
           >
             Preview
           </button>
@@ -135,7 +135,7 @@ export default function ProductPDFList({
               href={row.pdfURL}
               target="_blank"
               rel="noreferrer"
-              className="rounded-xl border border-outline-variant/20 px-3 py-1.5 text-xs font-bold text-on-surface transition hover:bg-surface-container"
+              className="rounded-xl border border-outline-variant/20 px-3 py-1.5 text-xs font-semibold text-on-surface transition hover:bg-surface-container"
             >
               PDF
             </a>
@@ -143,7 +143,7 @@ export default function ProductPDFList({
           <button
             type="button"
             onClick={() => onDeleteItem(row)}
-            className="rounded-xl bg-error/10 px-3 py-1.5 text-xs font-bold text-error transition hover:bg-error/15"
+            className="rounded-xl bg-error/10 px-3 py-1.5 text-xs font-semibold text-error transition hover:bg-error/15"
           >
             Delete
           </button>
@@ -157,8 +157,8 @@ export default function ProductPDFList({
       <div className="glass-card rounded-3xl p-5 mb-6">
         <div className="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
           <div>
-            <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-outline">Library</div>
-            <h3 className="mt-1 text-xl font-bold text-on-surface">{typeMeta.label} files</h3>
+            <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-outline">Library</div>
+            <h3 className="mt-1 text-xl font-semibold text-on-surface">{typeMeta.label} files</h3>
             <p className="mt-1 text-sm text-on-surface-variant">Search by 背番号, 品番, or モデル and switch between card and table browsing.</p>
           </div>
 
@@ -172,7 +172,7 @@ export default function ProductPDFList({
               type="button"
               onClick={() => onToggleSelectAll(!allSelected)}
               disabled={!items.length}
-              className="rounded-2xl border border-outline-variant/20 px-3 py-2 text-xs font-bold text-on-surface transition hover:bg-surface-container disabled:cursor-not-allowed disabled:opacity-50"
+              className="rounded-2xl border border-outline-variant/20 px-3 py-2 text-xs font-semibold text-on-surface transition hover:bg-surface-container disabled:cursor-not-allowed disabled:opacity-50"
             >
               {allSelected ? "Clear Page" : "Select Page"}
             </button>
@@ -180,7 +180,7 @@ export default function ProductPDFList({
               type="button"
               onClick={onDeleteSelected}
               disabled={!selectedCount}
-              className="rounded-2xl bg-error/10 px-3 py-2 text-xs font-bold text-error transition hover:bg-error/15 disabled:cursor-not-allowed disabled:opacity-50"
+              className="rounded-2xl bg-error/10 px-3 py-2 text-xs font-semibold text-error transition hover:bg-error/15 disabled:cursor-not-allowed disabled:opacity-50"
             >
               Delete Selected ({selectedCount})
             </button>
@@ -190,7 +190,7 @@ export default function ProductPDFList({
         <div className="mt-5 flex flex-col gap-4 lg:flex-row">
           <div className="ui-control-surface flex min-h-[52px] flex-1 flex-wrap items-center gap-2 rounded-3xl border border-outline-variant/20 px-4 py-3">
             {searchTokens.map((token) => (
-              <span key={token} className="inline-flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1 text-xs font-bold text-primary">
+              <span key={token} className="inline-flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
                 <span>{token}</span>
                 <button
                   type="button"
@@ -261,7 +261,7 @@ export default function ProductPDFList({
             <div className="text-sm font-medium text-on-surface-variant">{renderPageInfoText(totalCount, page, pageSize)}</div>
 
             <div className="flex items-center gap-3">
-              <span className="text-[11px] font-bold uppercase tracking-[0.18em] text-outline">Per page</span>
+              <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-outline">Per page</span>
               <select
                 value={pageSize}
                 onChange={(event) => onPageSizeChange(Number(event.target.value))}
@@ -277,7 +277,7 @@ export default function ProductPDFList({
           <div className="relative">
             {loading && items.length > 0 && (
               <div className="absolute inset-0 z-10 flex items-center justify-center bg-surface/70 backdrop-blur-sm">
-                <div className="flex items-center gap-3 rounded-full bg-surface px-4 py-3 text-sm font-bold text-on-surface shadow-lg">
+                <div className="flex items-center gap-3 rounded-full bg-surface px-4 py-3 text-sm font-semibold text-on-surface shadow-lg">
                   <span className="material-symbols-outlined animate-spin" style={{ fontSize: 18 }}>progress_activity</span>
                   Loading product PDFs…
                 </div>
@@ -325,7 +325,7 @@ export default function ProductPDFList({
                       </button>
 
                       <div className="mt-4">
-                        <div className="text-sm font-bold text-on-surface">{formatProductPDFTitle(item, 6)}</div>
+                        <div className="text-sm font-semibold text-on-surface">{formatProductPDFTitle(item, 6)}</div>
                         <div className="mt-1 text-xs text-on-surface-variant">{formatProductPDFHinban(item)}</div>
                         <div className="mt-2 truncate text-xs text-outline">{item?.fileName || "Untitled file"}</div>
                         <div className="mt-1 text-xs text-outline">{item?.uploadedBy || "—"} · {formatProductPDFDateTime(item?.uploadedAt)}</div>
@@ -336,7 +336,7 @@ export default function ProductPDFList({
                           type="button"
                           onClick={() => onPreviewItem(item)}
                           disabled={!item?.imageURL}
-                          className="rounded-xl border border-outline-variant/20 px-3 py-2 text-xs font-bold text-on-surface transition hover:bg-surface-container disabled:cursor-not-allowed disabled:opacity-50"
+                          className="rounded-xl border border-outline-variant/20 px-3 py-2 text-xs font-semibold text-on-surface transition hover:bg-surface-container disabled:cursor-not-allowed disabled:opacity-50"
                         >
                           Preview
                         </button>
@@ -345,7 +345,7 @@ export default function ProductPDFList({
                             href={item.pdfURL}
                             target="_blank"
                             rel="noreferrer"
-                            className="rounded-xl border border-outline-variant/20 px-3 py-2 text-xs font-bold text-on-surface transition hover:bg-surface-container"
+                            className="rounded-xl border border-outline-variant/20 px-3 py-2 text-xs font-semibold text-on-surface transition hover:bg-surface-container"
                           >
                             Open PDF
                           </a>
@@ -353,7 +353,7 @@ export default function ProductPDFList({
                         <button
                           type="button"
                           onClick={() => onDeleteItem(item)}
-                          className="rounded-xl bg-error/10 px-3 py-2 text-xs font-bold text-error transition hover:bg-error/15"
+                          className="rounded-xl bg-error/10 px-3 py-2 text-xs font-semibold text-error transition hover:bg-error/15"
                         >
                           Delete
                         </button>

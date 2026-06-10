@@ -251,7 +251,11 @@
 body {
   background-color: rgb(var(--c-background));
   color: rgb(var(--c-on-surface));
-  font-family: 'DM Sans', sans-serif;
+  font-family: 'Inter', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-feature-settings: "cv11", "ss01";
+  letter-spacing: -0.006em;
   overflow: hidden;
   background-image: radial-gradient(circle, rgba(0, 0, 0, 0.02) 1px, transparent 1px);
   background-size: 24px 24px;
@@ -364,65 +368,54 @@ select:-webkit-autofill:focus {
 }
 
 /* ─── Glass card ────────────────────────────────────────────────────────────── */
+/* Snow-style: flat, calm surface with a hairline border and a single soft       */
+/* shadow. No multi-layer glass stacking, no inset highlight.                    */
 .glass-card {
-  background: rgba(252, 253, 253, 0.90);
-  -webkit-backdrop-filter: blur(14px) saturate(1.4);
-  backdrop-filter: blur(14px) saturate(1.4);
-  border: 1px solid rgba(205, 207, 216, 0.60);
-  box-shadow:
-    0 2px 8px rgba(0, 0, 0, 0.06),
-    0 1px 2px rgba(0, 0, 0, 0.03),
-    inset 1px 1px 0 rgba(255, 255, 255, 0.88);
+  background: rgba(255, 255, 255, 0.94);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(205, 207, 216, 0.50);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
 }
 .dark .glass-card {
-  background: rgba(22, 18, 42, 0.60);
-  -webkit-backdrop-filter: blur(22px) saturate(1.5);
-  backdrop-filter: blur(22px) saturate(1.5);
-  border: 1px solid rgba(78, 76, 96, 0.50);
-  box-shadow:
-    0 4px 16px rgba(0, 0, 0, 0.38),
-    0 1px 4px rgba(0, 0, 0, 0.22),
-    inset 1px 1px 0 rgba(255, 255, 255, 0.04);
+  background: rgba(29, 32, 38, 0.72);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(76, 75, 92, 0.45);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
 }
 
 /* ─── Dashboard section (elevated major card) ───────────────────────────────── */
 .dashboard-section {
-  background: rgba(252, 253, 253, 0.94);
-  -webkit-backdrop-filter: blur(14px) saturate(1.4);
-  backdrop-filter: blur(14px) saturate(1.4);
-  border: 1px solid rgba(198, 200, 214, 0.70);
-  box-shadow:
-    0 4px 20px rgba(0, 0, 0, 0.08),
-    0 2px 6px rgba(0, 0, 0, 0.04),
-    inset 1px 1px 0 rgba(255, 255, 255, 0.92);
+  background: rgba(255, 255, 255, 0.96);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(205, 207, 216, 0.55);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
 }
 .dark .dashboard-section {
-  background: rgba(24, 20, 44, 0.68);
-  -webkit-backdrop-filter: blur(22px) saturate(1.5);
-  backdrop-filter: blur(22px) saturate(1.5);
-  border: 1px solid rgba(84, 82, 102, 0.55);
-  box-shadow:
-    0 6px 28px rgba(0, 0, 0, 0.44),
-    0 2px 8px rgba(0, 0, 0, 0.28),
-    inset 1px 1px 0 rgba(255, 255, 255, 0.04);
+  background: rgba(29, 32, 38, 0.80);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(76, 75, 92, 0.50);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.30);
 }
 
 /* ─── Hover elevation for interactive cards ─────────────────────────────────── */
+/* Gentle 2px lift + hairline-strengthen — calm, not bouncy.                     */
 .card-hover-lift {
-  transition: transform 160ms cubic-bezier(0.34, 1.4, 0.64, 1),
+  transition: transform 160ms ease,
               box-shadow 160ms ease,
               border-color 160ms ease;
 }
 .card-hover-lift:hover {
   transform: translateY(-2px);
-  box-shadow:
-    0 8px 24px rgba(0, 0, 0, 0.10),
-    0 3px 8px rgba(0, 0, 0, 0.06);
+  border-color: rgba(73, 75, 214, 0.30);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.07);
 }
 .dark .card-hover-lift:hover {
-  box-shadow:
-    0 8px 28px rgba(0, 0, 0, 0.48),
-    0 3px 10px rgba(0, 0, 0, 0.32);
+  border-color: rgba(192, 193, 255, 0.28);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.34);
 }
 
 /* ─── Fade-in-up entrance animation ────────────────────────────────────────── */
@@ -603,7 +596,7 @@ select:-webkit-autofill:focus {
 
 /* ─── Material Icons ────────────────────────────────────────────────────────── */
 .material-symbols-outlined {
-  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+  font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 24;
   font-size: 20px;
 }
 
@@ -716,7 +709,7 @@ select:-webkit-autofill:focus {
 }
 
 .ui-table-data {
-  font-family: 'DM Sans', sans-serif;
+  font-family: 'Inter', system-ui, sans-serif;
   font-size: var(--table-data-font-size);
   line-height: var(--table-data-line-height);
   font-variant-numeric: tabular-nums lining-nums;
@@ -724,15 +717,15 @@ select:-webkit-autofill:focus {
 }
 
 .ui-table-heading {
-  font-family: 'DM Sans', sans-serif;
+  font-family: 'Inter', system-ui, sans-serif;
   font-size: var(--table-heading-font-size);
   line-height: var(--table-heading-line-height);
-  font-weight: 700;
+  font-weight: 600;
   letter-spacing: var(--table-heading-letter-space);
 }
 
 .planner-data-text {
-  font-family: 'DM Sans', sans-serif;
+  font-family: 'Inter', system-ui, sans-serif;
   font-size: var(--table-data-font-size);
   line-height: var(--table-data-line-height);
   font-variant-numeric: tabular-nums lining-nums;
@@ -740,10 +733,10 @@ select:-webkit-autofill:focus {
 }
 
 .planner-data-label {
-  font-family: 'DM Sans', sans-serif;
+  font-family: 'Inter', system-ui, sans-serif;
   font-size: var(--table-heading-font-size);
   line-height: var(--table-heading-line-height);
-  font-weight: 700;
+  font-weight: 600;
   letter-spacing: var(--table-heading-letter-space);
   text-transform: uppercase;
 }

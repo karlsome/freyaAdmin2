@@ -111,7 +111,7 @@ function getFieldTypeMeta(type) {
 function renderFieldTypeGlyph(typeMeta, size = 16) {
   if (typeMeta.value === "toggle") {
     return (
-      <span className="inline-flex min-w-[1.9rem] items-center justify-center rounded-full border border-current/30 px-1.5 py-0.5 text-[10px] font-black leading-none tracking-[0.08em]">
+      <span className="inline-flex min-w-[1.9rem] items-center justify-center rounded-full border border-current/30 px-1.5 py-0.5 text-[10px] font-semibold leading-none tracking-[0.08em]">
         OK
       </span>
     );
@@ -236,9 +236,9 @@ function SummaryCard({ icon, label, value }) {
     <div className="rounded-2xl border border-separator/40 bg-surface px-4 py-3">
       <div className="flex items-center gap-2 text-outline">
         <span className="material-symbols-outlined text-primary" style={{ fontSize: 16 }}>{icon}</span>
-        <span className="text-[10px] font-bold uppercase tracking-[0.18em]">{label}</span>
+        <span className="text-[10px] font-semibold uppercase tracking-[0.18em]">{label}</span>
       </div>
-      <p className="mt-2 text-sm font-bold text-on-surface">{value}</p>
+      <p className="mt-2 text-sm font-semibold text-on-surface">{value}</p>
     </div>
   );
 }
@@ -281,7 +281,7 @@ function FieldPreviewCard({ field }) {
             {field.description || "No field instruction has been added yet."}
           </p>
         </div>
-        <span className="inline-flex rounded-full bg-primary/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-primary">
+        <span className="inline-flex rounded-full bg-primary/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-primary">
           {typeMeta.label}
         </span>
       </div>
@@ -317,7 +317,7 @@ function FieldPreviewCard({ field }) {
 
       {field.type === "select" && Array.isArray(field.options) && field.options.length > 0 ? (
         <div className="mt-4">
-          <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-outline">Options</p>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Options</p>
           <div className="mt-2 flex flex-wrap gap-2">
             {field.options.map((option) => (
               <span key={option} className="rounded-full border border-separator/40 bg-surface-container px-2.5 py-1 text-xs font-semibold text-on-surface">
@@ -530,10 +530,10 @@ export default function CheckFormBuilderModal({ initial, onClose, onSaved, prese
       >
         <div className="flex items-start justify-between border-b border-separator/35 px-6 py-5">
           <div className="min-w-0 flex-1 pr-4">
-            <p className="text-xs font-bold uppercase tracking-[0.18em] text-outline">
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-outline">
               {initial ? "Edit Form" : "New Form"}
             </p>
-            <h2 className="mt-1 text-xl font-black text-on-surface">Maintenance Form Builder</h2>
+            <h2 className="mt-1 text-xl font-semibold text-on-surface">Maintenance Form Builder</h2>
             <p className="mt-2 max-w-3xl text-sm leading-6 text-outline">
               Keep the setup simple, then shape each check inline so the form reads clearly before you save it.
             </p>
@@ -553,7 +553,7 @@ export default function CheckFormBuilderModal({ initial, onClose, onSaved, prese
               <section className="rounded-2xl border border-primary/15 bg-primary/5 p-4">
                 <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                   <div>
-                    <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-primary">
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-primary">
                       {initial ? "Update Flow" : "Start Here"}
                     </p>
                     <p className="mt-1 text-sm leading-6 text-on-surface">
@@ -570,13 +570,13 @@ export default function CheckFormBuilderModal({ initial, onClose, onSaved, prese
 
               <section className="mt-5 rounded-2xl border border-separator/40 bg-surface-container/40 p-4">
                 <div className="mb-4">
-                  <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-outline">Form Setup</p>
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Form Setup</p>
                   <p className="mt-1 text-sm text-outline">Define the name, description, factory, cadence, and activation date before editing the checks.</p>
                 </div>
 
                 <div className="grid gap-4 lg:grid-cols-2">
                   <div>
-                    <label className="mb-1.5 block text-xs font-bold uppercase tracking-[0.15em] text-outline">Form Name</label>
+                    <label className="mb-1.5 block text-xs font-semibold uppercase tracking-[0.15em] text-outline">Form Name</label>
                     <input
                       type="text"
                       placeholder="Form name *"
@@ -593,7 +593,7 @@ export default function CheckFormBuilderModal({ initial, onClose, onSaved, prese
                   </div>
 
                   <div>
-                    <label className="mb-1.5 block text-xs font-bold uppercase tracking-[0.15em] text-outline">Factory</label>
+                    <label className="mb-1.5 block text-xs font-semibold uppercase tracking-[0.15em] text-outline">Factory</label>
                     <select value={draft.工場} onChange={(event) => setTop("工場", event.target.value)} className={inputClass}>
                       <option value="">Select a factory</option>
                       {factories.map((factory) => (
@@ -603,7 +603,7 @@ export default function CheckFormBuilderModal({ initial, onClose, onSaved, prese
                   </div>
 
                   <div className="lg:col-span-2">
-                    <label className="mb-1.5 block text-xs font-bold uppercase tracking-[0.15em] text-outline">Description</label>
+                    <label className="mb-1.5 block text-xs font-semibold uppercase tracking-[0.15em] text-outline">Description</label>
                     <textarea
                       rows={3}
                       placeholder="Tell admins and operators what this maintenance form is for."
@@ -614,7 +614,7 @@ export default function CheckFormBuilderModal({ initial, onClose, onSaved, prese
                   </div>
 
                   <div className="lg:col-span-2">
-                    <label className="mb-1.5 block text-xs font-bold uppercase tracking-[0.15em] text-outline">Frequency</label>
+                    <label className="mb-1.5 block text-xs font-semibold uppercase tracking-[0.15em] text-outline">Frequency</label>
                     <div className="grid gap-2 sm:grid-cols-3">
                       {SCHEDULE_OPTIONS.map((option) => {
                         const isActive = draft.schedule === option.value;
@@ -631,7 +631,7 @@ export default function CheckFormBuilderModal({ initial, onClose, onSaved, prese
                             }`}
                           >
                             <span className="material-symbols-outlined mb-2 block" style={{ fontSize: 18 }}>{option.icon}</span>
-                            <span className="block text-xs font-bold uppercase tracking-[0.12em]">{option.label}</span>
+                            <span className="block text-xs font-semibold uppercase tracking-[0.12em]">{option.label}</span>
                             <span className={`mt-1 block text-[11px] ${isActive ? "text-primary/80" : "text-outline"}`}>{option.hint}</span>
                           </button>
                         );
@@ -640,7 +640,7 @@ export default function CheckFormBuilderModal({ initial, onClose, onSaved, prese
                   </div>
 
                   <div>
-                    <label className="mb-1.5 block text-xs font-bold uppercase tracking-[0.15em] text-outline">First Active Date</label>
+                    <label className="mb-1.5 block text-xs font-semibold uppercase tracking-[0.15em] text-outline">First Active Date</label>
                     <input
                       type="date"
                       value={draft.startDate}
@@ -659,14 +659,14 @@ export default function CheckFormBuilderModal({ initial, onClose, onSaved, prese
               <section className="mt-5 rounded-2xl border border-separator/40 bg-surface-container/40 p-4">
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                   <div>
-                    <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-outline">Machine Scope</p>
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Machine Scope</p>
                     <p className="mt-1 text-sm text-outline">Select the machines this form applies to. Switch factories first if needed.</p>
                   </div>
                   {filteredEquipment.length > 0 ? (
                     <button
                       type="button"
                       onClick={toggleAllMachines}
-                      className="inline-flex items-center gap-2 rounded-full border border-separator/40 bg-surface px-3 py-2 text-xs font-bold text-on-surface transition hover:bg-surface-container"
+                      className="inline-flex items-center gap-2 rounded-full border border-separator/40 bg-surface px-3 py-2 text-xs font-semibold text-on-surface transition hover:bg-surface-container"
                     >
                       <span className="material-symbols-outlined" style={{ fontSize: 14 }}>{allFilteredSelected ? "remove_done" : "done_all"}</span>
                       {allFilteredSelected ? "Clear all" : "Select all"}
@@ -711,7 +711,7 @@ export default function CheckFormBuilderModal({ initial, onClose, onSaved, prese
 
               <section className="mt-5 rounded-2xl border border-separator/40 bg-surface-container/40 p-4">
                 <div>
-                  <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-outline">Checks</p>
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Checks</p>
                   <p className="mt-1 text-sm text-outline">Each field card contains the full setup for that check. Use the number on the left to track checklist order, then add a new item at the bottom when needed.</p>
                 </div>
 
@@ -736,7 +736,7 @@ export default function CheckFormBuilderModal({ initial, onClose, onSaved, prese
                   <button
                     type="button"
                     onClick={() => addField()}
-                    className="flex w-full items-center justify-center gap-3 rounded-2xl border border-dashed border-outline-variant/30 bg-surface px-5 py-4 text-sm font-bold text-on-surface transition hover:border-primary/35 hover:bg-surface-container hover:text-primary"
+                    className="flex w-full items-center justify-center gap-3 rounded-2xl border border-dashed border-outline-variant/30 bg-surface px-5 py-4 text-sm font-semibold text-on-surface transition hover:border-primary/35 hover:bg-surface-container hover:text-primary"
                   >
                     <span className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-primary">
                       <span className="material-symbols-outlined" style={{ fontSize: 20 }}>add</span>
@@ -750,15 +750,15 @@ export default function CheckFormBuilderModal({ initial, onClose, onSaved, prese
             <aside className="border-t border-outline-variant/20 bg-surface/50 px-4 py-5 sm:px-6 xl:min-h-0 xl:overflow-y-auto xl:border-l xl:border-t-0">
               <div className="rounded-2xl border border-separator/40 bg-surface px-4 py-4">
                 <div className="mb-2 flex flex-wrap items-center gap-2">
-                  <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-primary">
+                  <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-primary">
                     <span className="material-symbols-outlined" style={{ fontSize: 12 }}>{selectedScheduleOption?.icon || "event_busy"}</span>
                     {selectedScheduleOption?.label || draft.schedule || "Unscheduled"}
                   </span>
-                  <span className="inline-flex rounded-full bg-surface-container px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-outline">
+                  <span className="inline-flex rounded-full bg-surface-container px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-outline">
                     {draft.status}
                   </span>
                 </div>
-                <h3 className="text-lg font-black text-on-surface">{draft.name.trim() || "Untitled maintenance form"}</h3>
+                <h3 className="text-lg font-semibold text-on-surface">{draft.name.trim() || "Untitled maintenance form"}</h3>
                 <p className="mt-2 text-sm leading-6 text-outline">
                   {draft.description.trim() || "Add a description so admins know the purpose and scope of this form at a glance."}
                 </p>
@@ -772,7 +772,7 @@ export default function CheckFormBuilderModal({ initial, onClose, onSaved, prese
               </div>
 
               <div className="mt-4 rounded-2xl border border-separator/40 bg-surface px-4 py-4">
-                <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-outline">Selected Machines</p>
+                <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Selected Machines</p>
                 <div className="mt-3 flex flex-wrap gap-2">
                   {selectedMachineNames.length > 0 ? (
                     selectedMachineNames.map((machineName) => (
@@ -793,7 +793,7 @@ export default function CheckFormBuilderModal({ initial, onClose, onSaved, prese
               <div className="mt-4 rounded-2xl border border-separator/40 bg-surface px-4 py-4">
                 <div className="mb-3 flex items-center justify-between gap-3">
                   <div>
-                    <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-outline">Field Focus</p>
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Field Focus</p>
                     <p className="mt-1 text-xs leading-5 text-outline">Use this preview to sanity-check the current field while editing inline.</p>
                   </div>
                 </div>
@@ -818,19 +818,19 @@ export default function CheckFormBuilderModal({ initial, onClose, onSaved, prese
                 type="button"
                 onClick={() => setConfirmingDelete(true)}
                 disabled={busy}
-                className="w-fit rounded-2xl border border-error/30 px-3 py-2 text-xs font-bold text-error transition hover:bg-error/10 disabled:opacity-50"
+                className="w-fit rounded-2xl border border-error/30 px-3 py-2 text-xs font-semibold text-error transition hover:bg-error/10 disabled:opacity-50"
               >
                 Delete Form
               </button>
             ) : null}
             {initial && confirmingDelete ? (
               <div className="flex flex-wrap items-center gap-2">
-                <p className="text-xs font-bold text-error">Delete this form?</p>
+                <p className="text-xs font-semibold text-error">Delete this form?</p>
                 <button
                   type="button"
                   onClick={deleteForm}
                   disabled={busy}
-                  className="rounded-2xl bg-error px-3 py-1.5 text-xs font-bold text-white transition hover:opacity-90 disabled:opacity-50"
+                  className="rounded-2xl bg-error px-3 py-1.5 text-xs font-semibold text-white transition hover:opacity-90 disabled:opacity-50"
                 >
                   Yes, delete
                 </button>
@@ -838,7 +838,7 @@ export default function CheckFormBuilderModal({ initial, onClose, onSaved, prese
                   type="button"
                   onClick={() => setConfirmingDelete(false)}
                   disabled={busy}
-                  className="rounded-2xl border border-separator/40 px-3 py-1.5 text-xs font-bold text-on-surface transition hover:bg-surface-container"
+                  className="rounded-2xl border border-separator/40 px-3 py-1.5 text-xs font-semibold text-on-surface transition hover:bg-surface-container"
                 >
                   Cancel
                 </button>
@@ -850,7 +850,7 @@ export default function CheckFormBuilderModal({ initial, onClose, onSaved, prese
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 rounded-2xl border border-separator/40 bg-surface-container px-4 py-2 text-sm font-bold text-on-surface transition hover:bg-surface-container-high sm:flex-none"
+              className="flex-1 rounded-2xl border border-separator/40 bg-surface-container px-4 py-2 text-sm font-semibold text-on-surface transition hover:bg-surface-container-high sm:flex-none"
             >
               Cancel
             </button>
@@ -858,7 +858,7 @@ export default function CheckFormBuilderModal({ initial, onClose, onSaved, prese
               type="button"
               disabled={busy || nameConflict}
               onClick={() => save("draft")}
-              className="flex-1 rounded-2xl border border-separator/40 bg-surface-container px-4 py-2 text-sm font-bold text-on-surface transition hover:bg-surface-container-high disabled:opacity-50 sm:flex-none"
+              className="flex-1 rounded-2xl border border-separator/40 bg-surface-container px-4 py-2 text-sm font-semibold text-on-surface transition hover:bg-surface-container-high disabled:opacity-50 sm:flex-none"
             >
               {busy ? "Saving..." : "Save Draft"}
             </button>
@@ -866,7 +866,7 @@ export default function CheckFormBuilderModal({ initial, onClose, onSaved, prese
               type="button"
               disabled={busy || nameConflict}
               onClick={() => save("active")}
-              className="flex-1 rounded-xl bg-primary px-4 py-2 text-sm font-bold text-on-primary hover:opacity-90 active:scale-95 transition-all duration-150 disabled:opacity-50 sm:flex-none"
+              className="flex-1 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-on-primary hover:opacity-90 active:scale-95 transition-all duration-150 disabled:opacity-50 sm:flex-none"
             >
               {busy ? "Saving..." : "Deploy"}
             </button>
@@ -920,7 +920,7 @@ function FieldCard({
           <div className="flex items-start gap-3">
             <div className="flex min-w-0 flex-1 items-start gap-3">
               <button type="button" onClick={onToggle} className="flex min-w-0 flex-1 items-start gap-3 text-left">
-                <span className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-2xl text-sm font-black ${expanded ? "bg-primary text-on-primary" : "bg-surface-container text-on-surface"}`}>
+                <span className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-2xl text-sm font-semibold ${expanded ? "bg-primary text-on-primary" : "bg-surface-container text-on-surface"}`}>
                   {index + 1}
                 </span>
                 <span className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-2xl ${expanded ? "bg-primary text-on-primary" : "bg-surface-container text-primary"}`}>
@@ -931,21 +931,21 @@ function FieldCard({
                     <p className="truncate text-sm font-semibold text-on-surface">
                       {field.label || (field.locked ? "名前" : `Untitled ${typeMeta.label.toLowerCase()} check`)}
                     </p>
-                    <span className="inline-flex rounded-full bg-primary/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-primary">
+                    <span className="inline-flex rounded-full bg-primary/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-primary">
                       {typeMeta.label}
                     </span>
                     {field.locked ? (
-                      <span className="inline-flex rounded-full bg-surface-container px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-outline">
+                      <span className="inline-flex rounded-full bg-surface-container px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-outline">
                         Locked
                       </span>
                     ) : null}
                     {field.required ? (
-                      <span className="inline-flex rounded-full bg-error/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-error">
+                      <span className="inline-flex rounded-full bg-error/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-error">
                         Required
                       </span>
                     ) : null}
                     {field.photoRequired ? (
-                      <span className="inline-flex rounded-full bg-surface-container px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-on-surface">
+                      <span className="inline-flex rounded-full bg-surface-container px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-on-surface">
                         Photo
                       </span>
                     ) : null}
@@ -1015,7 +1015,7 @@ function FieldCard({
               <button
                 type="button"
                 onClick={onToggle}
-                className="inline-flex items-center gap-1 rounded-full border border-separator/40 bg-surface px-3 py-1.5 text-[11px] font-bold text-on-surface transition hover:bg-surface-container"
+                className="inline-flex items-center gap-1 rounded-full border border-separator/40 bg-surface px-3 py-1.5 text-[11px] font-semibold text-on-surface transition hover:bg-surface-container"
               >
                 {expanded ? "Collapse" : "Edit"}
                 <span className="material-symbols-outlined" style={{ fontSize: 14 }}>{expanded ? "expand_less" : "expand_more"}</span>
@@ -1072,8 +1072,8 @@ function OverlayDialog({
         >
           <div className={`flex items-start justify-between gap-4 border-b px-5 py-4 sm:px-6 ${dividerClassName}`}>
             <div className="min-w-0 flex-1">
-              {eyebrow ? <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary">{eyebrow}</p> : null}
-              <h3 className={`mt-1 text-lg font-black ${titleClassName}`}>{title}</h3>
+              {eyebrow ? <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-primary">{eyebrow}</p> : null}
+              <h3 className={`mt-1 text-lg font-semibold ${titleClassName}`}>{title}</h3>
               {description ? <p className={`mt-1 text-sm leading-6 ${descriptionClassName}`}>{description}</p> : null}
             </div>
 
@@ -1123,7 +1123,7 @@ function ReferenceImageLibraryModal({
           <button
             type="button"
             onClick={onClose}
-            className="rounded-2xl border border-separator/40 px-4 py-2 text-xs font-bold text-on-surface transition hover:bg-surface-container"
+            className="rounded-2xl border border-separator/40 px-4 py-2 text-xs font-semibold text-on-surface transition hover:bg-surface-container"
           >
             Done
           </button>
@@ -1132,7 +1132,7 @@ function ReferenceImageLibraryModal({
     >
       <div className="space-y-4 px-5 py-5 sm:px-6">
         <div className="flex flex-wrap items-center gap-2">
-          <span className="rounded-full bg-primary/10 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.18em] text-primary">Folder</span>
+          <span className="rounded-full bg-primary/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-primary">Folder</span>
           <span className="rounded-full border border-separator/40 bg-surface-container px-3 py-1 text-xs font-semibold text-on-surface">{folderKey || "Unassigned"}</span>
         </div>
 
@@ -1153,7 +1153,7 @@ function ReferenceImageLibraryModal({
               {uploading ? "progress_activity" : "add_photo_alternate"}
             </span>
             <div>
-              <p className="text-sm font-black text-primary">{uploading ? "Uploading..." : "Upload new image"}</p>
+              <p className="text-sm font-semibold text-primary">{uploading ? "Uploading..." : "Upload new image"}</p>
               <p className="mt-1 text-xs leading-5 text-primary/80">This will be added to the same checklist folder for reuse later.</p>
             </div>
           </button>
@@ -1193,17 +1193,17 @@ function ReferenceImageLibraryModal({
                     className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.02]"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/15 to-transparent" />
-                  <span className="absolute left-3 top-3 rounded-full bg-white/85 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.14em] text-slate-900">
+                  <span className="absolute left-3 top-3 rounded-full bg-white/85 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-900">
                     {isSelected ? "Current" : "Saved"}
                   </span>
-                  <span className="absolute inset-x-0 bottom-0 px-3 py-3 text-left text-xs font-bold text-white">
+                  <span className="absolute inset-x-0 bottom-0 px-3 py-3 text-left text-xs font-semibold text-white">
                     Preview image
                   </span>
                 </button>
 
                 <div className="flex items-center justify-between gap-3 p-3">
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-xs font-bold text-on-surface">{image.name || fieldLabel || "Saved image"}</p>
+                    <p className="truncate text-xs font-semibold text-on-surface">{image.name || fieldLabel || "Saved image"}</p>
                     <p className="mt-1 text-[11px] leading-5 text-outline">
                       {isSelected ? "Currently selected for this check." : "Preview it first or assign it directly."}
                     </p>
@@ -1212,7 +1212,7 @@ function ReferenceImageLibraryModal({
                   <button
                     type="button"
                     onClick={() => onSelectImage(image.imageURL)}
-                    className={`rounded-2xl px-3 py-2 text-xs font-bold transition ${
+                    className={`rounded-2xl px-3 py-2 text-xs font-semibold transition ${
                       isSelected
                         ? "bg-primary/10 text-primary"
                         : "bg-primary text-on-primary hover:opacity-90"
@@ -1256,7 +1256,7 @@ function ReferenceImagePreviewModal({ image, selectedImageURL, onClose, onSelect
             type="button"
             onClick={() => onEditOverlay?.(image)}
             disabled={!onEditOverlay || editingOverlay}
-            className={`rounded-2xl border border-white/15 px-4 py-2 text-xs font-bold text-white transition ${
+            className={`rounded-2xl border border-white/15 px-4 py-2 text-xs font-semibold text-white transition ${
               !onEditOverlay || editingOverlay ? "opacity-50" : "hover:bg-white/10"
             }`}
           >
@@ -1266,7 +1266,7 @@ function ReferenceImagePreviewModal({ image, selectedImageURL, onClose, onSelect
             href={normalizedImageURL}
             target="_blank"
             rel="noreferrer"
-            className="rounded-2xl border border-white/15 px-4 py-2 text-xs font-bold text-white transition hover:bg-white/10"
+            className="rounded-2xl border border-white/15 px-4 py-2 text-xs font-semibold text-white transition hover:bg-white/10"
           >
             Open in new tab
           </a>
@@ -1277,7 +1277,7 @@ function ReferenceImagePreviewModal({ image, selectedImageURL, onClose, onSelect
               onClose();
             }}
             disabled={isSelected}
-            className={`rounded-2xl px-4 py-2 text-xs font-bold transition ${
+            className={`rounded-2xl px-4 py-2 text-xs font-semibold transition ${
               isSelected
                 ? "bg-white/10 text-white/60"
                 : "bg-primary text-on-primary hover:opacity-90"
@@ -1455,7 +1455,7 @@ function FieldEditor({ field, onChange, username }) {
       <div className="space-y-4">
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_280px]">
         <div>
-          <label className="mb-1.5 block text-xs font-bold uppercase tracking-[0.15em] text-outline">Title</label>
+          <label className="mb-1.5 block text-xs font-semibold uppercase tracking-[0.15em] text-outline">Title</label>
           <input
             type="text"
             placeholder="Describe this check..."
@@ -1466,14 +1466,14 @@ function FieldEditor({ field, onChange, username }) {
         </div>
 
         <div>
-          <label className="mb-1.5 block text-xs font-bold uppercase tracking-[0.15em] text-outline">Type</label>
+          <label className="mb-1.5 block text-xs font-semibold uppercase tracking-[0.15em] text-outline">Type</label>
           <div className="grid grid-cols-2 gap-2">
             {FIELD_TYPES.map((type) => (
               <button
                 key={type.value}
                 type="button"
                 onClick={() => onChange({ type: type.value })}
-                className={`flex items-center gap-2 rounded-2xl border px-3 py-3 text-left text-xs font-bold transition ${
+                className={`flex items-center gap-2 rounded-2xl border px-3 py-3 text-left text-xs font-semibold transition ${
                   field.type === type.value
                     ? "border-primary/40 bg-primary/10 text-primary"
                     : "border-outline-variant/30 bg-surface text-outline hover:border-primary/30 hover:text-primary"
@@ -1488,7 +1488,7 @@ function FieldEditor({ field, onChange, username }) {
       </div>
 
       <div>
-        <label className="mb-1.5 block text-xs font-bold uppercase tracking-[0.15em] text-outline">Instruction</label>
+        <label className="mb-1.5 block text-xs font-semibold uppercase tracking-[0.15em] text-outline">Instruction</label>
         <textarea
           rows={3}
           placeholder="What should be checked and how should operators interpret it?"
@@ -1500,7 +1500,7 @@ function FieldEditor({ field, onChange, username }) {
 
       <div className="grid gap-4 lg:grid-cols-2">
         <div className="space-y-3">
-          <p className="text-xs font-bold uppercase tracking-[0.15em] text-outline">Rules</p>
+          <p className="text-xs font-semibold uppercase tracking-[0.15em] text-outline">Rules</p>
           <ToggleRow
             checked={field.required}
             onToggle={() => onChange({ required: !field.required })}
@@ -1518,7 +1518,7 @@ function FieldEditor({ field, onChange, username }) {
         <div className="rounded-2xl border border-separator/40 bg-surface px-4 py-4">
           <div className="flex items-center justify-between gap-3">
             <div>
-              <p className="text-xs font-bold uppercase tracking-[0.15em] text-outline">Reference Image</p>
+              <p className="text-xs font-semibold uppercase tracking-[0.15em] text-outline">Reference Image</p>
               <p className="mt-1 text-xs leading-5 text-outline">Choose a saved image for this checklist or upload a new one into its folder.</p>
             </div>
           </div>
@@ -1529,7 +1529,7 @@ function FieldEditor({ field, onChange, username }) {
               type="button"
               onClick={handleLibraryToggle}
               disabled={uploading || preparingEditor}
-              className="inline-flex items-center gap-2 rounded-2xl border border-separator/50 bg-surface-container px-4 py-2 text-xs font-bold text-on-surface transition hover:bg-surface-container-high disabled:cursor-not-allowed disabled:opacity-50"
+              className="inline-flex items-center gap-2 rounded-2xl border border-separator/50 bg-surface-container px-4 py-2 text-xs font-semibold text-on-surface transition hover:bg-surface-container-high disabled:cursor-not-allowed disabled:opacity-50"
             >
               {uploading || loadingLibrary || preparingEditor ? (
                 <>
@@ -1548,7 +1548,7 @@ function FieldEditor({ field, onChange, username }) {
               <button
                 type="button"
                 onClick={() => handleOpenPreview({ imageURL: selectedImageURL, name: field.label || "Reference image" })}
-                className="inline-flex items-center gap-2 rounded-2xl border border-separator/40 px-4 py-2 text-xs font-bold text-on-surface transition hover:bg-surface-container"
+                className="inline-flex items-center gap-2 rounded-2xl border border-separator/40 px-4 py-2 text-xs font-semibold text-on-surface transition hover:bg-surface-container"
               >
                 <span className="material-symbols-outlined" style={{ fontSize: 15 }}>open_in_full</span>
                 Preview image
@@ -1564,13 +1564,13 @@ function FieldEditor({ field, onChange, username }) {
               <img src={selectedImageURL} alt="reference" className="h-40 w-full object-cover" />
               <div className="absolute inset-x-0 bottom-0 flex items-center justify-between gap-2 bg-gradient-to-t from-black/75 via-black/15 to-transparent px-3 py-3">
                 <div>
-                  <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-white/80">Current image</p>
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-white/80">Current image</p>
                   <p className="mt-1 text-xs font-semibold text-white">Open a preview to inspect details.</p>
                 </div>
                 <button
                   type="button"
                   onClick={() => handleOpenPreview({ imageURL: selectedImageURL, name: field.label || "Reference image" })}
-                  className="inline-flex items-center gap-1 rounded-full bg-white/15 px-3 py-1.5 text-[11px] font-bold text-white backdrop-blur-sm transition hover:bg-white/20"
+                  className="inline-flex items-center gap-1 rounded-full bg-white/15 px-3 py-1.5 text-[11px] font-semibold text-white backdrop-blur-sm transition hover:bg-white/20"
                 >
                   <span className="material-symbols-outlined" style={{ fontSize: 14 }}>open_in_full</span>
                   Preview
@@ -1591,7 +1591,7 @@ function FieldEditor({ field, onChange, username }) {
       {field.type === "number" ? (
         <div className="grid gap-4 lg:grid-cols-3">
           <div>
-            <label className="mb-1.5 block text-xs font-bold uppercase tracking-[0.15em] text-outline">Min</label>
+            <label className="mb-1.5 block text-xs font-semibold uppercase tracking-[0.15em] text-outline">Min</label>
             <input
               type="number"
               value={field.min ?? ""}
@@ -1600,7 +1600,7 @@ function FieldEditor({ field, onChange, username }) {
             />
           </div>
           <div>
-            <label className="mb-1.5 block text-xs font-bold uppercase tracking-[0.15em] text-outline">Max</label>
+            <label className="mb-1.5 block text-xs font-semibold uppercase tracking-[0.15em] text-outline">Max</label>
             <input
               type="number"
               value={field.max ?? ""}
@@ -1609,7 +1609,7 @@ function FieldEditor({ field, onChange, username }) {
             />
           </div>
           <div>
-            <label className="mb-1.5 block text-xs font-bold uppercase tracking-[0.15em] text-outline">Unit</label>
+            <label className="mb-1.5 block text-xs font-semibold uppercase tracking-[0.15em] text-outline">Unit</label>
             <input
               type="text"
               placeholder="e.g. °C"
@@ -1678,7 +1678,7 @@ function SelectOptionsEditor({ options, onChange }) {
     <div className="rounded-2xl border border-separator/40 bg-surface px-4 py-4">
       <div className="flex items-center justify-between gap-3">
         <div>
-          <p className="text-xs font-bold uppercase tracking-[0.15em] text-outline">Options</p>
+          <p className="text-xs font-semibold uppercase tracking-[0.15em] text-outline">Options</p>
           <p className="mt-1 text-xs leading-5 text-outline">Add the choices operators can select for this field.</p>
         </div>
       </div>
@@ -1708,7 +1708,7 @@ function SelectOptionsEditor({ options, onChange }) {
           }}
           className="flex-1 rounded-2xl border border-separator/50 bg-surface-container px-3 py-2 text-sm text-on-surface outline-none transition focus:border-primary/40"
         />
-        <button type="button" onClick={addOption} className="rounded-xl bg-primary px-4 py-2 text-sm font-bold text-on-primary hover:opacity-90 active:scale-95 transition-all duration-150">
+        <button type="button" onClick={addOption} className="rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-on-primary hover:opacity-90 active:scale-95 transition-all duration-150">
           Add
         </button>
       </div>

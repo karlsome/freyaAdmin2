@@ -17,11 +17,11 @@ function ConfirmModal({ message, onConfirm, onCancel }) {
             <p className="text-sm text-on-surface">{message}</p>
             <div className="mt-6 flex justify-end gap-3">
               <button type="button" onClick={onCancel}
-                className="rounded-2xl border border-separator/40 px-4 py-2 text-xs font-bold text-on-surface transition hover:bg-surface-container">
+                className="rounded-2xl border border-separator/40 px-4 py-2 text-xs font-semibold text-on-surface transition hover:bg-surface-container">
                 Cancel
               </button>
               <button type="button" onClick={onConfirm}
-                className="rounded-2xl bg-error px-4 py-2 text-xs font-bold text-white transition hover:opacity-90">
+                className="rounded-2xl bg-error px-4 py-2 text-xs font-semibold text-white transition hover:opacity-90">
                 Confirm
               </button>
             </div>
@@ -103,8 +103,8 @@ export default function EquipmentHistoryBinWorkspace({ refreshToken, onFlash }) 
     <section className="glass-card rounded-3xl p-6">
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <p className="text-xs font-bold uppercase tracking-[0.18em] text-outline">設備</p>
-          <h3 className="mt-1 text-2xl font-black text-on-surface">Maintenance Record Recycle Bin</h3>
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-outline">設備</p>
+          <h3 className="mt-1 text-2xl font-semibold text-on-surface">Maintenance Record Recycle Bin</h3>
           <p className="mt-1 text-sm text-on-surface-variant">Soft-deleted 事案 records. Restore or permanently delete.</p>
         </div>
         <div className="flex items-center gap-3">
@@ -112,7 +112,7 @@ export default function EquipmentHistoryBinWorkspace({ refreshToken, onFlash }) 
             <span className="text-sm text-on-surface-variant">{records.length} records in bin</span>
           )}
           <button type="button" onClick={() => setArchiveOpen(true)}
-            className="inline-flex items-center gap-1.5 rounded-2xl border border-amber-500/30 bg-amber-500/10 px-4 py-2 text-xs font-bold text-amber-600 transition hover:bg-amber-500/20">
+            className="inline-flex items-center gap-1.5 rounded-2xl border border-amber-500/30 bg-amber-500/10 px-4 py-2 text-xs font-semibold text-amber-600 transition hover:bg-amber-500/20">
             <span className="material-symbols-outlined" style={{ fontSize: 14 }}>inventory_2</span>
             View Archive
           </button>
@@ -153,7 +153,7 @@ export default function EquipmentHistoryBinWorkspace({ refreshToken, onFlash }) 
             <thead>
               <tr className="border-b border-outline-variant/20 bg-surface-container">
                 {["発生事案", "工場 / 設備", "削除日時", "削除者", "理由", ""].map((h) => (
-                  <th key={h} className="px-4 py-3 text-left text-[10px] font-bold uppercase tracking-[0.18em] text-outline">
+                  <th key={h} className="px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">
                     {h}
                   </th>
                 ))}
@@ -175,7 +175,7 @@ export default function EquipmentHistoryBinWorkspace({ refreshToken, onFlash }) 
                       {tags.length > 0 && (
                         <div className="mt-1 flex flex-wrap gap-1">
                           {tags.map((tag) => (
-                            <span key={tag} className="rounded-full bg-surface-container px-2 py-0.5 text-[10px] font-bold text-on-surface-variant">
+                            <span key={tag} className="rounded-full bg-surface-container px-2 py-0.5 text-[10px] font-semibold text-on-surface-variant">
                               {tag}
                             </span>
                           ))}
@@ -192,12 +192,12 @@ export default function EquipmentHistoryBinWorkspace({ refreshToken, onFlash }) 
                     <td className="px-4 py-3">
                       <div className="flex items-center justify-end gap-2">
                         <button type="button" onClick={() => handleRestore(record)} disabled={isBusy}
-                          className="rounded-xl border border-primary/30 bg-primary/10 px-3 py-1.5 text-[11px] font-bold text-primary transition hover:bg-primary/20 disabled:opacity-50">
+                          className="rounded-xl border border-primary/30 bg-primary/10 px-3 py-1.5 text-[11px] font-semibold text-primary transition hover:bg-primary/20 disabled:opacity-50">
                           {isBusy ? "…" : "Restore"}
                         </button>
                         {canAdmin && (
                           <button type="button" onClick={() => promptPermanentDelete(record)} disabled={isBusy}
-                            className="rounded-xl border border-error/20 bg-error/10 px-3 py-1.5 text-[11px] font-bold text-error transition hover:bg-error/20 disabled:opacity-50">
+                            className="rounded-xl border border-error/20 bg-error/10 px-3 py-1.5 text-[11px] font-semibold text-error transition hover:bg-error/20 disabled:opacity-50">
                             Delete
                           </button>
                         )}

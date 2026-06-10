@@ -81,7 +81,7 @@ export default function MasterDetailDrawer({
                     setDraft(nextDraft);
                     setEditing(false);
                   }}
-                  className="rounded-2xl border border-outline-variant/20 px-4 py-2 text-xs font-bold text-on-surface transition hover:bg-surface-container"
+                  className="rounded-2xl border border-outline-variant/20 px-4 py-2 text-xs font-semibold text-on-surface transition hover:bg-surface-container"
                 >
                   Cancel
                 </button>
@@ -89,7 +89,7 @@ export default function MasterDetailDrawer({
                   type="button"
                   onClick={() => onSave(draft)}
                   disabled={saving}
-                  className="rounded-xl bg-primary px-4 py-2 text-xs font-bold text-on-primary hover:opacity-90 active:scale-95 transition-all duration-150 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="rounded-xl bg-primary px-4 py-2 text-xs font-semibold text-on-primary hover:opacity-90 active:scale-95 transition-all duration-150 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {saving ? "Saving…" : "Save Changes"}
                 </button>
@@ -98,7 +98,7 @@ export default function MasterDetailDrawer({
               <button
                 type="button"
                 onClick={() => setEditing(true)}
-                className="rounded-xl bg-primary px-4 py-2 text-xs font-bold text-on-primary hover:opacity-90 active:scale-95 transition-all duration-150"
+                className="rounded-xl bg-primary px-4 py-2 text-xs font-semibold text-on-primary hover:opacity-90 active:scale-95 transition-all duration-150"
               >
                 Edit Record
               </button>
@@ -133,7 +133,7 @@ export default function MasterDetailDrawer({
               )}
               {uploading && (
                 <div className="absolute inset-0 flex items-center justify-center bg-surface/80 backdrop-blur-sm">
-                  <div className="rounded-full bg-surface-container px-4 py-2 text-xs font-bold text-on-surface shadow-lg">Uploading…</div>
+                  <div className="rounded-full bg-surface-container px-4 py-2 text-xs font-semibold text-on-surface shadow-lg">Uploading…</div>
                 </div>
               )}
               {editing && (
@@ -154,7 +154,7 @@ export default function MasterDetailDrawer({
                     type="button"
                     onClick={() => inputRef.current?.click()}
                     disabled={uploading}
-                    className="absolute bottom-3 right-3 rounded-xl bg-primary px-3 py-1.5 text-xs font-bold text-on-primary hover:opacity-90 active:scale-95 transition-all duration-150 disabled:opacity-50"
+                    className="absolute bottom-3 right-3 rounded-xl bg-primary px-3 py-1.5 text-xs font-semibold text-on-primary hover:opacity-90 active:scale-95 transition-all duration-150 disabled:opacity-50"
                   >
                     {uploading ? "Uploading…" : record.imageURL ? "Update Image" : "Upload Image"}
                   </button>
@@ -170,7 +170,7 @@ export default function MasterDetailDrawer({
 
                 return (
                   <div key={field.field} className={`rounded-2xl border border-outline-variant/15 bg-surface-container-low px-4 py-3 ${multiline ? "col-span-2" : ""}`}>
-                    <div className="mb-1 text-[11px] font-bold uppercase tracking-wider text-outline">{field.label}</div>
+                    <div className="mb-1 text-[11px] font-semibold uppercase tracking-wider text-outline">{field.label}</div>
                     {editing ? (
                       multiline ? (
                         <textarea
@@ -188,7 +188,7 @@ export default function MasterDetailDrawer({
                         />
                       )
                     ) : (
-                      <div className="whitespace-pre-wrap break-words text-sm font-bold text-on-surface">
+                      <div className="whitespace-pre-wrap break-words text-sm font-semibold text-on-surface">
                         {formatMasterValue(record[field.field])}
                       </div>
                     )}

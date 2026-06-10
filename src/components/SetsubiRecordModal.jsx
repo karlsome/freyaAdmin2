@@ -110,7 +110,7 @@ export default function SetsubiRecordModal({
             type="button"
             onClick={onArchive}
             disabled={submitting}
-            className="rounded-xl border border-amber-500/25 bg-amber-500/10 px-4 py-2 text-xs font-bold text-amber-500 hover:bg-amber-500/20 active:scale-95 transition-all duration-150 disabled:cursor-not-allowed disabled:opacity-50"
+            className="rounded-xl border border-amber-500/25 bg-amber-500/10 px-4 py-2 text-xs font-semibold text-amber-500 hover:bg-amber-500/20 active:scale-95 transition-all duration-150 disabled:cursor-not-allowed disabled:opacity-50"
           >
             Archive
           </button>
@@ -122,7 +122,7 @@ export default function SetsubiRecordModal({
         <button
           type="button"
           onClick={onClose}
-          className="rounded-xl border border-separator/50 px-4 py-2 text-xs font-bold text-on-surface-variant hover:bg-surface-container hover:text-primary hover:border-primary/30 active:scale-95 transition-all duration-150"
+          className="rounded-xl border border-separator/50 px-4 py-2 text-xs font-semibold text-on-surface-variant hover:bg-surface-container hover:text-primary hover:border-primary/30 active:scale-95 transition-all duration-150"
         >
           Cancel
         </button>
@@ -130,7 +130,7 @@ export default function SetsubiRecordModal({
           type="submit"
           form={FORM_ID}
           disabled={!hasData || submitting}
-          className="rounded-xl bg-primary px-4 py-2 text-xs font-bold text-on-primary hover:opacity-90 active:scale-95 transition-all duration-150 disabled:cursor-not-allowed disabled:opacity-50"
+          className="rounded-xl bg-primary px-4 py-2 text-xs font-semibold text-on-primary hover:opacity-90 active:scale-95 transition-all duration-150 disabled:cursor-not-allowed disabled:opacity-50"
         >
           {submitting ? "Saving…" : isEdit ? "Save Changes" : "Add Equipment"}
         </button>
@@ -315,7 +315,7 @@ export default function SetsubiRecordModal({
               type="button"
               onClick={() => fileInputRef.current?.click()}
               disabled={uploading}
-              className="inline-flex items-center gap-2 rounded-xl border border-outline-variant/30 bg-surface px-4 py-2 text-xs font-bold text-on-surface hover:bg-surface-container active:scale-95 transition-all duration-150 disabled:cursor-not-allowed disabled:opacity-50"
+              className="inline-flex items-center gap-2 rounded-xl border border-outline-variant/30 bg-surface px-4 py-2 text-xs font-semibold text-on-surface hover:bg-surface-container active:scale-95 transition-all duration-150 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {uploading ? (
                 <>

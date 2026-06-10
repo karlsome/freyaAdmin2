@@ -100,8 +100,8 @@ export default function Sidebar({ activePage, badges = {}, mobileOpen = false, o
               </span>
             </div>
             <div className={`overflow-hidden transition-opacity duration-200 ${isMobile ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`}>
-              <h1 className="whitespace-nowrap text-lg font-black leading-none text-on-surface">Freya Admin</h1>
-              <p className="mt-0.5 whitespace-nowrap text-[10px] font-bold uppercase tracking-widest text-primary">Detailed Data</p>
+              <h1 className="whitespace-nowrap text-lg font-semibold leading-none text-on-surface">Freya Admin</h1>
+              <p className="mt-0.5 whitespace-nowrap text-[10px] font-semibold uppercase tracking-widest text-primary">Detailed Data</p>
             </div>
           </div>
 
@@ -158,7 +158,7 @@ export default function Sidebar({ activePage, badges = {}, mobileOpen = false, o
                       {label}
                     </span>
                     {badges[item.page] > 0 && (
-                      <span className={`mr-2 flex-shrink-0 rounded-full bg-error px-1.5 py-0.5 text-[10px] font-bold text-on-error dark:bg-error-container dark:text-on-error-container dark:rounded-md ${
+                      <span className={`mr-2 flex-shrink-0 rounded-full bg-error px-1.5 py-0.5 text-[10px] font-semibold text-on-error dark:bg-error-container dark:text-on-error-container dark:rounded-md ${
                         isMobile ? "opacity-100" : "opacity-0 transition-opacity duration-200 group-hover:opacity-100"
                       }`}>
                         {badges[item.page]}

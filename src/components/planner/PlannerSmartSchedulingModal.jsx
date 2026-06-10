@@ -34,7 +34,7 @@ export default function PlannerSmartSchedulingModal({
           <button
             type="button"
             onClick={onClose}
-            className="rounded-2xl border border-separator/40 px-4 py-2 text-sm font-bold text-on-surface transition hover:bg-surface-container"
+            className="rounded-2xl border border-separator/40 px-4 py-2 text-sm font-semibold text-on-surface transition hover:bg-surface-container"
           >
             Cancel
           </button>
@@ -42,7 +42,7 @@ export default function PlannerSmartSchedulingModal({
             type="button"
             disabled={scheduling || !equipmentNames.length}
             onClick={() => onConfirm(timeLimit)}
-            className="rounded-2xl kinetic-gradient px-4 py-2 text-sm font-bold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+            className="rounded-2xl kinetic-gradient px-4 py-2 text-sm font-semibold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {scheduling ? "Applying…" : "Apply Smart Schedule"}
           </button>
@@ -66,8 +66,8 @@ export default function PlannerSmartSchedulingModal({
         ) : equipmentNames.map((equipment) => (
           <section key={equipment} className="planner-data-text rounded-2xl border border-outline-variant/15 bg-surface-container-low p-4">
             <div className="mb-3 flex items-center justify-between gap-3">
-              <h4 className="font-bold text-on-surface">{equipment}</h4>
-              <span className="rounded-full bg-primary/10 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.16em] text-primary">
+              <h4 className="font-semibold text-on-surface">{equipment}</h4>
+              <span className="rounded-full bg-primary/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-primary">
                 {assignments[equipment].length} goal{assignments[equipment].length === 1 ? "" : "s"}
               </span>
             </div>
@@ -75,10 +75,10 @@ export default function PlannerSmartSchedulingModal({
               {assignments[equipment].map((item) => (
                 <div key={item._id} className="flex items-center justify-between gap-3 rounded-2xl bg-surface px-4 py-3">
                   <div>
-                    <div className="font-bold text-on-surface">{item.背番号 || item.品番}</div>
+                    <div className="font-semibold text-on-surface">{item.背番号 || item.品番}</div>
                     <div className="mt-1 text-on-surface-variant">{item.品番} · {item.remainingQuantity} pcs remaining</div>
                   </div>
-                  <div className="rounded-full bg-surface-container px-3 py-1 text-[10px] font-bold uppercase tracking-[0.16em] text-on-surface-variant">
+                  <div className="rounded-full bg-surface-container px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-on-surface-variant">
                     {Math.round(Number(item.confidence || 0) * 100)}% confidence
                   </div>
                 </div>

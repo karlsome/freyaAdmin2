@@ -36,7 +36,7 @@ export default function PlannerGoalImportReviewModal({
           <button
             type="button"
             onClick={onClose}
-            className="rounded-2xl border border-separator/40 px-4 py-2 text-sm font-bold text-on-surface transition hover:bg-surface-container"
+            className="rounded-2xl border border-separator/40 px-4 py-2 text-sm font-semibold text-on-surface transition hover:bg-surface-container"
           >
             Cancel
           </button>
@@ -44,7 +44,7 @@ export default function PlannerGoalImportReviewModal({
             type="button"
             disabled={importing || !rows.some((row) => row.status === "valid" || row.status === "duplicate")}
             onClick={() => onConfirm(decisions)}
-            className="rounded-2xl kinetic-gradient px-4 py-2 text-sm font-bold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+            className="rounded-2xl kinetic-gradient px-4 py-2 text-sm font-semibold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {importing ? "Importing…" : "Apply Import"}
           </button>
@@ -75,7 +75,7 @@ export default function PlannerGoalImportReviewModal({
                 <td className="px-4 py-3 text-on-surface">{row.背番号 || "-"}</td>
                 <td className="px-4 py-3 text-on-surface-variant">{row.品番 || "-"}</td>
                 <td className="px-4 py-3 text-on-surface-variant">{row.品名 || row.error || "-"}</td>
-                <td className="px-4 py-3 font-bold text-on-surface">{row.targetQuantity}</td>
+                <td className="px-4 py-3 font-semibold text-on-surface">{row.targetQuantity}</td>
                 <td className="px-4 py-3">
                   {row.status === "valid" ? <span className="text-emerald-600 dark:text-emerald-300">Ready</span> : null}
                   {row.status === "duplicate" ? <span className="text-amber-600 dark:text-amber-300">Duplicate</span> : null}

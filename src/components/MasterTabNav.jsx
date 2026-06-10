@@ -77,7 +77,7 @@ export default function MasterTabNav({ tabs, activeTab, onSelect }) {
               type="button"
               onClick={() => onSelect(tab)}
               className={[
-                "relative z-10 whitespace-nowrap rounded-xl px-4 py-2 text-sm font-bold tracking-tight transition-colors duration-300",
+                "relative z-10 whitespace-nowrap rounded-xl px-4 py-2 text-sm font-semibold tracking-tight transition-colors duration-300",
                 active
                   ? "border border-transparent bg-transparent text-on-primary"
                   : tab.ready

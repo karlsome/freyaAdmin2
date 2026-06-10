@@ -166,7 +166,7 @@ export default function InventoryTransactionsModal({
           <button
             type="button"
             onClick={onClose}
-            className="planner-data-text rounded-2xl border border-separator/40 px-4 py-2 text-sm font-bold text-on-surface transition hover:bg-surface-container"
+            className="planner-data-text rounded-2xl border border-separator/40 px-4 py-2 text-sm font-semibold text-on-surface transition hover:bg-surface-container"
           >
             Close
           </button>
@@ -198,7 +198,7 @@ export default function InventoryTransactionsModal({
               <div className="flex flex-wrap items-start justify-between gap-4">
                 <div>
                   <div className="planner-data-label text-outline">Current State</div>
-                  <h3 className="planner-data-text mt-1 text-xl font-black text-on-surface">{currentItem.品番 || "Unknown Part"}</h3>
+                  <h3 className="planner-data-text mt-1 text-xl font-semibold text-on-surface">{currentItem.品番 || "Unknown Part"}</h3>
                   <p className="planner-data-text mt-1 text-sm text-on-surface-variant">
                     Serial {currentItem.背番号 || backNumber} {currentItem.工場 ? `· ${currentItem.工場}` : ""}
                   </p>
@@ -208,7 +208,7 @@ export default function InventoryTransactionsModal({
                   <button
                     type="button"
                     onClick={() => setResetPanelOpen((current) => !current)}
-                    className="planner-data-text rounded-2xl border border-error/20 bg-white/80 px-4 py-2.5 text-sm font-bold text-error transition hover:bg-error/8 dark:bg-surface-container"
+                    className="planner-data-text rounded-2xl border border-error/20 bg-white/80 px-4 py-2.5 text-sm font-semibold text-error transition hover:bg-error/8 dark:bg-surface-container"
                   >
                     {resetPanelOpen ? "Hide Reset Controls" : "Reset Inventory"}
                   </button>
@@ -222,15 +222,15 @@ export default function InventoryTransactionsModal({
                 </div>
                 <div className="rounded-2xl border border-outline-variant/15 bg-white/80 p-4 dark:bg-surface-container">
                   <p className="planner-data-label text-outline">Physical Stock</p>
-                  <p className="planner-data-text mt-2 text-lg font-black tabular-nums text-emerald-700 dark:text-emerald-300">{formatInventoryNumber(currentPhysical)}</p>
+                  <p className="planner-data-text mt-2 text-lg font-semibold tabular-nums text-emerald-700 dark:text-emerald-300">{formatInventoryNumber(currentPhysical)}</p>
                 </div>
                 <div className="rounded-2xl border border-outline-variant/15 bg-white/80 p-4 dark:bg-surface-container">
                   <p className="planner-data-label text-outline">Reserved Stock</p>
-                  <p className="planner-data-text mt-2 text-lg font-black tabular-nums text-amber-700 dark:text-amber-300">{formatInventoryNumber(currentReserved)}</p>
+                  <p className="planner-data-text mt-2 text-lg font-semibold tabular-nums text-amber-700 dark:text-amber-300">{formatInventoryNumber(currentReserved)}</p>
                 </div>
                 <div className="rounded-2xl border border-outline-variant/15 bg-white/80 p-4 dark:bg-surface-container">
                   <p className="planner-data-label text-outline">Available Stock</p>
-                  <p className="planner-data-text mt-2 text-lg font-black tabular-nums text-sky-700 dark:text-sky-300">{formatInventoryNumber(currentAvailable)}</p>
+                  <p className="planner-data-text mt-2 text-lg font-semibold tabular-nums text-sky-700 dark:text-sky-300">{formatInventoryNumber(currentAvailable)}</p>
                 </div>
               </div>
             </div>
@@ -272,7 +272,7 @@ export default function InventoryTransactionsModal({
                     type="button"
                     disabled={resetSubmitting}
                     onClick={handleReset}
-                    className="planner-data-text rounded-2xl bg-error px-5 py-2.5 text-sm font-bold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+                    className="planner-data-text rounded-2xl bg-error px-5 py-2.5 text-sm font-semibold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     {resetSubmitting ? "Resetting..." : "Apply Reset"}
                   </button>
@@ -284,7 +284,7 @@ export default function InventoryTransactionsModal({
               <div className="flex items-center justify-between gap-3">
                 <div>
                   <div className="planner-data-label text-outline">History</div>
-                  <h3 className="mt-1 text-base font-black text-on-surface">Transaction History</h3>
+                  <h3 className="mt-1 text-base font-semibold text-on-surface">Transaction History</h3>
                 </div>
                 <div className="planner-data-text text-xs text-on-surface-variant">Newest first</div>
               </div>
@@ -325,7 +325,7 @@ export default function InventoryTransactionsModal({
                         >
                           <td className="planner-data-text px-4 py-3 text-on-surface-variant">{formatInventoryDateTime(transaction.timeStamp)}</td>
                           <td className="px-4 py-3">
-                            <span className={joinInventoryClasses("planner-data-text inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-bold", actionMeta.badgeClassName)}>
+                            <span className={joinInventoryClasses("planner-data-text inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold", actionMeta.badgeClassName)}>
                               <span className="material-symbols-outlined" style={{ fontSize: 14 }}>{actionMeta.icon}</span>
                               {transaction.action || "Unknown"}
                             </span>

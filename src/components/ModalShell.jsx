@@ -56,9 +56,9 @@ export default function ModalShell({
             <div className="flex items-start justify-between gap-4">
               <div>
                 {eyebrow ? (
-                  <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-outline">{eyebrow}</div>
+                  <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-outline">{eyebrow}</div>
                 ) : null}
-                <h3 className={`${eyebrow ? "mt-2" : ""} text-2xl font-black text-on-surface`}>{title}</h3>
+                <h3 className={`${eyebrow ? "mt-2" : ""} text-2xl font-semibold text-on-surface`}>{title}</h3>
                 {subtitle ? (
                   <p className="mt-1 text-sm text-on-surface-variant">{subtitle}</p>
                 ) : null}

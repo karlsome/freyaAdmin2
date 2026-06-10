@@ -188,7 +188,7 @@ function generateCalendarHtml({ factoryName, planDate, scheduledProducts = [], b
             margin: 0;
             background: #f5f7fb;
             color: #111827;
-            font-family: "DM Sans", "Yu Gothic", sans-serif;
+            font-family: "Inter", "Yu Gothic", sans-serif;
           }
           .page {
             padding: 24px;
@@ -439,7 +439,7 @@ function generateCalendarHtml({ factoryName, planDate, scheduledProducts = [], b
             padding: 18px 20px 20px;
           }
           .planner-schedule-detail-card {
-            font-family: "DM Sans", "Yu Gothic", sans-serif;
+            font-family: "Inter", "Yu Gothic", sans-serif;
           }
           .planner-schedule-detail-image-wrap {
             margin-bottom: 16px;

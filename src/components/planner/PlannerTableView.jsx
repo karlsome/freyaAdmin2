@@ -37,7 +37,7 @@ export default function PlannerTableView({ scheduledProducts = [], onRemoveItem 
           <tbody>
             {items.map((item) => (
               <tr key={item._scheduleId} className="border-b border-outline-variant/10 transition hover:bg-primary/5">
-                <td className="px-4 py-3 font-bold text-on-surface">{item.equipment}</td>
+                <td className="px-4 py-3 font-semibold text-on-surface">{item.equipment}</td>
                 <td className="px-4 py-3 text-on-surface">
                   <div className="flex items-center gap-2">
                     <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: item.color }} />
@@ -54,7 +54,7 @@ export default function PlannerTableView({ scheduledProducts = [], onRemoveItem 
                   <button
                     type="button"
                     onClick={() => onRemoveItem(item)}
-                    className="rounded-xl border border-error/20 bg-error/5 px-3 py-2 text-xs font-bold text-error transition hover:bg-error/10"
+                    className="rounded-xl border border-error/20 bg-error/5 px-3 py-2 text-xs font-semibold text-error transition hover:bg-error/10"
                   >
                     Remove
                   </button>
@@ -64,12 +64,12 @@ export default function PlannerTableView({ scheduledProducts = [], onRemoveItem 
           </tbody>
           <tfoot className="bg-surface-container-low border-t border-outline-variant/20">
             <tr>
-              <td colSpan={4} className="px-4 py-3 font-black text-on-surface">Totals</td>
-              <td className="px-4 py-3 font-black text-on-surface">{totalQuantity}</td>
-              <td className="px-4 py-3 font-black text-on-surface">{totalBoxes}</td>
-              <td className="px-4 py-3 font-black text-on-surface">—</td>
-              <td className="px-4 py-3 font-black text-on-surface">{formatDuration(totalSeconds)}</td>
-              <td className="px-4 py-3 font-black text-on-surface">—</td>
+              <td colSpan={4} className="px-4 py-3 font-semibold text-on-surface">Totals</td>
+              <td className="px-4 py-3 font-semibold text-on-surface">{totalQuantity}</td>
+              <td className="px-4 py-3 font-semibold text-on-surface">{totalBoxes}</td>
+              <td className="px-4 py-3 font-semibold text-on-surface">—</td>
+              <td className="px-4 py-3 font-semibold text-on-surface">{formatDuration(totalSeconds)}</td>
+              <td className="px-4 py-3 font-semibold text-on-surface">—</td>
             </tr>
           </tfoot>
         </table>

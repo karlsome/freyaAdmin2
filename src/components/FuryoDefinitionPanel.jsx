@@ -32,7 +32,7 @@ function FieldRow({
 
   return (
     <div className="grid gap-3 lg:grid-cols-[7rem_minmax(0,1fr)_minmax(0,1fr)] lg:items-center">
-      <div className="text-sm font-bold text-on-surface-variant">Counter {index}</div>
+      <div className="text-sm font-semibold text-on-surface-variant">Counter {index}</div>
 
       <input
         type="text"
@@ -88,7 +88,7 @@ export default function FuryoDefinitionPanel({
       <div className="glass-card flex h-[min(74vh,820px)] items-center justify-center rounded-3xl px-6 py-10 text-center">
         <div>
           <span className="material-symbols-outlined text-outline" style={{ fontSize: 56 }}>arrow_back</span>
-          <h3 className="mt-4 text-xl font-bold text-on-surface">Select a model</h3>
+          <h3 className="mt-4 text-xl font-semibold text-on-surface">Select a model</h3>
           <p className="mt-2 text-sm text-on-surface-variant">Choose a model from the left panel to review or edit its 12 defect counters.</p>
         </div>
       </div>
@@ -107,8 +107,8 @@ export default function FuryoDefinitionPanel({
       <div className="border-b border-separator/35 px-6 py-5">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div>
-            <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-outline">Defect Definition</div>
-            <h3 className="mt-1 text-2xl font-bold text-on-surface">{selectedModel}</h3>
+            <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-outline">Defect Definition</div>
+            <h3 className="mt-1 text-2xl font-semibold text-on-surface">{selectedModel}</h3>
             <p className="mt-1 text-sm text-on-surface-variant">Define Japanese and English labels for counters 1 through 12.</p>
             {(definition?.updatedAt || definition?.updatedBy) && (
               <div className="mt-2 text-xs text-outline">
@@ -118,16 +118,16 @@ export default function FuryoDefinitionPanel({
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
-            <span className={`rounded-full px-3 py-1.5 text-xs font-bold ${badgeTone}`}>
+            <span className={`rounded-full px-3 py-1.5 text-xs font-semibold ${badgeTone}`}>
               {definedCount ? `${definedCount}/12 defined` : "未定義"}
             </span>
-            <span className="rounded-full bg-surface-container px-3 py-1.5 text-xs font-bold text-on-surface-variant">
+            <span className="rounded-full bg-surface-container px-3 py-1.5 text-xs font-semibold text-on-surface-variant">
               {canEdit ? (editMode ? "Editing" : "Editable") : "View only"}
             </span>
           </div>
         </div>
 
-        <div className="mt-5 grid gap-3 text-[11px] font-bold uppercase tracking-[0.18em] text-outline lg:grid-cols-[7rem_minmax(0,1fr)_minmax(0,1fr)]">
+        <div className="mt-5 grid gap-3 text-[11px] font-semibold uppercase tracking-[0.18em] text-outline lg:grid-cols-[7rem_minmax(0,1fr)_minmax(0,1fr)]">
           <div />
           <div>Japanese</div>
           <div>English</div>
@@ -169,14 +169,14 @@ export default function FuryoDefinitionPanel({
                 <button
                   type="button"
                   onClick={onClear}
-                  className="rounded-xl border border-separator/40 px-4 py-2 text-xs font-bold text-on-surface transition hover:bg-surface-container"
+                  className="rounded-xl border border-separator/40 px-4 py-2 text-xs font-semibold text-on-surface transition hover:bg-surface-container"
                 >
                   Clear
                 </button>
                 <button
                   type="button"
                   onClick={onCancelEdit}
-                  className="rounded-xl border border-separator/40 px-4 py-2 text-xs font-bold text-on-surface transition hover:bg-surface-container"
+                  className="rounded-xl border border-separator/40 px-4 py-2 text-xs font-semibold text-on-surface transition hover:bg-surface-container"
                 >
                   Cancel
                 </button>
@@ -184,7 +184,7 @@ export default function FuryoDefinitionPanel({
                   type="button"
                   onClick={onSave}
                   disabled={!hasChanges || saving}
-                  className="rounded-xl bg-primary px-5 py-2 text-xs font-bold text-on-primary hover:opacity-90 active:scale-95 transition-all duration-150 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="rounded-xl bg-primary px-5 py-2 text-xs font-semibold text-on-primary hover:opacity-90 active:scale-95 transition-all duration-150 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {saving ? "Saving…" : "Save"}
                 </button>
@@ -193,7 +193,7 @@ export default function FuryoDefinitionPanel({
               <button
                 type="button"
                 onClick={onStartEdit}
-                className="rounded-xl border border-primary/20 bg-primary/10 px-4 py-2 text-xs font-bold text-primary transition hover:bg-primary/15"
+                className="rounded-xl border border-primary/20 bg-primary/10 px-4 py-2 text-xs font-semibold text-primary transition hover:bg-primary/15"
               >
                 Edit
               </button>

@@ -104,7 +104,7 @@ export default function ProcessPanel({ processName, rows, onRowClick, showFactor
         key: "品番",
         label: "品番",
         width: 164,
-        renderCell: (row) => <span className="font-bold text-on-surface">{row["品番"] ?? "—"}</span>,
+        renderCell: (row) => <span className="font-semibold text-on-surface">{row["品番"] ?? "—"}</span>,
         disableCellWrapper: true,
       },
       {
@@ -135,7 +135,7 @@ export default function ProcessPanel({ processName, rows, onRowClick, showFactor
         align: "right",
         renderCell: (row) => {
           const quantity = Number(row.Process_Quantity) || Number(row.Total) || 0;
-          return <span className="font-bold text-on-surface">{quantity.toLocaleString()}</span>;
+          return <span className="font-semibold text-on-surface">{quantity.toLocaleString()}</span>;
         },
         disableCellWrapper: true,
       },
@@ -146,7 +146,7 @@ export default function ProcessPanel({ processName, rows, onRowClick, showFactor
         align: "right",
         renderCell: (row) => {
           const totalNg = Number(row.Total_NG) || 0;
-          return <span className={totalNg > 0 ? "font-bold text-error" : "font-bold text-outline"}>{totalNg}</span>;
+          return <span className={totalNg > 0 ? "font-semibold text-error" : "font-semibold text-outline"}>{totalNg}</span>;
         },
         disableCellWrapper: true,
       },
@@ -173,7 +173,7 @@ export default function ProcessPanel({ processName, rows, onRowClick, showFactor
           const totalNg = Number(row.Total_NG) || 0;
           const rate = quantity > 0 ? ((totalNg / quantity) * 100).toFixed(2) : "0.00";
           return (
-            <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold ${defectChip(rate)}`}>
+            <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold ${defectChip(rate)}`}>
               {rate}%
             </span>
           );
@@ -204,8 +204,8 @@ export default function ProcessPanel({ processName, rows, onRowClick, showFactor
       <div className="px-5 py-4 flex items-center justify-between gap-3 border-b border-separator/30">
         <div className="flex items-center gap-2.5 min-w-0">
           <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${accent.dot}`} />
-          <h4 className="text-sm font-bold text-on-surface truncate">{processName} Process</h4>
-          <span className="px-2 py-0.5 rounded-full bg-surface-container text-[10px] font-bold text-outline flex-shrink-0">
+          <h4 className="text-sm font-semibold text-on-surface truncate">{processName} Process</h4>
+          <span className="px-2 py-0.5 rounded-full bg-surface-container text-[10px] font-semibold text-outline flex-shrink-0">
             {totalItems}
           </span>
         </div>
@@ -272,7 +272,7 @@ export default function ProcessPanel({ processName, rows, onRowClick, showFactor
       {summary.length > 0 && (
         <div ref={summaryRef} className="border-t border-separator/30">
           <button
-            className="w-full px-5 py-3 flex items-center gap-2 text-xs font-bold text-outline hover:text-on-surface transition-colors"
+            className="w-full px-5 py-3 flex items-center gap-2 text-xs font-semibold text-outline hover:text-on-surface transition-colors"
             onClick={() => setShowSummary((v) => !v)}
           >
             <span className="material-symbols-outlined" style={{ fontSize: 14 }}>
@@ -284,7 +284,7 @@ export default function ProcessPanel({ processName, rows, onRowClick, showFactor
             <div className="px-5 pb-4 overflow-x-auto">
               <table className="ui-table-data w-full min-w-[400px]">
                 <thead>
-                  <tr className="text-[10px] font-bold uppercase tracking-wider text-outline">
+                  <tr className="text-[10px] font-semibold uppercase tracking-wider text-outline">
                     <th className="ui-table-heading text-left pb-2 pr-6">品番</th>
                     <th className="ui-table-heading text-left pb-2 pr-6">背番号</th>
                     <th className="ui-table-heading text-right pb-2 pr-6">Total</th>
@@ -297,12 +297,12 @@ export default function ProcessPanel({ processName, rows, onRowClick, showFactor
                     const rate = s.total > 0 ? ((s.ng / s.total) * 100).toFixed(2) : "0.00";
                     return (
                       <tr key={i} className="hover:bg-surface-container/40 transition-colors">
-                        <td className="py-2 pr-6 font-bold text-on-surface">{s.hinban ?? "—"}</td>
+                        <td className="py-2 pr-6 font-semibold text-on-surface">{s.hinban ?? "—"}</td>
                         <td className="py-2 pr-6 text-on-surface-variant">{s.sebanggo ?? "—"}</td>
                         <td className="py-2 pr-6 text-right text-on-surface">{s.total.toLocaleString()}</td>
-                        <td className={`py-2 pr-6 text-right font-bold ${s.ng > 0 ? "text-error" : "text-outline"}`}>{s.ng}</td>
+                        <td className={`py-2 pr-6 text-right font-semibold ${s.ng > 0 ? "text-error" : "text-outline"}`}>{s.ng}</td>
                         <td className="py-2 text-right">
-                          <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold ${defectChip(rate)}`}>
+                          <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold ${defectChip(rate)}`}>
                             {rate}%
                           </span>
                         </td>

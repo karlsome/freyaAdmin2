@@ -56,9 +56,9 @@ export default function NodaModalFrame({
 
                 <div className="min-w-0">
                   {eyebrow ? (
-                    <div className="text-[10px] font-bold uppercase tracking-[0.22em] text-outline">{eyebrow}</div>
+                    <div className="text-[10px] font-semibold uppercase tracking-[0.22em] text-outline">{eyebrow}</div>
                   ) : null}
-                  <h2 className="mt-1 break-words text-xl font-black text-on-surface [overflow-wrap:anywhere]">{title}</h2>
+                  <h2 className="mt-1 break-words text-xl font-semibold text-on-surface [overflow-wrap:anywhere]">{title}</h2>
                   {subtitle ? <p className="mt-1 break-words text-sm text-on-surface-variant [overflow-wrap:anywhere]">{subtitle}</p> : null}
                 </div>
               </div>

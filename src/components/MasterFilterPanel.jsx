@@ -119,7 +119,7 @@ export default function MasterFilterPanel({
                   <div className="flex items-start gap-x-6 gap-y-3 overflow-x-auto pb-1">
                     {equipmentOptions.filter((g) => g.key !== "__ungrouped").map((group) => (
                       <div key={group.key} className="flex flex-shrink-0 flex-col gap-1">
-                        <label className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-outline cursor-pointer">
+                        <label className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-outline cursor-pointer">
                           <input
                             type="checkbox"
                             checked={selectedGroups.includes(group.key)}
@@ -156,7 +156,7 @@ export default function MasterFilterPanel({
               ) : equipmentOptions.length ? (
                 <div className="flex flex-col gap-2">
                   <div className="flex items-center gap-4">
-                    <label className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-on-surface cursor-pointer">
+                    <label className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-on-surface cursor-pointer">
                       <input
                         type="checkbox"
                         checked={equipmentAllNames.length > 0 && equipmentAllNames.every((name) => selectedEquipment.includes(name))}
@@ -165,7 +165,7 @@ export default function MasterFilterPanel({
                       />
                       Select All
                     </label>
-                    <label className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-on-surface cursor-pointer">
+                    <label className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-on-surface cursor-pointer">
                       <input
                         type="checkbox"
                         checked={false}
@@ -180,7 +180,7 @@ export default function MasterFilterPanel({
                     {equipmentOptions.map((group) => (
                       <div key={group.key} className="flex flex-shrink-0 flex-col gap-1">
                         {group.heading && (
-                          <p className="text-[10px] font-bold uppercase tracking-wider text-outline">{group.heading}</p>
+                          <p className="text-[10px] font-semibold uppercase tracking-wider text-outline">{group.heading}</p>
                         )}
                         <div className="grid grid-flow-col grid-rows-6 auto-cols-[minmax(110px,1fr)] gap-x-3 gap-y-1">
                           {group.options.map((option) => (
@@ -220,17 +220,17 @@ export default function MasterFilterPanel({
         {showSearchTags && (
           <div className="lg:col-span-2 xl:col-span-2 flex flex-col gap-1.5">
             <div className="flex items-center gap-2">
-              <label className="text-[10px] font-bold uppercase tracking-wider text-outline">Search Tags</label>
+              <label className="text-[10px] font-semibold uppercase tracking-wider text-outline">Search Tags</label>
               <select
                 value={searchLogicMode}
                 onChange={(event) => onSearchLogicModeChange(event.target.value)}
-                className="h-7 rounded-lg border border-separator/40 bg-white px-2 text-[10px] font-bold text-on-surface outline-none transition-colors focus:border-primary/40"
+                className="h-7 rounded-lg border border-separator/40 bg-white px-2 text-[10px] font-semibold text-on-surface outline-none transition-colors focus:border-primary/40"
               >
                 <option value="OR">Match Any</option>
                 <option value="AND">Match All</option>
               </select>
               {!!searchTags.length && (
-                <button type="button" onClick={onClearSearchTags} className="ml-auto text-[10px] font-bold uppercase tracking-wider text-error">
+                <button type="button" onClick={onClearSearchTags} className="ml-auto text-[10px] font-semibold uppercase tracking-wider text-error">
                   Clear
                 </button>
               )}
@@ -277,7 +277,7 @@ export default function MasterFilterPanel({
               <button
                 type="button"
                 onClick={onApplyAdvancedFilters}
-                className="flex items-center gap-2 rounded-xl kinetic-gradient px-5 py-2.5 text-sm font-bold text-white shadow-[0_0_20px_rgba(99,102,241,0.25)] transition-opacity hover:opacity-90"
+                className="flex items-center gap-2 rounded-xl kinetic-gradient px-5 py-2.5 text-sm font-semibold text-white shadow-[0_0_20px_rgba(99,102,241,0.25)] transition-opacity hover:opacity-90"
               >
                 <span className="material-symbols-outlined" style={{ fontSize: 16 }}>filter_alt</span>
                 Apply Advanced Filters
@@ -286,7 +286,7 @@ export default function MasterFilterPanel({
               <button
                 type="button"
                 onClick={onClearAdvancedFilters}
-                className="flex items-center gap-2 rounded-xl border border-separator/35 glass-card px-5 py-2.5 text-sm font-bold text-on-surface transition-all hover:border-primary/30"
+                className="flex items-center gap-2 rounded-xl border border-separator/35 glass-card px-5 py-2.5 text-sm font-semibold text-on-surface transition-all hover:border-primary/30"
               >
                 <span className="material-symbols-outlined" style={{ fontSize: 16 }}>refresh</span>
                 Reset Advanced Filters
@@ -296,7 +296,7 @@ export default function MasterFilterPanel({
                 <button
                   type="button"
                   onClick={onOpenBatchEdit}
-                  className="flex items-center gap-2 rounded-xl border border-amber-400/30 bg-amber-400/10 px-5 py-2.5 text-sm font-bold text-amber-700 transition-colors hover:bg-amber-400/15"
+                  className="flex items-center gap-2 rounded-xl border border-amber-400/30 bg-amber-400/10 px-5 py-2.5 text-sm font-semibold text-amber-700 transition-colors hover:bg-amber-400/15"
                 >
                   <span className="material-symbols-outlined" style={{ fontSize: 16 }}>edit_square</span>
                   Batch Edit {batchCount} Records

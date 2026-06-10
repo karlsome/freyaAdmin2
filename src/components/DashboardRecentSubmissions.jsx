@@ -29,7 +29,7 @@ export default function DashboardRecentSubmissions({ recent, loading, onRecordCl
           <span className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
             <span className="material-symbols-outlined text-primary" style={{ fontSize: 18 }}>inbox</span>
           </span>
-          <h3 className="text-sm font-bold text-on-surface">Recent Submissions</h3>
+          <h3 className="text-sm font-semibold text-on-surface">Recent Submissions</h3>
         </div>
         <p className="text-[11px] text-outline mb-4 ml-10">Latest records submitted today</p>
         <div className="space-y-2.5">
@@ -47,7 +47,7 @@ export default function DashboardRecentSubmissions({ recent, loading, onRecordCl
         <span className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
           <span className="material-symbols-outlined text-primary" style={{ fontSize: 18 }}>inbox</span>
         </span>
-        <h3 className="text-sm font-bold text-on-surface">Recent Submissions</h3>
+        <h3 className="text-sm font-semibold text-on-surface">Recent Submissions</h3>
         {recent.length > 0 && (
           <span className="ml-auto text-[10px] text-outline">{recent.length} today</span>
         )}
@@ -59,7 +59,7 @@ export default function DashboardRecentSubmissions({ recent, loading, onRecordCl
           <span className="w-14 h-14 rounded-2xl bg-surface-container flex items-center justify-center">
             <span className="material-symbols-outlined" style={{ fontSize: 28 }}>inbox</span>
           </span>
-          <p className="text-sm font-bold">No submissions yet today</p>
+          <p className="text-sm font-semibold">No submissions yet today</p>
         </div>
       ) : (
         <div className="flex-1 overflow-y-auto scrollbar-hide space-y-2">
@@ -79,7 +79,7 @@ export default function DashboardRecentSubmissions({ recent, loading, onRecordCl
               >
                 <div className="flex items-center gap-2 mb-1">
                   <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 shadow-sm ${dotColor}`} />
-                  <span className="text-xs font-bold text-on-surface truncate flex-1 group-hover:text-primary transition-colors">
+                  <span className="text-xs font-semibold text-on-surface truncate flex-1 group-hover:text-primary transition-colors">
                     {r["工場"]} · {r["設備"]}
                   </span>
                   <span className="text-[10px] text-outline flex-shrink-0">{timeAgo(r.createdAt)}</span>
@@ -88,7 +88,7 @@ export default function DashboardRecentSubmissions({ recent, loading, onRecordCl
                   <span className="text-[11px] text-on-surface-variant truncate flex-1">
                     {r["品番"]} · {r["Worker_Name"]}
                   </span>
-                  <span className="text-[11px] font-bold text-on-surface flex-shrink-0 tabular-nums">
+                  <span className="text-[11px] font-semibold text-on-surface flex-shrink-0 tabular-nums">
                     {recordTotal.toLocaleString()}
                     {recordNG > 0 && (
                       <span className={`ml-1.5 ${defRate >= 2 ? "text-error" : "text-outline"}`}>

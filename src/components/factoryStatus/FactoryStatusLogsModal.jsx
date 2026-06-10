@@ -34,7 +34,7 @@ function SummaryTile({ label, value, toneClassName = "text-on-surface" }) {
   return (
     <div className="rounded-2xl border border-outline-variant/15 bg-white/80 p-4 dark:bg-surface-container">
       <p className="planner-data-label text-outline">{label}</p>
-      <p className={joinClasses("planner-data-text mt-2 text-lg font-black tabular-nums", toneClassName)}>{value}</p>
+      <p className={joinClasses("planner-data-text mt-2 text-lg font-semibold tabular-nums", toneClassName)}>{value}</p>
     </div>
   );
 }
@@ -196,14 +196,14 @@ export default function FactoryStatusLogsModal({
           <button
             type="button"
             onClick={() => onOpenFullPage?.()}
-            className="planner-data-text rounded-2xl border border-separator/40 px-4 py-2 text-sm font-bold text-on-surface transition hover:bg-surface-container"
+            className="planner-data-text rounded-2xl border border-separator/40 px-4 py-2 text-sm font-semibold text-on-surface transition hover:bg-surface-container"
           >
             Open Full Logs Page
           </button>
           <button
             type="button"
             onClick={onClose}
-            className="planner-data-text rounded-2xl border border-separator/40 px-4 py-2 text-sm font-bold text-on-surface transition hover:bg-surface-container"
+            className="planner-data-text rounded-2xl border border-separator/40 px-4 py-2 text-sm font-semibold text-on-surface transition hover:bg-surface-container"
           >
             Close
           </button>
@@ -215,7 +215,7 @@ export default function FactoryStatusLogsModal({
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
               <div className="planner-data-label text-outline">Equipment Scope</div>
-              <h3 className="planner-data-text mt-1 text-xl font-black text-on-surface">{equipment || "—"}</h3>
+              <h3 className="planner-data-text mt-1 text-xl font-semibold text-on-surface">{equipment || "—"}</h3>
               <p className="planner-data-text mt-1 text-sm text-on-surface-variant">
                 {factory || "Unknown Factory"} {generatedAt ? `· Updated ${formatFactoryStatusDateTime(generatedAt)}` : ""}
               </p>

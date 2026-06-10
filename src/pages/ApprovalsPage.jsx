@@ -91,7 +91,7 @@ function FlashBanner({ flash, onClose }) {
     <div className={joinClasses("mb-6 rounded-3xl border px-5 py-4", tone)}>
       <div className="flex items-start justify-between gap-4">
         <div>
-          <div className="text-[10px] font-bold uppercase tracking-[0.18em]">Status</div>
+          <div className="text-[10px] font-semibold uppercase tracking-[0.18em]">Status</div>
           <p className="mt-1 text-sm font-medium">{flash.message}</p>
         </div>
         <button type="button" onClick={onClose} className="text-current/70 transition hover:text-current">
@@ -926,7 +926,7 @@ export default function ApprovalsPage() {
       renderCell: (row) => {
         const meta = getApprovalStatusMeta(row);
         return (
-          <span className={joinClasses("inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-bold", meta.badgeClassName)}>
+          <span className={joinClasses("inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold", meta.badgeClassName)}>
             <span className="material-symbols-outlined" style={{ fontSize: 14, fontVariationSettings: "'FILL' 1" }}>{meta.icon}</span>
             {meta.label}
           </span>
@@ -1058,7 +1058,7 @@ export default function ApprovalsPage() {
             event.stopPropagation();
             openDetail(row, "live");
           }}
-          className="rounded-2xl border border-outline-variant/20 bg-white px-3 py-1.5 text-xs font-bold text-on-surface transition hover:bg-surface-container dark:bg-surface-container"
+          className="rounded-2xl border border-outline-variant/20 bg-white px-3 py-1.5 text-xs font-semibold text-on-surface transition hover:bg-surface-container dark:bg-surface-container"
         >
           Review
         </button>
@@ -1136,7 +1136,7 @@ export default function ApprovalsPage() {
             event.stopPropagation();
             openDetail(row, "recycle");
           }}
-          className="rounded-2xl border border-outline-variant/20 bg-white px-3 py-1.5 text-xs font-bold text-on-surface transition hover:bg-surface-container dark:bg-surface-container"
+          className="rounded-2xl border border-outline-variant/20 bg-white px-3 py-1.5 text-xs font-semibold text-on-surface transition hover:bg-surface-container dark:bg-surface-container"
         >
           Inspect
         </button>
@@ -1148,8 +1148,8 @@ export default function ApprovalsPage() {
     return (
       <section className="h-screen overflow-y-auto px-4 pb-24 pt-20 scrollbar-hide sm:px-6 sm:pb-16 sm:pt-24 md:px-8">
         <div className="glass-card rounded-[28px] px-6 py-8">
-          <div className="text-[10px] font-bold uppercase tracking-[0.22em] text-outline">Approvals</div>
-          <h1 className="mt-2 text-2xl font-black text-on-surface">Access Required</h1>
+          <div className="text-[10px] font-semibold uppercase tracking-[0.22em] text-outline">Approvals</div>
+          <h1 className="mt-2 text-2xl font-semibold text-on-surface">Access Required</h1>
           <p className="mt-3 max-w-2xl text-sm text-on-surface-variant">
             The approval workflow is available only to admin, 部長, 課長, 係長, and 班長 roles.
           </p>
@@ -1179,7 +1179,7 @@ export default function ApprovalsPage() {
             <button
               type="button"
               onClick={() => setRefreshNonce((current) => current + 1)}
-              className="flex h-11 items-center gap-2 rounded-2xl border border-outline-variant/20 bg-white px-4 text-sm font-bold text-on-surface transition hover:bg-surface-container dark:bg-surface-container"
+              className="flex h-11 items-center gap-2 rounded-2xl border border-outline-variant/20 bg-white px-4 text-sm font-semibold text-on-surface transition hover:bg-surface-container dark:bg-surface-container"
             >
               <span className="material-symbols-outlined" style={{ fontSize: 18 }}>refresh</span>
               Refresh
@@ -1215,20 +1215,20 @@ export default function ApprovalsPage() {
       ) : (
         <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-3">
           <div className="dashboard-section rounded-2xl p-4">
-            <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-outline">Recycle Bin</div>
-            <div className="planner-data-text mt-2 text-3xl font-black text-on-surface tabular-nums">{binRows.length.toLocaleString()}</div>
+            <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Recycle Bin</div>
+            <div className="planner-data-text mt-2 text-3xl font-semibold text-on-surface tabular-nums">{binRows.length.toLocaleString()}</div>
             <p className="mt-1 text-xs text-on-surface-variant">Soft-deleted approval records</p>
           </div>
           <div className="dashboard-section rounded-2xl p-4">
-            <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-outline">Restorable</div>
-            <div className="planner-data-text mt-2 text-3xl font-black text-on-surface tabular-nums">
+            <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Restorable</div>
+            <div className="planner-data-text mt-2 text-3xl font-semibold text-on-surface tabular-nums">
               {binRows.length.toLocaleString()}
             </div>
             <p className="mt-1 text-xs text-on-surface-variant">Available for restore using original collection metadata</p>
           </div>
           <div className="dashboard-section rounded-2xl p-4">
-            <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-outline">Role</div>
-            <div className="planner-data-text mt-2 text-lg font-black text-on-surface">{authUser?.role || "Unknown"}</div>
+            <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Role</div>
+            <div className="planner-data-text mt-2 text-lg font-semibold text-on-surface">{authUser?.role || "Unknown"}</div>
             <p className="mt-1 text-xs text-on-surface-variant">Recycle bin tools follow original role restrictions</p>
           </div>
         </div>
@@ -1238,7 +1238,7 @@ export default function ApprovalsPage() {
         <div className="dashboard-section mb-6 rounded-2xl p-5">
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_auto]">
             <div className="flex flex-col gap-1.5">
-              <label className="text-[10px] font-bold uppercase tracking-[0.18em] text-outline">Search Recycle Bin</label>
+              <label className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Search Recycle Bin</label>
               <input
                 type="text"
                 value={binSearchInput}
@@ -1257,7 +1257,7 @@ export default function ApprovalsPage() {
                   setPage(1);
                   setBinSearchInput("");
                 }}
-                className="h-11 rounded-2xl border border-outline-variant/20 bg-white px-4 text-sm font-bold text-on-surface transition hover:bg-surface-container dark:bg-surface-container"
+                className="h-11 rounded-2xl border border-outline-variant/20 bg-white px-4 text-sm font-semibold text-on-surface transition hover:bg-surface-container dark:bg-surface-container"
               >
                 Clear Search
               </button>
@@ -1292,7 +1292,7 @@ export default function ApprovalsPage() {
         <div className="dashboard-section mb-6 rounded-2xl p-5">
           <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
             <div>
-              <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-outline">Batch Mode</div>
+              <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Batch Mode</div>
               <p className="mt-1 text-sm text-on-surface-variant">
                 Select actionable rows on the current page and run the same approval or correction workflow in one pass.
               </p>
@@ -1303,7 +1303,7 @@ export default function ApprovalsPage() {
                 type="button"
                 onClick={selectVisibleRows}
                 disabled={actionBusy || !liveRows.some((record) => isBatchSelectable(record, authUser))}
-                className="rounded-2xl border border-outline-variant/20 bg-white px-4 py-2 text-xs font-bold text-on-surface transition hover:bg-surface-container disabled:cursor-not-allowed disabled:opacity-50 dark:bg-surface-container"
+                className="rounded-2xl border border-outline-variant/20 bg-white px-4 py-2 text-xs font-semibold text-on-surface transition hover:bg-surface-container disabled:cursor-not-allowed disabled:opacity-50 dark:bg-surface-container"
               >
                 Select Visible
               </button>
@@ -1311,7 +1311,7 @@ export default function ApprovalsPage() {
                 type="button"
                 onClick={() => setSelectedIds([])}
                 disabled={actionBusy || !batchSelectedCount}
-                className="rounded-2xl border border-outline-variant/20 bg-white px-4 py-2 text-xs font-bold text-on-surface transition hover:bg-surface-container disabled:cursor-not-allowed disabled:opacity-50 dark:bg-surface-container"
+                className="rounded-2xl border border-outline-variant/20 bg-white px-4 py-2 text-xs font-semibold text-on-surface transition hover:bg-surface-container disabled:cursor-not-allowed disabled:opacity-50 dark:bg-surface-container"
               >
                 Clear Selection
               </button>
@@ -1319,7 +1319,7 @@ export default function ApprovalsPage() {
                 type="button"
                 onClick={handleBatchApprove}
                 disabled={actionBusy || !batchSelectedCount}
-                className="rounded-xl bg-primary px-4 py-2 text-xs font-bold text-on-primary hover:opacity-90 active:scale-95 transition-all duration-150 disabled:cursor-not-allowed disabled:opacity-50"
+                className="rounded-xl bg-primary px-4 py-2 text-xs font-semibold text-on-primary hover:opacity-90 active:scale-95 transition-all duration-150 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 Approve Selected ({batchSelectedCount})
               </button>
@@ -1327,7 +1327,7 @@ export default function ApprovalsPage() {
                 type="button"
                 onClick={handleBatchCorrection}
                 disabled={actionBusy || !batchSelectedCount}
-                className="rounded-2xl bg-amber-500 px-4 py-2 text-xs font-bold text-black transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+                className="rounded-2xl bg-amber-500 px-4 py-2 text-xs font-semibold text-black transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 Request Correction ({batchSelectedCount})
               </button>

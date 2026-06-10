@@ -287,7 +287,7 @@ function ActionNoticeBanner({ notice, onClose }) {
     <div className={`mb-6 rounded-3xl border px-5 py-4 ${tone}`}>
       <div className="flex items-start justify-between gap-4">
         <div>
-          <p className="text-[10px] font-bold uppercase tracking-[0.18em]">Status</p>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.18em]">Status</p>
           <p className="mt-1 text-sm font-medium">{notice.message}</p>
         </div>
         <button type="button" onClick={onClose} className="text-current/70 transition hover:text-current">
@@ -303,14 +303,14 @@ function SavedPresetManagerCard({ activePresetId, draftName, editingPresetId, on
     <div className="glass-card rounded-2xl p-5">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-outline">Saved Views</p>
-          <h3 className="mt-1 text-lg font-black text-on-surface">Supervisor Presets</h3>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Saved Views</p>
+          <h3 className="mt-1 text-lg font-semibold text-on-surface">Supervisor Presets</h3>
           <p className="mt-2 text-sm leading-6 text-outline">
             Save repeated ticket review filters in this browser, then reapply them in one click.
           </p>
         </div>
         {activePresetId && (
-          <span className="inline-flex items-center rounded-full bg-primary/10 px-3 py-1 text-[10px] font-black uppercase tracking-[0.14em] text-primary">
+          <span className="inline-flex items-center rounded-full bg-primary/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-primary">
             Active preset
           </span>
         )}
@@ -328,7 +328,7 @@ function SavedPresetManagerCard({ activePresetId, draftName, editingPresetId, on
           type="button"
           onClick={onSave}
           disabled={!draftName.trim()}
-          className="inline-flex items-center justify-center gap-2 rounded-xl kinetic-gradient px-4 py-2.5 text-sm font-bold text-white shadow-[0_0_20px_rgba(99,102,241,0.25)] transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
+          className="inline-flex items-center justify-center gap-2 rounded-xl kinetic-gradient px-4 py-2.5 text-sm font-semibold text-white shadow-[0_0_20px_rgba(99,102,241,0.25)] transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
         >
           <span className="material-symbols-outlined" style={{ fontSize: 16 }}>{editingPresetId ? "drive_file_rename_outline" : "bookmark_added"}</span>
           {editingPresetId ? "Rename Preset" : "Save Current View"}
@@ -337,7 +337,7 @@ function SavedPresetManagerCard({ activePresetId, draftName, editingPresetId, on
           <button
             type="button"
             onClick={onCancelEdit}
-            className="inline-flex items-center justify-center gap-2 rounded-xl border border-separator/40 bg-white px-4 py-2.5 text-sm font-bold text-on-surface transition hover:border-primary/30 hover:text-primary"
+            className="inline-flex items-center justify-center gap-2 rounded-xl border border-separator/40 bg-white px-4 py-2.5 text-sm font-semibold text-on-surface transition hover:border-primary/30 hover:text-primary"
           >
             <span className="material-symbols-outlined" style={{ fontSize: 16 }}>close</span>
             Cancel
@@ -363,7 +363,7 @@ function SavedPresetManagerCard({ activePresetId, draftName, editingPresetId, on
                   <div className="flex flex-wrap items-center gap-2">
                     <h4 className="truncate text-sm font-semibold text-on-surface">{preset.name}</h4>
                     {isActive && (
-                      <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-black uppercase tracking-[0.12em] text-primary">
+                      <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-primary">
                         Active
                       </span>
                     )}
@@ -374,7 +374,7 @@ function SavedPresetManagerCard({ activePresetId, draftName, editingPresetId, on
                   <button
                     type="button"
                     onClick={() => onApply(preset)}
-                    className="inline-flex items-center gap-2 rounded-xl border border-separator/40 bg-white px-3 py-2 text-xs font-bold text-on-surface transition hover:border-primary/30 hover:text-primary"
+                    className="inline-flex items-center gap-2 rounded-xl border border-separator/40 bg-white px-3 py-2 text-xs font-semibold text-on-surface transition hover:border-primary/30 hover:text-primary"
                   >
                     <span className="material-symbols-outlined" style={{ fontSize: 14 }}>visibility</span>
                     Apply
@@ -382,7 +382,7 @@ function SavedPresetManagerCard({ activePresetId, draftName, editingPresetId, on
                   <button
                     type="button"
                     onClick={() => onRename(preset)}
-                    className="inline-flex items-center gap-2 rounded-xl border border-separator/40 bg-white px-3 py-2 text-xs font-bold text-on-surface transition hover:border-primary/30 hover:text-primary"
+                    className="inline-flex items-center gap-2 rounded-xl border border-separator/40 bg-white px-3 py-2 text-xs font-semibold text-on-surface transition hover:border-primary/30 hover:text-primary"
                   >
                     <span className="material-symbols-outlined" style={{ fontSize: 14 }}>drive_file_rename_outline</span>
                     Rename
@@ -390,7 +390,7 @@ function SavedPresetManagerCard({ activePresetId, draftName, editingPresetId, on
                   <button
                     type="button"
                     onClick={() => onDelete(preset)}
-                    className="inline-flex items-center gap-2 rounded-xl border border-error/20 bg-error/5 px-3 py-2 text-xs font-bold text-error transition hover:bg-error/10"
+                    className="inline-flex items-center gap-2 rounded-xl border border-error/20 bg-error/5 px-3 py-2 text-xs font-semibold text-error transition hover:bg-error/10"
                   >
                     <span className="material-symbols-outlined" style={{ fontSize: 14 }}>delete</span>
                     Delete
@@ -408,21 +408,21 @@ function SavedPresetManagerCard({ activePresetId, draftName, editingPresetId, on
 function ExportTicketResultsCard({ disabled, exporting, filteredCount, onCopyShareLink, onExport, shareButtonLabel }) {
   return (
     <div className="glass-card rounded-2xl p-5">
-      <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-outline">Export</p>
-      <h3 className="mt-1 text-lg font-black text-on-surface">Filtered Ticket CSV</h3>
+      <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Export</p>
+      <h3 className="mt-1 text-lg font-semibold text-on-surface">Filtered Ticket CSV</h3>
       <p className="mt-3 text-sm leading-6 text-outline">
         Export the current ticket view or the full submitted-ticket history. Large all-data exports may take longer than filtered exports.
       </p>
       <div className="mt-4 flex items-center justify-between gap-3 rounded-2xl border border-separator/40 bg-surface px-4 py-3">
         <div>
-          <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-outline">Current Export Scope</p>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-outline">Current Export Scope</p>
           <p className="mt-1 text-sm font-semibold text-on-surface">{formatTicketNumber(filteredCount)} matching tickets</p>
         </div>
         <div className="flex items-center gap-2">
           <button
             type="button"
             onClick={onCopyShareLink}
-            className="inline-flex items-center justify-center gap-2 rounded-xl border border-separator/40 bg-white px-4 py-2.5 text-sm font-bold text-on-surface transition hover:border-primary/30 hover:text-primary"
+            className="inline-flex items-center justify-center gap-2 rounded-xl border border-separator/40 bg-white px-4 py-2.5 text-sm font-semibold text-on-surface transition hover:border-primary/30 hover:text-primary"
           >
             <span className="material-symbols-outlined" style={{ fontSize: 16 }}>link</span>
             {shareButtonLabel}
@@ -431,7 +431,7 @@ function ExportTicketResultsCard({ disabled, exporting, filteredCount, onCopySha
             type="button"
             onClick={onExport}
             disabled={disabled || exporting}
-            className="inline-flex items-center justify-center gap-2 rounded-xl kinetic-gradient px-4 py-2.5 text-sm font-bold text-white shadow-[0_0_20px_rgba(99,102,241,0.25)] transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
+            className="inline-flex items-center justify-center gap-2 rounded-xl kinetic-gradient px-4 py-2.5 text-sm font-semibold text-white shadow-[0_0_20px_rgba(99,102,241,0.25)] transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
           >
             <span className="material-symbols-outlined" style={{ fontSize: 16 }}>download</span>
             {exporting ? "Preparing CSV..." : "Export CSV"}
@@ -465,8 +465,8 @@ function ExportChoiceModal({ filteredCount, onClose, onExportAll, onExportFilter
       >
         <div className="flex items-start justify-between gap-4 border-b border-separator/35 px-6 py-5">
           <div className="min-w-0 flex-1">
-            <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-outline">Export Choice</p>
-            <h3 className="mt-1 text-lg font-black text-on-surface">Choose what to export</h3>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Export Choice</p>
+            <h3 className="mt-1 text-lg font-semibold text-on-surface">Choose what to export</h3>
             <p className="mt-2 text-sm leading-6 text-outline">
               The current view may already be narrowed by date range, quick filters, advanced filters, or sort. Choose whether to export that filtered view or the full ticket history.
             </p>
@@ -486,8 +486,8 @@ function ExportChoiceModal({ filteredCount, onClose, onExportAll, onExportFilter
             onClick={onExportFiltered}
             className="rounded-2xl border border-primary/20 bg-primary/5 px-4 py-4 text-left transition hover:border-primary/35 hover:bg-primary/10"
           >
-            <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-primary">Current View</p>
-            <p className="mt-2 text-base font-black text-on-surface">Export filtered data</p>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-primary">Current View</p>
+            <p className="mt-2 text-base font-semibold text-on-surface">Export filtered data</p>
             <p className="mt-2 text-sm leading-6 text-outline">
               Exports the same filtered ticket set currently shown in the table. Matching tickets: {formatTicketNumber(filteredCount)}.
             </p>
@@ -498,8 +498,8 @@ function ExportChoiceModal({ filteredCount, onClose, onExportAll, onExportFilter
             onClick={onExportAll}
             className="rounded-2xl border border-separator/40 bg-surface-container px-4 py-4 text-left transition hover:border-primary/30 hover:bg-surface-container-high"
           >
-            <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-outline">Full History</p>
-            <p className="mt-2 text-base font-black text-on-surface">Export all data</p>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-outline">Full History</p>
+            <p className="mt-2 text-base font-semibold text-on-surface">Export all data</p>
             <p className="mt-2 text-sm leading-6 text-outline">
               Ignores the current filters and exports every submitted ticket. This may take longer for larger datasets.
             </p>
@@ -582,7 +582,7 @@ function SummaryCard({ accent, icon, label, subtitle, value }) {
       value={value}
       subtitle={subtitle}
       accent={accent}
-      valueClassName="text-2xl font-black tabular-nums"
+      valueClassName="text-2xl font-semibold tabular-nums"
       labelClassName="text-[11px] font-semibold text-on-surface-variant"
       subtitleClassName="text-[10px] text-outline"
       iconClassName="shadow-none"
@@ -594,7 +594,7 @@ function TicketStatusPill({ status }) {
   const meta = getTicketStatusMeta(status);
 
   return (
-    <span className={joinClasses("inline-flex rounded-full px-2.5 py-1 text-[11px] font-bold", meta.badgeClassName)}>
+    <span className={joinClasses("inline-flex rounded-full px-2.5 py-1 text-[11px] font-semibold", meta.badgeClassName)}>
       {meta.label}
     </span>
   );
@@ -668,8 +668,8 @@ function TicketDetailModal({ actionBusy = false, onClose, onCloseTicket = null, 
         >
           <div className="flex items-start justify-between gap-4 border-b border-separator/35 px-6 py-5">
             <div className="min-w-0 flex-1">
-              <p className="text-xs font-bold uppercase tracking-[0.18em] text-outline">Submitted Ticket</p>
-              <h3 className="mt-1 truncate text-lg font-black text-on-surface">{ticket.fieldLabel || "Untitled ticket"}</h3>
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-outline">Submitted Ticket</p>
+              <h3 className="mt-1 truncate text-lg font-semibold text-on-surface">{ticket.fieldLabel || "Untitled ticket"}</h3>
               <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs text-outline">
                 {ticket.formName && <span>{ticket.formName}</span>}
                 {ticket.machineName && <span>{ticket.machineName}</span>}
@@ -687,7 +687,7 @@ function TicketDetailModal({ actionBusy = false, onClose, onCloseTicket = null, 
 
           <div className="flex flex-col gap-3 border-b border-separator/35 px-6 py-4 text-sm lg:flex-row lg:items-center lg:justify-between">
             <div className="flex flex-wrap gap-3">
-              <span className={joinClasses("inline-flex items-center rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.14em]", statusMeta.badgeClassName)}>
+              <span className={joinClasses("inline-flex items-center rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em]", statusMeta.badgeClassName)}>
                 {statusMeta.label}
               </span>
               <span className="inline-flex items-center gap-1.5 text-outline">
@@ -712,7 +712,7 @@ function TicketDetailModal({ actionBusy = false, onClose, onCloseTicket = null, 
                   type="button"
                   onClick={onReopenTicket}
                   disabled={actionBusy || !onReopenTicket}
-                  className="inline-flex items-center justify-center gap-2 rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-2 text-sm font-bold text-emerald-700 transition hover:border-emerald-500/35 hover:bg-emerald-500/15 disabled:cursor-not-allowed disabled:opacity-50 dark:text-emerald-300"
+                  className="inline-flex items-center justify-center gap-2 rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-2 text-sm font-semibold text-emerald-700 transition hover:border-emerald-500/35 hover:bg-emerald-500/15 disabled:cursor-not-allowed disabled:opacity-50 dark:text-emerald-300"
                 >
                   <span className="material-symbols-outlined" style={{ fontSize: 16 }}>history</span>
                   {actionBusy ? "Reopening..." : "Reopen Ticket"}
@@ -722,7 +722,7 @@ function TicketDetailModal({ actionBusy = false, onClose, onCloseTicket = null, 
                   type="button"
                   onClick={onCloseTicket}
                   disabled={actionBusy || !onCloseTicket}
-                  className="inline-flex items-center justify-center gap-2 rounded-xl border border-error/20 bg-error/10 px-4 py-2 text-sm font-bold text-error transition hover:border-error/35 hover:bg-error/15 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="inline-flex items-center justify-center gap-2 rounded-xl border border-error/20 bg-error/10 px-4 py-2 text-sm font-semibold text-error transition hover:border-error/35 hover:bg-error/15 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   <span className="material-symbols-outlined" style={{ fontSize: 16 }}>task_alt</span>
                   {actionBusy ? "Closing..." : "Close Ticket"}
@@ -733,7 +733,7 @@ function TicketDetailModal({ actionBusy = false, onClose, onCloseTicket = null, 
                 <button
                   type="button"
                   onClick={onOpenChecklistSubmission}
-                  className="inline-flex items-center justify-center gap-2 rounded-xl border border-separator/40 bg-white px-4 py-2 text-sm font-bold text-on-surface transition hover:border-primary/30 hover:text-primary"
+                  className="inline-flex items-center justify-center gap-2 rounded-xl border border-separator/40 bg-white px-4 py-2 text-sm font-semibold text-on-surface transition hover:border-primary/30 hover:text-primary"
                 >
                   <span className="material-symbols-outlined" style={{ fontSize: 16 }}>arrow_outward</span>
                   Open Checklist Submission
@@ -745,23 +745,23 @@ function TicketDetailModal({ actionBusy = false, onClose, onCloseTicket = null, 
           <div className="flex-1 overflow-y-auto px-6 py-5">
             <div className="grid gap-4 lg:grid-cols-[minmax(0,1.3fr)_minmax(240px,0.7fr)]">
               <article className="rounded-2xl border border-separator/40 bg-surface-container px-5 py-4">
-                <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-outline">NG Reason</p>
+                <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">NG Reason</p>
                 <p className="mt-2 text-sm leading-6 text-on-surface">{ticket.reason || "No reason provided."}</p>
               </article>
 
               <div className="grid gap-4">
                 <article className="rounded-2xl border border-separator/40 bg-surface-container px-4 py-4">
-                  <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-outline">Submitted Value</p>
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Submitted Value</p>
                   <p className="mt-2 text-sm font-semibold text-on-surface">{ticket.answerValue || "—"}</p>
                 </article>
 
                 <article className="rounded-2xl border border-separator/40 bg-surface-container px-4 py-4">
-                  <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-outline">Allowed Range</p>
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Allowed Range</p>
                   <p className="mt-2 text-sm font-semibold text-on-surface">{expectedRange || "No range configured"}</p>
                 </article>
 
                 <article className="rounded-2xl border border-separator/40 bg-surface-container px-4 py-4">
-                  <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-outline">Image Evidence</p>
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Image Evidence</p>
                   <p className="mt-2 text-sm font-semibold text-on-surface">{formatTicketNumber(ticket.imageCount ?? ticket.imageURLs?.length ?? 0)} image{(ticket.imageCount ?? ticket.imageURLs?.length ?? 0) === 1 ? "" : "s"}</p>
                 </article>
               </div>
@@ -769,17 +769,17 @@ function TicketDetailModal({ actionBusy = false, onClose, onCloseTicket = null, 
 
             <div className="mt-4 grid gap-4 md:grid-cols-3">
               <article className="rounded-2xl border border-separator/40 bg-surface-container px-4 py-4">
-                <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-outline">Checklist Form</p>
+                <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Checklist Form</p>
                 <p className="mt-2 text-sm font-semibold text-on-surface">{ticket.formName || "—"}</p>
               </article>
 
               <article className="rounded-2xl border border-separator/40 bg-surface-container px-4 py-4">
-                <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-outline">Machine</p>
+                <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Machine</p>
                 <p className="mt-2 text-sm font-semibold text-on-surface">{ticket.machineName || "—"}</p>
               </article>
 
               <article className="rounded-2xl border border-separator/40 bg-surface-container px-4 py-4">
-                <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-outline">Latest Closure</p>
+                <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Latest Closure</p>
                 {ticket.closedAt ? (
                   <>
                     <p className="mt-2 text-sm font-semibold text-on-surface">{ticket.closedBy || ticket.closedByUsername || "Unknown user"}</p>
@@ -794,10 +794,10 @@ function TicketDetailModal({ actionBusy = false, onClose, onCloseTicket = null, 
             <div className="mt-5 rounded-2xl border border-separator/40 bg-surface-container px-5 py-4">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
-                  <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-outline">Status History</p>
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Status History</p>
                   <p className="mt-1 text-sm text-outline">Tracks each close and reopen action for this ticket.</p>
                 </div>
-                <span className="inline-flex items-center rounded-full bg-white/75 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.14em] text-outline">
+                <span className="inline-flex items-center rounded-full bg-white/75 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-outline">
                   {historyEntries.length} event{historyEntries.length === 1 ? "" : "s"}
                 </span>
               </div>
@@ -814,7 +814,7 @@ function TicketDetailModal({ actionBusy = false, onClose, onCloseTicket = null, 
                   >
                     <div className="flex flex-wrap items-start justify-between gap-3">
                       <div>
-                        <p className="text-sm font-bold text-on-surface">{formatTicketHistoryAction(entry)}</p>
+                        <p className="text-sm font-semibold text-on-surface">{formatTicketHistoryAction(entry)}</p>
                         <p className="mt-1 text-xs text-outline">{entry.user || entry.username || "Unknown user"}</p>
                       </div>
                       <p className="text-xs font-medium text-outline">{formatTicketDateTime(entry.timestamp)}</p>
@@ -850,7 +850,7 @@ function TicketDetailModal({ actionBusy = false, onClose, onCloseTicket = null, 
               <div className="mt-5">
                 <div className="mb-3 flex items-center justify-between gap-3">
                   <div>
-                    <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-outline">Attached Images</p>
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Attached Images</p>
                     <p className="mt-1 text-sm text-outline">Open any image for a larger preview.</p>
                   </div>
                 </div>
@@ -1111,7 +1111,7 @@ export default function TicketSubmissionsPage() {
       label: "Input Type",
       width: 126,
       renderCell: (row) => row.fieldType ? (
-        <span className="inline-flex rounded-full bg-outline/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.14em] text-outline">
+        <span className="inline-flex rounded-full bg-outline/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-outline">
           {row.fieldType}
         </span>
       ) : "—",
@@ -1152,7 +1152,7 @@ export default function TicketSubmissionsPage() {
       width: 96,
       align: "center",
       renderCell: (row) => (
-        <span className="inline-flex min-w-10 items-center justify-center rounded-full bg-surface-container px-2.5 py-1 text-xs font-bold text-on-surface">
+        <span className="inline-flex min-w-10 items-center justify-center rounded-full bg-surface-container px-2.5 py-1 text-xs font-semibold text-on-surface">
           {formatTicketNumber(row.imageCount ?? row.imageURLs?.length ?? 0)}
         </span>
       ),

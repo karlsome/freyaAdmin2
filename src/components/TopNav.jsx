@@ -81,11 +81,11 @@ export default function TopNav({ authUser, isDark, onLogout, onOpenMobileNav, on
         {/* User */}
         <div className="flex items-center gap-3 pl-1">
           <div className="hidden text-right sm:block">
-            <p className="text-xs font-bold text-on-surface leading-none">{displayName}</p>
+            <p className="text-xs font-semibold text-on-surface leading-none">{displayName}</p>
             <p className="text-[10px] text-outline mt-0.5">{roleLine}{usernameLine ? ` · ${usernameLine}` : ""}</p>
           </div>
           <div className="w-8 h-8 rounded-full kinetic-gradient ring-2 ring-primary/30 shadow-[0_0_12px_rgba(99,102,241,0.35)] flex items-center justify-center">
-            <span className="text-xs font-black tracking-[0.12em] text-white">{initials}</span>
+            <span className="text-xs font-semibold tracking-[0.12em] text-white">{initials}</span>
           </div>
         </div>
       </div>

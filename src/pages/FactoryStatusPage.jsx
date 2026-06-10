@@ -68,7 +68,7 @@ function SummaryCard({ icon, label, value, subtitle, accent, loading = false }) 
       subtitle={subtitle}
       accent={accent}
       loading={loading}
-      valueClassName="planner-data-text text-2xl font-black tabular-nums"
+      valueClassName="planner-data-text text-2xl font-semibold tabular-nums"
       labelClassName="planner-data-text text-[11px] font-semibold text-on-surface-variant"
       subtitleClassName="planner-data-text text-[10px] text-outline"
       iconClassName="shadow-none"
@@ -350,7 +350,7 @@ export default function FactoryStatusPage() {
       key: "todayActualQuantity",
       label: "Today Actual",
       width: 130,
-      renderCell: (row) => <span className="planner-data-text text-sm font-black tabular-nums text-primary">{formatFactoryStatusNumber(row.todayActualQuantity)}</span>,
+      renderCell: (row) => <span className="planner-data-text text-sm font-semibold tabular-nums text-primary">{formatFactoryStatusNumber(row.todayActualQuantity)}</span>,
       disableCellWrapper: true,
     },
   ]), []);
@@ -398,8 +398,8 @@ export default function FactoryStatusPage() {
         <div className="dashboard-section mb-6 rounded-2xl p-5">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
-              <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-outline">Filters</p>
-              <h2 className="mt-1 text-lg font-black text-on-surface">Factory Scope</h2>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-outline">Filters</p>
+              <h2 className="mt-1 text-lg font-semibold text-on-surface">Factory Scope</h2>
               <p className="planner-data-text mt-2 text-sm text-on-surface-variant">{selectionSummary.countLabel} · {selectionSummary.selectedText}</p>
             </div>
             <div className="flex flex-wrap gap-2">
@@ -407,7 +407,7 @@ export default function FactoryStatusPage() {
                 type="button"
                 onClick={handleSelectAllFactories}
                 disabled={!factoryOptions.length}
-                className="rounded-2xl border border-outline-variant/20 px-3 py-2 text-xs font-bold text-on-surface transition hover:bg-surface-container disabled:cursor-not-allowed disabled:opacity-60"
+                className="rounded-2xl border border-outline-variant/20 px-3 py-2 text-xs font-semibold text-on-surface transition hover:bg-surface-container disabled:cursor-not-allowed disabled:opacity-60"
               >
                 Select All
               </button>
@@ -415,7 +415,7 @@ export default function FactoryStatusPage() {
                 type="button"
                 onClick={handleClearFactories}
                 disabled={!selectedFactories.length}
-                className="rounded-2xl border border-outline-variant/20 px-3 py-2 text-xs font-bold text-on-surface transition hover:bg-surface-container disabled:cursor-not-allowed disabled:opacity-60"
+                className="rounded-2xl border border-outline-variant/20 px-3 py-2 text-xs font-semibold text-on-surface transition hover:bg-surface-container disabled:cursor-not-allowed disabled:opacity-60"
               >
                 Clear
               </button>
@@ -424,7 +424,7 @@ export default function FactoryStatusPage() {
 
           <div className="mt-4 grid gap-4 xl:grid-cols-[minmax(0,1.7fr)_260px]">
             <div>
-              <span className="block text-xs font-bold uppercase tracking-[0.18em] text-outline">Factories</span>
+              <span className="block text-xs font-semibold uppercase tracking-[0.18em] text-outline">Factories</span>
               <div className="mt-2 flex flex-wrap gap-2">
                 {factoryOptions.map((factory) => {
                   const active = selectedFactories.includes(factory);
@@ -454,7 +454,7 @@ export default function FactoryStatusPage() {
             </div>
 
             <label className="block">
-              <span className="block text-xs font-bold uppercase tracking-[0.18em] text-outline">Date</span>
+              <span className="block text-xs font-semibold uppercase tracking-[0.18em] text-outline">Date</span>
               <input
                 type="date"
                 value={date}
@@ -488,7 +488,7 @@ export default function FactoryStatusPage() {
                 <button
                   type="button"
                   onClick={handleApplyAdvancedFilters}
-                  className="flex items-center gap-2 rounded-xl kinetic-gradient px-5 py-2.5 text-sm font-bold text-white transition-opacity hover:opacity-90"
+                  className="flex items-center gap-2 rounded-xl kinetic-gradient px-5 py-2.5 text-sm font-semibold text-white transition-opacity hover:opacity-90"
                 >
                   <span className="material-symbols-outlined" style={{ fontSize: 16 }}>filter_alt</span>
                   Apply Advanced Filters
@@ -497,7 +497,7 @@ export default function FactoryStatusPage() {
                 <button
                   type="button"
                   onClick={handleClearAdvancedFilters}
-                  className="flex items-center gap-2 rounded-xl border border-outline-variant/20 px-5 py-2.5 text-sm font-bold text-on-surface transition hover:bg-surface-container"
+                  className="flex items-center gap-2 rounded-xl border border-outline-variant/20 px-5 py-2.5 text-sm font-semibold text-on-surface transition hover:bg-surface-container"
                 >
                   <span className="material-symbols-outlined" style={{ fontSize: 16 }}>refresh</span>
                   Reset Advanced Filters
@@ -560,7 +560,7 @@ export default function FactoryStatusPage() {
 
         {!selectedFactories.length && !loadingFactories ? (
           <div className="glass-card rounded-2xl px-6 py-12 text-center">
-            <h2 className="text-xl font-black text-on-surface">Choose at least one factory</h2>
+            <h2 className="text-xl font-semibold text-on-surface">Choose at least one factory</h2>
             <p className="planner-data-text mt-2 text-sm text-on-surface-variant">The grouped machine tables appear after you select one or more factories.</p>
           </div>
         ) : null}
@@ -570,8 +570,8 @@ export default function FactoryStatusPage() {
             <div className="mb-4 rounded-2xl border border-outline-variant/15 bg-surface-container-low/35 px-5 py-4">
               <div className="flex flex-wrap items-start justify-between gap-4">
                 <div>
-                  <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-outline">Factory</p>
-                  <h2 className="mt-1 text-2xl font-black text-on-surface">{group.factory}</h2>
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-outline">Factory</p>
+                  <h2 className="mt-1 text-2xl font-semibold text-on-surface">{group.factory}</h2>
                   <p className="planner-data-text mt-2 text-sm text-on-surface-variant">
                     {formatFactoryStatusNumber(group.overview.filteredMachineCount)} of {formatFactoryStatusNumber(group.overview.machineCount)} machines match the current table filters.
                   </p>
@@ -580,7 +580,7 @@ export default function FactoryStatusPage() {
                 <button
                   type="button"
                   onClick={() => openLogsPage({ factory: group.factory })}
-                  className="planner-data-text rounded-2xl border border-outline-variant/20 px-4 py-2 text-sm font-bold text-on-surface transition hover:bg-surface-container"
+                  className="planner-data-text rounded-2xl border border-outline-variant/20 px-4 py-2 text-sm font-semibold text-on-surface transition hover:bg-surface-container"
                 >
                   Logs Page
                 </button>

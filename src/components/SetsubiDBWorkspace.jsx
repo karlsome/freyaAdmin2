@@ -39,13 +39,13 @@ function SuccessModal({ message, onClose }) {
       <div className="flex min-h-full items-start justify-center px-4 pb-4 pt-10">
         <div className="dashboard-section w-full max-w-md rounded-2xl overflow-hidden">
           <div className="border-b border-separator/35 px-6 py-5">
-            <h3 className="text-2xl font-black text-on-surface">Success</h3>
+            <h3 className="text-2xl font-semibold text-on-surface">Success</h3>
           </div>
           <div className="px-6 py-6">
             <p className="text-sm text-on-surface-variant">{message}</p>
             <div className="mt-6 flex justify-end">
               <button type="button" onClick={onClose}
-                className="rounded-xl bg-primary px-4 py-2 text-xs font-bold text-on-primary hover:opacity-90 active:scale-95 transition-all duration-150">
+                className="rounded-xl bg-primary px-4 py-2 text-xs font-semibold text-on-primary hover:opacity-90 active:scale-95 transition-all duration-150">
                 OK
               </button>
             </div>
@@ -212,8 +212,8 @@ function EventDetailModal({ event, canEdit, username, role, onClose, onSaved, on
           <div className="border-b border-separator/35 px-6 py-5">
             <div className="flex items-start justify-between gap-4">
               <div>
-                <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-outline">事案詳細</div>
-                <h3 className="mt-2 text-2xl font-black text-on-surface">
+                <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-outline">事案詳細</div>
+                <h3 className="mt-2 text-2xl font-semibold text-on-surface">
                   {mode === "edit" ? "事案を編集" : (event["発生事案"] || "—")}
                 </h3>
                 {mode === "view" && event["工場"] && (
@@ -230,10 +230,10 @@ function EventDetailModal({ event, canEdit, username, role, onClose, onSaved, on
                 {/* Meta row */}
                 <div className="flex flex-wrap gap-3">
                   {event.eventDate && (
-                    <span className="rounded-xl bg-primary/10 px-3 py-1 text-[11px] font-bold text-primary">{event.eventDate}</span>
+                    <span className="rounded-xl bg-primary/10 px-3 py-1 text-[11px] font-semibold text-primary">{event.eventDate}</span>
                   )}
                   {event["名前"] && (
-                    <span className="rounded-xl bg-surface-container px-3 py-1 text-[11px] font-bold text-on-surface-variant">{event["名前"]}</span>
+                    <span className="rounded-xl bg-surface-container px-3 py-1 text-[11px] font-semibold text-on-surface-variant">{event["名前"]}</span>
                   )}
                 </div>
 
@@ -241,7 +241,7 @@ function EventDetailModal({ event, canEdit, username, role, onClose, onSaved, on
                 {tags.length > 0 && (
                   <div className="flex flex-wrap gap-1.5">
                     {tags.map((tag) => (
-                      <span key={tag} className="rounded-full bg-surface-container px-3 py-1 text-[11px] font-bold text-on-surface-variant">{tag}</span>
+                      <span key={tag} className="rounded-full bg-surface-container px-3 py-1 text-[11px] font-semibold text-on-surface-variant">{tag}</span>
                     ))}
                   </div>
                 )}
@@ -249,7 +249,7 @@ function EventDetailModal({ event, canEdit, username, role, onClose, onSaved, on
                 {/* Details */}
                 {event["詳細"] && (
                   <div>
-                    <p className="mb-1.5 text-[10px] font-bold uppercase tracking-[0.18em] text-outline">詳細</p>
+                    <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">詳細</p>
                     <p className="whitespace-pre-wrap text-sm text-on-surface">{event["詳細"]}</p>
                   </div>
                 )}
@@ -257,7 +257,7 @@ function EventDetailModal({ event, canEdit, username, role, onClose, onSaved, on
                 {/* Images / Videos */}
                 {imageURLs.length > 0 && (
                   <div>
-                    <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.18em] text-outline">画像 / 動画</p>
+                    <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">画像 / 動画</p>
                     <div className="flex flex-wrap gap-2">
                       {imageURLs.map((url) => (
                         <button key={url} type="button" onClick={() => setLightboxURL(url)}
@@ -276,14 +276,14 @@ function EventDetailModal({ event, canEdit, username, role, onClose, onSaved, on
             ) : (
               <div className="grid gap-4">
                 <label className="block">
-                  <div className="mb-2 text-[11px] font-bold uppercase tracking-[0.18em] text-outline">発生事案 <span className="text-error">*</span></div>
+                  <div className="mb-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-outline">発生事案 <span className="text-error">*</span></div>
                   <input type="text" value={draft.発生事案}
                     onChange={(e) => setField("発生事案", e.target.value)}
                     className="w-full rounded-2xl border border-outline-variant/30 bg-surface px-3 py-3 text-sm text-on-surface outline-none transition focus:border-primary/40" />
                 </label>
 
                 <label className="block">
-                  <div className="mb-2 text-[11px] font-bold uppercase tracking-[0.18em] text-outline">詳細</div>
+                  <div className="mb-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-outline">詳細</div>
                   <textarea value={draft.詳細}
                     onChange={(e) => setField("詳細", e.target.value)}
                     rows={4}
@@ -292,13 +292,13 @@ function EventDetailModal({ event, canEdit, username, role, onClose, onSaved, on
 
                 <div className="grid gap-4 sm:grid-cols-2">
                   <label className="block">
-                    <div className="mb-2 text-[11px] font-bold uppercase tracking-[0.18em] text-outline">名前</div>
+                    <div className="mb-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-outline">名前</div>
                     <input type="text" value={draft.名前}
                       onChange={(e) => setField("名前", e.target.value)}
                       className="w-full rounded-2xl border border-outline-variant/30 bg-surface px-3 py-3 text-sm text-on-surface outline-none transition focus:border-primary/40" />
                   </label>
                   <label className="block">
-                    <div className="mb-2 text-[11px] font-bold uppercase tracking-[0.18em] text-outline">発生日</div>
+                    <div className="mb-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-outline">発生日</div>
                     <input type="date" value={draft.eventDate}
                       onChange={(e) => setField("eventDate", e.target.value)}
                       className="w-full rounded-2xl border border-outline-variant/30 bg-surface px-3 py-3 text-sm text-on-surface outline-none transition focus:border-primary/40" />
@@ -306,13 +306,13 @@ function EventDetailModal({ event, canEdit, username, role, onClose, onSaved, on
                 </div>
 
                 <div>
-                  <div className="mb-2 text-[11px] font-bold uppercase tracking-[0.18em] text-outline">カテゴリ</div>
+                  <div className="mb-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-outline">カテゴリ</div>
                   <div className="flex flex-wrap gap-2">
                     {EVENT_CATEGORY_TAGS.map((tag) => {
                       const selected = draft.tags.includes(tag);
                       return (
                         <button key={tag} type="button" onClick={() => toggleTag(tag)}
-                          className={`rounded-full px-3.5 py-1.5 text-xs font-bold transition ${selected ? "bg-primary text-on-primary shadow-sm" : "border border-outline-variant/30 bg-surface text-on-surface hover:bg-surface-container"}`}>
+                          className={`rounded-full px-3.5 py-1.5 text-xs font-semibold transition ${selected ? "bg-primary text-on-primary shadow-sm" : "border border-outline-variant/30 bg-surface text-on-surface hover:bg-surface-container"}`}>
                           {tag}
                         </button>
                       );
@@ -321,10 +321,10 @@ function EventDetailModal({ event, canEdit, username, role, onClose, onSaved, on
                 </div>
 
                 <div>
-                  <div className="mb-2 text-[11px] font-bold uppercase tracking-[0.18em] text-outline">画像 / 動画</div>
+                  <div className="mb-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-outline">画像 / 動画</div>
                   <input ref={fileInputRef} type="file" accept="image/*,video/mp4,video/quicktime" multiple className="hidden" onChange={handleFileChange} />
                   <button type="button" onClick={() => fileInputRef.current?.click()} disabled={uploading}
-                    className="inline-flex items-center gap-2 rounded-2xl border border-outline-variant/30 bg-surface px-4 py-2.5 text-xs font-bold text-on-surface transition hover:bg-surface-container disabled:opacity-50">
+                    className="inline-flex items-center gap-2 rounded-2xl border border-outline-variant/30 bg-surface px-4 py-2.5 text-xs font-semibold text-on-surface transition hover:bg-surface-container disabled:opacity-50">
                     {uploading
                       ? <><span className="material-symbols-outlined animate-spin" style={{ fontSize: 15 }}>progress_activity</span>アップロード中…</>
                       : <><span className="material-symbols-outlined" style={{ fontSize: 15 }}>attach_file</span>ファイルを添付</>}
@@ -356,25 +356,25 @@ function EventDetailModal({ event, canEdit, username, role, onClose, onSaved, on
           <div className="flex items-center justify-between gap-3 border-t border-separator/30 px-6 py-4">
             {canEdit && mode === "edit" ? (
               <button type="button" onClick={handleDelete} disabled={busy}
-                className="rounded-2xl border border-error/20 bg-error/10 px-4 py-2 text-xs font-bold text-error transition hover:bg-error/20 disabled:opacity-50">
+                className="rounded-2xl border border-error/20 bg-error/10 px-4 py-2 text-xs font-semibold text-error transition hover:bg-error/20 disabled:opacity-50">
                 Delete
               </button>
             ) : <div />}
 
             <div className="flex items-center gap-3">
               <button type="button" onClick={mode === "edit" ? () => setMode("view") : onClose}
-                className="rounded-2xl border border-separator/40 px-4 py-2 text-xs font-bold text-on-surface transition hover:bg-surface-container">
+                className="rounded-2xl border border-separator/40 px-4 py-2 text-xs font-semibold text-on-surface transition hover:bg-surface-container">
                 {mode === "edit" ? "Cancel" : "Close"}
               </button>
               {canEdit && mode === "view" && (
                 <button type="button" onClick={enterEdit}
-                  className="rounded-xl bg-primary px-4 py-2 text-xs font-bold text-on-primary hover:opacity-90 active:scale-95 transition-all duration-150">
+                  className="rounded-xl bg-primary px-4 py-2 text-xs font-semibold text-on-primary hover:opacity-90 active:scale-95 transition-all duration-150">
                   Edit
                 </button>
               )}
               {mode === "edit" && (
                 <button type="button" onClick={handleSave} disabled={busy || uploading || !draft?.発生事案?.trim()}
-                  className="rounded-xl bg-primary px-4 py-2 text-xs font-bold text-on-primary hover:opacity-90 active:scale-95 transition-all duration-150 disabled:opacity-50">
+                  className="rounded-xl bg-primary px-4 py-2 text-xs font-semibold text-on-primary hover:opacity-90 active:scale-95 transition-all duration-150 disabled:opacity-50">
                   {busy ? "保存中…" : "変更を保存"}
                 </button>
               )}
@@ -414,8 +414,8 @@ function EquipmentDetailPanel({ equipment, onClose, onEdit }) {
       {/* Header */}
       <div className="flex items-start justify-between gap-4 border-b border-separator/35 px-6 py-5">
         <div>
-          <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-outline">設備詳細</p>
-          <h3 className="mt-1 text-xl font-black text-on-surface">{equipment.name || "—"}</h3>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">設備詳細</p>
+          <h3 className="mt-1 text-xl font-semibold text-on-surface">{equipment.name || "—"}</h3>
           {equipment["工場"] && (
             <p className="mt-0.5 text-sm text-on-surface-variant">{equipment["工場"]}</p>
           )}
@@ -423,7 +423,7 @@ function EquipmentDetailPanel({ equipment, onClose, onEdit }) {
         <div className="flex shrink-0 items-center gap-2">
           {onEdit && (
             <button type="button" onClick={() => onEdit(equipment)}
-              className="flex h-9 items-center gap-1.5 rounded-2xl border border-separator/40 bg-surface px-3 text-xs font-bold text-on-surface transition hover:bg-surface-container-high">
+              className="flex h-9 items-center gap-1.5 rounded-2xl border border-separator/40 bg-surface px-3 text-xs font-semibold text-on-surface transition hover:bg-surface-container-high">
               <span className="material-symbols-outlined" style={{ fontSize: 15 }}>edit</span>
               Edit
             </button>
@@ -448,12 +448,12 @@ function EquipmentDetailPanel({ equipment, onClose, onEdit }) {
         )}
 
         <section>
-          <p className="mb-3 text-[10px] font-bold uppercase tracking-[0.18em] text-outline">設備情報</p>
+          <p className="mb-3 text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">設備情報</p>
           <dl className="grid grid-cols-2 gap-3 rounded-2xl border border-separator/40 bg-surface px-5 py-4">
             {fields.map(({ label, value }) =>
               value ? (
                 <div key={label} className="flex flex-col gap-0.5">
-                  <dt className="text-[10px] font-bold uppercase tracking-[0.18em] text-outline">{label}</dt>
+                  <dt className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">{label}</dt>
                   <dd className="text-sm text-on-surface">{value}</dd>
                 </div>
               ) : null
@@ -478,7 +478,7 @@ function EquipmentRow({ equipment, isSelected, onView }) {
           : "border-outline-variant/15 bg-surface hover:border-outline-variant/30 hover:bg-surface-container/50"
       }`}
     >
-      <p className="truncate text-xs font-bold text-on-surface">{equipment.name || "—"}</p>
+      <p className="truncate text-xs font-semibold text-on-surface">{equipment.name || "—"}</p>
       {equipment.installationDate && (
         <p className="mt-0.5 text-[10px] text-on-surface-variant">設置日: {equipment.installationDate}</p>
       )}
@@ -500,7 +500,7 @@ function FactoryBox({ factory, equipment, selectedId, onView }) {
           <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-primary/10">
             <span className="material-symbols-outlined text-primary" style={{ fontSize: 16 }}>factory</span>
           </div>
-          <h4 className="text-sm font-black text-on-surface">{name}</h4>
+          <h4 className="text-sm font-semibold text-on-surface">{name}</h4>
         </div>
 
         <div className="flex flex-col gap-1.5">
@@ -740,8 +740,8 @@ export default function SetsubiDBWorkspace({ refreshToken, onFlash }) {
       {/* Page header */}
       <div className="mb-4 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <p className="text-xs font-bold uppercase tracking-[0.18em] text-outline">設備</p>
-          <h3 className="mt-1 text-2xl font-black text-on-surface">Equipment by Factory</h3>
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-outline">設備</p>
+          <h3 className="mt-1 text-2xl font-semibold text-on-surface">Equipment by Factory</h3>
         </div>
         <div className="flex items-center gap-3">
           {!loading && !error && listViewMode === "factory" && (
@@ -750,13 +750,13 @@ export default function SetsubiDBWorkspace({ refreshToken, onFlash }) {
             </span>
           )}
           <button type="button" onClick={() => setBinOpen(true)}
-            className="inline-flex items-center gap-2 rounded-2xl border border-separator/40 bg-surface-container px-4 py-3 text-sm font-bold text-on-surface transition hover:bg-surface-container-high">
+            className="inline-flex items-center gap-2 rounded-2xl border border-separator/40 bg-surface-container px-4 py-3 text-sm font-semibold text-on-surface transition hover:bg-surface-container-high">
             <span className="material-symbols-outlined" style={{ fontSize: 16 }}>delete</span>
             Recycle Bin
           </button>
           {canEdit && (
             <button type="button" onClick={() => openCreateEquipModal()}
-              className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-bold text-on-primary hover:opacity-90 active:scale-95 transition-all duration-150">
+              className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-on-primary hover:opacity-90 active:scale-95 transition-all duration-150">
               <span className="material-symbols-outlined" style={{ fontSize: 16 }}>add</span>
               Add Equipment
             </button>
@@ -775,7 +775,7 @@ export default function SetsubiDBWorkspace({ refreshToken, onFlash }) {
               key={key}
               type="button"
               onClick={() => setListViewMode(key)}
-              className={`inline-flex items-center gap-2 px-4 py-2.5 text-sm font-bold transition ${
+              className={`inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold transition ${
                 listViewMode === key
                   ? "bg-primary text-on-primary"
                   : "text-on-surface hover:bg-surface-container-high"
@@ -859,7 +859,7 @@ export default function SetsubiDBWorkspace({ refreshToken, onFlash }) {
                   key={tag}
                   type="button"
                   onClick={() => setListFilterTag(listFilterTag === tag ? "" : tag)}
-                  className={`rounded-full px-3 py-1.5 text-xs font-bold transition ${
+                  className={`rounded-full px-3 py-1.5 text-xs font-semibold transition ${
                     listFilterTag === tag
                       ? "bg-primary text-on-primary"
                       : "border border-separator/40 bg-surface text-on-surface hover:bg-surface-container"
@@ -873,7 +873,7 @@ export default function SetsubiDBWorkspace({ refreshToken, onFlash }) {
             <button
               type="button"
               onClick={() => setListSortDir((d) => d === "desc" ? "asc" : "desc")}
-              className="ml-auto inline-flex items-center gap-1.5 rounded-2xl border border-separator/40 bg-surface px-3 py-2 text-xs font-bold text-on-surface transition hover:bg-surface-container"
+              className="ml-auto inline-flex items-center gap-1.5 rounded-2xl border border-separator/40 bg-surface px-3 py-2 text-xs font-semibold text-on-surface transition hover:bg-surface-container"
             >
               <span className="material-symbols-outlined" style={{ fontSize: 15 }}>
                 {listSortDir === "desc" ? "arrow_downward" : "arrow_upward"}
@@ -919,7 +919,7 @@ export default function SetsubiDBWorkspace({ refreshToken, onFlash }) {
                         {tags.length > 0 && (
                           <div className="mt-1.5 flex flex-wrap gap-1">
                             {tags.map((tag) => (
-                              <span key={tag} className="rounded-full bg-surface-container px-2 py-0.5 text-[10px] font-bold text-on-surface-variant">
+                              <span key={tag} className="rounded-full bg-surface-container px-2 py-0.5 text-[10px] font-semibold text-on-surface-variant">
                                 {tag}
                               </span>
                             ))}
@@ -927,7 +927,7 @@ export default function SetsubiDBWorkspace({ refreshToken, onFlash }) {
                         )}
                       </div>
                       {event.eventDate && (
-                        <span className="shrink-0 text-[11px] font-bold text-primary">{event.eventDate}</span>
+                        <span className="shrink-0 text-[11px] font-semibold text-primary">{event.eventDate}</span>
                       )}
                     </div>
                   </button>

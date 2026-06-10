@@ -105,8 +105,8 @@ function StructuredValueCard({ value, depth = 0 }) {
     return (
       <div className="rounded-2xl border border-separator/40 bg-surface-container/40 p-3 space-y-2">
         <div className="flex items-center justify-between gap-2">
-          <span className="text-[10px] font-bold uppercase tracking-wider text-outline">Array</span>
-          <span className="rounded-full bg-surface px-2 py-0.5 text-[10px] font-bold text-on-surface-variant">
+          <span className="text-[10px] font-semibold uppercase tracking-wider text-outline">Array</span>
+          <span className="rounded-full bg-surface px-2 py-0.5 text-[10px] font-semibold text-on-surface-variant">
             {items.length} item{items.length === 1 ? "" : "s"}
           </span>
         </div>
@@ -118,14 +118,14 @@ function StructuredValueCard({ value, depth = 0 }) {
               <div key={index} className="rounded-2xl border border-outline-variant/15 bg-surface px-3 py-2.5">
                 {nestedStructured ? (
                   <div className="space-y-2">
-                    <span className="block text-[10px] font-bold uppercase tracking-wider text-outline">
+                    <span className="block text-[10px] font-semibold uppercase tracking-wider text-outline">
                       Item {index + 1}
                     </span>
                     <StructuredValueCard value={nestedValue} depth={depth + 1} />
                   </div>
                 ) : (
                   <div className="flex items-start justify-between gap-3">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-outline">
+                    <span className="text-[10px] font-semibold uppercase tracking-wider text-outline">
                       Item {index + 1}
                     </span>
                     <div className="min-w-0 flex-1">
@@ -154,8 +154,8 @@ function StructuredValueCard({ value, depth = 0 }) {
   return (
     <div className="rounded-2xl border border-separator/40 bg-surface-container/40 p-3 space-y-2">
       <div className="flex items-center justify-between gap-2">
-        <span className="text-[10px] font-bold uppercase tracking-wider text-outline">Object</span>
-        <span className="rounded-full bg-surface px-2 py-0.5 text-[10px] font-bold text-on-surface-variant">
+        <span className="text-[10px] font-semibold uppercase tracking-wider text-outline">Object</span>
+        <span className="rounded-full bg-surface px-2 py-0.5 text-[10px] font-semibold text-on-surface-variant">
           {objectEntries.length} field{objectEntries.length === 1 ? "" : "s"}
         </span>
       </div>
@@ -167,14 +167,14 @@ function StructuredValueCard({ value, depth = 0 }) {
             <div key={nestedKey} className="rounded-2xl border border-outline-variant/15 bg-surface px-3 py-2.5">
               {nestedStructured ? (
                 <div className="space-y-2">
-                  <span className="block text-[10px] font-bold uppercase tracking-wider text-outline break-all">
+                  <span className="block text-[10px] font-semibold uppercase tracking-wider text-outline break-all">
                     {nestedKey}
                   </span>
                   <StructuredValueCard value={normalizedNestedValue} depth={depth + 1} />
                 </div>
               ) : (
                 <div className="flex items-start justify-between gap-3">
-                  <span className="text-[11px] font-bold text-outline break-all">{nestedKey}</span>
+                  <span className="text-[11px] font-semibold text-outline break-all">{nestedKey}</span>
                   <div className="min-w-0 flex-1">
                     <PrimitiveFieldValue value={normalizedNestedValue} align="right" />
                   </div>
@@ -194,14 +194,14 @@ function PhotosSection({ checkImages, labelImages, totalCount, onPreview }) {
     <CollapsibleSection
       icon="photo_library"
       label="Uploaded Photos"
-      badge={<span className="px-1.5 py-0.5 rounded-full bg-surface-container text-[9px] font-bold normal-case tracking-normal">{totalCount}</span>}
+      badge={<span className="px-1.5 py-0.5 rounded-full bg-surface-container text-[9px] font-semibold normal-case tracking-normal">{totalCount}</span>}
     >
       <div className="pb-5 space-y-4">
           {checkImages.length > 0 && (
             <div className="grid grid-cols-2 gap-3">
               {checkImages.map(({ label, url }, index) => (
                 <div key={label}>
-                  <p className="text-[10px] font-bold text-outline mb-1.5">{label}</p>
+                  <p className="text-[10px] font-semibold text-outline mb-1.5">{label}</p>
                   <button
                     type="button"
                     onClick={() => onPreview?.("check", index)}
@@ -215,7 +215,7 @@ function PhotosSection({ checkImages, labelImages, totalCount, onPreview }) {
           )}
           {labelImages.length > 0 && (
             <div>
-              <p className="text-[10px] font-bold text-outline mb-2">材料ラベル ({labelImages.length})</p>
+              <p className="text-[10px] font-semibold text-outline mb-2">材料ラベル ({labelImages.length})</p>
               <div className="grid grid-cols-4 gap-2">
                 {labelImages.map((url, i) => (
                   <button
@@ -256,7 +256,7 @@ function BreakTimeSection({ record }) {
     <CollapsibleSection
       icon="coffee"
       label="Break Times"
-      badge={<span className="px-1.5 py-0.5 rounded-full bg-surface-container text-[9px] font-bold normal-case tracking-normal">{totalMin} min</span>}
+      badge={<span className="px-1.5 py-0.5 rounded-full bg-surface-container text-[9px] font-semibold normal-case tracking-normal">{totalMin} min</span>}
     >
       <div className="pb-5">
         <div className="rounded-xl overflow-hidden border border-separator/30">
@@ -275,7 +275,7 @@ function BreakTimeSection({ record }) {
                 const mins = e > s ? Math.round((e - s) / 60000) : null;
                 return (
                   <tr key={key} className="hover:bg-surface-container/40 transition-colors">
-                    <td className="px-3 py-3 font-bold text-on-surface capitalize">{key.replace(/([0-9]+)/, " $1")}</td>
+                    <td className="px-3 py-3 font-semibold text-on-surface capitalize">{key.replace(/([0-9]+)/, " $1")}</td>
                     <td className="px-3 py-3 font-mono text-on-surface-variant">{start}</td>
                     <td className="px-3 py-3 font-mono text-on-surface-variant">{end}</td>
                     <td className="px-3 py-3 text-outline">{mins != null ? `${mins} min` : "—"}</td>
@@ -304,7 +304,7 @@ function MaintenanceSection({ record, onPreview }) {
     <CollapsibleSection
       icon="build"
       label="Maintenance / Trouble"
-      badge={<span className="px-1.5 py-0.5 rounded-full bg-amber-400/15 text-amber-400 text-[9px] font-bold normal-case tracking-normal">{records.length} record{records.length > 1 ? "s" : ""}</span>}
+      badge={<span className="px-1.5 py-0.5 rounded-full bg-amber-400/15 text-amber-400 text-[9px] font-semibold normal-case tracking-normal">{records.length} record{records.length > 1 ? "s" : ""}</span>}
     >
       <div className="pb-5 space-y-4">
         {records.map((rec) => {
@@ -318,12 +318,12 @@ function MaintenanceSection({ record, onPreview }) {
                 <div className="flex-1 space-y-1.5">
                   <div className="flex items-center gap-3 flex-wrap">
                     {rec.startTime && (
-                      <span className="text-xs font-mono font-bold text-on-surface">
+                      <span className="text-xs font-mono font-semibold text-on-surface">
                         {rec.startTime}{rec.endTime ? ` → ${rec.endTime}` : ""}
                       </span>
                     )}
                     {mins != null && (
-                      <span className="px-2 py-0.5 rounded-full bg-amber-400/15 text-amber-400 text-[10px] font-bold">
+                      <span className="px-2 py-0.5 rounded-full bg-amber-400/15 text-amber-400 text-[10px] font-semibold">
                         {mins} min
                       </span>
                     )}
@@ -433,7 +433,7 @@ export default function RecordDetailModal({ record, processName, onClose, onLotC
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2.5">
               <span className={`w-3 h-3 rounded-full flex-shrink-0 shadow-sm ${processAccent?.dot ?? "bg-primary"}`} />
-              <h3 className="text-sm sm:text-base font-bold text-on-surface truncate">
+              <h3 className="text-sm sm:text-base font-semibold text-on-surface truncate">
                 {processName} Process — Record Details
               </h3>
             </div>
@@ -499,8 +499,8 @@ export default function RecordDetailModal({ record, processName, onClose, onLotC
             { label: "不良率",   value: `${defRate}%`,        color: defColor, bg: "bg-surface-container/60" },
           ].map(({ label, value, color, bg }) => (
             <div key={label} className={`rounded-xl px-3 py-3 text-center border border-separator/30 ${bg}`}>
-              <p className={`text-xl sm:text-2xl font-black leading-none ${color}`}>{value}</p>
-              <p className="text-[10px] font-bold text-outline uppercase tracking-wider mt-1.5">{label}</p>
+              <p className={`text-xl sm:text-2xl font-semibold leading-none ${color}`}>{value}</p>
+              <p className="text-[10px] font-semibold text-outline uppercase tracking-wider mt-1.5">{label}</p>
             </div>
           ))}
         </div>
@@ -509,19 +509,19 @@ export default function RecordDetailModal({ record, processName, onClose, onLotC
         <div className="px-6 py-4 grid grid-cols-2 gap-x-4 gap-y-3 border-b border-separator/30">
           {keyFields.map(([label, value]) => (
             <div key={label} className="flex flex-col gap-0.5">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-outline">{label}</span>
+              <span className="text-[10px] font-semibold uppercase tracking-wider text-outline">{label}</span>
               <span className="text-sm font-semibold text-on-surface">{value}</span>
             </div>
           ))}
           {materialLots.length > 0 ? (
             <div className="flex flex-col gap-1.5 col-span-2">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-outline">材料ロット</span>
+              <span className="text-[10px] font-semibold uppercase tracking-wider text-outline">材料ロット</span>
               <div className="flex flex-wrap gap-1.5">
                 {materialLots.map((lot) => (
                   <button
                     key={lot}
                     onClick={() => onLotClick?.(lot)}
-                    className="px-2.5 py-1 rounded-full bg-primary/10 text-primary text-[11px] font-mono font-bold
+                    className="px-2.5 py-1 rounded-full bg-primary/10 text-primary text-[11px] font-mono font-semibold
                                hover:bg-primary/22 hover:shadow-sm active:scale-95 transition-all duration-150
                                border border-primary/25"
                   >
@@ -532,7 +532,7 @@ export default function RecordDetailModal({ record, processName, onClose, onLotC
             </div>
           ) : record["材料ロット"] != null && (
             <div className="flex flex-col gap-0.5">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-outline">材料ロット</span>
+              <span className="text-[10px] font-semibold uppercase tracking-wider text-outline">材料ロット</span>
               <span className="text-sm font-semibold text-on-surface">{record["材料ロット"]}</span>
             </div>
           )}
@@ -598,7 +598,7 @@ export default function RecordDetailModal({ record, processName, onClose, onLotC
                   key={k}
                   className="grid grid-cols-1 gap-2 py-3 border-b border-separator/20 last:border-0 md:grid-cols-[minmax(120px,160px)_1fr] md:gap-4"
                 >
-                  <span className="text-[11px] font-bold text-outline md:pt-1">{k}</span>
+                  <span className="text-[11px] font-semibold text-outline md:pt-1">{k}</span>
                   {structured ? (
                     <StructuredValueCard value={normalizedValue} />
                   ) : (

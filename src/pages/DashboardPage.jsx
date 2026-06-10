@@ -34,7 +34,7 @@ export default function DashboardPage() {
           <button
             onClick={refresh}
             disabled={loading}
-            className="flex w-full sm:w-auto items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold
+            className="flex w-full sm:w-auto items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs font-semibold
                        bg-surface-container border border-separator/60 text-on-surface-variant
                        hover:bg-surface-container-high hover:text-primary hover:border-primary/30
                        active:scale-95 transition-all duration-150 disabled:opacity-50 shadow-sm"
@@ -50,7 +50,7 @@ export default function DashboardPage() {
         <div className="rounded-2xl p-4 mb-6 flex items-center gap-3 text-error
                         bg-error/8 border border-error/25 shadow-sm">
           <span className="material-symbols-outlined flex-shrink-0" style={{ fontSize: 20 }}>error</span>
-          <p className="text-sm font-bold">Backend unreachable — data may be stale. ({error})</p>
+          <p className="text-sm font-semibold">Backend unreachable — data may be stale. ({error})</p>
         </div>
       )}
 

@@ -33,7 +33,7 @@ export default function FuryoModelInfoModal({ model = "", loading, error, produc
                       )}
                     </div>
                     <div className="space-y-1 px-4 py-4 text-sm">
-                      <div className="truncate font-bold text-on-surface">背番号: {product?.背番号 || "—"}</div>
+                      <div className="truncate font-semibold text-on-surface">背番号: {product?.背番号 || "—"}</div>
                       <div className="truncate text-on-surface-variant">品番: {product?.品番 || "—"}</div>
                       {product?.品名 && <div className="truncate text-outline">{product.品名}</div>}
                     </div>

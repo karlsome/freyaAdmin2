@@ -7,15 +7,15 @@ function QueueRow({ item, index, total, onMove, onQuantityChange, onRemove }) {
     <div className="planner-data-text rounded-2xl border border-outline-variant/15 bg-surface-container-low p-4">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <div className="font-bold text-on-surface">{item.背番号 || item.品番}</div>
+          <div className="font-semibold text-on-surface">{item.背番号 || item.品番}</div>
           <div className="mt-1 text-on-surface-variant">{item.品番}</div>
           <div className="mt-1 text-on-surface-variant">Remaining {item.remainingQuantity} pcs</div>
         </div>
 
         <div className="flex items-center gap-2">
-          <button type="button" onClick={() => onMove(index, -1)} disabled={index === 0} className="rounded-2xl border border-separator/40 px-2 py-1 text-xs font-bold text-on-surface transition hover:bg-surface-container disabled:opacity-40">↑</button>
-          <button type="button" onClick={() => onMove(index, 1)} disabled={index === total - 1} className="rounded-2xl border border-separator/40 px-2 py-1 text-xs font-bold text-on-surface transition hover:bg-surface-container disabled:opacity-40">↓</button>
-          <button type="button" onClick={() => onRemove(item._id)} className="rounded-2xl border border-error/20 px-2 py-1 text-xs font-bold text-error transition hover:bg-error/10">Remove</button>
+          <button type="button" onClick={() => onMove(index, -1)} disabled={index === 0} className="rounded-2xl border border-separator/40 px-2 py-1 text-xs font-semibold text-on-surface transition hover:bg-surface-container disabled:opacity-40">↑</button>
+          <button type="button" onClick={() => onMove(index, 1)} disabled={index === total - 1} className="rounded-2xl border border-separator/40 px-2 py-1 text-xs font-semibold text-on-surface transition hover:bg-surface-container disabled:opacity-40">↓</button>
+          <button type="button" onClick={() => onRemove(item._id)} className="rounded-2xl border border-error/20 px-2 py-1 text-xs font-semibold text-error transition hover:bg-error/10">Remove</button>
         </div>
       </div>
 
@@ -94,7 +94,7 @@ export default function PlannerSlotSchedulingModal({
           <button
             type="button"
             onClick={onClose}
-            className="rounded-2xl border border-separator/40 px-4 py-2 text-sm font-bold text-on-surface transition hover:bg-surface-container"
+            className="rounded-2xl border border-separator/40 px-4 py-2 text-sm font-semibold text-on-surface transition hover:bg-surface-container"
           >
             Cancel
           </button>
@@ -102,7 +102,7 @@ export default function PlannerSlotSchedulingModal({
             type="button"
             disabled={submitting || !queue.length}
             onClick={() => onConfirm(queue)}
-            className="rounded-2xl kinetic-gradient px-4 py-2 text-sm font-bold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+            className="rounded-2xl kinetic-gradient px-4 py-2 text-sm font-semibold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {submitting ? "Scheduling…" : `Schedule ${queue.length} item${queue.length === 1 ? "" : "s"}`}
           </button>
@@ -135,11 +135,11 @@ export default function PlannerSlotSchedulingModal({
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div>
-                      <div className="font-bold text-on-surface">{goal.背番号 || goal.品番}</div>
+                      <div className="font-semibold text-on-surface">{goal.背番号 || goal.品番}</div>
                       <div className="mt-1 text-on-surface-variant">{goal.品番}</div>
                       <div className="mt-1 text-on-surface-variant">{goal.品名 || "Unnamed product"}</div>
                     </div>
-                    <span className="rounded-full bg-primary/10 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.16em] text-primary">
+                    <span className="rounded-full bg-primary/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-primary">
                       {goal.remainingQuantity} pcs
                     </span>
                   </div>
@@ -159,7 +159,7 @@ export default function PlannerSlotSchedulingModal({
               <div className="planner-data-label text-outline">Queue</div>
               <div className="mt-1 text-on-surface-variant">Items run in the order shown here.</div>
             </div>
-            <div className="rounded-full bg-surface px-3 py-1 text-[10px] font-bold uppercase tracking-[0.16em] text-on-surface-variant">
+            <div className="rounded-full bg-surface px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-on-surface-variant">
               {queue.length} selected
             </div>
           </div>

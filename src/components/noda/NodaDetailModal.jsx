@@ -80,14 +80,14 @@ function StatusBadge({ request }) {
 
 function InventoryBadge({ lineItem }) {
   if (lineItem.inventoryStatus === "none") {
-    return <span className="inline-flex rounded-full bg-error/10 px-2.5 py-1 text-xs font-bold text-error">Waiting</span>;
+    return <span className="inline-flex rounded-full bg-error/10 px-2.5 py-1 text-xs font-semibold text-error">Waiting</span>;
   }
 
   if (lineItem.inventoryStatus === "insufficient") {
-    return <span className="inline-flex rounded-full bg-amber-500/10 px-2.5 py-1 text-xs font-bold text-amber-700 dark:text-amber-300">Partial</span>;
+    return <span className="inline-flex rounded-full bg-amber-500/10 px-2.5 py-1 text-xs font-semibold text-amber-700 dark:text-amber-300">Partial</span>;
   }
 
-  return <span className="inline-flex rounded-full bg-emerald-500/10 px-2.5 py-1 text-xs font-bold text-emerald-700 dark:text-emerald-300">OK</span>;
+  return <span className="inline-flex rounded-full bg-emerald-500/10 px-2.5 py-1 text-xs font-semibold text-emerald-700 dark:text-emerald-300">OK</span>;
 }
 
 function sortNodaLineItems(items = [], sort = {}) {
@@ -288,7 +288,7 @@ export default function NodaDetailModal({ open, requestId, mode = "view", authUs
               type="button"
               onClick={() => handleSaveLineQuantity(lineItem)}
               disabled={busy}
-              className="rounded-2xl border border-separator/45 px-3 py-2 text-xs font-bold text-on-surface transition hover:bg-surface-container"
+              className="rounded-2xl border border-separator/45 px-3 py-2 text-xs font-semibold text-on-surface transition hover:bg-surface-container"
             >
               Save
             </button>
@@ -339,7 +339,7 @@ export default function NodaDetailModal({ open, requestId, mode = "view", authUs
             <option value="completed" disabled={lineItem.status === "in-progress"}>Completed</option>
           </select>
         ) : (
-          <span className={joinNodaClasses("inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-bold", lineMeta.badgeClassName)}>
+          <span className={joinNodaClasses("inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold", lineMeta.badgeClassName)}>
             <span className="material-symbols-outlined" style={{ fontSize: 14 }}>{lineMeta.icon}</span>
             {lineMeta.label}
           </span>
@@ -703,9 +703,9 @@ export default function NodaDetailModal({ open, requestId, mode = "view", authUs
               <div className="flex flex-wrap items-start justify-between gap-4">
                 <div>
                   <div className="flex flex-wrap items-center gap-3">
-                    <div className="text-[10px] font-bold uppercase tracking-[0.22em] text-outline">Overview</div>
+                    <div className="text-[10px] font-semibold uppercase tracking-[0.22em] text-outline">Overview</div>
                     <StatusBadge request={request} />
-                    <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-bold uppercase tracking-[0.16em] text-primary">
+                    <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-primary">
                       {isBulkRequest ? "Bulk" : "Single"}
                     </span>
                   </div>
@@ -721,7 +721,7 @@ export default function NodaDetailModal({ open, requestId, mode = "view", authUs
                     <button
                       type="button"
                       onClick={() => setViewMode("edit")}
-                      className="rounded-2xl bg-primary px-4 py-2.5 text-sm font-bold text-white transition hover:opacity-90"
+                      className="rounded-2xl bg-primary px-4 py-2.5 text-sm font-semibold text-white transition hover:opacity-90"
                     >
                       Edit Request
                     </button>
@@ -731,7 +731,7 @@ export default function NodaDetailModal({ open, requestId, mode = "view", authUs
                       type="button"
                       onClick={handleDeleteRequest}
                       disabled={busy}
-                      className="rounded-2xl bg-error px-4 py-2.5 text-sm font-bold text-white transition hover:opacity-90 disabled:opacity-60"
+                      className="rounded-2xl bg-error px-4 py-2.5 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-60"
                     >
                       Delete Request
                     </button>
@@ -741,27 +741,27 @@ export default function NodaDetailModal({ open, requestId, mode = "view", authUs
 
               <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-6">
                 <div className="rounded-2xl border border-outline-variant/15 bg-surface-container-low/35 p-4">
-                  <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-outline">Pickup Date</p>
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Pickup Date</p>
                   <p className="mt-2 text-sm font-semibold text-on-surface">{formatNodaDate(request.pickupDate || request.date)}</p>
                 </div>
                 <div className="rounded-2xl border border-outline-variant/15 bg-surface-container-low/35 p-4">
-                  <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-outline">Deadline</p>
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Deadline</p>
                   <p className="mt-2 text-sm font-semibold text-on-surface">{formatNodaDate(request.納入指示日)}</p>
                 </div>
                 <div className="rounded-2xl border border-outline-variant/15 bg-surface-container-low/35 p-4">
-                  <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-outline">Delivery Order</p>
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Delivery Order</p>
                   <p className="mt-2 text-sm font-semibold text-on-surface">{request.便 || "—"}</p>
                 </div>
                 <div className="rounded-2xl border border-outline-variant/15 bg-surface-container-low/35 p-4">
-                  <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-outline">Delivery Note</p>
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Delivery Note</p>
                   <p className="mt-2 text-sm font-semibold text-on-surface">{request.納品書番号 || "—"}</p>
                 </div>
                 <div className="rounded-2xl border border-outline-variant/15 bg-surface-container-low/35 p-4">
-                  <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-outline">Completed Date</p>
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Completed Date</p>
                   <p className="mt-2 text-sm font-semibold text-on-surface">{formatNodaDate(request.completedAt)}</p>
                 </div>
                 <div className="rounded-2xl border border-outline-variant/15 bg-surface-container-low/35 p-4">
-                  <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-outline">Completed Time</p>
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Completed Time</p>
                   <p className="mt-2 text-sm font-semibold text-on-surface">{formatNodaTime(request.completedAt)}</p>
                 </div>
               </div>
@@ -771,7 +771,7 @@ export default function NodaDetailModal({ open, requestId, mode = "view", authUs
               <div className="glass-card rounded-2xl p-5">
                 <div className="grid gap-4 md:grid-cols-2">
                   <label className="block">
-                    <span className="block text-xs font-bold uppercase tracking-[0.18em] text-outline">Status</span>
+                    <span className="block text-xs font-semibold uppercase tracking-[0.18em] text-outline">Status</span>
                     {viewMode === "edit" ? (
                       <select
                         value={singleForm.status}
@@ -788,7 +788,7 @@ export default function NodaDetailModal({ open, requestId, mode = "view", authUs
                     )}
                   </label>
                   <label className="block">
-                    <span className="block text-xs font-bold uppercase tracking-[0.18em] text-outline">品番</span>
+                    <span className="block text-xs font-semibold uppercase tracking-[0.18em] text-outline">品番</span>
                     {viewMode === "edit" ? (
                       <input
                         type="text"
@@ -801,7 +801,7 @@ export default function NodaDetailModal({ open, requestId, mode = "view", authUs
                     )}
                   </label>
                   <label className="block">
-                    <span className="block text-xs font-bold uppercase tracking-[0.18em] text-outline">背番号</span>
+                    <span className="block text-xs font-semibold uppercase tracking-[0.18em] text-outline">背番号</span>
                     {viewMode === "edit" ? (
                       <input
                         type="text"
@@ -814,7 +814,7 @@ export default function NodaDetailModal({ open, requestId, mode = "view", authUs
                     )}
                   </label>
                   <label className="block">
-                    <span className="block text-xs font-bold uppercase tracking-[0.18em] text-outline">Pickup Date</span>
+                    <span className="block text-xs font-semibold uppercase tracking-[0.18em] text-outline">Pickup Date</span>
                     {viewMode === "edit" ? (
                       <input
                         type="date"
@@ -827,7 +827,7 @@ export default function NodaDetailModal({ open, requestId, mode = "view", authUs
                     )}
                   </label>
                   <label className="block md:col-span-2">
-                    <span className="block text-xs font-bold uppercase tracking-[0.18em] text-outline">Quantity</span>
+                    <span className="block text-xs font-semibold uppercase tracking-[0.18em] text-outline">Quantity</span>
                     {viewMode === "edit" ? (
                       <input
                         type="number"
@@ -848,7 +848,7 @@ export default function NodaDetailModal({ open, requestId, mode = "view", authUs
                       type="button"
                       onClick={handleSaveSingleRequest}
                       disabled={busy}
-                      className="rounded-2xl bg-primary px-5 py-2.5 text-sm font-bold text-white transition hover:opacity-90 disabled:opacity-60"
+                      className="rounded-2xl bg-primary px-5 py-2.5 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-60"
                     >
                       {busy ? "Saving…" : "Save Changes"}
                     </button>
@@ -861,7 +861,7 @@ export default function NodaDetailModal({ open, requestId, mode = "view", authUs
                   <div className="glass-card rounded-2xl p-5">
                     <div className="flex flex-wrap items-end justify-between gap-4">
                       <label className="block max-w-xs flex-1">
-                        <span className="block text-xs font-bold uppercase tracking-[0.18em] text-outline">Pickup Date</span>
+                        <span className="block text-xs font-semibold uppercase tracking-[0.18em] text-outline">Pickup Date</span>
                         <input
                           type="date"
                           value={pickupDate}
@@ -873,7 +873,7 @@ export default function NodaDetailModal({ open, requestId, mode = "view", authUs
                         type="button"
                         onClick={handleSavePickupDate}
                         disabled={busy || !pickupDate}
-                        className="rounded-2xl bg-primary px-5 py-2.5 text-sm font-bold text-white transition hover:opacity-90 disabled:opacity-60"
+                        className="rounded-2xl bg-primary px-5 py-2.5 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-60"
                       >
                         Save Pickup Date
                       </button>
@@ -887,7 +887,7 @@ export default function NodaDetailModal({ open, requestId, mode = "view", authUs
                       type="button"
                       onClick={() => setBulkTab("existing")}
                       className={joinNodaClasses(
-                        "rounded-2xl px-4 py-2.5 text-sm font-bold transition",
+                        "rounded-2xl px-4 py-2.5 text-sm font-semibold transition",
                         bulkTab === "existing"
                           ? "bg-primary text-white"
                           : "border border-separator/45 text-on-surface hover:bg-surface-container"
@@ -899,7 +899,7 @@ export default function NodaDetailModal({ open, requestId, mode = "view", authUs
                       type="button"
                       onClick={() => setBulkTab("add")}
                       className={joinNodaClasses(
-                        "rounded-2xl px-4 py-2.5 text-sm font-bold transition",
+                        "rounded-2xl px-4 py-2.5 text-sm font-semibold transition",
                         bulkTab === "add"
                           ? "bg-primary text-white"
                           : "border border-separator/45 text-on-surface hover:bg-surface-container"
@@ -942,7 +942,7 @@ export default function NodaDetailModal({ open, requestId, mode = "view", authUs
                   <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_340px]">
                     <div className="glass-card rounded-2xl p-5">
                       <div className="flex flex-wrap items-center justify-between gap-3">
-                        <h3 className="text-base font-black text-on-surface">Add Items</h3>
+                        <h3 className="text-base font-semibold text-on-surface">Add Items</h3>
                         <label className="inline-flex cursor-pointer items-center gap-2 rounded-2xl border border-dashed border-outline-variant/30 px-4 py-2.5 text-sm font-semibold text-on-surface transition hover:border-primary/40 hover:bg-primary/5">
                           <span className="material-symbols-outlined" style={{ fontSize: 18 }}>upload_file</span>
                           Import CSV
@@ -952,7 +952,7 @@ export default function NodaDetailModal({ open, requestId, mode = "view", authUs
 
                       <div className="mt-4 grid gap-4 md:grid-cols-3">
                         <label className="block">
-                          <span className="block text-xs font-bold uppercase tracking-[0.18em] text-outline">品番</span>
+                          <span className="block text-xs font-semibold uppercase tracking-[0.18em] text-outline">品番</span>
                           <input
                             type="text"
                             value={addForm.partNumber}
@@ -962,7 +962,7 @@ export default function NodaDetailModal({ open, requestId, mode = "view", authUs
                           />
                         </label>
                         <label className="block">
-                          <span className="block text-xs font-bold uppercase tracking-[0.18em] text-outline">背番号</span>
+                          <span className="block text-xs font-semibold uppercase tracking-[0.18em] text-outline">背番号</span>
                           <input
                             type="text"
                             value={addForm.backNumber}
@@ -972,7 +972,7 @@ export default function NodaDetailModal({ open, requestId, mode = "view", authUs
                           />
                         </label>
                         <label className="block">
-                          <span className="block text-xs font-bold uppercase tracking-[0.18em] text-outline">Quantity</span>
+                          <span className="block text-xs font-semibold uppercase tracking-[0.18em] text-outline">Quantity</span>
                           <input
                             type="number"
                             min="1"
@@ -993,7 +993,7 @@ export default function NodaDetailModal({ open, requestId, mode = "view", authUs
                         <button
                           type="button"
                           onClick={handleAddSingleItem}
-                          className="rounded-2xl bg-primary px-5 py-2.5 text-sm font-bold text-white transition hover:opacity-90"
+                          className="rounded-2xl bg-primary px-5 py-2.5 text-sm font-semibold text-white transition hover:opacity-90"
                         >
                           Add To Pending Cart
                         </button>
@@ -1002,7 +1002,7 @@ export default function NodaDetailModal({ open, requestId, mode = "view", authUs
 
                     <div className="glass-card rounded-2xl p-5">
                       <div className="flex items-center justify-between gap-3">
-                        <h3 className="text-base font-black text-on-surface">Items To Add</h3>
+                        <h3 className="text-base font-semibold text-on-surface">Items To Add</h3>
                         {addCart.length ? (
                           <button
                             type="button"
@@ -1018,7 +1018,7 @@ export default function NodaDetailModal({ open, requestId, mode = "view", authUs
                           <div key={item.背番号} className="rounded-2xl border border-separator/40 bg-surface-container-low/35 p-4">
                             <div className="flex items-start justify-between gap-4">
                               <div>
-                                <div className="font-black text-on-surface">{item.背番号}</div>
+                                <div className="font-semibold text-on-surface">{item.背番号}</div>
                                 <div className="mt-1 text-sm text-on-surface-variant">{item.品番} • Qty {item.quantity}</div>
                               </div>
                               <button
@@ -1040,7 +1040,7 @@ export default function NodaDetailModal({ open, requestId, mode = "view", authUs
                           type="button"
                           onClick={handleSubmitAddedItems}
                           disabled={busy || !addCart.length}
-                          className="rounded-2xl bg-emerald-600 px-5 py-2.5 text-sm font-bold text-white transition hover:opacity-90 disabled:opacity-60"
+                          className="rounded-2xl bg-emerald-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-60"
                         >
                           Add {addCart.length || ""} Item{addCart.length === 1 ? "" : "s"}
                         </button>

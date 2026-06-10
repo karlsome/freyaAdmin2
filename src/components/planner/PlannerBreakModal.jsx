@@ -45,7 +45,7 @@ export default function PlannerBreakModal({
           <button
             type="button"
             onClick={onClose}
-            className="rounded-2xl border border-separator/40 px-4 py-2 text-sm font-bold text-on-surface transition hover:bg-surface-container"
+            className="rounded-2xl border border-separator/40 px-4 py-2 text-sm font-semibold text-on-surface transition hover:bg-surface-container"
           >
             Cancel
           </button>
@@ -53,7 +53,7 @@ export default function PlannerBreakModal({
             type="button"
             disabled={saving}
             onClick={() => onSave(draftBreaks)}
-            className="rounded-2xl kinetic-gradient px-4 py-2 text-sm font-bold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+            className="rounded-2xl kinetic-gradient px-4 py-2 text-sm font-semibold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {saving ? "Saving…" : "Save Breaks"}
           </button>
@@ -95,7 +95,7 @@ export default function PlannerBreakModal({
             <button
               type="button"
               onClick={() => setDraftBreaks((items) => items.filter((entry) => entry.id !== item.id))}
-              className="rounded-2xl border border-error/20 bg-error/5 px-4 py-2 text-sm font-bold text-error transition hover:bg-error/10"
+              className="rounded-2xl border border-error/20 bg-error/5 px-4 py-2 text-sm font-semibold text-error transition hover:bg-error/10"
             >
               Remove
             </button>
@@ -105,7 +105,7 @@ export default function PlannerBreakModal({
         <button
           type="button"
           onClick={() => setDraftBreaks((items) => [...items, createDraftBreak()])}
-          className="w-full rounded-2xl border border-dashed border-outline-variant/20 bg-surface-container-low px-5 py-4 text-sm font-bold text-on-surface transition hover:border-primary/35 hover:text-primary"
+          className="w-full rounded-2xl border border-dashed border-outline-variant/20 bg-surface-container-low px-5 py-4 text-sm font-semibold text-on-surface transition hover:border-primary/35 hover:text-primary"
         >
           Add Break Row
         </button>

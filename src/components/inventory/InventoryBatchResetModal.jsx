@@ -225,7 +225,7 @@ export default function InventoryBatchResetModal({
             <button
               type="button"
               onClick={onClose}
-              className="rounded-2xl border border-separator/40 px-4 py-2 text-sm font-bold text-on-surface transition hover:bg-surface-container"
+              className="rounded-2xl border border-separator/40 px-4 py-2 text-sm font-semibold text-on-surface transition hover:bg-surface-container"
             >
               Close
             </button>
@@ -233,7 +233,7 @@ export default function InventoryBatchResetModal({
               type="button"
               disabled={executing || selectedItems.length === 0}
               onClick={handleBatchReset}
-              className="rounded-2xl bg-error px-4 py-2 text-sm font-bold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+              className="rounded-2xl bg-error px-4 py-2 text-sm font-semibold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
             >
               {executing ? "Resetting..." : "Reset Selected"}
             </button>
@@ -270,7 +270,7 @@ export default function InventoryBatchResetModal({
                 onClick={() => {
                   void handleClearFilters();
                 }}
-                className="rounded-2xl border border-separator/40 px-4 py-2 text-sm font-bold text-on-surface transition hover:bg-surface-container"
+                className="rounded-2xl border border-separator/40 px-4 py-2 text-sm font-semibold text-on-surface transition hover:bg-surface-container"
               >
                 Clear Filters
               </button>
@@ -280,7 +280,7 @@ export default function InventoryBatchResetModal({
                 onClick={() => {
                   void handleApplyFilters();
                 }}
-                className="rounded-2xl bg-primary px-4 py-2 text-sm font-bold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+                className="rounded-2xl bg-primary px-4 py-2 text-sm font-semibold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {loading ? "Finding Items..." : "Find Items"}
               </button>
@@ -291,8 +291,8 @@ export default function InventoryBatchResetModal({
         <div className="glass-card rounded-2xl p-5">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <div className="text-[10px] font-bold uppercase tracking-[0.22em] text-outline">Results</div>
-              <h3 className="mt-1 text-base font-black text-on-surface">Inventory Items</h3>
+              <div className="text-[10px] font-semibold uppercase tracking-[0.22em] text-outline">Results</div>
+              <h3 className="mt-1 text-base font-semibold text-on-surface">Inventory Items</h3>
             </div>
             <label className="inline-flex items-center gap-2 text-sm text-on-surface-variant">
               <input
@@ -324,7 +324,7 @@ export default function InventoryBatchResetModal({
                       "Available",
                       "Factory",
                     ].map((label) => (
-                      <th key={label} className="px-4 py-3 text-left text-xs font-bold uppercase tracking-[0.18em] text-outline">
+                      <th key={label} className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.18em] text-outline">
                         {label}
                       </th>
                     ))}

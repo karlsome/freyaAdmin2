@@ -311,7 +311,7 @@ export default function RecordEditModal({
     if (kind === "auto") {
       return (
         <div>
-          {options.hideLabel ? null : <div className="mb-1 text-[10px] font-bold uppercase tracking-[0.18em] text-outline">{label}</div>}
+          {options.hideLabel ? null : <div className="mb-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">{label}</div>}
           <div className="planner-data-text rounded-2xl border border-primary/15 bg-primary/8 px-3 py-2.5 font-medium text-primary">
             {formatDisplayValue(value)}
           </div>
@@ -337,7 +337,7 @@ export default function RecordEditModal({
 
     return (
       <div>
-        {options.hideLabel ? null : <div className="mb-1 text-[10px] font-bold uppercase tracking-[0.18em] text-outline">{label}</div>}
+        {options.hideLabel ? null : <div className="mb-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">{label}</div>}
         {imagePreview ? (
           <div className="mb-2 overflow-hidden rounded-2xl border border-outline-variant/15 bg-surface-container-low">
             <img src={value} alt={label} className="h-32 w-full object-contain bg-black/5" />
@@ -376,12 +376,12 @@ export default function RecordEditModal({
             return (
               <div key={itemPath} className="rounded-2xl border border-outline-variant/15 bg-surface-container-low px-4 py-3">
                 <div className="mb-3 flex items-center justify-between gap-3">
-                  <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-outline">Item {index + 1}</div>
+                  <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Item {index + 1}</div>
                   <button
                     type="button"
                     onClick={() => handleArrayRemove(path, index)}
                     disabled={busy}
-                    className="rounded-2xl border border-error/20 bg-error/10 px-3 py-1.5 text-[11px] font-bold text-error transition hover:bg-error/15 disabled:cursor-not-allowed disabled:opacity-50"
+                    className="rounded-2xl border border-error/20 bg-error/10 px-3 py-1.5 text-[11px] font-semibold text-error transition hover:bg-error/15 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     Remove
                   </button>
@@ -402,7 +402,7 @@ export default function RecordEditModal({
             type="button"
             onClick={() => handleArrayAdd(path)}
             disabled={busy}
-            className="rounded-2xl border border-separator/40 bg-white px-4 py-2 text-xs font-bold text-on-surface transition hover:bg-surface-container disabled:cursor-not-allowed disabled:opacity-50 dark:bg-surface-container"
+            className="rounded-2xl border border-separator/40 bg-white px-4 py-2 text-xs font-semibold text-on-surface transition hover:bg-surface-container disabled:cursor-not-allowed disabled:opacity-50 dark:bg-surface-container"
           >
             Add Item
           </button>
@@ -432,7 +432,7 @@ export default function RecordEditModal({
                 <div className="rounded-2xl border border-outline-variant/15 bg-surface-container-low px-4 py-3">
                   {structured ? (
                     <>
-                      <div className="mb-2 text-[10px] font-bold uppercase tracking-[0.18em] text-outline">{childKey}</div>
+                      <div className="mb-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">{childKey}</div>
                       {renderStructuredNode(childPath, childValue, depth + 1)}
                     </>
                   ) : renderPrimitiveField(childPath, childKey, childValue)}
@@ -459,7 +459,7 @@ export default function RecordEditModal({
             { label: item.serialNumberLabel, value: serialNumberValue, focusField: "背番号" },
           ].map((field) => (
             <div key={field.focusField} className="rounded-2xl border border-outline-variant/15 bg-surface-container-low px-4 py-3">
-              <div className="mb-1 text-[10px] font-bold uppercase tracking-[0.18em] text-outline">{field.label}</div>
+              <div className="mb-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">{field.label}</div>
               <div className="flex items-center gap-2">
                 <div className="planner-data-text min-h-[42px] flex-1 rounded-2xl border border-separator/40 bg-white px-3 py-2.5 font-medium text-on-surface dark:bg-surface-container">
                   {formatDisplayValue(field.value)}
@@ -468,7 +468,7 @@ export default function RecordEditModal({
                   type="button"
                   onClick={() => openLinkedPicker(field.focusField)}
                   disabled={busy || !linkedProductPaths || typeof loadLinkedProductOptions !== "function"}
-                  className="rounded-xl bg-primary px-3 py-2 text-xs font-bold text-on-primary hover:opacity-90 active:scale-95 transition-all duration-150 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="rounded-xl bg-primary px-3 py-2 text-xs font-semibold text-on-primary hover:opacity-90 active:scale-95 transition-all duration-150 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   Change
                 </button>
@@ -483,7 +483,7 @@ export default function RecordEditModal({
       const value = getPathValue(draft, item.path);
       return (
         <div key={item.path} className={item.span === "full" ? "md:col-span-2" : ""}>
-          <div className="mb-1 text-[10px] font-bold uppercase tracking-[0.18em] text-outline">{item.label}</div>
+          <div className="mb-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">{item.label}</div>
           <div className="flex items-center gap-2 rounded-2xl border border-outline-variant/15 bg-surface-container-low px-4 py-3">
             <div className="planner-data-text min-h-[42px] flex-1 rounded-2xl border border-separator/40 bg-white px-3 py-2.5 font-medium text-on-surface dark:bg-surface-container">
               {formatDisplayValue(value)}
@@ -492,7 +492,7 @@ export default function RecordEditModal({
               type="button"
               onClick={() => openFieldPicker(item)}
               disabled={busy || typeof loadFieldPickerOptions !== "function"}
-              className="rounded-xl bg-primary px-3 py-2 text-xs font-bold text-on-primary hover:opacity-90 active:scale-95 transition-all duration-150 disabled:cursor-not-allowed disabled:opacity-50"
+              className="rounded-xl bg-primary px-3 py-2 text-xs font-semibold text-on-primary hover:opacity-90 active:scale-95 transition-all duration-150 disabled:cursor-not-allowed disabled:opacity-50"
             >
               Change
             </button>
@@ -505,7 +505,7 @@ export default function RecordEditModal({
       const value = getPathValue(draft, item.path);
       return (
         <div key={item.path} className={item.span === "full" ? "md:col-span-2" : ""}>
-          <div className="mb-1 text-[10px] font-bold uppercase tracking-[0.18em] text-outline">{item.label}</div>
+          <div className="mb-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">{item.label}</div>
           {renderStructuredNode(item.path, value)}
         </div>
       );
@@ -530,8 +530,8 @@ export default function RecordEditModal({
             <div className="border-b border-separator/35 px-6 py-5">
               <div className="flex items-start justify-between gap-4">
                 <div>
-                  <div className="text-[10px] font-bold uppercase tracking-[0.22em] text-outline">Edit Record</div>
-                  <h2 className="mt-1 text-xl font-black text-on-surface">{title}</h2>
+                  <div className="text-[10px] font-semibold uppercase tracking-[0.22em] text-outline">Edit Record</div>
+                  <h2 className="mt-1 text-xl font-semibold text-on-surface">{title}</h2>
                   {subtitle ? <p className="mt-1 text-sm text-on-surface-variant">{subtitle}</p> : null}
                 </div>
 
@@ -551,8 +551,8 @@ export default function RecordEditModal({
                     <div className="mb-4 flex items-center gap-2">
                       <span className="material-symbols-outlined text-primary" style={{ fontSize: 20 }}>{section.icon || "edit_square"}</span>
                       <div>
-                        <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-outline">Section</div>
-                        <h3 className="text-base font-black text-on-surface">{section.title}</h3>
+                        <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Section</div>
+                        <h3 className="text-base font-semibold text-on-surface">{section.title}</h3>
                       </div>
                     </div>
 
@@ -567,7 +567,7 @@ export default function RecordEditModal({
             <div className="border-t border-outline-variant/20 bg-surface-container-low/50 px-6 py-4">
               <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_auto_auto_auto] xl:items-end">
                 <div>
-                  <div className="mb-1 text-[10px] font-bold uppercase tracking-[0.18em] text-outline">{noteLabel}</div>
+                  <div className="mb-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">{noteLabel}</div>
                   <input
                     type="text"
                     value={note}
@@ -582,7 +582,7 @@ export default function RecordEditModal({
                     type="button"
                     disabled={busy}
                     onClick={() => onSoftDelete?.({ draft, note })}
-                    className="rounded-2xl border border-error/20 bg-error/10 px-4 py-2.5 text-xs font-bold text-error transition hover:bg-error/15 disabled:cursor-not-allowed disabled:opacity-50"
+                    className="rounded-2xl border border-error/20 bg-error/10 px-4 py-2.5 text-xs font-semibold text-error transition hover:bg-error/15 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     {softDeleteLabel}
                   </button>
@@ -592,7 +592,7 @@ export default function RecordEditModal({
                   type="button"
                   disabled={busy}
                   onClick={() => onClose?.()}
-                  className="rounded-2xl border border-separator/40 bg-white px-4 py-2.5 text-xs font-bold text-on-surface transition hover:bg-surface-container disabled:cursor-not-allowed disabled:opacity-50 dark:bg-surface-container"
+                  className="rounded-2xl border border-separator/40 bg-white px-4 py-2.5 text-xs font-semibold text-on-surface transition hover:bg-surface-container disabled:cursor-not-allowed disabled:opacity-50 dark:bg-surface-container"
                 >
                   Cancel
                 </button>
@@ -601,7 +601,7 @@ export default function RecordEditModal({
                   type="button"
                   disabled={busy}
                   onClick={() => onSave?.({ draft, note })}
-                  className="rounded-xl bg-primary px-4 py-2.5 text-xs font-bold text-on-primary hover:opacity-90 active:scale-95 transition-all duration-150 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="rounded-xl bg-primary px-4 py-2.5 text-xs font-semibold text-on-primary hover:opacity-90 active:scale-95 transition-all duration-150 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {saveLabel}
                 </button>

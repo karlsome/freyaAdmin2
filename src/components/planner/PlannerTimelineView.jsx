@@ -57,7 +57,7 @@ export default function PlannerTimelineView({
     return (
       <div className="rounded-3xl border border-dashed border-outline-variant/20 bg-surface-container-low px-6 py-14 text-center text-on-surface-variant">
         <span className="material-symbols-outlined text-4xl text-primary/60">calendar_month</span>
-        <p className="mt-3 text-lg font-bold text-on-surface">No equipment loaded</p>
+        <p className="mt-3 text-lg font-semibold text-on-surface">No equipment loaded</p>
         <p className="mt-1 text-sm">Choose a factory to build the planning timeline.</p>
       </div>
     );
@@ -67,14 +67,14 @@ export default function PlannerTimelineView({
     <div className="glass-card rounded-3xl p-5">
       <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div>
-          <h3 className="text-lg font-black text-on-surface">Timeline View</h3>
+          <h3 className="text-lg font-semibold text-on-surface">Timeline View</h3>
           <p className="mt-1 text-sm text-on-surface-variant">Place products on equipment rows and compare planned output against actual production.</p>
         </div>
 
         <button
           type="button"
           onClick={onToggleHideUnavailable}
-          className={`rounded-2xl border px-4 py-2 text-xs font-bold transition ${hideUnavailableEquipment ? "border-primary/25 bg-primary/10 text-primary" : "border-outline-variant/20 bg-surface-container text-on-surface"}`}
+          className={`rounded-2xl border px-4 py-2 text-xs font-semibold transition ${hideUnavailableEquipment ? "border-primary/25 bg-primary/10 text-primary" : "border-outline-variant/20 bg-surface-container text-on-surface"}`}
         >
           {hideUnavailableEquipment ? "Show unavailable equipment" : "Hide unavailable equipment"}
         </button>
@@ -96,7 +96,7 @@ export default function PlannerTimelineView({
               Equipment
             </div>
             {timeSlots.map((slot) => (
-              <div key={slot} className="planner-data-text flex h-12 items-center justify-center border-r border-outline-variant/10 font-bold text-on-surface-variant" style={{ width: SLOT_WIDTH }}>
+              <div key={slot} className="planner-data-text flex h-12 items-center justify-center border-r border-outline-variant/10 font-semibold text-on-surface-variant" style={{ width: SLOT_WIDTH }}>
                 {slot}
               </div>
             ))}
@@ -114,7 +114,7 @@ export default function PlannerTimelineView({
               <div key={equipmentName} className="border-b border-outline-variant/10 last:border-b-0">
                 <div className={`flex min-h-[58px] ${plannedUnavailable ? "opacity-50" : ""}`}>
                   <div className="sticky left-0 z-[5] flex flex-col justify-center border-r border-outline-variant/15 bg-surface px-4" style={{ width: LABEL_WIDTH }}>
-                    <div className="planner-data-text font-bold text-on-surface">{equipmentName}</div>
+                    <div className="planner-data-text font-semibold text-on-surface">{equipmentName}</div>
                     <div className="planner-data-label text-outline">
                       Planned{isGroupEquipment(equipmentName) ? " group" : " lane"}
                     </div>
@@ -163,7 +163,7 @@ export default function PlannerTimelineView({
                           >
                             {showLabel ? (
                               <>
-                                <div className="planner-data-text absolute inset-0 flex items-center justify-center px-1 font-bold" style={{ color: product.color }}>
+                                <div className="planner-data-text absolute inset-0 flex items-center justify-center px-1 font-semibold" style={{ color: product.color }}>
                                   {product.背番号}
                                 </div>
                                 <button
@@ -208,7 +208,7 @@ export default function PlannerTimelineView({
 
                 <div className={`flex min-h-[50px] bg-surface-container-lowest/30 ${actualUnavailable ? "opacity-50" : ""}`}>
                   <div className="sticky left-0 z-[5] flex flex-col justify-center border-r border-outline-variant/15 bg-surface-container-low px-4" style={{ width: LABEL_WIDTH }}>
-                    <div className="planner-data-text font-bold text-on-surface">{equipmentName}</div>
+                    <div className="planner-data-text font-semibold text-on-surface">{equipmentName}</div>
                     <div className="planner-data-label text-outline">Actual</div>
                   </div>
 
@@ -229,7 +229,7 @@ export default function PlannerTimelineView({
                             title={`${block.背番号} · ${block.totalQuantity} pcs actual`}
                           >
                             {showLabel ? (
-                              <div className="planner-data-text absolute inset-0 flex items-center justify-center px-1 font-bold text-sky-900 dark:text-sky-200">
+                              <div className="planner-data-text absolute inset-0 flex items-center justify-center px-1 font-semibold text-sky-900 dark:text-sky-200">
                                 {block.背番号}
                               </div>
                             ) : null}
@@ -245,7 +245,7 @@ export default function PlannerTimelineView({
                             style={{ width: SLOT_WIDTH }}
                             title={`${inProgress.背番号 || inProgress.品番} in progress`}
                           >
-                            <div className="planner-data-text absolute inset-0 flex items-center justify-center gap-1 px-1 font-bold text-amber-700 dark:text-amber-300">
+                            <div className="planner-data-text absolute inset-0 flex items-center justify-center gap-1 px-1 font-semibold text-amber-700 dark:text-amber-300">
                               <span className="material-symbols-outlined animate-spin" style={{ fontSize: 10 }}>progress_activity</span>
                               {inProgress.背番号 || "Run"}
                             </div>
@@ -256,7 +256,7 @@ export default function PlannerTimelineView({
                       if (slotMinutes <= currentMinutes) {
                         return (
                           <div key={`${equipmentName}-actual-${slot}`} className="border-r border-outline-variant/10 bg-[#16181e]" style={{ width: SLOT_WIDTH }}>
-                            {slotMinutes % 60 === 0 ? <div className="planner-data-text mt-4 text-center font-bold text-white/40">IDLE</div> : null}
+                            {slotMinutes % 60 === 0 ? <div className="planner-data-text mt-4 text-center font-semibold text-white/40">IDLE</div> : null}
                           </div>
                         );
                       }

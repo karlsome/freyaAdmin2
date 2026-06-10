@@ -24,7 +24,7 @@ const actorNameCache = new Map();
 function renderFieldTypeGlyph(typeMeta, size = 16) {
   if (typeMeta.label === "Toggle Buttons") {
     return (
-      <span className="inline-flex min-w-[1.9rem] items-center justify-center rounded-full border border-current/30 px-1.5 py-0.5 text-[10px] font-black leading-none tracking-[0.08em]">
+      <span className="inline-flex min-w-[1.9rem] items-center justify-center rounded-full border border-current/30 px-1.5 py-0.5 text-[10px] font-semibold leading-none tracking-[0.08em]">
         OK
       </span>
     );
@@ -76,9 +76,9 @@ function SummaryCard({ icon, label, value }) {
     <div className="rounded-2xl border border-separator/35 bg-surface px-4 py-3">
       <div className="flex items-center gap-2 text-outline">
         <span className="material-symbols-outlined text-primary" style={{ fontSize: 16 }}>{icon}</span>
-        <span className="text-[10px] font-bold uppercase tracking-[0.18em]">{label}</span>
+        <span className="text-[10px] font-semibold uppercase tracking-[0.18em]">{label}</span>
       </div>
-      <p className="mt-2 text-sm font-bold text-on-surface">{value}</p>
+      <p className="mt-2 text-sm font-semibold text-on-surface">{value}</p>
     </div>
   );
 }
@@ -88,7 +88,7 @@ function ActivityItem({ icon, label, value }) {
     <div className="rounded-2xl border border-separator/35 bg-surface px-4 py-3">
       <div className="flex items-center gap-2 text-outline">
         <span className="material-symbols-outlined text-primary" style={{ fontSize: 16 }}>{icon}</span>
-        <span className="text-[10px] font-bold uppercase tracking-[0.18em]">{label}</span>
+        <span className="text-[10px] font-semibold uppercase tracking-[0.18em]">{label}</span>
       </div>
       <p className="mt-2 text-sm font-semibold text-on-surface">{value}</p>
     </div>
@@ -104,7 +104,7 @@ function FieldRow({ field, order, onPreviewImage }) {
     <div className="rounded-2xl border border-separator/35 bg-surface px-4 py-3">
       <div className="flex items-start gap-3">
         <div className="flex min-w-0 flex-1 items-start gap-3">
-          <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-2xl bg-surface-container text-sm font-black text-on-surface">
+          <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-2xl bg-surface-container text-sm font-semibold text-on-surface">
             {orderLabel}
           </span>
           <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary">
@@ -139,7 +139,7 @@ function FieldRow({ field, order, onPreviewImage }) {
             <span className="h-12 w-12" aria-hidden="true" />
           )}
 
-          <span className="inline-flex rounded-full bg-primary/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-primary">
+          <span className="inline-flex rounded-full bg-primary/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-primary">
             {typeMeta.label}
           </span>
         </div>
@@ -210,15 +210,15 @@ export default function CheckFormDetailModal({ form, scheduleMeta, machineNames,
         <div className="flex items-start justify-between border-b border-separator/35 px-6 py-5">
           <div className="min-w-0 flex-1 pr-4">
             <div className="mb-2 flex flex-wrap items-center gap-2">
-              <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-primary">
+              <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-primary">
                 <span className="material-symbols-outlined" style={{ fontSize: 12 }}>{scheduleMeta?.icon || "event_busy"}</span>
                 {scheduleMeta?.label || form.schedule || "Unscheduled"}
               </span>
-              <span className={`inline-flex rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide ${STATUS_STYLES[form.status] ?? STATUS_STYLES.draft}`}>
+              <span className={`inline-flex rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide ${STATUS_STYLES[form.status] ?? STATUS_STYLES.draft}`}>
                 {form.status}
               </span>
             </div>
-            <h2 className="text-xl font-black text-on-surface">{form.name}</h2>
+            <h2 className="text-xl font-semibold text-on-surface">{form.name}</h2>
             <p className="mt-2 max-w-3xl text-sm leading-6 text-outline">
               {form.description || "No description has been added for this maintenance form yet."}
             </p>
@@ -240,7 +240,7 @@ export default function CheckFormDetailModal({ form, scheduleMeta, machineNames,
           </div>
 
           <section className="mt-5 rounded-2xl border border-separator/30 bg-surface-container/40 p-4">
-            <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-outline">Applies To</p>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Applies To</p>
             <div className="mt-3">
               <p className="text-sm font-semibold text-on-surface">Machines</p>
               <div className="mt-2 flex flex-wrap gap-2">
@@ -265,7 +265,7 @@ export default function CheckFormDetailModal({ form, scheduleMeta, machineNames,
           </section>
 
           <section className="mt-5 rounded-2xl border border-separator/30 bg-surface-container/40 p-4">
-            <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-outline">Activity</p>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Activity</p>
             <div className="mt-3 grid gap-3 md:grid-cols-2">
               <ActivityItem icon="person" label="Created By" value={createdByName || form.createdBy || "Unknown user"} />
               <ActivityItem icon="schedule" label="Created At" value={formatDateTime(form.createdAt)} />
@@ -277,10 +277,10 @@ export default function CheckFormDetailModal({ form, scheduleMeta, machineNames,
           <section className="mt-5 rounded-2xl border border-separator/30 bg-surface-container/40 p-4">
             <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
               <div>
-                <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-outline">Checks</p>
+                <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Checks</p>
                 <p className="mt-1 text-sm text-outline">Review the fields included in this form before editing.</p>
               </div>
-              <p className="text-xs font-bold text-primary">{form.fields?.length ?? 0} checks total</p>
+              <p className="text-xs font-semibold text-primary">{form.fields?.length ?? 0} checks total</p>
             </div>
             <div className="mt-4 space-y-2">
               {(form.fields ?? []).map((field, index) => (
@@ -295,7 +295,7 @@ export default function CheckFormDetailModal({ form, scheduleMeta, machineNames,
           <button
             type="button"
             onClick={onEdit}
-            className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-on-primary hover:opacity-90 active:scale-95 transition-all duration-150"
+            className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-on-primary hover:opacity-90 active:scale-95 transition-all duration-150"
           >
             <span className="material-symbols-outlined" style={{ fontSize: 18 }}>edit</span>
             Edit Form

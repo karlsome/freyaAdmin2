@@ -74,15 +74,15 @@ function FormCard({ form, machineNames, onOpen }) {
         <div className="mb-3 flex items-start justify-between gap-3">
           <div className="min-w-0">
             <div className="mb-2 flex flex-wrap items-center gap-2">
-              <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-primary">
+              <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-primary">
                 <span className="material-symbols-outlined" style={{ fontSize: 12 }}>{scheduleMeta.icon}</span>
                 {scheduleMeta.label}
               </span>
-              <span className={`inline-flex rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide ${STATUS_STYLES[form.status] ?? STATUS_STYLES.draft}`}>
+              <span className={`inline-flex rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide ${STATUS_STYLES[form.status] ?? STATUS_STYLES.draft}`}>
                 {form.status}
               </span>
             </div>
-            <h5 className="text-sm font-bold leading-tight text-on-surface">{form.name}</h5>
+            <h5 className="text-sm font-semibold leading-tight text-on-surface">{form.name}</h5>
           </div>
           <span className="material-symbols-outlined text-outline transition group-hover:text-primary" style={{ fontSize: 18 }}>arrow_outward</span>
         </div>
@@ -127,7 +127,7 @@ function FormCard({ form, machineNames, onOpen }) {
           </span>
         </div>
       </div>
-      <div className="flex items-center justify-between border-t border-separator/30 px-5 py-3 text-xs font-bold">
+      <div className="flex items-center justify-between border-t border-separator/30 px-5 py-3 text-xs font-semibold">
         <span className="text-outline">Click card to view details</span>
         <span className="inline-flex items-center gap-1 text-primary">
           Open
@@ -229,7 +229,7 @@ export default function MaintenancePage() {
               <select
                 value={factoryFilter}
                 onChange={(e) => setFactoryFilter(e.target.value)}
-                className="rounded-2xl border border-outline-variant/30 bg-surface-container px-4 py-3 text-sm font-bold text-on-surface outline-none transition hover:bg-surface-container-high"
+                className="rounded-2xl border border-outline-variant/30 bg-surface-container px-4 py-3 text-sm font-semibold text-on-surface outline-none transition hover:bg-surface-container-high"
               >
                 <option value="">All Factories</option>
                 {factories.map((f) => (
@@ -239,7 +239,7 @@ export default function MaintenancePage() {
               <button
                 type="button"
                 onClick={() => navigate("/maintenance/submissions")}
-                className="inline-flex items-center gap-2 rounded-2xl border border-outline-variant/30 bg-surface-container px-4 py-3 text-sm font-bold text-on-surface transition hover:bg-surface-container-high"
+                className="inline-flex items-center gap-2 rounded-2xl border border-outline-variant/30 bg-surface-container px-4 py-3 text-sm font-semibold text-on-surface transition hover:bg-surface-container-high"
               >
                 <span className="material-symbols-outlined" style={{ fontSize: 18 }}>table_chart</span>
                 View Inspection History
@@ -247,7 +247,7 @@ export default function MaintenancePage() {
               <button
                 type="button"
                 onClick={() => navigate("/maintenance/submissions/tickets")}
-                className="inline-flex items-center gap-2 rounded-2xl border border-outline-variant/30 bg-surface-container px-4 py-3 text-sm font-bold text-on-surface transition hover:bg-surface-container-high"
+                className="inline-flex items-center gap-2 rounded-2xl border border-outline-variant/30 bg-surface-container px-4 py-3 text-sm font-semibold text-on-surface transition hover:bg-surface-container-high"
               >
                 <span className="material-symbols-outlined" style={{ fontSize: 18 }}>confirmation_number</span>
                 View Submitted Tickets
@@ -255,7 +255,7 @@ export default function MaintenancePage() {
               <button
                 type="button"
                 onClick={() => openBuilder(null, selectedSchedule)}
-                className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-bold text-on-primary hover:opacity-90 active:scale-95 transition-all duration-150"
+                className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-on-primary hover:opacity-90 active:scale-95 transition-all duration-150"
               >
                 <span className="material-symbols-outlined" style={{ fontSize: 18 }}>add</span>
                 New {selectedScheduleMeta.label} Form
@@ -284,15 +284,15 @@ export default function MaintenancePage() {
                       <span className="material-symbols-outlined" style={{ fontSize: 20 }}>{schedule.icon}</span>
                     </span>
                     <div>
-                      <p className="text-sm font-black text-on-surface">{schedule.label}</p>
+                      <p className="text-sm font-semibold text-on-surface">{schedule.label}</p>
                       <p className="mt-1 text-xs leading-5 text-outline">{schedule.description}</p>
                     </div>
                   </div>
-                  <span className={`inline-flex min-w-8 items-center justify-center rounded-full px-2.5 py-1 text-[11px] font-bold ${isActive ? "bg-primary text-on-primary" : "bg-surface-container-high text-on-surface-variant"}`}>
+                  <span className={`inline-flex min-w-8 items-center justify-center rounded-full px-2.5 py-1 text-[11px] font-semibold ${isActive ? "bg-primary text-on-primary" : "bg-surface-container-high text-on-surface-variant"}`}>
                     {schedule.count}
                   </span>
                 </div>
-                <div className="mt-4 flex items-center justify-between text-xs font-bold">
+                <div className="mt-4 flex items-center justify-between text-xs font-semibold">
                   <span className={isActive ? "text-primary" : "text-outline"}>
                     {schedule.count === 0 ? "No forms yet" : `${schedule.count} form${schedule.count === 1 ? "" : "s"}`}
                   </span>
@@ -309,10 +309,10 @@ export default function MaintenancePage() {
         <div className="dashboard-section mb-6 rounded-2xl p-4">
           <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
             <div>
-              <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-outline">Selected Cadence</p>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Selected Cadence</p>
               <div className="mt-1 flex items-center gap-2">
                 <span className="material-symbols-outlined text-primary">{selectedScheduleMeta.icon}</span>
-                <h4 className="text-lg font-black text-on-surface">{selectedScheduleMeta.label} Forms</h4>
+                <h4 className="text-lg font-semibold text-on-surface">{selectedScheduleMeta.label} Forms</h4>
               </div>
               <p className="mt-1 text-sm leading-6 text-outline">
                 {selectedScheduleMeta.description} Create a form here when you want the builder to start with this cadence already selected.
@@ -322,7 +322,7 @@ export default function MaintenancePage() {
               {["Choose schedule", "Pick factory", "Add checks", "Deploy"].map((step, index) => (
                 <span
                   key={step}
-                  className="inline-flex items-center gap-2 rounded-full border border-outline-variant/20 bg-surface px-3 py-1.5 text-xs font-bold text-on-surface"
+                  className="inline-flex items-center gap-2 rounded-full border border-outline-variant/20 bg-surface px-3 py-1.5 text-xs font-semibold text-on-surface"
                 >
                   <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary/10 text-[11px] text-primary">
                     {index + 1}
@@ -352,7 +352,7 @@ export default function MaintenancePage() {
             <button
               type="button"
               onClick={() => openBuilder(null, selectedSchedule)}
-              className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-bold text-on-primary hover:opacity-90 active:scale-95 transition-all duration-150"
+              className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-on-primary hover:opacity-90 active:scale-95 transition-all duration-150"
             >
               <span className="material-symbols-outlined" style={{ fontSize: 18 }}>add</span>
               Create {selectedScheduleMeta.label} Form
@@ -364,7 +364,7 @@ export default function MaintenancePage() {
           <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-outline-variant/30 bg-surface-container/50 px-6 py-14 text-center text-outline">
             <span className="material-symbols-outlined" style={{ fontSize: 40 }}>{selectedScheduleMeta.icon}</span>
             <div>
-              <p className="text-sm font-bold text-on-surface">No {selectedScheduleMeta.label.toLowerCase()} forms in this view</p>
+              <p className="text-sm font-semibold text-on-surface">No {selectedScheduleMeta.label.toLowerCase()} forms in this view</p>
               <p className="mt-1 text-sm leading-6 text-outline">
                 Create the first {selectedScheduleMeta.label.toLowerCase()} form, or switch to another cadence above.
               </p>
@@ -372,7 +372,7 @@ export default function MaintenancePage() {
             <button
               type="button"
               onClick={() => openBuilder(null, selectedSchedule)}
-              className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-bold text-on-primary hover:opacity-90 active:scale-95 transition-all duration-150"
+              className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-on-primary hover:opacity-90 active:scale-95 transition-all duration-150"
             >
               <span className="material-symbols-outlined" style={{ fontSize: 18 }}>add</span>
               Create {selectedScheduleMeta.label} Form
@@ -383,7 +383,7 @@ export default function MaintenancePage() {
         {!loading && !error && selectedTemplates.length > 0 && grouped.map(({ key, label, labelClass, items }) =>
           items.length > 0 ? (
             <div key={key} className="mb-8">
-              <h4 className={`mb-3 text-xs font-bold uppercase tracking-[0.18em] ${labelClass}`}>{label}</h4>
+              <h4 className={`mb-3 text-xs font-semibold uppercase tracking-[0.18em] ${labelClass}`}>{label}</h4>
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 {items.map((form) => (
                   <FormCard

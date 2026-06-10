@@ -38,12 +38,12 @@ function DeviceCard({ device, onClick }) {
     >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
-          <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-outline">Device</p>
-          <p className="mt-1 truncate text-base font-black text-on-surface">{displayName}</p>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Device</p>
+          <p className="mt-1 truncate text-base font-semibold text-on-surface">{displayName}</p>
           <p className="mt-1 truncate font-mono text-[10px] text-outline">{device?.deviceId || "—"}</p>
         </div>
         {photoCount > 0 ? (
-          <span className="inline-flex flex-shrink-0 items-center gap-1 rounded-full border border-primary/20 bg-primary/10 px-2.5 py-1 text-[10px] font-bold text-primary">
+          <span className="inline-flex flex-shrink-0 items-center gap-1 rounded-full border border-primary/20 bg-primary/10 px-2.5 py-1 text-[10px] font-semibold text-primary">
             <span className="material-symbols-outlined" style={{ fontSize: 11 }}>photo_library</span>
             {photoCount}
           </span>
@@ -54,14 +54,14 @@ function DeviceCard({ device, onClick }) {
         <div className="rounded-2xl border border-outline-variant/15 bg-surface-container-low px-4 py-3">
           <div className="flex items-center gap-2 text-outline">
             <span className="material-symbols-outlined text-primary" style={{ fontSize: 16 }}>factory</span>
-            <span className="text-[10px] font-bold uppercase tracking-[0.18em]">Factory</span>
+            <span className="text-[10px] font-semibold uppercase tracking-[0.18em]">Factory</span>
           </div>
           <p className="mt-2 truncate text-sm font-semibold text-on-surface">{factoryName}</p>
         </div>
         <div className="rounded-2xl border border-outline-variant/15 bg-surface-container-low px-4 py-3">
           <div className="flex items-center gap-2 text-outline">
             <span className="material-symbols-outlined text-primary" style={{ fontSize: 16 }}>person</span>
-            <span className="text-[10px] font-bold uppercase tracking-[0.18em]">Registered</span>
+            <span className="text-[10px] font-semibold uppercase tracking-[0.18em]">Registered</span>
           </div>
           <p className="mt-2 truncate text-sm font-semibold text-on-surface">{registeredBy}</p>
         </div>
@@ -276,7 +276,7 @@ export default function DevicesPage() {
             type="button"
             onClick={refresh}
             disabled={loading}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary/10 text-primary text-xs font-bold hover:bg-primary/15 transition-all duration-150 disabled:opacity-50 active:scale-95"
+            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary/10 text-primary text-xs font-semibold hover:bg-primary/15 transition-all duration-150 disabled:opacity-50 active:scale-95"
           >
             <span className={`material-symbols-outlined ${loading ? "animate-spin" : ""}`} style={{ fontSize: 16 }}>refresh</span>
             Refresh
@@ -289,30 +289,30 @@ export default function DevicesPage() {
         <div className="glass-card rounded-2xl p-4">
           <div className="flex items-center gap-2 mb-2">
             <span className="material-symbols-outlined text-primary" style={{ fontSize: 16 }}>developer_board</span>
-            <p className="text-[10px] text-outline font-bold uppercase tracking-[0.18em]">Total Devices</p>
+            <p className="text-[10px] text-outline font-semibold uppercase tracking-[0.18em]">Total Devices</p>
           </div>
-          <p className="text-2xl font-black text-on-surface leading-none tracking-tight">{devices.length}</p>
+          <p className="text-2xl font-semibold text-on-surface leading-none tracking-tight">{devices.length}</p>
         </div>
         <div className="glass-card rounded-2xl p-4">
           <div className="flex items-center gap-2 mb-2">
             <span className="material-symbols-outlined text-tertiary" style={{ fontSize: 16 }}>factory</span>
-            <p className="text-[10px] text-outline font-bold uppercase tracking-[0.18em]">Factories</p>
+            <p className="text-[10px] text-outline font-semibold uppercase tracking-[0.18em]">Factories</p>
           </div>
-          <p className="text-2xl font-black text-on-surface leading-none tracking-tight">{factoryOptions.length}</p>
+          <p className="text-2xl font-semibold text-on-surface leading-none tracking-tight">{factoryOptions.length}</p>
         </div>
         <div className="glass-card rounded-2xl p-4">
           <div className="flex items-center gap-2 mb-2">
             <span className="material-symbols-outlined text-primary" style={{ fontSize: 16 }}>photo_library</span>
-            <p className="text-[10px] text-outline font-bold uppercase tracking-[0.18em]">Photos</p>
+            <p className="text-[10px] text-outline font-semibold uppercase tracking-[0.18em]">Photos</p>
           </div>
-          <p className="text-2xl font-black text-on-surface leading-none tracking-tight">{totalPhotos}</p>
+          <p className="text-2xl font-semibold text-on-surface leading-none tracking-tight">{totalPhotos}</p>
         </div>
         <div className="glass-card rounded-2xl p-4">
           <div className="flex items-center gap-2 mb-2">
             <span className="material-symbols-outlined text-primary" style={{ fontSize: 16 }}>filter_alt</span>
-            <p className="text-[10px] text-outline font-bold uppercase tracking-[0.18em]">Showing</p>
+            <p className="text-[10px] text-outline font-semibold uppercase tracking-[0.18em]">Showing</p>
           </div>
-          <p className="text-2xl font-black text-on-surface leading-none tracking-tight">{sortedDevices.length}</p>
+          <p className="text-2xl font-semibold text-on-surface leading-none tracking-tight">{sortedDevices.length}</p>
         </div>
       </div>
 
@@ -339,7 +339,7 @@ export default function DevicesPage() {
           ) : null}
         </div>
         <div className="flex items-center gap-2">
-          <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-outline">Factory</span>
+          <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Factory</span>
           <select
             value={factoryFilter}
             onChange={(event) => { setFactoryFilter(event.target.value); setPage(1); }}
@@ -357,7 +357,7 @@ export default function DevicesPage() {
         <div className="rounded-2xl border border-error/20 bg-error/10 px-4 py-4 flex gap-3 mb-6">
           <span className="material-symbols-outlined text-error flex-shrink-0" style={{ fontSize: 18 }}>report</span>
           <div>
-            <p className="text-sm font-bold text-on-surface">Failed to load devices</p>
+            <p className="text-sm font-semibold text-on-surface">Failed to load devices</p>
             <p className="text-xs text-on-surface-variant mt-1">{error}</p>
           </div>
         </div>
@@ -366,7 +366,7 @@ export default function DevicesPage() {
       {/* Device cards */}
       <div className="mb-6">
         <div className="flex items-center justify-between mb-3">
-          <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-outline">All Devices</p>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">All Devices</p>
           <span className="text-[10px] text-outline">{sortedDevices.length} {sortedDevices.length === 1 ? "device" : "devices"}</span>
         </div>
         {loading ? (
@@ -396,8 +396,8 @@ export default function DevicesPage() {
       {/* Data table */}
       <div className="glass-card rounded-2xl p-5">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-sm font-bold text-on-surface">All Devices</h3>
-          <span className="text-[10px] text-outline font-bold uppercase tracking-[0.18em]">
+          <h3 className="text-sm font-semibold text-on-surface">All Devices</h3>
+          <span className="text-[10px] text-outline font-semibold uppercase tracking-[0.18em]">
             {sortedDevices.length.toLocaleString()} rows
           </span>
         </div>

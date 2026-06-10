@@ -20,14 +20,14 @@ function GoalRow({ goal, currentDate, scheduledProducts, products, productColors
         <div className="flex items-center gap-3">
           <span className={`h-2.5 w-2.5 rounded-full ${goalState.dotClassName}`} />
           <div>
-            <div className="font-bold text-on-surface">{goal.背番号 || "-"}</div>
+            <div className="font-semibold text-on-surface">{goal.背番号 || "-"}</div>
             <div className="text-outline">{goalState.label}</div>
           </div>
         </div>
 
         <div>
           <div className="font-semibold text-on-surface">{goal.品番 || "-"}</div>
-          <div className="mt-1 inline-flex items-center gap-2 rounded-full bg-surface-container px-2.5 py-1 text-[10px] font-bold text-on-surface-variant">
+          <div className="mt-1 inline-flex items-center gap-2 rounded-full bg-surface-container px-2.5 py-1 text-[10px] font-semibold text-on-surface-variant">
             <span className="h-2 w-2 rounded-full" style={{ backgroundColor: productColors[goal.背番号] }} />
             {goal.date === currentDate ? "Current day" : goal.date}
           </div>
@@ -52,18 +52,18 @@ function GoalRow({ goal, currentDate, scheduledProducts, products, productColors
 
         <div>
           <div className="planner-data-label text-outline">Assigned</div>
-          <div className="mt-1 font-bold text-primary">
+          <div className="mt-1 font-semibold text-primary">
             {assignedEquipment.length ? assignedEquipment.join(", ") : "Not scheduled"}
           </div>
         </div>
 
         <div className="text-on-surface xl:text-right">
-          <div className="font-bold">{scheduledBoxes}/{targetBoxes}</div>
+          <div className="font-semibold">{scheduledBoxes}/{targetBoxes}</div>
           <div className="planner-data-label text-outline">Boxes</div>
         </div>
 
         <div className="text-on-surface xl:text-right">
-          <div className={`font-bold ${goalState.textClassName}`}>{goalState.label}</div>
+          <div className={`font-semibold ${goalState.textClassName}`}>{goalState.label}</div>
           <div className="planner-data-label text-outline">State</div>
         </div>
 
@@ -72,14 +72,14 @@ function GoalRow({ goal, currentDate, scheduledProducts, products, productColors
             type="button"
             onClick={() => onScheduleGoal(goal)}
             disabled={!schedulable}
-            className="rounded-xl border border-outline-variant/20 px-3 py-2 text-xs font-bold text-on-surface transition hover:bg-surface-container disabled:cursor-not-allowed disabled:opacity-40"
+            className="rounded-xl border border-outline-variant/20 px-3 py-2 text-xs font-semibold text-on-surface transition hover:bg-surface-container disabled:cursor-not-allowed disabled:opacity-40"
           >
             Plan
           </button>
           <button
             type="button"
             onClick={() => onDeleteGoal(goal)}
-            className="rounded-xl border border-error/20 bg-error/5 px-3 py-2 text-xs font-bold text-error transition hover:bg-error/10"
+            className="rounded-xl border border-error/20 bg-error/5 px-3 py-2 text-xs font-semibold text-error transition hover:bg-error/10"
           >
             Delete
           </button>
@@ -106,7 +106,7 @@ export default function PlannerGoalList({
     return (
       <div className="rounded-3xl border border-dashed border-outline-variant/20 bg-surface-container-low px-6 py-14 text-center text-on-surface-variant">
         <span className="material-symbols-outlined text-4xl text-primary/60">target</span>
-        <p className="mt-3 text-lg font-bold text-on-surface">No goals loaded</p>
+        <p className="mt-3 text-lg font-semibold text-on-surface">No goals loaded</p>
         <p className="mt-1 text-sm">Upload a CSV or add goals manually to start planning production.</p>
       </div>
     );
@@ -119,7 +119,7 @@ export default function PlannerGoalList({
           <div className="mb-3 flex items-center justify-between gap-3">
             <div className="planner-data-label text-outline">{date}</div>
             {date === currentDate ? (
-              <span className="rounded-full bg-primary/12 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.16em] text-primary">Today</span>
+              <span className="rounded-full bg-primary/12 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-primary">Today</span>
             ) : null}
           </div>
           <div className="space-y-3">

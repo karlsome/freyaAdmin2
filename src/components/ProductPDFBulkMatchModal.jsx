@@ -48,14 +48,14 @@ export default function ProductPDFBulkMatchModal({
           <button
             type="button"
             onClick={onClose}
-            className="rounded-2xl border border-separator/40 px-4 py-2 text-xs font-bold text-on-surface transition hover:bg-surface-container"
+            className="rounded-2xl border border-separator/40 px-4 py-2 text-xs font-semibold text-on-surface transition hover:bg-surface-container"
           >
             Cancel
           </button>
           <button
             type="button"
             onClick={handleConfirm}
-            className="rounded-xl bg-primary px-4 py-2 text-xs font-bold text-on-primary hover:opacity-90 active:scale-95 transition-all duration-150"
+            className="rounded-xl bg-primary px-4 py-2 text-xs font-semibold text-on-primary hover:opacity-90 active:scale-95 transition-all duration-150"
           >
             Confirm Upload
           </button>
@@ -64,12 +64,12 @@ export default function ProductPDFBulkMatchModal({
     >
           <div className="max-h-[60vh] space-y-4 overflow-y-auto px-6 py-5 scrollbar-hide">
             <section className="rounded-2xl border border-outline-variant/15 bg-surface-container-low px-4 py-4">
-              <div className="text-xs font-bold uppercase tracking-[0.18em] text-outline">Matched Files</div>
+              <div className="text-xs font-semibold uppercase tracking-[0.18em] text-outline">Matched Files</div>
               <div className="mt-3 space-y-2">
                 {matched.length ? matched.map((item) => (
                   <div key={`${item.file.name}-${item.serialNumber}`} className="flex items-center justify-between gap-3 rounded-2xl bg-surface px-4 py-3 text-sm">
                     <span className="truncate text-on-surface">{item.file.name}</span>
-                    <span className="shrink-0 font-bold text-primary">{item.serialNumber}</span>
+                    <span className="shrink-0 font-semibold text-primary">{item.serialNumber}</span>
                   </div>
                 )) : (
                   <div className="rounded-2xl bg-surface px-4 py-3 text-sm text-on-surface-variant">No automatic matches were found.</div>
@@ -78,11 +78,11 @@ export default function ProductPDFBulkMatchModal({
             </section>
 
             <section className="rounded-2xl border border-outline-variant/15 bg-surface-container-low px-4 py-4">
-              <div className="text-xs font-bold uppercase tracking-[0.18em] text-outline">Manual Assignment</div>
+              <div className="text-xs font-semibold uppercase tracking-[0.18em] text-outline">Manual Assignment</div>
               <div className="mt-3 space-y-3">
                 {toAssign.length ? toAssign.map((item, index) => (
                   <div key={`${item.file.name}-${index}`} className="rounded-2xl bg-surface px-4 py-3">
-                    <div className="text-sm font-bold text-on-surface">{item.file.name}</div>
+                    <div className="text-sm font-semibold text-on-surface">{item.file.name}</div>
                     <div className="mt-1 text-xs text-on-surface-variant">
                       {item.candidates?.length ? `Candidates: ${item.candidates.join(", ")}` : "No filename match found"}
                     </div>
@@ -108,7 +108,7 @@ export default function ProductPDFBulkMatchModal({
             </section>
 
             <section className="rounded-2xl border border-outline-variant/15 bg-surface-container-low px-4 py-4">
-              <div className="text-xs font-bold uppercase tracking-[0.18em] text-outline">Selected 背番号 Without a File</div>
+              <div className="text-xs font-semibold uppercase tracking-[0.18em] text-outline">Selected 背番号 Without a File</div>
               <div className="mt-3 text-sm text-on-surface-variant">
                 {unassignedSerials.length ? unassignedSerials.join(", ") : "All selected products have at least one file match."}
               </div>

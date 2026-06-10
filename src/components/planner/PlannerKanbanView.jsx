@@ -22,10 +22,10 @@ export default function PlannerKanbanView({ equipment = [], scheduledProducts = 
             <div className="border-b border-outline-variant/15 px-5 py-4">
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <h3 className="font-bold text-on-surface">{equipmentName}</h3>
+                  <h3 className="font-semibold text-on-surface">{equipmentName}</h3>
                   <p className="mt-1 text-on-surface-variant">{items.length} scheduled item{items.length === 1 ? "" : "s"}</p>
                 </div>
-                <span className={`rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-[0.16em] ${utilization.utilization > 100 ? "bg-error/10 text-error" : "bg-primary/10 text-primary"}`}>
+                <span className={`rounded-full px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] ${utilization.utilization > 100 ? "bg-error/10 text-error" : "bg-primary/10 text-primary"}`}>
                   {utilization.formattedTime}
                 </span>
               </div>
@@ -62,7 +62,7 @@ export default function PlannerKanbanView({ equipment = [], scheduledProducts = 
                     <div className="min-w-0">
                       <div className="flex items-center gap-2">
                         <span className="h-3 w-3 rounded-full" style={{ backgroundColor: item.color }} />
-                        <h4 className="truncate font-bold text-on-surface">{item.背番号 || item.品番}</h4>
+                        <h4 className="truncate font-semibold text-on-surface">{item.背番号 || item.品番}</h4>
                       </div>
                       <p className="mt-1 truncate text-on-surface-variant">{item.品名 || item.品番}</p>
                     </div>
@@ -78,15 +78,15 @@ export default function PlannerKanbanView({ equipment = [], scheduledProducts = 
 
                   <div className="mt-4 grid grid-cols-3 gap-2 text-on-surface-variant">
                     <div className="rounded-2xl bg-surface px-3 py-2">
-                      <div className="font-bold text-on-surface">{item.quantity}</div>
+                      <div className="font-semibold text-on-surface">{item.quantity}</div>
                       <div>pcs</div>
                     </div>
                     <div className="rounded-2xl bg-surface px-3 py-2">
-                      <div className="font-bold text-on-surface">{item.boxes}</div>
+                      <div className="font-semibold text-on-surface">{item.boxes}</div>
                       <div>boxes</div>
                     </div>
                     <div className="rounded-2xl bg-surface px-3 py-2">
-                      <div className="font-bold text-on-surface">{item.startTime}</div>
+                      <div className="font-semibold text-on-surface">{item.startTime}</div>
                       <div>{item.estimatedTime?.formattedTime}</div>
                     </div>
                   </div>
