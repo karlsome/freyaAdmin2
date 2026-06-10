@@ -34,7 +34,7 @@ export default function CheckFormImageLightboxModal({ image, onClose }) {
         >
           <div className="flex items-start justify-between gap-4 border-b border-separator/30 px-5 py-4 sm:px-6">
             <div className="min-w-0 flex-1">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-primary">Preview</p>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-primary">Preview</p>
               <h3 className="mt-1 truncate text-lg font-semibold text-white">{image.name || "Reference image"}</h3>
               <p className="mt-1 text-sm leading-6 text-white/65">Click outside or press Escape to close.</p>
             </div>

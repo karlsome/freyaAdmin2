@@ -272,7 +272,7 @@ export default function MaintenancePage() {
                 key={schedule.key}
                 type="button"
                 onClick={() => setActiveSchedule(schedule.key)}
-                className={`glass-card rounded-2xl p-4 text-left transition ${
+                className={`glass-card rounded-2xl p-5 text-left transition ${
                   isActive
                     ? "border-primary/35 bg-primary/10 shadow-sm"
                     : "hover:border-primary/20"
@@ -306,7 +306,7 @@ export default function MaintenancePage() {
           })}
         </div>
 
-        <div className="dashboard-section mb-6 rounded-2xl p-4">
+        <div className="dashboard-section mb-6 rounded-2xl p-5">
           <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
             <div>
               <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Selected Cadence</p>

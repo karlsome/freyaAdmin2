@@ -291,7 +291,7 @@ export default function InventoryBatchResetModal({
         <div className="glass-card rounded-2xl p-5">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <div className="text-[10px] font-semibold uppercase tracking-[0.22em] text-outline">Results</div>
+              <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Results</div>
               <h3 className="mt-1 text-base font-semibold text-on-surface">Inventory Items</h3>
             </div>
             <label className="inline-flex items-center gap-2 text-sm text-on-surface-variant">

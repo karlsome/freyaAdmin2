@@ -633,7 +633,7 @@ export default function ProductPDFsWorkspace({ refreshToken = 0, onFlash }) {
         <>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4 mb-6">
             {stats.map((card) => (
-              <div key={card.label} className="glass-card rounded-2xl p-4">
+              <div key={card.label} className="glass-card rounded-2xl p-5">
                 <div className="flex items-center gap-4">
                   <div className={`flex h-12 w-12 items-center justify-center rounded-2xl ${card.accent}`}>
                     <span className="material-symbols-outlined" style={{ fontSize: 22, fontVariationSettings: "'FILL' 1" }}>

@@ -790,7 +790,7 @@ export default function SensorDetailPage() {
       />
 
       {/* ── Filter bar ── */}
-      <div className="glass-card rounded-2xl p-4 flex flex-wrap items-center gap-4 mb-8">
+      <div className="glass-card rounded-2xl p-5 flex flex-wrap items-center gap-4 mb-8">
         <div className="flex items-center gap-2">
           <span className="text-[10px] text-outline font-semibold uppercase tracking-wider">From</span>
           <input
@@ -921,14 +921,14 @@ export default function SensorDetailPage() {
           {/* ── Trend charts ── */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-8">
             <div className="glass-card rounded-2xl p-5">
-              <p className="text-[10px] text-outline font-semibold uppercase tracking-widest mb-3 flex items-center gap-2">
+              <p className="text-[10px] text-outline font-semibold uppercase tracking-[0.18em] mb-3 flex items-center gap-2">
                 <span className="material-symbols-outlined text-amber-500" style={{ fontSize: 14 }}>thermostat</span>
                 Temperature Trend (daily avg)
               </p>
               <SensorTrendChart readings={overview.trends} type="temp" height={180} />
             </div>
             <div className="glass-card rounded-2xl p-5">
-              <p className="text-[10px] text-outline font-semibold uppercase tracking-widest mb-3 flex items-center gap-2">
+              <p className="text-[10px] text-outline font-semibold uppercase tracking-[0.18em] mb-3 flex items-center gap-2">
                 <span className="material-symbols-outlined text-cyan-400" style={{ fontSize: 14 }}>water_drop</span>
                 Humidity Trend (daily avg)
               </p>
@@ -939,7 +939,7 @@ export default function SensorDetailPage() {
           {/* ── Device summary cards ── */}
           {!cardLoading && deviceCards.length > 0 && (
             <div className="mb-8">
-              <p className="text-[10px] text-outline font-semibold uppercase tracking-widest mb-4">
+              <p className="text-[10px] text-outline font-semibold uppercase tracking-[0.18em] mb-4">
                 {deviceCards.length} Device{deviceCards.length !== 1 ? "s" : ""} — Latest Readings
               </p>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">

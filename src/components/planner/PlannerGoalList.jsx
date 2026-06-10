@@ -119,7 +119,7 @@ export default function PlannerGoalList({
           <div className="mb-3 flex items-center justify-between gap-3">
             <div className="planner-data-label text-outline">{date}</div>
             {date === currentDate ? (
-              <span className="rounded-full bg-primary/12 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-primary">Today</span>
+              <span className="rounded-full bg-primary/12 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-primary">Today</span>
             ) : null}
           </div>
           <div className="space-y-3">

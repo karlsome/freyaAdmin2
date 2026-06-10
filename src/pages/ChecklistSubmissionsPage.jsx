@@ -554,7 +554,7 @@ function ScheduleStackCell({ entries, onSelect }) {
             className={`relative flex min-h-[1.45rem] items-center justify-between rounded-md border px-1.5 py-1 ${SLOT_STYLES[entry.state]}`}
             title={entry.title}
           >
-            <span className="text-[9px] font-semibold tracking-[0.16em]">{SCHEDULE_META[entry.schedule].short}</span>
+            <span className="text-[9px] font-semibold tracking-[0.18em]">{SCHEDULE_META[entry.schedule].short}</span>
             <span className="text-[9px] font-semibold">{countLabel}</span>
             {entry.hasNG && (
               <span className="absolute right-0.5 top-0.5 h-1.5 w-1.5 rounded-full bg-error ring-1 ring-surface" />
@@ -588,7 +588,7 @@ function ScheduleLaneLegendCell({ schedules }) {
       {schedules.map((schedule) => (
         <div
           key={schedule}
-          className="flex min-h-[1.45rem] items-center rounded-md px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-outline"
+          className="flex min-h-[1.45rem] items-center rounded-md px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-outline"
         >
           {SCHEDULE_META[schedule].label}
         </div>
@@ -663,12 +663,12 @@ function SubmissionPickerModal({ dateLabel, factory, machineName, onClose, onSel
                   <div className="flex items-start justify-between gap-4">
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-2">
-                        <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-primary">
+                        <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-primary">
                           Record {index + 1}
                         </span>
                         <h4 className="truncate text-sm font-semibold text-on-surface">{submissionFormName}</h4>
                         {submission.record?.hasNG && (
-                          <span className="rounded-full bg-error/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-error">
+                          <span className="rounded-full bg-error/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-error">
                             NG
                           </span>
                         )}
@@ -933,7 +933,7 @@ function RecordDetailModal({ defaultTab = "submission", form, initialTicketFocus
               <button
                 type="button"
                 onClick={onBack}
-                className="mb-3 inline-flex items-center gap-2 rounded-full bg-surface-container px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.14em] text-on-surface transition hover:bg-surface-container-high"
+                className="mb-3 inline-flex items-center gap-2 rounded-full bg-surface-container px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-on-surface transition hover:bg-surface-container-high"
               >
                 <span className="material-symbols-outlined" style={{ fontSize: 16 }}>arrow_back</span>
                 Back to submissions
@@ -958,7 +958,7 @@ function RecordDetailModal({ defaultTab = "submission", form, initialTicketFocus
         <div className="flex flex-shrink-0 flex-wrap gap-4 border-b border-separator/35 px-6 py-4">
           {isReferenceRecord ? (
             <>
-              <span className={`rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] ${
+              <span className={`rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] ${
                 isMissedRecord ? "bg-error/10 text-error" : "bg-amber-500/10 text-amber-700"
               }`}>
                 {isMissedRecord ? "Missed" : "Waiting for submission"}
@@ -976,7 +976,7 @@ function RecordDetailModal({ defaultTab = "submission", form, initialTicketFocus
                 </div>
               )}
               {(record?.missedFormsCount > 1 || record?.waitingFormsCount > 1) && (
-                <span className="rounded-full bg-surface-container px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-outline">
+                <span className="rounded-full bg-surface-container px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">
                   {isMissedRecord ? record.missedFormsCount : record.waitingFormsCount} {isMissedRecord ? "missed" : "waiting"} checklists in this slot
                 </span>
               )}
@@ -1089,12 +1089,12 @@ function RecordDetailModal({ defaultTab = "submission", form, initialTicketFocus
                       </div>
                       <div className="text-right">
                         {isReferenceRecord ? (
-                          <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-outline">Not submitted</p>
+                          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Not submitted</p>
                         ) : (
                           <p className={`text-sm ${isNgValue ? "font-semibold tracking-[0.04em] text-red-600" : `font-semibold ${valueTone}`}`}>{value}</p>
                         )}
                         {!isReferenceRecord && fieldStatus === "out-of-range" && (
-                          <p className="mt-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-error">Out of range</p>
+                          <p className="mt-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-error">Out of range</p>
                         )}
                       </div>
                     </div>
@@ -1165,7 +1165,7 @@ function RecordDetailModal({ defaultTab = "submission", form, initialTicketFocus
                         <div className="flex flex-wrap items-center gap-2">
                           <h4 className="truncate text-sm font-semibold text-on-surface">{ticket.fieldLabel || "Untitled field"}</h4>
                           {ticket.fieldType && (
-                            <span className="rounded-full bg-outline/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-outline">
+                            <span className="rounded-full bg-outline/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">
                               {ticket.fieldType}
                             </span>
                           )}
@@ -1185,7 +1185,7 @@ function RecordDetailModal({ defaultTab = "submission", form, initialTicketFocus
                           )}
                         </div>
                       </div>
-                      <span className={`rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] ${statusMeta.badgeClassName}`}>
+                      <span className={`rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] ${statusMeta.badgeClassName}`}>
                         {statusMeta.label}
                       </span>
                     </div>
@@ -1842,7 +1842,7 @@ export default function ChecklistSubmissionsPage() {
               Review completed, due, and missed checks across {filteredMachines.length.toLocaleString()} filtered machines and {visibleTemplates.length.toLocaleString()} active checklist forms. Show one cadence or compare multiple at the same time.
             </p>
             {timelineFocusActive && (
-              <p className="mt-2 text-xs font-semibold uppercase tracking-[0.14em] text-primary">
+              <p className="mt-2 text-xs font-semibold uppercase tracking-[0.18em] text-primary">
                 Focus mode active: only matching submissions stay highlighted.
               </p>
             )}
@@ -1884,14 +1884,14 @@ export default function ChecklistSubmissionsPage() {
                 <tr>
                   <th
                     rowSpan={2}
-                    className="sticky left-0 z-20 border-b border-r border-outline-variant/20 bg-surface px-4 py-2 text-left text-xs font-semibold uppercase tracking-[0.15em] text-outline"
+                    className="sticky left-0 z-20 border-b border-r border-outline-variant/20 bg-surface px-4 py-2 text-left text-xs font-semibold uppercase tracking-[0.18em] text-outline"
                     style={{ width: MACHINE_COLUMN_WIDTH, minWidth: MACHINE_COLUMN_WIDTH, maxWidth: MACHINE_COLUMN_WIDTH }}
                   >
                     Machine
                   </th>
                   <th
                     rowSpan={2}
-                    className="sticky z-20 border-b border-r border-outline-variant/20 bg-surface px-3 py-2 text-left text-xs font-semibold uppercase tracking-[0.15em] text-outline"
+                    className="sticky z-20 border-b border-r border-outline-variant/20 bg-surface px-3 py-2 text-left text-xs font-semibold uppercase tracking-[0.18em] text-outline"
                     style={{ left: MACHINE_COLUMN_WIDTH, width: CADENCE_COLUMN_WIDTH, minWidth: CADENCE_COLUMN_WIDTH, maxWidth: CADENCE_COLUMN_WIDTH }}
                   >
                     Cadence
@@ -1900,7 +1900,7 @@ export default function ChecklistSubmissionsPage() {
                     <th
                       key={`${label}-${index}`}
                       colSpan={count}
-                      className="border-b border-r border-outline-variant/10 bg-surface px-0 py-1 text-center text-[10px] font-semibold uppercase tracking-widest text-outline"
+                      className="border-b border-r border-outline-variant/10 bg-surface px-0 py-1 text-center text-[10px] font-semibold uppercase tracking-[0.18em] text-outline"
                     >
                       {label}
                     </th>
@@ -1915,7 +1915,7 @@ export default function ChecklistSubmissionsPage() {
                         className={`w-16 border-b border-r border-outline-variant/10 px-1 py-2 text-center text-xs font-semibold ${isToday ? "bg-primary/10 text-primary" : "bg-surface text-outline"}`}
                       >
                         <span className="block">{date.getDate()}</span>
-                        <span className="mt-0.5 block text-[9px] font-medium uppercase tracking-[0.12em] opacity-70">
+                        <span className="mt-0.5 block text-[9px] font-medium uppercase tracking-[0.18em] opacity-70">
                           {date.toLocaleDateString("en", { weekday: "short" }).slice(0, 1)}
                         </span>
                       </th>

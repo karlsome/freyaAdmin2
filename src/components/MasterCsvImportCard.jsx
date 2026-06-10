@@ -6,7 +6,7 @@ function PreviewTable({ rows }) {
 
   return (
     <div className="mt-5 overflow-hidden rounded-2xl border border-separator/50 bg-surface-container-low">
-      <div className="border-b border-outline-variant/30 px-4 py-3 text-xs font-semibold uppercase tracking-[0.2em] text-outline">
+      <div className="border-b border-outline-variant/30 px-4 py-3 text-xs font-semibold uppercase tracking-[0.18em] text-outline">
         CSV Preview
       </div>
       <div className="overflow-x-auto">

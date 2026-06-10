@@ -86,7 +86,7 @@ export default function SensorDevicePhotoPreviewModal({ preview, onClose, onNavi
       >
         <div className="sticky top-0 z-10 flex items-start justify-between gap-4 rounded-t-2xl border-b border-separator/40 bg-surface/90 px-6 py-5 backdrop-blur-md">
           <div className="min-w-0 flex-1">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-outline">{eyebrow}</p>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">{eyebrow}</p>
             <h2 className="mt-1 truncate text-xl font-semibold text-on-surface">{title}</h2>
             {subtitleParts.length > 0 ? (
               <p className="mt-1 text-sm text-on-surface-variant">{subtitleParts.join(" • ")}</p>

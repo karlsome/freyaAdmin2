@@ -451,7 +451,7 @@ export default function InventoryPage() {
       <div className="w-full">
         <PageHeader
           eyebrow="Warehouse Ledger"
-          eyebrowClassName="tracking-[0.24em] text-primary"
+          eyebrowClassName="tracking-[0.18em] text-primary"
           title="Inventory"
           subtitle="Track the latest inventory state by serial number, inspect transaction history, add stock manually, and run controlled reset workflows."
           subtitleClassName="max-w-3xl"
@@ -515,7 +515,7 @@ export default function InventoryPage() {
         <div className="dashboard-section mb-6 rounded-2xl p-5">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
-              <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-outline">Filters</p>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Filters</p>
               <h2 className="mt-1 text-lg font-semibold text-on-surface">Inventory Filters</h2>
             </div>
             {modelLoading ? <p className="text-sm text-on-surface-variant">Loading model products...</p> : null}

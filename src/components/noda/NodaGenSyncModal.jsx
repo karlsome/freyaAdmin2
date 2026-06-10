@@ -191,7 +191,7 @@ function ComparisonStep({ availableItems, existingRequestsCount, nextRequestNumb
       <div className="rounded-[24px] border border-primary/20 bg-primary/8 p-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-primary">Creating Request</p>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-primary">Creating Request</p>
             <h3 className="mt-1 text-lg font-semibold text-on-surface">{nextRequestNumber}</h3>
           </div>
           {existingRequestsCount ? (

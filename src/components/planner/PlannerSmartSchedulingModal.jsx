@@ -67,7 +67,7 @@ export default function PlannerSmartSchedulingModal({
           <section key={equipment} className="planner-data-text rounded-2xl border border-outline-variant/15 bg-surface-container-low p-4">
             <div className="mb-3 flex items-center justify-between gap-3">
               <h4 className="font-semibold text-on-surface">{equipment}</h4>
-              <span className="rounded-full bg-primary/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-primary">
+              <span className="rounded-full bg-primary/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-primary">
                 {assignments[equipment].length} goal{assignments[equipment].length === 1 ? "" : "s"}
               </span>
             </div>
@@ -78,7 +78,7 @@ export default function PlannerSmartSchedulingModal({
                     <div className="font-semibold text-on-surface">{item.背番号 || item.品番}</div>
                     <div className="mt-1 text-on-surface-variant">{item.品番} · {item.remainingQuantity} pcs remaining</div>
                   </div>
-                  <div className="rounded-full bg-surface-container px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-on-surface-variant">
+                  <div className="rounded-full bg-surface-container px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-on-surface-variant">
                     {Math.round(Number(item.confidence || 0) * 100)}% confidence
                   </div>
                 </div>

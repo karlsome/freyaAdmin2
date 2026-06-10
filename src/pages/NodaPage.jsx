@@ -349,7 +349,7 @@ export default function NodaPage() {
       width: 130,
       renderCell: (row) => (
         <span className={joinNodaClasses(
-          "inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold uppercase tracking-[0.14em]",
+          "inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold uppercase tracking-[0.18em]",
           row.requestType === "bulk"
             ? "bg-primary/12 text-primary"
             : "bg-surface-container text-on-surface-variant"
@@ -472,7 +472,7 @@ export default function NodaPage() {
       <div className="w-full">
         <PageHeader
           eyebrow="Warehouse Workflow"
-          eyebrowClassName="tracking-[0.24em] text-primary"
+          eyebrowClassName="tracking-[0.18em] text-primary"
           title="Noda"
           subtitle="Manage Noda warehouse picking requests, inspect FIFO inventory impact, upload bulk CSV orders, and sync remaining work from GEN."
           subtitleClassName="max-w-3xl"

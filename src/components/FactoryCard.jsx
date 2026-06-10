@@ -17,7 +17,7 @@ export default function FactoryCard({ factory, onClick, onDefectClick }) {
   return (
     <div
       onClick={onClick}
-      className="glass-card rounded-2xl p-5 flex flex-col gap-4 cursor-pointer hover:shadow-xl hover:shadow-primary/5 hover:scale-[1.02] transition-all duration-300"
+      className="glass-card card-hover-lift rounded-2xl p-5 flex flex-col gap-4 cursor-pointer"
     >
       {/* ── Header ── */}
       <div className="flex items-start justify-between">
@@ -36,15 +36,15 @@ export default function FactoryCard({ factory, onClick, onDefectClick }) {
       {/* ── Production summary ── */}
       <div className="grid grid-cols-3 gap-2 pb-3 border-b border-outline-variant/20">
         <div>
-          <p className="text-[10px] text-on-surface-variant uppercase tracking-widest mb-1">Total</p>
+          <p className="text-[10px] text-on-surface-variant uppercase tracking-[0.18em] mb-1">Total</p>
           <p className="text-sm font-semibold text-on-surface">{total.toLocaleString()}</p>
         </div>
         <div>
-          <p className="text-[10px] text-on-surface-variant uppercase tracking-widest mb-1">NG</p>
+          <p className="text-[10px] text-on-surface-variant uppercase tracking-[0.18em] mb-1">NG</p>
           <p className="text-sm font-semibold text-on-surface">{totalNG.toLocaleString()}</p>
         </div>
         <div>
-          <p className="text-[10px] text-on-surface-variant uppercase tracking-widest mb-1">Defect</p>
+          <p className="text-[10px] text-on-surface-variant uppercase tracking-[0.18em] mb-1">Defect</p>
           <p className={`text-sm font-semibold ${defectStatus.valueColor}`}>{defectRate.toFixed(2)}%</p>
         </div>
       </div>
@@ -52,7 +52,7 @@ export default function FactoryCard({ factory, onClick, onDefectClick }) {
       {/* ── Top defects ── */}
       <div className="flex-1 flex flex-col">
         <div className="flex items-center justify-between mb-2.5">
-          <p className="text-[10px] font-semibold text-on-surface-variant uppercase tracking-widest">
+          <p className="text-[10px] font-semibold text-on-surface-variant uppercase tracking-[0.18em]">
             Top Defects
           </p>
           {topDefects.length > 0 && (
@@ -72,9 +72,9 @@ export default function FactoryCard({ factory, onClick, onDefectClick }) {
             {/* Column headers */}
             <div className="grid grid-cols-[1.5rem_1fr_3rem_3.5rem] gap-x-2 px-1 mb-1">
               <span />
-              <span className="text-[9px] font-semibold text-outline uppercase tracking-widest">背番号</span>
-              <span className="text-[9px] font-semibold text-outline uppercase tracking-widest text-right">NG</span>
-              <span className="text-[9px] font-semibold text-outline uppercase tracking-widest text-right">Rate</span>
+              <span className="text-[9px] font-semibold text-outline uppercase tracking-[0.18em]">背番号</span>
+              <span className="text-[9px] font-semibold text-outline uppercase tracking-[0.18em] text-right">NG</span>
+              <span className="text-[9px] font-semibold text-outline uppercase tracking-[0.18em] text-right">Rate</span>
             </div>
 
             {topDefects.map((d, i) => {

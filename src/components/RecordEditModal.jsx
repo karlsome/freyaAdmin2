@@ -530,7 +530,7 @@ export default function RecordEditModal({
             <div className="border-b border-separator/35 px-6 py-5">
               <div className="flex items-start justify-between gap-4">
                 <div>
-                  <div className="text-[10px] font-semibold uppercase tracking-[0.22em] text-outline">Edit Record</div>
+                  <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Edit Record</div>
                   <h2 className="mt-1 text-xl font-semibold text-on-surface">{title}</h2>
                   {subtitle ? <p className="mt-1 text-sm text-on-surface-variant">{subtitle}</p> : null}
                 </div>

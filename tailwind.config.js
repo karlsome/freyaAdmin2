@@ -47,7 +47,7 @@ export default {
         h2:       ["1.125rem", { lineHeight: "1.625rem", letterSpacing: "-0.01em",  fontWeight: "600" }], // 18px
         h3:       ["1rem",     { lineHeight: "1.5rem",   letterSpacing: "-0.01em",  fontWeight: "600" }], // 16px
         caption:  ["0.75rem",  { lineHeight: "1rem" }],                                                   // 12px
-        overline: ["0.6875rem",{ lineHeight: "0.875rem", letterSpacing: "0.06em",  fontWeight: "600" }], // 11px
+        overline: ["0.6875rem",{ lineHeight: "0.875rem", letterSpacing: "0.18em",  fontWeight: "600" }], // 11px
       },
       borderRadius: {
         DEFAULT: "0.25rem",

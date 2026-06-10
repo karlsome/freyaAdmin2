@@ -28,11 +28,11 @@ function PayoutsCard() {
 
         <div className="absolute top-4 left-4 flex gap-8 z-10">
           <div>
-            <p className="text-[10px] text-on-surface-variant uppercase tracking-widest font-semibold">Total Payout</p>
+            <p className="text-[10px] text-on-surface-variant uppercase tracking-[0.18em] font-semibold">Total Payout</p>
             <p className="text-2xl font-semibold text-on-surface">$142,804.22</p>
           </div>
           <div>
-            <p className="text-[10px] text-tertiary uppercase tracking-widest font-semibold">Unit Volume</p>
+            <p className="text-[10px] text-tertiary uppercase tracking-[0.18em] font-semibold">Unit Volume</p>
             <p className="text-2xl font-semibold text-on-surface">2.4M<span className="text-xs text-on-surface-variant font-medium ml-1">kwh</span></p>
           </div>
         </div>
@@ -101,7 +101,7 @@ function FactoryStatusCard() {
 
       <div className="mt-6 pt-6 border-t border-outline-variant/20">
         <div className="w-full h-24 rounded-lg bg-surface-container-high flex items-center justify-center">
-          <span className="text-[10px] text-outline uppercase tracking-widest">Global Map</span>
+          <span className="text-[10px] text-outline uppercase tracking-[0.18em]">Global Map</span>
         </div>
       </div>
     </div>

@@ -153,7 +153,7 @@ export default function PlannerSelectedSummary({
                     </div>
 
                     <div className="flex items-center gap-3">
-                      <div className={`rounded-full px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] ${utilization > 100 ? "bg-error/10 text-error" : "bg-primary/10 text-primary"}`}>
+                      <div className={`rounded-full px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] ${utilization > 100 ? "bg-error/10 text-error" : "bg-primary/10 text-primary"}`}>
                         {formattedTime} · {utilization}%
                       </div>
                       <div className="planner-data-text text-outline">Daily capacity {workMinutes} min</div>

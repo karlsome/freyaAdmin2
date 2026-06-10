@@ -310,7 +310,7 @@ function SavedPresetManagerCard({ activePresetId, draftName, editingPresetId, on
           </p>
         </div>
         {activePresetId && (
-          <span className="inline-flex items-center rounded-full bg-primary/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-primary">
+          <span className="inline-flex items-center rounded-full bg-primary/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-primary">
             Active preset
           </span>
         )}
@@ -363,7 +363,7 @@ function SavedPresetManagerCard({ activePresetId, draftName, editingPresetId, on
                   <div className="flex flex-wrap items-center gap-2">
                     <h4 className="truncate text-sm font-semibold text-on-surface">{preset.name}</h4>
                     {isActive && (
-                      <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-primary">
+                      <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-primary">
                         Active
                       </span>
                     )}
@@ -415,7 +415,7 @@ function ExportTicketResultsCard({ disabled, exporting, filteredCount, onCopySha
       </p>
       <div className="mt-4 flex items-center justify-between gap-3 rounded-2xl border border-separator/40 bg-surface px-4 py-3">
         <div>
-          <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-outline">Current Export Scope</p>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Current Export Scope</p>
           <p className="mt-1 text-sm font-semibold text-on-surface">{formatTicketNumber(filteredCount)} matching tickets</p>
         </div>
         <div className="flex items-center gap-2">
@@ -486,7 +486,7 @@ function ExportChoiceModal({ filteredCount, onClose, onExportAll, onExportFilter
             onClick={onExportFiltered}
             className="rounded-2xl border border-primary/20 bg-primary/5 px-4 py-4 text-left transition hover:border-primary/35 hover:bg-primary/10"
           >
-            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-primary">Current View</p>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-primary">Current View</p>
             <p className="mt-2 text-base font-semibold text-on-surface">Export filtered data</p>
             <p className="mt-2 text-sm leading-6 text-outline">
               Exports the same filtered ticket set currently shown in the table. Matching tickets: {formatTicketNumber(filteredCount)}.
@@ -498,7 +498,7 @@ function ExportChoiceModal({ filteredCount, onClose, onExportAll, onExportFilter
             onClick={onExportAll}
             className="rounded-2xl border border-separator/40 bg-surface-container px-4 py-4 text-left transition hover:border-primary/30 hover:bg-surface-container-high"
           >
-            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-outline">Full History</p>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Full History</p>
             <p className="mt-2 text-base font-semibold text-on-surface">Export all data</p>
             <p className="mt-2 text-sm leading-6 text-outline">
               Ignores the current filters and exports every submitted ticket. This may take longer for larger datasets.
@@ -687,7 +687,7 @@ function TicketDetailModal({ actionBusy = false, onClose, onCloseTicket = null, 
 
           <div className="flex flex-col gap-3 border-b border-separator/35 px-6 py-4 text-sm lg:flex-row lg:items-center lg:justify-between">
             <div className="flex flex-wrap gap-3">
-              <span className={joinClasses("inline-flex items-center rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em]", statusMeta.badgeClassName)}>
+              <span className={joinClasses("inline-flex items-center rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em]", statusMeta.badgeClassName)}>
                 {statusMeta.label}
               </span>
               <span className="inline-flex items-center gap-1.5 text-outline">
@@ -797,7 +797,7 @@ function TicketDetailModal({ actionBusy = false, onClose, onCloseTicket = null, 
                   <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Status History</p>
                   <p className="mt-1 text-sm text-outline">Tracks each close and reopen action for this ticket.</p>
                 </div>
-                <span className="inline-flex items-center rounded-full bg-white/75 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-outline">
+                <span className="inline-flex items-center rounded-full bg-white/75 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">
                   {historyEntries.length} event{historyEntries.length === 1 ? "" : "s"}
                 </span>
               </div>
@@ -1111,7 +1111,7 @@ export default function TicketSubmissionsPage() {
       label: "Input Type",
       width: 126,
       renderCell: (row) => row.fieldType ? (
-        <span className="inline-flex rounded-full bg-outline/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-outline">
+        <span className="inline-flex rounded-full bg-outline/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">
           {row.fieldType}
         </span>
       ) : "—",

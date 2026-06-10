@@ -576,7 +576,7 @@ export default function CheckFormBuilderModal({ initial, onClose, onSaved, prese
 
                 <div className="grid gap-4 lg:grid-cols-2">
                   <div>
-                    <label className="mb-1.5 block text-xs font-semibold uppercase tracking-[0.15em] text-outline">Form Name</label>
+                    <label className="mb-1.5 block text-xs font-semibold uppercase tracking-[0.18em] text-outline">Form Name</label>
                     <input
                       type="text"
                       placeholder="Form name *"
@@ -593,7 +593,7 @@ export default function CheckFormBuilderModal({ initial, onClose, onSaved, prese
                   </div>
 
                   <div>
-                    <label className="mb-1.5 block text-xs font-semibold uppercase tracking-[0.15em] text-outline">Factory</label>
+                    <label className="mb-1.5 block text-xs font-semibold uppercase tracking-[0.18em] text-outline">Factory</label>
                     <select value={draft.工場} onChange={(event) => setTop("工場", event.target.value)} className={inputClass}>
                       <option value="">Select a factory</option>
                       {factories.map((factory) => (
@@ -603,7 +603,7 @@ export default function CheckFormBuilderModal({ initial, onClose, onSaved, prese
                   </div>
 
                   <div className="lg:col-span-2">
-                    <label className="mb-1.5 block text-xs font-semibold uppercase tracking-[0.15em] text-outline">Description</label>
+                    <label className="mb-1.5 block text-xs font-semibold uppercase tracking-[0.18em] text-outline">Description</label>
                     <textarea
                       rows={3}
                       placeholder="Tell admins and operators what this maintenance form is for."
@@ -614,7 +614,7 @@ export default function CheckFormBuilderModal({ initial, onClose, onSaved, prese
                   </div>
 
                   <div className="lg:col-span-2">
-                    <label className="mb-1.5 block text-xs font-semibold uppercase tracking-[0.15em] text-outline">Frequency</label>
+                    <label className="mb-1.5 block text-xs font-semibold uppercase tracking-[0.18em] text-outline">Frequency</label>
                     <div className="grid gap-2 sm:grid-cols-3">
                       {SCHEDULE_OPTIONS.map((option) => {
                         const isActive = draft.schedule === option.value;
@@ -631,7 +631,7 @@ export default function CheckFormBuilderModal({ initial, onClose, onSaved, prese
                             }`}
                           >
                             <span className="material-symbols-outlined mb-2 block" style={{ fontSize: 18 }}>{option.icon}</span>
-                            <span className="block text-xs font-semibold uppercase tracking-[0.12em]">{option.label}</span>
+                            <span className="block text-xs font-semibold uppercase tracking-[0.18em]">{option.label}</span>
                             <span className={`mt-1 block text-[11px] ${isActive ? "text-primary/80" : "text-outline"}`}>{option.hint}</span>
                           </button>
                         );
@@ -640,7 +640,7 @@ export default function CheckFormBuilderModal({ initial, onClose, onSaved, prese
                   </div>
 
                   <div>
-                    <label className="mb-1.5 block text-xs font-semibold uppercase tracking-[0.15em] text-outline">First Active Date</label>
+                    <label className="mb-1.5 block text-xs font-semibold uppercase tracking-[0.18em] text-outline">First Active Date</label>
                     <input
                       type="date"
                       value={draft.startDate}
@@ -1072,7 +1072,7 @@ function OverlayDialog({
         >
           <div className={`flex items-start justify-between gap-4 border-b px-5 py-4 sm:px-6 ${dividerClassName}`}>
             <div className="min-w-0 flex-1">
-              {eyebrow ? <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-primary">{eyebrow}</p> : null}
+              {eyebrow ? <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-primary">{eyebrow}</p> : null}
               <h3 className={`mt-1 text-lg font-semibold ${titleClassName}`}>{title}</h3>
               {description ? <p className={`mt-1 text-sm leading-6 ${descriptionClassName}`}>{description}</p> : null}
             </div>
@@ -1193,7 +1193,7 @@ function ReferenceImageLibraryModal({
                     className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.02]"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/15 to-transparent" />
-                  <span className="absolute left-3 top-3 rounded-full bg-white/85 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-900">
+                  <span className="absolute left-3 top-3 rounded-full bg-white/85 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-900">
                     {isSelected ? "Current" : "Saved"}
                   </span>
                   <span className="absolute inset-x-0 bottom-0 px-3 py-3 text-left text-xs font-semibold text-white">
@@ -1455,7 +1455,7 @@ function FieldEditor({ field, onChange, username }) {
       <div className="space-y-4">
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_280px]">
         <div>
-          <label className="mb-1.5 block text-xs font-semibold uppercase tracking-[0.15em] text-outline">Title</label>
+          <label className="mb-1.5 block text-xs font-semibold uppercase tracking-[0.18em] text-outline">Title</label>
           <input
             type="text"
             placeholder="Describe this check..."
@@ -1466,7 +1466,7 @@ function FieldEditor({ field, onChange, username }) {
         </div>
 
         <div>
-          <label className="mb-1.5 block text-xs font-semibold uppercase tracking-[0.15em] text-outline">Type</label>
+          <label className="mb-1.5 block text-xs font-semibold uppercase tracking-[0.18em] text-outline">Type</label>
           <div className="grid grid-cols-2 gap-2">
             {FIELD_TYPES.map((type) => (
               <button
@@ -1488,7 +1488,7 @@ function FieldEditor({ field, onChange, username }) {
       </div>
 
       <div>
-        <label className="mb-1.5 block text-xs font-semibold uppercase tracking-[0.15em] text-outline">Instruction</label>
+        <label className="mb-1.5 block text-xs font-semibold uppercase tracking-[0.18em] text-outline">Instruction</label>
         <textarea
           rows={3}
           placeholder="What should be checked and how should operators interpret it?"
@@ -1500,7 +1500,7 @@ function FieldEditor({ field, onChange, username }) {
 
       <div className="grid gap-4 lg:grid-cols-2">
         <div className="space-y-3">
-          <p className="text-xs font-semibold uppercase tracking-[0.15em] text-outline">Rules</p>
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-outline">Rules</p>
           <ToggleRow
             checked={field.required}
             onToggle={() => onChange({ required: !field.required })}
@@ -1518,7 +1518,7 @@ function FieldEditor({ field, onChange, username }) {
         <div className="rounded-2xl border border-separator/40 bg-surface px-4 py-4">
           <div className="flex items-center justify-between gap-3">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.15em] text-outline">Reference Image</p>
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-outline">Reference Image</p>
               <p className="mt-1 text-xs leading-5 text-outline">Choose a saved image for this checklist or upload a new one into its folder.</p>
             </div>
           </div>
@@ -1564,7 +1564,7 @@ function FieldEditor({ field, onChange, username }) {
               <img src={selectedImageURL} alt="reference" className="h-40 w-full object-cover" />
               <div className="absolute inset-x-0 bottom-0 flex items-center justify-between gap-2 bg-gradient-to-t from-black/75 via-black/15 to-transparent px-3 py-3">
                 <div>
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-white/80">Current image</p>
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-white/80">Current image</p>
                   <p className="mt-1 text-xs font-semibold text-white">Open a preview to inspect details.</p>
                 </div>
                 <button
@@ -1591,7 +1591,7 @@ function FieldEditor({ field, onChange, username }) {
       {field.type === "number" ? (
         <div className="grid gap-4 lg:grid-cols-3">
           <div>
-            <label className="mb-1.5 block text-xs font-semibold uppercase tracking-[0.15em] text-outline">Min</label>
+            <label className="mb-1.5 block text-xs font-semibold uppercase tracking-[0.18em] text-outline">Min</label>
             <input
               type="number"
               value={field.min ?? ""}
@@ -1600,7 +1600,7 @@ function FieldEditor({ field, onChange, username }) {
             />
           </div>
           <div>
-            <label className="mb-1.5 block text-xs font-semibold uppercase tracking-[0.15em] text-outline">Max</label>
+            <label className="mb-1.5 block text-xs font-semibold uppercase tracking-[0.18em] text-outline">Max</label>
             <input
               type="number"
               value={field.max ?? ""}
@@ -1609,7 +1609,7 @@ function FieldEditor({ field, onChange, username }) {
             />
           </div>
           <div>
-            <label className="mb-1.5 block text-xs font-semibold uppercase tracking-[0.15em] text-outline">Unit</label>
+            <label className="mb-1.5 block text-xs font-semibold uppercase tracking-[0.18em] text-outline">Unit</label>
             <input
               type="text"
               placeholder="e.g. °C"
@@ -1678,7 +1678,7 @@ function SelectOptionsEditor({ options, onChange }) {
     <div className="rounded-2xl border border-separator/40 bg-surface px-4 py-4">
       <div className="flex items-center justify-between gap-3">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.15em] text-outline">Options</p>
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-outline">Options</p>
           <p className="mt-1 text-xs leading-5 text-outline">Add the choices operators can select for this field.</p>
         </div>
       </div>

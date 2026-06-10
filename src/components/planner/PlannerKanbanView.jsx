@@ -25,7 +25,7 @@ export default function PlannerKanbanView({ equipment = [], scheduledProducts = 
                   <h3 className="font-semibold text-on-surface">{equipmentName}</h3>
                   <p className="mt-1 text-on-surface-variant">{items.length} scheduled item{items.length === 1 ? "" : "s"}</p>
                 </div>
-                <span className={`rounded-full px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] ${utilization.utilization > 100 ? "bg-error/10 text-error" : "bg-primary/10 text-primary"}`}>
+                <span className={`rounded-full px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] ${utilization.utilization > 100 ? "bg-error/10 text-error" : "bg-primary/10 text-primary"}`}>
                   {utilization.formattedTime}
                 </span>
               </div>

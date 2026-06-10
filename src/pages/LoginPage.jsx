@@ -118,7 +118,7 @@ export default function LoginPage({ isDark, onToggleTheme, onLogin }) {
             <div className="relative flex h-full flex-col">
               <div className="flex items-start justify-between gap-4">
                 <div>
-                  <span className="inline-flex items-center gap-2 rounded-full border border-white/24 bg-white/18 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.22em] text-primary dark:border-white/12 dark:bg-white/8 dark:text-primary">
+                  <span className="inline-flex items-center gap-2 rounded-full border border-white/24 bg-white/18 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-primary dark:border-white/12 dark:bg-white/8 dark:text-primary">
                     <span className="material-symbols-outlined" style={{ fontSize: 14 }}>shield_lock</span>
                     Auth Gateway
                   </span>
@@ -148,7 +148,7 @@ export default function LoginPage({ isDark, onToggleTheme, onLogin }) {
                     key={card.label}
                     className="login-feature-card rounded-[24px] border border-white/18 bg-white/[0.2] p-4 shadow-[0_14px_40px_rgba(15,23,42,0.08)] backdrop-blur-xl dark:border-white/12 dark:bg-[rgba(7,11,20,0.2)] dark:shadow-none"
                   >
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-outline dark:text-white/78">{card.label}</p>
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-outline dark:text-white/78">{card.label}</p>
                     <p className="mt-3 text-sm font-semibold tracking-tight text-on-surface dark:text-white sm:text-base">{card.value}</p>
                     <p className="mt-2 text-xs leading-5 text-on-surface/65 dark:text-white/88">{card.note}</p>
                   </div>
@@ -160,7 +160,7 @@ export default function LoginPage({ isDark, onToggleTheme, onLogin }) {
           <div className="login-frost-card__content order-1 relative border-b border-white/14 px-5 py-6 sm:px-8 sm:py-8 lg:order-1 lg:border-b-0 lg:border-r lg:border-white/12 lg:px-10 lg:py-10">
             <div className="mx-auto flex h-full w-full max-w-none flex-col justify-center sm:max-w-md lg:max-w-[29rem]">
               <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.24em] text-outline dark:text-white/72">Access</p>
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-outline dark:text-white/72">Access</p>
                 <h2 className="mt-3 text-2xl font-semibold tracking-[-0.03em] text-on-surface sm:text-3xl">{t("loginTitle")}</h2>
                 <p className="login-status-copy mt-3 text-sm leading-6 text-on-surface/70 dark:text-white/82">
                   {isHandingOff
@@ -171,7 +171,7 @@ export default function LoginPage({ isDark, onToggleTheme, onLogin }) {
 
               <form className="login-form-stack mt-6 space-y-4 sm:mt-8 sm:space-y-5" onSubmit={handleSubmit} aria-busy={isLocked}>
                 <label className="block">
-                  <span className="mb-2 block text-xs font-semibold uppercase tracking-[0.2em] text-outline dark:text-white/80">{t("username")}</span>
+                  <span className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-outline dark:text-white/80">{t("username")}</span>
                   <div className="group flex items-center gap-3 rounded-[22px] border border-primary/12 bg-white/92 px-4 py-3 shadow-[0_10px_30px_rgba(73,75,214,0.06)] transition-all focus-within:border-primary/30 focus-within:shadow-[0_16px_44px_rgba(73,75,214,0.12)] dark:border-white/14 dark:bg-[rgba(7,11,20,0.18)] dark:shadow-none">
                     <span className="material-symbols-outlined text-outline transition-colors group-focus-within:text-primary dark:text-white/72 dark:group-focus-within:text-white">person</span>
                     <input
@@ -188,7 +188,7 @@ export default function LoginPage({ isDark, onToggleTheme, onLogin }) {
                 </label>
 
                 <label className="block">
-                  <span className="mb-2 block text-xs font-semibold uppercase tracking-[0.2em] text-outline dark:text-white/80">{t("password")}</span>
+                  <span className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-outline dark:text-white/80">{t("password")}</span>
                   <div className="group flex items-center gap-3 rounded-[22px] border border-primary/12 bg-white/92 px-4 py-3 shadow-[0_10px_30px_rgba(73,75,214,0.06)] transition-all focus-within:border-primary/30 focus-within:shadow-[0_16px_44px_rgba(73,75,214,0.12)] dark:border-white/14 dark:bg-[rgba(7,11,20,0.18)] dark:shadow-none">
                     <span className="material-symbols-outlined text-outline transition-colors group-focus-within:text-primary dark:text-white/72 dark:group-focus-within:text-white">key</span>
                     <input

@@ -578,7 +578,7 @@ export default function CheckFormImageOverlayEditorModal({
         >
           <div className="flex flex-wrap items-start justify-between gap-4 border-b border-separator/35 px-5 py-4 sm:px-6">
             <div className="min-w-0 flex-1">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-primary">Overlay Editor</p>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-primary">Overlay Editor</p>
               <h3 className="mt-1 text-lg font-semibold text-on-surface">{mode === "edit" ? "Edit reference image" : "Prepare new reference image"}</h3>
               <p className="mt-1 text-sm leading-6 text-outline">
                 Add simple callouts only if you need them. When you save, the image is flattened and uploaded as a new file.

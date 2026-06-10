@@ -313,7 +313,7 @@ function MaintenanceSection({ record, onPreview }) {
           const e = rec.endTime   ? new Date(`2000-01-01T${rec.endTime}`)   : null;
           const mins = (s && e && e > s) ? Math.round((e - s) / 60000) : null;
           return (
-            <div key={rec.id ?? rec.timestamp} className="glass-card rounded-2xl p-4 space-y-2">
+            <div key={rec.id ?? rec.timestamp} className="glass-card rounded-2xl p-5 space-y-2">
               <div className="flex items-start justify-between gap-3">
                 <div className="flex-1 space-y-1.5">
                   <div className="flex items-center gap-3 flex-wrap">

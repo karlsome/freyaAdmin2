@@ -427,7 +427,7 @@ export default function InspectionHistoryModal({ onClose }) {
                   <th
                     key={`${label}-${i}`}
                     colSpan={count}
-                    className="border-b border-r border-outline-variant/10 bg-surface px-0 py-1 text-center text-[10px] font-semibold uppercase tracking-widest text-outline"
+                    className="border-b border-r border-outline-variant/10 bg-surface px-0 py-1 text-center text-[10px] font-semibold uppercase tracking-[0.18em] text-outline"
                   >
                     {label}
                   </th>
@@ -435,7 +435,7 @@ export default function InspectionHistoryModal({ onClose }) {
               </tr>
               {/* Day row */}
               <tr>
-                <th className="sticky left-0 z-20 border-b border-r border-outline-variant/20 bg-surface px-4 py-2 text-left text-xs font-semibold uppercase tracking-[0.15em] text-outline">
+                <th className="sticky left-0 z-20 border-b border-r border-outline-variant/20 bg-surface px-4 py-2 text-left text-xs font-semibold uppercase tracking-[0.18em] text-outline">
                   Machine
                 </th>
                 {dates.map(date => {

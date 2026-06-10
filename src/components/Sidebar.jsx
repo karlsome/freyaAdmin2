@@ -101,7 +101,7 @@ export default function Sidebar({ activePage, badges = {}, mobileOpen = false, o
             </div>
             <div className={`overflow-hidden transition-opacity duration-200 ${isMobile ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`}>
               <h1 className="whitespace-nowrap text-lg font-semibold leading-none text-on-surface">Freya Admin</h1>
-              <p className="mt-0.5 whitespace-nowrap text-[10px] font-semibold uppercase tracking-widest text-primary">Detailed Data</p>
+              <p className="mt-0.5 whitespace-nowrap text-[10px] font-semibold uppercase tracking-[0.18em] text-primary">Detailed Data</p>
             </div>
           </div>
 

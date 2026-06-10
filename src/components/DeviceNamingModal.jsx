@@ -104,7 +104,7 @@ export default function DeviceNamingModal({
         {/* ── Header ── */}
         <div className="sticky top-0 z-10 rounded-t-2xl px-6 py-5 flex items-center justify-between border-b border-separator/40 bg-surface/90 backdrop-blur-md">
           <div>
-            <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-outline">IoT Device</p>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">IoT Device</p>
             <h2 className="mt-1 text-xl font-semibold text-on-surface">Rename Device</h2>
           </div>
           <button

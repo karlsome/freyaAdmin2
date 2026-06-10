@@ -330,7 +330,7 @@ export default function FactoryStatusLogsPage() {
       <div className="mx-auto max-w-[1600px]">
         <PageHeader
           eyebrow="Live Operations"
-          eyebrowClassName="tracking-[0.24em] text-primary"
+          eyebrowClassName="tracking-[0.18em] text-primary"
           title="Factory Status Logs"
           subtitle="Review tablet log history from tabletLogDB by factory, equipment, operator, and session. Use this full-page view for broader filtering beyond the quick equipment modal on Factory Status."
           subtitleClassName="max-w-4xl"
@@ -368,7 +368,7 @@ export default function FactoryStatusLogsPage() {
         <div className="dashboard-section mb-6 rounded-2xl p-5">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
-              <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-outline">Filters</p>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Filters</p>
               <h2 className="mt-1 text-lg font-semibold text-on-surface">Log Scope</h2>
               <p className="planner-data-text mt-2 text-sm text-on-surface-variant">{selectionSummary.countLabel} · {selectionSummary.selectedText}</p>
             </div>

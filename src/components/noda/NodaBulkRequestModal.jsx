@@ -755,7 +755,7 @@ export default function NodaBulkRequestModal({ open, authUser, onClose, onSubmit
           <div className="rounded-[28px] border border-separator/40 bg-surface-container-low/35 p-5">
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
-                <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-primary">CSV Review</p>
+                <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-primary">CSV Review</p>
                 <h3 className="mt-1 text-lg font-semibold text-on-surface">
                   {csvReview.validItems.length} items ready to import into the cart
                 </h3>

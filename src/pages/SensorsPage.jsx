@@ -20,7 +20,7 @@ function FactorySensorCard({ factory, onClick }) {
       {/* Header */}
       <div className="flex items-start justify-between mb-4">
         <div>
-          <p className="text-[10px] font-semibold text-outline uppercase tracking-widest">Factory</p>
+          <p className="text-[10px] font-semibold text-outline uppercase tracking-[0.18em]">Factory</p>
           <p className="text-lg font-semibold text-on-surface">{name}</p>
         </div>
         <span className={`text-[10px] font-semibold px-2.5 py-1 rounded-full ${wbgtStatus.bg} ${wbgtStatus.color}`}>
@@ -185,7 +185,7 @@ export default function SensorsPage() {
           {/* ── Active factories ── */}
           {withData.length > 0 && (
             <div className="mb-10">
-              <p className="text-[10px] text-outline font-semibold uppercase tracking-widest mb-4">
+              <p className="text-[10px] text-outline font-semibold uppercase tracking-[0.18em] mb-4">
                 {withData.length} Active Sensor{withData.length !== 1 ? "s" : ""}
               </p>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
@@ -203,7 +203,7 @@ export default function SensorsPage() {
           {/* ── No data ── */}
           {withoutData.length > 0 && (
             <div>
-              <p className="text-[10px] text-outline font-semibold uppercase tracking-widest mb-4">
+              <p className="text-[10px] text-outline font-semibold uppercase tracking-[0.18em] mb-4">
                 {withoutData.length} No Recent Data
               </p>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">

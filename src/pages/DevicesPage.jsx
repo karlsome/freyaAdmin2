@@ -286,28 +286,28 @@ export default function DevicesPage() {
 
       {/* Summary strip */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-        <div className="glass-card rounded-2xl p-4">
+        <div className="glass-card rounded-2xl p-5">
           <div className="flex items-center gap-2 mb-2">
             <span className="material-symbols-outlined text-primary" style={{ fontSize: 16 }}>developer_board</span>
             <p className="text-[10px] text-outline font-semibold uppercase tracking-[0.18em]">Total Devices</p>
           </div>
           <p className="text-2xl font-semibold text-on-surface leading-none tracking-tight">{devices.length}</p>
         </div>
-        <div className="glass-card rounded-2xl p-4">
+        <div className="glass-card rounded-2xl p-5">
           <div className="flex items-center gap-2 mb-2">
             <span className="material-symbols-outlined text-tertiary" style={{ fontSize: 16 }}>factory</span>
             <p className="text-[10px] text-outline font-semibold uppercase tracking-[0.18em]">Factories</p>
           </div>
           <p className="text-2xl font-semibold text-on-surface leading-none tracking-tight">{factoryOptions.length}</p>
         </div>
-        <div className="glass-card rounded-2xl p-4">
+        <div className="glass-card rounded-2xl p-5">
           <div className="flex items-center gap-2 mb-2">
             <span className="material-symbols-outlined text-primary" style={{ fontSize: 16 }}>photo_library</span>
             <p className="text-[10px] text-outline font-semibold uppercase tracking-[0.18em]">Photos</p>
           </div>
           <p className="text-2xl font-semibold text-on-surface leading-none tracking-tight">{totalPhotos}</p>
         </div>
-        <div className="glass-card rounded-2xl p-4">
+        <div className="glass-card rounded-2xl p-5">
           <div className="flex items-center gap-2 mb-2">
             <span className="material-symbols-outlined text-primary" style={{ fontSize: 16 }}>filter_alt</span>
             <p className="text-[10px] text-outline font-semibold uppercase tracking-[0.18em]">Showing</p>
@@ -317,7 +317,7 @@ export default function DevicesPage() {
       </div>
 
       {/* Filters */}
-      <div className="glass-card rounded-2xl p-4 mb-6 flex flex-col gap-3 md:flex-row md:items-center">
+      <div className="glass-card rounded-2xl p-5 mb-6 flex flex-col gap-3 md:flex-row md:items-center">
         <div className="flex-1 flex items-center gap-2 rounded-xl border border-separator/40 bg-surface px-4 py-2">
           <span className="material-symbols-outlined text-outline" style={{ fontSize: 18 }}>search</span>
           <input

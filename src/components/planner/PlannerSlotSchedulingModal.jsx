@@ -139,7 +139,7 @@ export default function PlannerSlotSchedulingModal({
                       <div className="mt-1 text-on-surface-variant">{goal.品番}</div>
                       <div className="mt-1 text-on-surface-variant">{goal.品名 || "Unnamed product"}</div>
                     </div>
-                    <span className="rounded-full bg-primary/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-primary">
+                    <span className="rounded-full bg-primary/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-primary">
                       {goal.remainingQuantity} pcs
                     </span>
                   </div>
@@ -159,7 +159,7 @@ export default function PlannerSlotSchedulingModal({
               <div className="planner-data-label text-outline">Queue</div>
               <div className="mt-1 text-on-surface-variant">Items run in the order shown here.</div>
             </div>
-            <div className="rounded-full bg-surface px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-on-surface-variant">
+            <div className="rounded-full bg-surface px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-on-surface-variant">
               {queue.length} selected
             </div>
           </div>

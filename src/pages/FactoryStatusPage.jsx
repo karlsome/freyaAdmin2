@@ -360,7 +360,7 @@ export default function FactoryStatusPage() {
       <div className="w-full">
         <PageHeader
           eyebrow="Live Operations"
-          eyebrowClassName="tracking-[0.24em] text-primary"
+          eyebrowClassName="tracking-[0.18em] text-primary"
           title="Factory Status"
           subtitle="Track live machine activity from tablet logs, compare goals versus actual production, and review the current machine state by factory."
           subtitleClassName="max-w-4xl"
@@ -398,7 +398,7 @@ export default function FactoryStatusPage() {
         <div className="dashboard-section mb-6 rounded-2xl p-5">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
-              <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-outline">Filters</p>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Filters</p>
               <h2 className="mt-1 text-lg font-semibold text-on-surface">Factory Scope</h2>
               <p className="planner-data-text mt-2 text-sm text-on-surface-variant">{selectionSummary.countLabel} · {selectionSummary.selectedText}</p>
             </div>
@@ -570,7 +570,7 @@ export default function FactoryStatusPage() {
             <div className="mb-4 rounded-2xl border border-outline-variant/15 bg-surface-container-low/35 px-5 py-4">
               <div className="flex flex-wrap items-start justify-between gap-4">
                 <div>
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-outline">Factory</p>
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Factory</p>
                   <h2 className="mt-1 text-2xl font-semibold text-on-surface">{group.factory}</h2>
                   <p className="planner-data-text mt-2 text-sm text-on-surface-variant">
                     {formatFactoryStatusNumber(group.overview.filteredMachineCount)} of {formatFactoryStatusNumber(group.overview.machineCount)} machines match the current table filters.

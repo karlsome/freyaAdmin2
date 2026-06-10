@@ -703,9 +703,9 @@ export default function NodaDetailModal({ open, requestId, mode = "view", authUs
               <div className="flex flex-wrap items-start justify-between gap-4">
                 <div>
                   <div className="flex flex-wrap items-center gap-3">
-                    <div className="text-[10px] font-semibold uppercase tracking-[0.22em] text-outline">Overview</div>
+                    <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Overview</div>
                     <StatusBadge request={request} />
-                    <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-primary">
+                    <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-primary">
                       {isBulkRequest ? "Bulk" : "Single"}
                     </span>
                   </div>

@@ -142,7 +142,7 @@ function AddEventModal({ factories, allEquipment, workerNames, username, submitt
         {/* Header */}
         <div className="sticky top-0 z-10 rounded-t-2xl px-6 py-5 flex items-center justify-between border-b border-separator/40 bg-surface/90 backdrop-blur-md">
           <div>
-            <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-outline">設備履歴</p>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">設備履歴</p>
             <h2 className="mt-1 text-xl font-semibold text-on-surface">Add History Record</h2>
           </div>
           <button
@@ -350,7 +350,7 @@ function EventDetailModal({ event, onClose }) {
         {/* Header */}
         <div className="sticky top-0 z-10 rounded-t-2xl px-6 py-5 flex items-start justify-between gap-4 border-b border-separator/40 bg-surface/90 backdrop-blur-md">
           <div>
-            <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-outline">設備履歴</p>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">設備履歴</p>
             <h2 className="mt-1 text-xl font-semibold text-on-surface">{event.equipmentName || "—"}</h2>
             {event["工場"] && (
               <p className="mt-1 text-sm text-on-surface-variant">{event["工場"]}</p>

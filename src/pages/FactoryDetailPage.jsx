@@ -153,7 +153,7 @@ function MfgLotModal({ onClose, initialLot = "" }) {
           {step === "results" && (
             <div className="space-y-3">
               {fields.length > 0 && (
-                <div className="glass-card rounded-xl p-4 space-y-2">
+                <div className="glass-card rounded-xl p-5 space-y-2">
                   {fields.map(([k, v]) => (
                     <div key={k} className="flex justify-between gap-4 border-b border-separator/20 pb-2 last:border-0">
                       <span className="text-[11px] font-semibold text-outline">{k}</span>
@@ -270,7 +270,7 @@ function CameraModal({ onClose, stream = 'tapo_cam' }) {
       >
         <div className="flex items-center justify-between gap-4 border-b border-separator/40 px-6 py-5">
           <div>
-            <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-outline">小瀬 — Live Camera</p>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">小瀬 — Live Camera</p>
             <h2 className="mt-1 text-xl font-semibold text-on-surface">Live Feed — {activeLabel}</h2>
           </div>
           <button

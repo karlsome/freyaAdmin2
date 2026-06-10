@@ -1148,7 +1148,7 @@ export default function ApprovalsPage() {
     return (
       <section className="h-screen overflow-y-auto px-4 pb-24 pt-20 scrollbar-hide sm:px-6 sm:pb-16 sm:pt-24 md:px-8">
         <div className="glass-card rounded-[28px] px-6 py-8">
-          <div className="text-[10px] font-semibold uppercase tracking-[0.22em] text-outline">Approvals</div>
+          <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Approvals</div>
           <h1 className="mt-2 text-2xl font-semibold text-on-surface">Access Required</h1>
           <p className="mt-3 max-w-2xl text-sm text-on-surface-variant">
             The approval workflow is available only to admin, 部長, 課長, 係長, and 班長 roles.
@@ -1214,19 +1214,19 @@ export default function ApprovalsPage() {
         <ApprovalsStatsStrip stats={stats} authUser={authUser} activeKey={activeStatsKey} onSelect={handleStatSelect} />
       ) : (
         <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-3">
-          <div className="dashboard-section rounded-2xl p-4">
+          <div className="dashboard-section rounded-2xl p-5">
             <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Recycle Bin</div>
             <div className="planner-data-text mt-2 text-3xl font-semibold text-on-surface tabular-nums">{binRows.length.toLocaleString()}</div>
             <p className="mt-1 text-xs text-on-surface-variant">Soft-deleted approval records</p>
           </div>
-          <div className="dashboard-section rounded-2xl p-4">
+          <div className="dashboard-section rounded-2xl p-5">
             <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Restorable</div>
             <div className="planner-data-text mt-2 text-3xl font-semibold text-on-surface tabular-nums">
               {binRows.length.toLocaleString()}
             </div>
             <p className="mt-1 text-xs text-on-surface-variant">Available for restore using original collection metadata</p>
           </div>
-          <div className="dashboard-section rounded-2xl p-4">
+          <div className="dashboard-section rounded-2xl p-5">
             <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Role</div>
             <div className="planner-data-text mt-2 text-lg font-semibold text-on-surface">{authUser?.role || "Unknown"}</div>
             <p className="mt-1 text-xs text-on-surface-variant">Recycle bin tools follow original role restrictions</p>

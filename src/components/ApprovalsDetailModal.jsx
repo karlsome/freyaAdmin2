@@ -349,7 +349,7 @@ export default function ApprovalsDetailModal({
           <div className="border-b border-separator/35 px-6 py-5">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
               <div>
-                <div className="text-[10px] font-semibold uppercase tracking-[0.22em] text-outline">Approval Record</div>
+                <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Approval Record</div>
                 <h2 className="mt-1 break-words text-xl font-semibold text-on-surface [overflow-wrap:anywhere]">{title}</h2>
                 <p className="mt-1 break-words text-sm text-on-surface-variant [overflow-wrap:anywhere]">{subtitle || "Approval workflow details"}</p>
               </div>
