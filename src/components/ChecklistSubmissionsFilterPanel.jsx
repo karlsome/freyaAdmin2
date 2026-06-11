@@ -104,7 +104,7 @@ export default function ChecklistSubmissionsFilterPanel({
             <button
               type="button"
               onClick={onClearAdvancedFilters}
-              className="flex items-center gap-2 rounded-xl border border-separator/35 glass-card px-5 py-2.5 text-sm font-semibold text-on-surface transition-all hover:border-primary/30"
+              className="flex items-center gap-2 rounded-xl border border-separator/40 glass-card px-5 py-2.5 text-sm font-semibold text-on-surface transition-all hover:border-primary/30"
             >
               <span className="material-symbols-outlined" style={{ fontSize: 16 }}>refresh</span>
               Reset Advanced Filters

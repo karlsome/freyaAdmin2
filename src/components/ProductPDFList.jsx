@@ -257,7 +257,7 @@ export default function ProductPDFList({
         />
       ) : (
         <div className="glass-card overflow-hidden rounded-3xl mb-8">
-          <div className="flex flex-col gap-4 border-b border-separator/35 px-5 py-4 md:flex-row md:items-center md:justify-between">
+          <div className="flex flex-col gap-4 border-b border-separator/40 px-5 py-4 md:flex-row md:items-center md:justify-between">
             <div className="text-sm font-medium text-on-surface-variant">{renderPageInfoText(totalCount, page, pageSize)}</div>
 
             <div className="flex items-center gap-3">
@@ -365,7 +365,7 @@ export default function ProductPDFList({
             )}
           </div>
 
-          <div className="flex flex-col gap-4 border-t border-separator/30 px-5 py-4 md:flex-row md:items-center md:justify-between">
+          <div className="flex flex-col gap-4 border-t border-separator/40 px-5 py-4 md:flex-row md:items-center md:justify-between">
             <div className="text-sm text-on-surface-variant">{selectedCount} selected</div>
 
             {totalPages > 1 && (

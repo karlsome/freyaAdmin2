@@ -67,7 +67,7 @@ export default function ProductPDFProductSelectorModal({
     <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm">
       <div className="flex min-h-full items-center justify-center p-4">
         <div ref={modalRef} className="glass-card flex w-full max-w-4xl flex-col overflow-hidden rounded-2xl">
-          <div className="border-b border-separator/35 px-5 py-4">
+          <div className="border-b border-separator/40 px-5 py-4">
             <div className="flex items-start justify-between gap-4">
               <div>
                 <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-outline">Product Selector</div>
@@ -150,7 +150,7 @@ export default function ProductPDFProductSelectorModal({
             )}
           </div>
 
-          <div className="flex items-center justify-between gap-3 border-t border-separator/30 px-5 py-4">
+          <div className="flex items-center justify-between gap-3 border-t border-separator/40 px-5 py-4">
             <div className="text-sm text-on-surface-variant">{draftSelection.size} products selected</div>
 
             <div className="flex items-center gap-3">

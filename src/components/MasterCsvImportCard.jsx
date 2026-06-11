@@ -5,7 +5,7 @@ function PreviewTable({ rows }) {
   const columns = Object.keys(previewRows[0] || {});
 
   return (
-    <div className="mt-5 overflow-hidden rounded-2xl border border-separator/50 bg-surface-container-low">
+    <div className="mt-5 overflow-hidden rounded-2xl border border-separator/40 bg-surface-container-low">
       <div className="border-b border-outline-variant/30 px-4 py-3 text-xs font-semibold uppercase tracking-[0.18em] text-outline">
         CSV Preview
       </div>
@@ -54,7 +54,7 @@ export default function MasterCsvImportCard({
         <div>
           <div className="flex items-center gap-3">
             <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-500/15 text-emerald-600 dark:text-emerald-300">
-              <span className="material-symbols-outlined" style={{ fontSize: 22, fontVariationSettings: "'FILL' 1" }}>
+              <span className="material-symbols-outlined" style={{ fontSize: 24, fontVariationSettings: "'FILL' 1" }}>
                 upload_file
               </span>
             </div>

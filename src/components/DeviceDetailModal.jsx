@@ -147,7 +147,7 @@ export default function DeviceDetailModal({ device, open, onClose }) {
                     key={url}
                     type="button"
                     onClick={() => setPreviewIndex(index)}
-                    className="aspect-square rounded-xl overflow-hidden border border-separator/30 bg-surface-container transition-all duration-150 hover:border-primary/30 active:scale-95"
+                    className="aspect-square rounded-xl overflow-hidden border border-separator/40 bg-surface-container transition-all duration-150 hover:border-primary/30 active:scale-95"
                     title={`Open photo ${index + 1}`}
                   >
                     <img

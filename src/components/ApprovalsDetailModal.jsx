@@ -77,7 +77,7 @@ function ActionButton({ tone = "primary", onClick, disabled, children }) {
     primary: "bg-primary text-on-primary hover:opacity-90",
     danger: "bg-error text-on-error hover:opacity-90",
     warning: "bg-amber-500 text-black hover:opacity-90",
-    neutral: "border border-separator/45 bg-white text-on-surface hover:bg-surface-container dark:bg-surface-container",
+    neutral: "border border-separator/40 bg-white text-on-surface hover:bg-surface-container dark:bg-surface-container",
   };
 
   return (
@@ -346,7 +346,7 @@ export default function ApprovalsDetailModal({
       <div className="flex min-h-full items-center justify-center p-4 lg:p-6">
         <div ref={modalRef} className="dashboard-section flex max-h-[92vh] w-full max-w-7xl flex-col overflow-hidden rounded-2xl">
 
-          <div className="border-b border-separator/35 px-6 py-5">
+          <div className="border-b border-separator/40 px-6 py-5">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
               <div>
                 <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Approval Record</div>

@@ -463,7 +463,7 @@ function ExportChoiceModal({ filteredCount, onClose, onExportAll, onExportFilter
         className="dashboard-section flex w-full max-w-xl flex-col overflow-hidden rounded-2xl"
         onClick={(event) => event.stopPropagation()}
       >
-        <div className="flex items-start justify-between gap-4 border-b border-separator/35 px-6 py-5">
+        <div className="flex items-start justify-between gap-4 border-b border-separator/40 px-6 py-5">
           <div className="min-w-0 flex-1">
             <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Export Choice</p>
             <h3 className="mt-1 text-lg font-semibold text-on-surface">Choose what to export</h3>
@@ -666,7 +666,7 @@ function TicketDetailModal({ actionBusy = false, onClose, onCloseTicket = null, 
           className="dashboard-section flex max-h-[88vh] w-full max-w-3xl flex-col overflow-hidden rounded-2xl"
           onMouseDown={(event) => event.stopPropagation()}
         >
-          <div className="flex items-start justify-between gap-4 border-b border-separator/35 px-6 py-5">
+          <div className="flex items-start justify-between gap-4 border-b border-separator/40 px-6 py-5">
             <div className="min-w-0 flex-1">
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-outline">Submitted Ticket</p>
               <h3 className="mt-1 truncate text-lg font-semibold text-on-surface">{ticket.fieldLabel || "Untitled ticket"}</h3>
@@ -685,7 +685,7 @@ function TicketDetailModal({ actionBusy = false, onClose, onCloseTicket = null, 
             </button>
           </div>
 
-          <div className="flex flex-col gap-3 border-b border-separator/35 px-6 py-4 text-sm lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex flex-col gap-3 border-b border-separator/40 px-6 py-4 text-sm lg:flex-row lg:items-center lg:justify-between">
             <div className="flex flex-wrap gap-3">
               <span className={joinClasses("inline-flex items-center rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em]", statusMeta.badgeClassName)}>
                 {statusMeta.label}
@@ -1643,7 +1643,7 @@ export default function TicketSubmissionsPage() {
         topBarClassName="flex flex-col gap-4 border-b border-outline-variant/15 px-5 py-4 md:flex-row md:items-center md:justify-between"
         bottomBarClassName="flex flex-col gap-4 border-t border-outline-variant/15 px-5 py-4 md:flex-row md:items-center md:justify-between"
         rowClassName="border-b border-outline-variant/10 transition hover:bg-primary/5"
-        rowsSelectClassName="h-10 rounded-2xl border border-separator/50 bg-white px-3 text-sm text-on-surface outline-none transition focus:border-primary/40 dark:bg-surface-container"
+        rowsSelectClassName="h-10 rounded-2xl border border-separator/40 bg-white px-3 text-sm text-on-surface outline-none transition focus:border-primary/40 dark:bg-surface-container"
       />
 
       {selectedTicket && createPortal(

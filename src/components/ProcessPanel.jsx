@@ -201,7 +201,7 @@ export default function ProcessPanel({ processName, rows, onRowClick, showFactor
   return (
     <div className="glass-card rounded-2xl overflow-hidden flex flex-col">
       {/* Panel header */}
-      <div className="px-5 py-4 flex items-center justify-between gap-3 border-b border-separator/30">
+      <div className="px-5 py-4 flex items-center justify-between gap-3 border-b border-separator/40">
         <div className="flex items-center gap-2.5 min-w-0">
           <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${accent.dot}`} />
           <h4 className="text-sm font-semibold text-on-surface truncate">{processName} Process</h4>
@@ -218,7 +218,7 @@ export default function ProcessPanel({ processName, rows, onRowClick, showFactor
               }}
               className="text-[11px] text-outline hover:text-on-surface transition-colors flex items-center gap-1"
             >
-              <span className="material-symbols-outlined" style={{ fontSize: 13 }}>expand_more</span>
+              <span className="material-symbols-outlined" style={{ fontSize: 14 }}>expand_more</span>
               Summary
             </button>
           )}
@@ -227,7 +227,7 @@ export default function ProcessPanel({ processName, rows, onRowClick, showFactor
             placeholder="Search…"
             value={search}
             onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-            className="h-7 px-2.5 rounded-lg bg-surface-container border border-separator/35 text-[11px]
+            className="h-7 px-2.5 rounded-lg bg-surface-container border border-separator/40 text-[11px]
                        text-on-surface placeholder:text-outline outline-none focus:border-primary/40 w-28 transition-colors"
           />
         </div>
@@ -257,7 +257,7 @@ export default function ProcessPanel({ processName, rows, onRowClick, showFactor
         stickyHeaderOffset={0}
         className="flex min-h-0 flex-1 flex-col overflow-hidden"
         topBarClassName="flex justify-end px-1 pb-4"
-        bottomBarClassName="flex flex-col gap-4 border-t border-separator/30 px-1 pt-4 md:flex-row md:items-center md:justify-between"
+        bottomBarClassName="flex flex-col gap-4 border-t border-separator/40 px-1 pt-4 md:flex-row md:items-center md:justify-between"
         tableClassName="ui-table-data min-w-[720px]"
         tableViewportClassName="min-h-0 overflow-auto"
         headClassName="bg-surface-container-high/40 border-b border-outline-variant/20"
@@ -270,7 +270,7 @@ export default function ProcessPanel({ processName, rows, onRowClick, showFactor
 
       {/* Summary collapsible */}
       {summary.length > 0 && (
-        <div ref={summaryRef} className="border-t border-separator/30">
+        <div ref={summaryRef} className="border-t border-separator/40">
           <button
             className="w-full px-5 py-3 flex items-center gap-2 text-xs font-semibold text-outline hover:text-on-surface transition-colors"
             onClick={() => setShowSummary((v) => !v)}

@@ -12,7 +12,7 @@ export default function FuryoModelListPanel({
 }) {
   return (
     <div className="glass-card flex h-[min(74vh,820px)] flex-col overflow-hidden rounded-3xl">
-      <div className="border-b border-separator/35 px-5 py-4">
+      <div className="border-b border-separator/40 px-5 py-4">
         <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-outline">Models</div>
         <h3 className="mt-1 text-lg font-semibold text-on-surface">モデル一覧</h3>
         <input

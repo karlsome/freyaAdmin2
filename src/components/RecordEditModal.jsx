@@ -527,7 +527,7 @@ export default function RecordEditModal({
             className="dashboard-section flex max-h-[92vh] w-full max-w-6xl flex-col overflow-hidden rounded-2xl"
             onClick={(event) => event.stopPropagation()}
           >
-            <div className="border-b border-separator/35 px-6 py-5">
+            <div className="border-b border-separator/40 px-6 py-5">
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Edit Record</div>

@@ -73,7 +73,7 @@ export default function DashboardRecentSubmissions({ recent, loading, onRecordCl
               <button
                 key={r._id?.$oid ?? `${r["工場"]}-${r["設備"]}-${r.createdAt}`}
                 onClick={() => onRecordClick?.(r)}
-                className="w-full text-left px-3 py-3 rounded-xl bg-surface-container/45 border border-separator/35
+                className="w-full text-left px-3 py-3 rounded-xl bg-surface-container/45 border border-separator/40
                            hover:bg-surface-container hover:border-primary/30 hover:shadow-sm
                            transition-all duration-150 group"
               >

@@ -104,7 +104,7 @@ function MfgLotModal({ onClose, initialLot = "" }) {
                    shadow-[0_0_80px_rgba(99,102,241,0.18),0_24px_48px_rgba(0,0,0,0.22)] scrollbar-hide"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="px-6 py-5 flex items-center justify-between border-b border-separator/30">
+        <div className="px-6 py-5 flex items-center justify-between border-b border-separator/40">
           <div className="flex items-center gap-2">
             <span className="material-symbols-outlined text-primary" style={{ fontSize: 20 }}>manage_search</span>
             <h3 className="text-base font-semibold text-on-surface">Manufacturing Lot Finder</h3>
@@ -123,7 +123,7 @@ function MfgLotModal({ onClose, initialLot = "" }) {
               onChange={(e) => setLotInput(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleSearch()}
               placeholder="製造ロット番号 (例: 241227)"
-              className="flex-1 h-10 px-3 rounded-xl bg-surface-container border border-separator/35 text-sm
+              className="flex-1 h-10 px-3 rounded-xl bg-surface-container border border-separator/40 text-sm
                          text-on-surface placeholder:text-outline outline-none focus:border-primary/40 transition-colors"
             />
             <button
@@ -155,7 +155,7 @@ function MfgLotModal({ onClose, initialLot = "" }) {
               {fields.length > 0 && (
                 <div className="glass-card rounded-xl p-5 space-y-2">
                   {fields.map(([k, v]) => (
-                    <div key={k} className="flex justify-between gap-4 border-b border-separator/20 pb-2 last:border-0">
+                    <div key={k} className="flex justify-between gap-4 border-b border-separator/40 pb-2 last:border-0">
                       <span className="text-[11px] font-semibold text-outline">{k}</span>
                       <span className="text-xs text-on-surface-variant text-right font-mono">{String(v)}</span>
                     </div>
@@ -163,7 +163,7 @@ function MfgLotModal({ onClose, initialLot = "" }) {
                 </div>
               )}
               {rows.length > 0 ? (
-                <div className="overflow-x-auto rounded-xl border border-separator/35">
+                <div className="overflow-x-auto rounded-xl border border-separator/40">
                   <table className="ui-table-data w-full">
                     <thead className="bg-surface-container-high/50">
                       <tr>
@@ -558,7 +558,7 @@ export default function FactoryDetailPage({ combined = false }) {
 
       {/* ── Daily Production ── */}
       <div className="glass-card rounded-2xl overflow-hidden">
-        <div className="px-6 py-4 border-b border-separator/30 flex items-center justify-between flex-wrap gap-3">
+        <div className="px-6 py-4 border-b border-separator/40 flex items-center justify-between flex-wrap gap-3">
           <h3 className="text-base font-semibold text-on-surface flex items-center gap-2">
             <span className="material-symbols-outlined text-primary" style={{ fontSize: 18 }}>factory</span>
             Daily Production

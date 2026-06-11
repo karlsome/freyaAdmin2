@@ -49,7 +49,7 @@ export default function ProductPDFUploadPanel({
       </button>
 
       {uploadExpanded && (
-        <div className="border-t border-separator/30 px-5 py-5 space-y-5">
+        <div className="border-t border-separator/40 px-5 py-5 space-y-5">
           <div className="grid gap-4 lg:grid-cols-3">
             <div>
               <label className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.18em] text-outline">Filter Type</label>

@@ -315,7 +315,7 @@ export default function FactoryDBWorkspace({ refreshToken, onFlash }) {
         <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-md">
           <div className="flex min-h-full items-center justify-center p-4">
             <div className="dashboard-section w-full max-w-md rounded-2xl overflow-hidden">
-              <div className="border-b border-separator/35 px-6 py-5">
+              <div className="border-b border-separator/40 px-6 py-5">
                 <h3 className="text-2xl font-semibold text-on-surface">Success</h3>
               </div>
               <div className="px-6 py-6">

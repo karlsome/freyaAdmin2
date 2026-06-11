@@ -462,7 +462,7 @@ export default function InventoryPage() {
                 type="button"
                 onClick={() => setRefreshNonce((current) => current + 1)}
                 disabled={loading || modelLoading}
-                className="rounded-2xl border border-separator/45 px-4 py-2.5 text-sm font-semibold text-on-surface transition hover:bg-surface-container disabled:cursor-not-allowed disabled:opacity-60"
+                className="rounded-2xl border border-separator/40 px-4 py-2.5 text-sm font-semibold text-on-surface transition hover:bg-surface-container disabled:cursor-not-allowed disabled:opacity-60"
               >
                 Refresh
               </button>
@@ -470,7 +470,7 @@ export default function InventoryPage() {
                 type="button"
                 onClick={handleExport}
                 disabled={exporting || modelLoading}
-                className="rounded-2xl border border-separator/45 px-4 py-2.5 text-sm font-semibold text-on-surface transition hover:bg-surface-container disabled:cursor-not-allowed disabled:opacity-60"
+                className="rounded-2xl border border-separator/40 px-4 py-2.5 text-sm font-semibold text-on-surface transition hover:bg-surface-container disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {exporting ? "Exporting..." : "Export CSV"}
               </button>
@@ -527,7 +527,7 @@ export default function InventoryPage() {
               <select
                 value={filters.partNumber}
                 onChange={(event) => updateFilter("partNumber", event.target.value)}
-                className="mt-2 h-11 w-full rounded-2xl border border-separator/50 bg-white px-4 text-sm text-on-surface outline-none transition focus:border-primary/40 dark:bg-surface-container"
+                className="mt-2 h-11 w-full rounded-2xl border border-separator/40 bg-white px-4 text-sm text-on-surface outline-none transition focus:border-primary/40 dark:bg-surface-container"
               >
                 <option value="">All Part Numbers</option>
                 {filterOptions.partNumbers.map((value) => (
@@ -542,7 +542,7 @@ export default function InventoryPage() {
                 value={filters.backNumber}
                 onChange={(event) => updateFilter("backNumber", event.target.value)}
                 disabled={selectedBackNumbers.length > 0}
-                className="mt-2 h-11 w-full rounded-2xl border border-separator/50 bg-white px-4 text-sm text-on-surface outline-none transition focus:border-primary/40 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-surface-container"
+                className="mt-2 h-11 w-full rounded-2xl border border-separator/40 bg-white px-4 text-sm text-on-surface outline-none transition focus:border-primary/40 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-surface-container"
               >
                 <option value="">{selectedBackNumbers.length > 0 ? "Model tag filter active" : "All Serial Numbers"}</option>
                 {filterOptions.backNumbers.map((value) => (
@@ -556,7 +556,7 @@ export default function InventoryPage() {
               <select
                 value={filters.model}
                 onChange={(event) => handleModelChange(event.target.value)}
-                className="mt-2 h-11 w-full rounded-2xl border border-separator/50 bg-white px-4 text-sm text-on-surface outline-none transition focus:border-primary/40 dark:bg-surface-container"
+                className="mt-2 h-11 w-full rounded-2xl border border-separator/40 bg-white px-4 text-sm text-on-surface outline-none transition focus:border-primary/40 dark:bg-surface-container"
               >
                 <option value="">All Models</option>
                 {models.map((value) => (
@@ -572,7 +572,7 @@ export default function InventoryPage() {
                 value={filters.search}
                 onChange={(event) => updateFilter("search", event.target.value)}
                 placeholder="Part number or serial number..."
-                className="mt-2 h-11 w-full rounded-2xl border border-separator/50 bg-white px-4 text-sm text-on-surface outline-none transition focus:border-primary/40 dark:bg-surface-container"
+                className="mt-2 h-11 w-full rounded-2xl border border-separator/40 bg-white px-4 text-sm text-on-surface outline-none transition focus:border-primary/40 dark:bg-surface-container"
               />
             </label>
           </div>
@@ -606,7 +606,7 @@ export default function InventoryPage() {
                 <button
                   type="button"
                   onClick={handleClearAdvancedFilters}
-                  className="flex items-center gap-2 rounded-xl border border-separator/35 glass-card px-5 py-2.5 text-sm font-semibold text-on-surface transition-all hover:border-primary/30"
+                  className="flex items-center gap-2 rounded-xl border border-separator/40 glass-card px-5 py-2.5 text-sm font-semibold text-on-surface transition-all hover:border-primary/30"
                 >
                   <span className="material-symbols-outlined" style={{ fontSize: 16 }}>refresh</span>
                   Reset Advanced Filters
@@ -694,7 +694,7 @@ export default function InventoryPage() {
           topBarClassName="flex flex-col gap-4 border-b border-outline-variant/15 px-5 py-4 md:flex-row md:items-center md:justify-between"
           bottomBarClassName="flex flex-col gap-4 border-t border-outline-variant/15 px-5 py-4 md:flex-row md:items-center md:justify-between"
           rowClassName="border-b border-outline-variant/10 transition hover:bg-primary/5"
-          rowsSelectClassName="h-10 rounded-2xl border border-separator/50 bg-white px-3 text-sm text-on-surface outline-none transition focus:border-primary/40 dark:bg-surface-container"
+          rowsSelectClassName="h-10 rounded-2xl border border-separator/40 bg-white px-3 text-sm text-on-surface outline-none transition focus:border-primary/40 dark:bg-surface-container"
         />
 
         <InventoryAddModal

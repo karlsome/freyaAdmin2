@@ -233,12 +233,12 @@ export default function EquipmentEventModal({
                   className="inline-flex items-center gap-2 rounded-2xl border border-outline-variant/30 bg-surface px-4 py-2.5 text-xs font-semibold text-on-surface transition hover:bg-surface-container disabled:cursor-not-allowed disabled:opacity-50">
                   {uploading ? (
                     <>
-                      <span className="material-symbols-outlined animate-spin" style={{ fontSize: 15 }}>progress_activity</span>
+                      <span className="material-symbols-outlined animate-spin" style={{ fontSize: 16 }}>progress_activity</span>
                       アップロード中…
                     </>
                   ) : (
                     <>
-                      <span className="material-symbols-outlined" style={{ fontSize: 15 }}>attach_file</span>
+                      <span className="material-symbols-outlined" style={{ fontSize: 16 }}>attach_file</span>
                       ファイルを添付
                     </>
                   )}

@@ -104,7 +104,7 @@ export default function FuryoDefinitionPanel({
 
   return (
     <div className="glass-card flex h-[min(74vh,820px)] flex-col overflow-hidden rounded-3xl">
-      <div className="border-b border-separator/35 px-6 py-5">
+      <div className="border-b border-separator/40 px-6 py-5">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div>
             <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-outline">Defect Definition</div>
@@ -153,7 +153,7 @@ export default function FuryoDefinitionPanel({
         </div>
       </div>
 
-      <div className="flex flex-col gap-4 border-t border-separator/30 px-6 py-4 md:flex-row md:items-center md:justify-between">
+      <div className="flex flex-col gap-4 border-t border-separator/40 px-6 py-4 md:flex-row md:items-center md:justify-between">
         <div className="text-sm text-on-surface-variant">
           {canEdit
             ? editMode

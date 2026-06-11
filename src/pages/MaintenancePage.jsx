@@ -117,17 +117,17 @@ function FormCard({ form, machineNames, onOpen }) {
         <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-outline">
           {form.工場 && (
             <span className="flex items-center gap-1">
-              <span className="material-symbols-outlined" style={{ fontSize: 13 }}>factory</span>
+              <span className="material-symbols-outlined" style={{ fontSize: 14 }}>factory</span>
               {form.工場}
             </span>
           )}
           <span className="flex items-center gap-1">
-            <span className="material-symbols-outlined" style={{ fontSize: 13 }}>list</span>
+            <span className="material-symbols-outlined" style={{ fontSize: 14 }}>list</span>
             {form.fields?.length ?? 0} fields
           </span>
         </div>
       </div>
-      <div className="flex items-center justify-between border-t border-separator/30 px-5 py-3 text-xs font-semibold">
+      <div className="flex items-center justify-between border-t border-separator/40 px-5 py-3 text-xs font-semibold">
         <span className="text-outline">Click card to view details</span>
         <span className="inline-flex items-center gap-1 text-primary">
           Open

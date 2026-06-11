@@ -263,12 +263,12 @@ function AddEventModal({ factories, allEquipment, workerNames, username, submitt
             >
               {uploading ? (
                 <>
-                  <span className="material-symbols-outlined animate-spin" style={{ fontSize: 15 }}>progress_activity</span>
+                  <span className="material-symbols-outlined animate-spin" style={{ fontSize: 16 }}>progress_activity</span>
                   アップロード中…
                 </>
               ) : (
                 <>
-                  <span className="material-symbols-outlined" style={{ fontSize: 15 }}>attach_file</span>
+                  <span className="material-symbols-outlined" style={{ fontSize: 16 }}>attach_file</span>
                   Attach files
                 </>
               )}
@@ -313,7 +313,7 @@ function AddEventModal({ factories, allEquipment, workerNames, username, submitt
           <button
             type="button"
             onClick={onClose}
-            className="rounded-xl border border-separator/50 px-4 py-2 text-xs font-semibold text-on-surface-variant hover:bg-surface-container hover:text-primary hover:border-primary/30 active:scale-95 transition-all duration-150"
+            className="rounded-xl border border-separator/40 px-4 py-2 text-xs font-semibold text-on-surface-variant hover:bg-surface-container hover:text-primary hover:border-primary/30 active:scale-95 transition-all duration-150"
           >
             Cancel
           </button>
@@ -418,7 +418,7 @@ function EventDetailModal({ event, onClose }) {
           <button
             type="button"
             onClick={onClose}
-            className="rounded-xl border border-separator/50 px-4 py-2 text-xs font-semibold text-on-surface-variant hover:bg-surface-container hover:text-primary hover:border-primary/30 active:scale-95 transition-all duration-150"
+            className="rounded-xl border border-separator/40 px-4 py-2 text-xs font-semibold text-on-surface-variant hover:bg-surface-container hover:text-primary hover:border-primary/30 active:scale-95 transition-all duration-150"
           >
             Close
           </button>
@@ -652,7 +652,7 @@ export default function EquipmentHistoryPage() {
       {/* History table */}
       <div className="dashboard-section rounded-2xl overflow-hidden">
         {/* Section header */}
-        <div className="px-5 py-4 border-b border-separator/35 flex items-center gap-2">
+        <div className="px-5 py-4 border-b border-separator/40 flex items-center gap-2">
           <span className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
             <span className="material-symbols-outlined text-primary" style={{ fontSize: 18 }}>history</span>
           </span>
@@ -719,7 +719,7 @@ export default function EquipmentHistoryPage() {
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
-                <tr className="border-b border-separator/30 bg-surface-container-high">
+                <tr className="border-b border-separator/40 bg-surface-container-high">
                   <th className="px-3 py-3 text-left text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">
                     <button
                       type="button"
@@ -727,7 +727,7 @@ export default function EquipmentHistoryPage() {
                       className="inline-flex items-center gap-1 hover:text-on-surface transition-all duration-150"
                     >
                       Date
-                      <span className="material-symbols-outlined" style={{ fontSize: 13 }}>
+                      <span className="material-symbols-outlined" style={{ fontSize: 14 }}>
                         {sortDir === "desc" ? "arrow_downward" : "arrow_upward"}
                       </span>
                     </button>

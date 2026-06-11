@@ -1389,8 +1389,8 @@ export default function ApprovalsPage() {
         stickyHeaderCellClassName="bg-surface-container-high shadow-[inset_0_-1px_0_rgba(148,163,184,0.18)]"
         layoutStorageKey={activeTab === "recycleBin" ? "approvals_bin_table" : `approvals_${activeTab}_${viewMode}`}
         className="dashboard-section mb-8 overflow-hidden rounded-2xl"
-        topBarClassName="flex flex-col gap-4 border-b border-separator/35 px-5 py-4 md:flex-row md:items-center md:justify-between"
-        bottomBarClassName="flex flex-col gap-4 border-t border-separator/30 px-5 py-4 md:flex-row md:items-center md:justify-between"
+        topBarClassName="flex flex-col gap-4 border-b border-separator/40 px-5 py-4 md:flex-row md:items-center md:justify-between"
+        bottomBarClassName="flex flex-col gap-4 border-t border-separator/40 px-5 py-4 md:flex-row md:items-center md:justify-between"
         tableClassName="ui-table-data w-full border-separate border-spacing-0"
         tableViewportClassName="max-h-[68vh] overflow-auto"
       />

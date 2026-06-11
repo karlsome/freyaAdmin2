@@ -73,7 +73,7 @@ async function resolveActorName(username) {
 
 function SummaryCard({ icon, label, value }) {
   return (
-    <div className="rounded-2xl border border-separator/35 bg-surface px-4 py-3">
+    <div className="rounded-2xl border border-separator/40 bg-surface px-4 py-3">
       <div className="flex items-center gap-2 text-outline">
         <span className="material-symbols-outlined text-primary" style={{ fontSize: 16 }}>{icon}</span>
         <span className="text-[10px] font-semibold uppercase tracking-[0.18em]">{label}</span>
@@ -85,7 +85,7 @@ function SummaryCard({ icon, label, value }) {
 
 function ActivityItem({ icon, label, value }) {
   return (
-    <div className="rounded-2xl border border-separator/35 bg-surface px-4 py-3">
+    <div className="rounded-2xl border border-separator/40 bg-surface px-4 py-3">
       <div className="flex items-center gap-2 text-outline">
         <span className="material-symbols-outlined text-primary" style={{ fontSize: 16 }}>{icon}</span>
         <span className="text-[10px] font-semibold uppercase tracking-[0.18em]">{label}</span>
@@ -101,7 +101,7 @@ function FieldRow({ field, order, onPreviewImage }) {
   const orderLabel = order + 1;
 
   return (
-    <div className="rounded-2xl border border-separator/35 bg-surface px-4 py-3">
+    <div className="rounded-2xl border border-separator/40 bg-surface px-4 py-3">
       <div className="flex items-start gap-3">
         <div className="flex min-w-0 flex-1 items-start gap-3">
           <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-2xl bg-surface-container text-sm font-semibold text-on-surface">
@@ -207,7 +207,7 @@ export default function CheckFormDetailModal({ form, scheduleMeta, machineNames,
       }}
     >
       <div className="relative flex max-h-[90vh] w-full max-w-4xl flex-col overflow-hidden rounded-2xl dashboard-section">
-        <div className="flex items-start justify-between border-b border-separator/35 px-6 py-5">
+        <div className="flex items-start justify-between border-b border-separator/40 px-6 py-5">
           <div className="min-w-0 flex-1 pr-4">
             <div className="mb-2 flex flex-wrap items-center gap-2">
               <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-primary">
@@ -239,7 +239,7 @@ export default function CheckFormDetailModal({ form, scheduleMeta, machineNames,
             <SummaryCard icon="list" label="Fields" value={`${form.fields?.length ?? 0} checks`} />
           </div>
 
-          <section className="mt-5 rounded-2xl border border-separator/30 bg-surface-container/40 p-4">
+          <section className="mt-5 rounded-2xl border border-separator/40 bg-surface-container/40 p-4">
             <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Applies To</p>
             <div className="mt-3">
               <p className="text-sm font-semibold text-on-surface">Machines</p>
@@ -248,14 +248,14 @@ export default function CheckFormDetailModal({ form, scheduleMeta, machineNames,
                   machineNames.map((machineName) => (
                     <span
                       key={machineName}
-                      className="inline-flex items-center gap-1 rounded-full border border-separator/35 bg-surface px-3 py-1.5 text-xs font-semibold text-on-surface"
+                      className="inline-flex items-center gap-1 rounded-full border border-separator/40 bg-surface px-3 py-1.5 text-xs font-semibold text-on-surface"
                     >
                       <span className="material-symbols-outlined text-primary" style={{ fontSize: 14 }}>precision_manufacturing</span>
                       {machineName}
                     </span>
                   ))
                 ) : (
-                  <span className="inline-flex items-center gap-1 rounded-full border border-dashed border-separator/35 bg-surface px-3 py-1.5 text-xs font-semibold text-outline">
+                  <span className="inline-flex items-center gap-1 rounded-full border border-dashed border-separator/40 bg-surface px-3 py-1.5 text-xs font-semibold text-outline">
                     <span className="material-symbols-outlined" style={{ fontSize: 14 }}>precision_manufacturing</span>
                     No machines assigned
                   </span>
@@ -264,7 +264,7 @@ export default function CheckFormDetailModal({ form, scheduleMeta, machineNames,
             </div>
           </section>
 
-          <section className="mt-5 rounded-2xl border border-separator/30 bg-surface-container/40 p-4">
+          <section className="mt-5 rounded-2xl border border-separator/40 bg-surface-container/40 p-4">
             <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Activity</p>
             <div className="mt-3 grid gap-3 md:grid-cols-2">
               <ActivityItem icon="person" label="Created By" value={createdByName || form.createdBy || "Unknown user"} />
@@ -274,7 +274,7 @@ export default function CheckFormDetailModal({ form, scheduleMeta, machineNames,
             </div>
           </section>
 
-          <section className="mt-5 rounded-2xl border border-separator/30 bg-surface-container/40 p-4">
+          <section className="mt-5 rounded-2xl border border-separator/40 bg-surface-container/40 p-4">
             <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
               <div>
                 <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Checks</p>
@@ -290,7 +290,7 @@ export default function CheckFormDetailModal({ form, scheduleMeta, machineNames,
           </section>
         </div>
 
-        <div className="flex flex-col gap-3 border-t border-separator/30 px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col gap-3 border-t border-separator/40 px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-xs leading-5 text-outline">Edit this form to update machine scope, cadence, metadata, or checklist fields.</p>
           <button
             type="button"

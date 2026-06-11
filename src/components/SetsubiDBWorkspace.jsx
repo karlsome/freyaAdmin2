@@ -38,7 +38,7 @@ function SuccessModal({ message, onClose }) {
     <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-md">
       <div className="flex min-h-full items-start justify-center px-4 pb-4 pt-10">
         <div className="dashboard-section w-full max-w-md rounded-2xl overflow-hidden">
-          <div className="border-b border-separator/35 px-6 py-5">
+          <div className="border-b border-separator/40 px-6 py-5">
             <h3 className="text-2xl font-semibold text-on-surface">Success</h3>
           </div>
           <div className="px-6 py-6">
@@ -209,7 +209,7 @@ function EventDetailModal({ event, canEdit, username, role, onClose, onSaved, on
         <div className="dashboard-section w-full max-w-lg rounded-2xl overflow-hidden">
 
           {/* Header */}
-          <div className="border-b border-separator/35 px-6 py-5">
+          <div className="border-b border-separator/40 px-6 py-5">
             <div className="flex items-start justify-between gap-4">
               <div>
                 <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-outline">事案詳細</div>
@@ -326,8 +326,8 @@ function EventDetailModal({ event, canEdit, username, role, onClose, onSaved, on
                   <button type="button" onClick={() => fileInputRef.current?.click()} disabled={uploading}
                     className="inline-flex items-center gap-2 rounded-2xl border border-outline-variant/30 bg-surface px-4 py-2.5 text-xs font-semibold text-on-surface transition hover:bg-surface-container disabled:opacity-50">
                     {uploading
-                      ? <><span className="material-symbols-outlined animate-spin" style={{ fontSize: 15 }}>progress_activity</span>アップロード中…</>
-                      : <><span className="material-symbols-outlined" style={{ fontSize: 15 }}>attach_file</span>ファイルを添付</>}
+                      ? <><span className="material-symbols-outlined animate-spin" style={{ fontSize: 16 }}>progress_activity</span>アップロード中…</>
+                      : <><span className="material-symbols-outlined" style={{ fontSize: 16 }}>attach_file</span>ファイルを添付</>}
                   </button>
                   {uploadError && <p className="mt-2 text-xs text-error">{uploadError}</p>}
                   {imageURLs.length > 0 && (
@@ -353,7 +353,7 @@ function EventDetailModal({ event, canEdit, username, role, onClose, onSaved, on
           </div>
 
           {/* Footer */}
-          <div className="flex items-center justify-between gap-3 border-t border-separator/30 px-6 py-4">
+          <div className="flex items-center justify-between gap-3 border-t border-separator/40 px-6 py-4">
             {canEdit && mode === "edit" ? (
               <button type="button" onClick={handleDelete} disabled={busy}
                 className="rounded-2xl border border-error/20 bg-error/10 px-4 py-2 text-xs font-semibold text-error transition hover:bg-error/20 disabled:opacity-50">
@@ -412,7 +412,7 @@ function EquipmentDetailPanel({ equipment, onClose, onEdit }) {
   return (
     <div className="rounded-2xl border border-separator/40 bg-surface-container shadow-sm overflow-hidden">
       {/* Header */}
-      <div className="flex items-start justify-between gap-4 border-b border-separator/35 px-6 py-5">
+      <div className="flex items-start justify-between gap-4 border-b border-separator/40 px-6 py-5">
         <div>
           <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">設備詳細</p>
           <h3 className="mt-1 text-xl font-semibold text-on-surface">{equipment.name || "—"}</h3>
@@ -424,7 +424,7 @@ function EquipmentDetailPanel({ equipment, onClose, onEdit }) {
           {onEdit && (
             <button type="button" onClick={() => onEdit(equipment)}
               className="flex h-9 items-center gap-1.5 rounded-2xl border border-separator/40 bg-surface px-3 text-xs font-semibold text-on-surface transition hover:bg-surface-container-high">
-              <span className="material-symbols-outlined" style={{ fontSize: 15 }}>edit</span>
+              <span className="material-symbols-outlined" style={{ fontSize: 16 }}>edit</span>
               Edit
             </button>
           )}
@@ -875,7 +875,7 @@ export default function SetsubiDBWorkspace({ refreshToken, onFlash }) {
               onClick={() => setListSortDir((d) => d === "desc" ? "asc" : "desc")}
               className="ml-auto inline-flex items-center gap-1.5 rounded-2xl border border-separator/40 bg-surface px-3 py-2 text-xs font-semibold text-on-surface transition hover:bg-surface-container"
             >
-              <span className="material-symbols-outlined" style={{ fontSize: 15 }}>
+              <span className="material-symbols-outlined" style={{ fontSize: 16 }}>
                 {listSortDir === "desc" ? "arrow_downward" : "arrow_upward"}
               </span>
               Date {listSortDir === "desc" ? "Newest first" : "Oldest first"}

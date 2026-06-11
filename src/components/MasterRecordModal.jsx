@@ -56,7 +56,7 @@ export default function MasterRecordModal({
                     ) : (
                       <div className="flex h-[280px] items-center justify-center text-on-surface-variant">
                         <div className="text-center">
-                          <span className="material-symbols-outlined" style={{ fontSize: 38 }}>image</span>
+                          <span className="material-symbols-outlined" style={{ fontSize: 40 }}>image</span>
                           <p className="mt-3 text-sm font-medium">No image selected</p>
                         </div>
                       </div>

@@ -35,11 +35,11 @@ export default function DashboardPage() {
             onClick={refresh}
             disabled={loading}
             className="flex w-full sm:w-auto items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs font-semibold
-                       bg-surface-container border border-separator/60 text-on-surface-variant
+                       bg-surface-container border border-separator/40 text-on-surface-variant
                        hover:bg-surface-container-high hover:text-primary hover:border-primary/30
                        active:scale-95 transition-all duration-150 disabled:opacity-50 shadow-sm"
           >
-            <span className={`material-symbols-outlined ${loading ? "animate-spin" : ""}`} style={{ fontSize: 15 }}>refresh</span>
+            <span className={`material-symbols-outlined ${loading ? "animate-spin" : ""}`} style={{ fontSize: 16 }}>refresh</span>
             {refreshLabel ? `${t("refresh")} · ${refreshLabel}` : t("refresh")}
           </button>
         )}

@@ -617,7 +617,7 @@ function SubmissionPickerModal({ dateLabel, factory, machineName, onClose, onSel
         className="glass-card flex max-h-[78vh] w-full max-w-lg flex-col overflow-hidden rounded-2xl border border-outline-variant/20"
         onClick={(event) => event.stopPropagation()}
       >
-        <div className="flex items-start justify-between gap-4 border-b border-separator/35 px-6 py-5">
+        <div className="flex items-start justify-between gap-4 border-b border-separator/40 px-6 py-5">
           <div className="min-w-0 flex-1">
             <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Multiple Submissions</p>
             <h3 className="mt-1 text-lg font-semibold text-on-surface">Choose a checklist record</h3>
@@ -927,7 +927,7 @@ function RecordDetailModal({ defaultTab = "submission", form, initialTicketFocus
     <>
       <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
         <div className="dashboard-section flex max-h-[88vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl">
-        <div className="flex flex-shrink-0 items-start justify-between border-b border-separator/35 px-6 py-5">
+        <div className="flex flex-shrink-0 items-start justify-between border-b border-separator/40 px-6 py-5">
           <div className="min-w-0 flex-1 pr-4">
             {onBack && (
               <button
@@ -955,7 +955,7 @@ function RecordDetailModal({ defaultTab = "submission", form, initialTicketFocus
           </button>
         </div>
 
-        <div className="flex flex-shrink-0 flex-wrap gap-4 border-b border-separator/35 px-6 py-4">
+        <div className="flex flex-shrink-0 flex-wrap gap-4 border-b border-separator/40 px-6 py-4">
           {isReferenceRecord ? (
             <>
               <span className={`rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] ${
@@ -1015,7 +1015,7 @@ function RecordDetailModal({ defaultTab = "submission", form, initialTicketFocus
         </div>
 
         {modalTabItems.length > 1 && (
-          <div className="border-b border-separator/35 px-6 py-3">
+          <div className="border-b border-separator/40 px-6 py-3">
             <LiquidSegmentedControl
               items={modalTabItems}
               activeKey={activeTab}
@@ -1082,7 +1082,7 @@ function RecordDetailModal({ defaultTab = "submission", form, initialTicketFocus
                         {field.description && <p className="mt-0.5 text-xs text-outline">{field.description}</p>}
                         {answeredAtLabel && (
                           <div className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-surface px-2.5 py-1 text-[11px] font-semibold text-outline">
-                            <span className="material-symbols-outlined" style={{ fontSize: 13 }}>schedule</span>
+                            <span className="material-symbols-outlined" style={{ fontSize: 14 }}>schedule</span>
                             Answered {answeredAtLabel}
                           </div>
                         )}
@@ -1834,7 +1834,7 @@ export default function ChecklistSubmissionsPage() {
       </div>
 
       <div className="dashboard-section overflow-hidden rounded-2xl">
-        <div className="flex flex-col gap-4 border-b border-separator/35 px-6 py-5 lg:flex-row lg:items-center lg:justify-between">
+        <div className="flex flex-col gap-4 border-b border-separator/40 px-6 py-5 lg:flex-row lg:items-center lg:justify-between">
           <div>
             <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Timeline</p>
             <h3 className="mt-1 text-lg font-semibold text-on-surface">Checklist Submission Timeline</h3>

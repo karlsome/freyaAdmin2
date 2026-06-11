@@ -218,7 +218,7 @@ function normalizeReferenceLibraryImages(images = []) {
 }
 
 const inputClass =
-  "w-full rounded-2xl border border-separator/50 bg-surface px-3 py-3 text-sm text-on-surface outline-none transition focus:border-primary/40";
+  "w-full rounded-2xl border border-separator/40 bg-surface px-3 py-3 text-sm text-on-surface outline-none transition focus:border-primary/40";
 
 function getBuilderViewportSize() {
   if (typeof window === "undefined") {
@@ -528,7 +528,7 @@ export default function CheckFormBuilderModal({ initial, onClose, onSaved, prese
         className="relative flex min-h-0 w-full max-w-6xl flex-col overflow-hidden rounded-2xl border border-separator/40 glass-card"
         style={{ height: `${modalHeight}px`, maxHeight: `${modalHeight}px` }}
       >
-        <div className="flex items-start justify-between border-b border-separator/35 px-6 py-5">
+        <div className="flex items-start justify-between border-b border-separator/40 px-6 py-5">
           <div className="min-w-0 flex-1 pr-4">
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-outline">
               {initial ? "Edit Form" : "New Form"}
@@ -586,7 +586,7 @@ export default function CheckFormBuilderModal({ initial, onClose, onSaved, prese
                     />
                     {nameConflict ? (
                       <p className="mt-1.5 flex items-center gap-1 text-xs text-error">
-                        <span className="material-symbols-outlined" style={{ fontSize: 13 }}>error</span>
+                        <span className="material-symbols-outlined" style={{ fontSize: 14 }}>error</span>
                         This form name is already in use.
                       </p>
                     ) : null}
@@ -1149,7 +1149,7 @@ function ReferenceImageLibraryModal({
             disabled={uploading}
             className="flex aspect-[4/3] flex-col items-center justify-center gap-3 rounded-3xl border border-dashed border-primary/35 bg-primary/5 px-5 text-center transition hover:border-primary/60 hover:bg-primary/10 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            <span className={`material-symbols-outlined text-primary ${uploading ? "animate-spin" : ""}`} style={{ fontSize: 30 }}>
+            <span className={`material-symbols-outlined text-primary ${uploading ? "animate-spin" : ""}`} style={{ fontSize: 28 }}>
               {uploading ? "progress_activity" : "add_photo_alternate"}
             </span>
             <div>
@@ -1245,7 +1245,7 @@ function ReferenceImagePreviewModal({ image, selectedImageURL, onClose, onSelect
       maxWidthClass="max-w-5xl"
       zIndexClass="z-[100]"
       overlayClassName="bg-black/75 backdrop-blur-sm"
-      panelClassName="border border-separator/35 bg-slate-950/95 text-white"
+      panelClassName="border border-separator/40 bg-slate-950/95 text-white"
       dividerClassName="border-white/10"
       titleClassName="text-white"
       descriptionClassName="text-white/65"
@@ -1529,16 +1529,16 @@ function FieldEditor({ field, onChange, username }) {
               type="button"
               onClick={handleLibraryToggle}
               disabled={uploading || preparingEditor}
-              className="inline-flex items-center gap-2 rounded-2xl border border-separator/50 bg-surface-container px-4 py-2 text-xs font-semibold text-on-surface transition hover:bg-surface-container-high disabled:cursor-not-allowed disabled:opacity-50"
+              className="inline-flex items-center gap-2 rounded-2xl border border-separator/40 bg-surface-container px-4 py-2 text-xs font-semibold text-on-surface transition hover:bg-surface-container-high disabled:cursor-not-allowed disabled:opacity-50"
             >
               {uploading || loadingLibrary || preparingEditor ? (
                 <>
-                  <span className="material-symbols-outlined animate-spin" style={{ fontSize: 15 }}>progress_activity</span>
+                  <span className="material-symbols-outlined animate-spin" style={{ fontSize: 16 }}>progress_activity</span>
                   {uploading ? "Uploading..." : preparingEditor ? "Preparing editor..." : "Loading images..."}
                 </>
               ) : (
                 <>
-                  <span className="material-symbols-outlined" style={{ fontSize: 15 }}>photo_library</span>
+                  <span className="material-symbols-outlined" style={{ fontSize: 16 }}>photo_library</span>
                   {field.imageURL ? "Replace image" : "Choose image"}
                 </>
               )}
@@ -1550,7 +1550,7 @@ function FieldEditor({ field, onChange, username }) {
                 onClick={() => handleOpenPreview({ imageURL: selectedImageURL, name: field.label || "Reference image" })}
                 className="inline-flex items-center gap-2 rounded-2xl border border-separator/40 px-4 py-2 text-xs font-semibold text-on-surface transition hover:bg-surface-container"
               >
-                <span className="material-symbols-outlined" style={{ fontSize: 15 }}>open_in_full</span>
+                <span className="material-symbols-outlined" style={{ fontSize: 16 }}>open_in_full</span>
                 Preview image
               </button>
             ) : null}
@@ -1706,7 +1706,7 @@ function SelectOptionsEditor({ options, onChange }) {
               addOption();
             }
           }}
-          className="flex-1 rounded-2xl border border-separator/50 bg-surface-container px-3 py-2 text-sm text-on-surface outline-none transition focus:border-primary/40"
+          className="flex-1 rounded-2xl border border-separator/40 bg-surface-container px-3 py-2 text-sm text-on-surface outline-none transition focus:border-primary/40"
         />
         <button type="button" onClick={addOption} className="rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-on-primary hover:opacity-90 active:scale-95 transition-all duration-150">
           Add

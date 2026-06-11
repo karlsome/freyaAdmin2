@@ -61,7 +61,7 @@ export default function ProductPDFTrashModal({
     <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm">
       <div className="flex min-h-full items-center justify-center p-4">
         <div ref={modalRef} className="glass-card flex w-full max-w-6xl flex-col overflow-hidden rounded-2xl">
-          <div className="border-b border-separator/35 px-6 py-5">
+          <div className="border-b border-separator/40 px-6 py-5">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
               <div>
                 <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-outline">Trash</div>
@@ -160,7 +160,7 @@ export default function ProductPDFTrashModal({
             )}
           </div>
 
-          <div className="flex flex-col gap-4 border-t border-separator/30 px-6 py-4 md:flex-row md:items-center md:justify-between">
+          <div className="flex flex-col gap-4 border-t border-separator/40 px-6 py-4 md:flex-row md:items-center md:justify-between">
             <div className="flex flex-wrap items-center gap-3 text-sm text-on-surface-variant">
               <span>Showing {start}-{end} of {totalCount}</span>
               <label className="flex items-center gap-2">

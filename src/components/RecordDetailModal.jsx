@@ -205,7 +205,7 @@ function PhotosSection({ checkImages, labelImages, totalCount, onPreview }) {
                   <button
                     type="button"
                     onClick={() => onPreview?.("check", index)}
-                    className="block w-full rounded-2xl overflow-hidden border border-separator/35 hover:border-primary/45 transition-all duration-150 cursor-zoom-in active:scale-95"
+                    className="block w-full rounded-2xl overflow-hidden border border-separator/40 hover:border-primary/45 transition-all duration-150 cursor-zoom-in active:scale-95"
                   >
                     <img src={url} alt={label} className="w-full object-cover max-h-36 bg-black/20" />
                   </button>
@@ -222,7 +222,7 @@ function PhotosSection({ checkImages, labelImages, totalCount, onPreview }) {
                     key={i}
                     type="button"
                     onClick={() => onPreview?.("label", i)}
-                    className="block w-full rounded-2xl overflow-hidden border border-separator/35 hover:border-primary/45 transition-all duration-150 cursor-zoom-in active:scale-95"
+                    className="block w-full rounded-2xl overflow-hidden border border-separator/40 hover:border-primary/45 transition-all duration-150 cursor-zoom-in active:scale-95"
                   >
                     <img
                       src={url}
@@ -259,7 +259,7 @@ function BreakTimeSection({ record }) {
       badge={<span className="px-1.5 py-0.5 rounded-full bg-surface-container text-[9px] font-semibold normal-case tracking-normal">{totalMin} min</span>}
     >
       <div className="pb-5">
-        <div className="rounded-xl overflow-hidden border border-separator/30">
+        <div className="rounded-xl overflow-hidden border border-separator/40">
           <table className="ui-table-data w-full">
             <thead className="bg-surface-container-high/40">
               <tr>
@@ -340,7 +340,7 @@ function MaintenanceSection({ record, onPreview }) {
                       key={i}
                       type="button"
                       onClick={() => onPreview?.(rec, i)}
-                      className="block w-full rounded-2xl overflow-hidden border border-separator/35 hover:border-amber-400/45 transition-all duration-150 cursor-zoom-in active:scale-95"
+                      className="block w-full rounded-2xl overflow-hidden border border-separator/40 hover:border-amber-400/45 transition-all duration-150 cursor-zoom-in active:scale-95"
                     >
                       <img src={url} alt={`Maintenance photo ${i + 1}`} className="w-full aspect-square object-cover bg-black/20" />
                     </button>
@@ -484,7 +484,7 @@ export default function RecordDetailModal({ record, processName, onClose, onLotC
             </button>
           ) : (
             <div className="w-full h-10 flex items-center justify-center rounded-xl bg-surface-container/40
-                            border border-separator/30 text-[11px] text-outline gap-1.5">
+                            border border-separator/40 text-[11px] text-outline gap-1.5">
               <span className="material-symbols-outlined" style={{ fontSize: 14 }}>image_not_supported</span>
               No image available
             </div>
@@ -492,13 +492,13 @@ export default function RecordDetailModal({ record, processName, onClose, onLotC
         </div>
 
         {/* Stats strip */}
-        <div className="grid grid-cols-3 gap-2.5 px-6 py-4 border-b border-separator/30">
+        <div className="grid grid-cols-3 gap-2.5 px-6 py-4 border-b border-separator/40">
           {[
             { label: "Total",    value: qty.toLocaleString(), color: "text-on-surface",  bg: "bg-surface-container/60" },
             { label: "Total NG", value: ng,                   color: ng > 0 ? "text-error" : "text-on-surface", bg: ng > 0 ? "bg-error/8" : "bg-surface-container/60" },
             { label: "不良率",   value: `${defRate}%`,        color: defColor, bg: "bg-surface-container/60" },
           ].map(({ label, value, color, bg }) => (
-            <div key={label} className={`rounded-xl px-3 py-3 text-center border border-separator/30 ${bg}`}>
+            <div key={label} className={`rounded-xl px-3 py-3 text-center border border-separator/40 ${bg}`}>
               <p className={`text-xl sm:text-2xl font-semibold leading-none ${color}`}>{value}</p>
               <p className="text-[10px] font-semibold text-outline uppercase tracking-wider mt-1.5">{label}</p>
             </div>
@@ -506,7 +506,7 @@ export default function RecordDetailModal({ record, processName, onClose, onLotC
         </div>
 
         {/* Key metrics */}
-        <div className="px-6 py-4 grid grid-cols-2 gap-x-4 gap-y-3 border-b border-separator/30">
+        <div className="px-6 py-4 grid grid-cols-2 gap-x-4 gap-y-3 border-b border-separator/40">
           {keyFields.map(([label, value]) => (
             <div key={label} className="flex flex-col gap-0.5">
               <span className="text-[10px] font-semibold uppercase tracking-wider text-outline">{label}</span>
@@ -596,7 +596,7 @@ export default function RecordDetailModal({ record, processName, onClose, onLotC
               return (
                 <div
                   key={k}
-                  className="grid grid-cols-1 gap-2 py-3 border-b border-separator/20 last:border-0 md:grid-cols-[minmax(120px,160px)_1fr] md:gap-4"
+                  className="grid grid-cols-1 gap-2 py-3 border-b border-separator/40 last:border-0 md:grid-cols-[minmax(120px,160px)_1fr] md:gap-4"
                 >
                   <span className="text-[11px] font-semibold text-outline md:pt-1">{k}</span>
                   {structured ? (

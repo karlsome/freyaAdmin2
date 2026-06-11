@@ -576,7 +576,7 @@ export default function CheckFormImageOverlayEditorModal({
           onMouseDown={(event) => event.stopPropagation()}
           className="flex w-full max-w-7xl max-h-[92vh] flex-col overflow-hidden rounded-[32px] border border-separator/40 bg-surface shadow-[0_32px_120px_rgba(15,23,42,0.28)]"
         >
-          <div className="flex flex-wrap items-start justify-between gap-4 border-b border-separator/35 px-5 py-4 sm:px-6">
+          <div className="flex flex-wrap items-start justify-between gap-4 border-b border-separator/40 px-5 py-4 sm:px-6">
             <div className="min-w-0 flex-1">
               <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-primary">Overlay Editor</p>
               <h3 className="mt-1 text-lg font-semibold text-on-surface">{mode === "edit" ? "Edit reference image" : "Prepare new reference image"}</h3>
@@ -710,7 +710,7 @@ export default function CheckFormImageOverlayEditorModal({
                   ) : null}
 
                   {loadError ? (
-                    <div className="flex min-h-[320px] items-center justify-center rounded-[24px] border border-separator/35 bg-white/5 px-6 text-center text-sm text-white/70">
+                    <div className="flex min-h-[320px] items-center justify-center rounded-[24px] border border-separator/40 bg-white/5 px-6 text-center text-sm text-white/70">
                       {loadError}
                     </div>
                   ) : null}
@@ -765,7 +765,7 @@ export default function CheckFormImageOverlayEditorModal({
             </div>
           </div>
 
-          <div className="border-t border-separator/30 px-5 py-4 sm:px-6">
+          <div className="border-t border-separator/40 px-5 py-4 sm:px-6">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <p className="text-xs leading-5 text-outline">
                 {mode === "edit"

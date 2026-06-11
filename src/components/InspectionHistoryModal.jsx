@@ -151,7 +151,7 @@ function RecordDetailModal({ record, form, onClose }) {
       <div className="w-full max-w-lg max-h-[85vh] flex flex-col rounded-2xl dashboard-section overflow-hidden">
 
         {/* Header */}
-        <div className="flex flex-shrink-0 items-start justify-between border-b border-separator/35 px-6 py-5">
+        <div className="flex flex-shrink-0 items-start justify-between border-b border-separator/40 px-6 py-5">
           <div className="min-w-0 flex-1 pr-4">
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-outline">Inspection Record</p>
             <h3 className="mt-0.5 truncate text-lg font-semibold text-on-surface">{form?.name}</h3>
@@ -166,7 +166,7 @@ function RecordDetailModal({ record, form, onClose }) {
         </div>
 
         {/* Meta */}
-        <div className="flex flex-shrink-0 flex-wrap gap-4 border-b border-separator/30 px-6 py-4">
+        <div className="flex flex-shrink-0 flex-wrap gap-4 border-b border-separator/40 px-6 py-4">
           <div className="flex items-center gap-2 text-sm">
             <span className="material-symbols-outlined text-primary" style={{ fontSize: 18 }}>person</span>
             <span className="font-semibold text-on-surface">{record?.completedBy ?? "—"}</span>
@@ -338,7 +338,7 @@ export default function InspectionHistoryModal({ onClose }) {
   const modal = (
     <div className="fixed inset-0 z-50 flex flex-col bg-surface">
       {/* Header */}
-      <div className="flex flex-shrink-0 items-center justify-between border-b border-separator/35 px-6 py-4">
+      <div className="flex flex-shrink-0 items-center justify-between border-b border-separator/40 px-6 py-4">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-outline">メンテナンス</p>
           <h2 className="mt-0.5 text-xl font-semibold text-on-surface">Inspection History</h2>

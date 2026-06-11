@@ -180,7 +180,7 @@ export default function DeviceNamingModal({
                 {imageURLs.map((url, idx) => (
                   <div
                     key={`${url}-${idx}`}
-                    className="relative rounded-xl overflow-hidden border border-separator/30 aspect-square bg-surface-container group"
+                    className="relative rounded-xl overflow-hidden border border-separator/40 aspect-square bg-surface-container group"
                   >
                     <img
                       src={url}
@@ -204,7 +204,7 @@ export default function DeviceNamingModal({
                 {isUploading && Array.from({ length: uploadingCount }).map((_, i) => (
                   <div
                     key={`uploading-${i}`}
-                    className="rounded-xl border border-separator/30 aspect-square bg-surface-container flex items-center justify-center animate-pulse"
+                    className="rounded-xl border border-separator/40 aspect-square bg-surface-container flex items-center justify-center animate-pulse"
                   >
                     <span className="material-symbols-outlined text-outline animate-spin" style={{ fontSize: 24 }}>progress_activity</span>
                   </div>
@@ -238,7 +238,7 @@ export default function DeviceNamingModal({
               type="button"
               onClick={() => fileInputRef.current?.click()}
               disabled={isUploading}
-              className="inline-flex items-center gap-2 rounded-xl border border-separator/50 px-4 py-2 text-xs font-semibold text-on-surface-variant hover:bg-surface-container hover:text-primary hover:border-primary/30 active:scale-95 transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="inline-flex items-center gap-2 rounded-xl border border-separator/40 px-4 py-2 text-xs font-semibold text-on-surface-variant hover:bg-surface-container hover:text-primary hover:border-primary/30 active:scale-95 transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <span className="material-symbols-outlined" style={{ fontSize: 14 }}>add_photo_alternate</span>
               {isUploading ? `Uploading ${uploadingCount} photo${uploadingCount !== 1 ? "s" : ""}…` : "Add Photos"}
@@ -252,7 +252,7 @@ export default function DeviceNamingModal({
           <button
             type="button"
             onClick={onClose}
-            className="rounded-xl border border-separator/50 px-4 py-2 text-xs font-semibold text-on-surface-variant hover:bg-surface-container hover:text-primary hover:border-primary/30 active:scale-95 transition-all duration-150"
+            className="rounded-xl border border-separator/40 px-4 py-2 text-xs font-semibold text-on-surface-variant hover:bg-surface-container hover:text-primary hover:border-primary/30 active:scale-95 transition-all duration-150"
           >
             Cancel
           </button>

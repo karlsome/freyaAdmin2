@@ -122,7 +122,7 @@ export default function SetsubiRecordModal({
         <button
           type="button"
           onClick={onClose}
-          className="rounded-xl border border-separator/50 px-4 py-2 text-xs font-semibold text-on-surface-variant hover:bg-surface-container hover:text-primary hover:border-primary/30 active:scale-95 transition-all duration-150"
+          className="rounded-xl border border-separator/40 px-4 py-2 text-xs font-semibold text-on-surface-variant hover:bg-surface-container hover:text-primary hover:border-primary/30 active:scale-95 transition-all duration-150"
         >
           Cancel
         </button>
@@ -319,12 +319,12 @@ export default function SetsubiRecordModal({
             >
               {uploading ? (
                 <>
-                  <span className="material-symbols-outlined animate-spin" style={{ fontSize: 15 }}>progress_activity</span>
+                  <span className="material-symbols-outlined animate-spin" style={{ fontSize: 16 }}>progress_activity</span>
                   アップロード中…
                 </>
               ) : (
                 <>
-                  <span className="material-symbols-outlined" style={{ fontSize: 15 }}>attach_file</span>
+                  <span className="material-symbols-outlined" style={{ fontSize: 16 }}>attach_file</span>
                   {draft.imageURL ? "画像を変更" : "画像を添付"}
                 </>
               )}

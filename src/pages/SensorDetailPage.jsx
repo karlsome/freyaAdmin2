@@ -238,7 +238,7 @@ function SensorCard({ device, isActive = false, onSelect = null, onEdit = null, 
                 event.stopPropagation();
                 onPreviewPhotos(device);
               }}
-              className="inline-flex items-center gap-1 rounded-xl border border-separator/50 bg-surface px-2.5 py-1 text-[10px] font-semibold text-on-surface-variant transition-all duration-150 hover:border-primary/30 hover:bg-surface-container hover:text-primary active:scale-95"
+              className="inline-flex items-center gap-1 rounded-xl border border-separator/40 bg-surface px-2.5 py-1 text-[10px] font-semibold text-on-surface-variant transition-all duration-150 hover:border-primary/30 hover:bg-surface-container hover:text-primary active:scale-95"
               title={`View ${photoCount} device photo${photoCount === 1 ? "" : "s"}`}
             >
               <span className="material-symbols-outlined" style={{ fontSize: 11 }}>photo_library</span>

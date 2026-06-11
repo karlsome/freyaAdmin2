@@ -64,7 +64,7 @@ export default function FactoryCard({ factory, onClick, onDefectClick }) {
 
         {topDefects.length === 0 ? (
           <div className="flex items-center justify-center gap-1.5 rounded-xl bg-emerald-500/10 py-4 text-[11px] font-medium text-emerald-600 dark:text-emerald-400">
-            <span className="material-symbols-outlined" style={{ fontSize: 15, fontVariationSettings: "'FILL' 1" }}>check_circle</span>
+            <span className="material-symbols-outlined" style={{ fontSize: 16, fontVariationSettings: "'FILL' 1" }}>check_circle</span>
             No defects today
           </div>
         ) : (

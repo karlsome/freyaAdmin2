@@ -185,7 +185,7 @@ export default function ProductionFilterBar({
         {onLotFinderOpen && (
           <button
             onClick={onLotFinderOpen}
-            className="flex items-center gap-2 px-5 py-2.5 rounded-xl glass-card border border-separator/35 text-sm font-semibold
+            className="flex items-center gap-2 px-5 py-2.5 rounded-xl glass-card border border-separator/40 text-sm font-semibold
                        text-on-surface hover:border-primary/30 hover:scale-[1.02] transition-all duration-150"
           >
             <span className="material-symbols-outlined" style={{ fontSize: 16 }}>manage_search</span>
