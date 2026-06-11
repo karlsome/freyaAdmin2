@@ -18,7 +18,7 @@ export default function PlannerDuplicateChoiceModal({
     >
       <div className="planner-data-text space-y-4">
         <div className="rounded-2xl border border-outline-variant/15 bg-surface-container-low p-4 text-on-surface-variant">
-          <div className="font-bold text-on-surface">{pendingGoal?.背番号 || pendingGoal?.品番}</div>
+          <div className="font-semibold text-on-surface">{pendingGoal?.背番号 || pendingGoal?.品番}</div>
           <div className="mt-1">Existing: {Number(existingGoal?.targetQuantity || 0)} pcs</div>
           <div className="mt-1">Incoming: {Number(pendingGoal?.targetQuantity || 0)} pcs</div>
         </div>
@@ -30,7 +30,7 @@ export default function PlannerDuplicateChoiceModal({
             onClick={() => onResolve("overwrite")}
             className="rounded-2xl border border-amber-500/20 bg-amber-500/10 px-5 py-4 text-left transition hover:bg-amber-500/15 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            <div className="font-bold text-on-surface">Overwrite</div>
+            <div className="font-semibold text-on-surface">Overwrite</div>
             <div className="mt-1 text-on-surface-variant">Replace the existing goal with the new quantity.</div>
           </button>
 
@@ -40,7 +40,7 @@ export default function PlannerDuplicateChoiceModal({
             onClick={() => onResolve("add")}
             className="rounded-2xl border border-emerald-500/20 bg-emerald-500/10 px-5 py-4 text-left transition hover:bg-emerald-500/15 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            <div className="font-bold text-on-surface">Add</div>
+            <div className="font-semibold text-on-surface">Add</div>
             <div className="mt-1 text-on-surface-variant">Increase the existing goal by the incoming quantity.</div>
           </button>
 
@@ -50,7 +50,7 @@ export default function PlannerDuplicateChoiceModal({
             onClick={() => onResolve("cancel")}
             className="rounded-2xl border border-separator/40 px-5 py-4 text-left transition hover:bg-surface-container disabled:cursor-not-allowed disabled:opacity-50"
           >
-            <div className="font-bold text-on-surface">Cancel</div>
+            <div className="font-semibold text-on-surface">Cancel</div>
             <div className="mt-1 text-on-surface-variant">Keep the existing goal unchanged.</div>
           </button>
         </div>

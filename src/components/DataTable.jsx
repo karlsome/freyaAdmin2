@@ -185,7 +185,7 @@ function StateMessage({ icon, title, message, toneClassName }) {
       <div className={joinClasses("mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl", toneClassName)}>
         <span className="material-symbols-outlined" style={{ fontSize: 24 }}>{icon}</span>
       </div>
-      <h3 className="text-lg font-black text-on-surface">{title}</h3>
+      <h3 className="text-lg font-semibold text-on-surface">{title}</h3>
       {message ? <p className="mt-2 text-sm text-on-surface-variant">{message}</p> : null}
     </div>
   );
@@ -227,8 +227,8 @@ export default function DataTable({
   defaultMinColumnWidth = 112,
   defaultMaxColumnWidth = null,
   className = "glass-card rounded-2xl overflow-hidden mb-8",
-  topBarClassName = "flex flex-col gap-4 border-b border-separator/35 px-5 py-4 md:flex-row md:items-center md:justify-between",
-  bottomBarClassName = "flex flex-col gap-4 border-t border-separator/30 px-5 py-4 md:flex-row md:items-center md:justify-between",
+  topBarClassName = "flex flex-col gap-4 border-b border-separator/40 px-5 py-4 md:flex-row md:items-center md:justify-between",
+  bottomBarClassName = "flex flex-col gap-4 border-t border-separator/40 px-5 py-4 md:flex-row md:items-center md:justify-between",
   topInfoClassName = "text-sm font-medium text-on-surface-variant",
   bottomInfoClassName = "text-sm text-on-surface-variant",
   tableClassName = "ui-table-data min-w-full",
@@ -242,7 +242,7 @@ export default function DataTable({
   cellClassName = "px-3 py-3 align-top",
   rowsSelectClassName = "h-10 rounded-2xl border border-outline-variant/30 bg-white px-3 text-sm text-on-surface outline-none transition focus:border-primary/40",
   loadingOverlayClassName = "absolute inset-0 z-10 flex items-center justify-center bg-surface/70 backdrop-blur-sm",
-  loadingPillClassName = "flex items-center gap-3 rounded-full bg-surface-container px-4 py-3 text-sm font-bold text-on-surface shadow-lg",
+  loadingPillClassName = "flex items-center gap-3 rounded-full bg-surface-container px-4 py-3 text-sm font-semibold text-on-surface shadow-lg",
 }) {
   const initialLayoutRef = useRef(null);
 
@@ -502,7 +502,7 @@ export default function DataTable({
               <button
                 type="button"
                 onClick={handleResetColumns}
-                className="inline-flex h-10 items-center gap-2 rounded-2xl border border-outline-variant/30 px-4 text-sm font-bold text-on-surface transition hover:bg-surface-container"
+                className="inline-flex h-10 items-center gap-2 rounded-2xl border border-outline-variant/30 px-4 text-sm font-semibold text-on-surface transition hover:bg-surface-container"
               >
                 <span className="material-symbols-outlined" style={{ fontSize: 18 }}>restart_alt</span>
                 {resetColumnsLabel}
@@ -511,7 +511,7 @@ export default function DataTable({
 
             {showPageSizeSelector && (
               <div className="flex items-center gap-3">
-                <span className="text-[11px] font-bold uppercase tracking-[0.18em] text-outline">{pageSizeLabel}</span>
+                <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-outline">{pageSizeLabel}</span>
                 <select
                   value={pageSize}
                   onChange={(event) => onPageSizeChange(Number(event.target.value))}

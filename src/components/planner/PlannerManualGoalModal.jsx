@@ -58,7 +58,7 @@ export default function PlannerManualGoalModal({
           <button
             type="button"
             onClick={onClose}
-            className="rounded-2xl border border-separator/40 px-4 py-2 text-sm font-bold text-on-surface transition hover:bg-surface-container"
+            className="rounded-2xl border border-separator/40 px-4 py-2 text-sm font-semibold text-on-surface transition hover:bg-surface-container"
           >
             Cancel
           </button>
@@ -66,7 +66,7 @@ export default function PlannerManualGoalModal({
             type="button"
             disabled={submitting || !selectedProduct || !date || Number(targetQuantity) <= 0}
             onClick={() => onSubmit({ product: selectedProduct, quantity: Number(targetQuantity), date })}
-            className="rounded-2xl kinetic-gradient px-4 py-2 text-sm font-bold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+            className="rounded-2xl bg-primary px-4 py-2 text-sm font-semibold text-on-primary transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {submitting ? "Saving…" : "Add Goal"}
           </button>
@@ -113,7 +113,7 @@ export default function PlannerManualGoalModal({
           {selectedProduct ? (
             <div className="rounded-2xl border border-primary/15 bg-primary/8 p-4">
               <div className="planner-data-label text-primary">Selected Product</div>
-              <div className="mt-2 font-bold text-on-surface">{selectedProduct.背番号}</div>
+              <div className="mt-2 font-semibold text-on-surface">{selectedProduct.背番号}</div>
               <div className="mt-1 text-on-surface-variant">{selectedProduct.品番}</div>
               <div className="mt-1 text-on-surface-variant">{selectedProduct.品名 || "Unnamed product"}</div>
             </div>
@@ -138,7 +138,7 @@ export default function PlannerManualGoalModal({
                   onClick={() => handleSelectProduct(item.背番号)}
                   className={`w-full rounded-2xl border px-4 py-4 text-left transition ${active ? "border-primary/35 bg-primary/10" : "border-outline-variant/15 bg-surface hover:bg-surface-container"}`}
                 >
-                  <div className="font-bold text-on-surface">{item.背番号}</div>
+                  <div className="font-semibold text-on-surface">{item.背番号}</div>
                   <div className="mt-1 text-on-surface-variant">{item.品番}</div>
                   <div className="mt-1 text-on-surface-variant">{item.品名 || "Unnamed product"}</div>
                 </button>

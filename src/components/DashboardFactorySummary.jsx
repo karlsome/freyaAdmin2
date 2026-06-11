@@ -22,7 +22,7 @@ export default function DashboardFactorySummary({ factories, loading, onNavigate
           <span className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
             <span className="material-symbols-outlined text-primary" style={{ fontSize: 18 }}>factory</span>
           </span>
-          <h3 className="text-sm font-bold text-on-surface">Factory Summary</h3>
+          <h3 className="text-sm font-semibold text-on-surface">Factory Summary</h3>
         </div>
         <p className="text-[11px] text-outline mb-4 ml-10">Click a row to open factory detail</p>
         <div className="space-y-2">
@@ -40,7 +40,7 @@ export default function DashboardFactorySummary({ factories, loading, onNavigate
         <span className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
           <span className="material-symbols-outlined text-primary" style={{ fontSize: 18 }}>factory</span>
         </span>
-        <h3 className="text-sm font-bold text-on-surface">Factory Summary — Today</h3>
+        <h3 className="text-sm font-semibold text-on-surface">Factory Summary — Today</h3>
         {factories.length > 0 && (
           <span className="ml-auto text-[10px] text-outline">{factories.length} factories</span>
         )}
@@ -57,7 +57,7 @@ export default function DashboardFactorySummary({ factories, loading, onNavigate
             <button
               key={f.name}
               onClick={() => onNavigateToFactory?.(f.name)}
-              className="w-full rounded-xl border border-separator/50 bg-surface-container/40 p-4
+              className="w-full rounded-xl border border-separator/40 bg-surface-container/40 p-4
                          text-left hover:bg-primary/8 hover:border-primary/30 transition-all duration-150 group"
             >
               <div className="flex items-center justify-between gap-3 mb-3">
@@ -69,26 +69,26 @@ export default function DashboardFactorySummary({ factories, loading, onNavigate
 
               <div className="grid grid-cols-2 gap-3 mb-3">
                 <div>
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-outline mb-0.5">Combined</p>
-                  <p className="text-sm font-bold text-on-surface tabular-nums">
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-outline mb-0.5">Combined</p>
+                  <p className="text-sm font-semibold text-on-surface tabular-nums">
                     {f.total > 0 ? f.total.toLocaleString() : "—"}
                   </p>
                 </div>
                 <div>
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-outline mb-0.5">Combined NG</p>
-                  <p className={`text-sm font-bold tabular-nums ${f.totalNG > 0 ? "text-error" : "text-outline"}`}>
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-outline mb-0.5">Combined NG</p>
+                  <p className={`text-sm font-semibold tabular-nums ${f.totalNG > 0 ? "text-error" : "text-outline"}`}>
                     {f.totalNG > 0 ? f.totalNG.toLocaleString() : "—"}
                   </p>
                 </div>
                 <div>
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-outline mb-0.5">Defect %</p>
-                  <p className={`text-sm font-bold tabular-nums ${ds.valueColor}`}>
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-outline mb-0.5">Defect %</p>
+                  <p className={`text-sm font-semibold tabular-nums ${ds.valueColor}`}>
                     {f.total > 0 ? `${f.defectRate.toFixed(2)}%` : "—"}
                   </p>
                 </div>
                 <div>
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-outline mb-0.5">Trouble</p>
-                  <p className={`text-sm font-bold tabular-nums ${hasTrouble ? "text-amber-500" : "text-outline"}`}>
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-outline mb-0.5">Trouble</p>
+                  <p className={`text-sm font-semibold tabular-nums ${hasTrouble ? "text-amber-500" : "text-outline"}`}>
                     {hasTrouble ? `${f.troubleHours.toFixed(1)}h` : "—"}
                   </p>
                 </div>
@@ -111,9 +111,9 @@ export default function DashboardFactorySummary({ factories, loading, onNavigate
       {/* Desktop table */}
       <div className="hidden md:block">
         <div className="grid grid-cols-[1fr_88px_88px_80px_60px_130px] gap-3 px-3 py-3
-                        rounded-xl bg-surface-container-high/40 border border-separator/30 mb-2">
+                        rounded-xl bg-surface-container-high/40 border border-separator/40 mb-2">
           {["Factory", "Combined", "Combined NG", "Defect %", "Trouble", ""].map((h) => (
-            <span key={h} className="text-[10px] font-bold uppercase tracking-wider text-outline">{h}</span>
+            <span key={h} className="text-[10px] font-semibold uppercase tracking-wider text-outline">{h}</span>
           ))}
         </div>
 
@@ -134,19 +134,19 @@ export default function DashboardFactorySummary({ factories, loading, onNavigate
                   {f.name}
                 </span>
 
-                <span className="text-sm font-bold text-on-surface tabular-nums">
+                <span className="text-sm font-semibold text-on-surface tabular-nums">
                   {f.total > 0 ? f.total.toLocaleString() : <span className="text-outline text-xs">—</span>}
                 </span>
 
-                <span className={`text-sm font-bold tabular-nums ${f.totalNG > 0 ? "text-error" : "text-outline"}`}>
+                <span className={`text-sm font-semibold tabular-nums ${f.totalNG > 0 ? "text-error" : "text-outline"}`}>
                   {f.totalNG > 0 ? f.totalNG.toLocaleString() : "—"}
                 </span>
 
-                <span className={`text-sm font-bold tabular-nums ${ds.valueColor}`}>
+                <span className={`text-sm font-semibold tabular-nums ${ds.valueColor}`}>
                   {f.total > 0 ? `${f.defectRate.toFixed(2)}%` : <span className="text-outline text-xs">—</span>}
                 </span>
 
-                <span className={`text-sm font-bold tabular-nums ${hasTrouble ? "text-amber-500" : "text-outline"}`}>
+                <span className={`text-sm font-semibold tabular-nums ${hasTrouble ? "text-amber-500" : "text-outline"}`}>
                   {hasTrouble ? `${f.troubleHours.toFixed(1)}h` : "—"}
                 </span>
 

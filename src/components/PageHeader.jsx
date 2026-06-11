@@ -1,5 +1,5 @@
-const PAGE_HEADER_TITLE_CLASS = "text-2xl sm:text-3xl font-black font-headline tracking-tight text-on-surface leading-tight";
-const PAGE_HEADER_EYEBROW_CLASS = "text-[11px] font-bold uppercase tracking-[0.22em] text-outline";
+const PAGE_HEADER_TITLE_CLASS = "text-h1 sm:text-display font-headline text-on-surface";
+const PAGE_HEADER_EYEBROW_CLASS = "text-overline uppercase text-outline";
 const PAGE_HEADER_SUBTITLE_CLASS = "mt-2 text-sm text-on-surface-variant";
 
 function joinClasses(...values) {

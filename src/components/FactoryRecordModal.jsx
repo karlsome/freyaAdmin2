@@ -124,14 +124,14 @@ export default function FactoryRecordModal({
                 <button
                   type="button"
                   onClick={onClose}
-                  className="rounded-2xl border border-separator/40 px-4 py-2 text-xs font-bold text-on-surface transition hover:bg-surface-container"
+                  className="rounded-2xl border border-separator/40 px-4 py-2 text-xs font-semibold text-on-surface transition hover:bg-surface-container"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={!hasData || submitting}
-                  className="rounded-xl bg-primary px-4 py-2 text-xs font-bold text-on-primary hover:opacity-90 active:scale-95 transition-all duration-150 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="rounded-xl bg-primary px-4 py-2 text-xs font-semibold text-on-primary hover:opacity-90 active:scale-95 transition-all duration-150 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {submitting ? "Saving…" : record ? "Save Changes" : "Create Factory"}
                 </button>

@@ -49,21 +49,21 @@ export default function MasterRecordModal({
             <div className="grid gap-6 xl:grid-cols-[320px,minmax(0,1fr)]">
               <div>
                 <div className="rounded-2xl border border-separator/40 bg-surface-container-low p-4 sticky top-0">
-                  <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-outline">Product Image</div>
+                  <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-outline">Product Image</div>
                   <div className="mt-3 overflow-hidden rounded-2xl border border-separator/40 bg-surface min-h-[280px]">
                     {imagePreview ? (
                       <img src={imagePreview} alt="New record preview" className="h-[280px] w-full object-contain bg-surface-container-lowest" />
                     ) : (
                       <div className="flex h-[280px] items-center justify-center text-on-surface-variant">
                         <div className="text-center">
-                          <span className="material-symbols-outlined" style={{ fontSize: 38 }}>image</span>
+                          <span className="material-symbols-outlined" style={{ fontSize: 40 }}>image</span>
                           <p className="mt-3 text-sm font-medium">No image selected</p>
                         </div>
                       </div>
                     )}
                   </div>
 
-                  <label className="mt-4 flex cursor-pointer items-center justify-center rounded-xl bg-primary px-4 py-2 text-xs font-bold text-on-primary hover:opacity-90 active:scale-95 transition-all duration-150">
+                  <label className="mt-4 flex cursor-pointer items-center justify-center rounded-xl bg-primary px-4 py-2 text-xs font-semibold text-on-primary hover:opacity-90 active:scale-95 transition-all duration-150">
                     <input
                       type="file"
                       accept="image/*"
@@ -92,7 +92,7 @@ export default function MasterRecordModal({
 
                   return (
                     <div key={field.field} className={multiline ? "md:col-span-2" : ""}>
-                      <label className="mb-2 block text-[11px] font-bold uppercase tracking-[0.18em] text-outline">
+                      <label className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.18em] text-outline">
                         {field.label}
                       </label>
 
@@ -126,14 +126,14 @@ export default function MasterRecordModal({
                 <button
                   type="button"
                   onClick={onClose}
-                  className="rounded-2xl border border-separator/40 px-4 py-2 text-xs font-bold text-on-surface transition hover:bg-surface-container"
+                  className="rounded-2xl border border-separator/40 px-4 py-2 text-xs font-semibold text-on-surface transition hover:bg-surface-container"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={!hasData || submitting}
-                  className="rounded-xl bg-primary px-4 py-2 text-xs font-bold text-on-primary hover:opacity-90 active:scale-95 transition-all duration-150 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="rounded-xl bg-primary px-4 py-2 text-xs font-semibold text-on-primary hover:opacity-90 active:scale-95 transition-all duration-150 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {submitting ? "Saving…" : "Create Record"}
                 </button>

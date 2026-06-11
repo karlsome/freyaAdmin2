@@ -40,7 +40,7 @@ export default function SettingsModal({ isOpen, onClose }) {
               <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10">
                 <span className="material-symbols-outlined text-primary" style={{ fontSize: 20 }}>settings</span>
               </div>
-              <h2 className="text-lg font-bold text-on-surface">{t("settings")}</h2>
+              <h2 className="text-lg font-semibold text-on-surface">{t("settings")}</h2>
             </div>
             <IconButton
               icon="close"
@@ -57,7 +57,7 @@ export default function SettingsModal({ isOpen, onClose }) {
           <div>
             <div className="mb-3 flex items-center gap-2">
               <span className="material-symbols-outlined text-outline" style={{ fontSize: 16 }}>language</span>
-              <p className="text-xs font-bold uppercase tracking-[0.18em] text-outline">{t("language")}</p>
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-outline">{t("language")}</p>
             </div>
 
             <div className="space-y-2">

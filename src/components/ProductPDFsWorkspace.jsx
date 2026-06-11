@@ -594,8 +594,8 @@ export default function ProductPDFsWorkspace({ refreshToken = 0, onFlash }) {
       <div className="glass-card rounded-3xl px-5 py-5 mb-6">
         <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-outline">Document Library</div>
-            <h3 className="mt-1 text-2xl font-bold text-on-surface">梱包 / 検査基準 / 3点照合</h3>
+            <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-outline">Document Library</div>
+            <h3 className="mt-1 text-2xl font-semibold text-on-surface">梱包 / 検査基準 / 3点照合</h3>
             <p className="mt-2 max-w-2xl text-sm text-on-surface-variant">
               Manage product-linked PDFs by document type. Uploads preserve the legacy conflict checks, bulk filename matching, and trash/recovery workflow.
             </p>
@@ -607,7 +607,7 @@ export default function ProductPDFsWorkspace({ refreshToken = 0, onFlash }) {
               setTrashPage(1);
               setTrashOpen(true);
             }}
-            className="inline-flex items-center gap-2 rounded-2xl border border-separator/40 bg-surface-container px-4 py-2 text-xs font-bold text-on-surface transition hover:bg-surface-container-high"
+            className="inline-flex items-center gap-2 rounded-2xl border border-separator/40 bg-surface-container px-4 py-2 text-xs font-semibold text-on-surface transition hover:bg-surface-container-high"
           >
             <span className="material-symbols-outlined" style={{ fontSize: 16 }}>delete</span>
             Open Trash
@@ -626,23 +626,23 @@ export default function ProductPDFsWorkspace({ refreshToken = 0, onFlash }) {
       {activeTypeMeta.comingSoon ? (
         <div className="glass-card rounded-3xl px-6 py-16 text-center mb-8">
           <span className="material-symbols-outlined text-outline" style={{ fontSize: 56 }}>video_library</span>
-          <h4 className="mt-4 text-xl font-bold text-on-surface">{activeTypeMeta.label}</h4>
+          <h4 className="mt-4 text-xl font-semibold text-on-surface">{activeTypeMeta.label}</h4>
           <p className="mt-2 text-sm text-on-surface-variant">This legacy section is still marked as coming soon. The sub-tab is live in navigation, but uploads and browsing are not enabled yet.</p>
         </div>
       ) : (
         <>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4 mb-6">
             {stats.map((card) => (
-              <div key={card.label} className="glass-card rounded-2xl p-4">
+              <div key={card.label} className="glass-card rounded-2xl p-5">
                 <div className="flex items-center gap-4">
                   <div className={`flex h-12 w-12 items-center justify-center rounded-2xl ${card.accent}`}>
-                    <span className="material-symbols-outlined" style={{ fontSize: 22, fontVariationSettings: "'FILL' 1" }}>
+                    <span className="material-symbols-outlined" style={{ fontSize: 24, fontVariationSettings: "'FILL' 1" }}>
                       {card.icon}
                     </span>
                   </div>
                   <div>
-                    <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-outline">{card.label}</div>
-                    <div className="mt-1 text-2xl font-black text-on-surface">{card.value}</div>
+                    <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-outline">{card.label}</div>
+                    <div className="mt-1 text-2xl font-semibold text-on-surface">{card.value}</div>
                   </div>
                 </div>
               </div>

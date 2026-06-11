@@ -104,8 +104,8 @@ export default function DeviceNamingModal({
         {/* ── Header ── */}
         <div className="sticky top-0 z-10 rounded-t-2xl px-6 py-5 flex items-center justify-between border-b border-separator/40 bg-surface/90 backdrop-blur-md">
           <div>
-            <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-outline">IoT Device</p>
-            <h2 className="mt-1 text-xl font-black text-on-surface">Rename Device</h2>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">IoT Device</p>
+            <h2 className="mt-1 text-xl font-semibold text-on-surface">Rename Device</h2>
           </div>
           <button
             type="button"
@@ -123,7 +123,7 @@ export default function DeviceNamingModal({
           <div className="rounded-2xl border border-outline-variant/15 bg-surface-container-low px-4 py-3">
             <div className="flex items-center gap-2 text-outline">
               <span className="material-symbols-outlined text-primary" style={{ fontSize: 16 }}>sensors</span>
-              <span className="text-[10px] font-bold uppercase tracking-[0.18em]">Device ID</span>
+              <span className="text-[10px] font-semibold uppercase tracking-[0.18em]">Device ID</span>
             </div>
             <p className="mt-2 font-mono text-xs text-on-surface-variant">{deviceId}</p>
           </div>
@@ -132,7 +132,7 @@ export default function DeviceNamingModal({
           <div className="rounded-2xl border border-outline-variant/15 bg-surface-container-low px-4 py-3">
             <div className="flex items-center gap-2 text-outline">
               <span className="material-symbols-outlined text-primary" style={{ fontSize: 16 }}>factory</span>
-              <span className="text-[10px] font-bold uppercase tracking-[0.18em]">Factory</span>
+              <span className="text-[10px] font-semibold uppercase tracking-[0.18em]">Factory</span>
             </div>
             <p className="mt-2 text-sm font-semibold text-on-surface">{factoryName}</p>
           </div>
@@ -141,7 +141,7 @@ export default function DeviceNamingModal({
           <div className="rounded-2xl border border-outline-variant/15 bg-surface-container-low px-4 py-3">
             <div className="flex items-center gap-2 text-outline mb-2">
               <span className="material-symbols-outlined text-primary" style={{ fontSize: 16 }}>edit</span>
-              <span className="text-[10px] font-bold uppercase tracking-[0.18em]">Display Name</span>
+              <span className="text-[10px] font-semibold uppercase tracking-[0.18em]">Display Name</span>
             </div>
             <input
               type="text"
@@ -160,7 +160,7 @@ export default function DeviceNamingModal({
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2 text-outline">
                 <span className="material-symbols-outlined text-primary" style={{ fontSize: 16 }}>photo_library</span>
-                <span className="text-[10px] font-bold uppercase tracking-[0.18em]">Device Photos</span>
+                <span className="text-[10px] font-semibold uppercase tracking-[0.18em]">Device Photos</span>
               </div>
               <span className="text-[10px] text-outline">{imageURLs.length} photo{imageURLs.length !== 1 ? "s" : ""}</span>
             </div>
@@ -169,7 +169,7 @@ export default function DeviceNamingModal({
               <div className="rounded-2xl border border-error/20 bg-error/10 px-4 py-4 flex gap-3 mb-3">
                 <span className="material-symbols-outlined text-error flex-shrink-0" style={{ fontSize: 18 }}>report</span>
                 <div>
-                  <p className="text-sm font-bold text-on-surface">Upload failed</p>
+                  <p className="text-sm font-semibold text-on-surface">Upload failed</p>
                   <p className="text-xs text-on-surface-variant mt-1">{uploadError}</p>
                 </div>
               </div>
@@ -180,7 +180,7 @@ export default function DeviceNamingModal({
                 {imageURLs.map((url, idx) => (
                   <div
                     key={`${url}-${idx}`}
-                    className="relative rounded-xl overflow-hidden border border-separator/30 aspect-square bg-surface-container group"
+                    className="relative rounded-xl overflow-hidden border border-separator/40 aspect-square bg-surface-container group"
                   >
                     <img
                       src={url}
@@ -204,7 +204,7 @@ export default function DeviceNamingModal({
                 {isUploading && Array.from({ length: uploadingCount }).map((_, i) => (
                   <div
                     key={`uploading-${i}`}
-                    className="rounded-xl border border-separator/30 aspect-square bg-surface-container flex items-center justify-center animate-pulse"
+                    className="rounded-xl border border-separator/40 aspect-square bg-surface-container flex items-center justify-center animate-pulse"
                   >
                     <span className="material-symbols-outlined text-outline animate-spin" style={{ fontSize: 24 }}>progress_activity</span>
                   </div>
@@ -238,7 +238,7 @@ export default function DeviceNamingModal({
               type="button"
               onClick={() => fileInputRef.current?.click()}
               disabled={isUploading}
-              className="inline-flex items-center gap-2 rounded-xl border border-separator/50 px-4 py-2 text-xs font-bold text-on-surface-variant hover:bg-surface-container hover:text-primary hover:border-primary/30 active:scale-95 transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="inline-flex items-center gap-2 rounded-xl border border-separator/40 px-4 py-2 text-xs font-semibold text-on-surface-variant hover:bg-surface-container hover:text-primary hover:border-primary/30 active:scale-95 transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <span className="material-symbols-outlined" style={{ fontSize: 14 }}>add_photo_alternate</span>
               {isUploading ? `Uploading ${uploadingCount} photo${uploadingCount !== 1 ? "s" : ""}…` : "Add Photos"}
@@ -252,7 +252,7 @@ export default function DeviceNamingModal({
           <button
             type="button"
             onClick={onClose}
-            className="rounded-xl border border-separator/50 px-4 py-2 text-xs font-bold text-on-surface-variant hover:bg-surface-container hover:text-primary hover:border-primary/30 active:scale-95 transition-all duration-150"
+            className="rounded-xl border border-separator/40 px-4 py-2 text-xs font-semibold text-on-surface-variant hover:bg-surface-container hover:text-primary hover:border-primary/30 active:scale-95 transition-all duration-150"
           >
             Cancel
           </button>
@@ -260,7 +260,7 @@ export default function DeviceNamingModal({
             type="button"
             onClick={handleSave}
             disabled={saving || isUploading}
-            className="rounded-xl bg-primary px-4 py-2 text-xs font-bold text-on-primary hover:opacity-90 active:scale-95 transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="rounded-xl bg-primary px-4 py-2 text-xs font-semibold text-on-primary hover:opacity-90 active:scale-95 transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {saving ? "Saving…" : "Save Changes"}
           </button>

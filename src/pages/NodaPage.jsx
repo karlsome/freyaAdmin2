@@ -55,7 +55,7 @@ function FlashBanner({ flash, onClose }) {
     <div className={joinNodaClasses("mb-6 rounded-[24px] border px-5 py-4", tone)}>
       <div className="flex items-start justify-between gap-4">
         <div>
-          <p className="text-[10px] font-bold uppercase tracking-[0.18em]">Status</p>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.18em]">Status</p>
           <p className="mt-1 text-sm font-medium">{flash.message}</p>
         </div>
         <button type="button" onClick={onClose} className="text-current/70 transition hover:text-current">
@@ -349,7 +349,7 @@ export default function NodaPage() {
       width: 130,
       renderCell: (row) => (
         <span className={joinNodaClasses(
-          "inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-bold uppercase tracking-[0.14em]",
+          "inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold uppercase tracking-[0.18em]",
           row.requestType === "bulk"
             ? "bg-primary/12 text-primary"
             : "bg-surface-container text-on-surface-variant"
@@ -389,7 +389,7 @@ export default function NodaPage() {
                   <span
                     key={`${row._id}-${warning.label}`}
                     className={joinNodaClasses(
-                      "inline-flex rounded-full px-2 py-0.5 text-[11px] font-bold",
+                      "inline-flex rounded-full px-2 py-0.5 text-[11px] font-semibold",
                       warning.tone === "danger"
                         ? "bg-error/10 text-error"
                         : warning.tone === "warning"
@@ -472,7 +472,7 @@ export default function NodaPage() {
       <div className="w-full">
         <PageHeader
           eyebrow="Warehouse Workflow"
-          eyebrowClassName="tracking-[0.24em] text-primary"
+          eyebrowClassName="tracking-[0.18em] text-primary"
           title="Noda"
           subtitle="Manage Noda warehouse picking requests, inspect FIFO inventory impact, upload bulk CSV orders, and sync remaining work from GEN."
           subtitleClassName="max-w-3xl"
@@ -513,7 +513,7 @@ export default function NodaPage() {
                 <button
                   type="button"
                   onClick={() => setGenModalOpen(true)}
-                  className="rounded-2xl border border-primary/20 bg-primary/8 px-4 py-2.5 text-sm font-bold text-primary transition hover:bg-primary/12"
+                  className="rounded-2xl border border-primary/20 bg-primary/8 px-4 py-2.5 text-sm font-semibold text-primary transition hover:bg-primary/12"
                 >
                   Sync From GEN
                 </button>
@@ -522,7 +522,7 @@ export default function NodaPage() {
                 <button
                   type="button"
                   onClick={() => setAddModalOpen(true)}
-                  className="rounded-2xl bg-primary px-4 py-2.5 text-sm font-bold text-white transition hover:opacity-90"
+                  className="rounded-2xl bg-primary px-4 py-2.5 text-sm font-semibold text-on-primary transition hover:opacity-90"
                 >
                   New Bulk Request
                 </button>
@@ -553,7 +553,7 @@ export default function NodaPage() {
         <div className="glass-card mb-6 rounded-[28px] p-5">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
-              <h2 className="text-base font-black text-on-surface">Filters</h2>
+              <h2 className="text-base font-semibold text-on-surface">Filters</h2>
               <p className="mt-1 text-sm text-on-surface-variant">Refine the active request list by status, item, deadline, or search term.</p>
             </div>
             <button
@@ -571,7 +571,7 @@ export default function NodaPage() {
 
           <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-6">
             <label className="block xl:col-span-1">
-              <span className="block text-xs font-bold uppercase tracking-[0.18em] text-outline">Status</span>
+              <span className="block text-xs font-semibold uppercase tracking-[0.18em] text-outline">Status</span>
               <select
                 value={filters.status}
                 onChange={(event) => handleStatusSelectChange(event.target.value)}
@@ -584,7 +584,7 @@ export default function NodaPage() {
             </label>
 
             <label className="block xl:col-span-1">
-              <span className="block text-xs font-bold uppercase tracking-[0.18em] text-outline">品番</span>
+              <span className="block text-xs font-semibold uppercase tracking-[0.18em] text-outline">品番</span>
               <select
                 value={filters.partNumber}
                 onChange={(event) => updateFilter("partNumber", event.target.value)}
@@ -598,7 +598,7 @@ export default function NodaPage() {
             </label>
 
             <label className="block xl:col-span-1">
-              <span className="block text-xs font-bold uppercase tracking-[0.18em] text-outline">背番号</span>
+              <span className="block text-xs font-semibold uppercase tracking-[0.18em] text-outline">背番号</span>
               <select
                 value={filters.backNumber}
                 onChange={(event) => updateFilter("backNumber", event.target.value)}
@@ -612,7 +612,7 @@ export default function NodaPage() {
             </label>
 
             <label className="block xl:col-span-1">
-              <span className="block text-xs font-bold uppercase tracking-[0.18em] text-outline">Deadline From</span>
+              <span className="block text-xs font-semibold uppercase tracking-[0.18em] text-outline">Deadline From</span>
               <input
                 type="date"
                 value={filters.dateFrom}
@@ -622,7 +622,7 @@ export default function NodaPage() {
             </label>
 
             <label className="block xl:col-span-1">
-              <span className="block text-xs font-bold uppercase tracking-[0.18em] text-outline">Deadline To</span>
+              <span className="block text-xs font-semibold uppercase tracking-[0.18em] text-outline">Deadline To</span>
               <input
                 type="date"
                 value={filters.dateTo}
@@ -632,7 +632,7 @@ export default function NodaPage() {
             </label>
 
             <label className="block xl:col-span-1">
-              <span className="block text-xs font-bold uppercase tracking-[0.18em] text-outline">Search</span>
+              <span className="block text-xs font-semibold uppercase tracking-[0.18em] text-outline">Search</span>
               <input
                 type="text"
                 value={filters.search}
@@ -675,7 +675,7 @@ export default function NodaPage() {
           enableColumnReorder
           stickyHeader
           stickyHeaderOffset={0}
-          className="glass-card mb-8 overflow-hidden rounded-[28px]"
+          className="glass-card mb-6 overflow-hidden rounded-[28px]"
           topBarClassName="flex flex-col gap-4 border-b border-outline-variant/15 px-5 py-4 md:flex-row md:items-center md:justify-between"
           bottomBarClassName="flex flex-col gap-4 border-t border-outline-variant/15 px-5 py-4 md:flex-row md:items-center md:justify-between"
           rowClassName="border-b border-outline-variant/10 transition hover:bg-primary/5"

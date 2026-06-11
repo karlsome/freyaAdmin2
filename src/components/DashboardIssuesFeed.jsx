@@ -5,7 +5,7 @@ import { getDefectRate } from "../utils/statusHelpers";
 
 function IssueTag({ children, color }) {
   return (
-    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold ${color}`}>
+    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold ${color}`}>
       {children}
     </span>
   );
@@ -19,7 +19,7 @@ export default function DashboardIssuesFeed({ issues, loading, onRecordClick }) 
           <span className="w-8 h-8 rounded-lg bg-error/10 flex items-center justify-center flex-shrink-0">
             <span className="material-symbols-outlined text-error" style={{ fontSize: 18 }}>warning</span>
           </span>
-          <h3 className="text-sm font-bold text-on-surface">Issues Today</h3>
+          <h3 className="text-sm font-semibold text-on-surface">Issues Today</h3>
         </div>
         <p className="text-[11px] text-outline mb-4 ml-10">Records with maintenance or high defect rate</p>
         <div className="space-y-2.5">
@@ -37,9 +37,9 @@ export default function DashboardIssuesFeed({ issues, loading, onRecordClick }) 
         <span className="w-8 h-8 rounded-lg bg-error/10 flex items-center justify-center flex-shrink-0">
           <span className="material-symbols-outlined text-error" style={{ fontSize: 18 }}>warning</span>
         </span>
-        <h3 className="text-sm font-bold text-on-surface">Issues Today</h3>
+        <h3 className="text-sm font-semibold text-on-surface">Issues Today</h3>
         {issues.length > 0 && (
-          <span className="ml-auto px-2.5 py-1 rounded-full bg-error/12 text-error text-[11px] font-black border border-error/20">
+          <span className="ml-auto px-2.5 py-1 rounded-full bg-error/12 text-error text-[11px] font-semibold border border-error/20">
             {issues.length}
           </span>
         )}
@@ -52,7 +52,7 @@ export default function DashboardIssuesFeed({ issues, loading, onRecordClick }) 
             <span className="material-symbols-outlined" style={{ fontSize: 32, fontVariationSettings: "'FILL' 1" }}>check_circle</span>
           </span>
           <div className="text-center">
-            <p className="text-sm font-bold">No issues today</p>
+            <p className="text-sm font-semibold">No issues today</p>
             <p className="text-[11px] text-outline mt-0.5">All records within normal range</p>
           </div>
         </div>
@@ -82,7 +82,7 @@ export default function DashboardIssuesFeed({ issues, loading, onRecordClick }) 
               >
                 <div className="flex items-start justify-between gap-2 mb-2">
                   <div className="flex items-center gap-2 min-w-0">
-                    <span className="text-xs font-bold text-on-surface truncate">{r["工場"]}</span>
+                    <span className="text-xs font-semibold text-on-surface truncate">{r["工場"]}</span>
                     <span className="text-[10px] text-outline truncate">{r["設備"]}</span>
                   </div>
                   <span className="text-[10px] text-outline flex-shrink-0 bg-surface-container px-1.5 py-0.5 rounded-md">{r["_process"]}</span>

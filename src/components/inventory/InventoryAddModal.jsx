@@ -136,7 +136,7 @@ export default function InventoryAddModal({
           <button
             type="button"
             onClick={onClose}
-            className="rounded-2xl border border-separator/40 px-4 py-2 text-sm font-bold text-on-surface transition hover:bg-surface-container"
+            className="rounded-2xl border border-separator/40 px-4 py-2 text-sm font-semibold text-on-surface transition hover:bg-surface-container"
           >
             Cancel
           </button>
@@ -144,7 +144,7 @@ export default function InventoryAddModal({
             type="button"
             disabled={submitting}
             onClick={handleSubmit}
-            className="rounded-2xl bg-primary px-4 py-2 text-sm font-bold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+            className="rounded-2xl bg-primary px-4 py-2 text-sm font-semibold text-on-primary transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {submitting ? "Adding..." : "Add Inventory"}
           </button>
@@ -160,7 +160,7 @@ export default function InventoryAddModal({
 
         <div className="grid gap-4 md:grid-cols-2">
           <label className="block">
-            <span className="block text-xs font-bold uppercase tracking-[0.18em] text-outline">Part Number</span>
+            <span className="block text-xs font-semibold uppercase tracking-[0.18em] text-outline">Part Number</span>
             <input
               type="text"
               value={form.partNumber}
@@ -175,7 +175,7 @@ export default function InventoryAddModal({
           </label>
 
           <label className="block">
-            <span className="block text-xs font-bold uppercase tracking-[0.18em] text-outline">Serial Number</span>
+            <span className="block text-xs font-semibold uppercase tracking-[0.18em] text-outline">Serial Number</span>
             <input
               type="text"
               value={form.backNumber}
@@ -191,7 +191,7 @@ export default function InventoryAddModal({
         </div>
 
         <label className="block">
-          <span className="block text-xs font-bold uppercase tracking-[0.18em] text-outline">Quantity</span>
+          <span className="block text-xs font-semibold uppercase tracking-[0.18em] text-outline">Quantity</span>
           <input
             type="number"
             min="1"

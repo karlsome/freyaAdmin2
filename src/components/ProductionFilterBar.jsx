@@ -175,8 +175,8 @@ export default function ProductionFilterBar({
         <button
           disabled={loading}
           onClick={handleApply}
-          className="flex items-center gap-2 px-5 py-2.5 rounded-xl kinetic-gradient text-white text-sm font-bold
-                     hover:opacity-90 disabled:opacity-50 transition-opacity shadow-[0_0_20px_rgba(99,102,241,0.25)]"
+          className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-primary text-on-primary text-sm font-semibold
+                     hover:opacity-90 disabled:opacity-50 transition-opacity"
         >
           <span className="material-symbols-outlined" style={{ fontSize: 16 }}>filter_alt</span>
           {loading ? "Loading…" : "Apply Filters"}
@@ -185,7 +185,7 @@ export default function ProductionFilterBar({
         {onLotFinderOpen && (
           <button
             onClick={onLotFinderOpen}
-            className="flex items-center gap-2 px-5 py-2.5 rounded-xl glass-card border border-separator/35 text-sm font-bold
+            className="flex items-center gap-2 px-5 py-2.5 rounded-xl glass-card border border-separator/40 text-sm font-semibold
                        text-on-surface hover:border-primary/30 hover:scale-[1.02] transition-all duration-150"
           >
             <span className="material-symbols-outlined" style={{ fontSize: 16 }}>manage_search</span>

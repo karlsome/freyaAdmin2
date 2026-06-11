@@ -11,10 +11,10 @@ function PreviewCard({ record, changes, previewFields, tabKey }) {
     <div className="rounded-2xl border border-separator/40 bg-surface p-4 shadow-sm">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h4 className="text-base font-black text-on-surface">{identity.title}</h4>
+          <h4 className="text-base font-semibold text-on-surface">{identity.title}</h4>
           <p className="mt-1 text-xs text-on-surface-variant">{identity.subtitle || "No secondary identifier"}</p>
         </div>
-        <span className="rounded-full bg-primary/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.18em] text-primary">
+        <span className="rounded-full bg-primary/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-primary">
           Preview
         </span>
       </div>
@@ -22,22 +22,22 @@ function PreviewCard({ record, changes, previewFields, tabKey }) {
       <div className="mt-4 space-y-3">
         {changedFields.length ? changedFields.map(([field, nextValue]) => (
           <div key={field} className="rounded-2xl bg-surface-container-low p-3">
-            <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-outline">{field}</div>
+            <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">{field}</div>
             <div className="mt-2 grid gap-2 md:grid-cols-2">
               <div>
-                <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-error">Old</div>
+                <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-error">Old</div>
                 <div className="mt-1 text-sm text-on-surface">{formatMasterValue(record[field])}</div>
               </div>
               <div>
-                <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-emerald-600 dark:text-emerald-300">New</div>
-                <div className="mt-1 text-sm font-bold text-on-surface">{formatMasterValue(nextValue)}</div>
+                <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-emerald-600 dark:text-emerald-300">New</div>
+                <div className="mt-1 text-sm font-semibold text-on-surface">{formatMasterValue(nextValue)}</div>
               </div>
             </div>
           </div>
         )) : (
           previewFields.map(({ field, label }) => (
             <div key={field} className="grid grid-cols-[120px,minmax(0,1fr)] gap-3 text-sm">
-              <div className="font-bold text-on-surface-variant">{label}</div>
+              <div className="font-semibold text-on-surface-variant">{label}</div>
               <div className="text-on-surface">{formatMasterValue(record[field])}</div>
             </div>
           ))
@@ -116,7 +116,7 @@ export default function MasterBatchEditModal({
             <button
               type="button"
               onClick={onClose}
-              className="rounded-2xl border border-separator/40 px-4 py-2 text-xs font-bold text-on-surface transition hover:bg-surface-container"
+              className="rounded-2xl border border-separator/40 px-4 py-2 text-xs font-semibold text-on-surface transition hover:bg-surface-container"
             >
               Cancel
             </button>
@@ -124,7 +124,7 @@ export default function MasterBatchEditModal({
               type="button"
               onClick={() => onSubmit(changes)}
               disabled={!Object.keys(changes).length || submitting}
-              className="rounded-xl bg-primary px-4 py-2 text-xs font-bold text-on-primary hover:opacity-90 active:scale-95 transition-all duration-150 disabled:cursor-not-allowed disabled:opacity-50"
+              className="rounded-xl bg-primary px-4 py-2 text-xs font-semibold text-on-primary hover:opacity-90 active:scale-95 transition-all duration-150 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {submitting ? "Updating…" : "Apply Updates"}
             </button>
@@ -135,7 +135,7 @@ export default function MasterBatchEditModal({
           <div className="grid min-h-0 flex-1 gap-0 xl:grid-cols-[360px,minmax(0,1fr)]">
             <div className="border-r border-outline-variant/20 bg-surface-container-low px-6 py-5 overflow-y-auto scrollbar-hide">
               <div className="rounded-2xl bg-surface px-4 py-4 border border-separator/40">
-                <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-outline">Available Fields</div>
+                <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-outline">Available Fields</div>
                 <div className="mt-4 flex flex-wrap gap-2">
                   {fields.map((field) => (
                     <button
@@ -143,7 +143,7 @@ export default function MasterBatchEditModal({
                       type="button"
                       onClick={() => handleFieldSelect(field.field)}
                       className={[
-                        "rounded-full px-3 py-1.5 text-sm font-bold transition",
+                        "rounded-full px-3 py-1.5 text-sm font-semibold transition",
                         selectedField === field.field
                           ? "bg-primary text-on-primary"
                           : "bg-primary/10 text-primary hover:bg-primary/15",
@@ -158,7 +158,7 @@ export default function MasterBatchEditModal({
               <div className="mt-4 rounded-2xl bg-surface px-4 py-4 border border-separator/40">
                 <div className="flex items-center justify-between gap-4">
                   <div>
-                    <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-outline">Edit Field</div>
+                    <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-outline">Edit Field</div>
                     <div className="mt-1 text-sm text-on-surface-variant">{activeField ? activeField.label : "Select a field tag above to start editing."}</div>
                   </div>
                 </div>
@@ -198,7 +198,7 @@ export default function MasterBatchEditModal({
                         if (!activeField || draftValue === "") return;
                         setChanges((current) => ({ ...current, [activeField.field]: draftValue }));
                       }}
-                      className="rounded-xl bg-primary px-4 py-2 text-xs font-bold text-on-primary hover:opacity-90 active:scale-95 transition-all duration-150"
+                      className="rounded-xl bg-primary px-4 py-2 text-xs font-semibold text-on-primary hover:opacity-90 active:scale-95 transition-all duration-150"
                     >
                       Add Change
                     </button>
@@ -209,14 +209,14 @@ export default function MasterBatchEditModal({
               <div className="mt-4 rounded-2xl bg-surface px-4 py-4 border border-separator/40">
                 <div className="flex items-center justify-between gap-3">
                   <div>
-                    <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-outline">Changes To Apply</div>
+                    <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-outline">Changes To Apply</div>
                     <div className="mt-1 text-sm text-on-surface-variant">These values will overwrite the selected fields for every matching record.</div>
                   </div>
                   {!!Object.keys(changes).length && (
                     <button
                       type="button"
                       onClick={() => setChanges({})}
-                      className="text-xs font-bold uppercase tracking-[0.18em] text-error"
+                      className="text-xs font-semibold uppercase tracking-[0.18em] text-error"
                     >
                       Clear
                     </button>
@@ -227,8 +227,8 @@ export default function MasterBatchEditModal({
                   {Object.keys(changes).length ? Object.entries(changes).map(([field, value]) => (
                     <div key={field} className="flex items-center justify-between gap-3 rounded-2xl bg-surface-container-low px-4 py-3">
                       <div>
-                        <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-outline">{field}</div>
-                        <div className="mt-1 text-sm font-bold text-on-surface">{String(value)}</div>
+                        <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">{field}</div>
+                        <div className="mt-1 text-sm font-semibold text-on-surface">{String(value)}</div>
                       </div>
                       <IconButton
                         icon="delete"
@@ -257,10 +257,10 @@ export default function MasterBatchEditModal({
             <div className="min-h-0 overflow-y-auto px-6 py-5 scrollbar-hide bg-surface-container-lowest/60">
               <div className="mb-4 flex items-center justify-between gap-4">
                 <div>
-                  <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-outline">Live Preview</div>
+                  <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-outline">Live Preview</div>
                   <div className="mt-1 text-sm text-on-surface-variant">Showing {Math.min(5, previewRecords.length)} preview cards from the current page.</div>
                 </div>
-                <div className="rounded-full bg-surface-container px-3 py-1.5 text-xs font-bold text-on-surface-variant">
+                <div className="rounded-full bg-surface-container px-3 py-1.5 text-xs font-semibold text-on-surface-variant">
                   {totalCount} total matches
                 </div>
               </div>

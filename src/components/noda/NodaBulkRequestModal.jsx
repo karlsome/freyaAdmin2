@@ -146,9 +146,9 @@ function StepIndicator({ currentStep }) {
             <div className="flex items-center gap-3">
               <div
                 className={joinClasses(
-                  "flex h-9 w-9 items-center justify-center rounded-full border text-sm font-black transition",
+                  "flex h-9 w-9 items-center justify-center rounded-full border text-sm font-semibold transition",
                   active || done
-                    ? "border-primary bg-primary text-white"
+                    ? "border-primary bg-primary text-on-primary"
                     : "border-outline-variant/30 bg-surface-container text-on-surface-variant"
                 )}
               >
@@ -647,7 +647,7 @@ export default function NodaBulkRequestModal({ open, authUser, onClose, onSubmit
           <button
             type="button"
             onClick={() => setStep((current) => Math.max(1, current - 1))}
-            className="rounded-2xl border border-separator/45 px-4 py-2.5 text-sm font-semibold text-on-surface transition hover:bg-surface-container"
+            className="rounded-2xl border border-separator/40 px-4 py-2.5 text-sm font-semibold text-on-surface transition hover:bg-surface-container"
           >
             Back
           </button>
@@ -655,7 +655,7 @@ export default function NodaBulkRequestModal({ open, authUser, onClose, onSubmit
         <button
           type="button"
           onClick={() => onClose?.()}
-          className="rounded-2xl border border-separator/45 px-4 py-2.5 text-sm font-semibold text-on-surface transition hover:bg-surface-container"
+          className="rounded-2xl border border-separator/40 px-4 py-2.5 text-sm font-semibold text-on-surface transition hover:bg-surface-container"
         >
           Close
         </button>
@@ -664,7 +664,7 @@ export default function NodaBulkRequestModal({ open, authUser, onClose, onSubmit
             type="button"
             onClick={handleGoToReview}
             disabled={!draft.cart.length}
-            className="rounded-2xl bg-primary px-5 py-2.5 text-sm font-bold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+            className="rounded-2xl bg-primary px-5 py-2.5 text-sm font-semibold text-on-primary transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
           >
             Review Items
           </button>
@@ -674,7 +674,7 @@ export default function NodaBulkRequestModal({ open, authUser, onClose, onSubmit
             type="button"
             onClick={() => setStep(3)}
             disabled={!draft.cart.length}
-            className="rounded-2xl bg-primary px-5 py-2.5 text-sm font-bold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+            className="rounded-2xl bg-primary px-5 py-2.5 text-sm font-semibold text-on-primary transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
           >
             Continue To Submit
           </button>
@@ -684,7 +684,7 @@ export default function NodaBulkRequestModal({ open, authUser, onClose, onSubmit
             type="button"
             onClick={handleSubmitRequest}
             disabled={submitting}
-            className="rounded-2xl bg-emerald-600 px-5 py-2.5 text-sm font-bold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+            className="rounded-2xl bg-emerald-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {submitting ? "Submitting…" : "Create Bulk Request"}
           </button>
@@ -713,7 +713,7 @@ export default function NodaBulkRequestModal({ open, authUser, onClose, onSubmit
 
         {duplicateChoice ? (
           <div className="rounded-[24px] border border-amber-500/20 bg-amber-500/10 p-5">
-            <h3 className="text-base font-black text-on-surface">Duplicate request detected</h3>
+            <h3 className="text-base font-semibold text-on-surface">Duplicate request detected</h3>
             <p className="mt-2 text-sm text-on-surface-variant">
               A request already exists for 納品書番号 {duplicateChoice.納品書番号}, 便 {duplicateChoice.便}, and deadline {duplicateChoice.納入指示日}.
             </p>
@@ -728,7 +728,7 @@ export default function NodaBulkRequestModal({ open, authUser, onClose, onSubmit
                 type="button"
                 onClick={() => performSubmit("overwrite", duplicateChoice._id)}
                 disabled={submitting}
-                className="rounded-2xl bg-error px-4 py-2.5 text-sm font-bold text-white transition hover:opacity-90 disabled:opacity-60"
+                className="rounded-2xl bg-error px-4 py-2.5 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-60"
               >
                 Overwrite Existing
               </button>
@@ -736,14 +736,14 @@ export default function NodaBulkRequestModal({ open, authUser, onClose, onSubmit
                 type="button"
                 onClick={() => performSubmit("createNew")}
                 disabled={submitting}
-                className="rounded-2xl bg-primary px-4 py-2.5 text-sm font-bold text-white transition hover:opacity-90 disabled:opacity-60"
+                className="rounded-2xl bg-primary px-4 py-2.5 text-sm font-semibold text-on-primary transition hover:opacity-90 disabled:opacity-60"
               >
                 Create New With Suffix
               </button>
               <button
                 type="button"
                 onClick={() => setDuplicateChoice(null)}
-                className="rounded-2xl border border-separator/45 px-4 py-2.5 text-sm font-semibold text-on-surface transition hover:bg-surface-container"
+                className="rounded-2xl border border-separator/40 px-4 py-2.5 text-sm font-semibold text-on-surface transition hover:bg-surface-container"
               >
                 Cancel
               </button>
@@ -755,8 +755,8 @@ export default function NodaBulkRequestModal({ open, authUser, onClose, onSubmit
           <div className="rounded-[28px] border border-separator/40 bg-surface-container-low/35 p-5">
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
-                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary">CSV Review</p>
-                <h3 className="mt-1 text-lg font-black text-on-surface">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-primary">CSV Review</p>
+                <h3 className="mt-1 text-lg font-semibold text-on-surface">
                   {csvReview.validItems.length} items ready to import into the cart
                 </h3>
                 <p className="mt-2 text-sm text-on-surface-variant">
@@ -782,7 +782,7 @@ export default function NodaBulkRequestModal({ open, authUser, onClose, onSubmit
                         ]),
                       ]
                     )}
-                    className="rounded-2xl border border-separator/45 px-4 py-2.5 text-sm font-semibold text-on-surface transition hover:bg-surface-container"
+                    className="rounded-2xl border border-separator/40 px-4 py-2.5 text-sm font-semibold text-on-surface transition hover:bg-surface-container"
                   >
                     Export Shortfall CSV
                   </button>
@@ -790,14 +790,14 @@ export default function NodaBulkRequestModal({ open, authUser, onClose, onSubmit
                 <button
                   type="button"
                   onClick={() => setCsvReview(null)}
-                  className="rounded-2xl border border-separator/45 px-4 py-2.5 text-sm font-semibold text-on-surface transition hover:bg-surface-container"
+                  className="rounded-2xl border border-separator/40 px-4 py-2.5 text-sm font-semibold text-on-surface transition hover:bg-surface-container"
                 >
                   Cancel Review
                 </button>
                 <button
                   type="button"
                   onClick={handleCsvReviewImport}
-                  className="rounded-2xl bg-primary px-4 py-2.5 text-sm font-bold text-white transition hover:opacity-90"
+                  className="rounded-2xl bg-primary px-4 py-2.5 text-sm font-semibold text-on-primary transition hover:opacity-90"
                 >
                   Use Reviewed Items
                 </button>
@@ -835,7 +835,7 @@ export default function NodaBulkRequestModal({ open, authUser, onClose, onSubmit
                         <td className="px-4 py-3 text-on-surface">{item.availableQuantity || 0}</td>
                         <td className="px-4 py-3">
                           <div className="flex flex-col gap-1">
-                            <span className={joinClasses("inline-flex w-fit rounded-full px-2.5 py-1 text-xs font-bold", statusTone)}>
+                            <span className={joinClasses("inline-flex w-fit rounded-full px-2.5 py-1 text-xs font-semibold", statusTone)}>
                               {item.status}
                             </span>
                             {item.shortfallQuantity ? (
@@ -859,10 +859,10 @@ export default function NodaBulkRequestModal({ open, authUser, onClose, onSubmit
           <div className="grid gap-6 xl:grid-cols-[minmax(0,1.1fr)_minmax(360px,0.9fr)]">
             <div className="space-y-6">
               <div className="glass-card rounded-[28px] p-5">
-                <h3 className="text-base font-black text-on-surface">Request Details</h3>
+                <h3 className="text-base font-semibold text-on-surface">Request Details</h3>
                 <div className="mt-4 grid gap-4 md:grid-cols-2">
                   <label className="block">
-                    <span className="block text-xs font-bold uppercase tracking-[0.18em] text-outline">Pickup Date</span>
+                    <span className="block text-xs font-semibold uppercase tracking-[0.18em] text-outline">Pickup Date</span>
                     <input
                       type="date"
                       value={draft.pickupDate}
@@ -871,7 +871,7 @@ export default function NodaBulkRequestModal({ open, authUser, onClose, onSubmit
                     />
                   </label>
                   <label className="block">
-                    <span className="block text-xs font-bold uppercase tracking-[0.18em] text-outline">Deadline Date</span>
+                    <span className="block text-xs font-semibold uppercase tracking-[0.18em] text-outline">Deadline Date</span>
                     <input
                       type="date"
                       value={draft.deadlineDate}
@@ -880,7 +880,7 @@ export default function NodaBulkRequestModal({ open, authUser, onClose, onSubmit
                     />
                   </label>
                   <label className="block">
-                    <span className="block text-xs font-bold uppercase tracking-[0.18em] text-outline">Delivery Order (便)</span>
+                    <span className="block text-xs font-semibold uppercase tracking-[0.18em] text-outline">Delivery Order (便)</span>
                     <input
                       type="text"
                       value={draft.deliveryOrder}
@@ -889,7 +889,7 @@ export default function NodaBulkRequestModal({ open, authUser, onClose, onSubmit
                     />
                   </label>
                   <label className="block">
-                    <span className="block text-xs font-bold uppercase tracking-[0.18em] text-outline">Delivery Note (納品書番号)</span>
+                    <span className="block text-xs font-semibold uppercase tracking-[0.18em] text-outline">Delivery Note (納品書番号)</span>
                     <input
                       type="text"
                       value={draft.deliveryNote}
@@ -902,7 +902,7 @@ export default function NodaBulkRequestModal({ open, authUser, onClose, onSubmit
 
               <div className="glass-card rounded-[28px] p-5">
                 <div className="flex flex-wrap items-center justify-between gap-3">
-                  <h3 className="text-base font-black text-on-surface">Add Item</h3>
+                  <h3 className="text-base font-semibold text-on-surface">Add Item</h3>
                   <label className="inline-flex cursor-pointer items-center gap-2 rounded-2xl border border-dashed border-outline-variant/30 px-4 py-2.5 text-sm font-semibold text-on-surface transition hover:border-primary/40 hover:bg-primary/5">
                     <span className="material-symbols-outlined" style={{ fontSize: 18 }}>upload_file</span>
                     {csvBusy ? "Reading CSV…" : "Import CSV"}
@@ -912,7 +912,7 @@ export default function NodaBulkRequestModal({ open, authUser, onClose, onSubmit
 
                 <div className="mt-4 grid gap-4 md:grid-cols-3">
                   <label className="block">
-                    <span className="block text-xs font-bold uppercase tracking-[0.18em] text-outline">品番</span>
+                    <span className="block text-xs font-semibold uppercase tracking-[0.18em] text-outline">品番</span>
                     <input
                       type="text"
                       value={itemForm.partNumber}
@@ -922,7 +922,7 @@ export default function NodaBulkRequestModal({ open, authUser, onClose, onSubmit
                     />
                   </label>
                   <label className="block">
-                    <span className="block text-xs font-bold uppercase tracking-[0.18em] text-outline">背番号</span>
+                    <span className="block text-xs font-semibold uppercase tracking-[0.18em] text-outline">背番号</span>
                     <input
                       type="text"
                       value={itemForm.backNumber}
@@ -932,7 +932,7 @@ export default function NodaBulkRequestModal({ open, authUser, onClose, onSubmit
                     />
                   </label>
                   <label className="block">
-                    <span className="block text-xs font-bold uppercase tracking-[0.18em] text-outline">Quantity</span>
+                    <span className="block text-xs font-semibold uppercase tracking-[0.18em] text-outline">Quantity</span>
                     <input
                       type="number"
                       min="1"
@@ -961,7 +961,7 @@ export default function NodaBulkRequestModal({ open, authUser, onClose, onSubmit
                   <button
                     type="button"
                     onClick={handleAddItem}
-                    className="rounded-2xl bg-primary px-5 py-2.5 text-sm font-bold text-white transition hover:opacity-90"
+                    className="rounded-2xl bg-primary px-5 py-2.5 text-sm font-semibold text-on-primary transition hover:opacity-90"
                   >
                     Add To Cart
                   </button>
@@ -972,7 +972,7 @@ export default function NodaBulkRequestModal({ open, authUser, onClose, onSubmit
             <div className="glass-card rounded-[28px] p-5">
               <div className="flex items-center justify-between gap-3">
                 <div>
-                  <h3 className="text-base font-black text-on-surface">Cart</h3>
+                  <h3 className="text-base font-semibold text-on-surface">Cart</h3>
                   <p className="mt-1 text-sm text-on-surface-variant">{cartCount} item{cartCount === 1 ? "" : "s"} ready for review</p>
                 </div>
                 {draft.cart.length ? (
@@ -982,7 +982,7 @@ export default function NodaBulkRequestModal({ open, authUser, onClose, onSubmit
                       setDraft((current) => ({ ...current, cart: [] }));
                       clearNodaCartDraftStorage();
                     }}
-                    className="rounded-2xl border border-separator/45 px-3 py-2 text-sm font-semibold text-on-surface transition hover:bg-surface-container"
+                    className="rounded-2xl border border-separator/40 px-3 py-2 text-sm font-semibold text-on-surface transition hover:bg-surface-container"
                   >
                     Clear Draft
                   </button>
@@ -995,7 +995,7 @@ export default function NodaBulkRequestModal({ open, authUser, onClose, onSubmit
                     <div className="flex items-start justify-between gap-4">
                       <div className="min-w-0 flex-1">
                         <div className="flex flex-wrap items-center gap-2">
-                          <span className="font-black text-on-surface">{item.背番号}</span>
+                          <span className="font-semibold text-on-surface">{item.背番号}</span>
                           <span className="text-sm text-on-surface-variant">{item.品番}</span>
                         </div>
                         <div className="mt-2 flex flex-wrap gap-3 text-xs text-on-surface-variant">
@@ -1029,7 +1029,7 @@ export default function NodaBulkRequestModal({ open, authUser, onClose, onSubmit
           <div className="glass-card rounded-[28px] p-5">
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
-                <h3 className="text-base font-black text-on-surface">Inventory Review</h3>
+                <h3 className="text-base font-semibold text-on-surface">Inventory Review</h3>
                 <p className="mt-1 text-sm text-on-surface-variant">
                   Pickup date {draft.pickupDate} • Deadline {draft.deadlineDate}
                 </p>
@@ -1037,7 +1037,7 @@ export default function NodaBulkRequestModal({ open, authUser, onClose, onSubmit
               <button
                 type="button"
                 onClick={refreshReview}
-                className="rounded-2xl border border-separator/45 px-4 py-2.5 text-sm font-semibold text-on-surface transition hover:bg-surface-container"
+                className="rounded-2xl border border-separator/40 px-4 py-2.5 text-sm font-semibold text-on-surface transition hover:bg-surface-container"
               >
                 Refresh Availability
               </button>
@@ -1067,7 +1067,7 @@ export default function NodaBulkRequestModal({ open, authUser, onClose, onSubmit
                         <td className="px-4 py-3 text-on-surface">{item.quantity}</td>
                         <td className="px-4 py-3 text-on-surface">{item.currentAvailable}</td>
                         <td className="px-4 py-3">
-                          <span className={joinClasses("inline-flex rounded-full px-2.5 py-1 text-xs font-bold", tone)}>
+                          <span className={joinClasses("inline-flex rounded-full px-2.5 py-1 text-xs font-semibold", tone)}>
                             {item.reviewStatus}
                           </span>
                         </td>
@@ -1083,22 +1083,22 @@ export default function NodaBulkRequestModal({ open, authUser, onClose, onSubmit
         {step === 3 ? (
           <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
             <div className="glass-card rounded-[28px] p-5">
-              <h3 className="text-base font-black text-on-surface">Submission Summary</h3>
+              <h3 className="text-base font-semibold text-on-surface">Submission Summary</h3>
               <div className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
                 <div className="rounded-[24px] border border-outline-variant/15 bg-surface-container-low/35 p-4">
-                  <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-outline">Pickup Date</p>
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Pickup Date</p>
                   <p className="mt-2 text-sm font-semibold text-on-surface">{draft.pickupDate}</p>
                 </div>
                 <div className="rounded-[24px] border border-outline-variant/15 bg-surface-container-low/35 p-4">
-                  <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-outline">Deadline Date</p>
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Deadline Date</p>
                   <p className="mt-2 text-sm font-semibold text-on-surface">{draft.deadlineDate}</p>
                 </div>
                 <div className="rounded-[24px] border border-outline-variant/15 bg-surface-container-low/35 p-4">
-                  <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-outline">Delivery Order</p>
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Delivery Order</p>
                   <p className="mt-2 text-sm font-semibold text-on-surface">{draft.deliveryOrder || "—"}</p>
                 </div>
                 <div className="rounded-[24px] border border-outline-variant/15 bg-surface-container-low/35 p-4">
-                  <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-outline">Delivery Note</p>
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Delivery Note</p>
                   <p className="mt-2 text-sm font-semibold text-on-surface">{draft.deliveryNote || "—"}</p>
                 </div>
               </div>
@@ -1130,7 +1130,7 @@ export default function NodaBulkRequestModal({ open, authUser, onClose, onSubmit
             </div>
 
             <div className="glass-card rounded-[28px] p-5">
-              <h3 className="text-base font-black text-on-surface">Final Check</h3>
+              <h3 className="text-base font-semibold text-on-surface">Final Check</h3>
               <div className="mt-4 space-y-4 text-sm text-on-surface-variant">
                 <p>
                   The request will be created as a bulk Noda picking request. Items with shortfall remain attached to the request and will be filled when inventory becomes available.

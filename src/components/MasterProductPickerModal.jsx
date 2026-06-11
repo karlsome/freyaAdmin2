@@ -114,7 +114,7 @@ export default function MasterProductPickerModal({
                         )}
                         onClick={() => onSelect?.({ 背番号: serialNumber, 品番: partNumber })}
                       >
-                        <td className="px-4 py-3 text-sm font-bold text-on-surface">{serialNumber || "—"}</td>
+                        <td className="px-4 py-3 text-sm font-semibold text-on-surface">{serialNumber || "—"}</td>
                         <td className="px-4 py-3 text-sm text-on-surface-variant">{partNumber || "—"}</td>
                       </tr>
                     );

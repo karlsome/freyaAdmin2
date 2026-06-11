@@ -31,7 +31,7 @@ export default function PlannerModalShell({
       >
         <div className="flex items-start justify-between gap-4 border-b border-outline-variant/15 px-6 py-5">
           <div>
-            <h3 className="text-xl font-black text-on-surface">{title}</h3>
+            <h3 className="text-xl font-semibold text-on-surface">{title}</h3>
             {subtitle ? <p className="mt-1 text-sm text-on-surface-variant">{subtitle}</p> : null}
           </div>
           <button
@@ -47,7 +47,7 @@ export default function PlannerModalShell({
         <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5">{children}</div>
 
         {footer ? (
-          <div className="border-t border-separator/30 px-6 py-4">{footer}</div>
+          <div className="border-t border-separator/40 px-6 py-4">{footer}</div>
         ) : null}
       </div>
     </div>

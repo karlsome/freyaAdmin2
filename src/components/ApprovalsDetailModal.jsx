@@ -77,7 +77,7 @@ function ActionButton({ tone = "primary", onClick, disabled, children }) {
     primary: "bg-primary text-on-primary hover:opacity-90",
     danger: "bg-error text-on-error hover:opacity-90",
     warning: "bg-amber-500 text-black hover:opacity-90",
-    neutral: "border border-separator/45 bg-white text-on-surface hover:bg-surface-container dark:bg-surface-container",
+    neutral: "border border-separator/40 bg-white text-on-surface hover:bg-surface-container dark:bg-surface-container",
   };
 
   return (
@@ -86,7 +86,7 @@ function ActionButton({ tone = "primary", onClick, disabled, children }) {
       disabled={disabled}
       onClick={onClick}
       className={joinClasses(
-        "rounded-2xl px-4 py-2 text-xs font-bold transition disabled:cursor-not-allowed disabled:opacity-50",
+        "rounded-2xl px-4 py-2 text-xs font-semibold transition disabled:cursor-not-allowed disabled:opacity-50",
         tones[tone] || tones.primary
       )}
     >
@@ -154,8 +154,8 @@ function StructuredValueCard({ value, depth = 0 }) {
     return (
       <div className="space-y-2 rounded-2xl border border-separator/40 bg-surface-container/40 p-3">
         <div className="flex items-center justify-between gap-2">
-          <span className="text-[10px] font-bold uppercase tracking-wider text-outline">Array</span>
-          <span className="rounded-full bg-surface px-2 py-0.5 text-[10px] font-bold text-on-surface-variant">
+          <span className="text-[10px] font-semibold uppercase tracking-wider text-outline">Array</span>
+          <span className="rounded-full bg-surface px-2 py-0.5 text-[10px] font-semibold text-on-surface-variant">
             {items.length} item{items.length === 1 ? "" : "s"}
           </span>
         </div>
@@ -168,14 +168,14 @@ function StructuredValueCard({ value, depth = 0 }) {
               <div key={index} className="rounded-2xl border border-outline-variant/15 bg-surface px-3 py-2.5">
                 {nestedStructured ? (
                   <div className="space-y-2">
-                    <span className="block text-[10px] font-bold uppercase tracking-wider text-outline">
+                    <span className="block text-[10px] font-semibold uppercase tracking-wider text-outline">
                       Item {index + 1}
                     </span>
                     <StructuredValueCard value={nestedValue} depth={depth + 1} />
                   </div>
                 ) : (
                   <div className="flex items-start justify-between gap-3">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-outline">
+                    <span className="text-[10px] font-semibold uppercase tracking-wider text-outline">
                       Item {index + 1}
                     </span>
                     <div className="min-w-0 flex-1">
@@ -204,8 +204,8 @@ function StructuredValueCard({ value, depth = 0 }) {
   return (
     <div className="space-y-2 rounded-2xl border border-separator/40 bg-surface-container/40 p-3">
       <div className="flex items-center justify-between gap-2">
-        <span className="text-[10px] font-bold uppercase tracking-wider text-outline">Object</span>
-        <span className="rounded-full bg-surface px-2 py-0.5 text-[10px] font-bold text-on-surface-variant">
+        <span className="text-[10px] font-semibold uppercase tracking-wider text-outline">Object</span>
+        <span className="rounded-full bg-surface px-2 py-0.5 text-[10px] font-semibold text-on-surface-variant">
           {objectEntries.length} field{objectEntries.length === 1 ? "" : "s"}
         </span>
       </div>
@@ -218,14 +218,14 @@ function StructuredValueCard({ value, depth = 0 }) {
             <div key={nestedKey} className="rounded-2xl border border-outline-variant/15 bg-surface px-3 py-2.5">
               {nestedStructured ? (
                 <div className="space-y-2">
-                  <span className="block break-all text-[10px] font-bold uppercase tracking-wider text-outline">
+                  <span className="block break-all text-[10px] font-semibold uppercase tracking-wider text-outline">
                     {nestedKey}
                   </span>
                   <StructuredValueCard value={normalizedNestedValue} depth={depth + 1} />
                 </div>
               ) : (
                 <div className="flex items-start justify-between gap-3">
-                  <span className="break-all text-[11px] font-bold text-outline">{nestedKey}</span>
+                  <span className="break-all text-[11px] font-semibold text-outline">{nestedKey}</span>
                   <div className="min-w-0 flex-1">
                     <PrimitiveFieldValue value={normalizedNestedValue} align="right" />
                   </div>
@@ -346,16 +346,16 @@ export default function ApprovalsDetailModal({
       <div className="flex min-h-full items-center justify-center p-4 lg:p-6">
         <div ref={modalRef} className="dashboard-section flex max-h-[92vh] w-full max-w-7xl flex-col overflow-hidden rounded-2xl">
 
-          <div className="border-b border-separator/35 px-6 py-5">
+          <div className="border-b border-separator/40 px-6 py-5">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
               <div>
-                <div className="text-[10px] font-bold uppercase tracking-[0.22em] text-outline">Approval Record</div>
-                <h2 className="mt-1 break-words text-xl font-black text-on-surface [overflow-wrap:anywhere]">{title}</h2>
+                <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Approval Record</div>
+                <h2 className="mt-1 break-words text-xl font-semibold text-on-surface [overflow-wrap:anywhere]">{title}</h2>
                 <p className="mt-1 break-words text-sm text-on-surface-variant [overflow-wrap:anywhere]">{subtitle || "Approval workflow details"}</p>
               </div>
 
               <div className="flex items-center gap-3">
-                <span className={joinClasses("inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-bold", statusMeta.badgeClassName)}>
+                <span className={joinClasses("inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold", statusMeta.badgeClassName)}>
                   <span className="material-symbols-outlined" style={{ fontSize: 16, fontVariationSettings: "'FILL' 1" }}>
                     {statusMeta.icon}
                   </span>
@@ -385,8 +385,8 @@ export default function ApprovalsDetailModal({
                   },
                 ].map((card) => (
                   <div key={card.label} className="glass-card rounded-2xl px-4 py-4">
-                    <div className={joinClasses("planner-data-text text-3xl font-black tabular-nums", card.tone)}>{card.value}</div>
-                    <div className="mt-1 text-[10px] font-bold uppercase tracking-[0.18em] text-outline">{card.label}</div>
+                    <div className={joinClasses("planner-data-text text-3xl font-semibold tabular-nums", card.tone)}>{card.value}</div>
+                    <div className="mt-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">{card.label}</div>
                   </div>
                 ))}
               </div>
@@ -398,7 +398,7 @@ export default function ApprovalsDetailModal({
                       <div className="flex items-start gap-3">
                         <span className="material-symbols-outlined" style={{ fontSize: 28 }}>error</span>
                         <div>
-                          <div className="text-sm font-black">Date Error Detected</div>
+                          <div className="text-sm font-semibold">Date Error Detected</div>
                           <p className="planner-data-text mt-1 text-sm font-semibold">
                             Input date: {sourceRecord?.Date || "—"} - Actual submission: {mismatch.objectIdDate || "—"}
                           </p>
@@ -412,7 +412,7 @@ export default function ApprovalsDetailModal({
                       <div className="flex items-start gap-3">
                         <span className="material-symbols-outlined" style={{ fontSize: 28 }}>schedule</span>
                         <div>
-                          <div className="text-sm font-black">Time Drift Detected</div>
+                          <div className="text-sm font-semibold">Time Drift Detected</div>
                           <p className="planner-data-text mt-1 text-sm font-semibold text-on-surface dark:text-on-surface">
                             End time: {sourceRecord?.Time_end || "—"} - Actual submission: {mismatch.objectIdTime || "—"}
                           </p>
@@ -464,14 +464,14 @@ export default function ApprovalsDetailModal({
                 <div className="mb-5 grid gap-4 md:grid-cols-2">
                   {sourceRecord?.correctionComment ? (
                     <div className="rounded-2xl border border-amber-500/20 bg-amber-500/10 px-4 py-4">
-                      <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-amber-700 dark:text-amber-300">Correction Note</div>
+                      <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-amber-700 dark:text-amber-300">Correction Note</div>
                       <p className="planner-data-text mt-2 whitespace-pre-wrap text-sm font-medium text-on-surface">{sourceRecord.correctionComment}</p>
                     </div>
                   ) : null}
 
                   {sourceRecord?.deleteRequestReason ? (
                     <div className="rounded-2xl border border-error/20 bg-error/10 px-4 py-4">
-                      <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-error">Delete Reason</div>
+                      <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-error">Delete Reason</div>
                       <p className="planner-data-text mt-2 whitespace-pre-wrap text-sm font-medium text-on-surface">{sourceRecord.deleteRequestReason}</p>
                     </div>
                   ) : null}
@@ -481,8 +481,8 @@ export default function ApprovalsDetailModal({
               <div className="mb-5 rounded-2xl border border-outline-variant/15 bg-surface-container-low px-4 py-4">
                 <div className="mb-3 flex items-center justify-between gap-4">
                   <div>
-                    <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-outline">Quality Details</div>
-                    <h3 className="mt-1 text-base font-black text-on-surface">Counter Breakdown</h3>
+                    <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Quality Details</div>
+                    <h3 className="mt-1 text-base font-semibold text-on-surface">Counter Breakdown</h3>
                   </div>
                 </div>
 
@@ -490,8 +490,8 @@ export default function ApprovalsDetailModal({
                   <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
                     {counters.map((counter) => (
                       <div key={counter.label} className="rounded-2xl border border-error/15 bg-error/5 px-4 py-3">
-                        <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-outline">{counter.label}</div>
-                        <div className="planner-data-text mt-2 text-2xl font-black text-error tabular-nums">{counter.value}</div>
+                        <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">{counter.label}</div>
+                        <div className="planner-data-text mt-2 text-2xl font-semibold text-error tabular-nums">{counter.value}</div>
                       </div>
                     ))}
                   </div>
@@ -503,14 +503,14 @@ export default function ApprovalsDetailModal({
               </div>
 
               <div className="mb-5 rounded-2xl border border-outline-variant/15 bg-surface-container-low px-4 py-4">
-                <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-outline">All Fields</div>
+                <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">All Fields</div>
                 <div className="mt-3 space-y-0">
                   {detailEntries.map(([field, value]) => (
                     <div
                       key={field}
                       className="grid grid-cols-1 gap-2 border-b border-outline-variant/10 py-3 last:border-0 md:grid-cols-[minmax(120px,160px)_1fr] md:gap-4"
                     >
-                      <span className="break-all text-[11px] font-bold text-outline md:pt-1">{field}</span>
+                      <span className="break-all text-[11px] font-semibold text-outline md:pt-1">{field}</span>
                       {isStructuredValue(parseStructuredValue(value)) ? (
                         <StructuredValueCard value={value} />
                       ) : (
@@ -522,13 +522,13 @@ export default function ApprovalsDetailModal({
               </div>
 
               <div className="rounded-2xl border border-outline-variant/15 bg-surface-container-low px-4 py-4">
-                <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-outline">Approval History</div>
+                <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Approval History</div>
                 {approvalHistory.length ? (
                   <div className="mt-3 space-y-3">
                     {approvalHistory.map((entry, index) => (
                       <div key={`${entry.timestamp || index}-${entry.action || index}`} className="rounded-2xl border border-outline-variant/15 bg-white/80 px-4 py-3 dark:bg-surface-container">
                         <div className="flex flex-wrap items-center justify-between gap-3">
-                          <div className="text-sm font-bold text-on-surface">{entry.action || "Update"}</div>
+                          <div className="text-sm font-semibold text-on-surface">{entry.action || "Update"}</div>
                           <div className="planner-data-text text-xs text-on-surface-variant">{entry.timestamp ? new Date(entry.timestamp).toLocaleString("ja-JP") : "—"}</div>
                         </div>
                         <div className="mt-1 text-xs text-on-surface-variant">{entry.user || "Unknown user"}</div>
@@ -548,7 +548,7 @@ export default function ApprovalsDetailModal({
 
             <aside className="min-h-0 overflow-y-auto border-t border-outline-variant/20 bg-surface-container-lowest/60 px-6 py-5 lg:border-l lg:border-t-0">
               <div className="mt-5 rounded-2xl border border-outline-variant/15 bg-white/80 p-4 dark:bg-surface-container">
-                <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-outline">Submitted Images</div>
+                <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Submitted Images</div>
 
                 {images.length ? (
                   <div className="mt-4 grid grid-cols-1 gap-3">
@@ -567,7 +567,7 @@ export default function ApprovalsDetailModal({
                       >
                         <img src={image.url} alt={image.label} className="h-40 w-full object-cover" />
                         <div className="px-3 py-3">
-                          <div className="text-xs font-bold text-on-surface">{image.label}</div>
+                          <div className="text-xs font-semibold text-on-surface">{image.label}</div>
                           <div className="text-[11px] text-on-surface-variant">Open full size</div>
                         </div>
                       </button>
@@ -581,7 +581,7 @@ export default function ApprovalsDetailModal({
               </div>
 
               <div className="mt-5 rounded-2xl border border-outline-variant/15 bg-white/80 p-4 dark:bg-surface-container">
-                <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-outline">Master Reference</div>
+                <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Master Reference</div>
 
                 <div className="mt-4 overflow-hidden rounded-2xl border border-outline-variant/15 bg-surface-container-low">
                   {masterImageLoading ? (
@@ -611,7 +611,7 @@ export default function ApprovalsDetailModal({
               </div>
 
               <div className="mt-5 rounded-2xl border border-outline-variant/15 bg-white/80 p-4 dark:bg-surface-container">
-                <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-outline">Actions</div>
+                <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Actions</div>
 
                 <div className="mt-4 flex flex-wrap gap-2">
                   {mode === "recycle" ? (

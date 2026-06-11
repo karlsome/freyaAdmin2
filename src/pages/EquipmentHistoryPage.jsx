@@ -142,8 +142,8 @@ function AddEventModal({ factories, allEquipment, workerNames, username, submitt
         {/* Header */}
         <div className="sticky top-0 z-10 rounded-t-2xl px-6 py-5 flex items-center justify-between border-b border-separator/40 bg-surface/90 backdrop-blur-md">
           <div>
-            <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-outline">設備履歴</p>
-            <h2 className="mt-1 text-xl font-black text-on-surface">Add History Record</h2>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">設備履歴</p>
+            <h2 className="mt-1 text-xl font-semibold text-on-surface">Add History Record</h2>
           </div>
           <button
             type="button"
@@ -162,7 +162,7 @@ function AddEventModal({ factories, allEquipment, workerNames, username, submitt
         >
           {/* Factory */}
           <div>
-            <div className="mb-2 text-[11px] font-bold uppercase tracking-[0.18em] text-outline">
+            <div className="mb-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-outline">
               工場 <span className="text-error">*</span>
             </div>
             <select value={factory} onChange={handleFactoryChange} className={inputCls} required>
@@ -175,7 +175,7 @@ function AddEventModal({ factories, allEquipment, workerNames, username, submitt
 
           {/* Machine */}
           <div>
-            <div className="mb-2 text-[11px] font-bold uppercase tracking-[0.18em] text-outline">
+            <div className="mb-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-outline">
               設備 <span className="text-error">*</span>
             </div>
             <select
@@ -204,7 +204,7 @@ function AddEventModal({ factories, allEquipment, workerNames, username, submitt
           {/* Reported By + Date */}
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <div className="mb-2 text-[11px] font-bold uppercase tracking-[0.18em] text-outline">
+              <div className="mb-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-outline">
                 Reported By
               </div>
               <select value={reportedBy} onChange={(e) => setReportedBy(e.target.value)} className={inputCls}>
@@ -215,7 +215,7 @@ function AddEventModal({ factories, allEquipment, workerNames, username, submitt
               </select>
             </div>
             <div>
-              <div className="mb-2 text-[11px] font-bold uppercase tracking-[0.18em] text-outline">
+              <div className="mb-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-outline">
                 Date <span className="text-error">*</span>
               </div>
               <input
@@ -230,7 +230,7 @@ function AddEventModal({ factories, allEquipment, workerNames, username, submitt
 
           {/* Details */}
           <div>
-            <div className="mb-2 text-[11px] font-bold uppercase tracking-[0.18em] text-outline">
+            <div className="mb-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-outline">
               Details
             </div>
             <textarea
@@ -244,7 +244,7 @@ function AddEventModal({ factories, allEquipment, workerNames, username, submitt
 
           {/* Photo upload */}
           <div>
-            <div className="mb-2 text-[11px] font-bold uppercase tracking-[0.18em] text-outline">
+            <div className="mb-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-outline">
               Photos
             </div>
             <input
@@ -259,16 +259,16 @@ function AddEventModal({ factories, allEquipment, workerNames, username, submitt
               type="button"
               onClick={() => fileInputRef.current?.click()}
               disabled={uploading}
-              className="inline-flex items-center gap-2 rounded-xl border border-outline-variant/30 bg-surface px-4 py-2 text-xs font-bold text-on-surface hover:bg-surface-container active:scale-95 transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="inline-flex items-center gap-2 rounded-xl border border-outline-variant/30 bg-surface px-4 py-2 text-xs font-semibold text-on-surface hover:bg-surface-container active:scale-95 transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {uploading ? (
                 <>
-                  <span className="material-symbols-outlined animate-spin" style={{ fontSize: 15 }}>progress_activity</span>
+                  <span className="material-symbols-outlined animate-spin" style={{ fontSize: 16 }}>progress_activity</span>
                   アップロード中…
                 </>
               ) : (
                 <>
-                  <span className="material-symbols-outlined" style={{ fontSize: 15 }}>attach_file</span>
+                  <span className="material-symbols-outlined" style={{ fontSize: 16 }}>attach_file</span>
                   Attach files
                 </>
               )}
@@ -313,7 +313,7 @@ function AddEventModal({ factories, allEquipment, workerNames, username, submitt
           <button
             type="button"
             onClick={onClose}
-            className="rounded-xl border border-separator/50 px-4 py-2 text-xs font-bold text-on-surface-variant hover:bg-surface-container hover:text-primary hover:border-primary/30 active:scale-95 transition-all duration-150"
+            className="rounded-xl border border-separator/40 px-4 py-2 text-xs font-semibold text-on-surface-variant hover:bg-surface-container hover:text-primary hover:border-primary/30 active:scale-95 transition-all duration-150"
           >
             Cancel
           </button>
@@ -321,7 +321,7 @@ function AddEventModal({ factories, allEquipment, workerNames, username, submitt
             type="submit"
             form="setsubi-history-add-form"
             disabled={!canSubmit}
-            className="rounded-xl bg-primary px-4 py-2 text-xs font-bold text-on-primary hover:opacity-90 active:scale-95 transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="rounded-xl bg-primary px-4 py-2 text-xs font-semibold text-on-primary hover:opacity-90 active:scale-95 transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {submitting ? "保存中…" : "Add Record"}
           </button>
@@ -350,8 +350,8 @@ function EventDetailModal({ event, onClose }) {
         {/* Header */}
         <div className="sticky top-0 z-10 rounded-t-2xl px-6 py-5 flex items-start justify-between gap-4 border-b border-separator/40 bg-surface/90 backdrop-blur-md">
           <div>
-            <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-outline">設備履歴</p>
-            <h2 className="mt-1 text-xl font-black text-on-surface">{event.equipmentName || "—"}</h2>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">設備履歴</p>
+            <h2 className="mt-1 text-xl font-semibold text-on-surface">{event.equipmentName || "—"}</h2>
             {event["工場"] && (
               <p className="mt-1 text-sm text-on-surface-variant">{event["工場"]}</p>
             )}
@@ -370,12 +370,12 @@ function EventDetailModal({ event, onClose }) {
           {/* Meta badges */}
           <div className="flex flex-wrap gap-3">
             {event.date && (
-              <span className="rounded-xl bg-primary/10 px-3 py-1 text-[11px] font-bold text-primary">
+              <span className="rounded-xl bg-primary/10 px-3 py-1 text-[11px] font-semibold text-primary">
                 {event.date}
               </span>
             )}
             {event["名前"] && (
-              <span className="rounded-xl bg-surface-container px-3 py-1 text-[11px] font-bold text-on-surface-variant">
+              <span className="rounded-xl bg-surface-container px-3 py-1 text-[11px] font-semibold text-on-surface-variant">
                 {event["名前"]}
               </span>
             )}
@@ -384,7 +384,7 @@ function EventDetailModal({ event, onClose }) {
           {/* Details */}
           {event.details && (
             <div className="rounded-2xl border border-outline-variant/15 bg-surface-container-low px-4 py-3">
-              <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-outline">Details</p>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Details</p>
               <p className="mt-2 text-sm text-on-surface whitespace-pre-wrap">{event.details}</p>
             </div>
           )}
@@ -392,7 +392,7 @@ function EventDetailModal({ event, onClose }) {
           {/* Photos */}
           {imageURLs.length > 0 && (
             <div>
-              <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.18em] text-outline">Photos</p>
+              <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Photos</p>
               <div className="flex flex-wrap gap-2">
                 {imageURLs.map((url) => (
                   <button
@@ -418,7 +418,7 @@ function EventDetailModal({ event, onClose }) {
           <button
             type="button"
             onClick={onClose}
-            className="rounded-xl border border-separator/50 px-4 py-2 text-xs font-bold text-on-surface-variant hover:bg-surface-container hover:text-primary hover:border-primary/30 active:scale-95 transition-all duration-150"
+            className="rounded-xl border border-separator/40 px-4 py-2 text-xs font-semibold text-on-surface-variant hover:bg-surface-container hover:text-primary hover:border-primary/30 active:scale-95 transition-all duration-150"
           >
             Close
           </button>
@@ -561,20 +561,20 @@ export default function EquipmentHistoryPage() {
       <PageHeader
         eyebrow="設備"
         title="Equipment History"
-        className="mb-8"
+        className="mb-6"
       />
 
       {/* Filter bar */}
-      <div className="dashboard-section rounded-2xl p-5">
+      <div className="dashboard-section mb-6 rounded-2xl p-5">
         {dataError && (
           <div className="mb-4 rounded-2xl border border-error/20 bg-error/10 px-4 py-4 flex gap-3">
             <span className="material-symbols-outlined text-error flex-shrink-0" style={{ fontSize: 18 }}>report</span>
-            <p className="text-sm font-bold text-on-surface">{dataError}</p>
+            <p className="text-sm font-semibold text-on-surface">{dataError}</p>
           </div>
         )}
         <div className="flex flex-col gap-4 sm:flex-row sm:items-end">
           <div className="flex-1">
-            <div className="mb-2 text-[10px] font-bold uppercase tracking-[0.18em] text-outline">
+            <div className="mb-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">
               Factory
             </div>
             <select
@@ -590,7 +590,7 @@ export default function EquipmentHistoryPage() {
             </select>
           </div>
           <div className="flex-1">
-            <div className="mb-2 text-[10px] font-bold uppercase tracking-[0.18em] text-outline">
+            <div className="mb-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">
               Machine
             </div>
             <select
@@ -611,7 +611,7 @@ export default function EquipmentHistoryPage() {
             </select>
           </div>
           <div className="flex-1">
-            <div className="mb-2 text-[10px] font-bold uppercase tracking-[0.18em] text-outline">
+            <div className="mb-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">
               Date Range
             </div>
             <div className="flex items-center gap-2">
@@ -640,7 +640,7 @@ export default function EquipmentHistoryPage() {
             <button
               type="button"
               onClick={() => setAddOpen(true)}
-              className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-xs font-bold text-on-primary hover:opacity-90 active:scale-95 transition-all duration-150 whitespace-nowrap"
+              className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-xs font-semibold text-on-primary hover:opacity-90 active:scale-95 transition-all duration-150 whitespace-nowrap"
             >
               <span className="material-symbols-outlined" style={{ fontSize: 16 }}>add</span>
               Add Event
@@ -652,12 +652,12 @@ export default function EquipmentHistoryPage() {
       {/* History table */}
       <div className="dashboard-section rounded-2xl overflow-hidden">
         {/* Section header */}
-        <div className="px-5 py-4 border-b border-separator/35 flex items-center gap-2">
+        <div className="px-5 py-4 border-b border-separator/40 flex items-center gap-2">
           <span className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
             <span className="material-symbols-outlined text-primary" style={{ fontSize: 18 }}>history</span>
           </span>
           <div>
-            <h3 className="text-sm font-bold text-on-surface">{tableTitle}</h3>
+            <h3 className="text-sm font-semibold text-on-surface">{tableTitle}</h3>
             {!historyLoading && history.length > 0 && (
               <p className="text-[11px] text-outline">
                 {displayedHistory.length !== history.length
@@ -719,31 +719,31 @@ export default function EquipmentHistoryPage() {
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
-                <tr className="border-b border-separator/30 bg-surface-container-high">
-                  <th className="px-3 py-3 text-left text-[10px] font-bold uppercase tracking-[0.18em] text-outline">
+                <tr className="border-b border-separator/40 bg-surface-container-high">
+                  <th className="px-3 py-3 text-left text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">
                     <button
                       type="button"
                       onClick={() => setSortDir((d) => d === "desc" ? "asc" : "desc")}
                       className="inline-flex items-center gap-1 hover:text-on-surface transition-all duration-150"
                     >
                       Date
-                      <span className="material-symbols-outlined" style={{ fontSize: 13 }}>
+                      <span className="material-symbols-outlined" style={{ fontSize: 14 }}>
                         {sortDir === "desc" ? "arrow_downward" : "arrow_upward"}
                       </span>
                     </button>
                   </th>
                   {!filterEquipmentId && (
-                    <th className="px-3 py-3 text-left text-[10px] font-bold uppercase tracking-[0.18em] text-outline">
+                    <th className="px-3 py-3 text-left text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">
                       Machine
                     </th>
                   )}
-                  <th className="px-3 py-3 text-left text-[10px] font-bold uppercase tracking-[0.18em] text-outline">
+                  <th className="px-3 py-3 text-left text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">
                     Reported By
                   </th>
-                  <th className="px-3 py-3 text-left text-[10px] font-bold uppercase tracking-[0.18em] text-outline">
+                  <th className="px-3 py-3 text-left text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">
                     Details
                   </th>
-                  <th className="px-3 py-3 text-center text-[10px] font-bold uppercase tracking-[0.18em] text-outline w-12">
+                  <th className="px-3 py-3 text-center text-[10px] font-semibold uppercase tracking-[0.18em] text-outline w-12">
                     Photos
                   </th>
                 </tr>
@@ -760,7 +760,7 @@ export default function EquipmentHistoryPage() {
                       className="cursor-pointer hover:bg-surface-container/50 transition-all duration-150"
                     >
                       <td className="px-3 py-3 whitespace-nowrap">
-                        <span className="text-sm font-bold text-primary">{event.date || "—"}</span>
+                        <span className="text-sm font-semibold text-primary">{event.date || "—"}</span>
                       </td>
                       {!filterEquipmentId && (
                         <td className="px-3 py-3">

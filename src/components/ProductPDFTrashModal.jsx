@@ -61,11 +61,11 @@ export default function ProductPDFTrashModal({
     <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm">
       <div className="flex min-h-full items-center justify-center p-4">
         <div ref={modalRef} className="glass-card flex w-full max-w-6xl flex-col overflow-hidden rounded-2xl">
-          <div className="border-b border-separator/35 px-6 py-5">
+          <div className="border-b border-separator/40 px-6 py-5">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
               <div>
-                <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-outline">Trash</div>
-                <h3 className="mt-1 text-2xl font-bold text-on-surface">Deleted Product PDFs</h3>
+                <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-outline">Trash</div>
+                <h3 className="mt-1 text-2xl font-semibold text-on-surface">Deleted Product PDFs</h3>
                 <p className="mt-2 text-sm text-on-surface-variant">Files stay recoverable for 30 days before permanent cleanup.</p>
               </div>
 
@@ -74,7 +74,7 @@ export default function ProductPDFTrashModal({
                   type="button"
                   onClick={onRecoverAll}
                   disabled={disableBulkActions}
-                  className="rounded-2xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-2 text-xs font-bold text-emerald-700 transition hover:bg-emerald-500/15 disabled:cursor-not-allowed disabled:opacity-50 dark:text-emerald-300"
+                  className="rounded-2xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-2 text-xs font-semibold text-emerald-700 transition hover:bg-emerald-500/15 disabled:cursor-not-allowed disabled:opacity-50 dark:text-emerald-300"
                 >
                   Recover All
                 </button>
@@ -82,7 +82,7 @@ export default function ProductPDFTrashModal({
                   type="button"
                   onClick={onDeleteAll}
                   disabled={disableBulkActions}
-                  className="rounded-2xl border border-error/20 bg-error/10 px-4 py-2 text-xs font-bold text-error transition hover:bg-error/15 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="rounded-2xl border border-error/20 bg-error/10 px-4 py-2 text-xs font-semibold text-error transition hover:bg-error/15 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   Delete All
                 </button>
@@ -121,14 +121,14 @@ export default function ProductPDFTrashModal({
                         <div className="min-w-0 flex-1">
                           <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                             <div className="min-w-0">
-                              <div className="truncate text-base font-bold text-on-surface">{formatProductPDFTitle(item)}</div>
+                              <div className="truncate text-base font-semibold text-on-surface">{formatProductPDFTitle(item)}</div>
                               <div className="mt-1 truncate text-sm text-on-surface-variant">{item?.fileName || "Untitled file"}</div>
                               <div className="mt-2 text-xs text-outline">
                                 Type: {item?.pdfType || "—"} · Deleted {daysAgo} day{daysAgo === 1 ? "" : "s"} ago · Uploaded {formatProductPDFDateTime(item?.uploadedAt)}
                               </div>
                             </div>
 
-                            <div className="shrink-0 rounded-full bg-surface px-3 py-1 text-xs font-bold text-on-surface-variant">
+                            <div className="shrink-0 rounded-full bg-surface px-3 py-1 text-xs font-semibold text-on-surface-variant">
                               {daysLeft} day{daysLeft === 1 ? "" : "s"} left
                             </div>
                           </div>
@@ -138,7 +138,7 @@ export default function ProductPDFTrashModal({
                               type="button"
                               onClick={() => onRecover(item)}
                               disabled={actionBusy}
-                              className="rounded-2xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-2 text-xs font-bold text-emerald-700 transition hover:bg-emerald-500/15 disabled:cursor-not-allowed disabled:opacity-50 dark:text-emerald-300"
+                              className="rounded-2xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-2 text-xs font-semibold text-emerald-700 transition hover:bg-emerald-500/15 disabled:cursor-not-allowed disabled:opacity-50 dark:text-emerald-300"
                             >
                               Recover
                             </button>
@@ -146,7 +146,7 @@ export default function ProductPDFTrashModal({
                               type="button"
                               onClick={() => onDeletePermanent(item)}
                               disabled={actionBusy}
-                              className="rounded-2xl border border-error/20 bg-error/10 px-4 py-2 text-xs font-bold text-error transition hover:bg-error/15 disabled:cursor-not-allowed disabled:opacity-50"
+                              className="rounded-2xl border border-error/20 bg-error/10 px-4 py-2 text-xs font-semibold text-error transition hover:bg-error/15 disabled:cursor-not-allowed disabled:opacity-50"
                             >
                               Delete Permanently
                             </button>
@@ -160,7 +160,7 @@ export default function ProductPDFTrashModal({
             )}
           </div>
 
-          <div className="flex flex-col gap-4 border-t border-separator/30 px-6 py-4 md:flex-row md:items-center md:justify-between">
+          <div className="flex flex-col gap-4 border-t border-separator/40 px-6 py-4 md:flex-row md:items-center md:justify-between">
             <div className="flex flex-wrap items-center gap-3 text-sm text-on-surface-variant">
               <span>Showing {start}-{end} of {totalCount}</span>
               <label className="flex items-center gap-2">
@@ -183,18 +183,18 @@ export default function ProductPDFTrashModal({
                   type="button"
                   onClick={() => onPageChange(page - 1)}
                   disabled={page <= 1 || loading}
-                  className="rounded-2xl border border-separator/40 px-4 py-2 text-xs font-bold text-on-surface transition hover:bg-surface-container disabled:cursor-not-allowed disabled:opacity-50"
+                  className="rounded-2xl border border-separator/40 px-4 py-2 text-xs font-semibold text-on-surface transition hover:bg-surface-container disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   Previous
                 </button>
-                <div className="rounded-2xl bg-surface-container px-4 py-2 text-xs font-bold text-on-surface-variant">
+                <div className="rounded-2xl bg-surface-container px-4 py-2 text-xs font-semibold text-on-surface-variant">
                   Page {page} / {totalPages}
                 </div>
                 <button
                   type="button"
                   onClick={() => onPageChange(page + 1)}
                   disabled={page >= totalPages || loading}
-                  className="rounded-2xl border border-separator/40 px-4 py-2 text-xs font-bold text-on-surface transition hover:bg-surface-container disabled:cursor-not-allowed disabled:opacity-50"
+                  className="rounded-2xl border border-separator/40 px-4 py-2 text-xs font-semibold text-on-surface transition hover:bg-surface-container disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   Next
                 </button>

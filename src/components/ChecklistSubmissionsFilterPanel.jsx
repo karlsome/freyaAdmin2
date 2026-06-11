@@ -46,25 +46,25 @@ export default function ChecklistSubmissionsFilterPanel({
 
         <div className="flex flex-col gap-1.5 xl:col-span-2">
           <div className="flex items-center justify-between gap-3">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-outline">Current Scope</span>
+            <span className="text-[10px] font-semibold uppercase tracking-wider text-outline">Current Scope</span>
             <button
               type="button"
               onClick={onResetDateRange}
-              className="text-[10px] font-bold uppercase tracking-wider text-primary transition hover:opacity-70"
+              className="text-[10px] font-semibold uppercase tracking-wider text-primary transition hover:opacity-70"
             >
               Reset Default 30d
             </button>
           </div>
           <div className="flex flex-wrap gap-2">
-            <span className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-separator/40 bg-surface px-3 py-2 text-xs font-bold text-on-surface">
+            <span className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-separator/40 bg-surface px-3 py-2 text-xs font-semibold text-on-surface">
               <span className="material-symbols-outlined text-primary" style={{ fontSize: 14 }}>calendar_month</span>
               {rangeLabel}
             </span>
-            <span className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-separator/40 bg-surface px-3 py-2 text-xs font-bold text-on-surface">
+            <span className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-separator/40 bg-surface px-3 py-2 text-xs font-semibold text-on-surface">
               <span className="material-symbols-outlined text-primary" style={{ fontSize: 14 }}>tune</span>
               {scopeLabel}
             </span>
-            <span className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-separator/40 bg-surface px-3 py-2 text-xs font-bold text-on-surface">
+            <span className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-separator/40 bg-surface px-3 py-2 text-xs font-semibold text-on-surface">
               <span className="material-symbols-outlined text-primary" style={{ fontSize: 14 }}>filter_alt</span>
               {appliedFilterLabel}
             </span>
@@ -95,7 +95,7 @@ export default function ChecklistSubmissionsFilterPanel({
             <button
               type="button"
               onClick={onApplyAdvancedFilters}
-              className="flex items-center gap-2 rounded-xl kinetic-gradient px-5 py-2.5 text-sm font-bold text-white shadow-[0_0_20px_rgba(99,102,241,0.25)] transition-opacity hover:opacity-90"
+              className="flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-on-primary transition-opacity hover:opacity-90"
             >
               <span className="material-symbols-outlined" style={{ fontSize: 16 }}>filter_alt</span>
               Apply Advanced Filters
@@ -104,7 +104,7 @@ export default function ChecklistSubmissionsFilterPanel({
             <button
               type="button"
               onClick={onClearAdvancedFilters}
-              className="flex items-center gap-2 rounded-xl border border-separator/35 glass-card px-5 py-2.5 text-sm font-bold text-on-surface transition-all hover:border-primary/30"
+              className="flex items-center gap-2 rounded-xl border border-separator/40 glass-card px-5 py-2.5 text-sm font-semibold text-on-surface transition-all hover:border-primary/30"
             >
               <span className="material-symbols-outlined" style={{ fontSize: 16 }}>refresh</span>
               Reset Advanced Filters

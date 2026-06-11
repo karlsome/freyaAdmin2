@@ -43,7 +43,7 @@ export default function NodaModalFrame({
     <div className="fixed inset-0 z-[70] bg-black/40 backdrop-blur-sm">
       <div className="flex min-h-full items-center justify-center p-4 lg:p-6">
         <div className={joinClasses("glass-card flex max-h-[92vh] w-full flex-col overflow-hidden rounded-2xl", maxWidthClassName)}>
-          <div className="border-b border-separator/35 px-5 py-4 lg:px-6">
+          <div className="border-b border-separator/40 px-5 py-4 lg:px-6">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
               <div className={joinClasses("min-w-0", showIcon ? "flex items-start gap-4" : "") }>
                 {showIcon ? (
@@ -56,9 +56,9 @@ export default function NodaModalFrame({
 
                 <div className="min-w-0">
                   {eyebrow ? (
-                    <div className="text-[10px] font-bold uppercase tracking-[0.22em] text-outline">{eyebrow}</div>
+                    <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">{eyebrow}</div>
                   ) : null}
-                  <h2 className="mt-1 break-words text-xl font-black text-on-surface [overflow-wrap:anywhere]">{title}</h2>
+                  <h2 className="mt-1 break-words text-xl font-semibold text-on-surface [overflow-wrap:anywhere]">{title}</h2>
                   {subtitle ? <p className="mt-1 break-words text-sm text-on-surface-variant [overflow-wrap:anywhere]">{subtitle}</p> : null}
                 </div>
               </div>

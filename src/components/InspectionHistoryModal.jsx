@@ -151,10 +151,10 @@ function RecordDetailModal({ record, form, onClose }) {
       <div className="w-full max-w-lg max-h-[85vh] flex flex-col rounded-2xl dashboard-section overflow-hidden">
 
         {/* Header */}
-        <div className="flex flex-shrink-0 items-start justify-between border-b border-separator/35 px-6 py-5">
+        <div className="flex flex-shrink-0 items-start justify-between border-b border-separator/40 px-6 py-5">
           <div className="min-w-0 flex-1 pr-4">
-            <p className="text-xs font-bold uppercase tracking-[0.18em] text-outline">Inspection Record</p>
-            <h3 className="mt-0.5 truncate text-lg font-black text-on-surface">{form?.name}</h3>
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-outline">Inspection Record</p>
+            <h3 className="mt-0.5 truncate text-lg font-semibold text-on-surface">{form?.name}</h3>
             <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-outline">
               {form?.工場 && <span>{form.工場}</span>}
               {form?.schedule && <span className="capitalize">{form.schedule}</span>}
@@ -166,7 +166,7 @@ function RecordDetailModal({ record, form, onClose }) {
         </div>
 
         {/* Meta */}
-        <div className="flex flex-shrink-0 flex-wrap gap-4 border-b border-separator/30 px-6 py-4">
+        <div className="flex flex-shrink-0 flex-wrap gap-4 border-b border-separator/40 px-6 py-4">
           <div className="flex items-center gap-2 text-sm">
             <span className="material-symbols-outlined text-primary" style={{ fontSize: 18 }}>person</span>
             <span className="font-semibold text-on-surface">{record?.completedBy ?? "—"}</span>
@@ -192,7 +192,7 @@ function RecordDetailModal({ record, form, onClose }) {
             </div>
           )}
           {record?.deviceId === "simulator" && (
-            <span className="rounded-full bg-outline/10 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-outline">Simulator</span>
+            <span className="rounded-full bg-outline/10 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-outline">Simulator</span>
           )}
         </div>
 
@@ -211,7 +211,7 @@ function RecordDetailModal({ record, form, onClose }) {
                     <p className="font-semibold text-sm text-on-surface truncate">{field.label || <span className="italic text-outline">Untitled</span>}</p>
                     {field.description && <p className="mt-0.5 text-xs text-outline">{field.description}</p>}
                   </div>
-                  <span className={`flex-shrink-0 text-sm font-bold ${isOK ? "text-emerald-500" : isNG ? "text-error" : "text-on-surface"}`}>
+                  <span className={`flex-shrink-0 text-sm font-semibold ${isOK ? "text-emerald-500" : isNG ? "text-error" : "text-on-surface"}`}>
                     {value}
                   </span>
                 </div>
@@ -338,10 +338,10 @@ export default function InspectionHistoryModal({ onClose }) {
   const modal = (
     <div className="fixed inset-0 z-50 flex flex-col bg-surface">
       {/* Header */}
-      <div className="flex flex-shrink-0 items-center justify-between border-b border-separator/35 px-6 py-4">
+      <div className="flex flex-shrink-0 items-center justify-between border-b border-separator/40 px-6 py-4">
         <div>
-          <p className="text-xs font-bold uppercase tracking-[0.18em] text-outline">メンテナンス</p>
-          <h2 className="mt-0.5 text-xl font-black text-on-surface">Inspection History</h2>
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-outline">メンテナンス</p>
+          <h2 className="mt-0.5 text-xl font-semibold text-on-surface">Inspection History</h2>
         </div>
         <div className="flex items-center gap-3">
           {/* Legend */}
@@ -381,7 +381,7 @@ export default function InspectionHistoryModal({ onClose }) {
                 key={r}
                 type="button"
                 onClick={() => setDays(r)}
-                className={`px-3 py-2 text-xs font-bold transition ${
+                className={`px-3 py-2 text-xs font-semibold transition ${
                   days === r
                     ? "bg-primary text-on-primary"
                     : "bg-surface text-outline hover:bg-surface-container"
@@ -427,7 +427,7 @@ export default function InspectionHistoryModal({ onClose }) {
                   <th
                     key={`${label}-${i}`}
                     colSpan={count}
-                    className="border-b border-r border-outline-variant/10 bg-surface px-0 py-1 text-center text-[10px] font-black uppercase tracking-widest text-outline"
+                    className="border-b border-r border-outline-variant/10 bg-surface px-0 py-1 text-center text-[10px] font-semibold uppercase tracking-[0.18em] text-outline"
                   >
                     {label}
                   </th>
@@ -435,7 +435,7 @@ export default function InspectionHistoryModal({ onClose }) {
               </tr>
               {/* Day row */}
               <tr>
-                <th className="sticky left-0 z-20 border-b border-r border-outline-variant/20 bg-surface px-4 py-2 text-left text-xs font-bold uppercase tracking-[0.15em] text-outline">
+                <th className="sticky left-0 z-20 border-b border-r border-outline-variant/20 bg-surface px-4 py-2 text-left text-xs font-semibold uppercase tracking-[0.18em] text-outline">
                   Machine
                 </th>
                 {dates.map(date => {
@@ -443,7 +443,7 @@ export default function InspectionHistoryModal({ onClose }) {
                   return (
                     <th
                       key={date.toISOString()}
-                      className={`w-11 border-b border-r border-outline-variant/10 px-1 py-2 text-center text-xs font-bold ${
+                      className={`w-11 border-b border-r border-outline-variant/10 px-1 py-2 text-center text-xs font-semibold ${
                         isToday ? "bg-primary/10 text-primary" : "bg-surface text-outline"
                       }`}
                     >

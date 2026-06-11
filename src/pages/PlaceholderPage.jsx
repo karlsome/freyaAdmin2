@@ -27,11 +27,11 @@ export default function PlaceholderPage({ page }) {
             {meta.icon}
           </span>
         </div>
-        <h2 className="text-2xl font-black text-on-surface mb-2">{meta.label}</h2>
+        <h2 className="text-2xl font-semibold text-on-surface mb-2">{meta.label}</h2>
         <p className="text-sm text-on-surface-variant">
           This page is being migrated to React.
         </p>
-        <div className="mt-6 flex items-center justify-center gap-2 text-[11px] text-primary font-bold">
+        <div className="mt-6 flex items-center justify-center gap-2 text-[11px] text-primary font-semibold">
           <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></span>
           Coming soon
         </div>

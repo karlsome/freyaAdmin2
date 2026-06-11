@@ -42,7 +42,7 @@ export default function PlannerPrintModal({
           <button
             type="button"
             onClick={onClose}
-            className="rounded-2xl border border-separator/40 px-4 py-2 text-sm font-bold text-on-surface transition hover:bg-surface-container"
+            className="rounded-2xl border border-separator/40 px-4 py-2 text-sm font-semibold text-on-surface transition hover:bg-surface-container"
           >
             Cancel
           </button>
@@ -50,7 +50,7 @@ export default function PlannerPrintModal({
             type="button"
             disabled={!selectedEquipment.length}
             onClick={() => onConfirm(selectedEquipment)}
-            className="rounded-2xl kinetic-gradient px-4 py-2 text-sm font-bold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+            className="rounded-2xl bg-primary px-4 py-2 text-sm font-semibold text-on-primary transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
           >
             Print
           </button>
@@ -69,7 +69,7 @@ export default function PlannerPrintModal({
                 onChange={(event) => setSelectedEquipment(event.target.checked ? normalizedOptions : [])}
                 className="h-4 w-4 rounded border-outline-variant/40"
               />
-              <span className="font-bold">Select All</span>
+              <span className="font-semibold">Select All</span>
             </label>
 
             <div className="max-h-[50vh] space-y-2 overflow-y-auto">

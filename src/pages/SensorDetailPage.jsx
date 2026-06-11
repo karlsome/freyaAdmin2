@@ -181,19 +181,19 @@ function SensorCard({ device, isActive = false, onSelect = null, onEdit = null, 
       ) : null}
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
-          <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-outline">Device</p>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Device</p>
           <div className="mt-1 flex flex-wrap items-center gap-2">
-            <p className={`text-base font-black truncate ${titleClassName}`}>
+            <p className={`text-base font-semibold truncate ${titleClassName}`}>
               {displayName || device?.deviceId || "Unknown"}
             </p>
             {isActive ? (
-              <span className="inline-flex items-center gap-1 rounded-full border border-primary/20 bg-primary/10 px-2.5 py-1 text-[10px] font-bold text-primary">
+              <span className="inline-flex items-center gap-1 rounded-full border border-primary/20 bg-primary/10 px-2.5 py-1 text-[10px] font-semibold text-primary">
                 <span className="material-symbols-outlined" style={{ fontSize: 11 }}>check</span>
                 Selected
               </span>
             ) : null}
             {isOffline ? (
-              <span className="inline-flex items-center gap-1 rounded-full border border-error/20 bg-error/10 px-2.5 py-1 text-[10px] font-bold text-error">
+              <span className="inline-flex items-center gap-1 rounded-full border border-error/20 bg-error/10 px-2.5 py-1 text-[10px] font-semibold text-error">
                 <span className="h-2 w-2 rounded-full bg-error" aria-hidden="true" />
                 Offline
               </span>
@@ -204,7 +204,7 @@ function SensorCard({ device, isActive = false, onSelect = null, onEdit = null, 
           )}
         </div>
         <div className="flex flex-col items-end gap-2 flex-shrink-0">
-          <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-[10px] font-bold ${wbgtStatus.bg} ${wbgtStatus.color}`}>
+          <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-[10px] font-semibold ${wbgtStatus.bg} ${wbgtStatus.color}`}>
             WBGT {wbgt ?? "—"}°C
           </span>
         </div>
@@ -212,12 +212,12 @@ function SensorCard({ device, isActive = false, onSelect = null, onEdit = null, 
 
       <div className="grid grid-cols-2 gap-3">
         <div className={`p-3 rounded-xl ${tempStatus.bg}`}>
-          <p className={`text-lg font-black ${tempStatus.color}`}>{Number.isNaN(latestTemp) ? "—" : `${latestTemp}°C`}</p>
+          <p className={`text-lg font-semibold ${tempStatus.color}`}>{Number.isNaN(latestTemp) ? "—" : `${latestTemp}°C`}</p>
           <p className="text-[10px] text-on-surface-variant">Temperature</p>
           <Sparkline values={tempTrend} color={latestTemp >= 30 ? "#f87171" : "#6366f1"} />
         </div>
         <div className={`p-3 rounded-xl ${humidityStatus.bg}`}>
-          <p className={`text-lg font-black ${humidityStatus.color}`}>{Number.isNaN(latestHumid) ? "—" : `${latestHumid}%`}</p>
+          <p className={`text-lg font-semibold ${humidityStatus.color}`}>{Number.isNaN(latestHumid) ? "—" : `${latestHumid}%`}</p>
           <p className="text-[10px] text-on-surface-variant">Humidity</p>
           <Sparkline values={humidityTrend} color="#22d3ee" />
         </div>
@@ -225,7 +225,7 @@ function SensorCard({ device, isActive = false, onSelect = null, onEdit = null, 
 
       <div className="flex items-center justify-between gap-3 text-[10px] text-outline">
         <div className="min-w-0 flex-1 truncate">
-          <span className={isOffline ? "font-bold text-error" : undefined}>
+          <span className={isOffline ? "font-semibold text-error" : undefined}>
             {isOffline ? `Offline · ${lastSeenLabel}` : `Last: ${latest?.Date || "—"} ${latest?.Time || ""}`}
           </span>
           <span> · {Number(device?.readingCount) || 0} readings</span>
@@ -238,7 +238,7 @@ function SensorCard({ device, isActive = false, onSelect = null, onEdit = null, 
                 event.stopPropagation();
                 onPreviewPhotos(device);
               }}
-              className="inline-flex items-center gap-1 rounded-xl border border-separator/50 bg-surface px-2.5 py-1 text-[10px] font-bold text-on-surface-variant transition-all duration-150 hover:border-primary/30 hover:bg-surface-container hover:text-primary active:scale-95"
+              className="inline-flex items-center gap-1 rounded-xl border border-separator/40 bg-surface px-2.5 py-1 text-[10px] font-semibold text-on-surface-variant transition-all duration-150 hover:border-primary/30 hover:bg-surface-container hover:text-primary active:scale-95"
               title={`View ${photoCount} device photo${photoCount === 1 ? "" : "s"}`}
             >
               <span className="material-symbols-outlined" style={{ fontSize: 11 }}>photo_library</span>
@@ -706,7 +706,7 @@ export default function SensorDetailPage() {
       renderCell: (row) => {
         const temperature = parseTemp(row.Temperature);
         const meta = getTempStatus(temperature);
-        return <span className={`font-bold ${meta.color}`}>{Number.isNaN(temperature) ? "—" : `${temperature}°C`}</span>;
+        return <span className={`font-semibold ${meta.color}`}>{Number.isNaN(temperature) ? "—" : `${temperature}°C`}</span>;
       },
       disableCellWrapper: true,
     },
@@ -718,7 +718,7 @@ export default function SensorDetailPage() {
       renderCell: (row) => {
         const humidity = parseHumid(row.Humidity);
         const meta = getHumidityStatus(humidity);
-        return <span className={`font-bold ${meta.color}`}>{Number.isNaN(humidity) ? "—" : `${humidity}%`}</span>;
+        return <span className={`font-semibold ${meta.color}`}>{Number.isNaN(humidity) ? "—" : `${humidity}%`}</span>;
       },
       disableCellWrapper: true,
     },
@@ -732,7 +732,7 @@ export default function SensorDetailPage() {
         const humidity = parseHumid(row.Humidity);
         const wbgt = calcWBGT(temperature, humidity);
         const meta = getWBGTStatus(wbgt);
-        return <span className={`font-bold ${meta.color}`}>{wbgt ?? "—"}°C</span>;
+        return <span className={`font-semibold ${meta.color}`}>{wbgt ?? "—"}°C</span>;
       },
       disableCellWrapper: true,
     },
@@ -747,7 +747,7 @@ export default function SensorDetailPage() {
         const wbgt = calcWBGT(temperature, humidity);
         const meta = getWBGTStatus(wbgt);
         return (
-          <span className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-bold ${meta.bg} ${meta.color}`}>
+          <span className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-semibold ${meta.bg} ${meta.color}`}>
             {row.sensorStatus ?? "OK"}
           </span>
         );
@@ -776,12 +776,12 @@ export default function SensorDetailPage() {
         )}
         titleClassName="flex items-center gap-3"
         subtitle={`${range.start} → ${range.end} · ${overview.totalReadings.toLocaleString()} readings`}
-        className="mb-8 md:flex-row md:items-center md:justify-between"
+        className="mb-6 md:flex-row md:items-center md:justify-between"
         actions={(
           <button
             onClick={handleExport}
             disabled={overview.totalReadings === 0 || exporting}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold bg-surface-container border border-outline-variant/20 text-on-surface-variant hover:bg-surface-container-high hover:text-primary transition-all disabled:opacity-40"
+            className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold bg-surface-container border border-outline-variant/20 text-on-surface-variant hover:bg-surface-container-high hover:text-primary transition-all disabled:opacity-40"
           >
             <span className="material-symbols-outlined" style={{ fontSize: 16 }}>download</span>
             {exporting ? "Exporting..." : "Export CSV"}
@@ -790,9 +790,9 @@ export default function SensorDetailPage() {
       />
 
       {/* ── Filter bar ── */}
-      <div className="glass-card rounded-2xl p-4 flex flex-wrap items-center gap-4 mb-8">
+      <div className="glass-card rounded-2xl p-5 flex flex-wrap items-center gap-4 mb-6">
         <div className="flex items-center gap-2">
-          <span className="text-[10px] text-outline font-bold uppercase tracking-wider">From</span>
+          <span className="text-[10px] text-outline font-semibold uppercase tracking-wider">From</span>
           <input
             type="date"
             value={range.start}
@@ -802,7 +802,7 @@ export default function SensorDetailPage() {
           />
         </div>
         <div className="flex items-center gap-2">
-          <span className="text-[10px] text-outline font-bold uppercase tracking-wider">To</span>
+          <span className="text-[10px] text-outline font-semibold uppercase tracking-wider">To</span>
           <input
             type="date"
             value={range.end}
@@ -813,7 +813,7 @@ export default function SensorDetailPage() {
           />
         </div>
         <div className="flex items-center gap-2">
-          <span className="text-[10px] text-outline font-bold uppercase tracking-wider">Device</span>
+          <span className="text-[10px] text-outline font-semibold uppercase tracking-wider">Device</span>
           <select
             value={deviceFilter}
             onChange={(e) => setDeviceFilter(normalizeDeviceId(e.target.value) || "all")}
@@ -824,7 +824,7 @@ export default function SensorDetailPage() {
           </select>
         </div>
         <div className="flex items-center gap-2">
-          <span className="text-[10px] text-outline font-bold uppercase tracking-wider">Sort</span>
+          <span className="text-[10px] text-outline font-semibold uppercase tracking-wider">Sort</span>
           <select
             value={sortKey}
             onChange={(e) => setSortKey(e.target.value)}
@@ -840,7 +840,7 @@ export default function SensorDetailPage() {
           <button
             type="button"
             onClick={handleResetFilters}
-            className="inline-flex items-center gap-2 rounded-lg border border-error/20 bg-error/10 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-error transition hover:bg-error/15"
+            className="inline-flex items-center gap-2 rounded-lg border border-error/20 bg-error/10 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-error transition hover:bg-error/15"
           >
             <span className="material-symbols-outlined" style={{ fontSize: 14 }}>restart_alt</span>
             Reset Filters
@@ -854,7 +854,7 @@ export default function SensorDetailPage() {
               <button
                 key={preset}
                 onClick={() => setRange({ start: toISO(s), end: toISO(new Date()) })}
-                className="px-3 py-1.5 text-[10px] font-bold rounded-lg bg-surface-container hover:bg-primary/10 hover:text-primary text-outline transition-colors"
+                className="px-3 py-1.5 text-[10px] font-semibold rounded-lg bg-surface-container hover:bg-primary/10 hover:text-primary text-outline transition-colors"
               >
                 {preset}
               </button>
@@ -864,7 +864,7 @@ export default function SensorDetailPage() {
       </div>
 
       {loading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5 mb-6">
           {Array.from({ length: 4 }).map((_, i) => (
             <div key={i} className="glass-card rounded-2xl h-44 animate-pulse" />
           ))}
@@ -872,7 +872,7 @@ export default function SensorDetailPage() {
       ) : (
         <>
           {/* ── KPI strip ── */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
             {[
               {
                 label: "Avg Temperature",
@@ -910,25 +910,25 @@ export default function SensorDetailPage() {
               <div key={label} className={`rounded-2xl p-5 border border-outline-variant/10 ${bg}`}>
                 <div className="flex items-center gap-2 mb-2">
                   <span className={`material-symbols-outlined ${color}`} style={{ fontSize: 16 }}>{icon}</span>
-                  <p className="text-[10px] text-outline font-bold uppercase tracking-wider">{label}</p>
+                  <p className="text-[10px] text-outline font-semibold uppercase tracking-wider">{label}</p>
                 </div>
-                <p className={`text-2xl font-black ${color}`}>{value}</p>
+                <p className={`text-2xl font-semibold ${color}`}>{value}</p>
                 {sub && <p className="text-[10px] text-outline mt-1">{sub}</p>}
               </div>
             ))}
           </div>
 
           {/* ── Trend charts ── */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-8">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-6">
             <div className="glass-card rounded-2xl p-5">
-              <p className="text-[10px] text-outline font-bold uppercase tracking-widest mb-3 flex items-center gap-2">
+              <p className="text-[10px] text-outline font-semibold uppercase tracking-[0.18em] mb-3 flex items-center gap-2">
                 <span className="material-symbols-outlined text-amber-500" style={{ fontSize: 14 }}>thermostat</span>
                 Temperature Trend (daily avg)
               </p>
               <SensorTrendChart readings={overview.trends} type="temp" height={180} />
             </div>
             <div className="glass-card rounded-2xl p-5">
-              <p className="text-[10px] text-outline font-bold uppercase tracking-widest mb-3 flex items-center gap-2">
+              <p className="text-[10px] text-outline font-semibold uppercase tracking-[0.18em] mb-3 flex items-center gap-2">
                 <span className="material-symbols-outlined text-cyan-400" style={{ fontSize: 14 }}>water_drop</span>
                 Humidity Trend (daily avg)
               </p>
@@ -938,8 +938,8 @@ export default function SensorDetailPage() {
 
           {/* ── Device summary cards ── */}
           {!cardLoading && deviceCards.length > 0 && (
-            <div className="mb-8">
-              <p className="text-[10px] text-outline font-bold uppercase tracking-widest mb-4">
+            <div className="mb-6">
+              <p className="text-[10px] text-outline font-semibold uppercase tracking-[0.18em] mb-4">
                 {deviceCards.length} Device{deviceCards.length !== 1 ? "s" : ""} — Latest Readings
               </p>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
@@ -960,8 +960,8 @@ export default function SensorDetailPage() {
           {/* ── Records table ── */}
           <div className="glass-card rounded-2xl p-6">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-base font-bold text-on-surface">All Readings</h3>
-              <span className="text-[10px] text-outline font-bold uppercase tracking-wider">
+              <h3 className="text-base font-semibold text-on-surface">All Readings</h3>
+              <span className="text-[10px] text-outline font-semibold uppercase tracking-wider">
                 {(pagination.totalItems || tableRows.length).toLocaleString()} rows
               </span>
             </div>

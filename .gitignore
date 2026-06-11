@@ -25,3 +25,6 @@ dist-ssr
 .env
 .env.*
 
+# Generated graphify artifacts
+graphify-out/
+

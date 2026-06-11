@@ -183,8 +183,8 @@ function getStylePreset(variant, framed) {
     return {
       wrapper: framed ? "mt-4 overflow-hidden rounded-[24px] border border-outline-variant/15 bg-surface-container-low/30" : "",
       toggle: framed
-        ? "flex w-full items-center justify-between gap-2 px-4 py-3 text-left text-xs font-bold text-outline transition-colors hover:text-on-surface"
-        : "flex items-center gap-1.5 text-xs font-bold text-outline transition-colors hover:text-on-surface mb-3",
+        ? "flex w-full items-center justify-between gap-2 px-4 py-3 text-left text-xs font-semibold text-outline transition-colors hover:text-on-surface"
+        : "flex items-center gap-1.5 text-xs font-semibold text-outline transition-colors hover:text-on-surface mb-3",
       content: framed ? "border-t border-outline-variant/15 px-4 py-4" : "mb-4",
       stack: "space-y-3",
       controlBase: "w-full rounded-2xl border border-separator/40 bg-white px-4 text-sm text-on-surface outline-none transition focus:border-primary/40 dark:bg-surface-container",
@@ -192,44 +192,44 @@ function getStylePreset(variant, framed) {
       operatorControl: "h-10 min-w-[160px] flex-1 disabled:cursor-not-allowed disabled:opacity-40",
       valueWrap: "min-w-[220px] flex-[2]",
       deleteButton: "rounded-2xl p-2 text-outline transition hover:bg-error/10 hover:text-error",
-      addButton: "mt-1 flex items-center gap-1.5 rounded-2xl border border-dashed border-outline-variant/30 px-3 py-2 text-xs font-bold text-outline transition hover:border-primary/40 hover:text-on-surface",
+      addButton: "mt-1 flex items-center gap-1.5 rounded-2xl border border-dashed border-outline-variant/30 px-3 py-2 text-xs font-semibold text-outline transition hover:border-primary/40 hover:text-on-surface",
       summaryPanel: "rounded-2xl border border-outline-variant/15 bg-surface-container/40 px-4 py-3",
-      summaryTitle: "text-[10px] font-bold uppercase tracking-[0.18em] text-outline",
+      summaryTitle: "text-[10px] font-semibold uppercase tracking-[0.18em] text-outline",
       summaryDescription: "mt-1 text-xs text-on-surface-variant",
-      clearButton: "text-[10px] font-bold uppercase tracking-[0.18em] text-error",
+      clearButton: "text-[10px] font-semibold uppercase tracking-[0.18em] text-error",
       footer: `flex flex-wrap items-center gap-3${framed ? " border-t border-outline-variant/15 pt-4" : " pt-4"}`,
       multiSelect: "min-h-32 py-2",
     };
   }
 
   return {
-    wrapper: framed ? "mt-4 rounded-xl border border-separator/35 bg-surface-container/30 overflow-hidden" : "",
+    wrapper: framed ? "mt-4 rounded-xl border border-separator/40 bg-surface-container/30 overflow-hidden" : "",
     toggle: framed
-      ? "flex w-full items-center justify-between gap-2 px-4 py-3 text-left text-xs font-bold text-outline transition-colors hover:text-on-surface"
-      : "flex items-center gap-1.5 text-xs font-bold text-outline transition-colors hover:text-on-surface mb-3",
-    content: framed ? "border-t border-separator/30 px-4 py-4" : "mb-4",
+      ? "flex w-full items-center justify-between gap-2 px-4 py-3 text-left text-xs font-semibold text-outline transition-colors hover:text-on-surface"
+      : "flex items-center gap-1.5 text-xs font-semibold text-outline transition-colors hover:text-on-surface mb-3",
+    content: framed ? "border-t border-separator/40 px-4 py-4" : "mb-4",
     stack: framed ? "space-y-3" : "space-y-2",
     controlBase: "w-full rounded-xl border border-separator/40 bg-white px-3 text-xs text-on-surface outline-none transition-colors focus:border-primary/40",
     fieldControl: "h-9 min-w-[180px] flex-1",
     operatorControl: "h-9 min-w-[150px] flex-1 disabled:opacity-40 disabled:cursor-not-allowed",
     valueWrap: "min-w-[200px] flex-[2]",
     deleteButton: "rounded-xl p-2 text-outline transition-colors hover:bg-error/10 hover:text-error",
-    addButton: "mt-1 flex items-center gap-1.5 rounded-xl border border-dashed border-white/20 px-3 py-1.5 text-xs font-bold text-outline transition-colors hover:border-primary/40 hover:text-on-surface",
-    summaryPanel: "rounded-xl border border-separator/35 bg-surface-container/40 px-4 py-3",
-    summaryTitle: "text-[10px] font-bold uppercase tracking-wider text-outline",
+    addButton: "mt-1 flex items-center gap-1.5 rounded-xl border border-dashed border-white/20 px-3 py-1.5 text-xs font-semibold text-outline transition-colors hover:border-primary/40 hover:text-on-surface",
+    summaryPanel: "rounded-xl border border-separator/40 bg-surface-container/40 px-4 py-3",
+    summaryTitle: "text-[10px] font-semibold uppercase tracking-wider text-outline",
     summaryDescription: "mt-1 text-xs text-on-surface-variant",
-    clearButton: "text-[10px] font-bold uppercase tracking-wider text-error",
-    footer: `flex flex-wrap items-center gap-3${framed ? " border-t border-separator/30 pt-4" : " pt-4"}`,
+    clearButton: "text-[10px] font-semibold uppercase tracking-wider text-error",
+    footer: `flex flex-wrap items-center gap-3${framed ? " border-t border-separator/40 pt-4" : " pt-4"}`,
     multiSelect: "min-h-28 py-2",
   };
 }
 
 function getChipClassName(tone) {
   if (tone === "amber") {
-    return "inline-flex items-center gap-2 rounded-full bg-amber-400 px-3 py-1.5 text-xs font-bold text-amber-950";
+    return "inline-flex items-center gap-2 rounded-full bg-amber-400 px-3 py-1.5 text-xs font-semibold text-amber-950";
   }
 
-  return "inline-flex items-center gap-2 rounded-full bg-primary/15 px-3 py-1.5 text-xs font-bold text-primary";
+  return "inline-flex items-center gap-2 rounded-full bg-primary/15 px-3 py-1.5 text-xs font-semibold text-primary";
 }
 
 export default function AdvancedFilterSection({
@@ -313,7 +313,7 @@ export default function AdvancedFilterSection({
               <span className="material-symbols-outlined text-primary" style={{ fontSize: 14 }}>filter_alt</span>
               <span className="uppercase tracking-wider">{title}</span>
               {activeFilters.length ? (
-                <span className="rounded-full bg-primary/15 px-1.5 py-0.5 text-[9px] font-bold normal-case tracking-normal text-primary">
+                <span className="rounded-full bg-primary/15 px-1.5 py-0.5 text-[9px] font-semibold normal-case tracking-normal text-primary">
                   {activeFilters.length} active
                 </span>
               ) : null}
@@ -330,7 +330,7 @@ export default function AdvancedFilterSection({
             </span>
             {title}
             {activeFilters.length ? (
-              <span className="rounded-full bg-primary/15 px-1.5 py-0.5 text-[9px] font-bold normal-case tracking-normal text-primary">
+              <span className="rounded-full bg-primary/15 px-1.5 py-0.5 text-[9px] font-semibold normal-case tracking-normal text-primary">
                 {activeFilters.length} active
               </span>
             ) : null}

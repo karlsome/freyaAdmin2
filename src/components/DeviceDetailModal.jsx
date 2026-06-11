@@ -66,33 +66,33 @@ export default function DeviceDetailModal({ device, open, onClose }) {
         <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5 space-y-4">
           {/* Identity */}
           <div className="rounded-2xl border border-outline-variant/15 bg-surface-container-low px-4 py-4">
-            <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-outline mb-3">Identity</p>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline mb-3">Identity</p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="rounded-2xl border border-outline-variant/15 bg-surface-container px-4 py-3">
                 <div className="flex items-center gap-2 text-outline">
                   <span className="material-symbols-outlined text-primary" style={{ fontSize: 16 }}>badge</span>
-                  <span className="text-[10px] font-bold uppercase tracking-[0.18em]">Name</span>
+                  <span className="text-[10px] font-semibold uppercase tracking-[0.18em]">Name</span>
                 </div>
                 <p className="mt-2 text-sm font-semibold text-on-surface">{deviceName}</p>
               </div>
               <div className="rounded-2xl border border-outline-variant/15 bg-surface-container px-4 py-3">
                 <div className="flex items-center gap-2 text-outline">
                   <span className="material-symbols-outlined text-primary" style={{ fontSize: 16 }}>tag</span>
-                  <span className="text-[10px] font-bold uppercase tracking-[0.18em]">Device ID</span>
+                  <span className="text-[10px] font-semibold uppercase tracking-[0.18em]">Device ID</span>
                 </div>
                 <p className="mt-2 font-mono text-xs text-on-surface-variant break-all">{deviceId}</p>
               </div>
               <div className="rounded-2xl border border-outline-variant/15 bg-surface-container px-4 py-3">
                 <div className="flex items-center gap-2 text-outline">
                   <span className="material-symbols-outlined text-primary" style={{ fontSize: 16 }}>factory</span>
-                  <span className="text-[10px] font-bold uppercase tracking-[0.18em]">Factory</span>
+                  <span className="text-[10px] font-semibold uppercase tracking-[0.18em]">Factory</span>
                 </div>
                 <p className="mt-2 text-sm font-semibold text-on-surface">{factoryName}</p>
               </div>
               <div className="rounded-2xl border border-outline-variant/15 bg-surface-container px-4 py-3">
                 <div className="flex items-center gap-2 text-outline">
                   <span className="material-symbols-outlined text-primary" style={{ fontSize: 16 }}>image</span>
-                  <span className="text-[10px] font-bold uppercase tracking-[0.18em]">Photos</span>
+                  <span className="text-[10px] font-semibold uppercase tracking-[0.18em]">Photos</span>
                 </div>
                 <p className="mt-2 text-sm font-semibold text-on-surface">
                   {images.length} {images.length === 1 ? "photo" : "photos"}
@@ -103,12 +103,12 @@ export default function DeviceDetailModal({ device, open, onClose }) {
 
           {/* Registration */}
           <div className="rounded-2xl border border-outline-variant/15 bg-surface-container-low px-4 py-4">
-            <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-outline mb-3">Registration</p>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline mb-3">Registration</p>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div className="rounded-2xl border border-outline-variant/15 bg-surface-container px-4 py-3">
                 <div className="flex items-center gap-2 text-outline">
                   <span className="material-symbols-outlined text-primary" style={{ fontSize: 16 }}>person</span>
-                  <span className="text-[10px] font-bold uppercase tracking-[0.18em]">Registered By</span>
+                  <span className="text-[10px] font-semibold uppercase tracking-[0.18em]">Registered By</span>
                 </div>
                 <p className="mt-2 text-sm font-semibold text-on-surface">{registeredByName}</p>
                 {usernameLabel ? (
@@ -118,14 +118,14 @@ export default function DeviceDetailModal({ device, open, onClose }) {
               <div className="rounded-2xl border border-outline-variant/15 bg-surface-container px-4 py-3">
                 <div className="flex items-center gap-2 text-outline">
                   <span className="material-symbols-outlined text-primary" style={{ fontSize: 16 }}>schedule</span>
-                  <span className="text-[10px] font-bold uppercase tracking-[0.18em]">Created</span>
+                  <span className="text-[10px] font-semibold uppercase tracking-[0.18em]">Created</span>
                 </div>
                 <p className="mt-2 text-sm font-semibold text-on-surface">{formatDateTime(device?.createdAt)}</p>
               </div>
               <div className="rounded-2xl border border-outline-variant/15 bg-surface-container px-4 py-3">
                 <div className="flex items-center gap-2 text-outline">
                   <span className="material-symbols-outlined text-primary" style={{ fontSize: 16 }}>update</span>
-                  <span className="text-[10px] font-bold uppercase tracking-[0.18em]">Updated</span>
+                  <span className="text-[10px] font-semibold uppercase tracking-[0.18em]">Updated</span>
                 </div>
                 <p className="mt-2 text-sm font-semibold text-on-surface">{formatDateTime(device?.updatedAt)}</p>
               </div>
@@ -135,7 +135,7 @@ export default function DeviceDetailModal({ device, open, onClose }) {
           {/* Photos */}
           <div className="rounded-2xl border border-outline-variant/15 bg-surface-container-low px-4 py-4">
             <div className="flex items-center justify-between mb-3">
-              <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-outline">Photos</p>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Photos</p>
               <span className="text-[10px] text-outline">
                 {images.length} {images.length === 1 ? "image" : "images"}
               </span>
@@ -147,7 +147,7 @@ export default function DeviceDetailModal({ device, open, onClose }) {
                     key={url}
                     type="button"
                     onClick={() => setPreviewIndex(index)}
-                    className="aspect-square rounded-xl overflow-hidden border border-separator/30 bg-surface-container transition-all duration-150 hover:border-primary/30 active:scale-95"
+                    className="aspect-square rounded-xl overflow-hidden border border-separator/40 bg-surface-container transition-all duration-150 hover:border-primary/30 active:scale-95"
                     title={`Open photo ${index + 1}`}
                   >
                     <img

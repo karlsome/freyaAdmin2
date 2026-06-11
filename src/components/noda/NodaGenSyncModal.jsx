@@ -106,7 +106,7 @@ function DuplicateSelectionStep({ duplicateGroups, duplicateSelections, onToggle
         <div className="flex items-start gap-3">
           <span className="material-symbols-outlined">warning</span>
           <div>
-            <p className="font-bold">Duplicate GEN entries detected</p>
+            <p className="font-semibold">Duplicate GEN entries detected</p>
             <p className="mt-1 text-amber-900/80 dark:text-amber-200/80">
               Select the rows to include for each duplicated serial number. Multiple selections will be summed before comparison.
             </p>
@@ -124,10 +124,10 @@ function DuplicateSelectionStep({ duplicateGroups, duplicateSelections, onToggle
             <div key={group.背番号} className="rounded-[24px] border border-separator/40 bg-surface-container-low/35 p-5">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
-                  <h3 className="text-base font-black text-on-surface">{group.背番号}</h3>
+                  <h3 className="text-base font-semibold text-on-surface">{group.背番号}</h3>
                   <p className="text-sm text-on-surface-variant">{group.品番}</p>
                 </div>
-                <span className="rounded-full bg-amber-500/15 px-3 py-1 text-xs font-bold uppercase tracking-[0.18em] text-amber-700 dark:text-amber-300">
+                <span className="rounded-full bg-amber-500/15 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-amber-700 dark:text-amber-300">
                   {group.entries.length} duplicates
                 </span>
               </div>
@@ -176,7 +176,7 @@ function DuplicateSelectionStep({ duplicateGroups, duplicateSelections, onToggle
         <button
           type="button"
           onClick={onContinue}
-          className="rounded-2xl bg-primary px-5 py-3 text-sm font-bold text-white transition hover:opacity-90"
+          className="rounded-2xl bg-primary px-5 py-3 text-sm font-semibold text-on-primary transition hover:opacity-90"
         >
           Continue To Comparison
         </button>
@@ -191,8 +191,8 @@ function ComparisonStep({ availableItems, existingRequestsCount, nextRequestNumb
       <div className="rounded-[24px] border border-primary/20 bg-primary/8 p-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary">Creating Request</p>
-            <h3 className="mt-1 text-lg font-black text-on-surface">{nextRequestNumber}</h3>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-primary">Creating Request</p>
+            <h3 className="mt-1 text-lg font-semibold text-on-surface">{nextRequestNumber}</h3>
           </div>
           {existingRequestsCount ? (
             <span className="rounded-full bg-white/80 px-3 py-1 text-xs font-semibold text-on-surface dark:bg-surface-container">
@@ -213,7 +213,7 @@ function ComparisonStep({ availableItems, existingRequestsCount, nextRequestNumb
               <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
-                    <h4 className="text-base font-black text-on-surface">{item.背番号}</h4>
+                    <h4 className="text-base font-semibold text-on-surface">{item.背番号}</h4>
                     <span className="text-sm text-on-surface-variant">{item.品番}</span>
                   </div>
                   <div className="mt-3 grid gap-2 text-xs text-on-surface-variant sm:grid-cols-2 xl:grid-cols-4">
@@ -225,7 +225,7 @@ function ComparisonStep({ availableItems, existingRequestsCount, nextRequestNumb
                 </div>
 
                 <div className="w-full lg:w-40">
-                  <label className="mb-2 block text-xs font-bold uppercase tracking-[0.18em] text-outline">
+                  <label className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-outline">
                     Quantity
                   </label>
                   <input
@@ -502,7 +502,7 @@ export default function NodaGenSyncModal({ open, authUser, onClose, onSubmitted 
             <button
               type="button"
               onClick={() => onClose?.()}
-              className="rounded-2xl border border-separator/45 px-4 py-2.5 text-sm font-semibold text-on-surface transition hover:bg-surface-container"
+              className="rounded-2xl border border-separator/40 px-4 py-2.5 text-sm font-semibold text-on-surface transition hover:bg-surface-container"
             >
               Cancel
             </button>
@@ -511,7 +511,7 @@ export default function NodaGenSyncModal({ open, authUser, onClose, onSubmitted 
                 type="button"
                 onClick={handleFetchFromGen}
                 disabled={busy}
-                className="rounded-2xl bg-primary px-5 py-2.5 text-sm font-bold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+                className="rounded-2xl bg-primary px-5 py-2.5 text-sm font-semibold text-on-primary transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {busy ? "Fetching…" : "Fetch From GEN"}
               </button>
@@ -521,7 +521,7 @@ export default function NodaGenSyncModal({ open, authUser, onClose, onSubmitted 
                 type="button"
                 onClick={handleCreateRequest}
                 disabled={createBusy || !canCreate}
-                className="rounded-2xl bg-emerald-600 px-5 py-2.5 text-sm font-bold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+                className="rounded-2xl bg-emerald-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {createBusy ? "Creating…" : "Create Request"}
               </button>
@@ -550,7 +550,7 @@ export default function NodaGenSyncModal({ open, authUser, onClose, onSubmitted 
 
         {phase === "date" ? (
           <div className="rounded-[24px] border border-separator/40 bg-surface-container-low/35 p-5">
-            <label className="block text-xs font-bold uppercase tracking-[0.18em] text-outline">
+            <label className="block text-xs font-semibold uppercase tracking-[0.18em] text-outline">
               Delivery Date
             </label>
             <input

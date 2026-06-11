@@ -101,13 +101,13 @@ function MfgLotModal({ onClose, initialLot = "" }) {
     >
       <div
         className="dashboard-section rounded-2xl w-full max-w-xl max-h-[85vh] overflow-y-auto
-                   shadow-[0_0_80px_rgba(99,102,241,0.18),0_24px_48px_rgba(0,0,0,0.22)] scrollbar-hide"
+                   scrollbar-hide"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="px-6 py-5 flex items-center justify-between border-b border-separator/30">
+        <div className="px-6 py-5 flex items-center justify-between border-b border-separator/40">
           <div className="flex items-center gap-2">
             <span className="material-symbols-outlined text-primary" style={{ fontSize: 20 }}>manage_search</span>
-            <h3 className="text-base font-bold text-on-surface">Manufacturing Lot Finder</h3>
+            <h3 className="text-base font-semibold text-on-surface">Manufacturing Lot Finder</h3>
           </div>
           <button onClick={onClose}
             className="p-2 rounded-xl hover:bg-surface-container text-outline hover:text-on-surface transition-colors">
@@ -123,13 +123,13 @@ function MfgLotModal({ onClose, initialLot = "" }) {
               onChange={(e) => setLotInput(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleSearch()}
               placeholder="製造ロット番号 (例: 241227)"
-              className="flex-1 h-10 px-3 rounded-xl bg-surface-container border border-separator/35 text-sm
+              className="flex-1 h-10 px-3 rounded-xl bg-surface-container border border-separator/40 text-sm
                          text-on-surface placeholder:text-outline outline-none focus:border-primary/40 transition-colors"
             />
             <button
               onClick={handleSearch}
               disabled={loading || lotInput.trim().length < 3}
-              className="px-4 h-10 rounded-xl kinetic-gradient text-white text-sm font-bold disabled:opacity-40 hover:opacity-90 transition-opacity"
+              className="px-4 h-10 rounded-xl bg-primary text-on-primary text-sm font-semibold disabled:opacity-40 hover:opacity-90 transition-opacity"
             >
               {loading ? "…" : "Search"}
             </button>
@@ -141,7 +141,7 @@ function MfgLotModal({ onClose, initialLot = "" }) {
               <div className="space-y-2">
                 {sebanggoOptions.map((s) => (
                   <button key={s} onClick={() => handleSelectSebanggo(s)}
-                    className="w-full px-4 py-3 rounded-xl glass-card text-left text-sm font-bold text-on-surface
+                    className="w-full px-4 py-3 rounded-xl glass-card text-left text-sm font-semibold text-on-surface
                                hover:border-primary/30 hover:scale-[1.01] transition-all">
                     {s}
                   </button>
@@ -153,17 +153,17 @@ function MfgLotModal({ onClose, initialLot = "" }) {
           {step === "results" && (
             <div className="space-y-3">
               {fields.length > 0 && (
-                <div className="glass-card rounded-xl p-4 space-y-2">
+                <div className="glass-card rounded-xl p-5 space-y-2">
                   {fields.map(([k, v]) => (
-                    <div key={k} className="flex justify-between gap-4 border-b border-separator/20 pb-2 last:border-0">
-                      <span className="text-[11px] font-bold text-outline">{k}</span>
+                    <div key={k} className="flex justify-between gap-4 border-b border-separator/40 pb-2 last:border-0">
+                      <span className="text-[11px] font-semibold text-outline">{k}</span>
                       <span className="text-xs text-on-surface-variant text-right font-mono">{String(v)}</span>
                     </div>
                   ))}
                 </div>
               )}
               {rows.length > 0 ? (
-                <div className="overflow-x-auto rounded-xl border border-separator/35">
+                <div className="overflow-x-auto rounded-xl border border-separator/40">
                   <table className="ui-table-data w-full">
                     <thead className="bg-surface-container-high/50">
                       <tr>
@@ -179,13 +179,13 @@ function MfgLotModal({ onClose, initialLot = "" }) {
                         const dr  = qty > 0 ? ((ng / qty) * 100).toFixed(2) : "0.00";
                         return (
                           <tr key={i} className="hover:bg-surface-container/40 transition-colors">
-                            <td className="px-4 py-2.5 font-bold text-on-surface">{r["品番"] ?? "—"}</td>
+                            <td className="px-4 py-2.5 font-semibold text-on-surface">{r["品番"] ?? "—"}</td>
                             <td className="px-4 py-2.5 text-on-surface-variant">{r["背番号"] ?? "—"}</td>
                             <td className="px-4 py-2.5 text-outline">{r.Date ?? "—"}</td>
                             <td className="px-4 py-2.5 text-on-surface">{qty.toLocaleString()}</td>
-                            <td className={`px-4 py-2.5 font-bold ${ng > 0 ? "text-error" : "text-outline"}`}>{ng}</td>
+                            <td className={`px-4 py-2.5 font-semibold ${ng > 0 ? "text-error" : "text-outline"}`}>{ng}</td>
                             <td className="px-4 py-2.5">
-                              <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold ${defectChip(dr)}`}>{dr}%</span>
+                              <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold ${defectChip(dr)}`}>{dr}%</span>
                             </td>
                           </tr>
                         );
@@ -270,8 +270,8 @@ function CameraModal({ onClose, stream = 'tapo_cam' }) {
       >
         <div className="flex items-center justify-between gap-4 border-b border-separator/40 px-6 py-5">
           <div>
-            <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-outline">小瀬 — Live Camera</p>
-            <h2 className="mt-1 text-xl font-black text-on-surface">Live Feed — {activeLabel}</h2>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">小瀬 — Live Camera</p>
+            <h2 className="mt-1 text-xl font-semibold text-on-surface">Live Feed — {activeLabel}</h2>
           </div>
           <button
             type="button"
@@ -295,7 +295,7 @@ function CameraModal({ onClose, stream = 'tapo_cam' }) {
               <button
                 key={c.id}
                 onClick={() => setActiveStream(c.id)}
-                className="px-3 py-1.5 rounded-lg bg-black/60 backdrop-blur-sm text-white text-xs font-bold hover:bg-black/80 transition-all border border-white/20 active:scale-95"
+                className="px-3 py-1.5 rounded-lg bg-black/60 backdrop-blur-sm text-white text-xs font-semibold hover:bg-black/80 transition-all border border-white/20 active:scale-95"
               >
                 {c.label}
               </button>
@@ -431,19 +431,19 @@ export default function FactoryDetailPage({ combined = false }) {
         bodyClassName="items-start"
         title={pageTitle}
         titleMeta={!loading ? (
-          <span className={`flex items-center gap-1.5 text-[10px] font-bold px-3 py-1 rounded-full ${defStatus.bg} ${defStatus.color}`}>
+          <span className={`flex items-center gap-1.5 text-[10px] font-semibold px-3 py-1 rounded-full ${defStatus.bg} ${defStatus.color}`}>
             <span className={`w-1.5 h-1.5 rounded-full ${defStatus.dot}`} />
             {defStatus.label}
           </span>
         ) : null}
         subtitle={`${combined ? "All Factories Combined -" : "Factory Overview -"} ${dateFrom === dateTo ? dateFrom : `${dateFrom} → ${dateTo}`}`}
-        className="mb-8 md:flex-row md:items-start md:justify-between"
+        className="mb-6 md:flex-row md:items-start md:justify-between"
         actions={(
           <>
             {!combined && factoryName === "小瀬" && (
               <button
                 onClick={() => setCameraModalOpen(true)}
-                className="flex-shrink-0 flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold border border-separator/40 bg-surface text-on-surface hover:bg-surface-container hover:border-primary/30 hover:text-primary active:scale-95 transition-all duration-150"
+                className="flex-shrink-0 flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold border border-separator/40 bg-surface text-on-surface hover:bg-surface-container hover:border-primary/30 hover:text-primary active:scale-95 transition-all duration-150"
               >
                 <span className="material-symbols-outlined" style={{ fontSize: 16 }}>videocam</span>
                 View Live Feed
@@ -452,8 +452,8 @@ export default function FactoryDetailPage({ combined = false }) {
 
             <button
               onClick={() => navigate(combined ? "/sensors" : `/sensors/${encoded}`)}
-              className="flex-shrink-0 flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold
-                         kinetic-gradient text-white shadow-[0_0_15px_rgba(99,102,241,0.3)] hover:opacity-90 transition-opacity"
+              className="flex-shrink-0 flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold
+                         bg-primary text-on-primary hover:opacity-90 transition-opacity"
             >
               <span className="material-symbols-outlined" style={{ fontSize: 16 }}>sensors</span>
               {combined ? "Sensor Overview" : "Sensor History"}
@@ -515,8 +515,8 @@ export default function FactoryDetailPage({ combined = false }) {
                   { label: "Humidity", value: `${env.humidity ?? "—"}%`,     status: getHumidityStatus(env.humidity) },
                 ].map(({ label, value, status }) => (
                   <div key={label} className="flex flex-col gap-0.5">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-outline">{label}</span>
-                    <span className={`text-base font-black ${status.color}`}>{value}</span>
+                    <span className="text-[10px] font-semibold uppercase tracking-wider text-outline">{label}</span>
+                    <span className={`text-base font-semibold ${status.color}`}>{value}</span>
                   </div>
                 ))}
               </div>
@@ -533,8 +533,8 @@ export default function FactoryDetailPage({ combined = false }) {
                   ...(sensor.wbgt != null ? [{ label: "WBGT", value: `${sensor.wbgt}°C`, status: getWBGTStatus(sensor.wbgt) }] : []),
                 ].map(({ label, value, status }) => (
                   <div key={label} className="flex flex-col gap-0.5">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-outline">{label}</span>
-                    <span className={`text-base font-black ${status.color}`}>{value}</span>
+                    <span className="text-[10px] font-semibold uppercase tracking-wider text-outline">{label}</span>
+                    <span className={`text-base font-semibold ${status.color}`}>{value}</span>
                   </div>
                 ))}
               </div>
@@ -558,8 +558,8 @@ export default function FactoryDetailPage({ combined = false }) {
 
       {/* ── Daily Production ── */}
       <div className="glass-card rounded-2xl overflow-hidden">
-        <div className="px-6 py-4 border-b border-separator/30 flex items-center justify-between flex-wrap gap-3">
-          <h3 className="text-base font-bold text-on-surface flex items-center gap-2">
+        <div className="px-6 py-4 border-b border-separator/40 flex items-center justify-between flex-wrap gap-3">
+          <h3 className="text-base font-semibold text-on-surface flex items-center gap-2">
             <span className="material-symbols-outlined text-primary" style={{ fontSize: 18 }}>factory</span>
             Daily Production
           </h3>

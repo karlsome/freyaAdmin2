@@ -26,18 +26,18 @@ function toBase64(file) {
 }
 
 function StepBadge({ n, active, done }) {
-  const base = "flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full text-xs font-black";
-  if (done) return <span className={`${base} bg-emerald-500 text-white`}><span className="material-symbols-outlined" style={{ fontSize: 13 }}>check</span></span>;
+  const base = "flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full text-xs font-semibold";
+  if (done) return <span className={`${base} bg-emerald-500 text-white`}><span className="material-symbols-outlined" style={{ fontSize: 14 }}>check</span></span>;
   if (active) return <span className={`${base} bg-primary text-on-primary`}>{n}</span>;
   return <span className={`${base} bg-surface-container text-on-surface-variant`}>{n}</span>;
 }
 
 function PanelHeader({ step, active, done, title, sub }) {
   return (
-    <div className="border-b border-separator/35 px-4 py-4 flex items-center gap-2.5">
+    <div className="border-b border-separator/40 px-4 py-4 flex items-center gap-2.5">
       <StepBadge n={step} active={active} done={done} />
       <div>
-        <h3 className="text-xs font-black text-on-surface">{title}</h3>
+        <h3 className="text-xs font-semibold text-on-surface">{title}</h3>
         {sub && <p className="text-[11px] text-on-surface-variant mt-0.5 leading-tight">{sub}</p>}
       </div>
     </div>
@@ -360,12 +360,12 @@ export default function PceFilesWorkspace({ onFlash }) {
                   : "border-outline-variant/30 hover:border-primary/40 hover:bg-primary/5",
               ].join(" ")}
             >
-              <span className={`material-symbols-outlined ${file ? "text-emerald-500" : "text-on-surface-variant/50"}`} style={{ fontSize: 26 }}>
+              <span className={`material-symbols-outlined ${file ? "text-emerald-500" : "text-on-surface-variant/50"}`} style={{ fontSize: 24 }}>
                 {file ? "check_circle" : "upload_file"}
               </span>
               {file ? (
                 <>
-                  <p className="text-xs font-bold text-on-surface break-all leading-tight">{file.name}</p>
+                  <p className="text-xs font-semibold text-on-surface break-all leading-tight">{file.name}</p>
                   <p className="text-[11px] text-on-surface-variant">{(file.size / 1024).toFixed(1)} KB · <span className="text-primary">replace</span></p>
                 </>
               ) : (
@@ -459,14 +459,14 @@ export default function PceFilesWorkspace({ onFlash }) {
               <ul className="grid grid-flow-col grid-rows-5 auto-cols-[minmax(180px,1fr)] gap-1.5 overflow-x-auto pb-1">
                 {uploadResults.map((f) => (
                   <li key={f.id} className="flex items-center gap-2 rounded-lg border border-emerald-500/20 bg-emerald-500/5 px-3 py-2 min-w-0">
-                    <span className="material-symbols-outlined text-emerald-500 flex-shrink-0" style={{ fontSize: 15 }}>check_circle</span>
-                    <span className="font-mono text-xs font-bold text-on-surface truncate">{f.name}</span>
+                    <span className="material-symbols-outlined text-emerald-500 flex-shrink-0" style={{ fontSize: 16 }}>check_circle</span>
+                    <span className="font-mono text-xs font-semibold text-on-surface truncate">{f.name}</span>
                   </li>
                 ))}
               </ul>
               <button type="button" onClick={handleReset}
-                className="mt-2 self-start flex items-center justify-center gap-1.5 rounded-xl border border-outline-variant/20 bg-surface-container px-4 py-2 text-xs font-bold text-on-surface hover:bg-surface-container-high transition-all">
-                <span className="material-symbols-outlined" style={{ fontSize: 15 }}>add</span>
+                className="mt-2 self-start flex items-center justify-center gap-1.5 rounded-xl border border-outline-variant/20 bg-surface-container px-4 py-2 text-xs font-semibold text-on-surface hover:bg-surface-container-high transition-all">
+                <span className="material-symbols-outlined" style={{ fontSize: 16 }}>add</span>
                 New upload
               </button>
             </>
@@ -475,8 +475,8 @@ export default function PceFilesWorkspace({ onFlash }) {
               <ul className="grid grid-flow-col grid-rows-5 auto-cols-[minmax(180px,1fr)] gap-1.5 overflow-x-auto pb-1 mb-2">
                 {previewFiles.map((name) => (
                   <li key={name} className="flex items-center gap-2 rounded-lg border border-outline-variant/15 bg-surface-container px-3 py-2 min-w-0">
-                    <span className="material-symbols-outlined text-primary flex-shrink-0" style={{ fontSize: 15 }}>description</span>
-                    <span className="font-mono text-xs font-bold text-on-surface truncate">{name}</span>
+                    <span className="material-symbols-outlined text-primary flex-shrink-0" style={{ fontSize: 16 }}>description</span>
+                    <span className="font-mono text-xs font-semibold text-on-surface truncate">{name}</span>
                   </li>
                 ))}
               </ul>
@@ -492,7 +492,7 @@ export default function PceFilesWorkspace({ onFlash }) {
                 type="button"
                 onClick={handleUpload}
                 disabled={!canUpload}
-                className="self-start flex items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-xs font-bold text-on-primary transition-all hover:opacity-90 active:scale-95 disabled:opacity-40"
+                className="self-start flex items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-xs font-semibold text-on-primary transition-all hover:opacity-90 active:scale-95 disabled:opacity-40"
               >
                 {uploading
                   ? <span className="material-symbols-outlined animate-spin" style={{ fontSize: 16 }}>progress_activity</span>

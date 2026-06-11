@@ -273,8 +273,8 @@ export default function FuryoKanriWorkspace({ refreshToken = 0, onFlash }) {
       <div className="glass-card rounded-3xl px-5 py-5 mb-6">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div>
-            <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-outline">Quality Setup</div>
-            <h3 className="mt-1 text-2xl font-bold text-on-surface">不良管理</h3>
+            <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-outline">Quality Setup</div>
+            <h3 className="mt-1 text-2xl font-semibold text-on-surface">不良管理</h3>
             <p className="mt-2 max-w-3xl text-sm text-on-surface-variant">
               Manage model-specific defect labels for counters 1 through 12. This ports the legacy definition workflow, including bilingual fields, edit-role gating, and model product lookup.
             </p>
@@ -289,16 +289,16 @@ export default function FuryoKanriWorkspace({ refreshToken = 0, onFlash }) {
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4 mb-6">
         {stats.map((card) => (
-          <div key={card.label} className="glass-card rounded-2xl p-4">
+          <div key={card.label} className="glass-card rounded-2xl p-5">
             <div className="flex items-center gap-4">
               <div className={`flex h-12 w-12 items-center justify-center rounded-2xl ${card.accent}`}>
-                <span className="material-symbols-outlined" style={{ fontSize: 22, fontVariationSettings: "'FILL' 1" }}>
+                <span className="material-symbols-outlined" style={{ fontSize: 24, fontVariationSettings: "'FILL' 1" }}>
                   {card.icon}
                 </span>
               </div>
               <div>
-                <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-outline">{card.label}</div>
-                <div className="mt-1 text-2xl font-black text-on-surface">{card.value}</div>
+                <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-outline">{card.label}</div>
+                <div className="mt-1 text-2xl font-semibold text-on-surface">{card.value}</div>
               </div>
             </div>
           </div>

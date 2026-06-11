@@ -79,7 +79,7 @@ export default function PaginationControls({
         type="button"
         onClick={() => onPageChange(page - 1)}
         disabled={disabled || page <= 1}
-        className="rounded-2xl border border-outline-variant/30 px-3 py-2 text-sm font-bold text-on-surface transition hover:bg-surface-container disabled:cursor-not-allowed disabled:opacity-40"
+        className="rounded-2xl border border-outline-variant/30 px-3 py-2 text-sm font-semibold text-on-surface transition hover:bg-surface-container disabled:cursor-not-allowed disabled:opacity-40"
       >
         {previousLabel}
       </button>
@@ -117,7 +117,7 @@ export default function PaginationControls({
               disabled={disabled}
               onClick={() => onPageChange(item)}
               className={joinClasses(
-                "relative z-10 min-w-10 rounded-2xl px-3 py-2 text-sm font-bold transition-colors duration-300 disabled:cursor-not-allowed disabled:opacity-40",
+                "relative z-10 min-w-10 rounded-2xl px-3 py-2 text-sm font-semibold transition-colors duration-300 disabled:cursor-not-allowed disabled:opacity-40",
                 active
                   ? "border border-transparent bg-transparent text-on-primary"
                   : "border border-outline-variant/30 text-on-surface hover:bg-surface-container"
@@ -133,7 +133,7 @@ export default function PaginationControls({
         type="button"
         onClick={() => onPageChange(page + 1)}
         disabled={disabled || page >= safeTotalPages}
-        className="rounded-2xl border border-outline-variant/30 px-3 py-2 text-sm font-bold text-on-surface transition hover:bg-surface-container disabled:cursor-not-allowed disabled:opacity-40"
+        className="rounded-2xl border border-outline-variant/30 px-3 py-2 text-sm font-semibold text-on-surface transition hover:bg-surface-container disabled:cursor-not-allowed disabled:opacity-40"
       >
         {nextLabel}
       </button>

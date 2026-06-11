@@ -52,13 +52,13 @@ export default function ModalShell({
           className={["dashboard-section flex w-full flex-col overflow-hidden rounded-2xl", maxWidth, cardClassName].filter(Boolean).join(" ")}
           onClick={(e) => e.stopPropagation()}
         >
-          <div className="border-b border-separator/35 px-6 py-5">
+          <div className="border-b border-separator/40 px-6 py-5">
             <div className="flex items-start justify-between gap-4">
               <div>
                 {eyebrow ? (
-                  <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-outline">{eyebrow}</div>
+                  <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-outline">{eyebrow}</div>
                 ) : null}
-                <h3 className={`${eyebrow ? "mt-2" : ""} text-2xl font-black text-on-surface`}>{title}</h3>
+                <h3 className={`${eyebrow ? "mt-2" : ""} text-2xl font-semibold text-on-surface`}>{title}</h3>
                 {subtitle ? (
                   <p className="mt-1 text-sm text-on-surface-variant">{subtitle}</p>
                 ) : null}
@@ -77,7 +77,7 @@ export default function ModalShell({
           {children}
 
           {footer ? (
-            <div className={footerClassName ?? "border-t border-separator/30 px-6 py-4"}>
+            <div className={footerClassName ?? "border-t border-separator/40 px-6 py-4"}>
               {footer}
             </div>
           ) : null}

@@ -30,12 +30,12 @@ export default function CheckFormImageLightboxModal({ image, onClose }) {
           role="dialog"
           aria-modal="true"
           onMouseDown={(event) => event.stopPropagation()}
-          className="flex w-full max-w-5xl max-h-[90vh] flex-col overflow-hidden rounded-[28px] border border-separator/35 bg-slate-950/95 text-white shadow-[0_32px_100px_rgba(15,23,42,0.28)]"
+          className="flex w-full max-w-5xl max-h-[90vh] flex-col overflow-hidden rounded-[28px] border border-separator/40 bg-slate-950/95 text-white shadow-[0_32px_100px_rgba(15,23,42,0.28)]"
         >
-          <div className="flex items-start justify-between gap-4 border-b border-separator/30 px-5 py-4 sm:px-6">
+          <div className="flex items-start justify-between gap-4 border-b border-separator/40 px-5 py-4 sm:px-6">
             <div className="min-w-0 flex-1">
-              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary">Preview</p>
-              <h3 className="mt-1 truncate text-lg font-black text-white">{image.name || "Reference image"}</h3>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-primary">Preview</p>
+              <h3 className="mt-1 truncate text-lg font-semibold text-white">{image.name || "Reference image"}</h3>
               <p className="mt-1 text-sm leading-6 text-white/65">Click outside or press Escape to close.</p>
             </div>
 
@@ -50,12 +50,12 @@ export default function CheckFormImageLightboxModal({ image, onClose }) {
             />
           </div>
 
-          <div className="flex items-center justify-end gap-3 border-t border-separator/30 px-5 py-4 sm:px-6">
+          <div className="flex items-center justify-end gap-3 border-t border-separator/40 px-5 py-4 sm:px-6">
             <a
               href={imageURL}
               target="_blank"
               rel="noreferrer"
-              className="rounded-2xl border border-white/15 px-4 py-2 text-xs font-bold text-white transition hover:bg-white/10"
+              className="rounded-2xl border border-white/15 px-4 py-2 text-xs font-semibold text-white transition hover:bg-white/10"
             >
               Open in new tab
             </a>

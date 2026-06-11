@@ -1,7 +1,7 @@
 export default function StatusChip({ icon, label, className, iconFilled = false }) {
   return (
     <span className={[
-      "inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-bold",
+      "inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-semibold",
       icon ? "gap-1" : null,
       className,
     ].filter(Boolean).join(" ")}>

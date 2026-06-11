@@ -58,7 +58,7 @@ function FlashBanner({ flash, onClose }) {
     <div className={joinInventoryClasses("mb-6 rounded-3xl border px-5 py-4", tone)}>
       <div className="flex items-start justify-between gap-4">
         <div>
-          <p className="text-[10px] font-bold uppercase tracking-[0.18em]">Status</p>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.18em]">Status</p>
           <p className="mt-1 text-sm font-medium">{flash.message}</p>
         </div>
         <button type="button" onClick={onClose} className="text-current/70 transition hover:text-current">
@@ -76,7 +76,7 @@ function AvailabilityCell({ value }) {
     <div className="min-w-0">
       <div className="font-semibold text-on-surface">{formatInventoryNumber(value)}</div>
       <div className="mt-2">
-        <span className={joinInventoryClasses("inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-bold", meta.badgeClassName)}>
+        <span className={joinInventoryClasses("inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold", meta.badgeClassName)}>
           <span className="material-symbols-outlined" style={{ fontSize: 14 }}>{meta.icon}</span>
           {meta.label}
         </span>
@@ -393,7 +393,7 @@ export default function InventoryPage() {
       label: "Factory",
       width: 140,
       renderCell: (row) => row.工場 ? (
-        <span className="inline-flex items-center rounded-full bg-primary/10 px-2.5 py-1 text-xs font-bold text-primary">
+        <span className="inline-flex items-center rounded-full bg-primary/10 px-2.5 py-1 text-xs font-semibold text-primary">
           {row.工場}
         </span>
       ) : <span className="text-on-surface-variant">—</span>,
@@ -451,7 +451,7 @@ export default function InventoryPage() {
       <div className="w-full">
         <PageHeader
           eyebrow="Warehouse Ledger"
-          eyebrowClassName="tracking-[0.24em] text-primary"
+          eyebrowClassName="tracking-[0.18em] text-primary"
           title="Inventory"
           subtitle="Track the latest inventory state by serial number, inspect transaction history, add stock manually, and run controlled reset workflows."
           subtitleClassName="max-w-3xl"
@@ -462,7 +462,7 @@ export default function InventoryPage() {
                 type="button"
                 onClick={() => setRefreshNonce((current) => current + 1)}
                 disabled={loading || modelLoading}
-                className="rounded-2xl border border-separator/45 px-4 py-2.5 text-sm font-semibold text-on-surface transition hover:bg-surface-container disabled:cursor-not-allowed disabled:opacity-60"
+                className="rounded-2xl border border-separator/40 px-4 py-2.5 text-sm font-semibold text-on-surface transition hover:bg-surface-container disabled:cursor-not-allowed disabled:opacity-60"
               >
                 Refresh
               </button>
@@ -470,7 +470,7 @@ export default function InventoryPage() {
                 type="button"
                 onClick={handleExport}
                 disabled={exporting || modelLoading}
-                className="rounded-2xl border border-separator/45 px-4 py-2.5 text-sm font-semibold text-on-surface transition hover:bg-surface-container disabled:cursor-not-allowed disabled:opacity-60"
+                className="rounded-2xl border border-separator/40 px-4 py-2.5 text-sm font-semibold text-on-surface transition hover:bg-surface-container disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {exporting ? "Exporting..." : "Export CSV"}
               </button>
@@ -478,7 +478,7 @@ export default function InventoryPage() {
                 <button
                   type="button"
                   onClick={() => setBatchResetOpen(true)}
-                  className="rounded-2xl border border-error/20 bg-error/8 px-4 py-2.5 text-sm font-bold text-error transition hover:bg-error/12"
+                  className="rounded-2xl border border-error/20 bg-error/8 px-4 py-2.5 text-sm font-semibold text-error transition hover:bg-error/12"
                 >
                   Batch Reset
                 </button>
@@ -487,7 +487,7 @@ export default function InventoryPage() {
                 <button
                   type="button"
                   onClick={() => setAddModalOpen(true)}
-                  className="rounded-2xl bg-primary px-4 py-2.5 text-sm font-bold text-white transition hover:opacity-90"
+                  className="rounded-2xl bg-primary px-4 py-2.5 text-sm font-semibold text-on-primary transition hover:opacity-90"
                 >
                   Add Inventory
                 </button>
@@ -515,19 +515,19 @@ export default function InventoryPage() {
         <div className="dashboard-section mb-6 rounded-2xl p-5">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
-              <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-outline">Filters</p>
-              <h2 className="mt-1 text-lg font-black text-on-surface">Inventory Filters</h2>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Filters</p>
+              <h2 className="mt-1 text-lg font-semibold text-on-surface">Inventory Filters</h2>
             </div>
             {modelLoading ? <p className="text-sm text-on-surface-variant">Loading model products...</p> : null}
           </div>
 
           <div className="mt-4 grid gap-4 xl:grid-cols-4">
             <label className="block">
-              <span className="block text-xs font-bold uppercase tracking-[0.18em] text-outline">Part Number</span>
+              <span className="block text-xs font-semibold uppercase tracking-[0.18em] text-outline">Part Number</span>
               <select
                 value={filters.partNumber}
                 onChange={(event) => updateFilter("partNumber", event.target.value)}
-                className="mt-2 h-11 w-full rounded-2xl border border-separator/50 bg-white px-4 text-sm text-on-surface outline-none transition focus:border-primary/40 dark:bg-surface-container"
+                className="mt-2 h-11 w-full rounded-2xl border border-separator/40 bg-white px-4 text-sm text-on-surface outline-none transition focus:border-primary/40 dark:bg-surface-container"
               >
                 <option value="">All Part Numbers</option>
                 {filterOptions.partNumbers.map((value) => (
@@ -537,12 +537,12 @@ export default function InventoryPage() {
             </label>
 
             <label className="block">
-              <span className="block text-xs font-bold uppercase tracking-[0.18em] text-outline">Serial Number</span>
+              <span className="block text-xs font-semibold uppercase tracking-[0.18em] text-outline">Serial Number</span>
               <select
                 value={filters.backNumber}
                 onChange={(event) => updateFilter("backNumber", event.target.value)}
                 disabled={selectedBackNumbers.length > 0}
-                className="mt-2 h-11 w-full rounded-2xl border border-separator/50 bg-white px-4 text-sm text-on-surface outline-none transition focus:border-primary/40 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-surface-container"
+                className="mt-2 h-11 w-full rounded-2xl border border-separator/40 bg-white px-4 text-sm text-on-surface outline-none transition focus:border-primary/40 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-surface-container"
               >
                 <option value="">{selectedBackNumbers.length > 0 ? "Model tag filter active" : "All Serial Numbers"}</option>
                 {filterOptions.backNumbers.map((value) => (
@@ -552,11 +552,11 @@ export default function InventoryPage() {
             </label>
 
             <label className="block">
-              <span className="block text-xs font-bold uppercase tracking-[0.18em] text-outline">Model</span>
+              <span className="block text-xs font-semibold uppercase tracking-[0.18em] text-outline">Model</span>
               <select
                 value={filters.model}
                 onChange={(event) => handleModelChange(event.target.value)}
-                className="mt-2 h-11 w-full rounded-2xl border border-separator/50 bg-white px-4 text-sm text-on-surface outline-none transition focus:border-primary/40 dark:bg-surface-container"
+                className="mt-2 h-11 w-full rounded-2xl border border-separator/40 bg-white px-4 text-sm text-on-surface outline-none transition focus:border-primary/40 dark:bg-surface-container"
               >
                 <option value="">All Models</option>
                 {models.map((value) => (
@@ -566,13 +566,13 @@ export default function InventoryPage() {
             </label>
 
             <label className="block">
-              <span className="block text-xs font-bold uppercase tracking-[0.18em] text-outline">Search</span>
+              <span className="block text-xs font-semibold uppercase tracking-[0.18em] text-outline">Search</span>
               <input
                 type="text"
                 value={filters.search}
                 onChange={(event) => updateFilter("search", event.target.value)}
                 placeholder="Part number or serial number..."
-                className="mt-2 h-11 w-full rounded-2xl border border-separator/50 bg-white px-4 text-sm text-on-surface outline-none transition focus:border-primary/40 dark:bg-surface-container"
+                className="mt-2 h-11 w-full rounded-2xl border border-separator/40 bg-white px-4 text-sm text-on-surface outline-none transition focus:border-primary/40 dark:bg-surface-container"
               />
             </label>
           </div>
@@ -597,7 +597,7 @@ export default function InventoryPage() {
                 <button
                   type="button"
                   onClick={handleApplyAdvancedFilters}
-                  className="flex items-center gap-2 rounded-xl kinetic-gradient px-5 py-2.5 text-sm font-bold text-white shadow-[0_0_20px_rgba(99,102,241,0.25)] transition-opacity hover:opacity-90"
+                  className="flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-on-primary transition-opacity hover:opacity-90"
                 >
                   <span className="material-symbols-outlined" style={{ fontSize: 16 }}>filter_alt</span>
                   Apply Advanced Filters
@@ -606,7 +606,7 @@ export default function InventoryPage() {
                 <button
                   type="button"
                   onClick={handleClearAdvancedFilters}
-                  className="flex items-center gap-2 rounded-xl border border-separator/35 glass-card px-5 py-2.5 text-sm font-bold text-on-surface transition-all hover:border-primary/30"
+                  className="flex items-center gap-2 rounded-xl border border-separator/40 glass-card px-5 py-2.5 text-sm font-semibold text-on-surface transition-all hover:border-primary/30"
                 >
                   <span className="material-symbols-outlined" style={{ fontSize: 16 }}>refresh</span>
                   Reset Advanced Filters
@@ -619,14 +619,14 @@ export default function InventoryPage() {
             <div className="mt-4 rounded-2xl border border-outline-variant/15 bg-surface-container-low/35 p-4">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
-                  <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-outline">Selected Products</p>
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Selected Products</p>
                   <p className="mt-1 text-sm text-on-surface-variant">{selectedTagSummary.countLabel}</p>
                 </div>
                 {filters.model ? (
                   <button
                     type="button"
                     onClick={() => handleModelChange("")}
-                    className="rounded-2xl border border-separator/40 px-3 py-2 text-xs font-bold text-on-surface transition hover:bg-surface-container"
+                    className="rounded-2xl border border-separator/40 px-3 py-2 text-xs font-semibold text-on-surface transition hover:bg-surface-container"
                   >
                     Clear Model Filter
                   </button>
@@ -636,7 +636,7 @@ export default function InventoryPage() {
               {selectedTagSummary.visible.length > 0 ? (
                 <div className="mt-4 flex flex-wrap gap-2">
                   {selectedTagSummary.visible.map((backNumber) => (
-                    <span key={backNumber} className="inline-flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1.5 text-xs font-bold text-primary">
+                    <span key={backNumber} className="inline-flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1.5 text-xs font-semibold text-primary">
                       {backNumber}
                       <button
                         type="button"
@@ -649,7 +649,7 @@ export default function InventoryPage() {
                     </span>
                   ))}
                   {selectedTagSummary.overflow > 0 ? (
-                    <span className="inline-flex items-center rounded-full bg-surface-container px-3 py-1.5 text-xs font-bold text-on-surface-variant">
+                    <span className="inline-flex items-center rounded-full bg-surface-container px-3 py-1.5 text-xs font-semibold text-on-surface-variant">
                       +{selectedTagSummary.overflow} more
                     </span>
                   ) : null}
@@ -690,11 +690,11 @@ export default function InventoryPage() {
           enableColumnReorder
           stickyHeader
           stickyHeaderOffset={0}
-          className="dashboard-section mb-8 overflow-hidden rounded-2xl"
+          className="dashboard-section mb-6 overflow-hidden rounded-2xl"
           topBarClassName="flex flex-col gap-4 border-b border-outline-variant/15 px-5 py-4 md:flex-row md:items-center md:justify-between"
           bottomBarClassName="flex flex-col gap-4 border-t border-outline-variant/15 px-5 py-4 md:flex-row md:items-center md:justify-between"
           rowClassName="border-b border-outline-variant/10 transition hover:bg-primary/5"
-          rowsSelectClassName="h-10 rounded-2xl border border-separator/50 bg-white px-3 text-sm text-on-surface outline-none transition focus:border-primary/40 dark:bg-surface-container"
+          rowsSelectClassName="h-10 rounded-2xl border border-separator/40 bg-white px-3 text-sm text-on-surface outline-none transition focus:border-primary/40 dark:bg-surface-container"
         />
 
         <InventoryAddModal

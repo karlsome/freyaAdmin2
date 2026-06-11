@@ -86,8 +86,8 @@ export default function SensorDevicePhotoPreviewModal({ preview, onClose, onNavi
       >
         <div className="sticky top-0 z-10 flex items-start justify-between gap-4 rounded-t-2xl border-b border-separator/40 bg-surface/90 px-6 py-5 backdrop-blur-md">
           <div className="min-w-0 flex-1">
-            <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-outline">{eyebrow}</p>
-            <h2 className="mt-1 truncate text-xl font-black text-on-surface">{title}</h2>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">{eyebrow}</p>
+            <h2 className="mt-1 truncate text-xl font-semibold text-on-surface">{title}</h2>
             {subtitleParts.length > 0 ? (
               <p className="mt-1 text-sm text-on-surface-variant">{subtitleParts.join(" • ")}</p>
             ) : null}
@@ -104,7 +104,7 @@ export default function SensorDevicePhotoPreviewModal({ preview, onClose, onNavi
         </div>
 
         <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5 space-y-4">
-          <div className="relative overflow-hidden rounded-2xl border border-separator/30 bg-surface-container">
+          <div className="relative overflow-hidden rounded-2xl border border-separator/40 bg-surface-container">
             <div className="flex min-h-[52vh] items-center justify-center bg-surface-container px-4 py-4">
               <img
                 src={activeImage.url}
@@ -141,7 +141,7 @@ export default function SensorDevicePhotoPreviewModal({ preview, onClose, onNavi
           <div className="rounded-2xl border border-outline-variant/15 bg-surface-container-low px-4 py-4">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
-                <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-outline">Current Photo</p>
+                <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Current Photo</p>
                 <p className="mt-1 text-sm font-semibold text-on-surface">{activeImage.label || `Photo ${activeIndex + 1}`}</p>
               </div>
               <p className="text-[11px] text-outline">
@@ -166,7 +166,7 @@ export default function SensorDevicePhotoPreviewModal({ preview, onClose, onNavi
                 type="button"
                 onClick={() => onNavigate(-1)}
                 disabled={!canGoPrevious}
-                className="rounded-xl border border-separator/50 px-4 py-2 text-xs font-bold text-on-surface-variant transition-all duration-150 hover:border-primary/30 hover:bg-surface-container hover:text-primary active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
+                className="rounded-xl border border-separator/40 px-4 py-2 text-xs font-semibold text-on-surface-variant transition-all duration-150 hover:border-primary/30 hover:bg-surface-container hover:text-primary active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 Previous
               </button>
@@ -177,7 +177,7 @@ export default function SensorDevicePhotoPreviewModal({ preview, onClose, onNavi
                 type="button"
                 onClick={() => onNavigate(1)}
                 disabled={!canGoNext}
-                className="rounded-xl border border-separator/50 px-4 py-2 text-xs font-bold text-on-surface-variant transition-all duration-150 hover:border-primary/30 hover:bg-surface-container hover:text-primary active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
+                className="rounded-xl border border-separator/40 px-4 py-2 text-xs font-semibold text-on-surface-variant transition-all duration-150 hover:border-primary/30 hover:bg-surface-container hover:text-primary active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 Next
               </button>
@@ -187,7 +187,7 @@ export default function SensorDevicePhotoPreviewModal({ preview, onClose, onNavi
               href={activeImage.url}
               target="_blank"
               rel="noreferrer"
-              className="rounded-xl border border-separator/50 px-4 py-2 text-xs font-bold text-on-surface-variant transition-all duration-150 hover:border-primary/30 hover:bg-surface-container hover:text-primary active:scale-95"
+              className="rounded-xl border border-separator/40 px-4 py-2 text-xs font-semibold text-on-surface-variant transition-all duration-150 hover:border-primary/30 hover:bg-surface-container hover:text-primary active:scale-95"
             >
               Open Photo
             </a>
@@ -195,7 +195,7 @@ export default function SensorDevicePhotoPreviewModal({ preview, onClose, onNavi
             <a
               href={activeImage.url}
               download={buildImageDownloadName(activeImage.url, activeImage.label)}
-              className="rounded-xl bg-primary px-4 py-2 text-xs font-bold text-on-primary transition-all duration-150 hover:opacity-90 active:scale-95"
+              className="rounded-xl bg-primary px-4 py-2 text-xs font-semibold text-on-primary transition-all duration-150 hover:opacity-90 active:scale-95"
             >
               Download Photo
             </a>

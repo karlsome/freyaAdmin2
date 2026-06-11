@@ -70,7 +70,7 @@ function SummaryCard({ icon, label, value, subtitle, accent, loading = false }) 
       subtitle={subtitle}
       accent={accent}
       loading={loading}
-      valueClassName="planner-data-text text-2xl font-black tabular-nums"
+      valueClassName="planner-data-text text-2xl font-semibold tabular-nums"
       labelClassName="planner-data-text text-[11px] font-semibold text-on-surface-variant"
       subtitleClassName="planner-data-text text-[10px] text-outline"
       iconClassName="shadow-none"
@@ -330,7 +330,7 @@ export default function FactoryStatusLogsPage() {
       <div className="mx-auto max-w-[1600px]">
         <PageHeader
           eyebrow="Live Operations"
-          eyebrowClassName="tracking-[0.24em] text-primary"
+          eyebrowClassName="tracking-[0.18em] text-primary"
           title="Factory Status Logs"
           subtitle="Review tablet log history from tabletLogDB by factory, equipment, operator, and session. Use this full-page view for broader filtering beyond the quick equipment modal on Factory Status."
           subtitleClassName="max-w-4xl"
@@ -368,8 +368,8 @@ export default function FactoryStatusLogsPage() {
         <div className="dashboard-section mb-6 rounded-2xl p-5">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
-              <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-outline">Filters</p>
-              <h2 className="mt-1 text-lg font-black text-on-surface">Log Scope</h2>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Filters</p>
+              <h2 className="mt-1 text-lg font-semibold text-on-surface">Log Scope</h2>
               <p className="planner-data-text mt-2 text-sm text-on-surface-variant">{selectionSummary.countLabel} · {selectionSummary.selectedText}</p>
             </div>
 
@@ -378,7 +378,7 @@ export default function FactoryStatusLogsPage() {
                 type="button"
                 onClick={handleSelectAllFactories}
                 disabled={!factoryOptions.length}
-                className="rounded-2xl border border-outline-variant/20 px-3 py-2 text-xs font-bold text-on-surface transition hover:bg-surface-container disabled:cursor-not-allowed disabled:opacity-60"
+                className="rounded-2xl border border-outline-variant/20 px-3 py-2 text-xs font-semibold text-on-surface transition hover:bg-surface-container disabled:cursor-not-allowed disabled:opacity-60"
               >
                 Select All
               </button>
@@ -386,14 +386,14 @@ export default function FactoryStatusLogsPage() {
                 type="button"
                 onClick={handleClearFactories}
                 disabled={!selectedFactories.length}
-                className="rounded-2xl border border-outline-variant/20 px-3 py-2 text-xs font-bold text-on-surface transition hover:bg-surface-container disabled:cursor-not-allowed disabled:opacity-60"
+                className="rounded-2xl border border-outline-variant/20 px-3 py-2 text-xs font-semibold text-on-surface transition hover:bg-surface-container disabled:cursor-not-allowed disabled:opacity-60"
               >
                 Clear
               </button>
               <button
                 type="button"
                 onClick={handleResetFilters}
-                className="rounded-2xl border border-outline-variant/20 px-3 py-2 text-xs font-bold text-on-surface transition hover:bg-surface-container"
+                className="rounded-2xl border border-outline-variant/20 px-3 py-2 text-xs font-semibold text-on-surface transition hover:bg-surface-container"
               >
                 Reset Filters
               </button>
@@ -402,7 +402,7 @@ export default function FactoryStatusLogsPage() {
 
           <div className="mt-4 grid gap-4 xl:grid-cols-[minmax(0,1.7fr)_260px]">
             <div>
-              <span className="block text-xs font-bold uppercase tracking-[0.18em] text-outline">Factories</span>
+              <span className="block text-xs font-semibold uppercase tracking-[0.18em] text-outline">Factories</span>
               <div className="mt-2 flex flex-wrap gap-2">
                 {factoryOptions.map((factory) => {
                   const active = selectedFactories.includes(factory);
@@ -432,7 +432,7 @@ export default function FactoryStatusLogsPage() {
             </div>
 
             <label className="block">
-              <span className="block text-xs font-bold uppercase tracking-[0.18em] text-outline">Date</span>
+              <span className="block text-xs font-semibold uppercase tracking-[0.18em] text-outline">Date</span>
               <input
                 type="date"
                 value={date}
@@ -448,7 +448,7 @@ export default function FactoryStatusLogsPage() {
 
           <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-5">
             <label className="block">
-              <span className="block text-xs font-bold uppercase tracking-[0.18em] text-outline">Equipment</span>
+              <span className="block text-xs font-semibold uppercase tracking-[0.18em] text-outline">Equipment</span>
               <input
                 type="text"
                 list="factory-status-log-equipment-options"
@@ -460,7 +460,7 @@ export default function FactoryStatusLogsPage() {
             </label>
 
             <label className="block">
-              <span className="block text-xs font-bold uppercase tracking-[0.18em] text-outline">Operator</span>
+              <span className="block text-xs font-semibold uppercase tracking-[0.18em] text-outline">Operator</span>
               <input
                 type="text"
                 list="factory-status-log-worker-options"
@@ -472,7 +472,7 @@ export default function FactoryStatusLogsPage() {
             </label>
 
             <label className="block">
-              <span className="block text-xs font-bold uppercase tracking-[0.18em] text-outline">Status</span>
+              <span className="block text-xs font-semibold uppercase tracking-[0.18em] text-outline">Status</span>
               <select
                 value={filters.status}
                 onChange={(event) => updateFilter("status", event.target.value)}
@@ -486,7 +486,7 @@ export default function FactoryStatusLogsPage() {
             </label>
 
             <label className="block">
-              <span className="block text-xs font-bold uppercase tracking-[0.18em] text-outline">Session ID</span>
+              <span className="block text-xs font-semibold uppercase tracking-[0.18em] text-outline">Session ID</span>
               <input
                 type="text"
                 value={filters.sessionID}
@@ -497,7 +497,7 @@ export default function FactoryStatusLogsPage() {
             </label>
 
             <label className="block">
-              <span className="block text-xs font-bold uppercase tracking-[0.18em] text-outline">Search</span>
+              <span className="block text-xs font-semibold uppercase tracking-[0.18em] text-outline">Search</span>
               <input
                 type="text"
                 value={filters.search}
@@ -558,7 +558,7 @@ export default function FactoryStatusLogsPage() {
 
         {!selectedFactories.length && !loadingFactories ? (
           <div className="glass-card rounded-2xl px-6 py-12 text-center">
-            <h2 className="text-xl font-black text-on-surface">Choose at least one factory</h2>
+            <h2 className="text-xl font-semibold text-on-surface">Choose at least one factory</h2>
             <p className="planner-data-text mt-2 text-sm text-on-surface-variant">The log table appears after you select one or more factories.</p>
           </div>
         ) : (

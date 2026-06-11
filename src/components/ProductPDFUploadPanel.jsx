@@ -36,8 +36,8 @@ export default function ProductPDFUploadPanel({
         className="flex w-full items-center justify-between gap-3 px-5 py-4 text-left transition hover:bg-surface-container-low"
       >
         <div>
-          <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-outline">Upload</div>
-          <div className="mt-1 text-base font-bold text-on-surface">{typeMeta.label} PDFs</div>
+          <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-outline">Upload</div>
+          <div className="mt-1 text-base font-semibold text-on-surface">{typeMeta.label} PDFs</div>
           <div className="mt-1 text-sm text-on-surface-variant">
             Link uploaded files to one or more products before they appear in the library.
           </div>
@@ -49,10 +49,10 @@ export default function ProductPDFUploadPanel({
       </button>
 
       {uploadExpanded && (
-        <div className="border-t border-separator/30 px-5 py-5 space-y-5">
+        <div className="border-t border-separator/40 px-5 py-5 space-y-5">
           <div className="grid gap-4 lg:grid-cols-3">
             <div>
-              <label className="mb-2 block text-[11px] font-bold uppercase tracking-[0.18em] text-outline">Filter Type</label>
+              <label className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.18em] text-outline">Filter Type</label>
               <select
                 value={filterType}
                 onChange={(event) => onFilterTypeChange(event.target.value)}
@@ -65,7 +65,7 @@ export default function ProductPDFUploadPanel({
 
             {filterType === "model" ? (
               <div>
-                <label className="mb-2 block text-[11px] font-bold uppercase tracking-[0.18em] text-outline">Model</label>
+                <label className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.18em] text-outline">Model</label>
                 <select
                   value={selectedModel}
                   onChange={(event) => onSelectedModelChange(event.target.value)}
@@ -79,7 +79,7 @@ export default function ProductPDFUploadPanel({
               </div>
             ) : (
               <div>
-                <label className="mb-2 block text-[11px] font-bold uppercase tracking-[0.18em] text-outline">Products</label>
+                <label className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.18em] text-outline">Products</label>
                 <button
                   type="button"
                   onClick={onOpenProductSelector}
@@ -93,11 +93,11 @@ export default function ProductPDFUploadPanel({
 
             <div>
               <div className="mb-2 flex items-center justify-between gap-3">
-                <label className="block text-[11px] font-bold uppercase tracking-[0.18em] text-outline">Selected Products</label>
+                <label className="block text-[11px] font-semibold uppercase tracking-[0.18em] text-outline">Selected Products</label>
                 <button
                   type="button"
                   onClick={onOpenProductSelector}
-                  className="text-xs font-bold text-primary transition hover:opacity-80"
+                  className="text-xs font-semibold text-primary transition hover:opacity-80"
                 >
                   Show all
                 </button>
@@ -112,7 +112,7 @@ export default function ProductPDFUploadPanel({
             {visibleTags.length ? visibleTags.map((serialNumber) => {
               const product = productMap.get(serialNumber);
               return (
-                <span key={serialNumber} className="inline-flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1.5 text-xs font-bold text-primary">
+                <span key={serialNumber} className="inline-flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1.5 text-xs font-semibold text-primary">
                   <span>{serialNumber}</span>
                   {product?.品番 && <span className="text-primary/70">{product.品番}</span>}
                   <button
@@ -133,7 +133,7 @@ export default function ProductPDFUploadPanel({
               <button
                 type="button"
                 onClick={onOpenProductSelector}
-                className="rounded-full border border-separator/40 px-3 py-1.5 text-xs font-bold text-on-surface transition hover:bg-surface-container"
+                className="rounded-full border border-separator/40 px-3 py-1.5 text-xs font-semibold text-on-surface transition hover:bg-surface-container"
               >
                 +{selectedSerialNumbers.length - visibleTags.length} more
               </button>
@@ -142,7 +142,7 @@ export default function ProductPDFUploadPanel({
 
           <div className="grid gap-5 xl:grid-cols-2">
             <div className="rounded-3xl border border-outline-variant/15 bg-surface-container-low px-4 py-4">
-              <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-outline">Single Upload</div>
+              <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-outline">Single Upload</div>
               <div className="mt-2 text-sm text-on-surface-variant">Upload one PDF and attach it to the current product selection.</div>
               <input
                 key={singleFile?.name || "single-empty"}
@@ -161,7 +161,7 @@ export default function ProductPDFUploadPanel({
                     if (singleInputRef.current) singleInputRef.current.value = "";
                     onClearSingleFile();
                   }}
-                  className="rounded-xl border border-separator/40 px-3 py-2 text-xs font-bold text-on-surface transition hover:bg-surface-container"
+                  className="rounded-xl border border-separator/40 px-3 py-2 text-xs font-semibold text-on-surface transition hover:bg-surface-container"
                 >
                   Clear
                 </button>
@@ -169,7 +169,7 @@ export default function ProductPDFUploadPanel({
                   type="button"
                   onClick={onUploadSingle}
                   disabled={singleUploading || !singleFile || !selectedSerialNumbers.length}
-                  className="rounded-xl bg-primary px-4 py-2 text-xs font-bold text-on-primary hover:opacity-90 active:scale-95 transition-all duration-150 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="rounded-xl bg-primary px-4 py-2 text-xs font-semibold text-on-primary hover:opacity-90 active:scale-95 transition-all duration-150 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {singleUploading ? "Uploading…" : `Upload ${typeMeta.label}`}
                 </button>
@@ -177,7 +177,7 @@ export default function ProductPDFUploadPanel({
             </div>
 
             <div className="rounded-3xl border border-outline-variant/15 bg-surface-container-low px-4 py-4">
-              <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-outline">Bulk Upload</div>
+              <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-outline">Bulk Upload</div>
               <div className="mt-2 text-sm text-on-surface-variant">Select multiple PDFs and review filename matches against the selected 背番号 set.</div>
               <input
                 key={bulkFiles.map((file) => file.name).join("|") || "bulk-empty"}
@@ -199,7 +199,7 @@ export default function ProductPDFUploadPanel({
                     if (bulkInputRef.current) bulkInputRef.current.value = "";
                     onClearBulkFiles();
                   }}
-                  className="rounded-xl border border-separator/40 px-3 py-2 text-xs font-bold text-on-surface transition hover:bg-surface-container"
+                  className="rounded-xl border border-separator/40 px-3 py-2 text-xs font-semibold text-on-surface transition hover:bg-surface-container"
                 >
                   Clear
                 </button>
@@ -207,7 +207,7 @@ export default function ProductPDFUploadPanel({
                   type="button"
                   onClick={onReviewBulkUpload}
                   disabled={bulkUploading || !bulkFiles.length || !selectedSerialNumbers.length}
-                  className="rounded-xl bg-secondary px-4 py-2 text-xs font-bold text-on-primary transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="rounded-xl bg-secondary px-4 py-2 text-xs font-semibold text-on-primary transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {bulkUploading ? "Uploading…" : "Match & Review"}
                 </button>

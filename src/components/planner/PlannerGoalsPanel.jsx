@@ -25,7 +25,7 @@ export default function PlannerGoalsPanel({
       <div className="glass-card rounded-3xl p-5">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <h3 className="text-lg font-black text-on-surface">Production Goals</h3>
+            <h3 className="text-lg font-semibold text-on-surface">Production Goals</h3>
             <p className="mt-1 text-sm text-on-surface-variant">Set goal quantities first, then place them onto equipment schedules.</p>
           </div>
 
@@ -34,7 +34,7 @@ export default function PlannerGoalsPanel({
               type="button"
               onClick={() => fileInputRef.current?.click()}
               disabled={importing}
-              className="flex items-center gap-2 rounded-2xl border border-separator/40 bg-surface-container px-4 py-2 text-xs font-bold text-on-surface transition hover:bg-surface-container-high disabled:cursor-not-allowed disabled:opacity-50"
+              className="flex items-center gap-2 rounded-2xl border border-separator/40 bg-surface-container px-4 py-2 text-xs font-semibold text-on-surface transition hover:bg-surface-container-high disabled:cursor-not-allowed disabled:opacity-50"
             >
               <span className="material-symbols-outlined" style={{ fontSize: 16 }}>upload</span>
               {importing ? "Reading CSV…" : "Upload CSV"}
@@ -42,7 +42,7 @@ export default function PlannerGoalsPanel({
             <button
               type="button"
               onClick={onOpenManualGoal}
-              className="flex items-center gap-2 rounded-2xl kinetic-gradient px-4 py-2 text-xs font-bold text-white shadow-[0_0_20px_rgba(99,102,241,0.22)] transition hover:opacity-90"
+              className="flex items-center gap-2 rounded-2xl bg-primary px-4 py-2 text-xs font-semibold text-on-primary transition hover:opacity-90"
             >
               <span className="material-symbols-outlined" style={{ fontSize: 16 }}>add_circle</span>
               Manual Input
@@ -51,7 +51,7 @@ export default function PlannerGoalsPanel({
               type="button"
               onClick={onOpenSmartScheduling}
               disabled={smartSchedulingBusy || !goals.length}
-              className="flex items-center gap-2 rounded-2xl border border-primary/25 bg-primary/10 px-4 py-2 text-xs font-bold text-primary transition hover:bg-primary/15 disabled:cursor-not-allowed disabled:opacity-40"
+              className="flex items-center gap-2 rounded-2xl border border-primary/25 bg-primary/10 px-4 py-2 text-xs font-semibold text-primary transition hover:bg-primary/15 disabled:cursor-not-allowed disabled:opacity-40"
             >
               <span className={`material-symbols-outlined ${smartSchedulingBusy ? "animate-spin" : ""}`} style={{ fontSize: 16 }}>
                 auto_awesome
@@ -77,7 +77,7 @@ export default function PlannerGoalsPanel({
             </div>
           </div>
 
-          <div className="planner-data-text rounded-2xl bg-surface-container-low px-4 py-3 font-bold text-on-surface-variant">
+          <div className="planner-data-text rounded-2xl bg-surface-container-low px-4 py-3 font-semibold text-on-surface-variant">
             {goals.length} goal{goals.length === 1 ? "" : "s"} in view
           </div>
         </div>
