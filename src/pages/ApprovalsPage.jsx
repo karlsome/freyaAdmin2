@@ -1188,7 +1188,7 @@ export default function ApprovalsPage() {
         )}
       />
 
-      <div className="mb-4 flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+      <div className="mb-6 flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
         <div className="max-w-full overflow-x-auto scrollbar-hide">
           <LiquidSegmentedControl items={tableTabs} activeKey={activeTab} onChange={handleTabChange} className="min-w-max" />
         </div>

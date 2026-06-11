@@ -565,7 +565,7 @@ export default function EquipmentHistoryPage() {
       />
 
       {/* Filter bar */}
-      <div className="dashboard-section rounded-2xl p-5">
+      <div className="dashboard-section mb-6 rounded-2xl p-5">
         {dataError && (
           <div className="mb-4 rounded-2xl border border-error/20 bg-error/10 px-4 py-4 flex gap-3">
             <span className="material-symbols-outlined text-error flex-shrink-0" style={{ fontSize: 18 }}>report</span>
