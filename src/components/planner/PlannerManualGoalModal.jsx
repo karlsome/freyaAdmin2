@@ -66,7 +66,7 @@ export default function PlannerManualGoalModal({
             type="button"
             disabled={submitting || !selectedProduct || !date || Number(targetQuantity) <= 0}
             onClick={() => onSubmit({ product: selectedProduct, quantity: Number(targetQuantity), date })}
-            className="rounded-2xl kinetic-gradient px-4 py-2 text-sm font-semibold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+            className="rounded-2xl bg-primary px-4 py-2 text-sm font-semibold text-on-primary transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {submitting ? "Saving…" : "Add Goal"}
           </button>

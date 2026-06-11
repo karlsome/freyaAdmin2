@@ -176,7 +176,7 @@ function DuplicateSelectionStep({ duplicateGroups, duplicateSelections, onToggle
         <button
           type="button"
           onClick={onContinue}
-          className="rounded-2xl bg-primary px-5 py-3 text-sm font-semibold text-white transition hover:opacity-90"
+          className="rounded-2xl bg-primary px-5 py-3 text-sm font-semibold text-on-primary transition hover:opacity-90"
         >
           Continue To Comparison
         </button>
@@ -511,7 +511,7 @@ export default function NodaGenSyncModal({ open, authUser, onClose, onSubmitted 
                 type="button"
                 onClick={handleFetchFromGen}
                 disabled={busy}
-                className="rounded-2xl bg-primary px-5 py-2.5 text-sm font-semibold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+                className="rounded-2xl bg-primary px-5 py-2.5 text-sm font-semibold text-on-primary transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {busy ? "Fetching…" : "Fetch From GEN"}
               </button>

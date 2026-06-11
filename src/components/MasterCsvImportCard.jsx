@@ -82,7 +82,7 @@ export default function MasterCsvImportCard({
             type="button"
             onClick={onImport}
             disabled={!parsedRows.length || importing}
-            className="flex items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2 text-xs font-semibold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+            className="flex items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2 text-xs font-semibold text-on-primary transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
           >
             <span className="material-symbols-outlined" style={{ fontSize: 18 }}>
               cloud_upload

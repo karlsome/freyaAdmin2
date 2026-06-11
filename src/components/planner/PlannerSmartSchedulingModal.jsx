@@ -42,7 +42,7 @@ export default function PlannerSmartSchedulingModal({
             type="button"
             disabled={scheduling || !equipmentNames.length}
             onClick={() => onConfirm(timeLimit)}
-            className="rounded-2xl kinetic-gradient px-4 py-2 text-sm font-semibold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+            className="rounded-2xl bg-primary px-4 py-2 text-sm font-semibold text-on-primary transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {scheduling ? "Applying…" : "Apply Smart Schedule"}
           </button>

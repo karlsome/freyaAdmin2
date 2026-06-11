@@ -721,7 +721,7 @@ export default function NodaDetailModal({ open, requestId, mode = "view", authUs
                     <button
                       type="button"
                       onClick={() => setViewMode("edit")}
-                      className="rounded-2xl bg-primary px-4 py-2.5 text-sm font-semibold text-white transition hover:opacity-90"
+                      className="rounded-2xl bg-primary px-4 py-2.5 text-sm font-semibold text-on-primary transition hover:opacity-90"
                     >
                       Edit Request
                     </button>
@@ -848,7 +848,7 @@ export default function NodaDetailModal({ open, requestId, mode = "view", authUs
                       type="button"
                       onClick={handleSaveSingleRequest}
                       disabled={busy}
-                      className="rounded-2xl bg-primary px-5 py-2.5 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-60"
+                      className="rounded-2xl bg-primary px-5 py-2.5 text-sm font-semibold text-on-primary transition hover:opacity-90 disabled:opacity-60"
                     >
                       {busy ? "Saving…" : "Save Changes"}
                     </button>
@@ -873,7 +873,7 @@ export default function NodaDetailModal({ open, requestId, mode = "view", authUs
                         type="button"
                         onClick={handleSavePickupDate}
                         disabled={busy || !pickupDate}
-                        className="rounded-2xl bg-primary px-5 py-2.5 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-60"
+                        className="rounded-2xl bg-primary px-5 py-2.5 text-sm font-semibold text-on-primary transition hover:opacity-90 disabled:opacity-60"
                       >
                         Save Pickup Date
                       </button>
@@ -889,7 +889,7 @@ export default function NodaDetailModal({ open, requestId, mode = "view", authUs
                       className={joinNodaClasses(
                         "rounded-2xl px-4 py-2.5 text-sm font-semibold transition",
                         bulkTab === "existing"
-                          ? "bg-primary text-white"
+                          ? "bg-primary text-on-primary"
                           : "border border-separator/40 text-on-surface hover:bg-surface-container"
                       )}
                     >
@@ -901,7 +901,7 @@ export default function NodaDetailModal({ open, requestId, mode = "view", authUs
                       className={joinNodaClasses(
                         "rounded-2xl px-4 py-2.5 text-sm font-semibold transition",
                         bulkTab === "add"
-                          ? "bg-primary text-white"
+                          ? "bg-primary text-on-primary"
                           : "border border-separator/40 text-on-surface hover:bg-surface-container"
                       )}
                     >
@@ -993,7 +993,7 @@ export default function NodaDetailModal({ open, requestId, mode = "view", authUs
                         <button
                           type="button"
                           onClick={handleAddSingleItem}
-                          className="rounded-2xl bg-primary px-5 py-2.5 text-sm font-semibold text-white transition hover:opacity-90"
+                          className="rounded-2xl bg-primary px-5 py-2.5 text-sm font-semibold text-on-primary transition hover:opacity-90"
                         >
                           Add To Pending Cart
                         </button>

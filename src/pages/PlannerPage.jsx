@@ -990,7 +990,7 @@ export default function PlannerPage() {
                   type="button"
                   onClick={() => setPrintModalOpen(true)}
                   disabled={!scheduledProducts.length}
-                  className="flex items-center gap-2 rounded-2xl kinetic-gradient px-4 py-2 text-xs font-semibold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
+                  className="flex items-center gap-2 rounded-2xl bg-primary px-4 py-2 text-xs font-semibold text-on-primary transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
                 >
                   <span className="material-symbols-outlined" style={{ fontSize: 16 }}>print</span>
                   Print

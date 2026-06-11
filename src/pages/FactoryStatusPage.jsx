@@ -488,7 +488,7 @@ export default function FactoryStatusPage() {
                 <button
                   type="button"
                   onClick={handleApplyAdvancedFilters}
-                  className="flex items-center gap-2 rounded-xl kinetic-gradient px-5 py-2.5 text-sm font-semibold text-white transition-opacity hover:opacity-90"
+                  className="flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-on-primary transition-opacity hover:opacity-90"
                 >
                   <span className="material-symbols-outlined" style={{ fontSize: 16 }}>filter_alt</span>
                   Apply Advanced Filters

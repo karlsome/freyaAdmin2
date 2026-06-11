@@ -42,7 +42,7 @@ export default function PlannerGoalsPanel({
             <button
               type="button"
               onClick={onOpenManualGoal}
-              className="flex items-center gap-2 rounded-2xl kinetic-gradient px-4 py-2 text-xs font-semibold text-white shadow-[0_0_20px_rgba(99,102,241,0.22)] transition hover:opacity-90"
+              className="flex items-center gap-2 rounded-2xl bg-primary px-4 py-2 text-xs font-semibold text-on-primary transition hover:opacity-90"
             >
               <span className="material-symbols-outlined" style={{ fontSize: 16 }}>add_circle</span>
               Manual Input

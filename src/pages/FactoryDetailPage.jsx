@@ -101,7 +101,7 @@ function MfgLotModal({ onClose, initialLot = "" }) {
     >
       <div
         className="dashboard-section rounded-2xl w-full max-w-xl max-h-[85vh] overflow-y-auto
-                   shadow-[0_0_80px_rgba(99,102,241,0.18),0_24px_48px_rgba(0,0,0,0.22)] scrollbar-hide"
+                   scrollbar-hide"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="px-6 py-5 flex items-center justify-between border-b border-separator/40">
@@ -129,7 +129,7 @@ function MfgLotModal({ onClose, initialLot = "" }) {
             <button
               onClick={handleSearch}
               disabled={loading || lotInput.trim().length < 3}
-              className="px-4 h-10 rounded-xl kinetic-gradient text-white text-sm font-semibold disabled:opacity-40 hover:opacity-90 transition-opacity"
+              className="px-4 h-10 rounded-xl bg-primary text-on-primary text-sm font-semibold disabled:opacity-40 hover:opacity-90 transition-opacity"
             >
               {loading ? "…" : "Search"}
             </button>
@@ -453,7 +453,7 @@ export default function FactoryDetailPage({ combined = false }) {
             <button
               onClick={() => navigate(combined ? "/sensors" : `/sensors/${encoded}`)}
               className="flex-shrink-0 flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold
-                         kinetic-gradient text-white shadow-[0_0_15px_rgba(99,102,241,0.3)] hover:opacity-90 transition-opacity"
+                         bg-primary text-on-primary hover:opacity-90 transition-opacity"
             >
               <span className="material-symbols-outlined" style={{ fontSize: 16 }}>sensors</span>
               {combined ? "Sensor Overview" : "Sensor History"}

@@ -106,7 +106,7 @@ export default function ApprovalsFilterPanel({
               type="button"
               onClick={onApplyAdvancedFilters}
               disabled={advancedApplying}
-              className="flex items-center gap-2 rounded-2xl kinetic-gradient px-5 py-2.5 text-sm font-semibold text-white shadow-[0_0_20px_rgba(99,102,241,0.25)] transition hover:opacity-90"
+              className="flex items-center gap-2 rounded-2xl bg-primary px-5 py-2.5 text-sm font-semibold text-on-primary transition hover:opacity-90"
             >
               <span className="material-symbols-outlined" style={{ fontSize: 16 }}>filter_alt</span>
               {advancedApplying ? "Applying..." : "Apply Advanced Filters"}

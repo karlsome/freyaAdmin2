@@ -44,7 +44,7 @@ export default function PlannerGoalImportReviewModal({
             type="button"
             disabled={importing || !rows.some((row) => row.status === "valid" || row.status === "duplicate")}
             onClick={() => onConfirm(decisions)}
-            className="rounded-2xl kinetic-gradient px-4 py-2 text-sm font-semibold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+            className="rounded-2xl bg-primary px-4 py-2 text-sm font-semibold text-on-primary transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {importing ? "Importing…" : "Apply Import"}
           </button>

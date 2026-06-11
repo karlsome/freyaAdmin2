@@ -328,7 +328,7 @@ function SavedPresetManagerCard({ activePresetId, draftName, editingPresetId, on
           type="button"
           onClick={onSave}
           disabled={!draftName.trim()}
-          className="inline-flex items-center justify-center gap-2 rounded-xl kinetic-gradient px-4 py-2.5 text-sm font-semibold text-white shadow-[0_0_20px_rgba(99,102,241,0.25)] transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
+          className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-on-primary transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
         >
           <span className="material-symbols-outlined" style={{ fontSize: 16 }}>{editingPresetId ? "drive_file_rename_outline" : "bookmark_added"}</span>
           {editingPresetId ? "Rename Preset" : "Save Current View"}
@@ -431,7 +431,7 @@ function ExportTicketResultsCard({ disabled, exporting, filteredCount, onCopySha
             type="button"
             onClick={onExport}
             disabled={disabled || exporting}
-            className="inline-flex items-center justify-center gap-2 rounded-xl kinetic-gradient px-4 py-2.5 text-sm font-semibold text-white shadow-[0_0_20px_rgba(99,102,241,0.25)] transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
+            className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-on-primary transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
           >
             <span className="material-symbols-outlined" style={{ fontSize: 16 }}>download</span>
             {exporting ? "Preparing CSV..." : "Export CSV"}

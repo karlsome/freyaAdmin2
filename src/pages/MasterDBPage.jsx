@@ -573,7 +573,7 @@ export default function MasterDBPage() {
               <button
                 type="button"
                 onClick={() => setAddModalOpen(true)}
-                className="flex items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2 text-xs font-semibold text-white transition-all hover:opacity-90"
+                className="flex items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2 text-xs font-semibold text-on-primary transition-all hover:opacity-90"
               >
                 <span className="material-symbols-outlined" style={{ fontSize: 16 }}>add</span>
                 Add New Record

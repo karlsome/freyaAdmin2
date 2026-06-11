@@ -144,7 +144,7 @@ export default function InventoryAddModal({
             type="button"
             disabled={submitting}
             onClick={handleSubmit}
-            className="rounded-2xl bg-primary px-4 py-2 text-sm font-semibold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+            className="rounded-2xl bg-primary px-4 py-2 text-sm font-semibold text-on-primary transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {submitting ? "Adding..." : "Add Inventory"}
           </button>

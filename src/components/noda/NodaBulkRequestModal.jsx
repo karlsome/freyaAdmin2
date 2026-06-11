@@ -148,7 +148,7 @@ function StepIndicator({ currentStep }) {
                 className={joinClasses(
                   "flex h-9 w-9 items-center justify-center rounded-full border text-sm font-semibold transition",
                   active || done
-                    ? "border-primary bg-primary text-white"
+                    ? "border-primary bg-primary text-on-primary"
                     : "border-outline-variant/30 bg-surface-container text-on-surface-variant"
                 )}
               >
@@ -664,7 +664,7 @@ export default function NodaBulkRequestModal({ open, authUser, onClose, onSubmit
             type="button"
             onClick={handleGoToReview}
             disabled={!draft.cart.length}
-            className="rounded-2xl bg-primary px-5 py-2.5 text-sm font-semibold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+            className="rounded-2xl bg-primary px-5 py-2.5 text-sm font-semibold text-on-primary transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
           >
             Review Items
           </button>
@@ -674,7 +674,7 @@ export default function NodaBulkRequestModal({ open, authUser, onClose, onSubmit
             type="button"
             onClick={() => setStep(3)}
             disabled={!draft.cart.length}
-            className="rounded-2xl bg-primary px-5 py-2.5 text-sm font-semibold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+            className="rounded-2xl bg-primary px-5 py-2.5 text-sm font-semibold text-on-primary transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
           >
             Continue To Submit
           </button>
@@ -736,7 +736,7 @@ export default function NodaBulkRequestModal({ open, authUser, onClose, onSubmit
                 type="button"
                 onClick={() => performSubmit("createNew")}
                 disabled={submitting}
-                className="rounded-2xl bg-primary px-4 py-2.5 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-60"
+                className="rounded-2xl bg-primary px-4 py-2.5 text-sm font-semibold text-on-primary transition hover:opacity-90 disabled:opacity-60"
               >
                 Create New With Suffix
               </button>
@@ -797,7 +797,7 @@ export default function NodaBulkRequestModal({ open, authUser, onClose, onSubmit
                 <button
                   type="button"
                   onClick={handleCsvReviewImport}
-                  className="rounded-2xl bg-primary px-4 py-2.5 text-sm font-semibold text-white transition hover:opacity-90"
+                  className="rounded-2xl bg-primary px-4 py-2.5 text-sm font-semibold text-on-primary transition hover:opacity-90"
                 >
                   Use Reviewed Items
                 </button>
@@ -961,7 +961,7 @@ export default function NodaBulkRequestModal({ open, authUser, onClose, onSubmit
                   <button
                     type="button"
                     onClick={handleAddItem}
-                    className="rounded-2xl bg-primary px-5 py-2.5 text-sm font-semibold text-white transition hover:opacity-90"
+                    className="rounded-2xl bg-primary px-5 py-2.5 text-sm font-semibold text-on-primary transition hover:opacity-90"
                   >
                     Add To Cart
                   </button>

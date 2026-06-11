@@ -280,7 +280,7 @@ export default function InventoryBatchResetModal({
                 onClick={() => {
                   void handleApplyFilters();
                 }}
-                className="rounded-2xl bg-primary px-4 py-2 text-sm font-semibold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+                className="rounded-2xl bg-primary px-4 py-2 text-sm font-semibold text-on-primary transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {loading ? "Finding Items..." : "Find Items"}
               </button>

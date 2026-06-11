@@ -522,7 +522,7 @@ export default function NodaPage() {
                 <button
                   type="button"
                   onClick={() => setAddModalOpen(true)}
-                  className="rounded-2xl bg-primary px-4 py-2.5 text-sm font-semibold text-white transition hover:opacity-90"
+                  className="rounded-2xl bg-primary px-4 py-2.5 text-sm font-semibold text-on-primary transition hover:opacity-90"
                 >
                   New Bulk Request
                 </button>
