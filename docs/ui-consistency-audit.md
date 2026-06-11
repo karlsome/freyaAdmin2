@@ -32,6 +32,8 @@ These rules **supersede** any older guidance below. Where an older section still
 | **Icon sizes** | scattered (13/15/22/26/30/38…) | Clean scale only: **11, 12, 14, 16, 18, 20, 24, 28, 32, 40, 56**. |
 | **Material Symbols weight** | `'wght' 400` | **`'wght' 300`** (thinner, set in `.material-symbols-outlined`). |
 | **Page section spacing** | mix of `mb-6` / `mb-8` / `mb-10` | **`mb-6` (24px) between every top-level page section.** |
+| **Primary buttons** | two styles: `kinetic-gradient`+glow *and* solid `bg-primary` | **One style: flat `bg-primary` + `text-on-primary`, no glow.** Gradient is decorative-only (logo/avatar/login). See §21. |
+| **Selected tabs** | bold purple fill (same as buttons) | **Neutral raised pill** (`is-segmented`), `text-on-surface`. Bold purple = primary action only. |
 
 ---
 
@@ -749,6 +751,19 @@ Rules:
 - `active:scale-95` is required on all primary and secondary buttons
 - `transition-all duration-150` is the standard transition — not `transition-colors`, not `duration-200`
 - Never `px-3.5`, `py-2.5`, or `py-3.5`
+
+### Button color semantics (one job per color)
+
+| Role | Fill | Text |
+|---|---|---|
+| **Primary action** | flat `bg-primary` | `text-on-primary` |
+| **Secondary** | transparent + `border-separator/40` | `text-on-surface-variant` |
+| **Destructive** | `border-error/20 bg-error/8` | `text-error` |
+
+- **Bold purple = primary action, and nothing else.** Exactly one primary button per view where possible.
+- ❌ **Do not use `kinetic-gradient` for buttons.** The gradient (`#6366f1→#a855f7`) is **decorative only** — reserved for the sidebar logo, the user avatar, and the standalone login hero. No gradient + no glow `shadow-[0_0_Npx_rgba(99,102,241,...)]` on action buttons.
+- Always pair `bg-primary` with `text-on-primary` (never `text-white`) — `text-white` is low-contrast on the lighter dark-mode primary.
+- **Selected tabs are not buttons.** The segmented-control active state is a **neutral raised pill** (`is-segmented` modifier on the liquid blob) with `text-on-surface` — never a purple fill. This keeps "where you are" (selection) visually distinct from "click to act" (action).
 
 ---
 
