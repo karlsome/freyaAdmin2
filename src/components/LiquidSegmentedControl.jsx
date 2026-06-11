@@ -103,7 +103,7 @@ export default function LiquidSegmentedControl({
             className={[
               "relative z-10 rounded-lg px-4 py-1.5 text-xs font-semibold transition-colors duration-300",
               active
-                ? "border border-transparent bg-transparent text-on-surface"
+                ? "border border-transparent bg-transparent text-primary"
                 : "text-on-surface-variant hover:text-on-surface",
               item.disabled ? "cursor-not-allowed opacity-50" : "",
             ].join(" ")}

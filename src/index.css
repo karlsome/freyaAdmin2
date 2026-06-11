@@ -708,20 +708,20 @@ select:-webkit-autofill:focus {
   animation: pagination-liquid-morph 460ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-/* ─── Segmented control: neutral raised pill (not a purple fill) ─────────────── */
-/* Keeps the morph motion of the liquid blob but reads as a "selected tab"        */
-/* (position) rather than a primary action — bold purple is reserved for buttons. */
+/* ─── Segmented control: raised pill with primary accent (clearly "selected") ── */
+/* Keeps the morph motion but reads as a selected tab — an outlined/raised pill   */
+/* with accent text — distinct from a solid-purple primary action button.         */
 .pagination-liquid-blob.is-segmented {
   background: rgb(var(--c-surface));
   box-shadow:
-    0 1px 3px rgba(0, 0, 0, 0.12),
-    0 1px 2px rgba(0, 0, 0, 0.06);
+    0 0 0 1.5px rgb(var(--c-primary) / 0.45),
+    0 2px 8px rgba(0, 0, 0, 0.14);
 }
 .dark .pagination-liquid-blob.is-segmented {
   background: rgb(var(--c-surface-container-highest));
   box-shadow:
-    0 1px 3px rgba(0, 0, 0, 0.35),
-    0 1px 2px rgba(0, 0, 0, 0.25);
+    0 0 0 1.5px rgb(var(--c-primary) / 0.55),
+    0 2px 10px rgba(0, 0, 0, 0.45);
 }
 
 .ui-table-data {

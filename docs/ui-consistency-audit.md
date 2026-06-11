@@ -33,7 +33,7 @@ These rules **supersede** any older guidance below. Where an older section still
 | **Material Symbols weight** | `'wght' 400` | **`'wght' 300`** (thinner, set in `.material-symbols-outlined`). |
 | **Page section spacing** | mix of `mb-6` / `mb-8` / `mb-10` | **`mb-6` (24px) between every top-level page section.** |
 | **Primary buttons** | two styles: `kinetic-gradient`+glow *and* solid `bg-primary` | **One style: flat `bg-primary` + `text-on-primary`, no glow.** Gradient is decorative-only (logo/avatar/login). See §21. |
-| **Selected tabs** | bold purple fill (same as buttons) | **Neutral raised pill** (`is-segmented`), `text-on-surface`. Bold purple = primary action only. |
+| **Selected tabs** | bold purple fill (same as buttons) | **Raised pill** (`is-segmented`) — surface fill + primary ring + `text-primary`. Accent (outline/text), never a solid fill. Bold purple = primary action only. |
 
 ---
 
@@ -763,7 +763,7 @@ Rules:
 - **Bold purple = primary action, and nothing else.** Exactly one primary button per view where possible.
 - ❌ **Do not use `kinetic-gradient` for buttons.** The gradient (`#6366f1→#a855f7`) is **decorative only** — reserved for the sidebar logo, the user avatar, and the standalone login hero. No gradient + no glow `shadow-[0_0_Npx_rgba(99,102,241,...)]` on action buttons.
 - Always pair `bg-primary` with `text-on-primary` (never `text-white`) — `text-white` is low-contrast on the lighter dark-mode primary.
-- **Selected tabs are not buttons.** The segmented-control active state is a **neutral raised pill** (`is-segmented` modifier on the liquid blob) with `text-on-surface` — never a purple fill. This keeps "where you are" (selection) visually distinct from "click to act" (action).
+- **Selected tabs are not buttons.** The active tab (both `LiquidSegmentedControl` and `MasterTabNav`, via the `is-segmented` modifier on the liquid blob) is a **raised pill**: opaque surface fill + a `primary` ring (`box-shadow 0 0 0 1.5px`) + `text-primary` accent text, on a `bg-surface-container` track. It signals selection through **accent outline + text**, never a solid purple fill — so it stays distinct from a primary action button while remaining easy to spot at a glance.
 
 ---
 

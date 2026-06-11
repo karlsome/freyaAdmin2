@@ -47,7 +47,7 @@ export default function MasterTabNav({ tabs, activeTab, onSelect }) {
   }, [activeTab, tabSignature]);
 
   return (
-    <div className="glass-card rounded-2xl p-1.5 mb-6">
+    <div className="bg-surface-container rounded-2xl p-1.5 mb-6">
       <div ref={containerRef} className="relative flex flex-wrap gap-1">
         {indicatorStyle && (
           <span
@@ -79,10 +79,10 @@ export default function MasterTabNav({ tabs, activeTab, onSelect }) {
               className={[
                 "relative z-10 whitespace-nowrap rounded-xl px-4 py-2 text-sm font-semibold tracking-tight transition-colors duration-300",
                 active
-                  ? "border border-transparent bg-transparent text-on-surface"
+                  ? "border border-transparent bg-transparent text-primary"
                   : tab.ready
-                    ? "text-on-surface-variant hover:bg-surface-container hover:text-on-surface"
-                    : "text-on-surface-variant/60 hover:bg-surface-container",
+                    ? "text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface"
+                    : "text-on-surface-variant/60 hover:bg-surface-container-high",
               ].join(" ")}
             >
               {tab.label}
