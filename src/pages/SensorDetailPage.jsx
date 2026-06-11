@@ -776,7 +776,7 @@ export default function SensorDetailPage() {
         )}
         titleClassName="flex items-center gap-3"
         subtitle={`${range.start} → ${range.end} · ${overview.totalReadings.toLocaleString()} readings`}
-        className="mb-8 md:flex-row md:items-center md:justify-between"
+        className="mb-6 md:flex-row md:items-center md:justify-between"
         actions={(
           <button
             onClick={handleExport}
@@ -790,7 +790,7 @@ export default function SensorDetailPage() {
       />
 
       {/* ── Filter bar ── */}
-      <div className="glass-card rounded-2xl p-5 flex flex-wrap items-center gap-4 mb-8">
+      <div className="glass-card rounded-2xl p-5 flex flex-wrap items-center gap-4 mb-6">
         <div className="flex items-center gap-2">
           <span className="text-[10px] text-outline font-semibold uppercase tracking-wider">From</span>
           <input
@@ -864,7 +864,7 @@ export default function SensorDetailPage() {
       </div>
 
       {loading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5 mb-6">
           {Array.from({ length: 4 }).map((_, i) => (
             <div key={i} className="glass-card rounded-2xl h-44 animate-pulse" />
           ))}
@@ -872,7 +872,7 @@ export default function SensorDetailPage() {
       ) : (
         <>
           {/* ── KPI strip ── */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
             {[
               {
                 label: "Avg Temperature",
@@ -919,7 +919,7 @@ export default function SensorDetailPage() {
           </div>
 
           {/* ── Trend charts ── */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-8">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-6">
             <div className="glass-card rounded-2xl p-5">
               <p className="text-[10px] text-outline font-semibold uppercase tracking-[0.18em] mb-3 flex items-center gap-2">
                 <span className="material-symbols-outlined text-amber-500" style={{ fontSize: 14 }}>thermostat</span>
@@ -938,7 +938,7 @@ export default function SensorDetailPage() {
 
           {/* ── Device summary cards ── */}
           {!cardLoading && deviceCards.length > 0 && (
-            <div className="mb-8">
+            <div className="mb-6">
               <p className="text-[10px] text-outline font-semibold uppercase tracking-[0.18em] mb-4">
                 {deviceCards.length} Device{deviceCards.length !== 1 ? "s" : ""} — Latest Readings
               </p>

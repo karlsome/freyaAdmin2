@@ -675,7 +675,7 @@ export default function NodaPage() {
           enableColumnReorder
           stickyHeader
           stickyHeaderOffset={0}
-          className="glass-card mb-8 overflow-hidden rounded-[28px]"
+          className="glass-card mb-6 overflow-hidden rounded-[28px]"
           topBarClassName="flex flex-col gap-4 border-b border-outline-variant/15 px-5 py-4 md:flex-row md:items-center md:justify-between"
           bottomBarClassName="flex flex-col gap-4 border-t border-outline-variant/15 px-5 py-4 md:flex-row md:items-center md:justify-between"
           rowClassName="border-b border-outline-variant/10 transition hover:bg-primary/5"

@@ -566,7 +566,7 @@ export default function FactoryStatusPage() {
         ) : null}
 
         {groups.map((group) => (
-          <div key={group.factory} className="mb-8">
+          <div key={group.factory} className="mb-6">
             <div className="mb-4 rounded-2xl border border-outline-variant/15 bg-surface-container-low/35 px-5 py-4">
               <div className="flex flex-wrap items-start justify-between gap-4">
                 <div>

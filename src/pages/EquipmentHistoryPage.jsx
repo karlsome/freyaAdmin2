@@ -561,7 +561,7 @@ export default function EquipmentHistoryPage() {
       <PageHeader
         eyebrow="設備"
         title="Equipment History"
-        className="mb-8"
+        className="mb-6"
       />
 
       {/* Filter bar */}

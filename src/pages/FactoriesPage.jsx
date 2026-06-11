@@ -27,7 +27,7 @@ export default function FactoriesPage() {
             {total} facilit{total === 1 ? "y" : "ies"} {"-"} {normal} normal, {warnings} warning{warnings !== 1 ? "s" : ""}, {critical} critical
           </>
         )}
-        className="mb-8 md:flex-row md:items-end md:justify-between"
+        className="mb-6 md:flex-row md:items-end md:justify-between"
         actionsClassName="md:justify-end"
         actions={(
           <button

@@ -28,7 +28,7 @@ export default function DashboardPage() {
       <PageHeader
         title={t("dashboard")}
         subtitle={today}
-        className="sm:mb-8"
+        className="sm:mb-6"
         actionsClassName="w-full sm:w-auto sm:justify-end"
         actions={(
           <button
@@ -58,7 +58,7 @@ export default function DashboardPage() {
       <DashboardKPIStrip kpis={kpis} byProcess={byProcess} loading={loading} />
 
       {/* ── Middle row: issues + recent submissions ── */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-5 mb-4 sm:mb-5" style={{ minHeight: 360 }}>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-5 mb-6" style={{ minHeight: 360 }}>
         <DashboardIssuesFeed
           issues={issues}
           loading={loading}

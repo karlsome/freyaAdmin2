@@ -1764,7 +1764,7 @@ export default function ChecklistSubmissionsPage() {
         eyebrow="メンテナンス"
         eyebrowClassName="text-xs tracking-[0.18em]"
         title={t("checklistSubmissions")}
-        className="mb-8"
+        className="mb-6"
       />
 
       <div className="mb-6 grid gap-3 md:grid-cols-2 xl:grid-cols-4">

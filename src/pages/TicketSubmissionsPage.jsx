@@ -1516,7 +1516,7 @@ export default function TicketSubmissionsPage() {
         title={t("submittedTickets")}
         subtitle="Review every submitted NG ticket in one place. Filters and pagination run on the server so large ticket history stays responsive even under heavy usage."
         subtitleClassName="max-w-3xl leading-6 text-outline"
-        className="mb-8"
+        className="mb-6"
       />
 
       <ActionNoticeBanner notice={actionNotice} onClose={() => setActionNotice(null)} />
@@ -1639,7 +1639,7 @@ export default function TicketSubmissionsPage() {
         stickyHeader
         stickyHeaderOffset={0}
         tableClassName="ui-table-data min-w-full border-separate border-spacing-0"
-        className="glass-card mb-8 overflow-hidden rounded-[28px]"
+        className="glass-card mb-6 overflow-hidden rounded-[28px]"
         topBarClassName="flex flex-col gap-4 border-b border-outline-variant/15 px-5 py-4 md:flex-row md:items-center md:justify-between"
         bottomBarClassName="flex flex-col gap-4 border-t border-outline-variant/15 px-5 py-4 md:flex-row md:items-center md:justify-between"
         rowClassName="border-b border-outline-variant/10 transition hover:bg-primary/5"

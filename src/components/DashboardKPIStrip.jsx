@@ -21,7 +21,7 @@ export default function DashboardKPIStrip({ kpis, byProcess = [], loading }) {
                                           "text-emerald-500 bg-emerald-500/10";
 
   return (
-    <div className="space-y-5 mb-8">
+    <div className="space-y-5 mb-6">
       {/* ── Row 1: Overall KPIs ── */}
       <div>
         <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline mb-3 flex items-center gap-2">

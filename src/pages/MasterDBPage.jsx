@@ -556,7 +556,7 @@ export default function MasterDBPage() {
     <section className="pt-24 pb-16 px-4 md:px-8 overflow-y-auto h-screen scrollbar-hide">
       <PageHeader
         title="Master Product Management"
-        className="mb-8 md:flex-row md:items-end md:justify-between"
+        className="mb-6 md:flex-row md:items-end md:justify-between"
         actionsClassName="self-start md:self-auto md:justify-end"
         actions={(
           <>

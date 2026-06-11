@@ -437,7 +437,7 @@ export default function FactoryDetailPage({ combined = false }) {
           </span>
         ) : null}
         subtitle={`${combined ? "All Factories Combined -" : "Factory Overview -"} ${dateFrom === dateTo ? dateFrom : `${dateFrom} → ${dateTo}`}`}
-        className="mb-8 md:flex-row md:items-start md:justify-between"
+        className="mb-6 md:flex-row md:items-start md:justify-between"
         actions={(
           <>
             {!combined && factoryName === "小瀬" && (

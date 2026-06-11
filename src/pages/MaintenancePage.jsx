@@ -382,7 +382,7 @@ export default function MaintenancePage() {
 
         {!loading && !error && selectedTemplates.length > 0 && grouped.map(({ key, label, labelClass, items }) =>
           items.length > 0 ? (
-            <div key={key} className="mb-8">
+            <div key={key} className="mb-6">
               <h4 className={`mb-3 text-xs font-semibold uppercase tracking-[0.18em] ${labelClass}`}>{label}</h4>
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 {items.map((form) => (

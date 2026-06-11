@@ -85,7 +85,7 @@ function SummaryStrip({ factories }) {
   ];
 
   return (
-    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
       {tiles.map(({ label, value, icon, color }) => (
         <div key={label} className="glass-card rounded-2xl p-5">
           <div className="flex items-center gap-2 mb-2">
@@ -140,7 +140,7 @@ export default function SensorsPage() {
         )}
         titleClassName="flex items-center gap-3"
         subtitle="Live temperature & humidity monitoring across all facilities"
-        className="mb-8 md:flex-row md:items-center md:justify-between"
+        className="mb-6 md:flex-row md:items-center md:justify-between"
         actions={(
           <button
             onClick={refresh}
@@ -159,7 +159,7 @@ export default function SensorsPage() {
       />
 
       {loading ? (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
           {Array.from({ length: 4 }).map((_, i) => (
             <div key={i} className="glass-card rounded-2xl h-20 animate-pulse" />
           ))}
@@ -169,7 +169,7 @@ export default function SensorsPage() {
       )}
 
       {!loading && error ? (
-        <div className="mb-8 rounded-2xl border border-error/20 bg-error/5 p-4 text-sm text-error">
+        <div className="mb-6 rounded-2xl border border-error/20 bg-error/5 p-4 text-sm text-error">
           {error}
         </div>
       ) : null}
@@ -184,7 +184,7 @@ export default function SensorsPage() {
         <>
           {/* ── Active factories ── */}
           {withData.length > 0 && (
-            <div className="mb-10">
+            <div className="mb-6">
               <p className="text-[10px] text-outline font-semibold uppercase tracking-[0.18em] mb-4">
                 {withData.length} Active Sensor{withData.length !== 1 ? "s" : ""}
               </p>
