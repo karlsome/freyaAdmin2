@@ -60,7 +60,7 @@ export default function MasterTabNav({ tabs, activeTab, onSelect }) {
             }}
           >
             <span className="pagination-liquid-glow" />
-            <span className={`pagination-liquid-blob ${isMoving ? "is-moving" : ""}`} />
+            <span className={`pagination-liquid-blob is-segmented ${isMoving ? "is-moving" : ""}`} />
           </span>
         )}
 
@@ -79,9 +79,9 @@ export default function MasterTabNav({ tabs, activeTab, onSelect }) {
               className={[
                 "relative z-10 whitespace-nowrap rounded-xl px-4 py-2 text-sm font-semibold tracking-tight transition-colors duration-300",
                 active
-                  ? "border border-transparent bg-transparent text-on-primary"
+                  ? "border border-transparent bg-transparent text-on-surface"
                   : tab.ready
-                    ? "text-on-surface hover:bg-surface-container"
+                    ? "text-on-surface-variant hover:bg-surface-container hover:text-on-surface"
                     : "text-on-surface-variant/60 hover:bg-surface-container",
               ].join(" ")}
             >
