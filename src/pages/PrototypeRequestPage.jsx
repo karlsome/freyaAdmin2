@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import DataTable from "../components/DataTable";
 import PageHeader from "../components/PageHeader";
 import SensorDevicePhotoPreviewModal from "../components/SensorDevicePhotoPreviewModal";
@@ -18,6 +18,8 @@ const EMPTY_ENTRY = {
   boxType: "",
   quantity: "",
 };
+
+const ENTRY_FIELD_KEYS = ["name", "okuriPitch", "color", "material", "boxType", "quantity"];
 
 function FlashBanner({ flash, onClose }) {
   if (!flash) return null;
@@ -49,6 +51,64 @@ function Field({ label, children }) {
       <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-on-surface-variant">{label}</span>
       {children}
     </label>
+  );
+}
+
+// Text input with a styled suggestion dropdown (values reused from other rows), since the
+// native <datalist> popup renders as an unstyled floating box that doesn't match the app's theme.
+function SuggestInput({ type = "text", value, options, onChange, className }) {
+  const [open, setOpen] = useState(false);
+  const containerRef = useRef(null);
+
+  const filteredOptions = useMemo(() => {
+    const query = String(value ?? "").trim().toLowerCase();
+    if (!query) return options;
+    return options.filter((option) => option.toLowerCase().includes(query));
+  }, [options, value]);
+
+  useEffect(() => {
+    if (!open) return undefined;
+
+    function handlePointerDown(event) {
+      if (containerRef.current && !containerRef.current.contains(event.target)) {
+        setOpen(false);
+      }
+    }
+
+    document.addEventListener("mousedown", handlePointerDown);
+    return () => document.removeEventListener("mousedown", handlePointerDown);
+  }, [open]);
+
+  return (
+    <div ref={containerRef} className="relative">
+      <input
+        type={type}
+        value={value}
+        onChange={onChange}
+        onFocus={() => setOpen(true)}
+        onKeyDown={(e) => { if (e.key === "Escape") setOpen(false); }}
+        className={`w-full ${className}`}
+      />
+      {open && filteredOptions.length > 0 && (
+        <ul className="absolute left-0 right-0 top-full z-20 mt-1 max-h-48 overflow-auto rounded-xl border border-outline-variant/30 bg-surface py-1 shadow-lg">
+          {filteredOptions.map((option) => (
+            <li key={option}>
+              <button
+                type="button"
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  onChange({ target: { value: option } });
+                  setOpen(false);
+                }}
+                className="block w-full truncate px-3 py-1.5 text-left text-sm text-on-surface transition hover:bg-surface-container-high"
+              >
+                {option}
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
   );
 }
 
@@ -96,7 +156,7 @@ export default function PrototypeRequestPage() {
   const [refreshNonce, setRefreshNonce] = useState(0);
 
   const [selectedPceKey, setSelectedPceKey] = useState("");
-  const [entry, setEntry] = useState(EMPTY_ENTRY);
+  const [entries, setEntries] = useState([{ ...EMPTY_ENTRY }]);
   const [submitting, setSubmitting] = useState(false);
   const [deletingId, setDeletingId] = useState(null);
   const [previewImage, setPreviewImage] = useState(null);
@@ -141,23 +201,46 @@ export default function PrototypeRequestPage() {
     [pceOptions, selectedPceKey]
   );
 
-  function handleEntryChange(key, value) {
-    setEntry((current) => ({ ...current, [key]: value }));
+  function handleEntryChange(index, key, value) {
+    setEntries((current) => current.map((item, i) => (i === index ? { ...item, [key]: value } : item)));
+  }
+
+  function addEntryRow() {
+    setEntries((current) => [...current, { ...EMPTY_ENTRY }]);
+  }
+
+  function removeEntryRow(index) {
+    setEntries((current) => (current.length > 1 ? current.filter((_, i) => i !== index) : current));
   }
 
   function resetEntry() {
     setSelectedPceKey("");
-    setEntry(EMPTY_ENTRY);
+    setEntries([{ ...EMPTY_ENTRY }]);
   }
+
+  const fieldSuggestions = useMemo(() => {
+    const result = {};
+    for (const key of ENTRY_FIELD_KEYS) {
+      const values = new Set();
+      for (const item of entries) {
+        const value = String(item[key] ?? "").trim();
+        if (value) values.add(value);
+      }
+      result[key] = Array.from(values);
+    }
+    return result;
+  }, [entries]);
 
   const canRegister = (
     !!selectedOption &&
-    entry.name.trim() &&
-    entry.okuriPitch !== "" &&
-    entry.color.trim() &&
-    entry.material.trim() &&
-    entry.boxType.trim() &&
-    entry.quantity !== "" &&
+    entries.every((item) =>
+      item.name.trim() &&
+      item.okuriPitch !== "" &&
+      item.color.trim() &&
+      item.material.trim() &&
+      item.boxType.trim() &&
+      item.quantity !== ""
+    ) &&
     !submitting
   );
 
@@ -166,18 +249,23 @@ export default function PrototypeRequestPage() {
     setSubmitting(true);
 
     try {
-      await registerShisakuRequest({
-        name: entry.name.trim(),
+      await Promise.all(entries.map((item) => registerShisakuRequest({
+        name: item.name.trim(),
         pce: selectedOption.pceName,
-        okuriPitch: Number(entry.okuriPitch),
-        color: entry.color.trim(),
-        material: entry.material.trim(),
-        boxType: entry.boxType.trim(),
-        quantity: Number(entry.quantity),
+        okuriPitch: Number(item.okuriPitch),
+        color: item.color.trim(),
+        material: item.material.trim(),
+        boxType: item.boxType.trim(),
+        quantity: Number(item.quantity),
         pdfLink: selectedOption.pdfLink,
-      });
+      })));
 
-      setFlash({ type: "success", message: "Prototype request registered successfully." });
+      setFlash({
+        type: "success",
+        message: entries.length > 1
+          ? `${entries.length} prototype requests registered successfully.`
+          : "Prototype request registered successfully.",
+      });
       resetEntry();
       setRefreshNonce((current) => current + 1);
     } catch (err) {
@@ -337,77 +425,110 @@ export default function PrototypeRequestPage() {
           </Field>
 
           {selectedOption && (
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-8">
-              <Field label="Name">
-                <input
-                  type="text"
-                  value={entry.name}
-                  onChange={(e) => handleEntryChange("name", e.target.value)}
-                  className={inputClassName}
-                />
-              </Field>
-              <Field label="PCE">
-                <p className={readOnlyInputClassName} title={selectedOption.pceName}>{selectedOption.pceName}</p>
-              </Field>
-              <Field label="Okuri Pitch">
-                <input
-                  type="number"
-                  value={entry.okuriPitch}
-                  onChange={(e) => handleEntryChange("okuriPitch", e.target.value)}
-                  className={inputClassName}
-                />
-              </Field>
-              <Field label="Color">
-                <input
-                  type="text"
-                  value={entry.color}
-                  onChange={(e) => handleEntryChange("color", e.target.value)}
-                  className={inputClassName}
-                />
-              </Field>
-              <Field label="Material">
-                <input
-                  type="text"
-                  value={entry.material}
-                  onChange={(e) => handleEntryChange("material", e.target.value)}
-                  className={inputClassName}
-                />
-              </Field>
-              <Field label="Box Type">
-                <input
-                  type="text"
-                  value={entry.boxType}
-                  onChange={(e) => handleEntryChange("boxType", e.target.value)}
-                  className={inputClassName}
-                />
-              </Field>
-              <Field label="Quantity">
-                <input
-                  type="number"
-                  value={entry.quantity}
-                  onChange={(e) => handleEntryChange("quantity", e.target.value)}
-                  className={inputClassName}
-                />
-              </Field>
-              <Field label="PDF">
-                {selectedOption.pdfLink ? (
-                  <button
-                    type="button"
-                    onClick={() => openPdfPreview(selectedOption.pdfLink, selectedOption.label)}
-                    title="View PDF preview"
-                    className="inline-flex h-[38px] w-[38px] items-center justify-center rounded-xl border border-outline-variant/30 bg-surface text-primary transition hover:bg-surface-container-high"
-                  >
-                    <span className="material-symbols-outlined" style={{ fontSize: 20 }}>picture_as_pdf</span>
-                  </button>
-                ) : (
-                  <span
-                    title="No PDF preview available"
-                    className="inline-flex h-[38px] w-[38px] items-center justify-center rounded-xl border border-outline-variant/15 bg-surface-container text-on-surface-variant/40"
-                  >
-                    <span className="material-symbols-outlined" style={{ fontSize: 20 }}>picture_as_pdf</span>
-                  </span>
-                )}
-              </Field>
+            <div className="flex flex-col gap-4">
+              {entries.map((item, index) => (
+                <div key={index} className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-9">
+                  <Field label="Name">
+                    <SuggestInput
+                      type="text"
+                      value={item.name}
+                      options={fieldSuggestions.name}
+                      onChange={(e) => handleEntryChange(index, "name", e.target.value)}
+                      className={inputClassName}
+                    />
+                  </Field>
+                  <Field label="PCE">
+                    <p className={readOnlyInputClassName} title={selectedOption.pceName}>{selectedOption.pceName}</p>
+                  </Field>
+                  <Field label="Okuri Pitch">
+                    <SuggestInput
+                      type="number"
+                      value={item.okuriPitch}
+                      options={fieldSuggestions.okuriPitch}
+                      onChange={(e) => handleEntryChange(index, "okuriPitch", e.target.value)}
+                      className={inputClassName}
+                    />
+                  </Field>
+                  <Field label="Color">
+                    <SuggestInput
+                      type="text"
+                      value={item.color}
+                      options={fieldSuggestions.color}
+                      onChange={(e) => handleEntryChange(index, "color", e.target.value)}
+                      className={inputClassName}
+                    />
+                  </Field>
+                  <Field label="Material">
+                    <SuggestInput
+                      type="text"
+                      value={item.material}
+                      options={fieldSuggestions.material}
+                      onChange={(e) => handleEntryChange(index, "material", e.target.value)}
+                      className={inputClassName}
+                    />
+                  </Field>
+                  <Field label="Box Type">
+                    <SuggestInput
+                      type="text"
+                      value={item.boxType}
+                      options={fieldSuggestions.boxType}
+                      onChange={(e) => handleEntryChange(index, "boxType", e.target.value)}
+                      className={inputClassName}
+                    />
+                  </Field>
+                  <Field label="Quantity">
+                    <SuggestInput
+                      type="number"
+                      value={item.quantity}
+                      options={fieldSuggestions.quantity}
+                      onChange={(e) => handleEntryChange(index, "quantity", e.target.value)}
+                      className={inputClassName}
+                    />
+                  </Field>
+                  <Field label="PDF">
+                    {selectedOption.pdfLink ? (
+                      <button
+                        type="button"
+                        onClick={() => openPdfPreview(selectedOption.pdfLink, selectedOption.label)}
+                        title="View PDF preview"
+                        className="inline-flex h-[38px] w-[38px] items-center justify-center rounded-xl border border-outline-variant/30 bg-surface text-primary transition hover:bg-surface-container-high"
+                      >
+                        <span className="material-symbols-outlined" style={{ fontSize: 20 }}>picture_as_pdf</span>
+                      </button>
+                    ) : (
+                      <span
+                        title="No PDF preview available"
+                        className="inline-flex h-[38px] w-[38px] items-center justify-center rounded-xl border border-outline-variant/15 bg-surface-container text-on-surface-variant/40"
+                      >
+                        <span className="material-symbols-outlined" style={{ fontSize: 20 }}>picture_as_pdf</span>
+                      </span>
+                    )}
+                  </Field>
+                  <Field label=" ">
+                    {entries.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => removeEntryRow(index)}
+                        title="Remove row"
+                        className="inline-flex h-[38px] w-[38px] items-center justify-center rounded-xl border border-outline-variant/30 bg-surface text-on-surface-variant transition hover:bg-error/10 hover:text-error"
+                      >
+                        <span className="material-symbols-outlined" style={{ fontSize: 18 }}>close</span>
+                      </button>
+                    )}
+                  </Field>
+                </div>
+              ))}
+
+              <div>
+                <button
+                  type="button"
+                  onClick={addEntryRow}
+                  className="inline-flex items-center gap-1.5 rounded-xl border border-outline-variant/30 bg-surface px-3 py-2 text-xs font-semibold text-on-surface transition hover:bg-surface-container-high"
+                >
+                  <span className="material-symbols-outlined" style={{ fontSize: 16 }}>add</span>
+                  Add Row
+                </button>
+              </div>
             </div>
           )}
 
