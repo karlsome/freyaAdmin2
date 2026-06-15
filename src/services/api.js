@@ -2664,6 +2664,29 @@ export async function uploadPceFiles({ fileBase64, sebanggoList, machineSuffix }
   return data;
 }
 
+// ─── Prototype (試作) Registration ─────────────────────────────────────────────
+export async function fetchShisakuList() {
+  return query("Sasaki_Coating_MasterDB", "shisakuDB", {}, { sort: { createdAt: -1 } });
+}
+
+export async function registerShisaku({ shisakuNo, deadline, eventName, modelName, customerName, dxfFile, pdfFile, pceFile }) {
+  const res = await fetch(`${BASE_URL}api/shisaku/register`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ shisakuNo, deadline, eventName, modelName, customerName, dxfFile, pdfFile, pceFile }),
+  });
+  const data = await _readJson(res);
+  if (!res.ok) {
+    const detail = data?.google ? JSON.stringify(data.google) : data?.details || data?.error || `API ${res.status}`;
+    throw new Error(`${data?.error || "Registration failed"} — ${detail}`);
+  }
+  return data;
+}
+
+export async function deleteShisaku(id) {
+  return _deleteJson(`api/shisaku/${encodeURIComponent(id)}`);
+}
+
 export async function translateJapaneseText(text) {
   const query = new URLSearchParams({
     q: text,

@@ -24,6 +24,7 @@ const translations = {
     overview: "Overview",
     sensors: "Sensors",
     devices: "Devices",
+    prototype: "Prototype",
 
     // Settings
     settings: "Settings",
@@ -190,6 +191,7 @@ const translations = {
     overview: "概要",
     sensors: "センサー",
     devices: "デバイス",
+    prototype: "試作",
 
     // Settings
     settings: "設定",

@@ -23,6 +23,7 @@ import MaintenancePage from "./pages/MaintenancePage";
 import ChecklistSubmissionsPage from "./pages/ChecklistSubmissionsPage";
 import EquipmentHistoryPage from "./pages/EquipmentHistoryPage";
 import TicketSubmissionsPage from "./pages/TicketSubmissionsPage";
+import PrototypePage from "./pages/PrototypePage";
 import LoginPage from "./pages/LoginPage";
 import {
   clearStoredAuthUser,
@@ -246,6 +247,7 @@ function App() {
               <Route path="/maintenance/submissions" element={<ChecklistSubmissionsPage />} />
               <Route path="/maintenance/submissions/tickets" element={<TicketSubmissionsPage />} />
               <Route path="/masterDB" element={<MasterDBPage />} />
+              <Route path="/prototype" element={<PrototypePage />} />
               <Route path="/factories" element={<FactoriesPage />} />
               <Route path="/sensors" element={<SensorsPage />} />
               <Route path="/devices" element={<DevicesPage />} />
