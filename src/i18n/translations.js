@@ -25,6 +25,7 @@ const translations = {
     sensors: "Sensors",
     devices: "Devices",
     prototype: "Prototype",
+    prototypeRequest: "Prototype Request",
 
     // Settings
     settings: "Settings",
@@ -192,6 +193,7 @@ const translations = {
     sensors: "センサー",
     devices: "デバイス",
     prototype: "試作",
+    prototypeRequest: "試作依頼",
 
     // Settings
     settings: "設定",

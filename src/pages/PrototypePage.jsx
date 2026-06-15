@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import DataTable from "../components/DataTable";
 import PageHeader from "../components/PageHeader";
 import { deleteShisaku, fetchShisakuList, registerShisaku } from "../services/api";
+import { convertPdfFileToPreviewImage } from "../utils/productPDFs";
 
 const EMPTY_FORM = {
   shisakuNo: "",
@@ -25,6 +26,11 @@ function buildFileName(shisakuNo, originalName) {
   const trimmed = String(shisakuNo || "").trim();
   if (!trimmed || !originalName) return "";
   return `試作${trimmed}_${originalName}`;
+}
+
+function buildJpgFileName(fileName) {
+  if (!fileName) return "";
+  return fileName.replace(/\.[^.]+$/, "") + ".jpg";
 }
 
 function FlashBanner({ flash, onClose }) {
@@ -263,11 +269,13 @@ export default function PrototypePage() {
     setSubmitting(true);
 
     try {
-      const [dxfBase64, pdfBase64, ...pceBase64List] = await Promise.all([
+      const [dxfBase64, pdfBase64, pdfImageDataUrl, ...pceBase64List] = await Promise.all([
         toBase64(dxfFile),
         toBase64(pdfFile),
+        convertPdfFileToPreviewImage(pdfFile),
         ...pceFiles.map((entry) => toBase64(entry.file)),
       ]);
+      const pdfImageBase64 = pdfImageDataUrl.split(",")[1] || "";
 
       const shisakuNo = form.shisakuNo.trim();
 
@@ -280,6 +288,7 @@ export default function PrototypePage() {
         registeredBy: form.registeredBy.trim(),
         dxfFile: { name: dxfFileName, base64: dxfBase64 },
         pdfFile: { name: pdfFileName, base64: pdfBase64 },
+        pdfImageFile: { name: buildJpgFileName(pdfFileName), base64: pdfImageBase64 },
         pceFiles: pceFiles.map((entry, idx) => ({ name: entry.name.trim(), base64: pceBase64List[idx] })),
       });
 
