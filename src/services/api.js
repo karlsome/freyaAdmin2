@@ -2669,11 +2669,11 @@ export async function fetchShisakuList() {
   return query("Sasaki_Coating_MasterDB", "shisakuDB", {}, { sort: { createdAt: -1 } });
 }
 
-export async function registerShisaku({ shisakuNo, deadline, eventName, modelName, customerName, dxfFile, pdfFile, pceFile }) {
+export async function registerShisaku({ shisakuNo, deadline, eventName, modelName, customerName, registeredBy, dxfFile, pdfFile, pceFiles }) {
   const res = await fetch(`${BASE_URL}api/shisaku/register`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ shisakuNo, deadline, eventName, modelName, customerName, dxfFile, pdfFile, pceFile }),
+    body: JSON.stringify({ shisakuNo, deadline, eventName, modelName, customerName, registeredBy, dxfFile, pdfFile, pceFiles }),
   });
   const data = await _readJson(res);
   if (!res.ok) {

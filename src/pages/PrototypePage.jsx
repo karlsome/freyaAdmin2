@@ -9,6 +9,7 @@ const EMPTY_FORM = {
   eventName: "",
   modelName: "",
   customerName: "",
+  registeredBy: "",
 };
 
 function toBase64(file) {
@@ -99,6 +100,56 @@ function FileUploadField({ label, accept, file, fileName, onSelect, disabled, ed
   );
 }
 
+function PceUploadList({ files, onAdd, onRemove, onRename, disabled }) {
+  return (
+    <div className="flex flex-col gap-2 rounded-xl border border-outline-variant/20 bg-surface-container px-3 py-3">
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-on-surface-variant">PCE</span>
+        <label className={`inline-flex items-center gap-1.5 rounded-lg border border-outline-variant/30 bg-surface px-3 py-1.5 text-xs font-semibold text-on-surface transition hover:bg-surface-container-high ${disabled ? "cursor-not-allowed opacity-40" : "cursor-pointer"}`}>
+          <span className="material-symbols-outlined" style={{ fontSize: 14 }}>upload_file</span>
+          {files.length ? "Add more" : "Upload"}
+          <input
+            type="file"
+            accept=".pce"
+            multiple
+            className="hidden"
+            disabled={disabled}
+            onChange={(e) => {
+              onAdd(Array.from(e.target.files || []));
+              e.target.value = "";
+            }}
+          />
+        </label>
+      </div>
+
+      {files.length === 0 ? (
+        <p className="text-[11px] text-on-surface-variant">{disabled ? "Enter 試作番号 first" : "No files selected"}</p>
+      ) : (
+        <div className="flex flex-col gap-2">
+          {files.map((entry) => (
+            <div key={entry.id} className="flex items-center gap-2">
+              <input
+                type="text"
+                value={entry.name}
+                onChange={(e) => onRename(entry.id, e.target.value)}
+                className={`${inputClassName} font-mono text-xs flex-1`}
+              />
+              <button
+                type="button"
+                onClick={() => onRemove(entry.id)}
+                title="Remove"
+                className="flex-shrink-0 rounded-lg border border-outline-variant/30 bg-surface p-1.5 text-on-surface-variant transition hover:bg-error/10 hover:text-error"
+              >
+                <span className="material-symbols-outlined" style={{ fontSize: 14 }}>close</span>
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function PrototypePage() {
   const [records, setRecords] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -110,9 +161,7 @@ export default function PrototypePage() {
   const [form, setForm] = useState(EMPTY_FORM);
   const [dxfFile, setDxfFile] = useState(null);
   const [pdfFile, setPdfFile] = useState(null);
-  const [pceFile, setPceFile] = useState(null);
-  const [pceFileName, setPceFileName] = useState("");
-  const [pceNameTouched, setPceNameTouched] = useState(false);
+  const [pceFiles, setPceFiles] = useState([]);
   const [submitting, setSubmitting] = useState(false);
   const [deletingId, setDeletingId] = useState(null);
 
@@ -147,11 +196,12 @@ export default function PrototypePage() {
 
   const dxfFileName = useMemo(() => buildFileName(form.shisakuNo, dxfFile?.name), [form.shisakuNo, dxfFile]);
   const pdfFileName = useMemo(() => buildFileName(form.shisakuNo, pdfFile?.name), [form.shisakuNo, pdfFile]);
-  const pceDefaultFileName = useMemo(() => buildFileName(form.shisakuNo, pceFile?.name), [form.shisakuNo, pceFile]);
 
   useEffect(() => {
-    if (!pceNameTouched) setPceFileName(pceDefaultFileName);
-  }, [pceDefaultFileName, pceNameTouched]);
+    setPceFiles((current) => current.map((entry) => (
+      entry.touched ? entry : { ...entry, name: buildFileName(form.shisakuNo, entry.file.name) }
+    )));
+  }, [form.shisakuNo]);
 
   function handleFieldChange(key, value) {
     setForm((current) => ({ ...current, [key]: value }));
@@ -161,19 +211,36 @@ export default function PrototypePage() {
     if (!file) return;
     if (kind === "dxf") setDxfFile(file);
     if (kind === "pdf") setPdfFile(file);
-    if (kind === "pce") {
-      setPceFile(file);
-      setPceNameTouched(false);
-    }
+  }
+
+  function handlePceFilesAdd(files) {
+    if (!files?.length) return;
+    setPceFiles((current) => [
+      ...current,
+      ...files.map((file) => ({
+        id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+        file,
+        name: buildFileName(form.shisakuNo, file.name),
+        touched: false,
+      })),
+    ]);
+  }
+
+  function handlePceFileRemove(id) {
+    setPceFiles((current) => current.filter((entry) => entry.id !== id));
+  }
+
+  function handlePceFileRename(id, name) {
+    setPceFiles((current) => current.map((entry) => (
+      entry.id === id ? { ...entry, name, touched: true } : entry
+    )));
   }
 
   function resetForm() {
     setForm(EMPTY_FORM);
     setDxfFile(null);
     setPdfFile(null);
-    setPceFile(null);
-    setPceFileName("");
-    setPceNameTouched(false);
+    setPceFiles([]);
   }
 
   const shisakuNoEntered = form.shisakuNo.trim().length > 0;
@@ -184,8 +251,10 @@ export default function PrototypePage() {
     form.eventName.trim() &&
     form.modelName.trim() &&
     form.customerName.trim() &&
-    !!dxfFile && !!pdfFile && !!pceFile &&
-    !!dxfFileName && !!pdfFileName && !!pceFileName.trim() &&
+    form.registeredBy.trim() &&
+    !!dxfFile && !!pdfFile &&
+    !!dxfFileName && !!pdfFileName &&
+    pceFiles.length > 0 && pceFiles.every((entry) => entry.name.trim()) &&
     !submitting
   );
 
@@ -194,10 +263,10 @@ export default function PrototypePage() {
     setSubmitting(true);
 
     try {
-      const [dxfBase64, pdfBase64, pceBase64] = await Promise.all([
+      const [dxfBase64, pdfBase64, ...pceBase64List] = await Promise.all([
         toBase64(dxfFile),
         toBase64(pdfFile),
-        toBase64(pceFile),
+        ...pceFiles.map((entry) => toBase64(entry.file)),
       ]);
 
       const shisakuNo = form.shisakuNo.trim();
@@ -208,9 +277,10 @@ export default function PrototypePage() {
         eventName: form.eventName.trim(),
         modelName: form.modelName.trim(),
         customerName: form.customerName.trim(),
+        registeredBy: form.registeredBy.trim(),
         dxfFile: { name: dxfFileName, base64: dxfBase64 },
         pdfFile: { name: pdfFileName, base64: pdfBase64 },
-        pceFile: { name: pceFileName.trim(), base64: pceBase64 },
+        pceFiles: pceFiles.map((entry, idx) => ({ name: entry.name.trim(), base64: pceBase64List[idx] })),
       });
 
       setFlash({ type: "success", message: `試作${shisakuNo} registered successfully.` });
@@ -256,27 +326,51 @@ export default function PrototypePage() {
       width: 200,
       align: "center",
       disableCellWrapper: true,
-      renderCell: (r) => (
-        <div className="flex items-center justify-center gap-2">
-          {[["dxf", r.dxflink], ["pdf", r.pdflink], ["pce", r.pcelink]].map(([label, link]) => (
-            link ? (
-              <a
-                key={label}
-                href={link}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center justify-center rounded-lg border border-outline-variant/30 bg-surface px-2.5 py-1 text-[11px] font-semibold uppercase text-primary transition hover:bg-surface-container-high"
-              >
-                {label}
-              </a>
+      renderCell: (r) => {
+        const pceLinks = Array.isArray(r.pcelinks) && r.pcelinks.length > 0
+          ? r.pcelinks
+          : (r.pcelink ? [{ name: "pce", link: r.pcelink }] : []);
+
+        return (
+          <div className="flex flex-wrap items-center justify-center gap-2">
+            {[["dxf", r.dxflink], ["pdf", r.pdflink]].map(([label, link]) => (
+              link ? (
+                <a
+                  key={label}
+                  href={link}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center justify-center rounded-lg border border-outline-variant/30 bg-surface px-2.5 py-1 text-[11px] font-semibold uppercase text-primary transition hover:bg-surface-container-high"
+                >
+                  {label}
+                </a>
+              ) : (
+                <span key={label} className="inline-flex items-center justify-center rounded-lg border border-outline-variant/15 bg-surface-container px-2.5 py-1 text-[11px] font-semibold uppercase text-on-surface-variant/40">
+                  {label}
+                </span>
+              )
+            ))}
+            {pceLinks.length > 0 ? (
+              pceLinks.map((entry, idx) => (
+                <a
+                  key={`pce-${idx}`}
+                  href={entry.link}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  title={entry.name}
+                  className="inline-flex items-center justify-center rounded-lg border border-outline-variant/30 bg-surface px-2.5 py-1 text-[11px] font-semibold uppercase text-primary transition hover:bg-surface-container-high"
+                >
+                  {pceLinks.length > 1 ? `pce${idx + 1}` : "pce"}
+                </a>
+              ))
             ) : (
-              <span key={label} className="inline-flex items-center justify-center rounded-lg border border-outline-variant/15 bg-surface-container px-2.5 py-1 text-[11px] font-semibold uppercase text-on-surface-variant/40">
-                {label}
+              <span className="inline-flex items-center justify-center rounded-lg border border-outline-variant/15 bg-surface-container px-2.5 py-1 text-[11px] font-semibold uppercase text-on-surface-variant/40">
+                pce
               </span>
-            )
-          ))}
-        </div>
-      ),
+            )}
+          </div>
+        );
+      },
     },
     {
       key: "createdAt",
@@ -343,7 +437,7 @@ export default function PrototypePage() {
           </div>
 
           <div className="px-4 py-4 flex flex-col gap-4">
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-6">
               <Field label="試作番号">
                 <input
                   type="text"
@@ -385,6 +479,14 @@ export default function PrototypePage() {
                   className={inputClassName}
                 />
               </Field>
+              <Field label="Registered By">
+                <input
+                  type="text"
+                  value={form.registeredBy}
+                  onChange={(e) => handleFieldChange("registeredBy", e.target.value)}
+                  className={inputClassName}
+                />
+              </Field>
             </div>
 
             {!shisakuNoEntered && (
@@ -413,18 +515,12 @@ export default function PrototypePage() {
                 onSelect={(f) => handleFileSelect("pdf", f)}
                 disabled={!shisakuNoEntered}
               />
-              <FileUploadField
-                label="PCE"
-                accept=".pce"
-                file={pceFile}
-                fileName={pceFileName}
-                onSelect={(f) => handleFileSelect("pce", f)}
+              <PceUploadList
+                files={pceFiles}
+                onAdd={handlePceFilesAdd}
+                onRemove={handlePceFileRemove}
+                onRename={handlePceFileRename}
                 disabled={!shisakuNoEntered}
-                editable
-                onNameChange={(value) => {
-                  setPceFileName(value);
-                  setPceNameTouched(true);
-                }}
               />
             </div>
 
