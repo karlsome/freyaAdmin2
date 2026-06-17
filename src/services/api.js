@@ -2692,8 +2692,8 @@ export async function fetchShisakuRequestList() {
   return query("Sasaki_Coating_MasterDB", "shisakuRequestDB", {}, { sort: { createdAt: -1 } });
 }
 
-export async function registerShisakuRequest({ name, pce, okuriPitch, color, material, boxType, quantity, pdfLink }) {
-  return _postJson("api/shisaku-request/register", { name, pce, okuriPitch, color, material, boxType, quantity, pdfLink });
+export async function registerShisakuRequest({ name, pce, okuriPitch, color, material, boxType, quantity, pdfLink, shisakudb_id }) {
+  return _postJson("api/shisaku-request/register", { name, pce, okuriPitch, color, material, boxType, quantity, pdfLink, shisakudb_id });
 }
 
 export async function deleteShisakuRequest(id) {

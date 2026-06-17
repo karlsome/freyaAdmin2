@@ -17,6 +17,7 @@ const EMPTY_ENTRY = {
   material: "",
   boxType: "",
   quantity: "",
+  file: null,
 };
 
 const ENTRY_FIELD_KEYS = ["name", "okuriPitch", "color", "material", "boxType", "quantity"];
@@ -139,6 +140,7 @@ function buildPceOptions(shisakuRecords) {
         value: `${recordId}-${idx}`,
         label: record.shisakuNo ? `試作${record.shisakuNo} — ${pceName}` : pceName,
         pceName,
+        shisakudbId: recordId,
         pdfLink: normalizeJpgLink(record.pdfjpglink || record.pdflink || ""),
       });
     });
@@ -205,6 +207,10 @@ export default function PrototypeRequestPage() {
     setEntries((current) => current.map((item, i) => (i === index ? { ...item, [key]: value } : item)));
   }
 
+  function handleEntryFileChange(index, file) {
+    setEntries((current) => current.map((item, i) => (i === index ? { ...item, file } : item)));
+  }
+
   function addEntryRow() {
     setEntries((current) => [...current, { ...EMPTY_ENTRY }]);
   }
@@ -258,6 +264,7 @@ export default function PrototypeRequestPage() {
         boxType: item.boxType.trim(),
         quantity: Number(item.quantity),
         pdfLink: selectedOption.pdfLink,
+        shisakudb_id: selectedOption.shisakudbId,
       })));
 
       setFlash({
@@ -427,8 +434,8 @@ export default function PrototypeRequestPage() {
           {selectedOption && (
             <div className="flex flex-col gap-4">
               {entries.map((item, index) => (
-                <div key={index} className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-9">
-                  <Field label="Name">
+                <div key={index} className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-[2fr_1fr_100px_80px_1fr_1fr_80px_38px_38px_38px]">
+                  <Field label="Request">
                     <SuggestInput
                       type="text"
                       value={item.name}
@@ -503,6 +510,23 @@ export default function PrototypeRequestPage() {
                         <span className="material-symbols-outlined" style={{ fontSize: 20 }}>picture_as_pdf</span>
                       </span>
                     )}
+                  </Field>
+                  <Field label="File">
+                    <label
+                      title={item.file ? item.file.name : "Upload file"}
+                      className={`inline-flex h-[38px] w-[38px] cursor-pointer items-center justify-center rounded-xl border transition ${
+                        item.file
+                          ? "border-primary/30 bg-primary/10 text-primary hover:bg-primary/20"
+                          : "border-outline-variant/30 bg-surface text-on-surface-variant hover:bg-surface-container-high"
+                      }`}
+                    >
+                      <span className="material-symbols-outlined" style={{ fontSize: 20 }}>attach_file</span>
+                      <input
+                        type="file"
+                        className="hidden"
+                        onChange={(e) => handleEntryFileChange(index, e.target.files?.[0] || null)}
+                      />
+                    </label>
                   </Field>
                   <Field label=" ">
                     {entries.length > 1 && (
