@@ -28,6 +28,11 @@ const navItems = [
       { icon: "confirmation_number",  labelKey: "submittedTickets",     page: "maintenance/submissions/tickets" },
     ]
   },
+  { icon: "science",                  labelKey: "prototype",           page: "prototype",
+    children: [
+      { icon: "assignment",           labelKey: "prototypeRequest",     page: "prototype/request" },
+    ]
+  },
   { icon: "lan",                      labelKey: "scna",                page: "scna" },
   { icon: "settings_input_component", labelKey: "noda",                page: "noda" },
   { icon: "play_circle",              labelKey: "videoManual",         page: "videoManual" },
