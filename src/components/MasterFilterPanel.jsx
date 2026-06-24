@@ -205,7 +205,7 @@ export default function MasterFilterPanel({
             </div>
           ) : (
             <select
-              value={simpleFilters.process}
+              value={typeof simpleFilters.process === 'string' ? simpleFilters.process : ''}
               onChange={(event) => onSimpleFilterChange("process", event.target.value)}
               className="h-10 w-full rounded-xl border border-separator/40 bg-white px-3 text-sm text-on-surface outline-none transition-colors focus:border-primary/40"
             >

@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
+  fetchMasterDistinctField,
   fetchMasterFilterOptions,
   fetchMasterPage,
   fetchMasterSchema,
@@ -8,6 +9,9 @@ import {
 } from "../services/api";
 import {
   MASTER_PAGE_SIZE_OPTIONS,
+  buildMasterAdvancedQuery,
+  buildMasterFieldDefinitions,
+  createMasterFilterRow,
   cleanMasterRecords,
   formatMasterValue,
   getMasterTabUI,
@@ -56,8 +60,13 @@ export default function PceFilesWorkspace({ onFlash }) {
   const [masterRecords, setMasterRecords] = useState([]);
   const [schemaFields, setSchemaFields] = useState([]);
   const [filterOptions, setFilterOptions] = useState({ factories: [], rl: [], colors: [], processes: [] });
-  // process is an array of selected 加工設備 names (multi-select, scoped to the chosen factory)
-  const [simpleFilters, setSimpleFilters] = useState({ factory: "", process: [] });
+  // process is a string representing the selected Equipment in the table filter
+  const [simpleFilters, setSimpleFilters] = useState({ factory: "", rl: "", color: "", process: "" });
+  const [topSimpleFilters, setTopSimpleFilters] = useState({ factory: "", rl: "", color: "", process: "" });
+  const [searchTags, setSearchTags] = useState([]);
+  const [searchLogicMode, setSearchLogicMode] = useState("OR");
+  const [advancedRows, setAdvancedRows] = useState([createMasterFilterRow()]);
+  const [advancedQuery, setAdvancedQuery] = useState({});
   const [sort, setSort] = useState({ column: null, direction: 1 });
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
@@ -67,9 +76,23 @@ export default function PceFilesWorkspace({ onFlash }) {
   const [tableError, setTableError] = useState("");
   // Set of selected 背番号 codes
   const [selectedRows, setSelectedRows] = useState(() => new Set());
+  const fieldDefinitions = useMemo(() => {
+    return buildMasterFieldDefinitions(schemaFields, [], "masterDB");
+  }, [schemaFields]);
   // Single selected group key (e.g. "1|1200") driving filename generation
   const [selectedGroupKey, setSelectedGroupKey] = useState(null);
   const requestIdRef = useRef(0);
+
+  const distinctCacheRef = useRef(new Map());
+  const loadDistinctOptions = useCallback(async (field) => {
+    const cacheKey = `masterDB:${field}`;
+    if (distinctCacheRef.current.has(cacheKey)) {
+      return distinctCacheRef.current.get(cacheKey);
+    }
+    const values = await fetchMasterDistinctField(field, "masterDB");
+    distinctCacheRef.current.set(cacheKey, values);
+    return values;
+  }, []);
 
   // Equipment records (for noOfHead / tableLength lookup, keyed by 加工設備 → name)
   const [setsubiList, setSetsubiList] = useState([]);
@@ -109,6 +132,10 @@ export default function PceFilesWorkspace({ onFlash }) {
           limit: pageSize,
           sort,
           simpleFilters,
+          advancedFilters: advancedQuery,
+          searchTags,
+          searchLogicMode,
+          searchFields: ["品番", "モデル", "背番号", "品名", "工場", "型番"],
         });
 
         if (cancelled || requestId !== requestIdRef.current) return;
@@ -128,7 +155,7 @@ export default function PceFilesWorkspace({ onFlash }) {
 
     loadRecords();
     return () => { cancelled = true; };
-  }, [page, pageSize, sort, simpleFilters, schemaFields]);
+  }, [page, pageSize, sort, simpleFilters, advancedQuery, searchTags, searchLogicMode, schemaFields]);
 
   useEffect(() => {
     let cancelled = false;
@@ -141,17 +168,70 @@ export default function PceFilesWorkspace({ onFlash }) {
     return () => { cancelled = true; };
   }, []);
 
-  function handleSimpleFilterChange(key, value) {
-    setPage(1);
-    setSimpleFilters((current) => (
-      key === "factory" ? { ...current, factory: value, process: [] } : { ...current, [key]: value }
+  function handleTopSimpleFilterChange(key, value) {
+    setTopSimpleFilters((current) => (
+      key === "factory" ? { ...current, factory: value, process: "" } : { ...current, [key]: value }
     ));
     if (key === "factory") {
       setSelectedGroupKey(null);
-      setSelectedRows(new Set());
       setUploadResults(null);
     }
   }
+
+  function handleSimpleFilterChange(key, value) {
+    setPage(1);
+    setSimpleFilters((current) => (
+      key === "factory" ? { ...current, factory: value, process: "" } : { ...current, [key]: value }
+    ));
+    if (key === "factory") {
+      setSelectedRows(new Set());
+    }
+  }
+
+  function handleAddSearchTag(tag) {
+    setPage(1);
+    setSearchTags((current) => [...current, tag]);
+  }
+
+  function handleRemoveSearchTag(tag) {
+    setPage(1);
+    setSearchTags((current) => current.filter((t) => t !== tag));
+  }
+
+  function handleClearSearchTags() {
+    setPage(1);
+    setSearchTags([]);
+  }
+
+  function handleSearchLogicModeChange(mode) {
+    setPage(1);
+    setSearchLogicMode(mode);
+  }
+
+  function handleUpdateAdvancedRow(rowId, updates) {
+    setAdvancedRows((current) => current.map((row) => (row.id === rowId ? { ...row, ...updates } : row)));
+  }
+
+  function handleAddAdvancedRow() {
+    setAdvancedRows((current) => [...current, createMasterFilterRow()]);
+  }
+
+  function handleRemoveAdvancedRow(rowId) {
+    setAdvancedRows((current) => current.filter((row) => row.id !== rowId));
+  }
+
+  function handleApplyAdvancedFilters() {
+    setPage(1);
+    const nextQuery = buildMasterAdvancedQuery(advancedRows, fieldDefinitions);
+    setAdvancedQuery(nextQuery);
+  }
+
+  function handleClearAdvancedFilters() {
+    setPage(1);
+    setAdvancedRows([createMasterFilterRow()]);
+    setAdvancedQuery({});
+  }
+
   function handleToggleGroup(groupKey) {
     setSelectedGroupKey((prev) => prev === groupKey ? null : groupKey);
     setUploadResults(null);
@@ -178,7 +258,7 @@ export default function PceFilesWorkspace({ onFlash }) {
   // noOfHead and tableLength are grouped under a text heading (e.g. "1 head 1200mm") with their
   // own checkboxes underneath; records missing either field fall into an unheaded group.
   const equipmentOptionsForFactory = useMemo(() => {
-    const factory = String(simpleFilters.factory || "").trim();
+    const factory = String(topSimpleFilters.factory || "").trim();
     if (!factory) return [];
 
     const groups = new Map();
@@ -227,7 +307,7 @@ export default function PceFilesWorkspace({ onFlash }) {
       : [];
 
     return [...groupedSections, ...ungroupedSections];
-  }, [setsubiList, simpleFilters.factory]);
+  }, [setsubiList, topSimpleFilters.factory]);
 
   // For each selected 背番号, generate one preview entry for the chosen group configuration
   const previewEntries = useMemo(() => {
@@ -386,9 +466,9 @@ export default function PceFilesWorkspace({ onFlash }) {
         {/* Filtering — same filter block as 内装品 DB, scoped to the 背番号 list below */}
         <div className="flex-1 min-w-0">
           <MasterFilterPanel
-            simpleFilters={simpleFilters}
+            simpleFilters={topSimpleFilters}
             filterOptions={filterOptions}
-            onSimpleFilterChange={handleSimpleFilterChange}
+            onSimpleFilterChange={handleTopSimpleFilterChange}
             processLabel={tabUI.processFilterLabel}
             processAllLabel={tabUI.processAllLabel}
             optionsCacheKey="pceFilesMasterDB"
@@ -415,6 +495,28 @@ export default function PceFilesWorkspace({ onFlash }) {
           sub={step2Done ? `${selectedRows.size} row${selectedRows.size === 1 ? "" : "s"} selected` : "Filter the list and select 背番号 rows"}
         />
         <div className="px-4 py-4 flex flex-col gap-4">
+          <MasterFilterPanel
+            simpleFilters={simpleFilters}
+            filterOptions={filterOptions}
+            searchTags={searchTags}
+            searchLogicMode={searchLogicMode}
+            fieldDefinitions={fieldDefinitions}
+            advancedRows={advancedRows}
+            onSimpleFilterChange={handleSimpleFilterChange}
+            onAddSearchTag={handleAddSearchTag}
+            onRemoveSearchTag={handleRemoveSearchTag}
+            onClearSearchTags={handleClearSearchTags}
+            onSearchLogicModeChange={handleSearchLogicModeChange}
+            onUpdateAdvancedRow={handleUpdateAdvancedRow}
+            onAddAdvancedRow={handleAddAdvancedRow}
+            onRemoveAdvancedRow={handleRemoveAdvancedRow}
+            onApplyAdvancedFilters={handleApplyAdvancedFilters}
+            onClearAdvancedFilters={handleClearAdvancedFilters}
+            loadDistinctOptions={loadDistinctOptions}
+            processLabel={tabUI.processFilterLabel}
+            processAllLabel={tabUI.processAllLabel}
+            optionsCacheKey="pceFilesMasterDB_table"
+          />
           <DataTable
             columns={tableColumns}
             rows={masterRecords}
