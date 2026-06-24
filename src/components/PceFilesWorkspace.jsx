@@ -79,8 +79,8 @@ export default function PceFilesWorkspace({ onFlash }) {
   const fieldDefinitions = useMemo(() => {
     return buildMasterFieldDefinitions(schemaFields, [], "masterDB");
   }, [schemaFields]);
-  // Single selected group key (e.g. "1|1200") driving filename generation
-  const [selectedGroupKey, setSelectedGroupKey] = useState(null);
+  // Selected group keys driving filename generation (multi-select)
+  const [selectedGroupKeys, setSelectedGroupKeys] = useState(new Set());
   const requestIdRef = useRef(0);
 
   const distinctCacheRef = useRef(new Map());
@@ -173,7 +173,7 @@ export default function PceFilesWorkspace({ onFlash }) {
       key === "factory" ? { ...current, factory: value, process: "" } : { ...current, [key]: value }
     ));
     if (key === "factory") {
-      setSelectedGroupKey(null);
+      setSelectedGroupKeys(new Set());
       setUploadResults(null);
     }
   }
@@ -233,7 +233,12 @@ export default function PceFilesWorkspace({ onFlash }) {
   }
 
   function handleToggleGroup(groupKey) {
-    setSelectedGroupKey((prev) => prev === groupKey ? null : groupKey);
+    setSelectedGroupKeys((prev) => {
+      const next = new Set(prev);
+      if (next.has(groupKey)) next.delete(groupKey);
+      else next.add(groupKey);
+      return next;
+    });
     setUploadResults(null);
   }
   function handleSort(column) {
@@ -309,20 +314,26 @@ export default function PceFilesWorkspace({ onFlash }) {
     return [...groupedSections, ...ungroupedSections];
   }, [setsubiList, topSimpleFilters.factory]);
 
-  // For each selected 背番号, generate one preview entry for the chosen group configuration
+  // For each selected 背番号, generate one preview entry for each chosen group configuration
   const previewEntries = useMemo(() => {
-    if (!selectedRows.size || !selectedGroupKey) return [];
-    const g = equipmentOptionsForFactory.find((g) => g.key === selectedGroupKey);
-    if (!g) return [];
-    const headsStr = String(g.heads ?? "").trim();
-    const lengthDigits = String(g.length ?? "").trim().slice(0, 2);
-    const suffix = headsStr && lengthDigits ? `${headsStr}h_${lengthDigits}` : null;
-    return [...selectedRows].map((code) => ({
-      code,
-      suffix,
-      fileName: suffix ? `${code}_${suffix}.pce` : null,
-    }));
-  }, [selectedRows, selectedGroupKey, equipmentOptionsForFactory]);
+    if (!selectedRows.size || !selectedGroupKeys.size) return [];
+    const entries = [];
+    selectedGroupKeys.forEach((groupKey) => {
+      const g = equipmentOptionsForFactory.find((g) => g.key === groupKey);
+      if (!g) return;
+      const headsStr = String(g.heads ?? "").trim();
+      const lengthDigits = String(g.length ?? "").trim().slice(0, 2);
+      const suffix = headsStr && lengthDigits ? `${headsStr}h_${lengthDigits}` : null;
+      [...selectedRows].forEach((code) => {
+        entries.push({
+          code,
+          suffix,
+          fileName: suffix ? `${code}_${suffix}.pce` : null,
+        });
+      });
+    });
+    return entries;
+  }, [selectedRows, selectedGroupKeys, equipmentOptionsForFactory]);
 
   const validPreviewEntries = useMemo(() => previewEntries.filter((entry) => entry.fileName), [previewEntries]);
   const invalidPreviewEntries = useMemo(() => previewEntries.filter((entry) => !entry.fileName), [previewEntries]);
@@ -417,7 +428,7 @@ export default function PceFilesWorkspace({ onFlash }) {
   const step1Done = !!file;
   const step2Done = selectedRows.size > 0;
   const fileCount = previewFiles.length;
-  const canUpload = step1Done && selectedRows.size > 0 && !!selectedGroupKey && validPreviewEntries.length > 0 && !uploading;
+  const canUpload = step1Done && selectedRows.size > 0 && selectedGroupKeys.size > 0 && validPreviewEntries.length > 0 && !uploading;
 
   return (
     <div className="flex flex-col gap-4">
@@ -478,7 +489,7 @@ export default function PceFilesWorkspace({ onFlash }) {
             showAdvancedFilters={false}
             equipmentVariant="groupSelect"
             equipmentOptions={equipmentOptionsForFactory}
-            selectedGroups={selectedGroupKey ? [selectedGroupKey] : []}
+            selectedGroups={Array.from(selectedGroupKeys)}
             onToggleGroup={handleToggleGroup}
           />
         </div>
