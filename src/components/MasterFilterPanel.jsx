@@ -41,10 +41,11 @@ export default function MasterFilterPanel({
   onToggleGroup,
   onSelectAllGroups,
   onClearGroups,
+  requireFactoryForEquipment = true,
 }) {
   const isMultiSelectEquipment = equipmentVariant === "multiSelect";
   const isGroupSelectEquipment = equipmentVariant === "groupSelect";
-  const equipmentNeedsFactory = (isMultiSelectEquipment || isGroupSelectEquipment) && !String(simpleFilters.factory || "").trim();
+  const equipmentNeedsFactory = requireFactoryForEquipment && (isMultiSelectEquipment || isGroupSelectEquipment) && !String(simpleFilters.factory || "").trim();
   const equipmentAllNames = isMultiSelectEquipment
     ? equipmentOptions.flatMap((group) => group.options.map((option) => option.key))
     : [];

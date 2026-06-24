@@ -2645,16 +2645,19 @@ export async function fetchPceMasterData() {
   });
 }
 
-export async function uploadPceFiles({ fileBase64, sebanggoList, machineSuffix }) {
+export async function uploadPceFiles({ fileBase64, sebanggoList, machineSuffix, overwrite }) {
   const res = await fetch(`${BASE_URL}api/pce/upload`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ fileBase64, sebanggoList, machineSuffix }),
+    body: JSON.stringify({ fileBase64, sebanggoList, machineSuffix, overwrite }),
   });
   const data = await res.json();
   if (!res.ok) {
     if (res.status === 409 && data.conflicts?.length) {
-      throw new Error(`Already exists in Drive — ${data.conflicts.join(", ")}`);
+      const err = new Error(`Already exists in Drive — ${data.conflicts.join(", ")}`);
+      err.isConflict = true;
+      err.conflicts = data.conflicts;
+      throw err;
     }
     const detail = data?.google
       ? JSON.stringify(data.google)

@@ -19,6 +19,7 @@ import {
 } from "../utils/masterDB";
 import DataTable from "./DataTable";
 import MasterFilterPanel from "./MasterFilterPanel";
+import PceFilesConflictModal from "./PceFilesConflictModal";
 
 function toBase64(file) {
   return new Promise((resolve, reject) => {
@@ -82,6 +83,9 @@ export default function PceFilesWorkspace({ onFlash }) {
   // Selected group keys driving filename generation (multi-select)
   const [selectedGroupKeys, setSelectedGroupKeys] = useState(new Set());
   const requestIdRef = useRef(0);
+  const uploadQueueRef = useRef([]);
+  const completedFilesRef = useRef([]);
+  const [conflictState, setConflictState] = useState(null);
 
   const distinctCacheRef = useRef(new Map());
   const loadDistinctOptions = useCallback(async (field) => {
@@ -264,13 +268,12 @@ export default function PceFilesWorkspace({ onFlash }) {
   // own checkboxes underneath; records missing either field fall into an unheaded group.
   const equipmentOptionsForFactory = useMemo(() => {
     const factory = String(topSimpleFilters.factory || "").trim();
-    if (!factory) return [];
 
     const groups = new Map();
     const ungroupedNames = new Set();
 
     setsubiList
-      .filter((record) => String(record?.工場 || "").trim() === factory)
+      .filter((record) => !factory || String(record?.工場 || "").trim() === factory)
       .forEach((record) => {
         const name = String(record?.name || "").trim();
         if (!name) return;
@@ -393,34 +396,83 @@ export default function PceFilesWorkspace({ onFlash }) {
     setUploadResults(null);
   }
 
-  async function handleUpload() {
-    if (!file || !validPreviewEntries.length) return;
+  async function processUploadQueue(fileBase64) {
     setUploading(true);
     try {
-      const fileBase64 = await toBase64(file);
-      // Group by suffix so each upload call still sends a single machineSuffix, as the backend expects
-      const groups = new Map();
-      validPreviewEntries.forEach(({ code, suffix }) => {
-        if (!groups.has(suffix)) groups.set(suffix, []);
-        groups.get(suffix).push(code);
-      });
-      const allFiles = [];
-      for (const [suffix, codes] of groups) {
-        const result = await uploadPceFiles({ fileBase64, sebanggoList: codes, machineSuffix: suffix });
-        allFiles.push(...result.files);
+      while (uploadQueueRef.current.length > 0) {
+        const task = uploadQueueRef.current[0];
+        try {
+          const result = await uploadPceFiles({
+            fileBase64,
+            sebanggoList: task.codes,
+            machineSuffix: task.suffix,
+            overwrite: task.overwrite,
+          });
+          completedFilesRef.current.push(...result.files);
+          uploadQueueRef.current.shift();
+        } catch (err) {
+          if (err.isConflict) {
+            setUploading(false);
+            setConflictState({ task, conflicts: err.conflicts, fileBase64 });
+            return;
+          }
+          throw err;
+        }
       }
-      setUploadResults(allFiles);
-      onFlash?.({ type: "success", message: `${allFiles.length} file${allFiles.length === 1 ? "" : "s"} created successfully and saved to Google Drive > freyaAdmin pce` });
+      setUploadResults(completedFilesRef.current);
+      onFlash?.({ type: "success", message: `${completedFilesRef.current.length} file${completedFilesRef.current.length === 1 ? "" : "s"} created successfully and saved to Google Drive > freyaAdmin pce` });
     } catch (err) {
       onFlash?.({ type: "error", message: err.message || "Upload failed." });
     } finally {
-      setUploading(false);
+      if (uploadQueueRef.current.length === 0) {
+        setUploading(false);
+      }
     }
+  }
+
+  async function handleUpload() {
+    if (!file || !validPreviewEntries.length) return;
+    setUploadResults(null);
+    setConflictState(null);
+    const fileBase64 = await toBase64(file);
+    const groups = new Map();
+    validPreviewEntries.forEach(({ code, suffix }) => {
+      if (!groups.has(suffix)) groups.set(suffix, []);
+      groups.get(suffix).push(code);
+    });
+
+    uploadQueueRef.current = Array.from(groups.entries()).map(([suffix, codes]) => ({ suffix, codes, overwrite: false }));
+    completedFilesRef.current = [];
+    processUploadQueue(fileBase64);
+  }
+
+  function handleResolveConflict(action) {
+    if (action === "cancel") {
+      setConflictState(null);
+      uploadQueueRef.current = [];
+      setUploading(false);
+      return;
+    }
+    const { task, conflicts, fileBase64 } = conflictState;
+    setConflictState(null);
+
+    if (action === "overwrite") {
+      task.overwrite = true;
+    } else if (action === "skip") {
+      const conflictingCodes = conflicts.map((f) => {
+        return task.suffix ? f.replace(`_${task.suffix}.pce`, "") : f.replace(`.pce`, "");
+      });
+      task.codes = task.codes.filter((c) => !conflictingCodes.includes(c));
+      if (task.codes.length === 0) {
+        uploadQueueRef.current.shift();
+      }
+    }
+    processUploadQueue(fileBase64);
   }
 
   function handleReset() {
     setSelectedRows(new Set());
-    setSelectedGroupKey(null);
+    setSelectedGroupKeys(new Set());
     setFile(null);
     setUploadResults(null);
   }
@@ -487,6 +539,7 @@ export default function PceFilesWorkspace({ onFlash }) {
             showColor={false}
             showSearchTags={false}
             showAdvancedFilters={false}
+            requireFactoryForEquipment={false}
             equipmentVariant="groupSelect"
             equipmentOptions={equipmentOptionsForFactory}
             selectedGroups={Array.from(selectedGroupKeys)}
@@ -620,7 +673,12 @@ export default function PceFilesWorkspace({ onFlash }) {
           )}
         </div>
       </div>
-
+      <PceFilesConflictModal
+        open={!!conflictState}
+        conflicts={conflictState?.conflicts || []}
+        onResolve={handleResolveConflict}
+        onCancel={() => handleResolveConflict("cancel")}
+      />
     </div>
   );
 }
