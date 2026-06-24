@@ -83,8 +83,6 @@ export default function PceFilesWorkspace({ onFlash }) {
   // Selected group keys driving filename generation (multi-select)
   const [selectedGroupKeys, setSelectedGroupKeys] = useState(new Set());
   const requestIdRef = useRef(0);
-  const uploadQueueRef = useRef([]);
-  const completedFilesRef = useRef([]);
   const [conflictState, setConflictState] = useState(null);
 
   const distinctCacheRef = useRef(new Map());
@@ -396,78 +394,48 @@ export default function PceFilesWorkspace({ onFlash }) {
     setUploadResults(null);
   }
 
-  async function processUploadQueue(fileBase64) {
+  async function handleUpload(resolutions = null) {
+    if (!file || !validPreviewEntries.length) return;
     setUploading(true);
+    
+    let overwriteFiles = false;
+    let base64 = null;
+    
+    if (resolutions) {
+      overwriteFiles = Object.keys(resolutions).filter(f => resolutions[f] === "overwrite");
+      base64 = conflictState.fileBase64;
+      setConflictState(null);
+    } else {
+      setUploadResults(null);
+      setConflictState(null);
+      base64 = await toBase64(file);
+    }
+
     try {
-      while (uploadQueueRef.current.length > 0) {
-        const task = uploadQueueRef.current[0];
-        try {
-          const result = await uploadPceFiles({
-            fileBase64,
-            sebanggoList: task.codes,
-            machineSuffix: task.suffix,
-            overwrite: task.overwrite,
-          });
-          completedFilesRef.current.push(...result.files);
-          uploadQueueRef.current.shift();
-        } catch (err) {
-          if (err.isConflict) {
-            setUploading(false);
-            setConflictState({ task, conflicts: err.conflicts, fileBase64 });
-            return;
-          }
-          throw err;
-        }
-      }
-      setUploadResults(completedFilesRef.current);
-      onFlash?.({ type: "success", message: `${completedFilesRef.current.length} file${completedFilesRef.current.length === 1 ? "" : "s"} created successfully and saved to Google Drive > freyaAdmin pce` });
+      const result = await uploadPceFiles({
+        fileBase64: base64,
+        entries: validPreviewEntries,
+        overwrite: overwriteFiles,
+      });
+      setUploadResults(result.files);
+      onFlash?.({ type: "success", message: `${result.files.length} file${result.files.length === 1 ? "" : "s"} created successfully and saved to Google Drive > freyaAdmin pce` });
     } catch (err) {
-      onFlash?.({ type: "error", message: err.message || "Upload failed." });
-    } finally {
-      if (uploadQueueRef.current.length === 0) {
-        setUploading(false);
+      if (err.isConflict) {
+        setConflictState({ fileBase64: base64, conflicts: err.conflicts });
+      } else {
+        onFlash?.({ type: "error", message: err.message || "Upload failed." });
       }
+    } finally {
+      setUploading(false);
     }
   }
 
-  async function handleUpload() {
-    if (!file || !validPreviewEntries.length) return;
-    setUploadResults(null);
-    setConflictState(null);
-    const fileBase64 = await toBase64(file);
-    const groups = new Map();
-    validPreviewEntries.forEach(({ code, suffix }) => {
-      if (!groups.has(suffix)) groups.set(suffix, []);
-      groups.get(suffix).push(code);
-    });
-
-    uploadQueueRef.current = Array.from(groups.entries()).map(([suffix, codes]) => ({ suffix, codes, overwrite: false }));
-    completedFilesRef.current = [];
-    processUploadQueue(fileBase64);
-  }
-
-  function handleResolveConflict(action) {
-    if (action === "cancel") {
+  function handleResolveConflict(resolutions) {
+    if (!resolutions) {
       setConflictState(null);
-      uploadQueueRef.current = [];
-      setUploading(false);
       return;
     }
-    const { task, conflicts, fileBase64 } = conflictState;
-    setConflictState(null);
-
-    if (action === "overwrite") {
-      task.overwrite = true;
-    } else if (action === "skip") {
-      const conflictingCodes = conflicts.map((f) => {
-        return task.suffix ? f.replace(`_${task.suffix}.pce`, "") : f.replace(`.pce`, "");
-      });
-      task.codes = task.codes.filter((c) => !conflictingCodes.includes(c));
-      if (task.codes.length === 0) {
-        uploadQueueRef.current.shift();
-      }
-    }
-    processUploadQueue(fileBase64);
+    handleUpload(resolutions);
   }
 
   function handleReset() {
@@ -656,7 +624,7 @@ export default function PceFilesWorkspace({ onFlash }) {
               )}
               <button
                 type="button"
-                onClick={handleUpload}
+                onClick={() => handleUpload()}
                 disabled={!canUpload}
                 className="self-start flex items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-xs font-semibold text-on-primary transition-all hover:opacity-90 active:scale-95 disabled:opacity-40"
               >

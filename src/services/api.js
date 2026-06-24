@@ -2645,11 +2645,11 @@ export async function fetchPceMasterData() {
   });
 }
 
-export async function uploadPceFiles({ fileBase64, sebanggoList, machineSuffix, overwrite }) {
+export async function uploadPceFiles({ fileBase64, sebanggoList, machineSuffix, entries, overwrite }) {
   const res = await fetch(`${BASE_URL}api/pce/upload`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ fileBase64, sebanggoList, machineSuffix, overwrite }),
+    body: JSON.stringify({ fileBase64, sebanggoList, machineSuffix, entries, overwrite }),
   });
   const data = await res.json();
   if (!res.ok) {
