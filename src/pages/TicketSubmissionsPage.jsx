@@ -1,6 +1,6 @@
 import { createPortal } from "react-dom";
 import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import DataTable from "../components/DataTable";
 import IconButton from "../components/IconButton";
 import PageHeader from "../components/PageHeader";
@@ -668,7 +668,9 @@ function TicketDetailModal({ actionBusy = false, onClose, onCloseTicket = null, 
         >
           <div className="flex items-start justify-between gap-4 border-b border-separator/40 px-6 py-5">
             <div className="min-w-0 flex-1">
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-outline">Submitted Ticket</p>
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-outline">
+                Submitted Ticket{ticket.ticketNo != null ? <span className="ml-2 text-primary">#{ticket.ticketNo}</span> : null}
+              </p>
               <h3 className="mt-1 truncate text-lg font-semibold text-on-surface">{ticket.fieldLabel || "Untitled ticket"}</h3>
               <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs text-outline">
                 {ticket.formName && <span>{ticket.formName}</span>}
@@ -761,7 +763,7 @@ function TicketDetailModal({ actionBusy = false, onClose, onCloseTicket = null, 
                 </article>
 
                 <article className="rounded-2xl border border-separator/40 bg-surface-container px-4 py-4">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Image Evidence</p>
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Defect Images</p>
                   <p className="mt-2 text-sm font-semibold text-on-surface">{formatTicketNumber(ticket.imageCount ?? ticket.imageURLs?.length ?? 0)} image{(ticket.imageCount ?? ticket.imageURLs?.length ?? 0) === 1 ? "" : "s"}</p>
                 </article>
               </div>
@@ -784,6 +786,9 @@ function TicketDetailModal({ actionBusy = false, onClose, onCloseTicket = null, 
                   <>
                     <p className="mt-2 text-sm font-semibold text-on-surface">{ticket.closedBy || ticket.closedByUsername || "Unknown user"}</p>
                     <p className="mt-1 text-xs text-outline">{formatTicketDateTime(ticket.closedAt)}</p>
+                    {ticket.fixReason && (
+                      <p className="mt-2 text-xs leading-5 text-on-surface/70">{ticket.fixReason}</p>
+                    )}
                   </>
                 ) : (
                   <p className="mt-2 text-sm font-semibold text-on-surface">No closure recorded</p>
@@ -807,42 +812,85 @@ function TicketDetailModal({ actionBusy = false, onClose, onCloseTicket = null, 
                   <div className="rounded-2xl border border-dashed border-outline-variant/25 bg-white/50 px-4 py-4 text-sm text-outline">
                     No ticket status changes recorded yet.
                   </div>
-                ) : historyEntries.map((entry, index) => (
-                  <article
-                    key={`${entry.timestamp || "ticket-history"}-${entry.action || index}-${entry.user || entry.username || "anonymous"}`}
-                    className="rounded-2xl border border-outline-variant/15 bg-white/70 px-4 py-4 dark:bg-surface"
-                  >
-                    <div className="flex flex-wrap items-start justify-between gap-3">
-                      <div>
-                        <p className="text-sm font-semibold text-on-surface">{formatTicketHistoryAction(entry)}</p>
-                        <p className="mt-1 text-xs text-outline">{entry.user || entry.username || "Unknown user"}</p>
-                      </div>
-                      <p className="text-xs font-medium text-outline">{formatTicketDateTime(entry.timestamp)}</p>
-                    </div>
+                ) : historyEntries.map((entry, index) => {
+                  const isClosure = normalizeTicketStatusValue(entry.toStatus) === "closed";
+                  const isReopened = normalizeTicketStatusValue(entry.toStatus) === "open" && normalizeTicketStatusValue(entry.fromStatus) === "closed";
+                  const entryNote = isClosure ? (entry.fixReason || entry.comment) : (entry.reason || entry.comment);
+                  const entryImages = Array.isArray(entry.imageURLs) ? entry.imageURLs.filter(Boolean) : [];
 
-                    {(entry.fromStatus || entry.toStatus) && (
-                      <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-outline">
-                        {entry.fromStatus ? (
-                          <span className="inline-flex items-center gap-1 rounded-full bg-surface-container px-2.5 py-1 font-semibold text-on-surface">
-                            From {formatTicketStatusLabel(entry.fromStatus)}
-                          </span>
-                        ) : null}
-                        {entry.toStatus ? (() => {
-                          const toStatusMeta = getTicketStatusMeta(entry.toStatus);
-                          return (
-                            <span className={joinClasses("inline-flex items-center gap-1 rounded-full px-2.5 py-1 font-semibold", toStatusMeta.badgeClassName)}>
-                              To {toStatusMeta.label}
+                  return (
+                    <article
+                      key={`${entry.timestamp || "ticket-history"}-${entry.action || index}-${entry.user || entry.username || "anonymous"}`}
+                      className="rounded-2xl border border-outline-variant/15 bg-white/70 px-4 py-4 dark:bg-surface"
+                    >
+                      <div className="flex flex-wrap items-start justify-between gap-3">
+                        <div>
+                          <p className="text-sm font-semibold text-on-surface">{formatTicketHistoryAction(entry)}</p>
+                          <p className="mt-1 text-xs text-outline">
+                            {entry.user || entry.username || "Unknown user"}
+                            {entry.username && entry.user && entry.username !== entry.user && (
+                              <span className="ml-1 text-outline/60">(@{entry.username})</span>
+                            )}
+                          </p>
+                        </div>
+                        <p className="text-xs font-medium text-outline">{formatTicketDateTime(entry.timestamp)}</p>
+                      </div>
+
+                      {(entry.fromStatus || entry.toStatus) && (
+                        <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-outline">
+                          {entry.fromStatus ? (
+                            <span className="inline-flex items-center gap-1 rounded-full bg-surface-container px-2.5 py-1 font-semibold text-on-surface">
+                              From {formatTicketStatusLabel(entry.fromStatus)}
                             </span>
-                          );
-                        })() : null}
-                      </div>
-                    )}
+                          ) : null}
+                          <span className="material-symbols-outlined text-outline/40" style={{ fontSize: 14 }}>arrow_forward</span>
+                          {entry.toStatus ? (() => {
+                            const toStatusMeta = getTicketStatusMeta(entry.toStatus);
+                            return (
+                              <span className={joinClasses("inline-flex items-center gap-1 rounded-full px-2.5 py-1 font-semibold", toStatusMeta.badgeClassName)}>
+                                {toStatusMeta.label}
+                              </span>
+                            );
+                          })() : null}
+                        </div>
+                      )}
 
-                    {entry.comment ? (
-                      <p className="mt-3 text-sm leading-6 text-on-surface">{entry.comment}</p>
-                    ) : null}
-                  </article>
-                ))}
+                      {entryNote && (
+                        <div className={`mt-3 rounded-xl px-3 py-2.5 text-sm leading-6 ${isClosure ? "bg-emerald-500/8 text-emerald-900 dark:text-emerald-200" : isReopened ? "bg-amber-500/8 text-amber-900 dark:text-amber-200" : "bg-surface-container text-on-surface"}`}>
+                          <p className="text-[10px] font-semibold uppercase tracking-[0.14em] mb-1 opacity-60">
+                            {isClosure ? "Fix Note" : "Reopen Reason"}
+                          </p>
+                          {entryNote}
+                        </div>
+                      )}
+
+                      {entryImages.length > 0 && (
+                        <div className="mt-3 grid grid-cols-3 gap-2">
+                          {entryImages.map((imageUrl, imgIndex) => (
+                            <button
+                              key={`${imageUrl}-${imgIndex}`}
+                              type="button"
+                              onClick={() => {
+                                const images = entryImages.map((url, i) => ({
+                                  url,
+                                  label: `${formatTicketHistoryAction(entry)} image ${i + 1}`,
+                                }));
+                                setPreviewImage({ activeIndex: imgIndex, images });
+                              }}
+                              className="group overflow-hidden rounded-xl border border-separator/40 bg-surface transition hover:border-primary/30"
+                            >
+                              <img
+                                src={imageUrl}
+                                alt={`Fix image ${imgIndex + 1}`}
+                                className="h-24 w-full object-cover transition duration-300 group-hover:scale-[1.02]"
+                              />
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </article>
+                  );
+                })}
               </div>
             </div>
 
@@ -850,7 +898,7 @@ function TicketDetailModal({ actionBusy = false, onClose, onCloseTicket = null, 
               <div className="mt-5">
                 <div className="mb-3 flex items-center justify-between gap-3">
                   <div>
-                    <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Attached Images</p>
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Defect Images</p>
                     <p className="mt-1 text-sm text-outline">Open any image for a larger preview.</p>
                   </div>
                 </div>
@@ -887,6 +935,7 @@ function TicketDetailModal({ actionBusy = false, onClose, onCloseTicket = null, 
 
 export default function TicketSubmissionsPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
   const { t } = useLanguage();
   const [authUser] = useState(() => readStoredAuthUser());
@@ -915,7 +964,7 @@ export default function TicketSubmissionsPage() {
   const [error, setError] = useState("");
   const [actionNotice, setActionNotice] = useState(null);
   const [refreshNonce, setRefreshNonce] = useState(0);
-  const [selectedTicket, setSelectedTicket] = useState(null);
+  const [selectedTicket, setSelectedTicket] = useState(() => location.state?.openTicket ?? null);
   const [statusAction, setStatusAction] = useState(null);
   const presetStorageKey = useMemo(() => buildTicketPresetStorageKey(authUser?.username), [authUser?.username]);
   const [presetName, setPresetName] = useState("");
@@ -925,6 +974,12 @@ export default function TicketSubmissionsPage() {
   const [shareButtonLabel, setShareButtonLabel] = useState("Copy Share Link");
 
   const deferredKeyword = useDeferredValue(filters.keyword);
+
+  useEffect(() => {
+    if (location.state?.openTicket) {
+      navigate(location.pathname + location.search, { replace: true, state: {} });
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     setSavedPresets(readTicketSubmissionPresets(presetStorageKey));
@@ -1075,6 +1130,17 @@ export default function TicketSubmissionsPage() {
   }, [appliedAdvancedFilters, dateRange.endDate, dateRange.startDate, deferredKeyword, filters.factory, filters.status, page, pageSize, refreshNonce, sort]);
 
   const columns = useMemo(() => ([
+    {
+      key: "ticketNo",
+      label: "Ticket No.",
+      width: 104,
+      renderCell: (row) => (
+        row.ticketNo != null
+          ? <span className="font-semibold text-on-surface">#{row.ticketNo}</span>
+          : <span className="text-outline">—</span>
+      ),
+      disableCellWrapper: true,
+    },
     {
       key: "createdAt",
       label: "Submitted At",

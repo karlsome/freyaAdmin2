@@ -1922,6 +1922,9 @@ function normalizeNgStatusHistoryEntry(entry) {
   return {
     action: String(entry.action ?? "").trim(),
     comment: String(entry.comment ?? entry.note ?? "").trim(),
+    fixReason: String(entry.fixReason ?? "").trim(),
+    reason: String(entry.reason ?? "").trim(),
+    imageURLs: Array.isArray(entry.imageURLs) ? entry.imageURLs.filter(Boolean) : [],
     fromStatus: String(entry.fromStatus ?? "").trim().toLowerCase(),
     timestamp: normalizeMongoDate(entry.timestamp ?? entry.createdAt ?? entry.updatedAt),
     toStatus: String(entry.toStatus ?? "").trim().toLowerCase(),
@@ -1959,6 +1962,8 @@ function normalizeNgReport(report) {
     closedAt: normalizeMongoDate(report.closedAt),
     closedBy: report.closedBy ?? "",
     closedByUsername: report.closedByUsername ?? "",
+    fixReason: report.fixReason ?? "",
+    ticketNo: report.ticketNo ?? null,
     status: report.status ?? "open",
     statusHistory: Array.isArray(report.statusHistory)
       ? report.statusHistory.map(normalizeNgStatusHistoryEntry).filter(Boolean)
@@ -2030,6 +2035,7 @@ function buildNgTicketNormalizationStages() {
         statusHistory: { $ifNull: ["$statusHistory", []] },
         unit: buildMongoStringExpression(["$unit"]),
         status: { $toLower: buildMongoStringExpression(["$status"], "open") },
+        ticketNo: { $ifNull: ["$ticketNo", null] },
       },
     },
     {

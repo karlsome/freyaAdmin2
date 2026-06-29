@@ -541,6 +541,20 @@ function getTicketStatusMeta(status) {
   };
 }
 
+function formatTicketHistoryAction(entry = {}) {
+  if (entry.action) return entry.action;
+  const from = String(entry.fromStatus ?? "").trim().toLowerCase();
+  const to = String(entry.toStatus ?? "").trim().toLowerCase();
+  if (to === "closed") return "Ticket Closed";
+  if (from === "closed" && to === "open") return "Ticket Reopened";
+  if (to === "open") return "Ticket Opened";
+  return "Status Updated";
+}
+
+function sortTicketHistoryEntries(entries = []) {
+  return [...entries].sort((a, b) => new Date(b?.timestamp ?? 0) - new Date(a?.timestamp ?? 0));
+}
+
 function ScheduleStackCell({ entries, onSelect }) {
   return (
     <div className="mx-auto flex w-14 flex-col gap-1">
@@ -697,6 +711,7 @@ function SubmissionPickerModal({ dateLabel, factory, machineName, onClose, onSel
 }
 
 function RecordDetailModal({ defaultTab = "submission", form, initialTicketFocusHint = null, onBack = null, onClose, record }) {
+  const navigate = useNavigate();
   const isMissedRecord = record?.status === "missed";
   const isWaitingRecord = record?.status === "waiting";
   const isReferenceRecord = isMissedRecord || isWaitingRecord;
@@ -706,6 +721,7 @@ function RecordDetailModal({ defaultTab = "submission", form, initialTicketFocus
   const [ticketsLoading, setTicketsLoading] = useState(false);
   const [previewImage, setPreviewImage] = useState(null);
   const [ticketFocusHint, setTicketFocusHint] = useState(null);
+  const [expandedHistoryKeys, setExpandedHistoryKeys] = useState(new Set());
   const ticketRefs = useRef(new Map());
 
   const recordAnswers = Array.isArray(record?.answers)
@@ -881,6 +897,24 @@ function RecordDetailModal({ defaultTab = "submission", form, initialTicketFocus
       subtitle: ticket?.factory || ticket?.formName || undefined,
       activeIndex: index,
       images: previewImages,
+    });
+  }
+
+  function openEntryImagePreview(entry, index = 0) {
+    const entryImages = Array.isArray(entry?.imageURLs)
+      ? entry.imageURLs.filter(Boolean).map((url, i) => ({
+        url,
+        label: `${formatTicketHistoryAction(entry)} image ${i + 1}`,
+      }))
+      : [];
+
+    if (!entryImages[index]?.url) return;
+
+    setPreviewImage({
+      eyebrow: "Fix Photos",
+      displayName: formatTicketHistoryAction(entry),
+      activeIndex: index,
+      images: entryImages,
     });
   }
 
@@ -1185,49 +1219,208 @@ function RecordDetailModal({ defaultTab = "submission", form, initialTicketFocus
                           )}
                         </div>
                       </div>
-                      <span className={`rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] ${statusMeta.badgeClassName}`}>
-                        {statusMeta.label}
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <span className={`rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] ${statusMeta.badgeClassName}`}>
+                          {statusMeta.label}
+                        </span>
+                        <button
+                          type="button"
+                          title="Open in Submitted Tickets"
+                          onClick={() => navigate("/maintenance/submissions/tickets", { state: { openTicket: ticket } })}
+                          className="inline-flex items-center gap-1 rounded-lg border border-separator/40 bg-white px-2 py-1 text-[10px] font-semibold text-outline transition hover:border-primary/30 hover:text-primary"
+                        >
+                          <span className="material-symbols-outlined" style={{ fontSize: 12 }}>arrow_outward</span>
+                          View
+                        </button>
+                      </div>
                     </div>
 
+                    {/* NG Reason */}
                     <div className="mt-3 rounded-2xl bg-surface px-4 py-3">
                       <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">NG Reason</p>
                       <p className="mt-1 text-sm leading-6 text-on-surface">{ticket.reason || "No reason provided."}</p>
-                    </div>
-
-                    <div className="mt-3 flex flex-wrap gap-3 text-xs text-outline">
-                      <span className="inline-flex items-center gap-1">
-                        <span className="material-symbols-outlined" style={{ fontSize: 14 }}>schedule</span>
-                        {ticket.createdAt
-                          ? new Date(ticket.createdAt).toLocaleString("ja-JP", { year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })
-                          : "—"}
-                      </span>
-                      {ticket.completedBy && (
+                      <div className="mt-2 flex flex-wrap gap-3 text-xs text-outline">
                         <span className="inline-flex items-center gap-1">
-                          <span className="material-symbols-outlined" style={{ fontSize: 14 }}>person</span>
-                          {ticket.completedBy}
+                          <span className="material-symbols-outlined" style={{ fontSize: 14 }}>schedule</span>
+                          {ticket.createdAt
+                            ? new Date(ticket.createdAt).toLocaleString("ja-JP", { year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })
+                            : "—"}
                         </span>
+                        {ticket.completedBy && (
+                          <span className="inline-flex items-center gap-1">
+                            <span className="material-symbols-outlined" style={{ fontSize: 14 }}>person</span>
+                            {ticket.completedBy}
+                          </span>
+                        )}
+                      </div>
+                      {ticket.imageURLs.length > 0 && (
+                        <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
+                          {ticket.imageURLs.map((imageUrl, imageIndex) => (
+                            <button
+                              key={`${imageUrl}-${imageIndex}`}
+                              type="button"
+                              onClick={() => openTicketImagePreview(ticket, imageIndex)}
+                              className="group overflow-hidden rounded-xl border border-separator/40 bg-white transition hover:border-primary/30"
+                            >
+                              <img
+                                src={imageUrl}
+                                alt={ticket.fieldLabel || "ticket"}
+                                className="h-24 w-full object-cover transition duration-300 group-hover:scale-[1.02]"
+                              />
+                            </button>
+                          ))}
+                        </div>
                       )}
                     </div>
 
-                    {ticket.imageURLs.length > 0 && (
-                      <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3">
-                        {ticket.imageURLs.map((imageUrl, imageIndex) => (
-                          <button
-                            key={`${imageUrl}-${imageIndex}`}
-                            type="button"
-                            onClick={() => openTicketImagePreview(ticket, imageIndex)}
-                            className="group overflow-hidden rounded-xl border border-separator/40 bg-surface transition hover:border-primary/30"
-                          >
-                            <img
-                              src={imageUrl}
-                              alt={ticket.fieldLabel || "ticket"}
-                              className="h-28 w-full object-cover transition duration-300 group-hover:scale-[1.02]"
-                            />
-                          </button>
-                        ))}
+                    {/* Latest Fix — shown only when ticket is closed */}
+                    {normalizeTicketStatusValue(ticket.status) === "closed" && ticket.closedAt && (
+                      <div className="mt-3 rounded-2xl border border-emerald-500/20 bg-emerald-500/8 px-4 py-3">
+                        <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-emerald-700 dark:text-emerald-400">Latest Fix</p>
+                        <p className="mt-1 text-sm leading-6 text-on-surface">{ticket.fixReason || "No fix note provided."}</p>
+                        <div className="mt-2 flex flex-wrap gap-3 text-xs text-outline">
+                          <span className="inline-flex items-center gap-1">
+                            <span className="material-symbols-outlined text-emerald-600" style={{ fontSize: 14 }}>task_alt</span>
+                            {new Date(ticket.closedAt).toLocaleString("ja-JP", { year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
+                          </span>
+                          {(ticket.closedBy || ticket.closedByUsername) && (
+                            <span className="inline-flex items-center gap-1">
+                              <span className="material-symbols-outlined text-emerald-600" style={{ fontSize: 14 }}>person</span>
+                              {ticket.closedBy || ticket.closedByUsername}
+                              {ticket.closedByUsername && ticket.closedBy && ticket.closedByUsername !== ticket.closedBy && (
+                                <span className="text-outline/60">(@{ticket.closedByUsername})</span>
+                              )}
+                            </span>
+                          )}
+                        </div>
+                        {(() => {
+                          const lastClose = sortTicketHistoryEntries(
+                            Array.isArray(ticket.statusHistory) ? ticket.statusHistory : []
+                          ).find((h) => normalizeTicketStatusValue(h.toStatus) === "closed");
+                          const fixImages = Array.isArray(lastClose?.imageURLs) ? lastClose.imageURLs.filter(Boolean) : [];
+                          return fixImages.length > 0 ? (
+                            <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
+                              {fixImages.map((imageUrl, imageIndex) => (
+                                <button
+                                  key={`${imageUrl}-${imageIndex}`}
+                                  type="button"
+                                  onClick={() => openEntryImagePreview(lastClose, imageIndex)}
+                                  className="group overflow-hidden rounded-xl border border-emerald-500/20 bg-white transition hover:border-emerald-500/40"
+                                >
+                                  <img
+                                    src={imageUrl}
+                                    alt={`Fix image ${imageIndex + 1}`}
+                                    className="h-24 w-full object-cover transition duration-300 group-hover:scale-[1.02]"
+                                  />
+                                </button>
+                              ))}
+                            </div>
+                          ) : null;
+                        })()}
                       </div>
                     )}
+
+                    {/* Status History — collapsible */}
+                    {Array.isArray(ticket.statusHistory) && ticket.statusHistory.length > 0 && (() => {
+                      const historyEntries = sortTicketHistoryEntries(ticket.statusHistory);
+                      const isExpanded = expandedHistoryKeys.has(ticketKey);
+                      return (
+                        <div className="mt-3 rounded-2xl border border-separator/30 bg-surface-container/60 px-4 py-3">
+                          <button
+                            type="button"
+                            onClick={() => setExpandedHistoryKeys((prev) => {
+                              const next = new Set(prev);
+                              if (next.has(ticketKey)) next.delete(ticketKey);
+                              else next.add(ticketKey);
+                              return next;
+                            })}
+                            className="flex w-full items-center justify-between gap-3 text-left"
+                          >
+                            <div className="flex items-center gap-2">
+                              <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Status History</span>
+                              <span className="inline-flex items-center rounded-full bg-outline/10 px-2 py-0.5 text-[10px] font-semibold text-outline">
+                                {historyEntries.length}
+                              </span>
+                            </div>
+                            <span className="material-symbols-outlined text-outline transition-transform duration-200" style={{ fontSize: 16, transform: isExpanded ? "rotate(180deg)" : "rotate(0deg)" }}>
+                              expand_more
+                            </span>
+                          </button>
+
+                          {isExpanded && (
+                            <div className="mt-3 space-y-2">
+                              {historyEntries.map((entry, entryIndex) => {
+                                const isClosure = normalizeTicketStatusValue(entry.toStatus) === "closed";
+                                const isReopened = normalizeTicketStatusValue(entry.toStatus) === "open" && normalizeTicketStatusValue(entry.fromStatus) === "closed";
+                                const entryNote = isClosure ? (entry.fixReason || entry.comment) : (entry.reason || entry.comment);
+                                const entryImages = Array.isArray(entry.imageURLs) ? entry.imageURLs.filter(Boolean) : [];
+                                const toStatusMeta = getTicketStatusMeta(entry.toStatus);
+                                return (
+                                  <div
+                                    key={`${entry.timestamp || "h"}-${entryIndex}`}
+                                    className="rounded-xl border border-outline-variant/15 bg-white/70 px-3 py-3 dark:bg-surface"
+                                  >
+                                    <div className="flex flex-wrap items-start justify-between gap-2">
+                                      <div>
+                                        <p className="text-xs font-semibold text-on-surface">{formatTicketHistoryAction(entry)}</p>
+                                        <p className="mt-0.5 text-[11px] text-outline">
+                                          {entry.user || entry.username || "Unknown user"}
+                                          {entry.username && entry.user && entry.username !== entry.user && (
+                                            <span className="ml-1 text-outline/60">(@{entry.username})</span>
+                                          )}
+                                        </p>
+                                      </div>
+                                      <p className="text-[11px] font-medium text-outline">
+                                        {entry.timestamp ? new Date(entry.timestamp).toLocaleString("ja-JP", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }) : "—"}
+                                      </p>
+                                    </div>
+                                    {(entry.fromStatus || entry.toStatus) && (
+                                      <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[11px]">
+                                        {entry.fromStatus && (
+                                          <span className="inline-flex rounded-full bg-surface-container px-2 py-0.5 font-semibold text-on-surface">
+                                            {formatTicketStatusLabel(entry.fromStatus)}
+                                          </span>
+                                        )}
+                                        <span className="material-symbols-outlined text-outline/40" style={{ fontSize: 12 }}>arrow_forward</span>
+                                        {entry.toStatus && (
+                                          <span className={`inline-flex rounded-full px-2 py-0.5 font-semibold ${toStatusMeta.badgeClassName}`}>
+                                            {toStatusMeta.label}
+                                          </span>
+                                        )}
+                                      </div>
+                                    )}
+                                    {entryNote && (
+                                      <div className={`mt-2 rounded-lg px-3 py-2 text-xs leading-5 ${isClosure ? "bg-emerald-500/8 text-emerald-900 dark:text-emerald-200" : isReopened ? "bg-amber-500/8 text-amber-900 dark:text-amber-200" : "bg-surface-container text-on-surface"}`}>
+                                        <span className="font-semibold opacity-60">{isClosure ? "Fix: " : "Reason: "}</span>
+                                        {entryNote}
+                                      </div>
+                                    )}
+                                    {entryImages.length > 0 && (
+                                      <div className="mt-2 grid grid-cols-3 gap-1.5">
+                                        {entryImages.map((imageUrl, imgIndex) => (
+                                          <button
+                                            key={`${imageUrl}-${imgIndex}`}
+                                            type="button"
+                                            onClick={() => openEntryImagePreview(entry, imgIndex)}
+                                            className="group overflow-hidden rounded-lg border border-separator/40 bg-surface transition hover:border-primary/30"
+                                          >
+                                            <img
+                                              src={imageUrl}
+                                              alt={`Fix image ${imgIndex + 1}`}
+                                              className="h-20 w-full object-cover transition duration-300 group-hover:scale-[1.02]"
+                                            />
+                                          </button>
+                                        ))}
+                                      </div>
+                                    )}
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })()}
                   </article>
                 );
               })}
