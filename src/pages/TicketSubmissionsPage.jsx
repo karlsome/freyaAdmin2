@@ -1,6 +1,6 @@
 import { createPortal } from "react-dom";
 import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import DataTable from "../components/DataTable";
 import IconButton from "../components/IconButton";
 import PageHeader from "../components/PageHeader";
@@ -933,6 +933,7 @@ function TicketDetailModal({ actionBusy = false, onClose, onCloseTicket = null, 
 
 export default function TicketSubmissionsPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
   const { t } = useLanguage();
   const [authUser] = useState(() => readStoredAuthUser());
@@ -961,7 +962,7 @@ export default function TicketSubmissionsPage() {
   const [error, setError] = useState("");
   const [actionNotice, setActionNotice] = useState(null);
   const [refreshNonce, setRefreshNonce] = useState(0);
-  const [selectedTicket, setSelectedTicket] = useState(null);
+  const [selectedTicket, setSelectedTicket] = useState(() => location.state?.openTicket ?? null);
   const [statusAction, setStatusAction] = useState(null);
   const presetStorageKey = useMemo(() => buildTicketPresetStorageKey(authUser?.username), [authUser?.username]);
   const [presetName, setPresetName] = useState("");
@@ -971,6 +972,12 @@ export default function TicketSubmissionsPage() {
   const [shareButtonLabel, setShareButtonLabel] = useState("Copy Share Link");
 
   const deferredKeyword = useDeferredValue(filters.keyword);
+
+  useEffect(() => {
+    if (location.state?.openTicket) {
+      navigate(location.pathname + location.search, { replace: true, state: {} });
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     setSavedPresets(readTicketSubmissionPresets(presetStorageKey));

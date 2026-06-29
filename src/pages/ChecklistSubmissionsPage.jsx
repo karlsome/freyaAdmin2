@@ -711,6 +711,7 @@ function SubmissionPickerModal({ dateLabel, factory, machineName, onClose, onSel
 }
 
 function RecordDetailModal({ defaultTab = "submission", form, initialTicketFocusHint = null, onBack = null, onClose, record }) {
+  const navigate = useNavigate();
   const isMissedRecord = record?.status === "missed";
   const isWaitingRecord = record?.status === "waiting";
   const isReferenceRecord = isMissedRecord || isWaitingRecord;
@@ -1218,9 +1219,20 @@ function RecordDetailModal({ defaultTab = "submission", form, initialTicketFocus
                           )}
                         </div>
                       </div>
-                      <span className={`rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] ${statusMeta.badgeClassName}`}>
-                        {statusMeta.label}
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <span className={`rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] ${statusMeta.badgeClassName}`}>
+                          {statusMeta.label}
+                        </span>
+                        <button
+                          type="button"
+                          title="Open in Submitted Tickets"
+                          onClick={() => navigate("/maintenance/submissions/tickets", { state: { openTicket: ticket } })}
+                          className="inline-flex items-center gap-1 rounded-lg border border-separator/40 bg-white px-2 py-1 text-[10px] font-semibold text-outline transition hover:border-primary/30 hover:text-primary"
+                        >
+                          <span className="material-symbols-outlined" style={{ fontSize: 12 }}>arrow_outward</span>
+                          View
+                        </button>
+                      </div>
                     </div>
 
                     {/* NG Reason */}
