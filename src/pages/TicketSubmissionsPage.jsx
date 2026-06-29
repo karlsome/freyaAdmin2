@@ -668,7 +668,9 @@ function TicketDetailModal({ actionBusy = false, onClose, onCloseTicket = null, 
         >
           <div className="flex items-start justify-between gap-4 border-b border-separator/40 px-6 py-5">
             <div className="min-w-0 flex-1">
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-outline">Submitted Ticket</p>
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-outline">
+                Submitted Ticket{ticket.ticketNo != null ? <span className="ml-2 text-primary">#{ticket.ticketNo}</span> : null}
+              </p>
               <h3 className="mt-1 truncate text-lg font-semibold text-on-surface">{ticket.fieldLabel || "Untitled ticket"}</h3>
               <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs text-outline">
                 {ticket.formName && <span>{ticket.formName}</span>}
@@ -1128,6 +1130,17 @@ export default function TicketSubmissionsPage() {
   }, [appliedAdvancedFilters, dateRange.endDate, dateRange.startDate, deferredKeyword, filters.factory, filters.status, page, pageSize, refreshNonce, sort]);
 
   const columns = useMemo(() => ([
+    {
+      key: "ticketNo",
+      label: "Ticket No.",
+      width: 104,
+      renderCell: (row) => (
+        row.ticketNo != null
+          ? <span className="font-semibold text-on-surface">#{row.ticketNo}</span>
+          : <span className="text-outline">—</span>
+      ),
+      disableCellWrapper: true,
+    },
     {
       key: "createdAt",
       label: "Submitted At",

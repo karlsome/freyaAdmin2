@@ -1963,6 +1963,7 @@ function normalizeNgReport(report) {
     closedBy: report.closedBy ?? "",
     closedByUsername: report.closedByUsername ?? "",
     fixReason: report.fixReason ?? "",
+    ticketNo: report.ticketNo ?? null,
     status: report.status ?? "open",
     statusHistory: Array.isArray(report.statusHistory)
       ? report.statusHistory.map(normalizeNgStatusHistoryEntry).filter(Boolean)
@@ -2034,6 +2035,7 @@ function buildNgTicketNormalizationStages() {
         statusHistory: { $ifNull: ["$statusHistory", []] },
         unit: buildMongoStringExpression(["$unit"]),
         status: { $toLower: buildMongoStringExpression(["$status"], "open") },
+        ticketNo: { $ifNull: ["$ticketNo", null] },
       },
     },
     {
