@@ -761,7 +761,7 @@ function TicketDetailModal({ actionBusy = false, onClose, onCloseTicket = null, 
                 </article>
 
                 <article className="rounded-2xl border border-separator/40 bg-surface-container px-4 py-4">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Image Evidence</p>
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Defect Images</p>
                   <p className="mt-2 text-sm font-semibold text-on-surface">{formatTicketNumber(ticket.imageCount ?? ticket.imageURLs?.length ?? 0)} image{(ticket.imageCount ?? ticket.imageURLs?.length ?? 0) === 1 ? "" : "s"}</p>
                 </article>
               </div>
@@ -784,6 +784,9 @@ function TicketDetailModal({ actionBusy = false, onClose, onCloseTicket = null, 
                   <>
                     <p className="mt-2 text-sm font-semibold text-on-surface">{ticket.closedBy || ticket.closedByUsername || "Unknown user"}</p>
                     <p className="mt-1 text-xs text-outline">{formatTicketDateTime(ticket.closedAt)}</p>
+                    {ticket.fixReason && (
+                      <p className="mt-2 text-xs leading-5 text-on-surface/70">{ticket.fixReason}</p>
+                    )}
                   </>
                 ) : (
                   <p className="mt-2 text-sm font-semibold text-on-surface">No closure recorded</p>
@@ -807,42 +810,85 @@ function TicketDetailModal({ actionBusy = false, onClose, onCloseTicket = null, 
                   <div className="rounded-2xl border border-dashed border-outline-variant/25 bg-white/50 px-4 py-4 text-sm text-outline">
                     No ticket status changes recorded yet.
                   </div>
-                ) : historyEntries.map((entry, index) => (
-                  <article
-                    key={`${entry.timestamp || "ticket-history"}-${entry.action || index}-${entry.user || entry.username || "anonymous"}`}
-                    className="rounded-2xl border border-outline-variant/15 bg-white/70 px-4 py-4 dark:bg-surface"
-                  >
-                    <div className="flex flex-wrap items-start justify-between gap-3">
-                      <div>
-                        <p className="text-sm font-semibold text-on-surface">{formatTicketHistoryAction(entry)}</p>
-                        <p className="mt-1 text-xs text-outline">{entry.user || entry.username || "Unknown user"}</p>
-                      </div>
-                      <p className="text-xs font-medium text-outline">{formatTicketDateTime(entry.timestamp)}</p>
-                    </div>
+                ) : historyEntries.map((entry, index) => {
+                  const isClosure = normalizeTicketStatusValue(entry.toStatus) === "closed";
+                  const isReopened = normalizeTicketStatusValue(entry.toStatus) === "open" && normalizeTicketStatusValue(entry.fromStatus) === "closed";
+                  const entryNote = isClosure ? (entry.fixReason || entry.comment) : (entry.reason || entry.comment);
+                  const entryImages = Array.isArray(entry.imageURLs) ? entry.imageURLs.filter(Boolean) : [];
 
-                    {(entry.fromStatus || entry.toStatus) && (
-                      <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-outline">
-                        {entry.fromStatus ? (
-                          <span className="inline-flex items-center gap-1 rounded-full bg-surface-container px-2.5 py-1 font-semibold text-on-surface">
-                            From {formatTicketStatusLabel(entry.fromStatus)}
-                          </span>
-                        ) : null}
-                        {entry.toStatus ? (() => {
-                          const toStatusMeta = getTicketStatusMeta(entry.toStatus);
-                          return (
-                            <span className={joinClasses("inline-flex items-center gap-1 rounded-full px-2.5 py-1 font-semibold", toStatusMeta.badgeClassName)}>
-                              To {toStatusMeta.label}
+                  return (
+                    <article
+                      key={`${entry.timestamp || "ticket-history"}-${entry.action || index}-${entry.user || entry.username || "anonymous"}`}
+                      className="rounded-2xl border border-outline-variant/15 bg-white/70 px-4 py-4 dark:bg-surface"
+                    >
+                      <div className="flex flex-wrap items-start justify-between gap-3">
+                        <div>
+                          <p className="text-sm font-semibold text-on-surface">{formatTicketHistoryAction(entry)}</p>
+                          <p className="mt-1 text-xs text-outline">
+                            {entry.user || entry.username || "Unknown user"}
+                            {entry.username && entry.user && entry.username !== entry.user && (
+                              <span className="ml-1 text-outline/60">(@{entry.username})</span>
+                            )}
+                          </p>
+                        </div>
+                        <p className="text-xs font-medium text-outline">{formatTicketDateTime(entry.timestamp)}</p>
+                      </div>
+
+                      {(entry.fromStatus || entry.toStatus) && (
+                        <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-outline">
+                          {entry.fromStatus ? (
+                            <span className="inline-flex items-center gap-1 rounded-full bg-surface-container px-2.5 py-1 font-semibold text-on-surface">
+                              From {formatTicketStatusLabel(entry.fromStatus)}
                             </span>
-                          );
-                        })() : null}
-                      </div>
-                    )}
+                          ) : null}
+                          <span className="material-symbols-outlined text-outline/40" style={{ fontSize: 14 }}>arrow_forward</span>
+                          {entry.toStatus ? (() => {
+                            const toStatusMeta = getTicketStatusMeta(entry.toStatus);
+                            return (
+                              <span className={joinClasses("inline-flex items-center gap-1 rounded-full px-2.5 py-1 font-semibold", toStatusMeta.badgeClassName)}>
+                                {toStatusMeta.label}
+                              </span>
+                            );
+                          })() : null}
+                        </div>
+                      )}
 
-                    {entry.comment ? (
-                      <p className="mt-3 text-sm leading-6 text-on-surface">{entry.comment}</p>
-                    ) : null}
-                  </article>
-                ))}
+                      {entryNote && (
+                        <div className={`mt-3 rounded-xl px-3 py-2.5 text-sm leading-6 ${isClosure ? "bg-emerald-500/8 text-emerald-900 dark:text-emerald-200" : isReopened ? "bg-amber-500/8 text-amber-900 dark:text-amber-200" : "bg-surface-container text-on-surface"}`}>
+                          <p className="text-[10px] font-semibold uppercase tracking-[0.14em] mb-1 opacity-60">
+                            {isClosure ? "Fix Note" : "Reopen Reason"}
+                          </p>
+                          {entryNote}
+                        </div>
+                      )}
+
+                      {entryImages.length > 0 && (
+                        <div className="mt-3 grid grid-cols-3 gap-2">
+                          {entryImages.map((imageUrl, imgIndex) => (
+                            <button
+                              key={`${imageUrl}-${imgIndex}`}
+                              type="button"
+                              onClick={() => {
+                                const images = entryImages.map((url, i) => ({
+                                  url,
+                                  label: `${formatTicketHistoryAction(entry)} image ${i + 1}`,
+                                }));
+                                setPreviewImage({ activeIndex: imgIndex, images });
+                              }}
+                              className="group overflow-hidden rounded-xl border border-separator/40 bg-surface transition hover:border-primary/30"
+                            >
+                              <img
+                                src={imageUrl}
+                                alt={`Fix image ${imgIndex + 1}`}
+                                className="h-24 w-full object-cover transition duration-300 group-hover:scale-[1.02]"
+                              />
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </article>
+                  );
+                })}
               </div>
             </div>
 
@@ -850,7 +896,7 @@ function TicketDetailModal({ actionBusy = false, onClose, onCloseTicket = null, 
               <div className="mt-5">
                 <div className="mb-3 flex items-center justify-between gap-3">
                   <div>
-                    <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Attached Images</p>
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Defect Images</p>
                     <p className="mt-1 text-sm text-outline">Open any image for a larger preview.</p>
                   </div>
                 </div>
