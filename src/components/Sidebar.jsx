@@ -4,7 +4,8 @@ import IconButton from "./IconButton";
 
 const navItems = [
   { icon: "dashboard",                labelKey: "dashboard",           page: "dashboard" },
-  { icon: "factory",                   labelKey: "factories",           page: "factories",
+  { icon: "domain",                   labelKey: "firstFactory",        page: "firstFactory" },
+  { icon: "factory",                  labelKey: "factories",           page: "factories",
     children: [
       { icon: "overview",             labelKey: "overview",            page: "factory/overview" },
       { icon: "sensors",              labelKey: "sensors",             page: "sensors" },

@@ -2,6 +2,7 @@ const translations = {
   en: {
     // Navigation
     dashboard: "Dashboard",
+    firstFactory: "First Factory",
     factories: "Factories",
     planner: "Production Planning",
     processes: "Processes",
@@ -170,6 +171,7 @@ const translations = {
   ja: {
     // Navigation
     dashboard: "ダッシュボード",
+    firstFactory: "第一工場",
     factories: "工場一覧",
     planner: "生産計画",
     processes: "工程",
