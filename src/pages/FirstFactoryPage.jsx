@@ -98,7 +98,7 @@ export default function FirstFactoryPage() {
   const days = Array.from({ length: 31 }, (_, i) => i + 1);
 
   return (
-    <div className="p-6 pt-24 pb-24">
+    <div className="p-6 pt-24 pb-24 overflow-y-auto h-screen">
       <div className="mb-6 flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-on-surface">{t('firstFactory')}</h1>
