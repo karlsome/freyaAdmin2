@@ -428,7 +428,22 @@ export default function FirstFactoryPage() {
             >
               <h3 className="mb-4 text-lg font-bold text-primary flex items-center justify-between">
                 Priority Order
-                <span className="text-sm font-normal text-primary/70">{scheduledItems.length} scheduled</span>
+                <div className="flex items-center gap-3">
+                  {scheduledItems.length > 0 && (
+                    <button 
+                      onClick={() => {
+                        if (window.confirm("Are you sure you want to reset the schedule? All items will be moved back to the pool.")) {
+                          setScheduleOrder([]);
+                        }
+                      }}
+                      className="flex items-center gap-1 rounded-lg border border-red-500/30 bg-red-500/10 px-2 py-1 text-xs font-semibold text-red-600 transition-colors hover:bg-red-500/20"
+                    >
+                      <span className="material-symbols-outlined" style={{ fontSize: 16 }}>restart_alt</span>
+                      Reset
+                    </button>
+                  )}
+                  <span className="text-sm font-normal text-primary/70">{scheduledItems.length} scheduled</span>
+                </div>
               </h3>
               <div className="flex flex-col gap-2 flex-1 overflow-y-auto">
                 {scheduledItems.length === 0 ? (
