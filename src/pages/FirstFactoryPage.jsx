@@ -166,9 +166,9 @@ export default function FirstFactoryPage() {
   const [showNoAdhesive, setShowNoAdhesive] = useState(false);
   
   const poolItems = useMemo(() => {
-    const scheduledHinbans = new Set(scheduleOrder.map(s => s.hinban).filter(Boolean));
+    const scheduledIds = new Set(scheduleOrder.map(s => s.poolItemId).filter(Boolean));
     return dailyProductionItems.filter(item => {
-      if (scheduledHinbans.has(item.hinban)) return false;
+      if (scheduledIds.has(item.id)) return false;
       if (poolSearch && !item.hinban.toLowerCase().includes(poolSearch.toLowerCase())) return false;
       
       if (!showNoAdhesive) {
@@ -262,7 +262,7 @@ export default function FirstFactoryPage() {
             duration: 15
           });
         } else if (dragData.type === 'pool-hinban') {
-          const found = data.find(i => i.hinban === dragData.hinban);
+          const found = data.find(i => i.id === dragData.id);
           if (found) {
              const qty = found.production[selectedDay - 1] || 0;
              const qtyCm = qty * 100;
@@ -281,6 +281,7 @@ export default function FirstFactoryPage() {
                    id: Date.now() + String(i) + Math.random().toString(),
                    type: 'hinban',
                    hinban: dragData.hinban,
+                   poolItemId: dragData.id,
                    rollIndex: i + 1,
                    totalRolls: numRolls,
                    meters: lengthCm / 100,
@@ -314,15 +315,19 @@ export default function FirstFactoryPage() {
           duration: 15
         });
       } else if (dragData.type === 'pool-hinban') {
-        const found = data.find(i => i.hinban === dragData.hinban);
+        const found = data.find(i => i.id === dragData.id);
+        console.log("handleAddToSchedule for:", dragData.hinban, "found:", !!found);
         if (found) {
            const qty = found.production[selectedDay - 1] || 0;
            const qtyCm = qty * 100;
            const packCountCm = found.materialInfo?.packCount || 4000;
            const workTime = found.materialInfo?.workTime || 0.075;
            
+           console.log("Metrics:", { qty, qtyCm, packCountCm, workTime });
+           
            if (qtyCm > 0) {
              const numRolls = Math.ceil(qtyCm / packCountCm);
+             console.log("numRolls:", numRolls);
              for (let i = 0; i < numRolls; i++) {
                let lengthCm = packCountCm;
                if (i === numRolls - 1 && (qtyCm % packCountCm !== 0)) {
@@ -333,12 +338,16 @@ export default function FirstFactoryPage() {
                  id: Date.now() + String(i) + Math.random().toString(),
                  type: 'hinban',
                  hinban: dragData.hinban,
+                 poolItemId: dragData.id,
                  rollIndex: i + 1,
                  totalRolls: numRolls,
                  meters: lengthCm / 100,
                  duration: Math.round(durationMins)
                });
              }
+             console.log("itemsToInsert count:", itemsToInsert.length);
+           } else {
+             console.log("qtyCm is 0 or less, not adding.");
            }
         }
       }
@@ -609,7 +618,7 @@ export default function FirstFactoryPage() {
                     <div 
                       key={item.id}
                       draggable
-                      onDragStart={(e) => onDragStartSchedule(e, { type: 'pool-hinban', hinban: item.hinban }, 'pool')}
+                      onDragStart={(e) => onDragStartSchedule(e, { type: 'pool-hinban', hinban: item.hinban, id: item.id }, 'pool')}
                       className={`cursor-grab active:cursor-grabbing rounded-xl border p-3 flex items-center gap-3 transition-colors ${
                         isRawMaterial 
                           ? 'border-amber-500/30 bg-amber-500/5 hover:border-amber-500/60' 
@@ -634,7 +643,7 @@ export default function FirstFactoryPage() {
                         </div>
                       </div>
                       <button 
-                        onClick={() => handleAddToSchedule({ type: 'pool-hinban', hinban: item.hinban })}
+                        onClick={() => handleAddToSchedule({ type: 'pool-hinban', hinban: item.hinban, id: item.id })}
                         className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full hover:bg-primary/10 text-primary transition-colors"
                       >
                         <span className="material-symbols-outlined" style={{fontSize: 20}}>arrow_forward</span>
