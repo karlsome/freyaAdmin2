@@ -601,16 +601,30 @@ export default function FirstFactoryPage() {
                     const workTime = item.materialInfo?.workTime || 0.075;
                     const numRolls = qtyCm > 0 ? Math.ceil(qtyCm / packCountCm) : 0;
                     const durationMins = Math.round((workTime * qtyCm) / 60);
+                    const segments = item.materialInfo?.rawMaster?.['品番構造']?.segments || [];
+                    const adhesiveSegment = segments.find(s => s.segment === '粘着コード');
+                    const isRawMaterial = adhesiveSegment && adhesiveSegment.name === '粘着無し';
 
                     return (
                     <div 
                       key={item.id}
                       draggable
                       onDragStart={(e) => onDragStartSchedule(e, { type: 'pool-hinban', hinban: item.hinban }, 'pool')}
-                      className="cursor-grab active:cursor-grabbing rounded-xl border border-outline-variant/30 bg-background p-3 flex items-center gap-3 hover:border-primary/50 transition-colors"
+                      className={`cursor-grab active:cursor-grabbing rounded-xl border p-3 flex items-center gap-3 transition-colors ${
+                        isRawMaterial 
+                          ? 'border-amber-500/30 bg-amber-500/5 hover:border-amber-500/60' 
+                          : 'border-outline-variant/30 bg-background hover:border-primary/50'
+                      }`}
                     >
                       <div className="flex-1 flex flex-col cursor-pointer" onClick={() => handleCardClick(item.hinban)}>
-                        <span className="font-medium text-sm text-on-surface">{item.hinban}</span>
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium text-sm text-on-surface">{item.hinban}</span>
+                          {isRawMaterial && (
+                            <span className="rounded bg-amber-500/10 px-1.5 py-0.5 text-[9px] font-bold text-amber-600 uppercase tracking-wider">
+                              Raw Material
+                            </span>
+                          )}
+                        </div>
                         <div className="flex items-center gap-2 mt-1 text-xs text-outline">
                           <span className="rounded bg-primary/10 px-1.5 py-0.5 font-bold text-primary">
                             Qty: {qty}m
