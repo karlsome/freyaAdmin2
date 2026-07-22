@@ -163,14 +163,25 @@ export default function FirstFactoryPage() {
   const scheduledItems = scheduleOrder;
 
   const [poolSearch, setPoolSearch] = useState('');
+  const [showNoAdhesive, setShowNoAdhesive] = useState(false);
+  
   const poolItems = useMemo(() => {
     const scheduledHinbans = new Set(scheduleOrder.map(s => s.hinban).filter(Boolean));
     return dailyProductionItems.filter(item => {
       if (scheduledHinbans.has(item.hinban)) return false;
       if (poolSearch && !item.hinban.toLowerCase().includes(poolSearch.toLowerCase())) return false;
+      
+      if (!showNoAdhesive) {
+        const segments = item.materialInfo?.rawMaster?.['品番構造']?.segments || [];
+        const adhesiveSegment = segments.find(s => s.segment === '粘着コード');
+        if (adhesiveSegment && adhesiveSegment.name === '粘着無し') {
+          return false;
+        }
+      }
+      
       return true;
     });
-  }, [scheduleOrder, dailyProductionItems, poolSearch]);
+  }, [scheduleOrder, dailyProductionItems, poolSearch, showNoAdhesive]);
 
   const handleSaveSchedule = async () => {
     try {
@@ -524,7 +535,19 @@ export default function FirstFactoryPage() {
               <div className="mb-4">
                 <h3 className="mb-2 text-lg font-bold text-on-surface flex items-center justify-between">
                   Available to Schedule
-                  <span className="text-sm font-normal text-outline">{poolItems.length} items</span>
+                  <div className="flex items-center gap-3">
+                    <button 
+                      onClick={() => setShowNoAdhesive(!showNoAdhesive)}
+                      className={`flex items-center gap-1.5 text-xs px-2 py-1 rounded-lg border transition-colors ${showNoAdhesive ? 'border-primary bg-primary/10 text-primary' : 'border-outline-variant/50 text-outline hover:bg-surface-variant/50'}`}
+                      title={showNoAdhesive ? "Hide raw materials (粘着無し)" : "Show raw materials (粘着無し)"}
+                    >
+                      <span className="material-symbols-outlined" style={{fontSize: 16}}>
+                        {showNoAdhesive ? 'visibility' : 'visibility_off'}
+                      </span>
+                      {showNoAdhesive ? 'Hide 粘着無し' : 'Show 粘着無し'}
+                    </button>
+                    <span className="text-sm font-normal text-outline">{poolItems.length} items</span>
+                  </div>
                 </h3>
                 <div className="relative">
                   <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline" style={{ fontSize: 18 }}>search</span>
