@@ -29,6 +29,15 @@ export default function FirstFactoryPage() {
   const selectedMonth = selectedDateStr.substring(0, 7);
   const selectedDay = parseInt(selectedDateStr.substring(8, 10), 10);
 
+  const handleMonthChange = (e) => {
+    const newMonth = e.target.value;
+    if (!newMonth) return;
+    const parts = selectedDateStr.split('-');
+    let day = parts[2];
+    if (parseInt(day, 10) > 28) day = '01'; // Safe fallback for shortest month
+    setSelectedDateStr(`${newMonth}-${day}`);
+  };
+
   const fetchSchedule = async (month) => {
     setLoading(true);
     try {
@@ -50,18 +59,24 @@ export default function FirstFactoryPage() {
     fetchSchedule(selectedMonth);
   }, [selectedMonth]);
 
-  const handleSyncExcel = async () => {
+  const [isSyncModalOpen, setIsSyncModalOpen] = useState(false);
+  const [syncTargetMonth, setSyncTargetMonth] = useState(selectedMonth);
+
+  const handleSyncExcel = async (monthToSync) => {
+    setIsSyncModalOpen(false);
     setSyncing(true);
     try {
       const res = await fetch('http://localhost:3000/api/production/sync-excel', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ month: selectedMonth })
+        body: JSON.stringify({ month: monthToSync })
       });
       const json = await res.json();
       if (json.success) {
         alert(json.message);
-        fetchSchedule(selectedMonth);
+        if (monthToSync === selectedMonth) {
+          fetchSchedule(selectedMonth);
+        }
       } else {
         alert('Sync failed: ' + json.message);
       }
@@ -72,6 +87,13 @@ export default function FirstFactoryPage() {
       setSyncing(false);
     }
   };
+
+  const lastSynced = useMemo(() => {
+    if (data.length > 0 && data[0].syncedAt) {
+      return new Date(data[0].syncedAt).toLocaleString();
+    }
+    return null;
+  }, [data]);
 
   const filteredData = data.filter(item => item.hinban.toLowerCase().includes(filter.toLowerCase()));
   const totalPages = Math.max(1, Math.ceil(filteredData.length / ITEMS_PER_PAGE));
@@ -407,9 +429,18 @@ export default function FirstFactoryPage() {
           <h1 className="text-2xl font-bold text-on-surface">{t('firstFactory')}</h1>
           <p className="mt-1 text-sm text-outline">Manage schedule and priorities</p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-4">
+          {lastSynced && (
+            <div className="text-xs text-outline text-right">
+              <span className="block font-medium">Last Synced:</span>
+              <span>{lastSynced}</span>
+            </div>
+          )}
           <button 
-            onClick={handleSyncExcel}
+            onClick={() => {
+              setSyncTargetMonth(selectedMonth);
+              setIsSyncModalOpen(true);
+            }}
             disabled={syncing}
             className="flex items-center gap-2 rounded-xl border border-primary/30 px-4 py-2 text-sm font-semibold text-primary transition-all hover:bg-primary/5 disabled:opacity-50"
           >
@@ -433,6 +464,16 @@ export default function FirstFactoryPage() {
         <>
           <div className="mb-6 rounded-2xl border border-outline-variant/30 bg-surface/50 p-4 backdrop-blur-xl">
             <div className="flex flex-col gap-4 md:flex-row md:items-center">
+              <div className="flex items-center gap-2">
+                <span className="material-symbols-outlined text-outline" style={{ fontSize: 20 }}>calendar_month</span>
+                <input
+                  type="month"
+                  value={selectedMonth}
+                  onChange={handleMonthChange}
+                  className="rounded-xl border border-outline-variant/50 bg-background/50 px-3 py-2.5 text-sm text-on-surface focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary font-medium"
+                  title="Select month to view"
+                />
+              </div>
               <div className="relative flex-1">
                 <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline">search</span>
                 <input
@@ -469,7 +510,9 @@ export default function FirstFactoryPage() {
                     </tr>
                   ) : filteredData.length === 0 ? (
                     <tr>
-                      <td colSpan={33} className="px-4 py-8 text-center text-outline">{t('noData')}</td>
+                      <td colSpan={33} className="px-4 py-8 text-center text-outline">
+                        {filter ? t('noData') : `No data fetched yet for ${selectedMonth}. Please sync from Excel.`}
+                      </td>
                     </tr>
                   ) : (
                     currentData.map((item) => (
@@ -1108,6 +1151,50 @@ export default function FirstFactoryPage() {
           </div>
         );
       })()}
+
+      {/* Sync Excel Modal */}
+      {isSyncModalOpen && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="bg-surface border border-outline-variant/30 rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden flex flex-col animate-[fadeIn_0.15s_ease-out]">
+            <div className="flex items-center justify-between p-5 border-b border-outline-variant/30 bg-surface-variant/20">
+              <h2 className="text-lg font-bold text-on-surface">Sync Excel Data</h2>
+              <button 
+                onClick={() => setIsSyncModalOpen(false)}
+                className="flex h-8 w-8 items-center justify-center rounded-full hover:bg-surface-variant/50 text-outline transition-colors"
+              >
+                <span className="material-symbols-outlined" style={{fontSize: 20}}>close</span>
+              </button>
+            </div>
+            <div className="p-6">
+              <label className="block text-sm font-medium text-on-surface mb-2">Select Year and Month</label>
+              <input
+                type="month"
+                value={syncTargetMonth}
+                onChange={(e) => setSyncTargetMonth(e.target.value)}
+                className="w-full rounded-xl border border-outline-variant/50 bg-background/50 px-4 py-3 text-sm text-on-surface focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+              />
+              <p className="text-xs text-outline mt-3">
+                This will fetch data from the <strong>{syncTargetMonth ? `${syncTargetMonth.split('-')[0]}年${parseInt(syncTargetMonth.split('-')[1], 10)}月` : '...'}</strong> tab in the Google Sheet.
+              </p>
+            </div>
+            <div className="flex items-center justify-end gap-3 p-5 border-t border-outline-variant/30 bg-surface-variant/10">
+              <button 
+                onClick={() => setIsSyncModalOpen(false)}
+                className="rounded-lg px-4 py-2 text-sm font-medium text-outline hover:bg-surface-variant/50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={() => handleSyncExcel(syncTargetMonth)}
+                className="rounded-lg bg-primary px-5 py-2 text-sm font-medium text-on-primary hover:bg-primary/90 transition-colors"
+              >
+                Fetch Data
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
