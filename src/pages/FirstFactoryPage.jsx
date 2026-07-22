@@ -95,11 +95,13 @@ export default function FirstFactoryPage() {
   const [startTime, setStartTime] = useState('09:00');
   
   const [modalData, setModalData] = useState(null);
+  const [materialDetailOpen, setMaterialDetailOpen] = useState(false);
 
   const handleCardClick = (hinban) => {
     const found = data.find(i => i.hinban === hinban);
     if (found && found.materialInfo && found.materialInfo.rawMaster) {
       setModalData(found.materialInfo.rawMaster);
+      setMaterialDetailOpen(false);
     }
   };
   
@@ -719,13 +721,29 @@ export default function FirstFactoryPage() {
             </div>
             <div className="p-6 overflow-y-auto flex-1 flex flex-col gap-6">
               
-              {/* Bom Info */}
-              <div className="bg-primary/5 border border-primary/20 rounded-xl p-4">
-                <div className="text-xs font-bold text-primary mb-2 uppercase tracking-wider">構成品番 (Material)</div>
-                <div className="font-medium text-on-surface">
-                  {modalData['BOM']?.find(b => b['工程番号'] === 1)?.['構成品番'] || 'N/A'}
-                </div>
-              </div>
+              {/* Bom Info - clickable to open material sub-modal */}
+              {(() => {
+                const bomEntry = modalData['BOM']?.find(b => b['工程コード'] === 1010);
+                const materialHinban = bomEntry?.['構成品番'] || 'N/A';
+                const hasMaterialDetail = !!bomEntry?.['構成品_詳細'];
+                return (
+                  <button 
+                    onClick={() => hasMaterialDetail && setMaterialDetailOpen(true)}
+                    className={`w-full rounded-xl border border-primary/20 bg-primary/5 p-4 flex items-center justify-between text-left transition-colors ${hasMaterialDetail ? 'hover:bg-primary/10 cursor-pointer' : 'cursor-default'}`}
+                  >
+                    <div>
+                      <div className="text-xs font-bold text-primary mb-1 uppercase tracking-wider">構成品番 (Material)</div>
+                      <div className="font-medium text-on-surface">{materialHinban}</div>
+                    </div>
+                    {hasMaterialDetail && (
+                      <div className="flex items-center gap-2 text-primary">
+                        <span className="text-[10px] font-medium bg-primary/10 px-2 py-0.5 rounded-full">View details</span>
+                        <span className="material-symbols-outlined" style={{fontSize: 20}}>open_in_new</span>
+                      </div>
+                    )}
+                  </button>
+                );
+              })()}
 
               {/* Segments Info */}
               <div>
@@ -793,6 +811,125 @@ export default function FirstFactoryPage() {
           </div>
         </div>
       )}
+
+      {/* Material Sub-Modal (on top of main modal) */}
+      {materialDetailOpen && modalData && (() => {
+        const bomEntry = modalData['BOM']?.find(b => b['工程コード'] === 1010);
+        const materialDetail = bomEntry?.['構成品_詳細'];
+        if (!materialDetail) return null;
+        return (
+          <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 backdrop-blur-[2px] p-4" onClick={() => setMaterialDetailOpen(false)}>
+            <div className="bg-surface border border-outline-variant/30 rounded-2xl shadow-2xl w-full max-w-xl overflow-hidden flex flex-col max-h-[85vh] animate-[fadeIn_0.15s_ease-out]" onClick={e => e.stopPropagation()}>
+              {/* Header */}
+              <div className="flex items-center justify-between p-5 border-b border-outline-variant/30 bg-primary/5">
+                <div className="flex items-center gap-3">
+                  <span className="material-symbols-outlined text-primary" style={{fontSize: 24}}>inventory_2</span>
+                  <div>
+                    <h3 className="text-lg font-bold text-on-surface">{materialDetail['品番']}</h3>
+                    <p className="text-xs text-outline">{materialDetail['品目マスタ']?.['品名']} — {materialDetail['品目マスタ']?.['仕様']}</p>
+                  </div>
+                </div>
+                <button 
+                  onClick={() => setMaterialDetailOpen(false)}
+                  className="flex h-8 w-8 items-center justify-center rounded-full hover:bg-surface-variant/50 text-outline transition-colors"
+                >
+                  <span className="material-symbols-outlined" style={{fontSize: 24}}>close</span>
+                </button>
+              </div>
+              
+              {/* Body */}
+              <div className="p-5 overflow-y-auto flex-1 flex flex-col gap-5">
+                {/* Material Structure */}
+                {materialDetail['品番構造']?.segments && (
+                  <div>
+                    <div className="text-[10px] font-bold text-outline mb-2 uppercase tracking-wider">材料品番構造 (Material Structure)</div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {materialDetail['品番構造'].segments.map((s, i) => {
+                        const name = s.name || s['得意先'] || s['入出荷先'];
+                        if (!name) return null;
+                        return (
+                          <div key={i} className="flex flex-col bg-surface-variant/30 border border-outline-variant/50 rounded-lg px-2.5 py-1.5 text-xs">
+                            <span className="text-[9px] text-outline">{s.segment}</span>
+                            <span className="font-medium text-on-surface">{name}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* Material Master Data */}
+                <div>
+                  <div className="text-[10px] font-bold text-outline mb-2 uppercase tracking-wider">材料マスタ (Material Master)</div>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                    <div className="flex flex-col">
+                      <span className="text-[9px] text-outline">品目区分 (Category)</span>
+                      <span className="font-medium text-xs text-on-surface">{materialDetail['品目マスタ']?.['品目区分'] || 'N/A'}</span>
+                    </div>
+                    <div className="flex flex-col">
+                      <span className="text-[9px] text-outline">手配先コード (Supplier)</span>
+                      <span className="font-medium text-xs text-on-surface">{materialDetail['品目マスタ']?.['手配先コード'] || 'N/A'}</span>
+                    </div>
+                    <div className="flex flex-col">
+                      <span className="text-[9px] text-outline">発注ロット数 (Order Lot)</span>
+                      <span className="font-medium text-xs text-on-surface">{materialDetail['品目マスタ']?.['発注ロット数'] || 'N/A'}</span>
+                    </div>
+                    <div className="flex flex-col">
+                      <span className="text-[9px] text-outline">基材幅 (Width)</span>
+                      <span className="font-medium text-xs text-on-surface">{materialDetail['品目マスタ']?.['基材幅'] || 'N/A'}mm</span>
+                    </div>
+                    <div className="flex flex-col">
+                      <span className="text-[9px] text-outline">基材長 (Length)</span>
+                      <span className="font-medium text-xs text-on-surface">{materialDetail['品目マスタ']?.['基材長'] || 'N/A'}mm</span>
+                    </div>
+                    <div className="flex flex-col">
+                      <span className="text-[9px] text-outline">粘着倍率 (Adhesive Ratio)</span>
+                      <span className="font-medium text-xs text-on-surface">{materialDetail['品目マスタ']?.['粘着倍率'] || 'N/A'}</span>
+                    </div>
+                    <div className="flex flex-col">
+                      <span className="text-[9px] text-outline">粘着剤幅 (Adhesive Width)</span>
+                      <span className="font-medium text-xs text-on-surface">{materialDetail['品目マスタ']?.['粘着剤幅'] || 'N/A'}mm</span>
+                    </div>
+                    <div className="flex flex-col">
+                      <span className="text-[9px] text-outline">粘着剤長 (Adhesive Length)</span>
+                      <span className="font-medium text-xs text-on-surface">{materialDetail['品目マスタ']?.['粘着剤長'] || 'N/A'}mm</span>
+                    </div>
+                    <div className="flex flex-col">
+                      <span className="text-[9px] text-outline">接着剤有無 (Adhesive)</span>
+                      <span className="font-medium text-xs text-on-surface">
+                        {materialDetail['品目マスタ']?.['接着剤有無'] === 1 ? '有 (Yes)' : materialDetail['品目マスタ']?.['接着剤有無'] === 2 ? '無 (No)' : materialDetail['品目マスタ']?.['接着剤有無'] ?? 'N/A'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* BOM Process Info */}
+                <div className="bg-surface-variant/20 border border-outline-variant/30 rounded-lg p-3">
+                  <div className="text-[10px] font-bold text-outline mb-2 uppercase tracking-wider">工程情報 (Process Info — 1010)</div>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    <div className="flex flex-col">
+                      <span className="text-[9px] text-outline">工程名</span>
+                      <span className="font-medium text-xs text-on-surface">{bomEntry?.['工程名'] || 'N/A'}</span>
+                    </div>
+                    <div className="flex flex-col">
+                      <span className="text-[9px] text-outline">段取時間</span>
+                      <span className="font-medium text-xs text-on-surface">{bomEntry?.['段取時間'] || 0} min</span>
+                    </div>
+                    <div className="flex flex-col">
+                      <span className="text-[9px] text-outline">作業時間</span>
+                      <span className="font-medium text-xs text-on-surface">{bomEntry?.['作業時間'] || 0} sec/cm</span>
+                    </div>
+                    <div className="flex flex-col">
+                      <span className="text-[9px] text-outline">原単位</span>
+                      <span className="font-medium text-xs text-on-surface">{bomEntry?.['原単位'] || 'N/A'}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }
