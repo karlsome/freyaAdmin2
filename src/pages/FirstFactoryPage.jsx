@@ -92,20 +92,23 @@ export default function FirstFactoryPage() {
   }, [savedSchedules, selectedDay]);
 
   const [scheduleOrder, setScheduleOrder] = useState([]);
+  const [startTime, setStartTime] = useState('09:00');
   
   // Whenever selected day or saved schedules change, reset our local schedule order
   useEffect(() => {
     setScheduleOrder(currentSavedSchedule.scheduleOrder || []);
+    setStartTime(currentSavedSchedule.startTime || '09:00');
   }, [currentSavedSchedule]);
 
   const hasUnsavedChanges = useMemo(() => {
     const original = currentSavedSchedule.scheduleOrder || [];
     if (original.length !== scheduleOrder.length) return true;
     for (let i = 0; i < original.length; i++) {
-      if (original[i] !== scheduleOrder[i]) return true;
+      if (original[i].id !== scheduleOrder[i].id) return true;
     }
+    if ((currentSavedSchedule.startTime || '09:00') !== startTime) return true;
     return false;
-  }, [currentSavedSchedule, scheduleOrder]);
+  }, [currentSavedSchedule, scheduleOrder, startTime]);
 
   useEffect(() => {
     const handleBeforeUnload = (e) => {
@@ -146,20 +149,13 @@ export default function FirstFactoryPage() {
   }, [data, selectedDay]);
 
   // Split into Pool and Scheduled
-  const scheduledItems = useMemo(() => {
-    // Return items in the order defined by scheduleOrder
-    const items = [];
-    scheduleOrder.forEach(hinban => {
-      const found = dailyProductionItems.find(i => i.hinban === hinban);
-      if (found) items.push(found);
-    });
-    return items;
-  }, [scheduleOrder, dailyProductionItems]);
+  const scheduledItems = scheduleOrder;
 
   const [poolSearch, setPoolSearch] = useState('');
   const poolItems = useMemo(() => {
+    const scheduledHinbans = new Set(scheduleOrder.map(s => s.hinban).filter(Boolean));
     return dailyProductionItems.filter(item => {
-      if (scheduleOrder.includes(item.hinban)) return false;
+      if (scheduledHinbans.has(item.hinban)) return false;
       if (poolSearch && !item.hinban.toLowerCase().includes(poolSearch.toLowerCase())) return false;
       return true;
     });
@@ -171,7 +167,8 @@ export default function FirstFactoryPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
-          scheduleOrder, 
+          scheduleOrder,
+          startTime, 
           month: selectedMonth, 
           date: selectedDay 
         })
@@ -187,41 +184,114 @@ export default function FirstFactoryPage() {
   };
 
   // HTML5 Drag and Drop for Scheduling
-  const onDragStartSchedule = (e, hinban, source) => {
-    e.dataTransfer.setData('hinban', hinban);
+  const onDragStartSchedule = (e, dragData, source) => {
+    e.dataTransfer.setData('dragData', JSON.stringify(dragData));
     e.dataTransfer.setData('source', source); // 'pool' or 'scheduled'
   };
 
   const onDropPool = (e) => {
     e.preventDefault();
-    const hinban = e.dataTransfer.getData('hinban');
     const source = e.dataTransfer.getData('source');
     if (source === 'scheduled') {
+      const dragData = JSON.parse(e.dataTransfer.getData('dragData'));
       // Remove from scheduled
-      setScheduleOrder(prev => prev.filter(h => h !== hinban));
+      setScheduleOrder(prev => {
+        if (dragData.type === 'hinban') {
+           // Remove all rolls for this hinban
+           return prev.filter(i => i.hinban !== dragData.hinban);
+        } else {
+           // Remove specific setup item
+           return prev.filter(i => i.id !== dragData.id);
+        }
+      });
     }
   };
 
   const onDropScheduled = (e, targetIndex = -1) => {
     e.preventDefault();
-    const hinban = e.dataTransfer.getData('hinban');
     const source = e.dataTransfer.getData('source');
+    if (!source) return;
+    
+    const dragData = JSON.parse(e.dataTransfer.getData('dragData'));
     
     setScheduleOrder(prev => {
       const newOrder = [...prev];
-      if (source === 'scheduled') {
-        const currentIndex = newOrder.indexOf(hinban);
-        newOrder.splice(currentIndex, 1);
-      }
       
-      if (targetIndex === -1) {
-        newOrder.push(hinban);
-      } else {
-        newOrder.splice(targetIndex, 0, hinban);
+      if (source === 'scheduled') {
+        const currentIndex = newOrder.findIndex(i => i.id === dragData.id);
+        if (currentIndex !== -1) {
+          const [removed] = newOrder.splice(currentIndex, 1);
+          if (targetIndex === -1) {
+            newOrder.push(removed);
+          } else {
+            // Adjust target index if we removed from earlier in the array
+            const adjustedTarget = targetIndex > currentIndex ? targetIndex - 1 : targetIndex;
+            newOrder.splice(adjustedTarget, 0, removed);
+          }
+        }
+      } else if (source === 'pool') {
+        let itemsToInsert = [];
+        
+        if (dragData.type === 'setup') {
+          itemsToInsert.push({
+            id: Date.now() + Math.random().toString(),
+            type: 'setup',
+            name: dragData.name,
+            duration: 15
+          });
+        } else if (dragData.type === 'pool-hinban') {
+          const found = data.find(i => i.hinban === dragData.hinban);
+          if (found) {
+             const qty = found.production[selectedDay - 1] || 0;
+             const qtyCm = qty * 100;
+             const packCountCm = found.materialInfo?.packCount || 4000;
+             const workTime = found.materialInfo?.workTime || 0.075;
+             
+             if (qtyCm > 0) {
+               const numRolls = Math.ceil(qtyCm / packCountCm);
+               for (let i = 0; i < numRolls; i++) {
+                 let lengthCm = packCountCm;
+                 if (i === numRolls - 1 && (qtyCm % packCountCm !== 0)) {
+                   lengthCm = qtyCm % packCountCm;
+                 }
+                 const durationMins = (workTime * lengthCm) / 60;
+                 itemsToInsert.push({
+                   id: Date.now() + String(i) + Math.random().toString(),
+                   type: 'hinban',
+                   hinban: dragData.hinban,
+                   rollIndex: i + 1,
+                   totalRolls: numRolls,
+                   meters: lengthCm / 100,
+                   duration: Math.round(durationMins)
+                 });
+               }
+             }
+          }
+        }
+        
+        if (targetIndex === -1) {
+          newOrder.push(...itemsToInsert);
+        } else {
+          newOrder.splice(targetIndex, 0, ...itemsToInsert);
+        }
       }
       return newOrder;
     });
   };
+
+  const computeTimeSchedule = (items, startTimeStr) => {
+     let current = new Date(`2000-01-01T${startTimeStr}:00`);
+     if (isNaN(current.getTime())) current = new Date(`2000-01-01T09:00:00`);
+     
+     return items.map(item => {
+        const start = current.toTimeString().substring(0, 5);
+        current = new Date(current.getTime() + item.duration * 60000);
+        const end = current.toTimeString().substring(0, 5);
+        return { ...item, startTime: start, endTime: end };
+     });
+  };
+  
+  const scheduleWithTimes = computeTimeSchedule(scheduledItems, startTime);
 
   return (
     <div className="p-6 pt-24 pb-24 overflow-y-auto h-screen">
@@ -400,6 +470,24 @@ export default function FirstFactoryPage() {
                 </div>
               </div>
               <div className="flex flex-col gap-2 flex-1 overflow-y-auto">
+                {/* Static setup items */}
+                <div className="flex gap-2 mb-4 pb-4 border-b border-outline-variant/30">
+                   <div 
+                     draggable
+                     onDragStart={(e) => onDragStartSchedule(e, { type: 'setup', name: '段取り' }, 'pool')}
+                     className="cursor-grab flex-1 rounded-xl border border-dashed border-primary/50 bg-primary/5 p-3 flex items-center justify-center hover:border-primary transition-colors text-primary font-bold text-sm"
+                   >
+                     段取り (15m)
+                   </div>
+                   <div 
+                     draggable
+                     onDragStart={(e) => onDragStartSchedule(e, { type: 'setup', name: '段替え' }, 'pool')}
+                     className="cursor-grab flex-1 rounded-xl border border-dashed border-primary/50 bg-primary/5 p-3 flex items-center justify-center hover:border-primary transition-colors text-primary font-bold text-sm"
+                   >
+                     段替え (15m)
+                   </div>
+                </div>
+
                 {poolItems.length === 0 ? (
                   <div className="text-center text-sm text-outline mt-10">No items available for this date.</div>
                 ) : (
@@ -407,7 +495,7 @@ export default function FirstFactoryPage() {
                     <div 
                       key={item.id}
                       draggable
-                      onDragStart={(e) => onDragStartSchedule(e, item.hinban, 'pool')}
+                      onDragStart={(e) => onDragStartSchedule(e, { type: 'pool-hinban', hinban: item.hinban }, 'pool')}
                       className="cursor-grab active:cursor-grabbing rounded-xl border border-outline-variant/30 bg-background p-3 flex items-center justify-between hover:border-primary/50 transition-colors"
                     >
                       <span className="font-medium text-sm text-on-surface">{item.hinban}</span>
@@ -427,7 +515,19 @@ export default function FirstFactoryPage() {
               onDrop={(e) => onDropScheduled(e)}
             >
               <h3 className="mb-4 text-lg font-bold text-primary flex items-center justify-between">
-                Priority Order
+                <div className="flex items-center gap-4">
+                  Priority Order
+                  <div className="flex items-center gap-2 text-sm font-normal text-on-surface">
+                    <span className="material-symbols-outlined text-outline" style={{fontSize:18}}>schedule</span>
+                    Start: 
+                    <input 
+                      type="time" 
+                      value={startTime}
+                      onChange={e => setStartTime(e.target.value)}
+                      className="rounded bg-background/50 border border-outline-variant/50 px-2 py-0.5 text-xs focus:outline-none focus:border-primary"
+                    />
+                  </div>
+                </div>
                 <div className="flex items-center gap-3">
                   {scheduledItems.length > 0 && (
                     <button 
@@ -446,30 +546,45 @@ export default function FirstFactoryPage() {
                 </div>
               </h3>
               <div className="flex flex-col gap-2 flex-1 overflow-y-auto">
-                {scheduledItems.length === 0 ? (
+                {scheduleWithTimes.length === 0 ? (
                   <div className="text-center text-sm text-primary/50 mt-10 border-2 border-dashed border-primary/20 rounded-xl p-8">
                     Drag items here to set priority order
                   </div>
                 ) : (
-                  scheduledItems.map((item, index) => (
+                  scheduleWithTimes.map((item, index) => (
                     <div 
                       key={item.id}
                       draggable
-                      onDragStart={(e) => onDragStartSchedule(e, item.hinban, 'scheduled')}
+                      onDragStart={(e) => onDragStartSchedule(e, item, 'scheduled')}
                       onDragOver={(e) => e.preventDefault()}
                       onDrop={(e) => {
                         e.stopPropagation(); // Prevent column drop
                         onDropScheduled(e, index);
                       }}
-                      className="cursor-grab active:cursor-grabbing rounded-xl border border-primary/20 bg-surface p-3 flex items-center gap-3 shadow-sm hover:border-primary/60 transition-colors"
+                      className={`cursor-grab active:cursor-grabbing rounded-xl border p-3 flex items-center gap-3 shadow-sm transition-colors ${item.type === 'setup' ? 'border-amber-500/30 bg-amber-500/5 hover:border-amber-500/60' : 'border-primary/20 bg-surface hover:border-primary/60'}`}
                     >
-                      <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/10 text-xs font-bold text-primary">
-                        {index + 1}
+                      <span className="flex flex-col items-center justify-center rounded bg-surface-variant/30 px-2 py-1 text-xs font-medium text-outline min-w-[50px]">
+                        <span>{item.startTime}</span>
+                        <span className="text-[10px] opacity-70">to {item.endTime}</span>
                       </span>
-                      <span className="font-medium text-sm text-on-surface flex-1">{item.hinban}</span>
-                      <span className="rounded bg-primary/10 px-2 py-1 text-xs font-bold text-primary">
-                        Qty: {item.production[selectedDay - 1]}
-                      </span>
+                      
+                      {item.type === 'setup' ? (
+                        <>
+                          <span className="font-bold text-sm text-amber-600 flex-1">{item.name}</span>
+                          <span className="text-xs font-medium text-amber-600/70">{item.duration} mins</span>
+                        </>
+                      ) : (
+                        <>
+                          <div className="flex-1 flex flex-col">
+                            <span className="font-medium text-sm text-on-surface">{item.hinban}</span>
+                            <span className="text-xs text-outline flex items-center gap-2 mt-1">
+                               <span className="bg-primary/10 text-primary px-1.5 rounded-sm">Roll {item.rollIndex}/{item.totalRolls}</span>
+                               <span>{item.meters}m</span>
+                            </span>
+                          </div>
+                          <span className="text-xs font-bold text-primary whitespace-nowrap">{item.duration} mins</span>
+                        </>
+                      )}
                     </div>
                   ))
                 )}
