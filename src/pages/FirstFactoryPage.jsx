@@ -94,6 +94,15 @@ export default function FirstFactoryPage() {
   const [scheduleOrder, setScheduleOrder] = useState([]);
   const [startTime, setStartTime] = useState('09:00');
   
+  const [modalData, setModalData] = useState(null);
+
+  const handleCardClick = (hinban) => {
+    const found = data.find(i => i.hinban === hinban);
+    if (found && found.materialInfo && found.materialInfo.rawMaster) {
+      setModalData(found.materialInfo.rawMaster);
+    }
+  };
+  
   // Whenever selected day or saved schedules change, reset our local schedule order
   useEffect(() => {
     setScheduleOrder(currentSavedSchedule.scheduleOrder || []);
@@ -277,6 +286,63 @@ export default function FirstFactoryPage() {
       }
       return newOrder;
     });
+  };
+
+  const handleAddToSchedule = (dragData) => {
+    setScheduleOrder(prev => {
+      const newOrder = [...prev];
+      let itemsToInsert = [];
+      
+      if (dragData.type === 'setup') {
+        itemsToInsert.push({
+          id: Date.now() + Math.random().toString(),
+          type: 'setup',
+          name: dragData.name,
+          duration: 15
+        });
+      } else if (dragData.type === 'pool-hinban') {
+        const found = data.find(i => i.hinban === dragData.hinban);
+        if (found) {
+           const qty = found.production[selectedDay - 1] || 0;
+           const qtyCm = qty * 100;
+           const packCountCm = found.materialInfo?.packCount || 4000;
+           const workTime = found.materialInfo?.workTime || 0.075;
+           
+           if (qtyCm > 0) {
+             const numRolls = Math.ceil(qtyCm / packCountCm);
+             for (let i = 0; i < numRolls; i++) {
+               let lengthCm = packCountCm;
+               if (i === numRolls - 1 && (qtyCm % packCountCm !== 0)) {
+                 lengthCm = qtyCm % packCountCm;
+               }
+               const durationMins = (workTime * lengthCm) / 60;
+               itemsToInsert.push({
+                 id: Date.now() + String(i) + Math.random().toString(),
+                 type: 'hinban',
+                 hinban: dragData.hinban,
+                 rollIndex: i + 1,
+                 totalRolls: numRolls,
+                 meters: lengthCm / 100,
+                 duration: Math.round(durationMins)
+               });
+             }
+           }
+        }
+      }
+      
+      newOrder.push(...itemsToInsert);
+      return newOrder;
+    });
+  };
+
+  const handleRemoveFromSchedule = (dragData) => {
+      setScheduleOrder(prev => {
+        if (dragData.type === 'hinban') {
+           return prev.filter(i => i.hinban !== dragData.hinban);
+        } else {
+           return prev.filter(i => i.id !== dragData.id);
+        }
+      });
   };
 
   const computeTimeSchedule = (items, startTimeStr) => {
@@ -475,35 +541,67 @@ export default function FirstFactoryPage() {
                    <div 
                      draggable
                      onDragStart={(e) => onDragStartSchedule(e, { type: 'setup', name: '段取り' }, 'pool')}
-                     className="cursor-grab flex-1 rounded-xl border border-dashed border-primary/50 bg-primary/5 p-3 flex items-center justify-center hover:border-primary transition-colors text-primary font-bold text-sm"
+                     className="cursor-grab flex-1 rounded-xl border border-dashed border-primary/50 bg-primary/5 p-3 flex items-center justify-between hover:border-primary transition-colors text-primary font-bold text-sm"
                    >
-                     段取り (15m)
+                     <span>段取り (15m)</span>
+                     <button 
+                       onClick={() => handleAddToSchedule({ type: 'setup', name: '段取り' })}
+                       className="flex h-6 w-6 items-center justify-center rounded-full hover:bg-primary/20 text-primary transition-colors"
+                     >
+                       <span className="material-symbols-outlined" style={{fontSize: 16}}>arrow_forward</span>
+                     </button>
                    </div>
                    <div 
                      draggable
                      onDragStart={(e) => onDragStartSchedule(e, { type: 'setup', name: '段替え' }, 'pool')}
-                     className="cursor-grab flex-1 rounded-xl border border-dashed border-primary/50 bg-primary/5 p-3 flex items-center justify-center hover:border-primary transition-colors text-primary font-bold text-sm"
+                     className="cursor-grab flex-1 rounded-xl border border-dashed border-primary/50 bg-primary/5 p-3 flex items-center justify-between hover:border-primary transition-colors text-primary font-bold text-sm"
                    >
-                     段替え (15m)
+                     <span>段替え (15m)</span>
+                     <button 
+                       onClick={() => handleAddToSchedule({ type: 'setup', name: '段替え' })}
+                       className="flex h-6 w-6 items-center justify-center rounded-full hover:bg-primary/20 text-primary transition-colors"
+                     >
+                       <span className="material-symbols-outlined" style={{fontSize: 16}}>arrow_forward</span>
+                     </button>
                    </div>
                 </div>
 
                 {poolItems.length === 0 ? (
                   <div className="text-center text-sm text-outline mt-10">No items available for this date.</div>
                 ) : (
-                  poolItems.map(item => (
+                  poolItems.map(item => {
+                    const qty = item.production[selectedDay - 1] || 0;
+                    const qtyCm = qty * 100;
+                    const packCountCm = item.materialInfo?.packCount || 4000;
+                    const workTime = item.materialInfo?.workTime || 0.075;
+                    const numRolls = qtyCm > 0 ? Math.ceil(qtyCm / packCountCm) : 0;
+                    const durationMins = Math.round((workTime * qtyCm) / 60);
+
+                    return (
                     <div 
                       key={item.id}
                       draggable
                       onDragStart={(e) => onDragStartSchedule(e, { type: 'pool-hinban', hinban: item.hinban }, 'pool')}
-                      className="cursor-grab active:cursor-grabbing rounded-xl border border-outline-variant/30 bg-background p-3 flex items-center justify-between hover:border-primary/50 transition-colors"
+                      className="cursor-grab active:cursor-grabbing rounded-xl border border-outline-variant/30 bg-background p-3 flex items-center gap-3 hover:border-primary/50 transition-colors"
                     >
-                      <span className="font-medium text-sm text-on-surface">{item.hinban}</span>
-                      <span className="rounded bg-primary/10 px-2 py-1 text-xs font-bold text-primary">
-                        Qty: {item.production[selectedDay - 1]}
-                      </span>
+                      <div className="flex-1 flex flex-col cursor-pointer" onClick={() => handleCardClick(item.hinban)}>
+                        <span className="font-medium text-sm text-on-surface">{item.hinban}</span>
+                        <div className="flex items-center gap-2 mt-1 text-xs text-outline">
+                          <span className="rounded bg-primary/10 px-1.5 py-0.5 font-bold text-primary">
+                            Qty: {qty}m
+                          </span>
+                          <span>{numRolls} rolls</span>
+                          <span>{durationMins} mins</span>
+                        </div>
+                      </div>
+                      <button 
+                        onClick={() => handleAddToSchedule({ type: 'pool-hinban', hinban: item.hinban })}
+                        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full hover:bg-primary/10 text-primary transition-colors"
+                      >
+                        <span className="material-symbols-outlined" style={{fontSize: 20}}>arrow_forward</span>
+                      </button>
                     </div>
-                  ))
+                  )})
                 )}
               </div>
             </div>
@@ -563,6 +661,9 @@ export default function FirstFactoryPage() {
                       }}
                       className={`cursor-grab active:cursor-grabbing rounded-xl border p-3 flex items-center gap-3 shadow-sm transition-colors ${item.type === 'setup' ? 'border-amber-500/30 bg-amber-500/5 hover:border-amber-500/60' : 'border-primary/20 bg-surface hover:border-primary/60'}`}
                     >
+                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-bold text-primary">
+                        {index + 1}
+                      </span>
                       <span className="flex flex-col items-center justify-center rounded bg-surface-variant/30 px-2 py-1 text-xs font-medium text-outline min-w-[50px]">
                         <span>{item.startTime}</span>
                         <span className="text-[10px] opacity-70">to {item.endTime}</span>
@@ -575,8 +676,8 @@ export default function FirstFactoryPage() {
                         </>
                       ) : (
                         <>
-                          <div className="flex-1 flex flex-col">
-                            <span className="font-medium text-sm text-on-surface">{item.hinban}</span>
+                          <div className="flex-1 flex flex-col cursor-pointer" onClick={() => handleCardClick(item.hinban)}>
+                            <span className="font-medium text-sm text-on-surface hover:text-primary transition-colors">{item.hinban}</span>
                             <span className="text-xs text-outline flex items-center gap-2 mt-1">
                                <span className="bg-primary/10 text-primary px-1.5 rounded-sm">Roll {item.rollIndex}/{item.totalRolls}</span>
                                <span>{item.meters}m</span>
@@ -585,10 +686,109 @@ export default function FirstFactoryPage() {
                           <span className="text-xs font-bold text-primary whitespace-nowrap">{item.duration} mins</span>
                         </>
                       )}
+                      <button 
+                        onClick={() => handleRemoveFromSchedule(item)}
+                        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full hover:bg-red-500/10 text-red-500 transition-colors ml-2"
+                      >
+                        <span className="material-symbols-outlined" style={{fontSize: 20}}>arrow_back</span>
+                      </button>
                     </div>
                   ))
                 )}
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal */}
+      {modalData && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="bg-surface border border-outline-variant/30 rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh]">
+            <div className="flex items-center justify-between p-6 border-b border-outline-variant/30 bg-surface-variant/20">
+              <div>
+                <h2 className="text-xl font-bold text-on-surface">{modalData['品番']}</h2>
+                <p className="text-sm text-outline mt-1">{modalData['品目マスタ']?.['品名']}</p>
+              </div>
+              <button 
+                onClick={() => setModalData(null)}
+                className="flex h-8 w-8 items-center justify-center rounded-full hover:bg-surface-variant/50 text-outline transition-colors"
+              >
+                <span className="material-symbols-outlined" style={{fontSize: 24}}>close</span>
+              </button>
+            </div>
+            <div className="p-6 overflow-y-auto flex-1 flex flex-col gap-6">
+              
+              {/* Bom Info */}
+              <div className="bg-primary/5 border border-primary/20 rounded-xl p-4">
+                <div className="text-xs font-bold text-primary mb-2 uppercase tracking-wider">構成品番 (Material)</div>
+                <div className="font-medium text-on-surface">
+                  {modalData['BOM']?.find(b => b['工程番号'] === 1)?.['構成品番'] || 'N/A'}
+                </div>
+              </div>
+
+              {/* Segments Info */}
+              <div>
+                <div className="text-xs font-bold text-outline mb-3 uppercase tracking-wider">品番構造 (Structure)</div>
+                <div className="flex flex-wrap gap-2">
+                  {modalData['品番構造']?.segments?.map((s, i) => {
+                     const name = s.name || s['得意先'] || s['入出荷先'];
+                     if (!name) return null;
+                     return (
+                       <div key={i} className="flex flex-col bg-surface-variant/30 border border-outline-variant/50 rounded-lg px-3 py-2 text-sm">
+                         <span className="text-[10px] text-outline">{s.segment}</span>
+                         <span className="font-medium text-on-surface">{name}</span>
+                       </div>
+                     );
+                  })}
+                </div>
+              </div>
+
+              {/* Master Data Grid */}
+              <div>
+                <div className="text-xs font-bold text-outline mb-3 uppercase tracking-wider">Master Data</div>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                  <div className="flex flex-col">
+                    <span className="text-[10px] text-outline">梱包数 (Pack Qty)</span>
+                    <span className="font-medium text-sm text-on-surface">{modalData['品目マスタ']?.['梱包数'] || 'N/A'}</span>
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="text-[10px] text-outline">図番 (Drawing No.)</span>
+                    <span className="font-medium text-sm text-on-surface">{modalData['品目マスタ']?.['図番'] || 'N/A'}</span>
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="text-[10px] text-outline">仕様 (Specs)</span>
+                    <span className="font-medium text-sm text-on-surface">{modalData['品目マスタ']?.['仕様'] || 'N/A'}</span>
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="text-[10px] text-outline">型番 (Model)</span>
+                    <span className="font-medium text-sm text-on-surface">{modalData['品目マスタ']?.['型番'] || 'N/A'}</span>
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="text-[10px] text-outline">速度 (Speed)</span>
+                    <span className="font-medium text-sm text-on-surface">{modalData['品目マスタ']?.['速度'] || 'N/A'}</span>
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="text-[10px] text-outline">接着剤有無 (Adhesive)</span>
+                    <span className="font-medium text-sm text-on-surface">
+                      {modalData['品目マスタ']?.['接着剤有無'] === 1 ? '有 (Yes)' : modalData['品目マスタ']?.['接着剤有無'] === 2 ? '無 (No)' : modalData['品目マスタ']?.['接着剤有無']}
+                    </span>
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="text-[10px] text-outline">クリーン度 (Cleanliness)</span>
+                    <span className="font-medium text-sm text-on-surface">{modalData['品目マスタ']?.['クリーン度'] || 'N/A'}</span>
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="text-[10px] text-outline">乾燥温度 (Dry Temp)</span>
+                    <span className="font-medium text-sm text-on-surface">{modalData['品目マスタ']?.['乾燥温度'] || 'N/A'}</span>
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="text-[10px] text-outline">ロール温度 (Roll Temp)</span>
+                    <span className="font-medium text-sm text-on-surface">{modalData['品目マスタ']?.['ロール温度'] || 'N/A'}</span>
+                  </div>
+                </div>
+              </div>
+
             </div>
           </div>
         </div>
