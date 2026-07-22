@@ -183,6 +183,25 @@ export default function FirstFactoryPage() {
     });
   }, [scheduleOrder, dailyProductionItems, poolSearch, showNoAdhesive]);
 
+  const poolTotalMins = useMemo(() => {
+    return poolItems.reduce((acc, item) => {
+      const qty = item.production[selectedDay - 1] || 0;
+      const qtyCm = qty * 100;
+      const workTime = item.materialInfo?.workTime || 0.075;
+      return acc + Math.round((workTime * qtyCm) / 60);
+    }, 0);
+  }, [poolItems, selectedDay]);
+
+  const scheduledTotalMins = useMemo(() => {
+    return scheduledItems.reduce((acc, item) => acc + (item.duration || 0), 0);
+  }, [scheduledItems]);
+
+  const formatTime = (mins) => {
+    const h = Math.floor(mins / 60);
+    const m = mins % 60;
+    return h > 0 ? `${h}h ${m}m` : `${m}m`;
+  };
+
   const handleSaveSchedule = async () => {
     try {
       const res = await fetch('http://localhost:3000/api/production/schedule', {
@@ -545,6 +564,9 @@ export default function FirstFactoryPage() {
                 <h3 className="mb-2 text-lg font-bold text-on-surface flex items-center justify-between">
                   Available to Schedule
                   <div className="flex items-center gap-3">
+                    <span className="rounded bg-primary/10 px-2 py-1 text-xs font-bold text-primary shadow-sm border border-primary/20">
+                      {formatTime(poolTotalMins)}
+                    </span>
                     <button 
                       onClick={() => setShowNoAdhesive(!showNoAdhesive)}
                       className={`flex items-center gap-1.5 text-xs px-2 py-1 rounded-lg border transition-colors ${showNoAdhesive ? 'border-primary bg-primary/10 text-primary' : 'border-outline-variant/50 text-outline hover:bg-surface-variant/50'}`}
@@ -675,6 +697,9 @@ export default function FirstFactoryPage() {
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
+                  <span className="rounded bg-primary/10 px-2 py-1 text-xs font-bold text-primary shadow-sm border border-primary/20">
+                    {formatTime(scheduledTotalMins)}
+                  </span>
                   {scheduledItems.length > 0 && (
                     <button 
                       onClick={() => {
