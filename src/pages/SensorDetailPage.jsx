@@ -8,6 +8,7 @@ import SensorTrendChart from "../components/SensorTrendChart";
 import DeviceNamingModal from "../components/DeviceNamingModal";
 import SensorDevicePhotoPreviewModal from "../components/SensorDevicePhotoPreviewModal";
 import { getAuthUser } from "../utils/masterDB";
+import { useLanguage } from "../contexts/LanguageContext";
 
 const SENSOR_READINGS_PAGE_SIZE_OPTIONS = [15, 50, 100];
 const SENSOR_DEVICE_OFFLINE_THRESHOLD_MS = 30 * 60 * 1000;
@@ -61,15 +62,15 @@ function getMinutesSinceTimestamp(timestamp, currentTimestamp = Date.now()) {
   return Math.max(0, Math.floor((currentTimestamp - timestamp.getTime()) / 60000));
 }
 
-function formatSensorLastSeen(minutesSinceLastReading) {
-  if (minutesSinceLastReading == null) return "Last seen unknown";
-  if (minutesSinceLastReading < 1) return "Last seen just now";
-  if (minutesSinceLastReading < 60) return `Last seen ${minutesSinceLastReading} min ago`;
+function formatSensorLastSeen(minutesSinceLastReading, t) {
+  if (minutesSinceLastReading == null) return t("lastSeenUnknown");
+  if (minutesSinceLastReading < 1) return t("lastSeenJustNow");
+  if (minutesSinceLastReading < 60) return t("lastSeenMinAgo", { mins: minutesSinceLastReading });
 
   const hours = Math.floor(minutesSinceLastReading / 60);
   const minutes = minutesSinceLastReading % 60;
-  if (minutes === 0) return `Last seen ${hours} hr ago`;
-  return `Last seen ${hours} hr ${minutes} min ago`;
+  if (minutes === 0) return t("lastSeenHrAgo", { hours });
+  return t("lastSeenHrMinAgo", { hours, mins: minutes });
 }
 
 function toISO(d) { return d.toISOString().split("T")[0]; }
@@ -80,12 +81,12 @@ function dateRangeDefault() {
   return { start: toISO(start), end: toISO(end) };
 }
 
-function buildSensorReadingsPageInfo({ filteredCount, page, pageSize }) {
-  if (!filteredCount) return "0 readings shown";
+function buildSensorReadingsPageInfo({ filteredCount, page, pageSize, t }) {
+  if (!filteredCount) return t("readingsShownZero");
 
   const start = (page - 1) * pageSize + 1;
   const end = Math.min(page * pageSize, filteredCount);
-  return `${filteredCount.toLocaleString()} readings, showing ${start.toLocaleString()}-${end.toLocaleString()}`;
+  return t("readingsShowingRange", { count: filteredCount.toLocaleString(), start: start.toLocaleString(), end: end.toLocaleString() });
 }
 
 function getSensorTableSort(sortKey) {
@@ -143,6 +144,7 @@ function SensorCard({
   onEdit = null,
   onPreviewPhotos = null
 }) {
+  const { t } = useLanguage();
   const latest = device?.latest ?? {};
   const latestTemp = parseTemp(latest.Temperature);
   const latestHumid = parseHumid(latest.Humidity);
@@ -155,7 +157,7 @@ function SensorCard({
   const displayName = device?.displayName || null;
   const photoCount = Array.isArray(device?.imageURLs) ? device.imageURLs.filter(Boolean).length : 0;
   const isOffline = Boolean(device?.isOffline);
-  const lastSeenLabel = formatSensorLastSeen(device?.minutesSinceLastReading);
+  const lastSeenLabel = formatSensorLastSeen(device?.minutesSinceLastReading, t);
   const cardStateClassName = isOffline
     ? `sensor-device-card--offline border-error/35 hover:border-error/45 ${isActive ? "ring-1 ring-inset ring-error/15" : ""}`
     : isActive
@@ -187,21 +189,21 @@ function SensorCard({
       ) : null}
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Device</p>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">{t("deviceLabel")}</p>
           <div className="mt-1 flex flex-wrap items-center gap-2">
             <p className={`text-base font-semibold truncate ${titleClassName}`}>
-              {displayName || device?.deviceId || "Unknown"}
+              {displayName || device?.deviceId || t("unknownLabel")}
             </p>
             {isActive ? (
               <span className="inline-flex items-center gap-1 rounded-full border border-primary/20 bg-primary/10 px-2.5 py-1 text-[10px] font-semibold text-primary">
                 <span className="material-symbols-outlined" style={{ fontSize: 11 }}>check</span>
-                Selected
+                {t("selectedLabel")}
               </span>
             ) : null}
             {isOffline ? (
               <span className="inline-flex items-center gap-1 rounded-full border border-error/20 bg-error/10 px-2.5 py-1 text-[10px] font-semibold text-error">
                 <span className="h-2 w-2 rounded-full bg-error" aria-hidden="true" />
-                Offline
+                {t("offlineLabel")}
               </span>
             ) : null}
           </div>
@@ -221,17 +223,17 @@ function SensorCard({
           <div className="flex items-center gap-2">
             <p className={`text-lg font-semibold ${tempStatus.color}`}>{Number.isNaN(latestTemp) ? "—" : `${latestTemp}°C`}</p>
             {offset ? (
-              <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-surface/50 text-on-surface-variant border border-outline-variant/30 whitespace-nowrap" title="Temperature Offset">
+              <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-surface/50 text-on-surface-variant border border-outline-variant/30 whitespace-nowrap" title={t("temperatureOffsetShort")}>
                 {offset > 0 ? "+" : ""}{offset}°C
               </span>
             ) : null}
           </div>
-          <p className="text-[10px] text-on-surface-variant">Temperature</p>
+          <p className="text-[10px] text-on-surface-variant">{t("temperature")}</p>
           <Sparkline values={tempTrend} color={latestTemp >= 30 ? "#f87171" : "#6366f1"} />
         </div>
         <div className={`p-3 rounded-xl ${humidityStatus.bg}`}>
           <p className={`text-lg font-semibold ${humidityStatus.color}`}>{Number.isNaN(latestHumid) ? "—" : `${latestHumid}%`}</p>
-          <p className="text-[10px] text-on-surface-variant">Humidity</p>
+          <p className="text-[10px] text-on-surface-variant">{t("humidity")}</p>
           <Sparkline values={humidityTrend} color="#22d3ee" />
         </div>
       </div>
@@ -239,9 +241,9 @@ function SensorCard({
       <div className="flex items-center justify-between gap-3 text-[10px] text-outline">
         <div className="min-w-0 flex-1 truncate">
           <span className={isOffline ? "font-semibold text-error" : undefined}>
-            {isOffline ? `Offline · ${lastSeenLabel}` : `Last: ${latest?.Date || "—"} ${latest?.Time || ""}`}
+            {isOffline ? t("offlineSinceLabel", { lastSeen: lastSeenLabel }) : t("lastReadingLabel", { date: latest?.Date || "—", time: latest?.Time || "" })}
           </span>
-          <span> · {Number(device?.readingCount) || 0} readings</span>
+          <span> · {t("readingsCountSuffix", { count: Number(device?.readingCount) || 0 })}</span>
         </div>
         <div className="flex flex-shrink-0 items-center gap-1">
           {photoCount > 0 && onPreviewPhotos ? (
@@ -252,7 +254,7 @@ function SensorCard({
                 onPreviewPhotos(device);
               }}
               className="inline-flex items-center gap-1 rounded-xl border border-separator/40 bg-surface px-2.5 py-1 text-[10px] font-semibold text-on-surface-variant transition-all duration-150 hover:border-primary/30 hover:bg-surface-container hover:text-primary active:scale-95"
-              title={`View ${photoCount} device photo${photoCount === 1 ? "" : "s"}`}
+              title={t("viewDevicePhotosTooltip", { count: photoCount, plural: photoCount === 1 ? "" : "s" })}
             >
               <span className="material-symbols-outlined" style={{ fontSize: 11 }}>photo_library</span>
               {photoCount}
@@ -267,7 +269,7 @@ function SensorCard({
                 onEdit(device);
               }}
               className="rounded-xl p-2 text-outline transition-all duration-150 hover:bg-surface-container hover:text-primary active:scale-95"
-              title="Rename device"
+              title={t("renameDeviceTooltip")}
             >
               <span className="material-symbols-outlined" style={{ fontSize: 16 }}>edit</span>
             </button>
@@ -280,6 +282,7 @@ function SensorCard({
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
 export default function SensorDetailPage() {
+  const { t } = useLanguage();
   const { factoryName: encoded } = useParams();
   const factoryName = decodeURIComponent(encoded);
   const navigate    = useNavigate();
@@ -351,13 +354,13 @@ export default function SensorDetailPage() {
 
     setPhotoPreview({
       activeIndex: 0,
-      eyebrow: "Device Photos",
+      eyebrow: t("devicePhotosLabel"),
       deviceId: normalizeDeviceId(device?.deviceId),
       displayName: device?.displayName || "",
       factoryName,
       images: imageURLs.map((url, index) => ({
         url,
-        label: `${device?.displayName || device?.deviceId || "Device"} photo ${index + 1}`,
+        label: `${device?.displayName || device?.deviceId || t("deviceLabel")} photo ${index + 1}`,
       })),
     });
   }
@@ -569,7 +572,7 @@ export default function SensorDetailPage() {
         if (cancelled || requestId !== tableRequestIdRef.current) return;
         setTableRows([]);
         setPagination({ ...EMPTY_SENSOR_PAGINATION, itemsPerPage: pageSize });
-        setTableError(loadError.message || "Failed to load sensor readings.");
+        setTableError(loadError.message || t("failedToLoadSensorReadings"));
       } finally {
         if (!cancelled && requestId === tableRequestIdRef.current) {
           setTableLoading(false);
@@ -688,7 +691,7 @@ export default function SensorDetailPage() {
   const tableColumns = useMemo(() => ([
     {
       key: "Date",
-      label: "Date",
+      label: t("date"),
       sortKey: "date",
       width: 128,
       renderCell: (row) => <span className="text-on-surface-variant">{row.Date || "—"}</span>,
@@ -696,14 +699,14 @@ export default function SensorDetailPage() {
     },
     {
       key: "Time",
-      label: "Time",
+      label: t("time"),
       width: 116,
       renderCell: (row) => <span className="text-on-surface-variant">{row.Time || "—"}</span>,
       disableCellWrapper: true,
     },
     {
       key: "device",
-      label: "Device",
+      label: t("deviceLabel"),
       width: 224,
       renderCell: (row) => {
         const friendlyName = getDisplayName(row.device);
@@ -720,7 +723,7 @@ export default function SensorDetailPage() {
     },
     {
       key: "temperature",
-      label: "Temp",
+      label: t("temperature"),
       sortKey: "temperature",
       width: 128,
       renderCell: (row) => {
@@ -732,7 +735,7 @@ export default function SensorDetailPage() {
     },
     {
       key: "humidity",
-      label: "Humidity",
+      label: t("humidity"),
       width: 132,
       sortable: false,
       renderCell: (row) => {
@@ -758,7 +761,7 @@ export default function SensorDetailPage() {
     },
     {
       key: "status",
-      label: "Status",
+      label: t("status"),
       width: 116,
       sortable: false,
       renderCell: (row) => {
@@ -774,7 +777,7 @@ export default function SensorDetailPage() {
       },
       disableCellWrapper: true,
     },
-  ]), [iotNamesMap]);
+  ]), [iotNamesMap, t]);
 
   return (
     <section className="pt-24 pb-16 px-8 overflow-y-auto h-screen scrollbar-hide">
@@ -791,11 +794,11 @@ export default function SensorDetailPage() {
         title={(
           <>
             <span className="material-symbols-outlined text-tertiary">sensors</span>
-            {factoryName} - Sensor Data
+            {t("sensorDataTitle", { factory: factoryName })}
           </>
         )}
         titleClassName="flex items-center gap-3"
-        subtitle={`${range.start} → ${range.end} · ${overview.totalReadings.toLocaleString()} readings`}
+        subtitle={`${range.start} → ${range.end} · ${t("readingsCountSuffix", { count: overview.totalReadings.toLocaleString() })}`}
         className="mb-6 md:flex-row md:items-center md:justify-between"
         actions={(
           <button
@@ -804,7 +807,7 @@ export default function SensorDetailPage() {
             className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold bg-surface-container border border-outline-variant/20 text-on-surface-variant hover:bg-surface-container-high hover:text-primary transition-all disabled:opacity-40"
           >
             <span className="material-symbols-outlined" style={{ fontSize: 16 }}>download</span>
-            {exporting ? "Exporting..." : "Export CSV"}
+            {exporting ? t("exportingLabel") : t("exportCSVLabel")}
           </button>
         )}
       />
@@ -812,7 +815,7 @@ export default function SensorDetailPage() {
       {/* ── Filter bar ── */}
       <div className="glass-card rounded-2xl p-5 flex flex-wrap items-center gap-4 mb-6">
         <div className="flex items-center gap-2">
-          <span className="text-[10px] text-outline font-semibold uppercase tracking-wider">From</span>
+          <span className="text-[10px] text-outline font-semibold uppercase tracking-wider">{t("fromLabel")}</span>
           <input
             type="date"
             value={range.start}
@@ -822,7 +825,7 @@ export default function SensorDetailPage() {
           />
         </div>
         <div className="flex items-center gap-2">
-          <span className="text-[10px] text-outline font-semibold uppercase tracking-wider">To</span>
+          <span className="text-[10px] text-outline font-semibold uppercase tracking-wider">{t("toLabel")}</span>
           <input
             type="date"
             value={range.end}
@@ -833,27 +836,27 @@ export default function SensorDetailPage() {
           />
         </div>
         <div className="flex items-center gap-2">
-          <span className="text-[10px] text-outline font-semibold uppercase tracking-wider">Device</span>
+          <span className="text-[10px] text-outline font-semibold uppercase tracking-wider">{t("deviceLabel")}</span>
           <select
             value={deviceFilter}
             onChange={(e) => setDeviceFilter(normalizeDeviceId(e.target.value) || "all")}
             className="bg-surface-container-lowest border border-outline-variant/20 rounded-lg px-3 py-1.5 text-xs text-on-surface focus:ring-2 focus:ring-primary/20 outline-none transition-all duration-150"
           >
-            <option value="all">All Devices</option>
+            <option value="all">{t("allDevicesOption")}</option>
             {devices.map((d) => <option key={d} value={d}>{d}</option>)}
           </select>
         </div>
         <div className="flex items-center gap-2">
-          <span className="text-[10px] text-outline font-semibold uppercase tracking-wider">Sort</span>
+          <span className="text-[10px] text-outline font-semibold uppercase tracking-wider">{t("sortLabel")}</span>
           <select
             value={sortKey}
             onChange={(e) => setSortKey(e.target.value)}
             className="bg-surface-container-lowest border border-outline-variant/20 rounded-lg px-3 py-1.5 text-xs text-on-surface focus:ring-2 focus:ring-primary/20 outline-none transition-all duration-150"
           >
-            <option value="date_desc">Latest First</option>
-            <option value="date_asc">Oldest First</option>
-            <option value="temp_desc">Temp High → Low</option>
-            <option value="temp_asc">Temp Low → High</option>
+            <option value="date_desc">{t("sortLatestFirst")}</option>
+            <option value="date_asc">{t("sortOldestFirst")}</option>
+            <option value="temp_desc">{t("sortTempHighLow")}</option>
+            <option value="temp_asc">{t("sortTempLowHigh")}</option>
           </select>
         </div>
         {hasActiveFilters ? (
@@ -863,7 +866,7 @@ export default function SensorDetailPage() {
             className="inline-flex items-center gap-2 rounded-lg border border-error/20 bg-error/10 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-error transition hover:bg-error/15"
           >
             <span className="material-symbols-outlined" style={{ fontSize: 14 }}>restart_alt</span>
-            Reset Filters
+            {t("resetFiltersLabel")}
           </button>
         ) : null}
         <div className="ml-auto flex gap-2">
@@ -893,40 +896,46 @@ export default function SensorDetailPage() {
         <>
           {/* ── KPI strip ── */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-            {[
-              {
-                label: `Avg Temperature${deviceFilter !== "all" && iotNamesMap.get(normalizeDeviceId(deviceFilter))?.offset ? ` (Offset: ${iotNamesMap.get(normalizeDeviceId(deviceFilter)).offset > 0 ? "+" : ""}${iotNamesMap.get(normalizeDeviceId(deviceFilter)).offset}°C)` : ""}`,
-                value: sensorKPIs.avgTemp !== null ? `${sensorKPIs.avgTemp}°C` : "—",
-                sub: sensorKPIs.minTemp !== null ? `Min ${sensorKPIs.minTemp}°C` : null,
-                icon: "thermostat",
-                color: getTempStatus(sensorKPIs.avgTemp).color,
-                bg: getTempStatus(sensorKPIs.avgTemp).bg,
-              },
-              {
-                label: `Peak Temperature${deviceFilter !== "all" && iotNamesMap.get(normalizeDeviceId(deviceFilter))?.offset ? ` (Offset: ${iotNamesMap.get(normalizeDeviceId(deviceFilter)).offset > 0 ? "+" : ""}${iotNamesMap.get(normalizeDeviceId(deviceFilter)).offset}°C)` : ""}`,
-                value: sensorKPIs.peakTemp !== null ? `${sensorKPIs.peakTemp}°C` : "—",
-                sub: null,
-                icon: "device_thermostat",
-                color: getTempStatus(sensorKPIs.peakTemp).color,
-                bg: getTempStatus(sensorKPIs.peakTemp).bg,
-              },
-              {
-                label: "Avg Humidity",
-                value: sensorKPIs.avgHumid !== null ? `${sensorKPIs.avgHumid}%` : "—",
-                sub: null,
-                icon: "water_drop",
-                color: getHumidityStatus(sensorKPIs.avgHumid).color,
-                bg: getHumidityStatus(sensorKPIs.avgHumid).bg,
-              },
-              {
-                label: "Heat Stress Alerts",
-                value: sensorKPIs.heatAlerts,
-                sub: sensorKPIs.heatAlerts > 0 ? "WBGT > 28°C" : "All clear",
-                icon: "warning",
-                color: sensorKPIs.heatAlerts > 0 ? "text-error" : "text-outline",
-                bg: sensorKPIs.heatAlerts > 0 ? "bg-error/10" : "bg-surface-container",
-              },
-            ].map(({ label, value, sub, icon, color, bg }) => (
+            {(() => {
+              const activeOffset = deviceFilter !== "all" ? iotNamesMap.get(normalizeDeviceId(deviceFilter))?.offset : null;
+              const offsetSuffix = activeOffset
+                ? t("offsetSuffix", { sign: activeOffset > 0 ? "+" : "", offset: activeOffset })
+                : "";
+              return [
+                {
+                  label: `${t("avgTemperatureLabel")}${offsetSuffix}`,
+                  value: sensorKPIs.avgTemp !== null ? `${sensorKPIs.avgTemp}°C` : "—",
+                  sub: sensorKPIs.minTemp !== null ? t("minTempLabel", { value: sensorKPIs.minTemp }) : null,
+                  icon: "thermostat",
+                  color: getTempStatus(sensorKPIs.avgTemp).color,
+                  bg: getTempStatus(sensorKPIs.avgTemp).bg,
+                },
+                {
+                  label: `${t("peakTemperatureLabel")}${offsetSuffix}`,
+                  value: sensorKPIs.peakTemp !== null ? `${sensorKPIs.peakTemp}°C` : "—",
+                  sub: null,
+                  icon: "device_thermostat",
+                  color: getTempStatus(sensorKPIs.peakTemp).color,
+                  bg: getTempStatus(sensorKPIs.peakTemp).bg,
+                },
+                {
+                  label: t("avgHumidityLabel"),
+                  value: sensorKPIs.avgHumid !== null ? `${sensorKPIs.avgHumid}%` : "—",
+                  sub: null,
+                  icon: "water_drop",
+                  color: getHumidityStatus(sensorKPIs.avgHumid).color,
+                  bg: getHumidityStatus(sensorKPIs.avgHumid).bg,
+                },
+                {
+                  label: t("heatStressAlertsLabel"),
+                  value: sensorKPIs.heatAlerts,
+                  sub: sensorKPIs.heatAlerts > 0 ? "WBGT > 28°C" : t("allClear"),
+                  icon: "warning",
+                  color: sensorKPIs.heatAlerts > 0 ? "text-error" : "text-outline",
+                  bg: sensorKPIs.heatAlerts > 0 ? "bg-error/10" : "bg-surface-container",
+                },
+              ];
+            })().map(({ label, value, sub, icon, color, bg }) => (
               <div key={label} className={`rounded-2xl p-5 border border-outline-variant/10 ${bg}`}>
                 <div className="flex items-center gap-2 mb-2">
                   <span className={`material-symbols-outlined ${color}`} style={{ fontSize: 16 }}>{icon}</span>
@@ -944,7 +953,7 @@ export default function SensorDetailPage() {
               <div className="flex items-center gap-2 mb-4">
                 <span className="material-symbols-outlined text-tertiary" style={{ fontSize: 16 }}>thermostat</span>
                 <p className="text-[10px] text-outline font-semibold uppercase tracking-[0.15em]">
-                  Temperature Trend ({range.start === range.end ? "hourly" : "daily"} avg)
+                  {t("temperatureTrendLabel", { period: range.start === range.end ? t("hourlyLabel") : t("dailyLabel") })}
                 </p>
               </div>
               <SensorTrendChart readings={overview.trends} type="temp" height={180} deviceNamesMap={iotNamesMap} />
@@ -953,7 +962,7 @@ export default function SensorDetailPage() {
               <div className="flex items-center gap-2 mb-4">
                 <span className="material-symbols-outlined text-cyan-400" style={{ fontSize: 16 }}>water_drop</span>
                 <p className="text-[10px] text-outline font-semibold uppercase tracking-[0.15em]">
-                  Humidity Trend ({range.start === range.end ? "hourly" : "daily"} avg)
+                  {t("humidityTrendLabel", { period: range.start === range.end ? t("hourlyLabel") : t("dailyLabel") })}
                 </p>
               </div>
               <SensorTrendChart readings={overview.trends} type="humid" height={180} deviceNamesMap={iotNamesMap} />
@@ -964,7 +973,7 @@ export default function SensorDetailPage() {
           {!cardLoading && deviceCards.length > 0 && (
             <div className="mb-6">
               <p className="text-[10px] text-outline font-semibold uppercase tracking-[0.18em] mb-4">
-                {deviceCards.length} Device{deviceCards.length !== 1 ? "s" : ""} — Latest Readings
+                {t("deviceCardsHeading", { count: deviceCards.length, plural: deviceCards.length !== 1 ? "s" : "" })}
               </p>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
                 {deviceCards.map((device) => (
@@ -985,9 +994,9 @@ export default function SensorDetailPage() {
           {/* ── Records table ── */}
           <div className="glass-card rounded-2xl p-6">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-base font-semibold text-on-surface">All Readings</h3>
+              <h3 className="text-base font-semibold text-on-surface">{t("allReadingsTitle")}</h3>
               <span className="text-[10px] text-outline font-semibold uppercase tracking-wider">
-                {(pagination.totalItems || tableRows.length).toLocaleString()} rows
+                {(pagination.totalItems || tableRows.length).toLocaleString()} {t("rowsSuffix")}
               </span>
             </div>
             <DataTable
@@ -1007,13 +1016,15 @@ export default function SensorDetailPage() {
                 setPage(1);
               }}
               pageSizeOptions={SENSOR_READINGS_PAGE_SIZE_OPTIONS}
-              pageSizeLabel="Rows"
+              pageSizeLabel={t("rowsSuffix")}
+              previousLabel={t("previousLabel")}
+              nextLabel={t("next")}
               rowKey={(row) => `${row.Date || ""}-${row.Time || ""}-${row.device || "sensor"}`}
               renderPageInfo={({ filteredCount, page: currentPage, pageSize: currentPageSize }) => (
-                <span>{buildSensorReadingsPageInfo({ filteredCount, page: currentPage, pageSize: currentPageSize })}</span>
+                <span>{buildSensorReadingsPageInfo({ filteredCount, page: currentPage, pageSize: currentPageSize, t })}</span>
               )}
-              emptyTitle="No sensor readings found"
-              emptyMessage="Adjust the date range or device filter to load sensor readings."
+              emptyTitle={t("noSensorReadingsFound")}
+              emptyMessage={t("adjustDateRangeMessage")}
               layoutStorageKey="sensor-readings-table-layout"
               enableColumnResize
               enableColumnReorder

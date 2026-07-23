@@ -22,11 +22,16 @@ export default function FactoriesPage() {
     <section className="pt-24 pb-16 px-8 overflow-y-auto h-screen scrollbar-hide">
       <PageHeader
         title={t("factoryListTitle")}
-        subtitle={(
-          <>
-            {total} facilit{total === 1 ? "y" : "ies"} {"-"} {normal} normal, {warnings} warning{warnings !== 1 ? "s" : ""}, {critical} critical
-          </>
-        )}
+        subtitle={t("factoriesSubtitle", {
+          total,
+          facilityWord: t(total === 1 ? "facilitySingular" : "facilitiesPlural"),
+          normal,
+          normalWord: t("normal"),
+          warnings,
+          warningWord: t("warning"),
+          critical,
+          criticalWord: t("critical"),
+        })}
         className="mb-6 md:flex-row md:items-end md:justify-between"
         actionsClassName="md:justify-end"
         actions={(
@@ -44,7 +49,7 @@ export default function FactoriesPage() {
       {error && (
         <div className="glass-card rounded-2xl p-6 mb-6 flex items-center gap-4 text-error">
           <span className="material-symbols-outlined">error</span>
-          <p className="text-sm font-semibold">Backend unreachable — showing last cached data. ({error})</p>
+          <p className="text-sm font-semibold">{t("factoriesBackendError", { error })}</p>
         </div>
       )}
 

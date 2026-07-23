@@ -1,4 +1,5 @@
 import { getDefectStatus } from "../utils/statusHelpers";
+import { useLanguage } from "../contexts/LanguageContext";
 
 // ─── Rank badge ───────────────────────────────────────────────────────────────
 const RANK_COLORS = [
@@ -9,10 +10,18 @@ const RANK_COLORS = [
   "bg-surface-container text-outline",
 ];
 
+const DEFECT_LEVEL_LABEL_KEY = {
+  high: "highDefectRate",
+  warning: "warning",
+  normal: "normal",
+};
+
 // ─── Main card ────────────────────────────────────────────────────────────────
 export default function FactoryCard({ factory, onClick, onDefectClick }) {
+  const { t } = useLanguage();
   const { name, total, totalNG, defectRate, topDefects = [] } = factory;
   const defectStatus = getDefectStatus(defectRate);
+  const defectStatusLabel = t(DEFECT_LEVEL_LABEL_KEY[defectStatus.level] ?? "normal");
 
   return (
     <div
@@ -24,19 +33,19 @@ export default function FactoryCard({ factory, onClick, onDefectClick }) {
         <div>
           <h4 className="text-base font-semibold text-on-surface leading-tight">{name}</h4>
           <p className="text-[10px] text-on-surface-variant mt-0.5">
-            {total.toLocaleString()} kensa units today
+            {t("kensaUnitsToday", { count: total.toLocaleString() })}
           </p>
         </div>
         <span className={`flex items-center gap-1.5 text-[10px] font-semibold px-2 py-1 rounded-full ${defectStatus.bg} ${defectStatus.color}`}>
           <span className={`w-1.5 h-1.5 rounded-full ${defectStatus.dot}`}></span>
-          {defectStatus.label}
+          {defectStatusLabel}
         </span>
       </div>
 
       {/* ── Production summary ── */}
       <div className="grid grid-cols-3 gap-2 pb-3 border-b border-outline-variant/20">
         <div>
-          <p className="text-[10px] text-on-surface-variant uppercase tracking-[0.18em] mb-1">Total</p>
+          <p className="text-[10px] text-on-surface-variant uppercase tracking-[0.18em] mb-1">{t("total")}</p>
           <p className="text-sm font-semibold text-on-surface">{total.toLocaleString()}</p>
         </div>
         <div>
@@ -44,7 +53,7 @@ export default function FactoryCard({ factory, onClick, onDefectClick }) {
           <p className="text-sm font-semibold text-on-surface">{totalNG.toLocaleString()}</p>
         </div>
         <div>
-          <p className="text-[10px] text-on-surface-variant uppercase tracking-[0.18em] mb-1">Defect</p>
+          <p className="text-[10px] text-on-surface-variant uppercase tracking-[0.18em] mb-1">{t("defectPercentColumn")}</p>
           <p className={`text-sm font-semibold ${defectStatus.valueColor}`}>{defectRate.toFixed(2)}%</p>
         </div>
       </div>
@@ -53,11 +62,11 @@ export default function FactoryCard({ factory, onClick, onDefectClick }) {
       <div className="flex-1 flex flex-col">
         <div className="flex items-center justify-between mb-2.5">
           <p className="text-[10px] font-semibold text-on-surface-variant uppercase tracking-[0.18em]">
-            Top Defects
+            {t("topDefectsLabel")}
           </p>
           {topDefects.length > 0 && (
             <span className="text-[10px] font-semibold text-error bg-error/10 px-2 py-0.5 rounded-full">
-              {topDefects.length} part{topDefects.length !== 1 ? "s" : ""}
+              {t("partsCount", { count: topDefects.length, plural: topDefects.length !== 1 ? "s" : "" })}
             </span>
           )}
         </div>
@@ -65,7 +74,7 @@ export default function FactoryCard({ factory, onClick, onDefectClick }) {
         {topDefects.length === 0 ? (
           <div className="flex items-center justify-center gap-1.5 rounded-xl bg-emerald-500/10 py-4 text-[11px] font-medium text-emerald-600 dark:text-emerald-400">
             <span className="material-symbols-outlined" style={{ fontSize: 16, fontVariationSettings: "'FILL' 1" }}>check_circle</span>
-            No defects today
+            {t("noDefectsToday")}
           </div>
         ) : (
           <div className="space-y-0.5">
@@ -74,7 +83,7 @@ export default function FactoryCard({ factory, onClick, onDefectClick }) {
               <span />
               <span className="text-[9px] font-semibold text-outline uppercase tracking-[0.18em]">背番号</span>
               <span className="text-[9px] font-semibold text-outline uppercase tracking-[0.18em] text-right">NG</span>
-              <span className="text-[9px] font-semibold text-outline uppercase tracking-[0.18em] text-right">Rate</span>
+              <span className="text-[9px] font-semibold text-outline uppercase tracking-[0.18em] text-right">{t("rateLabel")}</span>
             </div>
 
             {topDefects.map((d, i) => {

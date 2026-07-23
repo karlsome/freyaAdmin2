@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import ModalShell from "./ModalShell";
 import SensorDevicePhotoPreviewModal from "./SensorDevicePhotoPreviewModal";
+import { useLanguage } from "../contexts/LanguageContext";
 
 function formatDateTime(value) {
   if (!value) return "—";
@@ -17,6 +18,7 @@ function formatRegisteredBy(device) {
 }
 
 export default function DeviceDetailModal({ device, open, onClose }) {
+  const { t } = useLanguage();
   const [previewIndex, setPreviewIndex] = useState(null);
 
   const images = useMemo(() => (
@@ -26,7 +28,7 @@ export default function DeviceDetailModal({ device, open, onClose }) {
   const registeredByName = device ? formatRegisteredBy(device) : "—";
   const usernameLabel = device?.username ? `@${device.username}` : "";
   const factoryName = String(device?.factoryName || "—").trim() || "—";
-  const deviceName = String(device?.name || "").trim() || String(device?.deviceId || "Unknown device");
+  const deviceName = String(device?.name || "").trim() || String(device?.deviceId || t("unknownLabel"));
   const deviceId = String(device?.deviceId || "—").trim() || "—";
 
   function handleClose() {
@@ -44,7 +46,7 @@ export default function DeviceDetailModal({ device, open, onClose }) {
   }
 
   const preview = previewIndex != null && images[previewIndex] ? {
-    eyebrow: "Device Photos",
+    eyebrow: t("devicePhotosLabel"),
     images: images.map((url) => ({ url })),
     activeIndex: previewIndex,
     displayName: deviceName,
@@ -57,7 +59,7 @@ export default function DeviceDetailModal({ device, open, onClose }) {
       <ModalShell
         open={open && Boolean(device)}
         onClose={handleClose}
-        eyebrow="Device"
+        eyebrow={t("deviceLabel")}
         title={deviceName}
         subtitle={`${factoryName} • ${deviceId}`}
         maxWidth="max-w-3xl"
@@ -66,36 +68,36 @@ export default function DeviceDetailModal({ device, open, onClose }) {
         <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5 space-y-4">
           {/* Identity */}
           <div className="rounded-2xl border border-outline-variant/15 bg-surface-container-low px-4 py-4">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline mb-3">Identity</p>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline mb-3">{t("identityLabel")}</p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="rounded-2xl border border-outline-variant/15 bg-surface-container px-4 py-3">
                 <div className="flex items-center gap-2 text-outline">
                   <span className="material-symbols-outlined text-primary" style={{ fontSize: 16 }}>badge</span>
-                  <span className="text-[10px] font-semibold uppercase tracking-[0.18em]">Name</span>
+                  <span className="text-[10px] font-semibold uppercase tracking-[0.18em]">{t("name")}</span>
                 </div>
                 <p className="mt-2 text-sm font-semibold text-on-surface">{deviceName}</p>
               </div>
               <div className="rounded-2xl border border-outline-variant/15 bg-surface-container px-4 py-3">
                 <div className="flex items-center gap-2 text-outline">
                   <span className="material-symbols-outlined text-primary" style={{ fontSize: 16 }}>tag</span>
-                  <span className="text-[10px] font-semibold uppercase tracking-[0.18em]">Device ID</span>
+                  <span className="text-[10px] font-semibold uppercase tracking-[0.18em]">{t("deviceIdLabel")}</span>
                 </div>
                 <p className="mt-2 font-mono text-xs text-on-surface-variant break-all">{deviceId}</p>
               </div>
               <div className="rounded-2xl border border-outline-variant/15 bg-surface-container px-4 py-3">
                 <div className="flex items-center gap-2 text-outline">
                   <span className="material-symbols-outlined text-primary" style={{ fontSize: 16 }}>factory</span>
-                  <span className="text-[10px] font-semibold uppercase tracking-[0.18em]">Factory</span>
+                  <span className="text-[10px] font-semibold uppercase tracking-[0.18em]">{t("factory")}</span>
                 </div>
                 <p className="mt-2 text-sm font-semibold text-on-surface">{factoryName}</p>
               </div>
               <div className="rounded-2xl border border-outline-variant/15 bg-surface-container px-4 py-3">
                 <div className="flex items-center gap-2 text-outline">
                   <span className="material-symbols-outlined text-primary" style={{ fontSize: 16 }}>image</span>
-                  <span className="text-[10px] font-semibold uppercase tracking-[0.18em]">Photos</span>
+                  <span className="text-[10px] font-semibold uppercase tracking-[0.18em]">{t("photosLabel")}</span>
                 </div>
                 <p className="mt-2 text-sm font-semibold text-on-surface">
-                  {images.length} {images.length === 1 ? "photo" : "photos"}
+                  {t("photosCountLabel", { count: images.length, plural: images.length === 1 ? "" : "s" })}
                 </p>
               </div>
             </div>
@@ -103,12 +105,12 @@ export default function DeviceDetailModal({ device, open, onClose }) {
 
           {/* Registration */}
           <div className="rounded-2xl border border-outline-variant/15 bg-surface-container-low px-4 py-4">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline mb-3">Registration</p>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline mb-3">{t("registrationLabel")}</p>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div className="rounded-2xl border border-outline-variant/15 bg-surface-container px-4 py-3">
                 <div className="flex items-center gap-2 text-outline">
                   <span className="material-symbols-outlined text-primary" style={{ fontSize: 16 }}>person</span>
-                  <span className="text-[10px] font-semibold uppercase tracking-[0.18em]">Registered By</span>
+                  <span className="text-[10px] font-semibold uppercase tracking-[0.18em]">{t("registeredByLabel")}</span>
                 </div>
                 <p className="mt-2 text-sm font-semibold text-on-surface">{registeredByName}</p>
                 {usernameLabel ? (
@@ -118,14 +120,14 @@ export default function DeviceDetailModal({ device, open, onClose }) {
               <div className="rounded-2xl border border-outline-variant/15 bg-surface-container px-4 py-3">
                 <div className="flex items-center gap-2 text-outline">
                   <span className="material-symbols-outlined text-primary" style={{ fontSize: 16 }}>schedule</span>
-                  <span className="text-[10px] font-semibold uppercase tracking-[0.18em]">Created</span>
+                  <span className="text-[10px] font-semibold uppercase tracking-[0.18em]">{t("createdLabel")}</span>
                 </div>
                 <p className="mt-2 text-sm font-semibold text-on-surface">{formatDateTime(device?.createdAt)}</p>
               </div>
               <div className="rounded-2xl border border-outline-variant/15 bg-surface-container px-4 py-3">
                 <div className="flex items-center gap-2 text-outline">
                   <span className="material-symbols-outlined text-primary" style={{ fontSize: 16 }}>update</span>
-                  <span className="text-[10px] font-semibold uppercase tracking-[0.18em]">Updated</span>
+                  <span className="text-[10px] font-semibold uppercase tracking-[0.18em]">{t("updatedLabel")}</span>
                 </div>
                 <p className="mt-2 text-sm font-semibold text-on-surface">{formatDateTime(device?.updatedAt)}</p>
               </div>
@@ -135,9 +137,9 @@ export default function DeviceDetailModal({ device, open, onClose }) {
           {/* Photos */}
           <div className="rounded-2xl border border-outline-variant/15 bg-surface-container-low px-4 py-4">
             <div className="flex items-center justify-between mb-3">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Photos</p>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">{t("photosLabel")}</p>
               <span className="text-[10px] text-outline">
-                {images.length} {images.length === 1 ? "image" : "images"}
+                {t("imagesCountLabel", { count: images.length, plural: images.length === 1 ? "" : "s" })}
               </span>
             </div>
             {images.length > 0 ? (
@@ -148,7 +150,7 @@ export default function DeviceDetailModal({ device, open, onClose }) {
                     type="button"
                     onClick={() => setPreviewIndex(index)}
                     className="aspect-square rounded-xl overflow-hidden border border-separator/40 bg-surface-container transition-all duration-150 hover:border-primary/30 active:scale-95"
-                    title={`Open photo ${index + 1}`}
+                    title={t("openPhotoTooltip", { n: index + 1 })}
                   >
                     <img
                       src={url}
@@ -160,7 +162,7 @@ export default function DeviceDetailModal({ device, open, onClose }) {
                 ))}
               </div>
             ) : (
-              <p className="text-[11px] text-outline">No photos uploaded for this device.</p>
+              <p className="text-[11px] text-outline">{t("noPhotosUploaded")}</p>
             )}
           </div>
         </div>

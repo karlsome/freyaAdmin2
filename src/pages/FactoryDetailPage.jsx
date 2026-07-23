@@ -20,6 +20,13 @@ import ProcessPanel from "../components/ProcessPanel";
 import ProductionFilterBar from "../components/ProductionFilterBar";
 import StatSummaryCard from "../components/StatSummaryCard";
 import { useRecordModal } from "../hooks/useRecordModal";
+import { useLanguage } from "../contexts/LanguageContext";
+
+const DEFECT_LEVEL_LABEL_KEY = {
+  high: "highDefectRate",
+  warning: "warning",
+  normal: "normal",
+};
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function fmtDate(d) { return d.toISOString().split("T")[0]; }
@@ -34,6 +41,7 @@ function defectChip(rate) {
 
 // ─── MfgLotModal ─────────────────────────────────────────────────────────────
 function MfgLotModal({ onClose, initialLot = "" }) {
+  const { t } = useLanguage();
   const [lotInput, setLotInput]   = useState(initialLot);
   const [step, setStep]           = useState("input");
   const [sebanggoOptions, setSebanggoOptions] = useState([]);
@@ -61,7 +69,7 @@ function MfgLotModal({ onClose, initialLot = "" }) {
         setResults({ rows });
         setStep("results");
       } catch {
-        setErrMsg("Lot not found. Please check the number and try again.");
+        setErrMsg(t("lotNotFoundError"));
         setStep("error");
       }
     }
@@ -70,8 +78,8 @@ function MfgLotModal({ onClose, initialLot = "" }) {
 
   // Auto-search when opened with a pre-filled lot (e.g. from 材料ロット chip)
   useEffect(() => {
-    const t = initialLot.trim();
-    if (t.length >= 3) doSearch(t);
+    const trimmed = initialLot.trim();
+    if (trimmed.length >= 3) doSearch(trimmed);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleSearch = () => doSearch(lotInput.trim());
@@ -83,7 +91,7 @@ function MfgLotModal({ onClose, initialLot = "" }) {
       setResults(res);
       setStep("results");
     } catch {
-      setErrMsg("Failed to retrieve lot data.");
+      setErrMsg(t("failedRetrieveLotData"));
       setStep("error");
     }
     setLoading(false);
@@ -107,7 +115,7 @@ function MfgLotModal({ onClose, initialLot = "" }) {
         <div className="px-6 py-5 flex items-center justify-between border-b border-separator/40">
           <div className="flex items-center gap-2">
             <span className="material-symbols-outlined text-primary" style={{ fontSize: 20 }}>manage_search</span>
-            <h3 className="text-base font-semibold text-on-surface">Manufacturing Lot Finder</h3>
+            <h3 className="text-base font-semibold text-on-surface">{t("mfgLotFinderTitle")}</h3>
           </div>
           <button onClick={onClose}
             className="p-2 rounded-xl hover:bg-surface-container text-outline hover:text-on-surface transition-colors">
@@ -131,13 +139,13 @@ function MfgLotModal({ onClose, initialLot = "" }) {
               disabled={loading || lotInput.trim().length < 3}
               className="px-4 h-10 rounded-xl bg-primary text-on-primary text-sm font-semibold disabled:opacity-40 hover:opacity-90 transition-opacity"
             >
-              {loading ? "…" : "Search"}
+              {loading ? "…" : t("search")}
             </button>
           </div>
 
           {step === "selecting" && (
             <div>
-              <p className="text-xs text-on-surface-variant mb-3">Multiple matches — select a serial number:</p>
+              <p className="text-xs text-on-surface-variant mb-3">{t("multipleMatchesSelectSerial")}</p>
               <div className="space-y-2">
                 {sebanggoOptions.map((s) => (
                   <button key={s} onClick={() => handleSelectSebanggo(s)}
@@ -194,7 +202,7 @@ function MfgLotModal({ onClose, initialLot = "" }) {
                   </table>
                 </div>
               ) : fields.length === 0 && (
-                <p className="text-sm text-outline text-center py-4">No records found for this lot.</p>
+                <p className="text-sm text-outline text-center py-4">{t("noRecordsFoundForLot")}</p>
               )}
             </div>
           )}
@@ -217,6 +225,7 @@ const CAM_LABELS = [
 ];
 
 function CameraModal({ onClose, stream = 'tapo_cam' }) {
+  const { t } = useLanguage();
   const videoRef = useRef(null);
   const [activeStream, setActiveStream] = useState(stream);
 
@@ -270,8 +279,8 @@ function CameraModal({ onClose, stream = 'tapo_cam' }) {
       >
         <div className="flex items-center justify-between gap-4 border-b border-separator/40 px-6 py-5">
           <div>
-            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">小瀬 — Live Camera</p>
-            <h2 className="mt-1 text-xl font-semibold text-on-surface">Live Feed — {activeLabel}</h2>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">小瀬 — {t("liveCameraLabel")}</p>
+            <h2 className="mt-1 text-xl font-semibold text-on-surface">{t("liveFeedLabel", { label: activeLabel })}</h2>
           </div>
           <button
             type="button"
@@ -309,9 +318,10 @@ function CameraModal({ onClose, stream = 'tapo_cam' }) {
 console.log('API URL:', import.meta.env.VITE_API_URL);
 // ─── Main page ────────────────────────────────────────────────────────────────
 export default function FactoryDetailPage({ combined = false }) {
+  const { t } = useLanguage();
   const { factoryName: encoded } = useParams();
   const factoryName = combined ? "__all__" : decodeURIComponent(encoded);
-  const pageTitle = combined ? "Overview" : factoryName;
+  const pageTitle = combined ? t("overview") : factoryName;
   const navigate    = useNavigate();
 
   const [dateFrom,      setDateFrom]      = useState(todayStr());
@@ -361,6 +371,7 @@ export default function FactoryDetailPage({ combined = false }) {
   const stripNG      = allFlat.reduce((s, r) => s + (Number(r.Total_NG) || 0), 0);
   const stripRate    = stripTotal > 0 ? Math.round((stripNG / stripTotal) * 10000) / 100 : 0;
   const defStatus    = getDefectStatus(stripRate);
+  const defStatusLabel = t(DEFECT_LEVEL_LABEL_KEY[defStatus.level] ?? "normal");
 
   // Per-process stats
   const PROCESS_ACCENT = {
@@ -381,25 +392,25 @@ export default function FactoryDetailPage({ combined = false }) {
     {
       key: "total-processed",
       icon: "output",
-      label: "Total Processed",
+      label: t("totalProcessed"),
       value: stripTotal.toLocaleString(),
-      subtitle: "units processed",
+      subtitle: t("unitsProcessed"),
       accent: "text-primary bg-primary/10",
     },
     {
       key: "ng-units",
       icon: "report",
-      label: "NG Units",
+      label: t("ngUnitsLabel"),
       value: stripNG.toLocaleString(),
-      subtitle: "defective units",
+      subtitle: t("defectiveUnits"),
       accent: stripNG > 0 ? "text-error bg-error/10" : "text-emerald-500 bg-emerald-500/10",
     },
     {
       key: "defect-rate",
       icon: "percent",
-      label: "Defect Rate",
+      label: t("defectRate"),
       value: `${stripRate.toFixed(2)}%`,
-      subtitle: defStatus.label,
+      subtitle: defStatusLabel,
       accent:
         stripRate >= 2
           ? "text-error bg-error/10"
@@ -410,9 +421,9 @@ export default function FactoryDetailPage({ combined = false }) {
     {
       key: "sensors",
       icon: "sensors",
-      label: combined ? "Total Sensors" : "Sensors Online",
+      label: combined ? t("totalSensorsLabel") : t("sensorsOnlineLabel"),
       value: String(sensor?.sensorCount ?? 0),
-      subtitle: combined ? "connected sensors across factories" : "active sensor devices",
+      subtitle: combined ? t("connectedSensorsAcrossFactories") : t("activeSensorDevices"),
       accent: sensor?.hasData ? "text-emerald-500 bg-emerald-500/10" : "text-outline bg-surface-container-high",
     },
   ];
@@ -433,10 +444,10 @@ export default function FactoryDetailPage({ combined = false }) {
         titleMeta={!loading ? (
           <span className={`flex items-center gap-1.5 text-[10px] font-semibold px-3 py-1 rounded-full ${defStatus.bg} ${defStatus.color}`}>
             <span className={`w-1.5 h-1.5 rounded-full ${defStatus.dot}`} />
-            {defStatus.label}
+            {defStatusLabel}
           </span>
         ) : null}
-        subtitle={`${combined ? "All Factories Combined -" : "Factory Overview -"} ${dateFrom === dateTo ? dateFrom : `${dateFrom} → ${dateTo}`}`}
+        subtitle={`${combined ? t("allFactoriesCombined") : t("factoryOverview")} - ${dateFrom === dateTo ? dateFrom : `${dateFrom} → ${dateTo}`}`}
         className="mb-6 md:flex-row md:items-start md:justify-between"
         actions={(
           <>
@@ -446,7 +457,7 @@ export default function FactoryDetailPage({ combined = false }) {
                 className="flex-shrink-0 flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold border border-separator/40 bg-surface text-on-surface hover:bg-surface-container hover:border-primary/30 hover:text-primary active:scale-95 transition-all duration-150"
               >
                 <span className="material-symbols-outlined" style={{ fontSize: 16 }}>videocam</span>
-                View Live Feed
+                {t("viewLiveFeed")}
               </button>
             )}
 
@@ -456,7 +467,7 @@ export default function FactoryDetailPage({ combined = false }) {
                          bg-primary text-on-primary hover:opacity-90 transition-opacity"
             >
               <span className="material-symbols-outlined" style={{ fontSize: 16 }}>sensors</span>
-              {combined ? "Sensor Overview" : "Sensor History"}
+              {combined ? t("sensorOverviewBtn") : t("sensorHistoryBtn")}
             </button>
           </>
         )}
@@ -486,13 +497,13 @@ export default function FactoryDetailPage({ combined = false }) {
               <StatSummaryCard
                 key={proc}
                 icon="precision_manufacturing"
-                label={`${proc} Process`}
+                label={t("processSuffix", { process: proc })}
                 labelClassName={accent.color}
                 value={total > 0 ? total.toLocaleString() : "—"}
                 subtitle={
                   total > 0
                     ? <><span className={ds.valueColor}>{rate.toFixed(2)}%</span>{" · "}{ng.toLocaleString()} NG</>
-                    : "No data"
+                    : t("noDataShort")
                 }
                 subtitleClassName={total > 0 ? "text-on-surface-variant" : ""}
                 accent={`${accent.color} ${accent.bg}`}
@@ -511,8 +522,8 @@ export default function FactoryDetailPage({ combined = false }) {
               <span className="material-symbols-outlined text-primary flex-shrink-0" style={{ fontSize: 24 }}>cloud</span>
               <div className="flex gap-6 flex-wrap flex-1">
                 {[
-                  { label: "Temp",     value: `${env.temperature ?? "—"}°C`, status: getTempStatus(env.temperature) },
-                  { label: "Humidity", value: `${env.humidity ?? "—"}%`,     status: getHumidityStatus(env.humidity) },
+                  { label: t("temperature"), value: `${env.temperature ?? "—"}°C`, status: getTempStatus(env.temperature) },
+                  { label: t("humidity"),    value: `${env.humidity ?? "—"}%`,     status: getHumidityStatus(env.humidity) },
                 ].map(({ label, value, status }) => (
                   <div key={label} className="flex flex-col gap-0.5">
                     <span className="text-[10px] font-semibold uppercase tracking-wider text-outline">{label}</span>
@@ -520,7 +531,7 @@ export default function FactoryDetailPage({ combined = false }) {
                   </div>
                 ))}
               </div>
-              {env.isDefault && <span className="text-[10px] text-outline">Simulated</span>}
+              {env.isDefault && <span className="text-[10px] text-outline">{t("simulatedLabel")}</span>}
             </div>
           )}
           {sensor?.hasData && (
@@ -528,8 +539,8 @@ export default function FactoryDetailPage({ combined = false }) {
               <span className="material-symbols-outlined text-tertiary flex-shrink-0" style={{ fontSize: 24 }}>sensors</span>
               <div className="flex gap-6 flex-wrap">
                 {[
-                  { label: "Peak Temp",    value: `${sensor.highestTemp}°C`,      status: getTempStatus(sensor.highestTemp) },
-                  { label: "Avg Humidity", value: `${sensor.averageHumidity}%`,   status: getHumidityStatus(sensor.averageHumidity) },
+                  { label: t("peakTempLabel"),    value: `${sensor.highestTemp}°C`,      status: getTempStatus(sensor.highestTemp) },
+                  { label: t("avgHumidityLabel"), value: `${sensor.averageHumidity}%`,   status: getHumidityStatus(sensor.averageHumidity) },
                   ...(sensor.wbgt != null ? [{ label: "WBGT", value: `${sensor.wbgt}°C`, status: getWBGTStatus(sensor.wbgt) }] : []),
                 ].map(({ label, value, status }) => (
                   <div key={label} className="flex flex-col gap-0.5">
@@ -561,7 +572,7 @@ export default function FactoryDetailPage({ combined = false }) {
         <div className="px-6 py-4 border-b border-separator/40 flex items-center justify-between flex-wrap gap-3">
           <h3 className="text-base font-semibold text-on-surface flex items-center gap-2">
             <span className="material-symbols-outlined text-primary" style={{ fontSize: 18 }}>factory</span>
-            Daily Production
+            {t("dailyProductionTitle")}
           </h3>
           {sectionNames.length > 1 && (
             <LiquidSegmentedControl

@@ -3,6 +3,7 @@ import { fetchDistinctValues } from "../services/api";
 import AdvancedFilterSection from "./AdvancedFilterSection";
 import FormField from "./FormField";
 import TagInput from "./TagInput";
+import { useLanguage } from "../contexts/LanguageContext";
 
 const APPROVAL_STATUS_VALUES = [
   "pending",
@@ -74,6 +75,7 @@ export default function ProductionFilterBar({
   onLotFinderOpen,
   children,
 }) {
+  const { t } = useLanguage();
   const [dateFrom,      setDateFrom]      = useState(defaultDateFrom);
   const [dateTo,        setDateTo]        = useState(defaultDateTo);
   const [partNumbers,   setPartNumbers]   = useState([]);
@@ -112,7 +114,7 @@ export default function ProductionFilterBar({
     <div className="glass-card rounded-2xl p-5 mb-6">
       {/* Core filters grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 mb-4">
-        <FormField label="From">
+        <FormField label={t("fromLabel")}>
           <input
             type="date"
             value={dateFrom}
@@ -120,7 +122,7 @@ export default function ProductionFilterBar({
             className="h-10 px-3 rounded-xl bg-white border border-separator/40 text-sm text-on-surface outline-none focus:border-primary/40 transition-colors"
           />
         </FormField>
-        <FormField label="To">
+        <FormField label={t("toLabel")}>
           <input
             type="date"
             value={dateTo}
@@ -128,21 +130,21 @@ export default function ProductionFilterBar({
             className="h-10 px-3 rounded-xl bg-white border border-separator/40 text-sm text-on-surface outline-none focus:border-primary/40 transition-colors"
           />
         </FormField>
-        <FormField label="品番 (Part No.)">
+        <FormField label={t("partNumberFieldLabel")}>
           <TagInput
             tags={partNumbers}
-            onAdd={(t) => setPartNumbers((v) => [...v, t])}
-            onRemove={(t) => setPartNumbers((v) => v.filter((x) => x !== t))}
-            placeholder="Enter to add…"
+            onAdd={(tag) => setPartNumbers((v) => [...v, tag])}
+            onRemove={(tag) => setPartNumbers((v) => v.filter((x) => x !== tag))}
+            placeholder={t("enterToAddPlaceholder")}
             uppercase
           />
         </FormField>
-        <FormField label="背番号 (Serial No.)">
+        <FormField label={t("serialNumberFieldLabel")}>
           <TagInput
             tags={serialNumbers}
-            onAdd={(t) => setSerialNumbers((v) => [...v, t])}
-            onRemove={(t) => setSerialNumbers((v) => v.filter((x) => x !== t))}
-            placeholder="Enter to add…"
+            onAdd={(tag) => setSerialNumbers((v) => [...v, tag])}
+            onRemove={(tag) => setSerialNumbers((v) => v.filter((x) => x !== tag))}
+            placeholder={t("enterToAddPlaceholder")}
             uppercase
           />
         </FormField>
@@ -164,7 +166,7 @@ export default function ProductionFilterBar({
         operatorLabels={OPERATOR_LABELS}
         useOperatorLabelsInSelect
         optionsCacheKey={factoryName}
-        addRowLabel="Add Filter"
+        addRowLabel={t("addFilterLabel")}
         showActiveSummary={false}
         variant="compact"
         framed={false}
@@ -179,7 +181,7 @@ export default function ProductionFilterBar({
                      hover:opacity-90 disabled:opacity-50 transition-opacity"
         >
           <span className="material-symbols-outlined" style={{ fontSize: 16 }}>filter_alt</span>
-          {loading ? "Loading…" : "Apply Filters"}
+          {loading ? t("loading") : t("applyFilters")}
         </button>
 
         {onLotFinderOpen && (
@@ -189,7 +191,7 @@ export default function ProductionFilterBar({
                        text-on-surface hover:border-primary/30 hover:scale-[1.02] transition-all duration-150"
           >
             <span className="material-symbols-outlined" style={{ fontSize: 16 }}>manage_search</span>
-            Manufacturing Lot Finder
+            {t("mfgLotFinderTitle")}
           </button>
         )}
       </div>

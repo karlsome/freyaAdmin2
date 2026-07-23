@@ -3,6 +3,7 @@ import PageHeader from "../components/PageHeader";
 import DataTable from "../components/DataTable";
 import DeviceDetailModal from "../components/DeviceDetailModal";
 import { fetchAllIoTDevicesWithUsers } from "../services/api";
+import { useLanguage } from "../contexts/LanguageContext";
 
 const PAGE_SIZE_OPTIONS = [15, 50, 100];
 
@@ -20,12 +21,13 @@ function getRegisteredName(device) {
   return full || String(device?.username || "").trim() || "—";
 }
 
-function getDeviceDisplayName(device) {
-  return String(device?.name || "").trim() || String(device?.deviceId || "Unknown");
+function getDeviceDisplayName(device, t) {
+  return String(device?.name || "").trim() || String(device?.deviceId || t("unknownLabel"));
 }
 
 function DeviceCard({ device, onClick }) {
-  const displayName = getDeviceDisplayName(device);
+  const { t } = useLanguage();
+  const displayName = getDeviceDisplayName(device, t);
   const registeredBy = getRegisteredName(device);
   const factoryName = String(device?.factoryName || "—").trim() || "—";
   const photoCount = Array.isArray(device?.imageURLs) ? device.imageURLs.filter(Boolean).length : 0;
@@ -38,7 +40,7 @@ function DeviceCard({ device, onClick }) {
     >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Device</p>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">{t("deviceLabel")}</p>
           <p className="mt-1 truncate text-base font-semibold text-on-surface">{displayName}</p>
           <p className="mt-1 truncate font-mono text-[10px] text-outline">{device?.deviceId || "—"}</p>
         </div>
@@ -54,14 +56,14 @@ function DeviceCard({ device, onClick }) {
         <div className="rounded-2xl border border-outline-variant/15 bg-surface-container-low px-4 py-3">
           <div className="flex items-center gap-2 text-outline">
             <span className="material-symbols-outlined text-primary" style={{ fontSize: 16 }}>factory</span>
-            <span className="text-[10px] font-semibold uppercase tracking-[0.18em]">Factory</span>
+            <span className="text-[10px] font-semibold uppercase tracking-[0.18em]">{t("factory")}</span>
           </div>
           <p className="mt-2 truncate text-sm font-semibold text-on-surface">{factoryName}</p>
         </div>
         <div className="rounded-2xl border border-outline-variant/15 bg-surface-container-low px-4 py-3">
           <div className="flex items-center gap-2 text-outline">
             <span className="material-symbols-outlined text-primary" style={{ fontSize: 16 }}>person</span>
-            <span className="text-[10px] font-semibold uppercase tracking-[0.18em]">Registered</span>
+            <span className="text-[10px] font-semibold uppercase tracking-[0.18em]">{t("registeredShort")}</span>
           </div>
           <p className="mt-2 truncate text-sm font-semibold text-on-surface">{registeredBy}</p>
         </div>
@@ -71,6 +73,7 @@ function DeviceCard({ device, onClick }) {
 }
 
 export default function DevicesPage() {
+  const { t } = useLanguage();
   const [devices, setDevices] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -89,7 +92,7 @@ export default function DevicesPage() {
       setDevices(Array.isArray(result) ? result : []);
     } catch (loadError) {
       setDevices([]);
-      setError(loadError?.message || "Failed to load devices.");
+      setError(loadError?.message || t("failedToLoadDevices"));
     } finally {
       setLoading(false);
     }
@@ -132,7 +135,7 @@ export default function DevicesPage() {
     const direction = sort.direction === -1 ? -1 : 1;
     const accessor = (device) => {
       switch (sort.column) {
-        case "name": return getDeviceDisplayName(device).toLowerCase();
+        case "name": return getDeviceDisplayName(device, t).toLowerCase();
         case "deviceId": return String(device?.deviceId || "").toLowerCase();
         case "registeredBy": return getRegisteredName(device).toLowerCase();
         case "createdAt": return device?.createdAt ? new Date(device.createdAt).getTime() : 0;
@@ -150,7 +153,7 @@ export default function DevicesPage() {
       if (leftValue > rightValue) return 1 * direction;
       return 0;
     });
-  }, [filteredDevices, sort]);
+  }, [filteredDevices, sort, t]);
 
   const pagedDevices = useMemo(() => {
     const start = (page - 1) * pageSize;
@@ -166,7 +169,7 @@ export default function DevicesPage() {
   const tableColumns = useMemo(() => ([
     {
       key: "factory",
-      label: "Factory",
+      label: t("factory"),
       sortKey: "factory",
       width: 160,
       renderCell: (row) => (
@@ -176,17 +179,17 @@ export default function DevicesPage() {
     },
     {
       key: "name",
-      label: "Name",
+      label: t("name"),
       sortKey: "name",
       width: 200,
       renderCell: (row) => (
-        <span className="text-sm font-semibold text-on-surface">{getDeviceDisplayName(row)}</span>
+        <span className="text-sm font-semibold text-on-surface">{getDeviceDisplayName(row, t)}</span>
       ),
       disableCellWrapper: true,
     },
     {
       key: "deviceId",
-      label: "Device ID",
+      label: t("deviceIdLabel"),
       sortKey: "deviceId",
       width: 200,
       renderCell: (row) => (
@@ -196,7 +199,7 @@ export default function DevicesPage() {
     },
     {
       key: "photos",
-      label: "Photos",
+      label: t("photosLabel"),
       sortable: false,
       width: 96,
       renderCell: (row) => {
@@ -209,7 +212,7 @@ export default function DevicesPage() {
     },
     {
       key: "registeredBy",
-      label: "Registered By",
+      label: t("registeredByLabel"),
       sortKey: "registeredBy",
       width: 200,
       renderCell: (row) => {
@@ -226,7 +229,7 @@ export default function DevicesPage() {
     },
     {
       key: "createdAt",
-      label: "Created",
+      label: t("createdLabel"),
       sortKey: "createdAt",
       width: 132,
       renderCell: (row) => (
@@ -236,7 +239,7 @@ export default function DevicesPage() {
     },
     {
       key: "updatedAt",
-      label: "Updated",
+      label: t("updatedLabel"),
       sortKey: "updatedAt",
       width: 132,
       renderCell: (row) => (
@@ -244,7 +247,7 @@ export default function DevicesPage() {
       ),
       disableCellWrapper: true,
     },
-  ]), []);
+  ]), [t]);
 
   function handleSort(columnKey) {
     setSort((current) => {
@@ -265,11 +268,11 @@ export default function DevicesPage() {
         title={(
           <>
             <span className="material-symbols-outlined text-tertiary" style={{ fontVariationSettings: "'FILL' 1" }}>developer_board</span>
-            Devices
+            {t("devices")}
           </>
         )}
         titleClassName="flex items-center gap-3"
-        subtitle="Every registered IoT device across all factories"
+        subtitle={t("devicesPageSubtitle")}
         className="mb-6 md:flex-row md:items-center md:justify-between"
         actions={(
           <button
@@ -279,7 +282,7 @@ export default function DevicesPage() {
             className="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary/10 text-primary text-xs font-semibold hover:bg-primary/15 transition-all duration-150 disabled:opacity-50 active:scale-95"
           >
             <span className={`material-symbols-outlined ${loading ? "animate-spin" : ""}`} style={{ fontSize: 16 }}>refresh</span>
-            Refresh
+            {t("refresh")}
           </button>
         )}
       />
@@ -289,28 +292,28 @@ export default function DevicesPage() {
         <div className="glass-card rounded-2xl p-5">
           <div className="flex items-center gap-2 mb-2">
             <span className="material-symbols-outlined text-primary" style={{ fontSize: 16 }}>developer_board</span>
-            <p className="text-[10px] text-outline font-semibold uppercase tracking-[0.18em]">Total Devices</p>
+            <p className="text-[10px] text-outline font-semibold uppercase tracking-[0.18em]">{t("totalDevicesLabel")}</p>
           </div>
           <p className="text-2xl font-semibold text-on-surface leading-none tracking-tight">{devices.length}</p>
         </div>
         <div className="glass-card rounded-2xl p-5">
           <div className="flex items-center gap-2 mb-2">
             <span className="material-symbols-outlined text-tertiary" style={{ fontSize: 16 }}>factory</span>
-            <p className="text-[10px] text-outline font-semibold uppercase tracking-[0.18em]">Factories</p>
+            <p className="text-[10px] text-outline font-semibold uppercase tracking-[0.18em]">{t("factories")}</p>
           </div>
           <p className="text-2xl font-semibold text-on-surface leading-none tracking-tight">{factoryOptions.length}</p>
         </div>
         <div className="glass-card rounded-2xl p-5">
           <div className="flex items-center gap-2 mb-2">
             <span className="material-symbols-outlined text-primary" style={{ fontSize: 16 }}>photo_library</span>
-            <p className="text-[10px] text-outline font-semibold uppercase tracking-[0.18em]">Photos</p>
+            <p className="text-[10px] text-outline font-semibold uppercase tracking-[0.18em]">{t("photosLabel")}</p>
           </div>
           <p className="text-2xl font-semibold text-on-surface leading-none tracking-tight">{totalPhotos}</p>
         </div>
         <div className="glass-card rounded-2xl p-5">
           <div className="flex items-center gap-2 mb-2">
             <span className="material-symbols-outlined text-primary" style={{ fontSize: 16 }}>filter_alt</span>
-            <p className="text-[10px] text-outline font-semibold uppercase tracking-[0.18em]">Showing</p>
+            <p className="text-[10px] text-outline font-semibold uppercase tracking-[0.18em]">{t("showingLabel")}</p>
           </div>
           <p className="text-2xl font-semibold text-on-surface leading-none tracking-tight">{sortedDevices.length}</p>
         </div>
@@ -324,7 +327,7 @@ export default function DevicesPage() {
             type="text"
             value={searchTerm}
             onChange={(event) => { setSearchTerm(event.target.value); setPage(1); }}
-            placeholder="Search by name, device ID, factory, or person…"
+            placeholder={t("searchDevicesPlaceholder")}
             className="flex-1 bg-transparent text-sm text-on-surface placeholder:text-outline focus:outline-none"
           />
           {searchTerm ? (
@@ -332,20 +335,20 @@ export default function DevicesPage() {
               type="button"
               onClick={() => setSearchTerm("")}
               className="rounded-xl p-2 text-outline hover:bg-surface-container hover:text-on-surface transition-all duration-150 active:scale-95"
-              title="Clear search"
+              title={t("clearSearchTooltip")}
             >
               <span className="material-symbols-outlined" style={{ fontSize: 16 }}>close</span>
             </button>
           ) : null}
         </div>
         <div className="flex items-center gap-2">
-          <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Factory</span>
+          <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">{t("factory")}</span>
           <select
             value={factoryFilter}
             onChange={(event) => { setFactoryFilter(event.target.value); setPage(1); }}
             className="rounded-xl border border-separator/40 bg-surface px-4 py-2 text-sm font-semibold text-on-surface focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/35"
           >
-            <option value="all">All</option>
+            <option value="all">{t("all")}</option>
             {factoryOptions.map((name) => (
               <option key={name} value={name}>{name}</option>
             ))}
@@ -357,7 +360,7 @@ export default function DevicesPage() {
         <div className="rounded-2xl border border-error/20 bg-error/10 px-4 py-4 flex gap-3 mb-6">
           <span className="material-symbols-outlined text-error flex-shrink-0" style={{ fontSize: 18 }}>report</span>
           <div>
-            <p className="text-sm font-semibold text-on-surface">Failed to load devices</p>
+            <p className="text-sm font-semibold text-on-surface">{t("failedToLoadDevices")}</p>
             <p className="text-xs text-on-surface-variant mt-1">{error}</p>
           </div>
         </div>
@@ -366,8 +369,8 @@ export default function DevicesPage() {
       {/* Device cards */}
       <div className="mb-6">
         <div className="flex items-center justify-between mb-3">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">All Devices</p>
-          <span className="text-[10px] text-outline">{sortedDevices.length} {sortedDevices.length === 1 ? "device" : "devices"}</span>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">{t("allDevicesHeading")}</p>
+          <span className="text-[10px] text-outline">{t("deviceCountSuffix", { count: sortedDevices.length, plural: sortedDevices.length === 1 ? "" : "s" })}</span>
         </div>
         {loading ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
@@ -377,8 +380,8 @@ export default function DevicesPage() {
           </div>
         ) : sortedDevices.length === 0 ? (
           <div className="glass-card rounded-2xl p-5 text-center">
-            <p className="text-sm font-semibold text-on-surface">No devices match the current filters.</p>
-            <p className="text-[11px] text-outline mt-1">Try clearing the search or selecting a different factory.</p>
+            <p className="text-sm font-semibold text-on-surface">{t("noDevicesMatchFilters")}</p>
+            <p className="text-[11px] text-outline mt-1">{t("tryClearingSearch")}</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
@@ -396,9 +399,9 @@ export default function DevicesPage() {
       {/* Data table */}
       <div className="glass-card rounded-2xl p-5">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-sm font-semibold text-on-surface">All Devices</h3>
+          <h3 className="text-sm font-semibold text-on-surface">{t("allDevicesHeading")}</h3>
           <span className="text-[10px] text-outline font-semibold uppercase tracking-[0.18em]">
-            {sortedDevices.length.toLocaleString()} rows
+            {sortedDevices.length.toLocaleString()} {t("rowsSuffix")}
           </span>
         </div>
         <DataTable
@@ -415,11 +418,13 @@ export default function DevicesPage() {
           onPageChange={(nextPage) => setPage(nextPage)}
           onPageSizeChange={(nextPageSize) => { setPageSize(nextPageSize); setPage(1); }}
           pageSizeOptions={PAGE_SIZE_OPTIONS}
-          pageSizeLabel="Rows"
+          pageSizeLabel={t("rowsSuffix")}
+          previousLabel={t("previousLabel")}
+          nextLabel={t("next")}
           rowKey={(row) => `${row?.factoryName || ""}-${row?.deviceId || row?._id}`}
           onRowClick={(row) => setSelectedDevice(row)}
-          emptyTitle="No devices found"
-          emptyMessage="Adjust the filters above to view devices."
+          emptyTitle={t("noDevicesFoundTitle")}
+          emptyMessage={t("adjustFiltersMessage")}
         />
       </div>
 

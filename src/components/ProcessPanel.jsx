@@ -1,6 +1,7 @@
 //This component displays a paginated, sortable, and searchable table of production records for a specific process (Kensa, Press, SRS, or Slit). It also includes a summary section that aggregates data by part number and worker ID. The component is designed to be reusable for different processes by passing the appropriate props.
 import { useEffect, useMemo, useRef, useState } from "react";
 import DataTable from "./DataTable";
+import { useLanguage } from "../contexts/LanguageContext";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const ITEMS_PER_PAGE = 25;
@@ -48,6 +49,7 @@ function groupSummary(rows) {
 //   rows        — array of raw production records from the matching DB
 //   onRowClick  — callback(record, processName) when a row is clicked
 export default function ProcessPanel({ processName, rows, onRowClick, showFactoryColumn = false }) {
+  const { t } = useLanguage();
   const accent = PROCESS_ACCENT[processName] ?? PROCESS_ACCENT.Kensa;
   const [sort, setSort]               = useState({ col: null, dir: 1 });
   const [page, setPage]               = useState(1);
@@ -204,7 +206,7 @@ export default function ProcessPanel({ processName, rows, onRowClick, showFactor
       <div className="px-5 py-4 flex items-center justify-between gap-3 border-b border-separator/40">
         <div className="flex items-center gap-2.5 min-w-0">
           <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${accent.dot}`} />
-          <h4 className="text-sm font-semibold text-on-surface truncate">{processName} Process</h4>
+          <h4 className="text-sm font-semibold text-on-surface truncate">{t("processSuffix", { process: processName })}</h4>
           <span className="px-2 py-0.5 rounded-full bg-surface-container text-[10px] font-semibold text-outline flex-shrink-0">
             {totalItems}
           </span>
@@ -219,12 +221,12 @@ export default function ProcessPanel({ processName, rows, onRowClick, showFactor
               className="text-[11px] text-outline hover:text-on-surface transition-colors flex items-center gap-1"
             >
               <span className="material-symbols-outlined" style={{ fontSize: 14 }}>expand_more</span>
-              Summary
+              {t("summaryLabel")}
             </button>
           )}
           <input
             type="text"
-            placeholder="Search…"
+            placeholder={t("searchPlaceholder")}
             value={search}
             onChange={(e) => { setSearch(e.target.value); setPage(1); }}
             className="h-7 px-2.5 rounded-lg bg-surface-container border border-separator/40 text-[11px]
@@ -246,10 +248,10 @@ export default function ProcessPanel({ processName, rows, onRowClick, showFactor
         rowKey={(row, index) => `${processName}-${row["品番"] || "part"}-${row["背番号"] || "serial"}-${row.Date || index}`}
         onRowClick={onRowClick ? (row) => onRowClick(row, processName) : undefined}
         renderPageInfo={() => (
-          <span className="text-sm text-on-surface-variant">{totalItems} records, showing {pageStart}-{pageEnd}</span>
+          <span className="text-sm text-on-surface-variant">{t("recordsShowingRange", { count: totalItems, start: pageStart, end: pageEnd })}</span>
         )}
-        emptyTitle={search ? "No results match your search" : "No data available"}
-        emptyMessage={search ? "Adjust the search term to find matching production records." : "No production records are available for this process."}
+        emptyTitle={search ? t("noResultsMatchSearch") : t("noData")}
+        emptyMessage={search ? t("adjustSearchTermMessage") : t("noProductionRecordsMessage")}
         enableColumnResize
         enableColumnReorder
         layoutStorageKey={`freyaAdmin2.process-panel-layout:${processName}:${showFactoryColumn ? "factory" : "default"}`}
@@ -264,8 +266,8 @@ export default function ProcessPanel({ processName, rows, onRowClick, showFactor
         headerCellClassName="px-4 py-2.5 text-left whitespace-nowrap"
         cellClassName="px-4 py-2.5 align-top"
         rowClassName="border-b border-outline-variant/10 transition hover:bg-primary/10"
-        previousLabel="前へ"
-        nextLabel="次へ"
+        previousLabel={t("previousLabel")}
+        nextLabel={t("next")}
       />
 
       {/* Summary collapsible */}
@@ -278,7 +280,7 @@ export default function ProcessPanel({ processName, rows, onRowClick, showFactor
             <span className="material-symbols-outlined" style={{ fontSize: 14 }}>
               {showSummary ? "keyboard_arrow_up" : "keyboard_arrow_down"}
             </span>
-            Daily Summary ({summary.length} parts)
+            {t("dailySummaryHeading", { count: summary.length })}
           </button>
           {showSummary && (
             <div className="px-5 pb-4 overflow-x-auto">
