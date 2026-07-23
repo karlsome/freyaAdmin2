@@ -50,7 +50,7 @@ export default function DashboardPage() {
         <div className="rounded-2xl p-4 mb-6 flex items-center gap-3 text-error
                         bg-error/8 border border-error/25 shadow-sm">
           <span className="material-symbols-outlined flex-shrink-0" style={{ fontSize: 20 }}>error</span>
-          <p className="text-sm font-semibold">Backend unreachable — data may be stale. ({error})</p>
+          <p className="text-sm font-semibold">{t("dashboardBackendError", { error })}</p>
         </div>
       )}
 

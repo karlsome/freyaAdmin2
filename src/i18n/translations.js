@@ -88,6 +88,64 @@ const translations = {
     // Dashboard
     factoryOverview: "Factory Overview",
     viewDetails: "Click to view factory details",
+    dashboardBackendError: "Backend unreachable — data may be stale. ({error})",
+
+    // Dashboard — KPI strip
+    kpiOverall: "Overall",
+    kpiByProcess: "By Process",
+    totalProcessed: "Total Processed",
+    submissionsCount: "{count} submissions",
+    totalNG: "Total NG",
+    defectiveUnits: "defective units",
+    aboveThreshold: "Above threshold",
+    nearThreshold: "Near threshold",
+    withinTarget: "Within target",
+    troubleTime: "Trouble Time",
+    maintenanceDowntime: "maintenance downtime",
+    processSuffix: "{process} Process",
+    hoursAndSubmissions: "{hours} h · {count} sub",
+
+    // Dashboard — issues feed
+    issuesToday: "Issues Today",
+    issuesTodaySubtitle: "Records with maintenance or high defect rate",
+    noIssuesToday: "No issues today",
+    allRecordsNormalRange: "All records within normal range",
+    ngPercent: "{rate}% NG",
+    downtimeHours: "{hours} h downtime",
+
+    // Dashboard — recent submissions
+    recentSubmissions: "Recent Submissions",
+    recentSubmissionsSubtitle: "Latest records submitted today",
+    noSubmissionsToday: "No submissions yet today",
+    todayCount: "{count} today",
+    justNow: "just now",
+    minsAgo: "{mins}m ago",
+    hoursAgo: "{hours}h ago",
+    daysAgo: "{days}d ago",
+    ngCount: "({count} NG)",
+
+    // Dashboard — factory summary
+    factorySummary: "Factory Summary",
+    factorySummaryToday: "Factory Summary — Today",
+    factorySummarySubtitle: "Click a row to open factory detail",
+    factoriesCount: "{count} factories",
+    combined: "Combined",
+    combinedNG: "Combined NG",
+    defectPercentColumn: "Defect %",
+    trouble: "Trouble",
+    noFactoryData: "No factory data available",
+
+    // Record detail modal
+    processRecordDetails: "{process} Process — Record Details",
+    copyShareableLink: "Copy shareable link",
+    masterImage: "Master Image",
+    noImageAvailable: "No image available",
+    uploadedPhotos: "Uploaded Photos",
+    breakTimesLabel: "Break Times",
+    maintenanceTrouble: "Maintenance / Trouble",
+    allFields: "All Fields",
+    recordPhotos: "Record Photos",
+    maintenancePhotos: "Maintenance Photos",
 
     // Factories
     factoryListTitle: "Factory List",
@@ -256,6 +314,64 @@ const translations = {
     // Dashboard
     factoryOverview: "工場概要",
     viewDetails: "クリックして工場詳細を表示",
+    dashboardBackendError: "バックエンドに接続できません — データが古い可能性があります。({error})",
+
+    // Dashboard — KPI strip
+    kpiOverall: "全体",
+    kpiByProcess: "工程別",
+    totalProcessed: "総処理数",
+    submissionsCount: "{count} 件の提出",
+    totalNG: "総不良数",
+    defectiveUnits: "不良品数",
+    aboveThreshold: "閾値超過",
+    nearThreshold: "閾値に近い",
+    withinTarget: "目標内",
+    troubleTime: "トラブル時間",
+    maintenanceDowntime: "メンテナンス停止時間",
+    processSuffix: "{process} 工程",
+    hoursAndSubmissions: "{hours} 時間 · {count} 件",
+
+    // Dashboard — issues feed
+    issuesToday: "本日の問題",
+    issuesTodaySubtitle: "メンテナンスまたは高不良率のレコード",
+    noIssuesToday: "本日は問題なし",
+    allRecordsNormalRange: "すべてのレコードが正常範囲内です",
+    ngPercent: "{rate}% 不良",
+    downtimeHours: "{hours} 時間の停止",
+
+    // Dashboard — recent submissions
+    recentSubmissions: "最近の提出",
+    recentSubmissionsSubtitle: "本日提出された最新レコード",
+    noSubmissionsToday: "本日はまだ提出がありません",
+    todayCount: "本日 {count} 件",
+    justNow: "たった今",
+    minsAgo: "{mins}分前",
+    hoursAgo: "{hours}時間前",
+    daysAgo: "{days}日前",
+    ngCount: "（{count} 不良）",
+
+    // Dashboard — factory summary
+    factorySummary: "工場サマリー",
+    factorySummaryToday: "工場サマリー — 本日",
+    factorySummarySubtitle: "行をクリックして工場詳細を表示",
+    factoriesCount: "{count} 工場",
+    combined: "合計",
+    combinedNG: "合計不良数",
+    defectPercentColumn: "不良率 %",
+    trouble: "トラブル",
+    noFactoryData: "工場データがありません",
+
+    // Record detail modal
+    processRecordDetails: "{process} 工程 — レコード詳細",
+    copyShareableLink: "共有リンクをコピー",
+    masterImage: "マスター画像",
+    noImageAvailable: "画像がありません",
+    uploadedPhotos: "アップロード済み写真",
+    breakTimesLabel: "休憩時間",
+    maintenanceTrouble: "メンテナンス／トラブル",
+    allFields: "すべての項目",
+    recordPhotos: "レコード写真",
+    maintenancePhotos: "メンテナンス写真",
 
     // Factories
     factoryListTitle: "工場一覧",

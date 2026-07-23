@@ -1,4 +1,5 @@
 import { getDefectStatus } from "../utils/statusHelpers";
+import { useLanguage } from "../contexts/LanguageContext";
 
 // ─── Compact per-factory summary row ─────────────────────────────────────────
 // Props: factories (byFactory from useTodayData), loading, onNavigateToFactory(name)
@@ -13,6 +14,7 @@ function MiniBar({ value, max, color }) {
 }
 
 export default function DashboardFactorySummary({ factories, loading, onNavigateToFactory }) {
+  const { t } = useLanguage();
   const maxTotal = Math.max(...factories.map((f) => f.total), 1);
 
   if (loading) {
@@ -22,9 +24,9 @@ export default function DashboardFactorySummary({ factories, loading, onNavigate
           <span className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
             <span className="material-symbols-outlined text-primary" style={{ fontSize: 18 }}>factory</span>
           </span>
-          <h3 className="text-sm font-semibold text-on-surface">Factory Summary</h3>
+          <h3 className="text-sm font-semibold text-on-surface">{t("factorySummary")}</h3>
         </div>
-        <p className="text-[11px] text-outline mb-4 ml-10">Click a row to open factory detail</p>
+        <p className="text-[11px] text-outline mb-4 ml-10">{t("factorySummarySubtitle")}</p>
         <div className="space-y-2">
           {Array.from({ length: 5 }).map((_, i) => (
             <div key={i} className="h-10 rounded-xl bg-surface-container/70 animate-pulse" />
@@ -40,12 +42,12 @@ export default function DashboardFactorySummary({ factories, loading, onNavigate
         <span className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
           <span className="material-symbols-outlined text-primary" style={{ fontSize: 18 }}>factory</span>
         </span>
-        <h3 className="text-sm font-semibold text-on-surface">Factory Summary — Today</h3>
+        <h3 className="text-sm font-semibold text-on-surface">{t("factorySummaryToday")}</h3>
         {factories.length > 0 && (
-          <span className="ml-auto text-[10px] text-outline">{factories.length} factories</span>
+          <span className="ml-auto text-[10px] text-outline">{t("factoriesCount", { count: factories.length })}</span>
         )}
       </div>
-      <p className="text-[11px] text-outline mb-4 ml-10">Click a row to open factory detail</p>
+      <p className="text-[11px] text-outline mb-4 ml-10">{t("factorySummarySubtitle")}</p>
 
       {/* Mobile cards */}
       <div className="space-y-3 md:hidden">
@@ -69,25 +71,25 @@ export default function DashboardFactorySummary({ factories, loading, onNavigate
 
               <div className="grid grid-cols-2 gap-3 mb-3">
                 <div>
-                  <p className="text-[10px] font-semibold uppercase tracking-wider text-outline mb-0.5">Combined</p>
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-outline mb-0.5">{t("combined")}</p>
                   <p className="text-sm font-semibold text-on-surface tabular-nums">
                     {f.total > 0 ? f.total.toLocaleString() : "—"}
                   </p>
                 </div>
                 <div>
-                  <p className="text-[10px] font-semibold uppercase tracking-wider text-outline mb-0.5">Combined NG</p>
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-outline mb-0.5">{t("combinedNG")}</p>
                   <p className={`text-sm font-semibold tabular-nums ${f.totalNG > 0 ? "text-error" : "text-outline"}`}>
                     {f.totalNG > 0 ? f.totalNG.toLocaleString() : "—"}
                   </p>
                 </div>
                 <div>
-                  <p className="text-[10px] font-semibold uppercase tracking-wider text-outline mb-0.5">Defect %</p>
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-outline mb-0.5">{t("defectPercentColumn")}</p>
                   <p className={`text-sm font-semibold tabular-nums ${ds.valueColor}`}>
                     {f.total > 0 ? `${f.defectRate.toFixed(2)}%` : "—"}
                   </p>
                 </div>
                 <div>
-                  <p className="text-[10px] font-semibold uppercase tracking-wider text-outline mb-0.5">Trouble</p>
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-outline mb-0.5">{t("trouble")}</p>
                   <p className={`text-sm font-semibold tabular-nums ${hasTrouble ? "text-amber-500" : "text-outline"}`}>
                     {hasTrouble ? `${f.troubleHours.toFixed(1)}h` : "—"}
                   </p>
@@ -104,7 +106,7 @@ export default function DashboardFactorySummary({ factories, loading, onNavigate
         })}
 
         {factories.length === 0 && (
-          <p className="text-sm text-outline text-center py-8">No factory data available</p>
+          <p className="text-sm text-outline text-center py-8">{t("noFactoryData")}</p>
         )}
       </div>
 
@@ -112,8 +114,8 @@ export default function DashboardFactorySummary({ factories, loading, onNavigate
       <div className="hidden md:block">
         <div className="grid grid-cols-[1fr_88px_88px_80px_60px_130px] gap-3 px-3 py-3
                         rounded-xl bg-surface-container-high/40 border border-separator/40 mb-2">
-          {["Factory", "Combined", "Combined NG", "Defect %", "Trouble", ""].map((h) => (
-            <span key={h} className="text-[10px] font-semibold uppercase tracking-wider text-outline">{h}</span>
+          {[t("factory"), t("combined"), t("combinedNG"), t("defectPercentColumn"), t("trouble"), ""].map((h) => (
+            <span key={h || "chevron"} className="text-[10px] font-semibold uppercase tracking-wider text-outline">{h}</span>
           ))}
         </div>
 
@@ -162,7 +164,7 @@ export default function DashboardFactorySummary({ factories, loading, onNavigate
         </div>
 
         {factories.length === 0 && (
-          <p className="text-sm text-outline text-center py-8">No factory data available</p>
+          <p className="text-sm text-outline text-center py-8">{t("noFactoryData")}</p>
         )}
       </div>
     </div>

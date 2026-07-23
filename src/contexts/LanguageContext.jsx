@@ -13,8 +13,14 @@ export function LanguageProvider({ children }) {
     setLanguage(lang);
   }
 
-  function t(key) {
-    return translations[language]?.[key] ?? key;
+  function t(key, params) {
+    let str = translations[language]?.[key] ?? key;
+    if (params) {
+      for (const [name, value] of Object.entries(params)) {
+        str = str.replaceAll(`{${name}}`, value);
+      }
+    }
+    return str;
   }
 
   return (

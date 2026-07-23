@@ -2,16 +2,17 @@
 // Props: recent (from useTodayData), loading, onRecordClick(record)
 
 import { getDefectRate, getProcessedQuantity } from "../utils/statusHelpers";
+import { useLanguage } from "../contexts/LanguageContext";
 
-function timeAgo(isoStr) {
+function timeAgo(isoStr, t) {
   if (!isoStr) return "";
   const diff = Date.now() - new Date(isoStr).getTime();
   const mins  = Math.floor(diff / 60000);
-  if (mins < 1)  return "just now";
-  if (mins < 60) return `${mins}m ago`;
+  if (mins < 1)  return t("justNow");
+  if (mins < 60) return t("minsAgo", { mins });
   const hours = Math.floor(mins / 60);
-  if (hours < 24) return `${hours}h ago`;
-  return `${Math.floor(hours / 24)}d ago`;
+  if (hours < 24) return t("hoursAgo", { hours });
+  return t("daysAgo", { days: Math.floor(hours / 24) });
 }
 
 const PROCESS_DOT = {
@@ -22,6 +23,7 @@ const PROCESS_DOT = {
 };
 
 export default function DashboardRecentSubmissions({ recent, loading, onRecordClick }) {
+  const { t } = useLanguage();
   if (loading) {
     return (
       <div className="dashboard-section rounded-2xl p-5 h-full">
@@ -29,9 +31,9 @@ export default function DashboardRecentSubmissions({ recent, loading, onRecordCl
           <span className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
             <span className="material-symbols-outlined text-primary" style={{ fontSize: 18 }}>inbox</span>
           </span>
-          <h3 className="text-sm font-semibold text-on-surface">Recent Submissions</h3>
+          <h3 className="text-sm font-semibold text-on-surface">{t("recentSubmissions")}</h3>
         </div>
-        <p className="text-[11px] text-outline mb-4 ml-10">Latest records submitted today</p>
+        <p className="text-[11px] text-outline mb-4 ml-10">{t("recentSubmissionsSubtitle")}</p>
         <div className="space-y-2.5">
           {Array.from({ length: 5 }).map((_, i) => (
             <div key={i} className="h-[52px] rounded-xl bg-surface-container/70 animate-pulse" />
@@ -47,19 +49,19 @@ export default function DashboardRecentSubmissions({ recent, loading, onRecordCl
         <span className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
           <span className="material-symbols-outlined text-primary" style={{ fontSize: 18 }}>inbox</span>
         </span>
-        <h3 className="text-sm font-semibold text-on-surface">Recent Submissions</h3>
+        <h3 className="text-sm font-semibold text-on-surface">{t("recentSubmissions")}</h3>
         {recent.length > 0 && (
-          <span className="ml-auto text-[10px] text-outline">{recent.length} today</span>
+          <span className="ml-auto text-[10px] text-outline">{t("todayCount", { count: recent.length })}</span>
         )}
       </div>
-      <p className="text-[11px] text-outline mb-4 ml-10">Latest records submitted today</p>
+      <p className="text-[11px] text-outline mb-4 ml-10">{t("recentSubmissionsSubtitle")}</p>
 
       {recent.length === 0 ? (
         <div className="flex-1 flex flex-col items-center justify-center gap-3 text-outline">
           <span className="w-14 h-14 rounded-2xl bg-surface-container flex items-center justify-center">
             <span className="material-symbols-outlined" style={{ fontSize: 28 }}>inbox</span>
           </span>
-          <p className="text-sm font-semibold">No submissions yet today</p>
+          <p className="text-sm font-semibold">{t("noSubmissionsToday")}</p>
         </div>
       ) : (
         <div className="flex-1 overflow-y-auto scrollbar-hide space-y-2">
@@ -82,7 +84,7 @@ export default function DashboardRecentSubmissions({ recent, loading, onRecordCl
                   <span className="text-xs font-semibold text-on-surface truncate flex-1 group-hover:text-primary transition-colors">
                     {r["工場"]} · {r["設備"]}
                   </span>
-                  <span className="text-[10px] text-outline flex-shrink-0">{timeAgo(r.createdAt)}</span>
+                  <span className="text-[10px] text-outline flex-shrink-0">{timeAgo(r.createdAt, t)}</span>
                 </div>
                 <div className="flex items-center gap-3 pl-5">
                   <span className="text-[11px] text-on-surface-variant truncate flex-1">
@@ -92,7 +94,7 @@ export default function DashboardRecentSubmissions({ recent, loading, onRecordCl
                     {recordTotal.toLocaleString()}
                     {recordNG > 0 && (
                       <span className={`ml-1.5 ${defRate >= 2 ? "text-error" : "text-outline"}`}>
-                        ({recordNG} NG)
+                        {t("ngCount", { count: recordNG })}
                       </span>
                     )}
                   </span>

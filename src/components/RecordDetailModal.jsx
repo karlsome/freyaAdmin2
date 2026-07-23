@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import { fetchMasterImage } from "../services/api";
 import CollapsibleSection from "./CollapsibleSection";
 import SensorDevicePhotoPreviewModal from "./SensorDevicePhotoPreviewModal";
+import { useLanguage } from "../contexts/LanguageContext";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 export const PROCESS_ACCENT = {
@@ -190,10 +191,11 @@ function StructuredValueCard({ value, depth = 0 }) {
 
 // ─── PhotosSection ────────────────────────────────────────────────────────────
 function PhotosSection({ checkImages, labelImages, totalCount, onPreview }) {
+  const { t } = useLanguage();
   return (
     <CollapsibleSection
       icon="photo_library"
-      label="Uploaded Photos"
+      label={t("uploadedPhotos")}
       badge={<span className="px-1.5 py-0.5 rounded-full bg-surface-container text-[9px] font-semibold normal-case tracking-normal">{totalCount}</span>}
     >
       <div className="pb-5 space-y-4">
@@ -242,6 +244,7 @@ function PhotosSection({ checkImages, labelImages, totalCount, onPreview }) {
 
 // ─── BreakTimeSection ─────────────────────────────────────────────────────────
 function BreakTimeSection({ record }) {
+  const { t } = useLanguage();
 
   const data = record.Break_Time_Data ?? {};
   const breaks = Object.entries(data)
@@ -255,7 +258,7 @@ function BreakTimeSection({ record }) {
   return (
     <CollapsibleSection
       icon="coffee"
-      label="Break Times"
+      label={t("breakTimesLabel")}
       badge={<span className="px-1.5 py-0.5 rounded-full bg-surface-container text-[9px] font-semibold normal-case tracking-normal">{totalMin} min</span>}
     >
       <div className="pb-5">
@@ -293,6 +296,7 @@ function BreakTimeSection({ record }) {
 
 // ─── MaintenanceSection ───────────────────────────────────────────────────────
 function MaintenanceSection({ record, onPreview }) {
+  const { t } = useLanguage();
   const maint = record.Maintenance_Data ?? {};
   const records = Array.isArray(maint.records) ? maint.records.filter((r) => r.startTime || r.comment) : [];
 
@@ -303,7 +307,7 @@ function MaintenanceSection({ record, onPreview }) {
   return (
     <CollapsibleSection
       icon="build"
-      label="Maintenance / Trouble"
+      label={t("maintenanceTrouble")}
       badge={<span className="px-1.5 py-0.5 rounded-full bg-amber-400/15 text-amber-400 text-[9px] font-semibold normal-case tracking-normal">{records.length} record{records.length > 1 ? "s" : ""}</span>}
     >
       <div className="pb-5 space-y-4">
@@ -363,6 +367,7 @@ function MaintenanceSection({ record, onPreview }) {
 //   onClose     — callback to close the modal
 //   onLotClick  — optional callback(lot: string) when a 材料ロット chip is clicked
 export default function RecordDetailModal({ record, processName, onClose, onLotClick }) {
+  const { t } = useLanguage();
   const [imageData,    setImageData]    = useState(null);
   const [imageLoading, setImageLoading] = useState(true);
   const [copied,       setCopied]       = useState(false);
@@ -434,7 +439,7 @@ export default function RecordDetailModal({ record, processName, onClose, onLotC
             <div className="flex items-center gap-2.5">
               <span className={`w-3 h-3 rounded-full flex-shrink-0 shadow-sm ${processAccent?.dot ?? "bg-primary"}`} />
               <h3 className="text-sm sm:text-base font-semibold text-on-surface truncate">
-                {processName} Process — Record Details
+                {t("processRecordDetails", { process: processName })}
               </h3>
             </div>
             <p className="text-[11px] text-outline mt-0.5 font-mono ml-5.5">{record["品番"]} / {record["背番号"]}</p>
@@ -442,7 +447,7 @@ export default function RecordDetailModal({ record, processName, onClose, onLotC
           <div className="flex items-center gap-0.5 flex-shrink-0 ml-2">
             <button
               onClick={copyLink}
-              title="Copy shareable link"
+              title={t("copyShareableLink")}
               className="p-2 rounded-xl hover:bg-surface-container text-outline hover:text-primary transition-all duration-150"
             >
               <span className="material-symbols-outlined" style={{ fontSize: 18 }}>
@@ -466,7 +471,7 @@ export default function RecordDetailModal({ record, processName, onClose, onLotC
             <button
               type="button"
               onClick={() => setPhotoPreview({
-                eyebrow: "Master Image",
+                eyebrow: t("masterImage"),
                 displayName: imageData["品名"] ?? record["品番"] ?? "Master image",
                 subtitle: `${record["品番"] ?? ""}${record["背番号"] ? ` / ${record["背番号"]}` : ""}`.trim() || undefined,
                 images: [{ url: imageData.imageURL, label: imageData["品名"] ?? record["品番"] ?? "Master image" }],
@@ -486,7 +491,7 @@ export default function RecordDetailModal({ record, processName, onClose, onLotC
             <div className="w-full h-10 flex items-center justify-center rounded-xl bg-surface-container/40
                             border border-separator/40 text-[11px] text-outline gap-1.5">
               <span className="material-symbols-outlined" style={{ fontSize: 14 }}>image_not_supported</span>
-              No image available
+              {t("noImageAvailable")}
             </div>
           )}
         </div>
@@ -494,9 +499,9 @@ export default function RecordDetailModal({ record, processName, onClose, onLotC
         {/* Stats strip */}
         <div className="grid grid-cols-3 gap-2.5 px-6 py-4 border-b border-separator/40">
           {[
-            { label: "Total",    value: qty.toLocaleString(), color: "text-on-surface",  bg: "bg-surface-container/60" },
-            { label: "Total NG", value: ng,                   color: ng > 0 ? "text-error" : "text-on-surface", bg: ng > 0 ? "bg-error/8" : "bg-surface-container/60" },
-            { label: "不良率",   value: `${defRate}%`,        color: defColor, bg: "bg-surface-container/60" },
+            { label: t("total"),   value: qty.toLocaleString(), color: "text-on-surface",  bg: "bg-surface-container/60" },
+            { label: t("totalNG"), value: ng,                   color: ng > 0 ? "text-error" : "text-on-surface", bg: ng > 0 ? "bg-error/8" : "bg-surface-container/60" },
+            { label: t("defectRate"), value: `${defRate}%`,        color: defColor, bg: "bg-surface-container/60" },
           ].map(({ label, value, color, bg }) => (
             <div key={label} className={`rounded-xl px-3 py-3 text-center border border-separator/40 ${bg}`}>
               <p className={`text-xl sm:text-2xl font-semibold leading-none ${color}`}>{value}</p>
@@ -557,7 +562,7 @@ export default function RecordDetailModal({ record, processName, onClose, onLotC
             ];
             const activeIndex = group === "label" ? checkImages.length + index : index;
             setPhotoPreview({
-              eyebrow: "Record Photos",
+              eyebrow: t("recordPhotos"),
               displayName: `${processName ?? "Record"} Photos`,
               subtitle: `${record["品番"] ?? ""} / ${record["背番号"] ?? ""}`.trim() || undefined,
               images: combined,
@@ -578,8 +583,8 @@ export default function RecordDetailModal({ record, processName, onClose, onLotC
             const photos = Array.isArray(rec?.photos) ? rec.photos.filter(Boolean) : [];
             if (!photos.length) return;
             setPhotoPreview({
-              eyebrow: "Maintenance Photos",
-              displayName: "Maintenance / Trouble",
+              eyebrow: t("maintenancePhotos"),
+              displayName: t("maintenanceTrouble"),
               subtitle: rec?.comment || (rec?.startTime ? `${rec.startTime}${rec?.endTime ? ` → ${rec.endTime}` : ""}` : undefined),
               images: photos.map((url, i) => ({ url, label: `Maintenance photo ${i + 1}` })),
               activeIndex: index,
@@ -588,7 +593,7 @@ export default function RecordDetailModal({ record, processName, onClose, onLotC
         />
 
         {/* All fields — collapsible */}
-        <CollapsibleSection label="All Fields" wrapperClassName="px-6 py-4">
+        <CollapsibleSection label={t("allFields")} wrapperClassName="px-6 py-4">
           <div className="space-y-0 mt-3">
             {entries.map(([k, v]) => {
               const normalizedValue = parseStructuredValue(v);
