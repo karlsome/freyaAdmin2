@@ -1,3 +1,4 @@
+import { useLanguage } from "../../contexts/LanguageContext";
 import {
   equipmentConflicts,
   getFirstVisibleSlotMinutes,
@@ -45,6 +46,7 @@ export default function PlannerTimelineView({
   onMoveScheduledItem,
   onRemoveScheduledItem,
 }) {
+  const { t } = useLanguage();
   const timeSlots = getTimelineSlots(scheduledProducts, actualBlocks, breaks);
   const now = new Date();
   const currentMinutes = (now.getHours() * 60) + now.getMinutes();
@@ -57,8 +59,8 @@ export default function PlannerTimelineView({
     return (
       <div className="rounded-3xl border border-dashed border-outline-variant/20 bg-surface-container-low px-6 py-14 text-center text-on-surface-variant">
         <span className="material-symbols-outlined text-4xl text-primary/60">calendar_month</span>
-        <p className="mt-3 text-lg font-semibold text-on-surface">No equipment loaded</p>
-        <p className="mt-1 text-sm">Choose a factory to build the planning timeline.</p>
+        <p className="mt-3 text-lg font-semibold text-on-surface">{t("noEquipmentLoaded")}</p>
+        <p className="mt-1 text-sm">{t("chooseFactoryToBuildTimeline")}</p>
       </div>
     );
   }
@@ -67,8 +69,8 @@ export default function PlannerTimelineView({
     <div className="glass-card rounded-3xl p-5">
       <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div>
-          <h3 className="text-lg font-semibold text-on-surface">Timeline View</h3>
-          <p className="mt-1 text-sm text-on-surface-variant">Place products on equipment rows and compare planned output against actual production.</p>
+          <h3 className="text-lg font-semibold text-on-surface">{t("timelineView")}</h3>
+          <p className="mt-1 text-sm text-on-surface-variant">{t("placeProductsOnEquipment")}</p>
         </div>
 
         <button
@@ -92,9 +94,7 @@ export default function PlannerTimelineView({
           ) : null}
 
           <div className="sticky top-0 z-10 flex border-b border-outline-variant/15 bg-surface-container-high/95 backdrop-blur-md">
-            <div className="planner-data-label sticky left-0 z-10 flex h-12 items-center border-r border-outline-variant/15 bg-surface-container-high/95 px-4 text-outline" style={{ width: LABEL_WIDTH }}>
-              Equipment
-            </div>
+            <div className="planner-data-label sticky left-0 z-10 flex h-12 items-center border-r border-outline-variant/15 bg-surface-container-high/95 px-4 text-outline" style={{ width: LABEL_WIDTH }}>{t("equipment")}</div>
             {timeSlots.map((slot) => (
               <div key={slot} className="planner-data-text flex h-12 items-center justify-center border-r border-outline-variant/10 font-semibold text-on-surface-variant" style={{ width: SLOT_WIDTH }}>
                 {slot}

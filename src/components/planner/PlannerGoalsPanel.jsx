@@ -1,3 +1,4 @@
+import { useLanguage } from "../../contexts/LanguageContext";
 import { useId, useRef } from "react";
 import PlannerGoalList from "./PlannerGoalList";
 
@@ -17,6 +18,7 @@ export default function PlannerGoalsPanel({
   onDeleteGoal,
   onScheduleGoal,
 }) {
+  const { t } = useLanguage();
   const inputId = useId();
   const fileInputRef = useRef(null);
 
@@ -25,8 +27,8 @@ export default function PlannerGoalsPanel({
       <div className="glass-card rounded-3xl p-5">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <h3 className="text-lg font-semibold text-on-surface">Production Goals</h3>
-            <p className="mt-1 text-sm text-on-surface-variant">Set goal quantities first, then place them onto equipment schedules.</p>
+            <h3 className="text-lg font-semibold text-on-surface">{t("productionGoals")}</h3>
+            <p className="mt-1 text-sm text-on-surface-variant">{t("setGoalQuantitiesFirst")}</p>
           </div>
 
           <div className="flex flex-wrap gap-2">
@@ -63,7 +65,7 @@ export default function PlannerGoalsPanel({
 
         <div className="mt-4 flex flex-col gap-3 lg:flex-row lg:items-center">
           <div className="flex-1">
-            <label htmlFor={inputId} className="sr-only">Search goals</label>
+            <label htmlFor={inputId} className="sr-only">{t("searchGoals")}</label>
             <div className="ui-control-surface flex h-11 items-center gap-3 rounded-2xl border border-separator/40 px-4">
               <span className="material-symbols-outlined text-outline" style={{ fontSize: 18 }}>search</span>
               <input
@@ -71,7 +73,7 @@ export default function PlannerGoalsPanel({
                 type="text"
                 value={goalSearch}
                 onChange={(event) => onGoalSearchChange(event.target.value)}
-                placeholder="Search by 背番号, 品番, or 品名…"
+                placeholder={t("searchByPartNumber")}
                 className="planner-data-text h-full flex-1 bg-transparent outline-none"
               />
             </div>

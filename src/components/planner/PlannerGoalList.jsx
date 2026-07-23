@@ -1,3 +1,4 @@
+import { useLanguage } from "../../contexts/LanguageContext";
 import {
   calculateBoxesNeeded,
   getAssignedEquipmentForGoal,
@@ -7,6 +8,7 @@ import {
 } from "../../utils/planner";
 
 function GoalRow({ goal, currentDate, scheduledProducts, products, productColors, onDeleteGoal, onScheduleGoal }) {
+  const { t } = useLanguage();
   const goalState = getPlannerGoalState(goal);
   const assignedEquipment = getAssignedEquipmentForGoal(goal, scheduledProducts);
   const capacity = calculateBoxesNeeded(goal, goal.targetQuantity, products);
@@ -51,7 +53,7 @@ function GoalRow({ goal, currentDate, scheduledProducts, products, productColors
         </div>
 
         <div>
-          <div className="planner-data-label text-outline">Assigned</div>
+          <div className="planner-data-label text-outline">{t("assigned")}</div>
           <div className="mt-1 font-semibold text-primary">
             {assignedEquipment.length ? assignedEquipment.join(", ") : "Not scheduled"}
           </div>
@@ -59,12 +61,12 @@ function GoalRow({ goal, currentDate, scheduledProducts, products, productColors
 
         <div className="text-on-surface xl:text-right">
           <div className="font-semibold">{scheduledBoxes}/{targetBoxes}</div>
-          <div className="planner-data-label text-outline">Boxes</div>
+          <div className="planner-data-label text-outline">{t("boxes")}</div>
         </div>
 
         <div className="text-on-surface xl:text-right">
           <div className={`font-semibold ${goalState.textClassName}`}>{goalState.label}</div>
-          <div className="planner-data-label text-outline">State</div>
+          <div className="planner-data-label text-outline">{t("state")}</div>
         </div>
 
         <div className="flex items-center justify-end gap-2">
@@ -80,9 +82,7 @@ function GoalRow({ goal, currentDate, scheduledProducts, products, productColors
             type="button"
             onClick={() => onDeleteGoal(goal)}
             className="rounded-xl border border-error/20 bg-error/5 px-3 py-2 text-xs font-semibold text-error transition hover:bg-error/10"
-          >
-            Delete
-          </button>
+          >{t("delete")}</button>
         </div>
       </div>
     </article>
@@ -98,6 +98,7 @@ export default function PlannerGoalList({
   onDeleteGoal,
   onScheduleGoal,
 }) {
+  const { t } = useLanguage();
   const sortedGoals = sortGoals(goals);
   const goalsByDate = groupGoalsByDate(sortedGoals);
   const dateGroups = Object.keys(goalsByDate).sort((left, right) => left.localeCompare(right));
@@ -106,8 +107,8 @@ export default function PlannerGoalList({
     return (
       <div className="rounded-3xl border border-dashed border-outline-variant/20 bg-surface-container-low px-6 py-14 text-center text-on-surface-variant">
         <span className="material-symbols-outlined text-4xl text-primary/60">target</span>
-        <p className="mt-3 text-lg font-semibold text-on-surface">No goals loaded</p>
-        <p className="mt-1 text-sm">Upload a CSV or add goals manually to start planning production.</p>
+        <p className="mt-3 text-lg font-semibold text-on-surface">{t("noGoalsLoaded")}</p>
+        <p className="mt-1 text-sm">{t("uploadCsvOrAddManual")}</p>
       </div>
     );
   }
@@ -119,7 +120,7 @@ export default function PlannerGoalList({
           <div className="mb-3 flex items-center justify-between gap-3">
             <div className="planner-data-label text-outline">{date}</div>
             {date === currentDate ? (
-              <span className="rounded-full bg-primary/12 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-primary">Today</span>
+              <span className="rounded-full bg-primary/12 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-primary">{t("today")}</span>
             ) : null}
           </div>
           <div className="space-y-3">

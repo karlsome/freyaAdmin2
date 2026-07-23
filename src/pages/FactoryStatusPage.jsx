@@ -10,6 +10,7 @@ import {
   fetchFactoryStatusFactories,
   fetchFactoryStatusSnapshot,
 } from "../services/factoryStatusApi";
+import { useLanguage } from "../contexts/LanguageContext";
 import { readStoredAuthUser } from "../utils/auth";
 import {
   buildFactoryStatusAdvancedFilterClauses,
@@ -77,6 +78,7 @@ function SummaryCard({ icon, label, value, subtitle, accent, loading = false }) 
 }
 
 export default function FactoryStatusPage() {
+  const { t } = useLanguage();
   const navigate = useNavigate();
   const [authUser] = useState(() => readStoredAuthUser());
   const requestIdRef = useRef(0);
@@ -282,14 +284,14 @@ export default function FactoryStatusPage() {
   const columns = useMemo(() => ([
     {
       key: "equipment",
-      label: "Equipment",
+      label: t("equipment"),
       width: 150,
       renderCell: (row) => <span className="planner-data-text text-sm font-semibold text-on-surface">{row.equipment || "—"}</span>,
       disableCellWrapper: true,
     },
     {
       key: "statusKey",
-      label: "Status",
+      label: t("status"),
       width: 120,
       renderCell: (row) => {
         const meta = getFactoryStatusBadgeMeta(row.statusKey);
@@ -299,48 +301,48 @@ export default function FactoryStatusPage() {
     },
     {
       key: "workerName",
-      label: "Operator",
+      label: t("operator"),
       width: 160,
       renderCell: (row) => <span className="planner-data-text text-sm font-semibold text-on-surface">{getFactoryStatusOperatorName(row) || "—"}</span>,
       disableCellWrapper: true,
     },
     {
       key: "latestAction",
-      label: "Latest Action",
+      label: t("latestAction"),
       width: 260,
       renderCell: (row) => <div className="planner-data-text whitespace-normal text-sm text-on-surface-variant">{row.latestAction || "—"}</div>,
       disableCellWrapper: true,
     },
     {
       key: "partNumber",
-      label: "Part Number",
+      label: t("partNumber"),
       width: 180,
       renderCell: (row) => <span className="planner-data-text text-sm font-semibold text-on-surface">{row.partNumber || "—"}</span>,
       disableCellWrapper: true,
     },
     {
       key: "backNumber",
-      label: "Serial Number",
+      label: t("serialNumber") || "Serial Number",
       width: 150,
       renderCell: (row) => <span className="planner-data-text text-sm font-semibold text-on-surface">{row.backNumber || "—"}</span>,
       disableCellWrapper: true,
     },
     {
       key: "elapsedMinutes",
-      label: "Elapsed",
+      label: t("elapsed"),
       width: 120,
       renderCell: (row) => <span className="planner-data-text text-sm font-semibold tabular-nums text-on-surface">{formatFactoryStatusDuration(row.elapsedMinutes)}</span>,
       disableCellWrapper: true,
     },
     {
       key: "lastUpdatedAt",
-      label: "Last Update",
+      label: t("lastUpdate"),
       width: 220,
       renderCell: (row) => (
         <div className="planner-data-text min-w-0">
           <div className="text-sm font-semibold text-on-surface">{formatFactoryStatusDateTime(row.lastUpdatedAt)}</div>
           <div className="mt-1 text-xs text-on-surface-variant">
-            {row.lastUpdatedMinutes != null ? `${formatFactoryStatusNumber(row.lastUpdatedMinutes)} min ago` : "—"}
+            {row.lastUpdatedMinutes != null ? t("minAgo").replace("{minutes}", formatFactoryStatusNumber(row.lastUpdatedMinutes)) : "—"}
           </div>
         </div>
       ),
@@ -348,7 +350,7 @@ export default function FactoryStatusPage() {
     },
     {
       key: "todayActualQuantity",
-      label: "Today Actual",
+      label: t("todayActual"),
       width: 130,
       renderCell: (row) => <span className="planner-data-text text-sm font-semibold tabular-nums text-primary">{formatFactoryStatusNumber(row.todayActualQuantity)}</span>,
       disableCellWrapper: true,
@@ -359,10 +361,10 @@ export default function FactoryStatusPage() {
     <section className="h-screen overflow-y-auto scrollbar-hide px-8 pb-16 pt-24">
       <div className="w-full">
         <PageHeader
-          eyebrow="Live Operations"
+          eyebrow={t("liveOperations")}
           eyebrowClassName="tracking-[0.18em] text-primary"
-          title="Factory Status"
-          subtitle="Track live machine activity from tablet logs, compare goals versus actual production, and review the current machine state by factory."
+          title={t("factoryStatus")}
+          subtitle={t("factoryStatusSubtitle")}
           subtitleClassName="max-w-4xl"
           className="md:flex-row md:items-start md:justify-between"
           actions={(
@@ -375,7 +377,7 @@ export default function FactoryStatusPage() {
                 Logs Page
               </button>
               <div className="planner-data-text rounded-2xl border border-outline-variant/20 bg-surface-container-low/40 px-4 py-2.5 text-sm text-on-surface-variant">
-                {generatedAt ? `Updated ${formatFactoryStatusDateTime(generatedAt)}` : "Waiting for first load..."}
+                {generatedAt ? `Updated ${formatFactoryStatusDateTime(generatedAt)}` : t("waitingForFirstLoad")}
               </div>
               <button
                 type="button"
@@ -383,7 +385,7 @@ export default function FactoryStatusPage() {
                 disabled={loadingSnapshot || loadingFactories}
                 className="rounded-2xl border border-outline-variant/25 px-4 py-2.5 text-sm font-semibold text-on-surface transition hover:bg-surface-container disabled:cursor-not-allowed disabled:opacity-60"
               >
-                {loadingSnapshot ? "Refreshing..." : "Refresh"}
+                {loadingSnapshot ? t("refreshing") : t("refresh")}
               </button>
             </>
           )}
@@ -398,8 +400,8 @@ export default function FactoryStatusPage() {
         <div className="dashboard-section mb-6 rounded-2xl p-5">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
-              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Filters</p>
-              <h2 className="mt-1 text-lg font-semibold text-on-surface">Factory Scope</h2>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">{t("filters") || "Filters"}</p>
+              <h2 className="mt-1 text-lg font-semibold text-on-surface">{t("factoryScope")}</h2>
               <p className="planner-data-text mt-2 text-sm text-on-surface-variant">{selectionSummary.countLabel} · {selectionSummary.selectedText}</p>
             </div>
             <div className="flex flex-wrap gap-2">
@@ -424,7 +426,7 @@ export default function FactoryStatusPage() {
 
           <div className="mt-4 grid gap-4 xl:grid-cols-[minmax(0,1.7fr)_260px]">
             <div>
-              <span className="block text-xs font-semibold uppercase tracking-[0.18em] text-outline">Factories</span>
+              <span className="block text-xs font-semibold uppercase tracking-[0.18em] text-outline">{t("factories")}</span>
               <div className="mt-2 flex flex-wrap gap-2">
                 {factoryOptions.map((factory) => {
                   const active = selectedFactories.includes(factory);
@@ -447,14 +449,14 @@ export default function FactoryStatusPage() {
                 })}
                 {!factoryOptions.length && !loadingFactories ? (
                   <div className="planner-data-text rounded-2xl border border-outline-variant/20 bg-surface-container-low/35 px-4 py-3 text-sm text-on-surface-variant">
-                    No accessible factories found.
+                    {t("noAccessibleFactories")}
                   </div>
                 ) : null}
               </div>
             </div>
 
             <label className="block">
-              <span className="block text-xs font-semibold uppercase tracking-[0.18em] text-outline">Date</span>
+              <span className="block text-xs font-semibold uppercase tracking-[0.18em] text-outline">{t("date")}</span>
               <input
                 type="date"
                 value={date}
@@ -464,7 +466,7 @@ export default function FactoryStatusPage() {
                 }}
                 className="planner-data-text mt-2 h-11 w-full rounded-2xl border border-outline-variant/30 bg-white px-4 text-sm text-on-surface outline-none transition focus:border-primary/40 dark:bg-surface-container"
               />
-              <p className="planner-data-text mt-2 text-xs text-on-surface-variant">Defaults to today and auto-refreshes every 60 seconds.</p>
+              <p className="planner-data-text mt-2 text-xs text-on-surface-variant">{t("dateFieldDescription")}</p>
             </label>
           </div>
 
@@ -477,8 +479,8 @@ export default function FactoryStatusPage() {
             onClearRows={handleClearAdvancedFilters}
             operatorLabels={FACTORY_STATUS_OPERATOR_LABELS}
             useOperatorLabelsInSelect
-            title="Advanced Filters"
-            activeSummaryDescription="Filter the grouped machine tables without changing the top-level factory and date scope."
+            title={t("advancedFilters")}
+            activeSummaryDescription={t("advancedFiltersDescription")}
             variant="compact"
             framed
             enableTextSuggestions
@@ -510,49 +512,49 @@ export default function FactoryStatusPage() {
         <div className="mb-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-6">
           <SummaryCard
             icon="flag"
-            label="Goal"
+            label={t("goal")}
             value={formatFactoryStatusNumber(summary.totalGoalQuantity)}
-            subtitle="Selected factories"
+            subtitle={t("selectedFactories")}
             accent="bg-primary/10 text-primary"
             loading={loadingSnapshot && !generatedAt}
           />
           <SummaryCard
             icon="precision_manufacturing"
-            label="Actual"
+            label={t("actual")}
             value={formatFactoryStatusNumber(summary.totalActualQuantity)}
-            subtitle="Today from pressDB"
+            subtitle={t("todayFromPressDB")}
             accent="bg-sky-500/10 text-sky-600 dark:text-sky-300"
             loading={loadingSnapshot && !generatedAt}
           />
           <SummaryCard
             icon="trending_up"
-            label="Achievement"
+            label={t("achievement")}
             value={`${summary.achievementRate.toLocaleString()}%`}
-            subtitle="Goal vs actual"
+            subtitle={t("goalVsActual")}
             accent="bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
             loading={loadingSnapshot && !generatedAt}
           />
           <SummaryCard
             icon="play_circle"
-            label="Active Machines"
+            label={t("activeMachines")}
             value={formatFactoryStatusNumber(summary.activeMachines)}
-            subtitle="Live sessions in progress"
+            subtitle={t("liveSessionsInProgress")}
             accent="bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
             loading={loadingSnapshot && !generatedAt}
           />
           <SummaryCard
             icon="schedule"
-            label="Stale Machines"
+            label={t("staleMachines")}
             value={formatFactoryStatusNumber(summary.staleMachines)}
-            subtitle="Active but not recently updated"
+            subtitle={t("activeButNotRecentlyUpdated")}
             accent="bg-amber-500/10 text-amber-700 dark:text-amber-300"
             loading={loadingSnapshot && !generatedAt}
           />
           <SummaryCard
             icon="pause_circle"
-            label="Idle Machines"
+            label={t("idleMachines")}
             value={formatFactoryStatusNumber(summary.idleMachines)}
-            subtitle={`${formatFactoryStatusNumber(summary.activeSessions)} active sessions`}
+            subtitle={t("activeSessionsCount").replace("{count}", formatFactoryStatusNumber(summary.activeSessions))}
             accent="bg-surface-container text-on-surface-variant"
             loading={loadingSnapshot && !generatedAt}
           />
@@ -560,8 +562,8 @@ export default function FactoryStatusPage() {
 
         {!selectedFactories.length && !loadingFactories ? (
           <div className="glass-card rounded-2xl px-6 py-12 text-center">
-            <h2 className="text-xl font-semibold text-on-surface">Choose at least one factory</h2>
-            <p className="planner-data-text mt-2 text-sm text-on-surface-variant">The grouped machine tables appear after you select one or more factories.</p>
+            <h2 className="text-xl font-semibold text-on-surface">{t("chooseAtLeastOneFactory")}</h2>
+            <p className="planner-data-text mt-2 text-sm text-on-surface-variant">{t("groupedMachineTablesAppearAfter")}</p>
           </div>
         ) : null}
 
@@ -570,10 +572,10 @@ export default function FactoryStatusPage() {
             <div className="mb-4 rounded-2xl border border-outline-variant/15 bg-surface-container-low/35 px-5 py-4">
               <div className="flex flex-wrap items-start justify-between gap-4">
                 <div>
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Factory</p>
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">{t("factory")}</p>
                   <h2 className="mt-1 text-2xl font-semibold text-on-surface">{group.factory}</h2>
                   <p className="planner-data-text mt-2 text-sm text-on-surface-variant">
-                    {formatFactoryStatusNumber(group.overview.filteredMachineCount)} of {formatFactoryStatusNumber(group.overview.machineCount)} machines match the current table filters.
+                    {t("machinesMatchCurrentTableFilters").replace("{filtered}", formatFactoryStatusNumber(group.overview.filteredMachineCount)).replace("{total}", formatFactoryStatusNumber(group.overview.machineCount))}
                   </p>
                 </div>
 
@@ -587,11 +589,11 @@ export default function FactoryStatusPage() {
               </div>
 
               <div className="planner-data-text mt-4 flex flex-wrap gap-4 text-sm text-on-surface-variant">
-                <span><span className="font-semibold text-on-surface">Goal</span> {formatFactoryStatusNumber(group.goal.totalTargetQuantity)}</span>
-                <span><span className="font-semibold text-on-surface">Actual</span> {formatFactoryStatusNumber(group.overview.actualQuantity)}</span>
-                <span><span className="font-semibold text-on-surface">Good</span> {formatFactoryStatusNumber(group.overview.goodQuantity)}</span>
-                <span><span className="font-semibold text-on-surface">NG</span> {formatFactoryStatusNumber(group.overview.ngQuantity)}</span>
-                <span><span className="font-semibold text-on-surface">Progress</span> {group.overview.achievementRate.toLocaleString()}%</span>
+                <span><span className="font-semibold text-on-surface">{t("goal")}</span> {formatFactoryStatusNumber(group.goal.totalTargetQuantity)}</span>
+                <span><span className="font-semibold text-on-surface">{t("actual")}</span> {formatFactoryStatusNumber(group.overview.actualQuantity)}</span>
+                <span><span className="font-semibold text-on-surface">{t("good") || "Good"}</span> {formatFactoryStatusNumber(group.overview.goodQuantity)}</span>
+                <span><span className="font-semibold text-on-surface">{t("ng") || "NG"}</span> {formatFactoryStatusNumber(group.overview.ngQuantity)}</span>
+                <span><span className="font-semibold text-on-surface">{t("progress")}</span> {group.overview.achievementRate.toLocaleString()}%</span>
               </div>
 
               <div className="mt-3 h-2 overflow-hidden rounded-full bg-surface-container-high">
@@ -602,11 +604,11 @@ export default function FactoryStatusPage() {
               </div>
 
               <div className="planner-data-text mt-4 flex flex-wrap gap-4 text-sm text-on-surface-variant">
-                <span><span className="font-semibold text-on-surface">Running</span> {formatFactoryStatusNumber(group.overview.activeMachines)}</span>
-                <span><span className="font-semibold text-on-surface">Stale</span> {formatFactoryStatusNumber(group.overview.staleMachines)}</span>
-                <span><span className="font-semibold text-on-surface">Idle</span> {formatFactoryStatusNumber(group.overview.idleMachines)}</span>
-                <span><span className="font-semibold text-on-surface">Sessions</span> {formatFactoryStatusNumber(group.overview.activeSessions)}</span>
-                <span><span className="font-semibold text-on-surface">Records</span> {formatFactoryStatusNumber(group.overview.recordCount)}</span>
+                <span><span className="font-semibold text-on-surface">{t("running")}</span> {formatFactoryStatusNumber(group.overview.activeMachines)}</span>
+                <span><span className="font-semibold text-on-surface">{t("stale")}</span> {formatFactoryStatusNumber(group.overview.staleMachines)}</span>
+                <span><span className="font-semibold text-on-surface">{t("idle")}</span> {formatFactoryStatusNumber(group.overview.idleMachines)}</span>
+                <span><span className="font-semibold text-on-surface">{t("sessions")}</span> {formatFactoryStatusNumber(group.overview.activeSessions)}</span>
+                <span><span className="font-semibold text-on-surface">{t("records")}</span> {formatFactoryStatusNumber(group.overview.recordCount)}</span>
               </div>
             </div>
 
@@ -630,8 +632,8 @@ export default function FactoryStatusPage() {
               renderPageInfo={({ filteredCount, page, pageSize }) => (
                 <span className="planner-data-text">{buildFactoryStatusPageInfo({ filteredCount, page, pageSize })}</span>
               )}
-              emptyTitle="No matching machines"
-              emptyMessage="Adjust the advanced filters or refresh the live factory data."
+              emptyTitle={t("noMatchingMachines")}
+              emptyMessage={t("adjustAdvancedFilters")}
               layoutStorageKey="factory-status-table-layout"
               enableColumnResize
               enableColumnReorder

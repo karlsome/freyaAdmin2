@@ -1,3 +1,4 @@
+import { useLanguage } from "../../contexts/LanguageContext";
 export default function PlannerFilters({
   factories = [],
   factoryName,
@@ -8,11 +9,12 @@ export default function PlannerFilters({
   onDateChange,
   onEndDateChange,
 }) {
+  const { t } = useLanguage();
   return (
     <div className="glass-card planner-data-text rounded-3xl p-5">
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4 xl:items-end">
         <div className="flex flex-col gap-1.5">
-          <label className="planner-data-label text-outline">Factory</label>
+          <label className="planner-data-label text-outline">{t("factory")}</label>
           <select
             value={factoryName}
             onChange={(event) => onFactoryChange(event.target.value)}
@@ -26,7 +28,7 @@ export default function PlannerFilters({
         </div>
 
         <div className="flex flex-col gap-1.5">
-          <label className="planner-data-label text-outline">Plan Date</label>
+          <label className="planner-data-label text-outline">{t("planDate")}</label>
           <input
             type="date"
             value={planDate}
@@ -36,7 +38,7 @@ export default function PlannerFilters({
         </div>
 
         <div className="flex flex-col gap-1.5">
-          <label className="planner-data-label text-outline">End Date</label>
+          <label className="planner-data-label text-outline">{t("endDate")}</label>
           <input
             type="date"
             value={endDate}
@@ -48,7 +50,7 @@ export default function PlannerFilters({
         <div className="rounded-2xl border border-outline-variant/15 bg-surface-container-low px-4 py-3 text-on-surface-variant">
           <div className="flex items-center justify-between gap-3">
             <div>
-              <div className="planner-data-label text-outline">Planner State</div>
+              <div className="planner-data-label text-outline">{t("plannerState")}</div>
               <div className="mt-1 font-medium text-on-surface">
                 {loading ? "Refreshing schedule data…" : factoryName ? "Ready for scheduling" : "Select a factory to begin"}
               </div>

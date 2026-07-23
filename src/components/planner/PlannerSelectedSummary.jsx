@@ -1,3 +1,4 @@
+import { useLanguage } from "../../contexts/LanguageContext";
 import { useState } from "react";
 import EmptyState from "../EmptyState";
 
@@ -17,6 +18,7 @@ export default function PlannerSelectedSummary({
   onRemoveItem,
   onClearAll,
 }) {
+  const { t } = useLanguage();
   const [collapsed, setCollapsed] = useState(true);
   const sortedItems = sortScheduledProducts(scheduledProducts);
   const filteredItems = searchValue
@@ -57,7 +59,7 @@ export default function PlannerSelectedSummary({
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div>
           <div className="flex items-center gap-3">
-            <h3 className="text-lg font-semibold text-on-surface">Selected Products</h3>
+            <h3 className="text-lg font-semibold text-on-surface">{t("selectedProducts")}</h3>
             <button
               type="button"
               onClick={() => setCollapsed((value) => !value)}
@@ -71,7 +73,7 @@ export default function PlannerSelectedSummary({
             </button>
           </div>
           {!collapsed ? (
-            <p className="mt-1 text-sm text-on-surface-variant">Review scheduled products by equipment before switching views.</p>
+            <p className="mt-1 text-sm text-on-surface-variant">{t("reviewScheduledProductsBeforeSwitching")}</p>
           ) : null}
         </div>
 
@@ -83,7 +85,7 @@ export default function PlannerSelectedSummary({
                 type="text"
                 value={searchValue}
                 onChange={(event) => onSearchChange(event.target.value)}
-                placeholder="Search selected products…"
+                placeholder={t("searchSelectedProducts")}
                 className="planner-data-text h-full flex-1 bg-transparent outline-none"
               />
             </div>
@@ -111,29 +113,29 @@ export default function PlannerSelectedSummary({
       ) : null}
 
       {!collapsed && !scheduledProducts.length ? (
-        <EmptyState className="planner-data-text mt-5 rounded-3xl bg-surface-container-low py-10">No products scheduled yet.</EmptyState>
+        <EmptyState className="planner-data-text mt-5 rounded-3xl bg-surface-container-low py-10">{t("noProductsScheduledYet")}</EmptyState>
       ) : null}
 
       {!collapsed && scheduledProducts.length ? (
         <>
           <div className="mt-4 grid gap-3 md:grid-cols-3">
             <div className="rounded-2xl border border-outline-variant/15 bg-surface-container-low px-4 py-3">
-              <div className="planner-data-label text-outline">Products</div>
+              <div className="planner-data-label text-outline">{t("products")}</div>
               <div className="planner-data-text mt-2 font-semibold text-on-surface">{scheduledProducts.length}</div>
             </div>
             <div className="rounded-2xl border border-outline-variant/15 bg-surface-container-low px-4 py-3">
-              <div className="planner-data-label text-outline">Equipment</div>
+              <div className="planner-data-label text-outline">{t("equipment")}</div>
               <div className="planner-data-text mt-2 font-semibold text-on-surface">{new Set(scheduledProducts.map((item) => item.equipment)).size}</div>
             </div>
             <div className="rounded-2xl border border-outline-variant/15 bg-surface-container-low px-4 py-3">
-              <div className="planner-data-label text-outline">Planned Time</div>
+              <div className="planner-data-label text-outline">{t("plannedTime")}</div>
               <div className="planner-data-text mt-2 font-semibold text-on-surface">{Math.round(totalSeconds / 60)}m</div>
             </div>
           </div>
 
           <div className="mt-5 space-y-3">
             {equipmentNames.length === 0 ? (
-              <EmptyState className="planner-data-text bg-surface-container-low px-4 py-6">No scheduled products match the current search.</EmptyState>
+              <EmptyState className="planner-data-text bg-surface-container-low px-4 py-6">{t("noScheduledProductsMatchSearch")}</EmptyState>
             ) : equipmentNames.map((equipment) => {
               const items = equipmentMap[equipment];
               const firstStart = Math.min(...items.map((item) => Number(item.startTime?.split(":")[0]) * 60 + Number(item.startTime?.split(":")[1])));
@@ -184,9 +186,7 @@ export default function PlannerSelectedSummary({
                             type="button"
                             onClick={() => onRemoveItem(item)}
                             className="rounded-xl border border-error/20 px-3 py-2 text-[11px] font-semibold text-error transition hover:bg-error/10"
-                          >
-                            Remove
-                          </button>
+                          >{t("remove")}</button>
                         </div>
                       </div>
                     ))}

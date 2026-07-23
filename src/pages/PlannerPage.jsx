@@ -1,3 +1,4 @@
+import { useLanguage } from "../contexts/LanguageContext";
 import { useCallback, useEffect, useRef, useState } from "react";
 import Papa from "papaparse";
 import LiquidSegmentedControl from "../components/LiquidSegmentedControl";
@@ -57,17 +58,6 @@ import {
 } from "../utils/planner";
 import { openPlannerCalendarWindow, openPlannerPrintWindow } from "../utils/plannerExports";
 
-const MAIN_TABS = [
-  { key: "goals", label: "Production Goals" },
-  { key: "planning", label: "Planning" },
-];
-
-const VIEW_TABS = [
-  { key: "timeline", label: "Timeline" },
-  { key: "kanban", label: "Kanban" },
-  { key: "table", label: "Table" },
-];
-
 const SMART_SCHEDULING_GRACE_MINUTES = 30;
 
 function todayStr() {
@@ -75,6 +65,7 @@ function todayStr() {
 }
 
 function FlashBanner({ flash, onClose }) {
+  const { t } = useLanguage();
   if (!flash) return null;
 
   const tone = flash.type === "error"
@@ -89,7 +80,7 @@ function FlashBanner({ flash, onClose }) {
     <div className={`mb-6 rounded-3xl border px-5 py-4 ${tone}`}>
       <div className="flex items-start justify-between gap-4">
         <div>
-          <div className="text-[10px] font-semibold uppercase tracking-[0.18em]">Status</div>
+          <div className="text-[10px] font-semibold uppercase tracking-[0.18em]">{t("status")}</div>
           <p className="mt-1 text-sm font-medium">{flash.message}</p>
         </div>
         <button type="button" onClick={onClose} className="text-current/70 transition hover:text-current">
@@ -140,7 +131,20 @@ function filterGoals(goals, searchValue) {
 }
 
 export default function PlannerPage() {
+  const { t } = useLanguage();
   const authUser = getAuthUser();
+
+  const MAIN_TABS = [
+    { key: "goals", label: t("productionGoals") },
+    { key: "planning", label: "Planning" },
+  ];
+
+  const VIEW_TABS = [
+    { key: "timeline", label: t("timelineView") },
+    { key: "kanban", label: t("kanbanView") },
+    { key: "table", label: "Table" },
+  ];
+
   const requestIdRef = useRef(0);
   const [factories, setFactories] = useState([]);
   const [factoryName, setFactoryName] = useState(() => localStorage.getItem("planner_selected_factory") || "");
@@ -892,8 +896,8 @@ export default function PlannerPage() {
     <section className="h-screen overflow-y-auto px-4 pb-24 pt-20 scrollbar-hide sm:px-6 sm:pb-16 sm:pt-24 md:px-8">
       <FlashBanner flash={flash} onClose={() => setFlash(null)} />
       <PageHeader
-        title="Production Planning"
-        subtitle="Goal-based production planning migrated from the original Freya Admin workflow."
+        title={t("productionPlanning")}
+        subtitle={t("goalBasedProductionPlanning")}
         className="sm:flex-row sm:items-end sm:justify-between"
         actionsClassName="gap-2"
         actions={(
@@ -912,9 +916,7 @@ export default function PlannerPage() {
               disabled={loadingFactories || dataLoading}
               className="flex items-center gap-2 rounded-2xl border border-outline-variant/20 bg-surface-container px-4 py-2 text-xs font-semibold text-on-surface transition hover:bg-surface-container-high disabled:cursor-not-allowed disabled:opacity-50"
             >
-              <span className={`material-symbols-outlined ${dataLoading ? "animate-spin" : ""}`} style={{ fontSize: 16 }}>refresh</span>
-              Refresh
-            </button>
+              <span className={`material-symbols-outlined ${dataLoading ? "animate-spin" : ""}`} style={{ fontSize: 16 }}>refresh</span>{t("refresh")}</button>
           </>
         )}
       />

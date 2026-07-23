@@ -1,3 +1,4 @@
+import { useLanguage } from "../../contexts/LanguageContext";
 import { useEffect, useState } from "react";
 import PlannerModalShell from "./PlannerModalShell";
 import EmptyState from "../EmptyState";
@@ -15,12 +16,12 @@ function QueueRow({ item, index, total, onMove, onQuantityChange, onRemove }) {
         <div className="flex items-center gap-2">
           <button type="button" onClick={() => onMove(index, -1)} disabled={index === 0} className="rounded-2xl border border-separator/40 px-2 py-1 text-xs font-semibold text-on-surface transition hover:bg-surface-container disabled:opacity-40">↑</button>
           <button type="button" onClick={() => onMove(index, 1)} disabled={index === total - 1} className="rounded-2xl border border-separator/40 px-2 py-1 text-xs font-semibold text-on-surface transition hover:bg-surface-container disabled:opacity-40">↓</button>
-          <button type="button" onClick={() => onRemove(item._id)} className="rounded-2xl border border-error/20 px-2 py-1 text-xs font-semibold text-error transition hover:bg-error/10">Remove</button>
+          <button type="button" onClick={() => onRemove(item._id)} className="rounded-2xl border border-error/20 px-2 py-1 text-xs font-semibold text-error transition hover:bg-error/10">{t("remove")}</button>
         </div>
       </div>
 
       <div className="mt-3">
-        <label className="planner-data-label text-outline">Schedule Quantity</label>
+        <label className="planner-data-label text-outline">{t("scheduleQuantity")}</label>
         <input
           type="number"
           min="1"
@@ -44,6 +45,7 @@ export default function PlannerSlotSchedulingModal({
   onClose,
   onConfirm,
 }) {
+  const { t } = useLanguage();
   const [search, setSearch] = useState("");
   const [queue, setQueue] = useState([]);
 
@@ -95,9 +97,7 @@ export default function PlannerSlotSchedulingModal({
             type="button"
             onClick={onClose}
             className="rounded-2xl border border-separator/40 px-4 py-2 text-sm font-semibold text-on-surface transition hover:bg-surface-container"
-          >
-            Cancel
-          </button>
+          >{t("cancel")}</button>
           <button
             type="button"
             disabled={submitting || !queue.length}
@@ -117,7 +117,7 @@ export default function PlannerSlotSchedulingModal({
               type="text"
               value={search}
               onChange={(event) => setSearch(event.target.value)}
-              placeholder="Search goals for this date…"
+              placeholder={t("searchGoalsForDate")}
               className="planner-data-text h-full flex-1 bg-transparent outline-none"
             />
           </div>
@@ -148,7 +148,7 @@ export default function PlannerSlotSchedulingModal({
             })}
 
             {!availableGoals.length ? (
-              <EmptyState className="bg-surface px-4 py-10">No goals with remaining quantity are available for the selected date.</EmptyState>
+              <EmptyState className="bg-surface px-4 py-10">{t("noGoalsWithRemainingQuantity")}</EmptyState>
             ) : null}
           </div>
         </div>
@@ -156,8 +156,8 @@ export default function PlannerSlotSchedulingModal({
         <div className="rounded-2xl border border-outline-variant/15 bg-surface-container-low p-4">
           <div className="mb-4 flex items-center justify-between gap-3">
             <div>
-              <div className="planner-data-label text-outline">Queue</div>
-              <div className="mt-1 text-on-surface-variant">Items run in the order shown here.</div>
+              <div className="planner-data-label text-outline">{t("queue")}</div>
+              <div className="mt-1 text-on-surface-variant">{t("itemsRunInOrder")}</div>
             </div>
             <div className="rounded-full bg-surface px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-on-surface-variant">
               {queue.length} selected
@@ -183,7 +183,7 @@ export default function PlannerSlotSchedulingModal({
             ))}
 
             {!queue.length ? (
-              <EmptyState className="bg-surface px-4 py-10">Add goals from the left panel to build a scheduling queue.</EmptyState>
+              <EmptyState className="bg-surface px-4 py-10">{t("addGoalsFromLeftPanel")}</EmptyState>
             ) : null}
           </div>
         </div>

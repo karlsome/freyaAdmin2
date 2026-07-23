@@ -1,3 +1,4 @@
+import { useLanguage } from "../../contexts/LanguageContext";
 import { useEffect, useState } from "react";
 import PlannerModalShell from "./PlannerModalShell";
 import EmptyState from "../EmptyState";
@@ -12,6 +13,7 @@ export default function PlannerSmartSchedulingModal({
   onClose,
   onConfirm,
 }) {
+  const { t } = useLanguage();
   const [timeLimit, setTimeLimit] = useState(initialTimeLimit);
 
   useEffect(() => {
@@ -25,7 +27,7 @@ export default function PlannerSmartSchedulingModal({
   return (
     <PlannerModalShell
       open={open}
-      title="Smart Scheduling"
+      title={t("smartScheduling")}
       subtitle={`${totalAssigned} goals assigned from press history, ${totalUnassigned} without a strong match.`}
       onClose={onClose}
       maxWidthClassName="max-w-5xl"
@@ -35,9 +37,7 @@ export default function PlannerSmartSchedulingModal({
             type="button"
             onClick={onClose}
             className="rounded-2xl border border-separator/40 px-4 py-2 text-sm font-semibold text-on-surface transition hover:bg-surface-container"
-          >
-            Cancel
-          </button>
+          >{t("cancel")}</button>
           <button
             type="button"
             disabled={scheduling || !equipmentNames.length}
@@ -50,19 +50,19 @@ export default function PlannerSmartSchedulingModal({
       )}
     >
       <div className="planner-data-text rounded-2xl border border-outline-variant/15 bg-surface-container-low p-4">
-        <label className="planner-data-label text-outline">Schedule Until</label>
+        <label className="planner-data-label text-outline">{t("scheduleUntil")}</label>
         <input
           type="time"
           value={timeLimit}
           onChange={(event) => setTimeLimit(event.target.value)}
           className="planner-data-text mt-2 h-11 w-full max-w-xs rounded-2xl border border-separator/40 px-4 outline-none transition focus:border-primary/40"
         />
-        <p className="mt-2 text-on-surface-variant">The scheduler will fit complete boxes before this time, with the same grace-period logic used in the original planner.</p>
+        <p className="mt-2 text-on-surface-variant">{t("schedulerFitCompleteBoxes")}</p>
       </div>
 
       <div className="mt-5 space-y-5">
         {!equipmentNames.length ? (
-          <EmptyState className="planner-data-text bg-surface px-4">No historical equipment matches were found for the current goals.</EmptyState>
+          <EmptyState className="planner-data-text bg-surface px-4">{t("noHistoricalEquipmentMatches")}</EmptyState>
         ) : equipmentNames.map((equipment) => (
           <section key={equipment} className="planner-data-text rounded-2xl border border-outline-variant/15 bg-surface-container-low p-4">
             <div className="mb-3 flex items-center justify-between gap-3">

@@ -1,7 +1,9 @@
+import { useLanguage } from "../../contexts/LanguageContext";
 import { formatDuration, sortScheduledProducts } from "../../utils/planner";
 import EmptyState from "../EmptyState";
 
 export default function PlannerTableView({ scheduledProducts = [], onRemoveItem }) {
+  const { t } = useLanguage();
   const items = sortScheduledProducts(scheduledProducts);
   const totalQuantity = items.reduce((sum, item) => sum + Number(item.quantity || 0), 0);
   const totalBoxes = items.reduce((sum, item) => sum + Number(item.boxes || 0), 0);
@@ -9,7 +11,7 @@ export default function PlannerTableView({ scheduledProducts = [], onRemoveItem 
 
   if (!items.length) {
     return (
-      <EmptyState className="rounded-3xl bg-surface-container-low py-14">No products in the current plan.</EmptyState>
+      <EmptyState className="rounded-3xl bg-surface-container-low py-14">{t("noProductsInCurrentPlan")}</EmptyState>
     );
   }
 
@@ -55,16 +57,14 @@ export default function PlannerTableView({ scheduledProducts = [], onRemoveItem 
                     type="button"
                     onClick={() => onRemoveItem(item)}
                     className="rounded-xl border border-error/20 bg-error/5 px-3 py-2 text-xs font-semibold text-error transition hover:bg-error/10"
-                  >
-                    Remove
-                  </button>
+                  >{t("remove")}</button>
                 </td>
               </tr>
             ))}
           </tbody>
           <tfoot className="bg-surface-container-low border-t border-outline-variant/20">
             <tr>
-              <td colSpan={4} className="px-4 py-3 font-semibold text-on-surface">Totals</td>
+              <td colSpan={4} className="px-4 py-3 font-semibold text-on-surface">{t("totals")}</td>
               <td className="px-4 py-3 font-semibold text-on-surface">{totalQuantity}</td>
               <td className="px-4 py-3 font-semibold text-on-surface">{totalBoxes}</td>
               <td className="px-4 py-3 font-semibold text-on-surface">—</td>

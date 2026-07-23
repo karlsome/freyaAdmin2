@@ -1,3 +1,4 @@
+import { useLanguage } from "../../contexts/LanguageContext";
 import { useEffect, useState } from "react";
 import PlannerModalShell from "./PlannerModalShell";
 import EmptyState from "../EmptyState";
@@ -11,6 +12,7 @@ export default function PlannerManualGoalModal({
   onClose,
   onSubmit,
 }) {
+  const { t } = useLanguage();
   const [search, setSearch] = useState("");
   const [selectedSerial, setSelectedSerial] = useState("");
   const [targetQuantity, setTargetQuantity] = useState("");
@@ -49,8 +51,8 @@ export default function PlannerManualGoalModal({
   return (
     <PlannerModalShell
       open={open}
-      title="Manual Goal Input"
-      subtitle="Search a product from master DB and add a production goal for the selected date."
+      title={t("manualGoalInput")}
+      subtitle={t("searchProductDesc")}
       onClose={onClose}
       maxWidthClassName="max-w-5xl"
       footer={(
@@ -59,9 +61,7 @@ export default function PlannerManualGoalModal({
             type="button"
             onClick={onClose}
             className="rounded-2xl border border-separator/40 px-4 py-2 text-sm font-semibold text-on-surface transition hover:bg-surface-container"
-          >
-            Cancel
-          </button>
+          >{t("cancel")}</button>
           <button
             type="button"
             disabled={submitting || !selectedProduct || !date || Number(targetQuantity) <= 0}
@@ -76,7 +76,7 @@ export default function PlannerManualGoalModal({
       <div className="planner-data-text grid gap-5 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1.4fr)]">
         <div className="space-y-4">
           <div className="rounded-2xl border border-outline-variant/15 bg-surface-container-low p-4">
-            <label className="planner-data-label text-outline">Goal Date</label>
+            <label className="planner-data-label text-outline">{t("goalDate")}</label>
             <input
               type="date"
               value={date}
@@ -86,21 +86,21 @@ export default function PlannerManualGoalModal({
           </div>
 
           <div className="rounded-2xl border border-outline-variant/15 bg-surface-container-low p-4">
-            <label className="planner-data-label text-outline">Search Product</label>
+            <label className="planner-data-label text-outline">{t("searchProductTitle")}</label>
             <div className="ui-control-surface mt-2 flex h-11 items-center gap-3 rounded-2xl border border-separator/40 px-4">
               <span className="material-symbols-outlined text-outline" style={{ fontSize: 18 }}>search</span>
               <input
                 type="text"
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
-                placeholder="Search by 背番号, 品番, or 品名…"
+                placeholder={t("searchByPartNumber")}
                 className="planner-data-text h-full flex-1 bg-transparent outline-none"
               />
             </div>
           </div>
 
           <div className="rounded-2xl border border-outline-variant/15 bg-surface-container-low p-4">
-            <label className="planner-data-label text-outline">Target Quantity</label>
+            <label className="planner-data-label text-outline">{t("targetQuantity")}</label>
             <input
               type="number"
               min="1"
@@ -112,7 +112,7 @@ export default function PlannerManualGoalModal({
 
           {selectedProduct ? (
             <div className="rounded-2xl border border-primary/15 bg-primary/8 p-4">
-              <div className="planner-data-label text-primary">Selected Product</div>
+              <div className="planner-data-label text-primary">{t("selectedProduct")}</div>
               <div className="mt-2 font-semibold text-on-surface">{selectedProduct.背番号}</div>
               <div className="mt-1 text-on-surface-variant">{selectedProduct.品番}</div>
               <div className="mt-1 text-on-surface-variant">{selectedProduct.品名 || "Unnamed product"}</div>
@@ -123,7 +123,7 @@ export default function PlannerManualGoalModal({
         <div className="rounded-2xl border border-outline-variant/15 bg-surface-container-low p-4">
           <div className="mb-3 flex items-center justify-between gap-3">
             <div>
-              <div className="planner-data-label text-outline">Products</div>
+              <div className="planner-data-label text-outline">{t("products")}</div>
               <div className="mt-1 text-on-surface-variant">Showing {filteredProducts.length} matches</div>
             </div>
           </div>
@@ -146,7 +146,7 @@ export default function PlannerManualGoalModal({
             })}
 
             {!filteredProducts.length ? (
-              <EmptyState className="bg-surface px-4 py-10">No products match the current search.</EmptyState>
+              <EmptyState className="bg-surface px-4 py-10">{t("noProductsMatchSearch")}</EmptyState>
             ) : null}
           </div>
         </div>

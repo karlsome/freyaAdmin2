@@ -8,6 +8,7 @@ import {
   fetchFactoryStatusFactories,
   fetchFactoryStatusLogs,
 } from "../services/factoryStatusApi";
+import { useLanguage } from "../contexts/LanguageContext";
 import { readStoredAuthUser } from "../utils/auth";
 import {
   buildFactoryStatusLogPageInfo,
@@ -80,6 +81,7 @@ function SummaryCard({ icon, label, value, subtitle, accent, loading = false }) 
 
 
 export default function FactoryStatusLogsPage() {
+  const { t } = useLanguage();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [authUser] = useState(() => readStoredAuthUser());
@@ -259,28 +261,28 @@ export default function FactoryStatusLogsPage() {
   const columns = useMemo(() => ([
     {
       key: "timestamp",
-      label: "Timestamp",
+      label: t("timestamp"),
       width: 220,
       renderCell: (row) => <span className="planner-data-text text-sm font-semibold text-on-surface">{formatFactoryStatusDateTime(row.timestamp)}</span>,
       disableCellWrapper: true,
     },
     {
       key: "factory",
-      label: "Factory",
+      label: t("factory"),
       width: 140,
       renderCell: (row) => <span className="planner-data-text text-sm font-semibold text-on-surface">{row.factory || "—"}</span>,
       disableCellWrapper: true,
     },
     {
       key: "equipment",
-      label: "Equipment",
+      label: t("equipment"),
       width: 140,
       renderCell: (row) => <span className="planner-data-text text-sm font-semibold text-on-surface">{row.equipment || "—"}</span>,
       disableCellWrapper: true,
     },
     {
       key: "status",
-      label: "Status",
+      label: t("status"),
       width: 130,
       renderCell: (row) => {
         const meta = getFactoryStatusLogStatusMeta(row.status);
@@ -290,35 +292,35 @@ export default function FactoryStatusLogsPage() {
     },
     {
       key: "action",
-      label: "Action",
+      label: t("action") || "Action",
       width: 280,
       renderCell: (row) => <div className="planner-data-text whitespace-normal text-sm text-on-surface-variant">{row.action || "—"}</div>,
       disableCellWrapper: true,
     },
     {
       key: "workerName",
-      label: "Operator",
+      label: t("operator"),
       width: 160,
       renderCell: (row) => <span className="planner-data-text text-sm font-semibold text-on-surface">{getFactoryStatusOperatorName(row) || "—"}</span>,
       disableCellWrapper: true,
     },
     {
       key: "partNumber",
-      label: "Part Number",
+      label: t("partNumber"),
       width: 180,
       renderCell: (row) => <span className="planner-data-text text-sm font-semibold text-on-surface">{row.partNumber || "—"}</span>,
       disableCellWrapper: true,
     },
     {
       key: "backNumber",
-      label: "Serial Number",
+      label: t("serialNumber"),
       width: 150,
       renderCell: (row) => <span className="planner-data-text text-sm font-semibold text-on-surface">{row.backNumber || "—"}</span>,
       disableCellWrapper: true,
     },
     {
       key: "sessionID",
-      label: "Session ID",
+      label: t("sessionID"),
       width: 220,
       renderCell: (row) => <span className="planner-data-text text-xs font-semibold text-on-surface-variant">{row.sessionID || "—"}</span>,
       disableCellWrapper: true,
@@ -329,10 +331,10 @@ export default function FactoryStatusLogsPage() {
     <section className="h-screen overflow-y-auto scrollbar-hide px-8 pb-16 pt-24">
       <div className="mx-auto max-w-[1600px]">
         <PageHeader
-          eyebrow="Live Operations"
+          eyebrow={t("liveOperations")}
           eyebrowClassName="tracking-[0.18em] text-primary"
-          title="Factory Status Logs"
-          subtitle="Review tablet log history from tabletLogDB by factory, equipment, operator, and session. Use this full-page view for broader filtering beyond the quick equipment modal on Factory Status."
+          title={t("factoryStatusLogs")}
+          subtitle={t("factoryStatusLogsSubtitle")}
           subtitleClassName="max-w-4xl"
           className="md:flex-row md:items-start md:justify-between"
           actions={(
@@ -345,7 +347,7 @@ export default function FactoryStatusLogsPage() {
                 Back To Status
               </button>
               <div className="planner-data-text rounded-2xl border border-outline-variant/20 bg-surface-container-low/40 px-4 py-2.5 text-sm text-on-surface-variant">
-                {generatedAt ? `Updated ${formatFactoryStatusDateTime(generatedAt)}` : "Waiting for first load..."}
+                {generatedAt ? `Updated ${formatFactoryStatusDateTime(generatedAt)}` : t("waitingForFirstLoad")}
               </div>
               <button
                 type="button"
@@ -353,7 +355,7 @@ export default function FactoryStatusLogsPage() {
                 disabled={loadingLogs || loadingFactories}
                 className="rounded-2xl border border-outline-variant/25 px-4 py-2.5 text-sm font-semibold text-on-surface transition hover:bg-surface-container disabled:cursor-not-allowed disabled:opacity-60"
               >
-                {loadingLogs ? "Refreshing..." : "Refresh"}
+                {loadingLogs ? t("refreshing") : t("refresh")}
               </button>
             </>
           )}
@@ -368,8 +370,8 @@ export default function FactoryStatusLogsPage() {
         <div className="dashboard-section mb-6 rounded-2xl p-5">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
-              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Filters</p>
-              <h2 className="mt-1 text-lg font-semibold text-on-surface">Log Scope</h2>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">{t("filters") || "Filters"}</p>
+              <h2 className="mt-1 text-lg font-semibold text-on-surface">{t("logScope")}</h2>
               <p className="planner-data-text mt-2 text-sm text-on-surface-variant">{selectionSummary.countLabel} · {selectionSummary.selectedText}</p>
             </div>
 
@@ -402,7 +404,7 @@ export default function FactoryStatusLogsPage() {
 
           <div className="mt-4 grid gap-4 xl:grid-cols-[minmax(0,1.7fr)_260px]">
             <div>
-              <span className="block text-xs font-semibold uppercase tracking-[0.18em] text-outline">Factories</span>
+              <span className="block text-xs font-semibold uppercase tracking-[0.18em] text-outline">{t("factories")}</span>
               <div className="mt-2 flex flex-wrap gap-2">
                 {factoryOptions.map((factory) => {
                   const active = selectedFactories.includes(factory);
@@ -425,14 +427,14 @@ export default function FactoryStatusLogsPage() {
                 })}
                 {!factoryOptions.length && !loadingFactories ? (
                   <div className="planner-data-text rounded-2xl border border-outline-variant/20 bg-surface-container-low/35 px-4 py-3 text-sm text-on-surface-variant">
-                    No accessible factories found.
+                    {t("noAccessibleFactories")}
                   </div>
                 ) : null}
               </div>
             </div>
 
             <label className="block">
-              <span className="block text-xs font-semibold uppercase tracking-[0.18em] text-outline">Date</span>
+              <span className="block text-xs font-semibold uppercase tracking-[0.18em] text-outline">{t("date")}</span>
               <input
                 type="date"
                 value={date}
@@ -442,43 +444,43 @@ export default function FactoryStatusLogsPage() {
                 }}
                 className="planner-data-text mt-2 h-11 w-full rounded-2xl border border-outline-variant/30 bg-white px-4 text-sm text-on-surface outline-none transition focus:border-primary/40 dark:bg-surface-container"
               />
-              <p className="planner-data-text mt-2 text-xs text-on-surface-variant">Defaults to today and auto-refreshes every 60 seconds.</p>
+              <p className="planner-data-text mt-2 text-xs text-on-surface-variant">{t("dateFieldDescription")}</p>
             </label>
           </div>
 
           <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-5">
             <label className="block">
-              <span className="block text-xs font-semibold uppercase tracking-[0.18em] text-outline">Equipment</span>
+              <span className="block text-xs font-semibold uppercase tracking-[0.18em] text-outline">{t("equipment")}</span>
               <input
                 type="text"
                 list="factory-status-log-equipment-options"
                 value={filters.equipment}
                 onChange={(event) => updateFilter("equipment", event.target.value)}
-                placeholder="Filter by equipment"
+                placeholder={t("filterByEquipment")}
                 className="planner-data-text mt-2 h-11 w-full rounded-2xl border border-outline-variant/30 bg-white px-4 text-sm text-on-surface outline-none transition focus:border-primary/40 dark:bg-surface-container"
               />
             </label>
 
             <label className="block">
-              <span className="block text-xs font-semibold uppercase tracking-[0.18em] text-outline">Operator</span>
+              <span className="block text-xs font-semibold uppercase tracking-[0.18em] text-outline">{t("operator")}</span>
               <input
                 type="text"
                 list="factory-status-log-worker-options"
                 value={filters.workerName}
                 onChange={(event) => updateFilter("workerName", event.target.value)}
-                placeholder="Filter by operator"
+                placeholder={t("filterByOperator")}
                 className="planner-data-text mt-2 h-11 w-full rounded-2xl border border-outline-variant/30 bg-white px-4 text-sm text-on-surface outline-none transition focus:border-primary/40 dark:bg-surface-container"
               />
             </label>
 
             <label className="block">
-              <span className="block text-xs font-semibold uppercase tracking-[0.18em] text-outline">Status</span>
+              <span className="block text-xs font-semibold uppercase tracking-[0.18em] text-outline">{t("status")}</span>
               <select
                 value={filters.status}
                 onChange={(event) => updateFilter("status", event.target.value)}
                 className="planner-data-text mt-2 h-11 w-full rounded-2xl border border-outline-variant/30 bg-white px-4 text-sm text-on-surface outline-none transition focus:border-primary/40 dark:bg-surface-container"
               >
-                <option value="">All statuses</option>
+                <option value="">{t("allStatuses")}</option>
                 {filterOptions.statuses.map((status) => (
                   <option key={status} value={status}>{status}</option>
                 ))}
@@ -486,23 +488,23 @@ export default function FactoryStatusLogsPage() {
             </label>
 
             <label className="block">
-              <span className="block text-xs font-semibold uppercase tracking-[0.18em] text-outline">Session ID</span>
+              <span className="block text-xs font-semibold uppercase tracking-[0.18em] text-outline">{t("sessionID")}</span>
               <input
                 type="text"
                 value={filters.sessionID}
                 onChange={(event) => updateFilter("sessionID", event.target.value)}
-                placeholder="Filter by session"
+                placeholder={t("filterBySession")}
                 className="planner-data-text mt-2 h-11 w-full rounded-2xl border border-outline-variant/30 bg-white px-4 text-sm text-on-surface outline-none transition focus:border-primary/40 dark:bg-surface-container"
               />
             </label>
 
             <label className="block">
-              <span className="block text-xs font-semibold uppercase tracking-[0.18em] text-outline">Search</span>
+              <span className="block text-xs font-semibold uppercase tracking-[0.18em] text-outline">{t("search")}</span>
               <input
                 type="text"
                 value={filters.search}
                 onChange={(event) => updateFilter("search", event.target.value)}
-                placeholder="Action, part, serial..."
+                placeholder={t("filterBySearch")}
                 className="planner-data-text mt-2 h-11 w-full rounded-2xl border border-outline-variant/30 bg-white px-4 text-sm text-on-surface outline-none transition focus:border-primary/40 dark:bg-surface-container"
               />
             </label>
@@ -524,33 +526,33 @@ export default function FactoryStatusLogsPage() {
         <div className="mb-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           <SummaryCard
             icon="receipt_long"
-            label="Logs"
+            label={t("logs")}
             value={formatFactoryStatusNumber(summary.totalLogs)}
-            subtitle="Matching current filters"
+            subtitle={t("matchingCurrentFilters")}
             accent="bg-primary/10 text-primary"
             loading={loadingLogs && !generatedAt}
           />
           <SummaryCard
             icon="precision_manufacturing"
-            label="Equipment"
+            label={t("equipment")}
             value={formatFactoryStatusNumber(summary.equipmentCount)}
-            subtitle="Machines represented"
+            subtitle={t("machinesRepresented")}
             accent="bg-sky-500/10 text-sky-600 dark:text-sky-300"
             loading={loadingLogs && !generatedAt}
           />
           <SummaryCard
             icon="badge"
-            label="Operators"
+            label={t("operators")}
             value={formatFactoryStatusNumber(summary.workerCount)}
-            subtitle="Workers in current result set"
+            subtitle={t("workersInCurrentResultSet")}
             accent="bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
             loading={loadingLogs && !generatedAt}
           />
           <SummaryCard
             icon="fingerprint"
-            label="Sessions"
+            label={t("sessions")}
             value={formatFactoryStatusNumber(summary.sessionCount)}
-            subtitle="Distinct session IDs"
+            subtitle={t("distinctSessionIDs")}
             accent="bg-amber-500/10 text-amber-700 dark:text-amber-300"
             loading={loadingLogs && !generatedAt}
           />
@@ -558,8 +560,8 @@ export default function FactoryStatusLogsPage() {
 
         {!selectedFactories.length && !loadingFactories ? (
           <div className="glass-card rounded-2xl px-6 py-12 text-center">
-            <h2 className="text-xl font-semibold text-on-surface">Choose at least one factory</h2>
-            <p className="planner-data-text mt-2 text-sm text-on-surface-variant">The log table appears after you select one or more factories.</p>
+            <h2 className="text-xl font-semibold text-on-surface">{t("chooseAtLeastOneFactory")}</h2>
+            <p className="planner-data-text mt-2 text-sm text-on-surface-variant">{t("logTableAppearsAfter")}</p>
           </div>
         ) : (
           <DataTable
@@ -579,13 +581,13 @@ export default function FactoryStatusLogsPage() {
               setPage(1);
             }}
             pageSizeOptions={FACTORY_STATUS_LOG_PAGE_SIZE_OPTIONS}
-            pageSizeLabel="Rows"
+            pageSizeLabel={t("rows")}
             rowKey={(row) => row.id}
             renderPageInfo={({ filteredCount, page: currentPage, pageSize: currentPageSize }) => (
               <span className="planner-data-text">{buildFactoryStatusLogPageInfo({ filteredCount, page: currentPage, pageSize: currentPageSize })}</span>
             )}
-            emptyTitle="No matching tablet logs"
-            emptyMessage="Adjust the filters or refresh the page to load more tablet activity."
+            emptyTitle={t("noMatchingTabletLogs")}
+            emptyMessage={t("adjustFiltersToLoadMore")}
             layoutStorageKey="factory-status-logs-table-layout"
             enableColumnResize
             enableColumnReorder

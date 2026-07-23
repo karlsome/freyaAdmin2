@@ -3,6 +3,7 @@ import DataTable from "../DataTable";
 import PlannerModalShell from "../planner/PlannerModalShell";
 import StatusChip from "../StatusChip";
 import { fetchFactoryStatusLogs } from "../../services/factoryStatusApi";
+import { useLanguage } from "../../contexts/LanguageContext";
 import {
   buildFactoryStatusLogPageInfo,
   FACTORY_STATUS_LOG_PAGE_SIZE_OPTIONS,
@@ -48,6 +49,7 @@ export default function FactoryStatusLogsModal({
   onClose,
   onOpenFullPage,
 }) {
+  const { t } = useLanguage();
   const requestIdRef = useRef(0);
   const [rows, setRows] = useState([]);
   const [summary, setSummary] = useState(EMPTY_SUMMARY);
@@ -132,14 +134,14 @@ export default function FactoryStatusLogsModal({
   const columns = useMemo(() => ([
     {
       key: "timestamp",
-      label: "Timestamp",
+      label: t("timestamp"),
       width: 220,
       renderCell: (row) => <span className="planner-data-text text-sm font-semibold text-on-surface">{formatFactoryStatusDateTime(row.timestamp)}</span>,
       disableCellWrapper: true,
     },
     {
       key: "status",
-      label: "Status",
+      label: t("status"),
       width: 130,
       renderCell: (row) => {
         const meta = getFactoryStatusLogStatusMeta(row.status);
@@ -149,35 +151,35 @@ export default function FactoryStatusLogsModal({
     },
     {
       key: "action",
-      label: "Action",
+      label: t("action") || "Action",
       width: 320,
       renderCell: (row) => <div className="planner-data-text whitespace-normal text-sm text-on-surface-variant">{row.action || "—"}</div>,
       disableCellWrapper: true,
     },
     {
       key: "workerName",
-      label: "Operator",
+      label: t("operator"),
       width: 160,
       renderCell: (row) => <span className="planner-data-text text-sm font-semibold text-on-surface">{getFactoryStatusOperatorName(row) || "—"}</span>,
       disableCellWrapper: true,
     },
     {
       key: "partNumber",
-      label: "Part Number",
+      label: t("partNumber"),
       width: 180,
       renderCell: (row) => <span className="planner-data-text text-sm font-semibold text-on-surface">{row.partNumber || "—"}</span>,
       disableCellWrapper: true,
     },
     {
       key: "backNumber",
-      label: "Serial Number",
+      label: t("serialNumber"),
       width: 150,
       renderCell: (row) => <span className="planner-data-text text-sm font-semibold text-on-surface">{row.backNumber || "—"}</span>,
       disableCellWrapper: true,
     },
     {
       key: "sessionID",
-      label: "Session ID",
+      label: t("sessionID"),
       width: 220,
       renderCell: (row) => <span className="planner-data-text text-xs font-semibold text-on-surface-variant">{row.sessionID || "—"}</span>,
       disableCellWrapper: true,
@@ -187,8 +189,8 @@ export default function FactoryStatusLogsModal({
   return (
     <PlannerModalShell
       open={open}
-      title={equipment ? `Equipment Logs · ${equipment}` : "Equipment Logs"}
-      subtitle={factory && date ? `${factory} · ${date}` : "Review tablet logs for the selected equipment."}
+      title={equipment ? t("equipmentLogsWithVar").replace("{equipment}", equipment) : t("equipmentLogs")}
+      subtitle={factory && date ? t("factoryDate").replace("{factory}", factory).replace("{date}", date) : t("reviewTabletLogs")}
       onClose={onClose}
       maxWidthClassName="max-w-7xl"
       footer={(
@@ -214,19 +216,19 @@ export default function FactoryStatusLogsModal({
         <div className="rounded-2xl border border-outline-variant/15 bg-surface-container-low px-4 py-4">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
-              <div className="planner-data-label text-outline">Equipment Scope</div>
+              <div className="planner-data-label text-outline">{t("equipmentScope")}</div>
               <h3 className="planner-data-text mt-1 text-xl font-semibold text-on-surface">{equipment || "—"}</h3>
               <p className="planner-data-text mt-1 text-sm text-on-surface-variant">
-                {factory || "Unknown Factory"} {generatedAt ? `· Updated ${formatFactoryStatusDateTime(generatedAt)}` : ""}
+                {factory || t("unknownFactory")} {generatedAt ? `· Updated ${formatFactoryStatusDateTime(generatedAt)}` : ""}
               </p>
             </div>
           </div>
 
           <div className="mt-5 grid gap-4 md:grid-cols-4">
-            <SummaryTile label="Logs" value={formatFactoryStatusNumber(summary.totalLogs)} toneClassName="text-primary" />
-            <SummaryTile label="Operators" value={formatFactoryStatusNumber(summary.workerCount)} toneClassName="text-emerald-700 dark:text-emerald-300" />
-            <SummaryTile label="Sessions" value={formatFactoryStatusNumber(summary.sessionCount)} toneClassName="text-amber-700 dark:text-amber-300" />
-            <SummaryTile label="Equipment Count" value={formatFactoryStatusNumber(summary.equipmentCount)} toneClassName="text-sky-700 dark:text-sky-300" />
+            <SummaryTile label={t("logs")} value={formatFactoryStatusNumber(summary.totalLogs)} toneClassName="text-primary" />
+            <SummaryTile label={t("operators")} value={formatFactoryStatusNumber(summary.workerCount)} toneClassName="text-emerald-700 dark:text-emerald-300" />
+            <SummaryTile label={t("sessions")} value={formatFactoryStatusNumber(summary.sessionCount)} toneClassName="text-amber-700 dark:text-amber-300" />
+            <SummaryTile label={t("equipmentCount")} value={formatFactoryStatusNumber(summary.equipmentCount)} toneClassName="text-sky-700 dark:text-sky-300" />
           </div>
         </div>
 
@@ -253,13 +255,13 @@ export default function FactoryStatusLogsModal({
             setPage(1);
           }}
           pageSizeOptions={FACTORY_STATUS_LOG_PAGE_SIZE_OPTIONS}
-          pageSizeLabel="Rows"
+          pageSizeLabel={t("rows")}
           rowKey={(row) => row.id}
           renderPageInfo={({ filteredCount, page: currentPage, pageSize: currentPageSize }) => (
             <span className="planner-data-text">{buildFactoryStatusLogPageInfo({ filteredCount, page: currentPage, pageSize: currentPageSize })}</span>
           )}
-          emptyTitle="No equipment logs"
-          emptyMessage="No tablet logs were found for this equipment on the selected date."
+          emptyTitle={t("noEquipmentLogs")}
+          emptyMessage={t("noTabletLogsFound")}
           layoutStorageKey="factory-status-logs-modal-table-layout"
           enableColumnResize
           enableColumnReorder

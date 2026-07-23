@@ -1,3 +1,4 @@
+import { useLanguage } from "../../contexts/LanguageContext";
 import { useEffect, useState } from "react";
 import PlannerModalShell from "./PlannerModalShell";
 
@@ -8,6 +9,7 @@ export default function PlannerGoalImportReviewModal({
   onClose,
   onConfirm,
 }) {
+  const { t } = useLanguage();
   const [decisions, setDecisions] = useState({});
 
   useEffect(() => {
@@ -27,7 +29,7 @@ export default function PlannerGoalImportReviewModal({
   return (
     <PlannerModalShell
       open={open}
-      title="Review Imported Goals"
+      title={t("reviewImportedGoals")}
       subtitle={`${validCount} new, ${duplicateCount} duplicate, ${errorCount} invalid row${errorCount === 1 ? "" : "s"}`}
       onClose={onClose}
       maxWidthClassName="max-w-6xl"
@@ -37,9 +39,7 @@ export default function PlannerGoalImportReviewModal({
             type="button"
             onClick={onClose}
             className="rounded-2xl border border-separator/40 px-4 py-2 text-sm font-semibold text-on-surface transition hover:bg-surface-container"
-          >
-            Cancel
-          </button>
+          >{t("cancel")}</button>
           <button
             type="button"
             disabled={importing || !rows.some((row) => row.status === "valid" || row.status === "duplicate")}
@@ -77,9 +77,9 @@ export default function PlannerGoalImportReviewModal({
                 <td className="px-4 py-3 text-on-surface-variant">{row.品名 || row.error || "-"}</td>
                 <td className="px-4 py-3 font-semibold text-on-surface">{row.targetQuantity}</td>
                 <td className="px-4 py-3">
-                  {row.status === "valid" ? <span className="text-emerald-600 dark:text-emerald-300">Ready</span> : null}
-                  {row.status === "duplicate" ? <span className="text-amber-600 dark:text-amber-300">Duplicate</span> : null}
-                  {row.status === "error" ? <span className="text-error">Invalid</span> : null}
+                  {row.status === "valid" ? <span className="text-emerald-600 dark:text-emerald-300">{t("ready")}</span> : null}
+                  {row.status === "duplicate" ? <span className="text-amber-600 dark:text-amber-300">{t("duplicate")}</span> : null}
+                  {row.status === "error" ? <span className="text-error">{t("invalid")}</span> : null}
                 </td>
                 <td className="px-4 py-3 text-on-surface">
                   {row.status === "duplicate" ? (
@@ -88,9 +88,9 @@ export default function PlannerGoalImportReviewModal({
                       onChange={(event) => setDecisions((state) => ({ ...state, [row.id]: event.target.value }))}
                       className="planner-data-text h-10 rounded-2xl border border-separator/40 px-3 outline-none transition focus:border-primary/40"
                     >
-                      <option value="add">Add</option>
-                      <option value="overwrite">Overwrite</option>
-                      <option value="skip">Skip</option>
+                      <option value="add">{t("add")}</option>
+                      <option value="overwrite">{t("overwrite")}</option>
+                      <option value="skip">{t("skip")}</option>
                     </select>
                   ) : row.status === "error" ? row.error : "Create new goal"}
                 </td>

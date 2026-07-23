@@ -1,4 +1,6 @@
+import { useLanguage } from "../../contexts/LanguageContext";
 export default function PlannerScheduleDetailCard({ schedule = {} }) {
+  const { t } = useLanguage();
   const rows = [
     ["背番号", schedule.serial],
     ["設備名", schedule.equipment],

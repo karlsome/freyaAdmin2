@@ -1,3 +1,4 @@
+import { useLanguage } from "../../contexts/LanguageContext";
 import { useEffect, useMemo, useState } from "react";
 import PlannerModalShell from "./PlannerModalShell";
 import EmptyState from "../EmptyState";
@@ -8,6 +9,7 @@ export default function PlannerPrintModal({
   onClose,
   onConfirm,
 }) {
+  const { t } = useLanguage();
   const normalizedOptions = useMemo(
     () => [...new Set((Array.isArray(equipmentOptions) ? equipmentOptions : []).filter(Boolean))].sort((left, right) => String(left).localeCompare(String(right), "ja")),
     [equipmentOptions],
@@ -33,8 +35,8 @@ export default function PlannerPrintModal({
   return (
     <PlannerModalShell
       open={open}
-      title="Select Equipment to Print"
-      subtitle="Choose which equipment lanes should be included in the print sheet."
+      title={t("selectEquipmentToPrint")}
+      subtitle={t("chooseEquipmentToPrint")}
       onClose={onClose}
       maxWidthClassName="max-w-xl"
       footer={(
@@ -43,9 +45,7 @@ export default function PlannerPrintModal({
             type="button"
             onClick={onClose}
             className="rounded-2xl border border-separator/40 px-4 py-2 text-sm font-semibold text-on-surface transition hover:bg-surface-container"
-          >
-            Cancel
-          </button>
+          >{t("cancel")}</button>
           <button
             type="button"
             disabled={!selectedEquipment.length}
@@ -59,7 +59,7 @@ export default function PlannerPrintModal({
     >
       <div className="planner-data-text space-y-4">
         {!normalizedOptions.length ? (
-          <EmptyState className="bg-surface-container-low px-5 py-8">No scheduled equipment is available for printing.</EmptyState>
+          <EmptyState className="bg-surface-container-low px-5 py-8">{t("noScheduledEquipmentForPrinting")}</EmptyState>
         ) : (
           <>
             <label className="flex items-center gap-3 rounded-2xl border border-outline-variant/15 bg-surface-container-low px-4 py-3 text-on-surface">

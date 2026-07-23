@@ -1,3 +1,4 @@
+import { useLanguage } from "../../contexts/LanguageContext";
 import { useEffect, useState } from "react";
 import PlannerModalShell from "./PlannerModalShell";
 import { cloneBreaks, createScheduleId } from "../../utils/planner";
@@ -21,6 +22,7 @@ export default function PlannerBreakModal({
   onClose,
   onSave,
 }) {
+  const { t } = useLanguage();
   const [draftBreaks, setDraftBreaks] = useState(() => cloneBreaks(breaks));
 
   useEffect(() => {
@@ -36,8 +38,8 @@ export default function PlannerBreakModal({
   return (
     <PlannerModalShell
       open={open}
-      title="Manage Break Times"
-      subtitle="Breaks are shared across timeline calculations, utilization, and smart scheduling."
+      title={t("manageBreakTimes")}
+      subtitle={t("breaksAreShared")}
       onClose={onClose}
       maxWidthClassName="max-w-4xl"
       footer={(
@@ -46,9 +48,7 @@ export default function PlannerBreakModal({
             type="button"
             onClick={onClose}
             className="rounded-2xl border border-separator/40 px-4 py-2 text-sm font-semibold text-on-surface transition hover:bg-surface-container"
-          >
-            Cancel
-          </button>
+          >{t("cancel")}</button>
           <button
             type="button"
             disabled={saving}
@@ -67,7 +67,7 @@ export default function PlannerBreakModal({
               type="text"
               value={item.name || ""}
               onChange={(event) => updateBreak(item.id, { name: event.target.value })}
-              placeholder="Break name"
+              placeholder={t("breakName")}
               className="planner-data-text h-11 rounded-2xl border border-separator/40 px-4 outline-none transition focus:border-primary/40"
             />
             <input
@@ -87,7 +87,7 @@ export default function PlannerBreakModal({
               onChange={(event) => updateBreak(item.id, { equipment: event.target.value || null })}
               className="planner-data-text h-11 rounded-2xl border border-separator/40 px-4 outline-none transition focus:border-primary/40"
             >
-              <option value="">All equipment</option>
+              <option value="">{t("allEquipment")}</option>
               {equipmentOptions.map((equipment) => (
                 <option key={equipment} value={equipment}>{equipment}</option>
               ))}
@@ -96,9 +96,7 @@ export default function PlannerBreakModal({
               type="button"
               onClick={() => setDraftBreaks((items) => items.filter((entry) => entry.id !== item.id))}
               className="rounded-2xl border border-error/20 bg-error/5 px-4 py-2 text-sm font-semibold text-error transition hover:bg-error/10"
-            >
-              Remove
-            </button>
+            >{t("remove")}</button>
           </div>
         ))}
 

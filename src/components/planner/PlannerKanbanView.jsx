@@ -1,6 +1,8 @@
+import { useLanguage } from "../../contexts/LanguageContext";
 import { getEquipmentUtilization, sortScheduledProducts } from "../../utils/planner";
 
 export default function PlannerKanbanView({ equipment = [], scheduledProducts = [], breaks = [], onMoveItem, onRemoveItem }) {
+  const { t } = useLanguage();
   if (!equipment.length) {
     return (
       <div className="rounded-3xl border border-dashed border-outline-variant/20 bg-surface-container-low px-6 py-14 text-center text-on-surface-variant">
@@ -79,7 +81,7 @@ export default function PlannerKanbanView({ equipment = [], scheduledProducts = 
                   <div className="mt-4 grid grid-cols-3 gap-2 text-on-surface-variant">
                     <div className="rounded-2xl bg-surface px-3 py-2">
                       <div className="font-semibold text-on-surface">{item.quantity}</div>
-                      <div>pcs</div>
+                      <div>{t("pcs")}</div>
                     </div>
                     <div className="rounded-2xl bg-surface px-3 py-2">
                       <div className="font-semibold text-on-surface">{item.boxes}</div>

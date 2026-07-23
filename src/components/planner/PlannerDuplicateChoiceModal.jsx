@@ -1,3 +1,4 @@
+import { useLanguage } from "../../contexts/LanguageContext";
 import PlannerModalShell from "./PlannerModalShell";
 
 export default function PlannerDuplicateChoiceModal({
@@ -8,11 +9,12 @@ export default function PlannerDuplicateChoiceModal({
   onClose,
   onResolve,
 }) {
+  const { t } = useLanguage();
   return (
     <PlannerModalShell
       open={open}
-      title="Duplicate Goal Found"
-      subtitle="A goal for this product and date already exists. Choose how the new quantity should be applied."
+      title={t("duplicateGoalFound")}
+      subtitle={t("goalForProductExists")}
       onClose={onClose}
       maxWidthClassName="max-w-xl"
     >
@@ -30,8 +32,8 @@ export default function PlannerDuplicateChoiceModal({
             onClick={() => onResolve("overwrite")}
             className="rounded-2xl border border-amber-500/20 bg-amber-500/10 px-5 py-4 text-left transition hover:bg-amber-500/15 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            <div className="font-semibold text-on-surface">Overwrite</div>
-            <div className="mt-1 text-on-surface-variant">Replace the existing goal with the new quantity.</div>
+            <div className="font-semibold text-on-surface">{t("overwrite")}</div>
+            <div className="mt-1 text-on-surface-variant">{t("replaceExistingGoal")}</div>
           </button>
 
           <button
@@ -40,8 +42,8 @@ export default function PlannerDuplicateChoiceModal({
             onClick={() => onResolve("add")}
             className="rounded-2xl border border-emerald-500/20 bg-emerald-500/10 px-5 py-4 text-left transition hover:bg-emerald-500/15 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            <div className="font-semibold text-on-surface">Add</div>
-            <div className="mt-1 text-on-surface-variant">Increase the existing goal by the incoming quantity.</div>
+            <div className="font-semibold text-on-surface">{t("add")}</div>
+            <div className="mt-1 text-on-surface-variant">{t("increaseExistingGoal")}</div>
           </button>
 
           <button
@@ -50,8 +52,8 @@ export default function PlannerDuplicateChoiceModal({
             onClick={() => onResolve("cancel")}
             className="rounded-2xl border border-separator/40 px-5 py-4 text-left transition hover:bg-surface-container disabled:cursor-not-allowed disabled:opacity-50"
           >
-            <div className="font-semibold text-on-surface">Cancel</div>
-            <div className="mt-1 text-on-surface-variant">Keep the existing goal unchanged.</div>
+            <div className="font-semibold text-on-surface">{t("cancel")}</div>
+            <div className="mt-1 text-on-surface-variant">{t("keepExistingGoalUnchanged")}</div>
           </button>
         </div>
       </div>
