@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { createPortal } from "react-dom";
+import { useLanguage } from "../contexts/LanguageContext";
 
 function clampPreviewIndex(index, total) {
   if (!total) return 0;
@@ -26,21 +27,23 @@ function buildImageDownloadName(url, label) {
 }
 
 export default function SensorDevicePhotoPreviewModal({ preview, onClose, onNavigate }) {
+  const { t } = useLanguage();
   const images = Array.isArray(preview?.images) ? preview.images.filter((image) => image?.url) : [];
   const activeIndex = clampPreviewIndex(preview?.activeIndex, images.length);
   const activeImage = images[activeIndex] || null;
   const hasMultipleImages = images.length > 1;
   const canGoPrevious = activeIndex > 0;
   const canGoNext = activeIndex < images.length - 1;
-  const title = String(preview?.displayName ?? "").trim() || String(preview?.deviceId ?? "").trim() || "Photos";
-  const eyebrow = String(preview?.eyebrow ?? "").trim() || "Photos";
+  const title = String(preview?.displayName ?? "").trim() || String(preview?.deviceId ?? "").trim() || t("photosLabel");
+  const eyebrow = String(preview?.eyebrow ?? "").trim() || t("photosLabel");
   const customSubtitle = String(preview?.subtitle ?? "").trim();
+  const photoOfText = t("photoOfLabel", { current: activeIndex + 1, total: images.length });
   const subtitleParts = customSubtitle
-    ? [customSubtitle, hasMultipleImages ? `Photo ${activeIndex + 1} of ${images.length}` : ""].filter(Boolean)
+    ? [customSubtitle, hasMultipleImages ? photoOfText : ""].filter(Boolean)
     : [
         preview?.displayName ? String(preview?.deviceId ?? "").trim() : "",
         String(preview?.factoryName ?? "").trim(),
-        hasMultipleImages ? `Photo ${activeIndex + 1} of ${images.length}` : "",
+        hasMultipleImages ? photoOfText : "",
       ].filter(Boolean);
 
   useEffect(() => {
@@ -80,7 +83,7 @@ export default function SensorDevicePhotoPreviewModal({ preview, onClose, onNavi
       <div
         role="dialog"
         aria-modal="true"
-        aria-label={`Photos for ${title}`}
+        aria-label={t("photosForAriaLabel", { title })}
         onMouseDown={(event) => event.stopPropagation()}
         className="dashboard-section flex max-h-[92vh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl"
       >
@@ -97,7 +100,7 @@ export default function SensorDevicePhotoPreviewModal({ preview, onClose, onNavi
             type="button"
             onClick={onClose}
             className="rounded-xl p-2 text-outline transition-all duration-150 hover:bg-surface-container hover:text-on-surface"
-            aria-label="Close photo preview"
+            aria-label={t("closePhotoPreviewAria")}
           >
             <span className="material-symbols-outlined" style={{ fontSize: 18 }}>close</span>
           </button>
@@ -119,7 +122,7 @@ export default function SensorDevicePhotoPreviewModal({ preview, onClose, onNavi
                   type="button"
                   onClick={() => onNavigate(-1)}
                   disabled={!canGoPrevious}
-                  aria-label="Show previous image"
+                  aria-label={t("showPreviousImageAria")}
                   className="absolute left-4 top-1/2 z-10 -translate-y-1/2 rounded-xl border border-separator/40 bg-surface/90 p-2 text-on-surface transition-all duration-150 hover:border-primary/30 hover:bg-surface-container hover:text-primary disabled:cursor-not-allowed disabled:opacity-40"
                 >
                   <span className="material-symbols-outlined" style={{ fontSize: 18 }}>chevron_left</span>
@@ -129,7 +132,7 @@ export default function SensorDevicePhotoPreviewModal({ preview, onClose, onNavi
                   type="button"
                   onClick={() => onNavigate(1)}
                   disabled={!canGoNext}
-                  aria-label="Show next image"
+                  aria-label={t("showNextImageAria")}
                   className="absolute right-4 top-1/2 z-10 -translate-y-1/2 rounded-xl border border-separator/40 bg-surface/90 p-2 text-on-surface transition-all duration-150 hover:border-primary/30 hover:bg-surface-container hover:text-primary disabled:cursor-not-allowed disabled:opacity-40"
                 >
                   <span className="material-symbols-outlined" style={{ fontSize: 18 }}>chevron_right</span>
@@ -141,13 +144,13 @@ export default function SensorDevicePhotoPreviewModal({ preview, onClose, onNavi
           <div className="rounded-2xl border border-outline-variant/15 bg-surface-container-low px-4 py-4">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
-                <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Current Photo</p>
-                <p className="mt-1 text-sm font-semibold text-on-surface">{activeImage.label || `Photo ${activeIndex + 1}`}</p>
+                <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">{t("currentPhotoLabel")}</p>
+                <p className="mt-1 text-sm font-semibold text-on-surface">{activeImage.label || t("photoNumberLabel", { n: activeIndex + 1 })}</p>
               </div>
               <p className="text-[11px] text-outline">
                 {hasMultipleImages
-                  ? `Use the left and right arrow keys to browse all ${images.length} photos.`
-                  : "Press Escape to close this preview."}
+                  ? t("browsePhotosHint", { count: images.length })
+                  : t("pressEscapeHint")}
               </p>
             </div>
           </div>
@@ -156,8 +159,8 @@ export default function SensorDevicePhotoPreviewModal({ preview, onClose, onNavi
         <div className="flex flex-col gap-3 border-t border-outline-variant/20 bg-surface-container-low/50 px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-[11px] text-outline">
             {hasMultipleImages
-              ? `Photo ${activeIndex + 1} of ${images.length}`
-              : "Single photo attached"}
+              ? photoOfText
+              : t("singlePhotoAttached")}
           </p>
 
           <div className="flex flex-wrap items-center justify-end gap-3">
@@ -168,7 +171,7 @@ export default function SensorDevicePhotoPreviewModal({ preview, onClose, onNavi
                 disabled={!canGoPrevious}
                 className="rounded-xl border border-separator/40 px-4 py-2 text-xs font-semibold text-on-surface-variant transition-all duration-150 hover:border-primary/30 hover:bg-surface-container hover:text-primary active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
               >
-                Previous
+                {t("previousLabel")}
               </button>
             ) : null}
 
@@ -179,7 +182,7 @@ export default function SensorDevicePhotoPreviewModal({ preview, onClose, onNavi
                 disabled={!canGoNext}
                 className="rounded-xl border border-separator/40 px-4 py-2 text-xs font-semibold text-on-surface-variant transition-all duration-150 hover:border-primary/30 hover:bg-surface-container hover:text-primary active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
               >
-                Next
+                {t("next")}
               </button>
             ) : null}
 
@@ -189,7 +192,7 @@ export default function SensorDevicePhotoPreviewModal({ preview, onClose, onNavi
               rel="noreferrer"
               className="rounded-xl border border-separator/40 px-4 py-2 text-xs font-semibold text-on-surface-variant transition-all duration-150 hover:border-primary/30 hover:bg-surface-container hover:text-primary active:scale-95"
             >
-              Open Photo
+              {t("openPhotoBtn")}
             </a>
 
             <a
@@ -197,7 +200,7 @@ export default function SensorDevicePhotoPreviewModal({ preview, onClose, onNavi
               download={buildImageDownloadName(activeImage.url, activeImage.label)}
               className="rounded-xl bg-primary px-4 py-2 text-xs font-semibold text-on-primary transition-all duration-150 hover:opacity-90 active:scale-95"
             >
-              Download Photo
+              {t("downloadPhotoBtn")}
             </a>
           </div>
         </div>

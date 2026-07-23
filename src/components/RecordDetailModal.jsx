@@ -54,20 +54,21 @@ function isLikelyImage(value) {
   return typeof value === "string" && /(?:^data:image\/|\.(png|jpg|jpeg|gif|webp|avif|svg))(?:\?.*)?$/i.test(value);
 }
 
-function formatPrimitiveValue(value) {
+function formatPrimitiveValue(value, t) {
   if (value == null || value === "") return "—";
-  if (typeof value === "boolean") return value ? "True" : "False";
+  if (typeof value === "boolean") return value ? t("yes") : t("no");
   if (typeof value === "number" && Number.isFinite(value)) return value.toLocaleString();
   return String(value);
 }
 
 function PrimitiveFieldValue({ value, align = "right" }) {
+  const { t } = useLanguage();
   if (isLikelyImage(value)) {
     return (
       <div className={`flex ${align === "right" ? "justify-end" : "justify-start"}`}>
         <img
           src={value}
-          alt="Record field"
+          alt={t("recordFieldAlt")}
           className="max-h-28 rounded-2xl border border-separator/40 bg-surface object-contain"
         />
       </div>
@@ -80,12 +81,13 @@ function PrimitiveFieldValue({ value, align = "right" }) {
         align === "right" ? "text-right" : "text-left"
       }`}
     >
-      {formatPrimitiveValue(value)}
+      {formatPrimitiveValue(value, t)}
     </span>
   );
 }
 
 function StructuredValueCard({ value, depth = 0 }) {
+  const { t } = useLanguage();
   const normalizedValue = parseStructuredValue(value);
 
   if (!isStructuredValue(normalizedValue)) {
@@ -98,7 +100,7 @@ function StructuredValueCard({ value, depth = 0 }) {
     if (items.length === 0) {
       return (
         <div className="rounded-2xl border border-separator/40 bg-surface-container/40 px-3 py-2 text-[11px] text-outline">
-          Empty array
+          {t("emptyArrayLabel")}
         </div>
       );
     }
@@ -106,9 +108,9 @@ function StructuredValueCard({ value, depth = 0 }) {
     return (
       <div className="rounded-2xl border border-separator/40 bg-surface-container/40 p-3 space-y-2">
         <div className="flex items-center justify-between gap-2">
-          <span className="text-[10px] font-semibold uppercase tracking-wider text-outline">Array</span>
+          <span className="text-[10px] font-semibold uppercase tracking-wider text-outline">{t("arrayLabel")}</span>
           <span className="rounded-full bg-surface px-2 py-0.5 text-[10px] font-semibold text-on-surface-variant">
-            {items.length} item{items.length === 1 ? "" : "s"}
+            {t("itemsCountLabel", { count: items.length, plural: items.length === 1 ? "" : "s" })}
           </span>
         </div>
         <div className="space-y-2">
@@ -120,14 +122,14 @@ function StructuredValueCard({ value, depth = 0 }) {
                 {nestedStructured ? (
                   <div className="space-y-2">
                     <span className="block text-[10px] font-semibold uppercase tracking-wider text-outline">
-                      Item {index + 1}
+                      {t("itemLabel", { n: index + 1 })}
                     </span>
                     <StructuredValueCard value={nestedValue} depth={depth + 1} />
                   </div>
                 ) : (
                   <div className="flex items-start justify-between gap-3">
                     <span className="text-[10px] font-semibold uppercase tracking-wider text-outline">
-                      Item {index + 1}
+                      {t("itemLabel", { n: index + 1 })}
                     </span>
                     <div className="min-w-0 flex-1">
                       <PrimitiveFieldValue value={nestedValue} align="right" />
@@ -147,7 +149,7 @@ function StructuredValueCard({ value, depth = 0 }) {
   if (objectEntries.length === 0) {
     return (
       <div className="rounded-2xl border border-separator/40 bg-surface-container/40 px-3 py-2 text-[11px] text-outline">
-        Empty object
+        {t("emptyObjectLabel")}
       </div>
     );
   }
@@ -155,9 +157,9 @@ function StructuredValueCard({ value, depth = 0 }) {
   return (
     <div className="rounded-2xl border border-separator/40 bg-surface-container/40 p-3 space-y-2">
       <div className="flex items-center justify-between gap-2">
-        <span className="text-[10px] font-semibold uppercase tracking-wider text-outline">Object</span>
+        <span className="text-[10px] font-semibold uppercase tracking-wider text-outline">{t("objectLabel")}</span>
         <span className="rounded-full bg-surface px-2 py-0.5 text-[10px] font-semibold text-on-surface-variant">
-          {objectEntries.length} field{objectEntries.length === 1 ? "" : "s"}
+          {t("fieldsCountLabel", { count: objectEntries.length, plural: objectEntries.length === 1 ? "" : "s" })}
         </span>
       </div>
       <div className="space-y-2">
@@ -266,7 +268,7 @@ function BreakTimeSection({ record }) {
           <table className="ui-table-data w-full">
             <thead className="bg-surface-container-high/40">
               <tr>
-                {["Break", "Start", "End", "Duration"].map((h) => (
+                {[t("breakColumnLabel"), t("startColumnLabel"), t("endColumnLabel"), t("durationColumnLabel")].map((h) => (
                   <th key={h} className="ui-table-heading px-3 py-3 text-left uppercase tracking-wider text-outline">{h}</th>
                 ))}
               </tr>
@@ -281,14 +283,14 @@ function BreakTimeSection({ record }) {
                     <td className="px-3 py-3 font-semibold text-on-surface capitalize">{key.replace(/([0-9]+)/, " $1")}</td>
                     <td className="px-3 py-3 font-mono text-on-surface-variant">{start}</td>
                     <td className="px-3 py-3 font-mono text-on-surface-variant">{end}</td>
-                    <td className="px-3 py-3 text-outline">{mins != null ? `${mins} min` : "—"}</td>
+                    <td className="px-3 py-3 text-outline">{mins != null ? t("minutesUnit", { mins }) : "—"}</td>
                   </tr>
                 );
               })}
             </tbody>
           </table>
         </div>
-        <p className="text-[10px] text-outline mt-2 text-right">Total: {totalMin} min ({record.Total_Break_Hours ?? 0} hrs)</p>
+        <p className="text-[10px] text-outline mt-2 text-right">{t("breakTotalLabel", { min: totalMin, hours: record.Total_Break_Hours ?? 0 })}</p>
       </div>
     </CollapsibleSection>
   );
@@ -308,7 +310,7 @@ function MaintenanceSection({ record, onPreview }) {
     <CollapsibleSection
       icon="build"
       label={t("maintenanceTrouble")}
-      badge={<span className="px-1.5 py-0.5 rounded-full bg-amber-400/15 text-amber-400 text-[9px] font-semibold normal-case tracking-normal">{records.length} record{records.length > 1 ? "s" : ""}</span>}
+      badge={<span className="px-1.5 py-0.5 rounded-full bg-amber-400/15 text-amber-400 text-[9px] font-semibold normal-case tracking-normal">{t("recordsCountLabel", { count: records.length, plural: records.length > 1 ? "s" : "" })}</span>}
     >
       <div className="pb-5 space-y-4">
         {records.map((rec) => {
@@ -328,7 +330,7 @@ function MaintenanceSection({ record, onPreview }) {
                     )}
                     {mins != null && (
                       <span className="px-2 py-0.5 rounded-full bg-amber-400/15 text-amber-400 text-[10px] font-semibold">
-                        {mins} min
+                        {t("minutesUnit", { mins })}
                       </span>
                     )}
                   </div>
@@ -346,7 +348,7 @@ function MaintenanceSection({ record, onPreview }) {
                       onClick={() => onPreview?.(rec, i)}
                       className="block w-full rounded-2xl overflow-hidden border border-separator/40 hover:border-amber-400/45 transition-all duration-150 cursor-zoom-in active:scale-95"
                     >
-                      <img src={url} alt={`Maintenance photo ${i + 1}`} className="w-full aspect-square object-cover bg-black/20" />
+                      <img src={url} alt={t("maintenancePhotoAlt", { n: i + 1 })} className="w-full aspect-square object-cover bg-black/20" />
                     </button>
                   ))}
                 </div>
@@ -354,7 +356,7 @@ function MaintenanceSection({ record, onPreview }) {
             </div>
           );
         })}
-        <p className="text-[10px] text-outline text-right">Total trouble: {totalMin} min ({maint.totalHours ?? record.Total_Trouble_Hours ?? 0} hrs)</p>
+        <p className="text-[10px] text-outline text-right">{t("troubleTotalLabel", { min: totalMin, hours: maint.totalHours ?? record.Total_Trouble_Hours ?? 0 })}</p>
       </div>
     </CollapsibleSection>
   );
@@ -472,9 +474,9 @@ export default function RecordDetailModal({ record, processName, onClose, onLotC
               type="button"
               onClick={() => setPhotoPreview({
                 eyebrow: t("masterImage"),
-                displayName: imageData["品名"] ?? record["品番"] ?? "Master image",
+                displayName: imageData["品名"] ?? record["品番"] ?? t("masterImageFallbackLabel"),
                 subtitle: `${record["品番"] ?? ""}${record["背番号"] ? ` / ${record["背番号"]}` : ""}`.trim() || undefined,
-                images: [{ url: imageData.imageURL, label: imageData["品名"] ?? record["品番"] ?? "Master image" }],
+                images: [{ url: imageData.imageURL, label: imageData["品名"] ?? record["品番"] ?? t("masterImageFallbackLabel") }],
                 activeIndex: 0,
               })}
               className="block w-full overflow-hidden rounded-xl border border-separator/40
@@ -563,7 +565,7 @@ export default function RecordDetailModal({ record, processName, onClose, onLotC
             const activeIndex = group === "label" ? checkImages.length + index : index;
             setPhotoPreview({
               eyebrow: t("recordPhotos"),
-              displayName: `${processName ?? "Record"} Photos`,
+              displayName: t("processPhotosLabel", { process: processName ?? t("recordFallbackLabel") }),
               subtitle: `${record["品番"] ?? ""} / ${record["背番号"] ?? ""}`.trim() || undefined,
               images: combined,
               activeIndex,
