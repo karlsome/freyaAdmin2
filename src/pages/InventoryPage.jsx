@@ -31,12 +31,14 @@ import {
   getInventoryAvailabilityMeta,
   getInventoryRowToneClass,
   INVENTORY_ADVANCED_FILTER_FIELDS,
-  INVENTORY_OPERATOR_LABELS,
+  INVENTORY_FILTER_GROUP_LABEL_KEYS,
+  INVENTORY_OPERATOR_LABEL_KEYS,
   INVENTORY_PAGE_SIZE_OPTIONS,
   INVENTORY_SUMMARY_CARDS,
   joinInventoryClasses,
   summarizeSelectedInventoryTags,
 } from "../utils/inventory";
+import { useLanguage } from "../contexts/LanguageContext";
 
 const EMPTY_PAGINATION = {
   currentPage: 1,
@@ -46,6 +48,7 @@ const EMPTY_PAGINATION = {
 };
 
 function FlashBanner({ flash, onClose }) {
+  const { t } = useLanguage();
   if (!flash) return null;
 
   const tone = flash.type === "error"
@@ -58,7 +61,7 @@ function FlashBanner({ flash, onClose }) {
     <div className={joinInventoryClasses("mb-6 rounded-3xl border px-5 py-4", tone)}>
       <div className="flex items-start justify-between gap-4">
         <div>
-          <p className="text-[10px] font-semibold uppercase tracking-[0.18em]">Status</p>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.18em]">{t("status")}</p>
           <p className="mt-1 text-sm font-medium">{flash.message}</p>
         </div>
         <button type="button" onClick={onClose} className="text-current/70 transition hover:text-current">
@@ -70,6 +73,7 @@ function FlashBanner({ flash, onClose }) {
 }
 
 function AvailabilityCell({ value }) {
+  const { t } = useLanguage();
   const meta = getInventoryAvailabilityMeta(value);
 
   return (
@@ -78,7 +82,7 @@ function AvailabilityCell({ value }) {
       <div className="mt-2">
         <span className={joinInventoryClasses("inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold", meta.badgeClassName)}>
           <span className="material-symbols-outlined" style={{ fontSize: 14 }}>{meta.icon}</span>
-          {meta.label}
+          {t(meta.labelKey)}
         </span>
       </div>
     </div>
@@ -86,6 +90,7 @@ function AvailabilityCell({ value }) {
 }
 
 export default function InventoryPage() {
+  const { t } = useLanguage();
   const [authUser] = useState(() => readStoredAuthUser());
   const canAdd = canAddInventory(authUser);
   const canAdminReset = canAdminResetInventory(authUser);
@@ -115,10 +120,12 @@ export default function InventoryPage() {
   const [transactionState, setTransactionState] = useState({ open: false, backNumber: "" });
 
   const deferredSearch = useDeferredValue(filters.search);
-  const selectedTagSummary = summarizeSelectedInventoryTags(selectedBackNumbers);
+  const selectedTagSummary = summarizeSelectedInventoryTags(selectedBackNumbers, t);
   const advancedFieldDefinitions = useMemo(() => (
     INVENTORY_ADVANCED_FILTER_FIELDS.map((field) => ({
       ...field,
+      label: t(field.labelKey),
+      group: t(INVENTORY_FILTER_GROUP_LABEL_KEYS[field.group] || field.group),
       options: field.field === "品番"
         ? filterOptions.partNumbers
         : field.field === "背番号"
@@ -127,7 +134,10 @@ export default function InventoryPage() {
             ? filterOptions.factories
             : [],
     }))
-  ), [filterOptions.backNumbers, filterOptions.factories, filterOptions.partNumbers]);
+  ), [filterOptions.backNumbers, filterOptions.factories, filterOptions.partNumbers, t]);
+  const advancedOperatorLabels = useMemo(() => (
+    Object.fromEntries(Object.entries(INVENTORY_OPERATOR_LABEL_KEYS).map(([key, labelKey]) => [key, t(labelKey)]))
+  ), [t]);
 
   useEffect(() => {
     if (!flash) return undefined;
@@ -172,7 +182,7 @@ export default function InventoryPage() {
         setModels(nextModels);
       } catch (loadError) {
         if (!cancelled) {
-          setFlash({ type: "error", message: loadError.message || "Failed to load inventory filters." });
+          setFlash({ type: "error", message: loadError.message || t("failedLoadInventoryFiltersMessage") });
         }
       }
     }
@@ -203,7 +213,7 @@ export default function InventoryPage() {
       } catch (loadError) {
         if (!cancelled) {
           setSelectedBackNumbers([]);
-          setFlash({ type: "error", message: loadError.message || "Failed to load products for the selected model." });
+          setFlash({ type: "error", message: loadError.message || t("failedLoadModelProductsMessage") });
         }
       } finally {
         if (!cancelled) {
@@ -263,7 +273,7 @@ export default function InventoryPage() {
         setRows([]);
         setSummary(EMPTY_INVENTORY_SUMMARY);
         setPagination(EMPTY_PAGINATION);
-        setError(loadError.message || "Failed to load inventory data.");
+        setError(loadError.message || t("failedLoadInventoryDataMessage"));
       } finally {
         if (!cancelled && requestId === requestIdRef.current) {
           setLoading(false);
@@ -341,7 +351,7 @@ export default function InventoryPage() {
 
     try {
       if (filters.model && selectedBackNumbers.length === 0) {
-        setFlash({ type: "warning", message: "The selected model does not currently map to any serial numbers to export." });
+        setFlash({ type: "warning", message: t("modelNoSerialNumbersMessage") });
         return;
       }
 
@@ -354,9 +364,9 @@ export default function InventoryPage() {
       });
       const result = await exportInventoryData(exportFilters);
       downloadInventoryCsvFile("inventory-data.csv", buildInventoryExportMatrix(result));
-      setFlash({ type: "success", message: `Exported ${result.length} inventory item${result.length === 1 ? "" : "s"}.` });
+      setFlash({ type: "success", message: t("exportedInventoryItemsMessage", { count: result.length, plural: result.length === 1 ? "" : "s" }) });
     } catch (exportError) {
-      setFlash({ type: "error", message: exportError.message || "Failed to export inventory data." });
+      setFlash({ type: "error", message: exportError.message || t("failedExportInventoryMessage") });
     } finally {
       setExporting(false);
     }
@@ -365,7 +375,7 @@ export default function InventoryPage() {
   const columns = useMemo(() => ([
     {
       key: "品番",
-      label: "Part Number",
+      label: t("partNumberLabel"),
       width: 170,
       renderCell: (row) => (
         <button
@@ -383,14 +393,14 @@ export default function InventoryPage() {
     },
     {
       key: "背番号",
-      label: "Serial Number",
+      label: t("serialNumberLabel"),
       width: 170,
       renderCell: (row) => <span className="font-semibold text-on-surface">{row.背番号 || "—"}</span>,
       disableCellWrapper: true,
     },
     {
       key: "工場",
-      label: "Factory",
+      label: t("factory"),
       width: 140,
       renderCell: (row) => row.工場 ? (
         <span className="inline-flex items-center rounded-full bg-primary/10 px-2.5 py-1 text-xs font-semibold text-primary">
@@ -401,35 +411,35 @@ export default function InventoryPage() {
     },
     {
       key: "physicalQuantity",
-      label: "Physical",
+      label: t("physicalLabel"),
       width: 120,
       renderCell: (row) => <span className="font-semibold text-emerald-700 dark:text-emerald-300">{formatInventoryNumber(row.physicalQuantity)}</span>,
       disableCellWrapper: true,
     },
     {
       key: "reservedQuantity",
-      label: "Reserved",
+      label: t("reservedColumnLabel"),
       width: 120,
       renderCell: (row) => <span className="font-semibold text-amber-700 dark:text-amber-300">{formatInventoryNumber(row.reservedQuantity)}</span>,
       disableCellWrapper: true,
     },
     {
       key: "availableQuantity",
-      label: "Available",
+      label: t("availableLabel"),
       width: 180,
       renderCell: (row) => <AvailabilityCell value={row.availableQuantity} />,
       disableCellWrapper: true,
     },
     {
       key: "lastUpdated",
-      label: "Last Updated",
+      label: t("lastUpdatedLabel"),
       width: 190,
       renderCell: (row) => <span className="text-on-surface-variant">{formatInventoryDateTime(row.lastUpdated)}</span>,
       disableCellWrapper: true,
     },
     {
       key: "actions",
-      label: "Actions",
+      label: t("actions"),
       sortable: false,
       width: 90,
       renderCell: (row) => (
@@ -439,21 +449,21 @@ export default function InventoryPage() {
           variant="ghost"
           size="md"
           iconSize={18}
-          ariaLabel="View transactions"
+          ariaLabel={t("viewTransactionsAria")}
         />
       ),
       disableCellWrapper: true,
     },
-  ]), []);
+  ]), [t]);
 
   return (
     <section className="h-screen overflow-y-auto scrollbar-hide px-8 pb-16 pt-24">
       <div className="w-full">
         <PageHeader
-          eyebrow="Warehouse Ledger"
+          eyebrow={t("warehouseLedgerEyebrow")}
           eyebrowClassName="tracking-[0.18em] text-primary"
-          title="Inventory"
-          subtitle="Track the latest inventory state by serial number, inspect transaction history, add stock manually, and run controlled reset workflows."
+          title={t("inventory")}
+          subtitle={t("inventoryPageSubtitle")}
           subtitleClassName="max-w-3xl"
           className="md:flex-row md:items-start md:justify-between"
           actions={(
@@ -464,7 +474,7 @@ export default function InventoryPage() {
                 disabled={loading || modelLoading}
                 className="rounded-2xl border border-separator/40 px-4 py-2.5 text-sm font-semibold text-on-surface transition hover:bg-surface-container disabled:cursor-not-allowed disabled:opacity-60"
               >
-                Refresh
+                {t("refresh")}
               </button>
               <button
                 type="button"
@@ -472,7 +482,7 @@ export default function InventoryPage() {
                 disabled={exporting || modelLoading}
                 className="rounded-2xl border border-separator/40 px-4 py-2.5 text-sm font-semibold text-on-surface transition hover:bg-surface-container disabled:cursor-not-allowed disabled:opacity-60"
               >
-                {exporting ? "Exporting..." : "Export CSV"}
+                {exporting ? t("exportingLabel") : t("exportCSVLabel")}
               </button>
               {canAdminReset ? (
                 <button
@@ -480,7 +490,7 @@ export default function InventoryPage() {
                   onClick={() => setBatchResetOpen(true)}
                   className="rounded-2xl border border-error/20 bg-error/8 px-4 py-2.5 text-sm font-semibold text-error transition hover:bg-error/12"
                 >
-                  Batch Reset
+                  {t("batchResetButton")}
                 </button>
               ) : null}
               {canAdd ? (
@@ -489,7 +499,7 @@ export default function InventoryPage() {
                   onClick={() => setAddModalOpen(true)}
                   className="rounded-2xl bg-primary px-4 py-2.5 text-sm font-semibold text-on-primary transition hover:opacity-90"
                 >
-                  Add Inventory
+                  {t("addInventoryButton")}
                 </button>
               ) : null}
             </>
@@ -503,9 +513,9 @@ export default function InventoryPage() {
             <StatSummaryCard
               key={card.key}
               icon={card.icon}
-              label={card.label}
+              label={t(card.labelKey)}
               value={formatInventoryNumber(summary[card.key] ?? 0)}
-              subtitle={card.key === "totalItems" ? "Latest unique serial records" : `Across the current inventory filter set`}
+              subtitle={card.key === "totalItems" ? t("latestUniqueSerialRecordsMessage") : t("acrossCurrentFilterSetMessage")}
               accent={card.accent}
               loading={loading && !rows.length}
             />
@@ -515,21 +525,21 @@ export default function InventoryPage() {
         <div className="dashboard-section mb-6 rounded-2xl p-5">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
-              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Filters</p>
-              <h2 className="mt-1 text-lg font-semibold text-on-surface">Inventory Filters</h2>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">{t("filtersHeading")}</p>
+              <h2 className="mt-1 text-lg font-semibold text-on-surface">{t("inventoryFiltersHeading")}</h2>
             </div>
-            {modelLoading ? <p className="text-sm text-on-surface-variant">Loading model products...</p> : null}
+            {modelLoading ? <p className="text-sm text-on-surface-variant">{t("loadingModelProductsMessage")}</p> : null}
           </div>
 
           <div className="mt-4 grid gap-4 xl:grid-cols-4">
             <label className="block">
-              <span className="block text-xs font-semibold uppercase tracking-[0.18em] text-outline">Part Number</span>
+              <span className="block text-xs font-semibold uppercase tracking-[0.18em] text-outline">{t("partNumberLabel")}</span>
               <select
                 value={filters.partNumber}
                 onChange={(event) => updateFilter("partNumber", event.target.value)}
                 className="mt-2 h-11 w-full rounded-2xl border border-separator/40 bg-white px-4 text-sm text-on-surface outline-none transition focus:border-primary/40 dark:bg-surface-container"
               >
-                <option value="">All Part Numbers</option>
+                <option value="">{t("allPartNumbersOption")}</option>
                 {filterOptions.partNumbers.map((value) => (
                   <option key={value} value={value}>{value}</option>
                 ))}
@@ -537,14 +547,14 @@ export default function InventoryPage() {
             </label>
 
             <label className="block">
-              <span className="block text-xs font-semibold uppercase tracking-[0.18em] text-outline">Serial Number</span>
+              <span className="block text-xs font-semibold uppercase tracking-[0.18em] text-outline">{t("serialNumberLabel")}</span>
               <select
                 value={filters.backNumber}
                 onChange={(event) => updateFilter("backNumber", event.target.value)}
                 disabled={selectedBackNumbers.length > 0}
                 className="mt-2 h-11 w-full rounded-2xl border border-separator/40 bg-white px-4 text-sm text-on-surface outline-none transition focus:border-primary/40 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-surface-container"
               >
-                <option value="">{selectedBackNumbers.length > 0 ? "Model tag filter active" : "All Serial Numbers"}</option>
+                <option value="">{selectedBackNumbers.length > 0 ? t("modelTagFilterActiveMessage") : t("allSerialNumbersOption")}</option>
                 {filterOptions.backNumbers.map((value) => (
                   <option key={value} value={value}>{value}</option>
                 ))}
@@ -552,13 +562,13 @@ export default function InventoryPage() {
             </label>
 
             <label className="block">
-              <span className="block text-xs font-semibold uppercase tracking-[0.18em] text-outline">Model</span>
+              <span className="block text-xs font-semibold uppercase tracking-[0.18em] text-outline">{t("modelLabel")}</span>
               <select
                 value={filters.model}
                 onChange={(event) => handleModelChange(event.target.value)}
                 className="mt-2 h-11 w-full rounded-2xl border border-separator/40 bg-white px-4 text-sm text-on-surface outline-none transition focus:border-primary/40 dark:bg-surface-container"
               >
-                <option value="">All Models</option>
+                <option value="">{t("allModelsOption")}</option>
                 {models.map((value) => (
                   <option key={value} value={value}>{value}</option>
                 ))}
@@ -566,12 +576,12 @@ export default function InventoryPage() {
             </label>
 
             <label className="block">
-              <span className="block text-xs font-semibold uppercase tracking-[0.18em] text-outline">Search</span>
+              <span className="block text-xs font-semibold uppercase tracking-[0.18em] text-outline">{t("search")}</span>
               <input
                 type="text"
                 value={filters.search}
                 onChange={(event) => updateFilter("search", event.target.value)}
-                placeholder="Part number or serial number..."
+                placeholder={t("partOrSerialSearchPlaceholder")}
                 className="mt-2 h-11 w-full rounded-2xl border border-separator/40 bg-white px-4 text-sm text-on-surface outline-none transition focus:border-primary/40 dark:bg-surface-container"
               />
             </label>
@@ -584,10 +594,10 @@ export default function InventoryPage() {
             onAddRow={() => setAdvancedRows((current) => [...current, createInventoryAdvancedFilterRow()])}
             onRemoveRow={handleRemoveAdvancedRow}
             onClearRows={handleClearAdvancedFilters}
-            operatorLabels={INVENTORY_OPERATOR_LABELS}
+            operatorLabels={advancedOperatorLabels}
             useOperatorLabelsInSelect
-            title="Advanced Filters"
-            activeSummaryDescription="Current advanced inventory conditions before execution."
+            title={t("advancedFiltersTitle")}
+            activeSummaryDescription={t("currentAdvancedConditionsMessage")}
             variant="compact"
             framed
             enableTextSuggestions
@@ -600,7 +610,7 @@ export default function InventoryPage() {
                   className="flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-on-primary transition-opacity hover:opacity-90"
                 >
                   <span className="material-symbols-outlined" style={{ fontSize: 16 }}>filter_alt</span>
-                  Apply Advanced Filters
+                  {t("applyAdvancedFiltersButton")}
                 </button>
 
                 <button
@@ -609,7 +619,7 @@ export default function InventoryPage() {
                   className="flex items-center gap-2 rounded-xl border border-separator/40 glass-card px-5 py-2.5 text-sm font-semibold text-on-surface transition-all hover:border-primary/30"
                 >
                   <span className="material-symbols-outlined" style={{ fontSize: 16 }}>refresh</span>
-                  Reset Advanced Filters
+                  {t("resetAdvancedFiltersButton")}
                 </button>
               </>
             )}
@@ -619,7 +629,7 @@ export default function InventoryPage() {
             <div className="mt-4 rounded-2xl border border-outline-variant/15 bg-surface-container-low/35 p-4">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Selected Products</p>
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">{t("selectedProductsLabel")}</p>
                   <p className="mt-1 text-sm text-on-surface-variant">{selectedTagSummary.countLabel}</p>
                 </div>
                 {filters.model ? (
@@ -628,7 +638,7 @@ export default function InventoryPage() {
                     onClick={() => handleModelChange("")}
                     className="rounded-2xl border border-separator/40 px-3 py-2 text-xs font-semibold text-on-surface transition hover:bg-surface-container"
                   >
-                    Clear Model Filter
+                    {t("clearModelFilterButton")}
                   </button>
                 ) : null}
               </div>
@@ -642,7 +652,7 @@ export default function InventoryPage() {
                         type="button"
                         onClick={() => handleRemoveSelectedBackNumber(backNumber)}
                         className="text-current/70 transition hover:text-current"
-                        aria-label={`Remove ${backNumber}`}
+                        aria-label={t("removeItemAria", { serial: backNumber })}
                       >
                         <span className="material-symbols-outlined" style={{ fontSize: 14 }}>close</span>
                       </button>
@@ -650,7 +660,7 @@ export default function InventoryPage() {
                   ))}
                   {selectedTagSummary.overflow > 0 ? (
                     <span className="inline-flex items-center rounded-full bg-surface-container px-3 py-1.5 text-xs font-semibold text-on-surface-variant">
-                      +{selectedTagSummary.overflow} more
+                      {t("moreCountLabel", { count: selectedTagSummary.overflow })}
                     </span>
                   ) : null}
                 </div>
@@ -676,15 +686,17 @@ export default function InventoryPage() {
             setPage(1);
           }}
           pageSizeOptions={INVENTORY_PAGE_SIZE_OPTIONS}
-          pageSizeLabel="Rows"
+          pageSizeLabel={t("rowsSuffix")}
+          previousLabel={t("previousLabel")}
+          nextLabel={t("next")}
           rowKey={(row) => row.背番号}
           onRowClick={(row) => setTransactionState({ open: true, backNumber: row.背番号 })}
           getRowClassName={(row) => getInventoryRowToneClass(row)}
           renderPageInfo={({ filteredCount, page: currentPage, pageSize: currentPageSize }) => (
-            <span>{buildInventoryPageInfo({ filteredCount, page: currentPage, pageSize: currentPageSize })}</span>
+            <span>{buildInventoryPageInfo({ filteredCount, page: currentPage, pageSize: currentPageSize, t })}</span>
           )}
-          emptyTitle="No matching inventory records"
-          emptyMessage="Adjust the filters or add inventory to create the first transaction."
+          emptyTitle={t("noMatchingInventoryRecordsMessage")}
+          emptyMessage={t("adjustFiltersOrAddInventoryMessage")}
           layoutStorageKey="inventory-table-layout"
           enableColumnResize
           enableColumnReorder

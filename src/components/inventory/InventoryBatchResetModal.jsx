@@ -13,8 +13,10 @@ import {
   createInventoryBatchResetRow,
   formatInventoryNumber,
   INVENTORY_BATCH_FILTER_FIELDS,
-  INVENTORY_OPERATOR_LABELS,
+  INVENTORY_FILTER_GROUP_LABEL_KEYS,
+  INVENTORY_OPERATOR_LABEL_KEYS,
 } from "../../utils/inventory";
+import { useLanguage } from "../../contexts/LanguageContext";
 
 function InlineBanner({ flash, onClose }) {
   if (!flash) return null;
@@ -50,6 +52,7 @@ export default function InventoryBatchResetModal({
   onClose,
   onCompleted,
 }) {
+  const { t } = useLanguage();
   const [rows, setRows] = useState(() => [createInventoryBatchResetRow()]);
   const [results, setResults] = useState([]);
   const [selectedIds, setSelectedIds] = useState([]);
@@ -65,6 +68,8 @@ export default function InventoryBatchResetModal({
   const fieldDefinitions = useMemo(() => (
     INVENTORY_BATCH_FILTER_FIELDS.map((field) => ({
       ...field,
+      label: t(field.labelKey),
+      group: t(INVENTORY_FILTER_GROUP_LABEL_KEYS[field.group] || field.group),
       options: field.field === "品番"
         ? optionSets.partNumbers
         : field.field === "背番号"
@@ -75,7 +80,11 @@ export default function InventoryBatchResetModal({
               ? factoryOptions
               : [],
     }))
-  ), [factoryOptions, optionSets.backNumbers, optionSets.models, optionSets.partNumbers]);
+  ), [factoryOptions, optionSets.backNumbers, optionSets.models, optionSets.partNumbers, t]);
+
+  const operatorLabels = useMemo(() => (
+    Object.fromEntries(Object.entries(INVENTORY_OPERATOR_LABEL_KEYS).map(([key, labelKey]) => [key, t(labelKey)]))
+  ), [t]);
 
   const selectedItems = useMemo(() => (
     results.filter((item) => selectedIds.includes(item.背番号))
@@ -108,7 +117,7 @@ export default function InventoryBatchResetModal({
         });
         setResults(items);
       } catch (loadError) {
-        setFlash({ type: "error", message: loadError.message || "Failed to load batch reset data." });
+        setFlash({ type: "error", message: loadError.message || t("failedLoadBatchResetDataMessage") });
         setResults([]);
       } finally {
         setLoading(false);
@@ -139,7 +148,7 @@ export default function InventoryBatchResetModal({
       setResults(items);
     } catch (loadError) {
       setResults([]);
-      setFlash({ type: "error", message: loadError.message || "Failed to load batch reset results." });
+      setFlash({ type: "error", message: loadError.message || t("failedLoadBatchResultsMessage") });
     } finally {
       setLoading(false);
     }
@@ -172,18 +181,16 @@ export default function InventoryBatchResetModal({
 
     const preview = selectedItems
       .slice(0, 5)
-      .map((item) => `${item.背番号} (${item.品番}) - Physical ${item.physicalQuantity}, Reserved ${item.reservedQuantity}, Available ${item.availableQuantity}`)
+      .map((item) => `${item.背番号} (${item.品番}) - ${t("physicalLabel")} ${item.physicalQuantity}, ${t("reservedColumnLabel")} ${item.reservedQuantity}, ${t("availableLabel")} ${item.availableQuantity}`)
       .join("\n");
-    const more = selectedItems.length > 5 ? `\n...and ${selectedItems.length - 5} more items` : "";
+    const more = selectedItems.length > 5 ? t("andMoreItemsMessage", { count: selectedItems.length - 5 }) : "";
 
     const firstConfirm = window.confirm(
-      `Reset ${selectedItems.length} inventory item${selectedItems.length === 1 ? "" : "s"} to zero?\n\n${preview}${more}`
+      t("batchResetConfirm", { count: selectedItems.length, plural: selectedItems.length === 1 ? "" : "s", preview, more })
     );
     if (!firstConfirm) return;
 
-    const secondConfirm = window.confirm(
-      "This action creates batch reset audit transactions for all selected items. Continue?"
-    );
+    const secondConfirm = window.confirm(t("batchResetActionConfirm"));
     if (!secondConfirm) return;
 
     setExecuting(true);
@@ -196,12 +203,13 @@ export default function InventoryBatchResetModal({
         actorName || authUser?.username || "admin"
       );
 
+      const completedCount = result?.successCount || selectedItems.length;
       onCompleted?.({
         type: "success",
-        message: `Batch reset completed for ${result?.successCount || selectedItems.length} item${(result?.successCount || selectedItems.length) === 1 ? "" : "s"}.`,
+        message: t("batchResetCompletedMessage", { count: completedCount, plural: completedCount === 1 ? "" : "s" }),
       });
     } catch (resetError) {
-      setFlash({ type: "error", message: resetError.message || "Failed to complete batch reset." });
+      setFlash({ type: "error", message: resetError.message || t("failedCompleteBatchResetMessage") });
     } finally {
       setExecuting(false);
     }
@@ -212,14 +220,14 @@ export default function InventoryBatchResetModal({
   return (
     <PlannerModalShell
       open={open}
-      title="Batch Reset Inventory"
-      subtitle="Use advanced filters to find inventory rows and reset the selected items to zero with an audit trail."
+      title={t("batchResetInventoryTitle")}
+      subtitle={t("batchResetSubtitle")}
       onClose={onClose}
       maxWidthClassName="max-w-7xl"
       footer={(
         <div className="flex items-center justify-between gap-3">
           <div className="text-sm text-on-surface-variant">
-            {selectedItems.length} item{selectedItems.length === 1 ? "" : "s"} selected
+            {t("itemsSelectedMessage", { count: selectedItems.length, plural: selectedItems.length === 1 ? "" : "s" })}
           </div>
           <div className="flex gap-3">
             <button
@@ -227,7 +235,7 @@ export default function InventoryBatchResetModal({
               onClick={onClose}
               className="rounded-2xl border border-separator/40 px-4 py-2 text-sm font-semibold text-on-surface transition hover:bg-surface-container"
             >
-              Close
+              {t("close")}
             </button>
             <button
               type="button"
@@ -235,7 +243,7 @@ export default function InventoryBatchResetModal({
               onClick={handleBatchReset}
               className="rounded-2xl bg-error px-4 py-2 text-sm font-semibold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {executing ? "Resetting..." : "Reset Selected"}
+              {executing ? t("resettingLabel") : t("resetSelectedButton")}
             </button>
           </div>
         </div>
@@ -253,12 +261,12 @@ export default function InventoryBatchResetModal({
           onClearRows={() => {
             void handleClearFilters();
           }}
-          operatorLabels={INVENTORY_OPERATOR_LABELS}
+          operatorLabels={operatorLabels}
           useOperatorLabelsInSelect
-          title="Batch Reset Filters"
-          addRowLabel="Add Filter"
-          activeSummaryTitle="Active Reset Filters"
-          activeSummaryDescription="Filter by part number, serial number, factory, or model to preview affected inventory items."
+          title={t("batchResetFiltersTitle")}
+          addRowLabel={t("addFilterLabel")}
+          activeSummaryTitle={t("activeResetFiltersTitle")}
+          activeSummaryDescription={t("filterPreviewDescription")}
           variant="roomy"
           framed
           enableTextSuggestions
@@ -272,7 +280,7 @@ export default function InventoryBatchResetModal({
                 }}
                 className="rounded-2xl border border-separator/40 px-4 py-2 text-sm font-semibold text-on-surface transition hover:bg-surface-container"
               >
-                Clear Filters
+                {t("clearFiltersButton")}
               </button>
               <button
                 type="button"
@@ -282,7 +290,7 @@ export default function InventoryBatchResetModal({
                 }}
                 className="rounded-2xl bg-primary px-4 py-2 text-sm font-semibold text-on-primary transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
               >
-                {loading ? "Finding Items..." : "Find Items"}
+                {loading ? t("findingItemsLabel") : t("findItemsButton")}
               </button>
             </div>
           )}
@@ -291,8 +299,8 @@ export default function InventoryBatchResetModal({
         <div className="glass-card rounded-2xl p-5">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Results</div>
-              <h3 className="mt-1 text-base font-semibold text-on-surface">Inventory Items</h3>
+              <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">{t("resultsLabel")}</div>
+              <h3 className="mt-1 text-base font-semibold text-on-surface">{t("inventoryItemsLabel")}</h3>
             </div>
             <label className="inline-flex items-center gap-2 text-sm text-on-surface-variant">
               <input
@@ -302,27 +310,27 @@ export default function InventoryBatchResetModal({
                 onChange={(event) => handleToggleAll(event.target.checked)}
                 className="h-4 w-4 rounded border-outline-variant/30 text-primary"
               />
-              Select all non-zero items
+              {t("selectAllNonZeroLabel")}
             </label>
           </div>
 
           {loading ? (
-            <EmptyState variant="filled" className="mt-4">Loading inventory items...</EmptyState>
+            <EmptyState variant="filled" className="mt-4">{t("loadingInventoryItemsMessage")}</EmptyState>
           ) : results.length === 0 ? (
-            <EmptyState variant="filled" className="mt-4">No inventory items matched the current filters.</EmptyState>
+            <EmptyState variant="filled" className="mt-4">{t("noInventoryItemsMatchedMessage")}</EmptyState>
           ) : (
             <div className="mt-4 overflow-x-auto rounded-2xl border border-outline-variant/15">
               <table className="ui-table-data min-w-full">
                 <thead className="border-b border-outline-variant/15 bg-surface-container-low">
                   <tr>
                     {[
-                      "Select",
-                      "Part Number",
-                      "Serial Number",
-                      "Physical",
-                      "Reserved",
-                      "Available",
-                      "Factory",
+                      t("selectLabel"),
+                      t("partNumberLabel"),
+                      t("serialNumberLabel"),
+                      t("physicalLabel"),
+                      t("reservedColumnLabel"),
+                      t("availableLabel"),
+                      t("factory"),
                     ].map((label) => (
                       <th key={label} className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.18em] text-outline">
                         {label}

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import PlannerModalShell from "../planner/PlannerModalShell";
 import { addInventoryStock, lookupInventoryMasterData } from "../../services/inventoryApi";
+import { useLanguage } from "../../contexts/LanguageContext";
 
 function buildTodayDate() {
   return new Date().toISOString().split("T")[0];
@@ -13,6 +14,7 @@ export default function InventoryAddModal({
   onClose,
   onSubmitted,
 }) {
+  const { t } = useLanguage();
   const [form, setForm] = useState({ partNumber: "", backNumber: "", quantity: "" });
   const [errors, setErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
@@ -49,7 +51,7 @@ export default function InventoryAddModal({
       const record = await lookupInventoryMasterData({ 品番: partNumber });
       if (record?.背番号) {
         setForm((current) => ({ ...current, backNumber: record.背番号 }));
-        setLookupHint(`Auto-filled serial number: ${record.背番号}`);
+        setLookupHint(t("autoFilledSerialMessage", { value: record.背番号 }));
       }
     } catch {
       setLookupHint("");
@@ -69,7 +71,7 @@ export default function InventoryAddModal({
       const record = await lookupInventoryMasterData({ 背番号: backNumber });
       if (record?.品番) {
         setForm((current) => ({ ...current, partNumber: record.品番 }));
-        setLookupHint(`Auto-filled part number: ${record.品番}`);
+        setLookupHint(t("autoFilledPartMessage", { value: record.品番 }));
       }
     } catch {
       setLookupHint("");
@@ -84,9 +86,9 @@ export default function InventoryAddModal({
     const quantity = Number.parseInt(form.quantity, 10);
     const nextErrors = {};
 
-    if (!partNumber) nextErrors.partNumber = "Part number is required.";
-    if (!backNumber) nextErrors.backNumber = "Serial number is required.";
-    if (!Number.isFinite(quantity) || quantity <= 0) nextErrors.quantity = "Quantity must be a positive number.";
+    if (!partNumber) nextErrors.partNumber = t("partNumberRequiredMessage");
+    if (!backNumber) nextErrors.backNumber = t("serialNumberRequiredMessage");
+    if (!Number.isFinite(quantity) || quantity <= 0) nextErrors.quantity = t("quantityPositiveMessage");
 
     if (Object.keys(nextErrors).length > 0) {
       setErrors(nextErrors);
@@ -99,7 +101,7 @@ export default function InventoryAddModal({
     try {
       const masterRecord = await lookupInventoryMasterData({ 品番: partNumber, 背番号: backNumber });
       if (!masterRecord) {
-        setErrors({ partNumber: "The part number and serial number combination was not found in master data." });
+        setErrors({ partNumber: t("partSerialNotFoundMessage") });
         return;
       }
 
@@ -115,10 +117,10 @@ export default function InventoryAddModal({
 
       onSubmitted?.({
         type: "success",
-        message: result?.message || `Added ${quantity} units to ${backNumber}.`,
+        message: result?.message || t("addedInventoryUnitsMessage", { count: quantity, serial: backNumber }),
       });
     } catch (submitError) {
-      setErrors({ form: submitError.message || "Failed to add inventory." });
+      setErrors({ form: submitError.message || t("failedAddInventoryMessage") });
     } finally {
       setSubmitting(false);
     }
@@ -127,8 +129,8 @@ export default function InventoryAddModal({
   return (
     <PlannerModalShell
       open={open}
-      title="Add Inventory"
-      subtitle="Create a new manual inventory transaction using part and serial master data."
+      title={t("addInventoryButton")}
+      subtitle={t("addInventoryModalSubtitle")}
       onClose={onClose}
       maxWidthClassName="max-w-2xl"
       footer={(
@@ -138,7 +140,7 @@ export default function InventoryAddModal({
             onClick={onClose}
             className="rounded-2xl border border-separator/40 px-4 py-2 text-sm font-semibold text-on-surface transition hover:bg-surface-container"
           >
-            Cancel
+            {t("cancel")}
           </button>
           <button
             type="button"
@@ -146,7 +148,7 @@ export default function InventoryAddModal({
             onClick={handleSubmit}
             className="rounded-2xl bg-primary px-4 py-2 text-sm font-semibold text-on-primary transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {submitting ? "Adding..." : "Add Inventory"}
+            {submitting ? t("addingLabel") : t("addInventoryButton")}
           </button>
         </div>
       )}
@@ -160,7 +162,7 @@ export default function InventoryAddModal({
 
         <div className="grid gap-4 md:grid-cols-2">
           <label className="block">
-            <span className="block text-xs font-semibold uppercase tracking-[0.18em] text-outline">Part Number</span>
+            <span className="block text-xs font-semibold uppercase tracking-[0.18em] text-outline">{t("partNumberLabel")}</span>
             <input
               type="text"
               value={form.partNumber}
@@ -169,13 +171,13 @@ export default function InventoryAddModal({
                 void handlePartNumberBlur();
               }}
               className="mt-2 h-11 w-full rounded-2xl border border-outline-variant/30 bg-white px-4 text-sm text-on-surface outline-none transition focus:border-primary/40 dark:bg-surface-container"
-              placeholder="Enter part number"
+              placeholder={t("enterPartNumberPlaceholder")}
             />
             {errors.partNumber ? <p className="mt-2 text-sm text-error">{errors.partNumber}</p> : null}
           </label>
 
           <label className="block">
-            <span className="block text-xs font-semibold uppercase tracking-[0.18em] text-outline">Serial Number</span>
+            <span className="block text-xs font-semibold uppercase tracking-[0.18em] text-outline">{t("serialNumberLabel")}</span>
             <input
               type="text"
               value={form.backNumber}
@@ -184,29 +186,29 @@ export default function InventoryAddModal({
                 void handleBackNumberBlur();
               }}
               className="mt-2 h-11 w-full rounded-2xl border border-outline-variant/30 bg-white px-4 text-sm text-on-surface outline-none transition focus:border-primary/40 dark:bg-surface-container"
-              placeholder="Enter serial number"
+              placeholder={t("enterSerialNumberPlaceholder")}
             />
             {errors.backNumber ? <p className="mt-2 text-sm text-error">{errors.backNumber}</p> : null}
           </label>
         </div>
 
         <label className="block">
-          <span className="block text-xs font-semibold uppercase tracking-[0.18em] text-outline">Quantity</span>
+          <span className="block text-xs font-semibold uppercase tracking-[0.18em] text-outline">{t("quantity")}</span>
           <input
             type="number"
             min="1"
             value={form.quantity}
             onChange={(event) => updateField("quantity", event.target.value)}
             className="mt-2 h-11 w-full rounded-2xl border border-outline-variant/30 bg-white px-4 text-sm text-on-surface outline-none transition focus:border-primary/40 dark:bg-surface-container"
-            placeholder="Enter quantity"
+            placeholder={t("enterQuantityPlaceholder")}
           />
           {errors.quantity ? <p className="mt-2 text-sm text-error">{errors.quantity}</p> : null}
         </label>
 
         <div className="rounded-2xl border border-separator/40 bg-surface-container-low/35 px-4 py-3 text-sm text-on-surface-variant">
           {lookupBusy
-            ? "Checking master data..."
-            : lookupHint || "Blur part number or serial number to auto-fill the missing field from master data."}
+            ? t("checkingMasterDataMessage")
+            : lookupHint || t("blurToAutofillMessage")}
         </div>
       </div>
     </PlannerModalShell>

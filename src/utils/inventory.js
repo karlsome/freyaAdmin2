@@ -10,36 +10,43 @@ export const EMPTY_INVENTORY_SUMMARY = {
 };
 
 export const INVENTORY_SUMMARY_CARDS = [
-  { key: "totalItems", label: "Items", icon: "inventory_2", accent: "bg-slate-100 text-slate-700 dark:bg-slate-800/80 dark:text-slate-200" },
-  { key: "totalPhysicalStock", label: "Physical Stock", icon: "warehouse", accent: "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300" },
-  { key: "totalReservedStock", label: "Reserved Stock", icon: "bookmarks", accent: "bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300" },
-  { key: "totalAvailableStock", label: "Available Stock", icon: "check_circle", accent: "bg-sky-100 text-sky-700 dark:bg-sky-500/15 dark:text-sky-300" },
+  { key: "totalItems", labelKey: "itemsLabel", icon: "inventory_2", accent: "bg-slate-100 text-slate-700 dark:bg-slate-800/80 dark:text-slate-200" },
+  { key: "totalPhysicalStock", labelKey: "physicalStockLabel", icon: "warehouse", accent: "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300" },
+  { key: "totalReservedStock", labelKey: "reservedStockLabel", icon: "bookmarks", accent: "bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300" },
+  { key: "totalAvailableStock", labelKey: "availableStockLabel", icon: "check_circle", accent: "bg-sky-100 text-sky-700 dark:bg-sky-500/15 dark:text-sky-300" },
 ];
 
 export const INVENTORY_BATCH_FILTER_FIELDS = [
-  { field: "品番", label: "Part Number", group: "Inventory", type: "text", operators: ["equals", "contains"] },
-  { field: "背番号", label: "Serial Number", group: "Inventory", type: "text", operators: ["equals", "contains"] },
-  { field: "工場", label: "Factory", group: "Inventory", type: "text", operators: ["equals", "contains"] },
-  { field: "モデル", label: "Model", group: "Inventory", type: "text", operators: ["equals", "contains"] },
+  { field: "品番", labelKey: "partNumberLabel", group: "Inventory", type: "text", operators: ["equals", "contains"] },
+  { field: "背番号", labelKey: "serialNumberLabel", group: "Inventory", type: "text", operators: ["equals", "contains"] },
+  { field: "工場", labelKey: "factory", group: "Inventory", type: "text", operators: ["equals", "contains"] },
+  { field: "モデル", labelKey: "modelLabel", group: "Inventory", type: "text", operators: ["equals", "contains"] },
 ];
 
 export const INVENTORY_ADVANCED_FILTER_FIELDS = [
-  { field: "品番", label: "Part Number", group: "Identity", type: "select", operators: ["equals", "contains", "in"] },
-  { field: "背番号", label: "Serial Number", group: "Identity", type: "select", operators: ["equals", "contains", "in"] },
-  { field: "工場", label: "Factory", group: "Identity", type: "select", operators: ["equals", "contains", "in"] },
-  { field: "physicalQuantity", label: "Physical Stock", group: "Stock", type: "number", operators: ["equals", "greater", "less", "range"] },
-  { field: "reservedQuantity", label: "Reserved Stock", group: "Stock", type: "number", operators: ["equals", "greater", "less", "range"] },
-  { field: "availableQuantity", label: "Available Stock", group: "Stock", type: "number", operators: ["equals", "greater", "less", "range"] },
-  { field: "lastUpdated", label: "Last Updated", group: "Dates", type: "date", operators: ["equals", "greater", "less", "range"] },
+  { field: "品番", labelKey: "partNumberLabel", group: "Identity", type: "select", operators: ["equals", "contains", "in"] },
+  { field: "背番号", labelKey: "serialNumberLabel", group: "Identity", type: "select", operators: ["equals", "contains", "in"] },
+  { field: "工場", labelKey: "factory", group: "Identity", type: "select", operators: ["equals", "contains", "in"] },
+  { field: "physicalQuantity", labelKey: "physicalStockLabel", group: "Stock", type: "number", operators: ["equals", "greater", "less", "range"] },
+  { field: "reservedQuantity", labelKey: "reservedStockLabel", group: "Stock", type: "number", operators: ["equals", "greater", "less", "range"] },
+  { field: "availableQuantity", labelKey: "availableStockLabel", group: "Stock", type: "number", operators: ["equals", "greater", "less", "range"] },
+  { field: "lastUpdated", labelKey: "lastUpdatedLabel", group: "Dates", type: "date", operators: ["equals", "greater", "less", "range"] },
 ];
 
-export const INVENTORY_OPERATOR_LABELS = {
-  equals: "Equals",
-  contains: "Contains",
-  in: "In",
-  greater: "Greater than",
-  less: "Less than",
-  range: "Range",
+export const INVENTORY_OPERATOR_LABEL_KEYS = {
+  equals: "equalsLabel",
+  contains: "containsLabel",
+  in: "inLabel",
+  greater: "greaterThanLabel",
+  less: "lessThanLabel",
+  range: "rangeLabel",
+};
+
+export const INVENTORY_FILTER_GROUP_LABEL_KEYS = {
+  Inventory: "inventory",
+  Identity: "filterGroupIdentityLabel",
+  Stock: "filterGroupStockLabel",
+  Dates: "filterGroupDatesLabel",
 };
 
 let inventoryBatchFilterCount = 0;
@@ -197,13 +204,13 @@ export function formatInventoryDate(value) {
   return date.toLocaleDateString();
 }
 
-export function buildInventoryPageInfo({ filteredCount, page, pageSize }) {
+export function buildInventoryPageInfo({ filteredCount, page, pageSize, t }) {
   const safeCount = Number(filteredCount) || 0;
-  if (!safeCount) return "0 items shown";
+  if (!safeCount) return t("zeroItemsShownMessage");
 
   const start = (page - 1) * pageSize + 1;
   const end = Math.min(page * pageSize, safeCount);
-  return `${safeCount.toLocaleString()} items, showing ${start.toLocaleString()}-${end.toLocaleString()}`;
+  return t("itemsShowingRangeMessage", { count: safeCount.toLocaleString(), start: start.toLocaleString(), end: end.toLocaleString() });
 }
 
 export function getInventoryAvailabilityMeta(value) {
@@ -211,7 +218,7 @@ export function getInventoryAvailabilityMeta(value) {
 
   if (availableQuantity <= 0) {
     return {
-      label: "Out of Stock",
+      labelKey: "outOfStockLabel",
       icon: "cancel",
       badgeClassName: "bg-error/10 text-error",
       rowClassName: "bg-error/5",
@@ -220,7 +227,7 @@ export function getInventoryAvailabilityMeta(value) {
 
   if (availableQuantity <= 10) {
     return {
-      label: "Low Stock",
+      labelKey: "lowStockLabel",
       icon: "warning",
       badgeClassName: "bg-amber-500/10 text-amber-700 dark:text-amber-300",
       rowClassName: "bg-amber-500/5",
@@ -228,7 +235,7 @@ export function getInventoryAvailabilityMeta(value) {
   }
 
   return {
-    label: "Available",
+    labelKey: "availableLabel",
     icon: "check_circle",
     badgeClassName: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300",
     rowClassName: "",
@@ -294,13 +301,13 @@ export function downloadInventoryCsvFile(fileName, rows = []) {
   URL.revokeObjectURL(link.href);
 }
 
-export function summarizeSelectedInventoryTags(selectedBackNumbers = []) {
+export function summarizeSelectedInventoryTags(selectedBackNumbers = [], t) {
   if (!Array.isArray(selectedBackNumbers) || selectedBackNumbers.length === 0) {
-    return { countLabel: "None selected", visible: [], overflow: 0 };
+    return { countLabel: t("noneSelectedMessage"), visible: [], overflow: 0 };
   }
 
   return {
-    countLabel: `${selectedBackNumbers.length} products selected`,
+    countLabel: t("productsSelectedMessage", { count: selectedBackNumbers.length }),
     visible: selectedBackNumbers.slice(0, 10),
     overflow: Math.max(selectedBackNumbers.length - 10, 0),
   };

@@ -8,6 +8,7 @@ import {
   getInventoryTransactionActionMeta,
   joinInventoryClasses,
 } from "../../utils/inventory";
+import { useLanguage } from "../../contexts/LanguageContext";
 
 function InlineBanner({ flash, onClose }) {
   if (!flash) return null;
@@ -39,6 +40,7 @@ export default function InventoryTransactionsModal({
   onClose,
   onUpdated,
 }) {
+  const { t } = useLanguage();
   const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -62,11 +64,11 @@ export default function InventoryTransactionsModal({
       setTransactions(Array.isArray(nextTransactions) ? nextTransactions : []);
     } catch (loadError) {
       setTransactions([]);
-      setError(loadError.message || "Failed to load inventory transactions.");
+      setError(loadError.message || t("failedLoadTransactionsMessage"));
     } finally {
       setLoading(false);
     }
-  }, [backNumber]);
+  }, [backNumber, t]);
 
   useEffect(() => {
     if (!open) return;
@@ -94,7 +96,7 @@ export default function InventoryTransactionsModal({
     if (!currentItem) return;
 
     if (!resetPhysical && !resetReserved) {
-      setFlash({ type: "warning", message: "Select at least one inventory value to reset." });
+      setFlash({ type: "warning", message: t("selectAtLeastOneValueMessage") });
       return;
     }
 
@@ -102,27 +104,25 @@ export default function InventoryTransactionsModal({
     const hasReservedToReset = resetReserved && currentReserved !== 0;
 
     if (!hasPhysicalToReset && !hasReservedToReset) {
-      setFlash({ type: "warning", message: "The selected inventory values are already zero." });
+      setFlash({ type: "warning", message: t("valuesAlreadyZeroMessage") });
       return;
     }
 
     const resetLines = [];
     if (resetPhysical) {
-      resetLines.push(`Physical: ${formatInventoryNumber(currentPhysical)} -> 0`);
-      resetLines.push(`Available: ${formatInventoryNumber(currentAvailable)} -> 0`);
+      resetLines.push(t("physicalResetLineMessage", { value: formatInventoryNumber(currentPhysical) }));
+      resetLines.push(t("availableResetLineMessage", { value: formatInventoryNumber(currentAvailable) }));
     }
     if (resetReserved) {
-      resetLines.push(`Reserved: ${formatInventoryNumber(currentReserved)} -> 0`);
+      resetLines.push(t("reservedResetLineMessage", { value: formatInventoryNumber(currentReserved) }));
     }
 
     const firstConfirm = window.confirm(
-      `Reset inventory for ${backNumber}?\n\n${resetLines.join("\n")}\n\nThis creates an audit transaction.`
+      t("resetInventoryConfirm", { serial: backNumber, lines: resetLines.join("\n") })
     );
     if (!firstConfirm) return;
 
-    const secondConfirm = window.confirm(
-      "This action writes a new reset transaction and should be used carefully. Continue?"
-    );
+    const secondConfirm = window.confirm(t("resetActionConfirm"));
     if (!secondConfirm) return;
 
     setResetSubmitting(true);
@@ -145,10 +145,10 @@ export default function InventoryTransactionsModal({
 
       await loadTransactions();
       setResetPanelOpen(false);
-      setFlash({ type: "success", message: result?.message || "Inventory reset completed." });
-      onUpdated?.({ type: "success", message: result?.message || `Inventory reset completed for ${backNumber}.` });
+      setFlash({ type: "success", message: result?.message || t("inventoryResetCompletedMessage") });
+      onUpdated?.({ type: "success", message: result?.message || t("inventoryResetCompletedForMessage", { serial: backNumber }) });
     } catch (resetError) {
-      setFlash({ type: "error", message: resetError.message || "Failed to reset inventory." });
+      setFlash({ type: "error", message: resetError.message || t("failedResetInventoryMessage") });
     } finally {
       setResetSubmitting(false);
     }
@@ -157,8 +157,8 @@ export default function InventoryTransactionsModal({
   return (
     <PlannerModalShell
       open={open}
-      title={backNumber ? `Inventory Transactions · ${backNumber}` : "Inventory Transactions"}
-      subtitle={currentItem ? `${orderedTransactions.length} transaction${orderedTransactions.length === 1 ? "" : "s"} found` : "Review the current state and full transaction history."}
+      title={backNumber ? t("inventoryTransactionsTitleWithSerial", { serial: backNumber }) : t("inventoryTransactionsTitle")}
+      subtitle={currentItem ? t("transactionsFoundMessage", { count: orderedTransactions.length, plural: orderedTransactions.length === 1 ? "" : "s" }) : t("reviewCurrentStateMessage")}
       onClose={onClose}
       maxWidthClassName="max-w-6xl"
       footer={(
@@ -168,7 +168,7 @@ export default function InventoryTransactionsModal({
             onClick={onClose}
             className="planner-data-text rounded-2xl border border-separator/40 px-4 py-2 text-sm font-semibold text-on-surface transition hover:bg-surface-container"
           >
-            Close
+            {t("close")}
           </button>
         </div>
       )}
@@ -184,12 +184,12 @@ export default function InventoryTransactionsModal({
 
         {loading ? (
           <div className="planner-data-text rounded-2xl border border-separator/40 bg-surface-container-low/35 px-6 py-12 text-center text-sm text-on-surface-variant">
-            Loading inventory transactions...
+            {t("loadingInventoryTransactionsMessage")}
           </div>
         ) : null}
 
         {!loading && !error && !currentItem ? (
-          <EmptyState variant="filled" className="planner-data-text">No inventory transactions were found for this serial number.</EmptyState>
+          <EmptyState variant="filled" className="planner-data-text">{t("noTransactionsFoundMessage")}</EmptyState>
         ) : null}
 
         {!loading && currentItem ? (
@@ -197,10 +197,10 @@ export default function InventoryTransactionsModal({
             <div className="rounded-2xl border border-outline-variant/15 bg-surface-container-low px-4 py-4">
               <div className="flex flex-wrap items-start justify-between gap-4">
                 <div>
-                  <div className="planner-data-label text-outline">Current State</div>
-                  <h3 className="planner-data-text mt-1 text-xl font-semibold text-on-surface">{currentItem.品番 || "Unknown Part"}</h3>
+                  <div className="planner-data-label text-outline">{t("currentStateLabel")}</div>
+                  <h3 className="planner-data-text mt-1 text-xl font-semibold text-on-surface">{currentItem.品番 || t("unknownPartLabel")}</h3>
                   <p className="planner-data-text mt-1 text-sm text-on-surface-variant">
-                    Serial {currentItem.背番号 || backNumber} {currentItem.工場 ? `· ${currentItem.工場}` : ""}
+                    {t("serialFactoryLabel", { serial: currentItem.背番号 || backNumber, factory: currentItem.工場 ? `· ${currentItem.工場}` : "" })}
                   </p>
                 </div>
 
@@ -210,26 +210,26 @@ export default function InventoryTransactionsModal({
                     onClick={() => setResetPanelOpen((current) => !current)}
                     className="planner-data-text rounded-2xl border border-error/20 bg-white/80 px-4 py-2.5 text-sm font-semibold text-error transition hover:bg-error/8 dark:bg-surface-container"
                   >
-                    {resetPanelOpen ? "Hide Reset Controls" : "Reset Inventory"}
+                    {resetPanelOpen ? t("hideResetControlsButton") : t("resetInventoryButton")}
                   </button>
                 ) : null}
               </div>
 
               <div className="mt-5 grid gap-4 md:grid-cols-4">
                 <div className="rounded-2xl border border-outline-variant/15 bg-white/80 p-4 dark:bg-surface-container">
-                  <p className="planner-data-label text-outline">Part Number</p>
+                  <p className="planner-data-label text-outline">{t("partNumberLabel")}</p>
                   <p className="planner-data-text mt-2 text-sm font-semibold text-on-surface">{currentItem.品番 || "—"}</p>
                 </div>
                 <div className="rounded-2xl border border-outline-variant/15 bg-white/80 p-4 dark:bg-surface-container">
-                  <p className="planner-data-label text-outline">Physical Stock</p>
+                  <p className="planner-data-label text-outline">{t("physicalStockLabel")}</p>
                   <p className="planner-data-text mt-2 text-lg font-semibold tabular-nums text-emerald-700 dark:text-emerald-300">{formatInventoryNumber(currentPhysical)}</p>
                 </div>
                 <div className="rounded-2xl border border-outline-variant/15 bg-white/80 p-4 dark:bg-surface-container">
-                  <p className="planner-data-label text-outline">Reserved Stock</p>
+                  <p className="planner-data-label text-outline">{t("reservedStockLabel")}</p>
                   <p className="planner-data-text mt-2 text-lg font-semibold tabular-nums text-amber-700 dark:text-amber-300">{formatInventoryNumber(currentReserved)}</p>
                 </div>
                 <div className="rounded-2xl border border-outline-variant/15 bg-white/80 p-4 dark:bg-surface-container">
-                  <p className="planner-data-label text-outline">Available Stock</p>
+                  <p className="planner-data-label text-outline">{t("availableStockLabel")}</p>
                   <p className="planner-data-text mt-2 text-lg font-semibold tabular-nums text-sky-700 dark:text-sky-300">{formatInventoryNumber(currentAvailable)}</p>
                 </div>
               </div>
@@ -239,9 +239,9 @@ export default function InventoryTransactionsModal({
               <div className="rounded-2xl border border-error/20 bg-error/6 px-4 py-4">
                 <div className="flex flex-wrap items-start justify-between gap-4">
                   <div>
-                    <div className="planner-data-label text-error">Admin Reset</div>
+                    <div className="planner-data-label text-error">{t("adminResetLabel")}</div>
                     <p className="planner-data-text mt-1 text-sm text-on-surface-variant">
-                      This writes a new audit transaction and zeroes the selected inventory values.
+                      {t("writesAuditTransactionMessage")}
                     </p>
                   </div>
                 </div>
@@ -254,7 +254,7 @@ export default function InventoryTransactionsModal({
                       onChange={(event) => setResetPhysical(event.target.checked)}
                       className="h-4 w-4 rounded border-outline-variant/30 text-error"
                     />
-                    Reset physical stock and available stock
+                    {t("resetPhysicalCheckboxLabel")}
                   </label>
                   <label className="planner-data-text flex items-center gap-3 rounded-2xl border border-separator/40 bg-white/80 px-4 py-3 text-sm font-medium text-on-surface dark:bg-surface-container">
                     <input
@@ -263,7 +263,7 @@ export default function InventoryTransactionsModal({
                       onChange={(event) => setResetReserved(event.target.checked)}
                       className="h-4 w-4 rounded border-outline-variant/30 text-error"
                     />
-                    Reset reserved stock
+                    {t("resetReservedCheckboxLabel")}
                   </label>
                 </div>
 
@@ -274,7 +274,7 @@ export default function InventoryTransactionsModal({
                     onClick={handleReset}
                     className="planner-data-text rounded-2xl bg-error px-5 py-2.5 text-sm font-semibold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
                   >
-                    {resetSubmitting ? "Resetting..." : "Apply Reset"}
+                    {resetSubmitting ? t("resettingLabel") : t("applyResetButton")}
                   </button>
                 </div>
               </div>
@@ -283,10 +283,10 @@ export default function InventoryTransactionsModal({
             <div className="rounded-2xl border border-outline-variant/15 bg-surface-container-low px-4 py-4">
               <div className="flex items-center justify-between gap-3">
                 <div>
-                  <div className="planner-data-label text-outline">History</div>
-                  <h3 className="mt-1 text-base font-semibold text-on-surface">Transaction History</h3>
+                  <div className="planner-data-label text-outline">{t("historyLabel")}</div>
+                  <h3 className="mt-1 text-base font-semibold text-on-surface">{t("transactionHistoryLabel")}</h3>
                 </div>
-                <div className="planner-data-text text-xs text-on-surface-variant">Newest first</div>
+                <div className="planner-data-text text-xs text-on-surface-variant">{t("newestFirstLabel")}</div>
               </div>
 
               <div className="mt-4 overflow-x-auto rounded-2xl border border-outline-variant/15 bg-white/80 dark:bg-surface-container">
@@ -294,13 +294,13 @@ export default function InventoryTransactionsModal({
                   <thead className="border-b border-outline-variant/15 bg-surface-container-low/80">
                     <tr>
                       {[
-                        "Date & Time",
-                        "Action",
-                        "Physical",
-                        "Reserved",
-                        "Available",
-                        "Source",
-                        "Note",
+                        t("dateTimeLabel"),
+                        t("actionLabel"),
+                        t("physicalLabel"),
+                        t("reservedColumnLabel"),
+                        t("availableLabel"),
+                        t("sourceLabel"),
+                        t("noteLabel"),
                       ].map((label) => (
                         <th key={label} className="ui-table-heading px-4 py-3 text-left text-outline">
                           {label}
@@ -327,13 +327,13 @@ export default function InventoryTransactionsModal({
                           <td className="px-4 py-3">
                             <span className={joinInventoryClasses("planner-data-text inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold", actionMeta.badgeClassName)}>
                               <span className="material-symbols-outlined" style={{ fontSize: 14 }}>{actionMeta.icon}</span>
-                              {transaction.action || "Unknown"}
+                              {transaction.action || t("unknownLabel")}
                             </span>
                           </td>
                           <td className="planner-data-text px-4 py-3 font-semibold text-emerald-700 dark:text-emerald-300">{formatInventoryNumber(physicalQuantity)}</td>
                           <td className="planner-data-text px-4 py-3 font-semibold text-amber-700 dark:text-amber-300">{formatInventoryNumber(reservedQuantity)}</td>
                           <td className="planner-data-text px-4 py-3 font-semibold text-sky-700 dark:text-sky-300">{formatInventoryNumber(availableQuantity)}</td>
-                          <td className="planner-data-text px-4 py-3 text-on-surface-variant [overflow-wrap:anywhere]">{transaction.source || "System"}</td>
+                          <td className="planner-data-text px-4 py-3 text-on-surface-variant [overflow-wrap:anywhere]">{transaction.source || t("systemLabel")}</td>
                           <td className="planner-data-text px-4 py-3 whitespace-pre-wrap text-on-surface-variant [overflow-wrap:anywhere]">{transaction.note || transaction.migrationNote || "—"}</td>
                         </tr>
                       );
