@@ -219,7 +219,7 @@ function PhotosSection({ checkImages, labelImages, totalCount, onPreview }) {
           )}
           {labelImages.length > 0 && (
             <div>
-              <p className="text-[10px] font-semibold text-outline mb-2">材料ラベル ({labelImages.length})</p>
+              <p className="text-[10px] font-semibold text-outline mb-2">{t("materialLabelsHeading", { count: labelImages.length })}</p>
               <div className="grid grid-cols-4 gap-2">
                 {labelImages.map((url, i) => (
                   <button
@@ -230,10 +230,10 @@ function PhotosSection({ checkImages, labelImages, totalCount, onPreview }) {
                   >
                     <img
                       src={url}
-                      alt={`材料ラベル ${i + 1}`}
+                      alt={t("materialLabelPhoto", { n: i + 1 })}
                       className="w-full aspect-square object-cover bg-black/20"
                     />
-                    <p className="text-[9px] text-outline text-center py-1">材料ラベル {i + 1}</p>
+                    <p className="text-[9px] text-outline text-center py-1">{t("materialLabelPhoto", { n: i + 1 })}</p>
                   </button>
                 ))}
               </div>
@@ -409,14 +409,14 @@ export default function RecordDetailModal({ record, processName, onClose, onLotC
   const entries = Object.entries(record).filter(([k]) => !SKIP.has(k) && record[k] != null && record[k] !== "");
 
   const keyFields = [
-    ["工場",      record["工場"]],
-    ["Date",      record.Date],
-    ["作業者",    record.Worker_Name],
-    ["設備",      record["設備"]],
-    ["開始時刻",  record.Time_start],
-    ["終了時刻",  record.Time_end],
-    ["稼働時間",  hrs != null ? `${hrs.toFixed(2)} hrs` : null],
-    ["製造ロット", record["製造ロット"]],
+    [t("factory"),          record["工場"]],
+    [t("date"),             record.Date],
+    [t("workerLabel"),      record.Worker_Name],
+    [t("equipmentLabel"),   record["設備"]],
+    [t("startTimeLabel"),   record.Time_start],
+    [t("endTimeLabel"),     record.Time_end],
+    [t("workHoursLabel"),   hrs != null ? `${hrs.toFixed(2)} hrs` : null],
+    [t("manufacturingLotLabel"), record["製造ロット"]],
   ].filter(([, v]) => v != null);
 
   const processAccent = PROCESS_ACCENT[processName];
@@ -522,7 +522,7 @@ export default function RecordDetailModal({ record, processName, onClose, onLotC
           ))}
           {materialLots.length > 0 ? (
             <div className="flex flex-col gap-1.5 col-span-2">
-              <span className="text-[10px] font-semibold uppercase tracking-wider text-outline">材料ロット</span>
+              <span className="text-[10px] font-semibold uppercase tracking-wider text-outline">{t("materialLotLabel")}</span>
               <div className="flex flex-wrap gap-1.5">
                 {materialLots.map((lot) => (
                   <button
@@ -539,7 +539,7 @@ export default function RecordDetailModal({ record, processName, onClose, onLotC
             </div>
           ) : record["材料ロット"] != null && (
             <div className="flex flex-col gap-0.5">
-              <span className="text-[10px] font-semibold uppercase tracking-wider text-outline">材料ロット</span>
+              <span className="text-[10px] font-semibold uppercase tracking-wider text-outline">{t("materialLotLabel")}</span>
               <span className="text-sm font-semibold text-on-surface">{record["材料ロット"]}</span>
             </div>
           )}
@@ -548,8 +548,8 @@ export default function RecordDetailModal({ record, processName, onClose, onLotC
         {/* Uploaded photos — collapsible */}
         {(() => {
           const checkImages = [
-            { label: "初物チェック画像", url: record["初物チェック画像"] },
-            { label: "終物チェック画像", url: record["終物チェック画像"] },
+            { label: t("firstItemCheckImage"), url: record["初物チェック画像"] },
+            { label: t("lastItemCheckImage"), url: record["終物チェック画像"] },
           ].filter((i) => i.url);
           const labelImages = Array.isArray(record.materialLabelImages)
             ? record.materialLabelImages.filter(Boolean)
@@ -560,7 +560,7 @@ export default function RecordDetailModal({ record, processName, onClose, onLotC
           function handleOpenPreview(group, index) {
             const combined = [
               ...checkImages.map((image) => ({ url: image.url, label: image.label })),
-              ...labelImages.map((url, i) => ({ url, label: `材料ラベル ${i + 1}` })),
+              ...labelImages.map((url, i) => ({ url, label: t("materialLabelPhoto", { n: i + 1 }) })),
             ];
             const activeIndex = group === "label" ? checkImages.length + index : index;
             setPhotoPreview({

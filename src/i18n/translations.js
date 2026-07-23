@@ -350,6 +350,19 @@ const translations = {
     downloadPhotoBtn: "Download Photo",
     photosForAriaLabel: "Photos for {title}",
 
+    // Record detail modal — key fields
+    workerLabel: "Worker",
+    equipmentLabel: "Equipment",
+    startTimeLabel: "Start Time",
+    endTimeLabel: "End Time",
+    workHoursLabel: "Work Hours",
+    manufacturingLotLabel: "Manufacturing Lot",
+    materialLotLabel: "Material Lot",
+    materialLabelPhoto: "Material Label {n}",
+    materialLabelsHeading: "Material Labels ({count})",
+    firstItemCheckImage: "First Item Check Image",
+    lastItemCheckImage: "Last Item Check Image",
+
     // Approvals
     approvalsTitle: "Data Approval System",
     pending: "Pending",
@@ -770,6 +783,19 @@ const translations = {
     openPhotoBtn: "写真を開く",
     downloadPhotoBtn: "写真をダウンロード",
     photosForAriaLabel: "{title}の写真",
+
+    // Record detail modal — key fields
+    workerLabel: "作業者",
+    equipmentLabel: "設備",
+    startTimeLabel: "開始時刻",
+    endTimeLabel: "終了時刻",
+    workHoursLabel: "稼働時間",
+    manufacturingLotLabel: "製造ロット",
+    materialLotLabel: "材料ロット",
+    materialLabelPhoto: "材料ラベル {n}",
+    materialLabelsHeading: "材料ラベル（{count}）",
+    firstItemCheckImage: "初物チェック画像",
+    lastItemCheckImage: "終物チェック画像",
 
     // Approvals
     approvalsTitle: "データ承認システム",
