@@ -26,8 +26,9 @@ import {
   normalizeQuotedCsvValue,
   resolveNodaDisplayStatus,
 } from "../../utils/noda";
+import { useLanguage } from "../../contexts/LanguageContext";
 
-function parseCsvAdditions(csvText) {
+function parseCsvAdditions(csvText, t) {
   const parsed = Papa.parse(csvText, {
     header: true,
     skipEmptyLines: true,
@@ -41,7 +42,7 @@ function parseCsvAdditions(csvText) {
   const quantityHeader = headers.find((header) => header === "収容数" || header === "納入指示数" || header === "数量");
 
   if (!quantityHeader || (!serialHeader && !partHeader)) {
-    throw new Error("CSV must contain 背番号 or 品番 plus a quantity column.");
+    throw new Error(t("csvMustContainColumnMessage"));
   }
 
   return parsed.data.reduce((items, row) => {
@@ -74,17 +75,19 @@ function readCsvWithShiftJisFallback(file) {
 }
 
 function StatusBadge({ request }) {
+  const { t } = useLanguage();
   const meta = getNodaStatusMeta(resolveNodaDisplayStatus(request));
-  return <StatusChip icon={meta.icon} label={meta.label} className={meta.badgeClassName} />;
+  return <StatusChip icon={meta.icon} label={t(meta.labelKey)} className={meta.badgeClassName} />;
 }
 
 function InventoryBadge({ lineItem }) {
+  const { t } = useLanguage();
   if (lineItem.inventoryStatus === "none") {
-    return <span className="inline-flex rounded-full bg-error/10 px-2.5 py-1 text-xs font-semibold text-error">Waiting</span>;
+    return <span className="inline-flex rounded-full bg-error/10 px-2.5 py-1 text-xs font-semibold text-error">{t("waitingBadgeLabel")}</span>;
   }
 
   if (lineItem.inventoryStatus === "insufficient") {
-    return <span className="inline-flex rounded-full bg-amber-500/10 px-2.5 py-1 text-xs font-semibold text-amber-700 dark:text-amber-300">Partial</span>;
+    return <span className="inline-flex rounded-full bg-amber-500/10 px-2.5 py-1 text-xs font-semibold text-amber-700 dark:text-amber-300">{t("partialBadgeLabel")}</span>;
   }
 
   return <span className="inline-flex rounded-full bg-emerald-500/10 px-2.5 py-1 text-xs font-semibold text-emerald-700 dark:text-emerald-300">OK</span>;
@@ -133,6 +136,7 @@ function sortNodaLineItems(items = [], sort = {}) {
 }
 
 export default function NodaDetailModal({ open, requestId, mode = "view", authUser, onClose, onSubmitted }) {
+  const { t } = useLanguage();
   const canManageRequest = canManageNodaRequests(authUser);
   const [request, setRequest] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -176,7 +180,7 @@ export default function NodaDetailModal({ open, requestId, mode = "view", authUs
       setInventoryPreview(null);
     } catch (loadError) {
       setRequest(null);
-      setError(loadError.message || "Failed to load the request details.");
+      setError(loadError.message || t("failedLoadRequestDetailsMessage"));
     } finally {
       setLoading(false);
     }
@@ -202,7 +206,7 @@ export default function NodaDetailModal({ open, requestId, mode = "view", authUs
         const result = await checkNodaInventory(addForm.backNumber.trim());
         if (cancelled) return;
         if (!result?.success || !result.inventory) {
-          setInventoryPreview({ exists: false, message: "Item not found in inventory." });
+          setInventoryPreview({ exists: false, message: t("itemNotFoundInInventoryMessage") });
           return;
         }
         const available = result.inventory.availableQuantity || 0;
@@ -215,7 +219,7 @@ export default function NodaDetailModal({ open, requestId, mode = "view", authUs
         });
       } catch (loadError) {
         if (!cancelled) {
-          setInventoryPreview({ exists: false, message: loadError.message || "Could not check inventory." });
+          setInventoryPreview({ exists: false, message: loadError.message || t("couldNotCheckInventoryMessage") });
         }
       }
     }, 220);
@@ -248,28 +252,28 @@ export default function NodaDetailModal({ open, requestId, mode = "view", authUs
   const lineItemColumns = [
     {
       key: "lineNumber",
-      label: "Line",
+      label: t("lineLabel"),
       width: 88,
       renderCell: (lineItem) => <span className="text-on-surface">{lineItem.lineNumber}</span>,
       disableCellWrapper: true,
     },
     {
       key: "品番",
-      label: "品番",
+      label: t("partNumberLabel"),
       width: 164,
       renderCell: (lineItem) => <span className="font-semibold text-on-surface">{lineItem.品番 || "—"}</span>,
       disableCellWrapper: true,
     },
     {
       key: "背番号",
-      label: "背番号",
+      label: t("serialNumberLabel"),
       width: 164,
       renderCell: (lineItem) => <span className="text-on-surface">{lineItem.背番号 || "—"}</span>,
       disableCellWrapper: true,
     },
     {
       key: "quantity",
-      label: "Quantity",
+      label: t("quantity"),
       width: 168,
       renderCell: (lineItem) => (
         canManageRequest && viewMode === "edit" ? (
@@ -290,7 +294,7 @@ export default function NodaDetailModal({ open, requestId, mode = "view", authUs
               disabled={busy}
               className="rounded-2xl border border-separator/40 px-3 py-2 text-xs font-semibold text-on-surface transition hover:bg-surface-container"
             >
-              Save
+              {t("save")}
             </button>
           </div>
         ) : (
@@ -301,28 +305,28 @@ export default function NodaDetailModal({ open, requestId, mode = "view", authUs
     },
     {
       key: "reservedQuantity",
-      label: "Reserved",
+      label: t("reservedColumnLabel"),
       width: 116,
       renderCell: (lineItem) => <span className="text-on-surface">{lineItem.reservedQuantity ?? lineItem.quantity}</span>,
       disableCellWrapper: true,
     },
     {
       key: "shortfallQuantity",
-      label: "Shortfall",
+      label: t("shortfallColumnLabel"),
       width: 116,
       renderCell: (lineItem) => <span className="text-on-surface">{lineItem.shortfallQuantity ?? 0}</span>,
       disableCellWrapper: true,
     },
     {
       key: "inventoryStatus",
-      label: "Inventory",
+      label: t("inventoryColumnLabel"),
       width: 124,
       renderCell: (lineItem) => <InventoryBadge lineItem={lineItem} />,
       disableCellWrapper: true,
     },
     {
       key: "status",
-      label: "Status",
+      label: t("status"),
       width: 152,
       renderCell: (lineItem) => {
         const lineMeta = getNodaStatusMeta(lineItem.status);
@@ -334,14 +338,14 @@ export default function NodaDetailModal({ open, requestId, mode = "view", authUs
             disabled={busy}
             className="h-10 rounded-2xl border border-outline-variant/30 bg-white px-3 text-sm text-on-surface outline-none transition focus:border-primary/40 dark:bg-surface-container"
           >
-            <option value="pending">Pending</option>
-            <option value="in-progress">In Progress</option>
-            <option value="completed" disabled={lineItem.status === "in-progress"}>Completed</option>
+            <option value="pending">{t("pending")}</option>
+            <option value="in-progress">{t("nodaStatusInProgress")}</option>
+            <option value="completed" disabled={lineItem.status === "in-progress"}>{t("nodaStatusCompleted")}</option>
           </select>
         ) : (
           <span className={joinNodaClasses("inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold", lineMeta.badgeClassName)}>
             <span className="material-symbols-outlined" style={{ fontSize: 14 }}>{lineMeta.icon}</span>
-            {lineMeta.label}
+            {t(lineMeta.labelKey)}
           </span>
         );
       },
@@ -349,7 +353,7 @@ export default function NodaDetailModal({ open, requestId, mode = "view", authUs
     },
     ...(canManageRequest && viewMode === "edit" ? [{
       key: "actions",
-      label: "Actions",
+      label: t("actions"),
       sortable: false,
       width: 124,
       align: "right",
@@ -360,7 +364,7 @@ export default function NodaDetailModal({ open, requestId, mode = "view", authUs
             onClick={() => handleUpdateLineStatus(lineItem, "completed")}
             disabled={busy || lineItem.status === "completed" || lineItem.status === "in-progress"}
             className="flex h-9 w-9 items-center justify-center rounded-2xl text-emerald-700 transition hover:bg-emerald-500/10 disabled:opacity-40 dark:text-emerald-300"
-            title="Mark completed"
+            title={t("markCompletedTooltip")}
           >
             <span className="material-symbols-outlined" style={{ fontSize: 18 }}>check_circle</span>
           </button>
@@ -369,7 +373,7 @@ export default function NodaDetailModal({ open, requestId, mode = "view", authUs
             onClick={() => handleDeleteLineItem(lineItem)}
             disabled={busy}
             className="flex h-9 w-9 items-center justify-center rounded-2xl text-error transition hover:bg-error/10 disabled:opacity-40"
-            title="Delete line"
+            title={t("deleteLineTooltip")}
           >
             <span className="material-symbols-outlined" style={{ fontSize: 18 }}>delete</span>
           </button>
@@ -381,7 +385,7 @@ export default function NodaDetailModal({ open, requestId, mode = "view", authUs
 
   async function resolveActorName() {
     if (!authUser?.username) {
-      return "Unknown User";
+      return t("unknownUserLabel");
     }
     return fetchNodaUserFullName(authUser.username);
   }
@@ -402,9 +406,9 @@ export default function NodaDetailModal({ open, requestId, mode = "view", authUs
       });
       await loadRequest();
       setViewMode("view");
-      onSubmitted?.({ type: "success", message: `Updated ${request.requestNumber}.` });
+      onSubmitted?.({ type: "success", message: t("updatedRequestMessage", { request: request.requestNumber }) });
     } catch (saveError) {
-      setError(saveError.message || "Failed to save the request.");
+      setError(saveError.message || t("failedSaveRequestMessage"));
     } finally {
       setBusy(false);
     }
@@ -419,9 +423,9 @@ export default function NodaDetailModal({ open, requestId, mode = "view", authUs
     try {
       await updateNodaRequest(request._id, { pickupDate });
       await loadRequest();
-      onSubmitted?.({ type: "success", message: `Updated pickup date for ${request.requestNumber}.` });
+      onSubmitted?.({ type: "success", message: t("updatedPickupDateMessage", { request: request.requestNumber }) });
     } catch (saveError) {
-      setError(saveError.message || "Failed to update pickup date.");
+      setError(saveError.message || t("failedUpdatePickupDateMessage"));
     } finally {
       setBusy(false);
     }
@@ -436,9 +440,9 @@ export default function NodaDetailModal({ open, requestId, mode = "view", authUs
     try {
       await updateNodaLineItemStatus(request._id, lineItem.lineNumber, nextStatus);
       await loadRequest();
-      onSubmitted?.({ type: "success", message: `Updated line ${lineItem.lineNumber} on ${request.requestNumber}.` });
+      onSubmitted?.({ type: "success", message: t("updatedLineStatusMessage", { line: lineItem.lineNumber, request: request.requestNumber }) });
     } catch (saveError) {
-      setError(saveError.message || "Failed to update line status.");
+      setError(saveError.message || t("failedUpdateLineStatusMessage"));
     } finally {
       setBusy(false);
     }
@@ -448,7 +452,7 @@ export default function NodaDetailModal({ open, requestId, mode = "view", authUs
     if (!request?._id) return;
     const newQuantity = Number.parseInt(lineQuantities[lineItem.lineNumber], 10) || 0;
     if (newQuantity <= 0) {
-      setError("Line item quantity must be greater than zero.");
+      setError(t("lineQuantityPositiveMessage"));
       return;
     }
 
@@ -464,9 +468,9 @@ export default function NodaDetailModal({ open, requestId, mode = "view", authUs
         背番号: lineItem.背番号,
       }, actorName);
       await loadRequest();
-      onSubmitted?.({ type: "success", message: `Updated quantity for line ${lineItem.lineNumber}.` });
+      onSubmitted?.({ type: "success", message: t("updatedLineQuantityMessage", { line: lineItem.lineNumber }) });
     } catch (saveError) {
-      setError(saveError.message || "Failed to update line quantity.");
+      setError(saveError.message || t("failedUpdateLineQuantityMessage"));
     } finally {
       setBusy(false);
     }
@@ -475,7 +479,7 @@ export default function NodaDetailModal({ open, requestId, mode = "view", authUs
   async function handleDeleteLineItem(lineItem) {
     if (!request?._id) return;
 
-    const confirmed = window.confirm(`Delete line ${lineItem.lineNumber} (${lineItem.背番号}) from ${request.requestNumber}?`);
+    const confirmed = window.confirm(t("deleteLineConfirm", { line: lineItem.lineNumber, serial: lineItem.背番号, request: request.requestNumber }));
     if (!confirmed) return;
 
     setBusy(true);
@@ -489,9 +493,9 @@ export default function NodaDetailModal({ open, requestId, mode = "view", authUs
         quantity: lineItem.quantity,
       }, actorName);
       await loadRequest();
-      onSubmitted?.({ type: "success", message: `Deleted line ${lineItem.lineNumber} from ${request.requestNumber}.` });
+      onSubmitted?.({ type: "success", message: t("deletedLineMessage", { line: lineItem.lineNumber, request: request.requestNumber }) });
     } catch (deleteError) {
-      setError(deleteError.message || "Failed to delete line item.");
+      setError(deleteError.message || t("failedDeleteLineMessage"));
     } finally {
       setBusy(false);
     }
@@ -500,7 +504,7 @@ export default function NodaDetailModal({ open, requestId, mode = "view", authUs
   async function handleDeleteRequest() {
     if (!request?._id) return;
 
-    const confirmed = window.confirm(`Delete ${request.requestNumber}? This cannot be undone.`);
+    const confirmed = window.confirm(t("deleteRequestConfirm", { request: request.requestNumber }));
     if (!confirmed) return;
 
     setBusy(true);
@@ -509,10 +513,10 @@ export default function NodaDetailModal({ open, requestId, mode = "view", authUs
     try {
       const actorName = await resolveActorName();
       await deleteNodaRequest(request._id, actorName);
-      onSubmitted?.({ type: "success", message: `Deleted ${request.requestNumber}.` });
+      onSubmitted?.({ type: "success", message: t("deletedRequestMessage", { request: request.requestNumber }) });
       onClose?.();
     } catch (deleteError) {
-      setError(deleteError.message || "Failed to delete the request.");
+      setError(deleteError.message || t("failedDeleteRequestMessage"));
     } finally {
       setBusy(false);
     }
@@ -573,7 +577,7 @@ export default function NodaDetailModal({ open, requestId, mode = "view", authUs
     const quantity = Number.parseInt(addForm.quantity, 10) || 0;
 
     if (!partNumber || !backNumber || quantity <= 0) {
-      setError("Part number, serial number, and quantity are required.");
+      setError(t("partSerialQuantityRequiredMessage"));
       return;
     }
 
@@ -593,7 +597,7 @@ export default function NodaDetailModal({ open, requestId, mode = "view", authUs
 
     try {
       const csvText = await readCsvWithShiftJisFallback(file);
-      const rows = parseCsvAdditions(csvText);
+      const rows = parseCsvAdditions(csvText, t);
 
       for (const row of rows) {
         let item = { ...row };
@@ -617,7 +621,7 @@ export default function NodaDetailModal({ open, requestId, mode = "view", authUs
         }
       }
     } catch (loadError) {
-      setError(loadError.message || "Failed to import additional items from CSV.");
+      setError(loadError.message || t("failedImportCsvItemsMessage"));
     } finally {
       setBusy(false);
     }
@@ -625,7 +629,7 @@ export default function NodaDetailModal({ open, requestId, mode = "view", authUs
 
   async function handleSubmitAddedItems() {
     if (!request?._id || !addCart.length) {
-      setError("Add at least one new item before submitting.");
+      setError(t("addAtLeastOneNewItemMessage"));
       return;
     }
 
@@ -638,9 +642,9 @@ export default function NodaDetailModal({ open, requestId, mode = "view", authUs
       setAddCart([]);
       await loadRequest();
       setBulkTab("existing");
-      onSubmitted?.({ type: "success", message: `Added ${addCart.length} item${addCart.length === 1 ? "" : "s"} to ${request.requestNumber}.` });
+      onSubmitted?.({ type: "success", message: t("addedItemsToRequestMessage", { count: addCart.length, plural: addCart.length === 1 ? "" : "s", request: request.requestNumber }) });
     } catch (saveError) {
-      setError(saveError.message || "Failed to add items to the request.");
+      setError(saveError.message || t("failedAddItemsMessage"));
     } finally {
       setBusy(false);
     }
@@ -649,7 +653,7 @@ export default function NodaDetailModal({ open, requestId, mode = "view", authUs
   const footer = (
     <div className="flex flex-wrap items-center justify-between gap-3">
       <div className="text-sm text-on-surface-variant">
-        {loading ? "Loading request…" : request ? request.requestNumber : ""}
+        {loading ? t("loadingRequestLabel") : request ? request.requestNumber : ""}
       </div>
       <div className="flex flex-wrap gap-3">
         {viewMode === "edit" ? (
@@ -658,7 +662,7 @@ export default function NodaDetailModal({ open, requestId, mode = "view", authUs
             onClick={() => setViewMode("view")}
             className="rounded-2xl border border-separator/40 px-4 py-2 text-sm font-semibold text-on-surface transition hover:bg-surface-container"
           >
-            Cancel Edit
+            {t("cancelEditButton")}
           </button>
         ) : null}
         <button
@@ -666,7 +670,7 @@ export default function NodaDetailModal({ open, requestId, mode = "view", authUs
           onClick={() => onClose?.()}
           className="rounded-2xl border border-separator/40 px-4 py-2 text-sm font-semibold text-on-surface transition hover:bg-surface-container"
         >
-          Close
+          {t("close")}
         </button>
       </div>
     </div>
@@ -676,11 +680,11 @@ export default function NodaDetailModal({ open, requestId, mode = "view", authUs
     <NodaModalFrame
       open={open}
       onClose={onClose}
-      eyebrow="Noda Request"
+      eyebrow={t("nodaRequestLabel")}
       icon="description"
       showIcon={false}
-      title={request?.requestNumber || "Noda Request"}
-      subtitle={request ? `${isBulkRequest ? "Bulk" : "Single"} request details` : "Loading request details"}
+      title={request?.requestNumber || t("nodaRequestLabel")}
+      subtitle={request ? t("bulkOrSingleRequestDetails", { type: isBulkRequest ? t("bulkLabel") : t("singleLabel") }) : t("loadingRequestDetailsLabel")}
       footer={footer}
       maxWidthClassName="max-w-7xl"
     >
@@ -693,7 +697,7 @@ export default function NodaDetailModal({ open, requestId, mode = "view", authUs
 
         {loading ? (
           <div className="rounded-2xl border border-separator/40 bg-surface-container-low/35 px-6 py-12 text-center text-sm text-on-surface-variant">
-            Loading request details…
+            {t("loadingRequestDetailsLabel")}
           </div>
         ) : null}
 
@@ -703,17 +707,17 @@ export default function NodaDetailModal({ open, requestId, mode = "view", authUs
               <div className="flex flex-wrap items-start justify-between gap-4">
                 <div>
                   <div className="flex flex-wrap items-center gap-3">
-                    <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Overview</div>
+                    <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">{t("overview")}</div>
                     <StatusBadge request={request} />
                     <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-primary">
-                      {isBulkRequest ? "Bulk" : "Single"}
+                      {isBulkRequest ? t("bulkLabel") : t("singleLabel")}
                     </span>
                   </div>
                   <p className="mt-2 text-sm text-on-surface-variant">
-                    Created {formatNodaDateTime(request.createdAt)} by {request.createdBy || "Unknown User"}
+                    {t("createdByDateLabel", { date: formatNodaDateTime(request.createdAt), user: request.createdBy || t("unknownUserLabel") })}
                   </p>
                   <p className="mt-1 text-sm text-on-surface-variant">
-                    Completed {formatNodaDateTime(request.completedAt)}
+                    {t("completedDateInlineLabel", { date: formatNodaDateTime(request.completedAt) })}
                   </p>
                 </div>
                 <div className="flex flex-wrap gap-3">
@@ -723,7 +727,7 @@ export default function NodaDetailModal({ open, requestId, mode = "view", authUs
                       onClick={() => setViewMode("edit")}
                       className="rounded-2xl bg-primary px-4 py-2.5 text-sm font-semibold text-on-primary transition hover:opacity-90"
                     >
-                      Edit Request
+                      {t("editRequestButton")}
                     </button>
                   ) : null}
                   {canManageRequest ? (
@@ -733,7 +737,7 @@ export default function NodaDetailModal({ open, requestId, mode = "view", authUs
                       disabled={busy}
                       className="rounded-2xl bg-error px-4 py-2.5 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-60"
                     >
-                      Delete Request
+                      {t("deleteRequestButton")}
                     </button>
                   ) : null}
                 </div>
@@ -741,27 +745,27 @@ export default function NodaDetailModal({ open, requestId, mode = "view", authUs
 
               <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-6">
                 <div className="rounded-2xl border border-outline-variant/15 bg-surface-container-low/35 p-4">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Pickup Date</p>
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">{t("pickupDateLabel")}</p>
                   <p className="mt-2 text-sm font-semibold text-on-surface">{formatNodaDate(request.pickupDate || request.date)}</p>
                 </div>
                 <div className="rounded-2xl border border-outline-variant/15 bg-surface-container-low/35 p-4">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Deadline</p>
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">{t("deadlineLabel")}</p>
                   <p className="mt-2 text-sm font-semibold text-on-surface">{formatNodaDate(request.納入指示日)}</p>
                 </div>
                 <div className="rounded-2xl border border-outline-variant/15 bg-surface-container-low/35 p-4">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Delivery Order</p>
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">{t("deliveryOrderLabel")}</p>
                   <p className="mt-2 text-sm font-semibold text-on-surface">{request.便 || "—"}</p>
                 </div>
                 <div className="rounded-2xl border border-outline-variant/15 bg-surface-container-low/35 p-4">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Delivery Note</p>
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">{t("deliveryNoteLabel")}</p>
                   <p className="mt-2 text-sm font-semibold text-on-surface">{request.納品書番号 || "—"}</p>
                 </div>
                 <div className="rounded-2xl border border-outline-variant/15 bg-surface-container-low/35 p-4">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Completed Date</p>
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">{t("completedDateColumnLabel")}</p>
                   <p className="mt-2 text-sm font-semibold text-on-surface">{formatNodaDate(request.completedAt)}</p>
                 </div>
                 <div className="rounded-2xl border border-outline-variant/15 bg-surface-container-low/35 p-4">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Completed Time</p>
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">{t("completedTimeColumnLabel")}</p>
                   <p className="mt-2 text-sm font-semibold text-on-surface">{formatNodaTime(request.completedAt)}</p>
                 </div>
               </div>
@@ -771,24 +775,24 @@ export default function NodaDetailModal({ open, requestId, mode = "view", authUs
               <div className="glass-card rounded-2xl p-5">
                 <div className="grid gap-4 md:grid-cols-2">
                   <label className="block">
-                    <span className="block text-xs font-semibold uppercase tracking-[0.18em] text-outline">Status</span>
+                    <span className="block text-xs font-semibold uppercase tracking-[0.18em] text-outline">{t("status")}</span>
                     {viewMode === "edit" ? (
                       <select
                         value={singleForm.status}
                         onChange={(event) => setSingleForm((current) => ({ ...current, status: event.target.value }))}
                         className="mt-2 h-11 w-full rounded-2xl border border-outline-variant/30 bg-white px-4 text-sm text-on-surface outline-none transition focus:border-primary/40 dark:bg-surface-container"
                       >
-                        <option value="pending">Pending</option>
-                        <option value="active">Active</option>
-                        <option value="complete">Complete</option>
-                        <option value="failed">Failed</option>
+                        <option value="pending">{t("pending")}</option>
+                        <option value="active">{t("nodaStatusActive")}</option>
+                        <option value="complete">{t("nodaStatusComplete")}</option>
+                        <option value="failed">{t("nodaStatusFailed")}</option>
                       </select>
                     ) : (
                       <p className="mt-2 text-sm font-semibold text-on-surface">{request.status}</p>
                     )}
                   </label>
                   <label className="block">
-                    <span className="block text-xs font-semibold uppercase tracking-[0.18em] text-outline">品番</span>
+                    <span className="block text-xs font-semibold uppercase tracking-[0.18em] text-outline">{t("partNumberLabel")}</span>
                     {viewMode === "edit" ? (
                       <input
                         type="text"
@@ -801,7 +805,7 @@ export default function NodaDetailModal({ open, requestId, mode = "view", authUs
                     )}
                   </label>
                   <label className="block">
-                    <span className="block text-xs font-semibold uppercase tracking-[0.18em] text-outline">背番号</span>
+                    <span className="block text-xs font-semibold uppercase tracking-[0.18em] text-outline">{t("serialNumberLabel")}</span>
                     {viewMode === "edit" ? (
                       <input
                         type="text"
@@ -814,7 +818,7 @@ export default function NodaDetailModal({ open, requestId, mode = "view", authUs
                     )}
                   </label>
                   <label className="block">
-                    <span className="block text-xs font-semibold uppercase tracking-[0.18em] text-outline">Pickup Date</span>
+                    <span className="block text-xs font-semibold uppercase tracking-[0.18em] text-outline">{t("pickupDateLabel")}</span>
                     {viewMode === "edit" ? (
                       <input
                         type="date"
@@ -827,7 +831,7 @@ export default function NodaDetailModal({ open, requestId, mode = "view", authUs
                     )}
                   </label>
                   <label className="block md:col-span-2">
-                    <span className="block text-xs font-semibold uppercase tracking-[0.18em] text-outline">Quantity</span>
+                    <span className="block text-xs font-semibold uppercase tracking-[0.18em] text-outline">{t("quantity")}</span>
                     {viewMode === "edit" ? (
                       <input
                         type="number"
@@ -850,7 +854,7 @@ export default function NodaDetailModal({ open, requestId, mode = "view", authUs
                       disabled={busy}
                       className="rounded-2xl bg-primary px-5 py-2.5 text-sm font-semibold text-on-primary transition hover:opacity-90 disabled:opacity-60"
                     >
-                      {busy ? "Saving…" : "Save Changes"}
+                      {busy ? t("savingLabel") : t("saveChangesLabel")}
                     </button>
                   </div>
                 ) : null}
@@ -861,7 +865,7 @@ export default function NodaDetailModal({ open, requestId, mode = "view", authUs
                   <div className="glass-card rounded-2xl p-5">
                     <div className="flex flex-wrap items-end justify-between gap-4">
                       <label className="block max-w-xs flex-1">
-                        <span className="block text-xs font-semibold uppercase tracking-[0.18em] text-outline">Pickup Date</span>
+                        <span className="block text-xs font-semibold uppercase tracking-[0.18em] text-outline">{t("pickupDateLabel")}</span>
                         <input
                           type="date"
                           value={pickupDate}
@@ -875,7 +879,7 @@ export default function NodaDetailModal({ open, requestId, mode = "view", authUs
                         disabled={busy || !pickupDate}
                         className="rounded-2xl bg-primary px-5 py-2.5 text-sm font-semibold text-on-primary transition hover:opacity-90 disabled:opacity-60"
                       >
-                        Save Pickup Date
+                        {t("savePickupDateButton")}
                       </button>
                     </div>
                   </div>
@@ -893,7 +897,7 @@ export default function NodaDetailModal({ open, requestId, mode = "view", authUs
                           : "border border-separator/40 text-on-surface hover:bg-surface-container"
                       )}
                     >
-                      Existing Items
+                      {t("existingItemsTab")}
                     </button>
                     <button
                       type="button"
@@ -905,7 +909,7 @@ export default function NodaDetailModal({ open, requestId, mode = "view", authUs
                           : "border border-separator/40 text-on-surface hover:bg-surface-container"
                       )}
                     >
-                      Add More Items
+                      {t("addMoreItemsTab")}
                     </button>
                   </div>
                 ) : null}
@@ -919,8 +923,8 @@ export default function NodaDetailModal({ open, requestId, mode = "view", authUs
                       onSort={handleLineItemSort}
                       rowKey={(lineItem) => lineItem.lineNumber}
                       renderPageInfo={null}
-                      emptyTitle="No line items"
-                      emptyMessage="This request does not contain any line items."
+                      emptyTitle={t("noLineItemsTitle")}
+                      emptyMessage={t("noLineItemsMessage")}
                       enableColumnResize
                       enableColumnReorder
                       layoutStorageKey="freyaAdmin2.noda-detail-line-items-layout"
@@ -942,17 +946,17 @@ export default function NodaDetailModal({ open, requestId, mode = "view", authUs
                   <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_340px]">
                     <div className="glass-card rounded-2xl p-5">
                       <div className="flex flex-wrap items-center justify-between gap-3">
-                        <h3 className="text-base font-semibold text-on-surface">Add Items</h3>
+                        <h3 className="text-base font-semibold text-on-surface">{t("addItemsHeading")}</h3>
                         <label className="inline-flex cursor-pointer items-center gap-2 rounded-2xl border border-dashed border-outline-variant/30 px-4 py-2.5 text-sm font-semibold text-on-surface transition hover:border-primary/40 hover:bg-primary/5">
                           <span className="material-symbols-outlined" style={{ fontSize: 18 }}>upload_file</span>
-                          Import CSV
+                          {t("importCsvButton")}
                           <input type="file" accept=".csv" className="hidden" onChange={handleCsvAddition} disabled={busy} />
                         </label>
                       </div>
 
                       <div className="mt-4 grid gap-4 md:grid-cols-3">
                         <label className="block">
-                          <span className="block text-xs font-semibold uppercase tracking-[0.18em] text-outline">品番</span>
+                          <span className="block text-xs font-semibold uppercase tracking-[0.18em] text-outline">{t("partNumberLabel")}</span>
                           <input
                             type="text"
                             value={addForm.partNumber}
@@ -962,7 +966,7 @@ export default function NodaDetailModal({ open, requestId, mode = "view", authUs
                           />
                         </label>
                         <label className="block">
-                          <span className="block text-xs font-semibold uppercase tracking-[0.18em] text-outline">背番号</span>
+                          <span className="block text-xs font-semibold uppercase tracking-[0.18em] text-outline">{t("serialNumberLabel")}</span>
                           <input
                             type="text"
                             value={addForm.backNumber}
@@ -972,7 +976,7 @@ export default function NodaDetailModal({ open, requestId, mode = "view", authUs
                           />
                         </label>
                         <label className="block">
-                          <span className="block text-xs font-semibold uppercase tracking-[0.18em] text-outline">Quantity</span>
+                          <span className="block text-xs font-semibold uppercase tracking-[0.18em] text-outline">{t("quantity")}</span>
                           <input
                             type="number"
                             min="1"
@@ -985,8 +989,8 @@ export default function NodaDetailModal({ open, requestId, mode = "view", authUs
 
                       <div className="mt-4 rounded-2xl border border-separator/40 bg-surface-container-low/35 px-4 py-3 text-sm text-on-surface-variant">
                         {inventoryPreview?.exists
-                          ? `Available ${inventoryPreview.available} • Reserved now ${inventoryPreview.reserved} • Shortfall ${inventoryPreview.shortfall}`
-                          : inventoryPreview?.message || "Enter a serial number to preview inventory availability."}
+                          ? t("inventoryPreviewSummary", { available: inventoryPreview.available, reserved: inventoryPreview.reserved, shortfall: inventoryPreview.shortfall })
+                          : inventoryPreview?.message || t("enterSerialToPreviewMessage")}
                       </div>
 
                       <div className="mt-4 flex justify-end">
@@ -995,21 +999,21 @@ export default function NodaDetailModal({ open, requestId, mode = "view", authUs
                           onClick={handleAddSingleItem}
                           className="rounded-2xl bg-primary px-5 py-2.5 text-sm font-semibold text-on-primary transition hover:opacity-90"
                         >
-                          Add To Pending Cart
+                          {t("addToPendingCartButton")}
                         </button>
                       </div>
                     </div>
 
                     <div className="glass-card rounded-2xl p-5">
                       <div className="flex items-center justify-between gap-3">
-                        <h3 className="text-base font-semibold text-on-surface">Items To Add</h3>
+                        <h3 className="text-base font-semibold text-on-surface">{t("itemsToAddHeading")}</h3>
                         {addCart.length ? (
                           <button
                             type="button"
                             onClick={() => setAddCart([])}
                             className="rounded-2xl border border-separator/40 px-3 py-2 text-sm font-semibold text-on-surface transition hover:bg-surface-container"
                           >
-                            Clear
+                            {t("clearButton")}
                           </button>
                         ) : null}
                       </div>
@@ -1019,7 +1023,7 @@ export default function NodaDetailModal({ open, requestId, mode = "view", authUs
                             <div className="flex items-start justify-between gap-4">
                               <div>
                                 <div className="font-semibold text-on-surface">{item.背番号}</div>
-                                <div className="mt-1 text-sm text-on-surface-variant">{item.品番} • Qty {item.quantity}</div>
+                                <div className="mt-1 text-sm text-on-surface-variant">{item.品番} • {t("qtyInlineLabel", { n: item.quantity })}</div>
                               </div>
                               <button
                                 type="button"
@@ -1031,7 +1035,7 @@ export default function NodaDetailModal({ open, requestId, mode = "view", authUs
                             </div>
                           </div>
                         )) : (
-                          <EmptyState>No pending additions yet.</EmptyState>
+                          <EmptyState>{t("noPendingAdditionsMessage")}</EmptyState>
                         )}
                       </div>
 
@@ -1042,7 +1046,7 @@ export default function NodaDetailModal({ open, requestId, mode = "view", authUs
                           disabled={busy || !addCart.length}
                           className="rounded-2xl bg-emerald-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-60"
                         >
-                          Add {addCart.length || ""} Item{addCart.length === 1 ? "" : "s"}
+                          {t("addItemsCountButton", { count: addCart.length || "", plural: addCart.length === 1 ? "" : "s" })}
                         </button>
                       </div>
                     </div>

@@ -17,6 +17,7 @@ import {
   normalizeQuotedCsvValue,
   todayDateString,
 } from "../../utils/noda";
+import { useLanguage } from "../../contexts/LanguageContext";
 
 function joinClasses(...classes) {
   return classes.filter(Boolean).join(" ");
@@ -98,6 +99,7 @@ async function validateGenItems(parsedItems, deliveryDate) {
 }
 
 function DuplicateSelectionStep({ duplicateGroups, duplicateSelections, onToggle, onContinue }) {
+  const { t } = useLanguage();
   const groups = Object.values(duplicateGroups);
 
   return (
@@ -106,9 +108,9 @@ function DuplicateSelectionStep({ duplicateGroups, duplicateSelections, onToggle
         <div className="flex items-start gap-3">
           <span className="material-symbols-outlined">warning</span>
           <div>
-            <p className="font-semibold">Duplicate GEN entries detected</p>
+            <p className="font-semibold">{t("duplicateGenEntriesDetected")}</p>
             <p className="mt-1 text-amber-900/80 dark:text-amber-200/80">
-              Select the rows to include for each duplicated serial number. Multiple selections will be summed before comparison.
+              {t("duplicateGenEntriesDescription")}
             </p>
           </div>
         </div>
@@ -128,7 +130,7 @@ function DuplicateSelectionStep({ duplicateGroups, duplicateSelections, onToggle
                   <p className="text-sm text-on-surface-variant">{group.品番}</p>
                 </div>
                 <span className="rounded-full bg-amber-500/15 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-amber-700 dark:text-amber-300">
-                  {group.entries.length} duplicates
+                  {t("duplicatesCountLabel", { count: group.entries.length })}
                 </span>
               </div>
 
@@ -153,8 +155,8 @@ function DuplicateSelectionStep({ duplicateGroups, duplicateSelections, onToggle
                       />
                       <div className="flex-1">
                         <div className="flex flex-wrap items-center justify-between gap-2">
-                          <span className="font-semibold text-on-surface">{entry.quantity} pieces</span>
-                          <span className="text-xs text-on-surface-variant">Available stock: {entry.availableQuantity}</span>
+                          <span className="font-semibold text-on-surface">{t("piecesLabel", { count: entry.quantity })}</span>
+                          <span className="text-xs text-on-surface-variant">{t("availableStockInlineLabel", { count: entry.availableQuantity })}</span>
                         </div>
                       </div>
                     </label>
@@ -164,8 +166,8 @@ function DuplicateSelectionStep({ duplicateGroups, duplicateSelections, onToggle
 
               <div className="mt-3 rounded-2xl bg-surface-container-high/50 px-4 py-3 text-xs text-on-surface-variant">
                 {selectedRows.length
-                  ? `Selected quantity: ${selectedTotal} pieces`
-                  : "No entries selected. This serial number will be excluded."}
+                  ? t("selectedQuantityLabel", { count: selectedTotal })
+                  : t("noEntriesSelectedMessage")}
               </div>
             </div>
           );
@@ -178,7 +180,7 @@ function DuplicateSelectionStep({ duplicateGroups, duplicateSelections, onToggle
           onClick={onContinue}
           className="rounded-2xl bg-primary px-5 py-3 text-sm font-semibold text-on-primary transition hover:opacity-90"
         >
-          Continue To Comparison
+          {t("continueToComparisonButton")}
         </button>
       </div>
     </div>
@@ -186,22 +188,23 @@ function DuplicateSelectionStep({ duplicateGroups, duplicateSelections, onToggle
 }
 
 function ComparisonStep({ availableItems, existingRequestsCount, nextRequestNumber, quantities, onQuantityChange }) {
+  const { t } = useLanguage();
   return (
     <div className="space-y-5">
       <div className="rounded-[24px] border border-primary/20 bg-primary/8 p-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-primary">Creating Request</p>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-primary">{t("creatingRequestLabel")}</p>
             <h3 className="mt-1 text-lg font-semibold text-on-surface">{nextRequestNumber}</h3>
           </div>
           {existingRequestsCount ? (
             <span className="rounded-full bg-white/80 px-3 py-1 text-xs font-semibold text-on-surface dark:bg-surface-container">
-              {existingRequestsCount} existing requests on this date
+              {t("existingRequestsOnDateLabel", { count: existingRequestsCount })}
             </span>
           ) : null}
         </div>
         <p className="mt-3 text-sm text-on-surface-variant">
-          Adjust quantities below. Set a row to 0 to exclude it from the new request.
+          {t("adjustQuantitiesMessage")}
         </p>
       </div>
 
@@ -217,16 +220,16 @@ function ComparisonStep({ availableItems, existingRequestsCount, nextRequestNumb
                     <span className="text-sm text-on-surface-variant">{item.品番}</span>
                   </div>
                   <div className="mt-3 grid gap-2 text-xs text-on-surface-variant sm:grid-cols-2 xl:grid-cols-4">
-                    <span>GEN Total: <strong className="text-on-surface">{item.genTotal}</strong></span>
-                    <span>Allocated: <strong className="text-amber-700 dark:text-amber-300">{item.allocatedQty}</strong></span>
-                    <span>Remaining: <strong className="text-emerald-700 dark:text-emerald-300">{item.remainingQty}</strong></span>
-                    <span>Available: <strong className="text-sky-700 dark:text-sky-300">{item.availableQuantity}</strong></span>
+                    <span>{t("genTotalLabel")} <strong className="text-on-surface">{item.genTotal}</strong></span>
+                    <span>{t("allocatedLabel")} <strong className="text-amber-700 dark:text-amber-300">{item.allocatedQty}</strong></span>
+                    <span>{t("remainingLabel")} <strong className="text-emerald-700 dark:text-emerald-300">{item.remainingQty}</strong></span>
+                    <span>{t("availableColonLabel")} <strong className="text-sky-700 dark:text-sky-300">{item.availableQuantity}</strong></span>
                   </div>
                 </div>
 
                 <div className="w-full lg:w-40">
                   <label className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-outline">
-                    Quantity
+                    {t("quantity")}
                   </label>
                   <input
                     type="number"
@@ -236,7 +239,7 @@ function ComparisonStep({ availableItems, existingRequestsCount, nextRequestNumb
                     onChange={(event) => onQuantityChange(item.背番号, item.remainingQty, event.target.value)}
                     className="h-11 w-full rounded-2xl border border-outline-variant/30 bg-white px-4 text-sm text-on-surface outline-none transition focus:border-primary/40 dark:bg-surface-container"
                   />
-                  <p className="mt-2 text-right text-xs text-on-surface-variant">Max {item.remainingQty}</p>
+                  <p className="mt-2 text-right text-xs text-on-surface-variant">{t("maxQuantityLabel", { count: item.remainingQty })}</p>
                 </div>
               </div>
             </div>
@@ -248,6 +251,7 @@ function ComparisonStep({ availableItems, existingRequestsCount, nextRequestNumb
 }
 
 export default function NodaGenSyncModal({ open, authUser, onClose, onSubmitted }) {
+  const { t } = useLanguage();
   const [deliveryDate, setDeliveryDate] = useState(todayDateString());
   const [progress, setProgress] = useState({ value: 0, message: "" });
   const [error, setError] = useState("");
@@ -276,7 +280,7 @@ export default function NodaGenSyncModal({ open, authUser, onClose, onSubmitted 
 
   async function handleFetchFromGen() {
     if (!deliveryDate) {
-      setError("Please select a delivery date.");
+      setError(t("selectDeliveryDateMessage"));
       return;
     }
 
@@ -284,18 +288,18 @@ export default function NodaGenSyncModal({ open, authUser, onClose, onSubmitted 
     setError("");
 
     try {
-      setProgress({ value: 15, message: "Connecting to GEN…" });
+      setProgress({ value: 15, message: t("connectingToGenMessage") });
       const arrayBuffer = await fetchGenCsvBuffer(deliveryDate);
 
-      setProgress({ value: 35, message: "Parsing CSV data…" });
+      setProgress({ value: 35, message: t("parsingCsvDataMessage") });
       const decoder = new TextDecoder("shift-jis");
       const csvText = decoder.decode(arrayBuffer);
       const parsedItems = parseGenCsv(csvText);
 
-      setProgress({ value: 55, message: "Validating master data and inventory…" });
+      setProgress({ value: 55, message: t("validatingMasterDataMessage") });
       const { validated } = await validateGenItems(parsedItems, deliveryDate);
 
-      setProgress({ value: 75, message: "Loading existing Noda requests…" });
+      setProgress({ value: 75, message: t("loadingExistingRequestsMessage") });
       const existingRequests = await fetchNodaBulkRequestsByPickupDate(deliveryDate);
       const allocatedQuantities = calculateAllocatedQuantities(existingRequests);
       const nextRequestNumber = getNextNodaRequestNumber(existingRequests, deliveryDate);
@@ -310,7 +314,7 @@ export default function NodaGenSyncModal({ open, authUser, onClose, onSubmitted 
       };
 
       setWorkflowData(nextWorkflow);
-      setProgress({ value: 100, message: "Ready." });
+      setProgress({ value: 100, message: t("readyMessage") });
 
       if (Object.keys(duplicates).length > 0) {
         const defaultSelections = {};
@@ -328,7 +332,7 @@ export default function NodaGenSyncModal({ open, authUser, onClose, onSubmitted 
         .filter((item) => item.remainingQty > 0);
 
       if (!availableItems.length) {
-        throw new Error("All GEN items are already fully allocated for this date.");
+        throw new Error(t("allGenItemsAllocatedMessage"));
       }
 
       setWorkflowData((current) => ({ ...current, availableItems }));
@@ -337,7 +341,7 @@ export default function NodaGenSyncModal({ open, authUser, onClose, onSubmitted 
       );
       setPhase("comparison");
     } catch (loadError) {
-      setError(loadError.message || "Failed to fetch data from GEN.");
+      setError(loadError.message || t("failedFetchGenMessage"));
       setProgress({ value: 0, message: "" });
     } finally {
       setBusy(false);
@@ -399,7 +403,7 @@ export default function NodaGenSyncModal({ open, authUser, onClose, onSubmitted 
       .filter((item) => item.remainingQty > 0);
 
     if (!availableItems.length) {
-      setError("All selected items are already fully allocated for this date.");
+      setError(t("allSelectedItemsAllocatedMessage"));
       return;
     }
 
@@ -422,7 +426,7 @@ export default function NodaGenSyncModal({ open, authUser, onClose, onSubmitted 
 
   async function handleCreateRequest() {
     if (!workflowData?.availableItems?.length) {
-      setError("No comparison data is available.");
+      setError(t("noComparisonDataMessage"));
       return;
     }
 
@@ -441,7 +445,7 @@ export default function NodaGenSyncModal({ open, authUser, onClose, onSubmitted 
     }, []);
 
     if (!items.length) {
-      setError("Enter at least one quantity greater than zero.");
+      setError(t("enterQuantityGreaterThanZeroMessage"));
       return;
     }
 
@@ -449,18 +453,18 @@ export default function NodaGenSyncModal({ open, authUser, onClose, onSubmitted 
     setError("");
 
     try {
-      setProgress({ value: 25, message: "Validating inventory…" });
+      setProgress({ value: 25, message: t("validatingInventoryMessage") });
 
       for (const item of items) {
         const inventoryResult = await checkNodaInventory(item.背番号);
         const availableQuantity = inventoryResult?.inventory?.availableQuantity || 0;
 
         if (!inventoryResult?.success || availableQuantity < item.quantity) {
-          throw new Error(`${item.背番号}: insufficient stock for selected quantity.`);
+          throw new Error(t("insufficientStockForSerialMessage", { serial: item.背番号 }));
         }
       }
 
-      setProgress({ value: 70, message: "Creating bulk request…" });
+      setProgress({ value: 70, message: t("creatingBulkRequestMessage") });
       await bulkCreateNodaRequests(
         {
           items,
@@ -469,14 +473,14 @@ export default function NodaGenSyncModal({ open, authUser, onClose, onSubmitted 
         authUser?.username || "system"
       );
 
-      setProgress({ value: 100, message: "Request created." });
+      setProgress({ value: 100, message: t("requestCreatedMessage") });
       onSubmitted?.({
         type: "success",
-        message: `Created Noda request from GEN for ${workflowData.deliveryDate}.`,
+        message: t("createdNodaRequestFromGenMessage", { date: workflowData.deliveryDate }),
       });
       onClose?.();
     } catch (createError) {
-      setError(createError.message || "Failed to create request from GEN.");
+      setError(createError.message || t("failedCreateFromGenMessage"));
       setProgress({ value: 0, message: "" });
     } finally {
       setCreateBusy(false);
@@ -490,13 +494,13 @@ export default function NodaGenSyncModal({ open, authUser, onClose, onSubmitted 
       open={open}
       onClose={onClose}
       icon="cloud_sync"
-      title="Sync From GEN"
-      subtitle="Fetch GEN export data, review quantities, and create a Noda bulk request."
+      title={t("syncFromGenLabel")}
+      subtitle={t("genSyncSubtitle")}
       maxWidthClassName="max-w-5xl"
       footer={(
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="min-h-5 text-sm text-on-surface-variant">
-            {progress.value > 0 ? `${progress.message} (${progress.value}%)` : ""}
+            {progress.value > 0 ? t("progressPercentLabel", { message: progress.message, percent: progress.value }) : ""}
           </div>
           <div className="flex flex-wrap gap-3">
             <button
@@ -504,7 +508,7 @@ export default function NodaGenSyncModal({ open, authUser, onClose, onSubmitted 
               onClick={() => onClose?.()}
               className="rounded-2xl border border-separator/40 px-4 py-2.5 text-sm font-semibold text-on-surface transition hover:bg-surface-container"
             >
-              Cancel
+              {t("cancel")}
             </button>
             {phase === "date" ? (
               <button
@@ -513,7 +517,7 @@ export default function NodaGenSyncModal({ open, authUser, onClose, onSubmitted 
                 disabled={busy}
                 className="rounded-2xl bg-primary px-5 py-2.5 text-sm font-semibold text-on-primary transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
               >
-                {busy ? "Fetching…" : "Fetch From GEN"}
+                {busy ? t("fetchingLabel") : t("fetchFromGenButton")}
               </button>
             ) : null}
             {phase === "comparison" ? (
@@ -523,7 +527,7 @@ export default function NodaGenSyncModal({ open, authUser, onClose, onSubmitted 
                 disabled={createBusy || !canCreate}
                 className="rounded-2xl bg-emerald-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
               >
-                {createBusy ? "Creating…" : "Create Request"}
+                {createBusy ? t("creatingLabel") : t("createRequestButton")}
               </button>
             ) : null}
           </div>
@@ -551,7 +555,7 @@ export default function NodaGenSyncModal({ open, authUser, onClose, onSubmitted 
         {phase === "date" ? (
           <div className="rounded-[24px] border border-separator/40 bg-surface-container-low/35 p-5">
             <label className="block text-xs font-semibold uppercase tracking-[0.18em] text-outline">
-              Delivery Date
+              {t("deliveryDateLabel")}
             </label>
             <input
               type="date"
@@ -560,7 +564,7 @@ export default function NodaGenSyncModal({ open, authUser, onClose, onSubmitted 
               className="mt-3 h-12 w-full rounded-2xl border border-outline-variant/30 bg-white px-4 text-sm text-on-surface outline-none transition focus:border-primary/40 dark:bg-surface-container"
             />
             <p className="mt-3 text-sm text-on-surface-variant">
-              GEN sync imports the export for a single date, validates inventory, and lets you adjust the final quantities before creating a bulk request.
+              {t("genSyncDescription")}
             </p>
           </div>
         ) : null}

@@ -13,29 +13,23 @@ export const EMPTY_NODA_STATS = {
 };
 
 export const NODA_STATUS_OPTIONS = [
-  { value: "", label: "All Statuses" },
-  { value: "pending", label: "Pending" },
-  { value: "in-progress", label: "In Progress" },
-  { value: "completed", label: "Completed" },
-  { value: "past-deadline", label: "Deadline Passed" },
-  { value: "partial-inventory", label: "Partial Inventory" },
-  { value: "cancelled", label: "Cancelled" },
+  { value: "", labelKey: "nodaStatusAllStatuses" },
+  { value: "pending", labelKey: "pending" },
+  { value: "in-progress", labelKey: "nodaStatusInProgress" },
+  { value: "completed", labelKey: "nodaStatusCompleted" },
+  { value: "past-deadline", labelKey: "nodaStatusDeadlinePassed" },
+  { value: "partial-inventory", labelKey: "nodaStatusPartialInventory" },
+  { value: "cancelled", labelKey: "nodaStatusCancelled" },
 ];
 
 export const NODA_STATUS_CARDS = [
-  { key: "all", label: "All", icon: "list_alt", accent: "bg-slate-100 text-slate-700 dark:bg-slate-800/80 dark:text-slate-200" },
-  { key: "pending", label: "Pending", icon: "schedule", accent: "bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300" },
-  { key: "in-progress", label: "In Progress", icon: "play_circle", accent: "bg-sky-100 text-sky-700 dark:bg-sky-500/15 dark:text-sky-300" },
-  { key: "completed", label: "Completed", icon: "task_alt", accent: "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300" },
-  { key: "past-deadline", label: "Deadline Passed", icon: "event_busy", accent: "bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-200" },
-  { key: "partial-inventory", label: "Partial Inventory", icon: "error", accent: "bg-orange-100 text-orange-700 dark:bg-orange-500/15 dark:text-orange-300" },
-  { key: "cancelled", label: "Cancelled", icon: "cancel", accent: "bg-rose-100 text-rose-700 dark:bg-rose-500/15 dark:text-rose-300" },
-];
-
-export const NODA_LINE_STATUS_OPTIONS = [
-  { value: "pending", label: "Pending" },
-  { value: "in-progress", label: "In Progress" },
-  { value: "completed", label: "Completed" },
+  { key: "all", labelKey: "all", icon: "list_alt", accent: "bg-slate-100 text-slate-700 dark:bg-slate-800/80 dark:text-slate-200" },
+  { key: "pending", labelKey: "pending", icon: "schedule", accent: "bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300" },
+  { key: "in-progress", labelKey: "nodaStatusInProgress", icon: "play_circle", accent: "bg-sky-100 text-sky-700 dark:bg-sky-500/15 dark:text-sky-300" },
+  { key: "completed", labelKey: "nodaStatusCompleted", icon: "task_alt", accent: "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300" },
+  { key: "past-deadline", labelKey: "nodaStatusDeadlinePassed", icon: "event_busy", accent: "bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-200" },
+  { key: "partial-inventory", labelKey: "nodaStatusPartialInventory", icon: "error", accent: "bg-orange-100 text-orange-700 dark:bg-orange-500/15 dark:text-orange-300" },
+  { key: "cancelled", labelKey: "nodaStatusCancelled", icon: "cancel", accent: "bg-rose-100 text-rose-700 dark:bg-rose-500/15 dark:text-rose-300" },
 ];
 
 export const NODA_CART_STORAGE_KEYS = {
@@ -162,57 +156,57 @@ export function getNodaStatusMeta(status) {
   switch (status) {
     case "pending":
       return {
-        label: "Pending",
+        labelKey: "pending",
         icon: "schedule",
         badgeClassName: "bg-amber-100 text-amber-800 dark:bg-amber-500/15 dark:text-amber-300",
       };
     case "waiting-for-inventory":
       return {
-        label: "Waiting for Inventory",
+        labelKey: "nodaStatusWaitingForInventory",
         icon: "error",
         badgeClassName: "bg-rose-100 text-rose-800 dark:bg-rose-500/15 dark:text-rose-300",
       };
     case "partial-inventory":
       return {
-        label: "Partial Inventory",
+        labelKey: "nodaStatusPartialInventory",
         icon: "error",
         badgeClassName: "bg-orange-100 text-orange-800 dark:bg-orange-500/15 dark:text-orange-300",
       };
     case "past-deadline":
       return {
-        label: "Deadline Passed",
+        labelKey: "nodaStatusDeadlinePassed",
         icon: "event_busy",
         badgeClassName: "bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-200",
       };
     case "in-progress":
     case "active":
       return {
-        label: "In Progress",
+        labelKey: "nodaStatusInProgress",
         icon: "play_circle",
         badgeClassName: "bg-sky-100 text-sky-800 dark:bg-sky-500/15 dark:text-sky-300",
       };
     case "completed":
     case "complete":
       return {
-        label: "Completed",
+        labelKey: "nodaStatusCompleted",
         icon: "task_alt",
         badgeClassName: "bg-emerald-100 text-emerald-800 dark:bg-emerald-500/15 dark:text-emerald-300",
       };
     case "failed":
       return {
-        label: "Failed",
+        labelKey: "nodaStatusFailed",
         icon: "cancel",
         badgeClassName: "bg-rose-100 text-rose-800 dark:bg-rose-500/15 dark:text-rose-300",
       };
     case "cancelled":
       return {
-        label: "Cancelled",
+        labelKey: "nodaStatusCancelled",
         icon: "block",
         badgeClassName: "bg-rose-100 text-rose-800 dark:bg-rose-500/15 dark:text-rose-300",
       };
     default:
       return {
-        label: "Unknown",
+        labelKey: "unknownLabel",
         icon: "help",
         badgeClassName: "bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-200",
       };
@@ -264,11 +258,11 @@ export function getNodaRowToneClass(request = {}) {
   return "";
 }
 
-export function getNodaItemsSummary(request = {}) {
+export function getNodaItemsSummary(request = {}, t) {
   if (!isBulkNodaRequest(request)) {
     return {
       title: request?.品番 || "—",
-      subtitle: `${request?.背番号 || "—"} (Qty: ${safeParseNumber(request?.quantity)})`,
+      subtitle: t("singleItemSubtitle", { serial: request?.背番号 || "—", qty: safeParseNumber(request?.quantity) }),
       warnings: [],
     };
   }
@@ -294,24 +288,24 @@ export function getNodaItemsSummary(request = {}) {
 
   const warnings = [];
   if (request?.isPastDeadline || request?.dynamicInventoryStatus === "past-deadline") {
-    warnings.push({ tone: "muted", label: "Deadline passed" });
+    warnings.push({ tone: "muted", label: t("deadlinePassedWarning") });
   } else {
-    if (waitingCount > 0) warnings.push({ tone: "danger", label: `${waitingCount} waiting` });
-    if (partialCount > 0) warnings.push({ tone: "warning", label: `${partialCount} partial` });
+    if (waitingCount > 0) warnings.push({ tone: "danger", label: t("waitingCountWarning", { count: waitingCount }) });
+    if (partialCount > 0) warnings.push({ tone: "warning", label: t("partialCountWarning", { count: partialCount }) });
   }
 
   return {
-    title: `${totalItems} items`,
-    subtitle: `${completedItems} done, ${pendingItems} pending`,
+    title: t("itemsCountTitle", { count: totalItems }),
+    subtitle: t("doneAndPendingSubtitle", { done: completedItems, pending: pendingItems }),
     warnings,
   };
 }
 
-export function buildNodaPageInfo({ filteredCount, page, pageSize }) {
-  if (!filteredCount) return "No requests to display";
+export function buildNodaPageInfo({ filteredCount, page, pageSize, t }) {
+  if (!filteredCount) return t("noRequestsToDisplay");
   const start = (page - 1) * pageSize + 1;
   const end = Math.min(page * pageSize, filteredCount);
-  return `${filteredCount} requests, showing ${start}-${end}`;
+  return t("requestsShowingRange", { count: filteredCount, start, end });
 }
 
 export function normalizeQuotedCsvValue(value) {

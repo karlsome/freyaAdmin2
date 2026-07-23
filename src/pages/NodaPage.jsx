@@ -15,6 +15,7 @@ import {
   runNodaInventoryReservation,
 } from "../services/nodaApi";
 import { readStoredAuthUser } from "../utils/auth";
+import { useLanguage } from "../contexts/LanguageContext";
 import {
   buildNodaPageInfo,
   buildNodaQueryFilters,
@@ -43,6 +44,7 @@ const EMPTY_PAGINATION = {
 };
 
 function FlashBanner({ flash, onClose }) {
+  const { t } = useLanguage();
   if (!flash) return null;
 
   const tone = flash.type === "error"
@@ -55,7 +57,7 @@ function FlashBanner({ flash, onClose }) {
     <div className={joinNodaClasses("mb-6 rounded-[24px] border px-5 py-4", tone)}>
       <div className="flex items-start justify-between gap-4">
         <div>
-          <p className="text-[10px] font-semibold uppercase tracking-[0.18em]">Status</p>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.18em]">{t("status")}</p>
           <p className="mt-1 text-sm font-medium">{flash.message}</p>
         </div>
         <button type="button" onClick={onClose} className="text-current/70 transition hover:text-current">
@@ -80,7 +82,7 @@ function CompletedAtCell({ value }) {
   );
 }
 
-function buildExportMatrix(requests = []) {
+function buildExportMatrix(requests = [], t) {
   return [
     [
       "Request Number",
@@ -104,7 +106,7 @@ function buildExportMatrix(requests = []) {
       return [
         request.requestNumber || "",
         request.requestType || "single",
-        getNodaStatusMeta(resolveNodaDisplayStatus(request)).label,
+        t(getNodaStatusMeta(resolveNodaDisplayStatus(request)).labelKey),
         getNodaPickupDateValue(request) || "",
         request.納入指示日 || "",
         request.便 || "",
@@ -120,6 +122,7 @@ function buildExportMatrix(requests = []) {
 }
 
 export default function NodaPage() {
+  const { t } = useLanguage();
   const authUser = readStoredAuthUser();
   const canManage = canManageNodaRequests(authUser);
   const requestIdRef = useRef(0);
@@ -211,7 +214,7 @@ export default function NodaPage() {
         setRows([]);
         setStats(EMPTY_NODA_STATS);
         setPagination(EMPTY_PAGINATION);
-        setError(loadError.message || "Failed to load Noda requests.");
+        setError(loadError.message || t("failedToLoadNodaRequests"));
       } finally {
         if (!cancelled && requestId === requestIdRef.current) {
           setLoading(false);
@@ -281,10 +284,10 @@ export default function NodaPage() {
         search: deferredSearchValue,
       });
       const requests = await exportNodaRequests(filtersForExport);
-      downloadCsvFile("noda-requests.csv", buildExportMatrix(requests));
-      setFlash({ type: "success", message: `Exported ${requests.length} Noda request${requests.length === 1 ? "" : "s"}.` });
+      downloadCsvFile("noda-requests.csv", buildExportMatrix(requests, t));
+      setFlash({ type: "success", message: t("exportedNodaRequestsMessage", { count: requests.length, plural: requests.length === 1 ? "" : "s" }) });
     } catch (exportError) {
-      setFlash({ type: "error", message: exportError.message || "Failed to export Noda requests." });
+      setFlash({ type: "error", message: exportError.message || t("failedToExportNodaRequests") });
     }
   }
 
@@ -300,11 +303,16 @@ export default function NodaPage() {
       const result = await runNodaInventoryReservation(actorName);
       setFlash({
         type: "success",
-        message: `Inventory check complete. ${result.updatedRequests || 0} request${result.updatedRequests === 1 ? " was" : "s were"} updated with ${result.totalReservations || 0} reservation${result.totalReservations === 1 ? "" : "s"}.`,
+        message: t("inventoryCheckCompleteMessage", {
+          count: result.updatedRequests || 0,
+          verb: result.updatedRequests === 1 ? "was" : "were",
+          reservations: result.totalReservations || 0,
+          reservationsPlural: result.totalReservations === 1 ? "" : "s",
+        }),
       });
       setRefreshNonce((current) => current + 1);
     } catch (inventoryError) {
-      setFlash({ type: "error", message: inventoryError.message || "Manual inventory check failed." });
+      setFlash({ type: "error", message: inventoryError.message || t("manualInventoryCheckFailed") });
     } finally {
       setCheckingInventory(false);
     }
@@ -313,7 +321,7 @@ export default function NodaPage() {
   const columns = useMemo(() => ([
     {
       key: "requestNumber",
-      label: "Request Number",
+      label: t("requestNumberLabel"),
       width: 180,
       renderCell: (row) => (
         <button
@@ -331,21 +339,21 @@ export default function NodaPage() {
     },
     {
       key: "便",
-      label: "便",
+      label: t("deliveryRunLabel"),
       width: 120,
       renderCell: (row) => row.便 ? <span className="font-semibold text-primary">{row.便}</span> : <span className="text-on-surface-variant">—</span>,
       disableCellWrapper: true,
     },
     {
       key: "納品書番号",
-      label: "納品書番号",
+      label: t("deliveryNoteNumberLabel"),
       width: 160,
       renderCell: (row) => row.納品書番号 ? <span className="font-semibold text-primary">{row.納品書番号}</span> : <span className="text-on-surface-variant">—</span>,
       disableCellWrapper: true,
     },
     {
       key: "requestType",
-      label: "Type",
+      label: t("typeLabel"),
       width: 130,
       renderCell: (row) => (
         <span className={joinNodaClasses(
@@ -357,28 +365,28 @@ export default function NodaPage() {
           <span className="material-symbols-outlined" style={{ fontSize: 14 }}>
             {row.requestType === "bulk" ? "stacked_email" : "article"}
           </span>
-          {row.requestType === "bulk" ? "Bulk" : "Single"}
+          {row.requestType === "bulk" ? t("bulkLabel") : t("singleLabel")}
         </span>
       ),
       disableCellWrapper: true,
     },
     {
       key: "status",
-      label: "Status",
+      label: t("status"),
       width: 170,
       renderCell: (row) => {
         const meta = getNodaStatusMeta(resolveNodaDisplayStatus(row));
-        return <StatusChip icon={meta.icon} label={meta.label} className={meta.badgeClassName} />;
+        return <StatusChip icon={meta.icon} label={t(meta.labelKey)} className={meta.badgeClassName} />;
       },
       disableCellWrapper: true,
     },
     {
       key: "itemsSummary",
-      label: "Items",
+      label: t("itemsLabel"),
       sortable: false,
       width: 240,
       renderCell: (row) => {
-        const summary = getNodaItemsSummary(row);
+        const summary = getNodaItemsSummary(row, t);
         return (
           <div className="min-w-0">
             <div className="font-semibold text-on-surface">{summary.title}</div>
@@ -409,7 +417,7 @@ export default function NodaPage() {
     },
     {
       key: "pickupDate",
-      label: "Pickup Date",
+      label: t("pickupDateLabel"),
       sortKey: "pickupDate",
       width: 140,
       renderCell: (row) => <span className="text-on-surface">{formatNodaDate(getNodaPickupDateValue(row))}</span>,
@@ -417,7 +425,7 @@ export default function NodaPage() {
     },
     {
       key: "納入指示日",
-      label: "Deadline",
+      label: t("deadlineLabel"),
       sortKey: "納入指示日",
       width: 140,
       renderCell: (row) => (
@@ -429,7 +437,7 @@ export default function NodaPage() {
     },
     {
       key: "completedAt",
-      label: "Completed",
+      label: t("completedColumnLabel"),
       sortKey: "completedAt",
       width: 150,
       renderCell: (row) => <CompletedAtCell value={row.completedAt} />,
@@ -437,7 +445,7 @@ export default function NodaPage() {
     },
     {
       key: "actions",
-      label: "Actions",
+      label: t("actions"),
       sortable: false,
       width: 150,
       align: "right",
@@ -449,7 +457,7 @@ export default function NodaPage() {
             variant="ghost"
             size="md"
             iconSize={18}
-            ariaLabel="View request"
+            ariaLabel={t("viewRequestAria")}
           />
           {canManage ? (
             <IconButton
@@ -458,23 +466,23 @@ export default function NodaPage() {
               variant="ghost"
               size="md"
               iconSize={18}
-              ariaLabel="Edit request"
+              ariaLabel={t("editRequestAria")}
             />
           ) : null}
         </div>
       ),
       disableCellWrapper: true,
     },
-  ]), [canManage]);
+  ]), [canManage, t]);
 
   return (
     <section className="h-screen overflow-y-auto scrollbar-hide px-8 pb-16 pt-24">
       <div className="w-full">
         <PageHeader
-          eyebrow="Warehouse Workflow"
+          eyebrow={t("warehouseWorkflowEyebrow")}
           eyebrowClassName="tracking-[0.18em] text-primary"
           title="Noda"
-          subtitle="Manage Noda warehouse picking requests, inspect FIFO inventory impact, upload bulk CSV orders, and sync remaining work from GEN."
+          subtitle={t("nodaPageSubtitle")}
           subtitleClassName="max-w-3xl"
           className="md:flex-row md:items-start md:justify-between"
           actions={(
@@ -484,14 +492,14 @@ export default function NodaPage() {
                 onClick={() => setRefreshNonce((current) => current + 1)}
                 className="rounded-2xl border border-outline-variant/25 px-4 py-2.5 text-sm font-semibold text-on-surface transition hover:bg-surface-container"
               >
-                Refresh
+                {t("refresh")}
               </button>
               <button
                 type="button"
                 onClick={handleExport}
                 className="rounded-2xl border border-outline-variant/25 px-4 py-2.5 text-sm font-semibold text-on-surface transition hover:bg-surface-container"
               >
-                Export CSV
+                {t("exportCSVLabel")}
               </button>
               {canManage ? (
                 <button
@@ -504,9 +512,9 @@ export default function NodaPage() {
                   {checkingInventory ? (
                     <>
                       <span className="material-symbols-outlined animate-spin" style={{ fontSize: 18 }}>autorenew</span>
-                      Checking Inventory...
+                      {t("checkingInventoryButton")}
                     </>
-                  ) : "Check Inventory"}
+                  ) : t("checkInventoryButton")}
                 </button>
               ) : null}
               {canManage ? (
@@ -515,7 +523,7 @@ export default function NodaPage() {
                   onClick={() => setGenModalOpen(true)}
                   className="rounded-2xl border border-primary/20 bg-primary/8 px-4 py-2.5 text-sm font-semibold text-primary transition hover:bg-primary/12"
                 >
-                  Sync From GEN
+                  {t("syncFromGenLabel")}
                 </button>
               ) : null}
               {canManage ? (
@@ -524,7 +532,7 @@ export default function NodaPage() {
                   onClick={() => setAddModalOpen(true)}
                   className="rounded-2xl bg-primary px-4 py-2.5 text-sm font-semibold text-on-primary transition hover:opacity-90"
                 >
-                  New Bulk Request
+                  {t("newBulkRequestButton")}
                 </button>
               ) : null}
             </>
@@ -538,9 +546,9 @@ export default function NodaPage() {
             <StatSummaryCard
               key={card.key}
               icon={card.icon}
-              label={card.label}
+              label={t(card.labelKey)}
               value={stats[card.key] ?? 0}
-              subtitle={card.key === "all" ? "All tracked requests" : `Filter by ${card.label.toLowerCase()}`}
+              subtitle={card.key === "all" ? t("allTrackedRequests") : t("filterByStatus", { status: t(card.labelKey).toLowerCase() })}
               accent={card.accent}
               active={activeStatus === card.key}
               loading={loading}
@@ -553,8 +561,8 @@ export default function NodaPage() {
         <div className="glass-card mb-6 rounded-[28px] p-5">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
-              <h2 className="text-base font-semibold text-on-surface">Filters</h2>
-              <p className="mt-1 text-sm text-on-surface-variant">Refine the active request list by status, item, deadline, or search term.</p>
+              <h2 className="text-base font-semibold text-on-surface">{t("filtersHeading")}</h2>
+              <p className="mt-1 text-sm text-on-surface-variant">{t("nodaFiltersDescription")}</p>
             </div>
             <button
               type="button"
@@ -565,32 +573,32 @@ export default function NodaPage() {
               }}
               className="rounded-2xl border border-outline-variant/25 px-4 py-2 text-sm font-semibold text-on-surface transition hover:bg-surface-container"
             >
-              Reset Filters
+              {t("resetFiltersLabel")}
             </button>
           </div>
 
           <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-6">
             <label className="block xl:col-span-1">
-              <span className="block text-xs font-semibold uppercase tracking-[0.18em] text-outline">Status</span>
+              <span className="block text-xs font-semibold uppercase tracking-[0.18em] text-outline">{t("status")}</span>
               <select
                 value={filters.status}
                 onChange={(event) => handleStatusSelectChange(event.target.value)}
                 className="mt-2 h-11 w-full rounded-2xl border border-outline-variant/30 bg-white px-4 text-sm text-on-surface outline-none transition focus:border-primary/40 dark:bg-surface-container"
               >
                 {NODA_STATUS_OPTIONS.map((option) => (
-                  <option key={option.value || "all"} value={option.value}>{option.label}</option>
+                  <option key={option.value || "all"} value={option.value}>{t(option.labelKey)}</option>
                 ))}
               </select>
             </label>
 
             <label className="block xl:col-span-1">
-              <span className="block text-xs font-semibold uppercase tracking-[0.18em] text-outline">品番</span>
+              <span className="block text-xs font-semibold uppercase tracking-[0.18em] text-outline">{t("partNumberLabel")}</span>
               <select
                 value={filters.partNumber}
                 onChange={(event) => updateFilter("partNumber", event.target.value)}
                 className="mt-2 h-11 w-full rounded-2xl border border-outline-variant/30 bg-white px-4 text-sm text-on-surface outline-none transition focus:border-primary/40 dark:bg-surface-container"
               >
-                <option value="">All Part Numbers</option>
+                <option value="">{t("allPartNumbersOption")}</option>
                 {filterOptions.partNumbers.map((value) => (
                   <option key={value} value={value}>{value}</option>
                 ))}
@@ -598,13 +606,13 @@ export default function NodaPage() {
             </label>
 
             <label className="block xl:col-span-1">
-              <span className="block text-xs font-semibold uppercase tracking-[0.18em] text-outline">背番号</span>
+              <span className="block text-xs font-semibold uppercase tracking-[0.18em] text-outline">{t("serialNumberLabel")}</span>
               <select
                 value={filters.backNumber}
                 onChange={(event) => updateFilter("backNumber", event.target.value)}
                 className="mt-2 h-11 w-full rounded-2xl border border-outline-variant/30 bg-white px-4 text-sm text-on-surface outline-none transition focus:border-primary/40 dark:bg-surface-container"
               >
-                <option value="">All Serial Numbers</option>
+                <option value="">{t("allSerialNumbersOption")}</option>
                 {filterOptions.backNumbers.map((value) => (
                   <option key={value} value={value}>{value}</option>
                 ))}
@@ -612,7 +620,7 @@ export default function NodaPage() {
             </label>
 
             <label className="block xl:col-span-1">
-              <span className="block text-xs font-semibold uppercase tracking-[0.18em] text-outline">Deadline From</span>
+              <span className="block text-xs font-semibold uppercase tracking-[0.18em] text-outline">{t("deadlineFromLabel")}</span>
               <input
                 type="date"
                 value={filters.dateFrom}
@@ -622,7 +630,7 @@ export default function NodaPage() {
             </label>
 
             <label className="block xl:col-span-1">
-              <span className="block text-xs font-semibold uppercase tracking-[0.18em] text-outline">Deadline To</span>
+              <span className="block text-xs font-semibold uppercase tracking-[0.18em] text-outline">{t("deadlineToLabel")}</span>
               <input
                 type="date"
                 value={filters.dateTo}
@@ -632,12 +640,12 @@ export default function NodaPage() {
             </label>
 
             <label className="block xl:col-span-1">
-              <span className="block text-xs font-semibold uppercase tracking-[0.18em] text-outline">Search</span>
+              <span className="block text-xs font-semibold uppercase tracking-[0.18em] text-outline">{t("search")}</span>
               <input
                 type="text"
                 value={filters.search}
                 onChange={(event) => updateFilter("search", event.target.value)}
-                placeholder="Request number, item, serial…"
+                placeholder={t("nodaSearchPlaceholder")}
                 className="mt-2 h-11 w-full rounded-2xl border border-outline-variant/30 bg-white px-4 text-sm text-on-surface outline-none transition focus:border-primary/40 dark:bg-surface-container"
               />
             </label>
@@ -661,15 +669,17 @@ export default function NodaPage() {
             setPage(1);
           }}
           pageSizeOptions={NODA_PAGE_SIZE_OPTIONS}
-          pageSizeLabel="Rows"
+          pageSizeLabel={t("rowsSuffix")}
+          previousLabel={t("previousLabel")}
+          nextLabel={t("next")}
           rowKey={(row) => row._id}
           onRowClick={(row) => setDetailState({ open: true, requestId: row._id, mode: "view" })}
           getRowClassName={(row) => getNodaRowToneClass(row)}
           renderPageInfo={({ filteredCount, page: currentPage, pageSize: currentPageSize }) => (
-            <span>{buildNodaPageInfo({ filteredCount, page: currentPage, pageSize: currentPageSize })}</span>
+            <span>{buildNodaPageInfo({ filteredCount, page: currentPage, pageSize: currentPageSize, t })}</span>
           )}
-          emptyTitle="No matching Noda requests"
-          emptyMessage="Adjust the filters or create a new bulk request."
+          emptyTitle={t("noMatchingNodaRequests")}
+          emptyMessage={t("adjustFiltersOrCreateRequest")}
           layoutStorageKey="noda-table-layout"
           enableColumnResize
           enableColumnReorder

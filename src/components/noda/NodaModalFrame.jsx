@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { createPortal } from "react-dom";
+import { useLanguage } from "../../contexts/LanguageContext";
 
 function joinClasses(...classes) {
   return classes.filter(Boolean).join(" ");
@@ -17,6 +18,7 @@ export default function NodaModalFrame({
   footer,
   maxWidthClassName = "max-w-6xl",
 }) {
+  const { t } = useLanguage();
   useEffect(() => {
     if (!open) return undefined;
 
@@ -67,7 +69,7 @@ export default function NodaModalFrame({
                 type="button"
                 onClick={() => onClose?.()}
                 className="p-2 rounded-xl flex-shrink-0 text-outline hover:bg-surface-container hover:text-on-surface transition-all duration-150 active:scale-95"
-                aria-label="Close dialog"
+                aria-label={t("closeDialogAria")}
               >
                 <span className="material-symbols-outlined" style={{ fontSize: 18 }}>close</span>
               </button>
