@@ -655,14 +655,17 @@ function buildSensorReadingWBGTExpression() {
   };
 }
 
-function buildSensorReadingBaseMatch({ factoryName, startDate, endDate }) {
+function buildSensorReadingBaseMatch({ factoryName, startDate, endDate, years }) {
   const match = {};
 
   if (factoryName) {
     match["工場"] = factoryName;
   }
 
-  if (startDate || endDate) {
+  if (years && years.length > 0) {
+    // Prefix regex for each year, e.g. ^(2024|2025)
+    match.Date = { $regex: `^(${years.join('|')})` };
+  } else if (startDate || endDate) {
     const dateMatch = {};
     if (startDate) dateMatch.$gte = startDate;
     if (endDate) dateMatch.$lte = endDate;
@@ -677,9 +680,9 @@ function buildSensorReadingDeviceMatch(deviceId = "all") {
   return { device: deviceId };
 }
 
-function buildSensorReadingNormalizationStages({ factoryName, startDate, endDate, offsets = {} }) {
+function buildSensorReadingNormalizationStages({ factoryName, startDate, endDate, years, offsets = {} }) {
   return [
-    { $match: buildSensorReadingBaseMatch({ factoryName, startDate, endDate }) },
+    { $match: buildSensorReadingBaseMatch({ factoryName, startDate, endDate, years }) },
     {
       $addFields: {
         temperatureValue: buildSensorReadingTemperatureExpression(offsets),
@@ -712,6 +715,7 @@ export async function fetchHistoricalSensorReadingsPage({
   factoryName,
   startDate,
   endDate,
+  years,
   deviceId = "all",
   sortKey = "date_desc",
   page = 1,
@@ -729,7 +733,7 @@ export async function fetchHistoricalSensorReadingsPage({
     {},
     {
       aggregation: [
-        ...buildSensorReadingNormalizationStages({ factoryName, startDate, endDate, offsets }),
+        ...buildSensorReadingNormalizationStages({ factoryName, startDate, endDate, years, offsets }),
         ...(deviceMatch ? [{ $match: deviceMatch }] : []),
         {
           $facet: {
@@ -791,15 +795,17 @@ export async function fetchHistoricalSensorOverview({
   factoryName,
   startDate,
   endDate,
+  years,
   deviceId = "all",
   offsets = {},
 } = {}) {
-  const cacheKey = `sensorOverview:${factoryName}:${startDate}:${endDate}:${deviceId}:${JSON.stringify(offsets)}`;
+  const cacheKey = `sensorOverview:${factoryName}:${startDate}:${endDate}:${years?.join(",")}:${deviceId}:${JSON.stringify(offsets)}`;
   const cached = _getCached(cacheKey, SENSOR_TTL);
   if (cached) return cached;
 
   return _withInFlight(cacheKey, async () => {
     const deviceMatch = buildSensorReadingDeviceMatch(deviceId);
+    const isHourly = Boolean(startDate && endDate && startDate === endDate);
 
     const result = await query(
       "submittedDB",
@@ -807,7 +813,7 @@ export async function fetchHistoricalSensorOverview({
       {},
       {
         aggregation: [
-          ...buildSensorReadingNormalizationStages({ factoryName, startDate, endDate, offsets }),
+          ...buildSensorReadingNormalizationStages({ factoryName, startDate, endDate, years, offsets }),
           {
             $facet: {
               deviceOptions: [
@@ -855,7 +861,7 @@ export async function fetchHistoricalSensorOverview({
                     _id: {
                       device: "$device",
                       date: "$Date",
-                      hour: startDate === endDate ? { $substr: ["$Time", 0, 2] } : null,
+                      hour: isHourly ? { $substr: ["$Time", 0, 2] } : null,
                     },
                     avgTemperature: { $avg: "$temperatureValue" },
                     avgHumidity: { $avg: "$humidityValue" },
@@ -865,7 +871,7 @@ export async function fetchHistoricalSensorOverview({
                   $project: {
                     _id: 0,
                     device: "$_id.device",
-                    Date: startDate === endDate 
+                    Date: isHourly 
                       ? { $concat: ["$_id.date", " ", "$_id.hour", ":00"] }
                       : "$_id.date",
                     Temperature: { $round: ["$avgTemperature", 1] },

@@ -279,6 +279,72 @@ function SensorCard({
 }
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
+function YearSelectionModal({ isOpen, onClose, onApply, initialSelectedYears }) {
+  const [selected, setSelected] = useState(initialSelectedYears);
+  
+  useEffect(() => {
+    if (isOpen) setSelected(initialSelectedYears);
+  }, [isOpen, initialSelectedYears]);
+
+  if (!isOpen) return null;
+
+  const currentYear = new Date().getFullYear();
+  const yearOptions = Array.from({ length: currentYear - 2021 }, (_, i) => String(2022 + i));
+
+  const toggleYear = (y) => {
+    setSelected(prev => prev.includes(y) ? prev.filter(v => v !== y) : [...prev, y]);
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+      <div className="glass-card w-full max-w-sm rounded-2xl overflow-hidden shadow-2xl border border-outline-variant/30 animate-in fade-in zoom-in-95 duration-200">
+        <div className="px-6 py-5 border-b border-outline-variant/20 flex items-center gap-3">
+          <span className="material-symbols-outlined text-primary">calendar_month</span>
+          <h2 className="text-lg font-semibold text-on-surface">Select Years</h2>
+        </div>
+        
+        <div className="p-6">
+          <div className="grid grid-cols-2 gap-3">
+            {yearOptions.map(year => (
+              <label key={year} className={`flex items-center gap-3 p-3 rounded-xl border transition-all cursor-pointer ${selected.includes(year) ? 'bg-primary/10 border-primary/40' : 'bg-surface-container-lowest border-outline-variant/20 hover:border-outline-variant/40'}`}>
+                <input 
+                  type="checkbox" 
+                  checked={selected.includes(year)}
+                  onChange={() => toggleYear(year)}
+                  className="w-4 h-4 text-primary rounded border-outline-variant focus:ring-primary/30"
+                />
+                <span className={`text-sm font-semibold ${selected.includes(year) ? 'text-primary' : 'text-on-surface'}`}>{year}</span>
+              </label>
+            ))}
+          </div>
+          {selected.length === 0 && (
+            <p className="text-xs text-error mt-4 font-medium flex items-center gap-1.5">
+              <span className="material-symbols-outlined" style={{ fontSize: 14 }}>warning</span>
+              Please select at least one year.
+            </p>
+          )}
+        </div>
+
+        <div className="px-6 py-4 bg-surface-container/50 border-t border-outline-variant/20 flex items-center justify-end gap-3">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 rounded-xl text-sm font-semibold text-on-surface-variant hover:bg-surface-container-high transition-colors"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={() => onApply(selected)}
+            disabled={selected.length === 0}
+            className="px-6 py-2 rounded-xl text-sm font-semibold bg-primary text-on-primary hover:bg-primary/90 transition-all disabled:opacity-50 shadow-md shadow-primary/20"
+          >
+            Apply
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function SensorDetailPage() {
   const { factoryName: encoded } = useParams();
   const factoryName = decodeURIComponent(encoded);
@@ -289,6 +355,9 @@ export default function SensorDetailPage() {
   const defaultRange = useMemo(() => dateRangeDefault(), []);
 
   const [range, setRange]       = useState(dateRangeDefault);
+  const [rangeMode, setRangeMode] = useState("date"); // "date" or "years"
+  const [selectedYears, setSelectedYears] = useState([String(new Date().getFullYear())]);
+  const [isYearModalOpen, setIsYearModalOpen] = useState(false);
   const [deviceFilter, setDeviceFilter] = useState("all");
   const [overview, setOverview] = useState(EMPTY_SENSOR_OVERVIEW);
   const [cardOverview, setCardOverview] = useState(EMPTY_SENSOR_OVERVIEW);
@@ -434,8 +503,9 @@ export default function SensorDetailPage() {
       try {
         const data = await fetchHistoricalSensorOverview({
           factoryName,
-          startDate: range.start,
-          endDate: range.end,
+          startDate: rangeMode === "date" ? range.start : undefined,
+          endDate: rangeMode === "date" ? range.end : undefined,
+          years: rangeMode === "years" ? selectedYears : undefined,
           deviceId: deviceFilter,
           offsets: Object.fromEntries(Array.from(iotNamesMap.entries()).map(([k, v]) => [k, v.offset]).filter(([k, v]) => v)),
         });
@@ -457,7 +527,7 @@ export default function SensorDetailPage() {
     return () => {
       cancelled = true;
     };
-  }, [deviceFilter, factoryName, range.end, range.start, iotNamesMap]);
+  }, [deviceFilter, factoryName, range.end, range.start, rangeMode, selectedYears, iotNamesMap]);
 
   useEffect(() => {
     let cancelled = false;
@@ -469,8 +539,9 @@ export default function SensorDetailPage() {
       try {
         const data = await fetchHistoricalSensorOverview({
           factoryName,
-          startDate: range.start,
-          endDate: range.end,
+          startDate: rangeMode === "date" ? range.start : undefined,
+          endDate: rangeMode === "date" ? range.end : undefined,
+          years: rangeMode === "years" ? selectedYears : undefined,
           deviceId: "all",
           offsets: Object.fromEntries(Array.from(iotNamesMap.entries()).map(([k, v]) => [k, v.offset]).filter(([k, v]) => v)),
         });
@@ -492,7 +563,7 @@ export default function SensorDetailPage() {
     return () => {
       cancelled = true;
     };
-  }, [factoryName, range.end, range.start, iotNamesMap]);
+  }, [factoryName, range.end, range.start, rangeMode, selectedYears, iotNamesMap]);
 
   useEffect(() => {
     let cancelled = false;
@@ -501,8 +572,9 @@ export default function SensorDetailPage() {
       try {
         const data = await fetchHistoricalSensorOverview({
           factoryName,
-          startDate: range.start,
-          endDate: range.end,
+          startDate: rangeMode === "date" ? range.start : undefined,
+          endDate: rangeMode === "date" ? range.end : undefined,
+          years: rangeMode === "years" ? selectedYears : undefined,
           deviceId: "all",
           offsets: Object.fromEntries(Array.from(iotNamesMap.entries()).map(([k, v]) => [k, v.offset]).filter(([k, v]) => v)),
         });
@@ -523,7 +595,7 @@ export default function SensorDetailPage() {
       cancelled = true;
       window.clearInterval(intervalId);
     };
-  }, [factoryName, range.end, range.start, iotNamesMap]);
+  }, [factoryName, range.end, range.start, rangeMode, selectedYears, iotNamesMap]);
 
   useEffect(() => {
     if (deviceFilter === "all") return;
@@ -535,7 +607,7 @@ export default function SensorDetailPage() {
 
   useEffect(() => {
     setPage(1);
-  }, [deviceFilter, factoryName, range.end, range.start, sortKey]);
+  }, [deviceFilter, factoryName, range.end, range.start, rangeMode, selectedYears, sortKey]);
 
   useEffect(() => {
     let cancelled = false;
@@ -548,8 +620,9 @@ export default function SensorDetailPage() {
       try {
         const result = await fetchHistoricalSensorReadingsPage({
           factoryName,
-          startDate: range.start,
-          endDate: range.end,
+          startDate: rangeMode === "date" ? range.start : undefined,
+          endDate: rangeMode === "date" ? range.end : undefined,
+          years: rangeMode === "years" ? selectedYears : undefined,
           deviceId: deviceFilter,
           sortKey,
           page,
@@ -582,7 +655,7 @@ export default function SensorDetailPage() {
     return () => {
       cancelled = true;
     };
-  }, [deviceFilter, factoryName, page, pageSize, range.end, range.start, sortKey, iotNamesMap]);
+  }, [deviceFilter, factoryName, page, pageSize, range.end, range.start, rangeMode, selectedYears, sortKey, iotNamesMap]);
 
   const devices = useMemo(() => Array.from(new Set(
     (Array.isArray(overview.devices) ? overview.devices : [])
@@ -795,7 +868,7 @@ export default function SensorDetailPage() {
           </>
         )}
         titleClassName="flex items-center gap-3"
-        subtitle={`${range.start} → ${range.end} · ${overview.totalReadings.toLocaleString()} readings`}
+        subtitle={`${rangeMode === 'date' ? `${range.start} → ${range.end}` : `Years: ${selectedYears.join(', ')}`} · ${overview.totalReadings.toLocaleString()} readings`}
         className="mb-6 md:flex-row md:items-center md:justify-between"
         actions={(
           <button
@@ -811,27 +884,55 @@ export default function SensorDetailPage() {
 
       {/* ── Filter bar ── */}
       <div className="glass-card rounded-2xl p-5 flex flex-wrap items-center gap-4 mb-6">
-        <div className="flex items-center gap-2">
-          <span className="text-[10px] text-outline font-semibold uppercase tracking-wider">From</span>
-          <input
-            type="date"
-            value={range.start}
-            max={range.end}
-            onChange={(e) => setRange((r) => ({ ...r, start: e.target.value }))}
-            className="bg-surface-container-lowest border border-outline-variant/20 rounded-lg px-3 py-1.5 text-xs text-on-surface focus:ring-2 focus:ring-primary/20 focus:border-primary/30 outline-none transition-all duration-150"
-          />
+        <div className="flex items-center p-1 bg-surface-container-lowest rounded-xl border border-outline-variant/20">
+          <button
+            onClick={() => setRangeMode("date")}
+            className={`px-4 py-1.5 text-xs font-semibold rounded-lg transition-all ${rangeMode === "date" ? "bg-primary text-on-primary shadow-sm" : "text-on-surface-variant hover:text-on-surface"}`}
+          >
+            Date Range
+          </button>
+          <button
+            onClick={() => setIsYearModalOpen(true)}
+            className={`px-4 py-1.5 text-xs font-semibold rounded-lg transition-all ${rangeMode === "years" ? "bg-primary text-on-primary shadow-sm" : "text-on-surface-variant hover:text-on-surface"}`}
+          >
+            All Reading
+          </button>
         </div>
-        <div className="flex items-center gap-2">
-          <span className="text-[10px] text-outline font-semibold uppercase tracking-wider">To</span>
-          <input
-            type="date"
-            value={range.end}
-            min={range.start}
-            max={toISO(new Date())}
-            onChange={(e) => setRange((r) => ({ ...r, end: e.target.value }))}
-            className="bg-surface-container-lowest border border-outline-variant/20 rounded-lg px-3 py-1.5 text-xs text-on-surface focus:ring-2 focus:ring-primary/20 focus:border-primary/30 outline-none transition-all duration-150"
-          />
-        </div>
+
+        {rangeMode === "date" ? (
+          <>
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] text-outline font-semibold uppercase tracking-wider">From</span>
+              <input
+                type="date"
+                value={range.start}
+                max={range.end}
+                onChange={(e) => setRange((r) => ({ ...r, start: e.target.value }))}
+                className="bg-surface-container-lowest border border-outline-variant/20 rounded-lg px-3 py-1.5 text-xs text-on-surface focus:ring-2 focus:ring-primary/20 focus:border-primary/30 outline-none transition-all duration-150"
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] text-outline font-semibold uppercase tracking-wider">To</span>
+              <input
+                type="date"
+                value={range.end}
+                min={range.start}
+                max={toISO(new Date())}
+                onChange={(e) => setRange((r) => ({ ...r, end: e.target.value }))}
+                className="bg-surface-container-lowest border border-outline-variant/20 rounded-lg px-3 py-1.5 text-xs text-on-surface focus:ring-2 focus:ring-primary/20 focus:border-primary/30 outline-none transition-all duration-150"
+              />
+            </div>
+          </>
+        ) : (
+          <div className="flex items-center gap-3 bg-surface-container/30 px-4 py-1.5 rounded-lg border border-outline-variant/20">
+            <span className="text-[10px] text-outline font-semibold uppercase tracking-wider">Selected Years</span>
+            <span className="text-xs font-bold text-primary">{selectedYears.join(", ")}</span>
+            <button onClick={() => setIsYearModalOpen(true)} className="text-[10px] text-on-surface-variant hover:text-primary transition-colors flex items-center gap-1 ml-2 border-l border-outline-variant/20 pl-3">
+              <span className="material-symbols-outlined" style={{ fontSize: 14 }}>edit</span> Edit
+            </button>
+          </div>
+        )}
+
         <div className="flex items-center gap-2">
           <span className="text-[10px] text-outline font-semibold uppercase tracking-wider">Device</span>
           <select
@@ -873,7 +974,10 @@ export default function SensorDetailPage() {
             return (
               <button
                 key={preset}
-                onClick={() => setRange({ start: toISO(s), end: toISO(new Date()) })}
+                onClick={() => {
+                  setRange({ start: toISO(s), end: toISO(new Date()) });
+                  setRangeMode("date");
+                }}
                 className="px-3 py-1.5 text-[10px] font-semibold rounded-lg bg-surface-container hover:bg-primary/10 hover:text-primary text-outline transition-colors"
               >
                 {preset}
@@ -944,7 +1048,7 @@ export default function SensorDetailPage() {
               <div className="flex items-center gap-2 mb-4">
                 <span className="material-symbols-outlined text-tertiary" style={{ fontSize: 16 }}>thermostat</span>
                 <p className="text-[10px] text-outline font-semibold uppercase tracking-[0.15em]">
-                  Temperature Trend ({range.start === range.end ? "hourly" : "daily"} avg)
+                  Temperature Trend ({rangeMode === 'date' && range.start === range.end ? "hourly" : "daily"} avg)
                 </p>
               </div>
               <SensorTrendChart readings={overview.trends} type="temp" height={180} deviceNamesMap={iotNamesMap} />
@@ -953,7 +1057,7 @@ export default function SensorDetailPage() {
               <div className="flex items-center gap-2 mb-4">
                 <span className="material-symbols-outlined text-cyan-400" style={{ fontSize: 16 }}>water_drop</span>
                 <p className="text-[10px] text-outline font-semibold uppercase tracking-[0.15em]">
-                  Humidity Trend ({range.start === range.end ? "hourly" : "daily"} avg)
+                  Humidity Trend ({rangeMode === 'date' && range.start === range.end ? "hourly" : "daily"} avg)
                 </p>
               </div>
               <SensorTrendChart readings={overview.trends} type="humid" height={180} deviceNamesMap={iotNamesMap} />
@@ -1048,6 +1152,16 @@ export default function SensorDetailPage() {
         preview={photoPreview}
         onClose={() => setPhotoPreview(null)}
         onNavigate={handleNavigatePhotoPreview}
+      />
+      <YearSelectionModal
+        isOpen={isYearModalOpen}
+        onClose={() => setIsYearModalOpen(false)}
+        initialSelectedYears={selectedYears}
+        onApply={(years) => {
+          setSelectedYears(years);
+          setRangeMode("years");
+          setIsYearModalOpen(false);
+        }}
       />
     </section>
   );
