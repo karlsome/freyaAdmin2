@@ -4,6 +4,8 @@
 //   type      — "temp" | "humid"
 //   height    — SVG height in px (default 180)
 
+import { useState } from "react";
+
 function parseTemp(v)  { return parseFloat(String(v ?? "").replace("°C", "").trim()); }
 function parseHumid(v) { return parseFloat(String(v ?? "").replace("%",  "").trim()); }
 
@@ -14,7 +16,8 @@ const THRESHOLDS = {
   humid: { warning: 60, danger: 70, unit: "%"  },
 };
 
-export default function SensorTrendChart({ readings = [], type = "temp", height = 180 }) {
+export default function SensorTrendChart({ readings = [], type = "temp", height = 180, deviceNamesMap = new Map() }) {
+  const [hoveredIndex, setHoveredIndex] = useState(null);
   const { warning, danger, unit } = THRESHOLDS[type];
   const getVal = (r) => type === "temp" ? parseTemp(r.Temperature) : parseHumid(r.Humidity);
 
@@ -69,7 +72,7 @@ export default function SensorTrendChart({ readings = [], type = "temp", height 
   const xStep = Math.ceil(allDates.length / 8);
 
   return (
-    <div className="w-full">
+    <div className="w-full relative" onMouseLeave={() => setHoveredIndex(null)}>
       <svg viewBox={`0 0 ${W} ${H}`} className="w-full" style={{ height }}>
         {/* Grid + Y labels */}
         {Array.from({ length: yTicks + 1 }).map((_, i) => {
@@ -103,10 +106,12 @@ export default function SensorTrendChart({ readings = [], type = "temp", height 
         {/* X labels */}
         {allDates.map((d, i) => {
           if (i % xStep !== 0 && i !== allDates.length - 1) return null;
+          const isHourly = d.includes(" ");
+          const label = isHourly ? d.split(" ")[1] : d.slice(5);
           return (
             <text key={d} x={xPos(i)} y={H - 4} textAnchor="middle" fontSize={8}
               fill="currentColor" fillOpacity={0.4}>
-              {d.slice(5)}
+              {label}
             </text>
           );
         })}
@@ -135,17 +140,97 @@ export default function SensorTrendChart({ readings = [], type = "temp", height 
             </g>
           );
         })}
+
+        {/* Hover Indicator */}
+        {hoveredIndex !== null && (
+          <line
+            x1={xPos(hoveredIndex)}
+            y1={P.top}
+            x2={xPos(hoveredIndex)}
+            y2={P.top + cH}
+            stroke="currentColor"
+            strokeOpacity={0.2}
+            strokeWidth={1}
+            strokeDasharray="4 2"
+            pointerEvents="none"
+          />
+        )}
+
+        {/* Interaction overlay */}
+        {allDates.map((_, i) => {
+          const x = i === 0 ? P.left : (xPos(i - 1) + xPos(i)) / 2;
+          const nextX = i === allDates.length - 1 ? W - P.right : (xPos(i) + xPos(i + 1)) / 2;
+          const width = nextX - x;
+          return (
+            <rect
+              key={`hit-${i}`}
+              x={x}
+              y={P.top}
+              width={Math.max(width, 0)}
+              height={cH}
+              fill="transparent"
+              onMouseEnter={() => setHoveredIndex(i)}
+              style={{ cursor: "crosshair" }}
+            />
+          );
+        })}
       </svg>
+
+      {/* Tooltip */}
+      {hoveredIndex !== null && (
+        <div
+          className="absolute z-10 glass-card p-3 rounded-xl shadow-[0_12px_24px_rgba(0,0,0,0.15)] border border-outline-variant/30 pointer-events-none min-w-[150px]"
+          style={{
+            top: P.top,
+            ...(hoveredIndex > allDates.length / 2 
+              ? { right: `${100 - (xPos(hoveredIndex) / W) * 100}%`, marginRight: '16px' } 
+              : { left: `${(xPos(hoveredIndex) / W) * 100}%`, marginLeft: '16px' })
+          }}
+        >
+          <p className="text-[10px] font-semibold text-outline uppercase tracking-[0.1em] mb-2.5">
+            {allDates[hoveredIndex].includes(" ") ? `Time: ${allDates[hoveredIndex]}` : `Date: ${allDates[hoveredIndex]}`}
+          </p>
+          <div className="flex flex-col gap-1.5">
+            {series.map(({ id, values }, si) => {
+              const v = values[hoveredIndex];
+              if (v === null) return null;
+              const color = LINE_COLORS[si % LINE_COLORS.length];
+              const friendly = deviceNamesMap.get(id)?.name || id;
+              const offset = deviceNamesMap.get(id)?.offset || 0;
+              const offsetStr = offset ? ` (${offset > 0 ? "+" : ""}${offset})` : "";
+              return (
+                <div key={id} className="flex items-center justify-between gap-6 text-xs">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: color }} />
+                    <span className="text-on-surface truncate max-w-[120px] font-medium" title={`${friendly}${offsetStr}`}>
+                      {friendly}
+                    </span>
+                  </div>
+                  <span className="font-semibold text-on-surface flex-shrink-0">
+                    {type === "temp" ? v.toFixed(1) : Math.round(v)}{unit}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Legend */}
       {series.length > 1 && (
         <div className="flex flex-wrap gap-4 mt-1 pl-9">
-          {series.map(({ id }, si) => (
-            <div key={id} className="flex items-center gap-1.5">
-              <div className="w-4 h-0.5 rounded-full" style={{ backgroundColor: LINE_COLORS[si % LINE_COLORS.length] }} />
-              <span className="text-[10px] text-outline font-mono">{id}</span>
-            </div>
-          ))}
+          {series.map(({ id }, si) => {
+            const mapped = deviceNamesMap.get(id);
+            const friendly = mapped?.name || id;
+            const offset = mapped?.offset || 0;
+            const offsetStr = offset ? ` (${offset > 0 ? "+" : ""}${offset}°C)` : "";
+            return (
+              <div key={id} className="flex items-center gap-1.5" title={offset ? `Offset: ${offset > 0 ? "+" : ""}${offset}°C` : ""}>
+                <div className="w-4 h-0.5 rounded-full" style={{ backgroundColor: LINE_COLORS[si % LINE_COLORS.length] }} />
+                <span className="text-[10px] text-outline font-mono">{friendly}{offsetStr}</span>
+              </div>
+            );
+          })}
         </div>
       )}
     </div>

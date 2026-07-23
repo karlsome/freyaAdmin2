@@ -264,7 +264,7 @@ export function calcWBGT(temperature, humidity) {
   }
 }
 
-function _parseSensorReadings(readings) {
+function _parseSensorReadings(readings, offsets = {}) {
   const sensorMap = new Map();
   readings.forEach((r) => {
     const id = r.device;
@@ -275,14 +275,20 @@ function _parseSensorReadings(readings) {
     }
   });
 
-  const sensors = Array.from(sensorMap.values()).map((r) => ({
-    deviceId:    r.device,
-    temperature: parseFloat(String(r.Temperature ?? "").replace("°C", "").trim()),
-    humidity:    parseFloat(String(r.Humidity    ?? "").replace("%",  "").trim()),
-    status:      r.sensorStatus ?? "OK",
-    lastUpdate:  `${r.Date} ${r.Time}`,
-    factory:     r["工場"],
-  }));
+  const sensors = Array.from(sensorMap.values()).map((r) => {
+    let rawTemp = parseFloat(String(r.Temperature ?? "").replace("°C", "").trim());
+    if (!isNaN(rawTemp) && offsets[r.device]) {
+      rawTemp += offsets[r.device];
+    }
+    return {
+      deviceId:    r.device,
+      temperature: Math.round(rawTemp * 100) / 100,
+      humidity:    parseFloat(String(r.Humidity    ?? "").replace("%",  "").trim()),
+      status:      r.sensorStatus ?? "OK",
+      lastUpdate:  `${r.Date} ${r.Time}`,
+      factory:     r["工場"],
+    };
+  });
 
   const temps  = sensors.map((s) => s.temperature).filter((t) => !isNaN(t));
   const humids = sensors.map((s) => s.humidity).filter((h) => !isNaN(h));
@@ -311,7 +317,16 @@ export async function fetchSensorData(factoryName, date) {
       { sort: { Time: -1 }, limit: 200 }
     );
     if (!readings?.length) { _setCache(key, empty); return empty; }
-    const data = _parseSensorReadings(readings);
+
+    const deviceNames = await fetchIoTDeviceNames(factoryName);
+    const offsets = {};
+    if (Array.isArray(deviceNames)) {
+      deviceNames.forEach(d => {
+        if (d.offset) offsets[d.deviceId] = Number(d.offset);
+      });
+    }
+
+    const data = _parseSensorReadings(readings, offsets);
     _setCache(key, data);
     return data;
   } catch {
@@ -337,6 +352,16 @@ export async function fetchSensorFactoryOverview(date = new Date().toISOString()
   if (cached) return cached;
 
   return _withInFlight(cacheKey, async () => {
+    let offsets = {};
+    try {
+      const iotNames = await fetchIoTDeviceNames();
+      offsets = Object.fromEntries(
+        (Array.isArray(iotNames) ? iotNames : []).map(d => [d.deviceId, d.offset]).filter(([_, offset]) => offset)
+      );
+    } catch {
+      // ignore
+    }
+
     const result = await query(
       "submittedDB",
       "tempHumidityDB",
@@ -359,7 +384,7 @@ export async function fetchSensorFactoryOverview(date = new Date().toISOString()
                 { $match: { Date: date, factoryName: { $ne: "" } } },
                 {
                   $addFields: {
-                    temperatureValue: buildSensorReadingTemperatureExpression(),
+                    temperatureValue: buildSensorReadingTemperatureExpression(offsets),
                     humidityValue: buildSensorReadingHumidityExpression(),
                   },
                 },
@@ -490,8 +515,13 @@ export async function fetchHistoricalSensorData(factoryName, startDate, endDate)
   }
 }
 
-function buildSensorReadingTemperatureExpression() {
-  return {
+function buildSensorReadingTemperatureExpression(offsets = {}) {
+  const branches = Object.entries(offsets).map(([device, offset]) => ({
+    case: { $eq: ["$device", device] },
+    then: offset
+  }));
+
+  const baseTempExpr = {
     $convert: {
       input: {
         $trim: {
@@ -508,6 +538,27 @@ function buildSensorReadingTemperatureExpression() {
       onError: null,
       onNull: null,
     },
+  };
+
+  if (branches.length === 0) {
+    return baseTempExpr;
+  }
+
+  return {
+    $round: [
+      {
+        $add: [
+          baseTempExpr,
+          {
+            $switch: {
+              branches,
+              default: 0
+            }
+          }
+        ]
+      },
+      2
+    ]
   };
 }
 
@@ -626,18 +677,25 @@ function buildSensorReadingDeviceMatch(deviceId = "all") {
   return { device: deviceId };
 }
 
-function buildSensorReadingNormalizationStages({ factoryName, startDate, endDate }) {
+function buildSensorReadingNormalizationStages({ factoryName, startDate, endDate, offsets = {} }) {
   return [
     { $match: buildSensorReadingBaseMatch({ factoryName, startDate, endDate }) },
     {
       $addFields: {
-        temperatureValue: buildSensorReadingTemperatureExpression(),
+        temperatureValue: buildSensorReadingTemperatureExpression(offsets),
         humidityValue: buildSensorReadingHumidityExpression(),
       },
     },
     {
       $addFields: {
         wbgtValue: buildSensorReadingWBGTExpression(),
+        Temperature: {
+          $cond: [
+            { $eq: ["$temperatureValue", null] },
+            "$Temperature",
+            { $concat: [{ $toString: "$temperatureValue" }, "°C"] }
+          ]
+        }
       },
     },
   ];
@@ -658,6 +716,7 @@ export async function fetchHistoricalSensorReadingsPage({
   sortKey = "date_desc",
   page = 1,
   limit = 15,
+  offsets = {},
 } = {}) {
   const safeLimit = Math.max(1, Number(limit) || 15);
   const safePage = Math.max(1, Number(page) || 1);
@@ -670,7 +729,7 @@ export async function fetchHistoricalSensorReadingsPage({
     {},
     {
       aggregation: [
-        ...buildSensorReadingNormalizationStages({ factoryName, startDate, endDate }),
+        ...buildSensorReadingNormalizationStages({ factoryName, startDate, endDate, offsets }),
         ...(deviceMatch ? [{ $match: deviceMatch }] : []),
         {
           $facet: {
@@ -713,6 +772,7 @@ export async function fetchHistoricalSensorReadingsPage({
       sortKey,
       page: totalPages,
       limit: safeLimit,
+      offsets,
     });
   }
 
@@ -732,8 +792,9 @@ export async function fetchHistoricalSensorOverview({
   startDate,
   endDate,
   deviceId = "all",
+  offsets = {},
 } = {}) {
-  const cacheKey = `sensorOverview:${factoryName}:${startDate}:${endDate}:${deviceId}`;
+  const cacheKey = `sensorOverview:${factoryName}:${startDate}:${endDate}:${deviceId}:${JSON.stringify(offsets)}`;
   const cached = _getCached(cacheKey, SENSOR_TTL);
   if (cached) return cached;
 
@@ -746,7 +807,7 @@ export async function fetchHistoricalSensorOverview({
       {},
       {
         aggregation: [
-          ...buildSensorReadingNormalizationStages({ factoryName, startDate, endDate }),
+          ...buildSensorReadingNormalizationStages({ factoryName, startDate, endDate, offsets }),
           {
             $facet: {
               deviceOptions: [
@@ -794,6 +855,7 @@ export async function fetchHistoricalSensorOverview({
                     _id: {
                       device: "$device",
                       date: "$Date",
+                      hour: startDate === endDate ? { $substr: ["$Time", 0, 2] } : null,
                     },
                     avgTemperature: { $avg: "$temperatureValue" },
                     avgHumidity: { $avg: "$humidityValue" },
@@ -803,7 +865,9 @@ export async function fetchHistoricalSensorOverview({
                   $project: {
                     _id: 0,
                     device: "$_id.device",
-                    Date: "$_id.date",
+                    Date: startDate === endDate 
+                      ? { $concat: ["$_id.date", " ", "$_id.hour", ":00"] }
+                      : "$_id.date",
                     Temperature: { $round: ["$avgTemperature", 1] },
                     Humidity: { $round: ["$avgHumidity", 1] },
                   },
@@ -868,6 +932,7 @@ export async function fetchHistoricalSensorExport({
   endDate,
   deviceId = "all",
   sortKey = "date_desc",
+  offsets = {},
 } = {}) {
   const deviceMatch = buildSensorReadingDeviceMatch(deviceId);
 
@@ -877,7 +942,7 @@ export async function fetchHistoricalSensorExport({
     {},
     {
       aggregation: [
-        ...buildSensorReadingNormalizationStages({ factoryName, startDate, endDate }),
+        ...buildSensorReadingNormalizationStages({ factoryName, startDate, endDate, offsets }),
         ...(deviceMatch ? [{ $match: deviceMatch }] : []),
         { $sort: buildSensorReadingSortStage(sortKey) },
         {
@@ -934,6 +999,7 @@ export async function fetchAllIoTDevicesWithUsers() {
             createdAt: 1,
             updatedAt: 1,
             username: 1,
+            offset: 1,
             "registeredBy.firstName": 1,
             "registeredBy.lastName": 1,
             "registeredBy.email": 1,
@@ -947,8 +1013,8 @@ export async function fetchAllIoTDevicesWithUsers() {
   return Array.isArray(result) ? result : [];
 }
 
-export async function saveIoTDeviceName({ deviceId, factoryName, name, imageURLs, username }) {
-  return _postJson("api/iot-device-names/save", { deviceId, factoryName, name, imageURLs, username });
+export async function saveIoTDeviceName({ deviceId, factoryName, name, imageURLs, username, offset }) {
+  return _postJson("api/iot-device-names/save", { deviceId, factoryName, name, imageURLs, username, offset });
 }
 
 export async function uploadIoTDeviceImage({ base64, deviceId, factoryName, username }) {

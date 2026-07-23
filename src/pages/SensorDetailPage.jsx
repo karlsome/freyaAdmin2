@@ -77,7 +77,6 @@ function toISO(d) { return d.toISOString().split("T")[0]; }
 function dateRangeDefault() {
   const end   = new Date();
   const start = new Date();
-  start.setDate(start.getDate() - 6);
   return { start: toISO(start), end: toISO(end) };
 }
 
@@ -136,7 +135,14 @@ function Sparkline({ values, color = "#6366f1", height = 28 }) {
 }
 
 // ─── Per-device summary card ──────────────────────────────────────────────────
-function SensorCard({ device, isActive = false, onSelect = null, onEdit = null, onPreviewPhotos = null }) {
+function SensorCard({
+  device,
+  isActive = false,
+  offset = 0,
+  onSelect = null,
+  onEdit = null,
+  onPreviewPhotos = null
+}) {
   const latest = device?.latest ?? {};
   const latestTemp = parseTemp(latest.Temperature);
   const latestHumid = parseHumid(latest.Humidity);
@@ -212,7 +218,14 @@ function SensorCard({ device, isActive = false, onSelect = null, onEdit = null, 
 
       <div className="grid grid-cols-2 gap-3">
         <div className={`p-3 rounded-xl ${tempStatus.bg}`}>
-          <p className={`text-lg font-semibold ${tempStatus.color}`}>{Number.isNaN(latestTemp) ? "—" : `${latestTemp}°C`}</p>
+          <div className="flex items-center gap-2">
+            <p className={`text-lg font-semibold ${tempStatus.color}`}>{Number.isNaN(latestTemp) ? "—" : `${latestTemp}°C`}</p>
+            {offset ? (
+              <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-surface/50 text-on-surface-variant border border-outline-variant/30 whitespace-nowrap" title="Temperature Offset">
+                {offset > 0 ? "+" : ""}{offset}°C
+              </span>
+            ) : null}
+          </div>
           <p className="text-[10px] text-on-surface-variant">Temperature</p>
           <Sparkline values={tempTrend} color={latestTemp >= 30 ? "#f87171" : "#6366f1"} />
         </div>
@@ -307,6 +320,7 @@ export default function SensorDetailPage() {
             nextMap.set(String(r.deviceId).trim(), {
               name: r.name || "",
               imageURLs: Array.isArray(r.imageURLs) ? r.imageURLs : [],
+              offset: Number(r.offset) || 0,
             });
           }
         });
@@ -327,8 +341,8 @@ export default function SensorDetailPage() {
 
   function handleOpenNaming(device) {
     const id = String(device?.deviceId || "").trim();
-    const existing = iotNamesMap.get(id) || { name: "", imageURLs: [] };
-    setNamingDevice({ deviceId: id, name: existing.name, imageURLs: existing.imageURLs });
+    const existing = iotNamesMap.get(id) || { name: "", imageURLs: [], offset: 0 };
+    setNamingDevice({ deviceId: id, name: existing.name, imageURLs: existing.imageURLs, offset: existing.offset });
   }
 
   function handleOpenPhotoPreview(device) {
@@ -365,7 +379,7 @@ export default function SensorDetailPage() {
     });
   }
 
-  async function handleSaveName({ name, imageURLs }) {
+  async function handleSaveName({ name, imageURLs, offset }) {
     if (!namingDevice) return;
     setSavingName(true);
     try {
@@ -376,10 +390,11 @@ export default function SensorDetailPage() {
         name,
         imageURLs,
         username: authUser?.username || "",
+        offset,
       });
       setIoTNamesMap((prev) => {
         const next = new Map(prev);
-        next.set(namingDevice.deviceId, { name, imageURLs });
+        next.set(namingDevice.deviceId, { name, imageURLs, offset });
         return next;
       });
       setNamingDevice(null);
@@ -422,6 +437,7 @@ export default function SensorDetailPage() {
           startDate: range.start,
           endDate: range.end,
           deviceId: deviceFilter,
+          offsets: Object.fromEntries(Array.from(iotNamesMap.entries()).map(([k, v]) => [k, v.offset]).filter(([k, v]) => v)),
         });
 
         if (cancelled || requestId !== overviewRequestIdRef.current) return;
@@ -441,7 +457,7 @@ export default function SensorDetailPage() {
     return () => {
       cancelled = true;
     };
-  }, [deviceFilter, factoryName, range.end, range.start]);
+  }, [deviceFilter, factoryName, range.end, range.start, iotNamesMap]);
 
   useEffect(() => {
     let cancelled = false;
@@ -456,6 +472,7 @@ export default function SensorDetailPage() {
           startDate: range.start,
           endDate: range.end,
           deviceId: "all",
+          offsets: Object.fromEntries(Array.from(iotNamesMap.entries()).map(([k, v]) => [k, v.offset]).filter(([k, v]) => v)),
         });
 
         if (cancelled || requestId !== cardOverviewRequestIdRef.current) return;
@@ -475,7 +492,7 @@ export default function SensorDetailPage() {
     return () => {
       cancelled = true;
     };
-  }, [factoryName, range.end, range.start]);
+  }, [factoryName, range.end, range.start, iotNamesMap]);
 
   useEffect(() => {
     let cancelled = false;
@@ -487,6 +504,7 @@ export default function SensorDetailPage() {
           startDate: range.start,
           endDate: range.end,
           deviceId: "all",
+          offsets: Object.fromEntries(Array.from(iotNamesMap.entries()).map(([k, v]) => [k, v.offset]).filter(([k, v]) => v)),
         });
 
         if (cancelled) return;
@@ -505,7 +523,7 @@ export default function SensorDetailPage() {
       cancelled = true;
       window.clearInterval(intervalId);
     };
-  }, [factoryName, range.end, range.start]);
+  }, [factoryName, range.end, range.start, iotNamesMap]);
 
   useEffect(() => {
     if (deviceFilter === "all") return;
@@ -536,6 +554,7 @@ export default function SensorDetailPage() {
           sortKey,
           page,
           limit: pageSize,
+          offsets: Object.fromEntries(Array.from(iotNamesMap.entries()).map(([k, v]) => [k, v.offset]).filter(([k, v]) => v)),
         });
 
         if (cancelled || requestId !== tableRequestIdRef.current) return;
@@ -563,7 +582,7 @@ export default function SensorDetailPage() {
     return () => {
       cancelled = true;
     };
-  }, [deviceFilter, factoryName, page, pageSize, range.end, range.start, sortKey]);
+  }, [deviceFilter, factoryName, page, pageSize, range.end, range.start, sortKey, iotNamesMap]);
 
   const devices = useMemo(() => Array.from(new Set(
     (Array.isArray(overview.devices) ? overview.devices : [])
@@ -627,6 +646,7 @@ export default function SensorDetailPage() {
         endDate: range.end,
         deviceId: deviceFilter,
         sortKey,
+        offsets: Object.fromEntries(Array.from(iotNamesMap.entries()).map(([k, v]) => [k, v.offset]).filter(([k, v]) => v)),
       });
       exportCSV(exportRows, factoryName);
     } finally {
@@ -875,7 +895,7 @@ export default function SensorDetailPage() {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
             {[
               {
-                label: "Avg Temperature",
+                label: `Avg Temperature${deviceFilter !== "all" && iotNamesMap.get(normalizeDeviceId(deviceFilter))?.offset ? ` (Offset: ${iotNamesMap.get(normalizeDeviceId(deviceFilter)).offset > 0 ? "+" : ""}${iotNamesMap.get(normalizeDeviceId(deviceFilter)).offset}°C)` : ""}`,
                 value: sensorKPIs.avgTemp !== null ? `${sensorKPIs.avgTemp}°C` : "—",
                 sub: sensorKPIs.minTemp !== null ? `Min ${sensorKPIs.minTemp}°C` : null,
                 icon: "thermostat",
@@ -883,7 +903,7 @@ export default function SensorDetailPage() {
                 bg: getTempStatus(sensorKPIs.avgTemp).bg,
               },
               {
-                label: "Peak Temperature",
+                label: `Peak Temperature${deviceFilter !== "all" && iotNamesMap.get(normalizeDeviceId(deviceFilter))?.offset ? ` (Offset: ${iotNamesMap.get(normalizeDeviceId(deviceFilter)).offset > 0 ? "+" : ""}${iotNamesMap.get(normalizeDeviceId(deviceFilter)).offset}°C)` : ""}`,
                 value: sensorKPIs.peakTemp !== null ? `${sensorKPIs.peakTemp}°C` : "—",
                 sub: null,
                 icon: "device_thermostat",
@@ -921,18 +941,22 @@ export default function SensorDetailPage() {
           {/* ── Trend charts ── */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-6">
             <div className="glass-card rounded-2xl p-5">
-              <p className="text-[10px] text-outline font-semibold uppercase tracking-[0.18em] mb-3 flex items-center gap-2">
-                <span className="material-symbols-outlined text-amber-500" style={{ fontSize: 14 }}>thermostat</span>
-                Temperature Trend (daily avg)
-              </p>
-              <SensorTrendChart readings={overview.trends} type="temp" height={180} />
+              <div className="flex items-center gap-2 mb-4">
+                <span className="material-symbols-outlined text-tertiary" style={{ fontSize: 16 }}>thermostat</span>
+                <p className="text-[10px] text-outline font-semibold uppercase tracking-[0.15em]">
+                  Temperature Trend ({range.start === range.end ? "hourly" : "daily"} avg)
+                </p>
+              </div>
+              <SensorTrendChart readings={overview.trends} type="temp" height={180} deviceNamesMap={iotNamesMap} />
             </div>
             <div className="glass-card rounded-2xl p-5">
-              <p className="text-[10px] text-outline font-semibold uppercase tracking-[0.18em] mb-3 flex items-center gap-2">
-                <span className="material-symbols-outlined text-cyan-400" style={{ fontSize: 14 }}>water_drop</span>
-                Humidity Trend (daily avg)
-              </p>
-              <SensorTrendChart readings={overview.trends} type="humid" height={180} />
+              <div className="flex items-center gap-2 mb-4">
+                <span className="material-symbols-outlined text-cyan-400" style={{ fontSize: 16 }}>water_drop</span>
+                <p className="text-[10px] text-outline font-semibold uppercase tracking-[0.15em]">
+                  Humidity Trend ({range.start === range.end ? "hourly" : "daily"} avg)
+                </p>
+              </div>
+              <SensorTrendChart readings={overview.trends} type="humid" height={180} deviceNamesMap={iotNamesMap} />
             </div>
           </div>
 
@@ -947,6 +971,7 @@ export default function SensorDetailPage() {
                   <SensorCard
                     key={device.deviceId}
                     device={device}
+                    offset={iotNamesMap.get(device.deviceId)?.offset || 0}
                     isActive={normalizeDeviceId(deviceFilter) === normalizeDeviceId(device.deviceId)}
                     onSelect={handleSelectDevice}
                     onEdit={handleOpenNaming}
@@ -1011,6 +1036,7 @@ export default function SensorDetailPage() {
         factoryName={factoryName}
         initialName={namingDevice?.name || ""}
         initialImageURLs={namingDevice?.imageURLs || []}
+        initialOffset={namingDevice?.offset || 0}
         saving={savingName}
         onClose={() => setNamingDevice(null)}
         onSave={handleSaveName}

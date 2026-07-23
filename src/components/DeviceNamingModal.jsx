@@ -15,6 +15,7 @@ export default function DeviceNamingModal({
   factoryName,
   initialName = "",
   initialImageURLs = [],
+  initialOffset = 0,
   saving,
   onClose,
   onSave,
@@ -23,6 +24,7 @@ export default function DeviceNamingModal({
 }) {
   const fileInputRef = useRef(null);
   const [name, setName] = useState(initialName);
+  const [offset, setOffset] = useState(initialOffset);
   const [imageURLs, setImageURLs] = useState(initialImageURLs);
   const [uploadingCount, setUploadingCount] = useState(0);
   const [uploadError, setUploadError] = useState("");
@@ -30,11 +32,12 @@ export default function DeviceNamingModal({
   useEffect(() => {
     if (open) {
       setName(initialName);
+      setOffset(initialOffset);
       setImageURLs(initialImageURLs);
       setUploadError("");
       setUploadingCount(0);
     }
-  }, [open, initialName, initialImageURLs]);
+  }, [open, initialName, initialOffset, initialImageURLs]);
 
   useEffect(() => {
     function onKey(e) {
@@ -89,7 +92,7 @@ export default function DeviceNamingModal({
   }
 
   function handleSave() {
-    onSave({ name: name.trim(), imageURLs });
+    onSave({ name: name.trim(), imageURLs, offset: Number(offset) });
   }
 
   return (
@@ -152,6 +155,25 @@ export default function DeviceNamingModal({
             />
             <p className="text-[11px] text-outline mt-2">
               This name will replace the device ID in all sensor views for this factory.
+            </p>
+          </div>
+
+          {/* Temperature Offset input */}
+          <div className="rounded-2xl border border-outline-variant/15 bg-surface-container-low px-4 py-3">
+            <div className="flex items-center gap-2 text-outline mb-2">
+              <span className="material-symbols-outlined text-primary" style={{ fontSize: 16 }}>thermostat</span>
+              <span className="text-[10px] font-semibold uppercase tracking-[0.18em]">Temperature Offset (°C)</span>
+            </div>
+            <input
+              type="number"
+              step="0.1"
+              value={offset}
+              onChange={(e) => setOffset(e.target.value)}
+              placeholder="e.g. 5 or -2"
+              className="w-full rounded-xl border border-outline-variant/30 bg-surface px-3 py-2 text-sm font-semibold text-on-surface placeholder:text-outline/50 outline-none transition-all duration-150 focus:border-primary/40 focus:ring-2 focus:ring-primary/15"
+            />
+            <p className="text-[11px] text-outline mt-2">
+              This value will be added to the raw temperature reading in the frontend.
             </p>
           </div>
 
