@@ -1393,6 +1393,9 @@ export function getMasterCollectionConfig(tabKey = "masterDB") {
   if (tabKey === "setsubiDB") {
     return { collectionName: "setsubiDB", baseQuery: {} };
   }
+  if (tabKey === "processDB") {
+    return { collectionName: "processMasterDB", baseQuery: {} };
+  }
   if (tabKey === "equipmentHistoryDB") {
     return { collectionName: "equipmentHistoryDB", baseQuery: {} };
   }

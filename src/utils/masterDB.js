@@ -6,6 +6,8 @@ export const MASTER_TABS = [
   { key: "furyoKanri", label: "不良管理", description: "Defect definition management", ready: true },
   { key: "factoryDB", label: "工場", description: "Factory master list", ready: true },
   { key: "setsubiDB", label: "設備", description: "Equipment by factory", ready: true },
+  { key: "processDB", label: "工程 DB (Process)", description: "Process master records", ready: true },
+  { key: "bomDB", label: "BOM DB", description: "Bill of materials builder", ready: true },
   { key: "pceFiles", label: "pce ファイル", description: "PCE file upload utility", ready: true },
 ];
 
