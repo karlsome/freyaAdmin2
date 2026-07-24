@@ -1022,8 +1022,8 @@ export default function FirstFactoryPage() {
                 <div className="flex items-center gap-3">
                   <span className="material-symbols-outlined text-primary" style={{fontSize: 24}}>inventory_2</span>
                   <div>
-                    <h3 className="text-lg font-bold text-on-surface">{materialDetail['品番']}</h3>
-                    <p className="text-xs text-outline">{materialDetail['品目マスタ']?.['品名']} — {materialDetail['品目マスタ']?.['仕様']}</p>
+                    <h3 className="text-xl font-bold text-on-surface">{materialDetail['品番']}</h3>
+                    <p className="text-sm text-outline mt-1">{materialDetail['品目マスタ']?.['品名']} — {materialDetail['品目マスタ']?.['仕様']}</p>
                   </div>
                 </div>
                 <button 
@@ -1039,14 +1039,14 @@ export default function FirstFactoryPage() {
                 {/* Material Structure */}
                 {materialDetail['品番構造']?.segments && (
                   <div>
-                    <div className="text-[10px] font-bold text-outline mb-2 uppercase tracking-wider">材料品番構造 (Material Structure)</div>
-                    <div className="flex flex-wrap gap-1.5">
+                    <div className="text-xs font-bold text-outline mb-3 uppercase tracking-wider">材料品番構造 (Material Structure)</div>
+                    <div className="flex flex-wrap gap-2">
                       {materialDetail['品番構造'].segments.map((s, i) => {
                         const name = s.name || s['得意先'] || s['入出荷先'];
                         if (!name) return null;
                         return (
-                          <div key={i} className="flex flex-col bg-surface-variant/30 border border-outline-variant/50 rounded-lg px-2.5 py-1.5 text-xs">
-                            <span className="text-[9px] text-outline">{s.segment}</span>
+                          <div key={i} className="flex flex-col bg-surface-variant/30 border border-outline-variant/50 rounded-lg px-3 py-2 text-sm">
+                            <span className="text-[10px] text-outline">{s.segment}</span>
                             <span className="font-medium text-on-surface">{name}</span>
                           </div>
                         );
@@ -1057,94 +1057,94 @@ export default function FirstFactoryPage() {
 
                 {/* Material Master Data */}
                 <div>
-                  <div className="text-[10px] font-bold text-outline mb-2 uppercase tracking-wider">材料マスタ (Material Master)</div>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  <div className="text-xs font-bold text-outline mb-3 uppercase tracking-wider">材料マスタ (Material Master)</div>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                     <div className="flex flex-col">
-                      <span className="text-[9px] text-outline">品目区分 (Category)</span>
-                      <span className="font-medium text-xs text-on-surface">{materialDetail['品目マスタ']?.['品目区分'] || 'N/A'}</span>
+                      <span className="text-[10px] text-outline">品目区分 (Category)</span>
+                      <span className="font-medium text-sm text-on-surface">{materialDetail['品目マスタ']?.['品目区分'] || 'N/A'}</span>
                     </div>
                     <div className="flex flex-col">
-                      <span className="text-[9px] text-outline">手配先コード (Supplier)</span>
-                      <span className="font-medium text-xs text-on-surface">{materialDetail['品目マスタ']?.['手配先コード'] || 'N/A'}</span>
+                      <span className="text-[10px] text-outline">手配先コード (Supplier)</span>
+                      <span className="font-medium text-sm text-on-surface">{materialDetail['品目マスタ']?.['手配先コード'] || 'N/A'}</span>
                     </div>
                     <div className="flex flex-col">
-                      <span className="text-[9px] text-outline">生産単位数 (Prod Unit)</span>
-                      <span className="font-medium text-xs text-on-surface">{materialDetail['品目マスタ']?.['生産単位数'] || 'N/A'}</span>
+                      <span className="text-[10px] text-outline">生産単位数 (Prod Unit)</span>
+                      <span className="font-medium text-sm text-on-surface">{materialDetail['品目マスタ']?.['生産単位数'] || 'N/A'}</span>
                     </div>
                     <div className="flex flex-col">
-                      <span className="text-[9px] text-outline">発注ロット数 (Order Lot)</span>
-                      <span className="font-medium text-xs text-on-surface">{materialDetail['品目マスタ']?.['発注ロット数'] || 'N/A'}</span>
+                      <span className="text-[10px] text-outline">発注ロット数 (Order Lot)</span>
+                      <span className="font-medium text-sm text-on-surface">{materialDetail['品目マスタ']?.['発注ロット数'] || 'N/A'}</span>
                     </div>
 
                     <div className="flex flex-col">
-                      <span className="text-[9px] text-outline">出荷先名 (Shipping Dest)</span>
-                      <span className="font-medium text-xs text-on-surface">{materialDetail['品目マスタ']?.['出荷先名'] || 'N/A'}</span>
+                      <span className="text-[10px] text-outline">出荷先名 (Shipping Dest)</span>
+                      <span className="font-medium text-sm text-on-surface">{materialDetail['品目マスタ']?.['出荷先名'] || 'N/A'}</span>
                     </div>
                     <div className="flex flex-col">
-                      <span className="text-[9px] text-outline">仕様 (Specs)</span>
-                      <span className="font-medium text-xs text-on-surface">{materialDetail['品目マスタ']?.['仕様'] || 'N/A'}</span>
+                      <span className="text-[10px] text-outline">仕様 (Specs)</span>
+                      <span className="font-medium text-sm text-on-surface">{materialDetail['品目マスタ']?.['仕様'] || 'N/A'}</span>
                     </div>
                     <div className="flex flex-col">
-                      <span className="text-[9px] text-outline">型番 (Model)</span>
-                      <span className="font-medium text-xs text-on-surface">{materialDetail['品目マスタ']?.['型番'] || 'N/A'}</span>
+                      <span className="text-[10px] text-outline">型番 (Model)</span>
+                      <span className="font-medium text-sm text-on-surface">{materialDetail['品目マスタ']?.['型番'] || 'N/A'}</span>
                     </div>
                     <div className="flex flex-col">
-                      <span className="text-[9px] text-outline">接着剤有無 (Adhesive)</span>
-                      <span className="font-medium text-xs text-on-surface">
+                      <span className="text-[10px] text-outline">接着剤有無 (Adhesive)</span>
+                      <span className="font-medium text-sm text-on-surface">
                         {materialDetail['品目マスタ']?.['接着剤有無'] === 1 ? '有 (Yes)' : materialDetail['品目マスタ']?.['接着剤有無'] === 2 ? '無 (No)' : materialDetail['品目マスタ']?.['接着剤有無'] ?? 'N/A'}
                       </span>
                     </div>
 
                     <div className="flex flex-col">
-                      <span className="text-[9px] text-outline">基材厚 (Base Thick)</span>
-                      <span className="font-medium text-xs text-on-surface">{materialDetail['品目マスタ']?.['基材厚'] ?? 'N/A'}</span>
+                      <span className="text-[10px] text-outline">基材厚 (Base Thick)</span>
+                      <span className="font-medium text-sm text-on-surface">{materialDetail['品目マスタ']?.['基材厚'] ?? 'N/A'}</span>
                     </div>
                     <div className="flex flex-col">
-                      <span className="text-[9px] text-outline">基材幅 (Base Width)</span>
-                      <span className="font-medium text-xs text-on-surface">{materialDetail['品目マスタ']?.['基材幅'] ?? 'N/A'}</span>
+                      <span className="text-[10px] text-outline">基材幅 (Base Width)</span>
+                      <span className="font-medium text-sm text-on-surface">{materialDetail['品目マスタ']?.['基材幅'] ?? 'N/A'}</span>
                     </div>
                     <div className="flex flex-col">
-                      <span className="text-[9px] text-outline">基材長 (Base Length)</span>
-                      <span className="font-medium text-xs text-on-surface">{materialDetail['品目マスタ']?.['基材長'] ?? 'N/A'}</span>
+                      <span className="text-[10px] text-outline">基材長 (Base Length)</span>
+                      <span className="font-medium text-sm text-on-surface">{materialDetail['品目マスタ']?.['基材長'] ?? 'N/A'}</span>
                     </div>
                     <div className="flex flex-col">
-                      <span className="text-[9px] text-outline">粘着剤厚 (Adhesive Thick)</span>
-                      <span className="font-medium text-xs text-on-surface">{materialDetail['品目マスタ']?.['粘着剤厚'] ?? 'N/A'}</span>
+                      <span className="text-[10px] text-outline">粘着剤厚 (Adhesive Thick)</span>
+                      <span className="font-medium text-sm text-on-surface">{materialDetail['品目マスタ']?.['粘着剤厚'] ?? 'N/A'}</span>
                     </div>
                     <div className="flex flex-col">
-                      <span className="text-[9px] text-outline">粘着剤幅 (Adhesive Width)</span>
-                      <span className="font-medium text-xs text-on-surface">{materialDetail['品目マスタ']?.['粘着剤幅'] ?? 'N/A'}</span>
+                      <span className="text-[10px] text-outline">粘着剤幅 (Adhesive Width)</span>
+                      <span className="font-medium text-sm text-on-surface">{materialDetail['品目マスタ']?.['粘着剤幅'] ?? 'N/A'}</span>
                     </div>
                     <div className="flex flex-col">
-                      <span className="text-[9px] text-outline">粘着剤長 (Adhesive Length)</span>
-                      <span className="font-medium text-xs text-on-surface">{materialDetail['品目マスタ']?.['粘着剤長'] ?? 'N/A'}</span>
+                      <span className="text-[10px] text-outline">粘着剤長 (Adhesive Length)</span>
+                      <span className="font-medium text-sm text-on-surface">{materialDetail['品目マスタ']?.['粘着剤長'] ?? 'N/A'}</span>
                     </div>
                     <div className="flex flex-col">
-                      <span className="text-[9px] text-outline">粘着倍率 (Adhesive Ratio)</span>
-                      <span className="font-medium text-xs text-on-surface">{materialDetail['品目マスタ']?.['粘着倍率'] || 'N/A'}</span>
+                      <span className="text-[10px] text-outline">粘着倍率 (Adhesive Ratio)</span>
+                      <span className="font-medium text-sm text-on-surface">{materialDetail['品目マスタ']?.['粘着倍率'] || 'N/A'}</span>
                     </div>
                   </div>
                 </div>
 
                 {/* BOM Process Info */}
                 <div className="bg-surface-variant/20 border border-outline-variant/30 rounded-lg p-3">
-                  <div className="text-[10px] font-bold text-outline mb-2 uppercase tracking-wider">工程情報 (Process Info — 1010)</div>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  <div className="text-xs font-bold text-outline mb-3 uppercase tracking-wider">工程情報 (Process Info — 1010)</div>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                     <div className="flex flex-col">
-                      <span className="text-[9px] text-outline">工程名</span>
-                      <span className="font-medium text-xs text-on-surface">{bomEntry?.['工程名'] || 'N/A'}</span>
+                      <span className="text-[10px] text-outline">工程名</span>
+                      <span className="font-medium text-sm text-on-surface">{bomEntry?.['工程名'] || 'N/A'}</span>
                     </div>
                     <div className="flex flex-col">
-                      <span className="text-[9px] text-outline">段取時間</span>
-                      <span className="font-medium text-xs text-on-surface">{bomEntry?.['段取時間'] || 0} min</span>
+                      <span className="text-[10px] text-outline">段取時間</span>
+                      <span className="font-medium text-sm text-on-surface">{bomEntry?.['段取時間'] || 0} min</span>
                     </div>
                     <div className="flex flex-col">
-                      <span className="text-[9px] text-outline">作業時間</span>
-                      <span className="font-medium text-xs text-on-surface">{bomEntry?.['作業時間'] || 0} sec/cm</span>
+                      <span className="text-[10px] text-outline">作業時間</span>
+                      <span className="font-medium text-sm text-on-surface">{bomEntry?.['作業時間'] || 0} sec/cm</span>
                     </div>
                     <div className="flex flex-col">
-                      <span className="text-[9px] text-outline">原単位</span>
-                      <span className="font-medium text-xs text-on-surface">{bomEntry?.['原単位'] || 'N/A'}</span>
+                      <span className="text-[10px] text-outline">原単位</span>
+                      <span className="font-medium text-sm text-on-surface">{bomEntry?.['原単位'] || 'N/A'}</span>
                     </div>
                   </div>
                 </div>
