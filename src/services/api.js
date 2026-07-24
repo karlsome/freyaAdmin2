@@ -1729,6 +1729,117 @@ export async function permanentlyDeleteProductPDF(documentId) {
   return _deleteJson(`api/product-pdf-permanent/${encodeURIComponent(documentId)}`);
 }
 
+// ─── Material PDFs ─────────────────────────────────────────────────────────────
+
+export async function fetchMaterialPDFMaterials() {
+  const cacheKey = "material_pdf_materials";
+  const cached = _getCached(cacheKey, MASTER_TTL);
+  if (cached) return cached;
+
+  const materials = await query(
+    "Sasaki_Coating_MasterDB",
+    "materialMasterDB3",
+    {},
+    { projection: { "品目マスタ.図番": 1, "品目マスタ.品名": 1, 品番: 1, "品目マスタ.工程コード": 1 } }
+  );
+
+  const nextMaterials = Array.isArray(materials) ? materials.map(m => ({
+    ...m,
+    図番: m.品目マスタ?.図番 || m.図番,
+    品名: m.品目マスタ?.品名 || m.品名,
+    工程コード: m.品目マスタ?.工程コード || m.工程コード
+  })) : [];
+  _setCache(cacheKey, nextMaterials);
+  return nextMaterials;
+}
+
+export async function fetchMaterialPDFsByType({
+  pdfType,
+  page = 1,
+  limit = 25,
+  searchQuery = "",
+  processCode = "",
+  sortField = "uploadedAt",
+  sortDir = "desc",
+  includeHinban = true,
+} = {}) {
+  const query = new URLSearchParams({
+    page: String(page),
+    limit: String(limit),
+  });
+
+  if (includeHinban) query.set("includeHinban", "1");
+  if (searchQuery) query.set("q", searchQuery);
+  if (processCode) query.set("processCode", processCode);
+  if (sortField) query.set("sortField", sortField);
+  if (sortDir) query.set("sortDir", sortDir);
+
+  const result = await _getJson(`api/material-pdfs-by-type/${encodeURIComponent(pdfType)}?${query.toString()}`);
+  return normalizePaginatedItems(result);
+}
+
+export async function checkExistingMaterialPDFs({ pdfType, drawingNumbers = [] }) {
+  return _postJson("api/check-existing-material-pdfs", {
+    pdfType,
+    図番Array: drawingNumbers,
+  });
+}
+
+export async function uploadMaterialPDFFile({
+  pdfType,
+  drawingNumbers = [],
+  pdfBase64,
+  fileName,
+  uploadedBy,
+  resolutions = {},
+  excludedMaterialIds = [],
+}) {
+  return _postJson("api/upload-material-pdf", {
+    pdfType,
+    図番Array: drawingNumbers,
+    pdfBase64,
+    fileName,
+    uploadedBy,
+    resolutions,
+    excludedMaterialIds,
+  });
+}
+
+export async function uploadMaterialPDFImage({ documentId, imageBase64, pdfType }) {
+  return _postJson("api/upload-material-pdf-image", {
+    documentId,
+    imageBase64,
+    pdfType,
+  });
+}
+
+export async function batchDeleteMaterialPDFs(documentIds = []) {
+  return _postJson("api/material-pdf-batch-delete", {
+    documentIds,
+  });
+}
+
+export async function deleteMaterialPDF(documentId) {
+  return _deleteJson(`api/material-pdf/${encodeURIComponent(documentId)}`);
+}
+
+export async function fetchMaterialPDFTrash({ page = 1, limit = 25 } = {}) {
+  const query = new URLSearchParams({
+    page: String(page),
+    limit: String(limit),
+  });
+  const result = await _getJson(`api/material-pdfs-trash?${query.toString()}`);
+  return normalizePaginatedItems(result);
+}
+
+export async function recoverMaterialPDF(documentId) {
+  return _postJson(`api/material-pdf-recover/${encodeURIComponent(documentId)}`, {});
+}
+
+export async function permanentlyDeleteMaterialPDF(documentId) {
+  return _deleteJson(`api/material-pdf-permanent/${encodeURIComponent(documentId)}`);
+}
+
 // ─── Furyo Kanri (不良管理) ──────────────────────────────────────────────────
 export async function fetchFuryoModels() {
   const cacheKey = "furyo_models";

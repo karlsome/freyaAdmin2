@@ -2,6 +2,7 @@ export const MASTER_TABS = [
   { key: "masterDB", label: "内装品 DB", description: "Interior product records", ready: true },
   { key: "materialDB", label: "材料 DB", description: "Material master records", ready: true },
   { key: "productPDFs", label: "梱包 / 検査基準 / 3点照合", description: "Product PDF library", ready: true },
+  { key: "materialPDFs", label: "作業条件表 (PSA)", description: "Material PDF library", ready: true },
   { key: "furyoKanri", label: "不良管理", description: "Defect definition management", ready: true },
   { key: "factoryDB", label: "工場", description: "Factory master list", ready: true },
   { key: "setsubiDB", label: "設備", description: "Equipment by factory", ready: true },

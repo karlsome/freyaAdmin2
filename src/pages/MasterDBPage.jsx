@@ -37,6 +37,7 @@ import {
 } from "../utils/masterDB";
 
 const ProductPDFsWorkspace = lazy(() => import("../components/ProductPDFsWorkspace"));
+const MaterialPDFsWorkspace = lazy(() => import("../components/MaterialPDFsWorkspace"));
 const FuryoKanriWorkspace = lazy(() => import("../components/FuryoKanriWorkspace"));
 const FactoryDBWorkspace = lazy(() => import("../components/FactoryDBWorkspace"));
 const SetsubiDBWorkspace = lazy(() => import("../components/SetsubiDBWorkspace"));
@@ -116,11 +117,12 @@ export default function MasterDBPage() {
   const activeTabMeta = getMasterTabMeta(activeTab);
   const activeTabUI = getMasterTabUI(activeTab);
   const isProductPDFTab = activeTab === "productPDFs";
+  const isMaterialPDFTab = activeTab === "materialPDFs";
   const isFuryoKanriTab = activeTab === "furyoKanri";
   const isFactoryTab = activeTab === "factoryDB";
   const isSetsubiTab = activeTab === "setsubiDB";
   const isPceFilesTab = activeTab === "pceFiles";
-  const isSpecialTab = isProductPDFTab || isFuryoKanriTab || isFactoryTab || isSetsubiTab || isPceFilesTab;
+  const isSpecialTab = isProductPDFTab || isMaterialPDFTab || isFuryoKanriTab || isFactoryTab || isSetsubiTab || isPceFilesTab;
   const fieldDefinitions = buildMasterFieldDefinitions(schemaFields, records, activeTab);
   const columns = getMasterTableColumns(records, schemaFields, activeTab);
   const batchEditEnabled = Object.keys(advancedQuery).length > 0 && stats.filteredCount > 0;
@@ -604,6 +606,8 @@ export default function MasterDBPage() {
         >
           {isProductPDFTab ? (
             <ProductPDFsWorkspace refreshToken={refreshNonce} onFlash={setFlash} />
+          ) : isMaterialPDFTab ? (
+            <MaterialPDFsWorkspace refreshToken={refreshNonce} onFlash={setFlash} />
           ) : isFuryoKanriTab ? (
             <FuryoKanriWorkspace refreshToken={refreshNonce} onFlash={setFlash} />
           ) : isFactoryTab ? (
