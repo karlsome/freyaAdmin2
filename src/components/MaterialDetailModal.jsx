@@ -1,8 +1,44 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
+import { query } from "../services/api";
 
 export default function MaterialDetailModal({ modalData, onClose }) {
-  const [materialDetailOpen, setMaterialDetailOpen] = useState(false);
+  const [nestedMaterialData, setNestedMaterialData] = useState(null);
+  const [loadingNested, setLoadingNested] = useState(false);
+  const [bomData, setBomData] = useState(modalData?.['BOM'] || null);
+
+  useEffect(() => {
+    if (modalData && !modalData['BOM'] && modalData['品番']) {
+      query("Sasaki_Coating_MasterDB", "bomMasterDB", { "品番": modalData['品番'] })
+        .then(res => {
+          if (Array.isArray(res) && res.length > 0) {
+            setBomData(res[0].BOM);
+          } else if (res && res.data && res.data.length > 0) {
+            setBomData(res.data[0].BOM);
+          }
+        })
+        .catch(console.error);
+    } else if (modalData?.['BOM']) {
+      setBomData(modalData['BOM']);
+    }
+  }, [modalData]);
+
+  async function handleMaterialClick(materialHinban) {
+    if (!materialHinban || materialHinban === 'N/A') return;
+    setLoadingNested(true);
+    try {
+      const res = await query("Sasaki_Coating_MasterDB", "materialMasterDB3", { "品番": materialHinban });
+      if (Array.isArray(res) && res.length > 0) {
+        setNestedMaterialData(res[0]);
+      } else if (res && res.data && res.data.length > 0) {
+        setNestedMaterialData(res.data[0]);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoadingNested(false);
+    }
+  }
 
   if (!modalData) return null;
 
@@ -27,22 +63,27 @@ export default function MaterialDetailModal({ modalData, onClose }) {
               
               {/* Bom Info - clickable to open material sub-modal */}
               {(() => {
-                const bomEntry = modalData['BOM']?.find(b => b['工程コード'] === 1010);
+                const bomEntry = bomData?.find(b => b['工程コード'] === 1010);
                 const materialHinban = bomEntry?.['構成品番'] || 'N/A';
-                const hasMaterialDetail = !!bomEntry?.['構成品_詳細'];
+                const isClickable = materialHinban !== 'N/A';
                 return (
                   <button 
-                    onClick={() => hasMaterialDetail && setMaterialDetailOpen(true)}
-                    className={`w-full rounded-xl border border-primary/20 bg-primary/5 p-4 flex items-center justify-between text-left transition-colors ${hasMaterialDetail ? 'hover:bg-primary/10 cursor-pointer' : 'cursor-default'}`}
+                    onClick={() => isClickable && handleMaterialClick(materialHinban)}
+                    disabled={!isClickable || loadingNested}
+                    className={`w-full rounded-xl border border-primary/20 bg-primary/5 p-4 flex items-center justify-between text-left transition-colors ${isClickable ? 'hover:bg-primary/10 cursor-pointer' : 'cursor-default'} ${loadingNested ? 'opacity-70' : ''}`}
                   >
                     <div>
                       <div className="text-xs font-bold text-primary mb-1 uppercase tracking-wider">構成品番 (Material)</div>
                       <div className="font-medium text-on-surface">{materialHinban}</div>
                     </div>
-                    {hasMaterialDetail && (
+                    {isClickable && (
                       <div className="flex items-center gap-2 text-primary">
-                        <span className="text-[10px] font-medium bg-primary/10 px-2 py-0.5 rounded-full">View details</span>
-                        <span className="material-symbols-outlined" style={{fontSize: 20}}>open_in_new</span>
+                        <span className="text-[10px] font-medium bg-primary/10 px-2 py-0.5 rounded-full">
+                          {loadingNested ? "Loading..." : "View details"}
+                        </span>
+                        <span className="material-symbols-outlined" style={{fontSize: 20}}>
+                          {loadingNested ? "hourglass_empty" : "open_in_new"}
+                        </span>
                       </div>
                     )}
                   </button>
@@ -68,7 +109,7 @@ export default function MaterialDetailModal({ modalData, onClose }) {
 
               {/* Process Data */}
               {(() => {
-                const process2010 = modalData['BOM']?.find(b => b['工程コード'] === 2010);
+                const process2010 = bomData?.find(b => b['工程コード'] === 2010);
                 if (!process2010) return null;
                 return (
                   <div>
@@ -203,12 +244,12 @@ export default function MaterialDetailModal({ modalData, onClose }) {
       )}
 
       {/* Material Sub-Modal (on top of main modal) */}
-      {materialDetailOpen && (() => {
-        const bomEntry = modalData['BOM']?.find(b => b['工程コード'] === 1010);
-        const materialDetail = bomEntry?.['構成品_詳細'];
-        if (!materialDetail) return null;
+      {nestedMaterialData && (() => {
+        const materialDetail = nestedMaterialData;
+        const bomEntry = bomData?.find(b => b['工程コード'] === 1010);
+        
         return createPortal(
-          <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4" onClick={() => setMaterialDetailOpen(false)}>
+          <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4" onClick={() => setNestedMaterialData(null)}>
             <div className="bg-surface border border-outline-variant/30 rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[85vh] animate-[fadeIn_0.15s_ease-out]" onClick={e => e.stopPropagation()}>
               {/* Header */}
               <div className="flex items-center justify-between p-5 border-b border-outline-variant/30 bg-primary/5">
@@ -220,7 +261,7 @@ export default function MaterialDetailModal({ modalData, onClose }) {
                   </div>
                 </div>
                 <button 
-                  onClick={() => setMaterialDetailOpen(false)}
+                  onClick={() => setNestedMaterialData(null)}
                   className="flex h-8 w-8 items-center justify-center rounded-full hover:bg-surface-variant/50 text-outline transition-colors"
                 >
                   <span className="material-symbols-outlined" style={{fontSize: 24}}>close</span>

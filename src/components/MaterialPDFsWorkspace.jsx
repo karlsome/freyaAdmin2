@@ -35,6 +35,7 @@ import MaterialPDFPreviewModal from "./MaterialPDFPreviewModal";
 import MaterialPDFMaterialSelectorModal from "./MaterialPDFMaterialSelectorModal";
 import MaterialPDFTrashModal from "./MaterialPDFTrashModal";
 import MaterialPDFUploadPanel from "./MaterialPDFUploadPanel";
+import UploadProgressModal from "./UploadProgressModal";
 
 function assertApiSuccess(result, fallbackMessage) {
   if (result?.success === false) {
@@ -72,6 +73,7 @@ export default function MaterialPDFsWorkspace({ refreshToken = 0, onFlash }) {
   const [bulkFiles, setBulkFiles] = useState([]);
   const [singleUploading, setSingleUploading] = useState(false);
   const [bulkUploading, setBulkUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState({ current: 0, total: 0, isUploading: false });
   const [selectorOpen, setSelectorOpen] = useState(false);
   const [previewItem, setPreviewItem] = useState(null);
   const [conflictState, setConflictState] = useState(null);
@@ -392,6 +394,7 @@ export default function MaterialPDFsWorkspace({ refreshToken = 0, onFlash }) {
 
   async function executeBulkUpload(assignments, resolutions = {}) {
     setBulkUploading(true);
+    setUploadProgress({ current: 0, total: assignments.length, isUploading: true });
     let successCount = 0;
     let failureCount = 0;
 
@@ -411,6 +414,8 @@ export default function MaterialPDFsWorkspace({ refreshToken = 0, onFlash }) {
         } catch {
           failureCount += 1;
         }
+        
+        setUploadProgress(prev => ({ ...prev, current: prev.current + 1 }));
       }
 
       setBulkFiles([]);
@@ -424,6 +429,7 @@ export default function MaterialPDFsWorkspace({ refreshToken = 0, onFlash }) {
       refreshLists();
     } finally {
       setBulkUploading(false);
+      setUploadProgress({ current: 0, total: 0, isUploading: false });
     }
   }
 
