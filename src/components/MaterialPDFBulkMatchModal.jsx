@@ -180,6 +180,11 @@ export default function MaterialPDFBulkMatchModal({
                 >
                   <span className="truncate text-on-surface">{item.file.name}</span>
                   <div className="flex items-center gap-2">
+                    {materialMap.get(item.drawingNumber)?.length > 0 && (
+                      <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary/10 text-[10px] font-bold text-primary">
+                        {materialMap.get(item.drawingNumber).length}
+                      </span>
+                    )}
                     <span className="shrink-0 font-semibold text-primary">{item.drawingNumber}</span>
                     <span className={`material-symbols-outlined text-[16px] text-outline transition-transform ${expandedZuban === item.drawingNumber ? 'rotate-180' : ''}`}>
                       expand_more
@@ -227,6 +232,11 @@ export default function MaterialPDFBulkMatchModal({
                         className="flex items-center gap-1 text-xs font-semibold text-primary transition hover:opacity-80"
                       >
                         {expandedZuban === selectedDrawingNumber ? "Hide Materials" : "Select Specific Materials"}
+                        {materialMap.get(selectedDrawingNumber)?.length > 0 && (
+                          <span className="flex h-4 w-4 items-center justify-center rounded-full bg-primary/10 text-[9px] font-bold text-primary">
+                            {materialMap.get(selectedDrawingNumber).length}
+                          </span>
+                        )}
                         <span className="material-symbols-outlined text-[16px]">
                           {expandedZuban === selectedDrawingNumber ? 'expand_less' : 'expand_more'}
                         </span>
