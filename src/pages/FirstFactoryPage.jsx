@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { useLanguage } from '../contexts/LanguageContext';
 import MasterTabNav from '../components/MasterTabNav';
 
@@ -818,7 +819,7 @@ export default function FirstFactoryPage() {
       )}
 
       {/* Modal */}
-      {modalData && (
+      {modalData && createPortal(
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
           <div className="bg-surface border border-outline-variant/30 rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh]">
             <div className="flex items-center justify-between p-6 border-b border-outline-variant/30 bg-surface-variant/20">
@@ -1004,7 +1005,8 @@ export default function FirstFactoryPage() {
 
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Material Sub-Modal (on top of main modal) */}
@@ -1012,7 +1014,7 @@ export default function FirstFactoryPage() {
         const bomEntry = modalData['BOM']?.find(b => b['工程コード'] === 1010);
         const materialDetail = bomEntry?.['構成品_詳細'];
         if (!materialDetail) return null;
-        return (
+        return createPortal(
           <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 backdrop-blur-[2px] p-4" onClick={() => setMaterialDetailOpen(false)}>
             <div className="bg-surface border border-outline-variant/30 rounded-2xl shadow-2xl w-full max-w-xl overflow-hidden flex flex-col max-h-[85vh] animate-[fadeIn_0.15s_ease-out]" onClick={e => e.stopPropagation()}>
               {/* Header */}
@@ -1148,12 +1150,13 @@ export default function FirstFactoryPage() {
                 </div>
               </div>
             </div>
-          </div>
+          </div>,
+          document.body
         );
       })()}
 
       {/* Sync Excel Modal */}
-      {isSyncModalOpen && (
+      {isSyncModalOpen && createPortal(
         <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
           <div className="bg-surface border border-outline-variant/30 rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden flex flex-col animate-[fadeIn_0.15s_ease-out]">
             <div className="flex items-center justify-between p-5 border-b border-outline-variant/30 bg-surface-variant/20">
@@ -1192,7 +1195,8 @@ export default function FirstFactoryPage() {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
     </div>
