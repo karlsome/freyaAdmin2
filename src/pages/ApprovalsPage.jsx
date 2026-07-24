@@ -91,7 +91,7 @@ function FlashBanner({ flash, onClose }) {
     <div className={joinClasses("mb-6 rounded-3xl border px-5 py-4", tone)}>
       <div className="flex items-start justify-between gap-4">
         <div>
-          <div className="text-[10px] font-semibold uppercase tracking-[0.18em]">Status</div>
+          <div className="text-[10px] font-semibold uppercase tracking-[0.18em]">{t("status")}</div>
           <p className="mt-1 text-sm font-medium">{flash.message}</p>
         </div>
         <button type="button" onClick={onClose} className="text-current/70 transition hover:text-current">
@@ -117,7 +117,10 @@ function buildInitialRangeMode() {
   return APPROVAL_RANGE_MODES.some((item) => item.key === saved) ? saved : "current";
 }
 
+import { useLanguage } from "../contexts/LanguageContext";
+
 export default function ApprovalsPage() {
+  const { t } = useLanguage();
   const authUser = getAuthUser();
   const requestIdRef = useRef(0);
   const actorNameRef = useRef("");
@@ -165,7 +168,7 @@ export default function ApprovalsPage() {
   const advancedFieldDefinitions = getApprovalAdvancedFieldDefinitions(activeTab);
 
   const tableTabs = canUseRecycleBin
-    ? [...APPROVAL_TABS, { key: "recycleBin", label: "Recycle Bin" }]
+    ? [...APPROVAL_TABS, { key: "recycleBin", label: "recycleBin" }]
     : APPROVAL_TABS;
 
   useEffect(() => {
@@ -896,7 +899,7 @@ export default function ApprovalsPage() {
     ...(viewMode === "batch"
       ? [{
           key: "select",
-          label: "Sel",
+          label: t("sel"),
           sortable: false,
           width: 66,
           disableCellWrapper: true,
@@ -920,7 +923,7 @@ export default function ApprovalsPage() {
       : []),
     {
       key: "approvalStatus",
-      label: "Status",
+      label: t("status"),
       width: 148,
       disableCellWrapper: true,
       renderCell: (row) => {
@@ -935,7 +938,7 @@ export default function ApprovalsPage() {
     },
     {
       key: "Date",
-      label: "Submitted",
+      label: t("submitted"),
       width: 158,
       disableCellWrapper: true,
       renderCell: (row) => {
@@ -973,31 +976,31 @@ export default function ApprovalsPage() {
     },
     {
       key: "工場",
-      label: "Factory",
+      label: t("factoryField"),
       width: 130,
       contentClassName: "planner-data-text text-sm font-semibold",
     },
     {
       key: "品番",
-      label: "Part No.",
+      label: t("partNo"),
       width: 176,
       contentClassName: "planner-data-text text-sm font-semibold",
     },
     {
       key: "背番号",
-      label: "Serial No.",
+      label: t("serialNo"),
       width: 142,
       contentClassName: "planner-data-text text-sm font-semibold",
     },
     {
       key: "Worker_Name",
-      label: "Worker",
+      label: t("workerLabel"),
       width: 144,
       contentClassName: "planner-data-text text-sm font-semibold",
     },
     {
       key: "quantity",
-      label: "Qty",
+      label: t("qty"),
       width: 112,
       align: "right",
       disableCellWrapper: true,
@@ -1009,7 +1012,7 @@ export default function ApprovalsPage() {
     },
     {
       key: "ng",
-      label: "NG",
+      label: t("ng"),
       width: 98,
       align: "right",
       disableCellWrapper: true,
@@ -1022,7 +1025,7 @@ export default function ApprovalsPage() {
     },
     {
       key: "defectRate",
-      label: "Defect",
+      label: t("defect"),
       width: 112,
       align: "right",
       disableCellWrapper: true,
@@ -1037,7 +1040,7 @@ export default function ApprovalsPage() {
     },
     {
       key: "approvedBy",
-      label: "Approver",
+      label: t("approver"),
       width: 160,
       disableCellWrapper: true,
       renderCell: (row) => (
@@ -1046,7 +1049,7 @@ export default function ApprovalsPage() {
     },
     {
       key: "actions",
-      label: "Action",
+      label: t("action"),
       sortable: false,
       width: 112,
       disableCellWrapper: true,
@@ -1060,7 +1063,7 @@ export default function ApprovalsPage() {
           }}
           className="rounded-2xl border border-outline-variant/20 bg-white px-3 py-1.5 text-xs font-semibold text-on-surface transition hover:bg-surface-container dark:bg-surface-container"
         >
-          Review
+          {t("review")}
         </button>
       ),
     },
@@ -1069,7 +1072,7 @@ export default function ApprovalsPage() {
   const recycleColumns = [
     {
       key: "deletedAt",
-      label: "Deleted",
+      label: t("deleted"),
       width: 168,
       disableCellWrapper: true,
       renderCell: (row) => (
@@ -1081,7 +1084,7 @@ export default function ApprovalsPage() {
     },
     {
       key: "collection",
-      label: "Collection",
+      label: t("collection"),
       width: 128,
       disableCellWrapper: true,
       renderCell: (row) => (
@@ -1090,41 +1093,41 @@ export default function ApprovalsPage() {
     },
     {
       key: "工場",
-      label: "Factory",
+      label: t("factoryField"),
       width: 126,
       disableCellWrapper: true,
       renderCell: (row) => <span className="planner-data-text text-sm font-semibold text-on-surface">{row.originalDoc?.工場 || "—"}</span>,
     },
     {
       key: "品番",
-      label: "Part No.",
+      label: t("partNo"),
       width: 176,
       disableCellWrapper: true,
       renderCell: (row) => <span className="planner-data-text text-sm font-semibold text-on-surface">{row.originalDoc?.品番 || "—"}</span>,
     },
     {
       key: "背番号",
-      label: "Serial No.",
+      label: t("serialNo"),
       width: 140,
       disableCellWrapper: true,
       renderCell: (row) => <span className="planner-data-text text-sm font-semibold text-on-surface">{row.originalDoc?.背番号 || "—"}</span>,
     },
     {
       key: "deletedBy",
-      label: "Deleted By",
+      label: t("deletedBy"),
       width: 160,
       contentClassName: "planner-data-text text-sm font-semibold",
     },
     {
       key: "deleteReason",
-      label: "Reason",
+      label: t("reason"),
       width: 240,
       wrap: true,
       contentClassName: "planner-data-text text-sm",
     },
     {
       key: "actions",
-      label: "Action",
+      label: t("action"),
       sortable: false,
       width: 110,
       disableCellWrapper: true,
@@ -1138,7 +1141,7 @@ export default function ApprovalsPage() {
           }}
           className="rounded-2xl border border-outline-variant/20 bg-white px-3 py-1.5 text-xs font-semibold text-on-surface transition hover:bg-surface-container dark:bg-surface-container"
         >
-          Inspect
+          {t("inspectItem")}
         </button>
       ),
     },
@@ -1148,8 +1151,8 @@ export default function ApprovalsPage() {
     return (
       <section className="h-screen overflow-y-auto px-4 pb-24 pt-20 scrollbar-hide sm:px-6 sm:pb-16 sm:pt-24 md:px-8">
         <div className="glass-card rounded-[28px] px-6 py-8">
-          <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Approvals</div>
-          <h1 className="mt-2 text-2xl font-semibold text-on-surface">Access Required</h1>
+          <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">{t("approvals")}</div>
+          <h1 className="mt-2 text-2xl font-semibold text-on-surface">{t("accessRequired")}</h1>
           <p className="mt-3 max-w-2xl text-sm text-on-surface-variant">
             The approval workflow is available only to admin, 部長, 課長, 係長, and 班長 roles.
           </p>
@@ -1170,11 +1173,11 @@ export default function ApprovalsPage() {
       <PageHeader
         eyebrow="Approvals"
         eyebrowClassName="text-[10px]"
-        title="Production Approval Desk"
+        title={t("productionApprovalDesk")}
         actions={(
           <>
             {activeTab !== "recycleBin" ? (
-              <LiquidSegmentedControl items={APPROVAL_VIEW_MODES} activeKey={viewMode} onChange={(next) => setViewMode(next)} />
+              <LiquidSegmentedControl items={APPROVAL_VIEW_MODES.map(item => ({ ...item, label: t(item.label) }))} activeKey={viewMode} onChange={(next) => setViewMode(next)} />
             ) : null}
             <button
               type="button"
@@ -1182,7 +1185,7 @@ export default function ApprovalsPage() {
               className="flex h-11 items-center gap-2 rounded-2xl border border-outline-variant/20 bg-white px-4 text-sm font-semibold text-on-surface transition hover:bg-surface-container dark:bg-surface-container"
             >
               <span className="material-symbols-outlined" style={{ fontSize: 18 }}>refresh</span>
-              Refresh
+              {t("refresh")}
             </button>
           </>
         )}
@@ -1190,12 +1193,12 @@ export default function ApprovalsPage() {
 
       <div className="mb-6 flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
         <div className="max-w-full overflow-x-auto scrollbar-hide">
-          <LiquidSegmentedControl items={tableTabs} activeKey={activeTab} onChange={handleTabChange} className="min-w-max" />
+          <LiquidSegmentedControl items={tableTabs.map(item => ({ ...item, label: t(item.label) }))} activeKey={activeTab} onChange={handleTabChange} className="min-w-max" />
         </div>
 
         {activeTab !== "recycleBin" ? (
           <LiquidSegmentedControl
-            items={APPROVAL_RANGE_MODES}
+            items={APPROVAL_RANGE_MODES.map(item => ({ ...item, label: t(item.label) }))}
             activeKey={rangeMode}
             onChange={(next) => {
               setPage(1);
@@ -1215,21 +1218,21 @@ export default function ApprovalsPage() {
       ) : (
         <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-3">
           <div className="dashboard-section rounded-2xl p-5">
-            <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Recycle Bin</div>
+            <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">{t("recycleBin")}</div>
             <div className="planner-data-text mt-2 text-3xl font-semibold text-on-surface tabular-nums">{binRows.length.toLocaleString()}</div>
-            <p className="mt-1 text-xs text-on-surface-variant">Soft-deleted approval records</p>
+            <p className="mt-1 text-xs text-on-surface-variant">{t("softDeletedApprovalRecords")}</p>
           </div>
           <div className="dashboard-section rounded-2xl p-5">
-            <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Restorable</div>
+            <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">{t("restorable")}</div>
             <div className="planner-data-text mt-2 text-3xl font-semibold text-on-surface tabular-nums">
               {binRows.length.toLocaleString()}
             </div>
-            <p className="mt-1 text-xs text-on-surface-variant">Available for restore using original collection metadata</p>
+            <p className="mt-1 text-xs text-on-surface-variant">{t("availableForRestore")}</p>
           </div>
           <div className="dashboard-section rounded-2xl p-5">
-            <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Role</div>
+            <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">{t("role")}</div>
             <div className="planner-data-text mt-2 text-lg font-semibold text-on-surface">{authUser?.role || "Unknown"}</div>
-            <p className="mt-1 text-xs text-on-surface-variant">Recycle bin tools follow original role restrictions</p>
+            <p className="mt-1 text-xs text-on-surface-variant">{t("recycleBinToolsFollowOriginalRole")}</p>
           </div>
         </div>
       )}
@@ -1238,7 +1241,7 @@ export default function ApprovalsPage() {
         <div className="dashboard-section mb-6 rounded-2xl p-5">
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_auto]">
             <div className="flex flex-col gap-1.5">
-              <label className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Search Recycle Bin</label>
+              <label className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">{t("searchRecycleBin")}</label>
               <input
                 type="text"
                 value={binSearchInput}
@@ -1292,7 +1295,7 @@ export default function ApprovalsPage() {
         <div className="dashboard-section mb-6 rounded-2xl p-5">
           <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
             <div>
-              <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Batch Mode</div>
+              <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">{t("batchMode")}</div>
               <p className="mt-1 text-sm text-on-surface-variant">
                 Select actionable rows on the current page and run the same approval or correction workflow in one pass.
               </p>
@@ -1353,6 +1356,7 @@ export default function ApprovalsPage() {
           setPageSize(nextSize);
         }}
         pageSizeOptions={PAGE_SIZE_OPTIONS}
+        pageSizeLabel={t("rows")}
         rowKey={(row) => getApprovalRecordId(row)}
         onRowClick={(row) => openDetail(row, activeTab === "recycleBin" ? "recycle" : "live")}
         getRowClassName={(row) => {
@@ -1372,16 +1376,25 @@ export default function ApprovalsPage() {
           );
         }}
         renderPageInfo={({ filteredCount, page: current, pageSize: currentPageSize }) => {
-          if (!filteredCount) return <span>0 records shown</span>;
+          if (!filteredCount) return <span>{t("zeroRecordsShown")}</span>;
           const start = (current - 1) * currentPageSize + 1;
           const end = Math.min(current * currentPageSize, filteredCount);
           const totalPages = activeTab === "recycleBin" ? binTotalPages : (pagination.totalPages || 1);
-          return <span>{filteredCount.toLocaleString()} records, showing {start}-{end} · page {current}/{totalPages}</span>;
+          return (
+            <span>
+              {t("recordsShowingRangePage")
+                .replace("{count}", filteredCount.toLocaleString())
+                .replace("{start}", start)
+                .replace("{end}", end)
+                .replace("{current}", current)
+                .replace("{total}", totalPages)}
+            </span>
+          );
         }}
-        loadingMessage={activeTab === "recycleBin" ? "Loading recycle bin…" : "Loading approvals…"}
-        errorTitle={activeTab === "recycleBin" ? "Could not load recycle bin" : "Could not load approvals"}
-        emptyTitle={activeTab === "recycleBin" ? "Recycle bin is empty" : "No matching approvals"}
-        emptyMessage={activeTab === "recycleBin" ? "No deleted approval records matched the current search." : "Adjust the filters and try again."}
+        loadingMessage={activeTab === "recycleBin" ? t("loadingRecycleBin") : t("loadingApprovals")}
+        errorTitle={activeTab === "recycleBin" ? t("errorLoadRecycleBin") : t("errorLoadApprovals")}
+        emptyTitle={activeTab === "recycleBin" ? t("emptyRecycleBinTitle") : t("emptyApprovalsTitle")}
+        emptyMessage={activeTab === "recycleBin" ? t("emptyRecycleBin") : t("emptyApprovals")}
         enableColumnResize
         enableColumnReorder
         stickyHeader

@@ -3,55 +3,58 @@ import StatSummaryCard from "./StatSummaryCard";
 const CARD_DEFS = [
   {
     key: "pending",
-    label: "Pending",
+    label: "pending",
     statKey: "pending",
-    subtitle: "Awaiting hancho review",
+    subtitle: "awaitingHanchoReview",
     icon: "schedule",
     accent: "bg-amber-500/15 text-amber-700 dark:text-amber-300",
   },
   {
     key: "hancho_approved",
-    label: "Hancho Approved",
+    label: "hanchoApproved",
     statKey: "hanchoApproved",
-    subtitle: "Waiting for kacho approval",
+    subtitle: "waitingForKachoApproval",
     icon: "task_alt",
     accent: "bg-sky-500/15 text-sky-700 dark:text-sky-300",
   },
   {
     key: "fully_approved",
-    label: "Fully Approved",
+    label: "fullyApproved",
     statKey: "fullyApproved",
-    subtitle: "Workflow complete",
+    subtitle: "workflowComplete",
     icon: "verified",
     accent: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300",
   },
   {
     key: "correction_needed",
-    label: "Correction Needed",
+    label: "correctionNeeded",
     statKey: "correctionNeeded",
-    subtitle: "Requires edits and resubmission",
+    subtitle: "requiresEditsAndResubmission",
     icon: "edit_note",
     accent: "bg-rose-500/15 text-rose-700 dark:text-rose-300",
   },
   {
     key: "todayTotal",
-    label: "Today Total",
+    label: "todayTotal",
     statKey: "todayTotal",
-    subtitle: "Submitted today",
+    subtitle: "submittedToday",
     icon: "today",
     accent: "bg-surface-container-high text-on-surface",
   },
 ];
 
+import { useLanguage } from "../contexts/LanguageContext";
+
 export default function ApprovalsStatsStrip({ stats, authUser, activeKey = "", onSelect }) {
+  const { t } = useLanguage();
   const cards = [...CARD_DEFS];
 
   if (authUser?.role === "班長") {
     cards.splice(4, 0, {
       key: "correction_needed_from_kacho",
-      label: "Kacho Requests",
+      label: "kachoRequests",
       statKey: "correctionNeededFromKacho",
-      subtitle: "Hancho follow-up required",
+      subtitle: "hanchoFollowUpRequired",
       icon: "assignment_late",
       accent: "bg-orange-500/15 text-orange-700 dark:text-orange-300",
     });
@@ -67,9 +70,9 @@ export default function ApprovalsStatsStrip({ stats, authUser, activeKey = "", o
           <StatSummaryCard
             key={card.key}
             icon={card.icon}
-            label={card.label}
+            label={t(card.label)}
             value={Number(value).toLocaleString()}
-            subtitle={card.subtitle}
+            subtitle={t(card.subtitle)}
             accent={card.accent}
             active={active}
             onClick={() => onSelect?.(card.key)}

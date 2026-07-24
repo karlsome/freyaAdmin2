@@ -48,38 +48,38 @@ const DETAIL_HIDDEN_FIELDS = new Set([
 ]);
 
 export const APPROVAL_TABS = [
-  { key: "kensaDB", label: "Inspection" },
-  { key: "pressDB", label: "Press" },
-  { key: "SRSDB", label: "SRS" },
-  { key: "slitDB", label: "Slit" },
+  { key: "kensaDB", label: "inspection" },
+  { key: "pressDB", label: "press" },
+  { key: "SRSDB", label: "srs" },
+  { key: "slitDB", label: "slit" },
 ];
 
 export const APPROVAL_VIEW_MODES = [
-  { key: "review", label: "Review" },
-  { key: "batch", label: "Batch" },
+  { key: "review", label: "review" },
+  { key: "batch", label: "batch" },
 ];
 
 export const APPROVAL_RANGE_MODES = [
-  { key: "current", label: "Current Day" },
-  { key: "all", label: "All History" },
+  { key: "current", label: "currentDay" },
+  { key: "all", label: "allHistory" },
 ];
 
 export const APPROVAL_STATUS_OPTIONS = [
-  { value: "", label: "All Status" },
-  { value: "pending", label: "Pending" },
-  { value: "hancho_approved", label: "Hancho Approved" },
-  { value: "fully_approved", label: "Fully Approved" },
-  { value: "correction_needed", label: "Correction Needed" },
-  { value: "correction_needed_from_kacho", label: "Kacho Correction Request" },
+  { value: "", label: "allStatus" },
+  { value: "pending", label: "pending" },
+  { value: "hancho_approved", label: "hanchoApproved" },
+  { value: "fully_approved", label: "fullyApproved" },
+  { value: "correction_needed", label: "correctionNeeded" },
+  { value: "correction_needed_from_kacho", label: "kachoCorrectionRequest" },
 ];
 
 export const APPROVAL_FILTER_OPERATOR_LABELS = {
-  equals: "Equals",
-  contains: "Contains",
-  in: "In",
-  greater: "Greater than",
-  less: "Less than",
-  range: "Range",
+  equals: "equals",
+  contains: "contains",
+  in: "inLabel",
+  greater: "greaterThan",
+  less: "lessThan",
+  range: "range",
 };
 
 const APPROVAL_STATUS_ADVANCED_OPTIONS = APPROVAL_STATUS_OPTIONS
@@ -474,7 +474,7 @@ export function getApprovalStatusMeta(record = {}) {
     case "hancho_approved":
       return {
         key: statusKey,
-        label: "Hancho Approved",
+        label: "hanchoApproved",
         badgeClassName: "bg-sky-500/15 text-sky-700 dark:text-sky-300",
         rowClassName: "bg-sky-500/5",
         icon: "task_alt",
@@ -482,7 +482,7 @@ export function getApprovalStatusMeta(record = {}) {
     case "fully_approved":
       return {
         key: statusKey,
-        label: "Fully Approved",
+        label: "fullyApproved",
         badgeClassName: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300",
         rowClassName: "",
         icon: "verified",
@@ -490,7 +490,7 @@ export function getApprovalStatusMeta(record = {}) {
     case "correction_needed":
       return {
         key: statusKey,
-        label: "Correction Needed",
+        label: "correctionNeeded",
         badgeClassName: "bg-rose-500/15 text-rose-700 dark:text-rose-300",
         rowClassName: "bg-rose-500/5",
         icon: "edit_note",
@@ -507,7 +507,7 @@ export function getApprovalStatusMeta(record = {}) {
     default:
       return {
         key: "pending",
-        label: "Pending",
+        label: "pending",
         badgeClassName: "bg-amber-500/15 text-amber-700 dark:text-amber-300",
         rowClassName: "bg-amber-500/5",
         icon: "schedule",

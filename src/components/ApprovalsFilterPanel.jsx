@@ -2,6 +2,8 @@ import AdvancedFilterSection from "./AdvancedFilterSection";
 import FormField from "./FormField";
 import { APPROVAL_STATUS_OPTIONS } from "../utils/approvals";
 
+import { useLanguage } from "../contexts/LanguageContext";
+
 export default function ApprovalsFilterPanel({
   filters,
   factories,
@@ -20,35 +22,36 @@ export default function ApprovalsFilterPanel({
   onClearAdvancedFilters,
   loadDistinctOptions,
 }) {
+  const { t } = useLanguage();
   return (
     <div className="glass-card mb-6 rounded-[28px] p-5">
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 xl:grid-cols-[180px_180px_180px_minmax(0,1fr)_auto]">
-        <FormField label="Factory">
+        <FormField label={t("factoryField")}>
           <select
             value={filters.factory}
             onChange={(event) => onFilterChange("factory", event.target.value)}
             className="h-11 rounded-2xl border border-separator/40 bg-white px-4 text-sm text-on-surface outline-none transition focus:border-primary/40 dark:bg-surface-container"
           >
-            <option value="">All Factories</option>
+            <option value="">{t("allFactories")}</option>
             {factories.map((factory) => (
               <option key={factory} value={factory}>{factory}</option>
             ))}
           </select>
         </FormField>
 
-        <FormField label="Status">
+        <FormField label={t("status")}>
           <select
             value={filters.status}
             onChange={(event) => onFilterChange("status", event.target.value)}
             className="h-11 rounded-2xl border border-separator/40 bg-white px-4 text-sm text-on-surface outline-none transition focus:border-primary/40 dark:bg-surface-container"
           >
             {APPROVAL_STATUS_OPTIONS.map((option) => (
-              <option key={option.value || "all"} value={option.value}>{option.label}</option>
+              <option key={option.value || "all"} value={option.value}>{t(option.label)}</option>
             ))}
           </select>
         </FormField>
 
-        <FormField label="Date">
+        <FormField label={t("dateField")}>
           <input
             type="date"
             value={filters.date}
@@ -57,12 +60,12 @@ export default function ApprovalsFilterPanel({
           />
         </FormField>
 
-        <FormField label="Search">
+        <FormField label={t("searchField")}>
           <input
             type="text"
             value={searchInput}
             onChange={(event) => onSearchChange(event.target.value)}
-            placeholder="Part no., serial no., worker..."
+            placeholder={t("partNoSerialWorker")}
             className="h-11 rounded-2xl border border-separator/40 bg-white px-4 text-sm text-on-surface outline-none transition focus:border-primary/40 dark:bg-surface-container"
           />
         </FormField>
@@ -73,7 +76,7 @@ export default function ApprovalsFilterPanel({
             onClick={onClearFilters}
             className="h-11 rounded-2xl border border-separator/40 bg-white px-4 text-sm font-semibold text-on-surface transition hover:bg-surface-container dark:bg-surface-container"
           >
-            Reset Filters
+            {t("resetFilters")}
           </button>
         </div>
       </div>
@@ -86,17 +89,18 @@ export default function ApprovalsFilterPanel({
         onRemoveRow={onRemoveAdvancedRow}
         onClearRows={onClearAdvancedFilters}
         loadDistinctOptions={loadDistinctOptions}
+        title={t("advancedFilters")}
         shouldLoadOptions={(fieldDefinition) => fieldDefinition.type === "select"}
         operatorLabels={{
-          equals: "Equals",
-          contains: "Contains",
-          in: "In",
-          greater: "Greater than",
-          less: "Less than",
-          range: "Range",
+          equals: t("equals"),
+          contains: t("contains"),
+          in: t("inLabel"),
+          greater: t("greaterThan"),
+          less: t("lessThan"),
+          range: t("range"),
         }}
         optionsCacheKey={optionsCacheKey}
-        activeSummaryDescription="Draft advanced conditions ready to apply."
+        activeSummaryDescription={t("draftAdvancedConditions")}
         chipTone="primary"
         variant="roomy"
         framed
@@ -109,7 +113,7 @@ export default function ApprovalsFilterPanel({
               className="flex items-center gap-2 rounded-2xl bg-primary px-5 py-2.5 text-sm font-semibold text-on-primary transition hover:opacity-90"
             >
               <span className="material-symbols-outlined" style={{ fontSize: 16 }}>filter_alt</span>
-              {advancedApplying ? "Applying..." : "Apply Advanced Filters"}
+              {advancedApplying ? t("applying") : t("applyAdvancedFilters")}
             </button>
 
             <button
@@ -118,7 +122,7 @@ export default function ApprovalsFilterPanel({
               className="flex items-center gap-2 rounded-2xl border border-separator/40 bg-white px-5 py-2.5 text-sm font-semibold text-on-surface transition hover:bg-surface-container dark:bg-surface-container"
             >
               <span className="material-symbols-outlined" style={{ fontSize: 16 }}>refresh</span>
-              Reset Advanced Filters
+              {t("resetAdvancedFilters")}
             </button>
           </>
         )}

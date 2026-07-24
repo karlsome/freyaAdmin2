@@ -134,6 +134,7 @@ function PrimitiveFieldValue({ value, align = "right" }) {
 }
 
 function StructuredValueCard({ value, depth = 0 }) {
+  const { t } = useLanguage();
   const normalizedValue = parseStructuredValue(value);
 
   if (!isStructuredValue(normalizedValue)) {
@@ -146,7 +147,7 @@ function StructuredValueCard({ value, depth = 0 }) {
     if (items.length === 0) {
       return (
         <div className="rounded-2xl border border-separator/40 bg-surface-container/40 px-3 py-2 text-[11px] text-outline">
-          Empty array
+          {t("emptyArray")}
         </div>
       );
     }
@@ -154,9 +155,9 @@ function StructuredValueCard({ value, depth = 0 }) {
     return (
       <div className="space-y-2 rounded-2xl border border-separator/40 bg-surface-container/40 p-3">
         <div className="flex items-center justify-between gap-2">
-          <span className="text-[10px] font-semibold uppercase tracking-wider text-outline">Array</span>
+          <span className="text-[10px] font-semibold uppercase tracking-wider text-outline">{t("array")}</span>
           <span className="rounded-full bg-surface px-2 py-0.5 text-[10px] font-semibold text-on-surface-variant">
-            {items.length} item{items.length === 1 ? "" : "s"}
+            {t("itemsCountLabel").replace("{count}", items.length).replace("{plural}", items.length === 1 ? "" : "s")}
           </span>
         </div>
         <div className="space-y-2">
@@ -169,14 +170,14 @@ function StructuredValueCard({ value, depth = 0 }) {
                 {nestedStructured ? (
                   <div className="space-y-2">
                     <span className="block text-[10px] font-semibold uppercase tracking-wider text-outline">
-                      Item {index + 1}
+                      {t("itemLabelWithIndex").replace("{index}", index + 1)}
                     </span>
                     <StructuredValueCard value={nestedValue} depth={depth + 1} />
                   </div>
                 ) : (
                   <div className="flex items-start justify-between gap-3">
                     <span className="text-[10px] font-semibold uppercase tracking-wider text-outline">
-                      Item {index + 1}
+                      {t("itemLabelWithIndex").replace("{index}", index + 1)}
                     </span>
                     <div className="min-w-0 flex-1">
                       <PrimitiveFieldValue value={nestedValue} align="right" />
@@ -196,7 +197,7 @@ function StructuredValueCard({ value, depth = 0 }) {
   if (objectEntries.length === 0) {
     return (
       <div className="rounded-2xl border border-separator/40 bg-surface-container/40 px-3 py-2 text-[11px] text-outline">
-        Empty object
+        {t("emptyObject")}
       </div>
     );
   }
@@ -204,9 +205,9 @@ function StructuredValueCard({ value, depth = 0 }) {
   return (
     <div className="space-y-2 rounded-2xl border border-separator/40 bg-surface-container/40 p-3">
       <div className="flex items-center justify-between gap-2">
-        <span className="text-[10px] font-semibold uppercase tracking-wider text-outline">Object</span>
+        <span className="text-[10px] font-semibold uppercase tracking-wider text-outline">{t("object")}</span>
         <span className="rounded-full bg-surface px-2 py-0.5 text-[10px] font-semibold text-on-surface-variant">
-          {objectEntries.length} field{objectEntries.length === 1 ? "" : "s"}
+          {t("keyCountLabel").replace("{count}", objectEntries.length).replace("{plural}", objectEntries.length === 1 ? "" : "s")}
         </span>
       </div>
       <div className="space-y-2">
@@ -239,6 +240,8 @@ function StructuredValueCard({ value, depth = 0 }) {
   );
 }
 
+import { useLanguage } from "../contexts/LanguageContext";
+
 export default function ApprovalsDetailModal({
   open,
   record,
@@ -258,6 +261,7 @@ export default function ApprovalsDetailModal({
   onPermanentDelete,
 }) {
   const modalRef = useRef(null);
+  const { t } = useLanguage();
   const sourceRecord = mode === "recycle" ? record?.originalDoc || {} : record || {};
   const [masterImageUrl, setMasterImageUrl] = useState("");
   const [masterImageLoading, setMasterImageLoading] = useState(false);
@@ -349,7 +353,7 @@ export default function ApprovalsDetailModal({
           <div className="border-b border-separator/40 px-6 py-5">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
               <div>
-                <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Approval Record</div>
+                <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">{t("approvalRecord")}</div>
                 <h2 className="mt-1 break-words text-xl font-semibold text-on-surface [overflow-wrap:anywhere]">{title}</h2>
                 <p className="mt-1 break-words text-sm text-on-surface-variant [overflow-wrap:anywhere]">{subtitle || "Approval workflow details"}</p>
               </div>
@@ -376,10 +380,10 @@ export default function ApprovalsDetailModal({
             <div className="min-h-0 overflow-y-auto px-6 py-5">
               <div className="mb-5 grid grid-cols-1 gap-4 md:grid-cols-3">
                 {[
-                  { label: "Quantity", value: quantity.toLocaleString(), tone: "text-on-surface" },
-                  { label: "NG", value: ngCount.toLocaleString(), tone: ngCount > 0 ? "text-error" : "text-on-surface" },
+                  { label: t("quantity"), value: quantity.toLocaleString(), tone: "text-on-surface" },
+                  { label: t("ng"), value: ngCount.toLocaleString(), tone: ngCount > 0 ? "text-error" : "text-on-surface" },
                   {
-                    label: "Defect Rate",
+                    label: t("defectRate"),
                     value: `${defectRate.toFixed(2)}%`,
                     tone: defectRate > 0 ? "text-error" : "text-emerald-600 dark:text-emerald-300",
                   },
@@ -398,9 +402,9 @@ export default function ApprovalsDetailModal({
                       <div className="flex items-start gap-3">
                         <span className="material-symbols-outlined" style={{ fontSize: 28 }}>error</span>
                         <div>
-                          <div className="text-sm font-semibold">Date Error Detected</div>
+                          <div className="text-sm font-semibold">{t("dateErrorDetected")}</div>
                           <p className="planner-data-text mt-1 text-sm font-semibold">
-                            Input date: {sourceRecord?.Date || "—"} - Actual submission: {mismatch.objectIdDate || "—"}
+                            {t("inputDatePrefix")} {sourceRecord?.Date || "—"} {t("actualSubmission")} {mismatch.objectIdDate || "—"}
                           </p>
                         </div>
                       </div>
@@ -412,9 +416,9 @@ export default function ApprovalsDetailModal({
                       <div className="flex items-start gap-3">
                         <span className="material-symbols-outlined" style={{ fontSize: 28 }}>schedule</span>
                         <div>
-                          <div className="text-sm font-semibold">Time Drift Detected</div>
+                          <div className="text-sm font-semibold">{t("timeDriftDetected")}</div>
                           <p className="planner-data-text mt-1 text-sm font-semibold text-on-surface dark:text-on-surface">
-                            End time: {sourceRecord?.Time_end || "—"} - Actual submission: {mismatch.objectIdTime || "—"}
+                            {t("endTimePrefix")} {sourceRecord?.Time_end || "—"} {t("actualSubmission")} {mismatch.objectIdTime || "—"}
                           </p>
                         </div>
                       </div>
@@ -425,26 +429,26 @@ export default function ApprovalsDetailModal({
 
               <div className="mb-5 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
                 {[
-                  { label: "Factory", value: sourceRecord?.工場 },
-                  { label: "Worker", value: sourceRecord?.Worker_Name },
+                  { label: t("factoryField"), value: sourceRecord?.工場 },
+                  { label: t("workerLabel"), value: sourceRecord?.Worker_Name },
                   {
-                    label: "Date",
+                    label: t("dateField"),
                     value: sourceRecord?.Date,
                     tone: mismatch.dateMismatch ? "text-error" : "text-on-surface",
                     icon: mismatch.dateMismatch ? "warning" : "",
-                    iconTitle: mismatch.dateMismatch ? `Actual submission date: ${mismatch.objectIdDate || "unknown"}` : "",
+                    iconTitle: mismatch.dateMismatch ? `${t("actualSubmissionDate")}: ${mismatch.objectIdDate || "unknown"}` : "",
                   },
                   {
-                    label: "Time",
+                    label: t("timeField"),
                     value: [sourceRecord?.Time_start, sourceRecord?.Time_end].filter(Boolean).join(" - ") || "—",
                     tone: mismatch.timeMismatch ? "text-amber-700 dark:text-amber-300" : "text-on-surface",
                     icon: mismatch.timeMismatch ? "schedule" : "",
-                    iconTitle: mismatch.timeMismatch ? `Actual submission time: ${mismatch.objectIdTime || "unknown"}` : "",
+                    iconTitle: mismatch.timeMismatch ? `${t("actualSubmissionTime")}: ${mismatch.objectIdTime || "unknown"}` : "",
                   },
-                  { label: "Part No.", value: sourceRecord?.品番 },
-                  { label: "Serial No.", value: sourceRecord?.背番号 },
-                  { label: "Equipment", value: sourceRecord?.設備 },
-                  { label: "Approver", value: latestApprover || "—" },
+                  { label: t("partNo"), value: sourceRecord?.品番 },
+                  { label: t("serialNo"), value: sourceRecord?.背番号 },
+                  { label: t("equipment"), value: sourceRecord?.設備 },
+                  { label: t("approver"), value: latestApprover || "—" },
                 ].map((item) => (
                   <div key={item.label} className="rounded-2xl border border-outline-variant/15 bg-surface-container-low px-4 py-3">
                     <div className="planner-data-label text-outline">{item.label}</div>
@@ -464,14 +468,14 @@ export default function ApprovalsDetailModal({
                 <div className="mb-5 grid gap-4 md:grid-cols-2">
                   {sourceRecord?.correctionComment ? (
                     <div className="rounded-2xl border border-amber-500/20 bg-amber-500/10 px-4 py-4">
-                      <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-amber-700 dark:text-amber-300">Correction Note</div>
+                      <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-amber-700 dark:text-amber-300">{t("correctionNote")}</div>
                       <p className="planner-data-text mt-2 whitespace-pre-wrap text-sm font-medium text-on-surface">{sourceRecord.correctionComment}</p>
                     </div>
                   ) : null}
 
                   {sourceRecord?.deleteRequestReason ? (
                     <div className="rounded-2xl border border-error/20 bg-error/10 px-4 py-4">
-                      <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-error">Delete Reason</div>
+                      <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-error">{t("deleteReason")}</div>
                       <p className="planner-data-text mt-2 whitespace-pre-wrap text-sm font-medium text-on-surface">{sourceRecord.deleteRequestReason}</p>
                     </div>
                   ) : null}
@@ -481,8 +485,8 @@ export default function ApprovalsDetailModal({
               <div className="mb-5 rounded-2xl border border-outline-variant/15 bg-surface-container-low px-4 py-4">
                 <div className="mb-3 flex items-center justify-between gap-4">
                   <div>
-                    <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Quality Details</div>
-                    <h3 className="mt-1 text-base font-semibold text-on-surface">Counter Breakdown</h3>
+                    <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">{t("qualityDetails")}</div>
+                    <h3 className="mt-1 text-base font-semibold text-on-surface">{t("counterBreakdown")}</h3>
                   </div>
                 </div>
 
@@ -503,7 +507,7 @@ export default function ApprovalsDetailModal({
               </div>
 
               <div className="mb-5 rounded-2xl border border-outline-variant/15 bg-surface-container-low px-4 py-4">
-                <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">All Fields</div>
+                <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">{t("allFields")}</div>
                 <div className="mt-3 space-y-0">
                   {detailEntries.map(([field, value]) => (
                     <div
@@ -522,7 +526,7 @@ export default function ApprovalsDetailModal({
               </div>
 
               <div className="rounded-2xl border border-outline-variant/15 bg-surface-container-low px-4 py-4">
-                <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Approval History</div>
+                <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">{t("approvalHistory")}</div>
                 {approvalHistory.length ? (
                   <div className="mt-3 space-y-3">
                     {approvalHistory.map((entry, index) => (
@@ -548,7 +552,7 @@ export default function ApprovalsDetailModal({
 
             <aside className="min-h-0 overflow-y-auto border-t border-outline-variant/20 bg-surface-container-lowest/60 px-6 py-5 lg:border-l lg:border-t-0">
               <div className="mt-5 rounded-2xl border border-outline-variant/15 bg-white/80 p-4 dark:bg-surface-container">
-                <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Submitted Images</div>
+                <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">{t("submittedImages")}</div>
 
                 {images.length ? (
                   <div className="mt-4 grid grid-cols-1 gap-3">
@@ -568,7 +572,7 @@ export default function ApprovalsDetailModal({
                         <img src={image.url} alt={image.label} className="h-40 w-full object-cover" />
                         <div className="px-3 py-3">
                           <div className="text-xs font-semibold text-on-surface">{image.label}</div>
-                          <div className="text-[11px] text-on-surface-variant">Open full size</div>
+                          <div className="text-[11px] text-on-surface-variant">{t("openFullSize")}</div>
                         </div>
                       </button>
                     ))}
@@ -581,7 +585,7 @@ export default function ApprovalsDetailModal({
               </div>
 
               <div className="mt-5 rounded-2xl border border-outline-variant/15 bg-white/80 p-4 dark:bg-surface-container">
-                <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Master Reference</div>
+                <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">{t("masterReference")}</div>
 
                 <div className="mt-4 overflow-hidden rounded-2xl border border-outline-variant/15 bg-surface-container-low">
                   {masterImageLoading ? (
@@ -611,7 +615,7 @@ export default function ApprovalsDetailModal({
               </div>
 
               <div className="mt-5 rounded-2xl border border-outline-variant/15 bg-white/80 p-4 dark:bg-surface-container">
-                <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Actions</div>
+                <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">{t("actions")}</div>
 
                 <div className="mt-4 flex flex-wrap gap-2">
                   {mode === "recycle" ? (
