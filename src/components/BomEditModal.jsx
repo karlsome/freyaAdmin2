@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { query, insert_record } from '../services/api';
+import { query, createMasterRecord, updateMasterRecord } from '../services/api';
 
 export default function BomEditModal({ existingBom, onClose, onSaved, onFlash }) {
   const [loadingInitial, setLoadingInitial] = useState(true);
@@ -140,23 +140,18 @@ export default function BomEditModal({ existingBom, onClose, onSaved, onFlash })
     try {
       if (isEdit) {
         const id = existingBom._id?.$oid || existingBom._id;
-        // In the existing freyaAdmin2, updates to MongoDB happen via generic API.
-        // Assuming we use _putJson or standard route. We don't have a direct query builder for update yet if not using masterRecord update.
-        // But since we use generic `queries` for fetching, let's use the fetch standard `queries` update or insert route.
-        // Actually, we can use fetch PUT or POST to /api/queries but it doesn't support update.
-        // Let's use `updateMasterRecord` or we can just delete the old one and insert the new one if there isn't a direct route.
-        // Wait, standard CRUD has `updateMasterRecord(tabKey, id, data)`. 
-        // We can just use standard fetch POST to /api/masterDB/record but we need the tabKey.
-        // Let's use fetch directly to the backend to be safe.
-        const res = await fetch(`http://localhost:3000/api/records/Sasaki_Coating_MasterDB/bomMasterDB/${id}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(doc)
+        const res = await updateMasterRecord({
+          recordId: id,
+          updates: doc,
+          tabKey: "bomDB"
         });
-        if (!res.ok) throw new Error("Update failed");
+        if (!res.success) throw new Error(res.error || "Update failed");
       } else {
-        const res = await insert_record("Sasaki_Coating_MasterDB", "bomMasterDB", [doc]);
-        if (!res.success && res.error) throw new Error(res.error);
+        const res = await createMasterRecord({
+          data: doc,
+          tabKey: "bomDB"
+        });
+        if (!res.success) throw new Error(res.error || "Creation failed");
       }
       
       if (onFlash) onFlash({ type: "success", message: "BOM saved successfully!" });

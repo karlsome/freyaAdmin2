@@ -1396,6 +1396,9 @@ export function getMasterCollectionConfig(tabKey = "masterDB") {
   if (tabKey === "processDB") {
     return { collectionName: "processMasterDB", baseQuery: {} };
   }
+  if (tabKey === "bomDB") {
+    return { collectionName: "bomMasterDB", baseQuery: {} };
+  }
   if (tabKey === "equipmentHistoryDB") {
     return { collectionName: "equipmentHistoryDB", baseQuery: {} };
   }
