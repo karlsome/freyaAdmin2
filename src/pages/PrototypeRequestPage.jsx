@@ -128,7 +128,15 @@ export default function PrototypeRequestPage() {
   const [flash, setFlash] = useState(null);
   const [refreshNonce, setRefreshNonce] = useState(0);
 
-  const [entries, setEntries] = useState([{ ...EMPTY_ENTRY }]);
+  const [entries, setEntries] = useState(() => {
+    try {
+      const saved = localStorage.getItem(`freya-prototype-requests-${shisakuId || "new"}`);
+      if (saved) return JSON.parse(saved);
+    } catch (e) {
+      console.error("Failed to parse saved requests from local storage", e);
+    }
+    return [{ ...EMPTY_ENTRY }];
+  });
   const [submitting, setSubmitting] = useState(false);
   const [deletingId, setDeletingId] = useState(null);
   
@@ -173,6 +181,10 @@ export default function PrototypeRequestPage() {
     const timer = window.setTimeout(() => setFlash(null), 4500);
     return () => window.clearTimeout(timer);
   }, [flash]);
+
+  useEffect(() => {
+    localStorage.setItem(`freya-prototype-requests-${shisakuId || "new"}`, JSON.stringify(entries));
+  }, [entries, shisakuId]);
 
   useEffect(() => {
     let cancelled = false;
@@ -247,6 +259,7 @@ export default function PrototypeRequestPage() {
 
   function resetEntry() {
     setEntries([{ ...EMPTY_ENTRY }]);
+    localStorage.removeItem(`freya-prototype-requests-${shisakuId || "new"}`);
   }
 
   const handleDragStart = (e, index) => {
@@ -348,6 +361,7 @@ export default function PrototypeRequestPage() {
           : "Prototype request registered successfully.",
       });
       resetEntry();
+      localStorage.removeItem(`freya-prototype-requests-${shisakuId || "new"}`);
       setRefreshNonce((current) => current + 1);
     } catch (err) {
       setFlash({ type: "error", message: err.message || "Registration failed." });
@@ -583,44 +597,50 @@ export default function PrototypeRequestPage() {
             <h3 className="text-xs font-semibold text-on-surface">New Request Entries</h3>
           </div>
 
-          <div className="flex flex-col gap-4 pb-4">
+          <div className="flex flex-col gap-2 pb-4">
             {entries.map((item, index) => (
               <div 
                 key={index} 
-                draggable
                 onDragStart={(e) => handleDragStart(e, index)}
                 onDragEnter={(e) => handleDragEnter(e, index)}
                 onDragOver={handleDragOver}
                 onDrop={handleDrop}
                 onDragEnd={handleDragEnd}
-                className="relative rounded-2xl border border-outline-variant/60 bg-surface-container p-5 shadow transition-shadow hover:shadow-md cursor-grab active:cursor-grabbing"
+                className="request-card relative rounded-2xl border border-outline-variant/60 bg-surface-container p-3 shadow transition-shadow hover:shadow-md"
               >
                 {/* Header / Remove Button */}
-                <div className="mb-4 flex items-center justify-between border-b border-outline-variant/10 pb-3">
-                  <h4 className="text-sm font-semibold text-on-surface flex items-center gap-2">
-                    <span className="material-symbols-outlined text-on-surface-variant/40" style={{ fontSize: 20 }}>drag_indicator</span>
+                <div className="mb-2 flex items-center justify-between border-b border-outline-variant/10 pb-2">
+                  <h4 className="text-sm font-semibold text-on-surface flex items-center gap-1">
+                    <span 
+                      className="material-symbols-outlined text-on-surface-variant/40 hover:text-on-surface cursor-grab active:cursor-grabbing p-0.5 rounded transition" 
+                      style={{ fontSize: 18 }}
+                      onMouseEnter={(e) => { e.currentTarget.closest('.request-card').draggable = true; }}
+                      onMouseLeave={(e) => { e.currentTarget.closest('.request-card').draggable = false; }}
+                    >
+                      drag_indicator
+                    </span>
                     Request #{index + 1}
                   </h4>
                   <button
                     type="button"
                     onClick={() => removeEntryRow(index)}
                     disabled={entries.length <= 1}
-                    className="flex h-8 w-8 items-center justify-center rounded-full text-on-surface-variant transition hover:bg-error/10 hover:text-error disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-on-surface-variant"
+                    className="flex h-6 w-6 items-center justify-center rounded-full text-on-surface-variant transition hover:bg-error/10 hover:text-error disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-on-surface-variant"
                     title="Remove Request"
                   >
-                    <span className="material-symbols-outlined" style={{ fontSize: 18 }}>close</span>
+                    <span className="material-symbols-outlined" style={{ fontSize: 16 }}>close</span>
                   </button>
                 </div>
                 
                 {/* Grid Layout for Fields */}
-                <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
+                <div className="grid grid-cols-1 gap-2 md:grid-cols-4">
                   {/* Top Row Fields */}
                   <div className="md:col-span-1">
-                    <label className="mb-1.5 block text-xs font-semibold text-on-surface-variant uppercase tracking-wider">Product Name</label>
+                    <label className="mb-0.5 block text-[11px] font-semibold text-on-surface-variant uppercase tracking-wider">Product Name</label>
                     <SuggestInput value={item.name} options={fieldSuggestions.name} onChange={(e) => handleEntryChange(index, "name", e.target.value)} className={inputClassName + " w-full"} />
                   </div>
                   <div className="md:col-span-1">
-                    <label className="mb-1.5 block text-xs font-semibold text-on-surface-variant uppercase tracking-wider">DXF</label>
+                    <label className="mb-0.5 block text-[11px] font-semibold text-on-surface-variant uppercase tracking-wider">DXF</label>
                     <select
                       value={item.dxfIndex}
                       onChange={(e) => handleEntryChange(index, "dxfIndex", e.target.value)}
@@ -633,7 +653,7 @@ export default function PrototypeRequestPage() {
                     </select>
                   </div>
                   <div className="md:col-span-1">
-                    <label className="mb-1.5 block text-xs font-semibold text-on-surface-variant uppercase tracking-wider">PDF</label>
+                    <label className="mb-0.5 block text-[11px] font-semibold text-on-surface-variant uppercase tracking-wider">PDF</label>
                     <select
                       value={item.pdfIndex}
                       onChange={(e) => handleEntryChange(index, "pdfIndex", e.target.value)}
@@ -646,11 +666,11 @@ export default function PrototypeRequestPage() {
                     </select>
                   </div>
                   <div className="md:col-span-1">
-                    <label className="mb-1.5 block text-xs font-semibold text-error uppercase tracking-wider flex items-center gap-1">PCE <span className="text-[10px]">*</span></label>
+                    <label className="mb-0.5 block text-[11px] font-semibold text-error uppercase tracking-wider flex items-center gap-1">PCE <span className="text-[10px]">*</span></label>
                     <select
                       value={item.pceIndex}
                       onChange={(e) => handleEntryChange(index, "pceIndex", e.target.value)}
-                      className={`${inputClassName} w-full ${item.pceIndex === "" ? "border-error/50 bg-error/5" : ""}`}
+                      className={inputClassName + " w-full"}
                     >
                       <option value="">Select PCE *</option>
                       {(shisakuRecord.pcelinks || []).map((f, i) => (
@@ -660,25 +680,25 @@ export default function PrototypeRequestPage() {
                   </div>
                   
                   {/* Bottom Row Fields */}
-                  <div className="md:col-span-4 mt-2 grid grid-cols-2 gap-4 md:grid-cols-5 border-t border-outline-variant/10 pt-4">
+                  <div className="md:col-span-4 mt-1 grid grid-cols-2 gap-2 md:grid-cols-5 border-t border-outline-variant/10 pt-2">
                     <div>
-                      <label className="mb-1.5 block text-xs font-semibold text-on-surface-variant uppercase tracking-wider">Pitch</label>
+                      <label className="mb-0.5 block text-[11px] font-semibold text-on-surface-variant uppercase tracking-wider">Pitch</label>
                       <SuggestInput type="number" value={item.okuriPitch} options={fieldSuggestions.okuriPitch} onChange={(e) => handleEntryChange(index, "okuriPitch", e.target.value)} className={inputClassName + " w-full"} />
                     </div>
                     <div>
-                      <label className="mb-1.5 block text-xs font-semibold text-on-surface-variant uppercase tracking-wider">Color</label>
+                      <label className="mb-0.5 block text-[11px] font-semibold text-on-surface-variant uppercase tracking-wider">Color</label>
                       <SuggestInput value={item.color} options={fieldSuggestions.color} onChange={(e) => handleEntryChange(index, "color", e.target.value)} className={inputClassName + " w-full"} />
                     </div>
                     <div>
-                      <label className="mb-1.5 block text-xs font-semibold text-on-surface-variant uppercase tracking-wider">Material</label>
+                      <label className="mb-0.5 block text-[11px] font-semibold text-on-surface-variant uppercase tracking-wider">Material</label>
                       <SuggestInput value={item.material} options={fieldSuggestions.material} onChange={(e) => handleEntryChange(index, "material", e.target.value)} className={inputClassName + " w-full"} />
                     </div>
                     <div>
-                      <label className="mb-1.5 block text-xs font-semibold text-on-surface-variant uppercase tracking-wider">Box Type</label>
+                      <label className="mb-0.5 block text-[11px] font-semibold text-on-surface-variant uppercase tracking-wider">Box Type</label>
                       <SuggestInput value={item.boxType} options={fieldSuggestions.boxType} onChange={(e) => handleEntryChange(index, "boxType", e.target.value)} className={inputClassName + " w-full"} />
                     </div>
                     <div>
-                      <label className="mb-1.5 block text-xs font-semibold text-on-surface-variant uppercase tracking-wider">Quantity</label>
+                      <label className="mb-0.5 block text-[11px] font-semibold text-on-surface-variant uppercase tracking-wider">Quantity</label>
                       <SuggestInput type="number" value={item.quantity} options={fieldSuggestions.quantity} onChange={(e) => handleEntryChange(index, "quantity", e.target.value)} className={inputClassName + " w-full"} />
                     </div>
                   </div>
