@@ -172,7 +172,68 @@ export default function MasterDetailDrawer({
                   <div key={field.field} className={`rounded-2xl border border-outline-variant/15 bg-surface-container-low px-4 py-3 ${multiline ? "col-span-2" : ""}`}>
                     <div className="mb-1 text-[11px] font-semibold uppercase tracking-wider text-outline">{field.label}</div>
                     {editing ? (
-                      multiline ? (
+                      typeof value === 'object' && value !== null && !Array.isArray(value) ? (
+                        <div className="flex flex-col gap-3 mt-2">
+                          {Object.entries(value).map(([k, v]) => (
+                            <div key={k} className="flex flex-col gap-1">
+                              <label className="text-[10px] text-outline ml-1">{k}</label>
+                              {typeof v === 'object' && v !== null ? (
+                                (v.code !== undefined && v.name !== undefined) ? (
+                                  <div className="flex gap-2">
+                                    <input 
+                                      value={v.code ?? ""} 
+                                      onChange={(e) => {
+                                        const newVal = e.target.type === 'number' || !isNaN(e.target.value) ? Number(e.target.value) : e.target.value;
+                                        setDraft(cur => ({ 
+                                          ...cur, 
+                                          [field.field]: { ...cur[field.field], [k]: { ...v, code: newVal } }
+                                        }));
+                                      }}
+                                      className="w-1/3 rounded-xl border border-outline-variant/30 bg-surface px-2 py-1.5 text-xs text-on-surface outline-none transition focus:border-primary/40"
+                                      placeholder="Code"
+                                    />
+                                    <input 
+                                      value={v.name ?? ""} 
+                                      onChange={(e) => {
+                                        setDraft(cur => ({ 
+                                          ...cur, 
+                                          [field.field]: { ...cur[field.field], [k]: { ...v, name: e.target.value } }
+                                        }));
+                                      }}
+                                      className="w-2/3 rounded-xl border border-outline-variant/30 bg-surface px-2 py-1.5 text-xs text-on-surface outline-none transition focus:border-primary/40"
+                                      placeholder="Name"
+                                    />
+                                  </div>
+                                ) : (
+                                  <input 
+                                    value={JSON.stringify(v)}
+                                    readOnly
+                                    className="w-full rounded-xl border border-outline-variant/30 bg-surface-variant/30 px-2 py-1.5 text-xs text-on-surface outline-none cursor-not-allowed"
+                                  />
+                                )
+                              ) : (
+                                <input 
+                                  value={v ?? ""}
+                                  onChange={(e) => {
+                                    setDraft(cur => ({ 
+                                      ...cur, 
+                                      [field.field]: { ...cur[field.field], [k]: e.target.value }
+                                    }));
+                                  }}
+                                  className="w-full rounded-xl border border-outline-variant/30 bg-surface px-2 py-1.5 text-xs text-on-surface outline-none transition focus:border-primary/40"
+                                />
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      ) : Array.isArray(value) ? (
+                        <textarea
+                          value={value.join(', ')}
+                          onChange={(e) => setDraft((current) => ({ ...current, [field.field]: e.target.value.split(',').map(s => s.trim()) }))}
+                          rows={2}
+                          className="w-full rounded-2xl border border-outline-variant/30 bg-surface px-2 py-1.5 text-xs text-on-surface outline-none transition focus:border-primary/40"
+                        />
+                      ) : multiline ? (
                         <textarea
                           value={value}
                           onChange={(event) => setDraft((current) => ({ ...current, [field.field]: event.target.value }))}

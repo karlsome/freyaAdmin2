@@ -2,9 +2,12 @@ export const MASTER_TABS = [
   { key: "masterDB", label: "内装品 DB", description: "Interior product records", ready: true },
   { key: "materialDB", label: "材料 DB", description: "Material master records", ready: true },
   { key: "productPDFs", label: "梱包 / 検査基準 / 3点照合", description: "Product PDF library", ready: true },
+  { key: "materialPDFs", label: "作業条件表 (PSA)", description: "Material PDF library", ready: true },
   { key: "furyoKanri", label: "不良管理", description: "Defect definition management", ready: true },
   { key: "factoryDB", label: "工場", description: "Factory master list", ready: true },
   { key: "setsubiDB", label: "設備", description: "Equipment by factory", ready: true },
+  { key: "processDB", label: "工程 DB (Process)", description: "Process master records", ready: true },
+  { key: "bomDB", label: "BOM DB", description: "Bill of materials builder", ready: true },
   { key: "pceFiles", label: "pce ファイル", description: "PCE file upload utility", ready: true },
 ];
 
@@ -423,10 +426,30 @@ export function getActiveMasterAdvancedFilters(rows = [], fieldDefinitions = [])
 
 export function formatMasterValue(value) {
   if (value == null || value === "") return "—";
-  if (Array.isArray(value)) return value.join(", ");
+  if (Array.isArray(value)) {
+    return value.map(v => typeof v === "object" ? formatMasterValue(v) : v).join(", ");
+  }
   if (typeof value === "object") {
+    // Handle standard code/name resolved objects
+    if (value.code !== undefined && value.name !== undefined) {
+      return `${value.code} - ${value.name}`;
+    }
+    
+    // Format other objects as key-value pairs
     try {
-      return JSON.stringify(value);
+      return Object.entries(value)
+        .map(([k, v]) => {
+          let strV = v;
+          if (typeof v === "object" && v !== null) {
+            if (v.code !== undefined && v.name !== undefined) {
+              strV = `${v.code} - ${v.name}`;
+            } else {
+              strV = JSON.stringify(v); // Fallback for deeper nesting
+            }
+          }
+          return `${k}: ${strV}`;
+        })
+        .join("\n");
     } catch {
       return String(value);
     }

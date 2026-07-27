@@ -25,6 +25,7 @@ import EquipmentHistoryPage from "./pages/EquipmentHistoryPage";
 import TicketSubmissionsPage from "./pages/TicketSubmissionsPage";
 import PrototypePage from "./pages/PrototypePage";
 import PrototypeRequestPage from "./pages/PrototypeRequestPage";
+import FirstFactoryPage from "./pages/FirstFactoryPage";
 import LoginPage from "./pages/LoginPage";
 import {
   clearStoredAuthUser,
@@ -234,6 +235,7 @@ function App() {
             <Routes>
               <Route path="/" element={<Navigate to="/dashboard" replace />} />
               <Route path="/dashboard" element={<DashboardPage />} />
+              <Route path="/firstFactory" element={<FirstFactoryPage />} />
               <Route path="/planner" element={<PlannerPage />} />
               <Route path="/approvals" element={<ApprovalsPage />} />
               <Route path="/noda" element={<NodaPage />} />

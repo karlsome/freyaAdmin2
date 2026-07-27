@@ -37,10 +37,12 @@ import {
 } from "../utils/masterDB";
 
 const ProductPDFsWorkspace = lazy(() => import("../components/ProductPDFsWorkspace"));
+const MaterialPDFsWorkspace = lazy(() => import("../components/MaterialPDFsWorkspace"));
 const FuryoKanriWorkspace = lazy(() => import("../components/FuryoKanriWorkspace"));
 const FactoryDBWorkspace = lazy(() => import("../components/FactoryDBWorkspace"));
 const SetsubiDBWorkspace = lazy(() => import("../components/SetsubiDBWorkspace"));
 const PceFilesWorkspace = lazy(() => import("../components/PceFilesWorkspace"));
+const BomWorkspace = lazy(() => import("../components/BomWorkspace"));
 
 function FlashBanner({ flash, onClose }) {
   if (!flash) return null;
@@ -116,11 +118,13 @@ export default function MasterDBPage() {
   const activeTabMeta = getMasterTabMeta(activeTab);
   const activeTabUI = getMasterTabUI(activeTab);
   const isProductPDFTab = activeTab === "productPDFs";
+  const isMaterialPDFTab = activeTab === "materialPDFs";
   const isFuryoKanriTab = activeTab === "furyoKanri";
   const isFactoryTab = activeTab === "factoryDB";
   const isSetsubiTab = activeTab === "setsubiDB";
   const isPceFilesTab = activeTab === "pceFiles";
-  const isSpecialTab = isProductPDFTab || isFuryoKanriTab || isFactoryTab || isSetsubiTab || isPceFilesTab;
+  const isBomDBTab = activeTab === "bomDB";
+  const isSpecialTab = isProductPDFTab || isMaterialPDFTab || isFuryoKanriTab || isFactoryTab || isSetsubiTab || isPceFilesTab || isBomDBTab;
   const fieldDefinitions = buildMasterFieldDefinitions(schemaFields, records, activeTab);
   const columns = getMasterTableColumns(records, schemaFields, activeTab);
   const batchEditEnabled = Object.keys(advancedQuery).length > 0 && stats.filteredCount > 0;
@@ -604,12 +608,16 @@ export default function MasterDBPage() {
         >
           {isProductPDFTab ? (
             <ProductPDFsWorkspace refreshToken={refreshNonce} onFlash={setFlash} />
+          ) : isMaterialPDFTab ? (
+            <MaterialPDFsWorkspace refreshToken={refreshNonce} onFlash={setFlash} />
           ) : isFuryoKanriTab ? (
             <FuryoKanriWorkspace refreshToken={refreshNonce} onFlash={setFlash} />
           ) : isFactoryTab ? (
             <FactoryDBWorkspace refreshToken={refreshNonce} onFlash={setFlash} />
           ) : isPceFilesTab ? (
             <PceFilesWorkspace onFlash={setFlash} />
+          ) : isBomDBTab ? (
+            <BomWorkspace onFlash={setFlash} />
           ) : (
             <SetsubiDBWorkspace refreshToken={refreshNonce} />
           )}

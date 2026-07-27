@@ -2,6 +2,7 @@ const translations = {
   en: {
     // Navigation
     dashboard: "Dashboard",
+    firstFactory: "First Factory",
     factories: "Factories",
     planner: "Production Planning",
     processes: "Processes",
@@ -165,11 +166,13 @@ const translations = {
     failedToSave: "Failed to save",
     confirmDelete: "Are you sure you want to delete this?",
     noResultsFound: "No results found",
+    unsavedChangesWarning: "You have unsaved changes! Are you sure you want to proceed? Unsaved progress will be lost.",
   },
 
   ja: {
     // Navigation
     dashboard: "ダッシュボード",
+    firstFactory: "第一工場",
     factories: "工場一覧",
     planner: "生産計画",
     processes: "工程",
@@ -333,6 +336,7 @@ const translations = {
     failedToSave: "保存に失敗しました",
     confirmDelete: "本当に削除しますか？",
     noResultsFound: "結果が見つかりません",
+    unsavedChangesWarning: "保存されていない変更があります。続行してもよろしいですか？保存されていない進行状況は失われます。",
   },
 };
 
