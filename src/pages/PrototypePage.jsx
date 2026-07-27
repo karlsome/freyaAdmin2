@@ -410,61 +410,7 @@ export default function PrototypePage() {
     { key: "eventName", label: "Event", width: 160, renderCell: (r) => r.eventName || "—" },
     { key: "modelName", label: "Model", width: 160, renderCell: (r) => r.modelName || "—" },
     { key: "customerName", label: "Customer", width: 160, renderCell: (r) => r.customerName || "—" },
-    {
-      key: "files",
-      label: "Files",
-      sortable: false,
-      width: 200,
-      align: "center",
-      disableCellWrapper: true,
-      renderCell: (r) => {
-        const pceLinks = Array.isArray(r.pcelinks) && r.pcelinks.length > 0
-          ? r.pcelinks
-          : (r.pcelink ? [{ name: "pce", link: r.pcelink }] : []);
 
-        return (
-          <div className="flex flex-wrap items-center justify-center gap-2">
-            {[["dxf", r.dxflink], ["pdf", r.pdflink]].map(([label, link]) => (
-              link ? (
-                <a
-                  key={label}
-                  href={link}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  onClick={(e) => e.stopPropagation()}
-                  className="inline-flex items-center justify-center rounded-lg border border-outline-variant/30 bg-surface px-2.5 py-1 text-[11px] font-semibold uppercase text-primary transition hover:bg-surface-container-high"
-                >
-                  {label}
-                </a>
-              ) : (
-                <span key={label} className="inline-flex items-center justify-center rounded-lg border border-outline-variant/15 bg-surface-container px-2.5 py-1 text-[11px] font-semibold uppercase text-on-surface-variant/40">
-                  {label}
-                </span>
-              )
-            ))}
-            {pceLinks.length > 0 ? (
-              pceLinks.map((entry, idx) => (
-                <a
-                  key={`pce-${idx}`}
-                  href={entry.link}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  title={entry.name}
-                  onClick={(e) => e.stopPropagation()}
-                  className="inline-flex items-center justify-center rounded-lg border border-outline-variant/30 bg-surface px-2.5 py-1 text-[11px] font-semibold uppercase text-primary transition hover:bg-surface-container-high"
-                >
-                  {pceLinks.length > 1 ? `pce${idx + 1}` : "pce"}
-                </a>
-              ))
-            ) : (
-              <span className="inline-flex items-center justify-center rounded-lg border border-outline-variant/15 bg-surface-container px-2.5 py-1 text-[11px] font-semibold uppercase text-on-surface-variant/40">
-                pce
-              </span>
-            )}
-          </div>
-        );
-      },
-    },
     {
       key: "cybozuLink",
       label: "Cybozu",
