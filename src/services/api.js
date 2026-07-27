@@ -2928,8 +2928,8 @@ export async function fetchShisakuRequestList({ shisakudb_id } = {}) {
   return data;
 }
 
-export async function registerShisakuRequest({ name, pce, okuriPitch, color, material, boxType, quantity, pdfLink, shisakudb_id }) {
-  return _postJson("api/shisaku-request/register", { name, pce, okuriPitch, color, material, boxType, quantity, pdfLink, shisakudb_id });
+export async function registerShisakuRequest({ name, dxf, pdf, pce, okuriPitch, color, material, boxType, quantity, shisakudb_id }) {
+  return _postJson("api/shisaku-request/register", { name, dxf, pdf, pce, okuriPitch, color, material, boxType, quantity, shisakudb_id });
 }
 
 export async function deleteShisakuRequest(id) {

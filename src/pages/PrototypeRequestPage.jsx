@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import DataTable from "../components/DataTable";
 import PageHeader from "../components/PageHeader";
+import ModalShell from "../components/ModalShell";
 import {
   BASE_URL,
   deleteShisakuRequest,
@@ -127,6 +128,9 @@ export default function PrototypeRequestPage() {
   const [entries, setEntries] = useState([{ ...EMPTY_ENTRY }]);
   const [submitting, setSubmitting] = useState(false);
   const [deletingId, setDeletingId] = useState(null);
+  
+  const [searchQuery, setSearchQuery] = useState("");
+  const [detailModalRecord, setDetailModalRecord] = useState(null);
 
   useEffect(() => {
     if (!flash) return undefined;
@@ -141,21 +145,26 @@ export default function PrototypeRequestPage() {
       setLoading(true);
       setError("");
       try {
-        const shisakuData = await fetchShisaku(shisakuId);
-        if (cancelled) return;
-        
-        if (!shisakuData) {
-          setError("Prototype record not found.");
-          setLoading(false);
-          return;
+        if (shisakuId) {
+          const shisakuData = await fetchShisaku(shisakuId);
+          if (cancelled) return;
+          
+          if (!shisakuData) {
+            setError("Prototype record not found.");
+            setLoading(false);
+            return;
+          }
+          setShisakuRecord(shisakuData);
+        } else {
+          setShisakuRecord(null);
         }
-        setShisakuRecord(shisakuData);
 
-        const requestData = await fetchShisakuRequestList({ shisakudb_id: shisakuId });
+        const requestData = await fetchShisakuRequestList(shisakuId ? { shisakudb_id: shisakuId } : {});
         if (cancelled) return;
         setRecords(Array.isArray(requestData) ? requestData : []);
       } catch (err) {
         if (cancelled) return;
+        console.error("Error loading prototype requests:", err);
         setError(err.message || "Failed to load prototype request data.");
       } finally {
         if (!cancelled) setLoading(false);
@@ -215,7 +224,13 @@ export default function PrototypeRequestPage() {
     try {
       await Promise.all(entries.map((item) => {
         const dxf = item.dxfIndex !== "" ? shisakuRecord.dxfLinks[item.dxfIndex] : null;
-        const pdf = item.pdfIndex !== "" ? shisakuRecord.pdfLinks[item.pdfIndex] : null;
+        const pdfData = item.pdfIndex !== "" ? shisakuRecord.pdfLinks[item.pdfIndex] : null;
+        const pdf = pdfData 
+          ? {
+              ...pdfData,
+              jpgLink: pdfData.jpgLink || (shisakuRecord.pdfJpgLinks?.[item.pdfIndex]?.link || null)
+            }
+          : null;
         const pce = item.pceIndex !== "" ? shisakuRecord.pcelinks[item.pceIndex] : null;
         
         return registerShisakuRequest({
@@ -266,7 +281,20 @@ export default function PrototypeRequestPage() {
     }
   }
 
+  const filteredRecords = useMemo(() => {
+    if (!searchQuery.trim()) return records;
+    const lowerQuery = searchQuery.toLowerCase();
+    return records.filter(r => 
+      (r.name || "").toLowerCase().includes(lowerQuery) ||
+      (r.shisakuNo || "").toLowerCase().includes(lowerQuery) ||
+      (r.color || "").toLowerCase().includes(lowerQuery) ||
+      (r.material || "").toLowerCase().includes(lowerQuery) ||
+      (r.boxType || "").toLowerCase().includes(lowerQuery)
+    );
+  }, [records, searchQuery]);
+
   const columns = useMemo(() => [
+    { key: "shisakuNo", label: "Prototype No.", sortable: true, width: 120, renderCell: (r) => r.shisakuNo || "—" },
     { key: "name", label: "Name", sortable: false, width: 140, renderCell: (r) => r.name || "—" },
     { key: "okuriPitch", label: "Okuri Pitch", sortable: false, width: 110, align: "center", renderCell: (r) => r.okuriPitch ?? "—" },
     { key: "color", label: "Color", sortable: false, width: 120, renderCell: (r) => r.color || "—" },
@@ -381,13 +409,14 @@ export default function PrototypeRequestPage() {
   }
 
   return (
-    <div className="mx-auto w-full max-w-7xl px-4 pb-12 pt-6 sm:px-6 lg:px-8">
+    <div className="pt-24 pb-16 px-4 md:px-8 overflow-y-auto h-screen scrollbar-hide">
       <div className="mb-8 flex items-center justify-between">
         <PageHeader
           icon="assignment"
-          title={`Prototype Request: ${shisakuRecord?.shisakuNo || shisakuId}`}
-          description="Manage manufacturing requests for this prototype."
+          title={shisakuId ? `Prototype Request: ${shisakuRecord?.shisakuNo || shisakuId}` : "All Prototype Requests"}
+          description={shisakuId ? "Manage manufacturing requests for this prototype." : "View all prototype manufacturing requests."}
         />
+        {shisakuId && (
         <button
           onClick={() => navigate("/prototype")}
           className="flex items-center gap-2 rounded-xl border border-outline-variant/30 bg-surface px-4 py-2 text-sm font-semibold text-on-surface transition hover:bg-surface-container-high"
@@ -395,11 +424,13 @@ export default function PrototypeRequestPage() {
           <span className="material-symbols-outlined text-[18px]">arrow_back</span>
           Back
         </button>
+        )}
       </div>
 
       <FlashBanner flash={flash} onClose={() => setFlash(null)} />
 
       <div className="flex flex-col gap-8">
+        {shisakuId && (
         <section className="rounded-3xl border border-outline-variant/30 bg-surface px-6 py-6 shadow-sm">
           <div className="mb-6 flex items-center justify-between">
             <h3 className="text-xs font-semibold text-on-surface">New Request Entries</h3>
@@ -534,20 +565,134 @@ export default function PrototypeRequestPage() {
             </button>
           </div>
         </section>
+        )}
 
         <section>
-          <div className="mb-4">
-            <h3 className="text-sm font-semibold text-on-surface">Existing Requests</h3>
-            <p className="text-xs text-on-surface-variant mt-1">Prototype requests created for this prototype.</p>
+          <div className="mb-4 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div>
+              <h3 className="text-sm font-semibold text-on-surface">Existing Requests</h3>
+              <p className="text-xs text-on-surface-variant mt-1">Prototype requests created for this prototype.</p>
+            </div>
+            
+            {/* Search filter */}
+            <div className="relative">
+              <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant/60" style={{ fontSize: 18 }}>search</span>
+              <input
+                type="text"
+                placeholder="Search requests..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full md:w-64 rounded-xl border border-outline-variant/30 bg-surface py-2 pl-9 pr-3 text-sm text-on-surface placeholder:text-on-surface-variant/60 transition focus:border-primary/40 focus:outline-none"
+              />
+            </div>
           </div>
           <DataTable
-            data={records}
+            rows={filteredRecords}
             columns={columns}
             defaultSort={{ column: "createdAt", direction: -1 }}
-            searchPlaceholder="Search requests..."
+            onRowClick={(r) => setDetailModalRecord(r)}
           />
         </section>
       </div>
+
+      {detailModalRecord && (
+        <ModalShell
+          open={!!detailModalRecord}
+          onClose={() => setDetailModalRecord(null)}
+          title="Prototype Request Details"
+          maxWidth="max-w-xl"
+        >
+          <div className="px-6 py-4 flex flex-col gap-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <span className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider block mb-1">Prototype No.</span>
+                <p className="text-sm font-medium text-on-surface">{detailModalRecord.shisakuNo || "—"}</p>
+              </div>
+              <div>
+                <span className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider block mb-1">Name</span>
+                <p className="text-sm font-medium text-on-surface">{detailModalRecord.name || "—"}</p>
+              </div>
+              <div>
+                <span className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider block mb-1">Okuri Pitch</span>
+                <p className="text-sm font-medium text-on-surface">{detailModalRecord.okuriPitch ?? "—"}</p>
+              </div>
+              <div>
+                <span className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider block mb-1">Color</span>
+                <p className="text-sm font-medium text-on-surface">{detailModalRecord.color || "—"}</p>
+              </div>
+              <div>
+                <span className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider block mb-1">Material</span>
+                <p className="text-sm font-medium text-on-surface">{detailModalRecord.material || "—"}</p>
+              </div>
+              <div>
+                <span className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider block mb-1">Box Type</span>
+                <p className="text-sm font-medium text-on-surface">{detailModalRecord.boxType || "—"}</p>
+              </div>
+              <div>
+                <span className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider block mb-1">Quantity</span>
+                <p className="text-sm font-medium text-on-surface">{detailModalRecord.quantity ?? "—"}</p>
+              </div>
+              <div>
+                <span className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider block mb-1">Registered</span>
+                <p className="text-sm font-medium text-on-surface">
+                  {detailModalRecord.createdAt 
+                    ? new Date(detailModalRecord.createdAt.$date || detailModalRecord.createdAt).toLocaleDateString()
+                    : "—"}
+                </p>
+              </div>
+            </div>
+            
+            <div className="border-t border-separator/40 pt-4 mt-2">
+              <span className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider block mb-3">Linked Files</span>
+              <div className="flex flex-col gap-2 text-sm">
+                {detailModalRecord.dxf && detailModalRecord.dxf.link ? (
+                  <div>
+                    <span className="font-semibold text-on-surface-variant w-12 inline-block">DXF:</span>
+                    <a href={detailModalRecord.dxf.link} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+                      {detailModalRecord.dxf.name || "DXF File"}
+                    </a>
+                  </div>
+                ) : null}
+                
+                {detailModalRecord.pdf && detailModalRecord.pdf.link ? (
+                  <div>
+                    <span className="font-semibold text-on-surface-variant w-12 inline-block">PDF:</span>
+                    <a href={detailModalRecord.pdf.link} target="_blank" rel="noopener noreferrer" className="text-[#FF3B30] hover:underline">
+                      {detailModalRecord.pdf.name || "PDF File"}
+                    </a>
+                  </div>
+                ) : null}
+
+                {detailModalRecord.pdf && detailModalRecord.pdf.jpgLink ? (
+                  <div>
+                    <span className="font-semibold text-on-surface-variant w-12 inline-block">JPG:</span>
+                    <a href={detailModalRecord.pdf.jpgLink} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">
+                      {detailModalRecord.pdf.name ? detailModalRecord.pdf.name.replace(/\.pdf$/i, '.jpg') : "Preview Image"}
+                    </a>
+                  </div>
+                ) : null}
+                
+                {detailModalRecord.pce && detailModalRecord.pce.link ? (
+                  <div>
+                    <span className="font-semibold text-on-surface-variant w-12 inline-block">PCE:</span>
+                    <a href={detailModalRecord.pce.link} target="_blank" rel="noopener noreferrer" className="text-[#34C759] hover:underline">
+                      {detailModalRecord.pce.name || "PCE File"}
+                    </a>
+                  </div>
+                ) : null}
+              </div>
+            </div>
+          </div>
+          <div className="border-t border-separator/40 bg-surface-container/30 px-6 py-4 flex justify-end">
+            <button
+              onClick={() => setDetailModalRecord(null)}
+              className="rounded-xl border border-outline-variant/20 bg-surface-container px-4 py-2 text-sm font-semibold text-on-surface transition-all hover:bg-surface-container-high"
+            >
+              Close
+            </button>
+          </div>
+        </ModalShell>
+      )}
     </div>
   );
 }
