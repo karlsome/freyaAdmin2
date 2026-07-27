@@ -2863,20 +2863,46 @@ export async function uploadPceFiles({ fileBase64, sebanggoList, machineSuffix, 
 }
 
 // ─── Prototype (試作) Registration ─────────────────────────────────────────────
-export async function fetchShisakuList() {
-  return query("Sasaki_Coating_MasterDB", "shisakuDB", {}, { sort: { createdAt: -1 } });
+export async function fetchShisakuList({ page = 1, limit = 10, sortColumn = "createdAt", sortDirection = -1 } = {}) {
+  const url = new URL(`${BASE_URL}api/shisaku`);
+  url.searchParams.set("page", page);
+  url.searchParams.set("limit", limit);
+  url.searchParams.set("sortColumn", sortColumn);
+  url.searchParams.set("sortDirection", sortDirection);
+  
+  const res = await fetch(url.toString(), {
+    method: "GET",
+    headers: { "Content-Type": "application/json" }
+  });
+  const data = await _readJson(res);
+  if (!res.ok) throw new Error(data?.error || "Failed to fetch prototype list");
+  return data;
 }
 
-export async function registerShisaku({ shisakuNo, deadline, eventName, modelName, customerName, registeredBy, cybozuLink, dxfFile, pdfFile, pdfImageFile, pceFiles }) {
+export async function registerShisaku({ shisakuNo, deadline, eventName, modelName, customerName, registeredBy, cybozuLink, dxfFiles, pdfFiles, pdfImageFiles, pceFiles }) {
   const res = await fetch(`${BASE_URL}api/shisaku/register`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ shisakuNo, deadline, eventName, modelName, customerName, registeredBy, cybozuLink, dxfFile, pdfFile, pdfImageFile, pceFiles }),
+    body: JSON.stringify({ shisakuNo, deadline, eventName, modelName, customerName, registeredBy, cybozuLink, dxfFiles, pdfFiles, pdfImageFiles, pceFiles }),
   });
   const data = await _readJson(res);
   if (!res.ok) {
     const detail = data?.google ? JSON.stringify(data.google) : data?.details || data?.error || `API ${res.status}`;
     throw new Error(`${data?.error || "Registration failed"} — ${detail}`);
+  }
+  return data;
+}
+
+export async function updateShisaku(id, { shisakuNo, deadline, eventName, modelName, customerName, registeredBy, cybozuLink, dxfFiles, pdfFiles, pdfImageFiles, pceFiles }) {
+  const res = await fetch(`${BASE_URL}api/shisaku/update/${id}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ shisakuNo, deadline, eventName, modelName, customerName, registeredBy, cybozuLink, dxfFiles, pdfFiles, pdfImageFiles, pceFiles }),
+  });
+  const data = await _readJson(res);
+  if (!res.ok) {
+    const detail = data?.google ? JSON.stringify(data.google) : data?.details || data?.error || `API ${res.status}`;
+    throw new Error(`${data?.error || "Update failed"} — ${detail}`);
   }
   return data;
 }
