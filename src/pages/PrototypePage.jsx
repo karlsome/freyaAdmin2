@@ -681,6 +681,24 @@ export default function PrototypePage() {
                     {selectedRecord.createdAt ? new Date(selectedRecord.createdAt).toLocaleDateString() : "—"}
                   </p>
                 </div>
+                <div>
+                  <h3 className="text-sm font-medium text-on-surface-variant mb-1">
+                    Status
+                  </h3>
+                  <div>
+                    {(() => {
+                      const status = selectedRecord.status || "pending";
+                      let colorClass = "bg-amber-500/10 text-amber-600 border-amber-500/20";
+                      if (status === "completed") colorClass = "bg-emerald-500/10 text-emerald-600 border-emerald-500/20";
+                      if (status === "in-progress") colorClass = "bg-blue-500/10 text-blue-600 border-blue-500/20";
+                      return (
+                        <span className={`inline-flex items-center justify-center rounded-lg border px-2.5 py-1 text-[11px] font-semibold uppercase ${colorClass}`}>
+                          {status}
+                        </span>
+                      );
+                    })()}
+                  </div>
+                </div>
                 
                 <div className="col-span-1 sm:col-span-3">
                   <h3 className="text-sm font-medium text-on-surface-variant mb-1">
