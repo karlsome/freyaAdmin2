@@ -590,19 +590,16 @@ export default function PrototypePage() {
               label="Colors"
               tags={form.colors || []}
               setTags={(tags) => handleFieldChange("colors", tags)}
-              suggestions={["Red", "Blue", "Green", "Black", "White", "Silver", "Gold", "Yellow", "Orange", "Purple", "Pink"]}
             />
             <TagInput
               label="Materials"
               tags={form.materials || []}
               setTags={(tags) => handleFieldChange("materials", tags)}
-              suggestions={["SPCC", "SECC", "SUS304", "AL", "ZAM", "Copper", "Brass", "Acrylic", "Polycarbonate", "POM", "Teflon"]}
             />
             <TagInput
               label="Box Types"
               tags={form.boxTypes || []}
               setTags={(tags) => handleFieldChange("boxTypes", tags)}
-              suggestions={["Type A", "Type B", "Type C", "Standard", "Custom", "Large", "Small", "Medium"]}
             />
           </div>
 
@@ -975,19 +972,16 @@ export default function PrototypePage() {
               label="Colors"
               tags={editForm.colors || []}
               setTags={(tags) => setEditForm(c => ({...c, colors: tags}))}
-              suggestions={["Red", "Blue", "Green", "Black", "White", "Silver", "Gold", "Yellow", "Orange", "Purple", "Pink"]}
             />
             <TagInput
               label="Materials"
               tags={editForm.materials || []}
               setTags={(tags) => setEditForm(c => ({...c, materials: tags}))}
-              suggestions={["SPCC", "SECC", "SUS304", "AL", "ZAM", "Copper", "Brass", "Acrylic", "Polycarbonate", "POM", "Teflon"]}
             />
             <TagInput
               label="Box Types"
               tags={editForm.boxTypes || []}
               setTags={(tags) => setEditForm(c => ({...c, boxTypes: tags}))}
-              suggestions={["Type A", "Type B", "Type C", "Standard", "Custom", "Large", "Small", "Medium"]}
             />
           </div>
 
