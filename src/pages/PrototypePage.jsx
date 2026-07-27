@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import DataTable from "../components/DataTable";
 import PageHeader from "../components/PageHeader";
+import ModalShell from "../components/ModalShell";
 import { deleteShisaku, fetchShisakuList, registerShisaku } from "../services/api";
 import { convertPdfFileToPreviewImage } from "../utils/productPDFs";
 
@@ -11,6 +12,7 @@ const EMPTY_FORM = {
   modelName: "",
   customerName: "",
   registeredBy: "",
+  cybozuLink: "",
 };
 
 function toBase64(file) {
@@ -258,6 +260,7 @@ export default function PrototypePage() {
     form.modelName.trim() &&
     form.customerName.trim() &&
     form.registeredBy.trim() &&
+    form.cybozuLink.trim() &&
     !!dxfFile && !!pdfFile &&
     !!dxfFileName && !!pdfFileName &&
     pceFiles.length > 0 && pceFiles.every((entry) => entry.name.trim()) &&
@@ -286,6 +289,7 @@ export default function PrototypePage() {
         modelName: form.modelName.trim(),
         customerName: form.customerName.trim(),
         registeredBy: form.registeredBy.trim(),
+        cybozuLink: form.cybozuLink.trim(),
         dxfFile: { name: dxfFileName, base64: dxfBase64 },
         pdfFile: { name: pdfFileName, base64: pdfBase64 },
         pdfImageFile: { name: buildJpgFileName(pdfFileName), base64: pdfImageBase64 },
@@ -382,6 +386,29 @@ export default function PrototypePage() {
       },
     },
     {
+      key: "cybozuLink",
+      label: "Cybozu",
+      sortable: false,
+      width: 90,
+      align: "center",
+      disableCellWrapper: true,
+      renderCell: (r) => (
+        r.cybozuLink ? (
+          <div className="flex items-center justify-center">
+            <a
+              href={r.cybozuLink}
+              target="_blank"
+              rel="noopener noreferrer"
+              title="Open in Cybozu"
+              className="inline-flex items-center justify-center rounded-lg border border-primary/20 bg-primary/10 p-1.5 text-primary transition hover:bg-primary/20"
+            >
+              <span className="material-symbols-outlined" style={{ fontSize: 16 }}>open_in_new</span>
+            </a>
+          </div>
+        ) : "—"
+      ),
+    },
+    {
       key: "createdAt",
       label: "Registered",
       sortable: false,
@@ -439,123 +466,133 @@ export default function PrototypePage() {
 
       <FlashBanner flash={flash} onClose={() => setFlash(null)} />
 
-      {formOpen && (
-        <div className="dashboard-section rounded-2xl overflow-hidden mb-6">
-          <div className="border-b border-separator/40 px-4 py-4">
-            <h3 className="text-xs font-semibold text-on-surface">New 試作 Registration</h3>
+      <ModalShell
+        open={formOpen}
+        onClose={() => { resetForm(); setFormOpen(false); }}
+        title="New 試作 Registration"
+        subtitle="Fill in the required information and upload files for the new 試作."
+        maxWidth="max-w-4xl"
+      >
+        <div className="px-6 py-4 flex flex-col gap-5 overflow-y-auto max-h-[70vh]">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <Field label="試作番号">
+              <input
+                type="text"
+                value={form.shisakuNo}
+                onChange={(e) => handleFieldChange("shisakuNo", e.target.value)}
+                placeholder="4153"
+                className={inputClassName}
+              />
+            </Field>
+            <Field label="Deadline">
+              <input
+                type="date"
+                value={form.deadline}
+                onChange={(e) => handleFieldChange("deadline", e.target.value)}
+                className={inputClassName}
+              />
+            </Field>
+            <Field label="Event">
+              <input
+                type="text"
+                value={form.eventName}
+                onChange={(e) => handleFieldChange("eventName", e.target.value)}
+                className={inputClassName}
+              />
+            </Field>
+            <Field label="Model">
+              <input
+                type="text"
+                value={form.modelName}
+                onChange={(e) => handleFieldChange("modelName", e.target.value)}
+                className={inputClassName}
+              />
+            </Field>
+            <Field label="Customer">
+              <input
+                type="text"
+                value={form.customerName}
+                onChange={(e) => handleFieldChange("customerName", e.target.value)}
+                className={inputClassName}
+              />
+            </Field>
+            <Field label="Registered By">
+              <input
+                type="text"
+                value={form.registeredBy}
+                onChange={(e) => handleFieldChange("registeredBy", e.target.value)}
+                className={inputClassName}
+              />
+            </Field>
           </div>
+          
+          <Field label="Cybozu Link">
+            <input
+              type="url"
+              value={form.cybozuLink}
+              onChange={(e) => handleFieldChange("cybozuLink", e.target.value)}
+              placeholder="https://sasaki-coating.cybozu.com/..."
+              className={inputClassName}
+            />
+          </Field>
 
-          <div className="px-4 py-4 flex flex-col gap-4">
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-6">
-              <Field label="試作番号">
-                <input
-                  type="text"
-                  value={form.shisakuNo}
-                  onChange={(e) => handleFieldChange("shisakuNo", e.target.value)}
-                  placeholder="4153"
-                  className={inputClassName}
-                />
-              </Field>
-              <Field label="Deadline">
-                <input
-                  type="date"
-                  value={form.deadline}
-                  onChange={(e) => handleFieldChange("deadline", e.target.value)}
-                  className={inputClassName}
-                />
-              </Field>
-              <Field label="Event">
-                <input
-                  type="text"
-                  value={form.eventName}
-                  onChange={(e) => handleFieldChange("eventName", e.target.value)}
-                  className={inputClassName}
-                />
-              </Field>
-              <Field label="Model">
-                <input
-                  type="text"
-                  value={form.modelName}
-                  onChange={(e) => handleFieldChange("modelName", e.target.value)}
-                  className={inputClassName}
-                />
-              </Field>
-              <Field label="Customer">
-                <input
-                  type="text"
-                  value={form.customerName}
-                  onChange={(e) => handleFieldChange("customerName", e.target.value)}
-                  className={inputClassName}
-                />
-              </Field>
-              <Field label="Registered By">
-                <input
-                  type="text"
-                  value={form.registeredBy}
-                  onChange={(e) => handleFieldChange("registeredBy", e.target.value)}
-                  className={inputClassName}
-                />
-              </Field>
+          {!shisakuNoEntered && (
+            <div className="flex items-start gap-2 rounded-lg border border-amber-500/20 bg-amber-500/5 px-3 py-2">
+              <span className="material-symbols-outlined text-amber-500 flex-shrink-0" style={{ fontSize: 14 }}>warning</span>
+              <p className="text-[11px] text-amber-700 dark:text-amber-300 leading-snug">
+                Enter a 試作番号 first — uploaded file names are generated from it (試作{"{number}"}_filename).
+              </p>
             </div>
+          )}
 
-            {!shisakuNoEntered && (
-              <div className="flex items-start gap-2 rounded-lg border border-amber-500/20 bg-amber-500/5 px-3 py-2">
-                <span className="material-symbols-outlined text-amber-500 flex-shrink-0" style={{ fontSize: 14 }}>warning</span>
-                <p className="text-[11px] text-amber-700 dark:text-amber-300 leading-snug">
-                  Enter a 試作番号 first — uploaded file names are generated from it (試作{"{number}"}_filename).
-                </p>
-              </div>
-            )}
-
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-              <FileUploadField
-                label="DXF"
-                accept=".dxf"
-                file={dxfFile}
-                fileName={dxfFileName}
-                onSelect={(f) => handleFileSelect("dxf", f)}
-                disabled={!shisakuNoEntered}
-              />
-              <FileUploadField
-                label="PDF"
-                accept=".pdf"
-                file={pdfFile}
-                fileName={pdfFileName}
-                onSelect={(f) => handleFileSelect("pdf", f)}
-                disabled={!shisakuNoEntered}
-              />
-              <PceUploadList
-                files={pceFiles}
-                onAdd={handlePceFilesAdd}
-                onRemove={handlePceFileRemove}
-                onRename={handlePceFileRename}
-                disabled={!shisakuNoEntered}
-              />
-            </div>
-
-            <div className="flex items-center justify-end gap-3">
-              <button
-                type="button"
-                onClick={() => { resetForm(); setFormOpen(false); }}
-                className="rounded-xl border border-outline-variant/20 bg-surface-container px-4 py-2 text-xs font-semibold text-on-surface transition-all hover:bg-surface-container-high"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={handleRegister}
-                disabled={!canRegister}
-                className="flex items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-xs font-semibold text-on-primary transition-all hover:opacity-90 active:scale-95 disabled:opacity-40"
-              >
-                {submitting
-                  ? <span className="material-symbols-outlined animate-spin" style={{ fontSize: 16 }}>progress_activity</span>
-                  : <span className="material-symbols-outlined" style={{ fontSize: 16 }}>check</span>}
-                {submitting ? "Registering…" : "Register"}
-              </button>
-            </div>
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+            <FileUploadField
+              label="DXF"
+              accept=".dxf"
+              file={dxfFile}
+              fileName={dxfFileName}
+              onSelect={(f) => handleFileSelect("dxf", f)}
+              disabled={!shisakuNoEntered}
+            />
+            <FileUploadField
+              label="PDF"
+              accept=".pdf"
+              file={pdfFile}
+              fileName={pdfFileName}
+              onSelect={(f) => handleFileSelect("pdf", f)}
+              disabled={!shisakuNoEntered}
+            />
+            <PceUploadList
+              files={pceFiles}
+              onAdd={handlePceFilesAdd}
+              onRemove={handlePceFileRemove}
+              onRename={handlePceFileRename}
+              disabled={!shisakuNoEntered}
+            />
           </div>
         </div>
-      )}
+        
+        <div className="border-t border-separator/40 bg-surface-container/30 px-6 py-4 flex items-center justify-end gap-3 rounded-b-2xl">
+          <button
+            type="button"
+            onClick={() => { resetForm(); setFormOpen(false); }}
+            className="rounded-xl border border-outline-variant/20 bg-surface-container px-4 py-2 text-xs font-semibold text-on-surface transition-all hover:bg-surface-container-high"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={handleRegister}
+            disabled={!canRegister}
+            className="flex items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-xs font-semibold text-on-primary transition-all hover:opacity-90 active:scale-95 disabled:opacity-40"
+          >
+            {submitting
+              ? <span className="material-symbols-outlined animate-spin" style={{ fontSize: 16 }}>progress_activity</span>
+              : <span className="material-symbols-outlined" style={{ fontSize: 16 }}>check</span>}
+            {submitting ? "Registering…" : "Register"}
+          </button>
+        </div>
+      </ModalShell>
 
       <DataTable
         columns={columns}
