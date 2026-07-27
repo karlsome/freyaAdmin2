@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import DataTable from "../components/DataTable";
 import PageHeader from "../components/PageHeader";
 import ModalShell from "../components/ModalShell";
+import TagInput from "../components/TagInput";
 import { deleteShisaku, fetchShisakuList, registerShisaku, updateShisaku } from "../services/api";
 import { convertPdfFileToPreviewImage } from "../utils/productPDFs";
 import { getAuthUser } from "../utils/masterDB";
@@ -15,6 +16,9 @@ const EMPTY_FORM = {
   customerName: "",
   registeredBy: "",
   cybozuLink: "",
+  colors: [],
+  materials: [],
+  boxTypes: [],
 };
 
 function toBase64(file) {
@@ -330,6 +334,9 @@ export default function PrototypePage() {
       customerName: record.customerName || "",
       registeredBy: record.registeredBy || "",
       cybozuLink: record.cybozuLink || "",
+      colors: record.colors || [],
+      materials: record.materials || [],
+      boxTypes: record.boxTypes || [],
       _id: record._id,
     });
     setEditDxfFiles((record.dxfLinks || (record.dxflink ? [{name: 'DXF', link: record.dxflink}] : [])).map(l => ({ id: Math.random().toString(), name: l.name, link: l.link })));
@@ -369,7 +376,7 @@ export default function PrototypePage() {
 
       const pdfImagePayload = await Promise.all(editPdfFiles.map(async (f) => {
         if (f.link) return { name: f.name, link: f.link }; // We just pass link, backend will reuse pdfJpgLink? Wait, we didn't store pdfJpgLink mapping here. Actually backend will just keep existing. 
-        // For new files:
+        if (f.link) return { name: f.name, link: f.link }; 
         const previewUrl = await convertPdfFileToPreviewImage(f.file);
         return { name: buildJpgFileName(f.name.trim()), base64: previewUrl.split(",")[1] || "" };
       }));
@@ -381,6 +388,9 @@ export default function PrototypePage() {
         pdfFiles: pdfPayload,
         pdfImageFiles: pdfImagePayload,
         pceFiles: pcePayload,
+        colors: editForm.colors || [],
+        materials: editForm.materials || [],
+        boxTypes: editForm.boxTypes || [],
       });
 
       setFlash({ type: "success", message: `試作${editForm.shisakuNo} updated successfully.` });
@@ -574,6 +584,27 @@ export default function PrototypePage() {
               className={inputClassName}
             />
           </Field>
+
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3 border-t border-outline-variant/20 pt-4 mt-2">
+            <TagInput
+              label="Colors"
+              tags={form.colors || []}
+              setTags={(tags) => handleFieldChange("colors", tags)}
+              suggestions={["Red", "Blue", "Green", "Black", "White", "Silver", "Gold", "Yellow", "Orange", "Purple", "Pink"]}
+            />
+            <TagInput
+              label="Materials"
+              tags={form.materials || []}
+              setTags={(tags) => handleFieldChange("materials", tags)}
+              suggestions={["SPCC", "SECC", "SUS304", "AL", "ZAM", "Copper", "Brass", "Acrylic", "Polycarbonate", "POM", "Teflon"]}
+            />
+            <TagInput
+              label="Box Types"
+              tags={form.boxTypes || []}
+              setTags={(tags) => handleFieldChange("boxTypes", tags)}
+              suggestions={["Type A", "Type B", "Type C", "Standard", "Custom", "Large", "Small", "Medium"]}
+            />
+          </div>
 
           {!shisakuNoEntered && (
             <div className="flex items-start gap-2 rounded-lg border border-amber-500/20 bg-amber-500/5 px-3 py-2">
@@ -787,6 +818,41 @@ export default function PrototypePage() {
                         </div>
                       </div>
                     )}
+                    
+                    {(selectedRecord.colors?.length > 0 || selectedRecord.materials?.length > 0 || selectedRecord.boxTypes?.length > 0) && (
+                      <div className="mt-2 pt-4 border-t border-outline-variant/10 grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        {selectedRecord.colors?.length > 0 && (
+                          <div>
+                            <div className="text-[10px] font-bold uppercase tracking-wider text-on-surface-variant/70 mb-2">Colors</div>
+                            <div className="flex flex-wrap gap-1.5">
+                              {selectedRecord.colors.map((c, i) => (
+                                <span key={i} className="rounded-md bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">{c}</span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                        {selectedRecord.materials?.length > 0 && (
+                          <div>
+                            <div className="text-[10px] font-bold uppercase tracking-wider text-on-surface-variant/70 mb-2">Materials</div>
+                            <div className="flex flex-wrap gap-1.5">
+                              {selectedRecord.materials.map((c, i) => (
+                                <span key={i} className="rounded-md bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">{c}</span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                        {selectedRecord.boxTypes?.length > 0 && (
+                          <div>
+                            <div className="text-[10px] font-bold uppercase tracking-wider text-on-surface-variant/70 mb-2">Box Types</div>
+                            <div className="flex flex-wrap gap-1.5">
+                              {selectedRecord.boxTypes.map((c, i) => (
+                                <span key={i} className="rounded-md bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">{c}</span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
@@ -903,6 +969,27 @@ export default function PrototypePage() {
               className={inputClassName}
             />
           </Field>
+
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3 border-t border-outline-variant/20 pt-4 mt-2">
+            <TagInput
+              label="Colors"
+              tags={editForm.colors || []}
+              setTags={(tags) => setEditForm(c => ({...c, colors: tags}))}
+              suggestions={["Red", "Blue", "Green", "Black", "White", "Silver", "Gold", "Yellow", "Orange", "Purple", "Pink"]}
+            />
+            <TagInput
+              label="Materials"
+              tags={editForm.materials || []}
+              setTags={(tags) => setEditForm(c => ({...c, materials: tags}))}
+              suggestions={["SPCC", "SECC", "SUS304", "AL", "ZAM", "Copper", "Brass", "Acrylic", "Polycarbonate", "POM", "Teflon"]}
+            />
+            <TagInput
+              label="Box Types"
+              tags={editForm.boxTypes || []}
+              setTags={(tags) => setEditForm(c => ({...c, boxTypes: tags}))}
+              suggestions={["Type A", "Type B", "Type C", "Standard", "Custom", "Large", "Small", "Medium"]}
+            />
+          </div>
 
           <FileUploadList
             label="DXF"

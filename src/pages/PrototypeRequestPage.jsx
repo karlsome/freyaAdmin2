@@ -301,6 +301,16 @@ export default function PrototypeRequestPage() {
     const result = {};
     for (const key of ENTRY_FIELD_KEYS) {
       const values = new Set();
+      
+      // Inject parent prototype tags as base suggestions
+      if (key === "color" && shisakuRecord?.colors) {
+        shisakuRecord.colors.forEach(c => values.add(c));
+      } else if (key === "material" && shisakuRecord?.materials) {
+        shisakuRecord.materials.forEach(c => values.add(c));
+      } else if (key === "boxType" && shisakuRecord?.boxTypes) {
+        shisakuRecord.boxTypes.forEach(c => values.add(c));
+      }
+      
       for (const item of entries) {
         const value = String(item[key] ?? "").trim();
         if (value) values.add(value);
@@ -308,7 +318,7 @@ export default function PrototypeRequestPage() {
       result[key] = Array.from(values);
     }
     return result;
-  }, [entries]);
+  }, [entries, shisakuRecord]);
 
   const canRegister = (
     entries.every((item) =>

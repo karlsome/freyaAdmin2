@@ -2883,11 +2883,11 @@ export async function fetchShisaku(id) {
   return _getJson(`api/shisaku/${encodeURIComponent(id)}`);
 }
 
-export async function registerShisaku({ shisakuNo, deadline, eventName, modelName, customerName, registeredBy, cybozuLink, createdBy, status, dxfFiles, pdfFiles, pdfImageFiles, pceFiles }) {
+export async function registerShisaku({ shisakuNo, deadline, eventName, modelName, customerName, registeredBy, cybozuLink, createdBy, status, dxfFiles, pdfFiles, pdfImageFiles, pceFiles, colors, materials, boxTypes }) {
   const res = await fetch(`${BASE_URL}api/shisaku/register`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ shisakuNo, deadline, eventName, modelName, customerName, registeredBy, cybozuLink, createdBy, status, dxfFiles, pdfFiles, pdfImageFiles, pceFiles }),
+    body: JSON.stringify({ shisakuNo, deadline, eventName, modelName, customerName, registeredBy, cybozuLink, createdBy, status, dxfFiles, pdfFiles, pdfImageFiles, pceFiles, colors, materials, boxTypes }),
   });
   const data = await _readJson(res);
   if (!res.ok) {
@@ -2897,11 +2897,11 @@ export async function registerShisaku({ shisakuNo, deadline, eventName, modelNam
   return data;
 }
 
-export async function updateShisaku(id, { shisakuNo, deadline, eventName, modelName, customerName, registeredBy, cybozuLink, createdBy, status, dxfFiles, pdfFiles, pdfImageFiles, pceFiles }) {
+export async function updateShisaku(id, { shisakuNo, deadline, eventName, modelName, customerName, registeredBy, cybozuLink, createdBy, status, dxfFiles, pdfFiles, pdfImageFiles, pceFiles, colors, materials, boxTypes }) {
   const res = await fetch(`${BASE_URL}api/shisaku/update/${id}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ shisakuNo, deadline, eventName, modelName, customerName, registeredBy, cybozuLink, createdBy, status, dxfFiles, pdfFiles, pdfImageFiles, pceFiles }),
+    body: JSON.stringify({ shisakuNo, deadline, eventName, modelName, customerName, registeredBy, cybozuLink, createdBy, status, dxfFiles, pdfFiles, pdfImageFiles, pceFiles, colors, materials, boxTypes }),
   });
   const data = await _readJson(res);
   if (!res.ok) {
