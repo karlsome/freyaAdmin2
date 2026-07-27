@@ -32,8 +32,8 @@ function AsyncHinbanSelect({ value, onChange, placeholder = "Search 品番...", 
         const regexQuery = { "品番": { "$regex": search, "$options": "i" } };
         // Fetch up to 20 from both DBs
         const [masterRes, materialRes] = await Promise.all([
-          query("Sasaki_Coating_MasterDB", "masterDB", search ? regexQuery : {}, { limit: 20, projection: { "品番": 1, "品名": 1 } }),
-          query("Sasaki_Coating_MasterDB", "materialMasterDB3", search ? regexQuery : {}, { limit: 20, projection: { "品番": 1, "品名": 1 } })
+          query("Sasaki_Coating_MasterDB", "masterDB", search ? regexQuery : {}, { limit: 20 }),
+          query("Sasaki_Coating_MasterDB", "materialMasterDB3", search ? regexQuery : {}, { limit: 20 })
         ]);
         
         if (!active) return;
@@ -214,8 +214,18 @@ export default function BomEditModal({ existingBom, onClose, onSaved, onEditExis
           step['構成品番'] = "";
           step['構成品_id'] = null;
         } else {
-          step['構成品番'] = value.hinban;
-          step['構成品_id'] = value.id;
+          step['構成品番'] = value['品番'];
+          step['構成品_id'] = value._id;
+          
+          // Auto-fill fields from the selected material's master data
+          const src = value['品目マスタ'] || value; // materialMasterDB3 uses '品目マスタ', masterDB uses root
+          step['作業時間'] = src['作業時間'] ?? step['作業時間'] ?? 0;
+          step['段取時間'] = src['段取時間'] ?? step['段取時間'] ?? 0;
+          step['型番'] = src['型番'] ?? step['型番'] ?? "*";
+          step['生産単位'] = src['生産単位'] ?? src['生産単位数'] ?? step['生産単位'] ?? 4;
+          step['原単位'] = src['原単位'] ?? step['原単位'] ?? 1;
+          step['製品原単位'] = src['製品原単位'] ?? step['製品原単位'] ?? 1;
+          step['作業リード日'] = src['作業リード日'] ?? step['作業リード日'] ?? 0;
         }
       } else {
         step[field] = value;
@@ -308,13 +318,6 @@ export default function BomEditModal({ existingBom, onClose, onSaved, onEditExis
               <div>
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-sm font-bold uppercase tracking-wider text-outline">Process Steps</h3>
-                  <button 
-                    onClick={handleAddStep}
-                    className="flex items-center gap-1 rounded-full bg-primary/10 px-3 py-1.5 text-xs font-bold text-primary hover:bg-primary/20 transition-colors"
-                  >
-                    <span className="material-symbols-outlined" style={{ fontSize: 16 }}>add</span>
-                    Add Step
-                  </button>
                 </div>
 
                 <div className="flex flex-col gap-4">
@@ -362,7 +365,7 @@ export default function BomEditModal({ existingBom, onClose, onSaved, onEditExis
                             <label className="block text-[10px] font-bold uppercase text-outline mb-1">Child Material (構成品番)</label>
                             <AsyncHinbanSelect 
                               value={step['構成品番'] || ""}
-                              onChange={(opt, hinban) => handleStepChange(index, 'materialSelect', opt ? { hinban, id: opt._id } : null)}
+                              onChange={(opt, hinban) => handleStepChange(index, 'materialSelect', opt)}
                               placeholder="Search child material..."
                               className="md"
                             />
@@ -374,27 +377,27 @@ export default function BomEditModal({ existingBom, onClose, onSaved, onEditExis
                               <label className="block text-[10px] uppercase text-outline mb-1">作業時間 (Work Time)</label>
                               <input 
                                 type="number" 
-                                className="w-full bg-surface-variant/10 border border-outline-variant/50 rounded md px-2 py-1 text-sm"
-                                value={step['作業時間'] || 0}
-                                onChange={e => handleStepChange(index, '作業時間', e.target.value)}
+                                readOnly
+                                className="w-full bg-surface-variant/30 border border-outline-variant/30 rounded md px-2 py-1 text-sm text-outline focus:outline-none cursor-not-allowed"
+                                value={step['作業時間'] ?? ""}
                               />
                             </div>
                             <div>
                               <label className="block text-[10px] uppercase text-outline mb-1">段取時間 (Setup)</label>
                               <input 
                                 type="number" 
-                                className="w-full bg-surface-variant/10 border border-outline-variant/50 rounded md px-2 py-1 text-sm"
-                                value={step['段取時間'] || 0}
-                                onChange={e => handleStepChange(index, '段取時間', e.target.value)}
+                                readOnly
+                                className="w-full bg-surface-variant/30 border border-outline-variant/30 rounded md px-2 py-1 text-sm text-outline focus:outline-none cursor-not-allowed"
+                                value={step['段取時間'] ?? ""}
                               />
                             </div>
                             <div>
                               <label className="block text-[10px] uppercase text-outline mb-1">型番 (Model)</label>
                               <input 
                                 type="text" 
-                                className="w-full bg-surface-variant/10 border border-outline-variant/50 rounded md px-2 py-1 text-sm"
-                                value={step['型番'] || ""}
-                                onChange={e => handleStepChange(index, '型番', e.target.value)}
+                                readOnly
+                                className="w-full bg-surface-variant/30 border border-outline-variant/30 rounded md px-2 py-1 text-sm text-outline focus:outline-none cursor-not-allowed"
+                                value={step['型番'] ?? ""}
                               />
                             </div>
                           </div>
@@ -405,36 +408,36 @@ export default function BomEditModal({ existingBom, onClose, onSaved, onEditExis
                               <label className="block text-[9px] uppercase text-outline mb-1 whitespace-nowrap">生産単位</label>
                               <input 
                                 type="number" 
-                                className="w-full bg-surface-variant/10 border border-outline-variant/50 rounded md px-2 py-1 text-sm"
-                                value={step['生産単位'] || 0}
-                                onChange={e => handleStepChange(index, '生産単位', e.target.value)}
+                                readOnly
+                                className="w-full bg-surface-variant/30 border border-outline-variant/30 rounded md px-2 py-1 text-sm text-outline focus:outline-none cursor-not-allowed"
+                                value={step['生産単位'] ?? ""}
                               />
                             </div>
                             <div>
                               <label className="block text-[9px] uppercase text-outline mb-1 whitespace-nowrap">原単位</label>
                               <input 
                                 type="number" 
-                                className="w-full bg-surface-variant/10 border border-outline-variant/50 rounded md px-2 py-1 text-sm"
-                                value={step['原単位'] || 0}
-                                onChange={e => handleStepChange(index, '原単位', e.target.value)}
+                                readOnly
+                                className="w-full bg-surface-variant/30 border border-outline-variant/30 rounded md px-2 py-1 text-sm text-outline focus:outline-none cursor-not-allowed"
+                                value={step['原単位'] ?? ""}
                               />
                             </div>
                             <div>
                               <label className="block text-[9px] uppercase text-outline mb-1 whitespace-nowrap">製品原単位</label>
                               <input 
                                 type="number" 
-                                className="w-full bg-surface-variant/10 border border-outline-variant/50 rounded md px-2 py-1 text-sm"
-                                value={step['製品原単位'] || 0}
-                                onChange={e => handleStepChange(index, '製品原単位', e.target.value)}
+                                readOnly
+                                className="w-full bg-surface-variant/30 border border-outline-variant/30 rounded md px-2 py-1 text-sm text-outline focus:outline-none cursor-not-allowed"
+                                value={step['製品原単位'] ?? ""}
                               />
                             </div>
                             <div>
                               <label className="block text-[9px] uppercase text-outline mb-1 whitespace-nowrap">リード日</label>
                               <input 
                                 type="number" 
-                                className="w-full bg-surface-variant/10 border border-outline-variant/50 rounded md px-2 py-1 text-sm"
-                                value={step['作業リード日'] || 0}
-                                onChange={e => handleStepChange(index, '作業リード日', e.target.value)}
+                                readOnly
+                                className="w-full bg-surface-variant/30 border border-outline-variant/30 rounded md px-2 py-1 text-sm text-outline focus:outline-none cursor-not-allowed"
+                                value={step['作業リード日'] ?? ""}
                               />
                             </div>
                           </div>
@@ -443,6 +446,17 @@ export default function BomEditModal({ existingBom, onClose, onSaved, onEditExis
                       </div>
                     ))
                   )}
+                  
+                  {/* Add Step Button */}
+                  <div className="flex justify-center mt-2 pb-4">
+                    <button 
+                      onClick={handleAddStep}
+                      className="flex items-center gap-2 rounded-full bg-surface border border-primary/30 px-6 py-2.5 text-sm font-bold text-primary hover:bg-primary/10 transition-colors shadow-sm w-full md:w-auto md:min-w-[200px] justify-center"
+                    >
+                      <span className="material-symbols-outlined" style={{ fontSize: 20 }}>add</span>
+                      Add Step {bomSteps.length > 0 && `(Step ${bomSteps.length + 1})`}
+                    </button>
+                  </div>
                 </div>
               </div>
             </>
