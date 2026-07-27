@@ -2916,15 +2916,36 @@ export async function deleteShisaku(id) {
 }
 
 // ─── Prototype Request (試作依頼) ───────────────────────────────────────────────
-export async function fetchShisakuRequestList({ shisakudb_id } = {}) {
+export async function fetchShisakuRequestList({ shisakudb_id, page = 1, limit = 30, sortColumn = "createdAt", sortDirection = -1 } = {}) {
   const url = new URL(`${BASE_URL}api/shisaku-request/list`);
   if (shisakudb_id) url.searchParams.set("shisakudb_id", shisakudb_id);
+  url.searchParams.set("page", page);
+  url.searchParams.set("limit", limit);
+  url.searchParams.set("sortColumn", sortColumn);
+  url.searchParams.set("sortDirection", sortDirection);
+  
   const res = await fetch(url.toString(), {
     method: "GET",
     headers: { "Content-Type": "application/json" }
   });
   const data = await _readJson(res);
   if (!res.ok) throw new Error(data?.error || "Failed to fetch prototype request list");
+  return data;
+}
+
+export async function fetchShisakuRequestGroupedList({ page = 1, limit = 30, sortColumn = "latestDate", sortDirection = -1 } = {}) {
+  const url = new URL(`${BASE_URL}api/shisaku-request/grouped-list`);
+  url.searchParams.set("page", page);
+  url.searchParams.set("limit", limit);
+  url.searchParams.set("sortColumn", sortColumn);
+  url.searchParams.set("sortDirection", sortDirection);
+  
+  const res = await fetch(url.toString(), {
+    method: "GET",
+    headers: { "Content-Type": "application/json" }
+  });
+  const data = await _readJson(res);
+  if (!res.ok) throw new Error(data?.error || "Failed to fetch grouped prototype requests");
   return data;
 }
 

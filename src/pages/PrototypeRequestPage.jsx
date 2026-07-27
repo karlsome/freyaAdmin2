@@ -9,6 +9,7 @@ import {
   deleteShisakuRequest,
   fetchShisaku,
   fetchShisakuRequestList,
+  fetchShisakuRequestGroupedList,
   registerShisakuRequest,
   updateShisakuRequest,
 } from "../services/api";
@@ -131,6 +132,12 @@ export default function PrototypeRequestPage() {
   const [submitting, setSubmitting] = useState(false);
   const [deletingId, setDeletingId] = useState(null);
   
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(30);
+  const [totalPages, setTotalPages] = useState(0);
+  const [filteredCount, setFilteredCount] = useState(0);
+  const [sort, setSort] = useState({ column: "createdAt", direction: -1 });
+
   const [searchQuery, setSearchQuery] = useState("");
   const [detailModalRecord, setDetailModalRecord] = useState(null);
   
@@ -185,9 +192,30 @@ export default function PrototypeRequestPage() {
           setShisakuRecord(null);
         }
 
-        const requestData = await fetchShisakuRequestList(shisakuId ? { shisakudb_id: shisakuId } : {});
-        if (cancelled) return;
-        setRecords(Array.isArray(requestData) ? requestData : []);
+        if (shisakuId) {
+          const requestData = await fetchShisakuRequestList({
+            shisakudb_id: shisakuId,
+            page,
+            limit: pageSize,
+            sortColumn: sort.column,
+            sortDirection: sort.direction
+          });
+          if (cancelled) return;
+          setRecords(requestData?.rows || []);
+          setTotalPages(requestData?.pagination?.totalPages || 1);
+          setFilteredCount(requestData?.pagination?.totalCount || 0);
+        } else {
+          const groupedData = await fetchShisakuRequestGroupedList({
+            page,
+            limit: pageSize,
+            sortColumn: sort.column,
+            sortDirection: sort.direction
+          });
+          if (cancelled) return;
+          setRecords(groupedData?.rows || []);
+          setTotalPages(groupedData?.pagination?.totalPages || 1);
+          setFilteredCount(groupedData?.pagination?.totalCount || 0);
+        }
       } catch (err) {
         if (cancelled) return;
         console.error("Error loading prototype requests:", err);
@@ -199,7 +227,7 @@ export default function PrototypeRequestPage() {
 
     loadData();
     return () => { cancelled = true; };
-  }, [refreshNonce, shisakuId]);
+  }, [refreshNonce, shisakuId, page, pageSize, sort]);
 
   function handleEntryChange(index, key, value) {
     setEntries((current) => current.map((item, i) => (i === index ? { ...item, [key]: value } : item)));
@@ -347,48 +375,8 @@ export default function PrototypeRequestPage() {
     }
   }
 
-  const filteredRecords = useMemo(() => {
-    if (!searchQuery.trim()) return records;
-    const lowerQuery = searchQuery.toLowerCase();
-    return records.filter(r => 
-      (r.name || "").toLowerCase().includes(lowerQuery) ||
-      (r.shisakuNo || "").toLowerCase().includes(lowerQuery) ||
-      (r.color || "").toLowerCase().includes(lowerQuery) ||
-      (r.material || "").toLowerCase().includes(lowerQuery) ||
-      (r.boxType || "").toLowerCase().includes(lowerQuery) ||
-      (r.createdBy || "").toLowerCase().includes(lowerQuery)
-    );
-  }, [records, searchQuery]);
-
-  const groupedPrototypes = useMemo(() => {
-    if (shisakuId) return [];
-    const groups = {};
-    for (const r of records) {
-      const idStr = r.shisakudb_id?.$oid || r.shisakudb_id;
-      if (!idStr) continue;
-      if (!groups[idStr]) {
-        groups[idStr] = {
-          shisakudb_id: idStr,
-          shisakuNo: r.shisakuNo || "Unknown",
-          parentStatus: r.parentStatus || "pending",
-          totalRequests: 0,
-          latestDate: null,
-        };
-      }
-      groups[idStr].totalRequests += 1;
-      const d = r.createdAt ? new Date(r.createdAt.$date || r.createdAt) : null;
-      if (d && (!groups[idStr].latestDate || d > groups[idStr].latestDate)) {
-        groups[idStr].latestDate = d;
-      }
-    }
-    
-    const arr = Object.values(groups);
-    if (!searchQuery.trim()) return arr;
-    const lowerQuery = searchQuery.toLowerCase();
-    return arr.filter(g => 
-      (g.shisakuNo || "").toLowerCase().includes(lowerQuery)
-    );
-  }, [records, searchQuery, shisakuId]);
+  const filteredRecords = records;
+  const groupedPrototypes = records;
 
   const groupedColumns = useMemo(() => [
     { key: "shisakuNo", label: "Prototype No.", sortable: true, width: 200, renderCell: (r) => `試作${r.shisakuNo}` },
@@ -711,6 +699,15 @@ export default function PrototypeRequestPage() {
               rows={filteredRecords}
               columns={columns}
               defaultSort={{ column: "createdAt", direction: -1 }}
+              sort={sort}
+              onSort={setSort}
+              page={page}
+              pageSize={pageSize}
+              filteredCount={filteredCount}
+              totalPages={totalPages}
+              onPageChange={setPage}
+              onPageSizeChange={(newSize) => { setPageSize(newSize); setPage(1); }}
+              pageSizeOptions={[30, 50, 100]}
               onRowClick={(r) => setDetailModalRecord(r)}
               enableColumnResize
               enableColumnReorder
@@ -722,6 +719,15 @@ export default function PrototypeRequestPage() {
               rows={groupedPrototypes}
               columns={groupedColumns}
               defaultSort={{ column: "latestDate", direction: -1 }}
+              sort={sort}
+              onSort={setSort}
+              page={page}
+              pageSize={pageSize}
+              filteredCount={filteredCount}
+              totalPages={totalPages}
+              onPageChange={setPage}
+              onPageSizeChange={(newSize) => { setPageSize(newSize); setPage(1); }}
+              pageSizeOptions={[30, 50, 100]}
               onRowClick={(r) => navigate(`/prototype/request/${r.shisakudb_id}`)}
               enableColumnResize
               enableColumnReorder

@@ -131,7 +131,7 @@ export default function PrototypePage() {
   const [refreshNonce, setRefreshNonce] = useState(0);
   
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
+  const [pageSize, setPageSize] = useState(30);
   const [totalPages, setTotalPages] = useState(0);
   const [filteredCount, setFilteredCount] = useState(0);
   
@@ -982,7 +982,7 @@ export default function PrototypePage() {
           setPageSize(newSize);
           setPage(1);
         }}
-        pageSizeOptions={[10, 50, 100]}
+        pageSizeOptions={[30, 50, 100]}
         stickyHeader
         enableColumnResize
         enableColumnReorder
