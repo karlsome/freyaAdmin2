@@ -9,6 +9,7 @@ import {
   fetchShisaku,
   fetchShisakuRequestList,
   registerShisakuRequest,
+  updateShisakuRequest,
 } from "../services/api";
 
 const EMPTY_ENTRY = {
@@ -121,7 +122,7 @@ export default function PrototypeRequestPage() {
   const [shisakuRecord, setShisakuRecord] = useState(null);
   const [records, setRecords] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const [error, setError] = useState(null);
   const [flash, setFlash] = useState(null);
   const [refreshNonce, setRefreshNonce] = useState(0);
 
@@ -131,6 +132,30 @@ export default function PrototypeRequestPage() {
   
   const [searchQuery, setSearchQuery] = useState("");
   const [detailModalRecord, setDetailModalRecord] = useState(null);
+  
+  const [editModalRecord, setEditModalRecord] = useState(null);
+  const [editSubmitting, setEditSubmitting] = useState(false);
+  const [editShisakuRecord, setEditShisakuRecord] = useState(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function loadEditShisaku() {
+      if (!editModalRecord) {
+        setEditShisakuRecord(null);
+        return;
+      }
+      const parentId = editModalRecord.shisakudb_id?.$oid || editModalRecord.shisakudb_id;
+      if (!parentId) return;
+      try {
+        const data = await fetchShisaku(parentId);
+        if (!cancelled) setEditShisakuRecord(data);
+      } catch (e) {
+        console.error("Failed to load parent prototype for edit modal", e);
+      }
+    }
+    loadEditShisaku();
+    return () => { cancelled = true; };
+  }, [editModalRecord]);
 
   useEffect(() => {
     if (!flash) return undefined;
@@ -281,6 +306,44 @@ export default function PrototypeRequestPage() {
     }
   }
 
+  async function handleEditSubmit(e) {
+    e.preventDefault();
+    setEditSubmitting(true);
+    try {
+      const id = editModalRecord?._id?.$oid || editModalRecord?._id;
+      
+      const dxf = editModalRecord.dxfIndex !== "" && editShisakuRecord ? editShisakuRecord.dxfLinks[editModalRecord.dxfIndex] : (editModalRecord.dxf || null);
+      const pdfData = editModalRecord.pdfIndex !== "" && editShisakuRecord ? editShisakuRecord.pdfLinks[editModalRecord.pdfIndex] : (editModalRecord.pdf || null);
+      const pdf = pdfData && editModalRecord.pdfIndex !== "" && editShisakuRecord
+        ? {
+            ...pdfData,
+            jpgLink: pdfData.jpgLink || (editShisakuRecord.pdfJpgLinks?.[editModalRecord.pdfIndex]?.link || null)
+          }
+        : pdfData;
+      const pce = editModalRecord.pceIndex !== "" && editShisakuRecord ? editShisakuRecord.pcelinks[editModalRecord.pceIndex] : (editModalRecord.pce || null);
+      
+      await updateShisakuRequest(id, {
+        name: editModalRecord.name.trim(),
+        dxf,
+        pdf,
+        pce,
+        okuriPitch: Number(editModalRecord.okuriPitch),
+        color: editModalRecord.color.trim(),
+        material: editModalRecord.material.trim(),
+        boxType: editModalRecord.boxType.trim(),
+        quantity: Number(editModalRecord.quantity),
+      });
+
+      setFlash({ type: "success", message: "Prototype request updated successfully." });
+      setEditModalRecord(null);
+      setRefreshNonce((current) => current + 1);
+    } catch (err) {
+      setFlash({ type: "error", message: err.message || "Failed to update record." });
+    } finally {
+      setEditSubmitting(false);
+    }
+  }
+
   const filteredRecords = useMemo(() => {
     if (!searchQuery.trim()) return records;
     const lowerQuery = searchQuery.toLowerCase();
@@ -352,33 +415,6 @@ export default function PrototypeRequestPage() {
       sortable: false,
       width: 140,
       renderCell: (r) => r.createdAt ? new Date(r.createdAt).toLocaleDateString() : "—",
-    },
-    {
-      key: "actions",
-      label: "",
-      sortable: false,
-      width: 90,
-      align: "center",
-      disableCellWrapper: true,
-      renderCell: (r) => {
-        const id = r?._id?.$oid || r?._id;
-        const isDeleting = deletingId === id;
-        return (
-          <div className="flex items-center justify-center">
-            <button
-              type="button"
-              onClick={() => handleDelete(r)}
-              disabled={isDeleting}
-              title="Delete"
-              className="inline-flex items-center justify-center rounded-lg border border-error/20 bg-error/5 p-1.5 text-error transition hover:bg-error/10 disabled:opacity-40"
-            >
-              {isDeleting
-                ? <span className="material-symbols-outlined animate-spin" style={{ fontSize: 16 }}>progress_activity</span>
-                : <span className="material-symbols-outlined" style={{ fontSize: 16 }}>delete</span>}
-            </button>
-          </div>
-        );
-      },
     },
   ], [deletingId]);
 
@@ -683,14 +719,182 @@ export default function PrototypeRequestPage() {
               </div>
             </div>
           </div>
-          <div className="border-t border-separator/40 bg-surface-container/30 px-6 py-4 flex justify-end">
+          <div className="border-t border-separator/40 bg-surface-container/30 px-6 py-4 flex items-center justify-between">
             <button
               onClick={() => setDetailModalRecord(null)}
               className="rounded-xl border border-outline-variant/20 bg-surface-container px-4 py-2 text-sm font-semibold text-on-surface transition-all hover:bg-surface-container-high"
             >
               Close
             </button>
+            <button
+              onClick={() => {
+                setEditModalRecord({
+                  ...detailModalRecord,
+                  dxfIndex: "",
+                  pdfIndex: "",
+                  pceIndex: "",
+                });
+                setDetailModalRecord(null);
+              }}
+              className="flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-on-primary transition-all hover:opacity-90 active:scale-95"
+            >
+              <span className="material-symbols-outlined" style={{ fontSize: 18 }}>edit</span>
+              Edit
+            </button>
           </div>
+        </ModalShell>
+      )}
+
+      {editModalRecord && (
+        <ModalShell
+          open={!!editModalRecord}
+          onClose={() => setEditModalRecord(null)}
+          title="Edit Prototype Request"
+          maxWidth="max-w-2xl"
+        >
+          <form onSubmit={handleEditSubmit}>
+            <div className="px-6 py-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="mb-1 block text-xs font-semibold text-on-surface-variant">Name</label>
+                <input
+                  type="text"
+                  required
+                  value={editModalRecord.name}
+                  onChange={(e) => setEditModalRecord({ ...editModalRecord, name: e.target.value })}
+                  className={inputClassName + " w-full"}
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-semibold text-on-surface-variant">Okuri Pitch</label>
+                <input
+                  type="number"
+                  required
+                  value={editModalRecord.okuriPitch}
+                  onChange={(e) => setEditModalRecord({ ...editModalRecord, okuriPitch: e.target.value })}
+                  className={inputClassName + " w-full"}
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-semibold text-on-surface-variant">Color</label>
+                <input
+                  type="text"
+                  required
+                  value={editModalRecord.color}
+                  onChange={(e) => setEditModalRecord({ ...editModalRecord, color: e.target.value })}
+                  className={inputClassName + " w-full"}
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-semibold text-on-surface-variant">Material</label>
+                <input
+                  type="text"
+                  required
+                  value={editModalRecord.material}
+                  onChange={(e) => setEditModalRecord({ ...editModalRecord, material: e.target.value })}
+                  className={inputClassName + " w-full"}
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-semibold text-on-surface-variant">Box Type</label>
+                <input
+                  type="text"
+                  required
+                  value={editModalRecord.boxType}
+                  onChange={(e) => setEditModalRecord({ ...editModalRecord, boxType: e.target.value })}
+                  className={inputClassName + " w-full"}
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-semibold text-on-surface-variant">Quantity</label>
+                <input
+                  type="number"
+                  required
+                  value={editModalRecord.quantity}
+                  onChange={(e) => setEditModalRecord({ ...editModalRecord, quantity: e.target.value })}
+                  className={inputClassName + " w-full"}
+                />
+              </div>
+              
+              <div className="md:col-span-2 grid grid-cols-1 gap-4 border-t border-separator/40 pt-4 mt-2">
+                <div>
+                  <label className="mb-1 block text-xs font-semibold text-on-surface-variant">DXF File</label>
+                  <select
+                    value={editModalRecord.dxfIndex}
+                    onChange={(e) => setEditModalRecord({ ...editModalRecord, dxfIndex: e.target.value })}
+                    className={inputClassName + " w-full"}
+                  >
+                    <option value="">Keep current ({editModalRecord.dxf ? editModalRecord.dxf.name : "None"})</option>
+                    {editShisakuRecord?.dxfLinks?.map((l, i) => (
+                      <option key={i} value={i}>{l.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs font-semibold text-on-surface-variant">PDF File</label>
+                  <select
+                    value={editModalRecord.pdfIndex}
+                    onChange={(e) => setEditModalRecord({ ...editModalRecord, pdfIndex: e.target.value })}
+                    className={inputClassName + " w-full"}
+                  >
+                    <option value="">Keep current ({editModalRecord.pdf ? editModalRecord.pdf.name : "None"})</option>
+                    {editShisakuRecord?.pdfLinks?.map((l, i) => (
+                      <option key={i} value={i}>{l.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs font-semibold text-on-surface-variant">PCE File</label>
+                  <select
+                    value={editModalRecord.pceIndex}
+                    onChange={(e) => setEditModalRecord({ ...editModalRecord, pceIndex: e.target.value })}
+                    className={inputClassName + " w-full"}
+                  >
+                    <option value="">Keep current ({editModalRecord.pce ? editModalRecord.pce.name : "None"})</option>
+                    {editShisakuRecord?.pcelinks?.map((l, i) => (
+                      <option key={i} value={i}>{l.name}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <div className="border-t border-separator/40 bg-surface-container/30 px-6 py-4 flex items-center justify-between">
+              <button
+                type="button"
+                onClick={() => {
+                  if (window.confirm("Are you sure you want to delete this record?")) {
+                    setEditModalRecord(null);
+                    handleDelete(editModalRecord);
+                  }
+                }}
+                className="flex items-center gap-2 rounded-xl border border-error/20 bg-error/5 px-4 py-2 text-sm font-semibold text-error transition-all hover:bg-error/10 active:scale-95"
+              >
+                <span className="material-symbols-outlined" style={{ fontSize: 18 }}>delete</span>
+                Delete
+              </button>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setEditModalRecord(null)}
+                  className="rounded-xl border border-outline-variant/20 bg-surface-container px-4 py-2 text-sm font-semibold text-on-surface transition-all hover:bg-surface-container-high"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={editSubmitting}
+                  className="flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-on-primary transition-all hover:opacity-90 active:scale-95 disabled:opacity-50"
+                >
+                  {editSubmitting ? (
+                    <span className="material-symbols-outlined animate-spin" style={{ fontSize: 18 }}>progress_activity</span>
+                  ) : (
+                    <span className="material-symbols-outlined" style={{ fontSize: 18 }}>save</span>
+                  )}
+                  Save Changes
+                </button>
+              </div>
+            </div>
+          </form>
         </ModalShell>
       )}
     </div>

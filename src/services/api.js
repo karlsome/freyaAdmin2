@@ -2932,6 +2932,10 @@ export async function registerShisakuRequest({ name, dxf, pdf, pce, okuriPitch, 
   return _postJson("api/shisaku-request/register", { name, dxf, pdf, pce, okuriPitch, color, material, boxType, quantity, shisakudb_id });
 }
 
+export async function updateShisakuRequest(id, { name, dxf, pdf, pce, okuriPitch, color, material, boxType, quantity }) {
+  return _postJson(`api/shisaku-request/update/${encodeURIComponent(id)}`, { name, dxf, pdf, pce, okuriPitch, color, material, boxType, quantity });
+}
+
 export async function deleteShisakuRequest(id) {
   return _deleteJson(`api/shisaku-request/${encodeURIComponent(id)}`);
 }
