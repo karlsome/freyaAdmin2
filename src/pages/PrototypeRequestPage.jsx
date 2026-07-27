@@ -421,16 +421,16 @@ export default function PrototypeRequestPage() {
 
   const columns = useMemo(() => [
     { key: "shisakuNo", label: "Prototype No.", sortable: true, width: 120, renderCell: (r) => r.shisakuNo || "—" },
-    { key: "name", label: "Name", sortable: false, width: 140, renderCell: (r) => r.name || "—" },
-    { key: "okuriPitch", label: "Okuri Pitch", sortable: false, width: 110, align: "center", renderCell: (r) => r.okuriPitch ?? "—" },
-    { key: "color", label: "Color", sortable: false, width: 120, renderCell: (r) => r.color || "—" },
-    { key: "material", label: "Material", sortable: false, width: 120, renderCell: (r) => r.material || "—" },
-    { key: "boxType", label: "Box Type", sortable: false, width: 120, renderCell: (r) => r.boxType || "—" },
-    { key: "quantity", label: "Quantity", sortable: false, width: 100, align: "center", renderCell: (r) => r.quantity ?? "—" },
+    { key: "name", label: "Name", sortable: true, width: 140, renderCell: (r) => r.name || "—" },
+    { key: "okuriPitch", label: "Okuri Pitch", sortable: true, width: 110, align: "center", renderCell: (r) => r.okuriPitch ?? "—" },
+    { key: "color", label: "Color", sortable: true, width: 120, renderCell: (r) => r.color || "—" },
+    { key: "material", label: "Material", sortable: true, width: 120, renderCell: (r) => r.material || "—" },
+    { key: "boxType", label: "Box Type", sortable: true, width: 120, renderCell: (r) => r.boxType || "—" },
+    { key: "quantity", label: "Quantity", sortable: true, width: 100, align: "center", renderCell: (r) => r.quantity ?? "—" },
     {
       key: "dxf",
       label: "DXF",
-      sortable: false,
+      sortable: true,
       width: 100,
       align: "center",
       disableCellWrapper: true,
@@ -445,7 +445,7 @@ export default function PrototypeRequestPage() {
     {
       key: "pdf",
       label: "PDF",
-      sortable: false,
+      sortable: true,
       width: 100,
       align: "center",
       disableCellWrapper: true,
@@ -460,7 +460,7 @@ export default function PrototypeRequestPage() {
     {
       key: "pce",
       label: "PCE",
-      sortable: false,
+      sortable: true,
       width: 100,
       align: "center",
       disableCellWrapper: true,
@@ -712,6 +712,10 @@ export default function PrototypeRequestPage() {
               columns={columns}
               defaultSort={{ column: "createdAt", direction: -1 }}
               onRowClick={(r) => setDetailModalRecord(r)}
+              enableColumnResize
+              enableColumnReorder
+              layoutStorageKey="prototype-requests-table"
+              stickyHeader
             />
           ) : (
             <DataTable
@@ -719,6 +723,10 @@ export default function PrototypeRequestPage() {
               columns={groupedColumns}
               defaultSort={{ column: "latestDate", direction: -1 }}
               onRowClick={(r) => navigate(`/prototype/request/${r.shisakudb_id}`)}
+              enableColumnResize
+              enableColumnReorder
+              layoutStorageKey="prototype-requests-grouped-table"
+              stickyHeader
             />
           )}
         </section>
