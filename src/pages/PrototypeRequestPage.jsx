@@ -564,96 +564,96 @@ export default function PrototypeRequestPage() {
             </button>
           </div>
 
-          <div className="overflow-x-auto pb-4">
-            <div className="min-w-max border border-outline-variant/20 bg-surface rounded-2xl overflow-hidden">
-              <table className="w-full text-left text-sm">
-                <thead>
-                  <tr className="border-b border-outline-variant/20 bg-surface-container-lowest">
-                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-on-surface-variant">Product Name</th>
-                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-on-surface-variant">DXF</th>
-                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-on-surface-variant">PDF</th>
-                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-on-surface-variant">PCE *</th>
-                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-on-surface-variant">Pitch</th>
-                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-on-surface-variant">Color</th>
-                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-on-surface-variant">Material</th>
-                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-on-surface-variant">Box</th>
-                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-on-surface-variant">Qty</th>
-                    <th className="w-12 px-4 py-3 text-center"></th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-outline-variant/10">
-                  {entries.map((item, index) => (
-                    <tr key={index} className="transition-colors hover:bg-surface-container-lowest/50">
-                      <td className="px-4 py-3 align-top">
-                        <SuggestInput value={item.name} options={fieldSuggestions.name} onChange={(e) => handleEntryChange(index, "name", e.target.value)} className={inputClassName} />
-                      </td>
-                      <td className="px-4 py-3 align-top min-w-[150px]">
-                        <select
-                          value={item.dxfIndex}
-                          onChange={(e) => handleEntryChange(index, "dxfIndex", e.target.value)}
-                          className={inputClassName}
-                        >
-                          <option value="">None</option>
-                          {(shisakuRecord.dxfLinks || []).map((f, i) => (
-                            <option key={i} value={i}>{f.name}</option>
-                          ))}
-                        </select>
-                      </td>
-                      <td className="px-4 py-3 align-top min-w-[150px]">
-                        <select
-                          value={item.pdfIndex}
-                          onChange={(e) => handleEntryChange(index, "pdfIndex", e.target.value)}
-                          className={inputClassName}
-                        >
-                          <option value="">None</option>
-                          {(shisakuRecord.pdfLinks || []).map((f, i) => (
-                            <option key={i} value={i}>{f.name}</option>
-                          ))}
-                        </select>
-                      </td>
-                      <td className="px-4 py-3 align-top min-w-[150px]">
-                        <select
-                          value={item.pceIndex}
-                          onChange={(e) => handleEntryChange(index, "pceIndex", e.target.value)}
-                          className={`${inputClassName} ${item.pceIndex === "" ? "border-error/50 bg-error/5" : ""}`}
-                        >
-                          <option value="">Select PCE *</option>
-                          {(shisakuRecord.pcelinks || []).map((f, i) => (
-                            <option key={i} value={i}>{f.name}</option>
-                          ))}
-                        </select>
-                      </td>
-                      <td className="px-4 py-3 align-top w-24">
-                        <SuggestInput type="number" value={item.okuriPitch} options={fieldSuggestions.okuriPitch} onChange={(e) => handleEntryChange(index, "okuriPitch", e.target.value)} className={inputClassName} />
-                      </td>
-                      <td className="px-4 py-3 align-top w-28">
-                        <SuggestInput value={item.color} options={fieldSuggestions.color} onChange={(e) => handleEntryChange(index, "color", e.target.value)} className={inputClassName} />
-                      </td>
-                      <td className="px-4 py-3 align-top w-32">
-                        <SuggestInput value={item.material} options={fieldSuggestions.material} onChange={(e) => handleEntryChange(index, "material", e.target.value)} className={inputClassName} />
-                      </td>
-                      <td className="px-4 py-3 align-top w-32">
-                        <SuggestInput value={item.boxType} options={fieldSuggestions.boxType} onChange={(e) => handleEntryChange(index, "boxType", e.target.value)} className={inputClassName} />
-                      </td>
-                      <td className="px-4 py-3 align-top w-24">
-                        <SuggestInput type="number" value={item.quantity} options={fieldSuggestions.quantity} onChange={(e) => handleEntryChange(index, "quantity", e.target.value)} className={inputClassName} />
-                      </td>
-                      <td className="px-4 py-3 align-top text-center">
-                        <button
-                          type="button"
-                          onClick={() => removeEntryRow(index)}
-                          disabled={entries.length <= 1}
-                          title="Remove row"
-                          className="mt-1 flex-shrink-0 rounded-lg p-1.5 text-on-surface-variant transition hover:bg-error/10 hover:text-error disabled:opacity-30 disabled:hover:bg-transparent"
-                        >
-                          <span className="material-symbols-outlined" style={{ fontSize: 18 }}>close</span>
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+          <div className="flex flex-col gap-4 pb-4">
+            {entries.map((item, index) => (
+              <div key={index} className="relative rounded-2xl border border-outline-variant/30 bg-surface p-5 shadow-sm transition-shadow hover:shadow-md">
+                {/* Header / Remove Button */}
+                <div className="mb-4 flex items-center justify-between border-b border-outline-variant/10 pb-3">
+                  <h4 className="text-sm font-semibold text-on-surface">Request #{index + 1}</h4>
+                  <button
+                    type="button"
+                    onClick={() => removeEntryRow(index)}
+                    disabled={entries.length <= 1}
+                    className="flex h-8 w-8 items-center justify-center rounded-full text-on-surface-variant transition hover:bg-error/10 hover:text-error disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-on-surface-variant"
+                    title="Remove Request"
+                  >
+                    <span className="material-symbols-outlined" style={{ fontSize: 18 }}>close</span>
+                  </button>
+                </div>
+                
+                {/* Grid Layout for Fields */}
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
+                  {/* Top Row Fields */}
+                  <div className="md:col-span-1">
+                    <label className="mb-1.5 block text-xs font-semibold text-on-surface-variant uppercase tracking-wider">Product Name</label>
+                    <SuggestInput value={item.name} options={fieldSuggestions.name} onChange={(e) => handleEntryChange(index, "name", e.target.value)} className={inputClassName + " w-full"} />
+                  </div>
+                  <div className="md:col-span-1">
+                    <label className="mb-1.5 block text-xs font-semibold text-on-surface-variant uppercase tracking-wider">DXF</label>
+                    <select
+                      value={item.dxfIndex}
+                      onChange={(e) => handleEntryChange(index, "dxfIndex", e.target.value)}
+                      className={inputClassName + " w-full"}
+                    >
+                      <option value="">None</option>
+                      {(shisakuRecord.dxfLinks || []).map((f, i) => (
+                        <option key={i} value={i}>{f.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="md:col-span-1">
+                    <label className="mb-1.5 block text-xs font-semibold text-on-surface-variant uppercase tracking-wider">PDF</label>
+                    <select
+                      value={item.pdfIndex}
+                      onChange={(e) => handleEntryChange(index, "pdfIndex", e.target.value)}
+                      className={inputClassName + " w-full"}
+                    >
+                      <option value="">None</option>
+                      {(shisakuRecord.pdfLinks || []).map((f, i) => (
+                        <option key={i} value={i}>{f.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="md:col-span-1">
+                    <label className="mb-1.5 block text-xs font-semibold text-error uppercase tracking-wider flex items-center gap-1">PCE <span className="text-[10px]">*</span></label>
+                    <select
+                      value={item.pceIndex}
+                      onChange={(e) => handleEntryChange(index, "pceIndex", e.target.value)}
+                      className={`${inputClassName} w-full ${item.pceIndex === "" ? "border-error/50 bg-error/5" : ""}`}
+                    >
+                      <option value="">Select PCE *</option>
+                      {(shisakuRecord.pcelinks || []).map((f, i) => (
+                        <option key={i} value={i}>{f.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                  
+                  {/* Bottom Row Fields */}
+                  <div className="md:col-span-4 mt-2 grid grid-cols-2 gap-4 md:grid-cols-5 border-t border-outline-variant/10 pt-4">
+                    <div>
+                      <label className="mb-1.5 block text-xs font-semibold text-on-surface-variant uppercase tracking-wider">Pitch</label>
+                      <SuggestInput type="number" value={item.okuriPitch} options={fieldSuggestions.okuriPitch} onChange={(e) => handleEntryChange(index, "okuriPitch", e.target.value)} className={inputClassName + " w-full"} />
+                    </div>
+                    <div>
+                      <label className="mb-1.5 block text-xs font-semibold text-on-surface-variant uppercase tracking-wider">Color</label>
+                      <SuggestInput value={item.color} options={fieldSuggestions.color} onChange={(e) => handleEntryChange(index, "color", e.target.value)} className={inputClassName + " w-full"} />
+                    </div>
+                    <div>
+                      <label className="mb-1.5 block text-xs font-semibold text-on-surface-variant uppercase tracking-wider">Material</label>
+                      <SuggestInput value={item.material} options={fieldSuggestions.material} onChange={(e) => handleEntryChange(index, "material", e.target.value)} className={inputClassName + " w-full"} />
+                    </div>
+                    <div>
+                      <label className="mb-1.5 block text-xs font-semibold text-on-surface-variant uppercase tracking-wider">Box Type</label>
+                      <SuggestInput value={item.boxType} options={fieldSuggestions.boxType} onChange={(e) => handleEntryChange(index, "boxType", e.target.value)} className={inputClassName + " w-full"} />
+                    </div>
+                    <div>
+                      <label className="mb-1.5 block text-xs font-semibold text-on-surface-variant uppercase tracking-wider">Quantity</label>
+                      <SuggestInput type="number" value={item.quantity} options={fieldSuggestions.quantity} onChange={(e) => handleEntryChange(index, "quantity", e.target.value)} className={inputClassName + " w-full"} />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
 
           <div className="mt-4 flex items-center justify-end gap-3 border-t border-outline-variant/10 pt-4">
