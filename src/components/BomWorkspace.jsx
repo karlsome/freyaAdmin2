@@ -240,11 +240,15 @@ export default function BomWorkspace({ onFlash }) {
 
       {editModalOpen && (
         <BomEditModal 
+          key={selectedBom?._id?.$oid || selectedBom?._id || 'new'}
           existingBom={selectedBom}
           onClose={() => setEditModalOpen(false)}
           onSaved={() => {
             setEditModalOpen(false);
             loadPage(currentPage);
+          }}
+          onEditExisting={(existing) => {
+            setSelectedBom(existing);
           }}
           onFlash={onFlash}
         />
