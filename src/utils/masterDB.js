@@ -426,10 +426,30 @@ export function getActiveMasterAdvancedFilters(rows = [], fieldDefinitions = [])
 
 export function formatMasterValue(value) {
   if (value == null || value === "") return "—";
-  if (Array.isArray(value)) return value.join(", ");
+  if (Array.isArray(value)) {
+    return value.map(v => typeof v === "object" ? formatMasterValue(v) : v).join(", ");
+  }
   if (typeof value === "object") {
+    // Handle standard code/name resolved objects
+    if (value.code !== undefined && value.name !== undefined) {
+      return `${value.code} - ${value.name}`;
+    }
+    
+    // Format other objects as key-value pairs
     try {
-      return JSON.stringify(value);
+      return Object.entries(value)
+        .map(([k, v]) => {
+          let strV = v;
+          if (typeof v === "object" && v !== null) {
+            if (v.code !== undefined && v.name !== undefined) {
+              strV = `${v.code} - ${v.name}`;
+            } else {
+              strV = JSON.stringify(v); // Fallback for deeper nesting
+            }
+          }
+          return `${k}: ${strV}`;
+        })
+        .join("\n");
     } catch {
       return String(value);
     }
