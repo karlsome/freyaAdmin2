@@ -367,11 +367,6 @@ export default function DataTable({
     const persistedOrder = areArraysEqual(displayOrder, defaultColumnOrder) ? null : displayOrder;
     const persistedWidths = getWidthDiffMap(columnWidths, defaultColumnWidths);
 
-    if (!persistedOrder && !Object.keys(persistedWidths).length) {
-      window.localStorage.removeItem(layoutStorageKey);
-      return;
-    }
-
     window.localStorage.setItem(
       layoutStorageKey,
       JSON.stringify({

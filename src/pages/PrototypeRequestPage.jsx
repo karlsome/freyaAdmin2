@@ -499,6 +499,7 @@ export default function PrototypeRequestPage() {
   ], []);
 
   const columns = useMemo(() => [
+    { key: "index", label: "#", sortable: false, width: 60, align: "center", renderCell: (r, i) => i + 1 },
     { key: "shisakuNo", label: "Prototype No.", sortable: true, width: 120, renderCell: (r) => r.shisakuNo || "—" },
     { key: "name", label: "Name", sortable: true, width: 140, renderCell: (r) => r.name || "—" },
     { key: "okuriPitch", label: "Okuri Pitch", sortable: true, width: 110, align: "center", renderCell: (r) => r.okuriPitch ?? "—" },
@@ -832,7 +833,7 @@ export default function PrototypeRequestPage() {
               onRowClick={(r) => setDetailModalRecord(r)}
               enableColumnResize
               enableColumnReorder
-              layoutStorageKey="prototype-requests-table"
+              layoutStorageKey="prototype-requests-table-v2"
               stickyHeader
             />
           ) : (
