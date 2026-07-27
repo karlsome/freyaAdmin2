@@ -2916,6 +2916,17 @@ export async function deleteShisaku(id) {
 }
 
 // ─── Prototype Request (試作依頼) ───────────────────────────────────────────────
+export async function fetchAvailableShisakuForRequest() {
+  const url = new URL(`${BASE_URL}api/shisaku-request/available`);
+  const res = await fetch(url.toString(), {
+    method: "GET",
+    headers: { "Content-Type": "application/json" }
+  });
+  const data = await _readJson(res);
+  if (!res.ok) throw new Error(data?.error || "Failed to fetch available prototypes for request");
+  return data;
+}
+
 export async function fetchShisakuRequestList({ shisakudb_id, page = 1, limit = 30, sortColumn = "createdAt", sortDirection = -1 } = {}) {
   const url = new URL(`${BASE_URL}api/shisaku-request/list`);
   if (shisakudb_id) url.searchParams.set("shisakudb_id", shisakudb_id);

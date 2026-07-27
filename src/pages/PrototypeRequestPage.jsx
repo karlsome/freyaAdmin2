@@ -10,6 +10,7 @@ import {
   fetchShisaku,
   fetchShisakuRequestList,
   fetchShisakuRequestGroupedList,
+  fetchAvailableShisakuForRequest,
   registerShisakuRequest,
   updateShisakuRequest,
 } from "../services/api";
@@ -152,6 +153,20 @@ export default function PrototypeRequestPage() {
   const [editModalRecord, setEditModalRecord] = useState(null);
   const [editSubmitting, setEditSubmitting] = useState(false);
   const [editShisakuRecord, setEditShisakuRecord] = useState(null);
+
+  const [createModalOpen, setCreateModalOpen] = useState(false);
+  const [availableShisakus, setAvailableShisakus] = useState([]);
+  const [selectedShisaku, setSelectedShisaku] = useState("");
+  const [shisakuSearchTerm, setShisakuSearchTerm] = useState("");
+  const [showShisakuSuggestions, setShowShisakuSuggestions] = useState(false);
+
+  const filteredAvailableShisakus = useMemo(() => {
+    if (!shisakuSearchTerm) return availableShisakus.slice(0, 20);
+    const lower = shisakuSearchTerm.toLowerCase();
+    return availableShisakus
+      .filter(s => s.shisakuNo?.toLowerCase().includes(lower))
+      .slice(0, 20);
+  }, [availableShisakus, shisakuSearchTerm]);
 
   const draggedItemRef = useRef(null);
   const draggedOverItemRef = useRef(null);
@@ -438,6 +453,19 @@ export default function PrototypeRequestPage() {
     }
   }
 
+  async function handleOpenCreateModal() {
+    setCreateModalOpen(true);
+    setSelectedShisaku("");
+    setShisakuSearchTerm("");
+    setShowShisakuSuggestions(false);
+    try {
+      const data = await fetchAvailableShisakuForRequest();
+      setAvailableShisakus(data || []);
+    } catch (e) {
+      setFlash({ type: "error", message: e.message || "Failed to load available prototypes" });
+    }
+  }
+
   const filteredRecords = records;
   const groupedPrototypes = records;
 
@@ -587,15 +615,25 @@ export default function PrototypeRequestPage() {
           title={shisakuId ? `Prototype Request: ${shisakuRecord?.shisakuNo || shisakuId}` : "All Prototype Requests"}
           description={shisakuId ? "Manage manufacturing requests for this prototype." : "View all prototype manufacturing requests."}
         />
-        {shisakuId && (
-        <button
-          onClick={() => navigate("/prototype")}
-          className="flex items-center gap-2 rounded-xl border border-outline-variant/30 bg-surface px-4 py-2 text-sm font-semibold text-on-surface transition hover:bg-surface-container-high"
-        >
-          <span className="material-symbols-outlined text-[18px]">arrow_back</span>
-          Back
-        </button>
-        )}
+        <div className="flex items-center gap-3">
+          {!shisakuId && (
+            <button
+              onClick={handleOpenCreateModal}
+              className="flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-on-primary shadow-sm transition hover:opacity-90 active:scale-95"
+            >
+              Add Prototype Request
+            </button>
+          )}
+          {shisakuId && (
+            <button
+              onClick={() => navigate("/prototype")}
+              className="flex items-center gap-2 rounded-xl border border-outline-variant/30 bg-surface px-4 py-2 text-sm font-semibold text-on-surface transition hover:bg-surface-container-high"
+            >
+              <span className="material-symbols-outlined text-[18px]">arrow_back</span>
+              Back
+            </button>
+          )}
+        </div>
       </div>
 
       <FlashBanner flash={flash} onClose={() => setFlash(null)} />
@@ -1116,6 +1154,95 @@ export default function PrototypeRequestPage() {
           </form>
         </ModalShell>
       )}
+
+      <ModalShell
+        open={createModalOpen}
+        onClose={() => setCreateModalOpen(false)}
+        title="Select Prototype"
+        maxWidth="max-w-xl"
+      >
+        <div className="px-6 py-5 flex flex-col gap-4 min-h-[300px]">
+          <div className="relative">
+            <label className="mb-2 block text-sm font-semibold text-on-surface-variant">
+              Choose a prototype number to create requests for
+            </label>
+            <div className="relative">
+              <input
+                type="text"
+                placeholder="Search prototype number..."
+                value={shisakuSearchTerm}
+                onChange={(e) => {
+                  setShisakuSearchTerm(e.target.value);
+                  setSelectedShisaku("");
+                  setShowShisakuSuggestions(true);
+                }}
+                onFocus={() => setShowShisakuSuggestions(true)}
+                onBlur={() => setTimeout(() => setShowShisakuSuggestions(false), 200)}
+                className="w-full rounded-xl border border-outline-variant/50 bg-surface px-4 py-3 text-sm text-on-surface shadow-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+              />
+              <span className="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant pointer-events-none">
+                search
+              </span>
+            </div>
+
+            {showShisakuSuggestions && availableShisakus.length > 0 && (
+              <div className="absolute z-10 mt-1 w-full overflow-hidden rounded-xl border border-outline-variant/30 bg-surface shadow-lg">
+                <ul className="max-h-60 overflow-y-auto py-1">
+                  {filteredAvailableShisakus.length > 0 ? (
+                    filteredAvailableShisakus.map(s => (
+                      <li
+                        key={s._id}
+                        className="cursor-pointer px-4 py-2.5 text-sm text-on-surface hover:bg-primary/10 hover:text-primary transition-colors flex items-center gap-2"
+                        onClick={() => {
+                          setSelectedShisaku(s._id);
+                          setShisakuSearchTerm(s.shisakuNo);
+                          setShowShisakuSuggestions(false);
+                        }}
+                      >
+                        <span className="material-symbols-outlined text-[16px] text-primary/50">
+                          {selectedShisaku === s._id ? 'radio_button_checked' : 'radio_button_unchecked'}
+                        </span>
+                        <span className="font-medium">試作{s.shisakuNo}</span>
+                      </li>
+                    ))
+                  ) : (
+                    <li className="px-4 py-3 text-sm text-on-surface-variant italic text-center">
+                      No matching prototypes found
+                    </li>
+                  )}
+                </ul>
+              </div>
+            )}
+          </div>
+
+          {availableShisakus.length === 0 && (
+            <p className="text-xs text-amber-600 bg-amber-50 p-3 rounded-xl border border-amber-200">
+              There are no available prototypes without requests. Please register a new prototype first.
+            </p>
+          )}
+        </div>
+
+        <div className="border-t border-separator/40 bg-surface-container/30 px-6 py-4 flex justify-end gap-2">
+          <button
+            onClick={() => setCreateModalOpen(false)}
+            className="rounded-xl border border-outline-variant/20 bg-surface-container px-4 py-2 text-sm font-semibold text-on-surface transition-all hover:bg-surface-container-high"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={() => {
+              if (selectedShisaku) {
+                navigate(`/prototype/request/${selectedShisaku}`);
+                setCreateModalOpen(false);
+              }
+            }}
+            disabled={!selectedShisaku}
+            className="flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-on-primary transition-all hover:opacity-90 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Proceed
+          </button>
+        </div>
+      </ModalShell>
     </div>
   );
 }
