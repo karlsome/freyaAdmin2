@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import DataTable from "../components/DataTable";
 import PageHeader from "../components/PageHeader";
 import ModalShell from "../components/ModalShell";
+import { getAuthUser } from "../utils/masterDB";
 import {
   BASE_URL,
   deleteShisakuRequest,
@@ -269,6 +270,7 @@ export default function PrototypeRequestPage() {
           boxType: item.boxType.trim(),
           quantity: Number(item.quantity),
           shisakudb_id: shisakuId,
+          createdBy: getAuthUser()?.username || "",
         });
       }));
 
@@ -635,7 +637,7 @@ export default function PrototypeRequestPage() {
         <ModalShell
           open={!!detailModalRecord}
           onClose={() => setDetailModalRecord(null)}
-          title="Prototype Request Details"
+          title={detailModalRecord?.shisakuNo ? `Prototype Request Details - 試作${detailModalRecord.shisakuNo}` : "Prototype Request Details"}
           maxWidth="max-w-xl"
         >
           <div className="px-6 py-4 flex flex-col gap-4">
@@ -674,6 +676,7 @@ export default function PrototypeRequestPage() {
                   {detailModalRecord.createdAt 
                     ? new Date(detailModalRecord.createdAt.$date || detailModalRecord.createdAt).toLocaleDateString()
                     : "—"}
+                  {detailModalRecord.createdBy ? ` by ${detailModalRecord.createdBy}` : ""}
                 </p>
               </div>
             </div>
@@ -749,7 +752,7 @@ export default function PrototypeRequestPage() {
         <ModalShell
           open={!!editModalRecord}
           onClose={() => setEditModalRecord(null)}
-          title="Edit Prototype Request"
+          title={editModalRecord?.shisakuNo ? `Edit Prototype Request - 試作${editModalRecord.shisakuNo}` : "Edit Prototype Request"}
           maxWidth="max-w-2xl"
         >
           <form onSubmit={handleEditSubmit}>

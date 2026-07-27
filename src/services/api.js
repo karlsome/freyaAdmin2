@@ -2883,11 +2883,11 @@ export async function fetchShisaku(id) {
   return _getJson(`api/shisaku/${encodeURIComponent(id)}`);
 }
 
-export async function registerShisaku({ shisakuNo, deadline, eventName, modelName, customerName, registeredBy, cybozuLink, dxfFiles, pdfFiles, pdfImageFiles, pceFiles }) {
+export async function registerShisaku({ shisakuNo, deadline, eventName, modelName, customerName, registeredBy, cybozuLink, createdBy, dxfFiles, pdfFiles, pdfImageFiles, pceFiles }) {
   const res = await fetch(`${BASE_URL}api/shisaku/register`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ shisakuNo, deadline, eventName, modelName, customerName, registeredBy, cybozuLink, dxfFiles, pdfFiles, pdfImageFiles, pceFiles }),
+    body: JSON.stringify({ shisakuNo, deadline, eventName, modelName, customerName, registeredBy, cybozuLink, createdBy, dxfFiles, pdfFiles, pdfImageFiles, pceFiles }),
   });
   const data = await _readJson(res);
   if (!res.ok) {
@@ -2897,11 +2897,11 @@ export async function registerShisaku({ shisakuNo, deadline, eventName, modelNam
   return data;
 }
 
-export async function updateShisaku(id, { shisakuNo, deadline, eventName, modelName, customerName, registeredBy, cybozuLink, dxfFiles, pdfFiles, pdfImageFiles, pceFiles }) {
+export async function updateShisaku(id, { shisakuNo, deadline, eventName, modelName, customerName, registeredBy, cybozuLink, createdBy, dxfFiles, pdfFiles, pdfImageFiles, pceFiles }) {
   const res = await fetch(`${BASE_URL}api/shisaku/update/${id}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ shisakuNo, deadline, eventName, modelName, customerName, registeredBy, cybozuLink, dxfFiles, pdfFiles, pdfImageFiles, pceFiles }),
+    body: JSON.stringify({ shisakuNo, deadline, eventName, modelName, customerName, registeredBy, cybozuLink, createdBy, dxfFiles, pdfFiles, pdfImageFiles, pceFiles }),
   });
   const data = await _readJson(res);
   if (!res.ok) {
@@ -2928,8 +2928,8 @@ export async function fetchShisakuRequestList({ shisakudb_id } = {}) {
   return data;
 }
 
-export async function registerShisakuRequest({ name, dxf, pdf, pce, okuriPitch, color, material, boxType, quantity, shisakudb_id }) {
-  return _postJson("api/shisaku-request/register", { name, dxf, pdf, pce, okuriPitch, color, material, boxType, quantity, shisakudb_id });
+export async function registerShisakuRequest({ name, dxf, pdf, pce, okuriPitch, color, material, boxType, quantity, shisakudb_id, createdBy }) {
+  return _postJson("api/shisaku-request/register", { name, dxf, pdf, pce, okuriPitch, color, material, boxType, quantity, shisakudb_id, createdBy });
 }
 
 export async function updateShisakuRequest(id, { name, dxf, pdf, pce, okuriPitch, color, material, boxType, quantity }) {

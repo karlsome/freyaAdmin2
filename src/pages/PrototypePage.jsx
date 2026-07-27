@@ -3,8 +3,9 @@ import { useNavigate } from "react-router-dom";
 import DataTable from "../components/DataTable";
 import PageHeader from "../components/PageHeader";
 import ModalShell from "../components/ModalShell";
-import { deleteShisaku, fetchShisakuList, registerShisaku } from "../services/api";
+import { deleteShisaku, fetchShisakuList, registerShisaku, updateShisaku } from "../services/api";
 import { convertPdfFileToPreviewImage } from "../utils/productPDFs";
+import { getAuthUser } from "../utils/masterDB";
 
 const EMPTY_FORM = {
   shisakuNo: "",
@@ -215,7 +216,22 @@ export default function PrototypePage() {
         ...files.map((file) => ({
           id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
           file,
-          name: buildFileName(form.shisakuNo, file.name),
+          name: buildFileName(form.shisakuNo, file.name) || file.name,
+          touched: false,
+        })),
+      ]);
+    };
+  }
+
+  function createEditFilesAddHandler(setter) {
+    return (files) => {
+      if (!files?.length) return;
+      setter((current) => [
+        ...current,
+        ...files.map((file) => ({
+          id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+          file,
+          name: buildFileName(editForm.shisakuNo, file.name) || file.name,
           touched: false,
         })),
       ]);
@@ -287,6 +303,7 @@ export default function PrototypePage() {
         customerName: form.customerName.trim(),
         registeredBy: form.registeredBy.trim(),
         cybozuLink: form.cybozuLink.trim(),
+        createdBy: getAuthUser()?.username || "",
         dxfFiles: dxfFiles.map((e, i) => ({ name: e.name.trim(), base64: dxfBase64List[i] })),
         pdfFiles: pdfFiles.map((e, i) => ({ name: e.name.trim(), base64: pdfBase64List[i] })),
         pdfImageFiles: pdfFiles.map((e, i) => ({ name: buildJpgFileName(e.name.trim()), base64: (pdfImageUrls[i] || "").split(",")[1] || "" })),
@@ -323,15 +340,15 @@ export default function PrototypePage() {
     setEditFormOpen(true);
   }
 
-  const handleEditDxfFilesAdd = createFilesAddHandler(setEditDxfFiles);
+  const handleEditDxfFilesAdd = createEditFilesAddHandler(setEditDxfFiles);
   const handleEditDxfFileRemove = createFileRemoveHandler(setEditDxfFiles);
   const handleEditDxfFileRename = createFileRenameHandler(setEditDxfFiles);
 
-  const handleEditPdfFilesAdd = createFilesAddHandler(setEditPdfFiles);
+  const handleEditPdfFilesAdd = createEditFilesAddHandler(setEditPdfFiles);
   const handleEditPdfFileRemove = createFileRemoveHandler(setEditPdfFiles);
   const handleEditPdfFileRename = createFileRenameHandler(setEditPdfFiles);
 
-  const handleEditPceFilesAdd = createFilesAddHandler(setEditPceFiles);
+  const handleEditPceFilesAdd = createEditFilesAddHandler(setEditPceFiles);
   const handleEditPceFileRemove = createFileRemoveHandler(setEditPceFiles);
   const handleEditPceFileRename = createFileRenameHandler(setEditPceFiles);
 
