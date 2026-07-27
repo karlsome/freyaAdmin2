@@ -145,6 +145,9 @@ export default function PrototypeRequestPage() {
   const [editSubmitting, setEditSubmitting] = useState(false);
   const [editShisakuRecord, setEditShisakuRecord] = useState(null);
 
+  const draggedItemRef = useRef(null);
+  const draggedOverItemRef = useRef(null);
+
   useEffect(() => {
     let cancelled = false;
     async function loadEditShisaku() {
@@ -238,12 +241,48 @@ export default function PrototypeRequestPage() {
   }
 
   function removeEntryRow(index) {
-    setEntries((current) => (current.length > 1 ? current.filter((_, i) => i !== index) : current));
+    if (entries.length <= 1) return;
+    setEntries((current) => current.filter((_, i) => i !== index));
   }
 
   function resetEntry() {
     setEntries([{ ...EMPTY_ENTRY }]);
   }
+
+  const handleDragStart = (e, index) => {
+    draggedItemRef.current = index;
+    // Set a timeout to delay the opacity change, so the drag image doesn't look transparent
+    setTimeout(() => {
+      e.target.style.opacity = '0.4';
+    }, 0);
+  };
+
+  const handleDragEnter = (e, index) => {
+    e.preventDefault();
+    draggedOverItemRef.current = index;
+  };
+
+  const handleDragOver = (e) => {
+    e.preventDefault(); // Necessary to allow drop
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    if (draggedItemRef.current !== null && draggedOverItemRef.current !== null && draggedItemRef.current !== draggedOverItemRef.current) {
+      setEntries((current) => {
+        const newEntries = [...current];
+        const draggedItemContent = newEntries.splice(draggedItemRef.current, 1)[0];
+        newEntries.splice(draggedOverItemRef.current, 0, draggedItemContent);
+        return newEntries;
+      });
+    }
+  };
+
+  const handleDragEnd = (e) => {
+    e.target.style.opacity = '1';
+    draggedItemRef.current = null;
+    draggedOverItemRef.current = null;
+  };
 
   const fieldSuggestions = useMemo(() => {
     const result = {};
@@ -542,22 +581,26 @@ export default function PrototypeRequestPage() {
         <section className="rounded-3xl border border-outline-variant/30 bg-surface px-6 py-6 shadow-sm">
           <div className="mb-6 flex items-center justify-between">
             <h3 className="text-xs font-semibold text-on-surface">New Request Entries</h3>
-            <button
-              type="button"
-              onClick={addEntryRow}
-              className="flex items-center justify-center gap-1.5 rounded-lg border border-primary/20 bg-primary/5 px-3 py-1.5 text-xs font-semibold text-primary transition hover:bg-primary/10 active:scale-95"
-            >
-              <span className="material-symbols-outlined" style={{ fontSize: 16 }}>add</span>
-              Add Row
-            </button>
           </div>
 
           <div className="flex flex-col gap-4 pb-4">
             {entries.map((item, index) => (
-              <div key={index} className="relative rounded-2xl border border-outline-variant/30 bg-surface p-5 shadow-sm transition-shadow hover:shadow-md">
+              <div 
+                key={index} 
+                draggable
+                onDragStart={(e) => handleDragStart(e, index)}
+                onDragEnter={(e) => handleDragEnter(e, index)}
+                onDragOver={handleDragOver}
+                onDrop={handleDrop}
+                onDragEnd={handleDragEnd}
+                className="relative rounded-2xl border border-outline-variant/60 bg-surface-container p-5 shadow transition-shadow hover:shadow-md cursor-grab active:cursor-grabbing"
+              >
                 {/* Header / Remove Button */}
                 <div className="mb-4 flex items-center justify-between border-b border-outline-variant/10 pb-3">
-                  <h4 className="text-sm font-semibold text-on-surface">Request #{index + 1}</h4>
+                  <h4 className="text-sm font-semibold text-on-surface flex items-center gap-2">
+                    <span className="material-symbols-outlined text-on-surface-variant/40" style={{ fontSize: 20 }}>drag_indicator</span>
+                    Request #{index + 1}
+                  </h4>
                   <button
                     type="button"
                     onClick={() => removeEntryRow(index)}
@@ -642,6 +685,16 @@ export default function PrototypeRequestPage() {
                 </div>
               </div>
             ))}
+            <div className="flex justify-center mt-2">
+              <button
+                type="button"
+                onClick={addEntryRow}
+                className="flex items-center justify-center gap-2 rounded-xl border border-primary/20 bg-primary/5 px-6 py-2.5 text-sm font-semibold text-primary shadow-sm transition hover:bg-primary/10 active:scale-95"
+              >
+                <span className="material-symbols-outlined" style={{ fontSize: 18 }}>add</span>
+                Add Another Request Row
+              </button>
+            </div>
           </div>
 
           <div className="mt-4 flex items-center justify-end gap-3 border-t border-outline-variant/10 pt-4">
