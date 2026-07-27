@@ -334,6 +334,7 @@ export default function PrototypeRequestPage() {
         material: editModalRecord.material.trim(),
         boxType: editModalRecord.boxType.trim(),
         quantity: Number(editModalRecord.quantity),
+        status: editModalRecord.status || "pending",
       });
 
       setFlash({ type: "success", message: "Prototype request updated successfully." });
@@ -452,6 +453,23 @@ export default function PrototypeRequestPage() {
           <span className="inline-flex items-center justify-center rounded-lg border border-outline-variant/15 bg-surface-container px-2.5 py-1 text-[11px] font-semibold uppercase text-on-surface-variant/40">—</span>
         )
       ),
+    },
+    {
+      key: "status",
+      label: "Status",
+      sortable: true,
+      width: 120,
+      renderCell: (r) => {
+        const status = r.status || "pending";
+        let colorClass = "bg-amber-500/10 text-amber-600 border-amber-500/20";
+        if (status === "completed") colorClass = "bg-emerald-500/10 text-emerald-600 border-emerald-500/20";
+        if (status === "in-progress") colorClass = "bg-blue-500/10 text-blue-600 border-blue-500/20";
+        return (
+          <span className={`inline-flex items-center justify-center rounded-lg border px-2.5 py-1 text-[11px] font-semibold uppercase ${colorClass}`}>
+            {status}
+          </span>
+        );
+      },
     },
     { key: "createdBy", label: "Created By", sortable: true, width: 120, renderCell: (r) => r.createdBy || "—" },
     {
@@ -871,6 +889,18 @@ export default function PrototypeRequestPage() {
                   onChange={(e) => setEditModalRecord({ ...editModalRecord, quantity: e.target.value })}
                   className={inputClassName + " w-full"}
                 />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-semibold text-on-surface-variant">Status</label>
+                <select
+                  value={editModalRecord.status || "pending"}
+                  onChange={(e) => setEditModalRecord({ ...editModalRecord, status: e.target.value })}
+                  className={inputClassName + " w-full"}
+                >
+                  <option value="pending">Pending</option>
+                  <option value="in-progress">In-Progress</option>
+                  <option value="completed">Completed</option>
+                </select>
               </div>
               
               <div className="md:col-span-2 grid grid-cols-1 gap-4 border-t border-separator/40 pt-4 mt-2">

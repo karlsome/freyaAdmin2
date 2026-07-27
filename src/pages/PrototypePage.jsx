@@ -429,7 +429,22 @@ export default function PrototypePage() {
     { key: "eventName", label: "Event", width: 160, renderCell: (r) => r.eventName || "—" },
     { key: "modelName", label: "Model", width: 160, renderCell: (r) => r.modelName || "—" },
     { key: "customerName", label: "Customer", width: 160, renderCell: (r) => r.customerName || "—" },
-
+    {
+      key: "status",
+      label: "Status",
+      width: 120,
+      renderCell: (r) => {
+        const status = r.status || "pending";
+        let colorClass = "bg-amber-500/10 text-amber-600 border-amber-500/20";
+        if (status === "completed") colorClass = "bg-emerald-500/10 text-emerald-600 border-emerald-500/20";
+        if (status === "in-progress") colorClass = "bg-blue-500/10 text-blue-600 border-blue-500/20";
+        return (
+          <span className={`inline-flex items-center justify-center rounded-lg border px-2.5 py-1 text-[11px] font-semibold uppercase ${colorClass}`}>
+            {status}
+          </span>
+        );
+      },
+    },
     {
       key: "cybozuLink",
       label: "Cybozu",
@@ -831,10 +846,22 @@ export default function PrototypePage() {
               <input
                 type="text"
                 value={editForm.customerName}
-                onChange={(e) => setEditForm(c => ({...c, customerName: e.target.value}))}
+                onChange={(e) => setEditForm({ ...editForm, customerName: e.target.value })}
                 className={inputClassName}
               />
             </Field>
+            <div>
+              <label className="mb-1.5 block text-xs font-semibold text-on-surface-variant">Status</label>
+              <select
+                value={editForm.status || "pending"}
+                onChange={(e) => setEditForm({ ...editForm, status: e.target.value })}
+                className={inputClassName}
+              >
+                <option value="pending">Pending</option>
+                <option value="in-progress">In-Progress</option>
+                <option value="completed">Completed</option>
+              </select>
+            </div>
             <Field label="Registered By">
               <input
                 type="text"
