@@ -728,7 +728,7 @@ export default function PrototypePage() {
                   <div className="flex flex-col gap-4">
                     {/* Legacy format rendering */}
                     {(selectedRecord.dxflink || selectedRecord.pdflink) && (
-                      <div className="flex flex-wrap gap-2">
+                      <div className="flex flex-col gap-2 items-start">
                         {[
                           ["DXF", selectedRecord.dxflink],
                           ["PDF", selectedRecord.pdflink]
@@ -747,10 +747,10 @@ export default function PrototypePage() {
                     {(selectedRecord.dxfLinks?.length > 0) && (
                       <div>
                         <div className="text-[10px] font-bold uppercase tracking-wider text-on-surface-variant/70 mb-1.5">DXF Files</div>
-                        <div className="flex flex-wrap gap-2">
+                        <div className="flex flex-col gap-2 items-start">
                           {selectedRecord.dxfLinks.map((entry, idx) => (
                             <a key={idx} href={entry.link} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 rounded-lg border border-outline-variant/30 bg-surface px-3 py-1.5 text-xs font-semibold text-primary transition hover:bg-surface-container-high">
-                              <span className="material-symbols-outlined" style={{ fontSize: 16 }}>draw</span>
+                              <span className="text-[11px] font-bold opacity-60">{idx + 1}.</span>
                               {entry.name}
                             </a>
                           ))}
@@ -761,10 +761,10 @@ export default function PrototypePage() {
                     {(selectedRecord.pdfLinks?.length > 0) && (
                       <div>
                         <div className="text-[10px] font-bold uppercase tracking-wider text-on-surface-variant/70 mb-1.5">PDF Files</div>
-                        <div className="flex flex-wrap gap-2">
+                        <div className="flex flex-col gap-2 items-start">
                           {selectedRecord.pdfLinks.map((entry, idx) => (
                             <a key={idx} href={entry.link} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 rounded-lg border border-outline-variant/30 bg-surface px-3 py-1.5 text-xs font-semibold text-primary transition hover:bg-surface-container-high">
-                              <span className="material-symbols-outlined" style={{ fontSize: 16 }}>picture_as_pdf</span>
+                              <span className="text-[11px] font-bold opacity-60">{idx + 1}.</span>
                               {entry.name}
                             </a>
                           ))}
@@ -775,10 +775,10 @@ export default function PrototypePage() {
                     {selectedRecord.pcelinks?.length > 0 && (
                       <div>
                         <div className="text-[10px] font-bold uppercase tracking-wider text-on-surface-variant/70 mb-1.5">PCE Files</div>
-                        <div className="flex flex-wrap gap-2">
+                        <div className="flex flex-col gap-2 items-start">
                           {selectedRecord.pcelinks.map((entry, idx) => (
                             <a key={idx} href={entry.link} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 rounded-lg border border-outline-variant/30 bg-surface px-3 py-1.5 text-xs font-semibold text-primary transition hover:bg-surface-container-high">
-                              <span className="material-symbols-outlined" style={{ fontSize: 16 }}>code</span>
+                              <span className="text-[11px] font-bold opacity-60">{idx + 1}.</span>
                               {entry.name}
                             </a>
                           ))}
