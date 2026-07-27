@@ -469,12 +469,16 @@ export default function PrototypePage() {
         ) : "—"
       ),
     },
+    { key: "createdBy", label: "Created By", width: 120, renderCell: (r) => r.createdBy || "—" },
     {
       key: "createdAt",
-      label: "Registered",
-      sortable: false,
-      width: 140,
-      renderCell: (r) => r.createdAt ? new Date(r.createdAt).toLocaleDateString() : "—",
+      label: "Timestamp",
+      sortable: true,
+      width: 150,
+      renderCell: (r) => {
+        const d = r.createdAt ? new Date(r.createdAt.$date || r.createdAt) : null;
+        return d ? d.toLocaleString() : "—";
+      },
     },
 
   ], [deletingId]);

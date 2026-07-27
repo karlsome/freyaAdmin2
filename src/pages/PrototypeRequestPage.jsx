@@ -370,6 +370,7 @@ export default function PrototypeRequestPage() {
         groups[idStr] = {
           shisakudb_id: idStr,
           shisakuNo: r.shisakuNo || "Unknown",
+          parentStatus: r.parentStatus || "pending",
           totalRequests: 0,
           latestDate: null,
         };
@@ -391,6 +392,23 @@ export default function PrototypeRequestPage() {
 
   const groupedColumns = useMemo(() => [
     { key: "shisakuNo", label: "Prototype No.", sortable: true, width: 200, renderCell: (r) => `試作${r.shisakuNo}` },
+    {
+      key: "status",
+      label: "Status",
+      sortable: true,
+      width: 120,
+      renderCell: (r) => {
+        const status = r.parentStatus || "pending";
+        let colorClass = "bg-amber-500/10 text-amber-600 border-amber-500/20";
+        if (status === "completed") colorClass = "bg-emerald-500/10 text-emerald-600 border-emerald-500/20";
+        if (status === "in-progress") colorClass = "bg-blue-500/10 text-blue-600 border-blue-500/20";
+        return (
+          <span className={`inline-flex items-center justify-center rounded-lg border px-2.5 py-1 text-[11px] font-semibold uppercase ${colorClass}`}>
+            {status}
+          </span>
+        );
+      },
+    },
     { key: "totalRequests", label: "Total Requests", sortable: true, width: 150, align: "center" },
     { 
       key: "latestDate", 
@@ -742,6 +760,22 @@ export default function PrototypeRequestPage() {
               <div>
                 <span className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider block mb-1">Quantity</span>
                 <p className="text-sm font-medium text-on-surface">{detailModalRecord.quantity ?? "—"}</p>
+              </div>
+              <div>
+                <span className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider block mb-1">Status</span>
+                <div>
+                  {(() => {
+                    const status = detailModalRecord.status || "pending";
+                    let colorClass = "bg-amber-500/10 text-amber-600 border-amber-500/20";
+                    if (status === "completed") colorClass = "bg-emerald-500/10 text-emerald-600 border-emerald-500/20";
+                    if (status === "in-progress") colorClass = "bg-blue-500/10 text-blue-600 border-blue-500/20";
+                    return (
+                      <span className={`inline-flex items-center justify-center rounded-lg border px-2.5 py-1 text-[11px] font-semibold uppercase ${colorClass}`}>
+                        {status}
+                      </span>
+                    );
+                  })()}
+                </div>
               </div>
               <div>
                 <span className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider block mb-1">Registered</span>
