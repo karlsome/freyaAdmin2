@@ -354,9 +354,51 @@ export default function PrototypeRequestPage() {
       (r.shisakuNo || "").toLowerCase().includes(lowerQuery) ||
       (r.color || "").toLowerCase().includes(lowerQuery) ||
       (r.material || "").toLowerCase().includes(lowerQuery) ||
-      (r.boxType || "").toLowerCase().includes(lowerQuery)
+      (r.boxType || "").toLowerCase().includes(lowerQuery) ||
+      (r.createdBy || "").toLowerCase().includes(lowerQuery)
     );
   }, [records, searchQuery]);
+
+  const groupedPrototypes = useMemo(() => {
+    if (shisakuId) return [];
+    const groups = {};
+    for (const r of records) {
+      const idStr = r.shisakudb_id?.$oid || r.shisakudb_id;
+      if (!idStr) continue;
+      if (!groups[idStr]) {
+        groups[idStr] = {
+          shisakudb_id: idStr,
+          shisakuNo: r.shisakuNo || "Unknown",
+          totalRequests: 0,
+          latestDate: null,
+        };
+      }
+      groups[idStr].totalRequests += 1;
+      const d = r.createdAt ? new Date(r.createdAt.$date || r.createdAt) : null;
+      if (d && (!groups[idStr].latestDate || d > groups[idStr].latestDate)) {
+        groups[idStr].latestDate = d;
+      }
+    }
+    
+    const arr = Object.values(groups);
+    if (!searchQuery.trim()) return arr;
+    const lowerQuery = searchQuery.toLowerCase();
+    return arr.filter(g => 
+      (g.shisakuNo || "").toLowerCase().includes(lowerQuery)
+    );
+  }, [records, searchQuery, shisakuId]);
+
+  const groupedColumns = useMemo(() => [
+    { key: "shisakuNo", label: "Prototype No.", sortable: true, width: 200, renderCell: (r) => `試作${r.shisakuNo}` },
+    { key: "totalRequests", label: "Total Requests", sortable: true, width: 150, align: "center" },
+    { 
+      key: "latestDate", 
+      label: "Latest Request", 
+      sortable: true, 
+      width: 200,
+      renderCell: (r) => r.latestDate ? r.latestDate.toLocaleString() : "—"
+    },
+  ], []);
 
   const columns = useMemo(() => [
     { key: "shisakuNo", label: "Prototype No.", sortable: true, width: 120, renderCell: (r) => r.shisakuNo || "—" },
@@ -411,12 +453,16 @@ export default function PrototypeRequestPage() {
         )
       ),
     },
+    { key: "createdBy", label: "Created By", sortable: true, width: 120, renderCell: (r) => r.createdBy || "—" },
     {
       key: "createdAt",
-      label: "Registered",
-      sortable: false,
-      width: 140,
-      renderCell: (r) => r.createdAt ? new Date(r.createdAt).toLocaleDateString() : "—",
+      label: "Timestamp",
+      sortable: true,
+      width: 150,
+      renderCell: (r) => {
+        const d = r.createdAt ? new Date(r.createdAt.$date || r.createdAt) : null;
+        return d ? d.toLocaleString() : "—";
+      },
     },
   ], [deletingId]);
 
@@ -468,7 +514,7 @@ export default function PrototypeRequestPage() {
       <FlashBanner flash={flash} onClose={() => setFlash(null)} />
 
       <div className="flex flex-col gap-8">
-        {shisakuId && (
+        {shisakuId && shisakuRecord && (
         <section className="rounded-3xl border border-outline-variant/30 bg-surface px-6 py-6 shadow-sm">
           <div className="mb-6 flex items-center justify-between">
             <h3 className="text-xs font-semibold text-on-surface">New Request Entries</h3>
@@ -608,8 +654,8 @@ export default function PrototypeRequestPage() {
         <section>
           <div className="mb-4 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div>
-              <h3 className="text-sm font-semibold text-on-surface">Existing Requests</h3>
-              <p className="text-xs text-on-surface-variant mt-1">Prototype requests created for this prototype.</p>
+              <h3 className="text-sm font-semibold text-on-surface">{shisakuId ? "Existing Requests" : "Prototypes with Requests"}</h3>
+              <p className="text-xs text-on-surface-variant mt-1">{shisakuId ? "Prototype requests created for this prototype." : "Select a prototype to view its requests."}</p>
             </div>
             
             {/* Search filter */}
@@ -617,19 +663,28 @@ export default function PrototypeRequestPage() {
               <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant/60" style={{ fontSize: 18 }}>search</span>
               <input
                 type="text"
-                placeholder="Search requests..."
+                placeholder={shisakuId ? "Search requests..." : "Search prototypes..."}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full md:w-64 rounded-xl border border-outline-variant/30 bg-surface py-2 pl-9 pr-3 text-sm text-on-surface placeholder:text-on-surface-variant/60 transition focus:border-primary/40 focus:outline-none"
               />
             </div>
           </div>
-          <DataTable
-            rows={filteredRecords}
-            columns={columns}
-            defaultSort={{ column: "createdAt", direction: -1 }}
-            onRowClick={(r) => setDetailModalRecord(r)}
-          />
+          {shisakuId ? (
+            <DataTable
+              rows={filteredRecords}
+              columns={columns}
+              defaultSort={{ column: "createdAt", direction: -1 }}
+              onRowClick={(r) => setDetailModalRecord(r)}
+            />
+          ) : (
+            <DataTable
+              rows={groupedPrototypes}
+              columns={groupedColumns}
+              defaultSort={{ column: "latestDate", direction: -1 }}
+              onRowClick={(r) => navigate(`/prototype/request/${r.shisakudb_id}`)}
+            />
+          )}
         </section>
       </div>
 
