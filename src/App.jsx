@@ -251,7 +251,7 @@ function App() {
               <Route path="/maintenance/submissions/tickets" element={<TicketSubmissionsPage />} />
               <Route path="/masterDB" element={<MasterDBPage />} />
               <Route path="/prototype" element={<PrototypePage />} />
-              <Route path="/prototype/request" element={<PrototypeRequestPage />} />
+              <Route path="/prototype/request/:shisakuId" element={<PrototypeRequestPage />} />
               <Route path="/factories" element={<FactoriesPage />} />
               <Route path="/sensors" element={<SensorsPage />} />
               <Route path="/devices" element={<DevicesPage />} />

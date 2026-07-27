@@ -2879,6 +2879,10 @@ export async function fetchShisakuList({ page = 1, limit = 10, sortColumn = "cre
   return data;
 }
 
+export async function fetchShisaku(id) {
+  return _getJson(`api/shisaku/${encodeURIComponent(id)}`);
+}
+
 export async function registerShisaku({ shisakuNo, deadline, eventName, modelName, customerName, registeredBy, cybozuLink, dxfFiles, pdfFiles, pdfImageFiles, pceFiles }) {
   const res = await fetch(`${BASE_URL}api/shisaku/register`, {
     method: "POST",
@@ -2912,8 +2916,16 @@ export async function deleteShisaku(id) {
 }
 
 // ─── Prototype Request (試作依頼) ───────────────────────────────────────────────
-export async function fetchShisakuRequestList() {
-  return query("Sasaki_Coating_MasterDB", "shisakuRequestDB", {}, { sort: { createdAt: -1 } });
+export async function fetchShisakuRequestList({ shisakudb_id } = {}) {
+  const url = new URL(`${BASE_URL}api/shisaku-request/list`);
+  if (shisakudb_id) url.searchParams.set("shisakudb_id", shisakudb_id);
+  const res = await fetch(url.toString(), {
+    method: "GET",
+    headers: { "Content-Type": "application/json" }
+  });
+  const data = await _readJson(res);
+  if (!res.ok) throw new Error(data?.error || "Failed to fetch prototype request list");
+  return data;
 }
 
 export async function registerShisakuRequest({ name, pce, okuriPitch, color, material, boxType, quantity, pdfLink, shisakudb_id }) {

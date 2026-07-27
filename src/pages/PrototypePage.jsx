@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import DataTable from "../components/DataTable";
 import PageHeader from "../components/PageHeader";
 import ModalShell from "../components/ModalShell";
@@ -121,6 +122,7 @@ function FileUploadList({ label, accept, files, onAdd, onRemove, onRename, disab
 }
 
 export default function PrototypePage() {
+  const navigate = useNavigate();
   const [records, setRecords] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -745,6 +747,16 @@ export default function PrototypePage() {
             className="rounded-xl border border-outline-variant/20 bg-surface-container px-4 py-2 text-xs font-semibold text-on-surface transition-all hover:bg-surface-container-high"
           >
             Close
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              const id = selectedRecord._id?.$oid || selectedRecord._id;
+              if (id) navigate(`/prototype/request/${id}`);
+            }}
+            className="rounded-xl border border-outline-variant/20 bg-surface-container px-4 py-2 text-xs font-semibold text-on-surface transition-all hover:bg-surface-container-high"
+          >
+            Add Prototype Request
           </button>
           <button
             type="button"

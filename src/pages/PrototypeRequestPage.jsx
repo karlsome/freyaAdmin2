@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useParams, useNavigate } from "react-router-dom";
 import DataTable from "../components/DataTable";
 import PageHeader from "../components/PageHeader";
-import SensorDevicePhotoPreviewModal from "../components/SensorDevicePhotoPreviewModal";
 import {
   BASE_URL,
   deleteShisakuRequest,
-  fetchShisakuList,
+  fetchShisaku,
   fetchShisakuRequestList,
   registerShisakuRequest,
 } from "../services/api";
@@ -17,7 +17,9 @@ const EMPTY_ENTRY = {
   material: "",
   boxType: "",
   quantity: "",
-  file: null,
+  dxfIndex: "",
+  pdfIndex: "",
+  pceIndex: "",
 };
 
 const ENTRY_FIELD_KEYS = ["name", "okuriPitch", "color", "material", "boxType", "quantity"];
@@ -55,8 +57,6 @@ function Field({ label, children }) {
   );
 }
 
-// Text input with a styled suggestion dropdown (values reused from other rows), since the
-// native <datalist> popup renders as an unstyled floating box that doesn't match the app's theme.
 function SuggestInput({ type = "text", value, options, onChange, className }) {
   const [open, setOpen] = useState(false);
   const containerRef = useRef(null);
@@ -69,13 +69,11 @@ function SuggestInput({ type = "text", value, options, onChange, className }) {
 
   useEffect(() => {
     if (!open) return undefined;
-
     function handlePointerDown(event) {
       if (containerRef.current && !containerRef.current.contains(event.target)) {
         setOpen(false);
       }
     }
-
     document.addEventListener("mousedown", handlePointerDown);
     return () => document.removeEventListener("mousedown", handlePointerDown);
   }, [open]);
@@ -114,54 +112,21 @@ function SuggestInput({ type = "text", value, options, onChange, className }) {
 }
 
 const inputClassName = "rounded-xl border border-outline-variant/30 bg-surface px-3 py-2 text-sm text-on-surface placeholder:text-on-surface-variant/60 focus:border-primary focus:outline-none";
-const readOnlyInputClassName = "rounded-xl border border-outline-variant/20 bg-surface-container px-3 py-2 text-sm text-on-surface-variant truncate";
-
-// Older records stored Drive's webViewLink ("/file/d/<id>/view...") for pdfjpglink, which the
-// browser can't render as an <img> (it redirects to a Google login page). Rewrite those to the
-// backend's streaming proxy so previews work for records created before that fix too.
-function normalizeJpgLink(link) {
-  if (!link) return "";
-  const match = String(link).match(/\/file\/d\/([^/]+)/);
-  return match ? `${BASE_URL}api/shisaku/image/${match[1]}` : link;
-}
-
-function buildPceOptions(shisakuRecords) {
-  const options = [];
-
-  for (const record of shisakuRecords || []) {
-    const recordId = record?._id?.$oid || record?._id;
-    const pceLinks = Array.isArray(record.pcelinks) && record.pcelinks.length > 0
-      ? record.pcelinks
-      : (record.pcelink ? [{ name: "pce", link: record.pcelink }] : []);
-
-    pceLinks.forEach((entry, idx) => {
-      const pceName = entry?.name || "pce";
-      options.push({
-        value: `${recordId}-${idx}`,
-        label: record.shisakuNo ? `試作${record.shisakuNo} — ${pceName}` : pceName,
-        pceName,
-        shisakudbId: recordId,
-        pdfLink: normalizeJpgLink(record.pdfjpglink || record.pdflink || ""),
-      });
-    });
-  }
-
-  return options;
-}
 
 export default function PrototypeRequestPage() {
-  const [shisakuRecords, setShisakuRecords] = useState([]);
+  const { shisakuId } = useParams();
+  const navigate = useNavigate();
+  
+  const [shisakuRecord, setShisakuRecord] = useState(null);
   const [records, setRecords] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [flash, setFlash] = useState(null);
   const [refreshNonce, setRefreshNonce] = useState(0);
 
-  const [selectedPceKey, setSelectedPceKey] = useState("");
   const [entries, setEntries] = useState([{ ...EMPTY_ENTRY }]);
   const [submitting, setSubmitting] = useState(false);
   const [deletingId, setDeletingId] = useState(null);
-  const [previewImage, setPreviewImage] = useState(null);
 
   useEffect(() => {
     if (!flash) return undefined;
@@ -176,18 +141,22 @@ export default function PrototypeRequestPage() {
       setLoading(true);
       setError("");
       try {
-        const [shisakuData, requestData] = await Promise.all([
-          fetchShisakuList(),
-          fetchShisakuRequestList(),
-        ]);
+        const shisakuData = await fetchShisaku(shisakuId);
         if (cancelled) return;
-        setShisakuRecords(Array.isArray(shisakuData) ? shisakuData : []);
+        
+        if (!shisakuData) {
+          setError("Prototype record not found.");
+          setLoading(false);
+          return;
+        }
+        setShisakuRecord(shisakuData);
+
+        const requestData = await fetchShisakuRequestList({ shisakudb_id: shisakuId });
+        if (cancelled) return;
         setRecords(Array.isArray(requestData) ? requestData : []);
       } catch (err) {
         if (cancelled) return;
         setError(err.message || "Failed to load prototype request data.");
-        setShisakuRecords([]);
-        setRecords([]);
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -195,20 +164,10 @@ export default function PrototypeRequestPage() {
 
     loadData();
     return () => { cancelled = true; };
-  }, [refreshNonce]);
-
-  const pceOptions = useMemo(() => buildPceOptions(shisakuRecords), [shisakuRecords]);
-  const selectedOption = useMemo(
-    () => pceOptions.find((option) => option.value === selectedPceKey) || null,
-    [pceOptions, selectedPceKey]
-  );
+  }, [refreshNonce, shisakuId]);
 
   function handleEntryChange(index, key, value) {
     setEntries((current) => current.map((item, i) => (i === index ? { ...item, [key]: value } : item)));
-  }
-
-  function handleEntryFileChange(index, file) {
-    setEntries((current) => current.map((item, i) => (i === index ? { ...item, file } : item)));
   }
 
   function addEntryRow() {
@@ -220,7 +179,6 @@ export default function PrototypeRequestPage() {
   }
 
   function resetEntry() {
-    setSelectedPceKey("");
     setEntries([{ ...EMPTY_ENTRY }]);
   }
 
@@ -238,16 +196,16 @@ export default function PrototypeRequestPage() {
   }, [entries]);
 
   const canRegister = (
-    !!selectedOption &&
     entries.every((item) =>
       item.name.trim() &&
       item.okuriPitch !== "" &&
       item.color.trim() &&
       item.material.trim() &&
       item.boxType.trim() &&
-      item.quantity !== ""
+      item.quantity !== "" &&
+      item.pceIndex !== ""
     ) &&
-    !submitting
+    !submitting && shisakuRecord
   );
 
   async function handleRegister() {
@@ -255,17 +213,24 @@ export default function PrototypeRequestPage() {
     setSubmitting(true);
 
     try {
-      await Promise.all(entries.map((item) => registerShisakuRequest({
-        name: item.name.trim(),
-        pce: selectedOption.pceName,
-        okuriPitch: Number(item.okuriPitch),
-        color: item.color.trim(),
-        material: item.material.trim(),
-        boxType: item.boxType.trim(),
-        quantity: Number(item.quantity),
-        pdfLink: selectedOption.pdfLink,
-        shisakudb_id: selectedOption.shisakudbId,
-      })));
+      await Promise.all(entries.map((item) => {
+        const dxf = item.dxfIndex !== "" ? shisakuRecord.dxfLinks[item.dxfIndex] : null;
+        const pdf = item.pdfIndex !== "" ? shisakuRecord.pdfLinks[item.pdfIndex] : null;
+        const pce = item.pceIndex !== "" ? shisakuRecord.pcelinks[item.pceIndex] : null;
+        
+        return registerShisakuRequest({
+          name: item.name.trim(),
+          dxf,
+          pdf,
+          pce,
+          okuriPitch: Number(item.okuriPitch),
+          color: item.color.trim(),
+          material: item.material.trim(),
+          boxType: item.boxType.trim(),
+          quantity: Number(item.quantity),
+          shisakudb_id: shisakuId,
+        });
+      }));
 
       setFlash({
         type: "success",
@@ -280,34 +245,6 @@ export default function PrototypeRequestPage() {
     } finally {
       setSubmitting(false);
     }
-  }
-
-  function openPdfPreview(rawUrl, label) {
-    const url = normalizeJpgLink(rawUrl);
-    if (!url) return;
-    setPreviewImage({
-      eyebrow: "PDF Preview",
-      displayName: label || "PDF preview",
-      activeIndex: 0,
-      images: [{ url, label }],
-    });
-  }
-
-  function handlePreviewNavigate(direction) {
-    setPreviewImage((current) => {
-      const images = Array.isArray(current?.images) ? current.images : [];
-      const currentIndex = Number.isInteger(current?.activeIndex) ? current.activeIndex : 0;
-      const nextIndex = currentIndex + direction;
-
-      if (nextIndex < 0 || nextIndex >= images.length) {
-        return current;
-      }
-
-      return {
-        ...current,
-        activeIndex: nextIndex,
-      };
-    });
   }
 
   async function handleDelete(record) {
@@ -331,36 +268,53 @@ export default function PrototypeRequestPage() {
 
   const columns = useMemo(() => [
     { key: "name", label: "Name", sortable: false, width: 140, renderCell: (r) => r.name || "—" },
-    { key: "pce", label: "PCE", sortable: false, width: 180, renderCell: (r) => r.pce || "—" },
     { key: "okuriPitch", label: "Okuri Pitch", sortable: false, width: 110, align: "center", renderCell: (r) => r.okuriPitch ?? "—" },
     { key: "color", label: "Color", sortable: false, width: 120, renderCell: (r) => r.color || "—" },
     { key: "material", label: "Material", sortable: false, width: 120, renderCell: (r) => r.material || "—" },
     { key: "boxType", label: "Box Type", sortable: false, width: 120, renderCell: (r) => r.boxType || "—" },
     { key: "quantity", label: "Quantity", sortable: false, width: 100, align: "center", renderCell: (r) => r.quantity ?? "—" },
     {
-      key: "pdfLink",
-      label: "PDF",
+      key: "dxf",
+      label: "DXF",
       sortable: false,
-      width: 90,
+      width: 100,
       align: "center",
       disableCellWrapper: true,
       renderCell: (r) => (
-        r.pdfLink ? (
-          <div className="flex items-center justify-center">
-            <button
-              type="button"
-              onClick={() => openPdfPreview(r.pdfLink, r.name ? `${r.name} — PDF` : "PDF")}
-              className="inline-flex items-center justify-center rounded-lg border border-outline-variant/30 bg-surface px-2.5 py-1 text-[11px] font-semibold uppercase text-primary transition hover:bg-surface-container-high"
-            >
-              pdf
-            </button>
-          </div>
+        r.dxf && r.dxf.link ? (
+          <a href={r.dxf.link} target="_blank" rel="noopener noreferrer" className="inline-flex items-center justify-center rounded-lg border border-outline-variant/30 bg-surface px-2.5 py-1 text-[11px] font-semibold uppercase text-primary transition hover:bg-surface-container-high">DXF</a>
         ) : (
-          <div className="flex items-center justify-center">
-            <span className="inline-flex items-center justify-center rounded-lg border border-outline-variant/15 bg-surface-container px-2.5 py-1 text-[11px] font-semibold uppercase text-on-surface-variant/40">
-              pdf
-            </span>
-          </div>
+          <span className="inline-flex items-center justify-center rounded-lg border border-outline-variant/15 bg-surface-container px-2.5 py-1 text-[11px] font-semibold uppercase text-on-surface-variant/40">—</span>
+        )
+      ),
+    },
+    {
+      key: "pdf",
+      label: "PDF",
+      sortable: false,
+      width: 100,
+      align: "center",
+      disableCellWrapper: true,
+      renderCell: (r) => (
+        r.pdf && r.pdf.link ? (
+          <a href={r.pdf.link} target="_blank" rel="noopener noreferrer" className="inline-flex items-center justify-center rounded-lg border border-outline-variant/30 bg-surface px-2.5 py-1 text-[11px] font-semibold uppercase text-primary transition hover:bg-surface-container-high">PDF</a>
+        ) : (
+          <span className="inline-flex items-center justify-center rounded-lg border border-outline-variant/15 bg-surface-container px-2.5 py-1 text-[11px] font-semibold uppercase text-on-surface-variant/40">—</span>
+        )
+      ),
+    },
+    {
+      key: "pce",
+      label: "PCE",
+      sortable: false,
+      width: 100,
+      align: "center",
+      disableCellWrapper: true,
+      renderCell: (r) => (
+        r.pce && r.pce.link ? (
+          <a href={r.pce.link} target="_blank" rel="noopener noreferrer" className="inline-flex items-center justify-center rounded-lg border border-outline-variant/30 bg-surface px-2.5 py-1 text-[11px] font-semibold uppercase text-primary transition hover:bg-surface-container-high">PCE</a>
+        ) : (
+          <span className="inline-flex items-center justify-center rounded-lg border border-outline-variant/15 bg-surface-container px-2.5 py-1 text-[11px] font-semibold uppercase text-on-surface-variant/40">—</span>
         )
       ),
     },
@@ -400,212 +354,200 @@ export default function PrototypeRequestPage() {
     },
   ], [deletingId]);
 
+  if (loading) {
+    return (
+      <div className="flex h-full min-h-[400px] flex-col items-center justify-center gap-4">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary/30 border-t-primary" />
+        <p className="text-sm font-medium text-on-surface-variant">Loading requests...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex h-full min-h-[400px] flex-col items-center justify-center gap-4 px-6">
+        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-error/10 text-error">
+          <span className="material-symbols-outlined text-2xl">error</span>
+        </div>
+        <p className="text-sm font-medium text-error">{error}</p>
+        <button
+          onClick={() => navigate("/prototype")}
+          className="rounded-xl border border-outline-variant/30 bg-surface px-4 py-2 text-sm font-semibold text-on-surface transition hover:bg-surface-container-high"
+        >
+          Return to Prototypes
+        </button>
+      </div>
+    );
+  }
+
   return (
-    <section className="pt-24 pb-16 px-4 md:px-8 overflow-y-auto h-screen scrollbar-hide">
-      <PageHeader
-        title="Prototype Request"
-        subtitle="Select an uploaded 試作 PCE file and register a request for it."
-      />
+    <div className="mx-auto w-full max-w-7xl px-4 pb-12 pt-6 sm:px-6 lg:px-8">
+      <div className="mb-8 flex items-center justify-between">
+        <PageHeader
+          icon="assignment"
+          title={`Prototype Request: ${shisakuRecord?.shisakuNo || shisakuId}`}
+          description="Manage manufacturing requests for this prototype."
+        />
+        <button
+          onClick={() => navigate("/prototype")}
+          className="flex items-center gap-2 rounded-xl border border-outline-variant/30 bg-surface px-4 py-2 text-sm font-semibold text-on-surface transition hover:bg-surface-container-high"
+        >
+          <span className="material-symbols-outlined text-[18px]">arrow_back</span>
+          Back
+        </button>
+      </div>
 
       <FlashBanner flash={flash} onClose={() => setFlash(null)} />
 
-      <div className="dashboard-section rounded-2xl overflow-hidden mb-6">
-        <div className="border-b border-separator/40 px-4 py-4">
-          <h3 className="text-xs font-semibold text-on-surface">New Prototype Request</h3>
-        </div>
-
-        <div className="px-4 py-4 flex flex-col gap-4">
-          <Field label="PCE File">
-            <select
-              value={selectedPceKey}
-              onChange={(e) => setSelectedPceKey(e.target.value)}
-              className={inputClassName}
+      <div className="flex flex-col gap-8">
+        <section className="rounded-3xl border border-outline-variant/30 bg-surface px-6 py-6 shadow-sm">
+          <div className="mb-6 flex items-center justify-between">
+            <h3 className="text-xs font-semibold text-on-surface">New Request Entries</h3>
+            <button
+              type="button"
+              onClick={addEntryRow}
+              className="flex items-center justify-center gap-1.5 rounded-lg border border-primary/20 bg-primary/5 px-3 py-1.5 text-xs font-semibold text-primary transition hover:bg-primary/10 active:scale-95"
             >
-              <option value="">-- Select a 試作 PCE file --</option>
-              {pceOptions.map((option) => (
-                <option key={option.value} value={option.value}>{option.label}</option>
-              ))}
-            </select>
-            {pceOptions.length === 0 && (
-              <p className="text-[11px] text-on-surface-variant">No PCE files available. Register a 試作 with a PCE file first.</p>
-            )}
-          </Field>
+              <span className="material-symbols-outlined" style={{ fontSize: 16 }}>add</span>
+              Add Row
+            </button>
+          </div>
 
-          {selectedOption && (
-            <div className="flex flex-col gap-4">
-              {entries.map((item, index) => (
-                <div key={index} className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-[2fr_1fr_100px_80px_1fr_1fr_80px_38px_38px_38px]">
-                  <Field label="Request">
-                    <SuggestInput
-                      type="text"
-                      value={item.name}
-                      options={fieldSuggestions.name}
-                      onChange={(e) => handleEntryChange(index, "name", e.target.value)}
-                      className={inputClassName}
-                    />
-                  </Field>
-                  <Field label="PCE">
-                    <p className={readOnlyInputClassName} title={selectedOption.pceName}>{selectedOption.pceName}</p>
-                  </Field>
-                  <Field label="Okuri Pitch">
-                    <SuggestInput
-                      type="number"
-                      value={item.okuriPitch}
-                      options={fieldSuggestions.okuriPitch}
-                      onChange={(e) => handleEntryChange(index, "okuriPitch", e.target.value)}
-                      className={inputClassName}
-                    />
-                  </Field>
-                  <Field label="Color">
-                    <SuggestInput
-                      type="text"
-                      value={item.color}
-                      options={fieldSuggestions.color}
-                      onChange={(e) => handleEntryChange(index, "color", e.target.value)}
-                      className={inputClassName}
-                    />
-                  </Field>
-                  <Field label="Material">
-                    <SuggestInput
-                      type="text"
-                      value={item.material}
-                      options={fieldSuggestions.material}
-                      onChange={(e) => handleEntryChange(index, "material", e.target.value)}
-                      className={inputClassName}
-                    />
-                  </Field>
-                  <Field label="Box Type">
-                    <SuggestInput
-                      type="text"
-                      value={item.boxType}
-                      options={fieldSuggestions.boxType}
-                      onChange={(e) => handleEntryChange(index, "boxType", e.target.value)}
-                      className={inputClassName}
-                    />
-                  </Field>
-                  <Field label="Quantity">
-                    <SuggestInput
-                      type="number"
-                      value={item.quantity}
-                      options={fieldSuggestions.quantity}
-                      onChange={(e) => handleEntryChange(index, "quantity", e.target.value)}
-                      className={inputClassName}
-                    />
-                  </Field>
-                  <Field label="PDF">
-                    {selectedOption.pdfLink ? (
-                      <button
-                        type="button"
-                        onClick={() => openPdfPreview(selectedOption.pdfLink, selectedOption.label)}
-                        title="View PDF preview"
-                        className="inline-flex h-[38px] w-[38px] items-center justify-center rounded-xl border border-outline-variant/30 bg-surface text-primary transition hover:bg-surface-container-high"
-                      >
-                        <span className="material-symbols-outlined" style={{ fontSize: 20 }}>picture_as_pdf</span>
-                      </button>
-                    ) : (
-                      <span
-                        title="No PDF preview available"
-                        className="inline-flex h-[38px] w-[38px] items-center justify-center rounded-xl border border-outline-variant/15 bg-surface-container text-on-surface-variant/40"
-                      >
-                        <span className="material-symbols-outlined" style={{ fontSize: 20 }}>picture_as_pdf</span>
-                      </span>
-                    )}
-                  </Field>
-                  <Field label="File">
-                    <label
-                      title={item.file ? item.file.name : "Upload file"}
-                      className={`inline-flex h-[38px] w-[38px] cursor-pointer items-center justify-center rounded-xl border transition ${
-                        item.file
-                          ? "border-primary/30 bg-primary/10 text-primary hover:bg-primary/20"
-                          : "border-outline-variant/30 bg-surface text-on-surface-variant hover:bg-surface-container-high"
-                      }`}
-                    >
-                      <span className="material-symbols-outlined" style={{ fontSize: 20 }}>attach_file</span>
-                      <input
-                        type="file"
-                        className="hidden"
-                        onChange={(e) => handleEntryFileChange(index, e.target.files?.[0] || null)}
-                      />
-                    </label>
-                  </Field>
-                  <Field label=" ">
-                    {entries.length > 1 && (
-                      <button
-                        type="button"
-                        onClick={() => removeEntryRow(index)}
-                        title="Remove row"
-                        className="inline-flex h-[38px] w-[38px] items-center justify-center rounded-xl border border-outline-variant/30 bg-surface text-on-surface-variant transition hover:bg-error/10 hover:text-error"
-                      >
-                        <span className="material-symbols-outlined" style={{ fontSize: 18 }}>close</span>
-                      </button>
-                    )}
-                  </Field>
-                </div>
-              ))}
-
-              <div>
-                <button
-                  type="button"
-                  onClick={addEntryRow}
-                  className="inline-flex items-center gap-1.5 rounded-xl border border-outline-variant/30 bg-surface px-3 py-2 text-xs font-semibold text-on-surface transition hover:bg-surface-container-high"
-                >
-                  <span className="material-symbols-outlined" style={{ fontSize: 16 }}>add</span>
-                  Add Row
-                </button>
-              </div>
+          <div className="overflow-x-auto pb-4">
+            <div className="min-w-max border border-outline-variant/20 bg-surface rounded-2xl overflow-hidden">
+              <table className="w-full text-left text-sm">
+                <thead>
+                  <tr className="border-b border-outline-variant/20 bg-surface-container-lowest">
+                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-on-surface-variant">Product Name</th>
+                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-on-surface-variant">DXF</th>
+                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-on-surface-variant">PDF</th>
+                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-on-surface-variant">PCE *</th>
+                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-on-surface-variant">Pitch</th>
+                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-on-surface-variant">Color</th>
+                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-on-surface-variant">Material</th>
+                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-on-surface-variant">Box</th>
+                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-on-surface-variant">Qty</th>
+                    <th className="w-12 px-4 py-3 text-center"></th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-outline-variant/10">
+                  {entries.map((item, index) => (
+                    <tr key={index} className="transition-colors hover:bg-surface-container-lowest/50">
+                      <td className="px-4 py-3 align-top">
+                        <SuggestInput value={item.name} options={fieldSuggestions.name} onChange={(e) => handleEntryChange(index, "name", e.target.value)} className={inputClassName} />
+                      </td>
+                      <td className="px-4 py-3 align-top min-w-[150px]">
+                        <select
+                          value={item.dxfIndex}
+                          onChange={(e) => handleEntryChange(index, "dxfIndex", e.target.value)}
+                          className={inputClassName}
+                        >
+                          <option value="">None</option>
+                          {(shisakuRecord.dxfLinks || []).map((f, i) => (
+                            <option key={i} value={i}>{f.name}</option>
+                          ))}
+                        </select>
+                      </td>
+                      <td className="px-4 py-3 align-top min-w-[150px]">
+                        <select
+                          value={item.pdfIndex}
+                          onChange={(e) => handleEntryChange(index, "pdfIndex", e.target.value)}
+                          className={inputClassName}
+                        >
+                          <option value="">None</option>
+                          {(shisakuRecord.pdfLinks || []).map((f, i) => (
+                            <option key={i} value={i}>{f.name}</option>
+                          ))}
+                        </select>
+                      </td>
+                      <td className="px-4 py-3 align-top min-w-[150px]">
+                        <select
+                          value={item.pceIndex}
+                          onChange={(e) => handleEntryChange(index, "pceIndex", e.target.value)}
+                          className={`${inputClassName} ${item.pceIndex === "" ? "border-error/50 bg-error/5" : ""}`}
+                        >
+                          <option value="">Select PCE *</option>
+                          {(shisakuRecord.pcelinks || []).map((f, i) => (
+                            <option key={i} value={i}>{f.name}</option>
+                          ))}
+                        </select>
+                      </td>
+                      <td className="px-4 py-3 align-top w-24">
+                        <SuggestInput type="number" value={item.okuriPitch} options={fieldSuggestions.okuriPitch} onChange={(e) => handleEntryChange(index, "okuriPitch", e.target.value)} className={inputClassName} />
+                      </td>
+                      <td className="px-4 py-3 align-top w-28">
+                        <SuggestInput value={item.color} options={fieldSuggestions.color} onChange={(e) => handleEntryChange(index, "color", e.target.value)} className={inputClassName} />
+                      </td>
+                      <td className="px-4 py-3 align-top w-32">
+                        <SuggestInput value={item.material} options={fieldSuggestions.material} onChange={(e) => handleEntryChange(index, "material", e.target.value)} className={inputClassName} />
+                      </td>
+                      <td className="px-4 py-3 align-top w-32">
+                        <SuggestInput value={item.boxType} options={fieldSuggestions.boxType} onChange={(e) => handleEntryChange(index, "boxType", e.target.value)} className={inputClassName} />
+                      </td>
+                      <td className="px-4 py-3 align-top w-24">
+                        <SuggestInput type="number" value={item.quantity} options={fieldSuggestions.quantity} onChange={(e) => handleEntryChange(index, "quantity", e.target.value)} className={inputClassName} />
+                      </td>
+                      <td className="px-4 py-3 align-top text-center">
+                        <button
+                          type="button"
+                          onClick={() => removeEntryRow(index)}
+                          disabled={entries.length <= 1}
+                          title="Remove row"
+                          className="mt-1 flex-shrink-0 rounded-lg p-1.5 text-on-surface-variant transition hover:bg-error/10 hover:text-error disabled:opacity-30 disabled:hover:bg-transparent"
+                        >
+                          <span className="material-symbols-outlined" style={{ fontSize: 18 }}>close</span>
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
-          )}
+          </div>
 
-          <div className="flex items-center justify-end gap-3">
+          <div className="mt-4 flex items-center justify-end gap-3 border-t border-outline-variant/10 pt-4">
             <button
               type="button"
               onClick={resetEntry}
-              disabled={!selectedOption}
-              className="rounded-xl border border-outline-variant/20 bg-surface-container px-4 py-2 text-xs font-semibold text-on-surface transition-all hover:bg-surface-container-high disabled:opacity-40"
+              disabled={submitting}
+              className="rounded-xl px-4 py-2 text-sm font-semibold text-on-surface-variant transition hover:bg-surface-container-high hover:text-on-surface"
             >
-              Cancel
+              Reset
             </button>
             <button
               type="button"
               onClick={handleRegister}
               disabled={!canRegister}
-              className="flex items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-xs font-semibold text-on-primary transition-all hover:opacity-90 active:scale-95 disabled:opacity-40"
+              className="flex items-center justify-center gap-2 rounded-xl bg-primary px-6 py-2 text-sm font-semibold text-on-primary shadow-sm transition hover:bg-primary/90 hover:shadow disabled:opacity-50"
             >
-              {submitting
-                ? <span className="material-symbols-outlined animate-spin" style={{ fontSize: 16 }}>progress_activity</span>
-                : <span className="material-symbols-outlined" style={{ fontSize: 16 }}>check</span>}
-              {submitting ? "Registering…" : "Register"}
+              {submitting ? (
+                <>
+                  <span className="material-symbols-outlined animate-spin" style={{ fontSize: 18 }}>progress_activity</span>
+                  Registering...
+                </>
+              ) : (
+                <>
+                  <span className="material-symbols-outlined" style={{ fontSize: 18 }}>assignment_turned_in</span>
+                  Register Request
+                </>
+              )}
             </button>
           </div>
-        </div>
+        </section>
+
+        <section>
+          <div className="mb-4">
+            <h3 className="text-sm font-semibold text-on-surface">Existing Requests</h3>
+            <p className="text-xs text-on-surface-variant mt-1">Prototype requests created for this prototype.</p>
+          </div>
+          <DataTable
+            data={records}
+            columns={columns}
+            defaultSort={{ column: "createdAt", direction: -1 }}
+            searchPlaceholder="Search requests..."
+          />
+        </section>
       </div>
-
-      <DataTable
-        columns={columns}
-        rows={records}
-        loading={loading}
-        error={error}
-        sort={{ column: null, direction: 1 }}
-        page={1}
-        pageSize={records.length || 1}
-        filteredCount={records.length}
-        totalPages={1}
-        onSort={null}
-        onPageChange={null}
-        onPageSizeChange={null}
-        pageSizeOptions={[]}
-        stickyHeader
-        className="overflow-hidden"
-        emptyTitle="No prototype requests registered"
-        emptyMessage="Select a PCE file above to register the first request."
-        rowKey={(row, rowIndex) => row?._id?.$oid || row?._id || rowIndex}
-      />
-
-      <SensorDevicePhotoPreviewModal
-        preview={previewImage}
-        onClose={() => setPreviewImage(null)}
-        onNavigate={handlePreviewNavigate}
-      />
-    </section>
+    </div>
   );
 }
