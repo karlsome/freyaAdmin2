@@ -121,6 +121,18 @@ export default function BomEditModal({ existingBom, onClose, onSaved, onEditExis
   const [targetHinban, setTargetHinban] = useState(existingBom?.['品番'] || "");
   const [bomSteps, setBomSteps] = useState(existingBom?.BOM || []);
 
+  const dragItem = React.useRef(null);
+  const dragOverItem = React.useRef(null);
+
+  const handleSort = () => {
+    let _bomSteps = [...bomSteps];
+    const draggedItemContent = _bomSteps.splice(dragItem.current, 1)[0];
+    _bomSteps.splice(dragOverItem.current, 0, draggedItemContent);
+    dragItem.current = null;
+    dragOverItem.current = null;
+    setBomSteps(_bomSteps);
+  };
+
   const isEdit = !!existingBom;
 
   useEffect(() => {
@@ -327,11 +339,22 @@ export default function BomEditModal({ existingBom, onClose, onSaved, onEditExis
                     </div>
                   ) : (
                     bomSteps.map((step, index) => (
-                      <div key={index} className="bg-surface border border-outline-variant/30 rounded-xl shadow-sm overflow-hidden relative">
-                        <div className="bg-surface-variant/20 px-4 py-2 border-b border-outline-variant/30 flex items-center justify-between">
-                          <span className="text-xs font-bold text-primary bg-primary/10 px-2 py-0.5 rounded">
-                            Step {index + 1}
-                          </span>
+                      <div 
+                        key={index} 
+                        className="bg-surface border border-outline-variant/30 rounded-xl shadow-sm overflow-hidden relative transition-all duration-200 hover:border-primary/50"
+                        draggable
+                        onDragStart={(e) => (dragItem.current = index)}
+                        onDragEnter={(e) => (dragOverItem.current = index)}
+                        onDragEnd={handleSort}
+                        onDragOver={(e) => e.preventDefault()}
+                      >
+                        <div className="bg-surface-variant/20 px-4 py-2 border-b border-outline-variant/30 flex items-center justify-between cursor-move">
+                          <div className="flex items-center gap-2">
+                            <span className="material-symbols-outlined text-outline hover:text-primary transition-colors text-lg">drag_indicator</span>
+                            <span className="text-xs font-bold text-primary bg-primary/10 px-2 py-0.5 rounded pointer-events-none">
+                              Step {index + 1}
+                            </span>
+                          </div>
                           <button 
                             onClick={() => handleRemoveStep(index)}
                             className="text-error/70 hover:text-error hover:bg-error/10 p-1 rounded transition-colors"
