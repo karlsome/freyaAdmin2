@@ -21,6 +21,7 @@ import {
 const EMPTY_ENTRY = {
   name: "",
   okuriPitch: "",
+  pcPerCycle: "",
   color: "",
   material: "",
   boxType: "",
@@ -30,7 +31,7 @@ const EMPTY_ENTRY = {
   pceIndex: "",
 };
 
-const ENTRY_FIELD_KEYS = ["name", "okuriPitch", "color", "material", "boxType", "quantity"];
+const ENTRY_FIELD_KEYS = ["name", "okuriPitch", "pcPerCycle", "color", "material", "boxType", "quantity"];
 
 function FlashBanner({ flash, onClose }) {
   if (!flash) return null;
@@ -346,7 +347,8 @@ export default function PrototypeRequestPage() {
     entries.every((item) =>
       item.name.trim() &&
       item.okuriPitch !== "" &&
-      item.color.trim() &&
+      item.pcPerCycle !== "" &&
+      item.color.trim() !== "" &&
       item.material.trim() &&
       item.boxType.trim() &&
       item.quantity !== "" &&
@@ -381,6 +383,7 @@ export default function PrototypeRequestPage() {
           pdf,
           pce,
           okuriPitch: Number(item.okuriPitch),
+          pcPerCycle: Number(item.pcPerCycle),
           color: item.color.trim(),
           material: item.material.trim(),
           boxType: item.boxType.trim(),
@@ -448,6 +451,7 @@ export default function PrototypeRequestPage() {
         pdf,
         pce,
         okuriPitch: Number(editModalRecord.okuriPitch),
+        pcPerCycle: Number(editModalRecord.pcPerCycle),
         color: editModalRecord.color.trim(),
         material: editModalRecord.material.trim(),
         boxType: editModalRecord.boxType.trim(),
@@ -553,6 +557,7 @@ export default function PrototypeRequestPage() {
       { key: "shisakuNo", label: t("prototypeNo"), sortable: true, width: 120, renderCell: (r) => r.shisakuNo || "—" },
       { key: "name", label: t("partName"), sortable: true, width: 140, renderCell: (r) => r.name || "—" },
       { key: "okuriPitch", label: t("okuriPitch"), sortable: true, width: 110, align: "center", renderCell: (r) => r.okuriPitch ?? "—" },
+      { key: "pcPerCycle", label: t("pcPerCycle"), sortable: true, width: 110, align: "center", renderCell: (r) => r.pcPerCycle ?? "—" },
       { key: "color", label: t("color"), sortable: true, width: 120, renderCell: (r) => r.color || "—" },
       { key: "material", label: t("material"), sortable: true, width: 120, renderCell: (r) => r.material || "—" },
       { key: "boxType", label: t("boxType"), sortable: true, width: 120, renderCell: (r) => r.boxType || "—" },
@@ -820,10 +825,14 @@ export default function PrototypeRequestPage() {
                   </div>
                   
                   {/* Bottom Row Fields */}
-                  <div className="md:col-span-4 mt-1 grid grid-cols-2 gap-2 md:grid-cols-5 border-t border-outline-variant/10 pt-2">
+                  <div className="md:col-span-4 mt-1 grid grid-cols-2 gap-2 md:grid-cols-6 border-t border-outline-variant/10 pt-2">
                     <div>
                       <label className="mb-0.5 block text-[11px] font-semibold text-on-surface-variant uppercase tracking-wider">Pitch</label>
                       <SuggestInput type="number" value={item.okuriPitch} options={fieldSuggestions.okuriPitch} onChange={(e) => handleEntryChange(index, "okuriPitch", e.target.value)} className={inputClassName + " w-full"} />
+                    </div>
+                    <div>
+                      <label className="mb-0.5 block text-[11px] font-semibold text-on-surface-variant uppercase tracking-wider">Pc/Cycle</label>
+                      <SuggestInput type="number" value={item.pcPerCycle} options={fieldSuggestions.pcPerCycle || []} onChange={(e) => handleEntryChange(index, "pcPerCycle", e.target.value)} className={inputClassName + " w-full"} />
                     </div>
                     <div>
                       <label className="mb-0.5 block text-[11px] font-semibold text-on-surface-variant uppercase tracking-wider">Color</label>
@@ -1000,6 +1009,10 @@ export default function PrototypeRequestPage() {
                 <p className="text-sm font-medium text-on-surface">{detailModalRecord.okuriPitch ?? "—"}</p>
               </div>
               <div>
+                <span className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider block mb-1">{t("pcPerCycle")}</span>
+                <p className="text-sm font-medium text-on-surface">{detailModalRecord.pcPerCycle ?? "—"}</p>
+              </div>
+              <div>
                 <span className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider block mb-1">{t("color")}</span>
                 <p className="text-sm font-medium text-on-surface">{detailModalRecord.color || "—"}</p>
               </div>
@@ -1135,6 +1148,16 @@ export default function PrototypeRequestPage() {
                   required
                   value={editModalRecord.okuriPitch}
                   onChange={(e) => setEditModalRecord({ ...editModalRecord, okuriPitch: e.target.value })}
+                  className={inputClassName + " w-full"}
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-semibold text-on-surface-variant">{t("pcPerCycle")}</label>
+                <input
+                  type="number"
+                  required
+                  value={editModalRecord.pcPerCycle}
+                  onChange={(e) => setEditModalRecord({ ...editModalRecord, pcPerCycle: e.target.value })}
                   className={inputClassName + " w-full"}
                 />
               </div>
