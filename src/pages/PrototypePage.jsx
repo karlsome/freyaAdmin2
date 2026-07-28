@@ -4,7 +4,7 @@ import DataTable from "../components/DataTable";
 import PageHeader from "../components/PageHeader";
 import ModalShell from "../components/ModalShell";
 import TagInput from "../components/TagInput";
-import { deleteShisaku, fetchShisakuList, registerShisaku, updateShisaku } from "../services/api";
+import { deleteShisaku, fetchShisakuList, registerShisaku, updateShisaku, fetchShisakuRequestGroupedList } from "../services/api";
 import { convertPdfFileToPreviewImage } from "../utils/productPDFs";
 import { getAuthUser } from "../utils/masterDB";
 
@@ -170,14 +170,31 @@ export default function PrototypePage() {
       setLoading(true);
       setError("");
       try {
-        const data = await fetchShisakuList({
-          page,
-          limit: pageSize,
-          sortColumn: sort.column,
-          sortDirection: sort.direction,
-        });
+        const [data, groupedData] = await Promise.all([
+          fetchShisakuList({
+            page,
+            limit: pageSize,
+            sortColumn: sort.column,
+            sortDirection: sort.direction,
+          }),
+          fetchShisakuRequestGroupedList({ limit: 1000 })
+        ]);
         if (cancelled) return;
-        setRecords(data?.rows || []);
+
+        const requestCounts = new Map(
+          (groupedData?.rows || []).map((row) => [
+            String(row.shisakudb_id || row.shisakuNo),
+            row.totalRequests || 0
+          ])
+        );
+
+        const rows = (data?.rows || []).map(row => {
+          const id = row._id?.$oid || row._id;
+          const count = requestCounts.get(String(id)) || requestCounts.get(String(row.shisakuNo)) || 0;
+          return { ...row, totalRequests: count };
+        });
+
+        setRecords(rows);
         setTotalPages(data?.pagination?.totalPages || 1);
         setFilteredCount(data?.pagination?.totalCount || 0);
       } catch (err) {
@@ -455,6 +472,7 @@ export default function PrototypePage() {
         );
       },
     },
+    { key: "totalRequests", label: "Total Requests", sortable: true, width: 150, align: "center", renderCell: (r) => r.totalRequests ?? 0 },
     {
       key: "cybozuLink",
       label: "Cybozu",
