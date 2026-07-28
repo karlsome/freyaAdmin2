@@ -7,6 +7,7 @@ import TagInput from "../components/TagInput";
 import { deleteShisaku, fetchShisakuList, registerShisaku, updateShisaku, fetchShisakuRequestGroupedList } from "../services/api";
 import { convertPdfFileToPreviewImage } from "../utils/productPDFs";
 import { getAuthUser } from "../utils/masterDB";
+import { useLanguage } from "../contexts/LanguageContext";
 
 const EMPTY_FORM = {
   shisakuNo: "",
@@ -128,6 +129,7 @@ function FileUploadList({ label, accept, files, onAdd, onRemove, onRename, disab
 
 export default function PrototypePage() {
   const navigate = useNavigate();
+  const { t } = useLanguage();
   const [records, setRecords] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -451,14 +453,14 @@ export default function PrototypePage() {
   }
 
   const columns = useMemo(() => [
-    { key: "shisakuNo", label: "試作番号", width: 120, renderCell: (r) => r.shisakuNo || "—" },
-    { key: "deadline", label: "Deadline", width: 130, renderCell: (r) => r.deadline || "—" },
-    { key: "eventName", label: "Event", width: 160, renderCell: (r) => r.eventName || "—" },
-    { key: "modelName", label: "Model", width: 160, renderCell: (r) => r.modelName || "—" },
-    { key: "customerName", label: "Customer", width: 160, renderCell: (r) => r.customerName || "—" },
+    { key: "shisakuNo", label: t("prototypeNo"), width: 120, renderCell: (r) => r.shisakuNo || "—" },
+    { key: "deadline", label: t("deadline"), width: 130, renderCell: (r) => r.deadline || "—" },
+    { key: "eventName", label: t("eventName"), width: 160, renderCell: (r) => r.eventName || "—" },
+    { key: "modelName", label: t("modelName"), width: 160, renderCell: (r) => r.modelName || "—" },
+    { key: "customerName", label: t("customerName"), width: 160, renderCell: (r) => r.customerName || "—" },
     {
       key: "status",
-      label: "Status",
+      label: t("status"),
       width: 120,
       renderCell: (r) => {
         const status = r.status || "pending";
@@ -472,10 +474,10 @@ export default function PrototypePage() {
         );
       },
     },
-    { key: "totalRequests", label: "Total Requests", sortable: true, width: 150, align: "center", renderCell: (r) => r.totalRequests ?? 0 },
+    { key: "totalRequests", label: t("totalRequests"), sortable: true, width: 150, align: "center", renderCell: (r) => r.totalRequests ?? 0 },
     {
       key: "cybozuLink",
-      label: "Cybozu",
+      label: t("cybozuLink"),
       sortable: false,
       width: 90,
       align: "center",
@@ -497,10 +499,10 @@ export default function PrototypePage() {
         ) : "—"
       ),
     },
-    { key: "createdBy", label: "Created By", width: 120, renderCell: (r) => r.createdBy || "—" },
+    { key: "createdBy", label: t("createdBy"), width: 120, renderCell: (r) => r.createdBy || "—" },
     {
       key: "createdAt",
-      label: "Timestamp",
+      label: t("timestamp"),
       sortable: true,
       width: 150,
       renderCell: (r) => {
@@ -509,24 +511,24 @@ export default function PrototypePage() {
       },
     },
 
-  ], [deletingId]);
+  ], [deletingId, t]);
 
   return (
     <section className="pt-24 pb-16 px-4 md:px-8 overflow-y-auto h-screen scrollbar-hide">
       <PageHeader
-        title="Prototype Management"
+        title={t("prototypeManagement")}
         subtitle="Register new 試作 entries and manage their DXF, PDF, and PCE files."
         actions={(
           <button
             type="button"
             onClick={() => {
-              if (formOpen) resetForm();
-              setFormOpen((open) => !open);
+              setFormOpen(true);
+              resetForm();
             }}
-            className="flex items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2 text-xs font-semibold text-on-primary transition-all hover:opacity-90"
+            className="flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-bold text-on-primary shadow-sm transition-all hover:-translate-y-0.5 hover:bg-primary/90 hover:shadow"
           >
-            <span className="material-symbols-outlined" style={{ fontSize: 16 }}>{formOpen ? "close" : "add"}</span>
-            {formOpen ? "Cancel" : "register new 試作"}
+            <span className="material-symbols-outlined" style={{ fontSize: 18 }}>add_circle</span>
+            {t("registerPrototype")}
           </button>
         )}
       />
@@ -681,11 +683,11 @@ export default function PrototypePage() {
       </ModalShell>
 
       <ModalShell
-        open={!!selectedRecord}
-        onClose={() => setSelectedRecord(null)}
-        title={`試作 ${selectedRecord?.shisakuNo || "Details"}`}
-        subtitle="Prototype Information and Files"
-        maxWidth="max-w-2xl"
+          open={!!selectedRecord}
+          onClose={() => setSelectedRecord(null)}
+          title={selectedRecord?.shisakuNo ? `試作${selectedRecord.shisakuNo}` : t("prototypeInfoAndFiles")}
+          description={t("prototypeInfoAndFiles")}
+          maxWidth="max-w-3xl"
       >
         {selectedRecord && (() => {
           const hasAnyFile = (selectedRecord.dxfLinks?.length > 0) || (selectedRecord.pdfLinks?.length > 0) || (selectedRecord.pcelinks?.length > 0) || selectedRecord.dxflink || selectedRecord.pdflink;
@@ -695,37 +697,37 @@ export default function PrototypePage() {
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
                 <div>
                   <h3 className="text-sm font-medium text-on-surface-variant mb-1">
-                    Deadline
+                    {t("deadline")}
                   </h3>
                   <p className="text-base text-on-surface">{selectedRecord.deadline || "—"}</p>
                 </div>
                 <div>
                   <h3 className="text-sm font-medium text-on-surface-variant mb-1">
-                    Event
+                    {t("eventName")}
                   </h3>
                   <p className="text-base text-on-surface">{selectedRecord.eventName || "—"}</p>
                 </div>
                 <div>
                   <h3 className="text-sm font-medium text-on-surface-variant mb-1">
-                    Model
+                    {t("modelName")}
                   </h3>
                   <p className="text-base text-on-surface">{selectedRecord.modelName || "—"}</p>
                 </div>
                 <div>
                   <h3 className="text-sm font-medium text-on-surface-variant mb-1">
-                    Customer
+                    {t("customerName")}
                   </h3>
                   <p className="text-base text-on-surface">{selectedRecord.customerName || "—"}</p>
                 </div>
                 <div>
                   <h3 className="text-sm font-medium text-on-surface-variant mb-1">
-                    Registered By
+                    {t("registeredBy")}
                   </h3>
                   <p className="text-base text-on-surface">{selectedRecord.registeredBy || "—"}</p>
                 </div>
                 <div>
                   <h3 className="text-sm font-medium text-on-surface-variant mb-1">
-                    Registered At
+                    {t("registeredAt")}
                   </h3>
                   <p className="text-base text-on-surface">
                     {selectedRecord.createdAt ? new Date(selectedRecord.createdAt).toLocaleDateString() : "—"}
@@ -733,7 +735,7 @@ export default function PrototypePage() {
                 </div>
                 <div>
                   <h3 className="text-sm font-medium text-on-surface-variant mb-1">
-                    Status
+                    {t("status")}
                   </h3>
                   <div>
                     {(() => {
@@ -752,7 +754,7 @@ export default function PrototypePage() {
                 
                 <div className="col-span-1 sm:col-span-3">
                   <h3 className="text-sm font-medium text-on-surface-variant mb-1">
-                    Cybozu
+                    {t("cybozuLink")}
                   </h3>
                   {selectedRecord.cybozuLink ? (
                     <a
@@ -762,17 +764,17 @@ export default function PrototypePage() {
                       className="inline-flex items-center gap-1.5 text-base text-primary transition hover:text-primary/80"
                     >
                       <span className="material-symbols-outlined" style={{ fontSize: 16 }}>link</span>
-                      Open Cybozu Link
+                      {t("openCybozuLink")}
                     </a>
                   ) : (
-                    <p className="text-base text-on-surface-variant/50">No link provided</p>
+                    <p className="text-base text-on-surface-variant/50">{t("noLinkProvided")}</p>
                   )}
                 </div>
               </div>
 
               {hasAnyFile && (
                 <div className="flex flex-col gap-3">
-                  <h3 className="text-sm font-medium text-on-surface-variant mb-1">Files</h3>
+                  <h3 className="text-sm font-medium text-on-surface-variant mb-1">{t("files")}</h3>
                   <div className="flex flex-col gap-4">
                     {/* Legacy format rendering */}
                     {(selectedRecord.dxflink || selectedRecord.pdflink) && (
@@ -794,7 +796,7 @@ export default function PrototypePage() {
                     {/* Arrays format rendering */}
                     {(selectedRecord.dxfLinks?.length > 0) && (
                       <div>
-                        <div className="text-[10px] font-bold uppercase tracking-wider text-on-surface-variant/70 mb-1.5">DXF Files</div>
+                        <div className="text-[10px] font-bold uppercase tracking-wider text-on-surface-variant/70 mb-1.5">{t("dxfFiles")}</div>
                         <div className="flex flex-col gap-2 items-start">
                           {selectedRecord.dxfLinks.map((entry, idx) => (
                             <a key={idx} href={entry.link} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 rounded-lg border border-outline-variant/30 bg-surface px-3 py-1.5 text-xs font-semibold text-primary transition hover:bg-surface-container-high">
@@ -808,7 +810,7 @@ export default function PrototypePage() {
 
                     {(selectedRecord.pdfLinks?.length > 0) && (
                       <div>
-                        <div className="text-[10px] font-bold uppercase tracking-wider text-on-surface-variant/70 mb-1.5">PDF Files</div>
+                        <div className="text-[10px] font-bold uppercase tracking-wider text-on-surface-variant/70 mb-1.5">{t("pdfFiles")}</div>
                         <div className="flex flex-col gap-2 items-start">
                           {selectedRecord.pdfLinks.map((entry, idx) => (
                             <a key={idx} href={entry.link} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 rounded-lg border border-outline-variant/30 bg-surface px-3 py-1.5 text-xs font-semibold text-primary transition hover:bg-surface-container-high">
@@ -822,7 +824,7 @@ export default function PrototypePage() {
 
                     {selectedRecord.pcelinks?.length > 0 && (
                       <div>
-                        <div className="text-[10px] font-bold uppercase tracking-wider text-on-surface-variant/70 mb-1.5">PCE Files</div>
+                        <div className="text-[10px] font-bold uppercase tracking-wider text-on-surface-variant/70 mb-1.5">{t("pceFiles")}</div>
                         <div className="flex flex-col gap-2 items-start">
                           {selectedRecord.pcelinks.map((entry, idx) => (
                             <a key={idx} href={entry.link} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 rounded-lg border border-outline-variant/30 bg-surface px-3 py-1.5 text-xs font-semibold text-primary transition hover:bg-surface-container-high">
@@ -838,7 +840,7 @@ export default function PrototypePage() {
                       <div className="mt-2 pt-4 border-t border-outline-variant/10 grid grid-cols-1 sm:grid-cols-3 gap-4">
                         {selectedRecord.colors?.length > 0 && (
                           <div>
-                            <div className="text-[10px] font-bold uppercase tracking-wider text-on-surface-variant/70 mb-2">Colors</div>
+                            <div className="text-[10px] font-bold uppercase tracking-wider text-on-surface-variant/70 mb-2">{t("colors")}</div>
                             <div className="flex flex-wrap gap-1.5">
                               {selectedRecord.colors.map((c, i) => (
                                 <span key={i} className="rounded-md bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">{c}</span>
@@ -848,7 +850,7 @@ export default function PrototypePage() {
                         )}
                         {selectedRecord.materials?.length > 0 && (
                           <div>
-                            <div className="text-[10px] font-bold uppercase tracking-wider text-on-surface-variant/70 mb-2">Materials</div>
+                            <div className="text-[10px] font-bold uppercase tracking-wider text-on-surface-variant/70 mb-2">{t("materials")}</div>
                             <div className="flex flex-wrap gap-1.5">
                               {selectedRecord.materials.map((c, i) => (
                                 <span key={i} className="rounded-md bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">{c}</span>
@@ -858,7 +860,7 @@ export default function PrototypePage() {
                         )}
                         {selectedRecord.boxTypes?.length > 0 && (
                           <div>
-                            <div className="text-[10px] font-bold uppercase tracking-wider text-on-surface-variant/70 mb-2">Box Types</div>
+                            <div className="text-[10px] font-bold uppercase tracking-wider text-on-surface-variant/70 mb-2">{t("boxTypes")}</div>
                             <div className="flex flex-wrap gap-1.5">
                               {selectedRecord.boxTypes.map((c, i) => (
                                 <span key={i} className="rounded-md bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">{c}</span>
@@ -881,7 +883,7 @@ export default function PrototypePage() {
             onClick={() => setSelectedRecord(null)}
             className="rounded-xl border border-outline-variant/20 bg-surface-container px-4 py-2 text-xs font-semibold text-on-surface transition-all hover:bg-surface-container-high"
           >
-            Close
+            {t("close")}
           </button>
           <button
             type="button"
@@ -891,15 +893,15 @@ export default function PrototypePage() {
             }}
             className="rounded-xl border border-outline-variant/20 bg-surface-container px-4 py-2 text-xs font-semibold text-on-surface transition-all hover:bg-surface-container-high"
           >
-            Add Prototype Request
+            {t("addPrototypeRequest")}
           </button>
           <button
             type="button"
             onClick={() => handleOpenEditModal(selectedRecord)}
-            className="flex items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2 text-xs font-semibold text-on-primary transition-all hover:opacity-90 active:scale-95"
+            className="flex items-center justify-center gap-1.5 rounded-xl bg-primary px-4 py-2 text-xs font-semibold text-on-primary transition hover:opacity-90 active:scale-95"
           >
             <span className="material-symbols-outlined" style={{ fontSize: 16 }}>edit</span>
-            Edit
+            {t("edit")}
           </button>
         </div>
       </ModalShell>

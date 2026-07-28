@@ -2960,16 +2960,24 @@ export async function fetchShisakuRequestGroupedList({ page = 1, limit = 30, sor
   return data;
 }
 
-export async function registerShisakuRequest({ name, dxf, pdf, pce, okuriPitch, color, material, boxType, quantity, shisakudb_id, createdBy, status }) {
-  return _postJson("api/shisaku-request/register", { name, dxf, pdf, pce, okuriPitch, color, material, boxType, quantity, shisakudb_id, createdBy, status });
+export async function registerShisakuRequest({ name, dxf, pdf, pce, okuriPitch, color, material, boxType, quantity, shisakudb_id, createdBy, status, orderNumber }) {
+  return _postJson("api/shisaku-request/register", { name, dxf, pdf, pce, okuriPitch, color, material, boxType, quantity, shisakudb_id, createdBy, status, orderNumber });
 }
 
-export async function updateShisakuRequest(id, { name, dxf, pdf, pce, okuriPitch, color, material, boxType, quantity, status }) {
-  return _postJson(`api/shisaku-request/update/${encodeURIComponent(id)}`, { name, dxf, pdf, pce, okuriPitch, color, material, boxType, quantity, status });
+export async function updateShisakuRequest(id, { name, dxf, pdf, pce, okuriPitch, color, material, boxType, quantity, status, orderNumber }) {
+  return _postJson(`api/shisaku-request/update/${encodeURIComponent(id)}`, { name, dxf, pdf, pce, okuriPitch, color, material, boxType, quantity, status, orderNumber });
 }
 
 export async function deleteShisakuRequest(id) {
   return _deleteJson(`api/shisaku-request/${encodeURIComponent(id)}`);
+}
+
+export async function bulkDeleteShisakuRequests(ids) {
+  return _postJson("api/shisaku-request/bulk-delete", { ids });
+}
+
+export async function reorderShisakuRequests(updates) {
+  return _postJson("api/shisaku-request/reorder", { updates });
 }
 
 export async function translateJapaneseText(text) {

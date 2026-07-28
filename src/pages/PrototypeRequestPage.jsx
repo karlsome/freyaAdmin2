@@ -4,6 +4,7 @@ import DataTable from "../components/DataTable";
 import PageHeader from "../components/PageHeader";
 import ModalShell from "../components/ModalShell";
 import { getAuthUser } from "../utils/masterDB";
+import { useLanguage } from "../contexts/LanguageContext";
 import {
   BASE_URL,
   deleteShisakuRequest,
@@ -13,6 +14,8 @@ import {
   fetchAvailableShisakuForRequest,
   registerShisakuRequest,
   updateShisakuRequest,
+  bulkDeleteShisakuRequests,
+  reorderShisakuRequests,
 } from "../services/api";
 
 const EMPTY_ENTRY = {
@@ -121,6 +124,7 @@ const inputClassName = "rounded-xl border border-outline-variant/30 bg-surface p
 export default function PrototypeRequestPage() {
   const { shisakuId } = useParams();
   const navigate = useNavigate();
+  const { t } = useLanguage();
   
   const [shisakuRecord, setShisakuRecord] = useState(null);
   const [records, setRecords] = useState([]);
@@ -145,7 +149,10 @@ export default function PrototypeRequestPage() {
   const [pageSize, setPageSize] = useState(30);
   const [totalPages, setTotalPages] = useState(0);
   const [filteredCount, setFilteredCount] = useState(0);
-  const [sort, setSort] = useState({ column: "createdAt", direction: -1 });
+  const [sort, setSort] = useState({ column: "orderNumber", direction: 1 });
+
+  const [editMode, setEditMode] = useState(false);
+  const [selectedRequestIds, setSelectedRequestIds] = useState(new Set());
 
   const [searchQuery, setSearchQuery] = useState("");
   const [detailModalRecord, setDetailModalRecord] = useState(null);
@@ -353,7 +360,11 @@ export default function PrototypeRequestPage() {
     setSubmitting(true);
 
     try {
-      await Promise.all(entries.map((item) => {
+      const maxOrderNumber = filteredRecords.length > 0
+        ? Math.max(...filteredRecords.map((r) => r.orderNumber || 0))
+        : 0;
+
+      await Promise.all(entries.map((item, index) => {
         const dxf = item.dxfIndex !== "" ? shisakuRecord.dxfLinks[item.dxfIndex] : null;
         const pdfData = item.pdfIndex !== "" ? shisakuRecord.pdfLinks[item.pdfIndex] : null;
         const pdf = pdfData 
@@ -376,6 +387,7 @@ export default function PrototypeRequestPage() {
           quantity: Number(item.quantity),
           shisakudb_id: shisakuId,
           createdBy: getAuthUser()?.username || "",
+          orderNumber: maxOrderNumber + index + 1,
         });
       }));
 
@@ -466,14 +478,51 @@ export default function PrototypeRequestPage() {
     }
   }
 
+  async function handleBulkDelete() {
+    if (selectedRequestIds.size === 0) return;
+    if (!window.confirm(`Delete ${selectedRequestIds.size} requests? This cannot be undone.`)) return;
+
+    try {
+      await bulkDeleteShisakuRequests(Array.from(selectedRequestIds));
+      setFlash({ type: "success", message: `${selectedRequestIds.size} requests deleted.` });
+      setSelectedRequestIds(new Set());
+      setRefreshNonce((current) => current + 1);
+    } catch (err) {
+      setFlash({ type: "error", message: err.message || "Failed to bulk delete records." });
+    }
+  }
+
+  async function handleRowReorder(sourceIndex, targetIndex) {
+    if (sourceIndex === targetIndex) return;
+    const newRecords = [...records];
+    const [moved] = newRecords.splice(sourceIndex, 1);
+    newRecords.splice(targetIndex, 0, moved);
+
+    setRecords(newRecords);
+
+    const baseOrder = (page - 1) * pageSize;
+    const updates = newRecords.map((r, i) => ({
+      id: r._id?.$oid || r._id,
+      orderNumber: baseOrder + i + 1,
+    }));
+
+    try {
+      await reorderShisakuRequests(updates);
+      setRefreshNonce((current) => current + 1);
+    } catch (err) {
+      setFlash({ type: "error", message: err.message || "Failed to reorder requests." });
+      setRefreshNonce((current) => current + 1);
+    }
+  }
+
   const filteredRecords = records;
   const groupedPrototypes = records;
 
   const groupedColumns = useMemo(() => [
-    { key: "shisakuNo", label: "Prototype No.", sortable: true, width: 200, renderCell: (r) => `試作${r.shisakuNo}` },
+    { key: "shisakuNo", label: t("prototypeNo"), sortable: true, width: 200, renderCell: (r) => `試作${r.shisakuNo}` },
     {
       key: "status",
-      label: "Status",
+      label: t("status"),
       sortable: true,
       width: 120,
       renderCell: (r) => {
@@ -488,99 +537,141 @@ export default function PrototypeRequestPage() {
         );
       },
     },
-    { key: "totalRequests", label: "Total Requests", sortable: true, width: 150, align: "center" },
+    { key: "totalRequests", label: t("totalRequests"), sortable: true, width: 150, align: "center" },
     { 
       key: "latestDate", 
-      label: "Latest Request", 
+      label: t("latestRequest"), 
       sortable: true, 
       width: 200,
       renderCell: (r) => r.latestDate ? r.latestDate.toLocaleString() : "—"
     },
   ], []);
 
-  const columns = useMemo(() => [
-    { key: "index", label: "#", sortable: false, width: 60, align: "center", renderCell: (r, i) => i + 1 },
-    { key: "shisakuNo", label: "Prototype No.", sortable: true, width: 120, renderCell: (r) => r.shisakuNo || "—" },
-    { key: "name", label: "Name", sortable: true, width: 140, renderCell: (r) => r.name || "—" },
-    { key: "okuriPitch", label: "Okuri Pitch", sortable: true, width: 110, align: "center", renderCell: (r) => r.okuriPitch ?? "—" },
-    { key: "color", label: "Color", sortable: true, width: 120, renderCell: (r) => r.color || "—" },
-    { key: "material", label: "Material", sortable: true, width: 120, renderCell: (r) => r.material || "—" },
-    { key: "boxType", label: "Box Type", sortable: true, width: 120, renderCell: (r) => r.boxType || "—" },
-    { key: "quantity", label: "Quantity", sortable: true, width: 100, align: "center", renderCell: (r) => r.quantity ?? "—" },
-    {
-      key: "dxf",
-      label: "DXF",
-      sortable: true,
-      width: 100,
-      align: "center",
-      disableCellWrapper: true,
-      renderCell: (r) => (
-        r.dxf && r.dxf.link ? (
-          <a href={r.dxf.link} target="_blank" rel="noopener noreferrer" className="inline-flex items-center justify-center rounded-lg border border-outline-variant/30 bg-surface px-2.5 py-1 text-[11px] font-semibold uppercase text-primary transition hover:bg-surface-container-high">DXF</a>
-        ) : (
-          <span className="inline-flex items-center justify-center rounded-lg border border-outline-variant/15 bg-surface-container px-2.5 py-1 text-[11px] font-semibold uppercase text-on-surface-variant/40">—</span>
-        )
-      ),
-    },
-    {
-      key: "pdf",
-      label: "PDF",
-      sortable: true,
-      width: 100,
-      align: "center",
-      disableCellWrapper: true,
-      renderCell: (r) => (
-        r.pdf && r.pdf.link ? (
-          <a href={r.pdf.link} target="_blank" rel="noopener noreferrer" className="inline-flex items-center justify-center rounded-lg border border-outline-variant/30 bg-surface px-2.5 py-1 text-[11px] font-semibold uppercase text-primary transition hover:bg-surface-container-high">PDF</a>
-        ) : (
-          <span className="inline-flex items-center justify-center rounded-lg border border-outline-variant/15 bg-surface-container px-2.5 py-1 text-[11px] font-semibold uppercase text-on-surface-variant/40">—</span>
-        )
-      ),
-    },
-    {
-      key: "pce",
-      label: "PCE",
-      sortable: true,
-      width: 100,
-      align: "center",
-      disableCellWrapper: true,
-      renderCell: (r) => (
-        r.pce && r.pce.link ? (
-          <a href={r.pce.link} target="_blank" rel="noopener noreferrer" className="inline-flex items-center justify-center rounded-lg border border-outline-variant/30 bg-surface px-2.5 py-1 text-[11px] font-semibold uppercase text-primary transition hover:bg-surface-container-high">PCE</a>
-        ) : (
-          <span className="inline-flex items-center justify-center rounded-lg border border-outline-variant/15 bg-surface-container px-2.5 py-1 text-[11px] font-semibold uppercase text-on-surface-variant/40">—</span>
-        )
-      ),
-    },
-    {
-      key: "status",
-      label: "Status",
-      sortable: true,
-      width: 120,
-      renderCell: (r) => {
-        const status = r.status || "pending";
-        let colorClass = "bg-amber-500/10 text-amber-600 border-amber-500/20";
-        if (status === "completed") colorClass = "bg-emerald-500/10 text-emerald-600 border-emerald-500/20";
-        if (status === "in-progress") colorClass = "bg-blue-500/10 text-blue-600 border-blue-500/20";
-        return (
-          <span className={`inline-flex items-center justify-center rounded-lg border px-2.5 py-1 text-[11px] font-semibold uppercase ${colorClass}`}>
-            {status}
-          </span>
-        );
+  const columns = useMemo(() => {
+    const baseCols = [
+      { key: "index", label: "#", sortable: false, width: 60, align: "center", renderCell: (r, i) => r.orderNumber ?? (i + 1) },
+      { key: "shisakuNo", label: t("prototypeNo"), sortable: true, width: 120, renderCell: (r) => r.shisakuNo || "—" },
+      { key: "name", label: t("partName"), sortable: true, width: 140, renderCell: (r) => r.name || "—" },
+      { key: "okuriPitch", label: t("okuriPitch"), sortable: true, width: 110, align: "center", renderCell: (r) => r.okuriPitch ?? "—" },
+      { key: "color", label: t("color"), sortable: true, width: 120, renderCell: (r) => r.color || "—" },
+      { key: "material", label: t("material"), sortable: true, width: 120, renderCell: (r) => r.material || "—" },
+      { key: "boxType", label: t("boxType"), sortable: true, width: 120, renderCell: (r) => r.boxType || "—" },
+      { key: "quantity", label: t("quantityReq"), sortable: true, width: 100, align: "center", renderCell: (r) => r.quantity ?? "—" },
+      {
+        key: "dxf",
+        label: t("dxf"),
+        sortable: true,
+        width: 100,
+        align: "center",
+        disableCellWrapper: true,
+        renderCell: (r) => (
+          r.dxf && r.dxf.link ? (
+            <a href={r.dxf.link} target="_blank" rel="noopener noreferrer" className="inline-flex items-center justify-center rounded-lg border border-outline-variant/30 bg-surface px-2.5 py-1 text-[11px] font-semibold uppercase text-primary transition hover:bg-surface-container-high">DXF</a>
+          ) : (
+            <span className="inline-flex items-center justify-center rounded-lg border border-outline-variant/15 bg-surface-container px-2.5 py-1 text-[11px] font-semibold uppercase text-on-surface-variant/40">—</span>
+          )
+        ),
       },
-    },
-    { key: "createdBy", label: "Created By", sortable: true, width: 120, renderCell: (r) => r.createdBy || "—" },
-    {
-      key: "createdAt",
-      label: "Timestamp",
-      sortable: true,
-      width: 150,
-      renderCell: (r) => {
-        const d = r.createdAt ? new Date(r.createdAt.$date || r.createdAt) : null;
-        return d ? d.toLocaleString() : "—";
+      {
+        key: "pdf",
+        label: t("pdf"),
+        sortable: true,
+        width: 100,
+        align: "center",
+        disableCellWrapper: true,
+        renderCell: (r) => (
+          r.pdf && r.pdf.link ? (
+            <a href={r.pdf.link} target="_blank" rel="noopener noreferrer" className="inline-flex items-center justify-center rounded-lg border border-outline-variant/30 bg-surface px-2.5 py-1 text-[11px] font-semibold uppercase text-primary transition hover:bg-surface-container-high">PDF</a>
+          ) : (
+            <span className="inline-flex items-center justify-center rounded-lg border border-outline-variant/15 bg-surface-container px-2.5 py-1 text-[11px] font-semibold uppercase text-on-surface-variant/40">—</span>
+          )
+        ),
       },
-    },
-  ], [deletingId]);
+      {
+        key: "pce",
+        label: t("pce"),
+        sortable: true,
+        width: 100,
+        align: "center",
+        disableCellWrapper: true,
+        renderCell: (r) => (
+          r.pce && r.pce.link ? (
+            <a href={r.pce.link} target="_blank" rel="noopener noreferrer" className="inline-flex items-center justify-center rounded-lg border border-outline-variant/30 bg-surface px-2.5 py-1 text-[11px] font-semibold uppercase text-primary transition hover:bg-surface-container-high">PCE</a>
+          ) : (
+            <span className="inline-flex items-center justify-center rounded-lg border border-outline-variant/15 bg-surface-container px-2.5 py-1 text-[11px] font-semibold uppercase text-on-surface-variant/40">—</span>
+          )
+        ),
+      },
+      {
+        key: "status",
+        label: t("status"),
+        sortable: true,
+        width: 120,
+        renderCell: (r) => {
+          const status = r.status || "pending";
+          let colorClass = "bg-amber-500/10 text-amber-600 border-amber-500/20";
+          if (status === "completed") colorClass = "bg-emerald-500/10 text-emerald-600 border-emerald-500/20";
+          if (status === "in-progress") colorClass = "bg-blue-500/10 text-blue-600 border-blue-500/20";
+          return (
+            <span className={`inline-flex items-center justify-center rounded-lg border px-2.5 py-1 text-[11px] font-semibold uppercase ${colorClass}`}>
+              {status}
+            </span>
+          );
+        },
+      },
+      { key: "createdBy", label: t("createdBy"), sortable: true, width: 120, renderCell: (r) => r.createdBy || "—" },
+      {
+        key: "createdAt",
+        label: t("timestamp"),
+        sortable: true,
+        width: 150,
+        renderCell: (r) => {
+          const d = r.createdAt ? new Date(r.createdAt.$date || r.createdAt) : null;
+          return d ? d.toLocaleString() : "—";
+        },
+      },
+    ];
+
+    if (editMode) {
+      baseCols.unshift({
+        key: "selection",
+        label: (
+          <input 
+            type="checkbox" 
+            checked={records.length > 0 && selectedRequestIds.size === records.length}
+            onChange={(e) => {
+              if (e.target.checked) setSelectedRequestIds(new Set(records.map(r => r._id?.$oid || r._id)));
+              else setSelectedRequestIds(new Set());
+            }} 
+            className="cursor-pointer"
+          />
+        ),
+        sortable: false,
+        width: 40,
+        align: "center",
+        disableCellWrapper: true,
+        renderCell: (r) => {
+          const id = r._id?.$oid || r._id;
+          return (
+            <input 
+              type="checkbox" 
+              checked={selectedRequestIds.has(id)} 
+              onChange={(e) => {
+                const next = new Set(selectedRequestIds);
+                if (e.target.checked) next.add(id);
+                else next.delete(id);
+                setSelectedRequestIds(next);
+              }} 
+              onClick={(e) => e.stopPropagation()}
+              className="cursor-pointer"
+            />
+          );
+        }
+      });
+    }
+
+    return baseCols;
+  }, [deletingId, editMode, selectedRequestIds, records]);
 
   if (loading) {
     return (
@@ -622,7 +713,7 @@ export default function PrototypeRequestPage() {
               onClick={handleOpenCreateModal}
               className="flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-on-primary shadow-sm transition hover:opacity-90 active:scale-95"
             >
-              Add Prototype Request
+              {t("registerRequest")}
             </button>
           )}
           {shisakuId && (
@@ -800,27 +891,54 @@ export default function PrototypeRequestPage() {
         <section>
           <div className="mb-4 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div>
-              <h3 className="text-sm font-semibold text-on-surface">{shisakuId ? "Existing Requests" : "Prototypes with Requests"}</h3>
+              <h3 className="text-sm font-semibold text-on-surface">{shisakuId ? t("prototypeRequests") : t("prototypesWithRequests")}</h3>
               <p className="text-xs text-on-surface-variant mt-1">{shisakuId ? "Prototype requests created for this prototype." : "Select a prototype to view its requests."}</p>
             </div>
             
-            {/* Search filter */}
-            <div className="relative">
-              <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant/60" style={{ fontSize: 18 }}>search</span>
-              <input
-                type="text"
-                placeholder={shisakuId ? "Search requests..." : "Search prototypes..."}
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full md:w-64 rounded-xl border border-outline-variant/30 bg-surface py-2 pl-9 pr-3 text-sm text-on-surface placeholder:text-on-surface-variant/60 transition focus:border-primary/40 focus:outline-none"
-              />
+            {/* Controls */}
+            <div className="flex flex-wrap items-center gap-3">
+              {shisakuId && editMode && selectedRequestIds.size > 0 && (
+                <button
+                  type="button"
+                  onClick={handleBulkDelete}
+                  className="flex items-center gap-2 rounded-xl bg-error/10 px-4 py-2 text-sm font-semibold text-error transition hover:bg-error/20"
+                >
+                  <span className="material-symbols-outlined" style={{ fontSize: 18 }}>delete</span>
+                  {t("deleteSelected")} ({selectedRequestIds.size})
+                </button>
+              )}
+              {shisakuId && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEditMode(!editMode);
+                    if (editMode) setSelectedRequestIds(new Set());
+                  }}
+                  className={`flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold transition ${editMode ? 'bg-primary text-on-primary shadow-sm hover:bg-primary/90' : 'bg-surface-container border border-outline-variant/30 text-on-surface hover:bg-surface-container-high'}`}
+                >
+                  <span className="material-symbols-outlined" style={{ fontSize: 18 }}>{editMode ? 'done' : 'edit'}</span>
+                  {editMode ? 'Done' : t("editList")}
+                </button>
+              )}
+              <div className="relative">
+                <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant/60" style={{ fontSize: 18 }}>search</span>
+                <input
+                  type="text"
+                  placeholder={shisakuId ? t("searchRequests") : t("searchPrototypes")}
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full md:w-64 rounded-xl border border-outline-variant/30 bg-surface py-2 pl-9 pr-3 text-sm text-on-surface placeholder:text-on-surface-variant/60 transition focus:border-primary/40 focus:outline-none"
+                />
+              </div>
             </div>
           </div>
           {shisakuId ? (
             <DataTable
               rows={filteredRecords}
               columns={columns}
-              defaultSort={{ column: "createdAt", direction: -1 }}
+              enableRowReorder={editMode && !searchQuery}
+              onRowReorder={handleRowReorder}
+              defaultSort={{ column: "orderNumber", direction: 1 }}
               sort={sort}
               onSort={setSort}
               page={page}
@@ -864,41 +982,41 @@ export default function PrototypeRequestPage() {
         <ModalShell
           open={!!detailModalRecord}
           onClose={() => setDetailModalRecord(null)}
-          title={detailModalRecord?.shisakuNo ? `Prototype Request Details - 試作${detailModalRecord.shisakuNo}` : "Prototype Request Details"}
+          title={detailModalRecord?.shisakuNo ? `${t("prototypeRequestDetails")} - 試作${detailModalRecord.shisakuNo}` : t("prototypeRequestDetails")}
           maxWidth="max-w-xl"
         >
           <div className="px-6 py-4 flex flex-col gap-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <span className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider block mb-1">Prototype No.</span>
+                <span className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider block mb-1">{t("prototypeNo")}</span>
                 <p className="text-sm font-medium text-on-surface">{detailModalRecord.shisakuNo || "—"}</p>
               </div>
               <div>
-                <span className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider block mb-1">Name</span>
+                <span className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider block mb-1">{t("name")}</span>
                 <p className="text-sm font-medium text-on-surface">{detailModalRecord.name || "—"}</p>
               </div>
               <div>
-                <span className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider block mb-1">Okuri Pitch</span>
+                <span className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider block mb-1">{t("okuriPitch")}</span>
                 <p className="text-sm font-medium text-on-surface">{detailModalRecord.okuriPitch ?? "—"}</p>
               </div>
               <div>
-                <span className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider block mb-1">Color</span>
+                <span className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider block mb-1">{t("color")}</span>
                 <p className="text-sm font-medium text-on-surface">{detailModalRecord.color || "—"}</p>
               </div>
               <div>
-                <span className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider block mb-1">Material</span>
+                <span className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider block mb-1">{t("material")}</span>
                 <p className="text-sm font-medium text-on-surface">{detailModalRecord.material || "—"}</p>
               </div>
               <div>
-                <span className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider block mb-1">Box Type</span>
+                <span className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider block mb-1">{t("boxType")}</span>
                 <p className="text-sm font-medium text-on-surface">{detailModalRecord.boxType || "—"}</p>
               </div>
               <div>
-                <span className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider block mb-1">Quantity</span>
+                <span className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider block mb-1">{t("quantityReq")}</span>
                 <p className="text-sm font-medium text-on-surface">{detailModalRecord.quantity ?? "—"}</p>
               </div>
               <div>
-                <span className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider block mb-1">Status</span>
+                <span className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider block mb-1">{t("status")}</span>
                 <div>
                   {(() => {
                     const status = detailModalRecord.status || "pending";
@@ -914,7 +1032,7 @@ export default function PrototypeRequestPage() {
                 </div>
               </div>
               <div>
-                <span className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider block mb-1">Registered</span>
+                <span className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider block mb-1">{t("registered")}</span>
                 <p className="text-sm font-medium text-on-surface">
                   {detailModalRecord.createdAt 
                     ? new Date(detailModalRecord.createdAt.$date || detailModalRecord.createdAt).toLocaleDateString()
@@ -925,7 +1043,7 @@ export default function PrototypeRequestPage() {
             </div>
             
             <div className="border-t border-separator/40 pt-4 mt-2">
-              <span className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider block mb-3">Linked Files</span>
+              <span className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider block mb-3">{t("linkedFiles")}</span>
               <div className="flex flex-col gap-2 text-sm">
                 {detailModalRecord.dxf && detailModalRecord.dxf.link ? (
                   <div>
@@ -970,7 +1088,7 @@ export default function PrototypeRequestPage() {
               onClick={() => setDetailModalRecord(null)}
               className="rounded-xl border border-outline-variant/20 bg-surface-container px-4 py-2 text-sm font-semibold text-on-surface transition-all hover:bg-surface-container-high"
             >
-              Close
+              {t("close")}
             </button>
             <button
               onClick={() => {
@@ -985,7 +1103,7 @@ export default function PrototypeRequestPage() {
               className="flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-on-primary transition-all hover:opacity-90 active:scale-95"
             >
               <span className="material-symbols-outlined" style={{ fontSize: 18 }}>edit</span>
-              Edit
+              {t("edit")}
             </button>
           </div>
         </ModalShell>
@@ -1001,7 +1119,7 @@ export default function PrototypeRequestPage() {
           <form onSubmit={handleEditSubmit}>
             <div className="px-6 py-4 grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="mb-1 block text-xs font-semibold text-on-surface-variant">Name</label>
+                <label className="mb-1 block text-xs font-semibold text-on-surface-variant">{t("name")}</label>
                 <input
                   type="text"
                   required
@@ -1011,7 +1129,7 @@ export default function PrototypeRequestPage() {
                 />
               </div>
               <div>
-                <label className="mb-1 block text-xs font-semibold text-on-surface-variant">Okuri Pitch</label>
+                <label className="mb-1 block text-xs font-semibold text-on-surface-variant">{t("okuriPitch")}</label>
                 <input
                   type="number"
                   required
@@ -1021,7 +1139,7 @@ export default function PrototypeRequestPage() {
                 />
               </div>
               <div>
-                <label className="mb-1 block text-xs font-semibold text-on-surface-variant">Color</label>
+                <label className="mb-1 block text-xs font-semibold text-on-surface-variant">{t("color")}</label>
                 <input
                   type="text"
                   required
@@ -1031,7 +1149,7 @@ export default function PrototypeRequestPage() {
                 />
               </div>
               <div>
-                <label className="mb-1 block text-xs font-semibold text-on-surface-variant">Material</label>
+                <label className="mb-1 block text-xs font-semibold text-on-surface-variant">{t("material")}</label>
                 <input
                   type="text"
                   required
@@ -1041,7 +1159,7 @@ export default function PrototypeRequestPage() {
                 />
               </div>
               <div>
-                <label className="mb-1 block text-xs font-semibold text-on-surface-variant">Box Type</label>
+                <label className="mb-1 block text-xs font-semibold text-on-surface-variant">{t("boxType")}</label>
                 <input
                   type="text"
                   required
@@ -1051,7 +1169,7 @@ export default function PrototypeRequestPage() {
                 />
               </div>
               <div>
-                <label className="mb-1 block text-xs font-semibold text-on-surface-variant">Quantity</label>
+                <label className="mb-1 block text-xs font-semibold text-on-surface-variant">{t("quantityReq")}</label>
                 <input
                   type="number"
                   required
@@ -1061,7 +1179,7 @@ export default function PrototypeRequestPage() {
                 />
               </div>
               <div>
-                <label className="mb-1 block text-xs font-semibold text-on-surface-variant">Status</label>
+                <label className="mb-1 block text-xs font-semibold text-on-surface-variant">{t("status")}</label>
                 <select
                   value={editModalRecord.status || "pending"}
                   onChange={(e) => setEditModalRecord({ ...editModalRecord, status: e.target.value })}
@@ -1127,8 +1245,7 @@ export default function PrototypeRequestPage() {
                 }}
                 className="flex items-center gap-2 rounded-xl border border-error/20 bg-error/5 px-4 py-2 text-sm font-semibold text-error transition-all hover:bg-error/10 active:scale-95"
               >
-                <span className="material-symbols-outlined" style={{ fontSize: 18 }}>delete</span>
-                Delete
+                {t("delete")}
               </button>
               <div className="flex gap-2">
                 <button
@@ -1136,7 +1253,7 @@ export default function PrototypeRequestPage() {
                   onClick={() => setEditModalRecord(null)}
                   className="rounded-xl border border-outline-variant/20 bg-surface-container px-4 py-2 text-sm font-semibold text-on-surface transition-all hover:bg-surface-container-high"
                 >
-                  Cancel
+                  {t("cancel")}
                 </button>
                 <button
                   type="submit"
@@ -1148,7 +1265,7 @@ export default function PrototypeRequestPage() {
                   ) : (
                     <span className="material-symbols-outlined" style={{ fontSize: 18 }}>save</span>
                   )}
-                  Save Changes
+                  {t("save")}
                 </button>
               </div>
             </div>
