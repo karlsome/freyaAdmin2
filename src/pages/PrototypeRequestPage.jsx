@@ -1108,7 +1108,11 @@ export default function PrototypeRequestPage() {
                     <span className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider block mb-1">Completed Qty</span>
                     <p className="text-sm font-medium text-on-surface">{submittedDetails.requests[detailModalRecord.name].quantity || "—"}</p>
                   </div>
-                  <div className="col-span-2">
+                  <div>
+                    <span className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider block mb-1">Completed By</span>
+                    <p className="text-sm font-medium text-on-surface">{submittedDetails.createdBy || "—"}</p>
+                  </div>
+                  <div>
                     <span className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider block mb-1">Comment</span>
                     <p className="text-sm font-medium text-on-surface whitespace-pre-wrap">{submittedDetails.requests[detailModalRecord.name].Comment || "—"}</p>
                   </div>
