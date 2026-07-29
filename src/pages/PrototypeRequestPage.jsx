@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import DataTable from "../components/DataTable";
 import PageHeader from "../components/PageHeader";
 import ModalShell from "../components/ModalShell";
+import SensorDevicePhotoPreviewModal from "../components/SensorDevicePhotoPreviewModal";
 import { getAuthUser } from "../utils/masterDB";
 import { useLanguage } from "../contexts/LanguageContext";
 import {
@@ -159,6 +160,7 @@ export default function PrototypeRequestPage() {
   const [detailModalRecord, setDetailModalRecord] = useState(null);
   const [submittedDetails, setSubmittedDetails] = useState(null);
   const [submittedLoading, setSubmittedLoading] = useState(false);
+  const [photoPreview, setPhotoPreview] = useState(null);
 
   useEffect(() => {
     if (detailModalRecord?.shisakuSubmittedID && detailModalRecord?.status === 'completed') {
@@ -1115,46 +1117,39 @@ export default function PrototypeRequestPage() {
                 <div className="flex flex-col gap-3">
                   <span className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider block">Photos</span>
                   <div className="flex flex-wrap gap-4">
-                    {submittedDetails.requests[detailModalRecord.name].materialSidePhoto && (
-                      <div>
-                        <span className="text-[11px] font-semibold text-on-surface-variant block mb-1">Material Side</span>
-                        <a href={submittedDetails.requests[detailModalRecord.name].materialSidePhoto} target="_blank" rel="noopener noreferrer">
-                          <img src={submittedDetails.requests[detailModalRecord.name].materialSidePhoto} alt="Material Side" className="h-20 w-auto rounded border border-outline-variant/20 object-cover hover:opacity-80 transition" />
-                        </a>
-                      </div>
-                    )}
-                    {submittedDetails.requests[detailModalRecord.name].releasePaperSidePhoto && (
-                      <div>
-                        <span className="text-[11px] font-semibold text-on-surface-variant block mb-1">Release Paper</span>
-                        <a href={submittedDetails.requests[detailModalRecord.name].releasePaperSidePhoto} target="_blank" rel="noopener noreferrer">
-                          <img src={submittedDetails.requests[detailModalRecord.name].releasePaperSidePhoto} alt="Release Paper" className="h-20 w-auto rounded border border-outline-variant/20 object-cover hover:opacity-80 transition" />
-                        </a>
-                      </div>
-                    )}
-                    {submittedDetails.requests[detailModalRecord.name].materialLabelPhoto && (
-                      <div>
-                        <span className="text-[11px] font-semibold text-on-surface-variant block mb-1">Material Label</span>
-                        <a href={submittedDetails.requests[detailModalRecord.name].materialLabelPhoto} target="_blank" rel="noopener noreferrer">
-                          <img src={submittedDetails.requests[detailModalRecord.name].materialLabelPhoto} alt="Material Label" className="h-20 w-auto rounded border border-outline-variant/20 object-cover hover:opacity-80 transition" />
-                        </a>
-                      </div>
-                    )}
-                    {submittedDetails.requests[detailModalRecord.name].issue && Object.keys(submittedDetails.requests[detailModalRecord.name].issue).length > 0 && (
-                      <div>
-                        <span className="text-[11px] font-semibold text-on-surface-variant block mb-1">Issues</span>
-                        <div className="flex gap-2">
-                          {Object.values(submittedDetails.requests[detailModalRecord.name].issue).map((url, idx) => (
-                            <a key={idx} href={url} target="_blank" rel="noopener noreferrer">
-                              <img src={url} alt={`Issue ${idx+1}`} className="h-20 w-auto rounded border border-outline-variant/20 object-cover hover:opacity-80 transition" />
-                            </a>
-                          ))}
+                    {(() => {
+                      const sDetails = submittedDetails.requests[detailModalRecord.name];
+                      const images = [];
+                      if (sDetails.materialSidePhoto) images.push({ url: sDetails.materialSidePhoto, label: "Material Side" });
+                      if (sDetails.releasePaperSidePhoto) images.push({ url: sDetails.releasePaperSidePhoto, label: "Release Paper" });
+                      if (sDetails.materialLabelPhoto) images.push({ url: sDetails.materialLabelPhoto, label: "Material Label" });
+                      if (sDetails.issue) {
+                        Object.values(sDetails.issue).forEach((url, i) => images.push({ url, label: `Issue ${i + 1}` }));
+                      }
+
+                      if (images.length === 0) {
+                        return <span className="text-sm text-on-surface-variant italic">No photos attached</span>;
+                      }
+
+                      return images.map((img, idx) => (
+                        <div key={idx}>
+                          <span className="text-[11px] font-semibold text-on-surface-variant block mb-1">{img.label}</span>
+                          <button
+                            type="button"
+                            onClick={() => setPhotoPreview({
+                              eyebrow: "Prototype Request",
+                              displayName: `試作${detailModalRecord.shisakuNo} - ${detailModalRecord.name}`,
+                              subtitle: "Submitted Photos",
+                              images,
+                              activeIndex: idx
+                            })}
+                            className="block cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary rounded"
+                          >
+                            <img src={img.url} alt={img.label} className="h-20 w-auto rounded border border-outline-variant/20 object-cover hover:opacity-80 transition" />
+                          </button>
                         </div>
-                      </div>
-                    )}
-                    
-                    {!submittedDetails.requests[detailModalRecord.name].materialSidePhoto && !submittedDetails.requests[detailModalRecord.name].releasePaperSidePhoto && !submittedDetails.requests[detailModalRecord.name].materialLabelPhoto && (!submittedDetails.requests[detailModalRecord.name].issue || Object.keys(submittedDetails.requests[detailModalRecord.name].issue).length === 0) && (
-                      <span className="text-sm text-on-surface-variant italic">No photos attached</span>
-                    )}
+                      ));
+                    })()}
                   </div>
                 </div>
               </div>
@@ -1489,6 +1484,19 @@ export default function PrototypeRequestPage() {
           </button>
         </div>
       </ModalShell>
+
+      {/* Photo Preview Modal */}
+      <SensorDevicePhotoPreviewModal
+        preview={photoPreview}
+        onClose={() => setPhotoPreview(null)}
+        onNavigate={(direction) => setPhotoPreview((current) => {
+          if (!current) return current;
+          const images = Array.isArray(current.images) ? current.images : [];
+          const next = (Number.isInteger(current.activeIndex) ? current.activeIndex : 0) + direction;
+          if (next < 0 || next >= images.length) return current;
+          return { ...current, activeIndex: next };
+        })}
+      />
     </div>
   );
 }
