@@ -356,6 +356,7 @@ export default function PrototypePage() {
       colors: record.colors || [],
       materials: record.materials || [],
       boxTypes: record.boxTypes || [],
+      status: record.status || "pending",
       _id: record._id,
     });
     setEditDxfFiles((record.dxfLinks || (record.dxflink ? [{name: 'DXF', link: record.dxflink}] : [])).map(l => ({ id: Math.random().toString(), name: l.name, link: l.link })));

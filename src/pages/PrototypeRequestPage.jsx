@@ -157,7 +157,32 @@ export default function PrototypeRequestPage() {
 
   const [searchQuery, setSearchQuery] = useState("");
   const [detailModalRecord, setDetailModalRecord] = useState(null);
-  
+  const [submittedDetails, setSubmittedDetails] = useState(null);
+  const [submittedLoading, setSubmittedLoading] = useState(false);
+
+  useEffect(() => {
+    if (detailModalRecord?.shisakuSubmittedID && detailModalRecord?.status === 'completed') {
+      const fetchSubmitted = async () => {
+        setSubmittedLoading(true);
+        setSubmittedDetails(null);
+        try {
+          const res = await fetch(`${BASE_URL}api/shisaku-submitted/${detailModalRecord.shisakuSubmittedID}`);
+          if (res.ok) {
+            const data = await res.json();
+            setSubmittedDetails(data);
+          }
+        } catch (e) {
+          console.error("Failed to fetch submitted details", e);
+        } finally {
+          setSubmittedLoading(false);
+        }
+      };
+      fetchSubmitted();
+    } else {
+      setSubmittedDetails(null);
+    }
+  }, [detailModalRecord]);
+
   const [editModalRecord, setEditModalRecord] = useState(null);
   const [editSubmitting, setEditSubmitting] = useState(false);
   const [editShisakuRecord, setEditShisakuRecord] = useState(null);
@@ -1054,6 +1079,86 @@ export default function PrototypeRequestPage() {
                 </p>
               </div>
             </div>
+
+            {submittedLoading && (
+              <div className="border-t border-separator/40 pt-4 mt-2">
+                <span className="text-sm text-on-surface-variant">Loading submitted details...</span>
+              </div>
+            )}
+            
+            {!submittedLoading && submittedDetails && submittedDetails.requests && submittedDetails.requests[detailModalRecord.name] && (
+              <div className="border-t border-separator/40 pt-4 mt-2">
+                <span className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider block mb-3">Submitted Details</span>
+                <div className="grid grid-cols-2 gap-4 mb-4">
+                  <div>
+                    <span className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider block mb-1">Time Start</span>
+                    <p className="text-sm font-medium text-on-surface">{submittedDetails.requests[detailModalRecord.name].Time_start || "—"}</p>
+                  </div>
+                  <div>
+                    <span className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider block mb-1">Time End</span>
+                    <p className="text-sm font-medium text-on-surface">{submittedDetails.requests[detailModalRecord.name].Time_end || "—"}</p>
+                  </div>
+                  <div>
+                    <span className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider block mb-1">Cycle Time</span>
+                    <p className="text-sm font-medium text-on-surface">{submittedDetails.requests[detailModalRecord.name].cycleTime || "—"}</p>
+                  </div>
+                  <div>
+                    <span className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider block mb-1">Completed Qty</span>
+                    <p className="text-sm font-medium text-on-surface">{submittedDetails.requests[detailModalRecord.name].quantity || "—"}</p>
+                  </div>
+                  <div className="col-span-2">
+                    <span className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider block mb-1">Comment</span>
+                    <p className="text-sm font-medium text-on-surface whitespace-pre-wrap">{submittedDetails.requests[detailModalRecord.name].Comment || "—"}</p>
+                  </div>
+                </div>
+
+                <div className="flex flex-col gap-3">
+                  <span className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider block">Photos</span>
+                  <div className="flex flex-wrap gap-4">
+                    {submittedDetails.requests[detailModalRecord.name].materialSidePhoto && (
+                      <div>
+                        <span className="text-[11px] font-semibold text-on-surface-variant block mb-1">Material Side</span>
+                        <a href={submittedDetails.requests[detailModalRecord.name].materialSidePhoto} target="_blank" rel="noopener noreferrer">
+                          <img src={submittedDetails.requests[detailModalRecord.name].materialSidePhoto} alt="Material Side" className="h-20 w-auto rounded border border-outline-variant/20 object-cover hover:opacity-80 transition" />
+                        </a>
+                      </div>
+                    )}
+                    {submittedDetails.requests[detailModalRecord.name].releasePaperSidePhoto && (
+                      <div>
+                        <span className="text-[11px] font-semibold text-on-surface-variant block mb-1">Release Paper</span>
+                        <a href={submittedDetails.requests[detailModalRecord.name].releasePaperSidePhoto} target="_blank" rel="noopener noreferrer">
+                          <img src={submittedDetails.requests[detailModalRecord.name].releasePaperSidePhoto} alt="Release Paper" className="h-20 w-auto rounded border border-outline-variant/20 object-cover hover:opacity-80 transition" />
+                        </a>
+                      </div>
+                    )}
+                    {submittedDetails.requests[detailModalRecord.name].materialLabelPhoto && (
+                      <div>
+                        <span className="text-[11px] font-semibold text-on-surface-variant block mb-1">Material Label</span>
+                        <a href={submittedDetails.requests[detailModalRecord.name].materialLabelPhoto} target="_blank" rel="noopener noreferrer">
+                          <img src={submittedDetails.requests[detailModalRecord.name].materialLabelPhoto} alt="Material Label" className="h-20 w-auto rounded border border-outline-variant/20 object-cover hover:opacity-80 transition" />
+                        </a>
+                      </div>
+                    )}
+                    {submittedDetails.requests[detailModalRecord.name].issue && Object.keys(submittedDetails.requests[detailModalRecord.name].issue).length > 0 && (
+                      <div>
+                        <span className="text-[11px] font-semibold text-on-surface-variant block mb-1">Issues</span>
+                        <div className="flex gap-2">
+                          {Object.values(submittedDetails.requests[detailModalRecord.name].issue).map((url, idx) => (
+                            <a key={idx} href={url} target="_blank" rel="noopener noreferrer">
+                              <img src={url} alt={`Issue ${idx+1}`} className="h-20 w-auto rounded border border-outline-variant/20 object-cover hover:opacity-80 transition" />
+                            </a>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    
+                    {!submittedDetails.requests[detailModalRecord.name].materialSidePhoto && !submittedDetails.requests[detailModalRecord.name].releasePaperSidePhoto && !submittedDetails.requests[detailModalRecord.name].materialLabelPhoto && (!submittedDetails.requests[detailModalRecord.name].issue || Object.keys(submittedDetails.requests[detailModalRecord.name].issue).length === 0) && (
+                      <span className="text-sm text-on-surface-variant italic">No photos attached</span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
             
             <div className="border-t border-separator/40 pt-4 mt-2">
               <span className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider block mb-3">{t("linkedFiles")}</span>
