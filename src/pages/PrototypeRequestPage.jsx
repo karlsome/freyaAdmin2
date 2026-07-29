@@ -1084,55 +1084,55 @@ export default function PrototypeRequestPage() {
 
             {submittedLoading && (
               <div className="border-t border-separator/40 pt-4 mt-2">
-                <span className="text-sm text-on-surface-variant">Loading submitted details...</span>
+                <span className="text-sm text-on-surface-variant">{t("loadingSubmittedDetails")}</span>
               </div>
             )}
             
             {!submittedLoading && submittedDetails && submittedDetails.requests && submittedDetails.requests[detailModalRecord.name] && (
               <div className="border-t border-separator/40 pt-4 mt-2">
-                <span className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider block mb-3">Submitted Details</span>
+                <span className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider block mb-3">{t("submittedDetails")}</span>
                 <div className="grid grid-cols-2 gap-4 mb-4">
                   <div>
-                    <span className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider block mb-1">Time Start</span>
+                    <span className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider block mb-1">{t("timeStart")}</span>
                     <p className="text-sm font-medium text-on-surface">{submittedDetails.requests[detailModalRecord.name].Time_start || "—"}</p>
                   </div>
                   <div>
-                    <span className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider block mb-1">Time End</span>
+                    <span className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider block mb-1">{t("timeEnd")}</span>
                     <p className="text-sm font-medium text-on-surface">{submittedDetails.requests[detailModalRecord.name].Time_end || "—"}</p>
                   </div>
                   <div>
-                    <span className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider block mb-1">Cycle Time</span>
+                    <span className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider block mb-1">{t("cycleTime")}</span>
                     <p className="text-sm font-medium text-on-surface">{submittedDetails.requests[detailModalRecord.name].cycleTime || "—"}</p>
                   </div>
                   <div>
-                    <span className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider block mb-1">Completed Qty</span>
+                    <span className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider block mb-1">{t("completedQty")}</span>
                     <p className="text-sm font-medium text-on-surface">{submittedDetails.requests[detailModalRecord.name].quantity || "—"}</p>
                   </div>
                   <div>
-                    <span className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider block mb-1">Completed By</span>
+                    <span className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider block mb-1">{t("completedByField")}</span>
                     <p className="text-sm font-medium text-on-surface">{submittedDetails.createdBy || "—"}</p>
                   </div>
                   <div>
-                    <span className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider block mb-1">Comment</span>
+                    <span className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider block mb-1">{t("comment")}</span>
                     <p className="text-sm font-medium text-on-surface whitespace-pre-wrap">{submittedDetails.requests[detailModalRecord.name].Comment || "—"}</p>
                   </div>
                 </div>
 
                 <div className="flex flex-col gap-3">
-                  <span className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider block">Photos</span>
+                  <span className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider block">{t("photos")}</span>
                   <div className="flex flex-wrap gap-4">
                     {(() => {
                       const sDetails = submittedDetails.requests[detailModalRecord.name];
                       const images = [];
-                      if (sDetails.materialSidePhoto) images.push({ url: sDetails.materialSidePhoto, label: "Material Side" });
-                      if (sDetails.releasePaperSidePhoto) images.push({ url: sDetails.releasePaperSidePhoto, label: "Release Paper" });
-                      if (sDetails.materialLabelPhoto) images.push({ url: sDetails.materialLabelPhoto, label: "Material Label" });
+                      if (sDetails.materialSidePhoto) images.push({ url: sDetails.materialSidePhoto, label: t("materialSide") });
+                      if (sDetails.releasePaperSidePhoto) images.push({ url: sDetails.releasePaperSidePhoto, label: t("releasePaper") });
+                      if (sDetails.materialLabelPhoto) images.push({ url: sDetails.materialLabelPhoto, label: t("materialLabel") });
                       if (sDetails.issue) {
-                        Object.values(sDetails.issue).forEach((url, i) => images.push({ url, label: `Issue ${i + 1}` }));
+                        Object.values(sDetails.issue).forEach((url, i) => images.push({ url, label: `${t("issues")} ${i + 1}` }));
                       }
 
                       if (images.length === 0) {
-                        return <span className="text-sm text-on-surface-variant italic">No photos attached</span>;
+                        return <span className="text-sm text-on-surface-variant italic">{t("noPhotosAttached")}</span>;
                       }
 
                       return images.map((img, idx) => (
