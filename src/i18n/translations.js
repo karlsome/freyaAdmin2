@@ -82,7 +82,7 @@ const translations = {
     noLinkProvided: "No link provided",
     linkedFiles: "Linked Files",
     registered: "Registered",
-    addPrototypeRequest: "Add Prototype Request",
+    addPrototypeRequest: "Prototype Request",
 
     // Settings
     settings: "Settings",
