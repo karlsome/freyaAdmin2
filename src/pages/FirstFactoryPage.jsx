@@ -118,6 +118,9 @@ export default function FirstFactoryPage() {
   const [scheduleOrder, setScheduleOrder] = useState([]);
   const [startTime, setStartTime] = useState('09:00');
   
+  const [dandoriTime, setDandoriTime] = useState(15);
+  const [dangaeTime, setDangaeTime] = useState(15);
+
   const [modalData, setModalData] = useState(null);
 
   const handleCardClick = (hinban) => {
@@ -300,7 +303,7 @@ export default function FirstFactoryPage() {
             id: Date.now() + Math.random().toString(),
             type: 'setup',
             name: dragData.name,
-            duration: 15
+            duration: dragData.duration || 15
           });
         } else if (dragData.type === 'pool-hinban') {
           const found = data.find(i => i.id === dragData.id);
@@ -353,7 +356,7 @@ export default function FirstFactoryPage() {
           id: Date.now() + Math.random().toString(),
           type: 'setup',
           name: dragData.name,
-          duration: 15
+          duration: dragData.duration || 15
         });
       } else if (dragData.type === 'pool-hinban') {
         const found = data.find(i => i.id === dragData.id);
@@ -632,12 +635,28 @@ export default function FirstFactoryPage() {
                 <div className="flex gap-2 mb-4 pb-4 border-b border-outline-variant/30">
                    <div 
                      draggable
-                     onDragStart={(e) => onDragStartSchedule(e, { type: 'setup', name: '段取り' }, 'pool')}
+                     onDragStart={(e) => {
+                       if (e.target.tagName && e.target.tagName.toLowerCase() === 'input') {
+                         e.preventDefault();
+                         return;
+                       }
+                       onDragStartSchedule(e, { type: 'setup', name: '段取り', duration: dandoriTime }, 'pool');
+                     }}
                      className="cursor-grab flex-1 rounded-xl border border-dashed border-primary/50 bg-primary/5 p-3 flex items-center justify-between hover:border-primary transition-colors text-primary font-bold text-sm"
                    >
-                     <span>段取り (15m)</span>
+                     <div className="flex items-center gap-2">
+                       <span>段取り</span>
+                       <input 
+                         type="number" 
+                         value={dandoriTime} 
+                         onChange={e => setDandoriTime(Number(e.target.value) || 0)}
+                         className="w-14 rounded bg-background/80 border border-primary/30 px-1 py-0.5 text-center text-xs focus:outline-none focus:border-primary"
+                         min="0"
+                       />
+                       <span className="text-xs font-medium">m</span>
+                     </div>
                      <button 
-                       onClick={() => handleAddToSchedule({ type: 'setup', name: '段取り' })}
+                       onClick={() => handleAddToSchedule({ type: 'setup', name: '段取り', duration: dandoriTime })}
                        className="flex h-6 w-6 items-center justify-center rounded-full hover:bg-primary/20 text-primary transition-colors"
                      >
                        <span className="material-symbols-outlined" style={{fontSize: 16}}>arrow_forward</span>
@@ -645,12 +664,28 @@ export default function FirstFactoryPage() {
                    </div>
                    <div 
                      draggable
-                     onDragStart={(e) => onDragStartSchedule(e, { type: 'setup', name: '段替え' }, 'pool')}
+                     onDragStart={(e) => {
+                       if (e.target.tagName && e.target.tagName.toLowerCase() === 'input') {
+                         e.preventDefault();
+                         return;
+                       }
+                       onDragStartSchedule(e, { type: 'setup', name: '段替え', duration: dangaeTime }, 'pool');
+                     }}
                      className="cursor-grab flex-1 rounded-xl border border-dashed border-primary/50 bg-primary/5 p-3 flex items-center justify-between hover:border-primary transition-colors text-primary font-bold text-sm"
                    >
-                     <span>段替え (15m)</span>
+                     <div className="flex items-center gap-2">
+                       <span>段替え</span>
+                       <input 
+                         type="number" 
+                         value={dangaeTime} 
+                         onChange={e => setDangaeTime(Number(e.target.value) || 0)}
+                         className="w-14 rounded bg-background/80 border border-primary/30 px-1 py-0.5 text-center text-xs focus:outline-none focus:border-primary"
+                         min="0"
+                       />
+                       <span className="text-xs font-medium">m</span>
+                     </div>
                      <button 
-                       onClick={() => handleAddToSchedule({ type: 'setup', name: '段替え' })}
+                       onClick={() => handleAddToSchedule({ type: 'setup', name: '段替え', duration: dangaeTime })}
                        className="flex h-6 w-6 items-center justify-center rounded-full hover:bg-primary/20 text-primary transition-colors"
                      >
                        <span className="material-symbols-outlined" style={{fontSize: 16}}>arrow_forward</span>
