@@ -218,6 +218,8 @@ export default function DataTable({
   emptyMessage = "Adjust the filters and try again.",
   enableColumnResize = false,
   enableColumnReorder = false,
+  enableRowReorder = false,
+  onRowReorder,
   layoutStorageKey = null,
   resetColumnsLabel = "Reset columns",
   stickyHeader = false,
@@ -254,6 +256,8 @@ export default function DataTable({
   const [columnWidths, setColumnWidths] = useState(() => initialLayoutRef.current.widths);
   const [draggingColumnKey, setDraggingColumnKey] = useState(null);
   const [dragOverColumnKey, setDragOverColumnKey] = useState(null);
+  const [draggingRowIndex, setDraggingRowIndex] = useState(null);
+  const [dragOverRowIndex, setDragOverRowIndex] = useState(null);
   const [resizingColumnKey, setResizingColumnKey] = useState(null);
   const resizeCleanupRef = useRef(null);
   const defaultColumnOrder = getDefaultColumnOrder(columns);
@@ -366,11 +370,6 @@ export default function DataTable({
 
     const persistedOrder = areArraysEqual(displayOrder, defaultColumnOrder) ? null : displayOrder;
     const persistedWidths = getWidthDiffMap(columnWidths, defaultColumnWidths);
-
-    if (!persistedOrder && !Object.keys(persistedWidths).length) {
-      window.localStorage.removeItem(layoutStorageKey);
-      return;
-    }
 
     window.localStorage.setItem(
       layoutStorageKey,
@@ -489,6 +488,46 @@ export default function DataTable({
 
     window.addEventListener("mousemove", handleMouseMove);
     window.addEventListener("mouseup", handleMouseUp);
+  }
+
+  function handleRowDragStart(event, index) {
+    if (!enableRowReorder) return;
+    event.dataTransfer.effectAllowed = "move";
+    event.dataTransfer.setData("text/plain", "ROW:" + index);
+    setDraggingRowIndex(index);
+    setDragOverRowIndex(index);
+  }
+
+  function handleRowDragOver(event, index) {
+    if (!enableRowReorder || draggingRowIndex === null || draggingRowIndex === index) return;
+    event.preventDefault();
+    event.dataTransfer.dropEffect = "move";
+    if (dragOverRowIndex !== index) {
+      setDragOverRowIndex(index);
+    }
+  }
+
+  function handleRowDrop(event, targetIndex) {
+    if (!enableRowReorder) return;
+    event.preventDefault();
+    
+    const dragData = event.dataTransfer.getData("text/plain");
+    if (!dragData.startsWith("ROW:")) return;
+    const sourceIndex = draggingRowIndex ?? Number(dragData.substring(4));
+    
+    setDraggingRowIndex(null);
+    setDragOverRowIndex(null);
+
+    if (sourceIndex === null || sourceIndex === targetIndex) return;
+    
+    if (onRowReorder) {
+       onRowReorder(sourceIndex, targetIndex);
+    }
+  }
+
+  function handleRowDragEnd() {
+    setDraggingRowIndex(null);
+    setDragOverRowIndex(null);
   }
 
   return (
@@ -671,10 +710,17 @@ export default function DataTable({
                   return (
                     <tr
                       key={resolvedRowKey}
+                      draggable={enableRowReorder}
+                      onDragStart={enableRowReorder ? (e) => handleRowDragStart(e, rowIndex) : undefined}
+                      onDragOver={enableRowReorder ? (e) => handleRowDragOver(e, rowIndex) : undefined}
+                      onDrop={enableRowReorder ? (e) => handleRowDrop(e, rowIndex) : undefined}
+                      onDragEnd={enableRowReorder ? handleRowDragEnd : undefined}
                       onClick={onRowClick ? () => onRowClick(row, rowIndex) : undefined}
                       className={joinClasses(
                         rowClassName,
                         onRowClick ? clickableRowClassName : "",
+                        dragOverRowIndex === rowIndex && draggingRowIndex !== rowIndex ? "bg-primary/5" : "",
+                        draggingRowIndex === rowIndex ? "opacity-50" : "",
                         resolveValue(getRowClassName, row, rowIndex)
                       )}
                     >

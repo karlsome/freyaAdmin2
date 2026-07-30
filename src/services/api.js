@@ -2863,15 +2863,31 @@ export async function uploadPceFiles({ fileBase64, sebanggoList, machineSuffix, 
 }
 
 // ─── Prototype (試作) Registration ─────────────────────────────────────────────
-export async function fetchShisakuList() {
-  return query("Sasaki_Coating_MasterDB", "shisakuDB", {}, { sort: { createdAt: -1 } });
+export async function fetchShisakuList({ page = 1, limit = 10, sortColumn = "createdAt", sortDirection = -1 } = {}) {
+  const url = new URL(`${BASE_URL}api/shisaku`);
+  url.searchParams.set("page", page);
+  url.searchParams.set("limit", limit);
+  url.searchParams.set("sortColumn", sortColumn);
+  url.searchParams.set("sortDirection", sortDirection);
+  
+  const res = await fetch(url.toString(), {
+    method: "GET",
+    headers: { "Content-Type": "application/json" }
+  });
+  const data = await _readJson(res);
+  if (!res.ok) throw new Error(data?.error || "Failed to fetch prototype list");
+  return data;
 }
 
-export async function registerShisaku({ shisakuNo, deadline, eventName, modelName, customerName, registeredBy, dxfFile, pdfFile, pdfImageFile, pceFiles }) {
+export async function fetchShisaku(id) {
+  return _getJson(`api/shisaku/${encodeURIComponent(id)}`);
+}
+
+export async function registerShisaku({ shisakuNo, deadline, eventName, modelName, customerName, registeredBy, cybozuLink, createdBy, status, dxfFiles, pdfFiles, pdfImageFiles, pceFiles, colors, materials, boxTypes }) {
   const res = await fetch(`${BASE_URL}api/shisaku/register`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ shisakuNo, deadline, eventName, modelName, customerName, registeredBy, dxfFile, pdfFile, pdfImageFile, pceFiles }),
+    body: JSON.stringify({ shisakuNo, deadline, eventName, modelName, customerName, registeredBy, cybozuLink, createdBy, status, dxfFiles, pdfFiles, pdfImageFiles, pceFiles, colors, materials, boxTypes }),
   });
   const data = await _readJson(res);
   if (!res.ok) {
@@ -2881,21 +2897,87 @@ export async function registerShisaku({ shisakuNo, deadline, eventName, modelNam
   return data;
 }
 
+export async function updateShisaku(id, { shisakuNo, deadline, eventName, modelName, customerName, registeredBy, cybozuLink, createdBy, status, dxfFiles, pdfFiles, pdfImageFiles, pceFiles, colors, materials, boxTypes }) {
+  const res = await fetch(`${BASE_URL}api/shisaku/update/${id}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ shisakuNo, deadline, eventName, modelName, customerName, registeredBy, cybozuLink, createdBy, status, dxfFiles, pdfFiles, pdfImageFiles, pceFiles, colors, materials, boxTypes }),
+  });
+  const data = await _readJson(res);
+  if (!res.ok) {
+    const detail = data?.google ? JSON.stringify(data.google) : data?.details || data?.error || `API ${res.status}`;
+    throw new Error(`${data?.error || "Update failed"} — ${detail}`);
+  }
+  return data;
+}
+
 export async function deleteShisaku(id) {
   return _deleteJson(`api/shisaku/${encodeURIComponent(id)}`);
 }
 
 // ─── Prototype Request (試作依頼) ───────────────────────────────────────────────
-export async function fetchShisakuRequestList() {
-  return query("Sasaki_Coating_MasterDB", "shisakuRequestDB", {}, { sort: { createdAt: -1 } });
+export async function fetchAvailableShisakuForRequest() {
+  const url = new URL(`${BASE_URL}api/shisaku-request/available`);
+  const res = await fetch(url.toString(), {
+    method: "GET",
+    headers: { "Content-Type": "application/json" }
+  });
+  const data = await _readJson(res);
+  if (!res.ok) throw new Error(data?.error || "Failed to fetch available prototypes for request");
+  return data;
 }
 
-export async function registerShisakuRequest({ name, pce, okuriPitch, color, material, boxType, quantity, pdfLink, shisakudb_id }) {
-  return _postJson("api/shisaku-request/register", { name, pce, okuriPitch, color, material, boxType, quantity, pdfLink, shisakudb_id });
+export async function fetchShisakuRequestList({ shisakudb_id, page = 1, limit = 30, sortColumn = "createdAt", sortDirection = -1 } = {}) {
+  const url = new URL(`${BASE_URL}api/shisaku-request/list`);
+  if (shisakudb_id) url.searchParams.set("shisakudb_id", shisakudb_id);
+  url.searchParams.set("page", page);
+  url.searchParams.set("limit", limit);
+  url.searchParams.set("sortColumn", sortColumn);
+  url.searchParams.set("sortDirection", sortDirection);
+  
+  const res = await fetch(url.toString(), {
+    method: "GET",
+    headers: { "Content-Type": "application/json" }
+  });
+  const data = await _readJson(res);
+  if (!res.ok) throw new Error(data?.error || "Failed to fetch prototype request list");
+  return data;
+}
+
+export async function fetchShisakuRequestGroupedList({ page = 1, limit = 30, sortColumn = "latestDate", sortDirection = -1 } = {}) {
+  const url = new URL(`${BASE_URL}api/shisaku-request/grouped-list`);
+  url.searchParams.set("page", page);
+  url.searchParams.set("limit", limit);
+  url.searchParams.set("sortColumn", sortColumn);
+  url.searchParams.set("sortDirection", sortDirection);
+  
+  const res = await fetch(url.toString(), {
+    method: "GET",
+    headers: { "Content-Type": "application/json" }
+  });
+  const data = await _readJson(res);
+  if (!res.ok) throw new Error(data?.error || "Failed to fetch grouped prototype requests");
+  return data;
+}
+
+export async function registerShisakuRequest({ name, dxf, pdf, pce, okuriPitch, pcPerCycle, color, material, boxType, quantity, shisakudb_id, createdBy, status, orderNumber }) {
+  return _postJson("api/shisaku-request/register", { name, dxf, pdf, pce, okuriPitch, pcPerCycle, color, material, boxType, quantity, shisakudb_id, createdBy, status, orderNumber });
+}
+
+export async function updateShisakuRequest(id, { name, dxf, pdf, pce, okuriPitch, pcPerCycle, color, material, boxType, quantity, status, orderNumber }) {
+  return _postJson(`api/shisaku-request/update/${encodeURIComponent(id)}`, { name, dxf, pdf, pce, okuriPitch, pcPerCycle, color, material, boxType, quantity, status, orderNumber });
 }
 
 export async function deleteShisakuRequest(id) {
   return _deleteJson(`api/shisaku-request/${encodeURIComponent(id)}`);
+}
+
+export async function bulkDeleteShisakuRequests(ids) {
+  return _postJson("api/shisaku-request/bulk-delete", { ids });
+}
+
+export async function reorderShisakuRequests(updates) {
+  return _postJson("api/shisaku-request/reorder", { updates });
 }
 
 export async function translateJapaneseText(text) {
