@@ -4,6 +4,7 @@ import { useLanguage } from '../contexts/LanguageContext';
 import MasterTabNav from '../components/MasterTabNav';
 import MaterialDetailModal from '../components/MaterialDetailModal';
 import { BASE_URL } from '../services/api';
+import * as xlsx from 'xlsx';
 
 export default function FirstFactoryPage() {
   const { t } = useLanguage();
@@ -69,23 +70,95 @@ export default function FirstFactoryPage() {
     setIsSyncModalOpen(false);
     setSyncing(true);
     try {
+      // 1. Fetch the binary Excel file from the proxy
       const res = await fetch(BASE_URL + 'api/production/sync-excel', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ month: monthToSync })
       });
-      const json = await res.json();
-      if (json.success) {
-        alert(json.message);
+      
+      if (!res.ok) {
+        throw new Error('Failed to fetch Excel file from backend');
+      }
+      
+      const arrayBuffer = await res.arrayBuffer();
+      
+      // 2. Parse Excel in browser
+      const workbook = xlsx.read(arrayBuffer, { type: 'array' });
+      
+      const [year, monthNum] = monthToSync.split('-');
+      const targetTabName = `${year}年${parseInt(monthNum, 10)}月`;
+      
+      if (!workbook.Sheets[targetTabName]) {
+        alert(`Tab '${targetTabName}' not found in the Excel file.`);
+        setSyncing(false);
+        return;
+      }
+      
+      const sheet = workbook.Sheets[targetTabName];
+      const rows = xlsx.utils.sheet_to_json(sheet, { header: 1, defval: '' });
+      
+      let parsedData = [];
+      let currentBlock = null;
+      
+      for (let r = 0; r < rows.length; r++) {
+        const row = rows[r];
+        const valB = String(row[1] || '').trim();
+        const isHinbanRow = valB.length > 5 && /^[A-Z0-9\/\*\-\.]+$/.test(valB);
+
+        if (isHinbanRow) {
+          if (currentBlock) parsedData.push(currentBlock);
+          currentBlock = null; 
+          
+          if (valB.length === 20) {
+            currentBlock = {
+              id: Date.now().toString() + Math.random().toString(36).substring(2, 9),
+              month: monthToSync,
+              hinban: valB,
+              orders: Array(31).fill(0),
+              production: Array(31).fill(0)
+            };
+          }
+        }
+
+        if (currentBlock) {
+          let rowLabel = '';
+          for (let c = 0; c < 6; c++) if (row[c]) rowLabel += String(row[c]);
+
+          if (rowLabel.includes('受注')) {
+            for (let i = 0; i < 31; i++) {
+              currentBlock.orders[i] = Number(Number(row[5 + i] || 0).toFixed(1));
+            }
+          } else if (rowLabel.includes('生産')) {
+            for (let i = 0; i < 31; i++) {
+              currentBlock.production[i] = Number(Number(row[5 + i] || 0).toFixed(1));
+            }
+          }
+        }
+      }
+
+      if (currentBlock) parsedData.push(currentBlock);
+
+      // 3. Post the parsed JSON back to backend
+      const saveRes = await fetch(BASE_URL + 'api/production/sync-excel-save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ month: monthToSync, data: parsedData })
+      });
+      
+      const saveJson = await saveRes.json();
+      if (saveJson.success) {
+        alert(saveJson.message);
         if (monthToSync === selectedMonth) {
           fetchSchedule(selectedMonth);
         }
       } else {
-        alert('Sync failed: ' + json.message);
+        alert('Sync failed: ' + saveJson.message);
       }
+
     } catch (err) {
       console.error('Error syncing:', err);
-      alert('Error connecting to backend');
+      alert('Error connecting to backend or parsing Excel');
     } finally {
       setSyncing(false);
     }
