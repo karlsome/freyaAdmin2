@@ -69,7 +69,7 @@ export default function FirstFactoryPage() {
     setIsSyncModalOpen(false);
     setSyncing(true);
     try {
-      const res = await fetch(`\${BASE_URL}api/production/sync-excel`, {
+      const res = await fetch(BASE_URL + 'api/production/sync-excel', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ month: monthToSync })
@@ -230,7 +230,7 @@ export default function FirstFactoryPage() {
 
   const handleSaveSchedule = async () => {
     try {
-      const res = await fetch(`\${BASE_URL}api/production/schedule`, {
+      const res = await fetch(BASE_URL + 'api/production/schedule', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
