@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { useLanguage } from '../contexts/LanguageContext';
 import MasterTabNav from '../components/MasterTabNav';
 import MaterialDetailModal from '../components/MaterialDetailModal';
+import { BASE_URL } from '../services/api';
 
 export default function FirstFactoryPage() {
   const { t } = useLanguage();
@@ -43,7 +44,7 @@ export default function FirstFactoryPage() {
   const fetchSchedule = async (month) => {
     setLoading(true);
     try {
-      const res = await fetch(`http://localhost:3000/api/production/schedule?month=${month}`);
+      const res = await fetch(`${BASE_URL}api/production/schedule?month=${month}`);
       const json = await res.json();
       if (json.success) {
         setData(json.data);
@@ -68,7 +69,7 @@ export default function FirstFactoryPage() {
     setIsSyncModalOpen(false);
     setSyncing(true);
     try {
-      const res = await fetch('http://localhost:3000/api/production/sync-excel', {
+      const res = await fetch(`\${BASE_URL}api/production/sync-excel`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ month: monthToSync })
@@ -229,7 +230,7 @@ export default function FirstFactoryPage() {
 
   const handleSaveSchedule = async () => {
     try {
-      const res = await fetch('http://localhost:3000/api/production/schedule', {
+      const res = await fetch(`\${BASE_URL}api/production/schedule`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
