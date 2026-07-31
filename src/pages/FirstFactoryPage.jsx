@@ -590,7 +590,12 @@ export default function FirstFactoryPage() {
                         {/* Orders Row */}
                         <tr className="border-t border-outline-variant/20 hover:bg-surface-variant/20">
                           <td className="sticky left-0 bg-surface px-4 py-2 font-medium" rowSpan={2}>
-                            {item.hinban}
+                            <span 
+                              className="cursor-pointer hover:text-primary transition-colors"
+                              onClick={() => handleCardClick(item.hinban)}
+                            >
+                              {item.hinban}
+                            </span>
                           </td>
                           <td className="sticky left-[200px] bg-surface px-4 py-2 text-primary font-semibold text-xs border-r border-outline-variant/20">
                             受注
