@@ -461,24 +461,6 @@ function AllRecordsView({ pagedResult, page, pageSize, loading, onPageChange, on
 
   return (
     <div>
-      {/* Page size selector */}
-      <div className="mb-4 flex items-center justify-between">
-        <p className="text-xs text-on-surface-variant">
-          {pagination.totalItems} {t("total")}
-          {pagination.totalPages > 1 && ` · Page ${pagination.currentPage} / ${pagination.totalPages}`}
-        </p>
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-on-surface-variant">Rows:</span>
-          <select
-            value={pageSize}
-            onChange={(e) => onPageSizeChange(Number(e.target.value))}
-            className="rounded-lg border border-outline-variant/30 bg-surface-container px-2 py-1 text-xs font-medium text-on-surface focus:border-primary focus:outline-none"
-          >
-            {PAGE_SIZE_OPTIONS.map((s) => <option key={s} value={s}>{s}</option>)}
-          </select>
-        </div>
-      </div>
-
       {/* Table */}
       {loading ? (
         <div className="space-y-2">
@@ -553,7 +535,7 @@ function AllRecordsView({ pagedResult, page, pageSize, loading, onPageChange, on
               <select 
                 className="bg-surface-container border border-separator/20 rounded-lg px-2 py-1 text-sm text-on-surface focus:outline-none focus:ring-1 focus:ring-primary/50"
                 value={pageSize}
-                onChange={(e) => setPageSize(Number(e.target.value))}
+                onChange={(e) => onPageSizeChange(Number(e.target.value))}
               >
                 <option value={10}>10</option>
                 <option value={50}>50</option>
