@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import PageHeader from "../components/PageHeader";
 import StatSummaryCard from "../components/StatSummaryCard";
 import LiquidSegmentedControl from "../components/LiquidSegmentedControl";
-import PaginationControls from "../components/PaginationControls";
+import DataTable from "../components/DataTable";
 import StopCallLeaderboard, { aggregateLeaders } from "../components/StopCallLeaderboard";
 import StopCallDetailModal from "../components/StopCallDetailModal";
 import EmptyState from "../components/EmptyState";
@@ -86,6 +86,7 @@ export default function StopCallPage() {
   // Pagination (for "allRecords" view)
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
+  const [sort, setSort] = useState(null);
 
   // Data
   const [pagedResult, setPagedResult] = useState({ data: [], pagination: { currentPage: 1, totalPages: 0, totalItems: 0, itemsPerPage: 10 } });
@@ -143,18 +144,20 @@ export default function StopCallPage() {
         factory: factory || undefined,
         page,
         limit: pageSize,
+        sortColumn: sort?.column,
+        sortDirection: sort?.direction,
       });
       setPagedResult(result);
     } catch {
       setPagedResult({ data: [], pagination: { currentPage: 1, totalPages: 0, totalItems: 0, itemsPerPage: pageSize } });
     }
     setLoading(false);
-  }, [dateRange.from, dateRange.to, factory, page, pageSize]);
+  }, [dateRange.from, dateRange.to, factory, page, pageSize, sort]);
 
   useEffect(() => { loadPagedRecords(); }, [loadPagedRecords]);
 
   // Reset page when filters change
-  useEffect(() => { setPage(1); }, [dateRange.from, dateRange.to, factory, pageSize]);
+  useEffect(() => { setPage(1); }, [dateRange.from, dateRange.to, factory, pageSize, sort]);
 
   // Flatten summary for leaderboard / KPIs
   const flatEvents = useMemo(() => flattenStopCalls(summaryRecords), [summaryRecords]);
@@ -355,6 +358,8 @@ export default function StopCallPage() {
           loading={loading}
           onPageChange={setPage}
           onPageSizeChange={(size) => setPageSize(size)}
+          sort={sort}
+          onSort={setSort}
           onClickRecord={openDetail}
           t={t}
         />
@@ -453,7 +458,7 @@ function TimelineView({ events, onClickEvent, t, loading }) {
 }
 
 // ─── All Records View (paginated) ────────────────────────────────────────────
-function AllRecordsView({ pagedResult, page, pageSize, loading, onPageChange, onPageSizeChange, onClickRecord, t }) {
+function AllRecordsView({ pagedResult, page, pageSize, sort, onSort, loading, onPageChange, onPageSizeChange, onClickRecord, t }) {
   const { data, pagination } = pagedResult;
 
   // Flatten the paged records into individual stop call events
@@ -473,83 +478,67 @@ function AllRecordsView({ pagedResult, page, pageSize, loading, onPageChange, on
       ) : events.length === 0 ? (
         <EmptyState icon="phone_missed" title={t("noStopCalls")} />
       ) : (
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="text-left text-[10px] uppercase tracking-wider text-on-surface-variant border-b border-separator/20">
-                <th className="pb-3 pr-4 font-semibold">{t("date")}</th>
-                <th className="pb-3 pr-4 font-semibold">工場</th>
-                <th className="pb-3 pr-4 font-semibold">設備</th>
-                <th className="pb-3 pr-4 font-semibold">背番号</th>
-                <th className="pb-3 pr-4 font-semibold">品番</th>
-                <th className="pb-3 pr-4 font-semibold">{t("worker")}</th>
-                <th className="pb-3 pr-4 font-semibold">{t("leaderName")}</th>
-                <th className="pb-3 pr-4 font-semibold">{t("calledAt")}</th>
-                <th className="pb-3 pr-4 font-semibold">{t("arrivedAt")}</th>
-                <th className="pb-3 font-semibold">{t("waitTime")}</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-separator/10">
-              {events.map((ev, idx) => (
-                <tr
-                  key={idx}
-                  className="cursor-pointer transition-colors hover:bg-primary/5"
-                  onClick={() => onClickRecord(ev)}
-                >
-                  <td className="py-3 pr-4 text-on-surface">{ev.date}</td>
-                  <td className="py-3 pr-4 text-on-surface-variant">{ev["工場"]}</td>
-                  <td className="py-3 pr-4 text-on-surface">{ev["設備"]}</td>
-                  <td className="py-3 pr-4 font-medium text-primary">{ev["背番号"]}</td>
-                  <td className="py-3 pr-4 text-on-surface">{ev["品番"]}</td>
-                  <td className="py-3 pr-4 text-on-surface-variant">{ev.Worker_Name}</td>
-                  <td className="py-3 pr-4">
-                    <span className="text-on-surface">{ev.leaderName}</span>
-                    <span className={`ml-1.5 inline-block rounded-full px-1.5 py-0.5 text-[9px] font-semibold ${
-                      ev.leaderRole === "admin" ? "bg-primary/15 text-primary"
-                        : ev.leaderRole === "班長" ? "bg-amber-400/15 text-amber-500"
-                          : "bg-emerald-400/15 text-emerald-400"
-                    }`}>{ev.leaderRole}</span>
-                  </td>
-                  <td className="py-3 pr-4 text-on-surface-variant">{ev.calledAt}</td>
-                  <td className="py-3 pr-4 text-on-surface-variant">{ev.arrivedAt}</td>
-                  <td className={`py-3 font-semibold ${
-                    (ev.waitSeconds || 0) > 300 ? "text-error" : (ev.waitSeconds || 0) > 120 ? "text-amber-400" : "text-emerald-400"
-                  }`}>
-                    {fmtWait(ev.waitSeconds)}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-
-      {/* Pagination */}
-      {pagination.totalPages > 0 && (
-        <div className="mt-6 flex flex-col sm:flex-row items-center justify-between gap-4 bg-surface-container-low p-4 rounded-xl border border-separator/10">
-          <div className="text-sm text-on-surface-variant flex items-center gap-4">
-            <span>
-              {pagination.totalItems} records, showing {Math.min((pagination.currentPage - 1) * pagination.itemsPerPage + 1, pagination.totalItems)}-{Math.min(pagination.currentPage * pagination.itemsPerPage, pagination.totalItems)}
-            </span>
-            <div className="flex items-center gap-2">
-              <select 
-                className="bg-surface-container border border-separator/20 rounded-lg px-2 py-1 text-sm text-on-surface focus:outline-none focus:ring-1 focus:ring-primary/50"
-                value={pageSize}
-                onChange={(e) => onPageSizeChange(Number(e.target.value))}
-              >
-                <option value={10}>10</option>
-                <option value={50}>50</option>
-                <option value={100}>100</option>
-              </select>
-            </div>
-          </div>
-          <PaginationControls
-            page={pagination.currentPage}
-            totalPages={pagination.totalPages}
-            onPageChange={onPageChange}
-            disabled={loading}
-          />
-        </div>
+        <DataTable
+          columns={[
+            { key: "date", label: t("date"), sortable: true },
+            { key: "工場", label: "工場", sortable: true, cellClassName: "text-on-surface-variant" },
+            { key: "設備", label: "設備", sortable: true },
+            { key: "背番号", label: "背番号", sortable: true, cellClassName: "font-medium text-primary" },
+            { key: "品番", label: "品番", sortable: true },
+            { key: "Worker_Name", label: t("worker"), sortable: true, cellClassName: "text-on-surface-variant" },
+            { 
+              key: "leaderName", 
+              label: t("leaderName"), 
+              sortable: true,
+              renderCell: (ev) => (
+                <>
+                  <span className="text-on-surface">{ev.leaderName}</span>
+                  <span className={`ml-1.5 inline-block rounded-full px-1.5 py-0.5 text-[9px] font-semibold ${
+                    ev.leaderRole === "admin" ? "bg-primary/15 text-primary"
+                      : ev.leaderRole === "班長" ? "bg-amber-400/15 text-amber-500"
+                        : "bg-emerald-400/15 text-emerald-400"
+                  }`}>{ev.leaderRole}</span>
+                </>
+              )
+            },
+            { key: "calledAt", label: t("calledAt"), sortable: true, cellClassName: "text-on-surface-variant" },
+            { key: "arrivedAt", label: t("arrivedAt"), sortable: true, cellClassName: "text-on-surface-variant" },
+            { 
+              key: "waitSeconds", 
+              label: t("waitTime"), 
+              sortable: true,
+              cellClassName: (ev) => `font-semibold ${
+                (ev.waitSeconds || 0) > 300 ? "text-error" : (ev.waitSeconds || 0) > 120 ? "text-amber-400" : "text-emerald-400"
+              }`,
+              renderCell: (ev) => fmtWait(ev.waitSeconds)
+            },
+          ]}
+          rows={events}
+          sort={sort}
+          onSort={(colKey) => onSort((prev) => {
+            if (prev && prev.column === colKey) {
+              if (prev.direction === "asc") return { column: colKey, direction: "desc" };
+              return null;
+            }
+            return { column: colKey, direction: "asc" };
+          })}
+          page={page}
+          pageSize={pageSize}
+          totalPages={pagination.totalPages}
+          filteredCount={pagination.totalItems}
+          onPageChange={onPageChange}
+          onPageSizeChange={onPageSizeChange}
+          pageSizeOptions={[10, 50, 100]}
+          onRowClick={(ev) => onClickRecord(ev)}
+          enableColumnReorder={true}
+          layoutStorageKey="StopCallAllRecordsLayout"
+          className=""
+          tableClassName="w-full text-sm"
+          headClassName="border-b border-separator/20"
+          headerButtonClassName="ui-table-heading inline-flex items-center gap-2 uppercase tracking-wider text-[10px] text-on-surface-variant transition hover:text-on-surface"
+          headerCellClassName="pb-3 pr-4 text-left whitespace-nowrap"
+          cellClassName="py-3 pr-4 align-top"
+        />
       )}
     </div>
   );

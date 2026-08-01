@@ -1311,8 +1311,8 @@ export async function fetchTodayAllRecords(date) {
  * Fetches press records that contain StopCall data, with server-side pagination.
  * Returns { data, summaryData, pagination: { currentPage, totalPages, totalItems, itemsPerPage } }.
  */
-export async function fetchStopCallRecords({ dateFrom, dateTo, factory, page = 1, limit = 20 } = {}) {
-  return _postJson("api/analytics/stop-calls", { dateFrom, dateTo, factory, page, limit });
+export async function fetchStopCallRecords({ dateFrom, dateTo, factory, page = 1, limit = 20, sortColumn, sortDirection } = {}) {
+  return _postJson("api/analytics/stop-calls", { dateFrom, dateTo, factory, page, limit, sortColumn, sortDirection });
 }
 
 /**

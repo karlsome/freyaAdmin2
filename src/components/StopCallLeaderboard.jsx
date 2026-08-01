@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useLanguage } from "../contexts/LanguageContext";
-import PaginationControls from "./PaginationControls";
+import DataTable from "./DataTable";
 
 function fmtWait(seconds) {
   if (seconds == null) return "—";
@@ -107,12 +107,31 @@ function LeaderCard({ leader, rank, onClickRecord }) {
   const [expanded, setExpanded] = useState(false);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
-
+  const [sort, setSort] = useState(null);
   const isTop3 = rank <= 3;
 
-  const totalItems = leader.records.length;
+  const sortedRecords = useMemo(() => {
+    if (!sort || !sort.column) return leader.records;
+    return [...leader.records].sort((a, b) => {
+      let valA = a[sort.column];
+      let valB = b[sort.column];
+      // handle waitSeconds separately because they are numbers
+      if (sort.column === "waitSeconds") {
+         valA = Number(valA) || 0;
+         valB = Number(valB) || 0;
+      } else {
+         valA = String(valA || "").toLowerCase();
+         valB = String(valB || "").toLowerCase();
+      }
+      if (valA < valB) return sort.direction === "asc" ? -1 : 1;
+      if (valA > valB) return sort.direction === "asc" ? 1 : -1;
+      return 0;
+    });
+  }, [leader.records, sort]);
+
+  const totalItems = sortedRecords.length;
   const totalPages = Math.ceil(totalItems / pageSize);
-  const paginatedRecords = leader.records.slice((page - 1) * pageSize, page * pageSize);
+  const paginatedRecords = sortedRecords.slice((page - 1) * pageSize, page * pageSize);
 
   const accentBorder = rank === 1
     ? "border-amber-400/40 shadow-[0_0_20px_rgba(251,191,36,0.08)]"
@@ -201,74 +220,52 @@ function LeaderCard({ leader, rank, onClickRecord }) {
       {/* Expanded detail table */}
       <div className={`overflow-hidden transition-[max-height,opacity] duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] ${expanded ? "max-h-[8000px] opacity-100" : "max-h-0 opacity-0"}`}>
         <div className="border-t border-separator/20 px-5 pb-4 pt-3">
-          <div className="overflow-x-auto">
-            <table className="w-full text-xs">
-              <thead>
-                <tr className="text-left text-[10px] uppercase tracking-wider text-on-surface-variant">
-                  <th className="pb-2 pr-3 font-semibold">{t("date")}</th>
-                  <th className="pb-2 pr-3 font-semibold">設備</th>
-                  <th className="pb-2 pr-3 font-semibold">背番号</th>
-                  <th className="pb-2 pr-3 font-semibold">品番</th>
-                  <th className="pb-2 pr-3 font-semibold">{t("worker")}</th>
-                  <th className="pb-2 pr-3 font-semibold">{t("calledAt")}</th>
-                  <th className="pb-2 pr-3 font-semibold">{t("arrivedAt")}</th>
-                  <th className="pb-2 font-semibold">{t("waitTime")}</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-separator/10">
-                {paginatedRecords.map((rec, idx) => (
-                  <tr
-                    key={idx}
-                    className="cursor-pointer transition-colors hover:bg-primary/5"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onClickRecord?.(rec);
-                    }}
-                  >
-                    <td className="py-2 pr-3 text-on-surface">{rec.date}</td>
-                    <td className="py-2 pr-3 text-on-surface">{rec["設備"]}</td>
-                    <td className="py-2 pr-3 font-medium text-primary">{rec["背番号"]}</td>
-                    <td className="py-2 pr-3 text-on-surface">{rec["品番"]}</td>
-                    <td className="py-2 pr-3 text-on-surface-variant">{rec.Worker_Name}</td>
-                    <td className="py-2 pr-3 text-on-surface-variant">{rec.calledAt}</td>
-                    <td className="py-2 pr-3 text-on-surface-variant">{rec.arrivedAt}</td>
-                    <td className={`py-2 font-semibold ${rec.waitSeconds > 300 ? "text-error" : rec.waitSeconds > 120 ? "text-amber-400" : "text-emerald-400"}`}>
-                      {fmtWait(rec.waitSeconds)}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          
-          {totalPages > 0 && (
-            <div className="mt-4 flex flex-col sm:flex-row items-center justify-between gap-4 bg-surface-container-low p-3 rounded-xl border border-separator/10">
-              <div className="text-xs text-on-surface-variant flex items-center gap-4">
-                <span>
-                  {totalItems} records, showing {Math.min((page - 1) * pageSize + 1, totalItems)}-{Math.min(page * pageSize, totalItems)}
-                </span>
-                <div className="flex items-center gap-2">
-                  <select 
-                    className="bg-surface-container border border-separator/20 rounded-lg px-2 py-1 text-xs text-on-surface focus:outline-none focus:ring-1 focus:ring-primary/50"
-                    value={pageSize}
-                    onChange={(e) => {
-                      setPageSize(Number(e.target.value));
-                      setPage(1);
-                    }}
-                  >
-                    <option value={10}>10</option>
-                    <option value={50}>50</option>
-                    <option value={100}>100</option>
-                  </select>
-                </div>
-              </div>
-              <PaginationControls
-                page={page}
-                totalPages={totalPages}
-                onPageChange={setPage}
-              />
-            </div>
-          )}
+          <DataTable
+            columns={[
+              { key: "date", label: t("date"), sortable: true },
+              { key: "設備", label: "設備", sortable: true },
+              { key: "背番号", label: "背番号", sortable: true, cellClassName: "font-medium text-primary" },
+              { key: "品番", label: "品番", sortable: true },
+              { key: "Worker_Name", label: t("worker"), sortable: true, cellClassName: "text-on-surface-variant" },
+              { key: "calledAt", label: t("calledAt"), sortable: true, cellClassName: "text-on-surface-variant" },
+              { key: "arrivedAt", label: t("arrivedAt"), sortable: true, cellClassName: "text-on-surface-variant" },
+              { 
+                key: "waitSeconds", 
+                label: t("waitTime"), 
+                sortable: true, 
+                cellClassName: (r) => `font-semibold ${r.waitSeconds > 300 ? "text-error" : r.waitSeconds > 120 ? "text-amber-400" : "text-emerald-400"}`,
+                renderCell: (r) => fmtWait(r.waitSeconds) 
+              },
+            ]}
+            rows={paginatedRecords}
+            sort={sort}
+            onSort={(colKey) => setSort((prev) => {
+              if (prev && prev.column === colKey) {
+                if (prev.direction === "asc") return { column: colKey, direction: "desc" };
+                return null;
+              }
+              return { column: colKey, direction: "asc" };
+            })}
+            page={page}
+            pageSize={pageSize}
+            totalPages={totalPages}
+            filteredCount={totalItems}
+            onPageChange={setPage}
+            onPageSizeChange={(size) => {
+              setPageSize(size);
+              setPage(1);
+            }}
+            pageSizeOptions={[10, 50, 100]}
+            onRowClick={onClickRecord}
+            enableColumnReorder={true}
+            layoutStorageKey="LeaderboardTableLayout"
+            className="w-full"
+            tableClassName="w-full text-xs"
+            headClassName="border-b border-separator/20"
+            headerButtonClassName="ui-table-heading inline-flex items-center gap-2 uppercase tracking-wider text-[10px] text-on-surface-variant transition hover:text-on-surface"
+            headerCellClassName="pb-2 pr-3 text-left whitespace-nowrap"
+            cellClassName="py-2 pr-3 align-top"
+          />
         </div>
       </div>
     </div>
