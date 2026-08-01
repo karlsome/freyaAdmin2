@@ -197,7 +197,7 @@ export default function StopCallPage() {
   }, [rangePreset, t]);
 
   return (
-    <div className="px-4 py-6 sm:px-8">
+    <section className="h-screen overflow-y-auto px-4 pb-24 pt-20 scrollbar-hide sm:px-6 sm:pb-16 sm:pt-24 md:px-8">
       <PageHeader
         eyebrow={t("factories")}
         title={t("stopCallAnalytics")}
@@ -363,7 +363,7 @@ export default function StopCallPage() {
         stopCallEntry={modalStopCall}
         allStopCalls={modalAllStopCalls}
       />
-    </div>
+    </section>
   );
 }
 
