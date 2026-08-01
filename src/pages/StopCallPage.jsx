@@ -63,7 +63,7 @@ function flattenStopCalls(records) {
   return events;
 }
 
-const PAGE_SIZE_OPTIONS = [20, 50, 100];
+const PAGE_SIZE_OPTIONS = [10, 50, 100];
 const RANGE_PRESETS = ["today", "thisWeek", "thisMonth"];
 const VIEW_TABS = [
   { key: "leaderboard", labelKey: "leaderboard" },

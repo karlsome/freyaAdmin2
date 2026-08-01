@@ -199,7 +199,7 @@ function LeaderCard({ leader, rank, onClickRecord }) {
       </button>
 
       {/* Expanded detail table */}
-      <div className={`overflow-hidden transition-[max-height,opacity] duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] ${expanded ? "max-h-[600px] opacity-100" : "max-h-0 opacity-0"}`}>
+      <div className={`overflow-hidden transition-[max-height,opacity] duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] ${expanded ? "max-h-[8000px] opacity-100" : "max-h-0 opacity-0"}`}>
         <div className="border-t border-separator/20 px-5 pb-4 pt-3">
           <div className="overflow-x-auto">
             <table className="w-full text-xs">
