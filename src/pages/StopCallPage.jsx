@@ -85,10 +85,10 @@ export default function StopCallPage() {
 
   // Pagination (for "allRecords" view)
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(20);
+  const [pageSize, setPageSize] = useState(10);
 
   // Data
-  const [pagedResult, setPagedResult] = useState({ data: [], pagination: { currentPage: 1, totalPages: 0, totalItems: 0, itemsPerPage: 20 } });
+  const [pagedResult, setPagedResult] = useState({ data: [], pagination: { currentPage: 1, totalPages: 0, totalItems: 0, itemsPerPage: 10 } });
   const [summaryRecords, setSummaryRecords] = useState([]);
   const [loading, setLoading] = useState(false);
   const [summaryLoading, setSummaryLoading] = useState(false);
@@ -543,8 +543,24 @@ function AllRecordsView({ pagedResult, page, pageSize, loading, onPageChange, on
       )}
 
       {/* Pagination */}
-      {pagination.totalPages > 1 && (
-        <div className="mt-6 flex justify-center">
+      {pagination.totalPages > 0 && (
+        <div className="mt-6 flex flex-col sm:flex-row items-center justify-between gap-4 bg-surface-container-low p-4 rounded-xl border border-separator/10">
+          <div className="text-sm text-on-surface-variant flex items-center gap-4">
+            <span>
+              {pagination.totalItems} records, showing {Math.min((pagination.currentPage - 1) * pagination.itemsPerPage + 1, pagination.totalItems)}-{Math.min(pagination.currentPage * pagination.itemsPerPage, pagination.totalItems)}
+            </span>
+            <div className="flex items-center gap-2">
+              <select 
+                className="bg-surface-container border border-separator/20 rounded-lg px-2 py-1 text-sm text-on-surface focus:outline-none focus:ring-1 focus:ring-primary/50"
+                value={pageSize}
+                onChange={(e) => setPageSize(Number(e.target.value))}
+              >
+                <option value={10}>10</option>
+                <option value={50}>50</option>
+                <option value={100}>100</option>
+              </select>
+            </div>
+          </div>
           <PaginationControls
             page={pagination.currentPage}
             totalPages={pagination.totalPages}

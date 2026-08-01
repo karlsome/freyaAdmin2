@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useLanguage } from "../contexts/LanguageContext";
+import PaginationControls from "./PaginationControls";
 
 function fmtWait(seconds) {
   if (seconds == null) return "—";
@@ -104,7 +105,14 @@ function DailyBar({ dailyCounts }) {
 function LeaderCard({ leader, rank, onClickRecord }) {
   const { t } = useLanguage();
   const [expanded, setExpanded] = useState(false);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+
   const isTop3 = rank <= 3;
+
+  const totalItems = leader.records.length;
+  const totalPages = Math.ceil(totalItems / pageSize);
+  const paginatedRecords = leader.records.slice((page - 1) * pageSize, page * pageSize);
 
   const accentBorder = rank === 1
     ? "border-amber-400/40 shadow-[0_0_20px_rgba(251,191,36,0.08)]"
@@ -208,7 +216,7 @@ function LeaderCard({ leader, rank, onClickRecord }) {
                 </tr>
               </thead>
               <tbody className="divide-y divide-separator/10">
-                {leader.records.map((rec, idx) => (
+                {paginatedRecords.map((rec, idx) => (
                   <tr
                     key={idx}
                     className="cursor-pointer transition-colors hover:bg-primary/5"
@@ -232,6 +240,35 @@ function LeaderCard({ leader, rank, onClickRecord }) {
               </tbody>
             </table>
           </div>
+          
+          {totalPages > 0 && (
+            <div className="mt-4 flex flex-col sm:flex-row items-center justify-between gap-4 bg-surface-container-low p-3 rounded-xl border border-separator/10">
+              <div className="text-xs text-on-surface-variant flex items-center gap-4">
+                <span>
+                  {totalItems} records, showing {Math.min((page - 1) * pageSize + 1, totalItems)}-{Math.min(page * pageSize, totalItems)}
+                </span>
+                <div className="flex items-center gap-2">
+                  <select 
+                    className="bg-surface-container border border-separator/20 rounded-lg px-2 py-1 text-xs text-on-surface focus:outline-none focus:ring-1 focus:ring-primary/50"
+                    value={pageSize}
+                    onChange={(e) => {
+                      setPageSize(Number(e.target.value));
+                      setPage(1);
+                    }}
+                  >
+                    <option value={10}>10</option>
+                    <option value={50}>50</option>
+                    <option value={100}>100</option>
+                  </select>
+                </div>
+              </div>
+              <PaginationControls
+                page={page}
+                totalPages={totalPages}
+                onPageChange={setPage}
+              />
+            </div>
+          )}
         </div>
       </div>
     </div>
