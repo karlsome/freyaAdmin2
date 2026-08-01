@@ -1306,6 +1306,93 @@ export async function fetchTodayAllRecords(date) {
   return records;
 }
 
+// ─── Stop Call ────────────────────────────────────────────────────────────────
+/**
+ * Fetches press records that contain StopCall data, with server-side pagination.
+ * Returns { data, pagination: { currentPage, totalPages, totalItems, itemsPerPage } }.
+ */
+export async function fetchStopCallRecords({ dateFrom, dateTo, factory, page = 1, limit = 20 } = {}) {
+  const safeLimit = Math.max(1, Number(limit) || 20);
+  const safePage = Math.max(1, Number(page) || 1);
+  const skip = (safePage - 1) * safeLimit;
+
+  const matchStage = { "StopCall.count": { $gt: 0 } };
+  if (dateFrom && dateTo) {
+    matchStage.Date = { $gte: dateFrom, $lte: dateTo };
+  } else if (dateFrom) {
+    matchStage.Date = dateFrom;
+  }
+  if (factory) matchStage["工場"] = factory;
+
+  const result = await query("submittedDB", "pressDB", {}, {
+    aggregation: [
+      { $match: matchStage },
+      {
+        $facet: {
+          data: [
+            { $sort: { Date: -1, Time_start: -1 } },
+            { $skip: skip },
+            { $limit: safeLimit },
+            {
+              $project: {
+                "品番": 1, "背番号": 1, "設備": 1, "工場": 1, "Worker_Name": 1,
+                "Date": 1, "Time_start": 1, "Time_end": 1,
+                "Process_Quantity": 1, "Total": 1, "Total_NG": 1,
+                "Total_Work_Hours": 1, "Cycle_Time": 1,
+                "StopCall": 1,
+              },
+            },
+          ],
+          totalCount: [{ $count: "count" }],
+        },
+      },
+    ],
+  });
+
+  const payload = extractAggregationResultDocument(result);
+  const totalItems = Number(payload?.totalCount?.[0]?.count) || 0;
+  const totalPages = totalItems > 0 ? Math.ceil(totalItems / safeLimit) : 0;
+
+  if (totalItems > 0 && safePage > 1 && (!Array.isArray(payload?.data) || payload.data.length === 0)) {
+    return fetchStopCallRecords({ dateFrom, dateTo, factory, page: totalPages, limit: safeLimit });
+  }
+
+  return {
+    data: Array.isArray(payload?.data) ? payload.data : [],
+    pagination: {
+      currentPage: totalPages > 0 ? Math.min(safePage, totalPages) : 1,
+      totalPages,
+      totalItems,
+      itemsPerPage: safeLimit,
+    },
+  };
+}
+
+/**
+ * Lightweight fetch to pull all StopCall summary data for KPI and leaderboard aggregation.
+ * Only fetches StopCall + minimal parent fields (no pagination — limited to the date range).
+ */
+export async function fetchStopCallSummary({ dateFrom, dateTo, factory } = {}) {
+  const q = { "StopCall.count": { $gt: 0 } };
+  if (dateFrom && dateTo) {
+    q.Date = { $gte: dateFrom, $lte: dateTo };
+  } else if (dateFrom) {
+    q.Date = dateFrom;
+  }
+  if (factory) q["工場"] = factory;
+
+  return query("submittedDB", "pressDB", q, {
+    sort: { Date: -1, Time_start: -1 },
+    projection: {
+      "品番": 1, "背番号": 1, "設備": 1, "工場": 1, "Worker_Name": 1,
+      "Date": 1, "Time_start": 1, "Time_end": 1,
+      "Process_Quantity": 1, "Total": 1, "Total_NG": 1,
+      "Total_Work_Hours": 1, "Cycle_Time": 1,
+      "StopCall": 1,
+    },
+  });
+}
+
 /**
  * Fetches production data for a period (or single day → 3 sections: Daily/Weekly/Monthly).
  * Returns { isSingleDay, sections: { [label]: { Kensa, Press, SRS, Slit } } }
