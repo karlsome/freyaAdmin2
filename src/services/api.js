@@ -1166,6 +1166,23 @@ export async function fetchDistinctValues(factory, field) {
     return _toDistinctSortedStrings(Array.isArray(rows) ? rows.map((row) => row?.モデル) : []);
   }
 
+  if (field === "Worker_Name") {
+    const rows = await query("Sasaki_Coating_MasterDB", "workerDB", {}, {
+      projection: { Name: 1, _id: 0 },
+      limit: 10000,
+    });
+    return _toDistinctSortedStrings(Array.isArray(rows) ? rows.map((row) => row?.Name) : []);
+  }
+
+  if (field === "設備") {
+    const factoryQuery = _hasFactoryScope(factory) ? { 工場: factory } : {};
+    const rows = await query("Sasaki_Coating_MasterDB", "setsubiDB", factoryQuery, {
+      projection: { name: 1, _id: 0 },
+      limit: 10000,
+    });
+    return _toDistinctSortedStrings(Array.isArray(rows) ? rows.map((row) => row?.name) : []);
+  }
+
   const proj = { [field]: 1, _id: 0 };
   const factoryQuery = _hasFactoryScope(factory) ? { 工場: factory } : {};
   const settled = await Promise.allSettled(
