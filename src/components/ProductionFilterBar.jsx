@@ -69,6 +69,8 @@ export default function ProductionFilterBar({
   factoryName,
   defaultDateFrom = todayStr(),
   defaultDateTo   = todayStr(),
+  defaultPartNumbers = [],
+  defaultSerialNumbers = [],
   loading         = false,
   onApply,
   onLotFinderOpen,
@@ -76,8 +78,8 @@ export default function ProductionFilterBar({
 }) {
   const [dateFrom,      setDateFrom]      = useState(defaultDateFrom);
   const [dateTo,        setDateTo]        = useState(defaultDateTo);
-  const [partNumbers,   setPartNumbers]   = useState([]);
-  const [serialNumbers, setSerialNumbers] = useState([]);
+  const [partNumbers,   setPartNumbers]   = useState(defaultPartNumbers);
+  const [serialNumbers, setSerialNumbers] = useState(defaultSerialNumbers);
   const [filterRows,    setFilterRows]    = useState([newRow()]);
 
   const addRow    = () => setFilterRows((r) => [...r, newRow()]);

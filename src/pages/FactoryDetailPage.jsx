@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import Hls from "hls.js";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import PageHeader from "../components/PageHeader";
 import {
   BASE_URL,
@@ -313,11 +313,18 @@ export default function FactoryDetailPage({ combined = false }) {
   const factoryName = combined ? "__all__" : decodeURIComponent(encoded);
   const pageTitle = combined ? "Overview" : factoryName;
   const navigate    = useNavigate();
+  const location    = useLocation();
+  const hasAutoOpened = useRef(false);
+  
+  const searchParams = new URLSearchParams(location.search);
+  const initialDateFrom = searchParams.get("dateFrom") || todayStr();
+  const initialDateTo   = searchParams.get("dateTo") || todayStr();
+  const initialSebanggo = searchParams.get("sebanggo") || "";
 
-  const [dateFrom,      setDateFrom]      = useState(todayStr());
-  const [dateTo,        setDateTo]        = useState(todayStr());
+  const [dateFrom,      setDateFrom]      = useState(initialDateFrom);
+  const [dateTo,        setDateTo]        = useState(initialDateTo);
   const [partNumbers,   setPartNumbers]   = useState([]);
-  const [serialNumbers, setSerialNumbers] = useState([]);
+  const [serialNumbers, setSerialNumbers] = useState(initialSebanggo ? [initialSebanggo] : []);
 
   const [prodData,      setProdData]      = useState(null);
   const [sensor,        setSensor]        = useState(null);
@@ -349,6 +356,27 @@ export default function FactoryDetailPage({ combined = false }) {
 
   // Load on mount
   useEffect(() => { loadData(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Auto open modal if autoOpen=true
+  useEffect(() => {
+    if (prodData && searchParams.get("autoOpen") === "true" && !hasAutoOpened.current && initialSebanggo) {
+      hasAutoOpened.current = true;
+      const daily = prodData.sections?.["Daily"] || {};
+      let found = null;
+      let foundProcess = "";
+      for (const [procName, rows] of Object.entries(daily)) {
+        const match = rows.find((r) => r["背番号"] === initialSebanggo);
+        if (match) {
+          found = match;
+          foundProcess = procName;
+          break;
+        }
+      }
+      if (found) {
+        openRecord(found, foundProcess);
+      }
+    }
+  }, [prodData, searchParams, initialSebanggo, openRecord]);
 
   const sections     = prodData?.sections ?? {};
   const sectionNames = Object.keys(sections);
@@ -548,6 +576,7 @@ export default function FactoryDetailPage({ combined = false }) {
         factoryName={combined ? "__all__" : factoryName}
         defaultDateFrom={dateFrom}
         defaultDateTo={dateTo}
+        defaultSerialNumbers={serialNumbers}
         loading={loading}
         onApply={({ dateFrom: f, dateTo: t, partNumbers: p, serialNumbers: s, advancedFilters: af }) => {
           setDateFrom(f); setDateTo(t); setPartNumbers(p); setSerialNumbers(s);

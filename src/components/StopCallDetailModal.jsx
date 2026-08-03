@@ -40,6 +40,18 @@ export default function StopCallDetailModal({ open, onClose, record, stopCallEnt
     ? ((record.Total_NG / record.Total) * 100).toFixed(1)
     : "0.0";
 
+  const handleViewInFactory = () => {
+    const params = new URLSearchParams();
+    params.set("dateFrom", record.Date);
+    params.set("dateTo", record.Date);
+    if (record["背番号"]) {
+      params.set("sebanggo", record["背番号"]);
+    }
+    params.set("autoOpen", "true");
+    const url = `${import.meta.env.BASE_URL}factory/overview?${params.toString()}`;
+    window.open(url, "_blank");
+  };
+
   return (
     <ModalShell
       open={open}
@@ -109,6 +121,16 @@ export default function StopCallDetailModal({ open, onClose, record, stopCallEnt
               accent={parseFloat(defectRate) > 2 ? "text-error" : parseFloat(defectRate) > 1 ? "text-amber-400" : "text-emerald-400"}
             />
             <InfoRow label={t("cycleTime")} value={record.Cycle_Time ? `${record.Cycle_Time}s` : "—"} />
+          </div>
+
+          <div className="mt-4 pt-4 border-t border-separator/20">
+            <button
+              onClick={handleViewInFactory}
+              className="w-full py-2.5 rounded-xl bg-primary text-on-primary text-sm font-semibold hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
+            >
+              <span className="material-symbols-outlined" style={{ fontSize: 18 }}>open_in_new</span>
+              View in Factory Overview
+            </button>
           </div>
         </div>
 
