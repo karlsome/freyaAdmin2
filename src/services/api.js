@@ -1158,12 +1158,12 @@ function _toDistinctSortedStrings(values = []) {
  * collections, scoped to the given factory.
  */
 export async function fetchDistinctValues(factory, field) {
-  if (field === "モデル") {
+  if (["モデル", "品番", "背番号"].includes(field)) {
     const rows = await query("Sasaki_Coating_MasterDB", "masterDB", {}, {
-      projection: { モデル: 1, _id: 0 },
+      projection: { [field]: 1, _id: 0 },
       limit: 10000,
     });
-    return _toDistinctSortedStrings(Array.isArray(rows) ? rows.map((row) => row?.モデル) : []);
+    return _toDistinctSortedStrings(Array.isArray(rows) ? rows.map((row) => row?.[field]) : []);
   }
 
   if (field === "Worker_Name") {

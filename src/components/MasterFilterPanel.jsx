@@ -57,7 +57,7 @@ export default function MasterFilterPanel({
     : "xl:col-span-1";
 
   return (
-    <div className="glass-card rounded-2xl p-5 mb-6">
+    <div className="glass-card rounded-2xl p-5 mb-6 relative z-20">
       <div className="grid items-start gap-3 lg:grid-cols-2 xl:grid-cols-6">
         <FormField label="Factory / 工場" className="xl:col-span-1">
           <select

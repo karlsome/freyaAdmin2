@@ -24,7 +24,7 @@ export default function ChecklistSubmissionsFilterPanel({
     : "No advanced filters applied";
 
   return (
-    <div className={`glass-card rounded-2xl p-5 ${className}`.trim()}>
+    <div className={`glass-card rounded-2xl p-5 relative z-20 ${className}`.trim()}>
       <div className="grid items-end gap-3 lg:grid-cols-2 xl:grid-cols-4">
         <FormField label="From Date">
           <input

@@ -15,8 +15,8 @@ const APPROVAL_STATUS_VALUES = [
 // ─── Filter schema — shared fields across kensaDB / pressDB / SRSDB / slitDB ──
 export const FILTER_SCHEMA = [
   // Basic
-  { field: "品番",              label: "品番",                type: "text",   group: "Basic",                  operators: ["equals", "contains"] },
-  { field: "背番号",            label: "背番号",              type: "text",   group: "Basic",                  operators: ["equals", "contains"] },
+  { field: "品番",              label: "品番",                type: "select", group: "Basic",                  operators: ["equals", "in"] },
+  { field: "背番号",            label: "背番号",              type: "select", group: "Basic",                  operators: ["equals", "in"] },
   { field: "モデル",            label: "モデル",              type: "select", group: "Basic",                  operators: ["equals", "in"] },
   { field: "製造ロット",        label: "製造ロット",          type: "text",   group: "Basic",                  operators: ["equals", "contains"] },
   { field: "Date",              label: "Date",                type: "date",   group: "Basic",                  operators: ["equals", "greater_than", "less_than"] },
@@ -111,7 +111,7 @@ export default function ProductionFilterBar({
   };
 
   return (
-    <div className="glass-card rounded-2xl p-5 mb-6">
+    <div className="glass-card rounded-2xl p-5 mb-6 relative z-20">
       {/* Core filters grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 mb-4">
         <FormField label="From">

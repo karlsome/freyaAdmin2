@@ -1,4 +1,95 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
+
+function SearchableSelect({ value, options, multiple, onChange, placeholder, className }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const containerRef = useRef(null);
+
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (containerRef.current && !containerRef.current.contains(event.target)) {
+        setIsOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const filteredOptions = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return options;
+    return options.filter((o) => o.toLowerCase().includes(q));
+  }, [options, query]);
+
+  const toggleOption = (option, e) => {
+    e.preventDefault();
+    if (multiple) {
+      const current = Array.isArray(value) ? value : value ? [value] : [];
+      if (current.includes(option)) {
+        onChange({ value: current.filter((v) => v !== option) });
+      } else {
+        onChange({ value: [...current, option] });
+      }
+    } else {
+      onChange({ value: option });
+      setIsOpen(false);
+      setQuery("");
+    }
+  };
+
+  const displayText = multiple
+    ? (Array.isArray(value) && value.length > 0 ? value.join(", ") : placeholder)
+    : (value || placeholder);
+
+  return (
+    <div className="relative w-full" ref={containerRef}>
+      <button
+        type="button"
+        onClick={() => setIsOpen(!isOpen)}
+        className={`${className} flex items-center justify-between text-left truncate px-3`}
+      >
+        <span className="truncate opacity-90">{displayText}</span>
+        <span className="material-symbols-outlined shrink-0 opacity-50" style={{ fontSize: 18 }}>expand_more</span>
+      </button>
+
+      {isOpen && (
+        <div className="absolute z-50 mt-1 w-full max-h-72 overflow-y-auto rounded-xl border border-separator/40 bg-white shadow-xl dark:bg-surface-container py-1 flex flex-col">
+          <div className="px-2 pb-1 sticky top-0 bg-white dark:bg-surface-container z-10 pt-1">
+            <input
+              type="text"
+              autoFocus
+              className="w-full h-8 px-3 rounded-lg border border-separator/40 bg-surface-container-low text-xs outline-none focus:border-primary/40"
+              placeholder="Search..."
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              onClick={(e) => e.stopPropagation()}
+            />
+          </div>
+          {filteredOptions.length === 0 ? (
+            <div className="px-4 py-3 text-xs text-on-surface-variant text-center">No results found</div>
+          ) : (
+            filteredOptions.map((option) => {
+              const isSelected = multiple
+                ? (Array.isArray(value) ? value.includes(option) : value === option)
+                : value === option;
+              return (
+                <button
+                  key={option}
+                  type="button"
+                  onClick={(e) => toggleOption(option, e)}
+                  className={`flex w-full items-center px-4 py-2 text-sm text-left transition-colors
+                    ${isSelected ? "bg-primary/10 text-primary font-medium" : "text-on-surface hover:bg-surface-container-highest"}`}
+                >
+                  <span className="truncate">{option}</span>
+                </button>
+              );
+            })
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
 
 function getTextInputType(type) {
   if (type === "number") return "number";
@@ -106,25 +197,14 @@ function RowValueInput({
         : `No ${fieldDefinition.label} values`;
 
     return (
-      <select
+      <SearchableSelect
         value={selectedValue}
         multiple={isMultiSelect}
-        size={isMultiSelect ? Math.min(Math.max(options.length, 4), 8) : undefined}
-        onChange={(event) => {
-          if (isMultiSelect) {
-            onChange({ value: Array.from(event.target.selectedOptions, (option) => option.value) });
-            return;
-          }
-
-          onChange({ value: event.target.value });
-        }}
+        options={options}
+        onChange={onChange}
+        placeholder={placeholder}
         className={`${styles.controlBase} ${isMultiSelect ? styles.multiSelect : ""}`.trim()}
-      >
-        {!isMultiSelect ? <option value="">{placeholder}</option> : null}
-        {options.map((option) => (
-          <option key={option} value={option}>{option}</option>
-        ))}
-      </select>
+      />
     );
   }
 

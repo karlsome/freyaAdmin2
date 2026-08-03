@@ -21,7 +21,7 @@ export default function ApprovalsFilterPanel({
   loadDistinctOptions,
 }) {
   return (
-    <div className="glass-card mb-6 rounded-[28px] p-5">
+    <div className="glass-card mb-6 rounded-[28px] p-5 relative z-20">
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 xl:grid-cols-[180px_180px_180px_minmax(0,1fr)_auto]">
         <FormField label="Factory">
           <select
