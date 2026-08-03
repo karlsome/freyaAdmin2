@@ -87,7 +87,9 @@ export const APPROVAL_EDIT_PROTECTED_FIELDS = new Set([
 export const APPROVAL_EDIT_HIDDEN_FIELDS = new Set([
   ...APPROVAL_EDIT_PROTECTED_FIELDS,
   "materialLabelImageCount",
-  "材料ラベル画像" // We only expose the array version materialLabelImages
+  "材料ラベル画像", // We only expose the array version materialLabelImages
+  "_source",
+  "Inspection_Name",
 ]);
 
 const APPROVAL_EDIT_AUTO_FIELDS = new Set([
@@ -173,6 +175,7 @@ export function buildApprovalEditSections(draft = {}, collectionName) {
   const processedKeys = new Set();
 
   const basicItems = [];
+
   if (draft.品番 !== undefined || draft.背番号 !== undefined) {
     processedKeys.add("品番");
     processedKeys.add("背番号");
