@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
-import { fetchMasterImage, fetchDistinctValues, editSubmittedRecord } from "../services/api";
+import { fetchMasterImage, editSubmittedRecord, query } from "../services/api";
 import { searchApprovalMasterProducts } from "../services/approvalsApi";
 import {
   APPROVAL_EDIT_HIDDEN_FIELDS,
@@ -415,10 +415,20 @@ export default function RecordDetailModal({ record, processName, onClose, onLotC
         .sort((left, right) => String(left).localeCompare(String(right), "ja"));
     }
     let values = [];
-    if (path === "工場") {
-      values = ["小瀬", "三芳"]; 
-    } else {
-      values = await fetchDistinctValues(selectedFactory, path);
+    try {
+      if (path === "工場") {
+        const res = await query("Sasaki_Coating_MasterDB", "factoryDB", {}, { projection: { "工場": 1 } });
+        values = (Array.isArray(res) ? res : res.data || []).map(doc => doc["工場"]);
+      } else if (path === "設備") {
+        const q = selectedFactory ? { "工場": selectedFactory } : {};
+        const res = await query("Sasaki_Coating_MasterDB", "setsubiDB", q, { projection: { "name": 1 } });
+        values = (Array.isArray(res) ? res : res.data || []).map(doc => doc.name);
+      } else if (path === "Worker_Name") {
+        const res = await query("Sasaki_Coating_MasterDB", "workerDB", {}, { projection: { "Name": 1 } });
+        values = (Array.isArray(res) ? res : res.data || []).map(doc => doc.Name);
+      }
+    } catch (e) {
+      console.error("Failed to load options for", path, e);
     }
     editFieldOptionsCacheRef.current.set(cacheKey, values);
     return [...new Set([...values, currentValue].filter(Boolean))]

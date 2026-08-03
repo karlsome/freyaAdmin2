@@ -291,7 +291,7 @@ export default function RecordEditModal({
       path: item.path,
       label: item.label,
       title: item.pickerTitle || item.label,
-      initialQuery: currentValue,
+      initialQuery: "",
     });
   }
 
