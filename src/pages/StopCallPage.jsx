@@ -36,6 +36,31 @@ function getMonthRange() {
   return { from: fmtDate(first), to: fmtDate(last) };
 }
 
+function getYesterdayRange() {
+  const d = new Date();
+  d.setDate(d.getDate() - 1);
+  const s = fmtDate(d);
+  return { from: s, to: s };
+}
+
+function getLastWeekRange() {
+  const now = new Date();
+  const day = now.getDay();
+  const diffToMon = day === 0 ? 6 : day - 1;
+  const monday = new Date(now);
+  monday.setDate(now.getDate() - diffToMon - 7);
+  const saturday = new Date(monday);
+  saturday.setDate(monday.getDate() + 5);
+  return { from: fmtDate(monday), to: fmtDate(saturday) };
+}
+
+function getLastMonthRange() {
+  const now = new Date();
+  const first = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+  const last = new Date(now.getFullYear(), now.getMonth(), 0);
+  return { from: fmtDate(first), to: fmtDate(last) };
+}
+
 function fmtWait(seconds) {
   if (seconds == null || isNaN(seconds)) return "—";
   const m = Math.floor(seconds / 60);
@@ -64,7 +89,7 @@ function flattenStopCalls(records) {
 }
 
 const PAGE_SIZE_OPTIONS = [10, 50, 100];
-const RANGE_PRESETS = ["today", "thisWeek", "thisMonth"];
+const RANGE_PRESETS = ["today", "yesterday", "thisWeek", "thisMonth", "lastWeek", "lastMonth"];
 const VIEW_TABS = [
   { key: "leaderboard", labelKey: "leaderboard" },
   { key: "timeline", labelKey: "timeline" },
@@ -111,6 +136,9 @@ export default function StopCallPage() {
     }
     if (rangePreset === "thisWeek") return getWeekRange();
     if (rangePreset === "thisMonth") return getMonthRange();
+    if (rangePreset === "yesterday") return getYesterdayRange();
+    if (rangePreset === "lastWeek") return getLastWeekRange();
+    if (rangePreset === "lastMonth") return getLastMonthRange();
     // custom
     return { from: customFrom || todayStr(), to: customTo || todayStr() };
   }, [rangePreset, customFrom, customTo]);
@@ -201,6 +229,9 @@ export default function StopCallPage() {
     if (rangePreset === "today") return t("todayLabel");
     if (rangePreset === "thisWeek") return t("thisWeek");
     if (rangePreset === "thisMonth") return t("thisMonth");
+    if (rangePreset === "yesterday") return t("yesterday");
+    if (rangePreset === "lastWeek") return t("lastWeek");
+    if (rangePreset === "lastMonth") return t("lastMonth");
     return t("custom");
   }, [rangePreset, t]);
 
@@ -234,7 +265,7 @@ export default function StopCallPage() {
           >
             {RANGE_PRESETS.map((p) => (
               <option key={p} value={p}>
-                {p === "today" ? t("todayLabel") : p === "thisWeek" ? t("thisWeek") : t("thisMonth")}
+                {p === "today" ? t("todayLabel") : t(p)}
               </option>
             ))}
             <option value="custom">{t("custom")}</option>
