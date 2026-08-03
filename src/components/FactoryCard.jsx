@@ -70,9 +70,10 @@ export default function FactoryCard({ factory, onClick, onDefectClick }) {
         ) : (
           <div className="space-y-0.5">
             {/* Column headers */}
-            <div className="grid grid-cols-[1.5rem_1fr_3rem_3.5rem] gap-x-2 px-1 mb-1">
+            <div className="grid grid-cols-[1.5rem_1fr_3rem_2.5rem_3.5rem] gap-x-2 px-1 mb-1">
               <span />
               <span className="text-[9px] font-semibold text-outline uppercase tracking-[0.18em]">背番号</span>
+              <span className="text-[9px] font-semibold text-outline uppercase tracking-[0.18em] text-right">Total</span>
               <span className="text-[9px] font-semibold text-outline uppercase tracking-[0.18em] text-right">NG</span>
               <span className="text-[9px] font-semibold text-outline uppercase tracking-[0.18em] text-right">Rate</span>
             </div>
@@ -83,7 +84,7 @@ export default function FactoryCard({ factory, onClick, onDefectClick }) {
                 <div
                   key={`${d.sebanggo}-${i}`}
                   onClick={(e) => { e.stopPropagation(); if (d.worstRecord && onDefectClick) onDefectClick(d.worstRecord); }}
-                  className="grid grid-cols-[1.5rem_1fr_3rem_3.5rem] gap-x-2 items-center px-1 py-1.5 rounded-lg hover:bg-primary/10 hover:shadow-[inset_3px_0_0_rgb(var(--c-primary))] transition-all duration-150"
+                  className="grid grid-cols-[1.5rem_1fr_3rem_2.5rem_3.5rem] gap-x-2 items-center px-1 py-1.5 rounded-lg hover:bg-primary/10 hover:shadow-[inset_3px_0_0_rgb(var(--c-primary))] transition-all duration-150"
                 >
                   {/* Rank badge */}
                   <span className={`text-[9px] font-semibold w-5 h-5 rounded-md flex items-center justify-center ${RANK_COLORS[i] ?? RANK_COLORS[4]}`}>
@@ -91,6 +92,8 @@ export default function FactoryCard({ factory, onClick, onDefectClick }) {
                   </span>
                   {/* 背番号 */}
                   <span className="text-xs font-mono text-on-surface truncate">{d.sebanggo}</span>
+                  {/* Total */}
+                  <span className="text-xs font-semibold text-right text-on-surface-variant">{d.total.toLocaleString()}</span>
                   {/* NG qty */}
                   <span className="text-xs font-semibold text-right text-error">{d.ng.toLocaleString()}</span>
                   {/* Defect rate */}

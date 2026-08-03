@@ -234,26 +234,13 @@ export async function fetchProductionData(factoryName, date) {
   const cached = _getCached(key, SENSOR_TTL);
   if (cached) return cached;
 
-  const settled = await Promise.allSettled(
-    PROCESS_COLLECTIONS.map((col) =>
-      query("submittedDB", col, { 工場: factoryName, Date: date }, { sort: { Time_start: -1 } })
-    )
-  );
-
-  const records = settled.flatMap((r, i) =>
-    r.status === "fulfilled" ? r.value.map((row) => ({ ...row, _source: PROCESS_COLLECTIONS[i] })) : []
-  );
-
-  let total = 0, totalNG = 0;
-  records.forEach((r) => {
-    total   += Number(r.Total)    || 0;
-    totalNG += Number(r.Total_NG) || 0;
-  });
-  const defectRate = total > 0 ? Math.round((totalNG / total) * 10000) / 100 : 0;
-
-  const data = { records, total, totalNG, defectRate };
-  _setCache(key, data);
-  return data;
+  try {
+    const data = await _getJson(`api/factory/production/${encodeURIComponent(factoryName)}/${encodeURIComponent(date)}`);
+    _setCache(key, data);
+    return data;
+  } catch {
+    return { records: [], total: 0, totalNG: 0, defectRate: 0 };
+  }
 }
 
 // ─── Sensor data (tempHumidityDB) ─────────────────────────────────────────────
@@ -321,11 +308,7 @@ export async function fetchSensorData(factoryName, date) {
 
   const empty = { sensors: [], highestTemp: null, averageHumidity: null, wbgt: null, sensorCount: 0, hasData: false };
   try {
-    const readings = await query(
-      "submittedDB", "tempHumidityDB",
-      { 工場: factoryName, Date: date },
-      { sort: { Time: -1 }, limit: 200 }
-    );
+    const readings = await _getJson(`api/factory/sensors/${encodeURIComponent(factoryName)}/${encodeURIComponent(date)}`);
     if (!readings?.length) { _setCache(key, empty); return empty; }
 
     const deviceNames = await fetchIoTDeviceNames(factoryName);
@@ -372,80 +355,7 @@ export async function fetchSensorFactoryOverview(date = new Date().toISOString()
       // ignore
     }
 
-    const result = await query(
-      "submittedDB",
-      "tempHumidityDB",
-      {},
-      {
-        aggregation: [
-          {
-            $addFields: {
-              factoryName: buildSensorFactoryNameExpression(),
-            },
-          },
-          {
-            $facet: {
-              allFactories: [
-                { $match: { factoryName: { $ne: "" } } },
-                { $group: { _id: "$factoryName" } },
-                { $sort: { _id: 1 } },
-              ],
-              todayByFactory: [
-                { $match: { Date: date, factoryName: { $ne: "" } } },
-                {
-                  $addFields: {
-                    temperatureValue: buildSensorReadingTemperatureExpression(offsets),
-                    humidityValue: buildSensorReadingHumidityExpression(),
-                  },
-                },
-                {
-                  $addFields: {
-                    wbgtValue: buildSensorReadingWBGTExpression(),
-                  },
-                },
-                { $sort: { factoryName: 1, device: 1, Time: -1, _id: -1 } },
-                {
-                  $group: {
-                    _id: {
-                      device: "$device",
-                      factory: "$factoryName",
-                    },
-                    latest: { $first: "$$ROOT" },
-                  },
-                },
-                {
-                  $group: {
-                    _id: "$_id.factory",
-                    highestTemp: { $max: "$latest.temperatureValue" },
-                    averageHumidity: { $avg: "$latest.humidityValue" },
-                    sensorCount: { $sum: 1 },
-                    wbgt: { $max: "$latest.wbgtValue" },
-                    deviceLatest: {
-                      $push: {
-                        date: "$latest.Date",
-                        time: "$latest.Time",
-                      },
-                    },
-                  },
-                },
-                {
-                  $project: {
-                    _id: 0,
-                    averageHumidity: { $round: ["$averageHumidity", 1] },
-                    factory: "$_id",
-                    highestTemp: { $round: ["$highestTemp", 1] },
-                    sensorCount: 1,
-                    wbgt: { $round: ["$wbgt", 1] },
-                    deviceLatest: 1,
-                  },
-                },
-                { $sort: { factory: 1 } },
-              ],
-            },
-          },
-        ],
-      }
-    );
+    const result = await _postJson("api/factory/sensors/overview", { date, offsets });
 
     const payload = extractAggregationResultDocument(result);
     const knownFactories = mapAggregationFacetValues(payload?.allFactories);
@@ -525,202 +435,6 @@ export async function fetchHistoricalSensorData(factoryName, startDate, endDate)
   }
 }
 
-function buildSensorReadingTemperatureExpression(offsets = {}) {
-  const branches = Object.entries(offsets).map(([device, offset]) => ({
-    case: { $eq: ["$device", device] },
-    then: offset
-  }));
-
-  const baseTempExpr = {
-    $convert: {
-      input: {
-        $trim: {
-          input: {
-            $replaceAll: {
-              input: { $toString: { $ifNull: ["$Temperature", ""] } },
-              find: "°C",
-              replacement: "",
-            },
-          },
-        },
-      },
-      to: "double",
-      onError: null,
-      onNull: null,
-    },
-  };
-
-  if (branches.length === 0) {
-    return baseTempExpr;
-  }
-
-  return {
-    $round: [
-      {
-        $add: [
-          baseTempExpr,
-          {
-            $switch: {
-              branches,
-              default: 0
-            }
-          }
-        ]
-      },
-      2
-    ]
-  };
-}
-
-function buildSensorReadingHumidityExpression() {
-  return {
-    $convert: {
-      input: {
-        $trim: {
-          input: {
-            $replaceAll: {
-              input: { $toString: { $ifNull: ["$Humidity", ""] } },
-              find: "%",
-              replacement: "",
-            },
-          },
-        },
-      },
-      to: "double",
-      onError: null,
-      onNull: null,
-    },
-  };
-}
-
-function buildSensorReadingWBGTExpression() {
-  const temperature = "$temperatureValue";
-  const humidity = "$humidityValue";
-
-  const wetBulbTemperature = {
-    $subtract: [
-      {
-        $add: [
-          {
-            $multiply: [
-              temperature,
-              {
-                $atan: {
-                  $multiply: [
-                    0.151977,
-                    {
-                      $sqrt: {
-                        $add: [humidity, 8.313659],
-                      },
-                    },
-                  ],
-                },
-              },
-            ],
-          },
-          { $atan: { $add: [temperature, humidity] } },
-          {
-            $multiply: [
-              0.00391838,
-              { $pow: [humidity, 1.5] },
-              { $atan: { $multiply: [0.023101, humidity] } },
-            ],
-          },
-        ],
-      },
-      {
-        $add: [
-          { $atan: { $subtract: [humidity, 1.676331] } },
-          4.686035,
-        ],
-      },
-    ],
-  };
-
-  return {
-    $cond: [
-      {
-        $and: [
-          { $ne: [temperature, null] },
-          { $ne: [humidity, null] },
-          { $gte: [temperature, -50] },
-          { $lte: [temperature, 60] },
-          { $gte: [humidity, 0] },
-          { $lte: [humidity, 100] },
-        ],
-      },
-      {
-        $round: [
-          {
-            $add: [
-              { $multiply: [0.7, wetBulbTemperature] },
-              { $multiply: [0.3, temperature] },
-            ],
-          },
-          1,
-        ],
-      },
-      null,
-    ],
-  };
-}
-
-function buildSensorReadingBaseMatch({ factoryName, startDate, endDate, years }) {
-  const match = {};
-
-  if (factoryName) {
-    match["工場"] = factoryName;
-  }
-
-  if (years && years.length > 0) {
-    // Prefix regex for each year, e.g. ^(2024|2025)
-    match.Date = { $regex: `^(${years.join('|')})` };
-  } else if (startDate || endDate) {
-    const dateMatch = {};
-    if (startDate) dateMatch.$gte = startDate;
-    if (endDate) dateMatch.$lte = endDate;
-    match.Date = dateMatch;
-  }
-
-  return match;
-}
-
-function buildSensorReadingDeviceMatch(deviceId = "all") {
-  if (!deviceId || deviceId === "all") return null;
-  return { device: deviceId };
-}
-
-function buildSensorReadingNormalizationStages({ factoryName, startDate, endDate, years, offsets = {} }) {
-  return [
-    { $match: buildSensorReadingBaseMatch({ factoryName, startDate, endDate, years }) },
-    {
-      $addFields: {
-        temperatureValue: buildSensorReadingTemperatureExpression(offsets),
-        humidityValue: buildSensorReadingHumidityExpression(),
-      },
-    },
-    {
-      $addFields: {
-        wbgtValue: buildSensorReadingWBGTExpression(),
-        Temperature: {
-          $cond: [
-            { $eq: ["$temperatureValue", null] },
-            "$Temperature",
-            { $concat: [{ $toString: "$temperatureValue" }, "°C"] }
-          ]
-        }
-      },
-    },
-  ];
-}
-
-function buildSensorReadingSortStage(sortKey) {
-  if (sortKey === "date_asc") return { Date: 1, Time: 1, _id: 1 };
-  if (sortKey === "temp_desc") return { temperatureValue: -1, Date: -1, Time: -1, _id: -1 };
-  if (sortKey === "temp_asc") return { temperatureValue: 1, Date: -1, Time: -1, _id: -1 };
-  return { Date: -1, Time: -1, _id: -1 };
-}
-
 export async function fetchHistoricalSensorReadingsPage({
   factoryName,
   startDate,
@@ -735,43 +449,18 @@ export async function fetchHistoricalSensorReadingsPage({
   const safeLimit = Math.max(1, Number(limit) || 15);
   const safePage = Math.max(1, Number(page) || 1);
   const skip = (safePage - 1) * safeLimit;
-  const deviceMatch = buildSensorReadingDeviceMatch(deviceId);
 
-  const result = await query(
-    "submittedDB",
-    "tempHumidityDB",
-    {},
-    {
-      aggregation: [
-        ...buildSensorReadingNormalizationStages({ factoryName, startDate, endDate, years, offsets }),
-        ...(deviceMatch ? [{ $match: deviceMatch }] : []),
-        {
-          $facet: {
-            data: [
-              { $sort: buildSensorReadingSortStage(sortKey) },
-              { $skip: skip },
-              { $limit: safeLimit },
-              {
-                $project: {
-                  _id: 1,
-                  Date: 1,
-                  Time: 1,
-                  device: 1,
-                  Temperature: 1,
-                  Humidity: 1,
-                  sensorStatus: 1,
-                  工場: 1,
-                },
-              },
-            ],
-            totalCount: [
-              { $count: "count" },
-            ],
-          },
-        },
-      ],
-    }
-  );
+  const result = await _postJson("api/factory/sensors/historical", {
+    factoryName,
+    startDate,
+    endDate,
+    years,
+    deviceId,
+    sortKey,
+    skip,
+    limit: safeLimit,
+    offsets
+  });
 
   const payload = extractAggregationResultDocument(result);
   const totalItems = Number(payload?.totalCount?.[0]?.count) || 0;
@@ -782,6 +471,7 @@ export async function fetchHistoricalSensorReadingsPage({
       factoryName,
       startDate,
       endDate,
+      years,
       deviceId,
       sortKey,
       page: totalPages,
