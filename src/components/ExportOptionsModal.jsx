@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect } from "react";
 import { createPortal } from "react-dom";
 import Papa from "papaparse";
 import jsPDF from "jspdf";
-import "jspdf-autotable";
+import autoTable from "jspdf-autotable";
 import { fetchExportTemplates, saveExportTemplate } from "../services/api";
 
 function flattenObject(obj, prefix = '') {
@@ -77,12 +77,10 @@ export default function ExportOptionsModal({ data, onClose, processName = "Expor
     
     const initial = {};
     allUniqueHeaders.forEach((h, i) => {
-      // By default, let's select some basic fields if we want, or just nothing.
-      // We will select the first 10 fields to be helpful.
-      const shouldSelect = i < 10;
+      // Select all fields by default if no template is active
       initial[h] = {
-        checked: shouldSelect,
-        order: shouldSelect ? String(i + 1) : ""
+        checked: true,
+        order: String(i + 1)
       };
     });
     setHeadersState(initial);
@@ -238,7 +236,7 @@ export default function ExportOptionsModal({ data, onClose, processName = "Expor
     const doc = new jsPDF({ orientation: "landscape" });
     
     // Auto-table with auto-scaling to fit the page
-    doc.autoTable({
+    autoTable(doc, {
       head: [cols],
       body: tableBody,
       styles: { fontSize: 8 },

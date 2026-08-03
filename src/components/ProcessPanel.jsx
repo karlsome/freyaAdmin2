@@ -237,7 +237,7 @@ export default function ProcessPanel({ processName, rows, onRowClick, showFactor
                 setShowSummary(true);
                 setTimeout(() => summaryRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 50);
               }}
-              className="text-[11px] text-outline hover:text-on-surface transition-colors flex items-center gap-1"
+              className="px-3 py-1.5 rounded-lg border border-separator/40 bg-surface text-[11px] font-medium text-on-surface hover:bg-surface-container transition-colors flex items-center gap-1.5"
             >
               <span className="material-symbols-outlined" style={{ fontSize: 14 }}>expand_more</span>
               Summary
@@ -245,7 +245,7 @@ export default function ProcessPanel({ processName, rows, onRowClick, showFactor
           )}
           <button
             onClick={() => setShowExport(true)}
-            className="text-[11px] text-outline hover:text-primary transition-colors flex items-center gap-1"
+            className="px-3 py-1.5 rounded-lg border border-separator/40 bg-surface text-[11px] font-medium text-on-surface hover:text-primary hover:border-primary/30 hover:bg-primary/5 transition-colors flex items-center gap-1.5"
           >
             <span className="material-symbols-outlined" style={{ fontSize: 14 }}>download</span>
             Export
