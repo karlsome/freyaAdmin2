@@ -409,8 +409,16 @@ export default function RecordDetailModal({ record, processName, onClose, onLotC
     ["開始時刻",  record.Time_start],
     ["終了時刻",  record.Time_end],
     ["稼働時間",  hrs != null ? `${hrs.toFixed(2)} hrs` : null],
+    ["数量 (Qty)", record.Process_Quantity],
+    ["サイクルタイム", record.Cycle_Time ? `${record.Cycle_Time}s` : null],
+    ["ショット数", record["ショット数"]],
+    ["疵引不良",  record["疵引不良"]],
+    ["加工不良",  record["加工不良"]],
+    ["その他不良", record["その他"]],
+    ["Spare",     record.Spare],
+    ["コメント",  record.Comment],
     ["製造ロット", record["製造ロット"]],
-  ].filter(([, v]) => v != null);
+  ].filter(([, v]) => v != null && v !== "");
 
   const processAccent = PROCESS_ACCENT[processName];
 
