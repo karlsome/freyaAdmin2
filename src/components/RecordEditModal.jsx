@@ -334,6 +334,63 @@ export default function RecordEditModal({
   }
 
   function renderPrimitiveField(path, label, value, options = {}) {
+    if (path === "材料ロット") {
+      const pills = (value || "").split(",").map((s) => s.trim()).filter(Boolean);
+
+      const handleAddPill = (e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          const val = e.target.value.trim();
+          if (val && !pills.includes(val)) {
+            const nextPills = [...pills, val];
+            handleFieldChange(path, nextPills.join(","), "text");
+          }
+          e.target.value = "";
+        }
+      };
+      
+      const handleBlurPill = (e) => {
+        const val = e.target.value.trim();
+        if (val && !pills.includes(val)) {
+          const nextPills = [...pills, val];
+          handleFieldChange(path, nextPills.join(","), "text");
+        }
+        e.target.value = "";
+      };
+
+      const handleRemovePill = (idx) => {
+        const nextPills = pills.filter((_, i) => i !== idx);
+        handleFieldChange(path, nextPills.join(","), "text");
+      };
+
+      return (
+        <div>
+          {options.hideLabel ? null : <div className="mb-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">{label}</div>}
+          <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-separator/40 bg-white px-3 py-2.5 transition focus-within:border-primary/40 dark:bg-surface-container">
+            {pills.map((pill, idx) => (
+              <span key={idx} className="flex items-center gap-1 rounded-full bg-primary/10 px-3 py-1 text-[11px] font-semibold text-primary">
+                {pill}
+                <button
+                  type="button"
+                  onClick={() => handleRemovePill(idx)}
+                  className="flex items-center justify-center rounded-full hover:bg-primary/20 hover:text-error transition-colors"
+                >
+                  <span className="material-symbols-outlined text-[14px]">close</span>
+                </button>
+              </span>
+            ))}
+            <input
+              type="text"
+              placeholder={pills.length === 0 ? "Add lot..." : ""}
+              onKeyDown={handleAddPill}
+              onBlur={handleBlurPill}
+              className="planner-data-text min-w-[100px] flex-1 bg-transparent text-on-surface outline-none"
+            />
+          </div>
+        </div>
+      );
+    }
+
     const kind = options.inputKind
       || (typeof resolveFieldKind === "function" ? resolveFieldKind(path, value, schemaContext) : inferFieldKind(path, value));
     const imagePreview = isImageLikePath(path) && isImageUrl(value);
