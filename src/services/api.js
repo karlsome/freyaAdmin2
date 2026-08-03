@@ -3038,7 +3038,7 @@ export async function translateJapaneseText(text) {
  * POST /api/approvals/edit-document
  */
 export async function editSubmittedRecord(payload) {
-  const url = `${BASE_URL}approvals/edit-document`;
+  const url = `${BASE_URL}api/approvals/edit-document`;
   const res = await fetch(url, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -3047,6 +3047,24 @@ export async function editSubmittedRecord(payload) {
   if (!res.ok) {
     const errorText = await res.text();
     throw new Error(`Failed to edit record: ${res.status} - ${errorText}`);
+  }
+  return res.json();
+}
+
+/**
+ * Upload maintenance photo to Firebase Storage (via Kurachi backend)
+ * POST /api/upload-maintenance-image
+ */
+export async function uploadMaintenanceImage(payload) {
+  const url = `${BASE_URL}api/upload-maintenance-image`;
+  const res = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    const errorText = await res.text();
+    throw new Error(`Failed to upload maintenance image: ${res.status} - ${errorText}`);
   }
   return res.json();
 }

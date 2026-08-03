@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
 import IconButton from "./IconButton";
 import MasterProductPickerModal from "./MasterProductPickerModal";
 import FieldOptionPickerModal from "./FieldOptionPickerModal";
+import { uploadMaintenanceImage } from "../services/api";
 
 function joinClasses(...classes) {
   return classes.filter(Boolean).join(" ");
@@ -205,11 +206,12 @@ export default function RecordEditModal({
   const [fieldPickerState, setFieldPickerState] = useState({
     open: false,
     path: "",
-    label: "",
-    title: "",
     initialQuery: "",
   });
-  const [revealedKeys, setRevealedKeys] = useState(() => new Set());
+  const [revealedKeys, setRevealedKeys] = useState(new Set());
+  const [uploadingImage, setUploadingImage] = useState(false);
+  
+  const modalContentRef = useRef(null);
 
   useEffect(() => {
     if (!open || !record) {
@@ -394,6 +396,83 @@ export default function RecordEditModal({
   }
 
   function renderStructuredNode(path, value, depth = 0) {
+    if (path.endsWith(".photos")) {
+      const photos = Array.isArray(value) ? value.filter(Boolean) : [];
+      
+      const handlePhotoUpload = async (event) => {
+        const file = event.target.files?.[0];
+        if (!file) return;
+        
+        try {
+          setUploadingImage(true);
+          const base64 = await new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result.split(",")[1]);
+            reader.onerror = reject;
+            reader.readAsDataURL(file);
+          });
+          
+          const payload = {
+            factory: draft.工場 || "Unknown",
+            equipment: draft.設備 || "Unknown",
+            date: draft.Date || new Date().toISOString().split('T')[0],
+            timestamp: Date.now(),
+            id: Date.now(),
+            base64,
+            sebanggo: draft.背番号 || "Unknown"
+          };
+          
+          const res = await uploadMaintenanceImage(payload);
+          if (res.url) {
+             applyDraftMutation((nextDraft) => {
+               const arr = getPathValue(nextDraft, path) || [];
+               setPathValue(nextDraft, path, [...arr, res.url]);
+             });
+          }
+        } catch (error) {
+          alert(`Error uploading image: ${error.message}`);
+        } finally {
+          setUploadingImage(false);
+          event.target.value = "";
+        }
+      };
+      
+      return (
+        <div className="space-y-3">
+          {photos.length > 0 ? (
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              {photos.map((url, idx) => (
+                <div key={idx} className="relative group rounded-xl overflow-hidden border border-outline-variant/30">
+                  <img src={url} alt="Maintenance" className="w-full aspect-square object-cover" />
+                  <button
+                    type="button"
+                    disabled={uploadingImage || busy}
+                    onClick={() => handleArrayRemove(path, idx)}
+                    className="absolute top-1 right-1 bg-black/60 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center hover:bg-error/90 disabled:opacity-50"
+                  >
+                    <span className="material-symbols-outlined text-[14px]">close</span>
+                  </button>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="planner-data-text rounded-2xl border border-dashed border-outline-variant/20 bg-surface-container-low px-4 py-4 text-on-surface-variant text-center">
+              No photos attached yet.
+            </div>
+          )}
+          <div className="flex justify-center mt-2">
+             <label className={`flex items-center gap-2 rounded-2xl border border-primary/20 bg-primary/5 px-6 py-2.5 text-sm font-semibold text-primary transition ${(uploadingImage || busy) ? "opacity-50 cursor-not-allowed" : "hover:bg-primary/10 cursor-pointer"}`}>
+               <span className="material-symbols-outlined text-[18px]">
+                 {uploadingImage ? "hourglass_empty" : "add_a_photo"}
+               </span>
+               {uploadingImage ? "Uploading..." : "Attach Photo"}
+               <input type="file" accept="image/*" className="hidden" onChange={handlePhotoUpload} disabled={uploadingImage || busy} />
+             </label>
+          </div>
+        </div>
+      );
+    }
+
     if (Array.isArray(value)) {
       const isMaintenanceRecords = path === "Maintenance_Data.records";
       return (

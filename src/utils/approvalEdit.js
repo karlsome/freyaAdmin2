@@ -335,6 +335,20 @@ export function computeApprovalDerivedFields(draft = {}, collectionName) {
     draft.Total_Break_Hours = roundToTwo(totalBreakMinutes / 60);
   }
 
+  if (isPlainObject(draft.Maintenance_Data) && Array.isArray(draft.Maintenance_Data.records)) {
+    const totalTroubleMinutes = draft.Maintenance_Data.records.reduce((sum, entry) => {
+      const startMinutes = parseClockMinutes(entry?.startTime);
+      const endMinutes = parseClockMinutes(entry?.endTime);
+      if (startMinutes < 0 || endMinutes <= startMinutes) return sum;
+      return sum + (endMinutes - startMinutes);
+    }, 0);
+
+    draft.Maintenance_Data.totalMinutes = totalTroubleMinutes;
+    draft.Maintenance_Data.totalHours = roundToTwo(totalTroubleMinutes / 60);
+    draft.Total_Trouble_Minutes = totalTroubleMinutes;
+    draft.Total_Trouble_Hours = roundToTwo(totalTroubleMinutes / 60);
+  }
+
   const startMinutes = parseClockMinutes(draft.Time_start);
   const endMinutes = parseClockMinutes(draft.Time_end);
   const breakHours = normalizeNumber(draft.Total_Break_Hours);
