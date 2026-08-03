@@ -190,7 +190,7 @@ function MfgLotModal({ onClose, initialLot = "", initialHinban = "" }) {
                           <div className="space-y-2">
                             {rec.PrintLog.map((log, idx) => (
                               <div key={idx} className="bg-surface-container/30 rounded-xl p-3 grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2 text-xs">
-                                <div className="flex justify-between"><span className="text-outline">ロット番号:</span><span className="font-semibold">{log.lotNumbers?.join(", ") || "—"}</span></div>
+                                <div className="flex justify-between"><span className="text-outline">ロット番号:</span><span className="font-semibold break-all text-right max-w-[60%]">{log.lotNumbers?.join(", ") || "—"}</span></div>
                                 <div className="flex justify-between"><span className="text-outline">印刷枚数:</span><span className="font-semibold">{log.quantity ? `${log.quantity}枚` : "—"}</span></div>
                                 <div className="flex justify-between"><span className="text-outline">総印刷枚数:</span><span className="font-semibold">{log.totalPrintedSoFar ? `${log.totalPrintedSoFar}枚` : "—"}</span></div>
                                 <div className="flex justify-between"><span className="text-outline">印刷者:</span><span className="font-semibold">{log.user ?? "—"}</span></div>
@@ -200,6 +200,12 @@ function MfgLotModal({ onClose, initialLot = "", initialHinban = "" }) {
                           </div>
                         </div>
                       )}
+                      
+                      <div className="p-5 pt-4 border-t border-separator/20 grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3 text-sm">
+                        <div className="flex justify-between"><span className="text-outline">加工条件管理番号:</span><span className="font-semibold">{rec["加工条件管理番号"] ?? "—"}</span></div>
+                        <div className="flex justify-between"><span className="text-outline">印刷日時:</span><span className="font-semibold">{rec.LastPrintTimestamp ? new Date(rec.LastPrintTimestamp).toLocaleString() : (rec["印刷日時"] ?? "—")}</span></div>
+                        <div className="flex justify-between"><span className="text-outline">完了日時:</span><span className="font-semibold">{rec["完了日時"] ?? "—"}</span></div>
+                      </div>
                     </div>
                   ))}
                 </div>
