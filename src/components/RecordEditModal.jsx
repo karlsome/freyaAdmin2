@@ -185,11 +185,13 @@ export default function RecordEditModal({
     title: "",
     initialQuery: "",
   });
+  const [revealedKeys, setRevealedKeys] = useState(() => new Set());
 
   useEffect(() => {
     if (!open || !record) {
       setDraft(null);
       setNote("");
+      setRevealedKeys(new Set());
       return;
     }
 
@@ -411,7 +413,25 @@ export default function RecordEditModal({
     }
 
     if (isPlainObject(value)) {
-      const entries = Object.entries(value).filter(([childKey]) => !isHiddenPath(`${path}.${childKey}`));
+      let entries = Object.entries(value).filter(([childKey]) => !isHiddenPath(`${path}.${childKey}`));
+
+      const isIncrementalGroup = path === "Break_Time_Data" || path === "Maintenance_Data";
+      const hiddenKeys = [];
+
+      if (isIncrementalGroup) {
+        entries.sort(([a], [b]) => a.localeCompare(b, undefined, { numeric: true }));
+        const visibleEntries = [];
+        const hasData = (v) => Object.values(v).some((val) => val !== "" && val !== null && val !== undefined);
+        
+        entries.forEach(([k, v], i) => {
+          if (i === 0 || hasData(v) || revealedKeys.has(`${path}.${k}`)) {
+            visibleEntries.push([k, v]);
+          } else {
+            hiddenKeys.push(k);
+          }
+        });
+        entries = visibleEntries;
+      }
 
       if (!entries.length) {
         return (
@@ -422,24 +442,60 @@ export default function RecordEditModal({
       }
 
       return (
-        <div className="grid gap-3 md:grid-cols-2">
-          {entries.map(([childKey, childValue]) => {
-            const childPath = `${path}.${childKey}`;
-            const structured = Array.isArray(childValue) || isPlainObject(childValue);
+        <div className="space-y-3">
+          <div className="grid gap-3 md:grid-cols-2">
+            {entries.map(([childKey, childValue]) => {
+              const childPath = `${path}.${childKey}`;
+              const structured = Array.isArray(childValue) || isPlainObject(childValue);
 
-            return (
-              <div key={childPath} className={structured ? "md:col-span-2" : ""}>
-                <div className="rounded-2xl border border-outline-variant/15 bg-surface-container-low px-4 py-3">
-                  {structured ? (
-                    <>
-                      <div className="mb-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">{childKey}</div>
-                      {renderStructuredNode(childPath, childValue, depth + 1)}
-                    </>
-                  ) : renderPrimitiveField(childPath, childKey, childValue)}
+              return (
+                <div key={childPath} className={structured ? "md:col-span-2" : ""}>
+                  <div className="rounded-2xl border border-outline-variant/15 bg-surface-container-low px-4 py-3">
+                    {structured ? (
+                      <>
+                        <div className="mb-2 flex items-center justify-between">
+                          <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">{childKey}</div>
+                          {isIncrementalGroup && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                applyDraftMutation((nextDraft) => {
+                                  Object.keys(childValue).forEach((k) => {
+                                    setPathValue(nextDraft, `${childPath}.${k}`, "");
+                                  });
+                                });
+                                setRevealedKeys((prev) => {
+                                  const next = new Set(prev);
+                                  next.delete(childPath);
+                                  return next;
+                                });
+                              }}
+                              className="text-error transition-opacity hover:opacity-80 flex items-center justify-center"
+                              title="Clear & Remove Row"
+                            >
+                              <span className="material-symbols-outlined text-[16px]">delete</span>
+                            </button>
+                          )}
+                        </div>
+                        {renderStructuredNode(childPath, childValue, depth + 1)}
+                      </>
+                    ) : renderPrimitiveField(childPath, childKey, childValue)}
+                  </div>
                 </div>
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
+          {isIncrementalGroup && hiddenKeys.length > 0 && (
+            <div className="flex justify-center mt-1">
+              <button
+                type="button"
+                onClick={() => setRevealedKeys((prev) => new Set(prev).add(`${path}.${hiddenKeys[0]}`))}
+                className="flex items-center gap-2 rounded-2xl border border-primary/20 bg-primary/5 px-6 py-2.5 text-sm font-semibold text-primary transition hover:bg-primary/10"
+              >
+                + Add Another {path === "Break_Time_Data" ? "Break Time" : "Maintenance"} Row
+              </button>
+            </div>
+          )}
         </div>
       );
     }
