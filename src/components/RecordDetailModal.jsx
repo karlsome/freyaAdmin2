@@ -7,6 +7,7 @@ import {
   buildApprovalEditSections,
   resolveApprovalEditFieldKind,
   computeApprovalDerivedFields,
+  flattenApprovalEditChanges,
 } from "../utils/approvalEdit";
 import CollapsibleSection from "./CollapsibleSection";
 import SensorDevicePhotoPreviewModal from "./SensorDevicePhotoPreviewModal";
@@ -435,19 +436,22 @@ export default function RecordDetailModal({ record, processName, onClose, onLotC
       .sort((left, right) => String(left).localeCompare(String(right), "ja"));
   }
 
-  async function handleSaveEdit(updatedRecord, note) {
+  async function handleSaveEdit({ draft, note }) {
     if (!PROCESS_ACCENT[processName]?.db) return;
     setEditBusy(true);
     try {
+      const flattenedChanges = flattenApprovalEditChanges(draft);
+
       await editSubmittedRecord({
         collection: PROCESS_ACCENT[processName].db,
         docId: record._id?.$oid || record._id,
-        changes: updatedRecord,
+        changes: flattenedChanges,
         editedBy: authUser.name || authUser.username,
         editedByUsername: authUser.username,
         editNote: note,
-        pendingImageOps: updatedRecord._pendingImageOps || []
+        pendingImageOps: draft._pendingImageOps || []
       });
+      alert("Record updated successfully!");
       setIsEditing(false);
       // We rely on the parent or dashboard to eventually refetch data.
       // But we can close the modal, and the parent can reload if needed.
