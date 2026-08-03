@@ -71,10 +71,34 @@ function addArrayItem(target, path, template) {
   items.push(template);
 }
 
-function buildDefaultArrayTemplate(items) {
+function buildDefaultArrayTemplate(items, path) {
+  if (path === "Maintenance_Data.records") {
+    return {
+      id: Date.now(),
+      startTime: "",
+      endTime: "",
+      comment: "",
+      timestamp: new Date().toISOString(),
+      photos: [],
+    };
+  }
+  if (String(path || "").endsWith("photos")) {
+    return "";
+  }
+
   const sample = items.find((item) => item != null);
   if (Array.isArray(sample)) return [];
-  if (isPlainObject(sample)) return {};
+  if (isPlainObject(sample)) {
+    const template = deepClone(sample);
+    Object.keys(template).forEach((key) => {
+      if (typeof template[key] === "string") template[key] = "";
+      else if (typeof template[key] === "number") template[key] = 0;
+      else if (typeof template[key] === "boolean") template[key] = false;
+      else if (Array.isArray(template[key])) template[key] = [];
+      else if (isPlainObject(template[key])) template[key] = {};
+    });
+    return template;
+  }
   if (typeof sample === "number") return 0;
   if (typeof sample === "boolean") return false;
   return "";
@@ -92,7 +116,7 @@ function inferFieldKind(path, value) {
   const leafKey = String(path || "").split(".").pop() || "";
   if (typeof value === "boolean") return "boolean";
   if (leafKey === "Date" || /^\d{4}-\d{2}-\d{2}$/.test(String(value || ""))) return "date";
-  if (["Time_start", "Time_end", "start", "end"].includes(leafKey) || /^\d{1,2}:\d{2}$/.test(String(value || ""))) return "time";
+  if (["Time_start", "Time_end", "start", "end", "startTime", "endTime"].includes(leafKey) || /^\d{1,2}:\d{2}$/.test(String(value || ""))) return "time";
   if (typeof value === "number") return Number.isInteger(value) ? "integer" : "number";
   if (typeof value === "string" && value.length > 120) return "textarea";
   return "text";
@@ -226,6 +250,8 @@ export default function RecordEditModal({
   if (!open || !draft) return null;
 
   function isHiddenPath(path) {
+    const leafKey = String(path || "").split(".").pop() || "";
+    if (leafKey === "id" || leafKey === "timestamp") return true;
     const rootKey = String(path || "").split(".")[0] || "";
     return hiddenFieldSet.has(path) || hiddenFieldSet.has(rootKey);
   }
@@ -248,7 +274,7 @@ export default function RecordEditModal({
     applyDraftMutation((nextDraft) => {
       const items = getPathValue(nextDraft, path);
       if (!Array.isArray(items)) return;
-      addArrayItem(nextDraft, path, buildDefaultArrayTemplate(items));
+      addArrayItem(nextDraft, path, buildDefaultArrayTemplate(items, path));
     });
   }
 
@@ -369,6 +395,7 @@ export default function RecordEditModal({
 
   function renderStructuredNode(path, value, depth = 0) {
     if (Array.isArray(value)) {
+      const isMaintenanceRecords = path === "Maintenance_Data.records";
       return (
         <div className="space-y-3">
           {value.length ? value.map((item, index) => {
@@ -377,17 +404,31 @@ export default function RecordEditModal({
 
             return (
               <div key={itemPath} className="rounded-2xl border border-outline-variant/15 bg-surface-container-low px-4 py-3">
-                <div className="mb-3 flex items-center justify-between gap-3">
-                  <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Item {index + 1}</div>
-                  <button
-                    type="button"
-                    onClick={() => handleArrayRemove(path, index)}
-                    disabled={busy}
-                    className="rounded-2xl border border-error/20 bg-error/10 px-3 py-1.5 text-[11px] font-semibold text-error transition hover:bg-error/15 disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    Remove
-                  </button>
-                </div>
+                {isMaintenanceRecords ? (
+                  <div className="mb-2 flex items-center justify-between">
+                    <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">MAINTENANCE {index + 1}</div>
+                    <button
+                      type="button"
+                      onClick={() => handleArrayRemove(path, index)}
+                      className="text-error transition-opacity hover:opacity-80 flex items-center justify-center"
+                      title="Remove Row"
+                    >
+                      <span className="material-symbols-outlined text-[16px]">delete</span>
+                    </button>
+                  </div>
+                ) : (
+                  <div className="mb-3 flex items-center justify-between gap-3">
+                    <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Item {index + 1}</div>
+                    <button
+                      type="button"
+                      onClick={() => handleArrayRemove(path, index)}
+                      disabled={busy}
+                      className="rounded-2xl border border-error/20 bg-error/10 px-3 py-1.5 text-[11px] font-semibold text-error transition hover:bg-error/15 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                )}
 
                 {structured
                   ? renderStructuredNode(itemPath, item, depth + 1)
@@ -400,14 +441,27 @@ export default function RecordEditModal({
             </div>
           )}
 
-          <button
-            type="button"
-            onClick={() => handleArrayAdd(path)}
-            disabled={busy}
-            className="rounded-2xl border border-separator/40 bg-white px-4 py-2 text-xs font-semibold text-on-surface transition hover:bg-surface-container disabled:cursor-not-allowed disabled:opacity-50 dark:bg-surface-container"
-          >
-            Add Item
-          </button>
+          {isMaintenanceRecords ? (
+            <div className="flex justify-center mt-1">
+              <button
+                type="button"
+                onClick={() => handleArrayAdd(path)}
+                disabled={busy}
+                className="flex items-center gap-2 rounded-2xl border border-primary/20 bg-primary/5 px-6 py-2.5 text-sm font-semibold text-primary transition hover:bg-primary/10"
+              >
+                + Add Another Maintenance Row
+              </button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => handleArrayAdd(path)}
+              disabled={busy}
+              className="rounded-2xl border border-separator/40 bg-white px-4 py-2 text-xs font-semibold text-on-surface transition hover:bg-surface-container disabled:cursor-not-allowed disabled:opacity-50 dark:bg-surface-container"
+            >
+              Add Item
+            </button>
+          )}
         </div>
       );
     }
@@ -415,7 +469,7 @@ export default function RecordEditModal({
     if (isPlainObject(value)) {
       let entries = Object.entries(value).filter(([childKey]) => !isHiddenPath(`${path}.${childKey}`));
 
-      const isIncrementalGroup = path === "Break_Time_Data" || path === "Maintenance_Data";
+      const isIncrementalGroup = path === "Break_Time_Data";
       const hiddenKeys = [];
 
       if (isIncrementalGroup) {
@@ -561,7 +615,7 @@ export default function RecordEditModal({
       const value = getPathValue(draft, item.path);
       return (
         <div key={item.path} className={item.span === "full" ? "md:col-span-2" : ""}>
-          <div className="mb-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">{item.label}</div>
+          <div className="mb-3 mt-1 text-sm font-bold text-on-surface tracking-wide">{item.label}</div>
           {renderStructuredNode(item.path, value)}
         </div>
       );
