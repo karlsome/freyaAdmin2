@@ -108,6 +108,16 @@ export async function query(dbName, collectionName, q = {}, { sort, limit, proje
   return res.json();
 }
 
+export async function fetchCustomFields(dbName, collectionName) {
+  const res = await fetch(BASE_URL + "schema/custom-fields", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ dbName, collectionName }),
+  });
+  if (!res.ok) throw new Error(`API ${res.status}: ${await res.text()}`);
+  return res.json();
+}
+
 // ─── Factory list ─────────────────────────────────────────────────────────────
 export async function fetchMasterFactories() {
   const key = "masterFactories";

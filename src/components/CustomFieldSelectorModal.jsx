@@ -1,20 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
-import { query } from "../services/api";
-
-function flattenObject(obj, prefix = '') {
-  const flattened = {};
-  for (const key in obj) {
-    if (Object.prototype.hasOwnProperty.call(obj, key)) {
-      if (typeof obj[key] === 'object' && obj[key] !== null && !Array.isArray(obj[key])) {
-        Object.assign(flattened, flattenObject(obj[key], prefix + key + '.'));
-      } else {
-        flattened[prefix + key] = obj[key];
-      }
-    }
-  }
-  return flattened;
-}
+import { fetchCustomFields } from "../services/api";
 
 const DB_OPTIONS = [
   { value: "kensaDB", label: "Kensa (検査)" },
@@ -35,30 +21,25 @@ export default function CustomFieldSelectorModal({ onClose, onSelectField }) {
   const [selectedField, setSelectedField] = useState(null);
   const [selectedType, setSelectedType] = useState("text");
 
+  // Simple in-memory session cache
+  const cache = useRef({});
+
   useEffect(() => {
     async function loadFields() {
+      if (cache.current[selectedDB]) {
+        setFields(cache.current[selectedDB]);
+        return;
+      }
+
       setLoading(true);
       setError(null);
       setFields([]);
       setSelectedField(null);
       
       try {
-        // Sorting by _id: -1 is naturally indexed by MongoDB and provides the same chronological sorting as createdAt, but without needing a custom index!
-        const response = await query("submittedDB", selectedDB, {}, { limit: 50, sort: { _id: -1 } });
-        const items = response.items || response; // Depends on how query() formats it, it returns just an array or { items }
-        const dataArr = Array.isArray(items) ? items : (items.data || []);
-        
-        const keySet = new Set();
-        dataArr.forEach(doc => {
-          const flat = flattenObject(doc);
-          Object.keys(flat).forEach(k => {
-            // Ignore system keys and array indices (e.g. Lot_Details[0])
-            if (IGNORED_KEYS.includes(k) || k.includes("[")) return;
-            keySet.add(k);
-          });
-        });
-        
-        setFields(Array.from(keySet).sort());
+        const response = await fetchCustomFields("submittedDB", selectedDB);
+        setFields(response.fields || []);
+        cache.current[selectedDB] = response.fields || [];
       } catch (err) {
         console.error(err);
         setError("Failed to load schema from database.");
