@@ -1500,6 +1500,7 @@ export function getMasterCollectionConfig(tabKey = "masterDB") {
   if (tabKey === "setsubiDB") {
     return { collectionName: "setsubiDB", baseQuery: {} };
   }
+
   if (tabKey === "processDB") {
     return { collectionName: "processMasterDB", baseQuery: {} };
   }
@@ -3085,4 +3086,23 @@ export async function uploadMaterialLabelImage(payload) {
     throw new Error(`Failed to upload material label image: ${res.status} - ${errorText}`);
   }
   return res.json();
+}
+
+// ─── Export Templates ────────────────────────────────────────────────────────
+export async function fetchExportTemplates(processType = "All") {
+  const q = processType === "All" ? {} : { processType };
+  return _postJson("queries", {
+    dbName: "Sasaki_Coating_MasterDB",
+    collectionName: "exportTemplatesDB",
+    query: q,
+    sort: { templateName: 1 }
+  });
+}
+
+export async function saveExportTemplate(templateData) {
+  return _postJson("queries", {
+    dbName: "Sasaki_Coating_MasterDB",
+    collectionName: "exportTemplatesDB",
+    insertData: templateData
+  });
 }

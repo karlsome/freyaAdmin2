@@ -1,6 +1,7 @@
 //This component displays a paginated, sortable, and searchable table of production records for a specific process (Kensa, Press, SRS, or Slit). It also includes a summary section that aggregates data by part number and worker ID. The component is designed to be reusable for different processes by passing the appropriate props.
 import { useEffect, useMemo, useRef, useState } from "react";
 import DataTable from "./DataTable";
+import ExportOptionsModal from "./ExportOptionsModal";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const ITEMS_PER_PAGE = 25;
@@ -53,6 +54,7 @@ export default function ProcessPanel({ processName, rows, onRowClick, showFactor
   const [page, setPage]               = useState(1);
   const [search, setSearch]           = useState("");
   const [showSummary, setShowSummary] = useState(false);
+  const [showExport, setShowExport] = useState(false);
   const summaryRef = useRef(null);
 
   useEffect(() => setPage(1), [rows]);
@@ -241,6 +243,13 @@ export default function ProcessPanel({ processName, rows, onRowClick, showFactor
               Summary
             </button>
           )}
+          <button
+            onClick={() => setShowExport(true)}
+            className="text-[11px] text-outline hover:text-primary transition-colors flex items-center gap-1"
+          >
+            <span className="material-symbols-outlined" style={{ fontSize: 14 }}>download</span>
+            Export
+          </button>
           <input
             type="text"
             placeholder="Search…"
@@ -336,6 +345,14 @@ export default function ProcessPanel({ processName, rows, onRowClick, showFactor
             </div>
           )}
         </div>
+      )}
+
+      {showExport && (
+        <ExportOptionsModal
+          data={filtered}
+          processName={processName}
+          onClose={() => setShowExport(false)}
+        />
       )}
     </div>
   );
