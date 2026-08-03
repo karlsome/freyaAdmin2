@@ -3,6 +3,7 @@ import { fetchDistinctValues } from "../services/api";
 import AdvancedFilterSection from "./AdvancedFilterSection";
 import FormField from "./FormField";
 import TagInput from "./TagInput";
+import CustomFieldSelectorModal from "./CustomFieldSelectorModal";
 
 const APPROVAL_STATUS_VALUES = [
   "pending",
@@ -89,15 +90,19 @@ export default function ProductionFilterBar({
     return [newRow()];
   });
 
-  const addRow    = () => setFilterRows((r) => [...r, newRow()]);
-  const removeRow = (id) => setFilterRows((r) => r.filter((x) => x.id !== id));
-  const clearAdvancedRows = () => setFilterRows([newRow()]);
-  const updateRow = (id, patch) =>
+  const [customFields, setCustomFields] = useState([]);
+  const [activeCustomRowId, setActiveCustomRowId] = useState(null);
+
+  const handleAddRow    = () => setFilterRows((r) => [...r, newRow()]);
+  const handleRemoveRow = (id) => setFilterRows((r) => r.filter((x) => x.id !== id));
+  const handleClearRows = () => setFilterRows([newRow()]);
+  
+  const handleUpdateRow = (id, patch) =>
     setFilterRows((r) => r.map((x) => {
       if (x.id !== id) return x;
       const next = { ...x, ...patch };
       if ("field" in patch && patch.field !== x.field) {
-        const def = FILTER_SCHEMA.find((s) => s.field === patch.field);
+        const def = [...FILTER_SCHEMA, ...customFields].find((s) => s.field === patch.field);
         next.operator = def?.operators?.[0] || "equals";
         next.value = next.operator === "in" ? [] : "";
       }
@@ -112,8 +117,39 @@ export default function ProductionFilterBar({
       return next;
     }));
 
+  const handleCustomFieldClick = (rowId) => {
+    setActiveCustomRowId(rowId);
+  };
+
+  const handleSelectCustomField = (fieldPath, type) => {
+    const newSchema = {
+      field: fieldPath,
+      label: fieldPath,
+      type: type,
+      group: "Custom",
+      operators: type === "number" || type === "date" || type === "time"
+        ? ["equals", "greater_than", "less_than"]
+        : ["equals", "contains", "in"]
+    };
+    
+    if (!customFields.find(f => f.field === fieldPath)) {
+      setCustomFields(prev => [...prev, newSchema]);
+    }
+    
+    handleUpdateRow(activeCustomRowId, {
+      field: fieldPath,
+      operator: "equals",
+      value: ""
+    });
+
+    setActiveCustomRowId(null);
+  };
+
   const handleApply = () => {
-    const advancedFilters = filterRows.filter(hasFilterValue);
+    const advancedFilters = filterRows.filter(hasFilterValue).map(row => {
+      const def = [...FILTER_SCHEMA, ...customFields].find(s => s.field === row.field);
+      return { ...row, type: def?.type || "text" };
+    });
     onApply?.({ dateFrom, dateTo, partNumbers, serialNumbers, advancedFilters });
   };
 
@@ -125,7 +161,7 @@ export default function ProductionFilterBar({
     filterRows.some(hasFilterValue);
 
   return (
-    <div className="glass-card rounded-2xl p-5 mb-6 relative z-20">
+    <div className="bg-surface-container-lowest rounded-xl p-4 shadow-sm border border-separator/30 mb-6">
       {/* Core filters grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 mb-4">
         <FormField label="From">
@@ -163,28 +199,30 @@ export default function ProductionFilterBar({
           />
         </FormField>
 
-        {/* Extra filters injected by the parent page */}
         {children}
       </div>
 
-      {/* Advanced filters — dynamic rows */}
-      <AdvancedFilterSection
-        rows={filterRows}
-        fieldDefinitions={FILTER_SCHEMA}
-        onUpdateRow={updateRow}
-        onAddRow={addRow}
-        onRemoveRow={removeRow}
-        onClearRows={clearAdvancedRows}
-        loadDistinctOptions={(field) => fetchDistinctValues(factoryName, field)}
-        shouldLoadOptions={(fieldDefinition) => fieldDefinition.type === "select"}
-        operatorLabels={OPERATOR_LABELS}
-        useOperatorLabelsInSelect
-        optionsCacheKey={factoryName}
-        addRowLabel="Add Filter"
-        showActiveSummary={false}
-        variant="compact"
-        framed={false}
-      />
+      <div className="mt-4 pt-4 border-t border-separator/30">
+        <AdvancedFilterSection
+          rows={filterRows}
+          fieldDefinitions={[...FILTER_SCHEMA, ...customFields]}
+          onUpdateRow={handleUpdateRow}
+          onAddRow={handleAddRow}
+          onRemoveRow={handleRemoveRow}
+          onClearRows={handleClearRows}
+          loadDistinctOptions={(field) => fetchDistinctValues(factoryName, field)}
+          shouldLoadOptions={(fieldDefinition) => fieldDefinition.type === "select"}
+          operatorLabels={OPERATOR_LABELS}
+          useOperatorLabelsInSelect
+          optionsCacheKey={factoryName}
+          onCustomFieldClick={handleCustomFieldClick}
+          title="Advanced Filters"
+          addRowLabel="Add Filter"
+          showActiveSummary={false}
+          variant="compact"
+          framed={false}
+        />
+      </div>
 
       {/* Action buttons */}
       <div className="flex items-center gap-3 flex-wrap">
@@ -228,6 +266,13 @@ export default function ProductionFilterBar({
           </button>
         )}
       </div>
+
+      {activeCustomRowId && (
+        <CustomFieldSelectorModal 
+          onClose={() => setActiveCustomRowId(null)}
+          onSelectField={handleSelectCustomField}
+        />
+      )}
     </div>
   );
 }

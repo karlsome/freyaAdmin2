@@ -1206,7 +1206,7 @@ async function _buildProdQuery(factory, start, end, partNumbers, serialNumbers, 
 
   const groupedClauses = new Map();
 
-  for (const { field, operator, value } of advancedFilters) {
+  for (const { field, operator, value, type } of advancedFilters) {
     const isEmptyArray = Array.isArray(value) && value.length === 0;
     if (!field || !operator || value === "" || value === undefined || isEmptyArray) continue;
 
@@ -1236,7 +1236,7 @@ async function _buildProdQuery(factory, start, end, partNumbers, serialNumbers, 
       continue;
     }
 
-    const coerced = _NUMBER_FIELDS.has(field) ? Number(value) : value;
+    const coerced = (_NUMBER_FIELDS.has(field) || type === "number") ? Number(value) : value;
     let clause = null;
 
     switch (operator) {
@@ -1245,12 +1245,12 @@ async function _buildProdQuery(factory, start, end, partNumbers, serialNumbers, 
         break;
       case "in": {
         const values = Array.isArray(value)
-          ? value.map((item) => (_NUMBER_FIELDS.has(field) ? Number(item) : item)).filter((item) => item !== "" && item !== undefined)
+          ? value.map((item) => ((_NUMBER_FIELDS.has(field) || type === "number") ? Number(item) : item)).filter((item) => item !== "" && item !== undefined)
           : String(value || "")
               .split(",")
               .map((item) => item.trim())
               .filter(Boolean)
-              .map((item) => (_NUMBER_FIELDS.has(field) ? Number(item) : item));
+              .map((item) => ((_NUMBER_FIELDS.has(field) || type === "number") ? Number(item) : item));
         clause = values.length ? { [field]: { $in: values } } : null;
         break;
       }

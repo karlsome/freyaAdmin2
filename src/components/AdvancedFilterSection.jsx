@@ -168,14 +168,20 @@ function RowValueInput({
         <input
           type={inputType}
           value={row.valueFrom}
-          onChange={(event) => onChange({ valueFrom: event.target.value })}
+          onChange={(event) => {
+            const val = fieldDefinition.type === "number" ? event.target.value.replace(/[^0-9.-]/g, '') : event.target.value;
+            onChange({ valueFrom: val });
+          }}
           className={styles.controlBase}
           placeholder="From"
         />
         <input
           type={inputType}
           value={row.valueTo}
-          onChange={(event) => onChange({ valueTo: event.target.value })}
+          onChange={(event) => {
+            const val = fieldDefinition.type === "number" ? event.target.value.replace(/[^0-9.-]/g, '') : event.target.value;
+            onChange({ valueTo: val });
+          }}
           className={styles.controlBase}
           placeholder="To"
         />
@@ -242,7 +248,10 @@ function RowValueInput({
       <input
         type={inputType}
         value={row.value}
-        onChange={(event) => onChange({ value: event.target.value })}
+        onChange={(event) => {
+          const val = fieldDefinition.type === "number" ? event.target.value.replace(/[^0-9.-]/g, '') : event.target.value;
+          onChange({ value: val });
+        }}
         className={styles.controlBase}
         placeholder={placeholder}
         list={inputSupportsSuggestions ? datalistId : undefined}
@@ -335,6 +344,7 @@ export default function AdvancedFilterSection({
   enableTextSuggestions = false,
   inputIdPrefix = "advanced-filter-options",
   footer,
+  onCustomFieldClick,
 }) {
   const styles = getStylePreset(variant, framed);
   const [open, setOpen] = useState(false);
@@ -434,6 +444,10 @@ export default function AdvancedFilterSection({
                     value={row.field}
                     onChange={(event) => {
                       const nextField = event.target.value;
+                      if (nextField === "__CUSTOM__") {
+                        if (onCustomFieldClick) onCustomFieldClick(row.id);
+                        return;
+                      }
                       const nextDefinition = fieldDefinitions.find((field) => field.field === nextField);
                       onUpdateRow(row.id, {
                         field: nextField,
@@ -453,6 +467,11 @@ export default function AdvancedFilterSection({
                         ))}
                       </optgroup>
                     ))}
+                    {onCustomFieldClick && (
+                      <optgroup label="Custom Fields">
+                        <option value="__CUSTOM__">Custom...</option>
+                      </optgroup>
+                    )}
                   </select>
 
                   <select
