@@ -79,15 +79,34 @@ export default function ProcessPanel({ processName, rows, onRowClick, showFactor
       return (ha - hb) * sort.dir;
     }
     if (sort.col === "Defect_Rate") {
-      const qa = Number(a.Process_Quantity) || 0;
-      const qb = Number(b.Process_Quantity) || 0;
+      const qa = Number(a.Process_Quantity) || Number(a.Total) || 0;
+      const qb = Number(b.Process_Quantity) || Number(b.Total) || 0;
       const ra = qa ? (Number(a.Total_NG) || 0) / qa : 0;
       const rb = qb ? (Number(b.Total_NG) || 0) / qb : 0;
       return (ra - rb) * sort.dir;
     }
+    
+    if (sort.col === "Process_Quantity" || sort.col === "Total") {
+      const va = Number(a.Process_Quantity) || Number(a.Total) || 0;
+      const vb = Number(b.Process_Quantity) || Number(b.Total) || 0;
+      return (va - vb) * sort.dir;
+    }
+
+    if (sort.col === "Total_NG") {
+      const va = Number(a.Total_NG) || 0;
+      const vb = Number(b.Total_NG) || 0;
+      return (va - vb) * sort.dir;
+    }
+
     const va = a[sort.col] ?? "";
     const vb = b[sort.col] ?? "";
-    if (SORT_NUMERIC.has(sort.col)) return (Number(va) - Number(vb)) * sort.dir;
+    
+    if (SORT_NUMERIC.has(sort.col)) {
+      const numA = Number(va) || 0;
+      const numB = Number(vb) || 0;
+      return (numA - numB) * sort.dir;
+    }
+    
     return va.toString().localeCompare(vb.toString(), "ja") * sort.dir;
   });
 
@@ -243,7 +262,10 @@ export default function ProcessPanel({ processName, rows, onRowClick, showFactor
         totalPages={totalPages}
         onSort={handleSort}
         onPageChange={setPage}
-        rowKey={(row, index) => `${processName}-${row["品番"] || "part"}-${row["背番号"] || "serial"}-${row.Date || index}`}
+        rowKey={(row, index) => {
+          const id = row._id?.$oid ?? row._id;
+          return id ? String(id) : `${processName}-${index}`;
+        }}
         onRowClick={onRowClick ? (row) => onRowClick(row, processName) : undefined}
         renderPageInfo={() => (
           <span className="text-sm text-on-surface-variant">{totalItems} records, showing {pageStart}-{pageEnd}</span>

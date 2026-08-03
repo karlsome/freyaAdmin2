@@ -868,7 +868,7 @@ export default function RecordEditModal({
 
                 <button
                   type="button"
-                  disabled={busy}
+                  disabled={busy || !note || note.trim() === ""}
                   onClick={() => onSave?.({ draft, note })}
                   className="rounded-xl bg-primary px-4 py-2.5 text-xs font-semibold text-on-primary hover:opacity-90 active:scale-95 transition-all duration-150 disabled:cursor-not-allowed disabled:opacity-50"
                 >

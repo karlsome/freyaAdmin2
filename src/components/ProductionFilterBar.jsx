@@ -71,8 +71,10 @@ export default function ProductionFilterBar({
   defaultDateTo   = todayStr(),
   defaultPartNumbers = [],
   defaultSerialNumbers = [],
+  defaultAdvancedFilters = [],
   loading         = false,
   onApply,
+  onReset,
   onLotFinderOpen,
   children,
 }) {
@@ -80,7 +82,12 @@ export default function ProductionFilterBar({
   const [dateTo,        setDateTo]        = useState(defaultDateTo);
   const [partNumbers,   setPartNumbers]   = useState(defaultPartNumbers);
   const [serialNumbers, setSerialNumbers] = useState(defaultSerialNumbers);
-  const [filterRows,    setFilterRows]    = useState([newRow()]);
+  const [filterRows,    setFilterRows]    = useState(() => {
+    if (defaultAdvancedFilters && defaultAdvancedFilters.length > 0) {
+      return defaultAdvancedFilters.map(f => ({ ...f, id: ++_rowId }));
+    }
+    return [newRow()];
+  });
 
   const addRow    = () => setFilterRows((r) => [...r, newRow()]);
   const removeRow = (id) => setFilterRows((r) => r.filter((x) => x.id !== id));
@@ -109,6 +116,13 @@ export default function ProductionFilterBar({
     const advancedFilters = filterRows.filter(hasFilterValue);
     onApply?.({ dateFrom, dateTo, partNumbers, serialNumbers, advancedFilters });
   };
+
+  const hasActiveFilters = 
+    dateFrom !== todayStr() ||
+    dateTo !== todayStr() ||
+    partNumbers.length > 0 ||
+    serialNumbers.length > 0 ||
+    filterRows.some(hasFilterValue);
 
   return (
     <div className="glass-card rounded-2xl p-5 mb-6 relative z-20">
@@ -183,6 +197,25 @@ export default function ProductionFilterBar({
           <span className="material-symbols-outlined" style={{ fontSize: 16 }}>filter_alt</span>
           {loading ? "Loading…" : "Apply Filters"}
         </button>
+
+        {onReset && hasActiveFilters && (
+          <button
+            disabled={loading}
+            onClick={() => {
+              setDateFrom(todayStr());
+              setDateTo(todayStr());
+              setPartNumbers([]);
+              setSerialNumbers([]);
+              setFilterRows([newRow()]);
+              onReset?.();
+            }}
+            className="flex items-center gap-2 px-5 py-2.5 rounded-xl border border-error/20 bg-error/10 text-error text-sm font-semibold
+                       hover:bg-error/15 disabled:opacity-50 transition-colors"
+          >
+            <span className="material-symbols-outlined" style={{ fontSize: 16 }}>filter_alt_off</span>
+            Reset Filters
+          </button>
+        )}
 
         {onLotFinderOpen && (
           <button

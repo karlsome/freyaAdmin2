@@ -371,7 +371,8 @@ function MaintenanceSection({ record, onPreview }) {
 //   processName — string key matching PROCESS_ACCENT (e.g. "Press", "Kensa")
 //   onClose     — callback to close the modal
 //   onLotClick  — optional callback(lot: string) when a 材料ロット chip is clicked
-export default function RecordDetailModal({ record, processName, onClose, onLotClick }) {
+//   onUpdated   — optional callback triggered after successful edit
+export default function RecordDetailModal({ record, processName, onClose, onLotClick, onUpdated }) {
   const [imageData,    setImageData]    = useState(null);
   const [imageLoading, setImageLoading] = useState(true);
   const [copied,       setCopied]       = useState(false);
@@ -453,8 +454,9 @@ export default function RecordDetailModal({ record, processName, onClose, onLotC
       });
       alert("Record updated successfully!");
       setIsEditing(false);
-      // We rely on the parent or dashboard to eventually refetch data.
-      // But we can close the modal, and the parent can reload if needed.
+      if (typeof onUpdated === "function") {
+        onUpdated();
+      }
       onClose();
     } catch (err) {
       alert("Failed to save changes: " + err.message);

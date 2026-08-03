@@ -339,10 +339,23 @@ export default function FactoryDetailPage({ combined = false }) {
   const initialDateTo   = searchParams.get("dateTo") || todayStr();
   const initialSebanggo = searchParams.get("sebanggo") || "";
 
-  const [dateFrom,      setDateFrom]      = useState(initialDateFrom);
-  const [dateTo,        setDateTo]        = useState(initialDateTo);
-  const [partNumbers,   setPartNumbers]   = useState([]);
-  const [serialNumbers, setSerialNumbers] = useState(initialSebanggo ? [initialSebanggo] : []);
+  const storageKey = `freyaAdmin2.factoryFilter.${factoryName}`;
+  const getStoredFilters = () => {
+    try {
+      const stored = window.localStorage.getItem(storageKey);
+      if (stored) return JSON.parse(stored);
+    } catch (e) {
+      // ignore
+    }
+    return {};
+  };
+
+  const storedFilters = getStoredFilters();
+  const [dateFrom,      setDateFrom]      = useState(initialDateFrom !== todayStr() ? initialDateFrom : (storedFilters.dateFrom || initialDateFrom));
+  const [dateTo,        setDateTo]        = useState(initialDateTo !== todayStr() ? initialDateTo : (storedFilters.dateTo || initialDateTo));
+  const [partNumbers,   setPartNumbers]   = useState(storedFilters.partNumbers || []);
+  const [serialNumbers, setSerialNumbers] = useState(initialSebanggo ? [initialSebanggo] : (storedFilters.serialNumbers || []));
+  const [advancedFilters, setAdvancedFilters] = useState(storedFilters.advancedFilters || []);
 
   const [prodData,      setProdData]      = useState(null);
   const [sensor,        setSensor]        = useState(null);
@@ -356,7 +369,7 @@ export default function FactoryDetailPage({ combined = false }) {
 
   const [cameraModalOpen, setCameraModalOpen] = useState(false);
 
-  const loadData = useCallback(async (from = dateFrom, to = dateTo, parts = partNumbers, serials = serialNumbers, filters = []) => {
+  const loadData = useCallback(async (from = dateFrom, to = dateTo, parts = partNumbers, serials = serialNumbers, filters = advancedFilters) => {
     setLoading(true);
     const [p, s, e] = await Promise.allSettled([
       fetchProductionByPeriod(combined ? null : factoryName, from, to, parts, serials, filters),
@@ -594,10 +607,19 @@ export default function FactoryDetailPage({ combined = false }) {
         factoryName={combined ? "__all__" : factoryName}
         defaultDateFrom={dateFrom}
         defaultDateTo={dateTo}
+        defaultPartNumbers={partNumbers}
         defaultSerialNumbers={serialNumbers}
+        defaultAdvancedFilters={advancedFilters}
         loading={loading}
         onApply={({ dateFrom: f, dateTo: t, partNumbers: p, serialNumbers: s, advancedFilters: af }) => {
-          setDateFrom(f); setDateTo(t); setPartNumbers(p); setSerialNumbers(s);
+          setDateFrom(f); setDateTo(t); setPartNumbers(p); setSerialNumbers(s); setAdvancedFilters(af);
+          window.localStorage.setItem(storageKey, JSON.stringify({ dateFrom: f, dateTo: t, partNumbers: p, serialNumbers: s, advancedFilters: af }));
+          loadData(f, t, p, s, af);
+        }}
+        onReset={() => {
+          const f = todayStr(), t = todayStr(), p = [], s = [], af = [];
+          setDateFrom(f); setDateTo(t); setPartNumbers(p); setSerialNumbers(s); setAdvancedFilters(af);
+          window.localStorage.removeItem(storageKey);
           loadData(f, t, p, s, af);
         }}
         onLotFinderOpen={() => {
@@ -653,6 +675,7 @@ export default function FactoryDetailPage({ combined = false }) {
           record={modalRecord}
           processName={modalProcess}
           onClose={closeRecord}
+          onUpdated={loadData}
           onLotClick={(lot) => { setLotModalInitial({ lot, hinban: modalRecord["品番"] || "" }); setShowLotModal(true); }}
         />
       )}
