@@ -3015,3 +3015,21 @@ export async function translateJapaneseText(text) {
 
   return String(data?.responseData?.translatedText || "").trim();
 }
+
+/**
+ * Edit an existing submitted record securely.
+ * POST /api/approvals/edit-document
+ */
+export async function editSubmittedRecord(payload) {
+  const url = `${BASE_URL}approvals/edit-document`;
+  const res = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    const errorText = await res.text();
+    throw new Error(`Failed to edit record: ${res.status} - ${errorText}`);
+  }
+  return res.json();
+}

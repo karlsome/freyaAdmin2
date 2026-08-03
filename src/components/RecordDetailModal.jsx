@@ -1,15 +1,23 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
-import { fetchMasterImage } from "../services/api";
+import { fetchMasterImage, fetchDistinctValues, editSubmittedRecord } from "../services/api";
+import { searchApprovalMasterProducts } from "../services/approvalsApi";
+import {
+  APPROVAL_EDIT_HIDDEN_FIELDS,
+  buildApprovalEditSections,
+  resolveApprovalEditFieldKind,
+  computeApprovalDerivedFields,
+} from "../utils/approvalEdit";
 import CollapsibleSection from "./CollapsibleSection";
 import SensorDevicePhotoPreviewModal from "./SensorDevicePhotoPreviewModal";
+import RecordEditModal from "./RecordEditModal";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 export const PROCESS_ACCENT = {
-  Kensa: { dot: "bg-amber-400",   label: "text-amber-400" },
-  Press: { dot: "bg-emerald-400", label: "text-emerald-400" },
-  SRS:   { dot: "bg-slate-400",   label: "text-slate-400" },
-  Slit:  { dot: "bg-sky-400",     label: "text-sky-400" },
+  Kensa: { dot: "bg-amber-400",   label: "text-amber-400", db: "kensaDB" },
+  Press: { dot: "bg-emerald-400", label: "text-emerald-400", db: "pressDB" },
+  SRS:   { dot: "bg-slate-400",   label: "text-slate-400", db: "SRSDB" },
+  Slit:  { dot: "bg-sky-400",     label: "text-sky-400", db: "slitDB" },
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -368,6 +376,14 @@ export default function RecordDetailModal({ record, processName, onClose, onLotC
   const [copied,       setCopied]       = useState(false);
   const [photoPreview, setPhotoPreview] = useState(null);
 
+  const [isEditing, setIsEditing] = useState(false);
+  const [editBusy, setEditBusy] = useState(false);
+  const editFieldOptionsCacheRef = useRef(new Map());
+
+  const authUser = JSON.parse(localStorage.getItem("authUser")) || {};
+  const role = authUser.role || "";
+  const canEdit = ["admin", "部長", "課長", "係長"].includes(role);
+
   function copyLink() {
     navigator.clipboard.writeText(window.location.href).then(() => {
       setCopied(true);
@@ -376,7 +392,7 @@ export default function RecordDetailModal({ record, processName, onClose, onLotC
   }
 
   useEffect(() => {
-    if (!record) return;
+    if (!record || isEditing) return;
     let cancelled = false;
     setImageLoading(true);
     setImageData(null);
@@ -384,7 +400,54 @@ export default function RecordDetailModal({ record, processName, onClose, onLotC
       if (!cancelled) { setImageData(d); setImageLoading(false); }
     });
     return () => { cancelled = true; };
-  }, [record]);
+  }, [record, isEditing]);
+
+  async function loadFieldPickerOptions(path, draft) {
+    const currentValue = String(draft?.[path] || "").trim();
+    if (!["設備", "Worker_Name", "工場"].includes(path)) {
+      return currentValue ? [currentValue] : [];
+    }
+    const selectedFactory = String(draft?.工場 || "").trim();
+    const cacheKey = `${path}::${selectedFactory}`;
+    if (editFieldOptionsCacheRef.current.has(cacheKey)) {
+      const cachedOptions = editFieldOptionsCacheRef.current.get(cacheKey);
+      return [...new Set([...cachedOptions, currentValue].filter(Boolean))]
+        .sort((left, right) => String(left).localeCompare(String(right), "ja"));
+    }
+    let values = [];
+    if (path === "工場") {
+      values = ["小瀬", "三芳"]; 
+    } else {
+      values = await fetchDistinctValues(selectedFactory, path);
+    }
+    editFieldOptionsCacheRef.current.set(cacheKey, values);
+    return [...new Set([...values, currentValue].filter(Boolean))]
+      .sort((left, right) => String(left).localeCompare(String(right), "ja"));
+  }
+
+  async function handleSaveEdit(updatedRecord, note) {
+    if (!PROCESS_ACCENT[processName]?.db) return;
+    setEditBusy(true);
+    try {
+      await editSubmittedRecord({
+        collection: PROCESS_ACCENT[processName].db,
+        docId: record._id?.$oid || record._id,
+        changes: updatedRecord,
+        editedBy: authUser.name || authUser.username,
+        editedByUsername: authUser.username,
+        editNote: note,
+        pendingImageOps: updatedRecord._pendingImageOps || []
+      });
+      setIsEditing(false);
+      // We rely on the parent or dashboard to eventually refetch data.
+      // But we can close the modal, and the parent can reload if needed.
+      onClose();
+    } catch (err) {
+      alert("Failed to save changes: " + err.message);
+    } finally {
+      setEditBusy(false);
+    }
+  }
 
   if (!record) return null;
 
@@ -447,7 +510,16 @@ export default function RecordDetailModal({ record, processName, onClose, onLotC
             </div>
             <p className="text-[11px] text-outline mt-0.5 font-mono ml-5.5">{record["品番"]} / {record["背番号"]}</p>
           </div>
-          <div className="flex items-center gap-0.5 flex-shrink-0 ml-2">
+          <div className="flex items-center gap-2">
+            {canEdit && (
+              <button
+                type="button"
+                onClick={() => setIsEditing(true)}
+                className="px-4 py-1.5 rounded-xl bg-primary/10 text-primary font-semibold hover:bg-primary/20 text-xs active:scale-95 transition-all"
+              >
+                Edit
+              </button>
+            )}
             <button
               onClick={copyLink}
               title="Copy shareable link"
@@ -628,6 +700,25 @@ export default function RecordDetailModal({ record, processName, onClose, onLotC
           if (next < 0 || next >= images.length) return current;
           return { ...current, activeIndex: next };
         })}
+      />
+      <RecordEditModal
+        open={isEditing}
+        title={`Edit ${processName} Record`}
+        subtitle={`${record?.品番 || ""} / ${record?.背番号 || ""}`}
+        record={record}
+        busy={editBusy}
+        onClose={() => setIsEditing(false)}
+        onSave={handleSaveEdit}
+        saveLabel="Save Changes"
+        notePlaceholder="変更理由を入力... (必須)"
+        buildSections={buildApprovalEditSections}
+        resolveFieldKind={resolveApprovalEditFieldKind}
+        computeDraft={computeApprovalDerivedFields}
+        schemaContext={PROCESS_ACCENT[processName]?.db}
+        hiddenFields={APPROVAL_EDIT_HIDDEN_FIELDS}
+        linkedProductPaths={{ partNumberPath: "品番", serialNumberPath: "背番号" }}
+        loadLinkedProductOptions={searchApprovalMasterProducts}
+        loadFieldPickerOptions={loadFieldPickerOptions}
       />
     </div>
   );

@@ -521,11 +521,21 @@ export default function RecordEditModal({
 
   return (
     <>
-      <div className="fixed inset-0 z-[80] bg-black/50 backdrop-blur-sm" onClick={() => onClose?.()}>
-        <div className="flex min-h-full items-center justify-center p-4 lg:p-6">
+      <div 
+        className="fixed inset-0 z-[80] bg-black/50 backdrop-blur-sm" 
+        onMouseDown={(e) => {
+          if (e.target === e.currentTarget) onClose?.();
+        }}
+      >
+        <div 
+          className="flex min-h-full items-center justify-center p-4 lg:p-6"
+          onMouseDown={(e) => {
+            if (e.target === e.currentTarget) onClose?.();
+          }}
+        >
           <div
             className="dashboard-section flex max-h-[92vh] w-full max-w-6xl flex-col overflow-hidden rounded-2xl"
-            onClick={(event) => event.stopPropagation()}
+            onMouseDown={(event) => event.stopPropagation()}
           >
             <div className="border-b border-separator/40 px-6 py-5">
               <div className="flex items-start justify-between gap-4">

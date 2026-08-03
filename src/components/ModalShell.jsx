@@ -45,12 +45,19 @@ export default function ModalShell({
   const modal = (
     <div
       className={`fixed inset-0 ${zIndex} bg-black/${overlayOpacity} backdrop-blur-sm`}
-      onClick={onClose}
+      onMouseDown={(e) => {
+        if (e.target === e.currentTarget) onClose?.();
+      }}
     >
-      <div className={`flex min-h-full ${alignClass} justify-center px-4`}>
+      <div 
+        className={`flex min-h-full ${alignClass} justify-center px-4`}
+        onMouseDown={(e) => {
+          if (e.target === e.currentTarget) onClose?.();
+        }}
+      >
         <div
           className={["dashboard-section flex w-full flex-col overflow-hidden rounded-2xl", maxWidth, cardClassName].filter(Boolean).join(" ")}
-          onClick={(e) => e.stopPropagation()}
+          onMouseDown={(e) => e.stopPropagation()}
         >
           <div className="border-b border-separator/40 px-6 py-5">
             <div className="flex items-start justify-between gap-4">
