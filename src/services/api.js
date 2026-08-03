@@ -1427,21 +1427,21 @@ export async function fetchCombinedEnvironmentalData() {
 }
 
 // ─── Manufacturing lot lookup ──────────────────────────────────────────────────
-export async function checkMaterialSebanggo(lotNumber) {
+export async function checkMaterialSebanggo(hinban) {
   const res = await fetch(BASE_URL + "api/check-material-sebanggo", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ lotNumber }),
+    body: JSON.stringify({ 品番: hinban }),
   });
   if (!res.ok) throw new Error(`API ${res.status}`);
   return res.json();
 }
 
-export async function lookupMaterialLot(lotNumber, sebanggo) {
+export async function lookupMaterialLot(hinban, lotNumber, sebanggo) {
   const res = await fetch(BASE_URL + "api/material-lot-lookup", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ lotNumber, sebanggo }),
+    body: JSON.stringify({ 品番: hinban, 材料ロット: lotNumber, 材料背番号: sebanggo }),
   });
   if (!res.ok) throw new Error(`API ${res.status}`);
   return res.json();

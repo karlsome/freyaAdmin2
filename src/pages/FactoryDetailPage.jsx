@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
+import { createPortal } from "react-dom";
 import Hls from "hls.js";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import PageHeader from "../components/PageHeader";
@@ -33,53 +34,53 @@ function defectChip(rate) {
 }
 
 // ─── MfgLotModal ─────────────────────────────────────────────────────────────
-function MfgLotModal({ onClose, initialLot = "" }) {
-  const [lotInput, setLotInput]   = useState(initialLot);
-  const [step, setStep]           = useState("input");
+function MfgLotModal({ onClose, initialLot = "", initialHinban = "" }) {
+  const [lotInput, setLotInput]       = useState(initialLot);
+  const [hinbanInput, setHinbanInput] = useState(initialHinban);
+  const [step, setStep]               = useState("input");
   const [sebanggoOptions, setSebanggoOptions] = useState([]);
-  const [results, setResults]     = useState(null);
-  const [loading, setLoading]     = useState(false);
-  const [errMsg, setErrMsg]       = useState("");
+  const [results, setResults]         = useState(null);
+  const [loading, setLoading]         = useState(false);
+  const [errMsg, setErrMsg]           = useState("");
 
-  const doSearch = useCallback(async (lot) => {
-    if (!lot || lot.length < 3) return;
+  const doSearch = useCallback(async (lot, hinban) => {
+    if (!lot || lot.length < 3 || !hinban) {
+      setErrMsg("品番 and 製造ロット are required.");
+      return;
+    }
     setLoading(true);
     setErrMsg("");
     try {
-      const check = await checkMaterialSebanggo(lot);
-      if (check?.multiple && Array.isArray(check.options) && check.options.length > 1) {
-        setSebanggoOptions(check.options);
+      const check = await checkMaterialSebanggo(hinban);
+      if (check?.multiple && Array.isArray(check.材料背番号Array) && check.材料背番号Array.length > 1) {
+        setSebanggoOptions(check.材料背番号Array);
         setStep("selecting");
       } else {
-        const res = await lookupMaterialLot(lot, check?.sebanggo ?? null);
+        const res = await lookupMaterialLot(hinban, lot, null);
         setResults(res);
         setStep("results");
       }
-    } catch {
-      try {
-        const rows = await query("submittedDB", "pressDB", { "製造ロット": { $regex: lot, $options: "i" } });
-        setResults({ rows });
-        setStep("results");
-      } catch {
-        setErrMsg("Lot not found. Please check the number and try again.");
-        setStep("error");
-      }
+    } catch (e) {
+      setErrMsg("Search failed. Please check the inputs and try again.");
+      setStep("error");
     }
     setLoading(false);
   }, []);
 
-  // Auto-search when opened with a pre-filled lot (e.g. from 材料ロット chip)
   useEffect(() => {
-    const t = initialLot.trim();
-    if (t.length >= 3) doSearch(t);
+    const tLot = initialLot.trim();
+    const tHinban = initialHinban.trim();
+    if (tLot.length >= 3 && tHinban) {
+      doSearch(tLot, tHinban);
+    }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const handleSearch = () => doSearch(lotInput.trim());
+  const handleSearch = () => doSearch(lotInput.trim(), hinbanInput.trim());
 
   const handleSelectSebanggo = async (seb) => {
     setLoading(true);
     try {
-      const res = await lookupMaterialLot(lotInput.trim(), seb);
+      const res = await lookupMaterialLot(hinbanInput.trim(), lotInput.trim(), seb);
       setResults(res);
       setStep("results");
     } catch {
@@ -89,46 +90,47 @@ function MfgLotModal({ onClose, initialLot = "" }) {
     setLoading(false);
   };
 
-  const rows   = results?.rows ?? (Array.isArray(results) ? results : []);
-  const fields = (results && !Array.isArray(results) && !results.rows)
-    ? Object.entries(results).filter(([k]) => k !== "rows")
-    : [];
+  const records = results?.results ?? [];
 
-  return (
+  const modal = (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75"
+      className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/75"
       onClick={onClose}
     >
       <div
-        className="dashboard-section rounded-2xl w-full max-w-xl max-h-[85vh] overflow-y-auto
-                   scrollbar-hide"
+        className="dashboard-section rounded-2xl w-full max-w-3xl max-h-[85vh] overflow-y-auto scrollbar-hide"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="px-6 py-5 flex items-center justify-between border-b border-separator/40">
           <div className="flex items-center gap-2">
             <span className="material-symbols-outlined text-primary" style={{ fontSize: 20 }}>manage_search</span>
-            <h3 className="text-base font-semibold text-on-surface">Manufacturing Lot Finder</h3>
+            <h3 className="text-base font-semibold text-on-surface">材料ロット詳細 (Material Lot Finder)</h3>
           </div>
-          <button onClick={onClose}
-            className="p-2 rounded-xl hover:bg-surface-container text-outline hover:text-on-surface transition-colors">
+          <button onClick={onClose} className="p-2 rounded-xl hover:bg-surface-container text-outline hover:text-on-surface transition-colors">
             <span className="material-symbols-outlined" style={{ fontSize: 18 }}>close</span>
           </button>
         </div>
 
         <div className="px-6 py-5 space-y-4">
-          <div className="flex gap-2">
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <input
+              type="text"
+              value={hinbanInput}
+              onChange={(e) => setHinbanInput(e.target.value)}
+              placeholder="品番 (例: 12345-6789)"
+              className="flex-1 h-10 px-3 rounded-xl bg-surface-container border border-separator/40 text-sm text-on-surface placeholder:text-outline outline-none focus:border-primary/40 transition-colors"
+            />
             <input
               type="text"
               value={lotInput}
               onChange={(e) => setLotInput(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-              placeholder="製造ロット番号 (例: 241227)"
-              className="flex-1 h-10 px-3 rounded-xl bg-surface-container border border-separator/40 text-sm
-                         text-on-surface placeholder:text-outline outline-none focus:border-primary/40 transition-colors"
+              placeholder="材料ロット番号 (例: 260709-1)"
+              className="flex-1 h-10 px-3 rounded-xl bg-surface-container border border-separator/40 text-sm text-on-surface placeholder:text-outline outline-none focus:border-primary/40 transition-colors"
             />
             <button
               onClick={handleSearch}
-              disabled={loading || lotInput.trim().length < 3}
+              disabled={loading || lotInput.trim().length < 3 || !hinbanInput.trim()}
               className="px-4 h-10 rounded-xl bg-primary text-on-primary text-sm font-semibold disabled:opacity-40 hover:opacity-90 transition-opacity"
             >
               {loading ? "…" : "Search"}
@@ -137,12 +139,10 @@ function MfgLotModal({ onClose, initialLot = "" }) {
 
           {step === "selecting" && (
             <div>
-              <p className="text-xs text-on-surface-variant mb-3">Multiple matches — select a serial number:</p>
+              <p className="text-xs text-on-surface-variant mb-3">Multiple matches — select a 材料背番号 (Sebanggo):</p>
               <div className="space-y-2">
                 {sebanggoOptions.map((s) => (
-                  <button key={s} onClick={() => handleSelectSebanggo(s)}
-                    className="w-full px-4 py-3 rounded-xl glass-card text-left text-sm font-semibold text-on-surface
-                               hover:border-primary/30 hover:scale-[1.01] transition-all">
+                  <button key={s} onClick={() => handleSelectSebanggo(s)} className="w-full px-4 py-3 rounded-xl glass-card text-left text-sm font-semibold text-on-surface hover:border-primary/30 hover:scale-[1.01] transition-all">
                     {s}
                   </button>
                 ))}
@@ -151,49 +151,59 @@ function MfgLotModal({ onClose, initialLot = "" }) {
           )}
 
           {step === "results" && (
-            <div className="space-y-3">
-              {fields.length > 0 && (
-                <div className="glass-card rounded-xl p-5 space-y-2">
-                  {fields.map(([k, v]) => (
-                    <div key={k} className="flex justify-between gap-4 border-b border-separator/40 pb-2 last:border-0">
-                      <span className="text-[11px] font-semibold text-outline">{k}</span>
-                      <span className="text-xs text-on-surface-variant text-right font-mono">{String(v)}</span>
+            <div className="space-y-4">
+              <div className="rounded-xl bg-primary/10 px-4 py-3 border border-primary/20 text-sm text-primary font-semibold">
+                検索結果: {records.length}件 &nbsp;&nbsp;&nbsp; 材料背番号: {results?.材料背番号 ?? "—"}
+              </div>
+              
+              {records.length > 0 ? (
+                <div className="space-y-4">
+                  {records.map((rec, i) => (
+                    <div key={i} className="glass-card rounded-2xl overflow-hidden border border-separator/40">
+                      <div className="px-5 py-3 bg-surface-container-high/40 border-b border-separator/40 flex items-center justify-between">
+                        <span className="font-semibold text-sm">記録 #{i + 1}</span>
+                        {rec.Status === "Completed" && (
+                          <span className="px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-500 text-[10px] font-semibold">Completed</span>
+                        )}
+                      </div>
+                      
+                      <div className="p-5 grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3 text-sm">
+                        <div className="flex justify-between border-b border-separator/20 pb-2"><span className="text-outline">品番:</span><span className="font-semibold">{rec["品番"] ?? "—"}</span></div>
+                        <div className="flex justify-between border-b border-separator/20 pb-2"><span className="text-outline">生産数:</span><span className="font-semibold">{rec["生産数"] ?? "—"}</span></div>
+                        <div className="flex justify-between border-b border-separator/20 pb-2"><span className="text-outline">材料品番:</span><span className="font-semibold">{rec["材料品番"] ?? "—"}</span></div>
+                        <div className="flex justify-between border-b border-separator/20 pb-2"><span className="text-outline">生産順番:</span><span className="font-semibold">{rec["生産順番"] ?? "—"}</span></div>
+                        <div className="flex justify-between border-b border-separator/20 pb-2"><span className="text-outline">材料背番号:</span><span className="font-semibold">{rec["材料背番号"] ?? "—"}</span></div>
+                        <div className="flex justify-between border-b border-separator/20 pb-2"><span className="text-outline">作業時間:</span><span className="font-semibold">{rec["作業時間"] ? `${rec["作業時間"]} 時間` : "—"}</span></div>
+                        <div className="flex justify-between border-b border-separator/20 pb-2"><span className="text-outline">作業日:</span><span className="font-semibold">{rec["作業日"] ?? "—"}</span></div>
+                        <div className="flex justify-between border-b border-separator/20 pb-2"><span className="text-outline">人員数:</span><span className="font-semibold">{rec["人員数"] != null ? `${rec["人員数"]} 人` : "—"}</span></div>
+                        <div className="flex justify-between border-b border-separator/20 pb-2"><span className="text-outline">納期:</span><span className="font-semibold">{rec["納期"] ?? "—"}</span></div>
+                        <div className="flex justify-between border-b border-separator/20 pb-2"><span className="text-outline">幅:</span><span className="font-semibold">{rec["幅"] ?? "—"}</span></div>
+                        <div className="flex justify-between border-b border-separator/20 pb-2"><span className="text-outline">工場:</span><span className="font-semibold">{rec["工場"] ?? "—"}</span></div>
+                        <div className="flex justify-between border-b border-separator/20 pb-2"><span className="text-outline">型番:</span><span className="font-semibold">{rec["型番"] ?? "—"}</span></div>
+                      </div>
+                      
+                      {rec.PrintLog && rec.PrintLog.length > 0 && (
+                        <div className="p-5 pt-0">
+                          <h4 className="text-[11px] font-semibold text-on-surface-variant flex items-center gap-1.5 mb-3 uppercase tracking-wider">
+                            <span className="w-1.5 h-1.5 rounded-sm bg-primary" /> ロット情報
+                          </h4>
+                          <div className="space-y-2">
+                            {rec.PrintLog.map((log, idx) => (
+                              <div key={idx} className="bg-surface-container/30 rounded-xl p-3 grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2 text-xs">
+                                <div className="flex justify-between"><span className="text-outline">ロット番号:</span><span className="font-semibold">{log.lotNumbers?.join(", ") || "—"}</span></div>
+                                <div className="flex justify-between"><span className="text-outline">印刷枚数:</span><span className="font-semibold">{log.quantity ? `${log.quantity}枚` : "—"}</span></div>
+                                <div className="flex justify-between"><span className="text-outline">総印刷枚数:</span><span className="font-semibold">{log.totalPrintedSoFar ? `${log.totalPrintedSoFar}枚` : "—"}</span></div>
+                                <div className="flex justify-between"><span className="text-outline">印刷者:</span><span className="font-semibold">{log.user ?? "—"}</span></div>
+                                <div className="flex justify-between"><span className="text-outline">印刷日時:</span><span className="font-semibold">{log.timestamp ? new Date(log.timestamp).toLocaleString() : "—"}</span></div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
-              )}
-              {rows.length > 0 ? (
-                <div className="overflow-x-auto rounded-xl border border-separator/40">
-                  <table className="ui-table-data w-full">
-                    <thead className="bg-surface-container-high/50">
-                      <tr>
-                        {["品番","背番号","Date","Total","Total NG","不良率"].map((h) => (
-                          <th key={h} className="ui-table-heading px-4 py-2.5 text-left uppercase tracking-wider text-outline">{h}</th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-separator/20">
-                      {rows.map((r, i) => {
-                        const qty = Number(r.Process_Quantity) || Number(r.Total) || 0;
-                        const ng  = Number(r.Total_NG) || 0;
-                        const dr  = qty > 0 ? ((ng / qty) * 100).toFixed(2) : "0.00";
-                        return (
-                          <tr key={i} className="hover:bg-surface-container/40 transition-colors">
-                            <td className="px-4 py-2.5 font-semibold text-on-surface">{r["品番"] ?? "—"}</td>
-                            <td className="px-4 py-2.5 text-on-surface-variant">{r["背番号"] ?? "—"}</td>
-                            <td className="px-4 py-2.5 text-outline">{r.Date ?? "—"}</td>
-                            <td className="px-4 py-2.5 text-on-surface">{qty.toLocaleString()}</td>
-                            <td className={`px-4 py-2.5 font-semibold ${ng > 0 ? "text-error" : "text-outline"}`}>{ng}</td>
-                            <td className="px-4 py-2.5">
-                              <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold ${defectChip(dr)}`}>{dr}%</span>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              ) : fields.length === 0 && (
+              ) : (
                 <p className="text-sm text-outline text-center py-4">No records found for this lot.</p>
               )}
             </div>
@@ -206,6 +216,8 @@ function MfgLotModal({ onClose, initialLot = "" }) {
       </div>
     </div>
   );
+
+  return createPortal(modal, document.body);
 }
 
 // ─── Camera modal ─────────────────────────────────────────────────────────────
@@ -334,7 +346,7 @@ export default function FactoryDetailPage({ combined = false }) {
 
   const { modalRecord, modalProcess, openRecord, closeRecord } = useRecordModal();
   const [showLotModal,    setShowLotModal]    = useState(false);
-  const [lotModalInitial, setLotModalInitial] = useState("");
+  const [lotModalInitial, setLotModalInitial] = useState({ lot: "", hinban: "" });
 
   const [cameraModalOpen, setCameraModalOpen] = useState(false);
 
@@ -582,7 +594,10 @@ export default function FactoryDetailPage({ combined = false }) {
           setDateFrom(f); setDateTo(t); setPartNumbers(p); setSerialNumbers(s);
           loadData(f, t, p, s, af);
         }}
-        onLotFinderOpen={() => setShowLotModal(true)}
+        onLotFinderOpen={() => {
+          setLotModalInitial({ lot: "", hinban: "" });
+          setShowLotModal(true);
+        }}
       />
 
       {/* ── Daily Production ── */}
@@ -632,15 +647,16 @@ export default function FactoryDetailPage({ combined = false }) {
           record={modalRecord}
           processName={modalProcess}
           onClose={closeRecord}
-          onLotClick={(lot) => { setLotModalInitial(lot); setShowLotModal(true); }}
+          onLotClick={(lot) => { setLotModalInitial({ lot, hinban: modalRecord["品番"] || "" }); setShowLotModal(true); }}
         />
       )}
 
       {/* ── Manufacturing lot modal ── */}
       {showLotModal && (
         <MfgLotModal
-          initialLot={lotModalInitial}
-          onClose={() => { setShowLotModal(false); setLotModalInitial(""); }}
+          initialLot={lotModalInitial.lot}
+          initialHinban={lotModalInitial.hinban}
+          onClose={() => { setShowLotModal(false); setLotModalInitial({ lot: "", hinban: "" }); }}
         />
       )}
 
