@@ -84,7 +84,11 @@ export const APPROVAL_EDIT_PROTECTED_FIELDS = new Set([
   "restoredByUsername",
 ]);
 
-export const APPROVAL_EDIT_HIDDEN_FIELDS = APPROVAL_EDIT_PROTECTED_FIELDS;
+export const APPROVAL_EDIT_HIDDEN_FIELDS = new Set([
+  ...APPROVAL_EDIT_PROTECTED_FIELDS,
+  "materialLabelImageCount",
+  "材料ラベル画像" // We only expose the array version materialLabelImages
+]);
 
 const APPROVAL_EDIT_AUTO_FIELDS = new Set([
   "Cycle_Time",
@@ -243,10 +247,15 @@ export function buildApprovalEditSections(draft = {}, collectionName) {
 
       processedKeys.add(key);
       const value = draft[key];
+      let displayLabel = key;
+      if (key === "materialLabelImages") {
+        displayLabel = "材料ラベル画像";
+      }
+
       imageItems.push({
         kind: Array.isArray(value) || isPlainObject(value) ? "structured" : "field",
         path: key,
-        label: key,
+        label: displayLabel,
         span: "full",
       });
     });

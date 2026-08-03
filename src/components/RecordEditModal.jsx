@@ -2,7 +2,8 @@ import { useEffect, useMemo, useState, useRef } from "react";
 import IconButton from "./IconButton";
 import MasterProductPickerModal from "./MasterProductPickerModal";
 import FieldOptionPickerModal from "./FieldOptionPickerModal";
-import { uploadMaintenanceImage } from "../services/api";
+import { uploadMaintenanceImage, uploadMaterialLabelImage } from "../services/api";
+import SensorDevicePhotoPreviewModal from "./SensorDevicePhotoPreviewModal";
 
 function joinClasses(...classes) {
   return classes.filter(Boolean).join(" ");
@@ -210,6 +211,7 @@ export default function RecordEditModal({
   });
   const [revealedKeys, setRevealedKeys] = useState(new Set());
   const [uploadingImage, setUploadingImage] = useState(false);
+  const [photoPreview, setPhotoPreview] = useState(null);
   
   const modalContentRef = useRef(null);
 
@@ -426,35 +428,41 @@ export default function RecordEditModal({
       <div>
         {options.hideLabel ? null : <div className="mb-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">{label}</div>}
         {imagePreview ? (
-          <div className="mb-2 overflow-hidden rounded-2xl border border-outline-variant/15 bg-surface-container-low">
-            <img src={value} alt={label} className="h-32 w-full object-contain bg-black/5" />
+          <div className="mb-2 w-full max-w-sm overflow-hidden rounded-2xl border border-outline-variant/15 bg-surface-container-low transition-colors hover:bg-surface-container-high/50 cursor-pointer" onClick={() => setPhotoPreview({
+            eyebrow: "Record Photos",
+            displayName: label,
+            images: [{ url: value, label: label }],
+            activeIndex: 0
+          })}>
+            <img src={value} alt={label} className="h-48 w-full object-contain bg-black/5" />
           </div>
-        ) : null}
-
-        {kind === "textarea" ? (
-          <textarea
-            rows={3}
-            value={value ?? ""}
-            onChange={(event) => handleFieldChange(path, event.target.value, kind)}
-            className={inputClassName}
-          />
         ) : (
-          <input
-            type={kind === "date" ? "date" : kind === "time" ? "time" : kind === "number" || kind === "integer" ? "number" : "text"}
-            step={kind === "number" ? "0.01" : kind === "integer" ? "1" : undefined}
-            min={kind === "number" || kind === "integer" ? "0" : undefined}
-            value={kind === "number" || kind === "integer" ? (value ?? 0) : (value ?? "")}
-            onChange={(event) => handleFieldChange(path, event.target.value, kind)}
-            className={inputClassName}
-          />
+          kind === "textarea" ? (
+            <textarea
+              rows={3}
+              value={value ?? ""}
+              onChange={(event) => handleFieldChange(path, event.target.value, kind)}
+              className={inputClassName}
+            />
+          ) : (
+            <input
+              type={kind === "date" ? "date" : kind === "time" ? "time" : kind === "number" || kind === "integer" ? "number" : "text"}
+              step={kind === "number" ? "0.01" : kind === "integer" ? "1" : undefined}
+              min={kind === "number" || kind === "integer" ? "0" : undefined}
+              value={kind === "number" || kind === "integer" ? (value ?? 0) : (value ?? "")}
+              onChange={(event) => handleFieldChange(path, event.target.value, kind)}
+              className={inputClassName}
+            />
+          )
         )}
       </div>
     );
   }
 
   function renderStructuredNode(path, value, depth = 0) {
-    if (path.endsWith(".photos")) {
+    if (path.endsWith(".photos") || path === "materialLabelImages") {
       const photos = Array.isArray(value) ? value.filter(Boolean) : [];
+      const isMaterialLabel = path === "materialLabelImages";
       
       const handlePhotoUpload = async (event) => {
         const file = event.target.files?.[0];
@@ -479,7 +487,7 @@ export default function RecordEditModal({
             sebanggo: draft.背番号 || "Unknown"
           };
           
-          const res = await uploadMaintenanceImage(payload);
+          const res = isMaterialLabel ? await uploadMaterialLabelImage(payload) : await uploadMaintenanceImage(payload);
           if (res.url) {
              applyDraftMutation((nextDraft) => {
                const arr = getPathValue(nextDraft, path) || [];
@@ -500,7 +508,17 @@ export default function RecordEditModal({
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               {photos.map((url, idx) => (
                 <div key={idx} className="relative group rounded-xl overflow-hidden border border-outline-variant/30">
-                  <img src={url} alt="Maintenance" className="w-full aspect-square object-cover" />
+                  <img 
+                    src={url} 
+                    alt={isMaterialLabel ? "Material Label" : "Maintenance"} 
+                    className="w-full aspect-square object-cover cursor-pointer" 
+                    onClick={() => setPhotoPreview({
+                      eyebrow: "Record Photos",
+                      displayName: isMaterialLabel ? "材料ラベル画像" : "Maintenance Photos",
+                      images: photos.map((u, i) => ({ url: u, label: isMaterialLabel ? `材料ラベル ${i + 1}` : `Maintenance ${i + 1}` })),
+                      activeIndex: idx
+                    })}
+                  />
                   <button
                     type="button"
                     disabled={uploadingImage || busy}
@@ -522,7 +540,7 @@ export default function RecordEditModal({
                <span className="material-symbols-outlined text-[18px]">
                  {uploadingImage ? "hourglass_empty" : "add_a_photo"}
                </span>
-               {uploadingImage ? "Uploading..." : "Attach Photo"}
+               {uploadingImage ? "Uploading..." : (isMaterialLabel ? "Attach Material Label" : "Attach Photo")}
                <input type="file" accept="image/*" className="hidden" onChange={handlePhotoUpload} disabled={uploadingImage || busy} />
              </label>
           </div>
@@ -866,6 +884,18 @@ export default function RecordEditModal({
           </div>
         </div>
       </div>
+
+      <SensorDevicePhotoPreviewModal
+        preview={photoPreview}
+        onClose={() => setPhotoPreview(null)}
+        onNavigate={(direction) => setPhotoPreview((current) => {
+          if (!current) return current;
+          const images = Array.isArray(current.images) ? current.images : [];
+          const next = (Number.isInteger(current.activeIndex) ? current.activeIndex : 0) + direction;
+          if (next < 0 || next >= images.length) return current;
+          return { ...current, activeIndex: next };
+        })}
+      />
 
       <MasterProductPickerModal
         open={pickerState.open}

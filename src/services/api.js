@@ -3068,3 +3068,21 @@ export async function uploadMaintenanceImage(payload) {
   }
   return res.json();
 }
+
+/**
+ * Upload material label photo to Firebase Storage (via Kurachi backend)
+ * POST /api/upload-material-label-image
+ */
+export async function uploadMaterialLabelImage(payload) {
+  const url = `${BASE_URL}api/upload-material-label-image`;
+  const res = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    const errorText = await res.text();
+    throw new Error(`Failed to upload material label image: ${res.status} - ${errorText}`);
+  }
+  return res.json();
+}
