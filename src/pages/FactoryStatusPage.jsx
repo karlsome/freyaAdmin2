@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import AdvancedFilterSection from "../components/AdvancedFilterSection";
 import DataTable from "../components/DataTable";
+import MasterTabNav from "../components/MasterTabNav";
 import PageHeader from "../components/PageHeader";
 import StatSummaryCard from "../components/StatSummaryCard";
 import StatusChip from "../components/StatusChip";
@@ -96,6 +97,7 @@ export default function FactoryStatusPage() {
   const [error, setError] = useState("");
   const [refreshNonce, setRefreshNonce] = useState(0);
   const [logsModalState, setLogsModalState] = useState({ open: false, factory: "", equipment: "" });
+  const [activeTab, setActiveTab] = useState("live-status");
 
   const selectionSummary = summarizeFactoryStatusSelection(selectedFactories);
   const selectedFactoriesKey = selectedFactories.join("||");
@@ -507,7 +509,18 @@ export default function FactoryStatusPage() {
           />
         </div>
 
-        <div className="mb-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-6">
+        <MasterTabNav
+          tabs={[
+            { key: "live-status", label: "Production Status", ready: true },
+            { key: "live-monitor", label: "Live Monitor", ready: true },
+          ]}
+          activeTab={activeTab}
+          onSelect={(tab) => setActiveTab(tab.key)}
+        />
+
+        {activeTab === "live-status" && (
+          <>
+            <div className="mb-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-6">
           <SummaryCard
             icon="flag"
             label="Goal"
@@ -639,10 +652,18 @@ export default function FactoryStatusPage() {
               className="glass-card overflow-hidden rounded-[28px]"
               topBarClassName="flex flex-col gap-4 border-b border-outline-variant/15 px-5 py-4 md:flex-row md:items-center md:justify-between"
               bottomBarClassName="flex flex-col gap-4 border-t border-outline-variant/15 px-5 py-4 md:flex-row md:items-center md:justify-between"
-              rowClassName="border-b border-outline-variant/10 transition hover:bg-primary/5"
             />
           </div>
         ))}
+          </>
+        )}
+
+        {activeTab === "live-monitor" && (
+          <div className="glass-card rounded-2xl px-6 py-12 text-center">
+            <h2 className="text-xl font-semibold text-on-surface">Live Monitor</h2>
+            <p className="planner-data-text mt-2 text-sm text-on-surface-variant">Live monitor view coming soon.</p>
+          </div>
+        )}
 
         <FactoryStatusLogsModal
           open={logsModalState.open}
