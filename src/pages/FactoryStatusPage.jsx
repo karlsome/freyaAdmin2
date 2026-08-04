@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import FactoryLiveMonitor from "../components/factoryStatus/FactoryLiveMonitor";
 import AdvancedFilterSection from "../components/AdvancedFilterSection";
 import DataTable from "../components/DataTable";
@@ -80,6 +80,8 @@ function SummaryCard({ icon, label, value, subtitle, accent, loading = false }) 
 
 export default function FactoryStatusPage() {
   const navigate = useNavigate();
+  const { tab } = useParams();
+  const activeTab = tab || "live-monitor";
   const [authUser] = useState(() => readStoredAuthUser());
   const requestIdRef = useRef(0);
   const [factoryOptions, setFactoryOptions] = useState([]);
@@ -98,7 +100,6 @@ export default function FactoryStatusPage() {
   const [error, setError] = useState("");
   const [refreshNonce, setRefreshNonce] = useState(0);
   const [logsModalState, setLogsModalState] = useState({ open: false, factory: "", equipment: "" });
-  const [activeTab, setActiveTab] = useState("live-status");
 
   const selectionSummary = summarizeFactoryStatusSelection(selectedFactories);
   const selectedFactoriesKey = selectedFactories.join("||");
@@ -512,11 +513,11 @@ export default function FactoryStatusPage() {
 
         <MasterTabNav
           tabs={[
-            { key: "live-status", label: "Production Status", ready: true },
             { key: "live-monitor", label: "Live Monitor", ready: true },
+            { key: "live-status", label: "Production Status", ready: true },
           ]}
           activeTab={activeTab}
-          onSelect={(tab) => setActiveTab(tab.key)}
+          onSelect={(tab) => navigate(`/factoryStatus/${tab.key}`, { replace: true })}
         />
 
         {activeTab === "live-status" && (

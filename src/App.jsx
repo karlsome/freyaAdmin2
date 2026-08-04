@@ -242,6 +242,7 @@ function App() {
               <Route path="/noda" element={<NodaPage />} />
               <Route path="/inventory" element={<InventoryPage />} />
               <Route path="/factoryStatus" element={<FactoryStatusPage />} />
+              <Route path="/factoryStatus/:tab" element={<FactoryStatusPage />} />
               <Route path="/factoryStatus/logs" element={<FactoryStatusLogsPage />} />
               {placeholderPages.map((page) => (
                 <Route key={page} path={`/${page}`} element={<PlaceholderPage page={page} />} />
