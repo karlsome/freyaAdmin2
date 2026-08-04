@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { fetchFactoryLiveMachines } from '../../services/factoryStatusApi';
 import DataTable from '../DataTable';
+import LiquidSegmentedControl from '../LiquidSegmentedControl';
 import './FactoryLiveMonitor.css';
 
 function fmtWait(ms) {
@@ -19,6 +20,14 @@ export default function FactoryLiveCard({ factory }) {
   const [now, setNow] = useState(() => Date.now());
   const [isConnected, setIsConnected] = useState(false);
   const [sort, setSort] = useState(null);
+  
+  const [viewMode, setViewMode] = useState(() => {
+    return localStorage.getItem(`factoryLiveMonitor_viewMode_${factory}`) || 'individual';
+  });
+
+  useEffect(() => {
+    localStorage.setItem(`factoryLiveMonitor_viewMode_${factory}`, viewMode);
+  }, [viewMode, factory]);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -87,11 +96,33 @@ export default function FactoryLiveCard({ factory }) {
   }, [masterMachines, machineState, activeCalls]);
 
   const tableRows = useMemo(() => {
-    return machineRoster.map(machine => {
-      const callIdx = activeCalls.findIndex(c => c.machine === machine);
+    // Determine which machines to show based on viewMode
+    let displayMachines = [];
+    if (viewMode === 'individual') {
+      displayMachines = machineRoster.filter(m => !m.includes(','));
+    } else {
+      // Grouped mode
+      const groups = machineRoster.filter(m => m.includes(','));
+      const constituentsToHide = new Set();
+      groups.forEach(g => {
+        g.split(',').forEach(c => constituentsToHide.add(c.trim()));
+      });
+      displayMachines = machineRoster.filter(m => !constituentsToHide.has(m));
+    }
+
+    return displayMachines.map(machine => {
+      let activeMachineForData = machine;
+      
+      // If it's a grouped machine and doesn't have explicit state, borrow state from its first constituent
+      if (machine.includes(',') && !machineState.has(machine)) {
+        const constituents = machine.split(',');
+        activeMachineForData = constituents[0].trim();
+      }
+
+      const callIdx = activeCalls.findIndex(c => c.machine === activeMachineForData);
       const isCalling = callIdx >= 0;
       const call = isCalling ? activeCalls[callIdx] : null;
-      const state = machineState.get(machine) || { mode: 'idle', totalNG: 0 };
+      const state = machineState.get(activeMachineForData) || { mode: 'idle', totalNG: 0 };
       const mode = state.mode || 'idle';
       
       let statusText = "停止 / IDLE";
@@ -140,7 +171,7 @@ export default function FactoryLiveCard({ factory }) {
         hinban: state.hinban
       };
     });
-  }, [machineRoster, activeCalls, machineState, now]);
+  }, [machineRoster, activeCalls, machineState, now, viewMode]);
 
   const sortedRows = useMemo(() => {
     let sorted = [...tableRows];
@@ -166,9 +197,20 @@ export default function FactoryLiveCard({ factory }) {
   return (
     <div className="bg-surface-container rounded-2xl border border-outline-variant p-5 overflow-hidden">
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-xl font-bold text-on-surface flex items-center gap-2">
-          {factory}
-        </h3>
+        <div className="flex items-center gap-4">
+          <h3 className="text-xl font-bold text-on-surface flex items-center gap-2">
+            {factory}
+          </h3>
+          <LiquidSegmentedControl
+            items={[
+              { label: "Individual", key: "individual" },
+              { label: "Grouped", key: "grouped" }
+            ]}
+            activeKey={viewMode}
+            onChange={setViewMode}
+            size="sm"
+          />
+        </div>
         <div className="flex items-center gap-2">
           <div className={`w-2.5 h-2.5 rounded-full ${isConnected ? 'bg-emerald-500 shadow-[0_0_8px_#10b981]' : 'bg-amber-500 shadow-[0_0_8px_#f59e0b]'}`}></div>
           <span className="text-sm font-semibold text-on-surface-variant">
