@@ -605,6 +605,16 @@ export default function SensorDetailPage() {
     }
   }, [deviceFilter, overview.devices]);
 
+  const selectedDeviceName = useMemo(() => {
+    if (!deviceFilter || deviceFilter === "all") return "All Sensors";
+    const activeCard = overview.latestDevices?.find(
+      (d) => normalizeDeviceId(d.deviceId) === normalizeDeviceId(deviceFilter)
+    );
+    if (!activeCard) return deviceFilter;
+    const ioTName = iotNamesMap.get(activeCard.deviceId);
+    return ioTName?.name ? `${ioTName.name} - ${activeCard.deviceId}` : activeCard.deviceId;
+  }, [deviceFilter, overview.latestDevices, iotNamesMap]);
+
   useEffect(() => {
     setPage(1);
   }, [deviceFilter, factoryName, range.end, range.start, rangeMode, selectedYears, sortKey]);
@@ -986,8 +996,7 @@ export default function SensorDetailPage() {
           })}
         </div>
       </div>
-
-      {loading ? (
+      {loading && overview === EMPTY_SENSOR_OVERVIEW ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5 mb-6">
           {Array.from({ length: 4 }).map((_, i) => (
             <div key={i} className="glass-card rounded-2xl h-44 animate-pulse" />
@@ -1089,7 +1098,12 @@ export default function SensorDetailPage() {
           {/* ── Records table ── */}
           <div className="glass-card rounded-2xl p-6">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-base font-semibold text-on-surface">All Readings</h3>
+              <h3 className="text-base font-semibold text-on-surface flex items-center gap-2">
+                All Readings
+                <span className="text-primary bg-primary/10 px-2 py-0.5 rounded text-sm font-medium">
+                  {selectedDeviceName}
+                </span>
+              </h3>
               <span className="text-[10px] text-outline font-semibold uppercase tracking-wider">
                 {(pagination.totalItems || tableRows.length).toLocaleString()} rows
               </span>
