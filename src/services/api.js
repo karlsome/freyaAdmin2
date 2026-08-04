@@ -986,15 +986,18 @@ async function _buildProdQuery(factory, start, end, partNumbers, serialNumbers, 
 
 async function _fetchRange(factory, start, end, partNumbers, serialNumbers, advancedFilters = []) {
   const queries = await Promise.all(PROCESSES.map(() => _buildProdQuery(factory, start, end, partNumbers, serialNumbers, advancedFilters)));
-  const settled = await Promise.allSettled(
-    PROCESSES.map((p, index) =>
-      query("submittedDB", p.collection, queries[index])
-    )
-  );
-  return PROCESSES.reduce((acc, p, i) => {
-    acc[p.name] = settled[i].status === "fulfilled" ? settled[i].value : [];
-    return acc;
-  }, {});
+  
+  const response = await fetch(BASE_URL + "api/factory/production-period", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ queries })
+  });
+  
+  if (!response.ok) {
+    throw new Error("Failed to fetch production period");
+  }
+  
+  return await response.json();
 }
 
 function _fmtDate(d) { return d.toISOString().split("T")[0]; }
