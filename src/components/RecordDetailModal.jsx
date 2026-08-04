@@ -603,12 +603,16 @@ export default function RecordDetailModal({ record, processName, onClose, onLotC
 
         {/* Key metrics */}
         <div className="px-6 py-4 grid grid-cols-2 gap-x-4 gap-y-3 border-b border-separator/40">
-          {keyFields.map(([label, value]) => (
-            <div key={label} className="flex flex-col gap-0.5">
-              <span className="text-[10px] font-semibold uppercase tracking-wider text-outline">{label}</span>
-              <span className="text-sm font-semibold text-on-surface">{value}</span>
-            </div>
-          ))}
+          {keyFields.map(([label, value]) => {
+            const isDefect = label.includes("不良");
+            const hasDefect = isDefect && Number(value) > 0;
+            return (
+              <div key={label} className="flex flex-col gap-0.5">
+                <span className={`text-[10px] font-semibold uppercase tracking-wider ${hasDefect ? 'text-error/80' : 'text-outline'}`}>{label}</span>
+                <span className={`text-sm font-semibold ${hasDefect ? 'text-error' : 'text-on-surface'}`}>{value}</span>
+              </div>
+            );
+          })}
           {materialLots.length > 0 ? (
             <div className="flex flex-col gap-1.5 col-span-2">
               <span className="text-[10px] font-semibold uppercase tracking-wider text-outline">材料ロット</span>
