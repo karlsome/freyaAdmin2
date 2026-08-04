@@ -661,7 +661,10 @@ export default function FactoryStatusPage() {
         )}
 
         {activeTab === "live-monitor" && (
-          <FactoryLiveMonitor factories={selectedFactories} />
+          <FactoryLiveMonitor 
+            factories={selectedFactories} 
+            onMachineClick={(factory, equipment) => setLogsModalState({ open: true, factory, equipment })}
+          />
         )}
 
         <FactoryStatusLogsModal

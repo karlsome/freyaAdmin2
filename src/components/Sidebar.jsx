@@ -13,7 +13,11 @@ const navItems = [
       { icon: "developer_board",     labelKey: "devices",             page: "devices" },
     ]
   },
-  { icon: "precision_manufacturing",   labelKey: "factoryStatus",       page: "factoryStatus" },
+  { icon: "precision_manufacturing",   labelKey: "factoryStatus",       page: "factoryStatus",
+    children: [
+      { icon: "article",              labelKey: "logs",                page: "factoryStatus/logs" },
+    ]
+  },
   { icon: "event_note",               labelKey: "planner",             page: "planner" },
   { icon: "inventory_2",              labelKey: "inventory",           page: "inventory" },
   { icon: "notifications",            labelKey: "notifications",       page: "notifications" },

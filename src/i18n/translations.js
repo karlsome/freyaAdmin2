@@ -28,6 +28,7 @@ const translations = {
     prototype: "Prototype",
     prototypeRequest: "Prototype Request",
     stopCall: "Stop Call",
+    logs: "Logs",
     
     // Prototype App
     prototypeManagement: "Prototype Management",
@@ -300,6 +301,7 @@ const translations = {
     prototype: "試作",
     prototypeRequest: "試作依頼",
     stopCall: "ストップコール",
+    logs: "ログ",
     
     // Prototype App
     prototypeManagement: "試作管理",

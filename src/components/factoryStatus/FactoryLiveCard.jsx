@@ -13,7 +13,7 @@ function fmtWait(ms) {
   return h > 0 ? `${p(h)}:${p(m)}:${p(ss)}` : `${p(m)}:${p(ss)}`;
 }
 
-export default function FactoryLiveCard({ factory }) {
+export default function FactoryLiveCard({ factory, onRowClick }) {
   const [machineState, setMachineState] = useState(new Map());
   const [activeCalls, setActiveCalls] = useState([]);
   const [masterMachines, setMasterMachines] = useState([]);
@@ -109,19 +109,44 @@ export default function FactoryLiveCard({ factory }) {
       });
       displayMachines = machineRoster.filter(m => !constituentsToHide.has(m));
     }
+    
+    // Create a mapping from individual machine to its grouped name (if any)
+    const groupedNamesByConstituent = {};
+    machineRoster.filter(m => m.includes(',')).forEach(g => {
+      g.split(',').forEach(c => {
+        groupedNamesByConstituent[c.trim()] = g;
+      });
+    });
 
     return displayMachines.map(machine => {
       let activeMachineForData = machine;
+      let isCalling = false;
+      let call = null;
+      
+      let dbEquipmentName = machine;
+      if (viewMode === 'individual' && groupedNamesByConstituent[machine]) {
+        dbEquipmentName = groupedNamesByConstituent[machine];
+      }
       
       // If it's a grouped machine and doesn't have explicit state, borrow state from its first constituent
       if (machine.includes(',') && !machineState.has(machine)) {
-        const constituents = machine.split(',');
-        activeMachineForData = constituents[0].trim();
+        const constituents = machine.split(',').map(c => c.trim());
+        activeMachineForData = constituents[0];
+        
+        // Find ALL active calls for this group's constituents
+        const constituentCalls = activeCalls.filter(c => constituents.includes(c.machine));
+        if (constituentCalls.length > 0) {
+          isCalling = true;
+          // Alternate them every second based on `now` timestamp
+          const callIndex = Math.floor(now / 1000) % constituentCalls.length;
+          call = constituentCalls[callIndex];
+        }
+      } else {
+        const callIdx = activeCalls.findIndex(c => c.machine === activeMachineForData);
+        isCalling = callIdx >= 0;
+        call = isCalling ? activeCalls[callIdx] : null;
       }
 
-      const callIdx = activeCalls.findIndex(c => c.machine === activeMachineForData);
-      const isCalling = callIdx >= 0;
-      const call = isCalling ? activeCalls[callIdx] : null;
       const state = machineState.get(activeMachineForData) || { mode: 'idle', totalNG: 0 };
       const mode = state.mode || 'idle';
       
@@ -162,6 +187,7 @@ export default function FactoryLiveCard({ factory }) {
       return {
         id: machine,
         machine,
+        dbEquipmentName,
         statusText,
         statusCellClass,
         totalNG: state.totalNG || 0,
@@ -259,6 +285,8 @@ export default function FactoryLiveCard({ factory }) {
             }
             return { column: colKey, direction: "asc" };
           })}
+          onRowClick={(row) => onRowClick && onRowClick(factory, row.dbEquipmentName)}
+          getRowClassName={() => "cursor-pointer hover:bg-surface-container-high transition-colors"}
           layoutStorageKey={`live-monitor-${factory}`}
           enableColumnResize={true}
           enableColumnReorder={true}

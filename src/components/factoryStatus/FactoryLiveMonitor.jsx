@@ -1,7 +1,7 @@
 import React from 'react';
 import FactoryLiveCard from './FactoryLiveCard';
 
-export default function FactoryLiveMonitor({ factories }) {
+export default function FactoryLiveMonitor({ factories, onMachineClick }) {
   if (!factories || factories.length === 0) {
     return (
       <div className="bg-surface-container rounded-3xl p-12 text-center border border-outline-variant">
@@ -16,7 +16,7 @@ export default function FactoryLiveMonitor({ factories }) {
   return (
     <div className="flex flex-col gap-6">
       {factories.map(factory => (
-        <FactoryLiveCard key={factory} factory={factory} />
+        <FactoryLiveCard key={factory} factory={factory} onRowClick={onMachineClick} />
       ))}
     </div>
   );
