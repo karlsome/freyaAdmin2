@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import FactoryLiveMonitor from "../components/factoryStatus/FactoryLiveMonitor";
 import AdvancedFilterSection from "../components/AdvancedFilterSection";
 import DataTable from "../components/DataTable";
 import MasterTabNav from "../components/MasterTabNav";
@@ -659,10 +660,7 @@ export default function FactoryStatusPage() {
         )}
 
         {activeTab === "live-monitor" && (
-          <div className="glass-card rounded-2xl px-6 py-12 text-center">
-            <h2 className="text-xl font-semibold text-on-surface">Live Monitor</h2>
-            <p className="planner-data-text mt-2 text-sm text-on-surface-variant">Live monitor view coming soon.</p>
-          </div>
+          <FactoryLiveMonitor factories={selectedFactories} />
         )}
 
         <FactoryStatusLogsModal

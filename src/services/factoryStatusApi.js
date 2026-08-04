@@ -33,6 +33,13 @@ export async function fetchFactoryStatusFactories() {
   return fetchMasterFactories();
 }
 
+export async function fetchFactoryLiveMachines(factoryName) {
+  return requestJson(`api/factory-status/machines/${encodeURIComponent(factoryName)}`, {
+    method: "GET",
+    headers: { "Content-Type": "application/json" },
+  });
+}
+
 export async function fetchFactoryStatusSnapshot({
   date,
   factories = [],
