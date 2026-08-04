@@ -384,7 +384,15 @@ export default function RecordDetailModal({ record, processName, onClose, onLotC
 
   const authUser = JSON.parse(localStorage.getItem("authUser")) || {};
   const role = authUser.role || "";
-  const canEdit = ["admin", "部長", "課長", "係長"].includes(role);
+  const canEdit = ["admin", "部長", "係長", "課長"].includes(role);
+
+  function handleEditClick() {
+    if (!canEdit) {
+      alert("You are not permitted to use the edit mode.");
+      return;
+    }
+    setIsEditing(true);
+  }
 
   function copyLink() {
     navigator.clipboard.writeText(window.location.href).then(() => {
@@ -438,6 +446,11 @@ export default function RecordDetailModal({ record, processName, onClose, onLotC
   }
 
   async function handleSaveEdit({ draft, note }) {
+    if (!canEdit) {
+      alert("You are not permitted to use the edit mode.");
+      setIsEditing(false);
+      return;
+    }
     if (!PROCESS_ACCENT[processName]?.db) return;
     setEditBusy(true);
     try {
@@ -540,7 +553,7 @@ export default function RecordDetailModal({ record, processName, onClose, onLotC
             {canEdit && (
               <button
                 type="button"
-                onClick={() => setIsEditing(true)}
+                onClick={handleEditClick}
                 className="px-4 py-1.5 rounded-xl bg-primary/10 text-primary font-semibold hover:bg-primary/20 text-xs active:scale-95 transition-all"
               >
                 Edit
