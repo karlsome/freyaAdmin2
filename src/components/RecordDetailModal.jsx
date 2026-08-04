@@ -480,6 +480,10 @@ export default function RecordDetailModal({ record, processName, onClose, onLotC
   const SKIP    = new Set(["_id", "_source", "__v"]);
   const entries = Object.entries(record).filter(([k]) => !SKIP.has(k) && record[k] != null && record[k] !== "");
 
+  const kensaCounters = Object.entries(record?.Counters || {})
+    .filter(([, v]) => Number(v) > 0)
+    .map(([k, v]) => [k, v, true]);
+
   const keyFields = [
     ["工場",      record["工場"]],
     ["Date",      record.Date],
@@ -491,9 +495,10 @@ export default function RecordDetailModal({ record, processName, onClose, onLotC
     ["数量 (Qty)", record.Process_Quantity],
     ["サイクルタイム", record.Cycle_Time ? `${record.Cycle_Time}s` : null],
     ["ショット数", record["ショット数"]],
-    ["疵引不良",  record["疵引不良"]],
-    ["加工不良",  record["加工不良"]],
-    ["その他不良", record["その他"]],
+    ...kensaCounters,
+    ["疵引不良",  record["疵引不良"], true],
+    ["加工不良",  record["加工不良"], true],
+    ["その他不良", record["その他"], true],
     ["Spare",     record.Spare],
     ["コメント",  record.Comment],
     ["製造ロット", record["製造ロット"]],
@@ -603,8 +608,8 @@ export default function RecordDetailModal({ record, processName, onClose, onLotC
 
         {/* Key metrics */}
         <div className="px-6 py-4 grid grid-cols-2 gap-x-4 gap-y-3 border-b border-separator/40">
-          {keyFields.map(([label, value]) => {
-            const isDefect = label.includes("不良");
+          {keyFields.map(([label, value, isDefectForce]) => {
+            const isDefect = isDefectForce || label.includes("不良");
             const hasDefect = isDefect && Number(value) > 0;
             return (
               <div key={label} className="flex flex-col gap-0.5">
