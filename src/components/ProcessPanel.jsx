@@ -302,15 +302,29 @@ export default function ProcessPanel({ processName, rows, onRowClick, showFactor
       {/* Summary collapsible */}
       {summary.length > 0 && (
         <div ref={summaryRef} className="border-t border-separator/40">
-          <button
-            className="w-full px-5 py-3 flex items-center gap-2 text-xs font-semibold text-outline hover:text-on-surface transition-colors"
-            onClick={() => setShowSummary((v) => !v)}
-          >
-            <span className="material-symbols-outlined" style={{ fontSize: 14 }}>
-              {showSummary ? "keyboard_arrow_up" : "keyboard_arrow_down"}
-            </span>
-            Daily Summary ({summary.length} parts)
-          </button>
+          {(() => {
+            const overallTotal = summary.reduce((acc, s) => acc + s.total, 0);
+            const overallNg = summary.reduce((acc, s) => acc + s.ng, 0);
+            const overallRate = overallTotal > 0 ? ((overallNg / overallTotal) * 100).toFixed(2) : "0.00";
+            return (
+              <button
+                className="w-full px-5 py-3 flex items-center justify-between text-xs font-semibold text-outline hover:text-on-surface transition-colors"
+                onClick={() => setShowSummary((v) => !v)}
+              >
+                <div className="flex items-center gap-2">
+                  <span className="material-symbols-outlined" style={{ fontSize: 14 }}>
+                    {showSummary ? "keyboard_arrow_up" : "keyboard_arrow_down"}
+                  </span>
+                  <span>Daily Summary ({summary.length} parts)</span>
+                </div>
+                <div className="flex items-center gap-4 text-[11px] font-medium tracking-wide pr-2">
+                  <span className="flex gap-1.5 items-center"><span className="text-outline/70 uppercase text-[9px]">Total</span> <span className="text-on-surface font-semibold">{overallTotal.toLocaleString()}</span></span>
+                  <span className="flex gap-1.5 items-center"><span className="text-outline/70 uppercase text-[9px]">NG</span> <span className={`font-semibold ${overallNg > 0 ? 'text-error' : 'text-on-surface'}`}>{overallNg.toLocaleString()}</span></span>
+                  <span className="flex gap-1.5 items-center"><span className="text-outline/70 uppercase text-[9px]">Rate</span> <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold ${defectChip(overallRate)}`}>{overallRate}%</span></span>
+                </div>
+              </button>
+            );
+          })()}
           {showSummary && (
             <div className="px-5 pb-4 overflow-x-auto">
               <table className="ui-table-data w-full min-w-[400px]">
