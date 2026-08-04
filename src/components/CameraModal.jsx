@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import Hls from "hls.js";
 import { BASE_URL } from "../services/api";
 
@@ -50,7 +51,7 @@ export default function CameraModal({ onClose, stream = 'tapo_cam' }) {
   const activeLabel = CAM_LABELS.find(c => c.id === activeStream)?.label ?? 'CAM 1';
   const otherCams = CAM_LABELS.filter(c => c.id !== activeStream);
 
-  return (
+  const modal = (
     <div
       className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4"
       onClick={onClose}
@@ -97,4 +98,6 @@ export default function CameraModal({ onClose, stream = 'tapo_cam' }) {
       </div>
     </div>
   );
+
+  return createPortal(modal, document.body);
 }
