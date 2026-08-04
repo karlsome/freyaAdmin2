@@ -2,6 +2,7 @@ import React, { useEffect, useState, useMemo } from 'react';
 import { fetchFactoryLiveMachines } from '../../services/factoryStatusApi';
 import DataTable from '../DataTable';
 import LiquidSegmentedControl from '../LiquidSegmentedControl';
+import CameraModal from '../CameraModal';
 import './FactoryLiveMonitor.css';
 
 function fmtWait(ms) {
@@ -20,6 +21,7 @@ export default function FactoryLiveCard({ factory, onRowClick }) {
   const [now, setNow] = useState(() => Date.now());
   const [isConnected, setIsConnected] = useState(false);
   const [sort, setSort] = useState(null);
+  const [cameraModalOpen, setCameraModalOpen] = useState(false);
   
   const [viewMode, setViewMode] = useState(() => {
     return localStorage.getItem(`factoryLiveMonitor_viewMode_${factory}`) || 'individual';
@@ -238,6 +240,15 @@ export default function FactoryLiveCard({ factory, onRowClick }) {
           />
         </div>
         <div className="flex items-center gap-2">
+          {factory === "小瀬" && (
+            <button
+              onClick={() => setCameraModalOpen(true)}
+              className="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 mr-2 rounded-xl text-xs font-semibold border border-outline-variant/30 bg-surface text-on-surface hover:bg-surface-container hover:border-primary/30 hover:text-primary active:scale-95 transition-all duration-150"
+            >
+              <span className="material-symbols-outlined" style={{ fontSize: 16 }}>videocam</span>
+              View Live Feed
+            </button>
+          )}
           <div className={`w-2.5 h-2.5 rounded-full ${isConnected ? 'bg-emerald-500 shadow-[0_0_8px_#10b981]' : 'bg-amber-500 shadow-[0_0_8px_#f59e0b]'}`}></div>
           <span className="text-sm font-semibold text-on-surface-variant">
             {isConnected ? 'ONLINE' : 'OFFLINE'}
@@ -292,6 +303,10 @@ export default function FactoryLiveCard({ factory, onRowClick }) {
           enableColumnReorder={true}
           hidePagination={true}
         />
+      )}
+
+      {cameraModalOpen && (
+        <CameraModal onClose={() => setCameraModalOpen(false)} />
       )}
     </div>
   );
