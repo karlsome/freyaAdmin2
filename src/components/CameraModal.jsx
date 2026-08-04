@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import Hls from "hls.js";
-
-const BASE_URL = import.meta.env.VITE_API_BASE_URL || "";
+import { BASE_URL } from "../services/api";
 
 const CAM_LABELS = [
   { id: 'tapo_cam',  label: 'CAM 1' },
