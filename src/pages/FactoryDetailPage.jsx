@@ -2,7 +2,6 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { createPortal } from "react-dom";
 import Hls from "hls.js";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
-import DateRangePicker from "../components/DateRangePicker";
 import CameraModal from "../components/CameraModal";
 import PageHeader from "../components/PageHeader";
 import {

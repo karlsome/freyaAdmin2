@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useMemo } from 'react';
-import { fetchFactoryLiveMachines } from '../../services/factoryStatusApi';
+import { fetchFactoryLiveMachines, BASE_URL } from '../../services/factoryStatusApi';
 import DataTable from '../DataTable';
 import LiquidSegmentedControl from '../LiquidSegmentedControl';
 import CameraModal from '../CameraModal';
@@ -54,9 +54,8 @@ export default function FactoryLiveCard({ factory, onRowClick }) {
   useEffect(() => {
     if (!factory) return;
 
-    // Temporarily hardcode to onrender to see live data
-    const PROD_URL = "https://kurachi.onrender.com";
-    const es = new EventSource(`${PROD_URL}/sse/factory/${encodeURIComponent(factory)}`);
+    const baseUrlNoSlash = BASE_URL.replace(/\/$/, "");
+    const es = new EventSource(`${baseUrlNoSlash}/sse/factory/${encodeURIComponent(factory)}`);
 
     es.onopen = () => setIsConnected(true);
     es.onerror = () => setIsConnected(false);

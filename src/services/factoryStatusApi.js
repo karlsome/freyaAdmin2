@@ -2,7 +2,7 @@ import { fetchMasterFactories } from "./api";
 
 const LOCAL_URL = "http://localhost:3000/";
 const ENV_URL = import.meta.env.VITE_API_URL?.trim();
-const BASE_URL = (ENV_URL || LOCAL_URL).replace(/\/?$/, "/");
+export const BASE_URL = (ENV_URL || LOCAL_URL).replace(/\/?$/, "/");
 
 async function readJson(response) {
   const text = await response.text();
