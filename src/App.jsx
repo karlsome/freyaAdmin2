@@ -26,6 +26,7 @@ import TicketSubmissionsPage from "./pages/TicketSubmissionsPage";
 import PrototypePage from "./pages/PrototypePage";
 import PrototypeRequestPage from "./pages/PrototypeRequestPage";
 import FirstFactoryPage from "./pages/FirstFactoryPage";
+import StopCallPage from "./pages/StopCallPage";
 import LoginPage from "./pages/LoginPage";
 import {
   clearStoredAuthUser,
@@ -241,6 +242,7 @@ function App() {
               <Route path="/noda" element={<NodaPage />} />
               <Route path="/inventory" element={<InventoryPage />} />
               <Route path="/factoryStatus" element={<FactoryStatusPage />} />
+              <Route path="/factoryStatus/:tab" element={<FactoryStatusPage />} />
               <Route path="/factoryStatus/logs" element={<FactoryStatusLogsPage />} />
               {placeholderPages.map((page) => (
                 <Route key={page} path={`/${page}`} element={<PlaceholderPage page={page} />} />
@@ -257,6 +259,7 @@ function App() {
               <Route path="/sensors" element={<SensorsPage />} />
               <Route path="/devices" element={<DevicesPage />} />
               <Route path="/factory/overview" element={<FactoryDetailPage combined />} />
+              <Route path="/factory/stopCall" element={<StopCallPage />} />
               <Route path="/factory/:factoryName" element={<FactoryDetailPage />} />
               <Route path="/sensors/:factoryName" element={<SensorDetailPage />} />
               <Route path="*" element={<Navigate to="/dashboard" replace />} />

@@ -1,7 +1,9 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
 import IconButton from "./IconButton";
 import MasterProductPickerModal from "./MasterProductPickerModal";
 import FieldOptionPickerModal from "./FieldOptionPickerModal";
+import { uploadMaintenanceImage, uploadMaterialLabelImage } from "../services/api";
+import SensorDevicePhotoPreviewModal from "./SensorDevicePhotoPreviewModal";
 
 function joinClasses(...classes) {
   return classes.filter(Boolean).join(" ");
@@ -71,10 +73,34 @@ function addArrayItem(target, path, template) {
   items.push(template);
 }
 
-function buildDefaultArrayTemplate(items) {
+function buildDefaultArrayTemplate(items, path) {
+  if (path === "Maintenance_Data.records") {
+    return {
+      id: Date.now(),
+      startTime: "",
+      endTime: "",
+      comment: "",
+      timestamp: new Date().toISOString(),
+      photos: [],
+    };
+  }
+  if (String(path || "").endsWith("photos")) {
+    return "";
+  }
+
   const sample = items.find((item) => item != null);
   if (Array.isArray(sample)) return [];
-  if (isPlainObject(sample)) return {};
+  if (isPlainObject(sample)) {
+    const template = deepClone(sample);
+    Object.keys(template).forEach((key) => {
+      if (typeof template[key] === "string") template[key] = "";
+      else if (typeof template[key] === "number") template[key] = 0;
+      else if (typeof template[key] === "boolean") template[key] = false;
+      else if (Array.isArray(template[key])) template[key] = [];
+      else if (isPlainObject(template[key])) template[key] = {};
+    });
+    return template;
+  }
   if (typeof sample === "number") return 0;
   if (typeof sample === "boolean") return false;
   return "";
@@ -92,7 +118,7 @@ function inferFieldKind(path, value) {
   const leafKey = String(path || "").split(".").pop() || "";
   if (typeof value === "boolean") return "boolean";
   if (leafKey === "Date" || /^\d{4}-\d{2}-\d{2}$/.test(String(value || ""))) return "date";
-  if (["Time_start", "Time_end", "start", "end"].includes(leafKey) || /^\d{1,2}:\d{2}$/.test(String(value || ""))) return "time";
+  if (["Time_start", "Time_end", "start", "end", "startTime", "endTime"].includes(leafKey) || /^\d{1,2}:\d{2}$/.test(String(value || ""))) return "time";
   if (typeof value === "number") return Number.isInteger(value) ? "integer" : "number";
   if (typeof value === "string" && value.length > 120) return "textarea";
   return "text";
@@ -181,15 +207,19 @@ export default function RecordEditModal({
   const [fieldPickerState, setFieldPickerState] = useState({
     open: false,
     path: "",
-    label: "",
-    title: "",
     initialQuery: "",
   });
+  const [revealedKeys, setRevealedKeys] = useState(new Set());
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const [photoPreview, setPhotoPreview] = useState(null);
+  
+  const modalContentRef = useRef(null);
 
   useEffect(() => {
     if (!open || !record) {
       setDraft(null);
       setNote("");
+      setRevealedKeys(new Set());
       return;
     }
 
@@ -224,6 +254,8 @@ export default function RecordEditModal({
   if (!open || !draft) return null;
 
   function isHiddenPath(path) {
+    const leafKey = String(path || "").split(".").pop() || "";
+    if (leafKey === "id" || leafKey === "timestamp") return true;
     const rootKey = String(path || "").split(".")[0] || "";
     return hiddenFieldSet.has(path) || hiddenFieldSet.has(rootKey);
   }
@@ -246,7 +278,7 @@ export default function RecordEditModal({
     applyDraftMutation((nextDraft) => {
       const items = getPathValue(nextDraft, path);
       if (!Array.isArray(items)) return;
-      addArrayItem(nextDraft, path, buildDefaultArrayTemplate(items));
+      addArrayItem(nextDraft, path, buildDefaultArrayTemplate(items, path));
     });
   }
 
@@ -291,7 +323,7 @@ export default function RecordEditModal({
       path: item.path,
       label: item.label,
       title: item.pickerTitle || item.label,
-      initialQuery: currentValue,
+      initialQuery: "",
     });
   }
 
@@ -304,6 +336,63 @@ export default function RecordEditModal({
   }
 
   function renderPrimitiveField(path, label, value, options = {}) {
+    if (path === "材料ロット") {
+      const pills = (value || "").split(",").map((s) => s.trim()).filter(Boolean);
+
+      const handleAddPill = (e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          const val = e.target.value.trim();
+          if (val && !pills.includes(val)) {
+            const nextPills = [...pills, val];
+            handleFieldChange(path, nextPills.join(","), "text");
+          }
+          e.target.value = "";
+        }
+      };
+      
+      const handleBlurPill = (e) => {
+        const val = e.target.value.trim();
+        if (val && !pills.includes(val)) {
+          const nextPills = [...pills, val];
+          handleFieldChange(path, nextPills.join(","), "text");
+        }
+        e.target.value = "";
+      };
+
+      const handleRemovePill = (idx) => {
+        const nextPills = pills.filter((_, i) => i !== idx);
+        handleFieldChange(path, nextPills.join(","), "text");
+      };
+
+      return (
+        <div>
+          {options.hideLabel ? null : <div className="mb-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">{label}</div>}
+          <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-separator/40 bg-white px-3 py-2.5 transition focus-within:border-primary/40 dark:bg-surface-container">
+            {pills.map((pill, idx) => (
+              <span key={idx} className="flex items-center gap-1 rounded-full bg-primary/10 px-3 py-1 text-[11px] font-semibold text-primary">
+                {pill}
+                <button
+                  type="button"
+                  onClick={() => handleRemovePill(idx)}
+                  className="flex items-center justify-center rounded-full hover:bg-primary/20 hover:text-error transition-colors"
+                >
+                  <span className="material-symbols-outlined text-[14px]">close</span>
+                </button>
+              </span>
+            ))}
+            <input
+              type="text"
+              placeholder={pills.length === 0 ? "Add lot..." : ""}
+              onKeyDown={handleAddPill}
+              onBlur={handleBlurPill}
+              className="planner-data-text min-w-[100px] flex-1 bg-transparent text-on-surface outline-none"
+            />
+          </div>
+        </div>
+      );
+    }
+
     const kind = options.inputKind
       || (typeof resolveFieldKind === "function" ? resolveFieldKind(path, value, schemaContext) : inferFieldKind(path, value));
     const imagePreview = isImageLikePath(path) && isImageUrl(value);
@@ -339,34 +428,123 @@ export default function RecordEditModal({
       <div>
         {options.hideLabel ? null : <div className="mb-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">{label}</div>}
         {imagePreview ? (
-          <div className="mb-2 overflow-hidden rounded-2xl border border-outline-variant/15 bg-surface-container-low">
-            <img src={value} alt={label} className="h-32 w-full object-contain bg-black/5" />
+          <div className="mb-2 w-full max-w-sm overflow-hidden rounded-2xl border border-outline-variant/15 bg-surface-container-low transition-colors hover:bg-surface-container-high/50 cursor-pointer" onClick={() => setPhotoPreview({
+            eyebrow: "Record Photos",
+            displayName: label,
+            images: [{ url: value, label: label }],
+            activeIndex: 0
+          })}>
+            <img src={value} alt={label} className="h-48 w-full object-contain bg-black/5" />
           </div>
-        ) : null}
-
-        {kind === "textarea" ? (
-          <textarea
-            rows={3}
-            value={value ?? ""}
-            onChange={(event) => handleFieldChange(path, event.target.value, kind)}
-            className={inputClassName}
-          />
         ) : (
-          <input
-            type={kind === "date" ? "date" : kind === "time" ? "time" : kind === "number" || kind === "integer" ? "number" : "text"}
-            step={kind === "number" ? "0.01" : kind === "integer" ? "1" : undefined}
-            min={kind === "number" || kind === "integer" ? "0" : undefined}
-            value={kind === "number" || kind === "integer" ? (value ?? 0) : (value ?? "")}
-            onChange={(event) => handleFieldChange(path, event.target.value, kind)}
-            className={inputClassName}
-          />
+          kind === "textarea" ? (
+            <textarea
+              rows={3}
+              value={value ?? ""}
+              onChange={(event) => handleFieldChange(path, event.target.value, kind)}
+              className={inputClassName}
+            />
+          ) : (
+            <input
+              type={kind === "date" ? "date" : kind === "time" ? "time" : kind === "number" || kind === "integer" ? "number" : "text"}
+              step={kind === "number" ? "0.01" : kind === "integer" ? "1" : undefined}
+              min={kind === "number" || kind === "integer" ? "0" : undefined}
+              value={kind === "number" || kind === "integer" ? (value ?? 0) : (value ?? "")}
+              onChange={(event) => handleFieldChange(path, event.target.value, kind)}
+              className={inputClassName}
+            />
+          )
         )}
       </div>
     );
   }
 
   function renderStructuredNode(path, value, depth = 0) {
+    if (path.endsWith(".photos") || path === "materialLabelImages") {
+      const photos = Array.isArray(value) ? value.filter(Boolean) : [];
+      const isMaterialLabel = path === "materialLabelImages";
+      
+      const handlePhotoUpload = async (event) => {
+        const file = event.target.files?.[0];
+        if (!file) return;
+        
+        try {
+          setUploadingImage(true);
+          const base64 = await new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result.split(",")[1]);
+            reader.onerror = reject;
+            reader.readAsDataURL(file);
+          });
+          
+          const payload = {
+            factory: draft.工場 || "Unknown",
+            equipment: draft.設備 || "Unknown",
+            date: draft.Date || new Date().toISOString().split('T')[0],
+            timestamp: Date.now(),
+            id: Date.now(),
+            base64,
+            sebanggo: draft.背番号 || "Unknown"
+          };
+          
+          const res = isMaterialLabel ? await uploadMaterialLabelImage(payload) : await uploadMaintenanceImage(payload);
+          if (res.url) {
+             applyDraftMutation((nextDraft) => {
+               const arr = getPathValue(nextDraft, path) || [];
+               setPathValue(nextDraft, path, [...arr, res.url]);
+             });
+          }
+        } catch (error) {
+          alert(`Error uploading image: ${error.message}`);
+        } finally {
+          setUploadingImage(false);
+          event.target.value = "";
+        }
+      };
+      
+      return (
+        <div className="space-y-3">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            {photos.map((url, idx) => (
+              <div key={idx} className="relative group rounded-xl overflow-hidden border border-outline-variant/30">
+                <img 
+                  src={url} 
+                  alt={isMaterialLabel ? "Material Label" : "Maintenance"} 
+                  className="w-full aspect-square object-cover cursor-pointer" 
+                  onClick={() => setPhotoPreview({
+                    eyebrow: "Record Photos",
+                    displayName: isMaterialLabel ? "材料ラベル画像" : "Maintenance Photos",
+                    images: photos.map((u, i) => ({ url: u, label: isMaterialLabel ? `材料ラベル ${i + 1}` : `Maintenance ${i + 1}` })),
+                    activeIndex: idx
+                  })}
+                />
+                <button
+                  type="button"
+                  disabled={uploadingImage || busy}
+                  onClick={() => handleArrayRemove(path, idx)}
+                  className="absolute top-1 right-1 bg-black/60 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center hover:bg-error/90 disabled:opacity-50"
+                >
+                  <span className="material-symbols-outlined text-[14px]">close</span>
+                </button>
+              </div>
+            ))}
+            
+            <label className={`flex flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-primary/40 bg-primary/5 aspect-square text-sm font-semibold text-primary transition ${(uploadingImage || busy) ? "opacity-50 cursor-not-allowed" : "hover:bg-primary/10 cursor-pointer"}`}>
+               <span className="material-symbols-outlined text-[24px]">
+                 {uploadingImage ? "hourglass_empty" : "add_a_photo"}
+               </span>
+               <span className="text-[10px] uppercase tracking-wider text-center px-2">
+                 {uploadingImage ? "Uploading..." : (isMaterialLabel ? "Attach Material Image" : "Attach Photo")}
+               </span>
+               <input type="file" accept="image/*" className="hidden" onChange={handlePhotoUpload} disabled={uploadingImage || busy} />
+            </label>
+          </div>
+        </div>
+      );
+    }
+
     if (Array.isArray(value)) {
+      const isMaintenanceRecords = path === "Maintenance_Data.records";
       return (
         <div className="space-y-3">
           {value.length ? value.map((item, index) => {
@@ -375,17 +553,31 @@ export default function RecordEditModal({
 
             return (
               <div key={itemPath} className="rounded-2xl border border-outline-variant/15 bg-surface-container-low px-4 py-3">
-                <div className="mb-3 flex items-center justify-between gap-3">
-                  <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Item {index + 1}</div>
-                  <button
-                    type="button"
-                    onClick={() => handleArrayRemove(path, index)}
-                    disabled={busy}
-                    className="rounded-2xl border border-error/20 bg-error/10 px-3 py-1.5 text-[11px] font-semibold text-error transition hover:bg-error/15 disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    Remove
-                  </button>
-                </div>
+                {isMaintenanceRecords ? (
+                  <div className="mb-2 flex items-center justify-between">
+                    <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">MAINTENANCE {index + 1}</div>
+                    <button
+                      type="button"
+                      onClick={() => handleArrayRemove(path, index)}
+                      className="text-error transition-opacity hover:opacity-80 flex items-center justify-center"
+                      title="Remove Row"
+                    >
+                      <span className="material-symbols-outlined text-[16px]">delete</span>
+                    </button>
+                  </div>
+                ) : (
+                  <div className="mb-3 flex items-center justify-between gap-3">
+                    <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Item {index + 1}</div>
+                    <button
+                      type="button"
+                      onClick={() => handleArrayRemove(path, index)}
+                      disabled={busy}
+                      className="rounded-2xl border border-error/20 bg-error/10 px-3 py-1.5 text-[11px] font-semibold text-error transition hover:bg-error/15 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                )}
 
                 {structured
                   ? renderStructuredNode(itemPath, item, depth + 1)
@@ -398,20 +590,51 @@ export default function RecordEditModal({
             </div>
           )}
 
-          <button
-            type="button"
-            onClick={() => handleArrayAdd(path)}
-            disabled={busy}
-            className="rounded-2xl border border-separator/40 bg-white px-4 py-2 text-xs font-semibold text-on-surface transition hover:bg-surface-container disabled:cursor-not-allowed disabled:opacity-50 dark:bg-surface-container"
-          >
-            Add Item
-          </button>
+          {isMaintenanceRecords ? (
+            <div className="flex justify-center mt-1">
+              <button
+                type="button"
+                onClick={() => handleArrayAdd(path)}
+                disabled={busy}
+                className="flex items-center gap-2 rounded-2xl border border-primary/20 bg-primary/5 px-6 py-2.5 text-sm font-semibold text-primary transition hover:bg-primary/10"
+              >
+                + Add Another Maintenance Row
+              </button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => handleArrayAdd(path)}
+              disabled={busy}
+              className="rounded-2xl border border-separator/40 bg-white px-4 py-2 text-xs font-semibold text-on-surface transition hover:bg-surface-container disabled:cursor-not-allowed disabled:opacity-50 dark:bg-surface-container"
+            >
+              Add Item
+            </button>
+          )}
         </div>
       );
     }
 
     if (isPlainObject(value)) {
-      const entries = Object.entries(value).filter(([childKey]) => !isHiddenPath(`${path}.${childKey}`));
+      let entries = Object.entries(value).filter(([childKey]) => !isHiddenPath(`${path}.${childKey}`));
+
+      const isIncrementalGroup = path === "Break_Time_Data";
+      const hiddenKeys = [];
+
+      if (isIncrementalGroup) {
+        entries.sort(([a], [b]) => a.localeCompare(b, undefined, { numeric: true }));
+        const visibleEntries = [];
+        const hasData = (v) => Object.values(v).some((val) => val !== "" && val !== null && val !== undefined);
+        
+        entries.forEach(([k, v], i) => {
+          if (i === 0 || hasData(v) || revealedKeys.has(`${path}.${k}`)) {
+            visibleEntries.push([k, v]);
+          } else {
+            hiddenKeys.push(k);
+          }
+        });
+        entries = visibleEntries;
+      }
 
       if (!entries.length) {
         return (
@@ -422,24 +645,60 @@ export default function RecordEditModal({
       }
 
       return (
-        <div className="grid gap-3 md:grid-cols-2">
-          {entries.map(([childKey, childValue]) => {
-            const childPath = `${path}.${childKey}`;
-            const structured = Array.isArray(childValue) || isPlainObject(childValue);
+        <div className="space-y-3">
+          <div className="grid gap-3 md:grid-cols-2">
+            {entries.map(([childKey, childValue]) => {
+              const childPath = `${path}.${childKey}`;
+              const structured = Array.isArray(childValue) || isPlainObject(childValue);
 
-            return (
-              <div key={childPath} className={structured ? "md:col-span-2" : ""}>
-                <div className="rounded-2xl border border-outline-variant/15 bg-surface-container-low px-4 py-3">
-                  {structured ? (
-                    <>
-                      <div className="mb-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">{childKey}</div>
-                      {renderStructuredNode(childPath, childValue, depth + 1)}
-                    </>
-                  ) : renderPrimitiveField(childPath, childKey, childValue)}
+              return (
+                <div key={childPath} className={structured ? "md:col-span-2" : ""}>
+                  <div className="rounded-2xl border border-outline-variant/15 bg-surface-container-low px-4 py-3">
+                    {structured ? (
+                      <>
+                        <div className="mb-2 flex items-center justify-between">
+                          <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">{childKey}</div>
+                          {isIncrementalGroup && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                applyDraftMutation((nextDraft) => {
+                                  Object.keys(childValue).forEach((k) => {
+                                    setPathValue(nextDraft, `${childPath}.${k}`, "");
+                                  });
+                                });
+                                setRevealedKeys((prev) => {
+                                  const next = new Set(prev);
+                                  next.delete(childPath);
+                                  return next;
+                                });
+                              }}
+                              className="text-error transition-opacity hover:opacity-80 flex items-center justify-center"
+                              title="Clear & Remove Row"
+                            >
+                              <span className="material-symbols-outlined text-[16px]">delete</span>
+                            </button>
+                          )}
+                        </div>
+                        {renderStructuredNode(childPath, childValue, depth + 1)}
+                      </>
+                    ) : renderPrimitiveField(childPath, childKey, childValue)}
+                  </div>
                 </div>
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
+          {isIncrementalGroup && hiddenKeys.length > 0 && (
+            <div className="flex justify-center mt-1">
+              <button
+                type="button"
+                onClick={() => setRevealedKeys((prev) => new Set(prev).add(`${path}.${hiddenKeys[0]}`))}
+                className="flex items-center gap-2 rounded-2xl border border-primary/20 bg-primary/5 px-6 py-2.5 text-sm font-semibold text-primary transition hover:bg-primary/10"
+              >
+                + Add Another {path === "Break_Time_Data" ? "Break Time" : "Maintenance"} Row
+              </button>
+            </div>
+          )}
         </div>
       );
     }
@@ -505,7 +764,7 @@ export default function RecordEditModal({
       const value = getPathValue(draft, item.path);
       return (
         <div key={item.path} className={item.span === "full" ? "md:col-span-2" : ""}>
-          <div className="mb-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">{item.label}</div>
+          <div className="mb-3 mt-1 text-sm font-bold text-on-surface tracking-wide">{item.label}</div>
           {renderStructuredNode(item.path, value)}
         </div>
       );
@@ -521,11 +780,21 @@ export default function RecordEditModal({
 
   return (
     <>
-      <div className="fixed inset-0 z-[80] bg-black/50 backdrop-blur-sm" onClick={() => onClose?.()}>
-        <div className="flex min-h-full items-center justify-center p-4 lg:p-6">
+      <div 
+        className="fixed inset-0 z-[80] bg-black/50 backdrop-blur-sm" 
+        onMouseDown={(e) => {
+          if (e.target === e.currentTarget) onClose?.();
+        }}
+      >
+        <div 
+          className="flex min-h-full items-center justify-center p-4 lg:p-6"
+          onMouseDown={(e) => {
+            if (e.target === e.currentTarget) onClose?.();
+          }}
+        >
           <div
             className="dashboard-section flex max-h-[92vh] w-full max-w-6xl flex-col overflow-hidden rounded-2xl"
-            onClick={(event) => event.stopPropagation()}
+            onMouseDown={(event) => event.stopPropagation()}
           >
             <div className="border-b border-separator/40 px-6 py-5">
               <div className="flex items-start justify-between gap-4">
@@ -599,7 +868,7 @@ export default function RecordEditModal({
 
                 <button
                   type="button"
-                  disabled={busy}
+                  disabled={busy || !note || note.trim() === ""}
                   onClick={() => onSave?.({ draft, note })}
                   className="rounded-xl bg-primary px-4 py-2.5 text-xs font-semibold text-on-primary hover:opacity-90 active:scale-95 transition-all duration-150 disabled:cursor-not-allowed disabled:opacity-50"
                 >
@@ -610,6 +879,18 @@ export default function RecordEditModal({
           </div>
         </div>
       </div>
+
+      <SensorDevicePhotoPreviewModal
+        preview={photoPreview}
+        onClose={() => setPhotoPreview(null)}
+        onNavigate={(direction) => setPhotoPreview((current) => {
+          if (!current) return current;
+          const images = Array.isArray(current.images) ? current.images : [];
+          const next = (Number.isInteger(current.activeIndex) ? current.activeIndex : 0) + direction;
+          if (next < 0 || next >= images.length) return current;
+          return { ...current, activeIndex: next };
+        })}
+      />
 
       <MasterProductPickerModal
         open={pickerState.open}

@@ -84,7 +84,13 @@ export const APPROVAL_EDIT_PROTECTED_FIELDS = new Set([
   "restoredByUsername",
 ]);
 
-export const APPROVAL_EDIT_HIDDEN_FIELDS = APPROVAL_EDIT_PROTECTED_FIELDS;
+export const APPROVAL_EDIT_HIDDEN_FIELDS = new Set([
+  ...APPROVAL_EDIT_PROTECTED_FIELDS,
+  "materialLabelImageCount",
+  "材料ラベル画像", // We only expose the array version materialLabelImages
+  "_source",
+  "Inspection_Name",
+]);
 
 const APPROVAL_EDIT_AUTO_FIELDS = new Set([
   "Cycle_Time",
@@ -137,20 +143,25 @@ const SRS_COUNTER_FIELDS = [
 
 const PRESS_COUNTER_FIELDS = ["疵引不良", "加工不良", "その他"];
 
+function hasPath(draft, key) {
+  const rootKey = String(key || "").split(".")[0];
+  return rootKey in (draft || {});
+}
+
 function addFieldItem(items, processedKeys, draft, key, label, inputKind = undefined) {
-  if (!(key in (draft || {}))) return;
+  if (!hasPath(draft, key)) return;
   processedKeys.add(key);
   items.push({ kind: "field", path: key, label, inputKind });
 }
 
 function addPickerFieldItem(items, processedKeys, draft, key, label, pickerTitle = label) {
-  if (!(key in (draft || {}))) return;
+  if (!hasPath(draft, key)) return;
   processedKeys.add(key);
   items.push({ kind: "pickerField", path: key, label, pickerTitle });
 }
 
 function addStructuredItem(items, processedKeys, draft, key, label) {
-  if (!(key in (draft || {}))) return;
+  if (!hasPath(draft, key)) return;
   processedKeys.add(key);
   items.push({ kind: "structured", path: key, label, span: "full" });
 }
@@ -164,6 +175,7 @@ export function buildApprovalEditSections(draft = {}, collectionName) {
   const processedKeys = new Set();
 
   const basicItems = [];
+
   if (draft.品番 !== undefined || draft.背番号 !== undefined) {
     processedKeys.add("品番");
     processedKeys.add("背番号");
@@ -193,7 +205,10 @@ export function buildApprovalEditSections(draft = {}, collectionName) {
   addFieldItem(timeItems, processedKeys, draft, "Total_Trouble_Hours", "故障時間（時間）", "number");
   addFieldItem(timeItems, processedKeys, draft, "Total_Work_Hours", "稼働時間", "auto");
   addFieldItem(timeItems, processedKeys, draft, "Cycle_Time", "サイクルタイム（秒）", "auto");
-  addStructuredItem(timeItems, processedKeys, draft, "Maintenance_Data", "メンテナンス / 故障");
+  addStructuredItem(timeItems, processedKeys, draft, "Maintenance_Data.records", "メンテナンス記録");
+  addFieldItem(timeItems, processedKeys, draft, "Maintenance_Data.totalMinutes", "メンテナンス合計（分）", "auto");
+  addFieldItem(timeItems, processedKeys, draft, "Maintenance_Data.totalHours", "メンテナンス合計（時間）", "auto");
+  processedKeys.add("Maintenance_Data");
   pushSection(sections, "time", "時間・稼働", "schedule", timeItems);
 
   const quantityItems = [];
@@ -235,10 +250,15 @@ export function buildApprovalEditSections(draft = {}, collectionName) {
 
       processedKeys.add(key);
       const value = draft[key];
+      let displayLabel = key;
+      if (key === "materialLabelImages") {
+        displayLabel = "材料ラベル画像";
+      }
+
       imageItems.push({
         kind: Array.isArray(value) || isPlainObject(value) ? "structured" : "field",
         path: key,
-        label: key,
+        label: displayLabel,
         span: "full",
       });
     });
@@ -278,7 +298,7 @@ export function resolveApprovalEditFieldKind(path, value) {
   if (APPROVAL_EDIT_AUTO_FIELDS.has(rootKey)) return "auto";
   if (APPROVAL_EDIT_TEXTAREA_FIELDS.has(rootKey)) return "textarea";
   if (rootKey === "Date" || leafKey === "Date") return "date";
-  if (["Time_start", "Time_end", "start", "end"].includes(leafKey)) return "time";
+  if (["Time_start", "Time_end", "start", "end", "startTime", "endTime"].includes(leafKey)) return "time";
   if (path.startsWith("Counters.")) return "integer";
   if (APPROVAL_EDIT_INTEGER_FIELDS.has(rootKey) || APPROVAL_EDIT_INTEGER_FIELDS.has(leafKey)) return "integer";
   if (APPROVAL_EDIT_NUMBER_FIELDS.has(rootKey) || APPROVAL_EDIT_NUMBER_FIELDS.has(leafKey)) return "number";
@@ -325,6 +345,20 @@ export function computeApprovalDerivedFields(draft = {}, collectionName) {
 
     draft.Total_Break_Minutes = totalBreakMinutes;
     draft.Total_Break_Hours = roundToTwo(totalBreakMinutes / 60);
+  }
+
+  if (isPlainObject(draft.Maintenance_Data) && Array.isArray(draft.Maintenance_Data.records)) {
+    const totalTroubleMinutes = draft.Maintenance_Data.records.reduce((sum, entry) => {
+      const startMinutes = parseClockMinutes(entry?.startTime);
+      const endMinutes = parseClockMinutes(entry?.endTime);
+      if (startMinutes < 0 || endMinutes <= startMinutes) return sum;
+      return sum + (endMinutes - startMinutes);
+    }, 0);
+
+    draft.Maintenance_Data.totalMinutes = totalTroubleMinutes;
+    draft.Maintenance_Data.totalHours = roundToTwo(totalTroubleMinutes / 60);
+    draft.Total_Trouble_Minutes = totalTroubleMinutes;
+    draft.Total_Trouble_Hours = roundToTwo(totalTroubleMinutes / 60);
   }
 
   const startMinutes = parseClockMinutes(draft.Time_start);

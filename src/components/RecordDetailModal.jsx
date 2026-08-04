@@ -1,15 +1,24 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
-import { fetchMasterImage } from "../services/api";
+import { fetchMasterImage, editSubmittedRecord, query } from "../services/api";
+import { searchApprovalMasterProducts } from "../services/approvalsApi";
+import {
+  APPROVAL_EDIT_HIDDEN_FIELDS,
+  buildApprovalEditSections,
+  resolveApprovalEditFieldKind,
+  computeApprovalDerivedFields,
+  flattenApprovalEditChanges,
+} from "../utils/approvalEdit";
 import CollapsibleSection from "./CollapsibleSection";
 import SensorDevicePhotoPreviewModal from "./SensorDevicePhotoPreviewModal";
+import RecordEditModal from "./RecordEditModal";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 export const PROCESS_ACCENT = {
-  Kensa: { dot: "bg-amber-400",   label: "text-amber-400" },
-  Press: { dot: "bg-emerald-400", label: "text-emerald-400" },
-  SRS:   { dot: "bg-slate-400",   label: "text-slate-400" },
-  Slit:  { dot: "bg-sky-400",     label: "text-sky-400" },
+  Kensa: { dot: "bg-amber-400",   label: "text-amber-400", db: "kensaDB" },
+  Press: { dot: "bg-emerald-400", label: "text-emerald-400", db: "pressDB" },
+  SRS:   { dot: "bg-slate-400",   label: "text-slate-400", db: "SRSDB" },
+  Slit:  { dot: "bg-sky-400",     label: "text-sky-400", db: "slitDB" },
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -362,11 +371,28 @@ function MaintenanceSection({ record, onPreview }) {
 //   processName — string key matching PROCESS_ACCENT (e.g. "Press", "Kensa")
 //   onClose     — callback to close the modal
 //   onLotClick  — optional callback(lot: string) when a 材料ロット chip is clicked
-export default function RecordDetailModal({ record, processName, onClose, onLotClick }) {
+//   onUpdated   — optional callback triggered after successful edit
+export default function RecordDetailModal({ record, processName, onClose, onLotClick, onUpdated }) {
   const [imageData,    setImageData]    = useState(null);
   const [imageLoading, setImageLoading] = useState(true);
   const [copied,       setCopied]       = useState(false);
   const [photoPreview, setPhotoPreview] = useState(null);
+
+  const [isEditing, setIsEditing] = useState(false);
+  const [editBusy, setEditBusy] = useState(false);
+  const editFieldOptionsCacheRef = useRef(new Map());
+
+  const authUser = JSON.parse(localStorage.getItem("authUser")) || {};
+  const role = authUser.role || "";
+  const canEdit = ["admin", "部長", "係長", "課長"].includes(role);
+
+  function handleEditClick() {
+    if (!canEdit) {
+      alert("You are not permitted to use the edit mode.");
+      return;
+    }
+    setIsEditing(true);
+  }
 
   function copyLink() {
     navigator.clipboard.writeText(window.location.href).then(() => {
@@ -376,7 +402,7 @@ export default function RecordDetailModal({ record, processName, onClose, onLotC
   }
 
   useEffect(() => {
-    if (!record) return;
+    if (!record || isEditing) return;
     let cancelled = false;
     setImageLoading(true);
     setImageData(null);
@@ -384,12 +410,78 @@ export default function RecordDetailModal({ record, processName, onClose, onLotC
       if (!cancelled) { setImageData(d); setImageLoading(false); }
     });
     return () => { cancelled = true; };
-  }, [record]);
+  }, [record, isEditing]);
+
+  async function loadFieldPickerOptions(path, draft) {
+    const currentValue = String(draft?.[path] || "").trim();
+    if (!["設備", "Worker_Name", "工場"].includes(path)) {
+      return currentValue ? [currentValue] : [];
+    }
+    const selectedFactory = String(draft?.工場 || "").trim();
+    const cacheKey = `${path}::${selectedFactory}`;
+    if (editFieldOptionsCacheRef.current.has(cacheKey)) {
+      const cachedOptions = editFieldOptionsCacheRef.current.get(cacheKey);
+      return [...new Set([...cachedOptions, currentValue].filter(Boolean))]
+        .sort((left, right) => String(left).localeCompare(String(right), "ja"));
+    }
+    let values = [];
+    try {
+      if (path === "工場") {
+        const res = await query("Sasaki_Coating_MasterDB", "factoryDB", {}, { projection: { "工場": 1 } });
+        values = (Array.isArray(res) ? res : res.data || []).map(doc => doc["工場"]);
+      } else if (path === "設備") {
+        const q = selectedFactory ? { "工場": selectedFactory } : {};
+        const res = await query("Sasaki_Coating_MasterDB", "setsubiDB", q, { projection: { "name": 1 } });
+        values = (Array.isArray(res) ? res : res.data || []).map(doc => doc.name);
+      } else if (path === "Worker_Name") {
+        const res = await query("Sasaki_Coating_MasterDB", "workerDB", {}, { projection: { "Name": 1 } });
+        values = (Array.isArray(res) ? res : res.data || []).map(doc => doc.Name);
+      }
+    } catch (e) {
+      console.error("Failed to load options for", path, e);
+    }
+    editFieldOptionsCacheRef.current.set(cacheKey, values);
+    return [...new Set([...values, currentValue].filter(Boolean))]
+      .sort((left, right) => String(left).localeCompare(String(right), "ja"));
+  }
+
+  async function handleSaveEdit({ draft, note }) {
+    if (!canEdit) {
+      alert("You are not permitted to use the edit mode.");
+      setIsEditing(false);
+      return;
+    }
+    if (!PROCESS_ACCENT[processName]?.db) return;
+    setEditBusy(true);
+    try {
+      const flattenedChanges = flattenApprovalEditChanges(draft);
+
+      await editSubmittedRecord({
+        collection: PROCESS_ACCENT[processName].db,
+        docId: record._id?.$oid || record._id,
+        changes: flattenedChanges,
+        editedBy: authUser.name || authUser.username,
+        editedByUsername: authUser.username,
+        editNote: note,
+        pendingImageOps: draft._pendingImageOps || []
+      });
+      alert("Record updated successfully!");
+      setIsEditing(false);
+      if (typeof onUpdated === "function") {
+        onUpdated();
+      }
+      onClose();
+    } catch (err) {
+      alert("Failed to save changes: " + err.message);
+    } finally {
+      setEditBusy(false);
+    }
+  }
 
   if (!record) return null;
 
   const qty      = Number(record.Process_Quantity) || Number(record.Total) || 0;
-  const ng       = Number(record.Total_NG) || 0;
+  const ng       = Number(record.SRS_Total_NG) || Number(record.Total_NG) || 0;
   const defRate  = qty > 0 ? ((ng / qty) * 100).toFixed(2) : "0.00";
   const hrs      = calcWorkHours(record.Time_start, record.Time_end);
   const defColor = parseFloat(defRate) > 2 ? "text-error" : parseFloat(defRate) > 1 ? "text-amber-400" : "text-emerald-400";
@@ -401,6 +493,10 @@ export default function RecordDetailModal({ record, processName, onClose, onLotC
   const SKIP    = new Set(["_id", "_source", "__v"]);
   const entries = Object.entries(record).filter(([k]) => !SKIP.has(k) && record[k] != null && record[k] !== "");
 
+  const kensaCounters = Object.entries(record?.Counters || {})
+    .filter(([, v]) => Number(v) > 0)
+    .map(([k, v]) => [k, v, true]);
+
   const keyFields = [
     ["工場",      record["工場"]],
     ["Date",      record.Date],
@@ -409,8 +505,22 @@ export default function RecordDetailModal({ record, processName, onClose, onLotC
     ["開始時刻",  record.Time_start],
     ["終了時刻",  record.Time_end],
     ["稼働時間",  hrs != null ? `${hrs.toFixed(2)} hrs` : null],
+    ["数量 (Qty)", record.Process_Quantity],
+    ["サイクルタイム", record.Cycle_Time ? `${record.Cycle_Time}s` : null],
+    ["ショット数", record["ショット数"]],
+    ...kensaCounters,
+    ["疵引不良",  record["疵引不良"], true],
+    ["加工不良",  record["加工不良"], true],
+    ["くっつき・めくれ", record["くっつき・めくれ"], true],
+    ["シワ",      record["シワ"], true],
+    ["転写位置ズレ", record["転写位置ズレ"], true],
+    ["転写不良",  record["転写不良"], true],
+    ["文字欠け",  record["文字欠け"], true],
+    ["その他不良", record["その他"], true],
+    ["Spare",     record.Spare],
+    ["コメント",  record.Comment],
     ["製造ロット", record["製造ロット"]],
-  ].filter(([, v]) => v != null);
+  ].filter(([, v]) => v != null && v !== "");
 
   const processAccent = PROCESS_ACCENT[processName];
 
@@ -439,7 +549,16 @@ export default function RecordDetailModal({ record, processName, onClose, onLotC
             </div>
             <p className="text-[11px] text-outline mt-0.5 font-mono ml-5.5">{record["品番"]} / {record["背番号"]}</p>
           </div>
-          <div className="flex items-center gap-0.5 flex-shrink-0 ml-2">
+          <div className="flex items-center gap-2">
+            {canEdit && (
+              <button
+                type="button"
+                onClick={handleEditClick}
+                className="px-4 py-1.5 rounded-xl bg-primary/10 text-primary font-semibold hover:bg-primary/20 text-xs active:scale-95 transition-all"
+              >
+                Edit
+              </button>
+            )}
             <button
               onClick={copyLink}
               title="Copy shareable link"
@@ -507,12 +626,16 @@ export default function RecordDetailModal({ record, processName, onClose, onLotC
 
         {/* Key metrics */}
         <div className="px-6 py-4 grid grid-cols-2 gap-x-4 gap-y-3 border-b border-separator/40">
-          {keyFields.map(([label, value]) => (
-            <div key={label} className="flex flex-col gap-0.5">
-              <span className="text-[10px] font-semibold uppercase tracking-wider text-outline">{label}</span>
-              <span className="text-sm font-semibold text-on-surface">{value}</span>
-            </div>
-          ))}
+          {keyFields.map(([label, value, isDefectForce]) => {
+            const isDefect = isDefectForce || label.includes("不良");
+            const hasDefect = isDefect && Number(value) > 0;
+            return (
+              <div key={label} className="flex flex-col gap-0.5">
+                <span className={`text-[10px] font-semibold uppercase tracking-wider ${hasDefect ? 'text-error/80' : 'text-outline'}`}>{label}</span>
+                <span className={`text-sm font-semibold ${hasDefect ? 'text-error' : 'text-on-surface'}`}>{value}</span>
+              </div>
+            );
+          })}
           {materialLots.length > 0 ? (
             <div className="flex flex-col gap-1.5 col-span-2">
               <span className="text-[10px] font-semibold uppercase tracking-wider text-outline">材料ロット</span>
@@ -620,6 +743,25 @@ export default function RecordDetailModal({ record, processName, onClose, onLotC
           if (next < 0 || next >= images.length) return current;
           return { ...current, activeIndex: next };
         })}
+      />
+      <RecordEditModal
+        open={isEditing}
+        title={`Edit ${processName} Record`}
+        subtitle={`${record?.品番 || ""} / ${record?.背番号 || ""}`}
+        record={record}
+        busy={editBusy}
+        onClose={() => setIsEditing(false)}
+        onSave={handleSaveEdit}
+        saveLabel="Save Changes"
+        notePlaceholder="変更理由を入力... (必須)"
+        buildSections={buildApprovalEditSections}
+        resolveFieldKind={resolveApprovalEditFieldKind}
+        computeDraft={computeApprovalDerivedFields}
+        schemaContext={PROCESS_ACCENT[processName]?.db}
+        hiddenFields={APPROVAL_EDIT_HIDDEN_FIELDS}
+        linkedProductPaths={{ partNumberPath: "品番", serialNumberPath: "背番号" }}
+        loadLinkedProductOptions={searchApprovalMasterProducts}
+        loadFieldPickerOptions={loadFieldPickerOptions}
       />
     </div>
   );

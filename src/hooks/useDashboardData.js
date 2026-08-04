@@ -11,21 +11,27 @@ function computeTopDefects(records = []) {
   const map = new Map();
   records.forEach((r) => {
     const key = r["背番号"] ?? "—";
-    if (!map.has(key)) map.set(key, { sebanggo: key, total: 0, ng: 0, worstRecord: null });
-    const entry = map.get(key);
-    entry.total += Number(r.Total)    || 0;
-    entry.ng    += Number(r.Total_NG) || 0;
-    // Keep the record with the highest NG count as the representative record
-    if ((Number(r.Total_NG) || 0) > (Number(entry.worstRecord?.Total_NG) || 0)) {
-      entry.worstRecord = r;
+    const ng = Number(r.SRS_Total_NG) || Number(r.Total_NG) || 0;
+    
+    // Track the single worst record per part (highest NG)
+    if (!map.has(key) || ng > (Number(map.get(key).worstRecord?.SRS_Total_NG) || Number(map.get(key).worstRecord?.Total_NG) || 0)) {
+      map.set(key, { sebanggo: key, worstRecord: r });
     }
   });
+
   return Array.from(map.values())
+    .map((d) => {
+      const total = Number(d.worstRecord.Process_Quantity) || Number(d.worstRecord.Total) || 0;
+      const ng = Number(d.worstRecord.SRS_Total_NG) || Number(d.worstRecord.Total_NG) || 0;
+      return {
+        sebanggo: d.sebanggo,
+        total,
+        ng,
+        defectRate: total > 0 ? Math.round((ng / total) * 10000) / 100 : 0,
+        worstRecord: d.worstRecord,
+      };
+    })
     .filter((d) => d.ng > 0)
-    .map((d) => ({
-      ...d,
-      defectRate: d.total > 0 ? Math.round((d.ng / d.total) * 10000) / 100 : 0,
-    }))
     .sort((a, b) => b.ng - a.ng)
     .slice(0, 5);
 }
@@ -63,8 +69,8 @@ export function useDashboardData() {
           const kensaRecords = (p?.records ?? []).filter((r) => r._source === "kensaDB");
           let kensaTotal = 0, kensaTotalNG = 0;
           kensaRecords.forEach((r) => {
-            kensaTotal   += Number(r.Total)    || 0;
-            kensaTotalNG += Number(r.Total_NG) || 0;
+            kensaTotal   += Number(r.Process_Quantity) || Number(r.Total) || 0;
+            kensaTotalNG += Number(r.SRS_Total_NG) || Number(r.Total_NG) || 0;
           });
           const kensaDefectRate = kensaTotal > 0
             ? Math.round((kensaTotalNG / kensaTotal) * 10000) / 100

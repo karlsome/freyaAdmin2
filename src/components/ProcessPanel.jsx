@@ -1,6 +1,7 @@
 //This component displays a paginated, sortable, and searchable table of production records for a specific process (Kensa, Press, SRS, or Slit). It also includes a summary section that aggregates data by part number and worker ID. The component is designed to be reusable for different processes by passing the appropriate props.
 import { useEffect, useMemo, useRef, useState } from "react";
 import DataTable from "./DataTable";
+import ExportOptionsModal from "./ExportOptionsModal";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const ITEMS_PER_PAGE = 25;
@@ -37,7 +38,7 @@ function groupSummary(rows) {
     if (!map.has(key)) map.set(key, { hinban: r["品番"], sebanggo: r["背番号"], total: 0, ng: 0 });
     const e = map.get(key);
     e.total += Number(r.Process_Quantity) || Number(r.Total) || 0;
-    e.ng    += Number(r.Total_NG) || 0;
+    e.ng    += Number(r.SRS_Total_NG) || Number(r.Total_NG) || 0;
   });
   return Array.from(map.values());
 }
@@ -53,6 +54,7 @@ export default function ProcessPanel({ processName, rows, onRowClick, showFactor
   const [page, setPage]               = useState(1);
   const [search, setSearch]           = useState("");
   const [showSummary, setShowSummary] = useState(false);
+  const [showExport, setShowExport] = useState(false);
   const summaryRef = useRef(null);
 
   useEffect(() => setPage(1), [rows]);
@@ -79,15 +81,34 @@ export default function ProcessPanel({ processName, rows, onRowClick, showFactor
       return (ha - hb) * sort.dir;
     }
     if (sort.col === "Defect_Rate") {
-      const qa = Number(a.Process_Quantity) || 0;
-      const qb = Number(b.Process_Quantity) || 0;
-      const ra = qa ? (Number(a.Total_NG) || 0) / qa : 0;
-      const rb = qb ? (Number(b.Total_NG) || 0) / qb : 0;
+      const qa = Number(a.Process_Quantity) || Number(a.Total) || 0;
+      const qb = Number(b.Process_Quantity) || Number(b.Total) || 0;
+      const ra = qa ? (Number(a.SRS_Total_NG) || Number(a.Total_NG) || 0) / qa : 0;
+      const rb = qb ? (Number(b.SRS_Total_NG) || Number(b.Total_NG) || 0) / qb : 0;
       return (ra - rb) * sort.dir;
     }
+    
+    if (sort.col === "Process_Quantity" || sort.col === "Total") {
+      const va = Number(a.Process_Quantity) || Number(a.Total) || 0;
+      const vb = Number(b.Process_Quantity) || Number(b.Total) || 0;
+      return (va - vb) * sort.dir;
+    }
+
+    if (sort.col === "Total_NG") {
+      const va = Number(a.SRS_Total_NG) || Number(a.Total_NG) || 0;
+      const vb = Number(b.SRS_Total_NG) || Number(b.Total_NG) || 0;
+      return (va - vb) * sort.dir;
+    }
+
     const va = a[sort.col] ?? "";
     const vb = b[sort.col] ?? "";
-    if (SORT_NUMERIC.has(sort.col)) return (Number(va) - Number(vb)) * sort.dir;
+    
+    if (SORT_NUMERIC.has(sort.col)) {
+      const numA = Number(va) || 0;
+      const numB = Number(vb) || 0;
+      return (numA - numB) * sort.dir;
+    }
+    
     return va.toString().localeCompare(vb.toString(), "ja") * sort.dir;
   });
 
@@ -145,7 +166,7 @@ export default function ProcessPanel({ processName, rows, onRowClick, showFactor
         width: 112,
         align: "right",
         renderCell: (row) => {
-          const totalNg = Number(row.Total_NG) || 0;
+          const totalNg = Number(row.SRS_Total_NG) || Number(row.Total_NG) || 0;
           return <span className={totalNg > 0 ? "font-semibold text-error" : "font-semibold text-outline"}>{totalNg}</span>;
         },
         disableCellWrapper: true,
@@ -170,7 +191,7 @@ export default function ProcessPanel({ processName, rows, onRowClick, showFactor
         align: "right",
         renderCell: (row) => {
           const quantity = Number(row.Process_Quantity) || Number(row.Total) || 0;
-          const totalNg = Number(row.Total_NG) || 0;
+          const totalNg = Number(row.SRS_Total_NG) || Number(row.Total_NG) || 0;
           const rate = quantity > 0 ? ((totalNg / quantity) * 100).toFixed(2) : "0.00";
           return (
             <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold ${defectChip(rate)}`}>
@@ -216,12 +237,13 @@ export default function ProcessPanel({ processName, rows, onRowClick, showFactor
                 setShowSummary(true);
                 setTimeout(() => summaryRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 50);
               }}
-              className="text-[11px] text-outline hover:text-on-surface transition-colors flex items-center gap-1"
+              className="px-3 py-1.5 rounded-lg border border-separator/40 bg-surface text-[11px] font-medium text-on-surface hover:bg-surface-container transition-colors flex items-center gap-1.5"
             >
               <span className="material-symbols-outlined" style={{ fontSize: 14 }}>expand_more</span>
               Summary
             </button>
           )}
+
           <input
             type="text"
             placeholder="Search…"
@@ -243,10 +265,22 @@ export default function ProcessPanel({ processName, rows, onRowClick, showFactor
         totalPages={totalPages}
         onSort={handleSort}
         onPageChange={setPage}
-        rowKey={(row, index) => `${processName}-${row["品番"] || "part"}-${row["背番号"] || "serial"}-${row.Date || index}`}
+        rowKey={(row, index) => {
+          const id = row._id?.$oid ?? row._id;
+          return id ? String(id) : `${processName}-${index}`;
+        }}
         onRowClick={onRowClick ? (row) => onRowClick(row, processName) : undefined}
         renderPageInfo={() => (
-          <span className="text-sm text-on-surface-variant">{totalItems} records, showing {pageStart}-{pageEnd}</span>
+          <div className="flex items-center justify-between w-full">
+            <span className="text-sm text-on-surface-variant">{totalItems} records, showing {pageStart}-{pageEnd}</span>
+            <button
+              onClick={() => setShowExport(true)}
+              className="px-3 py-1.5 rounded-lg border border-separator/40 bg-surface text-[11px] font-medium text-on-surface hover:text-primary hover:border-primary/30 hover:bg-primary/5 transition-colors flex items-center gap-1.5"
+            >
+              <span className="material-symbols-outlined" style={{ fontSize: 14 }}>download</span>
+              Export
+            </button>
+          </div>
         )}
         emptyTitle={search ? "No results match your search" : "No data available"}
         emptyMessage={search ? "Adjust the search term to find matching production records." : "No production records are available for this process."}
@@ -258,6 +292,7 @@ export default function ProcessPanel({ processName, rows, onRowClick, showFactor
         className="flex min-h-0 flex-1 flex-col overflow-hidden"
         topBarClassName="flex justify-end px-1 pb-4"
         bottomBarClassName="flex flex-col gap-4 border-t border-separator/40 px-1 pt-4 md:flex-row md:items-center md:justify-between"
+        bottomInfoClassName="flex-1 w-full flex"
         tableClassName="ui-table-data min-w-[720px]"
         tableViewportClassName="min-h-0 overflow-auto"
         headClassName="bg-surface-container-high/40 border-b border-outline-variant/20"
@@ -271,15 +306,29 @@ export default function ProcessPanel({ processName, rows, onRowClick, showFactor
       {/* Summary collapsible */}
       {summary.length > 0 && (
         <div ref={summaryRef} className="border-t border-separator/40">
-          <button
-            className="w-full px-5 py-3 flex items-center gap-2 text-xs font-semibold text-outline hover:text-on-surface transition-colors"
-            onClick={() => setShowSummary((v) => !v)}
-          >
-            <span className="material-symbols-outlined" style={{ fontSize: 14 }}>
-              {showSummary ? "keyboard_arrow_up" : "keyboard_arrow_down"}
-            </span>
-            Daily Summary ({summary.length} parts)
-          </button>
+          {(() => {
+            const overallTotal = summary.reduce((acc, s) => acc + s.total, 0);
+            const overallNg = summary.reduce((acc, s) => acc + s.ng, 0);
+            const overallRate = overallTotal > 0 ? ((overallNg / overallTotal) * 100).toFixed(2) : "0.00";
+            return (
+              <button
+                className="w-full px-5 py-3 flex items-center justify-between text-xs font-semibold text-outline hover:text-on-surface transition-colors"
+                onClick={() => setShowSummary((v) => !v)}
+              >
+                <div className="flex items-center gap-2">
+                  <span className="material-symbols-outlined" style={{ fontSize: 14 }}>
+                    {showSummary ? "keyboard_arrow_up" : "keyboard_arrow_down"}
+                  </span>
+                  <span>Daily Summary ({summary.length} parts)</span>
+                </div>
+                <div className="flex items-center gap-4 text-[11px] font-medium tracking-wide pr-2">
+                  <span className="flex gap-1.5 items-center"><span className="text-outline/70 uppercase text-[9px]">Total</span> <span className="text-on-surface font-semibold">{overallTotal.toLocaleString()}</span></span>
+                  <span className="flex gap-1.5 items-center"><span className="text-outline/70 uppercase text-[9px]">NG</span> <span className={`font-semibold ${overallNg > 0 ? 'text-error' : 'text-on-surface'}`}>{overallNg.toLocaleString()}</span></span>
+                  <span className="flex gap-1.5 items-center"><span className="text-outline/70 uppercase text-[9px]">Rate</span> <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold ${defectChip(overallRate)}`}>{overallRate}%</span></span>
+                </div>
+              </button>
+            );
+          })()}
           {showSummary && (
             <div className="px-5 pb-4 overflow-x-auto">
               <table className="ui-table-data w-full min-w-[400px]">
@@ -314,6 +363,14 @@ export default function ProcessPanel({ processName, rows, onRowClick, showFactor
             </div>
           )}
         </div>
+      )}
+
+      {showExport && (
+        <ExportOptionsModal
+          data={filtered}
+          processName={processName}
+          onClose={() => setShowExport(false)}
+        />
       )}
     </div>
   );

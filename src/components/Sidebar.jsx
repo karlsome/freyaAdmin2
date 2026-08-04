@@ -8,11 +8,16 @@ const navItems = [
   { icon: "factory",                  labelKey: "factories",           page: "factories",
     children: [
       { icon: "overview",             labelKey: "overview",            page: "factory/overview" },
+      { icon: "phone_missed",        labelKey: "stopCall",            page: "factory/stopCall" },
       { icon: "sensors",              labelKey: "sensors",             page: "sensors" },
       { icon: "developer_board",     labelKey: "devices",             page: "devices" },
     ]
   },
-  { icon: "precision_manufacturing",   labelKey: "factoryStatus",       page: "factoryStatus" },
+  { icon: "precision_manufacturing",   labelKey: "factoryStatus",       page: "factoryStatus",
+    children: [
+      { icon: "article",              labelKey: "logs",                page: "factoryStatus/logs" },
+    ]
+  },
   { icon: "event_note",               labelKey: "planner",             page: "planner" },
   { icon: "inventory_2",              labelKey: "inventory",           page: "inventory" },
   { icon: "notifications",            labelKey: "notifications",       page: "notifications" },
@@ -196,7 +201,7 @@ export default function Sidebar({ activePage, badges = {}, mobileOpen = false, o
                 {hasChildren && (
                   <div
                     className={`overflow-hidden transition-[max-height,opacity] duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] ${
-                      isOpen ? "max-h-40" : "max-h-0"
+                      isOpen ? "max-h-60" : "max-h-0"
                     } ${isMobile ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`}
                   >
                     <div className="relative mb-1 ml-[18px] mt-0.5">

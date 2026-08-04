@@ -534,9 +534,7 @@ export default function DataTable({
     <div className={className}>
       {showTopBar && (
         <div className={topBarClassName}>
-          {pageInfo ? <div className={topInfoClassName}>{pageInfo}</div> : <div />}
-
-          <div className="flex flex-wrap items-center justify-end gap-3">
+          <div className="flex flex-wrap items-center justify-end gap-3 flex-1">
             {showResetColumns && (
               <button
                 type="button"

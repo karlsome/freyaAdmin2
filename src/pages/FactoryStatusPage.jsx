@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
+import FactoryLiveMonitor from "../components/factoryStatus/FactoryLiveMonitor";
 import AdvancedFilterSection from "../components/AdvancedFilterSection";
 import DataTable from "../components/DataTable";
+import MasterTabNav from "../components/MasterTabNav";
 import PageHeader from "../components/PageHeader";
 import StatSummaryCard from "../components/StatSummaryCard";
 import StatusChip from "../components/StatusChip";
@@ -78,6 +80,8 @@ function SummaryCard({ icon, label, value, subtitle, accent, loading = false }) 
 
 export default function FactoryStatusPage() {
   const navigate = useNavigate();
+  const { tab } = useParams();
+  const activeTab = tab || "live-monitor";
   const [authUser] = useState(() => readStoredAuthUser());
   const requestIdRef = useRef(0);
   const [factoryOptions, setFactoryOptions] = useState([]);
@@ -507,7 +511,18 @@ export default function FactoryStatusPage() {
           />
         </div>
 
-        <div className="mb-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-6">
+        <MasterTabNav
+          tabs={[
+            { key: "live-monitor", label: "Live Monitor", ready: true },
+            { key: "live-status", label: "Production Status", ready: true },
+          ]}
+          activeTab={activeTab}
+          onSelect={(tab) => navigate(`/factoryStatus/${tab.key}`, { replace: true })}
+        />
+
+        {activeTab === "live-status" && (
+          <>
+            <div className="mb-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-6">
           <SummaryCard
             icon="flag"
             label="Goal"
@@ -639,10 +654,18 @@ export default function FactoryStatusPage() {
               className="glass-card overflow-hidden rounded-[28px]"
               topBarClassName="flex flex-col gap-4 border-b border-outline-variant/15 px-5 py-4 md:flex-row md:items-center md:justify-between"
               bottomBarClassName="flex flex-col gap-4 border-t border-outline-variant/15 px-5 py-4 md:flex-row md:items-center md:justify-between"
-              rowClassName="border-b border-outline-variant/10 transition hover:bg-primary/5"
             />
           </div>
         ))}
+          </>
+        )}
+
+        {activeTab === "live-monitor" && (
+          <FactoryLiveMonitor 
+            factories={selectedFactories} 
+            onMachineClick={(factory, equipment) => setLogsModalState({ open: true, factory, equipment })}
+          />
+        )}
 
         <FactoryStatusLogsModal
           open={logsModalState.open}
