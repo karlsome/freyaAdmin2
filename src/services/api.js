@@ -504,114 +504,14 @@ export async function fetchHistoricalSensorOverview({
   if (cached) return cached;
 
   return _withInFlight(cacheKey, async () => {
-    const deviceMatch = buildSensorReadingDeviceMatch(deviceId);
-    const isHourly = Boolean(startDate && endDate && startDate === endDate);
-
-    const result = await query(
-      "submittedDB",
-      "tempHumidityDB",
-      {},
-      {
-        aggregation: [
-          ...buildSensorReadingNormalizationStages({ factoryName, startDate, endDate, years, offsets }),
-          {
-            $facet: {
-              deviceOptions: [
-                { $match: { device: { $ne: "" } } },
-                { $group: { _id: "$device" } },
-                { $sort: { _id: 1 } },
-              ],
-              summary: [
-                ...(deviceMatch ? [{ $match: deviceMatch }] : []),
-                {
-                  $group: {
-                    _id: null,
-                    totalReadings: { $sum: 1 },
-                    avgTemp: { $avg: "$temperatureValue" },
-                    peakTemp: { $max: "$temperatureValue" },
-                    minTemp: { $min: "$temperatureValue" },
-                    avgHumid: { $avg: "$humidityValue" },
-                    heatAlerts: {
-                      $sum: {
-                        $cond: [
-                          { $gt: ["$wbgtValue", 28] },
-                          1,
-                          0,
-                        ],
-                      },
-                    },
-                  },
-                },
-                {
-                  $project: {
-                    _id: 0,
-                    totalReadings: 1,
-                    avgTemp: { $round: ["$avgTemp", 1] },
-                    peakTemp: { $round: ["$peakTemp", 1] },
-                    minTemp: { $round: ["$minTemp", 1] },
-                    avgHumid: { $round: ["$avgHumid", 1] },
-                    heatAlerts: 1,
-                  },
-                },
-              ],
-              trends: [
-                { $match: { device: { $ne: "" }, ...(deviceMatch || {}) } },
-                {
-                  $group: {
-                    _id: {
-                      device: "$device",
-                      date: "$Date",
-                      hour: isHourly ? { $substr: ["$Time", 0, 2] } : null,
-                    },
-                    avgTemperature: { $avg: "$temperatureValue" },
-                    avgHumidity: { $avg: "$humidityValue" },
-                  },
-                },
-                {
-                  $project: {
-                    _id: 0,
-                    device: "$_id.device",
-                    Date: isHourly 
-                      ? { $concat: ["$_id.date", " ", "$_id.hour", ":00"] }
-                      : "$_id.date",
-                    Temperature: { $round: ["$avgTemperature", 1] },
-                    Humidity: { $round: ["$avgHumidity", 1] },
-                  },
-                },
-                { $sort: { Date: 1, device: 1 } },
-              ],
-              latestDevices: [
-                { $match: { device: { $ne: "" }, ...(deviceMatch || {}) } },
-                { $sort: { device: 1, Date: -1, Time: -1, _id: -1 } },
-                {
-                  $group: {
-                    _id: "$device",
-                    latest: { $first: "$$ROOT" },
-                    readingCount: { $sum: 1 },
-                  },
-                },
-                {
-                  $project: {
-                    _id: 0,
-                    deviceId: "$_id",
-                    readingCount: 1,
-                    latest: {
-                      Date: "$latest.Date",
-                      Time: "$latest.Time",
-                      Temperature: "$latest.Temperature",
-                      Humidity: "$latest.Humidity",
-                      sensorStatus: "$latest.sensorStatus",
-                      factory: "$latest.工場",
-                    },
-                  },
-                },
-                { $sort: { "latest.Date": -1, "latest.Time": -1, deviceId: 1 } },
-              ],
-            },
-          },
-        ],
-      }
-    );
+    const result = await _postJson("api/factory/sensors/historical/overview", {
+      factoryName,
+      startDate,
+      endDate,
+      years,
+      deviceId,
+      offsets
+    });
 
     const payload = extractAggregationResultDocument(result);
     const summary = payload?.summary?.[0] ?? {};
@@ -640,32 +540,14 @@ export async function fetchHistoricalSensorExport({
   sortKey = "date_desc",
   offsets = {},
 } = {}) {
-  const deviceMatch = buildSensorReadingDeviceMatch(deviceId);
-
-  const result = await query(
-    "submittedDB",
-    "tempHumidityDB",
-    {},
-    {
-      aggregation: [
-        ...buildSensorReadingNormalizationStages({ factoryName, startDate, endDate, offsets }),
-        ...(deviceMatch ? [{ $match: deviceMatch }] : []),
-        { $sort: buildSensorReadingSortStage(sortKey) },
-        {
-          $project: {
-            _id: 1,
-            Date: 1,
-            Time: 1,
-            device: 1,
-            Temperature: 1,
-            Humidity: 1,
-            sensorStatus: 1,
-            工場: 1,
-          },
-        },
-      ],
-    }
-  );
+  const result = await _postJson("api/factory/sensors/historical/export", {
+    factoryName,
+    startDate,
+    endDate,
+    deviceId,
+    sortKey,
+    offsets
+  });
 
   return Array.isArray(result) ? result : [];
 }

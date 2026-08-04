@@ -243,13 +243,7 @@ export default function ProcessPanel({ processName, rows, onRowClick, showFactor
               Summary
             </button>
           )}
-          <button
-            onClick={() => setShowExport(true)}
-            className="px-3 py-1.5 rounded-lg border border-separator/40 bg-surface text-[11px] font-medium text-on-surface hover:text-primary hover:border-primary/30 hover:bg-primary/5 transition-colors flex items-center gap-1.5"
-          >
-            <span className="material-symbols-outlined" style={{ fontSize: 14 }}>download</span>
-            Export
-          </button>
+
           <input
             type="text"
             placeholder="Search…"
@@ -277,7 +271,16 @@ export default function ProcessPanel({ processName, rows, onRowClick, showFactor
         }}
         onRowClick={onRowClick ? (row) => onRowClick(row, processName) : undefined}
         renderPageInfo={() => (
-          <span className="text-sm text-on-surface-variant">{totalItems} records, showing {pageStart}-{pageEnd}</span>
+          <div className="flex items-center justify-between w-full">
+            <span className="text-sm text-on-surface-variant">{totalItems} records, showing {pageStart}-{pageEnd}</span>
+            <button
+              onClick={() => setShowExport(true)}
+              className="px-3 py-1.5 rounded-lg border border-separator/40 bg-surface text-[11px] font-medium text-on-surface hover:text-primary hover:border-primary/30 hover:bg-primary/5 transition-colors flex items-center gap-1.5"
+            >
+              <span className="material-symbols-outlined" style={{ fontSize: 14 }}>download</span>
+              Export
+            </button>
+          </div>
         )}
         emptyTitle={search ? "No results match your search" : "No data available"}
         emptyMessage={search ? "Adjust the search term to find matching production records." : "No production records are available for this process."}
@@ -289,6 +292,7 @@ export default function ProcessPanel({ processName, rows, onRowClick, showFactor
         className="flex min-h-0 flex-1 flex-col overflow-hidden"
         topBarClassName="flex justify-end px-1 pb-4"
         bottomBarClassName="flex flex-col gap-4 border-t border-separator/40 px-1 pt-4 md:flex-row md:items-center md:justify-between"
+        bottomInfoClassName="flex-1 w-full flex"
         tableClassName="ui-table-data min-w-[720px]"
         tableViewportClassName="min-h-0 overflow-auto"
         headClassName="bg-surface-container-high/40 border-b border-outline-variant/20"
