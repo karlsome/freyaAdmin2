@@ -38,7 +38,7 @@ function groupSummary(rows) {
     if (!map.has(key)) map.set(key, { hinban: r["品番"], sebanggo: r["背番号"], total: 0, ng: 0 });
     const e = map.get(key);
     e.total += Number(r.Process_Quantity) || Number(r.Total) || 0;
-    e.ng    += Number(r.Total_NG) || 0;
+    e.ng    += Number(r.SRS_Total_NG) || Number(r.Total_NG) || 0;
   });
   return Array.from(map.values());
 }
@@ -83,8 +83,8 @@ export default function ProcessPanel({ processName, rows, onRowClick, showFactor
     if (sort.col === "Defect_Rate") {
       const qa = Number(a.Process_Quantity) || Number(a.Total) || 0;
       const qb = Number(b.Process_Quantity) || Number(b.Total) || 0;
-      const ra = qa ? (Number(a.Total_NG) || 0) / qa : 0;
-      const rb = qb ? (Number(b.Total_NG) || 0) / qb : 0;
+      const ra = qa ? (Number(a.SRS_Total_NG) || Number(a.Total_NG) || 0) / qa : 0;
+      const rb = qb ? (Number(b.SRS_Total_NG) || Number(b.Total_NG) || 0) / qb : 0;
       return (ra - rb) * sort.dir;
     }
     
@@ -95,8 +95,8 @@ export default function ProcessPanel({ processName, rows, onRowClick, showFactor
     }
 
     if (sort.col === "Total_NG") {
-      const va = Number(a.Total_NG) || 0;
-      const vb = Number(b.Total_NG) || 0;
+      const va = Number(a.SRS_Total_NG) || Number(a.Total_NG) || 0;
+      const vb = Number(b.SRS_Total_NG) || Number(b.Total_NG) || 0;
       return (va - vb) * sort.dir;
     }
 
@@ -166,7 +166,7 @@ export default function ProcessPanel({ processName, rows, onRowClick, showFactor
         width: 112,
         align: "right",
         renderCell: (row) => {
-          const totalNg = Number(row.Total_NG) || 0;
+          const totalNg = Number(row.SRS_Total_NG) || Number(row.Total_NG) || 0;
           return <span className={totalNg > 0 ? "font-semibold text-error" : "font-semibold text-outline"}>{totalNg}</span>;
         },
         disableCellWrapper: true,
@@ -191,7 +191,7 @@ export default function ProcessPanel({ processName, rows, onRowClick, showFactor
         align: "right",
         renderCell: (row) => {
           const quantity = Number(row.Process_Quantity) || Number(row.Total) || 0;
-          const totalNg = Number(row.Total_NG) || 0;
+          const totalNg = Number(row.SRS_Total_NG) || Number(row.Total_NG) || 0;
           const rate = quantity > 0 ? ((totalNg / quantity) * 100).toFixed(2) : "0.00";
           return (
             <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold ${defectChip(rate)}`}>

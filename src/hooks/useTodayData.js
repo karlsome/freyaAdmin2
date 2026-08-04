@@ -40,7 +40,7 @@ export function useTodayData() {
     let total = 0, totalNG = 0, workHours = 0, troubleHours = 0, breakHours = 0;
     records.forEach((r) => {
       total        += getProcessedQuantity(r);
-      totalNG      += Number(r.Total_NG)            || 0;
+      totalNG      += Number(r.SRS_Total_NG) || Number(r.Total_NG) || 0;
       workHours    += Number(r.Total_Work_Hours)    || 0;
       troubleHours += Number(r.Total_Trouble_Hours) || 0;
       breakHours   += Number(r.Total_Break_Hours)   || 0;
@@ -71,7 +71,7 @@ export function useTodayData() {
     let total = 0, workHours = 0, totalNG = 0;
     recs.forEach((r) => {
       total     += getProcessedQuantity(r);
-      totalNG   += Number(r.Total_NG)         || 0;
+      totalNG   += Number(r.SRS_Total_NG) || Number(r.Total_NG) || 0;
       workHours += Number(r.Total_Work_Hours) || 0;
     });
     return { name, total, totalNG, workHours, submissionCount: recs.length };
@@ -83,7 +83,7 @@ export function useTodayData() {
     let ftotal = 0, ftotalNG = 0, fTrouble = 0;
     recs.forEach((r) => {
       ftotal   += getProcessedQuantity(r);
-      ftotalNG += Number(r.Total_NG)            ?? 0;
+      ftotalNG += Number(r.SRS_Total_NG) ?? Number(r.Total_NG) ?? 0;
       fTrouble += Number(r.Total_Trouble_Hours) ?? 0;
     });
     const defectRate = ftotal > 0 ? Math.round((ftotalNG / ftotal) * 10000) / 100 : 0;

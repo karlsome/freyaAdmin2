@@ -468,7 +468,7 @@ export default function RecordDetailModal({ record, processName, onClose, onLotC
   if (!record) return null;
 
   const qty      = Number(record.Process_Quantity) || Number(record.Total) || 0;
-  const ng       = Number(record.Total_NG) || 0;
+  const ng       = Number(record.SRS_Total_NG) || Number(record.Total_NG) || 0;
   const defRate  = qty > 0 ? ((ng / qty) * 100).toFixed(2) : "0.00";
   const hrs      = calcWorkHours(record.Time_start, record.Time_end);
   const defColor = parseFloat(defRate) > 2 ? "text-error" : parseFloat(defRate) > 1 ? "text-amber-400" : "text-emerald-400";
@@ -498,6 +498,11 @@ export default function RecordDetailModal({ record, processName, onClose, onLotC
     ...kensaCounters,
     ["疵引不良",  record["疵引不良"], true],
     ["加工不良",  record["加工不良"], true],
+    ["くっつき・めくれ", record["くっつき・めくれ"], true],
+    ["シワ",      record["シワ"], true],
+    ["転写位置ズレ", record["転写位置ズレ"], true],
+    ["転写不良",  record["転写不良"], true],
+    ["文字欠け",  record["文字欠け"], true],
     ["その他不良", record["その他"], true],
     ["Spare",     record.Spare],
     ["コメント",  record.Comment],

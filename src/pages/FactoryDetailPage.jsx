@@ -417,7 +417,7 @@ export default function FactoryDetailPage({ combined = false }) {
   const firstSection = sections[sectionNames[0]] ?? {};
   const allFlat      = Object.values(firstSection).flat();
   const stripTotal   = allFlat.reduce((s, r) => s + (Number(r.Process_Quantity) || Number(r.Total) || 0), 0);
-  const stripNG      = allFlat.reduce((s, r) => s + (Number(r.Total_NG) || 0), 0);
+  const stripNG      = allFlat.reduce((s, r) => s + (Number(r.SRS_Total_NG) || Number(r.Total_NG) || 0), 0);
   const stripRate    = stripTotal > 0 ? Math.round((stripNG / stripTotal) * 10000) / 100 : 0;
   const defStatus    = getDefectStatus(stripRate);
 
@@ -431,7 +431,7 @@ export default function FactoryDetailPage({ combined = false }) {
   const perProcess = ["Kensa", "Press", "SRS", "Slit"].map((proc) => {
     const rows  = (firstSection[proc] ?? []);
     const total = rows.reduce((s, r) => s + (Number(r.Process_Quantity) || Number(r.Total) || 0), 0);
-    const ng    = rows.reduce((s, r) => s + (Number(r.Total_NG) || 0), 0);
+    const ng    = rows.reduce((s, r) => s + (Number(r.SRS_Total_NG) || Number(r.Total_NG) || 0), 0);
     const rate  = total > 0 ? Math.round((ng / total) * 10000) / 100 : 0;
     return { proc, total, ng, rate, accent: PROCESS_ACCENT[proc] ?? { color: "text-primary", bg: "bg-primary/10" } };
   });

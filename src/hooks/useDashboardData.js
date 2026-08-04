@@ -11,10 +11,10 @@ function computeTopDefects(records = []) {
   const map = new Map();
   records.forEach((r) => {
     const key = r["背番号"] ?? "—";
-    const ng = Number(r.Total_NG) || 0;
+    const ng = Number(r.SRS_Total_NG) || Number(r.Total_NG) || 0;
     
     // Track the single worst record per part (highest NG)
-    if (!map.has(key) || ng > (Number(map.get(key).worstRecord?.Total_NG) || 0)) {
+    if (!map.has(key) || ng > (Number(map.get(key).worstRecord?.SRS_Total_NG) || Number(map.get(key).worstRecord?.Total_NG) || 0)) {
       map.set(key, { sebanggo: key, worstRecord: r });
     }
   });
@@ -22,7 +22,7 @@ function computeTopDefects(records = []) {
   return Array.from(map.values())
     .map((d) => {
       const total = Number(d.worstRecord.Process_Quantity) || Number(d.worstRecord.Total) || 0;
-      const ng = Number(d.worstRecord.Total_NG) || 0;
+      const ng = Number(d.worstRecord.SRS_Total_NG) || Number(d.worstRecord.Total_NG) || 0;
       return {
         sebanggo: d.sebanggo,
         total,
@@ -70,7 +70,7 @@ export function useDashboardData() {
           let kensaTotal = 0, kensaTotalNG = 0;
           kensaRecords.forEach((r) => {
             kensaTotal   += Number(r.Process_Quantity) || Number(r.Total) || 0;
-            kensaTotalNG += Number(r.Total_NG) || 0;
+            kensaTotalNG += Number(r.SRS_Total_NG) || Number(r.Total_NG) || 0;
           });
           const kensaDefectRate = kensaTotal > 0
             ? Math.round((kensaTotalNG / kensaTotal) * 10000) / 100

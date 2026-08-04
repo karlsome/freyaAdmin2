@@ -5,7 +5,7 @@ export function getProcessedQuantity(record) {
 
 export function getDefectRate(record) {
   const quantity = getProcessedQuantity(record);
-  const totalNg = Number(record?.Total_NG) || 0;
+  const totalNg = Number(record?.SRS_Total_NG) || Number(record?.Total_NG) || 0;
   return quantity > 0 ? (totalNg / quantity) * 100 : 0;
 }
 

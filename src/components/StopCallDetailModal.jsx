@@ -36,8 +36,9 @@ export default function StopCallDetailModal({ open, onClose, record, stopCallEnt
 
   if (!open || !record) return null;
 
+  const totalNg = Number(record.SRS_Total_NG) || Number(record.Total_NG) || 0;
   const defectRate = record.Total > 0
-    ? ((record.Total_NG / record.Total) * 100).toFixed(1)
+    ? ((totalNg / record.Total) * 100).toFixed(1)
     : "0.0";
 
   const handleViewInFactory = () => {
@@ -114,7 +115,7 @@ export default function StopCallDetailModal({ open, onClose, record, stopCallEnt
             <InfoRow label={t("timeEnd")} value={record.Time_end} />
             <InfoRow label={t("completedQty")} value={record.Process_Quantity} />
             <InfoRow label={t("total")} value={record.Total} />
-            <InfoRow label="Total NG" value={record.Total_NG} />
+            <InfoRow label="Total NG" value={totalNg} />
             <InfoRow
               label={t("defectRate")}
               value={`${defectRate}%`}

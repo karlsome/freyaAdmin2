@@ -65,7 +65,7 @@ export default function DashboardRecentSubmissions({ recent, loading, onRecordCl
         <div className="flex-1 overflow-y-auto scrollbar-hide space-y-2">
           {recent.map((r) => {
             const recordTotal = getProcessedQuantity(r);
-            const recordNG    = Number(r.Total_NG) || 0;
+            const recordNG    = Number(r.SRS_Total_NG) || Number(r.Total_NG) || 0;
             const defRate     = getDefectRate(r);
             const dotColor    = PROCESS_DOT[r._process] ?? "bg-outline";
 
