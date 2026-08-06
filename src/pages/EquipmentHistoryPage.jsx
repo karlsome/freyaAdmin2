@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, startTransition } from "react";
 import { createPortal } from "react-dom";
 import {
   createSetsubiHistoryRecord,
@@ -17,11 +17,46 @@ import SensorDevicePhotoPreviewModal from "../components/SensorDevicePhotoPrevie
 const inputCls =
   "w-full rounded-xl border border-outline-variant/30 bg-surface px-3 py-3 text-sm text-on-surface outline-none transition-all duration-150 focus:border-primary/40 disabled:opacity-50 font-body";
 
-function toBase64(file) {
+function compressImage(file) {
   return new Promise((resolve, reject) => {
+    if (!file.type.startsWith("image/") || file.type === "image/gif") {
+      const reader = new FileReader();
+      reader.onerror = () => reject(new Error("Failed to read file"));
+      reader.onloadend = () => resolve(String(reader.result || ""));
+      reader.readAsDataURL(file);
+      return;
+    }
     const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        const MAX_WIDTH = 1280;
+        const MAX_HEIGHT = 1280;
+        let width = img.width;
+        let height = img.height;
+
+        if (width > height) {
+          if (width > MAX_WIDTH) {
+            height *= MAX_WIDTH / width;
+            width = MAX_WIDTH;
+          }
+        } else {
+          if (height > MAX_HEIGHT) {
+            width *= MAX_HEIGHT / height;
+            height = MAX_HEIGHT;
+          }
+        }
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(img, 0, 0, width, height);
+        resolve(canvas.toDataURL("image/jpeg", 0.7));
+      };
+      img.onerror = () => reject(new Error("Failed to load image for compression"));
+      img.src = e.target.result;
+    };
     reader.onerror = () => reject(new Error("Failed to read file"));
-    reader.onloadend = () => resolve(String(reader.result || ""));
     reader.readAsDataURL(file);
   });
 }
@@ -277,6 +312,7 @@ function EventModal({ event, history, factories, allEquipment, workerNames, user
   const [activeAttemptIndexForUpload, setActiveAttemptIndexForUpload] = useState(null);
 
   const [previewState, setPreviewState] = useState(null);
+  const [expandedAttemptIndex, setExpandedAttemptIndex] = useState(0);
 
   const factoryEquipment = useMemo(
     () => allEquipment.filter((eq) => eq["工場"] === factory),
@@ -344,7 +380,8 @@ function EventModal({ event, history, factories, allEquipment, workerNames, user
     setUploadError("");
     const results = await Promise.allSettled(
       files.map(async (file) => {
-        const base64 = await toBase64(file);
+        const base64 = await compressImage(file);
+        console.log(`Starting upload for ${file.name}, compressed size: ${Math.round(base64.length / 1024)}KB`);
         const result = await uploadEquipmentEventImage({
           base64,
           factoryName: factory,
@@ -401,19 +438,22 @@ function EventModal({ event, history, factories, allEquipment, workerNames, user
   }
 
   function addAttempt() {
-    setAttempts(prev => [
-      ...prev,
-      {
-        attemptNumber: prev.length + 1,
-        title: "",
-        fixDescription: "",
-        result: "",
-        fixedBy: username ? [username] : [],
-        status: "Success",
-        timeToResolve: "",
-        imageURLs: []
-      }
-    ]);
+    setAttempts(prev => {
+      setExpandedAttemptIndex(prev.length);
+      return [
+        ...prev,
+        {
+          attemptNumber: prev.length + 1,
+          title: "",
+          fixDescription: "",
+          result: "",
+          fixedBy: username ? [username] : [],
+          status: "Success",
+          timeToResolve: "",
+          imageURLs: []
+        }
+      ];
+    });
   }
 
   function updateAttempt(index, field, value) {
@@ -687,45 +727,88 @@ function EventModal({ event, history, factories, allEquipment, workerNames, user
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {attempts.map((attempt, index) => (
-                    <div key={index} className="p-4 bg-surface rounded-2xl border border-outline-variant/20 shadow-sm relative group" style={{ zIndex: 50 - index }}>
-                      <button
-                        type="button"
-                        onClick={() => removeAttempt(index)}
-                        className="absolute top-3 right-3 text-outline hover:text-error opacity-0 group-hover:opacity-100 transition-opacity"
-                      >
-                        <span className="material-symbols-outlined" style={{ fontSize: 18 }}>delete</span>
-                      </button>
-                      
-                      <div className="flex items-center gap-2 mb-3">
-                        <span className="bg-surface-container-high text-on-surface text-[10px] font-bold px-2 py-0.5 rounded-md">
-                          #{attempt.attemptNumber}
-                        </span>
-                      </div>
+                  {attempts.map((attempt, index) => {
+                    const isExpanded = expandedAttemptIndex === index;
+                    return (
+                      <div key={index} className="p-4 bg-surface rounded-2xl border border-outline-variant/20 shadow-sm relative group transition-all" style={{ zIndex: 50 - index }}>
+                        <button
+                          type="button"
+                          onClick={(e) => { e.stopPropagation(); removeAttempt(index); }}
+                          className="absolute top-3 right-3 text-outline hover:text-error opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                        >
+                          <span className="material-symbols-outlined" style={{ fontSize: 18 }}>delete</span>
+                        </button>
+                        
+                        <div 
+                          className={`flex items-center gap-2 cursor-pointer ${isExpanded ? 'mb-3' : ''}`}
+                          onClick={() => startTransition(() => setExpandedAttemptIndex(index))}
+                        >
+                          <span className="bg-surface-container-high text-on-surface text-[10px] font-bold px-2 py-0.5 rounded-md">
+                            #{attempt.attemptNumber}
+                          </span>
+                          {!isExpanded && (
+                            <span className="text-sm font-semibold text-on-surface flex-1 truncate">
+                              {attempt.title || `Attempt ${attempt.attemptNumber}`}
+                            </span>
+                          )}
+                          
+                          {/* Render Thumbnails always so they don't remount on expand */}
+                          {!isExpanded && (attempt.imageURLs?.length > 0) && (
+                            <div className="flex gap-1 ml-2 mr-2">
+                              {attempt.imageURLs.slice(0, 3).map((url, i) => (
+                                <div key={i} className="h-6 w-6 rounded border border-separator/40 overflow-hidden flex items-center justify-center bg-surface-container shrink-0">
+                                  {isVideoUrl(url) ? (
+                                    <span className="material-symbols-outlined text-[12px] text-outline">movie</span>
+                                  ) : isPdfUrl(url) ? (
+                                    <span className="material-symbols-outlined text-[12px] text-outline">description</span>
+                                  ) : (
+                                    <img src={url} alt="attached" loading="lazy" decoding="async" className="h-full w-full object-cover" />
+                                  )}
+                                </div>
+                              ))}
+                              {attempt.imageURLs.length > 3 && (
+                                <div className="h-6 w-6 rounded border border-separator/40 bg-surface-container-high flex items-center justify-center text-[9px] font-bold text-on-surface">
+                                  +{attempt.imageURLs.length - 3}
+                                </div>
+                              )}
+                            </div>
+                          )}
 
-                      <div className="flex flex-col gap-3 mb-4">
-                        <input
-                          type="text"
-                          value={attempt.title || ""}
-                          onChange={(e) => updateAttempt(index, "title", e.target.value)}
-                          placeholder="Attempt Title (e.g. Belt Realignment)"
-                          className={`${inputCls} font-medium`}
-                        />
-                        <textarea
-                          value={attempt.fixDescription || ""}
-                          onChange={(e) => updateAttempt(index, "fixDescription", e.target.value)}
-                          placeholder="What did you do?"
-                          className={`${inputCls} resize-none`}
-                          rows={2}
-                        />
-                        <textarea
-                          value={attempt.result || ""}
-                          onChange={(e) => updateAttempt(index, "result", e.target.value)}
-                          placeholder="What was the result?"
-                          className={`${inputCls} resize-none`}
-                          rows={2}
-                        />
-                      </div>
+                          {!isExpanded && (
+                            <span className="material-symbols-outlined text-outline" style={{ fontSize: 18 }}>expand_more</span>
+                          )}
+                          {isExpanded && (
+                            <span className="text-sm font-semibold text-primary ml-auto mr-8">
+                              Editing
+                            </span>
+                          )}
+                        </div>
+
+                        {isExpanded && (
+                          <>
+                            <div className="flex flex-col gap-3 mb-4">
+                              <input
+                                type="text"
+                                value={attempt.title || ""}
+                                onChange={(e) => updateAttempt(index, "title", e.target.value)}
+                                placeholder="Attempt Title (e.g. Belt Realignment)"
+                                className={`${inputCls} font-medium`}
+                              />
+                              <textarea
+                                value={attempt.fixDescription || ""}
+                                onChange={(e) => updateAttempt(index, "fixDescription", e.target.value)}
+                                placeholder="What did you do?"
+                                className={`${inputCls} resize-none`}
+                                rows={2}
+                              />
+                              <textarea
+                                value={attempt.result || ""}
+                                onChange={(e) => updateAttempt(index, "result", e.target.value)}
+                                placeholder="What was the result?"
+                                className={`${inputCls} resize-none`}
+                                rows={2}
+                              />
+                            </div>
 
                       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-3">
                         <div>
@@ -824,8 +907,11 @@ function EventModal({ event, history, factories, allEquipment, workerNames, user
                           ))}
                         </div>
                       </div>
-                    </div>
-                  ))}
+                          </>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               )}
               
