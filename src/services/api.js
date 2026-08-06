@@ -226,6 +226,10 @@ export async function uploadEquipmentEventImage({ base64, factoryName, equipment
   return _postJson("api/upload-equipment-event-image", { base64, factoryName, equipmentName, username });
 }
 
+export async function deleteEquipmentEventImage(imageURL) {
+  return _postJson("api/delete-equipment-event-image", { imageURL });
+}
+
 // ─── Production data (aggregates all 4 process DBs) ──────────────────────────
 const PROCESS_COLLECTIONS = ["kensaDB", "pressDB", "slitDB", "SRSDB"];
 
@@ -1303,6 +1307,15 @@ export async function createSetsubiHistoryRecord(data) {
     dbName: "submittedDB",
     collectionName: "setsubiHistory",
     insertData: { ...data, createdAt: new Date().toISOString() },
+  });
+}
+
+export async function updateSetsubiHistoryRecord(id, data) {
+  return _postJson("update-query", {
+    dbName: "submittedDB",
+    collectionName: "setsubiHistory",
+    id,
+    updateData: { ...data, updatedAt: new Date().toISOString() },
   });
 }
 

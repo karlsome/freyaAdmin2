@@ -2,17 +2,19 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import {
   createSetsubiHistoryRecord,
+  updateSetsubiHistoryRecord,
   fetchFactoryDBRecords,
   fetchSetsubiDBRecords,
   fetchSetsubiHistoryRecords,
   fetchWorkerNames,
   uploadEquipmentEventImage,
+  deleteEquipmentEventImage,
 } from "../services/api";
 import { getAuthUser } from "../utils/masterDB";
 import PageHeader from "../components/PageHeader";
 
 const inputCls =
-  "w-full rounded-xl border border-outline-variant/30 bg-surface px-3 py-3 text-sm text-on-surface outline-none transition-all duration-150 focus:border-primary/40";
+  "w-full rounded-xl border border-outline-variant/30 bg-surface px-3 py-3 text-sm text-on-surface outline-none transition-all duration-150 focus:border-primary/40 disabled:opacity-50 font-body";
 
 function toBase64(file) {
   return new Promise((resolve, reject) => {
@@ -25,6 +27,10 @@ function toBase64(file) {
 
 function isVideoUrl(url) {
   return /\.(mp4|mov)$/i.test(url.split("?")[0]);
+}
+
+function isImageUrl(url) {
+  return /\.(jpeg|jpg|gif|png|webp|svg)$/i.test(url.split("?")[0]);
 }
 
 // ── Lightbox ─────────────────────────────────────────────────────────────────
@@ -56,18 +62,166 @@ function Lightbox({ url, onClose }) {
   );
 }
 
-// ── Add Event Modal ───────────────────────────────────────────────────────────
+// ── Searchable Select ──────────────────────────────────────────────────────────
 
-function AddEventModal({ factories, allEquipment, workerNames, username, submitting, onClose, onSubmit }) {
-  const [factory, setFactory] = useState("");
-  const [equipmentId, setEquipmentId] = useState("");
-  const [reportedBy, setReportedBy] = useState("");
-  const [date, setDate] = useState("");
-  const [details, setDetails] = useState("");
-  const [imageURLs, setImageURLs] = useState([]);
+function SearchableSelect({ value, options, onChange, placeholder, className, disabled }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const containerRef = useRef(null);
+  const [dropdownStyles, setDropdownStyles] = useState({});
+
+  const updatePosition = () => {
+    if (containerRef.current) {
+      const rect = containerRef.current.getBoundingClientRect();
+      setDropdownStyles({
+        position: 'fixed',
+        top: rect.bottom + 4,
+        left: rect.left,
+        width: rect.width,
+        zIndex: 99999
+      });
+    }
+  };
+
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (containerRef.current && !containerRef.current.contains(event.target)) {
+        // We also need to check if they clicked inside the portal dropdown.
+        // It's easier to just attach an ID or class to the portal and check that,
+        // but since we only have one open at a time usually, we can just check if event.target is inside a .searchable-select-dropdown
+        if (!event.target.closest('.searchable-select-dropdown')) {
+          setIsOpen(false);
+        }
+      }
+    }
+    
+    function handleScroll() {
+      if (isOpen) updatePosition();
+    }
+
+    document.addEventListener("mousedown", handleClickOutside);
+    window.addEventListener("scroll", handleScroll, true); // true for capturing phase to catch inner scrolls
+    window.addEventListener("resize", handleScroll);
+    
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      window.removeEventListener("scroll", handleScroll, true);
+      window.removeEventListener("resize", handleScroll);
+    };
+  }, [isOpen]);
+
+  const normalizedOptions = useMemo(() => {
+    return options.map(opt => {
+      if (typeof opt === 'string') return { label: opt, value: opt };
+      return opt;
+    });
+  }, [options]);
+
+  const filteredOptions = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return normalizedOptions;
+    return normalizedOptions.filter((o) => o.label.toLowerCase().includes(q));
+  }, [normalizedOptions, query]);
+
+  const toggleOption = (option, e) => {
+    e.preventDefault();
+    onChange(option.value);
+    setIsOpen(false);
+    setQuery("");
+  };
+
+  const selectedOption = normalizedOptions.find(o => o.value === value);
+  const displayText = selectedOption ? selectedOption.label : placeholder;
+
+  return (
+    <div className="relative w-full" ref={containerRef}>
+      <button
+        type="button"
+        disabled={disabled}
+        onClick={() => {
+          updatePosition();
+          setIsOpen(!isOpen);
+        }}
+        className={`${className} flex items-center justify-between text-left px-3 ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+      >
+        <span className="truncate">{displayText}</span>
+        <span className="material-symbols-outlined shrink-0 opacity-50" style={{ fontSize: 18 }}>expand_more</span>
+      </button>
+
+      {isOpen && !disabled && createPortal(
+        <div 
+          className="searchable-select-dropdown max-h-72 overflow-y-auto rounded-xl border border-separator/40 bg-white shadow-xl dark:bg-surface-container py-1 flex flex-col font-body"
+          style={dropdownStyles}
+        >
+          <div className="px-2 pb-1 sticky top-0 bg-white dark:bg-surface-container z-10 pt-1">
+            <input
+              type="text"
+              autoFocus
+              className="w-full h-8 px-3 rounded-lg border border-separator/40 bg-surface-container-low text-xs outline-none focus:border-primary/40 font-body"
+              placeholder="Search..."
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              onClick={(e) => e.stopPropagation()}
+            />
+          </div>
+          {/* Option to clear selection */}
+          <button
+            type="button"
+            onClick={(e) => toggleOption({ value: "", label: placeholder }, e)}
+            className={`flex w-full items-center px-4 py-2 text-sm text-left transition-colors ${!value ? "bg-primary/10 text-primary font-medium" : "text-on-surface hover:bg-surface-container-highest"}`}
+          >
+            <span className="truncate italic opacity-70">{placeholder}</span>
+          </button>
+          {filteredOptions.length === 0 ? (
+            <div className="px-4 py-2 text-xs text-on-surface-variant text-center">No results found</div>
+          ) : (
+            filteredOptions.map((option) => {
+              const isSelected = value === option.value;
+              return (
+                <button
+                  key={option.value}
+                  type="button"
+                  onClick={(e) => toggleOption(option, e)}
+                  className={`flex w-full items-center px-4 py-2 text-sm text-left transition-colors
+                    ${isSelected ? "bg-primary/10 text-primary font-medium" : "text-on-surface hover:bg-surface-container-highest"}`}
+                >
+                  <span className="truncate">{option.label}</span>
+                </button>
+              );
+            })
+          )}
+        </div>,
+        document.body
+      )}
+    </div>
+  );
+}
+
+// ── Event Modal (Add / Edit) ──────────────────────────────────────────────────
+
+function EventModal({ event, history, factories, allEquipment, workerNames, username, submitting, onClose, onSubmit }) {
+  const isEdit = Boolean(event);
+
+  const [factory, setFactory] = useState(event?.["工場"] || "");
+  const [equipmentId, setEquipmentId] = useState(event?.equipmentId || "");
+  const [reportedBy, setReportedBy] = useState(event?.["名前"] || username || "");
+  const [date, setDate] = useState(event?.date || new Date().toISOString().split("T")[0]);
+  
+  const [title, setTitle] = useState(event?.title || "");
+  const [status, setStatus] = useState(event?.status || "Open");
+  const [details, setDetails] = useState(event?.details || "");
+  const [imageURLs, setImageURLs] = useState(event?.imageURLs || []);
+  const [resolutionTime, setResolutionTime] = useState(event?.resolutionTime || "");
+
+  const [attempts, setAttempts] = useState(event?.attempts || []);
+
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState("");
   const fileInputRef = useRef(null);
+  const attemptFileInputRef = useRef(null);
+  const [activeAttemptIndexForUpload, setActiveAttemptIndexForUpload] = useState(null);
+
+  const [lightboxURL, setLightboxURL] = useState(null);
 
   const factoryEquipment = useMemo(
     () => allEquipment.filter((eq) => eq["工場"] === factory),
@@ -78,12 +232,56 @@ function AddEventModal({ factories, allEquipment, workerNames, username, submitt
     (eq) => (eq._id?.$oid ?? String(eq._id)) === equipmentId
   );
 
+  // Insights calculation based on selected equipment
+  const insights = useMemo(() => {
+    if (!equipmentId) return null;
+    const eqHistory = history.filter(h => h.equipmentId === equipmentId);
+    if (eqHistory.length === 0) return null;
+
+    const totalOccurrences = eqHistory.length;
+    const resolved = eqHistory.filter(h => h.status === "Resolved");
+    
+    // Average resolution time
+    let totalTime = 0;
+    let countWithTime = 0;
+    resolved.forEach(r => {
+      if (r.resolutionTime) {
+        totalTime += Number(r.resolutionTime);
+        countWithTime++;
+      }
+    });
+    const avgTime = countWithTime > 0 ? Math.round(totalTime / countWithTime) : 0;
+
+    // Successful vs Failed fixes from attempts
+    let successFixes = 0;
+    let failedFixes = 0;
+    eqHistory.forEach(h => {
+      (h.attempts || []).forEach(a => {
+        if (a.status === "Success") successFixes++;
+        if (a.status === "Failed") failedFixes++;
+      });
+    });
+
+    // Last fixed by
+    let lastFixedBy = "—";
+    let lastFixedDate = "—";
+    const sortedResolved = [...resolved].sort((a, b) => (b.date || "").localeCompare(a.date || ""));
+    if (sortedResolved.length > 0) {
+      const last = sortedResolved[0];
+      const lastSuccessfulAttempt = (last.attempts || []).slice().reverse().find(a => a.status === "Success");
+      lastFixedBy = lastSuccessfulAttempt?.fixedBy || last["名前"] || "Unknown";
+      lastFixedDate = last.date;
+    }
+
+    return { totalOccurrences, avgTime, successFixes, failedFixes, lastFixedBy, lastFixedDate };
+  }, [equipmentId, history]);
+
   function handleFactoryChange(e) {
     setFactory(e.target.value);
     setEquipmentId("");
   }
 
-  async function handleFileChange(e) {
+  async function handleFileChange(e, attemptIndex = null) {
     const files = Array.from(e.target.files || []);
     if (!files.length) return;
     e.target.value = "";
@@ -103,7 +301,19 @@ function AddEventModal({ factories, allEquipment, workerNames, username, submitt
     );
     const urls = results.filter((r) => r.status === "fulfilled").map((r) => r.value);
     const failedCount = results.filter((r) => r.status === "rejected").length;
-    if (urls.length) setImageURLs((prev) => [...prev, ...urls]);
+    
+    if (urls.length) {
+      if (attemptIndex !== null) {
+        setAttempts(prev => {
+          const newAtt = [...prev];
+          newAtt[attemptIndex].imageURLs = [...(newAtt[attemptIndex].imageURLs || []), ...urls];
+          return newAtt;
+        });
+      } else {
+        setImageURLs((prev) => [...prev, ...urls]);
+      }
+    }
+
     if (failedCount) {
       const raw = results.find((r) => r.status === "rejected")?.reason?.message || "";
       setUploadError(
@@ -111,24 +321,69 @@ function AddEventModal({ factories, allEquipment, workerNames, username, submitt
       );
     }
     setUploading(false);
+    setActiveAttemptIndexForUpload(null);
   }
 
-  function removeImage(url) {
-    setImageURLs((prev) => prev.filter((u) => u !== url));
+  function removeImage(url, attemptIndex = null) {
+    // Delete from Firebase asynchronously
+    deleteEquipmentEventImage(url).catch((err) => console.error("Failed to delete image:", err));
+
+    if (attemptIndex !== null) {
+      setAttempts(prev => {
+        const newAtt = [...prev];
+        newAtt[attemptIndex].imageURLs = (newAtt[attemptIndex].imageURLs || []).filter((u) => u !== url);
+        return newAtt;
+      });
+    } else {
+      setImageURLs((prev) => prev.filter((u) => u !== url));
+    }
+  }
+
+  function addAttempt() {
+    setAttempts(prev => [
+      ...prev,
+      {
+        attemptNumber: prev.length + 1,
+        fixDescription: "",
+        fixedBy: username || "",
+        status: "Success",
+        timeToResolve: "",
+        imageURLs: []
+      }
+    ]);
+  }
+
+  function updateAttempt(index, field, value) {
+    setAttempts(prev => {
+      const newAtt = [...prev];
+      newAtt[index][field] = value;
+      return newAtt;
+    });
+  }
+
+  function removeAttempt(index) {
+    setAttempts(prev => prev.filter((_, i) => i !== index).map((att, i) => ({ ...att, attemptNumber: i + 1 })));
   }
 
   function handleSubmit(e) {
     e.preventDefault();
     if (!factory || !equipmentId || !date) return;
-    onSubmit({
+    
+    const payload = {
       工場: factory,
       equipmentId,
-      equipmentName: selectedEquipment?.name || "",
+      equipmentName: selectedEquipment?.name || event?.equipmentName || "",
       名前: reportedBy,
       date,
+      title,
+      status,
       details,
       imageURLs,
-    });
+      attempts,
+      resolutionTime: Number(resolutionTime) || null,
+    };
+
+    onSubmit(payload);
   }
 
   const canSubmit = Boolean(factory && equipmentId && date) && !submitting && !uploading;
@@ -136,295 +391,409 @@ function AddEventModal({ factories, allEquipment, workerNames, username, submitt
   return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
       <div
-        className="dashboard-section rounded-2xl w-full max-w-2xl max-h-[92vh] flex flex-col overflow-hidden"
+        className="dashboard-section rounded-2xl w-full max-w-6xl max-h-[92vh] flex flex-col overflow-hidden shadow-2xl font-body"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="sticky top-0 z-10 rounded-t-2xl px-6 py-5 flex items-center justify-between border-b border-separator/40 bg-surface/90 backdrop-blur-md">
+        <div className="sticky top-0 z-20 px-6 py-4 flex items-center justify-between border-b border-separator/40 bg-surface/90 backdrop-blur-md">
           <div>
-            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">設備履歴</p>
-            <h2 className="mt-1 text-xl font-semibold text-on-surface">Add History Record</h2>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">
+              {isEdit ? "Edit Record" : "Add Record"}
+            </p>
+            <h2 className="mt-1 text-xl font-semibold text-on-surface">
+              {isEdit ? (event.title || "Equipment Event") : "Report Equipment Event"}
+            </h2>
           </div>
           <button
             type="button"
             onClick={onClose}
             className="p-2 rounded-xl hover:bg-surface-container text-outline hover:text-on-surface transition-all duration-150"
           >
-            <span className="material-symbols-outlined" style={{ fontSize: 18 }}>close</span>
+            <span className="material-symbols-outlined" style={{ fontSize: 20 }}>close</span>
           </button>
         </div>
 
         {/* Scrollable body */}
-        <form
-          id="setsubi-history-add-form"
-          onSubmit={handleSubmit}
-          className="min-h-0 flex-1 overflow-y-auto px-6 py-5 space-y-4"
-        >
-          {/* Factory */}
-          <div>
-            <div className="mb-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-outline">
-              工場 <span className="text-error">*</span>
-            </div>
-            <select value={factory} onChange={handleFactoryChange} className={inputCls} required>
-              <option value="">— Select factory —</option>
-              {factories.map((f) => (
-                <option key={f} value={f}>{f}</option>
-              ))}
-            </select>
-          </div>
-
-          {/* Machine */}
-          <div>
-            <div className="mb-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-outline">
-              設備 <span className="text-error">*</span>
-            </div>
-            <select
-              value={equipmentId}
-              onChange={(e) => setEquipmentId(e.target.value)}
-              className={inputCls}
-              disabled={!factory || factoryEquipment.length === 0}
-              required
-            >
-              <option value="">
-                {!factory
-                  ? "— Select factory first —"
-                  : factoryEquipment.length === 0
-                  ? "— No equipment found —"
-                  : "— Select machine —"}
-              </option>
-              {factoryEquipment.map((eq) => {
-                const id = eq._id?.$oid ?? String(eq._id);
-                return (
-                  <option key={id} value={id}>{eq.name}</option>
-                );
-              })}
-            </select>
-          </div>
-
-          {/* Reported By + Date */}
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <div className="mb-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-outline">
-                Reported By
+        <div className="min-h-0 flex-1 overflow-y-auto bg-surface-container-low/30 relative flex flex-col lg:flex-row">
+          
+          <form
+            id="event-form"
+            onSubmit={handleSubmit}
+            className="flex-1 px-6 py-6 space-y-6"
+          >
+            {/* Top row: Factory, Machine, Date, Reported By */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 relative z-30">
+              <div>
+                <div className="mb-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">工場 *</div>
+                <SearchableSelect
+                  value={factory}
+                  onChange={(val) => {
+                    setFactory(val);
+                    setEquipmentId("");
+                  }}
+                  options={factories}
+                  placeholder="— Select factory —"
+                  className={inputCls}
+                />
               </div>
-              <select value={reportedBy} onChange={(e) => setReportedBy(e.target.value)} className={inputCls}>
-                <option value="">— Select name —</option>
-                {workerNames.map((name) => (
-                  <option key={name} value={name}>{name}</option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <div className="mb-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-outline">
-                Date <span className="text-error">*</span>
+              <div>
+                <div className="mb-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">設備 *</div>
+                <SearchableSelect
+                  value={equipmentId}
+                  onChange={(val) => setEquipmentId(val)}
+                  options={factoryEquipment.map(eq => ({ label: eq.name, value: eq._id?.$oid ?? String(eq._id) }))}
+                  placeholder={!factory ? "— Select factory first —" : "— Select machine —"}
+                  className={inputCls}
+                  disabled={!factory}
+                />
               </div>
+              <div>
+                <div className="mb-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Reported By</div>
+                <SearchableSelect
+                  value={reportedBy}
+                  onChange={(val) => setReportedBy(val)}
+                  options={workerNames}
+                  placeholder="— Select name —"
+                  className={inputCls}
+                />
+              </div>
+              <div>
+                <div className="mb-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Date *</div>
+                <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className={inputCls} required />
+              </div>
+            </div>
+
+            <hr className="border-separator/20" />
+
+            {/* Core Issue */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              <div className="lg:col-span-2 space-y-4">
+                <div>
+                  <div className="mb-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Issue Title</div>
+                  <input
+                    type="text"
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value)}
+                    placeholder="e.g. Conveyor Belt Jam at Station 2"
+                    className={`${inputCls} font-medium text-base`}
+                  />
+                </div>
+                <div>
+                  <div className="mb-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Symptom Details</div>
+                  <textarea
+                    value={details}
+                    onChange={(e) => setDetails(e.target.value)}
+                    rows={3}
+                    placeholder="Describe exactly what happened or what was observed..."
+                    className={`${inputCls} resize-none`}
+                  />
+                </div>
+              </div>
+              <div className="space-y-4">
+                <div>
+                  <div className="mb-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Overall Status</div>
+                  <select 
+                    value={status} 
+                    onChange={(e) => setStatus(e.target.value)} 
+                    className={`${inputCls} font-semibold ${
+                      status === "Resolved" ? "text-primary border-primary/40 bg-primary/5" :
+                      status === "Failed" ? "text-error border-error/40 bg-error/5" : ""
+                    }`}
+                  >
+                    <option value="Open">🔴 Open / Unresolved</option>
+                    <option value="Resolved">✅ Resolved</option>
+                    <option value="Failed">❌ Failed to Fix</option>
+                  </select>
+                </div>
+                <div>
+                  <div className="mb-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Total Time (hours)</div>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={resolutionTime}
+                    onChange={(e) => setResolutionTime(e.target.value)}
+                    placeholder="e.g. 1.5"
+                    className={inputCls}
+                    min="0"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* General Files */}
+            <div>
+              <div className="mb-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Symptom Files</div>
               <input
-                type="date"
-                value={date}
-                onChange={(e) => setDate(e.target.value)}
-                className={inputCls}
-                required
+                ref={fileInputRef}
+                type="file"
+                multiple
+                className="hidden"
+                onChange={(e) => handleFileChange(e, null)}
               />
-            </div>
-          </div>
-
-          {/* Details */}
-          <div>
-            <div className="mb-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-outline">
-              Details
-            </div>
-            <textarea
-              value={details}
-              onChange={(e) => setDetails(e.target.value)}
-              rows={4}
-              placeholder="Describe the event, maintenance performed, or observations…"
-              className="w-full rounded-xl border border-outline-variant/30 bg-surface px-3 py-3 text-sm text-on-surface outline-none transition-all duration-150 focus:border-primary/40 resize-none"
-            />
-          </div>
-
-          {/* Photo upload */}
-          <div>
-            <div className="mb-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-outline">
-              Photos
-            </div>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*,video/mp4,video/quicktime"
-              multiple
-              className="hidden"
-              onChange={handleFileChange}
-            />
-            <button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              disabled={uploading}
-              className="inline-flex items-center gap-2 rounded-xl border border-outline-variant/30 bg-surface px-4 py-2 text-xs font-semibold text-on-surface hover:bg-surface-container active:scale-95 transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {uploading ? (
-                <>
-                  <span className="material-symbols-outlined animate-spin" style={{ fontSize: 16 }}>progress_activity</span>
-                  アップロード中…
-                </>
-              ) : (
-                <>
-                  <span className="material-symbols-outlined" style={{ fontSize: 16 }}>attach_file</span>
-                  Attach files
-                </>
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={uploading}
+                className="inline-flex items-center gap-2 rounded-xl border border-outline-variant/30 bg-surface px-4 py-2 text-xs font-semibold text-on-surface hover:bg-surface-container active:scale-95 transition-all duration-150 disabled:opacity-50"
+              >
+                {uploading && activeAttemptIndexForUpload === null ? (
+                  <><span className="material-symbols-outlined animate-spin" style={{ fontSize: 16 }}>progress_activity</span> Uploading...</>
+                ) : (
+                  <><span className="material-symbols-outlined" style={{ fontSize: 16 }}>attach_file</span> Attach Files</>
+                )}
+              </button>
+              {imageURLs.length > 0 && (
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {imageURLs.map((url) => (
+                    <div key={url} className="group relative">
+                      <button 
+                        type="button" 
+                        onClick={() => {
+                          if (isVideoUrl(url) || isImageUrl(url)) {
+                            setLightboxURL(url);
+                          } else {
+                            window.open(url, "_blank");
+                          }
+                        }}
+                        className="h-16 w-16 rounded-xl border border-separator/40 overflow-hidden flex items-center justify-center bg-surface-container hover:bg-surface-container-high transition-colors"
+                      >
+                        {isVideoUrl(url) ? (
+                          <video src={url} className="h-full w-full object-cover bg-black" muted />
+                        ) : isImageUrl(url) ? (
+                          <img src={url} alt="attached" className="h-full w-full object-cover" />
+                        ) : (
+                          <span className="material-symbols-outlined text-outline" style={{ fontSize: 24 }}>insert_drive_file</span>
+                        )}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => removeImage(url, null)}
+                        className="absolute -right-1.5 -top-1.5 hidden h-5 w-5 items-center justify-center rounded-full bg-error text-white group-hover:flex"
+                      >
+                        <span className="material-symbols-outlined" style={{ fontSize: 11 }}>close</span>
+                      </button>
+                    </div>
+                  ))}
+                </div>
               )}
-            </button>
-            {uploadError && (
-              <p className="mt-2 text-xs text-error">{uploadError}</p>
-            )}
-            {imageURLs.length > 0 && (
-              <div className="mt-3 flex flex-wrap gap-2">
-                {imageURLs.map((url) => (
-                  <div key={url} className="group relative">
-                    {isVideoUrl(url) ? (
-                      <video
-                        src={url}
-                        className="h-16 w-16 rounded-xl object-cover border border-separator/40 bg-black"
-                        muted
-                        playsInline
-                      />
-                    ) : (
-                      <img
-                        src={url}
-                        alt="attached"
-                        className="h-16 w-16 rounded-xl object-cover border border-separator/40"
-                      />
-                    )}
-                    <button
-                      type="button"
-                      onClick={() => removeImage(url)}
-                      className="absolute -right-1.5 -top-1.5 hidden h-5 w-5 items-center justify-center rounded-full bg-error text-white group-hover:flex"
-                    >
-                      <span className="material-symbols-outlined" style={{ fontSize: 11 }}>close</span>
-                    </button>
+            </div>
+
+            <hr className="border-separator/20" />
+
+            {/* Fix Attempts */}
+            <div>
+              <div className="flex items-center justify-between mb-4">
+                <div className="text-sm font-semibold text-on-surface flex items-center gap-2">
+                  <span className="material-symbols-outlined text-primary" style={{ fontSize: 20 }}>build</span>
+                  Fix Attempts
+                </div>
+                <button
+                  type="button"
+                  onClick={addAttempt}
+                  className="text-xs font-semibold text-primary hover:bg-primary/10 px-3 py-1.5 rounded-lg transition-all flex items-center gap-1"
+                >
+                  <span className="material-symbols-outlined" style={{ fontSize: 14 }}>add</span> Add Attempt
+                </button>
+              </div>
+
+              {attempts.length === 0 ? (
+                <div className="text-center py-6 border border-dashed border-outline-variant/40 rounded-2xl">
+                  <p className="text-sm text-on-surface-variant">No fix attempts recorded yet.</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {attempts.map((attempt, index) => (
+                    <div key={index} className="p-4 bg-surface rounded-2xl border border-outline-variant/20 shadow-sm relative group" style={{ zIndex: 50 - index }}>
+                      <button
+                        type="button"
+                        onClick={() => removeAttempt(index)}
+                        className="absolute top-3 right-3 text-outline hover:text-error opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        <span className="material-symbols-outlined" style={{ fontSize: 18 }}>delete</span>
+                      </button>
+                      
+                      <div className="flex items-center gap-2 mb-3">
+                        <span className="bg-surface-container-high text-on-surface text-[10px] font-bold px-2 py-0.5 rounded-md">
+                          #{attempt.attemptNumber}
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-3">
+                        <div className="sm:col-span-3">
+                          <input
+                            type="text"
+                            value={attempt.fixDescription}
+                            onChange={(e) => updateAttempt(index, "fixDescription", e.target.value)}
+                            placeholder="What was done? (e.g. Realigned the guide rail)"
+                            className={inputCls}
+                          />
+                        </div>
+                        <div>
+                          <select 
+                            value={attempt.status} 
+                            onChange={(e) => updateAttempt(index, "status", e.target.value)}
+                            className={inputCls}
+                          >
+                            <option value="Success">✅ Success</option>
+                            <option value="Failed">❌ Failed</option>
+                          </select>
+                        </div>
+                        <div>
+                          <SearchableSelect
+                            value={attempt.fixedBy}
+                            onChange={(val) => updateAttempt(index, "fixedBy", val)}
+                            options={workerNames}
+                            placeholder="— Worker —"
+                            className={inputCls}
+                          />
+                        </div>
+                        <div>
+                          <input
+                            type="number"
+                            step="0.01"
+                            value={attempt.timeToResolve}
+                            onChange={(e) => updateAttempt(index, "timeToResolve", e.target.value)}
+                            placeholder="hours"
+                            className={inputCls}
+                            min="0"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Attempt Files */}
+                      <div className="mt-2 flex items-center gap-3">
+                        <input
+                          type="file"
+                          multiple
+                          className="hidden"
+                          onChange={(e) => {
+                            setActiveAttemptIndexForUpload(index);
+                            handleFileChange(e, index);
+                          }}
+                        />
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.currentTarget.previousElementSibling?.click();
+                          }}
+                          disabled={uploading}
+                          className="text-xs font-semibold text-outline hover:text-on-surface flex items-center gap-1 transition-colors disabled:opacity-50"
+                        >
+                          {uploading && activeAttemptIndexForUpload === index ? (
+                            <><span className="material-symbols-outlined animate-spin" style={{ fontSize: 14 }}>progress_activity</span> Uploading...</>
+                          ) : (
+                            <><span className="material-symbols-outlined" style={{ fontSize: 14 }}>attach_file</span> File(s)</>
+                          )}
+                        </button>
+                        <div className="flex gap-2">
+                          {(attempt.imageURLs || []).map((url) => (
+                            <div key={url} className="relative group/img">
+                              <button 
+                                type="button" 
+                                onClick={() => {
+                                  if (isVideoUrl(url) || isImageUrl(url)) {
+                                    setLightboxURL(url);
+                                  } else {
+                                    window.open(url, "_blank");
+                                  }
+                                }}
+                                className="h-8 w-8 rounded-lg border border-separator/40 overflow-hidden flex items-center justify-center bg-surface-container hover:bg-surface-container-high transition-colors"
+                              >
+                                {isVideoUrl(url) ? (
+                                  <video src={url} className="h-full w-full object-cover bg-black" muted />
+                                ) : isImageUrl(url) ? (
+                                  <img src={url} alt="attached" className="h-full w-full object-cover" />
+                                ) : (
+                                  <span className="material-symbols-outlined text-outline" style={{ fontSize: 16 }}>insert_drive_file</span>
+                                )}
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => removeImage(url, index)}
+                                className="absolute -right-1 -top-1 hidden h-4 w-4 items-center justify-center rounded-full bg-error text-white group-hover/img:flex"
+                              >
+                                <span className="material-symbols-outlined" style={{ fontSize: 10 }}>close</span>
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+            
+            {uploadError && <p className="text-xs text-error">{uploadError}</p>}
+          </form>
+
+          {/* Sidebar Insights */}
+          <div className="w-full lg:w-72 bg-surface border-t lg:border-t-0 lg:border-l border-separator/30 p-6 flex flex-col shrink-0">
+            <h3 className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline mb-4">
+              History & Insights
+            </h3>
+            
+            {!equipmentId ? (
+              <p className="text-sm text-on-surface-variant text-center mt-4 italic">Select a machine to view insights</p>
+            ) : !insights ? (
+              <p className="text-sm text-on-surface-variant text-center mt-4 italic">No previous history for this machine.</p>
+            ) : (
+              <div className="space-y-4">
+                <div className="bg-surface-container-low rounded-xl p-4">
+                  <p className="text-[10px] font-semibold uppercase text-outline mb-1">Total Occurrences</p>
+                  <p className="text-lg font-bold text-on-surface flex items-center gap-2">
+                    {insights.totalOccurrences > 3 ? "🔴" : "🔵"} {insights.totalOccurrences} times
+                  </p>
+                </div>
+                
+                <div className="bg-surface-container-low rounded-xl p-4">
+                  <p className="text-[10px] font-semibold uppercase text-outline mb-1">Fix Success Rate</p>
+                  <div className="flex justify-between items-center mt-2">
+                    <span className="text-sm font-medium text-primary flex items-center gap-1">
+                      ✅ {insights.successFixes}
+                    </span>
+                    <span className="text-sm font-medium text-error flex items-center gap-1">
+                      ❌ {insights.failedFixes}
+                    </span>
                   </div>
-                ))}
+                </div>
+
+                <div className="bg-surface-container-low rounded-xl p-4">
+                  <p className="text-[10px] font-semibold uppercase text-outline mb-1">Last Fixed By</p>
+                  <p className="text-sm font-medium text-on-surface">👷 {insights.lastFixedBy}</p>
+                  <p className="text-xs text-outline mt-1">{insights.lastFixedDate}</p>
+                </div>
+
+                <div className="bg-surface-container-low rounded-xl p-4">
+                  <p className="text-[10px] font-semibold uppercase text-outline mb-1">Avg. Resolution Time</p>
+                  <p className="text-sm font-medium text-on-surface flex items-center gap-2">
+                    ⏱️ {insights.avgTime > 0 ? `${insights.avgTime} mins` : "Unknown"}
+                  </p>
+                </div>
               </div>
             )}
           </div>
-        </form>
+        </div>
 
         {/* Footer */}
-        <div className="border-t border-outline-variant/20 px-6 py-4 bg-surface-container-low/50 flex items-center justify-end gap-3">
+        <div className="border-t border-outline-variant/20 px-6 py-4 bg-surface flex items-center justify-end gap-3 z-20">
           <button
             type="button"
             onClick={onClose}
-            className="rounded-xl border border-separator/40 px-4 py-2 text-xs font-semibold text-on-surface-variant hover:bg-surface-container hover:text-primary hover:border-primary/30 active:scale-95 transition-all duration-150"
+            className="rounded-xl border border-separator/40 px-5 py-2.5 text-sm font-semibold text-on-surface-variant hover:bg-surface-container hover:text-primary hover:border-primary/30 active:scale-95 transition-all"
           >
             Cancel
           </button>
           <button
             type="submit"
-            form="setsubi-history-add-form"
+            form="event-form"
             disabled={!canSubmit}
-            className="rounded-xl bg-primary px-4 py-2 text-xs font-semibold text-on-primary hover:opacity-90 active:scale-95 transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="rounded-xl bg-primary px-6 py-2.5 text-sm font-semibold text-on-primary hover:opacity-90 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {submitting ? "保存中…" : "Add Record"}
+            {submitting ? "Saving..." : isEdit ? "Save Changes" : "Submit Report"}
           </button>
         </div>
       </div>
-    </div>,
-    document.body
-  );
-}
-
-// ── Event Detail Modal ────────────────────────────────────────────────────────
-
-function EventDetailModal({ event, onClose }) {
-  const [lightboxURL, setLightboxURL] = useState(null);
-  const imageURLs = Array.isArray(event.imageURLs) ? event.imageURLs : [];
-
-  return createPortal(
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm"
-      onClick={onClose}
-    >
-      <div
-        className="dashboard-section rounded-2xl w-full max-w-2xl max-h-[92vh] flex flex-col overflow-hidden"
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Header */}
-        <div className="sticky top-0 z-10 rounded-t-2xl px-6 py-5 flex items-start justify-between gap-4 border-b border-separator/40 bg-surface/90 backdrop-blur-md">
-          <div>
-            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">設備履歴</p>
-            <h2 className="mt-1 text-xl font-semibold text-on-surface">{event.equipmentName || "—"}</h2>
-            {event["工場"] && (
-              <p className="mt-1 text-sm text-on-surface-variant">{event["工場"]}</p>
-            )}
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="flex-shrink-0 p-2 rounded-xl hover:bg-surface-container text-outline hover:text-on-surface transition-all duration-150"
-          >
-            <span className="material-symbols-outlined" style={{ fontSize: 18 }}>close</span>
-          </button>
-        </div>
-
-        {/* Body */}
-        <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5 space-y-4">
-          {/* Meta badges */}
-          <div className="flex flex-wrap gap-3">
-            {event.date && (
-              <span className="rounded-xl bg-primary/10 px-3 py-1 text-[11px] font-semibold text-primary">
-                {event.date}
-              </span>
-            )}
-            {event["名前"] && (
-              <span className="rounded-xl bg-surface-container px-3 py-1 text-[11px] font-semibold text-on-surface-variant">
-                {event["名前"]}
-              </span>
-            )}
-          </div>
-
-          {/* Details */}
-          {event.details && (
-            <div className="rounded-2xl border border-outline-variant/15 bg-surface-container-low px-4 py-3">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Details</p>
-              <p className="mt-2 text-sm text-on-surface whitespace-pre-wrap">{event.details}</p>
-            </div>
-          )}
-
-          {/* Photos */}
-          {imageURLs.length > 0 && (
-            <div>
-              <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Photos</p>
-              <div className="flex flex-wrap gap-2">
-                {imageURLs.map((url) => (
-                  <button
-                    key={url}
-                    type="button"
-                    onClick={() => setLightboxURL(url)}
-                    className="overflow-hidden rounded-xl border border-separator/40 transition hover:opacity-80"
-                  >
-                    {isVideoUrl(url) ? (
-                      <video src={url} className="h-16 w-16 object-cover bg-black" muted playsInline />
-                    ) : (
-                      <img src={url} alt="attached" className="h-16 w-16 object-cover" />
-                    )}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Footer */}
-        <div className="border-t border-outline-variant/20 px-6 py-4 bg-surface-container-low/50 flex items-center justify-end">
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-xl border border-separator/40 px-4 py-2 text-xs font-semibold text-on-surface-variant hover:bg-surface-container hover:text-primary hover:border-primary/30 active:scale-95 transition-all duration-150"
-          >
-            Close
-          </button>
-        </div>
-      </div>
-
       <Lightbox url={lightboxURL} onClose={() => setLightboxURL(null)} />
     </div>,
     document.body
@@ -445,6 +814,8 @@ export default function EquipmentHistoryPage() {
 
   const [filterFactory, setFilterFactory] = useState("");
   const [filterEquipmentId, setFilterEquipmentId] = useState("");
+  const [filterStatus, setFilterStatus] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
 
   const [history, setHistory] = useState([]);
   const [historyLoading, setHistoryLoading] = useState(false);
@@ -455,9 +826,9 @@ export default function EquipmentHistoryPage() {
   const [dateTo, setDateTo] = useState("");
   const [sortDir, setSortDir] = useState("desc");
 
-  const [addOpen, setAddOpen] = useState(false);
-  const [addSubmitting, setAddSubmitting] = useState(false);
-  const [viewingEvent, setViewingEvent] = useState(null);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editingEvent, setEditingEvent] = useState(null);
+  const [submitting, setSubmitting] = useState(false);
 
   // Load factories, equipment, worker names
   useEffect(() => {
@@ -521,21 +892,36 @@ export default function EquipmentHistoryPage() {
     return eq?.name || "";
   }, [allEquipment, filterEquipmentId]);
 
-  function handleFilterFactoryChange(e) {
-    setFilterFactory(e.target.value);
+  function handleFilterFactoryChange(val) {
+    setFilterFactory(val);
     setFilterEquipmentId("");
   }
 
-  async function handleAddSubmit(data) {
-    setAddSubmitting(true);
+  function openCreate() {
+    setEditingEvent(null);
+    setModalOpen(true);
+  }
+
+  function openEdit(event) {
+    setEditingEvent(event);
+    setModalOpen(true);
+  }
+
+  async function handleModalSubmit(data) {
+    setSubmitting(true);
     try {
-      await createSetsubiHistoryRecord({ ...data, submittedBy: username });
-      setAddOpen(false);
+      if (editingEvent) {
+        const id = editingEvent._id?.$oid ?? editingEvent._id;
+        await updateSetsubiHistoryRecord(id, { ...data, updatedBy: username });
+      } else {
+        await createSetsubiHistoryRecord({ ...data, submittedBy: username });
+      }
+      setModalOpen(false);
       setHistoryRefresh((n) => n + 1);
     } catch (err) {
       alert(err?.message || "Failed to save record.");
     } finally {
-      setAddSubmitting(false);
+      setSubmitting(false);
     }
   }
 
@@ -543,12 +929,20 @@ export default function EquipmentHistoryPage() {
     let rows = history;
     if (dateFrom) rows = rows.filter((r) => (r.date || "") >= dateFrom);
     if (dateTo) rows = rows.filter((r) => (r.date || "") <= dateTo);
+    if (filterStatus) rows = rows.filter((r) => r.status === filterStatus);
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase();
+      rows = rows.filter(r => 
+        (r.title && r.title.toLowerCase().includes(q)) || 
+        (r.details && r.details.toLowerCase().includes(q))
+      );
+    }
     return [...rows].sort((a, b) => {
       const da = a.date || "";
       const db = b.date || "";
       return sortDir === "asc" ? da.localeCompare(db) : db.localeCompare(da);
     });
-  }, [history, dateFrom, dateTo, sortDir]);
+  }, [history, dateFrom, dateTo, sortDir, filterStatus, searchQuery]);
 
   const tableTitle = filterEquipmentId
     ? selectedEquipmentName
@@ -557,232 +951,201 @@ export default function EquipmentHistoryPage() {
     : "Equipment History";
 
   return (
-    <section className="pt-24 pb-16 px-8 overflow-y-auto h-screen scrollbar-hide">
+    <section className="pt-24 pb-16 px-8 overflow-y-auto h-screen scrollbar-hide font-body">
       <PageHeader
-        eyebrow="設備"
+        eyebrow="設備履歴"
         title="Equipment History"
         className="mb-6"
       />
 
       {/* Filter bar */}
-      <div className="dashboard-section mb-6 rounded-2xl p-5">
+      <div className="dashboard-section mb-6 rounded-2xl p-5 relative z-20">
         {dataError && (
           <div className="mb-4 rounded-2xl border border-error/20 bg-error/10 px-4 py-4 flex gap-3">
             <span className="material-symbols-outlined text-error flex-shrink-0" style={{ fontSize: 18 }}>report</span>
             <p className="text-sm font-semibold text-on-surface">{dataError}</p>
           </div>
         )}
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-end">
-          <div className="flex-1">
-            <div className="mb-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">
-              Factory
-            </div>
-            <select
+        <div className="flex flex-wrap items-end gap-4">
+          <div className="flex-1 min-w-[200px]">
+            <div className="mb-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Factory</div>
+            <SearchableSelect
               value={filterFactory}
               onChange={handleFilterFactoryChange}
+              options={factories}
+              placeholder="— Select factory —"
+              className={inputCls}
               disabled={dataLoading}
-              className={inputCls}
-            >
-              <option value="">— Select factory —</option>
-              {factories.map((f) => (
-                <option key={f} value={f}>{f}</option>
-              ))}
-            </select>
+            />
           </div>
-          <div className="flex-1">
-            <div className="mb-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">
-              Machine
-            </div>
-            <select
+          <div className="flex-1 min-w-[200px]">
+            <div className="mb-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Machine</div>
+            <SearchableSelect
               value={filterEquipmentId}
-              onChange={(e) => setFilterEquipmentId(e.target.value)}
-              disabled={!filterFactory || dataLoading}
+              onChange={(val) => setFilterEquipmentId(val)}
+              options={factoryEquipment.map(eq => ({ label: eq.name, value: eq._id?.$oid ?? String(eq._id) }))}
+              placeholder={!filterFactory ? "— Select factory first —" : "All machines"}
               className={inputCls}
-            >
-              <option value="">
-                {!filterFactory ? "— Select factory first —" : "All machines"}
-              </option>
-              {factoryEquipment.map((eq) => {
-                const id = eq._id?.$oid ?? String(eq._id);
-                return (
-                  <option key={id} value={id}>{eq.name}</option>
-                );
-              })}
-            </select>
+              disabled={!filterFactory || dataLoading}
+            />
           </div>
-          <div className="flex-1">
-            <div className="mb-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">
-              Date Range
-            </div>
+          <div className="flex-[2] min-w-[250px]">
+            <div className="mb-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Search & Filter</div>
             <div className="flex items-center gap-2">
+              <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} className={inputCls}>
+                <option value="">All Statuses</option>
+                <option value="Open">Open</option>
+                <option value="Resolved">Resolved</option>
+                <option value="Failed">Failed</option>
+              </select>
               <input
-                type="date"
-                value={dateFrom}
-                onChange={(e) => setDateFrom(e.target.value)}
-                className={inputCls}
-              />
-              <span className="text-outline flex-shrink-0">—</span>
-              <input
-                type="date"
-                value={dateTo}
-                onChange={(e) => setDateTo(e.target.value)}
+                type="text"
+                placeholder="Search titles..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
                 className={inputCls}
               />
             </div>
           </div>
-          <div className="flex items-end gap-3">
-            {dataLoading && (
-              <div className="flex items-center gap-2 text-sm text-on-surface-variant pb-3">
-                <span className="material-symbols-outlined animate-spin" style={{ fontSize: 16 }}>progress_activity</span>
-                Loading…
-              </div>
-            )}
+          <div className="flex items-end gap-3 ml-auto">
             <button
               type="button"
-              onClick={() => setAddOpen(true)}
-              className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-xs font-semibold text-on-primary hover:opacity-90 active:scale-95 transition-all duration-150 whitespace-nowrap"
+              onClick={openCreate}
+              className="inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-on-primary hover:opacity-90 active:scale-95 transition-all shadow-md"
             >
-              <span className="material-symbols-outlined" style={{ fontSize: 16 }}>add</span>
-              Add Event
+              <span className="material-symbols-outlined" style={{ fontSize: 18 }}>add</span>
+              Report Issue
             </button>
           </div>
         </div>
       </div>
 
       {/* History table */}
-      <div className="dashboard-section rounded-2xl overflow-hidden">
+      <div className="dashboard-section rounded-2xl overflow-hidden shadow-sm">
         {/* Section header */}
-        <div className="px-5 py-4 border-b border-separator/40 flex items-center gap-2">
-          <span className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
-            <span className="material-symbols-outlined text-primary" style={{ fontSize: 18 }}>history</span>
-          </span>
-          <div>
-            <h3 className="text-sm font-semibold text-on-surface">{tableTitle}</h3>
-            {!historyLoading && history.length > 0 && (
-              <p className="text-[11px] text-outline">
-                {displayedHistory.length !== history.length
-                  ? `${displayedHistory.length} of ${history.length} records`
-                  : `${history.length} records`}
-              </p>
-            )}
+        <div className="px-5 py-4 border-b border-separator/40 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <span className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
+              <span className="material-symbols-outlined text-primary" style={{ fontSize: 20 }}>build_circle</span>
+            </span>
+            <div>
+              <h3 className="text-base font-semibold text-on-surface">{tableTitle}</h3>
+              {!historyLoading && history.length > 0 && (
+                <p className="text-xs text-outline mt-0.5">
+                  {displayedHistory.length !== history.length
+                    ? `Showing ${displayedHistory.length} of ${history.length} records`
+                    : `${history.length} total records`}
+                </p>
+              )}
+            </div>
           </div>
         </div>
 
         {/* Loading */}
         {historyLoading && (
-          <div className="flex items-center gap-2 px-5 py-10 text-sm text-on-surface-variant">
-            <span className="material-symbols-outlined animate-spin" style={{ fontSize: 18 }}>progress_activity</span>
-            読み込み中…
+          <div className="flex items-center justify-center gap-2 px-5 py-16 text-sm text-on-surface-variant">
+            <span className="material-symbols-outlined animate-spin text-primary" style={{ fontSize: 24 }}>progress_activity</span>
+            Loading history...
           </div>
         )}
 
-        {/* Error */}
-        {!historyLoading && historyError && (
-          <div className="m-5 rounded-2xl border border-error/20 bg-error/10 px-4 py-4 flex gap-3">
-            <span className="material-symbols-outlined text-error flex-shrink-0" style={{ fontSize: 18 }}>report</span>
-            <p className="text-sm text-on-surface">{historyError}</p>
-          </div>
-        )}
-
-        {/* Empty — no factory selected */}
-        {!historyLoading && !historyError && !filterFactory && (
-          <div className="px-5 py-14 text-center">
-            <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/8">
-              <span className="material-symbols-outlined text-primary" style={{ fontSize: 28 }}>factory</span>
+        {/* Empty States */}
+        {!historyLoading && !filterFactory && (
+          <div className="px-5 py-20 text-center">
+            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10">
+              <span className="material-symbols-outlined text-primary" style={{ fontSize: 32 }}>factory</span>
             </div>
-            <p className="text-sm font-semibold text-on-surface">Select a factory</p>
-            <p className="mt-1 text-[11px] text-outline">
-              Choose a factory above to load equipment history.
-            </p>
+            <p className="text-base font-semibold text-on-surface">Select a factory</p>
+            <p className="mt-1 text-sm text-outline">Choose a factory to view its equipment history.</p>
           </div>
         )}
 
-        {/* Empty — factory selected, no records */}
-        {!historyLoading && !historyError && filterFactory && displayedHistory.length === 0 && (
-          <div className="px-5 py-14 text-center">
-            <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-surface-container">
-              <span className="material-symbols-outlined text-outline" style={{ fontSize: 28 }}>event_note</span>
+        {!historyLoading && filterFactory && displayedHistory.length === 0 && (
+          <div className="px-5 py-20 text-center">
+            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-surface-container">
+              <span className="material-symbols-outlined text-outline" style={{ fontSize: 32 }}>search_off</span>
             </div>
-            <p className="text-sm font-semibold text-on-surface">No records found</p>
-            <p className="mt-1 text-[11px] text-outline">
-              {history.length > 0
-                ? "No records match the current date range."
-                : filterEquipmentId
-                ? "This machine has no history entries yet."
-                : "No history entries for this factory yet."}
-            </p>
+            <p className="text-base font-semibold text-on-surface">No records found</p>
+            <p className="mt-1 text-sm text-outline">Try adjusting your filters or report a new issue.</p>
           </div>
         )}
 
         {/* Table */}
-        {!historyLoading && !historyError && displayedHistory.length > 0 && (
+        {!historyLoading && displayedHistory.length > 0 && (
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
-                <tr className="border-b border-separator/40 bg-surface-container-high">
-                  <th className="px-3 py-3 text-left text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">
-                    <button
-                      type="button"
-                      onClick={() => setSortDir((d) => d === "desc" ? "asc" : "desc")}
-                      className="inline-flex items-center gap-1 hover:text-on-surface transition-all duration-150"
-                    >
-                      Date
-                      <span className="material-symbols-outlined" style={{ fontSize: 14 }}>
-                        {sortDir === "desc" ? "arrow_downward" : "arrow_upward"}
-                      </span>
-                    </button>
+                <tr className="border-b border-separator/40 bg-surface-container-low">
+                  <th className="px-4 py-3.5 text-left text-[11px] font-semibold uppercase tracking-wider text-outline whitespace-nowrap">
+                    Date
+                  </th>
+                  <th className="px-4 py-3.5 text-left text-[11px] font-semibold uppercase tracking-wider text-outline w-1/3">
+                    Issue Title
+                  </th>
+                  <th className="px-4 py-3.5 text-left text-[11px] font-semibold uppercase tracking-wider text-outline">
+                    Status
                   </th>
                   {!filterEquipmentId && (
-                    <th className="px-3 py-3 text-left text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">
+                    <th className="px-4 py-3.5 text-left text-[11px] font-semibold uppercase tracking-wider text-outline">
                       Machine
                     </th>
                   )}
-                  <th className="px-3 py-3 text-left text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">
+                  <th className="px-4 py-3.5 text-left text-[11px] font-semibold uppercase tracking-wider text-outline">
                     Reported By
                   </th>
-                  <th className="px-3 py-3 text-left text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">
-                    Details
-                  </th>
-                  <th className="px-3 py-3 text-center text-[10px] font-semibold uppercase tracking-[0.18em] text-outline w-12">
-                    Photos
+                  <th className="px-4 py-3.5 text-center text-[11px] font-semibold uppercase tracking-wider text-outline">
+                    Attempts
                   </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-separator/20">
                 {displayedHistory.map((event, i) => {
                   const key = event._id?.$oid ?? event._id ?? i;
-                  const hasPhotos =
-                    Array.isArray(event.imageURLs) && event.imageURLs.length > 0;
+                  const attemptCount = Array.isArray(event.attempts) ? event.attempts.length : 0;
+                  const status = event.status || "Open";
+                  
                   return (
                     <tr
                       key={key}
-                      onClick={() => setViewingEvent(event)}
-                      className="cursor-pointer hover:bg-surface-container/50 transition-all duration-150"
+                      onClick={() => openEdit(event)}
+                      className="cursor-pointer hover:bg-surface-container/50 transition-colors group"
                     >
-                      <td className="px-3 py-3 whitespace-nowrap">
-                        <span className="text-sm font-semibold text-primary">{event.date || "—"}</span>
+                      <td className="px-4 py-4 whitespace-nowrap">
+                        <span className="text-sm font-semibold text-on-surface-variant group-hover:text-primary transition-colors">
+                          {event.date || "—"}
+                        </span>
+                      </td>
+                      <td className="px-4 py-4">
+                        <p className="text-sm font-bold text-on-surface line-clamp-1">
+                          {event.title || <span className="italic font-normal text-on-surface-variant truncate block max-w-sm">{event.details}</span> || "—"}
+                        </p>
+                      </td>
+                      <td className="px-4 py-4 whitespace-nowrap">
+                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold ${
+                          status === "Resolved" ? "bg-primary/10 text-primary" :
+                          status === "Failed" ? "bg-error/10 text-error" :
+                          "bg-surface-container-high text-on-surface-variant"
+                        }`}>
+                          {status === "Resolved" ? "✅" : status === "Failed" ? "❌" : "🔴"} {status}
+                        </span>
                       </td>
                       {!filterEquipmentId && (
-                        <td className="px-3 py-3">
-                          <p className="text-sm font-semibold text-on-surface">
+                        <td className="px-4 py-4 whitespace-nowrap">
+                          <p className="text-sm font-medium text-on-surface">
                             {event.equipmentName || "—"}
                           </p>
                         </td>
                       )}
-                      <td className="px-3 py-3 whitespace-nowrap">
+                      <td className="px-4 py-4 whitespace-nowrap">
                         <span className="text-sm text-on-surface-variant">{event["名前"] || "—"}</span>
                       </td>
-                      <td className="px-3 py-3 max-w-xs">
-                        <p className="text-sm text-on-surface truncate">{event.details || "—"}</p>
-                      </td>
-                      <td className="px-3 py-3 text-center">
-                        {hasPhotos && (
-                          <span
-                            className="material-symbols-outlined text-outline"
-                            style={{ fontSize: 16 }}
-                          >
-                            photo_library
+                      <td className="px-4 py-4 text-center">
+                        {attemptCount > 0 ? (
+                          <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-primary/10 text-primary text-xs font-bold">
+                            {attemptCount}
                           </span>
+                        ) : (
+                          <span className="text-outline text-sm">—</span>
                         )}
                       </td>
                     </tr>
@@ -794,24 +1157,17 @@ export default function EquipmentHistoryPage() {
         )}
       </div>
 
-      {/* Add Event Modal */}
-      {addOpen && (
-        <AddEventModal
+      {modalOpen && (
+        <EventModal
+          event={editingEvent}
+          history={history}
           factories={factories}
           allEquipment={allEquipment}
           workerNames={workerNames}
           username={username}
-          submitting={addSubmitting}
-          onClose={() => setAddOpen(false)}
-          onSubmit={handleAddSubmit}
-        />
-      )}
-
-      {/* Event Detail */}
-      {viewingEvent && (
-        <EventDetailModal
-          event={viewingEvent}
-          onClose={() => setViewingEvent(null)}
+          submitting={submitting}
+          onClose={() => setModalOpen(false)}
+          onSubmit={handleModalSubmit}
         />
       )}
     </section>
