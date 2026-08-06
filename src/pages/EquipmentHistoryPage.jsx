@@ -12,6 +12,7 @@ import {
 } from "../services/api";
 import { getAuthUser } from "../utils/masterDB";
 import PageHeader from "../components/PageHeader";
+import SensorDevicePhotoPreviewModal from "../components/SensorDevicePhotoPreviewModal";
 
 const inputCls =
   "w-full rounded-xl border border-outline-variant/30 bg-surface px-3 py-3 text-sm text-on-surface outline-none transition-all duration-150 focus:border-primary/40 disabled:opacity-50 font-body";
@@ -33,33 +34,8 @@ function isImageUrl(url) {
   return /\.(jpeg|jpg|gif|png|webp|svg)$/i.test(url.split("?")[0]);
 }
 
-// ── Lightbox ─────────────────────────────────────────────────────────────────
-
-function Lightbox({ url, onClose }) {
-  if (!url) return null;
-  return createPortal(
-    <div
-      className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80"
-      onClick={onClose}
-    >
-      {isVideoUrl(url) ? (
-        <video
-          src={url}
-          controls
-          autoPlay
-          className="max-h-[90vh] max-w-[90vw] rounded-2xl shadow-2xl"
-          onClick={(e) => e.stopPropagation()}
-        />
-      ) : (
-        <img
-          src={url}
-          alt="full size"
-          className="max-h-[90vh] max-w-[90vw] rounded-2xl object-contain shadow-2xl"
-        />
-      )}
-    </div>,
-    document.body
-  );
+function isPdfUrl(url) {
+  return /\.pdf$/i.test(url.split("?")[0]);
 }
 
 // ── Searchable Select ──────────────────────────────────────────────────────────
@@ -300,7 +276,7 @@ function EventModal({ event, history, factories, allEquipment, workerNames, user
   const attemptFileInputRef = useRef(null);
   const [activeAttemptIndexForUpload, setActiveAttemptIndexForUpload] = useState(null);
 
-  const [lightboxURL, setLightboxURL] = useState(null);
+  const [previewState, setPreviewState] = useState(null);
 
   const factoryEquipment = useMemo(
     () => allEquipment.filter((eq) => eq["工場"] === factory),
@@ -385,7 +361,10 @@ function EventModal({ event, history, factories, allEquipment, workerNames, user
       if (attemptIndex !== null) {
         setAttempts(prev => {
           const newAtt = [...prev];
-          newAtt[attemptIndex].imageURLs = [...(newAtt[attemptIndex].imageURLs || []), ...urls];
+          newAtt[attemptIndex] = {
+            ...newAtt[attemptIndex],
+            imageURLs: [...(newAtt[attemptIndex].imageURLs || []), ...urls]
+          };
           return newAtt;
         });
       } else {
@@ -410,7 +389,10 @@ function EventModal({ event, history, factories, allEquipment, workerNames, user
     if (attemptIndex !== null) {
       setAttempts(prev => {
         const newAtt = [...prev];
-        newAtt[attemptIndex].imageURLs = (newAtt[attemptIndex].imageURLs || []).filter((u) => u !== url);
+        newAtt[attemptIndex] = {
+          ...newAtt[attemptIndex],
+          imageURLs: (newAtt[attemptIndex].imageURLs || []).filter((u) => u !== url)
+        };
         return newAtt;
       });
     } else {
@@ -437,13 +419,37 @@ function EventModal({ event, history, factories, allEquipment, workerNames, user
   function updateAttempt(index, field, value) {
     setAttempts(prev => {
       const newAtt = [...prev];
-      newAtt[index][field] = value;
+      newAtt[index] = { ...newAtt[index], [field]: value };
       return newAtt;
     });
   }
 
   function removeAttempt(index) {
     setAttempts(prev => prev.filter((_, i) => i !== index).map((att, i) => ({ ...att, attemptNumber: i + 1 })));
+  }
+
+  async function discardDraft() {
+    // Delete all files in the draft from Firebase Storage asynchronously
+    imageURLs.forEach(url => {
+      deleteEquipmentEventImage(url).catch(() => {});
+    });
+    attempts.forEach(att => {
+      (att.imageURLs || []).forEach(url => {
+        deleteEquipmentEventImage(url).catch(() => {});
+      });
+    });
+
+    localStorage.removeItem(draftKey);
+    setFactory("");
+    setEquipmentId("");
+    setReportedBy(username || "");
+    setDate(new Date().toISOString().split("T")[0]);
+    setTitle("");
+    setStatus("Open");
+    setDetails("");
+    setImageURLs([]);
+    setResolutionTime("");
+    setAttempts([]);
   }
 
   function handleSubmit(e) {
@@ -630,8 +636,13 @@ function EventModal({ event, history, factories, allEquipment, workerNames, user
                       <button 
                         type="button" 
                         onClick={() => {
-                          if (isVideoUrl(url) || isImageUrl(url)) {
-                            setLightboxURL(url);
+                          if (isVideoUrl(url) || isImageUrl(url) || isPdfUrl(url)) {
+                            setPreviewState({
+                              images: imageURLs.map((u) => ({ url: u, label: "Event File" })),
+                              activeIndex: imageURLs.indexOf(url),
+                              displayName: "Report Attachments",
+                              eyebrow: title || "Event",
+                            });
                           } else {
                             window.open(url, "_blank");
                           }
@@ -641,7 +652,7 @@ function EventModal({ event, history, factories, allEquipment, workerNames, user
                         {isVideoUrl(url) ? (
                           <video src={url} className="h-full w-full object-cover bg-black" muted />
                         ) : isImageUrl(url) ? (
-                          <img src={url} alt="attached" className="h-full w-full object-cover" />
+                          <img src={url} alt="attached" loading="lazy" decoding="async" className="h-full w-full object-cover" />
                         ) : (
                           <span className="material-symbols-outlined text-outline" style={{ fontSize: 24 }}>insert_drive_file</span>
                         )}
@@ -781,8 +792,13 @@ function EventModal({ event, history, factories, allEquipment, workerNames, user
                               <button 
                                 type="button" 
                                 onClick={() => {
-                                  if (isVideoUrl(url) || isImageUrl(url)) {
-                                    setLightboxURL(url);
+                                  if (isVideoUrl(url) || isImageUrl(url) || isPdfUrl(url)) {
+                                    setPreviewState({
+                                      images: attempt.imageURLs.map((u) => ({ url: u, label: "Attempt File" })),
+                                      activeIndex: attempt.imageURLs.indexOf(url),
+                                      displayName: attempt.title || `Attempt ${index + 1}`,
+                                      eyebrow: "Fix Attempt",
+                                    });
                                   } else {
                                     window.open(url, "_blank");
                                   }
@@ -792,7 +808,7 @@ function EventModal({ event, history, factories, allEquipment, workerNames, user
                                 {isVideoUrl(url) ? (
                                   <video src={url} className="h-full w-full object-cover bg-black" muted />
                                 ) : isImageUrl(url) ? (
-                                  <img src={url} alt="attached" className="h-full w-full object-cover" />
+                                  <img src={url} alt="attached" loading="lazy" decoding="async" className="h-full w-full object-cover" />
                                 ) : (
                                   <span className="material-symbols-outlined text-outline" style={{ fontSize: 16 }}>insert_drive_file</span>
                                 )}
@@ -876,25 +892,44 @@ function EventModal({ event, history, factories, allEquipment, workerNames, user
         </div>
 
         {/* Footer */}
-        <div className="border-t border-outline-variant/20 px-6 py-4 bg-surface flex items-center justify-end gap-3 z-20">
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-xl border border-separator/40 px-5 py-2.5 text-sm font-semibold text-on-surface-variant hover:bg-surface-container hover:text-primary hover:border-primary/30 active:scale-95 transition-all"
-          >
-            Cancel
-          </button>
-          <button
-            type="submit"
-            form="event-form"
-            disabled={!canSubmit}
-            className="rounded-xl bg-primary px-6 py-2.5 text-sm font-semibold text-on-primary hover:opacity-90 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {submitting ? "Saving..." : isEdit ? "Save Changes" : "Submit Report"}
-          </button>
+        <div className="border-t border-outline-variant/20 px-6 py-4 bg-surface flex items-center justify-between gap-3 z-20">
+          {!isEdit ? (
+            <button
+              type="button"
+              onClick={discardDraft}
+              className="rounded-xl border border-error/20 text-error hover:bg-error/10 px-5 py-2.5 text-sm font-semibold active:scale-95 transition-all"
+            >
+              Discard Draft
+            </button>
+          ) : (
+            <div />
+          )}
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-xl border border-separator/40 px-5 py-2.5 text-sm font-semibold text-on-surface-variant hover:bg-surface-container hover:text-primary hover:border-primary/30 active:scale-95 transition-all"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              form="event-form"
+              disabled={!canSubmit}
+              className="rounded-xl bg-primary px-6 py-2.5 text-sm font-semibold text-on-primary hover:opacity-90 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {submitting ? "Saving..." : isEdit ? "Save Changes" : "Submit Report"}
+            </button>
+          </div>
         </div>
       </div>
-      <Lightbox url={lightboxURL} onClose={() => setLightboxURL(null)} />
+      <SensorDevicePhotoPreviewModal 
+        preview={previewState} 
+        onClose={() => setPreviewState(null)} 
+        onNavigate={(dir) => {
+          setPreviewState(prev => prev ? { ...prev, activeIndex: prev.activeIndex + dir } : null);
+        }} 
+      />
     </div>,
     document.body
   );
