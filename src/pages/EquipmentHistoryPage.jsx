@@ -64,7 +64,7 @@ function Lightbox({ url, onClose }) {
 
 // ── Searchable Select ──────────────────────────────────────────────────────────
 
-function SearchableSelect({ value, options, onChange, placeholder, className, disabled }) {
+function SearchableSelect({ value, options, onChange, placeholder, className, disabled, isMulti }) {
   const [isOpen, setIsOpen] = useState(false);
   const [query, setQuery] = useState("");
   const containerRef = useRef(null);
@@ -125,13 +125,38 @@ function SearchableSelect({ value, options, onChange, placeholder, className, di
 
   const toggleOption = (option, e) => {
     e.preventDefault();
-    onChange(option.value);
-    setIsOpen(false);
-    setQuery("");
+    if (isMulti) {
+      const currentValues = Array.isArray(value) ? value : [];
+      if (option.value === "") {
+        onChange([]);
+        setIsOpen(false);
+      } else {
+        if (currentValues.includes(option.value)) {
+          onChange(currentValues.filter(v => v !== option.value));
+        } else {
+          onChange([...currentValues, option.value]);
+        }
+      }
+    } else {
+      onChange(option.value);
+      setIsOpen(false);
+      setQuery("");
+    }
   };
 
-  const selectedOption = normalizedOptions.find(o => o.value === value);
-  const displayText = selectedOption ? selectedOption.label : placeholder;
+  const displayText = useMemo(() => {
+    if (isMulti) {
+      const currentValues = Array.isArray(value) ? value : [];
+      if (currentValues.length === 0) return placeholder;
+      const labels = currentValues.map(v => {
+        const found = normalizedOptions.find(o => o.value === v);
+        return found ? found.label : v;
+      });
+      return labels.join(", ");
+    }
+    const selectedOption = normalizedOptions.find(o => o.value === value);
+    return selectedOption ? selectedOption.label : placeholder;
+  }, [value, isMulti, normalizedOptions, placeholder]);
 
   return (
     <div className="relative w-full" ref={containerRef}>
@@ -142,9 +167,40 @@ function SearchableSelect({ value, options, onChange, placeholder, className, di
           updatePosition();
           setIsOpen(!isOpen);
         }}
-        className={`${className} flex items-center justify-between text-left px-3 ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+        className={`${className} flex items-center justify-between text-left px-3 ${disabled ? 'opacity-50 cursor-not-allowed' : ''} ${isMulti && Array.isArray(value) && value.length > 0 ? 'py-1.5' : ''}`}
       >
-        <span className="truncate">{displayText}</span>
+        <div className="flex-1 flex flex-wrap gap-1.5 items-center overflow-hidden pr-2">
+          {isMulti && Array.isArray(value) && value.length > 0 ? (
+            value.map((v) => {
+              const opt = normalizedOptions.find((o) => o.value === v);
+              const label = opt ? opt.label : v;
+              return (
+                <span key={v} className="inline-flex items-center gap-1 bg-surface-container-high border border-outline-variant/30 px-2 py-1 rounded-md text-[11px] font-medium text-on-surface">
+                  <span className="truncate max-w-[120px]">{label}</span>
+                  <div 
+                    role="button"
+                    tabIndex={0}
+                    className="hover:text-error hover:bg-error/10 rounded-full p-0.5 -mr-1 transition-colors flex items-center justify-center cursor-pointer"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onChange(value.filter((item) => item !== v));
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.stopPropagation();
+                        onChange(value.filter((item) => item !== v));
+                      }
+                    }}
+                  >
+                    <span className="material-symbols-outlined" style={{ fontSize: 12 }}>close</span>
+                  </div>
+                </span>
+              );
+            })
+          ) : (
+            <span className="truncate">{displayText}</span>
+          )}
+        </div>
         <span className="material-symbols-outlined shrink-0 opacity-50" style={{ fontSize: 18 }}>expand_more</span>
       </button>
 
@@ -176,7 +232,9 @@ function SearchableSelect({ value, options, onChange, placeholder, className, di
             <div className="px-4 py-2 text-xs text-on-surface-variant text-center">No results found</div>
           ) : (
             filteredOptions.map((option) => {
-              const isSelected = value === option.value;
+              const isSelected = isMulti 
+                ? (Array.isArray(value) && value.includes(option.value))
+                : (value === option.value);
               return (
                 <button
                   key={option.value}
@@ -185,7 +243,10 @@ function SearchableSelect({ value, options, onChange, placeholder, className, di
                   className={`flex w-full items-center px-4 py-2 text-sm text-left transition-colors
                     ${isSelected ? "bg-primary/10 text-primary font-medium" : "text-on-surface hover:bg-surface-container-highest"}`}
                 >
-                  <span className="truncate">{option.label}</span>
+                  <span className="truncate flex-1">{option.label}</span>
+                  {isSelected && isMulti && (
+                    <span className="material-symbols-outlined text-primary ml-2" style={{ fontSize: 16 }}>check</span>
+                  )}
                 </button>
               );
             })
@@ -201,19 +262,37 @@ function SearchableSelect({ value, options, onChange, placeholder, className, di
 
 function EventModal({ event, history, factories, allEquipment, workerNames, username, submitting, onClose, onSubmit }) {
   const isEdit = Boolean(event);
+  const draftKey = "equipment_event_draft";
 
-  const [factory, setFactory] = useState(event?.["工場"] || "");
-  const [equipmentId, setEquipmentId] = useState(event?.equipmentId || "");
-  const [reportedBy, setReportedBy] = useState(event?.["名前"] || username || "");
-  const [date, setDate] = useState(event?.date || new Date().toISOString().split("T")[0]);
+  const initialDraft = useMemo(() => {
+    if (!isEdit) {
+      try {
+        const stored = localStorage.getItem(draftKey);
+        if (stored) return JSON.parse(stored);
+      } catch (e) {}
+    }
+    return null;
+  }, [isEdit]);
+
+  const [factory, setFactory] = useState(initialDraft?.factory || event?.["工場"] || "");
+  const [equipmentId, setEquipmentId] = useState(initialDraft?.equipmentId || event?.equipmentId || "");
+  const [reportedBy, setReportedBy] = useState(initialDraft?.reportedBy || event?.["名前"] || username || "");
+  const [date, setDate] = useState(initialDraft?.date || event?.date || new Date().toISOString().split("T")[0]);
   
-  const [title, setTitle] = useState(event?.title || "");
-  const [status, setStatus] = useState(event?.status || "Open");
-  const [details, setDetails] = useState(event?.details || "");
-  const [imageURLs, setImageURLs] = useState(event?.imageURLs || []);
-  const [resolutionTime, setResolutionTime] = useState(event?.resolutionTime || "");
+  const [title, setTitle] = useState(initialDraft?.title || event?.title || "");
+  const [status, setStatus] = useState(initialDraft?.status || event?.status || "Open");
+  const [details, setDetails] = useState(initialDraft?.details || event?.details || "");
+  const [imageURLs, setImageURLs] = useState(initialDraft?.imageURLs || event?.imageURLs || []);
+  const [resolutionTime, setResolutionTime] = useState(initialDraft?.resolutionTime || event?.resolutionTime || "");
 
-  const [attempts, setAttempts] = useState(event?.attempts || []);
+  const [attempts, setAttempts] = useState(initialDraft?.attempts || event?.attempts || []);
+
+  useEffect(() => {
+    if (!isEdit && !submitting) {
+      const draft = { factory, equipmentId, reportedBy, date, title, status, details, imageURLs, resolutionTime, attempts };
+      localStorage.setItem(draftKey, JSON.stringify(draft));
+    }
+  }, [factory, equipmentId, reportedBy, date, title, status, details, imageURLs, resolutionTime, attempts, isEdit, submitting]);
 
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState("");
@@ -344,8 +423,10 @@ function EventModal({ event, history, factories, allEquipment, workerNames, user
       ...prev,
       {
         attemptNumber: prev.length + 1,
+        title: "",
         fixDescription: "",
-        fixedBy: username || "",
+        result: "",
+        fixedBy: username ? [username] : [],
         status: "Success",
         timeToResolve: "",
         imageURLs: []
@@ -587,13 +668,6 @@ function EventModal({ event, history, factories, allEquipment, workerNames, user
                   <span className="material-symbols-outlined text-primary" style={{ fontSize: 20 }}>build</span>
                   Fix Attempts
                 </div>
-                <button
-                  type="button"
-                  onClick={addAttempt}
-                  className="text-xs font-semibold text-primary hover:bg-primary/10 px-3 py-1.5 rounded-lg transition-all flex items-center gap-1"
-                >
-                  <span className="material-symbols-outlined" style={{ fontSize: 14 }}>add</span> Add Attempt
-                </button>
               </div>
 
               {attempts.length === 0 ? (
@@ -618,16 +692,31 @@ function EventModal({ event, history, factories, allEquipment, workerNames, user
                         </span>
                       </div>
 
+                      <div className="flex flex-col gap-3 mb-4">
+                        <input
+                          type="text"
+                          value={attempt.title || ""}
+                          onChange={(e) => updateAttempt(index, "title", e.target.value)}
+                          placeholder="Attempt Title (e.g. Belt Realignment)"
+                          className={`${inputCls} font-medium`}
+                        />
+                        <textarea
+                          value={attempt.fixDescription || ""}
+                          onChange={(e) => updateAttempt(index, "fixDescription", e.target.value)}
+                          placeholder="What did you do?"
+                          className={`${inputCls} resize-none`}
+                          rows={2}
+                        />
+                        <textarea
+                          value={attempt.result || ""}
+                          onChange={(e) => updateAttempt(index, "result", e.target.value)}
+                          placeholder="What was the result?"
+                          className={`${inputCls} resize-none`}
+                          rows={2}
+                        />
+                      </div>
+
                       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-3">
-                        <div className="sm:col-span-3">
-                          <input
-                            type="text"
-                            value={attempt.fixDescription}
-                            onChange={(e) => updateAttempt(index, "fixDescription", e.target.value)}
-                            placeholder="What was done? (e.g. Realigned the guide rail)"
-                            className={inputCls}
-                          />
-                        </div>
                         <div>
                           <select 
                             value={attempt.status} 
@@ -640,11 +729,12 @@ function EventModal({ event, history, factories, allEquipment, workerNames, user
                         </div>
                         <div>
                           <SearchableSelect
-                            value={attempt.fixedBy}
+                            value={Array.isArray(attempt.fixedBy) ? attempt.fixedBy : (attempt.fixedBy ? [attempt.fixedBy] : [])}
                             onChange={(val) => updateAttempt(index, "fixedBy", val)}
                             options={workerNames}
-                            placeholder="— Worker —"
+                            placeholder="— Worker(s) —"
                             className={inputCls}
+                            isMulti
                           />
                         </div>
                         <div>
@@ -722,6 +812,16 @@ function EventModal({ event, history, factories, allEquipment, workerNames, user
                   ))}
                 </div>
               )}
+              
+              <div className="mt-4 flex justify-center">
+                <button
+                  type="button"
+                  onClick={addAttempt}
+                  className="text-sm font-semibold text-primary hover:bg-primary/10 px-4 py-2 rounded-xl border border-primary/20 transition-all flex items-center gap-2"
+                >
+                  <span className="material-symbols-outlined" style={{ fontSize: 16 }}>add</span> Add Attempt
+                </button>
+              </div>
             </div>
             
             {uploadError && <p className="text-xs text-error">{uploadError}</p>}
@@ -911,12 +1011,13 @@ export default function EquipmentHistoryPage() {
     setSubmitting(true);
     try {
       if (editingEvent) {
-        const id = editingEvent._id?.$oid ?? editingEvent._id;
-        await updateSetsubiHistoryRecord(id, { ...data, updatedBy: username });
+        await updateSetsubiHistoryRecord(editingEvent._id.$oid ?? editingEvent._id, { ...data, updatedBy: username });
       } else {
         await createSetsubiHistoryRecord({ ...data, submittedBy: username });
+        localStorage.removeItem("equipment_event_draft");
       }
       setModalOpen(false);
+      setEditingEvent(null);
       setHistoryRefresh((n) => n + 1);
     } catch (err) {
       alert(err?.message || "Failed to save record.");
