@@ -741,7 +741,7 @@ function EventModal({ event, history, factories, allEquipment, workerNames, user
                         
                         <div 
                           className={`flex items-center gap-2 cursor-pointer ${isExpanded ? 'mb-3' : ''}`}
-                          onClick={() => startTransition(() => setExpandedAttemptIndex(index))}
+                          onClick={() => startTransition(() => setExpandedAttemptIndex(isExpanded ? null : index))}
                         >
                           <span className="bg-surface-container-high text-on-surface text-[10px] font-bold px-2 py-0.5 rounded-md">
                             #{attempt.attemptNumber}
