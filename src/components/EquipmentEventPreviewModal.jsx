@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { createPortal } from "react-dom";
 import { useLanguage } from "../contexts/LanguageContext";
 import SensorDevicePhotoPreviewModal from "./SensorDevicePhotoPreviewModal";
 
@@ -26,8 +27,8 @@ export default function EquipmentEventPreviewModal({ event, onClose, onEdit, onE
 
   const attempts = event.attempts || [];
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 lg:p-12 bg-black/40 backdrop-blur-sm animate-in fade-in duration-200" onClick={onClose}>
+  return createPortal(
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 lg:p-12 bg-black/40 backdrop-blur-sm animate-in fade-in duration-200" onClick={onClose}>
       <div 
         className="w-full max-w-4xl max-h-full flex flex-col bg-surface rounded-2xl shadow-xl border border-separator/20 overflow-hidden"
         onClick={e => e.stopPropagation()}
@@ -320,6 +321,7 @@ export default function EquipmentEventPreviewModal({ event, onClose, onEdit, onE
           }}
         />
       )}
-    </div>
+    </div>,
+    document.body
   );
 }
