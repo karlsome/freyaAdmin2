@@ -301,6 +301,11 @@ function EventModal({ event, history, factories, allEquipment, workerNames, user
   const { language } = useLanguage();
   const [activeAttemptTabs, setActiveAttemptTabs] = useState({});
   const attemptSnapshotsRef = useRef({});
+  const attemptsRef = useRef(attempts);
+
+  useEffect(() => {
+    attemptsRef.current = attempts;
+  }, [attempts]);
 
   async function performSmartTranslation(index, oldAtt, newAtt) {
     const activeTab = activeAttemptTabs[index] || (language === "ja" ? "ja" : "en");
@@ -345,20 +350,26 @@ function EventModal({ event, history, factories, allEquipment, workerNames, user
     }
   }
 
-  function handleToggleCollapse(index, isExpanded) {
+  function changeExpandedAttempt(newIndex, latestAttempts = attemptsRef.current) {
     startTransition(() => {
-      if (!isExpanded) {
-        attemptSnapshotsRef.current[index] = { ...attempts[index] };
-        setExpandedAttemptIndex(index);
-      } else {
-        const oldAtt = attemptSnapshotsRef.current[index];
-        const newAtt = attempts[index];
+      if (expandedAttemptIndex !== null && expandedAttemptIndex !== newIndex) {
+        const oldAtt = attemptSnapshotsRef.current[expandedAttemptIndex];
+        const newAtt = latestAttempts[expandedAttemptIndex];
         if (oldAtt && newAtt) {
-          performSmartTranslation(index, oldAtt, newAtt);
+          performSmartTranslation(expandedAttemptIndex, oldAtt, newAtt);
         }
-        setExpandedAttemptIndex(null);
       }
+
+      if (newIndex !== null) {
+        attemptSnapshotsRef.current[newIndex] = { ...latestAttempts[newIndex] };
+      }
+
+      setExpandedAttemptIndex(newIndex);
     });
+  }
+
+  function handleToggleCollapse(index, isExpanded) {
+    changeExpandedAttempt(isExpanded ? null : index);
   }
 
   useEffect(() => {
@@ -508,27 +519,26 @@ function EventModal({ event, history, factories, allEquipment, workerNames, user
 
   function addAttempt() {
     setAttempts(prev => {
-      setExpandedAttemptIndex(prev.length);
-      return [
-        ...prev,
-        {
-          attemptNumber: prev.length + 1,
-          title: "",
-          title_en: "",
-          title_ja: "",
-          fixDescription: "",
-          fixDescription_en: "",
-          fixDescription_ja: "",
-          result: "",
-          result_en: "",
-          result_ja: "",
-          fixedBy: [],
-          status: "Success",
-          date: new Date().toISOString().split("T")[0],
-          timeToResolve: "",
-          imageURLs: []
-        }
-      ];
+      const newAttempt = {
+        attemptNumber: prev.length + 1,
+        title: "",
+        title_en: "",
+        title_ja: "",
+        fixDescription: "",
+        fixDescription_en: "",
+        fixDescription_ja: "",
+        result: "",
+        result_en: "",
+        result_ja: "",
+        fixedBy: [],
+        status: "Success",
+        date: new Date().toISOString().split("T")[0],
+        timeToResolve: "",
+        imageURLs: []
+      };
+      const newAttemptsList = [...prev, newAttempt];
+      changeExpandedAttempt(prev.length, newAttemptsList);
+      return newAttemptsList;
     });
   }
 
