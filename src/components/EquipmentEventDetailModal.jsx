@@ -1,8 +1,18 @@
-import React from "react";
+import React, { useState } from "react";
 import { useLanguage } from "../contexts/LanguageContext";
+import SensorDevicePhotoPreviewModal from "./SensorDevicePhotoPreviewModal";
+
+function isVideoUrl(url) {
+  return /\.(mp4|mov|webm)$/i.test(url.split("?")[0]);
+}
+
+function isImageUrl(url) {
+  return /\.(jpeg|jpg|gif|png|webp|svg)$/i.test(url.split("?")[0]);
+}
 
 export default function EquipmentEventDetailModal({ event, onClose, onEdit }) {
   const { language } = useLanguage();
+  const [previewState, setPreviewState] = useState(null);
 
   if (!event) return null;
 
@@ -76,19 +86,67 @@ export default function EquipmentEventDetailModal({ event, onClose, onEdit }) {
             <div className="text-base text-on-surface-variant whitespace-pre-wrap">
               {details || <span className="italic text-outline">No details provided.</span>}
             </div>
-            {event.imageURLs && event.imageURLs.length > 0 && (
-              <div className="flex gap-4 overflow-x-auto pb-4">
-                {event.imageURLs.map((url, i) => (
-                  <div key={i} className="flex-shrink-0 w-32 h-32 rounded-xl overflow-hidden border border-separator/30 bg-surface-container">
-                    {url.toLowerCase().match(/\.(mp4|mov|webm)$/) ? (
-                      <video src={url} className="w-full h-full object-cover" controls />
-                    ) : (
-                      <img src={url} alt="Issue" className="w-full h-full object-cover" />
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
+            {event.imageURLs && event.imageURLs.length > 0 && (() => {
+              const videos = event.imageURLs.filter(isVideoUrl);
+              const images = event.imageURLs.filter(isImageUrl);
+              const others = event.imageURLs.filter(u => !isVideoUrl(u) && !isImageUrl(u));
+              
+              const allMedia = [...videos, ...images]; // for the carousel
+              const openPreview = (url) => {
+                const idx = allMedia.indexOf(url);
+                if (idx >= 0) {
+                  setPreviewState({
+                    images: allMedia.map(u => ({ url: u, label: "Event Attachment" })),
+                    activeIndex: idx,
+                    displayName: "Report Attachments",
+                    eyebrow: title || "Event"
+                  });
+                } else {
+                  window.open(url, "_blank");
+                }
+              };
+
+              return (
+                <div className="space-y-4 pt-4">
+                  {videos.length > 0 && (
+                    <div>
+                      <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline mb-2">Videos</div>
+                      <div className="flex gap-4 overflow-x-auto pb-2">
+                        {videos.map((url, i) => (
+                          <div key={i} className="flex-shrink-0 w-32 h-32 rounded-xl overflow-hidden border border-separator/30 bg-surface-container cursor-pointer hover:opacity-80 transition-opacity" onClick={() => openPreview(url)}>
+                            <video src={url + "#t=0.001"} preload="metadata" className="w-full h-full object-cover bg-black" />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {images.length > 0 && (
+                    <div>
+                      <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline mb-2">Images</div>
+                      <div className="flex gap-4 overflow-x-auto pb-2">
+                        {images.map((url, i) => (
+                          <div key={i} className="flex-shrink-0 w-32 h-32 rounded-xl overflow-hidden border border-separator/30 bg-surface-container cursor-pointer hover:opacity-80 transition-opacity" onClick={() => openPreview(url)}>
+                            <img src={url} alt="Issue" className="w-full h-full object-cover" />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {others.length > 0 && (
+                    <div>
+                      <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline mb-2">Other Files</div>
+                      <div className="flex gap-4 overflow-x-auto pb-2">
+                        {others.map((url, i) => (
+                          <div key={i} className="flex-shrink-0 w-16 h-16 rounded-xl border border-separator/30 bg-surface-container flex items-center justify-center cursor-pointer hover:bg-surface-container-high transition-colors" onClick={() => window.open(url, "_blank")}>
+                            <span className="material-symbols-outlined text-outline" style={{ fontSize: 24 }}>insert_drive_file</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
           </div>
 
           {/* Attempts Timeline */}
@@ -147,22 +205,67 @@ export default function EquipmentEventDetailModal({ event, onClose, onEdit }) {
                           </div>
                         </div>
 
-                        {att.imageURLs && att.imageURLs.length > 0 && (
-                          <div className="pt-2">
-                            <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline mb-2">Attachments</div>
-                            <div className="flex flex-wrap gap-3">
-                              {att.imageURLs.map((url, i) => (
-                                <div key={i} className="w-24 h-24 rounded-lg overflow-hidden border border-separator/30 bg-surface-container">
-                                  {url.toLowerCase().match(/\.(mp4|mov|webm)$/) ? (
-                                    <video src={url} className="w-full h-full object-cover" controls />
-                                  ) : (
-                                    <img src={url} alt={`Attempt ${idx + 1}`} className="w-full h-full object-cover" />
-                                  )}
+                        {att.imageURLs && att.imageURLs.length > 0 && (() => {
+                          const attVideos = att.imageURLs.filter(isVideoUrl);
+                          const attImages = att.imageURLs.filter(isImageUrl);
+                          const attOthers = att.imageURLs.filter(u => !isVideoUrl(u) && !isImageUrl(u));
+                          
+                          const allAttMedia = [...attVideos, ...attImages];
+                          const openAttPreview = (url) => {
+                            const idx = allAttMedia.indexOf(url);
+                            if (idx >= 0) {
+                              setPreviewState({
+                                images: allAttMedia.map(u => ({ url: u, label: "Attempt Attachment" })),
+                                activeIndex: idx,
+                                displayName: attTitle || `Attempt ${att.attemptNumber || idx + 1}`,
+                                eyebrow: title || "Event"
+                              });
+                            } else {
+                              window.open(url, "_blank");
+                            }
+                          };
+
+                          return (
+                            <div className="pt-2 space-y-4">
+                              {attVideos.length > 0 && (
+                                <div>
+                                  <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline mb-2">Videos</div>
+                                  <div className="flex flex-wrap gap-3">
+                                    {attVideos.map((url, i) => (
+                                      <div key={i} className="w-24 h-24 rounded-lg overflow-hidden border border-separator/30 bg-surface-container cursor-pointer hover:opacity-80 transition-opacity" onClick={() => openAttPreview(url)}>
+                                        <video src={url + "#t=0.001"} preload="metadata" className="w-full h-full object-cover bg-black" />
+                                      </div>
+                                    ))}
+                                  </div>
                                 </div>
-                              ))}
+                              )}
+                              {attImages.length > 0 && (
+                                <div>
+                                  <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline mb-2">Images</div>
+                                  <div className="flex flex-wrap gap-3">
+                                    {attImages.map((url, i) => (
+                                      <div key={i} className="w-24 h-24 rounded-lg overflow-hidden border border-separator/30 bg-surface-container cursor-pointer hover:opacity-80 transition-opacity" onClick={() => openAttPreview(url)}>
+                                        <img src={url} alt={`Attempt`} className="w-full h-full object-cover" />
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+                              {attOthers.length > 0 && (
+                                <div>
+                                  <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline mb-2">Other Files</div>
+                                  <div className="flex flex-wrap gap-3">
+                                    {attOthers.map((url, i) => (
+                                      <div key={i} className="w-12 h-12 rounded-lg border border-separator/30 bg-surface-container flex items-center justify-center cursor-pointer hover:bg-surface-container-high transition-colors" onClick={() => window.open(url, "_blank")}>
+                                        <span className="material-symbols-outlined text-outline" style={{ fontSize: 20 }}>insert_drive_file</span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
                             </div>
-                          </div>
-                        )}
+                          );
+                        })()}
                       </div>
                     </div>
                   );
@@ -173,6 +276,16 @@ export default function EquipmentEventDetailModal({ event, onClose, onEdit }) {
 
         </div>
       </div>
+      
+      {previewState && (
+        <SensorDevicePhotoPreviewModal 
+          preview={previewState} 
+          onClose={() => setPreviewState(null)} 
+          onNavigate={(dir) => {
+            setPreviewState(prev => prev ? { ...prev, activeIndex: prev.activeIndex + dir } : null);
+          }} 
+        />
+      )}
     </div>
   );
 }

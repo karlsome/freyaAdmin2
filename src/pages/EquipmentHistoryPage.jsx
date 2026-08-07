@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState, startTransition } from "react";
 import { createPortal } from "react-dom";
+import { useSearchParams } from "react-router-dom";
 import {
   createSetsubiHistoryRecord,
   updateSetsubiHistoryRecord,
@@ -1279,6 +1280,35 @@ export default function EquipmentHistoryPage() {
   const [viewingEvent, setViewingEvent] = useState(null);
   const [submitting, setSubmitting] = useState(false);
 
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  // Load the viewing event from URL if it exists
+  useEffect(() => {
+    const urlEventId = searchParams.get("eventId");
+    if (urlEventId && history.length > 0) {
+      if (!viewingEvent || (viewingEvent._id?.$oid ?? viewingEvent._id) !== urlEventId) {
+        const found = history.find(h => (h._id?.$oid ?? h._id) === urlEventId);
+        if (found) {
+          setViewingEvent(found);
+        }
+      }
+    } else if (!urlEventId && viewingEvent) {
+      setViewingEvent(null);
+    }
+  }, [searchParams, history, viewingEvent]);
+
+  function handleSetViewingEvent(evt) {
+    if (evt) {
+      const newParams = new URLSearchParams(searchParams);
+      newParams.set("eventId", evt._id?.$oid ?? evt._id);
+      setSearchParams(newParams);
+    } else {
+      const newParams = new URLSearchParams(searchParams);
+      newParams.delete("eventId");
+      setSearchParams(newParams);
+    }
+  }
+
   // Load factories, equipment, worker names
   useEffect(() => {
     let active = true;
@@ -1474,9 +1504,9 @@ export default function EquipmentHistoryPage() {
       {viewingEvent ? (
         <EquipmentEventDetailModal
           event={viewingEvent}
-          onClose={() => setViewingEvent(null)}
+          onClose={() => handleSetViewingEvent(null)}
           onEdit={(evt) => {
-            setViewingEvent(null);
+            handleSetViewingEvent(null);
             openEdit(evt);
           }}
         />
@@ -1567,7 +1597,7 @@ export default function EquipmentHistoryPage() {
                   return (
                     <tr
                       key={key}
-                      onClick={() => setViewingEvent(event)}
+                      onClick={() => handleSetViewingEvent(event)}
                       className="cursor-pointer hover:bg-surface-container/50 transition-colors group"
                     >
                       <td className="px-4 py-4 whitespace-nowrap">
