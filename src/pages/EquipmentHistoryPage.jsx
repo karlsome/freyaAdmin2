@@ -20,10 +20,7 @@ const inputCls =
 function compressImage(file) {
   return new Promise((resolve, reject) => {
     if (!file.type.startsWith("image/") || file.type === "image/gif") {
-      const reader = new FileReader();
-      reader.onerror = () => reject(new Error("Failed to read file"));
-      reader.onloadend = () => resolve(String(reader.result || ""));
-      reader.readAsDataURL(file);
+      resolve({ file });
       return;
     }
     const reader = new FileReader();
@@ -51,7 +48,7 @@ function compressImage(file) {
         canvas.height = height;
         const ctx = canvas.getContext("2d");
         ctx.drawImage(img, 0, 0, width, height);
-        resolve(canvas.toDataURL("image/jpeg", 0.7));
+        resolve({ base64: canvas.toDataURL("image/jpeg", 0.7) });
       };
       img.onerror = () => reject(new Error("Failed to load image for compression"));
       img.src = e.target.result;
@@ -379,10 +376,16 @@ function EventModal({ event, history, factories, allEquipment, workerNames, user
     setUploading(true);
     setUploadError("");
     const results = await Promise.allSettled(
-      files.map(async (file) => {
-        const base64 = await compressImage(file);
-        console.log(`Starting upload for ${file.name}, compressed size: ${Math.round(base64.length / 1024)}KB`);
+      files.map(async (fileObj) => {
+        const { base64, file: rawFile } = await compressImage(fileObj);
+        if (base64) {
+          console.log(`Starting upload for ${fileObj.name}, compressed size: ${Math.round(base64.length / 1024)}KB`);
+        } else {
+          console.log(`Starting upload for ${fileObj.name}, raw file size: ${Math.round(rawFile.size / 1024)}KB`);
+        }
+        
         const result = await uploadEquipmentEventImage({
+          file: rawFile,
           base64,
           factoryName: factory,
           equipmentName: selectedEquipment?.name || "",
