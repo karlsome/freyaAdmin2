@@ -113,8 +113,11 @@ export default function EquipmentEventDetailModal({ event, onClose, onEdit }) {
                       <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline mb-2">Videos</div>
                       <div className="flex gap-4 overflow-x-auto pb-2">
                         {videos.map((url, i) => (
-                          <div key={i} className="flex-shrink-0 w-32 h-32 rounded-xl overflow-hidden border border-separator/30 bg-surface-container cursor-pointer hover:opacity-80 transition-opacity" onClick={() => openPreview(url)}>
+                          <div key={i} className="relative flex-shrink-0 w-32 h-32 rounded-xl overflow-hidden border border-separator/30 bg-surface-container cursor-pointer hover:opacity-80 transition-opacity group" onClick={() => openPreview(url)}>
                             <video src={url + "#t=0.001"} preload="metadata" className="w-full h-full object-cover bg-black" />
+                            <div className="absolute inset-0 flex items-center justify-center bg-black/20 group-hover:bg-black/40 transition-colors">
+                              <span className="material-symbols-outlined text-white drop-shadow-md" style={{ fontSize: 40 }}>play_circle</span>
+                            </div>
                           </div>
                         ))}
                       </div>
@@ -232,8 +235,11 @@ export default function EquipmentEventDetailModal({ event, onClose, onEdit }) {
                                   <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline mb-2">Videos</div>
                                   <div className="flex flex-wrap gap-3">
                                     {attVideos.map((url, i) => (
-                                      <div key={i} className="w-24 h-24 rounded-lg overflow-hidden border border-separator/30 bg-surface-container cursor-pointer hover:opacity-80 transition-opacity" onClick={() => openAttPreview(url)}>
+                                      <div key={i} className="relative w-24 h-24 rounded-lg overflow-hidden border border-separator/30 bg-surface-container cursor-pointer hover:opacity-80 transition-opacity group" onClick={() => openAttPreview(url)}>
                                         <video src={url + "#t=0.001"} preload="metadata" className="w-full h-full object-cover bg-black" />
+                                        <div className="absolute inset-0 flex items-center justify-center bg-black/20 group-hover:bg-black/40 transition-colors">
+                                          <span className="material-symbols-outlined text-white drop-shadow-md" style={{ fontSize: 32 }}>play_circle</span>
+                                        </div>
                                       </div>
                                     ))}
                                   </div>
