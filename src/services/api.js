@@ -1314,11 +1314,21 @@ export async function createWorkerRecord(name) {
 
 // ─── Equipment history (submittedDB › setsubiHistory) ─────────────────────────
 
-export async function fetchSetsubiHistoryRecords({ factory, equipmentId } = {}) {
-  const q = { _deleted: { $ne: true } };
-  if (factory) q["工場"] = factory;
-  if (equipmentId) q.equipmentId = equipmentId;
-  return query("submittedDB", "setsubiHistory", q, { sort: { date: -1, createdAt: -1 } });
+export async function fetchSetsubiHistoryRecords({ factory, equipmentId, status, search, dateFrom, dateTo, page = 1, limit = 50, sortDir = "desc" } = {}) {
+  const params = new URLSearchParams();
+  if (factory) params.append("factory", factory);
+  if (equipmentId) params.append("equipmentId", equipmentId);
+  if (status) params.append("status", status);
+  if (search) params.append("search", search);
+  if (dateFrom) params.append("dateFrom", dateFrom);
+  if (dateTo) params.append("dateTo", dateTo);
+  params.append("page", page);
+  params.append("limit", limit);
+  params.append("sortDir", sortDir);
+
+  const res = await fetch(`${BASE_URL}api/setsubi-history?${params.toString()}`);
+  if (!res.ok) throw new Error(`API ${res.status}: ${await res.text()}`);
+  return res.json();
 }
 
 export async function createSetsubiHistoryRecord(data) {

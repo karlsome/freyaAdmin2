@@ -1265,9 +1265,13 @@ export default function EquipmentHistoryPage() {
   const [filterFactory, setFilterFactory] = useState("");
   const [filterEquipmentId, setFilterEquipmentId] = useState("");
   const [filterStatus, setFilterStatus] = useState("");
-  const [searchQuery, setSearchQuery] = useState("");
+  const [searchInput, setSearchInput] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
 
   const [history, setHistory] = useState([]);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [historyError, setHistoryError] = useState("");
   const [historyRefresh, setHistoryRefresh] = useState(0);
@@ -1341,7 +1345,16 @@ export default function EquipmentHistoryPage() {
     return () => { active = false; };
   }, []);
 
-  // Load history when filter changes
+  // Debounce search input
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearch(searchInput);
+      setPage(1); // Reset to page 1 on new search
+    }, 400);
+    return () => clearTimeout(handler);
+  }, [searchInput]);
+
+  // Load history when filters/page change
   useEffect(() => {
     let active = true;
     setHistoryLoading(true);
@@ -1349,12 +1362,25 @@ export default function EquipmentHistoryPage() {
     fetchSetsubiHistoryRecords({
       factory: filterFactory || undefined,
       equipmentId: filterEquipmentId || undefined,
+      status: filterStatus || undefined,
+      search: debouncedSearch || undefined,
+      dateFrom: dateFrom || undefined,
+      dateTo: dateTo || undefined,
+      page,
+      limit: 50,
+      sortDir
     })
-      .then((rows) => { if (active) setHistory(Array.isArray(rows) ? rows : []); })
+      .then((res) => { 
+        if (active) {
+          setHistory(Array.isArray(res.items) ? res.items : []);
+          setTotalPages(res.totalPages || 1);
+          setTotalCount(res.totalCount || 0);
+        }
+      })
       .catch((err) => { if (active) setHistoryError(err?.message || "Failed to load history."); })
       .finally(() => { if (active) setHistoryLoading(false); });
     return () => { active = false; };
-  }, [filterFactory, filterEquipmentId, historyRefresh]);
+  }, [filterFactory, filterEquipmentId, filterStatus, debouncedSearch, dateFrom, dateTo, page, sortDir, historyRefresh]);
 
   const factoryEquipment = useMemo(
     () => allEquipment.filter((eq) => eq["工場"] === filterFactory),
@@ -1372,6 +1398,7 @@ export default function EquipmentHistoryPage() {
   function handleFilterFactoryChange(val) {
     setFilterFactory(val);
     setFilterEquipmentId("");
+    setPage(1);
   }
 
   function openCreate() {
@@ -1403,44 +1430,6 @@ export default function EquipmentHistoryPage() {
     }
   }
 
-  const displayedHistory = useMemo(() => {
-    let rows = history;
-    if (dateFrom) rows = rows.filter((r) => (r.date || "") >= dateFrom);
-    if (dateTo) rows = rows.filter((r) => (r.date || "") <= dateTo);
-    if (filterStatus) rows = rows.filter((r) => r.status === filterStatus);
-    if (searchQuery) {
-      const q = searchQuery.toLowerCase();
-      rows = rows.filter(r => {
-        // Collect all searchable text into an array
-        const searchableText = [
-          r.title, r.title_en, r.title_ja,
-          r.details, r.details_en, r.details_ja,
-          r.equipmentName, r["工場"], r["名前"], r.status
-        ];
-        
-        // Add all text from attempts
-        if (r.attempts && Array.isArray(r.attempts)) {
-          r.attempts.forEach(att => {
-            searchableText.push(
-              att.title, att.title_en, att.title_ja,
-              att.fixDescription, att.fixDescription_en, att.fixDescription_ja,
-              att.result, att.result_en, att.result_ja,
-              att.status, att.fixedBy
-            );
-          });
-        }
-
-        // Join everything into a single string and check if it includes the query
-        const combinedString = searchableText.filter(Boolean).join(" ").toLowerCase();
-        return combinedString.includes(q);
-      });
-    }
-    return [...rows].sort((a, b) => {
-      const da = a.date || "";
-      const db = b.date || "";
-      return sortDir === "asc" ? da.localeCompare(db) : db.localeCompare(da);
-    });
-  }, [history, dateFrom, dateTo, sortDir, filterStatus, searchQuery]);
 
   const tableTitle = filterEquipmentId
     ? selectedEquipmentName
@@ -1499,8 +1488,8 @@ export default function EquipmentHistoryPage() {
               <input
                 type="text"
                 placeholder="Search titles..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
                 className={inputCls}
               />
             </div>
@@ -1554,9 +1543,7 @@ export default function EquipmentHistoryPage() {
               <h3 className="text-base font-semibold text-on-surface">{tableTitle}</h3>
               {!historyLoading && history.length > 0 && (
                 <p className="text-xs text-outline mt-0.5">
-                  {displayedHistory.length !== history.length
-                    ? `Showing ${displayedHistory.length} of ${history.length} records`
-                    : `${history.length} total records`}
+                  {`${history.length} total records`}
                 </p>
               )}
             </div>
@@ -1582,7 +1569,7 @@ export default function EquipmentHistoryPage() {
           </div>
         )}
 
-        {!historyLoading && displayedHistory.length === 0 && (
+        {!historyLoading && history.length === 0 && (
           <div className="px-5 py-20 text-center">
             <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-surface-container">
               <span className="material-symbols-outlined text-outline" style={{ fontSize: 32 }}>search_off</span>
@@ -1593,7 +1580,7 @@ export default function EquipmentHistoryPage() {
         )}
 
         {/* Table */}
-        {!historyLoading && displayedHistory.length > 0 && (
+        {!historyLoading && history.length > 0 && (
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
@@ -1621,7 +1608,7 @@ export default function EquipmentHistoryPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-separator/20">
-                {displayedHistory.map((event, i) => {
+                {history.map((event, i) => {
                   const key = event._id?.$oid ?? event._id ?? i;
                   const attemptCount = Array.isArray(event.attempts) ? event.attempts.length : 0;
                   const status = event.status || "Open";
@@ -1681,6 +1668,36 @@ export default function EquipmentHistoryPage() {
                 })}
               </tbody>
             </table>
+          </div>
+        )}
+
+        {/* Pagination Controls */}
+        {!historyLoading && totalPages > 1 && (
+          <div className="px-5 py-4 border-t border-separator/20 flex items-center justify-between bg-surface/50">
+            <span className="text-sm text-outline">
+              Showing {(page - 1) * 50 + 1} to {Math.min(page * 50, totalCount)} of {totalCount} records
+            </span>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setPage(p => Math.max(1, p - 1))}
+                disabled={page === 1}
+                className="px-3 py-1.5 rounded-lg text-sm font-semibold bg-surface-container hover:bg-surface-container-high disabled:opacity-40 disabled:hover:bg-surface-container transition-colors"
+              >
+                Previous
+              </button>
+              <span className="text-sm font-semibold px-2">
+                Page {page} of {totalPages}
+              </span>
+              <button
+                type="button"
+                onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                disabled={page === totalPages}
+                className="px-3 py-1.5 rounded-lg text-sm font-semibold bg-surface-container hover:bg-surface-container-high disabled:opacity-40 disabled:hover:bg-surface-container transition-colors"
+              >
+                Next
+              </button>
+            </div>
           </div>
         )}
       </div>
