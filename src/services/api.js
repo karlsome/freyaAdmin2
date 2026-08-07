@@ -244,6 +244,11 @@ export async function deleteEquipmentEventImage(imageURL) {
   return _postJson("api/delete-equipment-event-image", { imageURL });
 }
 
+export async function translateTextApi(text, langpair = "en|ja") {
+  const res = await _postJson("api/translate", { text, langpair });
+  return res.translatedText;
+}
+
 // ─── Production data (aggregates all 4 process DBs) ──────────────────────────
 const PROCESS_COLLECTIONS = ["kensaDB", "pressDB", "slitDB", "SRSDB"];
 

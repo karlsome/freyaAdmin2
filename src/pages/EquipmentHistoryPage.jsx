@@ -9,10 +9,13 @@ import {
   fetchWorkerNames,
   uploadEquipmentEventImage,
   deleteEquipmentEventImage,
+  translateTextApi
 } from "../services/api";
 import { getAuthUser } from "../utils/masterDB";
 import PageHeader from "../components/PageHeader";
 import SensorDevicePhotoPreviewModal from "../components/SensorDevicePhotoPreviewModal";
+import { useLanguage } from "../contexts/LanguageContext";
+import MasterTabNav from "../components/MasterTabNav";
 
 const inputCls =
   "w-full rounded-xl border border-outline-variant/30 bg-surface px-3 py-3 text-sm text-on-surface outline-none transition-all duration-150 focus:border-primary/40 disabled:opacity-50 font-body";
@@ -294,6 +297,69 @@ function EventModal({ event, history, factories, allEquipment, workerNames, user
   const [resolutionTime, setResolutionTime] = useState(initialDraft?.resolutionTime || event?.resolutionTime || "");
 
   const [attempts, setAttempts] = useState(initialDraft?.attempts || event?.attempts || []);
+  
+  const { language } = useLanguage();
+  const [activeAttemptTabs, setActiveAttemptTabs] = useState({});
+  const attemptSnapshotsRef = useRef({});
+
+  async function performSmartTranslation(index, oldAtt, newAtt) {
+    const activeTab = activeAttemptTabs[index] || (language === "ja" ? "ja" : "en");
+    const targetTab = activeTab === "en" ? "ja" : "en";
+    const langpair = activeTab === "ja" ? "ja|en" : "en|ja";
+
+    let updatedFields = {};
+
+    const checkAndTranslate = async (fieldBase) => {
+      const srcField = `${fieldBase}_${activeTab}`;
+      const targetField = `${fieldBase}_${targetTab}`;
+      
+      const fallbackOld = activeTab === "en" ? (oldAtt[fieldBase] || "") : "";
+      const fallbackNew = activeTab === "en" ? (newAtt[fieldBase] || "") : "";
+      
+      const oldVal = oldAtt[srcField] ?? fallbackOld;
+      const newVal = newAtt[srcField] ?? fallbackNew;
+      
+      if (newVal && newVal.trim() !== "" && newVal !== oldVal) {
+        try {
+          const translated = await translateTextApi(newVal, langpair);
+          updatedFields[targetField] = translated;
+          if (targetTab === "en") updatedFields[fieldBase] = translated;
+        } catch (e) {
+          console.error(`Translation failed for ${fieldBase}:`, e);
+        }
+      }
+    };
+
+    await Promise.all([
+      checkAndTranslate("title"),
+      checkAndTranslate("fixDescription"),
+      checkAndTranslate("result")
+    ]);
+
+    if (Object.keys(updatedFields).length > 0) {
+      setAttempts(prev => {
+        const newAtt = [...prev];
+        newAtt[index] = { ...newAtt[index], ...updatedFields };
+        return newAtt;
+      });
+    }
+  }
+
+  function handleToggleCollapse(index, isExpanded) {
+    startTransition(() => {
+      if (!isExpanded) {
+        attemptSnapshotsRef.current[index] = { ...attempts[index] };
+        setExpandedAttemptIndex(index);
+      } else {
+        const oldAtt = attemptSnapshotsRef.current[index];
+        const newAtt = attempts[index];
+        if (oldAtt && newAtt) {
+          performSmartTranslation(index, oldAtt, newAtt);
+        }
+        setExpandedAttemptIndex(null);
+      }
+    });
+  }
 
   useEffect(() => {
     if (!isEdit && !submitting) {
@@ -448,8 +514,14 @@ function EventModal({ event, history, factories, allEquipment, workerNames, user
         {
           attemptNumber: prev.length + 1,
           title: "",
+          title_en: "",
+          title_ja: "",
           fixDescription: "",
+          fixDescription_en: "",
+          fixDescription_ja: "",
           result: "",
+          result_en: "",
+          result_ja: "",
           fixedBy: [],
           status: "Success",
           date: new Date().toISOString().split("T")[0],
@@ -745,7 +817,7 @@ function EventModal({ event, history, factories, allEquipment, workerNames, user
                         
                         <div 
                           className={`flex items-center gap-2 cursor-pointer ${isExpanded ? 'mb-3' : ''}`}
-                          onClick={() => startTransition(() => setExpandedAttemptIndex(isExpanded ? null : index))}
+                          onClick={() => handleToggleCollapse(index, isExpanded)}
                         >
                           <span className="bg-surface-container-high text-on-surface text-[10px] font-bold px-2 py-0.5 rounded-md">
                             #{attempt.attemptNumber}
@@ -788,33 +860,62 @@ function EventModal({ event, history, factories, allEquipment, workerNames, user
                           )}
                         </div>
 
+                        {isExpanded && (() => {
+                          const activeTab = activeAttemptTabs[index] || (language === "ja" ? "ja" : "en");
+                          const isEn = activeTab === "en";
+
+                          return (
+                            <>
+                              <div className="mb-4">
+                                <MasterTabNav
+                                  tabs={[
+                                    { key: "en", label: "English 🇺🇸" },
+                                    { key: "ja", label: "日本語 🇯🇵" }
+                                  ]}
+                                  activeTab={activeTab}
+                                  onSelect={(tab) => setActiveAttemptTabs(prev => ({ ...prev, [index]: tab.key }))}
+                                />
+                              </div>
+
+                              <div className="flex flex-col gap-3 mb-4">
+                                <input
+                                  type="text"
+                                  value={isEn ? (attempt.title_en ?? attempt.title ?? "") : (attempt.title_ja ?? "")}
+                                  onChange={(e) => {
+                                    updateAttempt(index, isEn ? "title_en" : "title_ja", e.target.value);
+                                    if (isEn) updateAttempt(index, "title", e.target.value);
+                                  }}
+                                  placeholder={isEn ? "Attempt Title (e.g. Belt Realignment)" : "タイトル"}
+                                  className={`${inputCls} font-medium`}
+                                />
+                                <textarea
+                                  value={isEn ? (attempt.fixDescription_en ?? attempt.fixDescription ?? "") : (attempt.fixDescription_ja ?? "")}
+                                  onChange={(e) => {
+                                    updateAttempt(index, isEn ? "fixDescription_en" : "fixDescription_ja", e.target.value);
+                                    if (isEn) updateAttempt(index, "fixDescription", e.target.value);
+                                  }}
+                                  placeholder={isEn ? "What did you do?" : "何をしましたか？"}
+                                  className={`${inputCls} resize-none`}
+                                  rows={2}
+                                />
+                                <textarea
+                                  value={isEn ? (attempt.result_en ?? attempt.result ?? "") : (attempt.result_ja ?? "")}
+                                  onChange={(e) => {
+                                    updateAttempt(index, isEn ? "result_en" : "result_ja", e.target.value);
+                                    if (isEn) updateAttempt(index, "result", e.target.value);
+                                  }}
+                                  placeholder={isEn ? "What was the result?" : "結果はどうでしたか？"}
+                                  className={`${inputCls} resize-none`}
+                                  rows={2}
+                                />
+                              </div>
+                            </>
+                          );
+                        })()}
+
                         {isExpanded && (
                           <>
-                            <div className="flex flex-col gap-3 mb-4">
-                              <input
-                                type="text"
-                                value={attempt.title || ""}
-                                onChange={(e) => updateAttempt(index, "title", e.target.value)}
-                                placeholder="Attempt Title (e.g. Belt Realignment)"
-                                className={`${inputCls} font-medium`}
-                              />
-                              <textarea
-                                value={attempt.fixDescription || ""}
-                                onChange={(e) => updateAttempt(index, "fixDescription", e.target.value)}
-                                placeholder="What did you do?"
-                                className={`${inputCls} resize-none`}
-                                rows={2}
-                              />
-                              <textarea
-                                value={attempt.result || ""}
-                                onChange={(e) => updateAttempt(index, "result", e.target.value)}
-                                placeholder="What was the result?"
-                                className={`${inputCls} resize-none`}
-                                rows={2}
-                              />
-                            </div>
-
-                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-3">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-3">
                         <div>
                           <select 
                             value={attempt.status} 
@@ -1021,6 +1122,7 @@ function EventModal({ event, history, factories, allEquipment, workerNames, user
           </div>
         </div>
       </div>
+
       <SensorDevicePhotoPreviewModal 
         preview={previewState} 
         onClose={() => setPreviewState(null)} 
