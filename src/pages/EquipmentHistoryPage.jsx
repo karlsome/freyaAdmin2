@@ -1410,10 +1410,30 @@ export default function EquipmentHistoryPage() {
     if (filterStatus) rows = rows.filter((r) => r.status === filterStatus);
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
-      rows = rows.filter(r => 
-        (r.title && r.title.toLowerCase().includes(q)) || 
-        (r.details && r.details.toLowerCase().includes(q))
-      );
+      rows = rows.filter(r => {
+        // Collect all searchable text into an array
+        const searchableText = [
+          r.title, r.title_en, r.title_ja,
+          r.details, r.details_en, r.details_ja,
+          r.equipmentName, r["工場"], r["名前"], r.status
+        ];
+        
+        // Add all text from attempts
+        if (r.attempts && Array.isArray(r.attempts)) {
+          r.attempts.forEach(att => {
+            searchableText.push(
+              att.title, att.title_en, att.title_ja,
+              att.fixDescription, att.fixDescription_en, att.fixDescription_ja,
+              att.result, att.result_en, att.result_ja,
+              att.status, att.fixedBy
+            );
+          });
+        }
+
+        // Join everything into a single string and check if it includes the query
+        const combinedString = searchableText.filter(Boolean).join(" ").toLowerCase();
+        return combinedString.includes(q);
+      });
     }
     return [...rows].sort((a, b) => {
       const da = a.date || "";
