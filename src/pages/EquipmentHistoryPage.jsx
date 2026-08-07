@@ -1341,15 +1341,11 @@ export default function EquipmentHistoryPage() {
 
   // Load history when filter changes
   useEffect(() => {
-    if (!filterFactory) {
-      setHistory([]);
-      return;
-    }
     let active = true;
     setHistoryLoading(true);
     setHistoryError("");
     fetchSetsubiHistoryRecords({
-      factory: filterFactory,
+      factory: filterFactory || undefined,
       equipmentId: filterEquipmentId || undefined,
     })
       .then((rows) => { if (active) setHistory(Array.isArray(rows) ? rows : []); })
@@ -1550,7 +1546,7 @@ export default function EquipmentHistoryPage() {
           </div>
         )}
 
-        {!historyLoading && filterFactory && displayedHistory.length === 0 && (
+        {!historyLoading && displayedHistory.length === 0 && (
           <div className="px-5 py-20 text-center">
             <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-surface-container">
               <span className="material-symbols-outlined text-outline" style={{ fontSize: 32 }}>search_off</span>
@@ -1577,7 +1573,7 @@ export default function EquipmentHistoryPage() {
                   </th>
                   {!filterEquipmentId && (
                     <th className="px-4 py-3.5 text-left text-[11px] font-semibold uppercase tracking-wider text-outline">
-                      Machine
+                      {!filterFactory ? "Factory & Machine" : "Machine"}
                     </th>
                   )}
                   <th className="px-4 py-3.5 text-left text-[11px] font-semibold uppercase tracking-wider text-outline">
@@ -1626,7 +1622,9 @@ export default function EquipmentHistoryPage() {
                       {!filterEquipmentId && (
                         <td className="px-4 py-4 whitespace-nowrap">
                           <p className="text-sm font-medium text-on-surface">
-                            {event.equipmentName || "—"}
+                            {!filterFactory 
+                              ? `${event["工場"] || "—"} / ${event.equipmentName || "—"}` 
+                              : event.equipmentName || "—"}
                           </p>
                         </td>
                       )}
