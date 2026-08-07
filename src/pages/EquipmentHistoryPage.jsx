@@ -16,6 +16,7 @@ import { getAuthUser } from "../utils/masterDB";
 import PageHeader from "../components/PageHeader";
 import SensorDevicePhotoPreviewModal from "../components/SensorDevicePhotoPreviewModal";
 import EquipmentEventDetailModal from "../components/EquipmentEventDetailModal";
+import EquipmentEventPreviewModal from "../components/EquipmentEventPreviewModal";
 import { useLanguage } from "../contexts/LanguageContext";
 import MasterTabNav from "../components/MasterTabNav";
 
@@ -1278,6 +1279,7 @@ export default function EquipmentHistoryPage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editingEvent, setEditingEvent] = useState(null);
   const [viewingEvent, setViewingEvent] = useState(null);
+  const [previewEvent, setPreviewEvent] = useState(null);
   const [submitting, setSubmitting] = useState(false);
 
   const [searchParams, setSearchParams] = useSearchParams();
@@ -1496,6 +1498,20 @@ export default function EquipmentHistoryPage() {
         </div>
       </div>
 
+      {/* Pop-up Preview Modal */}
+      <EquipmentEventPreviewModal
+        event={previewEvent}
+        onClose={() => setPreviewEvent(null)}
+        onEdit={(evt) => {
+          setPreviewEvent(null);
+          openEdit(evt);
+        }}
+        onExpand={(evt) => {
+          setPreviewEvent(null);
+          handleSetViewingEvent(evt);
+        }}
+      />
+
       {/* History table or Detail View */}
       {viewingEvent ? (
         <EquipmentEventDetailModal
@@ -1593,7 +1609,7 @@ export default function EquipmentHistoryPage() {
                   return (
                     <tr
                       key={key}
-                      onClick={() => handleSetViewingEvent(event)}
+                      onClick={() => setPreviewEvent(event)}
                       className="cursor-pointer hover:bg-surface-container/50 transition-colors group"
                     >
                       <td className="px-4 py-4 whitespace-nowrap">
