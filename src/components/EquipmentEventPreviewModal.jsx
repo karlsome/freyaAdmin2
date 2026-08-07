@@ -21,21 +21,6 @@ export default function EquipmentEventPreviewModal({ event, onClose, onEdit, onE
   const issueImages = (event.imageURLs || []).filter(isImageUrl);
 
   const attempts = event.attempts || [];
-  const latestAttempt = attempts.length > 0 ? attempts[attempts.length - 1] : null;
-
-  let attTitle = "";
-  let attDesc = "";
-  let attResult = "";
-  let attVideos = [];
-  let attImages = [];
-
-  if (latestAttempt) {
-    attTitle = language === "ja" ? (latestAttempt.title_ja || latestAttempt.title) : (latestAttempt.title_en || latestAttempt.title);
-    attDesc = language === "ja" ? (latestAttempt.fixDescription_ja || latestAttempt.fixDescription) : (latestAttempt.fixDescription_en || latestAttempt.fixDescription);
-    attResult = language === "ja" ? (latestAttempt.result_ja || latestAttempt.result) : (latestAttempt.result_en || latestAttempt.result);
-    attVideos = (latestAttempt.imageURLs || []).filter(isVideoUrl);
-    attImages = (latestAttempt.imageURLs || []).filter(isImageUrl);
-  }
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 lg:p-12 bg-black/40 backdrop-blur-sm animate-in fade-in duration-200" onClick={onClose}>
@@ -146,70 +131,80 @@ export default function EquipmentEventPreviewModal({ event, onClose, onEdit, onE
               )}
             </div>
 
-            {/* Right: Latest Attempt */}
-            <div>
-              <h3 className="text-sm font-bold text-on-surface border-b border-separator/40 pb-2 flex items-center justify-between">
-                Latest Attempt
-                {attempts.length > 1 && (
-                  <span className="text-[10px] font-semibold uppercase text-outline tracking-wider bg-surface-container px-2 py-0.5 rounded">
-                    {attempts.length} Total
-                  </span>
-                )}
+            {/* Right: Attempts List */}
+            <div className="flex flex-col h-full max-h-[500px]">
+              <h3 className="text-sm font-bold text-on-surface border-b border-separator/40 pb-2 mb-4 flex items-center justify-between shrink-0">
+                Troubleshooting Attempts
+                <span className="text-[10px] font-semibold uppercase text-outline tracking-wider bg-surface-container px-2 py-0.5 rounded">
+                  {attempts.length} Total
+                </span>
               </h3>
               
-              {latestAttempt ? (
-                <div className="space-y-4 pt-2">
-                  <div>
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="text-xs font-bold text-outline">#{latestAttempt.attemptNumber || attempts.length}</span>
-                      <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
-                        latestAttempt.status === "Success" ? "bg-primary/10 text-primary" :
-                        latestAttempt.status === "Failed" ? "bg-error/10 text-error" :
-                        "bg-surface-container-high text-on-surface-variant"
-                      }`}>
-                        {latestAttempt.status || "Unknown"}
-                      </span>
-                    </div>
-                    <h4 className="text-base font-bold text-on-surface">{attTitle || "Untitled Attempt"}</h4>
-                  </div>
-                  
-                  <div className="space-y-3">
-                    <div>
-                      <div className="text-xs font-semibold uppercase tracking-wider text-outline mb-1">Action Taken</div>
-                      <div className="text-sm text-on-surface-variant whitespace-pre-wrap">{attDesc || "—"}</div>
-                    </div>
-                    <div>
-                      <div className="text-xs font-semibold uppercase tracking-wider text-outline mb-1">Result</div>
-                      <div className="text-sm text-on-surface-variant whitespace-pre-wrap">{attResult || "—"}</div>
-                    </div>
-                  </div>
+              <div className="overflow-y-auto pr-2 space-y-8 pb-4">
+                {attempts.length > 0 ? (
+                  attempts.map((att, idx) => {
+                    const attTitle = language === "ja" ? (att.title_ja || att.title) : (att.title_en || att.title);
+                    const attDesc = language === "ja" ? (att.fixDescription_ja || att.fixDescription) : (att.fixDescription_en || att.fixDescription);
+                    const attResult = language === "ja" ? (att.result_ja || att.result) : (att.result_en || att.result);
+                    const attVideos = (att.imageURLs || []).filter(isVideoUrl);
+                    const attImages = (att.imageURLs || []).filter(isImageUrl);
 
-                  {(attVideos.length > 0 || attImages.length > 0) && (
-                    <div className="pt-2">
-                      <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline mb-2">Attachments</div>
-                      <div className="flex gap-2 flex-wrap">
-                        {attVideos.map((url, i) => (
-                          <div key={`att-vid-${i}`} className="relative w-12 h-12 rounded-md overflow-hidden border border-separator/30 bg-surface-container">
-                            <video src={url + "#t=0.001"} preload="metadata" className="w-full h-full object-cover bg-black" />
-                            <div className="absolute inset-0 flex items-center justify-center bg-black/20">
-                              <span className="material-symbols-outlined text-white drop-shadow-md" style={{ fontSize: 16 }}>play_circle</span>
+                    return (
+                      <div key={idx} className="space-y-4">
+                        <div>
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="text-xs font-bold text-outline">#{att.attemptNumber || idx + 1}</span>
+                            <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
+                              att.status === "Success" ? "bg-primary/10 text-primary" :
+                              att.status === "Failed" ? "bg-error/10 text-error" :
+                              "bg-surface-container-high text-on-surface-variant"
+                            }`}>
+                              {att.status || "Unknown"}
+                            </span>
+                          </div>
+                          <h4 className="text-base font-bold text-on-surface">{attTitle || "Untitled Attempt"}</h4>
+                        </div>
+                        
+                        <div className="space-y-3">
+                          <div>
+                            <div className="text-xs font-semibold uppercase tracking-wider text-outline mb-1">Action Taken</div>
+                            <div className="text-sm text-on-surface-variant whitespace-pre-wrap">{attDesc || "—"}</div>
+                          </div>
+                          <div>
+                            <div className="text-xs font-semibold uppercase tracking-wider text-outline mb-1">Result</div>
+                            <div className="text-sm text-on-surface-variant whitespace-pre-wrap">{attResult || "—"}</div>
+                          </div>
+                        </div>
+
+                        {(attVideos.length > 0 || attImages.length > 0) && (
+                          <div className="pt-2">
+                            <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline mb-2">Attachments</div>
+                            <div className="flex gap-2 flex-wrap">
+                              {attVideos.map((url, i) => (
+                                <div key={`att-vid-${i}`} className="relative w-12 h-12 rounded-md overflow-hidden border border-separator/30 bg-surface-container">
+                                  <video src={url + "#t=0.001"} preload="metadata" className="w-full h-full object-cover bg-black" />
+                                  <div className="absolute inset-0 flex items-center justify-center bg-black/20">
+                                    <span className="material-symbols-outlined text-white drop-shadow-md" style={{ fontSize: 16 }}>play_circle</span>
+                                  </div>
+                                </div>
+                              ))}
+                              {attImages.map((url, i) => (
+                                <div key={`att-img-${i}`} className="w-12 h-12 rounded-md overflow-hidden border border-separator/30 bg-surface-container">
+                                  <img src={url} alt="Attempt" className="w-full h-full object-cover" />
+                                </div>
+                              ))}
                             </div>
                           </div>
-                        ))}
-                        {attImages.map((url, i) => (
-                          <div key={`att-img-${i}`} className="w-12 h-12 rounded-md overflow-hidden border border-separator/30 bg-surface-container">
-                            <img src={url} alt="Attempt" className="w-full h-full object-cover" />
-                          </div>
-                        ))}
+                        )}
                       </div>
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <div className="pt-4 text-sm text-outline italic">
-                  No attempts recorded yet.
-                </div>
-              )}
+                    );
+                  })
+                ) : (
+                  <div className="text-sm text-outline italic">
+                    No attempts recorded yet.
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
