@@ -452,6 +452,7 @@ function EventModal({ event, history, factories, allEquipment, workerNames, user
           result: "",
           fixedBy: [],
           status: "Success",
+          date: new Date().toISOString().split("T")[0],
           timeToResolve: "",
           imageURLs: []
         }
@@ -813,7 +814,7 @@ function EventModal({ event, history, factories, allEquipment, workerNames, user
                               />
                             </div>
 
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-3">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-3">
                         <div>
                           <select 
                             value={attempt.status} 
@@ -832,6 +833,14 @@ function EventModal({ event, history, factories, allEquipment, workerNames, user
                             placeholder="— Worker(s) —"
                             className={inputCls}
                             isMulti
+                          />
+                        </div>
+                        <div>
+                          <input
+                            type="date"
+                            value={attempt.date || ""}
+                            onChange={(e) => updateAttempt(index, "date", e.target.value)}
+                            className={inputCls}
                           />
                         </div>
                         <div>
