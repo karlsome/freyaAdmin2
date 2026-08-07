@@ -52,13 +52,13 @@ export default function EquipmentEventDetailModal({ event, onClose, onEdit }) {
 
       {/* Scrollable body */}
       <div className="p-6">
-        <div className="max-w-4xl mx-auto space-y-12">
+        <div className="max-w-5xl mx-auto space-y-10">
           
           {/* Top Info Section */}
-          <div className="bg-surface p-6 rounded-2xl border border-separator/30 shadow-sm grid grid-cols-1 md:grid-cols-4 gap-6">
+          <div className="bg-surface p-6 rounded-2xl border border-separator/30 shadow-sm flex flex-wrap items-start gap-8">
             <div>
-              <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline mb-1">Status</div>
-              <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-sm font-bold ${
+              <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline mb-1.5">Status</div>
+              <span className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-base font-bold ${
                 event.status === "Resolved" ? "bg-primary/10 text-primary" :
                 event.status === "Failed" ? "bg-error/10 text-error" :
                 "bg-surface-container-high text-on-surface-variant"
@@ -78,10 +78,16 @@ export default function EquipmentEventDetailModal({ event, onClose, onEdit }) {
               <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline mb-1">Reported By</div>
               <div className="text-sm font-medium text-on-surface">{event["名前"] || "—"}</div>
             </div>
+            {event.resolutionTime && (
+              <div>
+                <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline mb-1">Total Time</div>
+                <div className="text-sm font-medium text-on-surface">{event.resolutionTime} hrs</div>
+              </div>
+            )}
           </div>
 
           {/* Details Section */}
-          <div className="space-y-4">
+          <div className="bg-surface-container/30 p-6 rounded-2xl border border-separator/20 space-y-4">
             <h3 className="text-sm font-bold text-on-surface border-b border-separator/40 pb-2">Issue Details</h3>
             <div className="text-base text-on-surface-variant whitespace-pre-wrap">
               {details || <span className="italic text-outline">No details provided.</span>}
