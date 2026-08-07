@@ -174,36 +174,28 @@ export default function EquipmentEventDetailModal({ event, onClose, onEdit }) {
                       
                       {/* Attempt Card */}
                       <div className="bg-surface rounded-2xl p-5 shadow-sm border border-separator/20 space-y-4">
-                        <div className="flex justify-between items-start gap-4">
-                          <div>
-                            <div className="flex items-center gap-2 mb-1">
-                              <span className="text-xs font-bold text-outline">#{att.attemptNumber || idx + 1}</span>
-                              <span className="text-xs text-on-surface-variant font-medium">{att.date || "—"}</span>
-                              <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
-                                att.status === "Success" ? "bg-primary/10 text-primary" :
-                                att.status === "Failed" ? "bg-error/10 text-error" :
-                                "bg-surface-container-high text-on-surface-variant"
-                              }`}>
-                                {att.status || "Unknown"}
-                              </span>
-                            </div>
-                            <h4 className="text-base font-bold text-on-surface">{attTitle || "Untitled Attempt"}</h4>
+                        <div>
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="text-xs font-bold text-outline">#{att.attemptNumber || idx + 1}</span>
+                            <span className="text-xs text-on-surface-variant font-medium">{att.date || "—"}</span>
+                            <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
+                              att.status === "Success" ? "bg-primary/10 text-primary" :
+                              att.status === "Failed" ? "bg-error/10 text-error" :
+                              "bg-surface-container-high text-on-surface-variant"
+                            }`}>
+                              {att.status || "Unknown"}
+                            </span>
                           </div>
-                          {att.fixedBy && att.fixedBy.length > 0 && (
-                            <div className="text-right">
-                              <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline mb-1">Personnel</div>
-                              <div className="text-xs font-medium text-on-surface-variant">{att.fixedBy.join(", ")}</div>
-                            </div>
-                          )}
+                          <h4 className="text-lg font-bold text-on-surface">{attTitle || "Untitled Attempt"}</h4>
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                           <div>
-                            <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline mb-1.5">Action Taken</div>
+                            <div className="text-xs font-semibold uppercase tracking-wider text-outline mb-1.5">Action Taken</div>
                             <div className="text-sm text-on-surface-variant whitespace-pre-wrap">{attDesc || "—"}</div>
                           </div>
                           <div>
-                            <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline mb-1.5">Result</div>
+                            <div className="text-xs font-semibold uppercase tracking-wider text-outline mb-1.5">Result</div>
                             <div className="text-sm text-on-surface-variant whitespace-pre-wrap">{attResult || "—"}</div>
                           </div>
                         </div>
@@ -272,6 +264,13 @@ export default function EquipmentEventDetailModal({ event, onClose, onEdit }) {
                             </div>
                           );
                         })()}
+                        {att.fixedBy && att.fixedBy.length > 0 && (
+                          <div className="flex justify-end pt-2 border-t border-separator/20">
+                            <div className="text-xs text-on-surface-variant">
+                              <span className="text-outline">Personnel:</span> {att.fixedBy.join(", ")}
+                            </div>
+                          </div>
+                        )}
                       </div>
                     </div>
                   );
