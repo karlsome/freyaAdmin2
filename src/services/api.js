@@ -1330,11 +1330,11 @@ export async function createSetsubiHistoryRecord(data) {
 }
 
 export async function updateSetsubiHistoryRecord(id, data) {
-  return _postJson("update-query", {
+  return _postJson("queries", {
     dbName: "submittedDB",
     collectionName: "setsubiHistory",
-    id,
-    updateData: { ...data, updatedAt: new Date().toISOString() },
+    query: { _id: id },
+    update: { $set: { ...data, updatedAt: new Date().toISOString() } },
   });
 }
 

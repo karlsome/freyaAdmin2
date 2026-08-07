@@ -291,8 +291,14 @@ function EventModal({ event, history, factories, allEquipment, workerNames, user
   const [date, setDate] = useState(initialDraft?.date || event?.date || new Date().toISOString().split("T")[0]);
   
   const [title, setTitle] = useState(initialDraft?.title || event?.title || "");
+  const [title_en, setTitle_en] = useState(initialDraft?.title_en || event?.title_en || "");
+  const [title_ja, setTitle_ja] = useState(initialDraft?.title_ja || event?.title_ja || "");
+  
   const [status, setStatus] = useState(initialDraft?.status || event?.status || "Open");
   const [details, setDetails] = useState(initialDraft?.details || event?.details || "");
+  const [details_en, setDetails_en] = useState(initialDraft?.details_en || event?.details_en || "");
+  const [details_ja, setDetails_ja] = useState(initialDraft?.details_ja || event?.details_ja || "");
+  
   const [imageURLs, setImageURLs] = useState(initialDraft?.imageURLs || event?.imageURLs || []);
   const [resolutionTime, setResolutionTime] = useState(initialDraft?.resolutionTime || event?.resolutionTime || "");
 
@@ -302,10 +308,56 @@ function EventModal({ event, history, factories, allEquipment, workerNames, user
   const [activeAttemptTabs, setActiveAttemptTabs] = useState({});
   const attemptSnapshotsRef = useRef({});
   const attemptsRef = useRef(attempts);
+  const titleSnapshotRef = useRef(title);
+  const detailsSnapshotRef = useRef(details);
 
   useEffect(() => {
     attemptsRef.current = attempts;
   }, [attempts]);
+
+  async function handleTitleBlur() {
+    const currentVal = language === "ja" ? (title_ja || title) : (title_en || title);
+    if (!currentVal || currentVal === titleSnapshotRef.current) return;
+    titleSnapshotRef.current = currentVal;
+    
+    const targetLang = language === "ja" ? "en" : "ja";
+    const langpair = language === "ja" ? "ja|en" : "en|ja";
+    
+    try {
+      const translated = await translateTextApi(currentVal, langpair);
+      if (translated && translated.responseData && translated.responseData.translatedText) {
+        if (targetLang === "ja") {
+          setTitle_ja(translated.responseData.translatedText);
+        } else {
+          setTitle_en(translated.responseData.translatedText);
+        }
+      }
+    } catch (err) {
+      console.error("Auto-translate title failed", err);
+    }
+  }
+
+  async function handleDetailsBlur() {
+    const currentVal = language === "ja" ? (details_ja || details) : (details_en || details);
+    if (!currentVal || currentVal === detailsSnapshotRef.current) return;
+    detailsSnapshotRef.current = currentVal;
+    
+    const targetLang = language === "ja" ? "en" : "ja";
+    const langpair = language === "ja" ? "ja|en" : "en|ja";
+    
+    try {
+      const translated = await translateTextApi(currentVal, langpair);
+      if (translated && translated.responseData && translated.responseData.translatedText) {
+        if (targetLang === "ja") {
+          setDetails_ja(translated.responseData.translatedText);
+        } else {
+          setDetails_en(translated.responseData.translatedText);
+        }
+      }
+    } catch (err) {
+      console.error("Auto-translate details failed", err);
+    }
+  }
 
   async function performSmartTranslation(index, oldAtt, newAtt) {
     const activeTab = activeAttemptTabs[index] || (language === "ja" ? "ja" : "en");
@@ -571,8 +623,12 @@ function EventModal({ event, history, factories, allEquipment, workerNames, user
     setReportedBy(username || "");
     setDate(new Date().toISOString().split("T")[0]);
     setTitle("");
+    setTitle_en("");
+    setTitle_ja("");
     setStatus("Open");
     setDetails("");
+    setDetails_en("");
+    setDetails_ja("");
     setImageURLs([]);
     setResolutionTime("");
     setAttempts([]);
@@ -589,8 +645,12 @@ function EventModal({ event, history, factories, allEquipment, workerNames, user
       名前: reportedBy,
       date,
       title,
+      title_en,
+      title_ja,
       status,
       details,
+      details_en,
+      details_ja,
       imageURLs,
       attempts,
       resolutionTime: Number(resolutionTime) || null,
@@ -681,23 +741,35 @@ function EventModal({ event, history, factories, allEquipment, workerNames, user
             {/* Core Issue */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               <div className="lg:col-span-2 space-y-4">
-                <div>
+                <div className="md:col-span-2">
                   <div className="mb-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Issue Title</div>
                   <input
                     type="text"
-                    value={title}
-                    onChange={(e) => setTitle(e.target.value)}
-                    placeholder="e.g. Conveyor Belt Jam at Station 2"
+                    value={language === "ja" ? (title_ja || title) : (title_en || title)}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      if (language === "ja") setTitle_ja(val);
+                      else setTitle_en(val);
+                      setTitle(val);
+                    }}
+                    onBlur={handleTitleBlur}
+                    placeholder={language === "ja" ? "タイトル" : "E.g. Belt Realignment, Motor Replacement..."}
                     className={`${inputCls} font-medium text-base`}
                   />
                 </div>
                 <div>
                   <div className="mb-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Symptom Details</div>
                   <textarea
-                    value={details}
-                    onChange={(e) => setDetails(e.target.value)}
+                    value={language === "ja" ? (details_ja || details) : (details_en || details)}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      if (language === "ja") setDetails_ja(val);
+                      else setDetails_en(val);
+                      setDetails(val); // Fallback syncing
+                    }}
+                    onBlur={handleDetailsBlur}
                     rows={3}
-                    placeholder="Describe exactly what happened or what was observed..."
+                    placeholder={language === "ja" ? "何が起こったのか、何が観察されたのかを正確に記述してください..." : "Describe exactly what happened or what was observed..."}
                     className={`${inputCls} resize-none`}
                   />
                 </div>
