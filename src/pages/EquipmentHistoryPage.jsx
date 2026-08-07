@@ -299,6 +299,9 @@ function EventModal({ event, history, factories, allEquipment, workerNames, user
   const [details_en, setDetails_en] = useState(initialDraft?.details_en || event?.details_en || "");
   const [details_ja, setDetails_ja] = useState(initialDraft?.details_ja || event?.details_ja || "");
   
+  const [titleTranslated, setTitleTranslated] = useState(false);
+  const [detailsTranslated, setDetailsTranslated] = useState(false);
+  
   const [imageURLs, setImageURLs] = useState(initialDraft?.imageURLs || event?.imageURLs || []);
   const [resolutionTime, setResolutionTime] = useState(initialDraft?.resolutionTime || event?.resolutionTime || "");
 
@@ -317,20 +320,27 @@ function EventModal({ event, history, factories, allEquipment, workerNames, user
 
   async function handleTitleBlur() {
     const currentVal = language === "ja" ? (title_ja || title) : (title_en || title);
-    if (!currentVal || currentVal === titleSnapshotRef.current) return;
+    const targetLang = language === "ja" ? "en" : "ja";
+    const needsForceTranslation = targetLang === "ja" ? !title_ja : !title_en;
+
+    console.log("[handleTitleBlur] currentVal:", currentVal, "snapshot:", titleSnapshotRef.current, "needsForce:", needsForceTranslation);
+
+    if (!currentVal || (!needsForceTranslation && currentVal === titleSnapshotRef.current)) return;
     titleSnapshotRef.current = currentVal;
     
-    const targetLang = language === "ja" ? "en" : "ja";
+    console.log("[handleTitleBlur] Translating to:", targetLang);
+    
     const langpair = language === "ja" ? "ja|en" : "en|ja";
     
     try {
       const translated = await translateTextApi(currentVal, langpair);
-      if (translated && translated.responseData && translated.responseData.translatedText) {
+      if (translated && typeof translated === "string") {
         if (targetLang === "ja") {
-          setTitle_ja(translated.responseData.translatedText);
+          setTitle_ja(translated);
         } else {
-          setTitle_en(translated.responseData.translatedText);
+          setTitle_en(translated);
         }
+        setTitleTranslated(true);
       }
     } catch (err) {
       console.error("Auto-translate title failed", err);
@@ -339,20 +349,27 @@ function EventModal({ event, history, factories, allEquipment, workerNames, user
 
   async function handleDetailsBlur() {
     const currentVal = language === "ja" ? (details_ja || details) : (details_en || details);
-    if (!currentVal || currentVal === detailsSnapshotRef.current) return;
+    const targetLang = language === "ja" ? "en" : "ja";
+    const needsForceTranslation = targetLang === "ja" ? !details_ja : !details_en;
+
+    console.log("[handleDetailsBlur] currentVal:", currentVal, "snapshot:", detailsSnapshotRef.current, "needsForce:", needsForceTranslation);
+
+    if (!currentVal || (!needsForceTranslation && currentVal === detailsSnapshotRef.current)) return;
     detailsSnapshotRef.current = currentVal;
     
-    const targetLang = language === "ja" ? "en" : "ja";
+    console.log("[handleDetailsBlur] Translating to:", targetLang);
+    
     const langpair = language === "ja" ? "ja|en" : "en|ja";
     
     try {
       const translated = await translateTextApi(currentVal, langpair);
-      if (translated && translated.responseData && translated.responseData.translatedText) {
+      if (translated && typeof translated === "string") {
         if (targetLang === "ja") {
-          setDetails_ja(translated.responseData.translatedText);
+          setDetails_ja(translated);
         } else {
-          setDetails_en(translated.responseData.translatedText);
+          setDetails_en(translated);
         }
+        setDetailsTranslated(true);
       }
     } catch (err) {
       console.error("Auto-translate details failed", err);
@@ -742,7 +759,12 @@ function EventModal({ event, history, factories, allEquipment, workerNames, user
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               <div className="lg:col-span-2 space-y-4">
                 <div className="md:col-span-2">
-                  <div className="mb-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Issue Title</div>
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Issue Title</div>
+                    {titleTranslated && (
+                      <div className="w-1.5 h-1.5 rounded-full bg-error animate-pulse" title="Auto-translated!" />
+                    )}
+                  </div>
                   <input
                     type="text"
                     value={language === "ja" ? (title_ja || title) : (title_en || title)}
@@ -751,6 +773,7 @@ function EventModal({ event, history, factories, allEquipment, workerNames, user
                       if (language === "ja") setTitle_ja(val);
                       else setTitle_en(val);
                       setTitle(val);
+                      setTitleTranslated(false);
                     }}
                     onBlur={handleTitleBlur}
                     placeholder={language === "ja" ? "タイトル" : "E.g. Belt Realignment, Motor Replacement..."}
@@ -758,14 +781,20 @@ function EventModal({ event, history, factories, allEquipment, workerNames, user
                   />
                 </div>
                 <div>
-                  <div className="mb-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Symptom Details</div>
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Symptom Details</div>
+                    {detailsTranslated && (
+                      <div className="w-1.5 h-1.5 rounded-full bg-error animate-pulse" title="Auto-translated!" />
+                    )}
+                  </div>
                   <textarea
                     value={language === "ja" ? (details_ja || details) : (details_en || details)}
                     onChange={(e) => {
                       const val = e.target.value;
                       if (language === "ja") setDetails_ja(val);
                       else setDetails_en(val);
-                      setDetails(val); // Fallback syncing
+                      setDetails(val);
+                      setDetailsTranslated(false);
                     }}
                     onBlur={handleDetailsBlur}
                     rows={3}
@@ -1222,6 +1251,7 @@ function EventModal({ event, history, factories, allEquipment, workerNames, user
 export default function EquipmentHistoryPage() {
   const authUser = getAuthUser();
   const username = authUser?.username || "unknown";
+  const { language } = useLanguage();
 
   const [factories, setFactories] = useState([]);
   const [allEquipment, setAllEquipment] = useState([]);
@@ -1535,7 +1565,11 @@ export default function EquipmentHistoryPage() {
                       </td>
                       <td className="px-4 py-4">
                         <p className="text-sm font-bold text-on-surface line-clamp-1">
-                          {event.title || <span className="italic font-normal text-on-surface-variant truncate block max-w-sm">{event.details}</span> || "—"}
+                          {language === "ja" ? (event.title_ja || event.title) : (event.title_en || event.title) || (
+                            <span className="italic font-normal text-on-surface-variant truncate block max-w-sm">
+                              {language === "ja" ? (event.details_ja || event.details) : (event.details_en || event.details)}
+                            </span>
+                          ) || "—"}
                         </p>
                       </td>
                       <td className="px-4 py-4 whitespace-nowrap">
