@@ -1,5 +1,6 @@
-import React from "react";
+import React, { useState } from "react";
 import { useLanguage } from "../contexts/LanguageContext";
+import SensorDevicePhotoPreviewModal from "./SensorDevicePhotoPreviewModal";
 
 function isVideoUrl(url) {
   return /\.(mp4|mov|webm)$/i.test(url.split("?")[0]);
@@ -11,6 +12,8 @@ function isImageUrl(url) {
 
 export default function EquipmentEventPreviewModal({ event, onClose, onEdit, onExpand }) {
   const { language } = useLanguage();
+  const [previewState, setPreviewState] = useState(null);
+  const [activeMediaIndex, setActiveMediaIndex] = useState(0);
 
   if (!event) return null;
 
@@ -19,6 +22,7 @@ export default function EquipmentEventPreviewModal({ event, onClose, onEdit, onE
 
   const issueVideos = (event.imageURLs || []).filter(isVideoUrl);
   const issueImages = (event.imageURLs || []).filter(isImageUrl);
+  const issueMedia = [...issueVideos, ...issueImages];
 
   const attempts = event.attempts || [];
 
@@ -109,23 +113,71 @@ export default function EquipmentEventPreviewModal({ event, onClose, onEdit, onE
                 {details || <span className="italic text-outline">No details provided.</span>}
               </div>
               
-              {(issueVideos.length > 0 || issueImages.length > 0) && (
+              {issueMedia.length > 0 && (
                 <div className="pt-2">
-                  <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline mb-2">Attachments</div>
-                  <div className="flex gap-2 flex-wrap">
-                    {issueVideos.map((url, i) => (
-                      <div key={`vid-${i}`} className="relative w-16 h-16 rounded-lg overflow-hidden border border-separator/30 bg-surface-container">
-                        <video src={url + "#t=0.001"} preload="metadata" className="w-full h-full object-cover bg-black" />
+                  <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline mb-2">
+                    Attachments {issueMedia.length > 1 && `(${activeMediaIndex + 1} / ${issueMedia.length})`}
+                  </div>
+                  <div className="relative w-full aspect-video rounded-xl overflow-hidden bg-black/5 border border-separator/20 group select-none">
+                    {isVideoUrl(issueMedia[activeMediaIndex]) ? (
+                      <div 
+                        className="w-full h-full cursor-pointer hover:opacity-90 transition-opacity relative"
+                        onClick={(e) => { 
+                          e.stopPropagation(); 
+                          setPreviewState({
+                            images: issueMedia.map(u => ({ url: u, label: "Issue Attachment" })),
+                            activeIndex: activeMediaIndex,
+                            displayName: "Report Attachments",
+                            eyebrow: title || "Event"
+                          });
+                        }}
+                      >
+                        <video src={issueMedia[activeMediaIndex] + "#t=0.001"} preload="metadata" className="w-full h-full object-contain pointer-events-none" />
                         <div className="absolute inset-0 flex items-center justify-center bg-black/20">
-                          <span className="material-symbols-outlined text-white drop-shadow-md" style={{ fontSize: 24 }}>play_circle</span>
+                          <span className="material-symbols-outlined text-white drop-shadow-md" style={{ fontSize: 48 }}>play_circle</span>
                         </div>
                       </div>
-                    ))}
-                    {issueImages.map((url, i) => (
-                      <div key={`img-${i}`} className="w-16 h-16 rounded-lg overflow-hidden border border-separator/30 bg-surface-container">
-                        <img src={url} alt="Issue" className="w-full h-full object-cover" />
+                    ) : (
+                      <div 
+                        className="w-full h-full cursor-pointer hover:opacity-90 transition-opacity"
+                        onClick={(e) => { 
+                          e.stopPropagation(); 
+                          setPreviewState({
+                            images: issueMedia.map(u => ({ url: u, label: "Issue Attachment" })),
+                            activeIndex: activeMediaIndex,
+                            displayName: "Report Attachments",
+                            eyebrow: title || "Event"
+                          });
+                        }}
+                      >
+                        <img src={issueMedia[activeMediaIndex]} alt="Issue attachment" className="w-full h-full object-contain pointer-events-none" />
                       </div>
-                    ))}
+                    )}
+                    
+                    {issueMedia.length > 1 && (
+                      <>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setActiveMediaIndex((prev) => (prev - 1 + issueMedia.length) % issueMedia.length);
+                          }}
+                          className="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/40 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-black/60"
+                        >
+                          <span className="material-symbols-outlined" style={{ fontSize: 20 }}>chevron_left</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setActiveMediaIndex((prev) => (prev + 1) % issueMedia.length);
+                          }}
+                          className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/40 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-black/60"
+                        >
+                          <span className="material-symbols-outlined" style={{ fontSize: 20 }}>chevron_right</span>
+                        </button>
+                      </>
+                    )}
                   </div>
                 </div>
               )}
@@ -148,6 +200,8 @@ export default function EquipmentEventPreviewModal({ event, onClose, onEdit, onE
                     const attResult = language === "ja" ? (att.result_ja || att.result) : (att.result_en || att.result);
                     const attVideos = (att.imageURLs || []).filter(isVideoUrl);
                     const attImages = (att.imageURLs || []).filter(isImageUrl);
+
+                    const attMedia = [...attVideos, ...attImages];
 
                     return (
                       <div key={idx} className="space-y-4">
@@ -181,16 +235,42 @@ export default function EquipmentEventPreviewModal({ event, onClose, onEdit, onE
                             <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline mb-2">Attachments</div>
                             <div className="flex gap-2 flex-wrap">
                               {attVideos.map((url, i) => (
-                                <div key={`att-vid-${i}`} className="relative w-12 h-12 rounded-md overflow-hidden border border-separator/30 bg-surface-container">
-                                  <video src={url + "#t=0.001"} preload="metadata" className="w-full h-full object-cover bg-black" />
+                                <div 
+                                  key={`att-vid-${i}`} 
+                                  className="relative w-12 h-12 rounded-md overflow-hidden border border-separator/30 bg-surface-container cursor-pointer hover:opacity-80 transition-opacity"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    const mediaIdx = attMedia.indexOf(url);
+                                    setPreviewState({
+                                      images: attMedia.map(u => ({ url: u, label: "Attempt Attachment" })),
+                                      activeIndex: mediaIdx >= 0 ? mediaIdx : 0,
+                                      displayName: "Attempt Attachments",
+                                      eyebrow: attTitle || "Attempt"
+                                    });
+                                  }}
+                                >
+                                  <video src={url + "#t=0.001"} preload="metadata" className="w-full h-full object-cover bg-black pointer-events-none" />
                                   <div className="absolute inset-0 flex items-center justify-center bg-black/20">
                                     <span className="material-symbols-outlined text-white drop-shadow-md" style={{ fontSize: 16 }}>play_circle</span>
                                   </div>
                                 </div>
                               ))}
                               {attImages.map((url, i) => (
-                                <div key={`att-img-${i}`} className="w-12 h-12 rounded-md overflow-hidden border border-separator/30 bg-surface-container">
-                                  <img src={url} alt="Attempt" className="w-full h-full object-cover" />
+                                <div 
+                                  key={`att-img-${i}`} 
+                                  className="w-12 h-12 rounded-md overflow-hidden border border-separator/30 bg-surface-container cursor-pointer hover:opacity-80 transition-opacity"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    const mediaIdx = attMedia.indexOf(url);
+                                    setPreviewState({
+                                      images: attMedia.map(u => ({ url: u, label: "Attempt Attachment" })),
+                                      activeIndex: mediaIdx >= 0 ? mediaIdx : 0,
+                                      displayName: "Attempt Attachments",
+                                      eyebrow: attTitle || "Attempt"
+                                    });
+                                  }}
+                                >
+                                  <img src={url} alt="Attempt" className="w-full h-full object-cover pointer-events-none" />
                                 </div>
                               ))}
                             </div>
@@ -230,6 +310,16 @@ export default function EquipmentEventPreviewModal({ event, onClose, onEdit, onE
           </button>
         </div>
       </div>
+
+      {previewState && (
+        <SensorDevicePhotoPreviewModal
+          preview={previewState}
+          onClose={() => setPreviewState(null)}
+          onNavigate={(dir) => {
+            setPreviewState(prev => prev ? { ...prev, activeIndex: prev.activeIndex + dir } : null);
+          }}
+        />
+      )}
     </div>
   );
 }
