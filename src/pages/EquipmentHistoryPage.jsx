@@ -14,6 +14,7 @@ import {
 import { getAuthUser } from "../utils/masterDB";
 import PageHeader from "../components/PageHeader";
 import SensorDevicePhotoPreviewModal from "../components/SensorDevicePhotoPreviewModal";
+import EquipmentEventDetailModal from "../components/EquipmentEventDetailModal";
 import { useLanguage } from "../contexts/LanguageContext";
 import MasterTabNav from "../components/MasterTabNav";
 
@@ -1275,6 +1276,7 @@ export default function EquipmentHistoryPage() {
 
   const [modalOpen, setModalOpen] = useState(false);
   const [editingEvent, setEditingEvent] = useState(null);
+  const [viewingEvent, setViewingEvent] = useState(null);
   const [submitting, setSubmitting] = useState(false);
 
   // Load factories, equipment, worker names
@@ -1468,8 +1470,18 @@ export default function EquipmentHistoryPage() {
         </div>
       </div>
 
-      {/* History table */}
-      <div className="dashboard-section rounded-2xl overflow-hidden shadow-sm">
+      {/* History table or Detail View */}
+      {viewingEvent ? (
+        <EquipmentEventDetailModal
+          event={viewingEvent}
+          onClose={() => setViewingEvent(null)}
+          onEdit={(evt) => {
+            setViewingEvent(null);
+            openEdit(evt);
+          }}
+        />
+      ) : (
+        <div className="dashboard-section rounded-2xl overflow-hidden shadow-sm">
         {/* Section header */}
         <div className="px-5 py-4 border-b border-separator/40 flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -1555,7 +1567,7 @@ export default function EquipmentHistoryPage() {
                   return (
                     <tr
                       key={key}
-                      onClick={() => openEdit(event)}
+                      onClick={() => setViewingEvent(event)}
                       className="cursor-pointer hover:bg-surface-container/50 transition-colors group"
                     >
                       <td className="px-4 py-4 whitespace-nowrap">
@@ -1608,6 +1620,7 @@ export default function EquipmentHistoryPage() {
           </div>
         )}
       </div>
+      )}
 
       {modalOpen && (
         <EventModal

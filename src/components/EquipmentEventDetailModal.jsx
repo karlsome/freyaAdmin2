@@ -1,0 +1,178 @@
+import React from "react";
+import { useLanguage } from "../contexts/LanguageContext";
+
+export default function EquipmentEventDetailModal({ event, onClose, onEdit }) {
+  const { language } = useLanguage();
+
+  if (!event) return null;
+
+  const title = language === "ja" ? (event.title_ja || event.title) : (event.title_en || event.title);
+  const details = language === "ja" ? (event.details_ja || event.details) : (event.details_en || event.details);
+
+  return (
+    <div className="dashboard-section rounded-2xl overflow-hidden shadow-sm flex flex-col slide-in-from-right animate-in fade-in duration-300 border border-separator/20 bg-surface">
+      {/* Header */}
+      <div className="flex h-[72px] shrink-0 items-center justify-between border-b border-separator/40 bg-surface/80 px-6 backdrop-blur-xl">
+        <div>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">
+            Record Details
+          </p>
+          <h2 className="mt-1 text-xl font-semibold text-on-surface">
+            {title || "Equipment Event"}
+          </h2>
+        </div>
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => onEdit(event)}
+            className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-on-primary hover:opacity-90 active:scale-95 transition-all shadow-md"
+          >
+            <span className="material-symbols-outlined" style={{ fontSize: 18 }}>edit</span>
+            Edit Record
+          </button>
+          <button
+            type="button"
+            onClick={onClose}
+            className="p-2 rounded-xl hover:bg-surface-container text-outline hover:text-on-surface transition-all duration-150"
+          >
+            <span className="material-symbols-outlined" style={{ fontSize: 20 }}>close</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Scrollable body */}
+      <div className="p-6">
+        <div className="max-w-4xl mx-auto space-y-12">
+          
+          {/* Top Info Section */}
+          <div className="bg-surface p-6 rounded-2xl border border-separator/30 shadow-sm grid grid-cols-1 md:grid-cols-4 gap-6">
+            <div>
+              <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline mb-1">Status</div>
+              <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-sm font-bold ${
+                event.status === "Resolved" ? "bg-primary/10 text-primary" :
+                event.status === "Failed" ? "bg-error/10 text-error" :
+                "bg-surface-container-high text-on-surface-variant"
+              }`}>
+                {event.status === "Resolved" ? "✅" : event.status === "Failed" ? "❌" : "🔴"} {event.status || "Open"}
+              </span>
+            </div>
+            <div>
+              <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline mb-1">Date</div>
+              <div className="text-sm font-medium text-on-surface">{event.date || "—"}</div>
+            </div>
+            <div>
+              <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline mb-1">Factory & Machine</div>
+              <div className="text-sm font-medium text-on-surface">{event["工場"]} / {event.equipmentName}</div>
+            </div>
+            <div>
+              <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline mb-1">Reported By</div>
+              <div className="text-sm font-medium text-on-surface">{event["名前"] || "—"}</div>
+            </div>
+          </div>
+
+          {/* Details Section */}
+          <div className="space-y-4">
+            <h3 className="text-sm font-bold text-on-surface border-b border-separator/40 pb-2">Issue Details</h3>
+            <div className="text-base text-on-surface-variant whitespace-pre-wrap">
+              {details || <span className="italic text-outline">No details provided.</span>}
+            </div>
+            {event.imageURLs && event.imageURLs.length > 0 && (
+              <div className="flex gap-4 overflow-x-auto pb-4">
+                {event.imageURLs.map((url, i) => (
+                  <div key={i} className="flex-shrink-0 w-32 h-32 rounded-xl overflow-hidden border border-separator/30 bg-surface-container">
+                    {url.toLowerCase().match(/\.(mp4|mov|webm)$/) ? (
+                      <video src={url} className="w-full h-full object-cover" controls />
+                    ) : (
+                      <img src={url} alt="Issue" className="w-full h-full object-cover" />
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Attempts Timeline */}
+          {event.attempts && event.attempts.length > 0 && (
+            <div className="space-y-6">
+              <h3 className="text-sm font-bold text-on-surface border-b border-separator/40 pb-2">Troubleshooting Timeline</h3>
+              
+              <div className="relative border-l-2 border-separator/40 ml-4 space-y-8 pb-8">
+                {event.attempts.map((att, idx) => {
+                  const attTitle = language === "ja" ? (att.title_ja || att.title) : (att.title_en || att.title);
+                  const attDesc = language === "ja" ? (att.fixDescription_ja || att.fixDescription) : (att.fixDescription_en || att.fixDescription);
+                  const attResult = language === "ja" ? (att.result_ja || att.result) : (att.result_en || att.result);
+                  
+                  return (
+                    <div key={idx} className="relative pl-8">
+                      {/* Timeline Dot */}
+                      <div className={`absolute -left-[9px] top-1 w-4 h-4 rounded-full border-2 border-surface ${
+                        att.status === "Success" ? "bg-primary" : 
+                        att.status === "Failed" ? "bg-error" : 
+                        "bg-surface-container-high"
+                      }`} />
+                      
+                      {/* Attempt Card */}
+                      <div className="bg-surface rounded-2xl p-5 shadow-sm border border-separator/20 space-y-4">
+                        <div className="flex justify-between items-start gap-4">
+                          <div>
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className="text-xs font-bold text-outline">#{att.attemptNumber || idx + 1}</span>
+                              <span className="text-xs text-on-surface-variant font-medium">{att.date || "—"}</span>
+                              <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
+                                att.status === "Success" ? "bg-primary/10 text-primary" :
+                                att.status === "Failed" ? "bg-error/10 text-error" :
+                                "bg-surface-container-high text-on-surface-variant"
+                              }`}>
+                                {att.status || "Unknown"}
+                              </span>
+                            </div>
+                            <h4 className="text-base font-bold text-on-surface">{attTitle || "Untitled Attempt"}</h4>
+                          </div>
+                          {att.fixedBy && att.fixedBy.length > 0 && (
+                            <div className="text-right">
+                              <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline mb-1">Personnel</div>
+                              <div className="text-xs font-medium text-on-surface-variant">{att.fixedBy.join(", ")}</div>
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                          <div>
+                            <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline mb-1.5">Action Taken</div>
+                            <div className="text-sm text-on-surface-variant whitespace-pre-wrap">{attDesc || "—"}</div>
+                          </div>
+                          <div>
+                            <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline mb-1.5">Result</div>
+                            <div className="text-sm text-on-surface-variant whitespace-pre-wrap">{attResult || "—"}</div>
+                          </div>
+                        </div>
+
+                        {att.imageURLs && att.imageURLs.length > 0 && (
+                          <div className="pt-2">
+                            <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline mb-2">Attachments</div>
+                            <div className="flex flex-wrap gap-3">
+                              {att.imageURLs.map((url, i) => (
+                                <div key={i} className="w-24 h-24 rounded-lg overflow-hidden border border-separator/30 bg-surface-container">
+                                  {url.toLowerCase().match(/\.(mp4|mov|webm)$/) ? (
+                                    <video src={url} className="w-full h-full object-cover" controls />
+                                  ) : (
+                                    <img src={url} alt={`Attempt ${idx + 1}`} className="w-full h-full object-cover" />
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+        </div>
+      </div>
+    </div>
+  );
+}
