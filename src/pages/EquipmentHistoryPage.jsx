@@ -450,7 +450,7 @@ function EventModal({ event, history, factories, allEquipment, workerNames, user
           title: "",
           fixDescription: "",
           result: "",
-          fixedBy: username ? [username] : [],
+          fixedBy: [],
           status: "Success",
           timeToResolve: "",
           imageURLs: []
