@@ -10,6 +10,7 @@ import {
 } from "../services/api";
 import { getAuthUser } from "../utils/masterDB";
 import PageHeader from "../components/PageHeader";
+import { useLanguage } from "../contexts/LanguageContext";
 
 const inputCls =
   "w-full rounded-xl border border-outline-variant/30 bg-surface px-3 py-3 text-sm text-on-surface outline-none transition-all duration-150 focus:border-primary/40";
@@ -27,9 +28,17 @@ function isVideoUrl(url) {
   return /\.(mp4|mov)$/i.test(url.split("?")[0]);
 }
 
+function fillTemplate(template, values) {
+  return Object.entries(values).reduce(
+    (str, [key, value]) => str.replace(`{${key}}`, value),
+    template
+  );
+}
+
 // ── Lightbox ─────────────────────────────────────────────────────────────────
 
 function Lightbox({ url, onClose }) {
+  const { t } = useLanguage();
   if (!url) return null;
   return createPortal(
     <div
@@ -47,7 +56,7 @@ function Lightbox({ url, onClose }) {
       ) : (
         <img
           src={url}
-          alt="full size"
+          alt={t("fullSizeImage")}
           className="max-h-[90vh] max-w-[90vw] rounded-2xl object-contain shadow-2xl"
         />
       )}
@@ -59,6 +68,7 @@ function Lightbox({ url, onClose }) {
 // ── Add Event Modal ───────────────────────────────────────────────────────────
 
 function AddEventModal({ factories, allEquipment, workerNames, username, submitting, onClose, onSubmit }) {
+  const { t } = useLanguage();
   const [factory, setFactory] = useState("");
   const [equipmentId, setEquipmentId] = useState("");
   const [reportedBy, setReportedBy] = useState("");
@@ -107,7 +117,9 @@ function AddEventModal({ factories, allEquipment, workerNames, username, submitt
     if (failedCount) {
       const raw = results.find((r) => r.status === "rejected")?.reason?.message || "";
       setUploadError(
-        raw.startsWith("<") ? "Upload failed — server error." : raw || `${failedCount} file(s) failed.`
+        raw.startsWith("<")
+          ? t("uploadFailedServerError")
+          : raw || fillTemplate(t("filesFailedTemplate"), { count: failedCount })
       );
     }
     setUploading(false);
@@ -142,8 +154,8 @@ function AddEventModal({ factories, allEquipment, workerNames, username, submitt
         {/* Header */}
         <div className="sticky top-0 z-10 rounded-t-2xl px-6 py-5 flex items-center justify-between border-b border-separator/40 bg-surface/90 backdrop-blur-md">
           <div>
-            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">設備履歴</p>
-            <h2 className="mt-1 text-xl font-semibold text-on-surface">Add History Record</h2>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">{t("equipmentHistoryTitle")}</p>
+            <h2 className="mt-1 text-xl font-semibold text-on-surface">{t("addHistoryRecord")}</h2>
           </div>
           <button
             type="button"
@@ -163,10 +175,10 @@ function AddEventModal({ factories, allEquipment, workerNames, username, submitt
           {/* Factory */}
           <div>
             <div className="mb-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-outline">
-              工場 <span className="text-error">*</span>
+              {t("factory")} <span className="text-error">*</span>
             </div>
             <select value={factory} onChange={handleFactoryChange} className={inputCls} required>
-              <option value="">— Select factory —</option>
+              <option value="">{t("selectFactoryOption")}</option>
               {factories.map((f) => (
                 <option key={f} value={f}>{f}</option>
               ))}
@@ -176,7 +188,7 @@ function AddEventModal({ factories, allEquipment, workerNames, username, submitt
           {/* Machine */}
           <div>
             <div className="mb-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-outline">
-              設備 <span className="text-error">*</span>
+              {t("machine")} <span className="text-error">*</span>
             </div>
             <select
               value={equipmentId}
@@ -187,10 +199,10 @@ function AddEventModal({ factories, allEquipment, workerNames, username, submitt
             >
               <option value="">
                 {!factory
-                  ? "— Select factory first —"
+                  ? t("selectFactoryFirstOption")
                   : factoryEquipment.length === 0
-                  ? "— No equipment found —"
-                  : "— Select machine —"}
+                  ? t("noEquipmentFoundOption")
+                  : t("selectMachineOption")}
               </option>
               {factoryEquipment.map((eq) => {
                 const id = eq._id?.$oid ?? String(eq._id);
@@ -205,10 +217,10 @@ function AddEventModal({ factories, allEquipment, workerNames, username, submitt
           <div className="grid grid-cols-2 gap-3">
             <div>
               <div className="mb-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-outline">
-                Reported By
+                {t("reportedBy")}
               </div>
               <select value={reportedBy} onChange={(e) => setReportedBy(e.target.value)} className={inputCls}>
-                <option value="">— Select name —</option>
+                <option value="">{t("selectNameOption")}</option>
                 {workerNames.map((name) => (
                   <option key={name} value={name}>{name}</option>
                 ))}
@@ -216,7 +228,7 @@ function AddEventModal({ factories, allEquipment, workerNames, username, submitt
             </div>
             <div>
               <div className="mb-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-outline">
-                Date <span className="text-error">*</span>
+                {t("date")} <span className="text-error">*</span>
               </div>
               <input
                 type="date"
@@ -231,13 +243,13 @@ function AddEventModal({ factories, allEquipment, workerNames, username, submitt
           {/* Details */}
           <div>
             <div className="mb-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-outline">
-              Details
+              {t("details")}
             </div>
             <textarea
               value={details}
               onChange={(e) => setDetails(e.target.value)}
               rows={4}
-              placeholder="Describe the event, maintenance performed, or observations…"
+              placeholder={t("eventDetailsPlaceholder")}
               className="w-full rounded-xl border border-outline-variant/30 bg-surface px-3 py-3 text-sm text-on-surface outline-none transition-all duration-150 focus:border-primary/40 resize-none"
             />
           </div>
@@ -245,7 +257,7 @@ function AddEventModal({ factories, allEquipment, workerNames, username, submitt
           {/* Photo upload */}
           <div>
             <div className="mb-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-outline">
-              Photos
+              {t("photos")}
             </div>
             <input
               ref={fileInputRef}
@@ -264,12 +276,12 @@ function AddEventModal({ factories, allEquipment, workerNames, username, submitt
               {uploading ? (
                 <>
                   <span className="material-symbols-outlined animate-spin" style={{ fontSize: 16 }}>progress_activity</span>
-                  アップロード中…
+                  {t("uploadingFiles")}
                 </>
               ) : (
                 <>
                   <span className="material-symbols-outlined" style={{ fontSize: 16 }}>attach_file</span>
-                  Attach files
+                  {t("attachFiles")}
                 </>
               )}
             </button>
@@ -290,7 +302,7 @@ function AddEventModal({ factories, allEquipment, workerNames, username, submitt
                     ) : (
                       <img
                         src={url}
-                        alt="attached"
+                        alt={t("attachedImage")}
                         className="h-16 w-16 rounded-xl object-cover border border-separator/40"
                       />
                     )}
@@ -315,7 +327,7 @@ function AddEventModal({ factories, allEquipment, workerNames, username, submitt
             onClick={onClose}
             className="rounded-xl border border-separator/40 px-4 py-2 text-xs font-semibold text-on-surface-variant hover:bg-surface-container hover:text-primary hover:border-primary/30 active:scale-95 transition-all duration-150"
           >
-            Cancel
+            {t("cancel")}
           </button>
           <button
             type="submit"
@@ -323,7 +335,7 @@ function AddEventModal({ factories, allEquipment, workerNames, username, submitt
             disabled={!canSubmit}
             className="rounded-xl bg-primary px-4 py-2 text-xs font-semibold text-on-primary hover:opacity-90 active:scale-95 transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {submitting ? "保存中…" : "Add Record"}
+            {submitting ? t("savingEllipsis") : t("addRecord")}
           </button>
         </div>
       </div>
@@ -335,6 +347,7 @@ function AddEventModal({ factories, allEquipment, workerNames, username, submitt
 // ── Event Detail Modal ────────────────────────────────────────────────────────
 
 function EventDetailModal({ event, onClose }) {
+  const { t } = useLanguage();
   const [lightboxURL, setLightboxURL] = useState(null);
   const imageURLs = Array.isArray(event.imageURLs) ? event.imageURLs : [];
 
@@ -350,7 +363,7 @@ function EventDetailModal({ event, onClose }) {
         {/* Header */}
         <div className="sticky top-0 z-10 rounded-t-2xl px-6 py-5 flex items-start justify-between gap-4 border-b border-separator/40 bg-surface/90 backdrop-blur-md">
           <div>
-            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">設備履歴</p>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">{t("equipmentHistoryTitle")}</p>
             <h2 className="mt-1 text-xl font-semibold text-on-surface">{event.equipmentName || "—"}</h2>
             {event["工場"] && (
               <p className="mt-1 text-sm text-on-surface-variant">{event["工場"]}</p>
@@ -384,7 +397,7 @@ function EventDetailModal({ event, onClose }) {
           {/* Details */}
           {event.details && (
             <div className="rounded-2xl border border-outline-variant/15 bg-surface-container-low px-4 py-3">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Details</p>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">{t("details")}</p>
               <p className="mt-2 text-sm text-on-surface whitespace-pre-wrap">{event.details}</p>
             </div>
           )}
@@ -392,7 +405,7 @@ function EventDetailModal({ event, onClose }) {
           {/* Photos */}
           {imageURLs.length > 0 && (
             <div>
-              <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Photos</p>
+              <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">{t("photos")}</p>
               <div className="flex flex-wrap gap-2">
                 {imageURLs.map((url) => (
                   <button
@@ -404,7 +417,7 @@ function EventDetailModal({ event, onClose }) {
                     {isVideoUrl(url) ? (
                       <video src={url} className="h-16 w-16 object-cover bg-black" muted playsInline />
                     ) : (
-                      <img src={url} alt="attached" className="h-16 w-16 object-cover" />
+                      <img src={url} alt={t("attachedImage")} className="h-16 w-16 object-cover" />
                     )}
                   </button>
                 ))}
@@ -420,7 +433,7 @@ function EventDetailModal({ event, onClose }) {
             onClick={onClose}
             className="rounded-xl border border-separator/40 px-4 py-2 text-xs font-semibold text-on-surface-variant hover:bg-surface-container hover:text-primary hover:border-primary/30 active:scale-95 transition-all duration-150"
           >
-            Close
+            {t("close")}
           </button>
         </div>
       </div>
@@ -434,6 +447,7 @@ function EventDetailModal({ event, onClose }) {
 // ── Main Page ─────────────────────────────────────────────────────────────────
 
 export default function EquipmentHistoryPage() {
+  const { t } = useLanguage();
   const authUser = getAuthUser();
   const username = authUser?.username || "unknown";
 
@@ -480,7 +494,7 @@ export default function EquipmentHistoryPage() {
         setAllEquipment(Array.isArray(equipmentRecords) ? equipmentRecords : []);
         setWorkerNames(Array.isArray(names) ? names : []);
       } catch (err) {
-        if (active) setDataError(err?.message || "Failed to load data.");
+        if (active) setDataError(err?.message || t("failedToLoadData"));
       } finally {
         if (active) setDataLoading(false);
       }
@@ -503,7 +517,7 @@ export default function EquipmentHistoryPage() {
       equipmentId: filterEquipmentId || undefined,
     })
       .then((rows) => { if (active) setHistory(Array.isArray(rows) ? rows : []); })
-      .catch((err) => { if (active) setHistoryError(err?.message || "Failed to load history."); })
+      .catch((err) => { if (active) setHistoryError(err?.message || t("failedToLoadHistory")); })
       .finally(() => { if (active) setHistoryLoading(false); });
     return () => { active = false; };
   }, [filterFactory, filterEquipmentId, historyRefresh]);
@@ -533,7 +547,7 @@ export default function EquipmentHistoryPage() {
       setAddOpen(false);
       setHistoryRefresh((n) => n + 1);
     } catch (err) {
-      alert(err?.message || "Failed to save record.");
+      alert(err?.message || t("failedToSaveRecord"));
     } finally {
       setAddSubmitting(false);
     }
@@ -554,13 +568,13 @@ export default function EquipmentHistoryPage() {
     ? selectedEquipmentName
     : filterFactory
     ? filterFactory
-    : "Equipment History";
+    : t("equipmentHistoryTitle");
 
   return (
     <section className="pt-24 pb-16 px-8 overflow-y-auto h-screen scrollbar-hide">
       <PageHeader
-        eyebrow="設備"
-        title="Equipment History"
+        eyebrow={t("equipment")}
+        title={t("equipmentHistoryTitle")}
         className="mb-6"
       />
 
@@ -575,7 +589,7 @@ export default function EquipmentHistoryPage() {
         <div className="flex flex-col gap-4 sm:flex-row sm:items-end">
           <div className="flex-1">
             <div className="mb-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">
-              Factory
+              {t("factory")}
             </div>
             <select
               value={filterFactory}
@@ -583,7 +597,7 @@ export default function EquipmentHistoryPage() {
               disabled={dataLoading}
               className={inputCls}
             >
-              <option value="">— Select factory —</option>
+              <option value="">{t("selectFactoryOption")}</option>
               {factories.map((f) => (
                 <option key={f} value={f}>{f}</option>
               ))}
@@ -591,7 +605,7 @@ export default function EquipmentHistoryPage() {
           </div>
           <div className="flex-1">
             <div className="mb-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">
-              Machine
+              {t("machine")}
             </div>
             <select
               value={filterEquipmentId}
@@ -600,7 +614,7 @@ export default function EquipmentHistoryPage() {
               className={inputCls}
             >
               <option value="">
-                {!filterFactory ? "— Select factory first —" : "All machines"}
+                {!filterFactory ? t("selectFactoryFirstOption") : t("allMachinesOption")}
               </option>
               {factoryEquipment.map((eq) => {
                 const id = eq._id?.$oid ?? String(eq._id);
@@ -612,7 +626,7 @@ export default function EquipmentHistoryPage() {
           </div>
           <div className="flex-1">
             <div className="mb-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">
-              Date Range
+              {t("dateRange")}
             </div>
             <div className="flex items-center gap-2">
               <input
@@ -634,7 +648,7 @@ export default function EquipmentHistoryPage() {
             {dataLoading && (
               <div className="flex items-center gap-2 text-sm text-on-surface-variant pb-3">
                 <span className="material-symbols-outlined animate-spin" style={{ fontSize: 16 }}>progress_activity</span>
-                Loading…
+                {t("loading")}
               </div>
             )}
             <button
@@ -643,7 +657,7 @@ export default function EquipmentHistoryPage() {
               className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-xs font-semibold text-on-primary hover:opacity-90 active:scale-95 transition-all duration-150 whitespace-nowrap"
             >
               <span className="material-symbols-outlined" style={{ fontSize: 16 }}>add</span>
-              Add Event
+              {t("addEvent")}
             </button>
           </div>
         </div>
@@ -661,8 +675,11 @@ export default function EquipmentHistoryPage() {
             {!historyLoading && history.length > 0 && (
               <p className="text-[11px] text-outline">
                 {displayedHistory.length !== history.length
-                  ? `${displayedHistory.length} of ${history.length} records`
-                  : `${history.length} records`}
+                  ? fillTemplate(t("recordsCountFilteredTemplate"), {
+                      shown: displayedHistory.length,
+                      total: history.length,
+                    })
+                  : fillTemplate(t("recordsCountTemplate"), { count: history.length })}
               </p>
             )}
           </div>
@@ -672,7 +689,7 @@ export default function EquipmentHistoryPage() {
         {historyLoading && (
           <div className="flex items-center gap-2 px-5 py-10 text-sm text-on-surface-variant">
             <span className="material-symbols-outlined animate-spin" style={{ fontSize: 18 }}>progress_activity</span>
-            読み込み中…
+            {t("loading")}
           </div>
         )}
 
@@ -690,9 +707,9 @@ export default function EquipmentHistoryPage() {
             <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/8">
               <span className="material-symbols-outlined text-primary" style={{ fontSize: 28 }}>factory</span>
             </div>
-            <p className="text-sm font-semibold text-on-surface">Select a factory</p>
+            <p className="text-sm font-semibold text-on-surface">{t("selectAFactory")}</p>
             <p className="mt-1 text-[11px] text-outline">
-              Choose a factory above to load equipment history.
+              {t("chooseFactoryPrompt")}
             </p>
           </div>
         )}
@@ -703,13 +720,13 @@ export default function EquipmentHistoryPage() {
             <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-surface-container">
               <span className="material-symbols-outlined text-outline" style={{ fontSize: 28 }}>event_note</span>
             </div>
-            <p className="text-sm font-semibold text-on-surface">No records found</p>
+            <p className="text-sm font-semibold text-on-surface">{t("noRecordsFoundTitle")}</p>
             <p className="mt-1 text-[11px] text-outline">
               {history.length > 0
-                ? "No records match the current date range."
+                ? t("noRecordsDateRange")
                 : filterEquipmentId
-                ? "This machine has no history entries yet."
-                : "No history entries for this factory yet."}
+                ? t("noRecordsMachine")
+                : t("noRecordsFactory")}
             </p>
           </div>
         )}
@@ -726,7 +743,7 @@ export default function EquipmentHistoryPage() {
                       onClick={() => setSortDir((d) => d === "desc" ? "asc" : "desc")}
                       className="inline-flex items-center gap-1 hover:text-on-surface transition-all duration-150"
                     >
-                      Date
+                      {t("date")}
                       <span className="material-symbols-outlined" style={{ fontSize: 14 }}>
                         {sortDir === "desc" ? "arrow_downward" : "arrow_upward"}
                       </span>
@@ -734,17 +751,17 @@ export default function EquipmentHistoryPage() {
                   </th>
                   {!filterEquipmentId && (
                     <th className="px-3 py-3 text-left text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">
-                      Machine
+                      {t("machine")}
                     </th>
                   )}
                   <th className="px-3 py-3 text-left text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">
-                    Reported By
+                    {t("reportedBy")}
                   </th>
                   <th className="px-3 py-3 text-left text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">
-                    Details
+                    {t("details")}
                   </th>
                   <th className="px-3 py-3 text-center text-[10px] font-semibold uppercase tracking-[0.18em] text-outline w-12">
-                    Photos
+                    {t("photos")}
                   </th>
                 </tr>
               </thead>
