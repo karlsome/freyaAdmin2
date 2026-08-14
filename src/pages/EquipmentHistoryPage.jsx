@@ -1272,7 +1272,7 @@ export default function EquipmentHistoryPage() {
   const [dataLoading, setDataLoading] = useState(true);
   const [dataError, setDataError] = useState("");
 
-  const [filterFactory, setFilterFactory] = useState("");
+  const [filterFactories, setFilterFactories] = useState([]);
   const [filterEquipmentId, setFilterEquipmentId] = useState("");
   const [filterStatus, setFilterStatus] = useState("");
   const [searchInput, setSearchInput] = useState("");
@@ -1364,37 +1364,76 @@ export default function EquipmentHistoryPage() {
     return () => clearTimeout(handler);
   }, [searchInput]);
 
-  // Load history when filters/page change
+  // Load history when filters/page change.
+  // 0 or 1 selected factories: standard server-side pagination.
+  // 2+ selected factories: fetch each factory in parallel and merge/paginate client-side,
+  // since the backend only filters by a single factory at a time.
   useEffect(() => {
     let active = true;
     setHistoryLoading(true);
     setHistoryError("");
-    fetchSetsubiHistoryRecords({
-      factory: filterFactory || undefined,
-      equipmentId: filterEquipmentId || undefined,
-      status: filterStatus || undefined,
-      search: debouncedSearch || undefined,
-      dateFrom: dateFrom || undefined,
-      dateTo: dateTo || undefined,
-      page,
-      limit: 50,
-      sortDir
-    })
-      .then((res) => { 
-        if (active) {
+
+    async function load() {
+      try {
+        if (filterFactories.length <= 1) {
+          const res = await fetchSetsubiHistoryRecords({
+            factory: filterFactories[0] || undefined,
+            equipmentId: filterEquipmentId || undefined,
+            status: filterStatus || undefined,
+            search: debouncedSearch || undefined,
+            dateFrom: dateFrom || undefined,
+            dateTo: dateTo || undefined,
+            page,
+            limit: 50,
+            sortDir
+          });
+          if (!active) return;
           setHistory(Array.isArray(res.items) ? res.items : []);
           setTotalPages(res.totalPages || 1);
           setTotalCount(res.totalCount || 0);
+        } else {
+          const results = await Promise.all(
+            filterFactories.map((factory) =>
+              fetchSetsubiHistoryRecords({
+                factory,
+                status: filterStatus || undefined,
+                search: debouncedSearch || undefined,
+                dateFrom: dateFrom || undefined,
+                dateTo: dateTo || undefined,
+                page: 1,
+                limit: 500,
+                sortDir
+              })
+            )
+          );
+          if (!active) return;
+          const merged = results.flatMap((res) => (Array.isArray(res.items) ? res.items : []));
+          merged.sort((a, b) => {
+            const da = a.date || "";
+            const db = b.date || "";
+            return sortDir === "asc" ? da.localeCompare(db) : db.localeCompare(da);
+          });
+          const pages = Math.max(1, Math.ceil(merged.length / 50));
+          const clampedPage = Math.min(page, pages);
+          setHistory(merged.slice((clampedPage - 1) * 50, clampedPage * 50));
+          setTotalPages(pages);
+          setTotalCount(merged.length);
+          if (clampedPage !== page) setPage(clampedPage);
         }
-      })
-      .catch((err) => { if (active) setHistoryError(err?.message || t("failedToLoadHistory")); })
-      .finally(() => { if (active) setHistoryLoading(false); });
+      } catch (err) {
+        if (active) setHistoryError(err?.message || t("failedToLoadHistory"));
+      } finally {
+        if (active) setHistoryLoading(false);
+      }
+    }
+
+    load();
     return () => { active = false; };
-  }, [filterFactory, filterEquipmentId, filterStatus, debouncedSearch, dateFrom, dateTo, page, sortDir, historyRefresh]);
+  }, [filterFactories, filterEquipmentId, filterStatus, debouncedSearch, dateFrom, dateTo, page, sortDir, historyRefresh]);
 
   const factoryEquipment = useMemo(
-    () => allEquipment.filter((eq) => eq["工場"] === filterFactory),
-    [allEquipment, filterFactory]
+    () => filterFactories.length === 1 ? allEquipment.filter((eq) => eq["工場"] === filterFactories[0]) : [],
+    [allEquipment, filterFactories]
   );
 
   const selectedEquipmentName = useMemo(() => {
@@ -1405,8 +1444,8 @@ export default function EquipmentHistoryPage() {
     return eq?.name || "";
   }, [allEquipment, filterEquipmentId]);
 
-  function handleFilterFactoryChange(val) {
-    setFilterFactory(val);
+  function handleFilterFactoriesChange(vals) {
+    setFilterFactories(vals);
     setFilterEquipmentId("");
     setPage(1);
   }
@@ -1443,8 +1482,10 @@ export default function EquipmentHistoryPage() {
 
   const tableTitle = filterEquipmentId
     ? selectedEquipmentName
-    : filterFactory
-    ? filterFactory
+    : filterFactories.length === 1
+    ? filterFactories[0]
+    : filterFactories.length > 1
+    ? fillTemplate(t("factoriesSelectedTemplate"), { count: filterFactories.length })
     : t("equipmentHistoryTitle");
 
   return (
@@ -1467,12 +1508,13 @@ export default function EquipmentHistoryPage() {
           <div className="flex-1 min-w-[200px]">
             <div className="mb-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">{t("factory")}</div>
             <SearchableSelect
-              value={filterFactory}
-              onChange={handleFilterFactoryChange}
+              value={filterFactories}
+              onChange={handleFilterFactoriesChange}
               options={factories}
-              placeholder={t("selectFactoryOption")}
+              placeholder={t("allFactoriesOption")}
               className={inputCls}
               disabled={dataLoading}
+              isMulti
             />
           </div>
           <div className="flex-1 min-w-[200px]">
@@ -1481,9 +1523,9 @@ export default function EquipmentHistoryPage() {
               value={filterEquipmentId}
               onChange={(val) => setFilterEquipmentId(val)}
               options={factoryEquipment.map(eq => ({ label: eq.name, value: eq._id?.$oid ?? String(eq._id) }))}
-              placeholder={!filterFactory ? t("selectFactoryFirstOption") : t("allMachinesOption")}
+              placeholder={filterFactories.length !== 1 ? t("selectOneFactoryOption") : t("allMachinesOption")}
               className={inputCls}
-              disabled={!filterFactory || dataLoading}
+              disabled={filterFactories.length !== 1 || dataLoading}
             />
           </div>
           <div className="flex-[2] min-w-[250px]">
@@ -1551,9 +1593,9 @@ export default function EquipmentHistoryPage() {
             </span>
             <div>
               <h3 className="text-base font-semibold text-on-surface">{tableTitle}</h3>
-              {!historyLoading && history.length > 0 && (
+              {!historyLoading && totalCount > 0 && (
                 <p className="text-xs text-outline mt-0.5">
-                  {fillTemplate(t("totalRecordsTemplate"), { count: history.length })}
+                  {fillTemplate(t("totalRecordsTemplate"), { count: totalCount })}
                 </p>
               )}
             </div>
@@ -1568,17 +1610,7 @@ export default function EquipmentHistoryPage() {
           </div>
         )}
 
-        {/* Empty States */}
-        {!historyLoading && !filterFactory && (
-          <div className="px-5 py-20 text-center">
-            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10">
-              <span className="material-symbols-outlined text-primary" style={{ fontSize: 32 }}>factory</span>
-            </div>
-            <p className="text-base font-semibold text-on-surface">{t("selectAFactory")}</p>
-            <p className="mt-1 text-sm text-outline">{t("chooseFactoryToView")}</p>
-          </div>
-        )}
-
+        {/* Empty State */}
         {!historyLoading && history.length === 0 && (
           <div className="px-5 py-20 text-center">
             <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-surface-container">
@@ -1606,7 +1638,7 @@ export default function EquipmentHistoryPage() {
                   </th>
                   {!filterEquipmentId && (
                     <th className="px-4 py-3.5 text-left text-[11px] font-semibold uppercase tracking-wider text-outline">
-                      {!filterFactory ? t("factoryAndMachine") : t("machine")}
+                      {filterFactories.length !== 1 ? t("factoryAndMachine") : t("machine")}
                     </th>
                   )}
                   <th className="px-4 py-3.5 text-left text-[11px] font-semibold uppercase tracking-wider text-outline">
@@ -1656,8 +1688,8 @@ export default function EquipmentHistoryPage() {
                       {!filterEquipmentId && (
                         <td className="px-4 py-4 whitespace-nowrap">
                           <p className="text-sm font-medium text-on-surface">
-                            {!filterFactory 
-                              ? `${event["工場"] || "—"} / ${event.equipmentName || "—"}` 
+                            {filterFactories.length !== 1
+                              ? `${event["工場"] || "—"} / ${event.equipmentName || "—"}`
                               : event.equipmentName || "—"}
                           </p>
                         </td>
