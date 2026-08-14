@@ -10,8 +10,15 @@ function isImageUrl(url) {
   return /\.(jpeg|jpg|gif|png|webp|svg)$/i.test(url.split("?")[0]);
 }
 
+function fillTemplate(template, values) {
+  return Object.entries(values).reduce(
+    (str, [key, value]) => str.replace(`{${key}}`, value),
+    template
+  );
+}
+
 export default function EquipmentEventDetailModal({ event, onClose, onEdit }) {
-  const { language } = useLanguage();
+  const { language, t } = useLanguage();
   const [previewState, setPreviewState] = useState(null);
 
   if (!event) return null;
@@ -25,10 +32,10 @@ export default function EquipmentEventDetailModal({ event, onClose, onEdit }) {
       <div className="flex h-[72px] shrink-0 items-center justify-between border-b border-separator/40 bg-surface/80 px-6 backdrop-blur-xl">
         <div>
           <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">
-            Record Details
+            {t("recordDetails")}
           </p>
           <h2 className="mt-1 text-xl font-semibold text-on-surface">
-            {title || "Equipment Event"}
+            {title || t("equipmentEventFallback")}
           </h2>
         </div>
         <div className="flex items-center gap-3">
@@ -38,7 +45,7 @@ export default function EquipmentEventDetailModal({ event, onClose, onEdit }) {
             className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-on-primary hover:opacity-90 active:scale-95 transition-all shadow-md"
           >
             <span className="material-symbols-outlined" style={{ fontSize: 18 }}>edit</span>
-            Edit Record
+            {t("editRecordAction")}
           </button>
           <button
             type="button"
@@ -57,40 +64,41 @@ export default function EquipmentEventDetailModal({ event, onClose, onEdit }) {
           {/* Top Info Section */}
           <div className="bg-surface p-6 rounded-2xl border border-separator/30 shadow-sm flex flex-wrap items-start gap-8">
             <div>
-              <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline mb-1.5">Status</div>
+              <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline mb-1.5">{t("status")}</div>
               <span className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-base font-bold ${
                 event.status === "Resolved" ? "bg-primary/10 text-primary" :
                 event.status === "Failed" ? "bg-error/10 text-error" :
                 "bg-surface-container-high text-on-surface-variant"
               }`}>
-                {event.status === "Resolved" ? "✅" : event.status === "Failed" ? "❌" : "🔴"} {event.status || "Open"}
+                {event.status === "Resolved" ? "✅" : event.status === "Failed" ? "❌" : "🔴"}{" "}
+                {event.status === "Resolved" ? t("statusResolved") : event.status === "Failed" ? t("statusFailed") : t("statusOpen")}
               </span>
             </div>
             <div>
-              <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline mb-1">Date</div>
+              <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline mb-1">{t("date")}</div>
               <div className="text-sm font-medium text-on-surface">{event.date || "—"}</div>
             </div>
             <div>
-              <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline mb-1">Factory & Machine</div>
+              <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline mb-1">{t("factoryAndMachine")}</div>
               <div className="text-sm font-medium text-on-surface">{event["工場"]} / {event.equipmentName}</div>
             </div>
             <div>
-              <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline mb-1">Reported By</div>
+              <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline mb-1">{t("reportedBy")}</div>
               <div className="text-sm font-medium text-on-surface">{event["名前"] || "—"}</div>
             </div>
             {event.resolutionTime && (
               <div>
-                <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline mb-1">Total Time</div>
-                <div className="text-sm font-medium text-on-surface">{event.resolutionTime} hrs</div>
+                <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline mb-1">{t("totalTime")}</div>
+                <div className="text-sm font-medium text-on-surface">{event.resolutionTime} {t("hrsSuffix")}</div>
               </div>
             )}
           </div>
 
           {/* Details Section */}
           <div className="bg-surface-container/30 p-6 rounded-2xl border border-separator/20 space-y-4">
-            <h3 className="text-sm font-bold text-on-surface border-b border-separator/40 pb-2">Issue Details</h3>
+            <h3 className="text-sm font-bold text-on-surface border-b border-separator/40 pb-2">{t("issueDetails")}</h3>
             <div className="text-base text-on-surface-variant whitespace-pre-wrap">
-              {details || <span className="italic text-outline">No details provided.</span>}
+              {details || <span className="italic text-outline">{t("noDetailsProvided")}</span>}
             </div>
             {event.imageURLs && event.imageURLs.length > 0 && (() => {
               const videos = event.imageURLs.filter(isVideoUrl);
@@ -102,10 +110,10 @@ export default function EquipmentEventDetailModal({ event, onClose, onEdit }) {
                 const idx = allMedia.indexOf(url);
                 if (idx >= 0) {
                   setPreviewState({
-                    images: allMedia.map(u => ({ url: u, label: "Event Attachment" })),
+                    images: allMedia.map(u => ({ url: u, label: t("eventFileLabel") })),
                     activeIndex: idx,
-                    displayName: "Report Attachments",
-                    eyebrow: title || "Event"
+                    displayName: t("reportAttachments"),
+                    eyebrow: title || t("eventFallback")
                   });
                 } else {
                   window.open(url, "_blank");
@@ -116,7 +124,7 @@ export default function EquipmentEventDetailModal({ event, onClose, onEdit }) {
                 <div className="space-y-4 pt-4">
                   {videos.length > 0 && (
                     <div>
-                      <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline mb-2">Videos</div>
+                      <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline mb-2">{t("videos")}</div>
                       <div className="flex gap-4 overflow-x-auto pb-2">
                         {videos.map((url, i) => (
                           <div key={i} className="relative flex-shrink-0 w-32 h-32 rounded-xl overflow-hidden border border-separator/30 bg-surface-container cursor-pointer hover:opacity-80 transition-opacity group" onClick={() => openPreview(url)}>
@@ -131,11 +139,11 @@ export default function EquipmentEventDetailModal({ event, onClose, onEdit }) {
                   )}
                   {images.length > 0 && (
                     <div>
-                      <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline mb-2">Images</div>
+                      <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline mb-2">{t("images")}</div>
                       <div className="flex gap-4 overflow-x-auto pb-2">
                         {images.map((url, i) => (
                           <div key={i} className="flex-shrink-0 w-32 h-32 rounded-xl overflow-hidden border border-separator/30 bg-surface-container cursor-pointer hover:opacity-80 transition-opacity" onClick={() => openPreview(url)}>
-                            <img src={url} alt="Issue" className="w-full h-full object-cover" />
+                            <img src={url} alt={t("issueTitle")} className="w-full h-full object-cover" />
                           </div>
                         ))}
                       </div>
@@ -143,7 +151,7 @@ export default function EquipmentEventDetailModal({ event, onClose, onEdit }) {
                   )}
                   {others.length > 0 && (
                     <div>
-                      <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline mb-2">Other Files</div>
+                      <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline mb-2">{t("otherFiles")}</div>
                       <div className="flex gap-4 overflow-x-auto pb-2">
                         {others.map((url, i) => (
                           <div key={i} className="flex-shrink-0 w-16 h-16 rounded-xl border border-separator/30 bg-surface-container flex items-center justify-center cursor-pointer hover:bg-surface-container-high transition-colors" onClick={() => window.open(url, "_blank")}>
@@ -161,7 +169,7 @@ export default function EquipmentEventDetailModal({ event, onClose, onEdit }) {
           {/* Attempts Timeline */}
           {event.attempts && event.attempts.length > 0 && (
             <div className="space-y-6">
-              <h3 className="text-sm font-bold text-on-surface border-b border-separator/40 pb-2">Troubleshooting Timeline</h3>
+              <h3 className="text-sm font-bold text-on-surface border-b border-separator/40 pb-2">{t("troubleshootingTimeline")}</h3>
               
               <div className="relative border-l-2 border-separator/40 ml-4 space-y-8 pb-8">
                 {event.attempts.map((att, idx) => {
@@ -189,19 +197,19 @@ export default function EquipmentEventDetailModal({ event, onClose, onEdit }) {
                               att.status === "Failed" ? "bg-error/10 text-error" :
                               "bg-surface-container-high text-on-surface-variant"
                             }`}>
-                              {att.status || "Unknown"}
+                              {att.status === "Success" ? t("attemptStatusSuccess") : att.status === "Failed" ? t("attemptStatusFailed") : t("statusUnknown")}
                             </span>
                           </div>
-                          <h4 className="text-lg font-bold text-on-surface">{attTitle || "Untitled Attempt"}</h4>
+                          <h4 className="text-lg font-bold text-on-surface">{attTitle || t("untitledAttempt")}</h4>
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                           <div>
-                            <div className="text-xs font-semibold uppercase tracking-wider text-outline mb-1.5">Action Taken</div>
+                            <div className="text-xs font-semibold uppercase tracking-wider text-outline mb-1.5">{t("actionTaken")}</div>
                             <div className="text-sm text-on-surface-variant whitespace-pre-wrap">{attDesc || "—"}</div>
                           </div>
                           <div>
-                            <div className="text-xs font-semibold uppercase tracking-wider text-outline mb-1.5">Result</div>
+                            <div className="text-xs font-semibold uppercase tracking-wider text-outline mb-1.5">{t("result")}</div>
                             <div className="text-sm text-on-surface-variant whitespace-pre-wrap">{attResult || "—"}</div>
                           </div>
                         </div>
@@ -216,10 +224,10 @@ export default function EquipmentEventDetailModal({ event, onClose, onEdit }) {
                             const idx = allAttMedia.indexOf(url);
                             if (idx >= 0) {
                               setPreviewState({
-                                images: allAttMedia.map(u => ({ url: u, label: "Attempt Attachment" })),
+                                images: allAttMedia.map(u => ({ url: u, label: t("attemptFileLabel") })),
                                 activeIndex: idx,
-                                displayName: attTitle || `Attempt ${att.attemptNumber || idx + 1}`,
-                                eyebrow: title || "Event"
+                                displayName: attTitle || fillTemplate(t("attemptNumberTemplate"), { number: att.attemptNumber || idx + 1 }),
+                                eyebrow: title || t("eventFallback")
                               });
                             } else {
                               window.open(url, "_blank");
@@ -230,7 +238,7 @@ export default function EquipmentEventDetailModal({ event, onClose, onEdit }) {
                             <div className="pt-2 space-y-4">
                               {attVideos.length > 0 && (
                                 <div>
-                                  <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline mb-2">Videos</div>
+                                  <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline mb-2">{t("videos")}</div>
                                   <div className="flex flex-wrap gap-3">
                                     {attVideos.map((url, i) => (
                                       <div key={i} className="relative w-24 h-24 rounded-lg overflow-hidden border border-separator/30 bg-surface-container cursor-pointer hover:opacity-80 transition-opacity group" onClick={() => openAttPreview(url)}>
@@ -245,11 +253,11 @@ export default function EquipmentEventDetailModal({ event, onClose, onEdit }) {
                               )}
                               {attImages.length > 0 && (
                                 <div>
-                                  <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline mb-2">Images</div>
+                                  <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline mb-2">{t("images")}</div>
                                   <div className="flex flex-wrap gap-3">
                                     {attImages.map((url, i) => (
                                       <div key={i} className="w-24 h-24 rounded-lg overflow-hidden border border-separator/30 bg-surface-container cursor-pointer hover:opacity-80 transition-opacity" onClick={() => openAttPreview(url)}>
-                                        <img src={url} alt={`Attempt`} className="w-full h-full object-cover" />
+                                        <img src={url} alt={t("attemptFileLabel")} className="w-full h-full object-cover" />
                                       </div>
                                     ))}
                                   </div>
@@ -257,7 +265,7 @@ export default function EquipmentEventDetailModal({ event, onClose, onEdit }) {
                               )}
                               {attOthers.length > 0 && (
                                 <div>
-                                  <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline mb-2">Other Files</div>
+                                  <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline mb-2">{t("otherFiles")}</div>
                                   <div className="flex flex-wrap gap-3">
                                     {attOthers.map((url, i) => (
                                       <div key={i} className="w-12 h-12 rounded-lg border border-separator/30 bg-surface-container flex items-center justify-center cursor-pointer hover:bg-surface-container-high transition-colors" onClick={() => window.open(url, "_blank")}>
@@ -273,7 +281,7 @@ export default function EquipmentEventDetailModal({ event, onClose, onEdit }) {
                         {att.fixedBy && att.fixedBy.length > 0 && (
                           <div className="flex justify-end pt-2 border-t border-separator/20">
                             <div className="text-xs text-on-surface-variant">
-                              <span className="text-outline">Personnel:</span> {att.fixedBy.join(", ")}
+                              <span className="text-outline">{t("personnel")}:</span> {att.fixedBy.join(", ")}
                             </div>
                           </div>
                         )}

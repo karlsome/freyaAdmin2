@@ -76,9 +76,17 @@ function isPdfUrl(url) {
   return /\.pdf$/i.test(url.split("?")[0]);
 }
 
+function fillTemplate(template, values) {
+  return Object.entries(values).reduce(
+    (str, [key, value]) => str.replace(`{${key}}`, value),
+    template
+  );
+}
+
 // ── Searchable Select ──────────────────────────────────────────────────────────
 
 function SearchableSelect({ value, options, onChange, placeholder, className, disabled, isMulti }) {
+  const { t } = useLanguage();
   const [isOpen, setIsOpen] = useState(false);
   const [query, setQuery] = useState("");
   const containerRef = useRef(null);
@@ -228,7 +236,7 @@ function SearchableSelect({ value, options, onChange, placeholder, className, di
               type="text"
               autoFocus
               className="w-full h-8 px-3 rounded-lg border border-separator/40 bg-surface-container-low text-xs outline-none focus:border-primary/40 font-body"
-              placeholder="Search..."
+              placeholder={t("searchPlaceholder")}
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               onClick={(e) => e.stopPropagation()}
@@ -243,7 +251,7 @@ function SearchableSelect({ value, options, onChange, placeholder, className, di
             <span className="truncate italic opacity-70">{placeholder}</span>
           </button>
           {filteredOptions.length === 0 ? (
-            <div className="px-4 py-2 text-xs text-on-surface-variant text-center">No results found</div>
+            <div className="px-4 py-2 text-xs text-on-surface-variant text-center">{t("noResultsFound")}</div>
           ) : (
             filteredOptions.map((option) => {
               const isSelected = isMulti 
@@ -310,7 +318,7 @@ function EventModal({ event, history, factories, allEquipment, workerNames, user
 
   const [attempts, setAttempts] = useState(initialDraft?.attempts || event?.attempts || []);
   
-  const { language } = useLanguage();
+  const { language, t } = useLanguage();
   const [activeAttemptTabs, setActiveAttemptTabs] = useState({});
   const attemptSnapshotsRef = useRef({});
   const attemptsRef = useRef(attempts);
@@ -506,12 +514,12 @@ function EventModal({ event, history, factories, allEquipment, workerNames, user
     if (sortedResolved.length > 0) {
       const last = sortedResolved[0];
       const lastSuccessfulAttempt = (last.attempts || []).slice().reverse().find(a => a.status === "Success");
-      lastFixedBy = lastSuccessfulAttempt?.fixedBy || last["名前"] || "Unknown";
+      lastFixedBy = lastSuccessfulAttempt?.fixedBy || last["名前"] || t("statusUnknown");
       lastFixedDate = last.date;
     }
 
     return { totalOccurrences, avgTime, successFixes, failedFixes, lastFixedBy, lastFixedDate };
-  }, [equipmentId, history]);
+  }, [equipmentId, history, t]);
 
   function handleFactoryChange(e) {
     setFactory(e.target.value);
@@ -564,7 +572,9 @@ function EventModal({ event, history, factories, allEquipment, workerNames, user
     if (failedCount) {
       const raw = results.find((r) => r.status === "rejected")?.reason?.message || "";
       setUploadError(
-        raw.startsWith("<") ? "Upload failed — server error." : raw || `${failedCount} file(s) failed.`
+        raw.startsWith("<")
+          ? t("uploadFailedServerError")
+          : raw || fillTemplate(t("filesFailedTemplate"), { count: failedCount })
       );
     }
     setUploading(false);
@@ -691,10 +701,10 @@ function EventModal({ event, history, factories, allEquipment, workerNames, user
         <div className="sticky top-0 z-20 px-6 py-4 flex items-center justify-between border-b border-separator/40 bg-surface/90 backdrop-blur-md">
           <div>
             <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">
-              {isEdit ? "Edit Record" : "Add Record"}
+              {isEdit ? t("editRecordEyebrow") : t("addRecordEyebrow")}
             </p>
             <h2 className="mt-1 text-xl font-semibold text-on-surface">
-              {isEdit ? (event.title || "Equipment Event") : "Report Equipment Event"}
+              {isEdit ? (event.title || t("equipmentEventFallback")) : t("reportEquipmentEvent")}
             </h2>
           </div>
           <button
@@ -717,7 +727,7 @@ function EventModal({ event, history, factories, allEquipment, workerNames, user
             {/* Top row: Factory, Machine, Date, Reported By */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 relative z-30">
               <div>
-                <div className="mb-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">工場 *</div>
+                <div className="mb-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">{t("factory")} *</div>
                 <SearchableSelect
                   value={factory}
                   onChange={(val) => {
@@ -725,33 +735,33 @@ function EventModal({ event, history, factories, allEquipment, workerNames, user
                     setEquipmentId("");
                   }}
                   options={factories}
-                  placeholder="— Select factory —"
+                  placeholder={t("selectFactoryOption")}
                   className={inputCls}
                 />
               </div>
               <div>
-                <div className="mb-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">設備 *</div>
+                <div className="mb-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">{t("machine")} *</div>
                 <SearchableSelect
                   value={equipmentId}
                   onChange={(val) => setEquipmentId(val)}
                   options={factoryEquipment.map(eq => ({ label: eq.name, value: eq._id?.$oid ?? String(eq._id) }))}
-                  placeholder={!factory ? "— Select factory first —" : "— Select machine —"}
+                  placeholder={!factory ? t("selectFactoryFirstOption") : t("selectMachineOption")}
                   className={inputCls}
                   disabled={!factory}
                 />
               </div>
               <div>
-                <div className="mb-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Reported By</div>
+                <div className="mb-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">{t("reportedBy")}</div>
                 <SearchableSelect
                   value={reportedBy}
                   onChange={(val) => setReportedBy(val)}
                   options={workerNames}
-                  placeholder="— Select name —"
+                  placeholder={t("selectNameOption")}
                   className={inputCls}
                 />
               </div>
               <div>
-                <div className="mb-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Date *</div>
+                <div className="mb-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">{t("date")} *</div>
                 <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className={inputCls} required />
               </div>
             </div>
@@ -763,9 +773,9 @@ function EventModal({ event, history, factories, allEquipment, workerNames, user
               <div className="lg:col-span-2 space-y-4">
                 <div className="md:col-span-2">
                   <div className="flex items-center gap-2 mb-2">
-                    <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Issue Title</div>
+                    <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">{t("issueTitle")}</div>
                     {titleTranslated && (
-                      <div className="w-1.5 h-1.5 rounded-full bg-error animate-pulse" title="Auto-translated!" />
+                      <div className="w-1.5 h-1.5 rounded-full bg-error animate-pulse" title={t("autoTranslated")} />
                     )}
                   </div>
                   <input
@@ -785,9 +795,9 @@ function EventModal({ event, history, factories, allEquipment, workerNames, user
                 </div>
                 <div>
                   <div className="flex items-center gap-2 mb-2">
-                    <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Symptom Details</div>
+                    <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">{t("symptomDetails")}</div>
                     {detailsTranslated && (
-                      <div className="w-1.5 h-1.5 rounded-full bg-error animate-pulse" title="Auto-translated!" />
+                      <div className="w-1.5 h-1.5 rounded-full bg-error animate-pulse" title={t("autoTranslated")} />
                     )}
                   </div>
                   <textarea
@@ -808,28 +818,28 @@ function EventModal({ event, history, factories, allEquipment, workerNames, user
               </div>
               <div className="space-y-4">
                 <div>
-                  <div className="mb-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Overall Status</div>
-                  <select 
-                    value={status} 
-                    onChange={(e) => setStatus(e.target.value)} 
+                  <div className="mb-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">{t("overallStatus")}</div>
+                  <select
+                    value={status}
+                    onChange={(e) => setStatus(e.target.value)}
                     className={`${inputCls} font-semibold ${
                       status === "Resolved" ? "text-primary border-primary/40 bg-primary/5" :
                       status === "Failed" ? "text-error border-error/40 bg-error/5" : ""
                     }`}
                   >
-                    <option value="Open">🔴 Open / Unresolved</option>
-                    <option value="Resolved">✅ Resolved</option>
-                    <option value="Failed">❌ Failed to Fix</option>
+                    <option value="Open">{t("statusOpenOption")}</option>
+                    <option value="Resolved">{t("statusResolvedOption")}</option>
+                    <option value="Failed">{t("statusFailedOption")}</option>
                   </select>
                 </div>
                 <div>
-                  <div className="mb-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Total Time (hours)</div>
+                  <div className="mb-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">{t("totalTimeHours")}</div>
                   <input
                     type="number"
                     step="0.01"
                     value={resolutionTime}
                     onChange={(e) => setResolutionTime(e.target.value)}
-                    placeholder="e.g. 1.5"
+                    placeholder={t("hoursExample")}
                     className={inputCls}
                     min="0"
                   />
@@ -839,7 +849,7 @@ function EventModal({ event, history, factories, allEquipment, workerNames, user
 
             {/* General Files */}
             <div>
-              <div className="mb-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Symptom Files</div>
+              <div className="mb-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">{t("symptomFiles")}</div>
               <input
                 ref={fileInputRef}
                 type="file"
@@ -854,9 +864,9 @@ function EventModal({ event, history, factories, allEquipment, workerNames, user
                 className="inline-flex items-center gap-2 rounded-xl border border-outline-variant/30 bg-surface px-4 py-2 text-xs font-semibold text-on-surface hover:bg-surface-container active:scale-95 transition-all duration-150 disabled:opacity-50"
               >
                 {uploading && activeAttemptIndexForUpload === null ? (
-                  <><span className="material-symbols-outlined animate-spin" style={{ fontSize: 16 }}>progress_activity</span> Uploading...</>
+                  <><span className="material-symbols-outlined animate-spin" style={{ fontSize: 16 }}>progress_activity</span> {t("uploadingFiles")}</>
                 ) : (
-                  <><span className="material-symbols-outlined" style={{ fontSize: 16 }}>attach_file</span> Attach Files</>
+                  <><span className="material-symbols-outlined" style={{ fontSize: 16 }}>attach_file</span> {t("attachFiles")}</>
                 )}
               </button>
               {imageURLs.length > 0 && (
@@ -868,10 +878,10 @@ function EventModal({ event, history, factories, allEquipment, workerNames, user
                         onClick={() => {
                           if (isVideoUrl(url) || isImageUrl(url) || isPdfUrl(url)) {
                             setPreviewState({
-                              images: imageURLs.map((u) => ({ url: u, label: "Event File" })),
+                              images: imageURLs.map((u) => ({ url: u, label: t("eventFileLabel") })),
                               activeIndex: imageURLs.indexOf(url),
-                              displayName: "Report Attachments",
-                              eyebrow: title || "Event",
+                              displayName: t("reportAttachments"),
+                              eyebrow: title || t("eventFallback"),
                             });
                           } else {
                             window.open(url, "_blank");
@@ -907,13 +917,13 @@ function EventModal({ event, history, factories, allEquipment, workerNames, user
               <div className="flex items-center justify-between mb-4">
                 <div className="text-sm font-semibold text-on-surface flex items-center gap-2">
                   <span className="material-symbols-outlined text-primary" style={{ fontSize: 20 }}>build</span>
-                  Fix Attempts
+                  {t("fixAttempts")}
                 </div>
               </div>
 
               {attempts.length === 0 ? (
                 <div className="text-center py-6 border border-dashed border-outline-variant/40 rounded-2xl">
-                  <p className="text-sm text-on-surface-variant">No fix attempts recorded yet.</p>
+                  <p className="text-sm text-on-surface-variant">{t("noFixAttempts")}</p>
                 </div>
               ) : (
                 <div className="space-y-4">
@@ -938,7 +948,7 @@ function EventModal({ event, history, factories, allEquipment, workerNames, user
                           </span>
                           {!isExpanded && (
                             <span className="text-sm font-semibold text-on-surface flex-1 truncate">
-                              {attempt.title || `Attempt ${attempt.attemptNumber}`}
+                              {attempt.title || fillTemplate(t("attemptNumberTemplate"), { number: attempt.attemptNumber })}
                             </span>
                           )}
                           
@@ -969,7 +979,7 @@ function EventModal({ event, history, factories, allEquipment, workerNames, user
                           )}
                           {isExpanded && (
                             <span className="text-sm font-semibold text-primary ml-auto mr-8">
-                              Editing
+                              {t("editingLabel")}
                             </span>
                           )}
                         </div>
@@ -1036,8 +1046,8 @@ function EventModal({ event, history, factories, allEquipment, workerNames, user
                             onChange={(e) => updateAttempt(index, "status", e.target.value)}
                             className={inputCls}
                           >
-                            <option value="Success">✅ Success</option>
-                            <option value="Failed">❌ Failed</option>
+                            <option value="Success">{t("attemptStatusSuccessOption")}</option>
+                            <option value="Failed">{t("attemptStatusFailedOption")}</option>
                           </select>
                         </div>
                         <div>
@@ -1045,7 +1055,7 @@ function EventModal({ event, history, factories, allEquipment, workerNames, user
                             value={Array.isArray(attempt.fixedBy) ? attempt.fixedBy : (attempt.fixedBy ? [attempt.fixedBy] : [])}
                             onChange={(val) => updateAttempt(index, "fixedBy", val)}
                             options={workerNames}
-                            placeholder="— Worker(s) —"
+                            placeholder={t("selectWorkersOption")}
                             className={inputCls}
                             isMulti
                           />
@@ -1064,7 +1074,7 @@ function EventModal({ event, history, factories, allEquipment, workerNames, user
                             step="0.01"
                             value={attempt.timeToResolve}
                             onChange={(e) => updateAttempt(index, "timeToResolve", e.target.value)}
-                            placeholder="hours"
+                            placeholder={t("hoursPlaceholder")}
                             className={inputCls}
                             min="0"
                           />
@@ -1091,9 +1101,9 @@ function EventModal({ event, history, factories, allEquipment, workerNames, user
                           className="text-xs font-semibold text-outline hover:text-on-surface flex items-center gap-1 transition-colors disabled:opacity-50"
                         >
                           {uploading && activeAttemptIndexForUpload === index ? (
-                            <><span className="material-symbols-outlined animate-spin" style={{ fontSize: 14 }}>progress_activity</span> Uploading...</>
+                            <><span className="material-symbols-outlined animate-spin" style={{ fontSize: 14 }}>progress_activity</span> {t("uploadingFiles")}</>
                           ) : (
-                            <><span className="material-symbols-outlined" style={{ fontSize: 14 }}>attach_file</span> File(s)</>
+                            <><span className="material-symbols-outlined" style={{ fontSize: 14 }}>attach_file</span> {t("filesButtonLabel")}</>
                           )}
                         </button>
                         <div className="flex gap-2">
@@ -1104,10 +1114,10 @@ function EventModal({ event, history, factories, allEquipment, workerNames, user
                                 onClick={() => {
                                   if (isVideoUrl(url) || isImageUrl(url) || isPdfUrl(url)) {
                                     setPreviewState({
-                                      images: attempt.imageURLs.map((u) => ({ url: u, label: "Attempt File" })),
+                                      images: attempt.imageURLs.map((u) => ({ url: u, label: t("attemptFileLabel") })),
                                       activeIndex: attempt.imageURLs.indexOf(url),
-                                      displayName: attempt.title || `Attempt ${index + 1}`,
-                                      eyebrow: "Fix Attempt",
+                                      displayName: attempt.title || fillTemplate(t("attemptNumberTemplate"), { number: index + 1 }),
+                                      eyebrow: t("fixAttemptLabel"),
                                     });
                                   } else {
                                     window.open(url, "_blank");
@@ -1148,7 +1158,7 @@ function EventModal({ event, history, factories, allEquipment, workerNames, user
                   onClick={addAttempt}
                   className="text-sm font-semibold text-primary hover:bg-primary/10 px-4 py-2 rounded-xl border border-primary/20 transition-all flex items-center gap-2"
                 >
-                  <span className="material-symbols-outlined" style={{ fontSize: 16 }}>add</span> Add Attempt
+                  <span className="material-symbols-outlined" style={{ fontSize: 16 }}>add</span> {t("addAttempt")}
                 </button>
               </div>
             </div>
@@ -1159,24 +1169,24 @@ function EventModal({ event, history, factories, allEquipment, workerNames, user
           {/* Sidebar Insights */}
           <div className="w-full lg:w-72 bg-surface border-t lg:border-t-0 lg:border-l border-separator/30 p-6 flex flex-col shrink-0">
             <h3 className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline mb-4">
-              History & Insights
+              {t("historyAndInsights")}
             </h3>
-            
+
             {!equipmentId ? (
-              <p className="text-sm text-on-surface-variant text-center mt-4 italic">Select a machine to view insights</p>
+              <p className="text-sm text-on-surface-variant text-center mt-4 italic">{t("selectMachineForInsights")}</p>
             ) : !insights ? (
-              <p className="text-sm text-on-surface-variant text-center mt-4 italic">No previous history for this machine.</p>
+              <p className="text-sm text-on-surface-variant text-center mt-4 italic">{t("noPreviousHistory")}</p>
             ) : (
               <div className="space-y-4">
                 <div className="bg-surface-container-low rounded-xl p-4">
-                  <p className="text-[10px] font-semibold uppercase text-outline mb-1">Total Occurrences</p>
+                  <p className="text-[10px] font-semibold uppercase text-outline mb-1">{t("totalOccurrences")}</p>
                   <p className="text-lg font-bold text-on-surface flex items-center gap-2">
-                    {insights.totalOccurrences > 3 ? "🔴" : "🔵"} {insights.totalOccurrences} times
+                    {insights.totalOccurrences > 3 ? "🔴" : "🔵"} {insights.totalOccurrences} {t("timesSuffix")}
                   </p>
                 </div>
-                
+
                 <div className="bg-surface-container-low rounded-xl p-4">
-                  <p className="text-[10px] font-semibold uppercase text-outline mb-1">Fix Success Rate</p>
+                  <p className="text-[10px] font-semibold uppercase text-outline mb-1">{t("fixSuccessRate")}</p>
                   <div className="flex justify-between items-center mt-2">
                     <span className="text-sm font-medium text-primary flex items-center gap-1">
                       ✅ {insights.successFixes}
@@ -1188,15 +1198,15 @@ function EventModal({ event, history, factories, allEquipment, workerNames, user
                 </div>
 
                 <div className="bg-surface-container-low rounded-xl p-4">
-                  <p className="text-[10px] font-semibold uppercase text-outline mb-1">Last Fixed By</p>
+                  <p className="text-[10px] font-semibold uppercase text-outline mb-1">{t("lastFixedBy")}</p>
                   <p className="text-sm font-medium text-on-surface">👷 {insights.lastFixedBy}</p>
                   <p className="text-xs text-outline mt-1">{insights.lastFixedDate}</p>
                 </div>
 
                 <div className="bg-surface-container-low rounded-xl p-4">
-                  <p className="text-[10px] font-semibold uppercase text-outline mb-1">Avg. Resolution Time</p>
+                  <p className="text-[10px] font-semibold uppercase text-outline mb-1">{t("avgResolutionTime")}</p>
                   <p className="text-sm font-medium text-on-surface flex items-center gap-2">
-                    ⏱️ {insights.avgTime > 0 ? `${insights.avgTime} mins` : "Unknown"}
+                    ⏱️ {insights.avgTime > 0 ? `${insights.avgTime} ${t("minsSuffix")}` : t("statusUnknown")}
                   </p>
                 </div>
               </div>
@@ -1212,7 +1222,7 @@ function EventModal({ event, history, factories, allEquipment, workerNames, user
               onClick={discardDraft}
               className="rounded-xl border border-error/20 text-error hover:bg-error/10 px-5 py-2.5 text-sm font-semibold active:scale-95 transition-all"
             >
-              Discard Draft
+              {t("discardDraft")}
             </button>
           ) : (
             <div />
@@ -1223,7 +1233,7 @@ function EventModal({ event, history, factories, allEquipment, workerNames, user
               onClick={onClose}
               className="rounded-xl border border-separator/40 px-5 py-2.5 text-sm font-semibold text-on-surface-variant hover:bg-surface-container hover:text-primary hover:border-primary/30 active:scale-95 transition-all"
             >
-              Cancel
+              {t("cancel")}
             </button>
             <button
               type="submit"
@@ -1231,7 +1241,7 @@ function EventModal({ event, history, factories, allEquipment, workerNames, user
               disabled={!canSubmit}
               className="rounded-xl bg-primary px-6 py-2.5 text-sm font-semibold text-on-primary hover:opacity-90 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {submitting ? "Saving..." : isEdit ? "Save Changes" : "Submit Report"}
+              {submitting ? t("savingEllipsis") : isEdit ? t("saveChanges") : t("submitReport")}
             </button>
           </div>
         </div>
@@ -1254,7 +1264,7 @@ function EventModal({ event, history, factories, allEquipment, workerNames, user
 export default function EquipmentHistoryPage() {
   const authUser = getAuthUser();
   const username = authUser?.username || "unknown";
-  const { language } = useLanguage();
+  const { language, t } = useLanguage();
 
   const [factories, setFactories] = useState([]);
   const [allEquipment, setAllEquipment] = useState([]);
@@ -1336,7 +1346,7 @@ export default function EquipmentHistoryPage() {
         setAllEquipment(Array.isArray(equipmentRecords) ? equipmentRecords : []);
         setWorkerNames(Array.isArray(names) ? names : []);
       } catch (err) {
-        if (active) setDataError(err?.message || "Failed to load data.");
+        if (active) setDataError(err?.message || t("failedToLoadData"));
       } finally {
         if (active) setDataLoading(false);
       }
@@ -1377,7 +1387,7 @@ export default function EquipmentHistoryPage() {
           setTotalCount(res.totalCount || 0);
         }
       })
-      .catch((err) => { if (active) setHistoryError(err?.message || "Failed to load history."); })
+      .catch((err) => { if (active) setHistoryError(err?.message || t("failedToLoadHistory")); })
       .finally(() => { if (active) setHistoryLoading(false); });
     return () => { active = false; };
   }, [filterFactory, filterEquipmentId, filterStatus, debouncedSearch, dateFrom, dateTo, page, sortDir, historyRefresh]);
@@ -1424,7 +1434,7 @@ export default function EquipmentHistoryPage() {
       setEditingEvent(null);
       setHistoryRefresh((n) => n + 1);
     } catch (err) {
-      alert(err?.message || "Failed to save record.");
+      alert(err?.message || t("failedToSaveRecord"));
     } finally {
       setSubmitting(false);
     }
@@ -1435,13 +1445,13 @@ export default function EquipmentHistoryPage() {
     ? selectedEquipmentName
     : filterFactory
     ? filterFactory
-    : "Equipment History";
+    : t("equipmentHistoryTitle");
 
   return (
     <section className="pt-24 pb-16 px-8 overflow-y-auto h-screen scrollbar-hide font-body">
       <PageHeader
-        eyebrow="設備履歴"
-        title="Equipment History"
+        eyebrow={t("equipmentHistoryTitle")}
+        title={t("equipmentHistoryTitle")}
         className="mb-6"
       />
 
@@ -1455,39 +1465,39 @@ export default function EquipmentHistoryPage() {
         )}
         <div className="flex flex-wrap items-end gap-4">
           <div className="flex-1 min-w-[200px]">
-            <div className="mb-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Factory</div>
+            <div className="mb-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">{t("factory")}</div>
             <SearchableSelect
               value={filterFactory}
               onChange={handleFilterFactoryChange}
               options={factories}
-              placeholder="— Select factory —"
+              placeholder={t("selectFactoryOption")}
               className={inputCls}
               disabled={dataLoading}
             />
           </div>
           <div className="flex-1 min-w-[200px]">
-            <div className="mb-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Machine</div>
+            <div className="mb-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">{t("machine")}</div>
             <SearchableSelect
               value={filterEquipmentId}
               onChange={(val) => setFilterEquipmentId(val)}
               options={factoryEquipment.map(eq => ({ label: eq.name, value: eq._id?.$oid ?? String(eq._id) }))}
-              placeholder={!filterFactory ? "— Select factory first —" : "All machines"}
+              placeholder={!filterFactory ? t("selectFactoryFirstOption") : t("allMachinesOption")}
               className={inputCls}
               disabled={!filterFactory || dataLoading}
             />
           </div>
           <div className="flex-[2] min-w-[250px]">
-            <div className="mb-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Search & Filter</div>
+            <div className="mb-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">{t("searchAndFilter")}</div>
             <div className="flex items-center gap-2">
               <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} className={inputCls}>
-                <option value="">All Statuses</option>
-                <option value="Open">Open</option>
-                <option value="Resolved">Resolved</option>
-                <option value="Failed">Failed</option>
+                <option value="">{t("allStatuses")}</option>
+                <option value="Open">{t("statusOpen")}</option>
+                <option value="Resolved">{t("statusResolved")}</option>
+                <option value="Failed">{t("statusFailed")}</option>
               </select>
               <input
                 type="text"
-                placeholder="Search titles..."
+                placeholder={t("searchTitlesPlaceholder")}
                 value={searchInput}
                 onChange={(e) => setSearchInput(e.target.value)}
                 className={inputCls}
@@ -1501,7 +1511,7 @@ export default function EquipmentHistoryPage() {
               className="inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-on-primary hover:opacity-90 active:scale-95 transition-all shadow-md"
             >
               <span className="material-symbols-outlined" style={{ fontSize: 18 }}>add</span>
-              Report Issue
+              {t("reportIssue")}
             </button>
           </div>
         </div>
@@ -1543,7 +1553,7 @@ export default function EquipmentHistoryPage() {
               <h3 className="text-base font-semibold text-on-surface">{tableTitle}</h3>
               {!historyLoading && history.length > 0 && (
                 <p className="text-xs text-outline mt-0.5">
-                  {`${history.length} total records`}
+                  {fillTemplate(t("totalRecordsTemplate"), { count: history.length })}
                 </p>
               )}
             </div>
@@ -1554,7 +1564,7 @@ export default function EquipmentHistoryPage() {
         {historyLoading && (
           <div className="flex items-center justify-center gap-2 px-5 py-16 text-sm text-on-surface-variant">
             <span className="material-symbols-outlined animate-spin text-primary" style={{ fontSize: 24 }}>progress_activity</span>
-            Loading history...
+            {t("loadingHistory")}
           </div>
         )}
 
@@ -1564,8 +1574,8 @@ export default function EquipmentHistoryPage() {
             <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10">
               <span className="material-symbols-outlined text-primary" style={{ fontSize: 32 }}>factory</span>
             </div>
-            <p className="text-base font-semibold text-on-surface">Select a factory</p>
-            <p className="mt-1 text-sm text-outline">Choose a factory to view its equipment history.</p>
+            <p className="text-base font-semibold text-on-surface">{t("selectAFactory")}</p>
+            <p className="mt-1 text-sm text-outline">{t("chooseFactoryToView")}</p>
           </div>
         )}
 
@@ -1574,8 +1584,8 @@ export default function EquipmentHistoryPage() {
             <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-surface-container">
               <span className="material-symbols-outlined text-outline" style={{ fontSize: 32 }}>search_off</span>
             </div>
-            <p className="text-base font-semibold text-on-surface">No records found</p>
-            <p className="mt-1 text-sm text-outline">Try adjusting your filters or report a new issue.</p>
+            <p className="text-base font-semibold text-on-surface">{t("noRecordsFoundTitle")}</p>
+            <p className="mt-1 text-sm text-outline">{t("adjustFiltersPrompt")}</p>
           </div>
         )}
 
@@ -1586,24 +1596,24 @@ export default function EquipmentHistoryPage() {
               <thead>
                 <tr className="border-b border-separator/40 bg-surface-container-low">
                   <th className="px-4 py-3.5 text-left text-[11px] font-semibold uppercase tracking-wider text-outline whitespace-nowrap">
-                    Date
+                    {t("date")}
                   </th>
                   <th className="px-4 py-3.5 text-left text-[11px] font-semibold uppercase tracking-wider text-outline w-1/3">
-                    Issue Title
+                    {t("issueTitle")}
                   </th>
                   <th className="px-4 py-3.5 text-left text-[11px] font-semibold uppercase tracking-wider text-outline">
-                    Status
+                    {t("status")}
                   </th>
                   {!filterEquipmentId && (
                     <th className="px-4 py-3.5 text-left text-[11px] font-semibold uppercase tracking-wider text-outline">
-                      {!filterFactory ? "Factory & Machine" : "Machine"}
+                      {!filterFactory ? t("factoryAndMachine") : t("machine")}
                     </th>
                   )}
                   <th className="px-4 py-3.5 text-left text-[11px] font-semibold uppercase tracking-wider text-outline">
-                    Reported By
+                    {t("reportedBy")}
                   </th>
                   <th className="px-4 py-3.5 text-center text-[11px] font-semibold uppercase tracking-wider text-outline">
-                    Attempts
+                    {t("attempts")}
                   </th>
                 </tr>
               </thead>
@@ -1639,7 +1649,8 @@ export default function EquipmentHistoryPage() {
                           status === "Failed" ? "bg-error/10 text-error" :
                           "bg-surface-container-high text-on-surface-variant"
                         }`}>
-                          {status === "Resolved" ? "✅" : status === "Failed" ? "❌" : "🔴"} {status}
+                          {status === "Resolved" ? "✅" : status === "Failed" ? "❌" : "🔴"}{" "}
+                          {status === "Resolved" ? t("statusResolved") : status === "Failed" ? t("statusFailed") : t("statusOpen")}
                         </span>
                       </td>
                       {!filterEquipmentId && (
@@ -1675,7 +1686,11 @@ export default function EquipmentHistoryPage() {
         {!historyLoading && totalPages > 1 && (
           <div className="px-5 py-4 border-t border-separator/20 flex items-center justify-between bg-surface/50">
             <span className="text-sm text-outline">
-              Showing {(page - 1) * 50 + 1} to {Math.min(page * 50, totalCount)} of {totalCount} records
+              {fillTemplate(t("showingRecordsTemplate"), {
+                from: (page - 1) * 50 + 1,
+                to: Math.min(page * 50, totalCount),
+                total: totalCount,
+              })}
             </span>
             <div className="flex items-center gap-2">
               <button
@@ -1684,10 +1699,10 @@ export default function EquipmentHistoryPage() {
                 disabled={page === 1}
                 className="px-3 py-1.5 rounded-lg text-sm font-semibold bg-surface-container hover:bg-surface-container-high disabled:opacity-40 disabled:hover:bg-surface-container transition-colors"
               >
-                Previous
+                {t("previous")}
               </button>
               <span className="text-sm font-semibold px-2">
-                Page {page} of {totalPages}
+                {fillTemplate(t("pageOfTemplate"), { page, total: totalPages })}
               </span>
               <button
                 type="button"
@@ -1695,7 +1710,7 @@ export default function EquipmentHistoryPage() {
                 disabled={page === totalPages}
                 className="px-3 py-1.5 rounded-lg text-sm font-semibold bg-surface-container hover:bg-surface-container-high disabled:opacity-40 disabled:hover:bg-surface-container transition-colors"
               >
-                Next
+                {t("next")}
               </button>
             </div>
           </div>

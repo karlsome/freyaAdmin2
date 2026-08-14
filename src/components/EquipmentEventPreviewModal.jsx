@@ -12,7 +12,7 @@ function isImageUrl(url) {
 }
 
 export default function EquipmentEventPreviewModal({ event, onClose, onEdit, onExpand }) {
-  const { language } = useLanguage();
+  const { language, t } = useLanguage();
   const [previewState, setPreviewState] = useState(null);
   const [activeMediaIndex, setActiveMediaIndex] = useState(0);
 
@@ -49,7 +49,7 @@ export default function EquipmentEventPreviewModal({ event, onClose, onEdit, onE
               <p className="text-[10px] font-bold uppercase tracking-wider text-outline mb-0.5">
                 {event.date} • {event["工場"]} / {event.equipmentName}
               </p>
-              <h3 className="text-base font-bold text-on-surface line-clamp-1">{title || "Equipment Event"}</h3>
+              <h3 className="text-base font-bold text-on-surface line-clamp-1">{title || t("equipmentEventFallback")}</h3>
             </div>
           </div>
           <div className="flex gap-2 items-center">
@@ -58,7 +58,7 @@ export default function EquipmentEventPreviewModal({ event, onClose, onEdit, onE
               onClick={() => onExpand(event)}
               className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary/10 text-primary text-xs font-bold hover:bg-primary/20 transition-all"
             >
-              Full View
+              {t("fullView")}
               <span className="material-symbols-outlined" style={{ fontSize: 16 }}>open_in_new</span>
             </button>
             <button
@@ -77,31 +77,32 @@ export default function EquipmentEventPreviewModal({ event, onClose, onEdit, onE
           {/* Top Info Section */}
           <div className="flex flex-wrap items-start gap-8 border-b border-separator/20 pb-6">
             <div>
-              <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline mb-1">Status</div>
+              <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline mb-1">{t("status")}</div>
               <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-sm font-bold ${
                 event.status === "Resolved" ? "bg-primary/10 text-primary" :
                 event.status === "Failed" ? "bg-error/10 text-error" :
                 "bg-surface-container-high text-on-surface-variant"
               }`}>
-                {event.status === "Resolved" ? "✅" : event.status === "Failed" ? "❌" : "🔴"} {event.status || "Open"}
+                {event.status === "Resolved" ? "✅" : event.status === "Failed" ? "❌" : "🔴"}{" "}
+                {event.status === "Resolved" ? t("statusResolved") : event.status === "Failed" ? t("statusFailed") : t("statusOpen")}
               </span>
             </div>
             <div>
-              <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline mb-1">Date</div>
+              <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline mb-1">{t("date")}</div>
               <div className="text-sm font-medium text-on-surface">{event.date || "—"}</div>
             </div>
             <div>
-              <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline mb-1">Factory & Machine</div>
+              <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline mb-1">{t("factoryAndMachine")}</div>
               <div className="text-sm font-medium text-on-surface">{event["工場"]} / {event.equipmentName}</div>
             </div>
             <div>
-              <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline mb-1">Reported By</div>
+              <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline mb-1">{t("reportedBy")}</div>
               <div className="text-sm font-medium text-on-surface">{event["名前"] || "—"}</div>
             </div>
             {event.resolutionTime && (
               <div>
-                <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline mb-1">Total Time</div>
-                <div className="text-sm font-medium text-on-surface">{event.resolutionTime} hrs</div>
+                <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline mb-1">{t("totalTime")}</div>
+                <div className="text-sm font-medium text-on-surface">{event.resolutionTime} {t("hrsSuffix")}</div>
               </div>
             )}
           </div>
@@ -109,15 +110,15 @@ export default function EquipmentEventPreviewModal({ event, onClose, onEdit, onE
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             {/* Left: Issue Details */}
             <div className="space-y-4">
-              <h3 className="text-sm font-bold text-on-surface border-b border-separator/40 pb-2">Issue Details</h3>
+              <h3 className="text-sm font-bold text-on-surface border-b border-separator/40 pb-2">{t("issueDetails")}</h3>
               <div className="text-sm text-on-surface-variant whitespace-pre-wrap">
-                {details || <span className="italic text-outline">No details provided.</span>}
+                {details || <span className="italic text-outline">{t("noDetailsProvided")}</span>}
               </div>
-              
+
               {issueMedia.length > 0 && (
                 <div className="pt-2">
                   <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline mb-2">
-                    Attachments {issueMedia.length > 1 && `(${activeMediaIndex + 1} / ${issueMedia.length})`}
+                    {t("attachments")} {issueMedia.length > 1 && `(${activeMediaIndex + 1} / ${issueMedia.length})`}
                   </div>
                   <div className="relative w-full aspect-video rounded-xl overflow-hidden bg-black/5 border border-separator/20 group select-none">
                     {isVideoUrl(issueMedia[activeMediaIndex]) ? (
@@ -126,10 +127,10 @@ export default function EquipmentEventPreviewModal({ event, onClose, onEdit, onE
                         onClick={(e) => { 
                           e.stopPropagation(); 
                           setPreviewState({
-                            images: issueMedia.map(u => ({ url: u, label: "Issue Attachment" })),
+                            images: issueMedia.map(u => ({ url: u, label: t("eventFileLabel") })),
                             activeIndex: activeMediaIndex,
-                            displayName: "Report Attachments",
-                            eyebrow: title || "Event"
+                            displayName: t("reportAttachments"),
+                            eyebrow: title || t("eventFallback")
                           });
                         }}
                       >
@@ -144,14 +145,14 @@ export default function EquipmentEventPreviewModal({ event, onClose, onEdit, onE
                         onClick={(e) => { 
                           e.stopPropagation(); 
                           setPreviewState({
-                            images: issueMedia.map(u => ({ url: u, label: "Issue Attachment" })),
+                            images: issueMedia.map(u => ({ url: u, label: t("eventFileLabel") })),
                             activeIndex: activeMediaIndex,
-                            displayName: "Report Attachments",
-                            eyebrow: title || "Event"
+                            displayName: t("reportAttachments"),
+                            eyebrow: title || t("eventFallback")
                           });
                         }}
                       >
-                        <img src={issueMedia[activeMediaIndex]} alt="Issue attachment" className="w-full h-full object-contain pointer-events-none" />
+                        <img src={issueMedia[activeMediaIndex]} alt={t("issueTitle")} className="w-full h-full object-contain pointer-events-none" />
                       </div>
                     )}
                     
@@ -187,9 +188,9 @@ export default function EquipmentEventPreviewModal({ event, onClose, onEdit, onE
             {/* Right: Attempts List */}
             <div className="flex flex-col h-full max-h-[500px]">
               <h3 className="text-sm font-bold text-on-surface border-b border-separator/40 pb-2 mb-4 flex items-center justify-between shrink-0">
-                Troubleshooting Attempts
+                {t("troubleshootingAttempts")}
                 <span className="text-[10px] font-semibold uppercase text-outline tracking-wider bg-surface-container px-2 py-0.5 rounded">
-                  {attempts.length} Total
+                  {attempts.length} {t("totalSuffix")}
                 </span>
               </h3>
               
@@ -214,26 +215,26 @@ export default function EquipmentEventPreviewModal({ event, onClose, onEdit, onE
                               att.status === "Failed" ? "bg-error/10 text-error" :
                               "bg-surface-container-high text-on-surface-variant"
                             }`}>
-                              {att.status || "Unknown"}
+                              {att.status === "Success" ? t("attemptStatusSuccess") : att.status === "Failed" ? t("attemptStatusFailed") : t("statusUnknown")}
                             </span>
                           </div>
-                          <h4 className="text-base font-bold text-on-surface">{attTitle || "Untitled Attempt"}</h4>
+                          <h4 className="text-base font-bold text-on-surface">{attTitle || t("untitledAttempt")}</h4>
                         </div>
-                        
+
                         <div className="space-y-3">
                           <div>
-                            <div className="text-xs font-semibold uppercase tracking-wider text-outline mb-1">Action Taken</div>
+                            <div className="text-xs font-semibold uppercase tracking-wider text-outline mb-1">{t("actionTaken")}</div>
                             <div className="text-sm text-on-surface-variant whitespace-pre-wrap">{attDesc || "—"}</div>
                           </div>
                           <div>
-                            <div className="text-xs font-semibold uppercase tracking-wider text-outline mb-1">Result</div>
+                            <div className="text-xs font-semibold uppercase tracking-wider text-outline mb-1">{t("result")}</div>
                             <div className="text-sm text-on-surface-variant whitespace-pre-wrap">{attResult || "—"}</div>
                           </div>
                         </div>
 
                         {(attVideos.length > 0 || attImages.length > 0) && (
                           <div className="pt-2">
-                            <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline mb-2">Attachments</div>
+                            <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline mb-2">{t("attachments")}</div>
                             <div className="flex gap-2 flex-wrap">
                               {attVideos.map((url, i) => (
                                 <div 
@@ -243,10 +244,10 @@ export default function EquipmentEventPreviewModal({ event, onClose, onEdit, onE
                                     e.stopPropagation();
                                     const mediaIdx = attMedia.indexOf(url);
                                     setPreviewState({
-                                      images: attMedia.map(u => ({ url: u, label: "Attempt Attachment" })),
+                                      images: attMedia.map(u => ({ url: u, label: t("attemptFileLabel") })),
                                       activeIndex: mediaIdx >= 0 ? mediaIdx : 0,
-                                      displayName: "Attempt Attachments",
-                                      eyebrow: attTitle || "Attempt"
+                                      displayName: t("attemptAttachments"),
+                                      eyebrow: attTitle || t("attemptLabel")
                                     });
                                   }}
                                 >
@@ -264,14 +265,14 @@ export default function EquipmentEventPreviewModal({ event, onClose, onEdit, onE
                                     e.stopPropagation();
                                     const mediaIdx = attMedia.indexOf(url);
                                     setPreviewState({
-                                      images: attMedia.map(u => ({ url: u, label: "Attempt Attachment" })),
+                                      images: attMedia.map(u => ({ url: u, label: t("attemptFileLabel") })),
                                       activeIndex: mediaIdx >= 0 ? mediaIdx : 0,
-                                      displayName: "Attempt Attachments",
-                                      eyebrow: attTitle || "Attempt"
+                                      displayName: t("attemptAttachments"),
+                                      eyebrow: attTitle || t("attemptLabel")
                                     });
                                   }}
                                 >
-                                  <img src={url} alt="Attempt" className="w-full h-full object-cover pointer-events-none" />
+                                  <img src={url} alt={t("attemptLabel")} className="w-full h-full object-cover pointer-events-none" />
                                 </div>
                               ))}
                             </div>
@@ -282,7 +283,7 @@ export default function EquipmentEventPreviewModal({ event, onClose, onEdit, onE
                   })
                 ) : (
                   <div className="text-sm text-outline italic">
-                    No attempts recorded yet.
+                    {t("noAttemptsRecorded")}
                   </div>
                 )}
               </div>
@@ -298,15 +299,15 @@ export default function EquipmentEventPreviewModal({ event, onClose, onEdit, onE
             className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-semibold text-primary hover:bg-primary/10 transition-colors"
           >
             <span className="material-symbols-outlined" style={{ fontSize: 18 }}>edit</span>
-            Edit
+            {t("edit")}
           </button>
-          
+
           <button
             type="button"
             onClick={() => onExpand(event)}
             className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-primary text-on-primary text-sm font-bold shadow-sm hover:opacity-90 active:scale-95 transition-all"
           >
-            Open Full Timeline
+            {t("openFullTimeline")}
             <span className="material-symbols-outlined" style={{ fontSize: 18 }}>arrow_forward</span>
           </button>
         </div>
