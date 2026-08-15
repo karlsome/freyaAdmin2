@@ -19,6 +19,9 @@ import EquipmentEventDetailModal from "../components/EquipmentEventDetailModal";
 import EquipmentEventPreviewModal from "../components/EquipmentEventPreviewModal";
 import { useLanguage } from "../contexts/LanguageContext";
 import MasterTabNav from "../components/MasterTabNav";
+import DataTable from "../components/DataTable";
+
+const PAGE_SIZE_OPTIONS = [25, 50, 100];
 
 const inputCls =
   "w-full rounded-xl border border-outline-variant/30 bg-surface px-3 py-3 text-sm text-on-surface outline-none transition-all duration-150 focus:border-primary/40 disabled:opacity-50 font-body";
@@ -1280,6 +1283,7 @@ export default function EquipmentHistoryPage() {
 
   const [history, setHistory] = useState([]);
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(50);
   const [totalPages, setTotalPages] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
   const [historyLoading, setHistoryLoading] = useState(false);
@@ -1288,7 +1292,7 @@ export default function EquipmentHistoryPage() {
 
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
-  const [sortDir, setSortDir] = useState("desc");
+  const [sort, setSort] = useState({ column: "date", direction: -1 });
 
   const [modalOpen, setModalOpen] = useState(false);
   const [editingEvent, setEditingEvent] = useState(null);
@@ -1368,6 +1372,8 @@ export default function EquipmentHistoryPage() {
   // 0 or 1 selected factories: standard server-side pagination.
   // 2+ selected factories: fetch each factory in parallel and merge/paginate client-side,
   // since the backend only filters by a single factory at a time.
+  const sortDir = sort.column === "date" && sort.direction === 1 ? "asc" : "desc";
+
   useEffect(() => {
     let active = true;
     setHistoryLoading(true);
@@ -1384,7 +1390,7 @@ export default function EquipmentHistoryPage() {
             dateFrom: dateFrom || undefined,
             dateTo: dateTo || undefined,
             page,
-            limit: 50,
+            limit: pageSize,
             sortDir
           });
           if (!active) return;
@@ -1413,9 +1419,9 @@ export default function EquipmentHistoryPage() {
             const db = b.date || "";
             return sortDir === "asc" ? da.localeCompare(db) : db.localeCompare(da);
           });
-          const pages = Math.max(1, Math.ceil(merged.length / 50));
+          const pages = Math.max(1, Math.ceil(merged.length / pageSize));
           const clampedPage = Math.min(page, pages);
-          setHistory(merged.slice((clampedPage - 1) * 50, clampedPage * 50));
+          setHistory(merged.slice((clampedPage - 1) * pageSize, clampedPage * pageSize));
           setTotalPages(pages);
           setTotalCount(merged.length);
           if (clampedPage !== page) setPage(clampedPage);
@@ -1429,7 +1435,7 @@ export default function EquipmentHistoryPage() {
 
     load();
     return () => { active = false; };
-  }, [filterFactories, filterEquipmentId, filterStatus, debouncedSearch, dateFrom, dateTo, page, sortDir, historyRefresh]);
+  }, [filterFactories, filterEquipmentId, filterStatus, debouncedSearch, dateFrom, dateTo, page, pageSize, sortDir, historyRefresh]);
 
   const factoryEquipment = useMemo(
     () => filterFactories.length === 1 ? allEquipment.filter((eq) => eq["工場"] === filterFactories[0]) : [],
@@ -1443,6 +1449,171 @@ export default function EquipmentHistoryPage() {
     );
     return eq?.name || "";
   }, [allEquipment, filterEquipmentId]);
+
+  const tableColumns = useMemo(() => [
+    {
+      key: "machine",
+      sortKey: "machine",
+      label: t("machine"),
+      width: 180,
+      renderCell: (row) => (
+        <span className="text-sm font-bold text-on-surface">
+          {row.equipmentName || "—"}
+        </span>
+      ),
+      disableCellWrapper: true,
+    },
+    {
+      key: "factory",
+      sortKey: "factory",
+      label: t("factory"),
+      width: 130,
+      renderCell: (row) => (
+        <span className="text-sm font-medium text-on-surface">
+          {row["工場"] || "—"}
+        </span>
+      ),
+      disableCellWrapper: true,
+    },
+    {
+      key: "date",
+      sortKey: "date",
+      label: t("date"),
+      width: 130,
+      renderCell: (row) => (
+        <span className="text-sm font-semibold text-on-surface-variant group-hover:text-primary transition-colors whitespace-nowrap">
+          {row.date || "—"}
+        </span>
+      ),
+      disableCellWrapper: true,
+    },
+    {
+      key: "issueTitle",
+      sortKey: "issueTitle",
+      label: t("issueTitle"),
+      width: 320,
+      renderCell: (row) => {
+        const title = language === "ja"
+          ? (row.title_ja || row.title)
+          : (row.title_en || row.title);
+        const fallback = language === "ja"
+          ? (row.details_ja || row.details)
+          : (row.details_en || row.details);
+        return (
+          <p className="text-sm font-bold text-on-surface line-clamp-1">
+            {title || (
+              fallback ? (
+                <span className="italic font-normal text-on-surface-variant truncate block max-w-sm">
+                  {fallback}
+                </span>
+              ) : "—"
+            )}
+          </p>
+        );
+      },
+      disableCellWrapper: true,
+    },
+    {
+      key: "status",
+      sortKey: "status",
+      label: t("status"),
+      width: 130,
+      renderCell: (row) => {
+        const status = row.status || "Open";
+        return (
+          <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold whitespace-nowrap ${
+            status === "Resolved" ? "bg-primary/10 text-primary" :
+            status === "Failed" ? "bg-error/10 text-error" :
+            "bg-surface-container-high text-on-surface-variant"
+          }`}>
+            {status === "Resolved" ? "✅" : status === "Failed" ? "❌" : "🔴"}{" "}
+            {status === "Resolved" ? t("statusResolved") : status === "Failed" ? t("statusFailed") : t("statusOpen")}
+          </span>
+        );
+      },
+      disableCellWrapper: true,
+    },
+    {
+      key: "reportedBy",
+      sortKey: "reportedBy",
+      label: t("reportedBy"),
+      width: 140,
+      renderCell: (row) => (
+        <span className="text-sm text-on-surface-variant whitespace-nowrap">
+          {row["名前"] || row.submittedBy || "—"}
+        </span>
+      ),
+      disableCellWrapper: true,
+    },
+    {
+      key: "attempts",
+      sortKey: "attempts",
+      label: t("attempts"),
+      align: "center",
+      width: 110,
+      renderCell: (row) => {
+        const attemptCount = Array.isArray(row.attempts) ? row.attempts.length : 0;
+        return attemptCount > 0 ? (
+          <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-primary/10 text-primary text-xs font-bold">
+            {attemptCount}
+          </span>
+        ) : (
+          <span className="text-outline text-sm">—</span>
+        );
+      },
+      disableCellWrapper: true,
+    },
+  ], [language, t]);
+
+  const sortedHistory = useMemo(() => {
+    if (!sort?.column) return history;
+    const direction = sort.direction === -1 ? -1 : 1;
+
+    const getVal = (item) => {
+      switch (sort.column) {
+        case "machine":
+          return (item.equipmentName || "").toLowerCase();
+        case "factory":
+          return (item["工場"] || "").toLowerCase();
+        case "date":
+          return item.date || "";
+        case "issueTitle":
+          return (
+            language === "ja"
+              ? (item.title_ja || item.title || item.details_ja || item.details || "")
+              : (item.title_en || item.title || item.details_en || item.details || "")
+          ).toLowerCase();
+        case "status":
+          return (item.status || "Open").toLowerCase();
+        case "reportedBy":
+          return (item["名前"] || item.submittedBy || "").toLowerCase();
+        case "attempts":
+          return Array.isArray(item.attempts) ? item.attempts.length : 0;
+        default:
+          return "";
+      }
+    };
+
+    return [...history].sort((a, b) => {
+      const va = getVal(a);
+      const vb = getVal(b);
+      if (typeof va === "number" && typeof vb === "number") {
+        return (va - vb) * direction;
+      }
+      if (va < vb) return -1 * direction;
+      if (va > vb) return 1 * direction;
+      return 0;
+    });
+  }, [history, sort, language]);
+
+  function handleSort(columnKey) {
+    setSort((prev) => {
+      if (prev?.column === columnKey) {
+        return { column: columnKey, direction: prev.direction === 1 ? -1 : 1 };
+      }
+      return { column: columnKey, direction: columnKey === "date" ? -1 : 1 };
+    });
+  }
 
   function handleFilterFactoriesChange(vals) {
     setFilterFactories(vals);
@@ -1585,169 +1756,56 @@ export default function EquipmentHistoryPage() {
         />
       ) : (
         <div className="dashboard-section rounded-2xl overflow-hidden shadow-sm">
-        {/* Section header */}
-        <div className="px-5 py-4 border-b border-separator/40 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <span className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
-              <span className="material-symbols-outlined text-primary" style={{ fontSize: 20 }}>build_circle</span>
-            </span>
-            <div>
-              <h3 className="text-base font-semibold text-on-surface">{tableTitle}</h3>
-              {!historyLoading && totalCount > 0 && (
-                <p className="text-xs text-outline mt-0.5">
-                  {fillTemplate(t("totalRecordsTemplate"), { count: totalCount })}
-                </p>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* Loading */}
-        {historyLoading && (
-          <div className="flex items-center justify-center gap-2 px-5 py-16 text-sm text-on-surface-variant">
-            <span className="material-symbols-outlined animate-spin text-primary" style={{ fontSize: 24 }}>progress_activity</span>
-            {t("loadingHistory")}
-          </div>
-        )}
-
-        {/* Empty State */}
-        {!historyLoading && history.length === 0 && (
-          <div className="px-5 py-20 text-center">
-            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-surface-container">
-              <span className="material-symbols-outlined text-outline" style={{ fontSize: 32 }}>search_off</span>
-            </div>
-            <p className="text-base font-semibold text-on-surface">{t("noRecordsFoundTitle")}</p>
-            <p className="mt-1 text-sm text-outline">{t("adjustFiltersPrompt")}</p>
-          </div>
-        )}
-
-        {/* Table */}
-        {!historyLoading && history.length > 0 && (
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-separator/40 bg-surface-container-low">
-                  <th className="px-4 py-3.5 text-left text-[11px] font-semibold uppercase tracking-wider text-outline whitespace-nowrap">
-                    {t("date")}
-                  </th>
-                  <th className="px-4 py-3.5 text-left text-[11px] font-semibold uppercase tracking-wider text-outline w-1/3">
-                    {t("issueTitle")}
-                  </th>
-                  <th className="px-4 py-3.5 text-left text-[11px] font-semibold uppercase tracking-wider text-outline">
-                    {t("status")}
-                  </th>
-                  {!filterEquipmentId && (
-                    <th className="px-4 py-3.5 text-left text-[11px] font-semibold uppercase tracking-wider text-outline">
-                      {filterFactories.length !== 1 ? t("factoryAndMachine") : t("machine")}
-                    </th>
-                  )}
-                  <th className="px-4 py-3.5 text-left text-[11px] font-semibold uppercase tracking-wider text-outline">
-                    {t("reportedBy")}
-                  </th>
-                  <th className="px-4 py-3.5 text-center text-[11px] font-semibold uppercase tracking-wider text-outline">
-                    {t("attempts")}
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-separator/20">
-                {history.map((event, i) => {
-                  const key = event._id?.$oid ?? event._id ?? i;
-                  const attemptCount = Array.isArray(event.attempts) ? event.attempts.length : 0;
-                  const status = event.status || "Open";
-                  
-                  return (
-                    <tr
-                      key={key}
-                      onClick={() => setPreviewEvent(event)}
-                      className="cursor-pointer hover:bg-surface-container/50 transition-colors group"
-                    >
-                      <td className="px-4 py-4 whitespace-nowrap">
-                        <span className="text-sm font-semibold text-on-surface-variant group-hover:text-primary transition-colors">
-                          {event.date || "—"}
-                        </span>
-                      </td>
-                      <td className="px-4 py-4">
-                        <p className="text-sm font-bold text-on-surface line-clamp-1">
-                          {language === "ja" ? (event.title_ja || event.title) : (event.title_en || event.title) || (
-                            <span className="italic font-normal text-on-surface-variant truncate block max-w-sm">
-                              {language === "ja" ? (event.details_ja || event.details) : (event.details_en || event.details)}
-                            </span>
-                          ) || "—"}
-                        </p>
-                      </td>
-                      <td className="px-4 py-4 whitespace-nowrap">
-                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold ${
-                          status === "Resolved" ? "bg-primary/10 text-primary" :
-                          status === "Failed" ? "bg-error/10 text-error" :
-                          "bg-surface-container-high text-on-surface-variant"
-                        }`}>
-                          {status === "Resolved" ? "✅" : status === "Failed" ? "❌" : "🔴"}{" "}
-                          {status === "Resolved" ? t("statusResolved") : status === "Failed" ? t("statusFailed") : t("statusOpen")}
-                        </span>
-                      </td>
-                      {!filterEquipmentId && (
-                        <td className="px-4 py-4 whitespace-nowrap">
-                          <p className="text-sm font-medium text-on-surface">
-                            {filterFactories.length !== 1
-                              ? `${event["工場"] || "—"} / ${event.equipmentName || "—"}`
-                              : event.equipmentName || "—"}
-                          </p>
-                        </td>
-                      )}
-                      <td className="px-4 py-4 whitespace-nowrap">
-                        <span className="text-sm text-on-surface-variant">{event["名前"] || "—"}</span>
-                      </td>
-                      <td className="px-4 py-4 text-center">
-                        {attemptCount > 0 ? (
-                          <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-primary/10 text-primary text-xs font-bold">
-                            {attemptCount}
-                          </span>
-                        ) : (
-                          <span className="text-outline text-sm">—</span>
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
-
-        {/* Pagination Controls */}
-        {!historyLoading && totalPages > 1 && (
-          <div className="px-5 py-4 border-t border-separator/20 flex items-center justify-between bg-surface/50">
-            <span className="text-sm text-outline">
-              {fillTemplate(t("showingRecordsTemplate"), {
-                from: (page - 1) * 50 + 1,
-                to: Math.min(page * 50, totalCount),
-                total: totalCount,
-              })}
-            </span>
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => setPage(p => Math.max(1, p - 1))}
-                disabled={page === 1}
-                className="px-3 py-1.5 rounded-lg text-sm font-semibold bg-surface-container hover:bg-surface-container-high disabled:opacity-40 disabled:hover:bg-surface-container transition-colors"
-              >
-                {t("previous")}
-              </button>
-              <span className="text-sm font-semibold px-2">
-                {fillTemplate(t("pageOfTemplate"), { page, total: totalPages })}
+          {/* Section header */}
+          <div className="px-5 py-4 border-b border-separator/40 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <span className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
+                <span className="material-symbols-outlined text-primary" style={{ fontSize: 20 }}>build_circle</span>
               </span>
-              <button
-                type="button"
-                onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-                disabled={page === totalPages}
-                className="px-3 py-1.5 rounded-lg text-sm font-semibold bg-surface-container hover:bg-surface-container-high disabled:opacity-40 disabled:hover:bg-surface-container transition-colors"
-              >
-                {t("next")}
-              </button>
+              <div>
+                <h3 className="text-base font-semibold text-on-surface">{tableTitle}</h3>
+                {!historyLoading && totalCount > 0 && (
+                  <p className="text-xs text-outline mt-0.5">
+                    {fillTemplate(t("totalRecordsTemplate"), { count: totalCount })}
+                  </p>
+                )}
+              </div>
             </div>
           </div>
-        )}
-      </div>
+
+          <DataTable
+            columns={tableColumns}
+            rows={sortedHistory}
+            loading={historyLoading}
+            error={historyError}
+            sort={sort}
+            page={page}
+            pageSize={pageSize}
+            filteredCount={totalCount}
+            totalPages={totalPages}
+            onSort={handleSort}
+            onPageChange={(nextPage) => setPage(nextPage)}
+            onPageSizeChange={(nextPageSize) => {
+              setPageSize(nextPageSize);
+              setPage(1);
+            }}
+            pageSizeOptions={PAGE_SIZE_OPTIONS}
+            pageSizeLabel={t("rows") || "Rows"}
+            previousLabel={t("previous") || "Previous"}
+            nextLabel={t("next") || "Next"}
+            resetColumnsLabel={t("resetColumns") || "Reset columns"}
+            enableColumnResize={true}
+            enableColumnReorder={true}
+            layoutStorageKey="equipment_history_table_layout"
+            rowKey={(row) => row._id?.$oid ?? row._id}
+            onRowClick={(row) => setPreviewEvent(row)}
+            clickableRowClassName="cursor-pointer"
+            className="overflow-hidden"
+            emptyTitle={t("noRecordsFoundTitle")}
+            emptyMessage={t("adjustFiltersPrompt")}
+            loadingMessage={t("loadingHistory")}
+          />
+        </div>
       )}
 
       {modalOpen && (
