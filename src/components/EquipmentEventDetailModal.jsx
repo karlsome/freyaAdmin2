@@ -181,7 +181,7 @@ export default function EquipmentEventDetailModal({ event, onClose, onEdit }) {
                     <div key={idx} className="relative pl-8">
                       {/* Timeline Dot */}
                       <div className={`absolute -left-[9px] top-1 w-4 h-4 rounded-full border-2 border-surface ${
-                        att.status === "Success" ? "bg-primary" : 
+                        att.status === "Success" ? "bg-emerald-500" : 
                         att.status === "Failed" ? "bg-error" : 
                         "bg-surface-container-high"
                       }`} />
@@ -193,7 +193,7 @@ export default function EquipmentEventDetailModal({ event, onClose, onEdit }) {
                             <span className="text-xs font-bold text-outline">#{att.attemptNumber || idx + 1}</span>
                             <span className="text-xs text-on-surface-variant font-medium">{att.date || "—"}</span>
                             <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
-                              att.status === "Success" ? "bg-primary/10 text-primary" :
+                              att.status === "Success" ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400" :
                               att.status === "Failed" ? "bg-error/10 text-error" :
                               "bg-surface-container-high text-on-surface-variant"
                             }`}>

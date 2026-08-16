@@ -211,7 +211,7 @@ export default function EquipmentEventPreviewModal({ event, onClose, onEdit, onE
                           <div className="flex items-center gap-2 mb-1">
                             <span className="text-xs font-bold text-outline">#{att.attemptNumber || idx + 1}</span>
                             <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
-                              att.status === "Success" ? "bg-primary/10 text-primary" :
+                              att.status === "Success" ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400" :
                               att.status === "Failed" ? "bg-error/10 text-error" :
                               "bg-surface-container-high text-on-surface-variant"
                             }`}>
