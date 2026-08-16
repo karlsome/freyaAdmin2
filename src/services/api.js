@@ -1314,7 +1314,7 @@ export async function createWorkerRecord(name) {
 
 // ─── Equipment history (submittedDB › setsubiHistory) ─────────────────────────
 
-export async function fetchSetsubiHistoryRecords({ factory, equipmentId, status, search, dateFrom, dateTo, page = 1, limit = 50, sortDir = "desc" } = {}) {
+export async function fetchSetsubiHistoryRecords({ factory, equipmentId, status, search, dateFrom, dateTo, page = 1, limit = 50, sortColumn, sortDir = "desc" } = {}) {
   const params = new URLSearchParams();
   if (factory) params.append("factory", factory);
   if (equipmentId) params.append("equipmentId", equipmentId);
@@ -1324,6 +1324,7 @@ export async function fetchSetsubiHistoryRecords({ factory, equipmentId, status,
   if (dateTo) params.append("dateTo", dateTo);
   params.append("page", page);
   params.append("limit", limit);
+  if (sortColumn) params.append("sortColumn", sortColumn);
   params.append("sortDir", sortDir);
 
   const res = await fetch(`${BASE_URL}api/setsubi-history?${params.toString()}`);

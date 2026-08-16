@@ -1372,7 +1372,8 @@ export default function EquipmentHistoryPage() {
   // 0 or 1 selected factories: standard server-side pagination.
   // 2+ selected factories: fetch each factory in parallel and merge/paginate client-side,
   // since the backend only filters by a single factory at a time.
-  const sortDir = sort.column === "date" && sort.direction === 1 ? "asc" : "desc";
+  const sortDir = sort.direction === 1 ? "asc" : "desc";
+  const sortColumn = sort.column || "date";
 
   useEffect(() => {
     let active = true;
@@ -1391,6 +1392,7 @@ export default function EquipmentHistoryPage() {
             dateTo: dateTo || undefined,
             page,
             limit: pageSize,
+            sortColumn,
             sortDir
           });
           if (!active) return;
@@ -1408,17 +1410,51 @@ export default function EquipmentHistoryPage() {
                 dateTo: dateTo || undefined,
                 page: 1,
                 limit: 500,
+                sortColumn,
                 sortDir
               })
             )
           );
           if (!active) return;
           const merged = results.flatMap((res) => (Array.isArray(res.items) ? res.items : []));
+          
+          const direction = sort.direction === -1 ? -1 : 1;
+          const getVal = (item) => {
+            switch (sort.column) {
+              case "machine":
+                return (item.equipmentName || "").toLowerCase();
+              case "factory":
+                return (item["工場"] || "").toLowerCase();
+              case "date":
+                return item.date || "";
+              case "issueTitle":
+                return (
+                  language === "ja"
+                    ? (item.title_ja || item.title || item.details_ja || item.details || "")
+                    : (item.title_en || item.title || item.details_en || item.details || "")
+                ).toLowerCase();
+              case "status":
+                return (item.status || "Open").toLowerCase();
+              case "reportedBy":
+                return (item["名前"] || item.submittedBy || "").toLowerCase();
+              case "attempts":
+                return Array.isArray(item.attempts) ? item.attempts.length : 0;
+              default:
+                return "";
+            }
+          };
+
           merged.sort((a, b) => {
-            const da = a.date || "";
-            const db = b.date || "";
-            return sortDir === "asc" ? da.localeCompare(db) : db.localeCompare(da);
+            const va = getVal(a);
+            const vb = getVal(b);
+            if (typeof va === "number" && typeof vb === "number") {
+              return (va - vb) * direction;
+            }
+            if (va < vb) return -1 * direction;
+            if (va > vb) return 1 * direction;
+            return 0;
           });
+
           const pages = Math.max(1, Math.ceil(merged.length / pageSize));
           const clampedPage = Math.min(page, pages);
           setHistory(merged.slice((clampedPage - 1) * pageSize, clampedPage * pageSize));
@@ -1435,7 +1471,7 @@ export default function EquipmentHistoryPage() {
 
     load();
     return () => { active = false; };
-  }, [filterFactories, filterEquipmentId, filterStatus, debouncedSearch, dateFrom, dateTo, page, pageSize, sortDir, historyRefresh]);
+  }, [filterFactories, filterEquipmentId, filterStatus, debouncedSearch, dateFrom, dateTo, page, pageSize, sortColumn, sortDir, historyRefresh, language]);
 
   const factoryEquipment = useMemo(
     () => filterFactories.length === 1 ? allEquipment.filter((eq) => eq["工場"] === filterFactories[0]) : [],
@@ -1565,54 +1601,12 @@ export default function EquipmentHistoryPage() {
     },
   ], [language, t]);
 
-  const sortedHistory = useMemo(() => {
-    if (!sort?.column) return history;
-    const direction = sort.direction === -1 ? -1 : 1;
-
-    const getVal = (item) => {
-      switch (sort.column) {
-        case "machine":
-          return (item.equipmentName || "").toLowerCase();
-        case "factory":
-          return (item["工場"] || "").toLowerCase();
-        case "date":
-          return item.date || "";
-        case "issueTitle":
-          return (
-            language === "ja"
-              ? (item.title_ja || item.title || item.details_ja || item.details || "")
-              : (item.title_en || item.title || item.details_en || item.details || "")
-          ).toLowerCase();
-        case "status":
-          return (item.status || "Open").toLowerCase();
-        case "reportedBy":
-          return (item["名前"] || item.submittedBy || "").toLowerCase();
-        case "attempts":
-          return Array.isArray(item.attempts) ? item.attempts.length : 0;
-        default:
-          return "";
-      }
-    };
-
-    return [...history].sort((a, b) => {
-      const va = getVal(a);
-      const vb = getVal(b);
-      if (typeof va === "number" && typeof vb === "number") {
-        return (va - vb) * direction;
-      }
-      if (va < vb) return -1 * direction;
-      if (va > vb) return 1 * direction;
-      return 0;
-    });
-  }, [history, sort, language]);
-
   function handleSort(columnKey) {
     setSort((prev) => {
-      if (prev?.column === columnKey) {
-        return { column: columnKey, direction: prev.direction === 1 ? -1 : 1 };
-      }
-      return { column: columnKey, direction: columnKey === "date" ? -1 : 1 };
+      const nextDir = prev?.column === columnKey ? (prev.direction === 1 ? -1 : 1) : (columnKey === "date" ? -1 : 1);
+      return { column: columnKey, direction: nextDir };
     });
+    setPage(1);
   }
 
   function handleFilterFactoriesChange(vals) {
@@ -1775,7 +1769,7 @@ export default function EquipmentHistoryPage() {
 
           <DataTable
             columns={tableColumns}
-            rows={sortedHistory}
+            rows={history}
             loading={historyLoading}
             error={historyError}
             sort={sort}
