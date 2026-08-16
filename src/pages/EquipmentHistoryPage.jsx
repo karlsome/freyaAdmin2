@@ -17,6 +17,8 @@ import PageHeader from "../components/PageHeader";
 import SensorDevicePhotoPreviewModal from "../components/SensorDevicePhotoPreviewModal";
 import EquipmentEventDetailModal from "../components/EquipmentEventDetailModal";
 import EquipmentEventPreviewModal from "../components/EquipmentEventPreviewModal";
+import CheckFormImageOverlayEditorModal from "../components/CheckFormImageOverlayEditorModal";
+import VideoTrimmerEditorModal from "../components/media/VideoTrimmerEditorModal";
 import { useLanguage } from "../contexts/LanguageContext";
 import MasterTabNav from "../components/MasterTabNav";
 import DataTable from "../components/DataTable";
@@ -468,6 +470,10 @@ function EventModal({ event, history, factories, allEquipment, workerNames, user
   const attemptFileInputRef = useRef(null);
   const [activeAttemptIndexForUpload, setActiveAttemptIndexForUpload] = useState(null);
 
+  const [mediaQueue, setMediaQueue] = useState([]);
+  const [mediaQueueIndex, setMediaQueueIndex] = useState(0);
+  const [mediaQueueTargetAttemptIndex, setMediaQueueTargetAttemptIndex] = useState(null);
+
   const [previewState, setPreviewState] = useState(null);
   const [expandedAttemptIndex, setExpandedAttemptIndex] = useState(0);
 
@@ -529,41 +535,111 @@ function EventModal({ event, history, factories, allEquipment, workerNames, user
     setEquipmentId("");
   }
 
+  function getMediaType(file) {
+    const name = file?.name || "";
+    const mime = file?.type || "";
+    if (mime.startsWith("video/") || /\.(mp4|mov|webm|avi|m4v|mkv)$/i.test(name)) return "video";
+    if (mime.startsWith("image/") || /\.(jpg|jpeg|png|webp|gif|svg|bmp)$/i.test(name)) return "image";
+    return "other";
+  }
+
   async function handleFileChange(e, attemptIndex = null) {
     const files = Array.from(e.target.files || []);
     if (!files.length) return;
     e.target.value = "";
-    setUploading(true);
     setUploadError("");
-    const results = await Promise.allSettled(
-      files.map(async (fileObj) => {
-        const { base64, file: rawFile } = await compressImage(fileObj);
-        if (base64) {
-          console.log(`Starting upload for ${fileObj.name}, compressed size: ${Math.round(base64.length / 1024)}KB`);
-        } else {
-          console.log(`Starting upload for ${fileObj.name}, raw file size: ${Math.round(rawFile.size / 1024)}KB`);
+
+    const queueItems = await Promise.all(
+      files.map(async (file) => {
+        const type = getMediaType(file);
+        let dataURL = "";
+        if (type === "image") {
+          dataURL = await new Promise((res) => {
+            const reader = new FileReader();
+            reader.onload = () => res(reader.result);
+            reader.onerror = () => res("");
+            reader.readAsDataURL(file);
+          });
         }
-        
-        const result = await uploadEquipmentEventImage({
-          file: rawFile,
-          base64,
-          factoryName: factory,
-          equipmentName: selectedEquipment?.name || "",
-          username,
-        });
-        return result.imageURL;
+        return {
+          file,
+          type,
+          name: file.name,
+          dataURL,
+          processedOutput: null,
+        };
       })
     );
+
+    const hasMedia = queueItems.some((item) => item.type === "video" || item.type === "image");
+    if (!hasMedia) {
+      await uploadFinalProcessedFiles(queueItems, attemptIndex);
+      return;
+    }
+
+    setMediaQueue(queueItems);
+    setMediaQueueIndex(0);
+    setMediaQueueTargetAttemptIndex(attemptIndex);
+  }
+
+  async function uploadFinalProcessedFiles(items, attemptIndex) {
+    setUploading(true);
+    setActiveAttemptIndexForUpload(attemptIndex);
+    setUploadError("");
+
+    const results = await Promise.allSettled(
+      items.map(async (item) => {
+        if (item.type === "image") {
+          if (item.processedOutput && typeof item.processedOutput === "string") {
+            const result = await uploadEquipmentEventImage({
+              base64: item.processedOutput,
+              factoryName: factory,
+              equipmentName: selectedEquipment?.name || "",
+              username,
+            });
+            return result.imageURL;
+          } else {
+            const { base64, file: rawFile } = await compressImage(item.file);
+            const result = await uploadEquipmentEventImage({
+              file: rawFile,
+              base64,
+              factoryName: factory,
+              equipmentName: selectedEquipment?.name || "",
+              username,
+            });
+            return result.imageURL;
+          }
+        } else if (item.type === "video") {
+          const fileToUpload = item.processedOutput instanceof File ? item.processedOutput : item.file;
+          const result = await uploadEquipmentEventImage({
+            file: fileToUpload,
+            factoryName: factory,
+            equipmentName: selectedEquipment?.name || "",
+            username,
+          });
+          return result.imageURL;
+        } else {
+          const result = await uploadEquipmentEventImage({
+            file: item.file,
+            factoryName: factory,
+            equipmentName: selectedEquipment?.name || "",
+            username,
+          });
+          return result.imageURL;
+        }
+      })
+    );
+
     const urls = results.filter((r) => r.status === "fulfilled").map((r) => r.value);
     const failedCount = results.filter((r) => r.status === "rejected").length;
-    
+
     if (urls.length) {
       if (attemptIndex !== null) {
-        setAttempts(prev => {
+        setAttempts((prev) => {
           const newAtt = [...prev];
           newAtt[attemptIndex] = {
             ...newAtt[attemptIndex],
-            imageURLs: [...(newAtt[attemptIndex].imageURLs || []), ...urls]
+            imageURLs: [...(newAtt[attemptIndex].imageURLs || []), ...urls],
           };
           return newAtt;
         });
@@ -582,6 +658,46 @@ function EventModal({ event, history, factories, allEquipment, workerNames, user
     }
     setUploading(false);
     setActiveAttemptIndexForUpload(null);
+  }
+
+  function advanceQueue(updatedQueue) {
+    let nextIdx = mediaQueueIndex + 1;
+    while (nextIdx < updatedQueue.length && updatedQueue[nextIdx].type === "other") {
+      nextIdx++;
+    }
+
+    if (nextIdx < updatedQueue.length) {
+      setMediaQueue(updatedQueue);
+      setMediaQueueIndex(nextIdx);
+    } else {
+      const targetIdx = mediaQueueTargetAttemptIndex;
+      setMediaQueue([]);
+      setMediaQueueIndex(0);
+      setMediaQueueTargetAttemptIndex(null);
+      uploadFinalProcessedFiles(updatedQueue, targetIdx);
+    }
+  }
+
+  function handleQueueItemProcessed(processedOutput) {
+    const updated = [...mediaQueue];
+    if (updated[mediaQueueIndex]) {
+      updated[mediaQueueIndex] = {
+        ...updated[mediaQueueIndex],
+        processedOutput,
+      };
+    }
+    advanceQueue(updated);
+  }
+
+  function handleQueueItemSkipped() {
+    const updated = [...mediaQueue];
+    advanceQueue(updated);
+  }
+
+  function handleCancelQueue() {
+    setMediaQueue([]);
+    setMediaQueueIndex(0);
+    setMediaQueueTargetAttemptIndex(null);
   }
 
   function removeImage(url, attemptIndex = null) {
@@ -1249,6 +1365,34 @@ function EventModal({ event, history, factories, allEquipment, workerNames, user
           </div>
         </div>
       </div>
+
+      {/* Media Pre-Upload Editors */}
+      {mediaQueue[mediaQueueIndex]?.type === "video" && (
+        <VideoTrimmerEditorModal
+          open={true}
+          videoFile={mediaQueue[mediaQueueIndex].file}
+          eyebrow={`Media Editor (${mediaQueueIndex + 1} / ${mediaQueue.length})`}
+          title={`Trim Video: ${mediaQueue[mediaQueueIndex].name}`}
+          confirmLabel={mediaQueueIndex === mediaQueue.length - 1 ? (t("finishAndUpload") || "Finish & Upload All") : (t("saveAndContinue") || "Save & Next")}
+          onSave={handleQueueItemProcessed}
+          onSkip={handleQueueItemSkipped}
+          onClose={handleCancelQueue}
+        />
+      )}
+
+      {mediaQueue[mediaQueueIndex]?.type === "image" && (
+        <CheckFormImageOverlayEditorModal
+          open={true}
+          sourceImage={{ name: mediaQueue[mediaQueueIndex].name, dataURL: mediaQueue[mediaQueueIndex].dataURL }}
+          eyebrow={`Media Editor (${mediaQueueIndex + 1} / ${mediaQueue.length})`}
+          title={`Annotate: ${mediaQueue[mediaQueueIndex].name}`}
+          description="Add arrows, boxes, circles, freehand drawings, or text labels before uploading."
+          confirmLabel={mediaQueueIndex === mediaQueue.length - 1 ? (t("finishAndUpload") || "Finish & Upload All") : (t("saveAndContinue") || "Save & Next")}
+          onSave={handleQueueItemProcessed}
+          onSkip={handleQueueItemSkipped}
+          onClose={handleCancelQueue}
+        />
+      )}
 
       <SensorDevicePhotoPreviewModal 
         preview={previewState} 

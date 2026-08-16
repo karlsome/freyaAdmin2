@@ -20,10 +20,10 @@ function fillTemplate(template, values) {
 export default function EquipmentEventDetailModal({ event, onClose, onEdit }) {
   const { language, t } = useLanguage();
   const [previewState, setPreviewState] = useState(null);
-  const [expandedIndex, setExpandedIndex] = useState(null);
+  const [expandedIndices, setExpandedIndices] = useState(() => new Set());
 
   useEffect(() => {
-    setExpandedIndex(null);
+    setExpandedIndices(new Set());
   }, [event?._id?.$oid ?? event?._id]);
 
   if (!event) return null;
@@ -172,61 +172,97 @@ export default function EquipmentEventDetailModal({ event, onClose, onEdit }) {
           </div>
 
           {/* Attempts Timeline */}
-          {event.attempts && event.attempts.length > 0 && (
-            <div className="space-y-6">
-              <h3 className="text-sm font-bold text-on-surface border-b border-separator/40 pb-2">{t("troubleshootingTimeline")}</h3>
-              
-              <div className="relative border-l-2 border-separator/40 ml-4 space-y-6 pb-8">
-                {event.attempts.map((att, idx) => {
-                  const attTitle = language === "ja" ? (att.title_ja || att.title) : (att.title_en || att.title);
-                  const attDesc = language === "ja" ? (att.fixDescription_ja || att.fixDescription) : (att.fixDescription_en || att.fixDescription);
-                  const attResult = language === "ja" ? (att.result_ja || att.result) : (att.result_en || att.result);
-                  const isExpanded = expandedIndex === idx;
-                  const prevAtt = idx > 0 ? event.attempts[idx - 1] : null;
-                  const dayGap = prevAtt?.date && att.date
-                    ? Math.round((new Date(att.date) - new Date(prevAtt.date)) / 86400000)
-                    : null;
+          {event.attempts && event.attempts.length > 0 && (() => {
+            const attemptsCount = event.attempts.length;
+            const isAllExpanded = attemptsCount > 0 && expandedIndices.size === attemptsCount;
 
-                  return (
-                    <div key={idx} className="relative pl-8">
-                      {/* Timeline Dot */}
-                      <div className={`absolute -left-[9px] top-1 w-4 h-4 rounded-full border-2 border-surface ${
-                        att.status === "Success" ? "bg-emerald-500" :
-                        att.status === "Failed" ? "bg-error" :
-                        "bg-surface-container-high"
-                      }`} />
+            const toggleExpandAll = () => {
+              if (isAllExpanded) {
+                setExpandedIndices(new Set());
+              } else {
+                setExpandedIndices(new Set(event.attempts.map((_, i) => i)));
+              }
+            };
 
-                      {dayGap !== null && dayGap > 0 && (
-                        <div className="mb-2 flex items-center gap-1 text-[11px] font-medium text-outline">
-                          <span className="material-symbols-outlined" style={{ fontSize: 14 }}>schedule</span>
-                          {fillTemplate(t("daysLaterTemplate"), { days: dayGap })}
-                        </div>
-                      )}
+            const toggleExpand = (idx) => {
+              setExpandedIndices((prev) => {
+                const next = new Set(prev);
+                if (next.has(idx)) {
+                  next.delete(idx);
+                } else {
+                  next.add(idx);
+                }
+                return next;
+              });
+            };
 
-                      {/* Attempt Card */}
-                      <div className="bg-surface rounded-2xl shadow-sm border border-separator/20 overflow-hidden">
-                        <button
-                          type="button"
-                          onClick={() => setExpandedIndex(isExpanded ? null : idx)}
-                          className="w-full flex items-center gap-3 p-4 text-left hover:bg-surface-container/40 transition-colors"
-                        >
-                          <span className="text-xs font-bold text-outline shrink-0">#{att.attemptNumber || idx + 1}</span>
-                          <span className={`shrink-0 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
-                            att.status === "Success" ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400" :
-                            att.status === "Failed" ? "bg-error/10 text-error" :
-                            "bg-surface-container-high text-on-surface-variant"
-                          }`}>
-                            {att.status === "Success" ? t("attemptStatusSuccess") : att.status === "Failed" ? t("attemptStatusFailed") : t("statusUnknown")}
-                          </span>
-                          <span className="text-sm font-bold text-on-surface flex-1 truncate">{attTitle || t("untitledAttempt")}</span>
-                          {att.timeToResolve ? (
-                            <span className="hidden sm:inline text-xs text-on-surface-variant shrink-0">{att.timeToResolve} {t("hrsSuffix")}</span>
-                          ) : null}
-                          <span className="text-xs text-on-surface-variant shrink-0">{att.date || "—"}</span>
-                          <span className="material-symbols-outlined text-outline shrink-0" style={{ fontSize: 20 }}>
-                            {isExpanded ? "expand_less" : "expand_more"}
-                          </span>
-                        </button>
+            return (
+              <div className="space-y-6">
+                <div className="flex items-center justify-between border-b border-separator/40 pb-2">
+                  <h3 className="text-sm font-bold text-on-surface">{t("troubleshootingTimeline")}</h3>
+                  <button
+                    type="button"
+                    onClick={toggleExpandAll}
+                    className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-semibold text-primary hover:bg-primary/10 transition-all active:scale-95 cursor-pointer"
+                  >
+                    <span className="material-symbols-outlined" style={{ fontSize: 16 }}>
+                      {isAllExpanded ? "unfold_less" : "unfold_more"}
+                    </span>
+                    {isAllExpanded ? t("collapseAll") : t("expandAll")}
+                  </button>
+                </div>
+                
+                <div className="relative border-l-2 border-separator/40 ml-4 space-y-6 pb-8">
+                  {event.attempts.map((att, idx) => {
+                    const attTitle = language === "ja" ? (att.title_ja || att.title) : (att.title_en || att.title);
+                    const attDesc = language === "ja" ? (att.fixDescription_ja || att.fixDescription) : (att.fixDescription_en || att.fixDescription);
+                    const attResult = language === "ja" ? (att.result_ja || att.result) : (att.result_en || att.result);
+                    const isExpanded = expandedIndices.has(idx);
+                    const prevAtt = idx > 0 ? event.attempts[idx - 1] : null;
+                    const dayGap = prevAtt?.date && att.date
+                      ? Math.round((new Date(att.date) - new Date(prevAtt.date)) / 86400000)
+                      : null;
+
+                    return (
+                      <div key={idx} className="relative pl-8">
+                        {/* Timeline Dot */}
+                        <div className={`absolute -left-[9px] top-1 w-4 h-4 rounded-full border-2 border-surface ${
+                          att.status === "Success" ? "bg-emerald-500" :
+                          att.status === "Failed" ? "bg-error" :
+                          "bg-surface-container-high"
+                        }`} />
+
+                        {dayGap !== null && dayGap > 0 && (
+                          <div className="mb-2 flex items-center gap-1 text-[11px] font-medium text-outline">
+                            <span className="material-symbols-outlined" style={{ fontSize: 14 }}>schedule</span>
+                            {fillTemplate(t("daysLaterTemplate"), { days: dayGap })}
+                          </div>
+                        )}
+
+                        {/* Attempt Card */}
+                        <div className="bg-surface rounded-2xl shadow-sm border border-separator/20 overflow-hidden">
+                          <button
+                            type="button"
+                            onClick={() => toggleExpand(idx)}
+                            className="w-full flex items-center gap-3 p-4 text-left hover:bg-surface-container/40 transition-colors"
+                          >
+                            <span className="text-xs font-bold text-outline shrink-0">#{att.attemptNumber || idx + 1}</span>
+                            <span className={`shrink-0 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
+                              att.status === "Success" ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400" :
+                              att.status === "Failed" ? "bg-error/10 text-error" :
+                              "bg-surface-container-high text-on-surface-variant"
+                            }`}>
+                              {att.status === "Success" ? t("attemptStatusSuccess") : att.status === "Failed" ? t("attemptStatusFailed") : t("statusUnknown")}
+                            </span>
+                            <span className="text-sm font-bold text-on-surface flex-1 truncate">{attTitle || t("untitledAttempt")}</span>
+                            {att.timeToResolve ? (
+                              <span className="hidden sm:inline text-xs text-on-surface-variant shrink-0">{att.timeToResolve} {t("hrsSuffix")}</span>
+                            ) : null}
+                            <span className="text-xs text-on-surface-variant shrink-0">{att.date || "—"}</span>
+                            <span className="material-symbols-outlined text-outline shrink-0" style={{ fontSize: 20 }}>
+                              {isExpanded ? "expand_less" : "expand_more"}
+                            </span>
+                          </button>
 
                         {isExpanded && (
                         <div className="px-5 pb-5 pt-1 space-y-4 border-t border-separator/20">
@@ -321,7 +357,8 @@ export default function EquipmentEventDetailModal({ event, onClose, onEdit }) {
                 })}
               </div>
             </div>
-          )}
+          );
+        })()}
 
         </div>
       </div>
