@@ -335,21 +335,15 @@ function EventModal({ event, history, factories, allEquipment, workerNames, user
   }, [attempts]);
 
   async function handleTitleBlur() {
-    const currentVal = language === "ja" ? (title_ja || title) : (title_en || title);
-    const targetLang = language === "ja" ? "en" : "ja";
-    const needsForceTranslation = targetLang === "ja" ? !title_ja : !title_en;
+    const isJa = language === "ja";
+    const currentVal = isJa ? (title_ja || title) : (title_en || title);
+    if (!currentVal || !currentVal.trim()) return;
 
-    console.log("[handleTitleBlur] currentVal:", currentVal, "snapshot:", titleSnapshotRef.current, "needsForce:", needsForceTranslation);
+    const targetLang = isJa ? "en" : "ja";
+    const langpair = isJa ? "ja|en" : "en|ja";
 
-    if (!currentVal || (!needsForceTranslation && currentVal === titleSnapshotRef.current)) return;
-    titleSnapshotRef.current = currentVal;
-    
-    console.log("[handleTitleBlur] Translating to:", targetLang);
-    
-    const langpair = language === "ja" ? "ja|en" : "en|ja";
-    
     try {
-      const translated = await translateTextApi(currentVal, langpair);
+      const translated = await translateTextApi(currentVal.trim(), langpair);
       if (translated && typeof translated === "string") {
         if (targetLang === "ja") {
           setTitle_ja(translated);
@@ -364,21 +358,15 @@ function EventModal({ event, history, factories, allEquipment, workerNames, user
   }
 
   async function handleDetailsBlur() {
-    const currentVal = language === "ja" ? (details_ja || details) : (details_en || details);
-    const targetLang = language === "ja" ? "en" : "ja";
-    const needsForceTranslation = targetLang === "ja" ? !details_ja : !details_en;
+    const isJa = language === "ja";
+    const currentVal = isJa ? (details_ja || details) : (details_en || details);
+    if (!currentVal || !currentVal.trim()) return;
 
-    console.log("[handleDetailsBlur] currentVal:", currentVal, "snapshot:", detailsSnapshotRef.current, "needsForce:", needsForceTranslation);
+    const targetLang = isJa ? "en" : "ja";
+    const langpair = isJa ? "ja|en" : "en|ja";
 
-    if (!currentVal || (!needsForceTranslation && currentVal === detailsSnapshotRef.current)) return;
-    detailsSnapshotRef.current = currentVal;
-    
-    console.log("[handleDetailsBlur] Translating to:", targetLang);
-    
-    const langpair = language === "ja" ? "ja|en" : "en|ja";
-    
     try {
-      const translated = await translateTextApi(currentVal, langpair);
+      const translated = await translateTextApi(currentVal.trim(), langpair);
       if (translated && typeof translated === "string") {
         if (targetLang === "ja") {
           setDetails_ja(translated);
@@ -389,6 +377,83 @@ function EventModal({ event, history, factories, allEquipment, workerNames, user
       }
     } catch (err) {
       console.error("Auto-translate details failed", err);
+    }
+  }
+
+  async function translateAttemptField(index, fieldBase) {
+    const attempt = attemptsRef.current[index];
+    if (!attempt) return;
+
+    const activeTab = activeAttemptTabs[index] || (language === "ja" ? "ja" : "en");
+    const isEn = activeTab === "en";
+    const srcKey = isEn ? `${fieldBase}_en` : `${fieldBase}_ja`;
+    const targetKey = isEn ? `${fieldBase}_ja` : `${fieldBase}_en`;
+    const langpair = isEn ? "en|ja" : "ja|en";
+
+    const srcVal = attempt[srcKey] || (isEn ? attempt[fieldBase] : "");
+    if (!srcVal || !srcVal.trim()) return;
+
+    try {
+      const translated = await translateTextApi(srcVal.trim(), langpair);
+      if (translated && typeof translated === "string") {
+        setAttempts((prev) => {
+          const newAtt = [...prev];
+          newAtt[index] = {
+            ...newAtt[index],
+            [targetKey]: translated,
+            ...(isEn ? {} : { [fieldBase]: translated }),
+          };
+          return newAtt;
+        });
+      }
+    } catch (err) {
+      console.error(`Auto-translate attempt ${fieldBase} failed:`, err);
+    }
+  }
+
+  async function handleAttemptTabSelect(index, newTabKey) {
+    const currentTab = activeAttemptTabs[index] || (language === "ja" ? "ja" : "en");
+    setActiveAttemptTabs((prev) => ({ ...prev, [index]: newTabKey }));
+
+    if (currentTab !== newTabKey) {
+      const attempt = attemptsRef.current[index];
+      if (!attempt) return;
+
+      const isEn = currentTab === "en";
+      const langpair = isEn ? "en|ja" : "ja|en";
+      const fieldsToTranslate = ["title", "fixDescription", "result"];
+      const updates = {};
+
+      await Promise.all(
+        fieldsToTranslate.map(async (fieldBase) => {
+          const srcKey = isEn ? `${fieldBase}_en` : `${fieldBase}_ja`;
+          const targetKey = isEn ? `${fieldBase}_ja` : `${fieldBase}_en`;
+          const srcVal = attempt[srcKey] || (isEn ? attempt[fieldBase] : "");
+
+          if (srcVal && srcVal.trim()) {
+            try {
+              const translated = await translateTextApi(srcVal.trim(), langpair);
+              if (translated && typeof translated === "string") {
+                updates[targetKey] = translated;
+                if (!isEn) updates[fieldBase] = translated;
+              }
+            } catch (err) {
+              console.error(`Auto-translate on tab switch failed for ${fieldBase}:`, err);
+            }
+          }
+        })
+      );
+
+      if (Object.keys(updates).length > 0) {
+        setAttempts((prev) => {
+          const newAtt = [...prev];
+          newAtt[index] = {
+            ...newAtt[index],
+            ...updates,
+          };
+          return newAtt;
+        });
+      }
     }
   }
 
@@ -411,7 +476,7 @@ function EventModal({ event, history, factories, allEquipment, workerNames, user
       
       if (newVal && newVal.trim() !== "" && newVal !== oldVal) {
         try {
-          const translated = await translateTextApi(newVal, langpair);
+          const translated = await translateTextApi(newVal.trim(), langpair);
           updatedFields[targetField] = translated;
           if (targetTab === "en") updatedFields[fieldBase] = translated;
         } catch (e) {
@@ -786,25 +851,85 @@ function EventModal({ event, history, factories, allEquipment, workerNames, user
     setAttempts([]);
   }
 
-  function handleSubmit(e) {
+  async function handleSubmit(e) {
     e.preventDefault();
     if (!factory || !equipmentId || !date) return;
     
+    let finalTitle_ja = title_ja;
+    let finalTitle_en = title_en;
+    let finalDetails_ja = details_ja;
+    let finalDetails_en = details_en;
+
+    try {
+      const srcTitle = title_en || title || "";
+      if (srcTitle && !finalTitle_ja) {
+        finalTitle_ja = await translateTextApi(srcTitle, "en|ja");
+      } else if (title_ja && !finalTitle_en) {
+        finalTitle_en = await translateTextApi(title_ja, "ja|en");
+      }
+
+      const srcDetails = details_en || details || "";
+      if (srcDetails && !finalDetails_ja) {
+        finalDetails_ja = await translateTextApi(srcDetails, "en|ja");
+      } else if (details_ja && !finalDetails_en) {
+        finalDetails_en = await translateTextApi(details_ja, "ja|en");
+      }
+    } catch (err) {
+      console.warn("Pre-submit translation warning:", err);
+    }
+
+    const finalAttempts = await Promise.all(
+      attempts.map(async (att) => {
+        const updated = { ...att };
+        try {
+          const tEn = att.title_en || att.title || "";
+          const tJa = att.title_ja || "";
+          if (tEn && !tJa) {
+            updated.title_ja = await translateTextApi(tEn, "en|ja");
+          } else if (tJa && !tEn) {
+            updated.title_en = await translateTextApi(tJa, "ja|en");
+            if (!updated.title) updated.title = updated.title_en;
+          }
+
+          const descEn = att.fixDescription_en || att.fixDescription || "";
+          const descJa = att.fixDescription_ja || "";
+          if (descEn && !descJa) {
+            updated.fixDescription_ja = await translateTextApi(descEn, "en|ja");
+          } else if (descJa && !descEn) {
+            updated.fixDescription_en = await translateTextApi(descJa, "ja|en");
+            if (!updated.fixDescription) updated.fixDescription = updated.fixDescription_en;
+          }
+
+          const resEn = att.result_en || att.result || "";
+          const resJa = att.result_ja || "";
+          if (resEn && !resJa) {
+            updated.result_ja = await translateTextApi(resEn, "en|ja");
+          } else if (resJa && !resEn) {
+            updated.result_en = await translateTextApi(resJa, "ja|en");
+            if (!updated.result) updated.result = updated.result_en;
+          }
+        } catch (err) {
+          console.warn("Attempt pre-submit translation warning:", err);
+        }
+        return updated;
+      })
+    );
+
     const payload = {
       工場: factory,
       equipmentId,
       equipmentName: selectedEquipment?.name || event?.equipmentName || "",
       名前: reportedBy,
       date,
-      title,
-      title_en,
-      title_ja,
+      title: finalTitle_en || title,
+      title_en: finalTitle_en || title_en,
+      title_ja: finalTitle_ja || title_ja,
       status,
-      details,
-      details_en,
-      details_ja,
+      details: finalDetails_en || details,
+      details_en: finalDetails_en || details_en,
+      details_ja: finalDetails_ja || details_ja,
       imageURLs,
-      attempts,
+      attempts: finalAttempts,
       resolutionTime: Number(resolutionTime) || null,
     };
 
@@ -1119,7 +1244,7 @@ function EventModal({ event, history, factories, allEquipment, workerNames, user
                                     { key: "ja", label: "日本語 🇯🇵" }
                                   ]}
                                   activeTab={activeTab}
-                                  onSelect={(tab) => setActiveAttemptTabs(prev => ({ ...prev, [index]: tab.key }))}
+                                  onSelect={(tab) => handleAttemptTabSelect(index, tab.key)}
                                 />
                               </div>
 
@@ -1131,6 +1256,7 @@ function EventModal({ event, history, factories, allEquipment, workerNames, user
                                     updateAttempt(index, isEn ? "title_en" : "title_ja", e.target.value);
                                     if (isEn) updateAttempt(index, "title", e.target.value);
                                   }}
+                                  onBlur={() => translateAttemptField(index, "title")}
                                   placeholder={isEn ? "Attempt Title (e.g. Belt Realignment)" : "タイトル"}
                                   className={`${inputCls} font-medium`}
                                 />
@@ -1140,6 +1266,7 @@ function EventModal({ event, history, factories, allEquipment, workerNames, user
                                     updateAttempt(index, isEn ? "fixDescription_en" : "fixDescription_ja", e.target.value);
                                     if (isEn) updateAttempt(index, "fixDescription", e.target.value);
                                   }}
+                                  onBlur={() => translateAttemptField(index, "fixDescription")}
                                   placeholder={isEn ? "What did you do?" : "何をしましたか？"}
                                   className={`${inputCls} resize-none`}
                                   rows={2}
@@ -1150,6 +1277,7 @@ function EventModal({ event, history, factories, allEquipment, workerNames, user
                                     updateAttempt(index, isEn ? "result_en" : "result_ja", e.target.value);
                                     if (isEn) updateAttempt(index, "result", e.target.value);
                                   }}
+                                  onBlur={() => translateAttemptField(index, "result")}
                                   placeholder={isEn ? "What was the result?" : "結果はどうでしたか？"}
                                   className={`${inputCls} resize-none`}
                                   rows={2}
