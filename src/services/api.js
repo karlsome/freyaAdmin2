@@ -222,8 +222,31 @@ export async function permanentDeleteEquipmentHistory({ recordId, username, role
   return deleteMasterRecord({ recordId, username, role, tabKey: "equipmentHistoryDB" });
 }
 
-export async function uploadEquipmentEventImage({ base64, factoryName, equipmentName, username }) {
+export async function uploadEquipmentEventImage({ file, base64, factoryName, equipmentName, username }) {
+  if (file) {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('factoryName', factoryName || "");
+    formData.append('equipmentName', equipmentName || "");
+    formData.append('username', username || "");
+
+    const res = await fetch(BASE_URL + "api/upload-equipment-event-file", {
+      method: "POST",
+      body: formData,
+    });
+    if (!res.ok) throw new Error(`API ${res.status}: ${await res.text()}`);
+    return res.json();
+  }
   return _postJson("api/upload-equipment-event-image", { base64, factoryName, equipmentName, username });
+}
+
+export async function deleteEquipmentEventImage(imageURL) {
+  return _postJson("api/delete-equipment-event-image", { imageURL });
+}
+
+export async function translateTextApi(text, langpair = "en|ja") {
+  const res = await _postJson("api/translate", { text, langpair });
+  return res.translatedText;
 }
 
 // ─── Production data (aggregates all 4 process DBs) ──────────────────────────
@@ -1291,11 +1314,22 @@ export async function createWorkerRecord(name) {
 
 // ─── Equipment history (submittedDB › setsubiHistory) ─────────────────────────
 
-export async function fetchSetsubiHistoryRecords({ factory, equipmentId } = {}) {
-  const q = { _deleted: { $ne: true } };
-  if (factory) q["工場"] = factory;
-  if (equipmentId) q.equipmentId = equipmentId;
-  return query("submittedDB", "setsubiHistory", q, { sort: { date: -1, createdAt: -1 } });
+export async function fetchSetsubiHistoryRecords({ factory, equipmentId, status, search, dateFrom, dateTo, page = 1, limit = 50, sortColumn, sortDir = "desc" } = {}) {
+  const params = new URLSearchParams();
+  if (factory) params.append("factory", factory);
+  if (equipmentId) params.append("equipmentId", equipmentId);
+  if (status) params.append("status", status);
+  if (search) params.append("search", search);
+  if (dateFrom) params.append("dateFrom", dateFrom);
+  if (dateTo) params.append("dateTo", dateTo);
+  params.append("page", page);
+  params.append("limit", limit);
+  if (sortColumn) params.append("sortColumn", sortColumn);
+  params.append("sortDir", sortDir);
+
+  const res = await fetch(`${BASE_URL}api/setsubi-history?${params.toString()}`);
+  if (!res.ok) throw new Error(`API ${res.status}: ${await res.text()}`);
+  return res.json();
 }
 
 export async function createSetsubiHistoryRecord(data) {
@@ -1303,6 +1337,15 @@ export async function createSetsubiHistoryRecord(data) {
     dbName: "submittedDB",
     collectionName: "setsubiHistory",
     insertData: { ...data, createdAt: new Date().toISOString() },
+  });
+}
+
+export async function updateSetsubiHistoryRecord(id, data) {
+  return _postJson("queries", {
+    dbName: "submittedDB",
+    collectionName: "setsubiHistory",
+    query: { _id: id },
+    update: { $set: { ...data, updatedAt: new Date().toISOString() } },
   });
 }
 

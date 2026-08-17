@@ -1,6 +1,14 @@
 import { useEffect } from "react";
 import { createPortal } from "react-dom";
 
+function isVideoUrl(url) {
+  return /\.(mp4|mov)$/i.test(url.split("?")[0]);
+}
+
+function isPdfUrl(url) {
+  return /\.pdf$/i.test(url.split("?")[0]);
+}
+
 function clampPreviewIndex(index, total) {
   if (!total) return 0;
   const numericIndex = Number.isInteger(index) ? index : 0;
@@ -105,12 +113,27 @@ export default function SensorDevicePhotoPreviewModal({ preview, onClose, onNavi
 
         <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5 space-y-4">
           <div className="relative overflow-hidden rounded-2xl border border-separator/40 bg-surface-container">
-            <div className="flex min-h-[52vh] items-center justify-center bg-surface-container px-4 py-4">
-              <img
-                src={activeImage.url}
-                alt={activeImage.label || title}
-                className="max-h-[70vh] max-w-full object-contain"
-              />
+            <div className="flex min-h-[52vh] items-center justify-center bg-surface-container px-4 py-4 w-full h-full overflow-hidden">
+              {isVideoUrl(activeImage.url) ? (
+                <video
+                  src={activeImage.url}
+                  controls
+                  autoPlay
+                  className="max-h-[70vh] max-w-full rounded-[24px] object-contain shadow-2xl"
+                />
+              ) : isPdfUrl(activeImage.url) ? (
+                <iframe 
+                  src={activeImage.url} 
+                  className="w-full h-[70vh] rounded-[24px] shadow-2xl bg-white" 
+                  title={activeImage.label || title || "PDF Preview"} 
+                />
+              ) : (
+                <img
+                  src={activeImage.url}
+                  alt={activeImage.label || title}
+                  className="max-h-[70vh] max-w-full object-contain"
+                />
+              )}
             </div>
 
             {hasMultipleImages ? (
@@ -141,12 +164,12 @@ export default function SensorDevicePhotoPreviewModal({ preview, onClose, onNavi
           <div className="rounded-2xl border border-outline-variant/15 bg-surface-container-low px-4 py-4">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
-                <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Current Photo</p>
-                <p className="mt-1 text-sm font-semibold text-on-surface">{activeImage.label || `Photo ${activeIndex + 1}`}</p>
+                <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Current File</p>
+                <p className="mt-1 text-sm font-semibold text-on-surface">{activeImage.label || `File ${activeIndex + 1}`}</p>
               </div>
               <p className="text-[11px] text-outline">
                 {hasMultipleImages
-                  ? `Use the left and right arrow keys to browse all ${images.length} photos.`
+                  ? `Use the left and right arrow keys to browse all ${images.length} files.`
                   : "Press Escape to close this preview."}
               </p>
             </div>
@@ -156,8 +179,8 @@ export default function SensorDevicePhotoPreviewModal({ preview, onClose, onNavi
         <div className="flex flex-col gap-3 border-t border-outline-variant/20 bg-surface-container-low/50 px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-[11px] text-outline">
             {hasMultipleImages
-              ? `Photo ${activeIndex + 1} of ${images.length}`
-              : "Single photo attached"}
+              ? `File ${activeIndex + 1} of ${images.length}`
+              : "Single file attached"}
           </p>
 
           <div className="flex flex-wrap items-center justify-end gap-3">
@@ -189,7 +212,7 @@ export default function SensorDevicePhotoPreviewModal({ preview, onClose, onNavi
               rel="noreferrer"
               className="rounded-xl border border-separator/40 px-4 py-2 text-xs font-semibold text-on-surface-variant transition-all duration-150 hover:border-primary/30 hover:bg-surface-container hover:text-primary active:scale-95"
             >
-              Open Photo
+              Open File
             </a>
 
             <a
@@ -197,7 +220,7 @@ export default function SensorDevicePhotoPreviewModal({ preview, onClose, onNavi
               download={buildImageDownloadName(activeImage.url, activeImage.label)}
               className="rounded-xl bg-primary px-4 py-2 text-xs font-semibold text-on-primary transition-all duration-150 hover:opacity-90 active:scale-95"
             >
-              Download Photo
+              Download File
             </a>
           </div>
         </div>

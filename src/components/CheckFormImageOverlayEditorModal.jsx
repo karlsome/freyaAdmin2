@@ -1,13 +1,15 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { Arrow, Circle, Image as KonvaImage, Layer, Rect, Stage, Transformer } from "react-konva";
+import { Arrow, Circle, Image as KonvaImage, Layer, Line, Rect, Stage, Text as KonvaText, Transformer } from "react-konva";
 import IconButton from "./IconButton";
 
 const TOOL_OPTIONS = [
   { value: "select", label: "Select", icon: "arrow_selector_tool" },
+  { value: "draw", label: "Draw", icon: "draw" },
   { value: "rect", label: "Box", icon: "crop_square" },
   { value: "circle", label: "Circle", icon: "circle" },
   { value: "arrow", label: "Arrow", icon: "arrow_right_alt" },
+  { value: "text", label: "Text", icon: "title" },
 ];
 
 const DEFAULT_COLOR = "#ef4444";
@@ -190,11 +192,23 @@ function createArrowFromDraft(draft) {
   };
 }
 
+function createDrawFromDraft(draft) {
+  if (!draft?.points || draft.points.length < 4) return null;
+  return {
+    id: draft.id,
+    kind: "draw",
+    points: draft.points,
+    stroke: draft.stroke,
+    strokeWidth: draft.strokeWidth,
+  };
+}
+
 function buildShapeFromDraft(draft) {
   if (!draft) return null;
   if (draft.kind === "rect") return createRectFromDraft(draft);
   if (draft.kind === "circle") return createCircleFromDraft(draft);
   if (draft.kind === "arrow") return createArrowFromDraft(draft);
+  if (draft.kind === "draw") return createDrawFromDraft(draft);
   return null;
 }
 
@@ -213,6 +227,51 @@ function renderAnnotation(annotation, options) {
       options.onSelect(annotation.id);
     },
   };
+
+  if (annotation.kind === "draw") {
+    return (
+      <Line
+        {...commonProps}
+        points={annotation.points}
+        tension={0.4}
+        lineCap="round"
+        lineJoin="round"
+        draggable
+        onDragEnd={(event) => {
+          const node = event.target;
+          const offsetX = node.x();
+          const offsetY = node.y();
+          node.x(0);
+          node.y(0);
+          options.onDrawChange?.(annotation.id, {
+            points: annotation.points.map((p, i) => (i % 2 === 0 ? p + offsetX : p + offsetY)),
+          });
+        }}
+      />
+    );
+  }
+
+  if (annotation.kind === "text") {
+    return (
+      <KonvaText
+        {...commonProps}
+        x={annotation.x}
+        y={annotation.y}
+        text={annotation.text}
+        fontSize={annotation.fontSize || 20}
+        fontFamily="sans-serif"
+        fontStyle="bold"
+        fill={annotation.stroke}
+        draggable
+        onDragEnd={(event) => {
+          options.onTextChange?.(annotation.id, {
+            x: event.target.x(),
+            y: event.target.y(),
+          });
+        }}
+      />
+    );
+  }
 
   if (annotation.kind === "rect") {
     return (
@@ -320,8 +379,13 @@ export default function CheckFormImageOverlayEditorModal({
   open,
   sourceImage,
   mode = "new",
+  eyebrow = "Overlay Editor",
+  title,
+  description,
+  confirmLabel,
   onClose,
   onSave,
+  onSkip,
 }) {
   const [viewportSize, setViewportSize] = useState(() => getViewportSize());
   const [imageElement, setImageElement] = useState(null);
@@ -506,6 +570,39 @@ export default function CheckFormImageOverlayEditorModal({
     const point = getPointerPosition();
     if (!point) return;
 
+    if (tool === "draw") {
+      setSelectedId("");
+      setDraftShape({
+        id: crypto.randomUUID(),
+        kind: "draw",
+        points: [point.x, point.y],
+        stroke: strokeColor,
+        strokeWidth: Number(strokeWidth),
+      });
+      return;
+    }
+
+    if (tool === "text") {
+      setSelectedId("");
+      const entered = window.prompt("Enter text to overlay:") || "";
+      if (entered.trim()) {
+        const newText = {
+          id: crypto.randomUUID(),
+          kind: "text",
+          x: point.x,
+          y: point.y,
+          text: entered.trim(),
+          fontSize: Math.max(14, Number(strokeWidth) * 3.5),
+          stroke: strokeColor,
+          strokeWidth: 1,
+        };
+        pushHistory([...annotations, newText]);
+        setSelectedId(newText.id);
+      }
+      setTool("select");
+      return;
+    }
+
     setSelectedId("");
     setDraftShape({
       id: crypto.randomUUID(),
@@ -525,6 +622,15 @@ export default function CheckFormImageOverlayEditorModal({
     const point = getPointerPosition();
     if (!point) return;
 
+    if (draftShape.kind === "draw") {
+      setDraftShape((current) => (
+        current
+          ? { ...current, points: [...current.points, point.x, point.y] }
+          : current
+      ));
+      return;
+    }
+
     setDraftShape((current) => (
       current
         ? { ...current, endX: point.x, endY: point.y }
@@ -534,6 +640,15 @@ export default function CheckFormImageOverlayEditorModal({
 
   function handleStagePointerUp() {
     if (!draftShape) return;
+
+    if (draftShape.kind === "draw") {
+      const nextShape = createDrawFromDraft(draftShape);
+      setDraftShape(null);
+      if (!nextShape) return;
+      pushHistory([...annotations, nextShape]);
+      setSelectedId(nextShape.id);
+      return;
+    }
 
     const nextShape = buildShapeFromDraft(draftShape);
     setDraftShape(null);
@@ -578,10 +693,10 @@ export default function CheckFormImageOverlayEditorModal({
         >
           <div className="flex flex-wrap items-start justify-between gap-4 border-b border-separator/40 px-5 py-4 sm:px-6">
             <div className="min-w-0 flex-1">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-primary">Overlay Editor</p>
-              <h3 className="mt-1 text-lg font-semibold text-on-surface">{mode === "edit" ? "Edit reference image" : "Prepare new reference image"}</h3>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-primary">{eyebrow}</p>
+              <h3 className="mt-1 text-lg font-semibold text-on-surface">{title || (mode === "edit" ? "Edit reference image" : "Prepare new reference image")}</h3>
               <p className="mt-1 text-sm leading-6 text-outline">
-                Add simple callouts only if you need them. When you save, the image is flattened and uploaded as a new file.
+                {description || "Add simple callouts only if you need them. When you save, the image is flattened and uploaded as a new file."}
               </p>
             </div>
 
@@ -737,6 +852,8 @@ export default function CheckFormImageOverlayEditorModal({
                           onRectChange: (annotationId, nextValues) => replaceAnnotation(annotationId, () => nextValues),
                           onCircleChange: (annotationId, nextValues) => replaceAnnotation(annotationId, () => nextValues),
                           onArrowChange: (annotationId, nextValues) => replaceAnnotation(annotationId, () => nextValues),
+                          onDrawChange: (annotationId, nextValues) => replaceAnnotation(annotationId, () => nextValues),
+                          onTextChange: (annotationId, nextValues) => replaceAnnotation(annotationId, () => nextValues),
                         }))}
 
                         {draftPreview ? renderAnnotation(draftPreview, {
@@ -745,6 +862,8 @@ export default function CheckFormImageOverlayEditorModal({
                           onRectChange: () => {},
                           onCircleChange: () => {},
                           onArrowChange: () => {},
+                          onDrawChange: () => {},
+                          onTextChange: () => {},
                         }) : null}
 
                         <Transformer
@@ -781,13 +900,23 @@ export default function CheckFormImageOverlayEditorModal({
                 >
                   Cancel
                 </button>
+                {onSkip ? (
+                  <button
+                    type="button"
+                    onClick={onSkip}
+                    disabled={saving}
+                    className="rounded-2xl border border-separator/40 px-4 py-2 text-xs font-semibold text-outline hover:text-on-surface transition hover:bg-surface-container"
+                  >
+                    Skip
+                  </button>
+                ) : null}
                 <button
                   type="button"
                   onClick={handleSave}
                   disabled={saving || loadingImage || !imageElement}
                   className="rounded-xl bg-primary px-4 py-2 text-xs font-semibold text-on-primary hover:opacity-90 active:scale-95 transition-all duration-150 disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  {saving ? "Saving..." : mode === "edit" ? "Save as new image" : "Upload image"}
+                  {saving ? "Saving..." : confirmLabel || (mode === "edit" ? "Save as new image" : "Upload image")}
                 </button>
               </div>
             </div>

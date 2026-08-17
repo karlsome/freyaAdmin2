@@ -11,7 +11,7 @@ import {
   deleteCheckFormTemplate,
   uploadCheckFormReferenceImage,
 } from "../services/api";
-import CheckFormImageLightboxModal from "./CheckFormImageLightboxModal";
+import FilePreviewModal from "./FilePreviewModal";
 import CheckFormImageOverlayEditorModal from "./CheckFormImageOverlayEditorModal";
 import { getAuthUser } from "../utils/masterDB";
 
@@ -1040,7 +1040,7 @@ function FieldCard({
         ) : null}
       </div>
 
-      <CheckFormImageLightboxModal image={thumbnailPreviewImage} onClose={() => setThumbnailPreviewImage(null)} />
+      <FilePreviewModal url={thumbnailPreviewImage?.imageURL} name={thumbnailPreviewImage?.name} onClose={() => setThumbnailPreviewImage(null)} />
     </>
   );
 }
