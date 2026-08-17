@@ -222,13 +222,15 @@ export async function permanentDeleteEquipmentHistory({ recordId, username, role
   return deleteMasterRecord({ recordId, username, role, tabKey: "equipmentHistoryDB" });
 }
 
-export async function uploadEquipmentEventImage({ file, base64, factoryName, equipmentName, username }) {
+export async function uploadEquipmentEventImage({ file, base64, factoryName, equipmentName, username, trimStart, trimEnd }) {
   if (file) {
     const formData = new FormData();
     formData.append('file', file);
     formData.append('factoryName', factoryName || "");
     formData.append('equipmentName', equipmentName || "");
     formData.append('username', username || "");
+    if (trimStart !== undefined && trimStart !== null) formData.append('trimStart', trimStart);
+    if (trimEnd !== undefined && trimEnd !== null) formData.append('trimEnd', trimEnd);
 
     const res = await fetch(BASE_URL + "api/upload-equipment-event-file", {
       method: "POST",

@@ -610,7 +610,10 @@ function EventModal({ event, history, factories, allEquipment, workerNames, user
             return result.imageURL;
           }
         } else if (item.type === "video") {
-          const fileToUpload = item.processedOutput instanceof File ? item.processedOutput : item.file;
+          const fileToUpload = (item.processedOutput instanceof File)
+            ? item.processedOutput
+            : (item.processedOutput?.file instanceof File ? item.processedOutput.file : item.file);
+
           const result = await uploadEquipmentEventImage({
             file: fileToUpload,
             factoryName: factory,

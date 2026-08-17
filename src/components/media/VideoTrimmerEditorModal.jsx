@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { Conversion, Input, Output, BlobSource, BufferTarget, Mp4OutputFormat, ALL_FORMATS } from "mediabunny";
 import IconButton from "../IconButton";
 
 function formatTime(seconds) {
@@ -8,6 +9,55 @@ function formatTime(seconds) {
   const secs = Math.floor(seconds % 60);
   const ms = Math.floor((seconds % 1) * 10);
   return `${String(mins).padStart(2, "0")}:${String(secs).padStart(2, "0")}.${ms}`;
+}
+
+/**
+ * Lossless client-side video trimming via Mediabunny / WebCodecs
+ * Preserves original portrait/landscape orientation, resolution, and outputs standard MP4.
+ */
+async function trimVideoClientSide(file, startTime, endTime, onProgress) {
+  const input = new Input({
+    source: new BlobSource(file),
+    formats: ALL_FORMATS,
+  });
+
+  const target = new BufferTarget();
+  const output = new Output({
+    format: new Mp4OutputFormat(),
+    target,
+  });
+
+  const conversion = await Conversion.init({
+    input,
+    output,
+    trim: {
+      start: startTime,
+      end: endTime,
+    },
+  });
+
+  if (!conversion.isValid) {
+    throw new Error("Unable to trim this video format in browser.");
+  }
+
+  if (onProgress) {
+    conversion.onProgress = (progress) => {
+      onProgress(Math.min(99, Math.round(progress * 100)));
+    };
+  }
+
+  await conversion.execute();
+
+  const buffer = target.buffer;
+  if (!buffer || buffer.byteLength === 0) {
+    throw new Error("Trimmed video output is empty.");
+  }
+
+  const baseName = file.name.replace(/\.[^/.]+$/, "");
+  return new File([buffer], `${baseName}_trimmed.mp4`, {
+    type: "video/mp4",
+    lastModified: Date.now(),
+  });
 }
 
 export default function VideoTrimmerEditorModal({
@@ -111,8 +161,8 @@ export default function VideoTrimmerEditorModal({
   async function handleTrimAndSave() {
     if (!videoFile || !duration) return;
 
-    // If start is 0 and end is virtually the whole duration (within 0.3s), keep original
-    if (startTime <= 0.1 && Math.abs(endTime - duration) <= 0.3) {
+    const isTrimmed = startTime > 0.05 || (duration > 0 && Math.abs(endTime - duration) > 0.1);
+    if (!isTrimmed) {
       onSave(videoFile);
       return;
     }
@@ -122,14 +172,14 @@ export default function VideoTrimmerEditorModal({
     setProcessError("");
 
     try {
-      const trimmedFile = await trimVideoInBrowser(videoFile, startTime, endTime, (pct) => {
+      const trimmedFile = await trimVideoClientSide(videoFile, startTime, endTime, (pct) => {
         setProgress(pct);
       });
       setProcessing(false);
       onSave(trimmedFile);
     } catch (err) {
-      console.error("Trim failed:", err);
-      setProcessError("Failed to trim video in browser. You can still skip or upload original.");
+      console.error("Client video trim failed:", err);
+      setProcessError(err?.message || "Failed to trim video in browser. You can skip to upload original.");
       setProcessing(false);
     }
   }
@@ -137,6 +187,7 @@ export default function VideoTrimmerEditorModal({
   if (!open || !videoFile) return null;
 
   const clipDuration = Math.max(0, endTime - startTime);
+  const isTrimmed = startTime > 0.05 || (duration > 0 && Math.abs(endTime - duration) > 0.1);
 
   return createPortal(
     <div className="fixed inset-0 z-[110] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 sm:p-6" onMouseDown={onClose}>
@@ -219,7 +270,7 @@ export default function VideoTrimmerEditorModal({
                   type="range"
                   min="0"
                   max={duration || 100}
-                  step="0.1"
+                  step="0.05"
                   value={startTime}
                   onChange={(e) => {
                     const val = Number(e.target.value);
@@ -240,7 +291,7 @@ export default function VideoTrimmerEditorModal({
                   type="range"
                   min="0"
                   max={duration || 100}
-                  step="0.1"
+                  step="0.05"
                   value={endTime}
                   onChange={(e) => {
                     const val = Number(e.target.value);
@@ -299,8 +350,8 @@ export default function VideoTrimmerEditorModal({
           {processing && (
             <div className="rounded-2xl bg-primary/10 border border-primary/20 p-4 space-y-2">
               <div className="flex justify-between text-xs font-semibold text-primary">
-                <span>Encoding trimmed clip...</span>
-                <span>{Math.round(progress)}%</span>
+                <span>Trimming video locally in browser...</span>
+                <span>{progress}%</span>
               </div>
               <div className="h-2 w-full rounded-full bg-primary/20 overflow-hidden">
                 <div
@@ -319,9 +370,9 @@ export default function VideoTrimmerEditorModal({
         {/* Footer */}
         <div className="flex flex-wrap items-center justify-between gap-3 border-t border-separator/40 px-6 py-4 bg-surface">
           <p className="text-xs text-outline">
-            {startTime > 0 || endTime < duration
-              ? `Trimmed clip will be ${formatTime(clipDuration)} long.`
-              : "No trim selected. Original file will be used."}
+            {isTrimmed
+              ? `Trimmed clip will be ${formatTime(clipDuration)} long (MP4 export).`
+              : "Full duration selected. Original video file will be uploaded."}
           </p>
 
           <div className="flex items-center gap-3">
@@ -364,98 +415,4 @@ export default function VideoTrimmerEditorModal({
     </div>,
     document.body
   );
-}
-
-/**
- * Trims a video file in the browser using HTML5 Canvas + MediaRecorder
- */
-function trimVideoInBrowser(file, startTime, endTime, onProgress) {
-  return new Promise((resolve, reject) => {
-    const video = document.createElement("video");
-    video.src = URL.createObjectURL(file);
-    video.muted = false;
-    video.playsInline = true;
-    video.crossOrigin = "anonymous";
-
-    video.onloadedmetadata = async () => {
-      try {
-        const width = Math.min(video.videoWidth || 1280, 1920);
-        const height = Math.min(video.videoHeight || 720, 1080);
-
-        const canvas = document.createElement("canvas");
-        canvas.width = width;
-        canvas.height = height;
-        const ctx = canvas.getContext("2d");
-
-        const stream = canvas.captureStream(30);
-        
-        let mimeType = "video/webm;codecs=vp9,opus";
-        if (!MediaRecorder.isTypeSupported(mimeType)) {
-          mimeType = "video/webm";
-          if (!MediaRecorder.isTypeSupported(mimeType)) {
-            mimeType = "video/mp4";
-          }
-        }
-
-        const recorder = new MediaRecorder(stream, {
-          mimeType: MediaRecorder.isTypeSupported(mimeType) ? mimeType : undefined,
-          videoBitsPerSecond: 3000000,
-        });
-
-        const chunks = [];
-        recorder.ondataavailable = (e) => {
-          if (e.data && e.data.size > 0) chunks.push(e.data);
-        };
-
-        recorder.onstop = () => {
-          URL.revokeObjectURL(video.src);
-          const blob = new Blob(chunks, { type: chunks[0]?.type || "video/mp4" });
-          const baseName = file.name.replace(/\.[^/.]+$/, "");
-          const extension = blob.type.includes("webm") ? ".webm" : ".mp4";
-          const trimmedFile = new File([blob], `${baseName}_trimmed${extension}`, {
-            type: blob.type,
-            lastModified: Date.now(),
-          });
-          resolve(trimmedFile);
-        };
-
-        video.currentTime = startTime;
-
-        await new Promise((res) => {
-          video.onseeked = () => res();
-        });
-
-        recorder.start(100);
-        await video.play();
-
-        const totalDuration = endTime - startTime;
-
-        function renderFrame() {
-          if (video.currentTime >= endTime || video.paused || video.ended) {
-            recorder.stop();
-            video.pause();
-            return;
-          }
-
-          ctx.drawImage(video, 0, 0, width, height);
-
-          const elapsed = Math.max(0, video.currentTime - startTime);
-          const pct = Math.min(99, (elapsed / totalDuration) * 100);
-          onProgress?.(pct);
-
-          requestAnimationFrame(renderFrame);
-        }
-
-        requestAnimationFrame(renderFrame);
-      } catch (err) {
-        URL.revokeObjectURL(video.src);
-        reject(err);
-      }
-    };
-
-    video.onerror = (err) => {
-      URL.revokeObjectURL(video.src);
-      reject(err || new Error("Failed to load video"));
-    };
-  });
 }
