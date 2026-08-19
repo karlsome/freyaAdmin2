@@ -1384,8 +1384,8 @@ export default function FirstFactoryPage() {
               stickyHeader={true}
               stickyHeaderOffset={0}
               stickyHeaderCellClassName="bg-surface/95 backdrop-blur-md shadow-[inset_0_-1px_0_rgba(148,163,184,0.18)]"
-              tableViewportClassName="max-h-[85vh] overflow-auto overscroll-contain"
-              className="glass-card rounded-2xl overflow-hidden shadow-sm border border-outline-variant/30"
+              tableViewportClassName="overflow-x-auto"
+              className="glass-card rounded-2xl shadow-sm border border-outline-variant/30"
               rowKey={(row) => row.dateKey}
               emptyTitle="No schedule data"
               emptyMessage="No schedules found for this month."
