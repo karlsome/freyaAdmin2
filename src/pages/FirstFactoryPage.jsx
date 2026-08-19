@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { useLanguage } from '../contexts/LanguageContext';
 import MasterTabNav from '../components/MasterTabNav';
 import MaterialDetailModal from '../components/MaterialDetailModal';
@@ -10,7 +11,11 @@ import * as xlsx from 'xlsx';
 
 export default function FirstFactoryPage() {
   const { t } = useLanguage();
-  const [activeTab, setActiveTab] = useState('fetching'); // 'fetching' | 'scheduling'
+  const navigate = useNavigate();
+  const { tab: routeTab } = useParams();
+  
+  const VALID_TABS = ['fetching', 'scheduling', 'summary'];
+  const activeTab = VALID_TABS.includes(routeTab) ? routeTab : 'fetching';
   
   const [data, setData] = useState([]);
   const [savedSchedules, setSavedSchedules] = useState([]);
@@ -293,13 +298,13 @@ export default function FirstFactoryPage() {
     setSelectedDateStr(newDate);
   };
 
-  const handleTabChange = (tab) => {
-    if (activeTab === 'scheduling' && tab !== 'scheduling' && hasUnsavedChanges) {
+  const handleTabChange = (nextTab) => {
+    if (activeTab === 'scheduling' && nextTab !== 'scheduling' && hasUnsavedChanges) {
       if (!window.confirm(t('unsavedChangesWarning') || "You have unsaved changes! Are you sure you want to switch tabs? Unsaved progress will be lost.")) {
         return;
       }
     }
-    setActiveTab(tab);
+    navigate(`/firstFactory/${nextTab}`);
   };
 
   // Items that have production > 0 for this day
@@ -633,7 +638,7 @@ export default function FirstFactoryPage() {
         <button
           onClick={() => {
             setSelectedDateStr(row.dateKey);
-            setActiveTab('scheduling');
+            navigate('/firstFactory/scheduling');
           }}
           className="inline-flex items-center gap-1 rounded-lg border border-primary/30 bg-primary/5 px-2.5 py-1 text-xs font-bold text-primary hover:bg-primary hover:text-on-primary transition-colors shadow-sm"
           title="Open in Scheduling Tab"
