@@ -1306,65 +1306,6 @@ export default function FirstFactoryPage() {
             </div>
           </div>
 
-          {/* KPI Stat Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="rounded-2xl border border-outline-variant/30 bg-surface/60 p-5 backdrop-blur-md flex items-center justify-between shadow-sm">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-wider text-outline">Total Scheduled Time</p>
-                <h3 className="text-2xl font-black text-primary mt-1">
-                  {formatTime(monthSummaryData.totalScheduledMins)}
-                </h3>
-                <p className="text-xs text-outline mt-0.5">({monthSummaryData.totalScheduledHours} hrs total)</p>
-              </div>
-              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 text-primary">
-                <span className="material-symbols-outlined" style={{ fontSize: 26 }}>schedule</span>
-              </div>
-            </div>
-
-            <div className="rounded-2xl border border-outline-variant/30 bg-surface/60 p-5 backdrop-blur-md flex items-center justify-between shadow-sm">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-wider text-outline">Scheduled Days</p>
-                <h3 className="text-2xl font-black text-emerald-600 mt-1">
-                  {monthSummaryData.scheduledDaysCount} <span className="text-sm font-medium text-outline">/ {daysInSelectedMonth} days</span>
-                </h3>
-                <p className="text-xs text-outline mt-0.5">
-                  {((monthSummaryData.scheduledDaysCount / daysInSelectedMonth) * 100).toFixed(0)}% month planned
-                </p>
-              </div>
-              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-500/10 text-emerald-600">
-                <span className="material-symbols-outlined" style={{ fontSize: 26 }}>event_available</span>
-              </div>
-            </div>
-
-            <div className="rounded-2xl border border-outline-variant/30 bg-surface/60 p-5 backdrop-blur-md flex items-center justify-between shadow-sm">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-wider text-outline">Total Items & Tasks</p>
-                <h3 className="text-2xl font-black text-indigo-600 mt-1">
-                  {monthSummaryData.totalScheduledItemsCount} <span className="text-sm font-medium text-outline">items</span>
-                </h3>
-                <p className="text-xs text-outline mt-0.5">
-                  {monthSummaryData.totalMonthUniqueHinbansCount} unique 品番 • {monthSummaryData.totalSetupCount} setups
-                </p>
-              </div>
-              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-indigo-500/10 text-indigo-600">
-                <span className="material-symbols-outlined" style={{ fontSize: 26 }}>inventory_2</span>
-              </div>
-            </div>
-
-            <div className="rounded-2xl border border-outline-variant/30 bg-surface/60 p-5 backdrop-blur-md flex items-center justify-between shadow-sm">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-wider text-outline">Avg Daily Scheduled</p>
-                <h3 className="text-2xl font-black text-amber-600 mt-1">
-                  {monthSummaryData.avgHoursPerScheduledDay} <span className="text-sm font-medium text-outline">hrs / day</span>
-                </h3>
-                <p className="text-xs text-outline mt-0.5">Across active scheduled days</p>
-              </div>
-              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-500/10 text-amber-600">
-                <span className="material-symbols-outlined" style={{ fontSize: 26 }}>timelapse</span>
-              </div>
-            </div>
-          </div>
-
           {/* Daily Breakdown Table */}
           <div className="flex flex-col gap-3">
             <div className="flex items-center justify-between px-1">
