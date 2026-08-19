@@ -6,7 +6,8 @@ import MasterTabNav from '../components/MasterTabNav';
 import MaterialDetailModal from '../components/MaterialDetailModal';
 import DataTable from '../components/DataTable';
 import { BASE_URL } from '../services/api';
-import { readStoredAuthUser } from '../utils/auth';
+import { readStoredAuthUser, getAuthDisplayName } from '../utils/auth';
+import { openFirstFactorySchedulePrintWindow } from '../utils/firstFactoryPdfExport';
 import * as xlsx from 'xlsx';
 
 export default function FirstFactoryPage() {
@@ -1095,6 +1096,18 @@ export default function FirstFactoryPage() {
   
   const scheduleWithTimes = computeTimeSchedule(scheduledItems, startTime);
 
+  const handlePrintSchedulePDF = () => {
+    const authUser = readStoredAuthUser() || {};
+    const fullName = getAuthDisplayName(authUser);
+    openFirstFactorySchedulePrintWindow({
+      dateStr: selectedDateStr,
+      startTime,
+      scheduleWithTimes,
+      data,
+      scheduledBy: fullName
+    });
+  };
+
   return (
     <div className="p-6 pt-24 pb-24 overflow-y-auto h-screen">
       <div className="mb-6 flex items-center justify-between">
@@ -1485,17 +1498,29 @@ export default function FirstFactoryPage() {
                     {formatTime(scheduledTotalMins)}
                   </span>
                   {scheduledItems.length > 0 && (
-                    <button 
-                      onClick={() => {
-                        if (window.confirm("Are you sure you want to reset the schedule? All items will be moved back to the pool.")) {
-                          setScheduleOrder([]);
-                        }
-                      }}
-                      className="flex items-center gap-1 rounded-lg border border-red-500/30 bg-red-500/10 px-2 py-1 text-xs font-semibold text-red-600 transition-colors hover:bg-red-500/20"
-                    >
-                      <span className="material-symbols-outlined" style={{ fontSize: 16 }}>restart_alt</span>
-                      Reset
-                    </button>
+                    <>
+                      <button
+                        type="button"
+                        onClick={handlePrintSchedulePDF}
+                        className="flex items-center gap-1 rounded-lg border border-primary/40 bg-primary/10 px-2.5 py-1 text-xs font-bold text-primary transition-all hover:bg-primary hover:text-on-primary shadow-xs active:scale-95 cursor-pointer"
+                        title="A3縦 生産計画PDF印刷 (Print A3 Schedule PDF)"
+                      >
+                        <span className="material-symbols-outlined" style={{ fontSize: 16 }}>print</span>
+                        Print
+                      </button>
+                      <button 
+                        type="button"
+                        onClick={() => {
+                          if (window.confirm("Are you sure you want to reset the schedule? All items will be moved back to the pool.")) {
+                            setScheduleOrder([]);
+                          }
+                        }}
+                        className="flex items-center gap-1 rounded-lg border border-red-500/30 bg-red-500/10 px-2 py-1 text-xs font-semibold text-red-600 transition-colors hover:bg-red-500/20 cursor-pointer"
+                      >
+                        <span className="material-symbols-outlined" style={{ fontSize: 16 }}>restart_alt</span>
+                        Reset
+                      </button>
+                    </>
                   )}
                   <span className="text-sm font-normal text-primary/70">{scheduledItems.length} scheduled</span>
                 </div>
