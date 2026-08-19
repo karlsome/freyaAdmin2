@@ -673,9 +673,10 @@ export default function FirstFactoryPage() {
   const [productionStatuses, setProductionStatuses] = useState([]);
   const [loadingProduction, setLoadingProduction] = useState(false);
   const [productionFilter, setProductionFilter] = useState('all');
+  const [isLiveConnected, setIsLiveConnected] = useState(false);
 
-  const fetchProductionData = async (dateStr) => {
-    setLoadingProduction(true);
+  const fetchProductionData = async (dateStr, isBackground = false) => {
+    if (!isBackground) setLoadingProduction(true);
     try {
       const [year, monthNum, dayNum] = dateStr.split('-');
       const month = `${year}-${monthNum}`;
@@ -722,14 +723,89 @@ export default function FirstFactoryPage() {
     } catch (err) {
       console.error("Failed to load production tracking data:", err);
     } finally {
-      setLoadingProduction(false);
+      if (!isBackground) setLoadingProduction(false);
     }
   };
 
   useEffect(() => {
-    if (activeTab === 'production') {
-      fetchProductionData(productionDateStr);
+    if (activeTab !== 'production') return;
+
+    fetchProductionData(productionDateStr);
+
+    // -------------------------------------------------------------
+    // Realtime EventSource (SSE) Connection
+    // -------------------------------------------------------------
+    let eventSource = null;
+    try {
+      const sseUrl = `${BASE_URL}api/production/events?date=${encodeURIComponent(productionDateStr)}`;
+      eventSource = new EventSource(sseUrl);
+
+      eventSource.onopen = () => {
+        setIsLiveConnected(true);
+      };
+
+      eventSource.onmessage = (e) => {
+        try {
+          const data = JSON.parse(e.data);
+          if (data.type === 'status_update') {
+            if (data.date === productionDateStr && data.record) {
+              setProductionStatuses((prev) => {
+                const idx = prev.findIndex(r => r.groupId === data.groupId);
+                if (idx !== -1) {
+                  const updated = [...prev];
+                  updated[idx] = { ...updated[idx], ...data.record };
+                  return updated;
+                } else {
+                  return [...prev, data.record];
+                }
+              });
+            }
+          } else if (data.type === 'print_log') {
+            if (data.date === productionDateStr && data.printEntry) {
+              setProductionStatuses((prev) => {
+                const idx = prev.findIndex(r => r.groupId === data.groupId);
+                if (idx !== -1) {
+                  const updated = [...prev];
+                  const existingHistory = Array.isArray(updated[idx].printHistory) ? updated[idx].printHistory : [];
+                  updated[idx] = {
+                    ...updated[idx],
+                    printHistory: [...existingHistory, data.printEntry]
+                  };
+                  return updated;
+                } else {
+                  return [...prev, { groupId: data.groupId, hinban: data.hinban, date: data.date, printHistory: [data.printEntry] }];
+                }
+              });
+            }
+          } else if (data.type === 'schedule_update') {
+            fetchProductionData(productionDateStr, true);
+          }
+        } catch (err) {
+          console.error("Error processing SSE event:", err);
+        }
+      };
+
+      eventSource.onerror = () => {
+        setIsLiveConnected(false);
+      };
+    } catch (err) {
+      console.warn("Could not connect to SSE stream:", err);
     }
+
+    // 5-second resilient polling fallback
+    const interval = setInterval(() => {
+      if (document.visibilityState === 'visible') {
+        fetchProductionData(productionDateStr, true);
+      }
+    }, 5000);
+
+    return () => {
+      if (eventSource) {
+        eventSource.close();
+      }
+      clearInterval(interval);
+      setIsLiveConnected(false);
+    };
   }, [activeTab, productionDateStr]);
 
   const productionGroups = useMemo(() => {
@@ -1592,6 +1668,19 @@ export default function FirstFactoryPage() {
                 <span className="material-symbols-outlined text-outline" style={{ fontSize: 16 }}>precision_manufacturing</span>
                 <span>PSA-2 (1号機)</span>
               </span>
+
+              {/* Realtime Live Connection Indicator */}
+              <span 
+                className={`inline-flex items-center gap-1.5 rounded-xl px-2.5 py-1 text-xs font-bold transition-colors ${
+                  isLiveConnected 
+                    ? 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/20' 
+                    : 'bg-surface-variant/40 text-outline border border-outline-variant/30'
+                }`}
+                title={isLiveConnected ? 'Realtime Event Stream Active - Instant updates from tablet' : 'Connecting to live event stream...'}
+              >
+                <span className={`h-2 w-2 rounded-full ${isLiveConnected ? 'bg-emerald-500 animate-pulse' : 'bg-outline'}`}></span>
+                <span>{isLiveConnected ? 'Live Realtime' : 'Syncing'}</span>
+              </span>
             </div>
 
             {/* Refresh Button */}
@@ -1874,11 +1963,28 @@ export default function FirstFactoryPage() {
                     </div>
 
                     {/* Metadata Specs Strip */}
-                    <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-3 text-xs">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-3 text-xs">
                       <div className="rounded-xl bg-surface-variant/20 p-2.5">
                         <span className="text-[10px] font-semibold uppercase text-outline block">Scheduled Time</span>
                         <span className="font-mono font-bold text-on-surface mt-0.5 block">
                           🕒 {group.startTime} ～ {group.endTime}
+                        </span>
+                      </div>
+
+                      <div className="rounded-xl bg-surface-variant/20 p-2.5">
+                        <span className="text-[10px] font-semibold uppercase text-outline block">Actual Time</span>
+                        <span className="font-mono font-bold mt-0.5 block truncate">
+                          {isCompleted && group.actualStartTime ? (
+                            <span className="text-emerald-600 dark:text-emerald-400">
+                              ⏱️ {group.actualStartTime} ～ {group.actualEndTime || ''}
+                            </span>
+                          ) : isInProgress && (group.actualStartTime || group.startTime) ? (
+                            <span className="text-purple-600 dark:text-purple-400 animate-pulse">
+                              ⏱️ {group.actualStartTime || group.startTime}〜
+                            </span>
+                          ) : (
+                            <span className="text-outline">—</span>
+                          )}
                         </span>
                       </div>
 
@@ -1912,28 +2018,60 @@ export default function FirstFactoryPage() {
 
                       <div className="rounded-xl bg-surface-variant/20 p-2.5">
                         <span className="text-[10px] font-semibold uppercase text-outline block">Machine</span>
-                        <span className="font-mono font-bold text-on-surface mt-0.5 block">
+                        <span className="font-mono font-bold text-on-surface mt-0.5 block truncate">
                           🏭 {group.machine || 'PSA2'}
                         </span>
                       </div>
                     </div>
 
-                    {/* Rolls Sub-list */}
-                    <div className="flex flex-wrap items-center gap-2 pt-1">
-                      <span className="text-[11px] font-bold text-outline uppercase mr-1">Rolls:</span>
-                      {group.items.map((roll, rIdx) => (
-                        <div
-                          key={roll.id || rIdx}
-                          className="inline-flex items-center gap-2 rounded-lg border border-outline-variant/30 bg-background/50 px-2.5 py-1 text-xs"
-                        >
-                          <span className="font-bold text-primary">
-                            #{roll.rollIndex || (rIdx + 1)}/{roll.totalRolls || group.items.length}
-                          </span>
-                          <span className="text-outline font-mono">{roll.meters}m</span>
-                          <span className="text-outline text-[11px]">({roll.duration}m)</span>
+                    {/* Print Status Sub-list */}
+                    {(() => {
+                      const printedRollIndices = new Set(
+                        Array.isArray(group.statusRecord?.printHistory)
+                          ? group.statusRecord.printHistory.map(p => Number(p.rollIndex))
+                          : []
+                      );
+                      const printedCount = printedRollIndices.size;
+                      const totalRolls = group.items.length;
+                      const allDone = totalRolls > 0 && printedCount >= totalRolls;
+
+                      return (
+                        <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-outline-variant/15 mt-1">
+                          <div className="flex items-center gap-1.5 mr-1">
+                            <span className="material-symbols-outlined text-outline" style={{ fontSize: 16 }}>print</span>
+                            <span className="text-[11px] font-bold text-outline uppercase">Print Status:</span>
+                            <span className={`rounded px-1.5 py-0.2 text-[10px] font-black ${allDone ? 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-300' : 'bg-surface-variant/60 text-outline'}`}>
+                              {printedCount} / {totalRolls} Printed
+                            </span>
+                          </div>
+
+                          {group.items.map((roll, rIdx) => {
+                            const rollNum = Number(roll.rollIndex) || (rIdx + 1);
+                            const isPrinted = printedRollIndices.has(rollNum);
+
+                            return (
+                              <div
+                                key={roll.id || rIdx}
+                                className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs transition-colors ${
+                                  isPrinted
+                                    ? 'border border-emerald-500/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 font-bold shadow-xs'
+                                    : 'border border-outline-variant/30 bg-surface-variant/20 text-outline font-medium'
+                                }`}
+                                title={isPrinted ? `Roll #${rollNum}/${totalRolls} - Printed` : `Roll #${rollNum}/${totalRolls} - Waiting for Print`}
+                              >
+                                <span className={`material-symbols-outlined ${isPrinted ? 'text-emerald-600 dark:text-emerald-400' : 'text-outline/60'}`} style={{ fontSize: 14 }}>
+                                  {isPrinted ? 'check_circle' : 'radio_button_unchecked'}
+                                </span>
+                                <span>
+                                  {rollNum}/{totalRolls}
+                                </span>
+                                <span className="opacity-75 font-mono text-[11px]">({roll.meters}m)</span>
+                              </div>
+                            );
+                          })}
                         </div>
-                      ))}
-                    </div>
+                      );
+                    })()}
                   </div>
                 );
               })}
