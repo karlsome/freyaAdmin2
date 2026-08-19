@@ -3,7 +3,9 @@ import { createPortal } from 'react-dom';
 import { useLanguage } from '../contexts/LanguageContext';
 import MasterTabNav from '../components/MasterTabNav';
 import MaterialDetailModal from '../components/MaterialDetailModal';
+import DataTable from '../components/DataTable';
 import { BASE_URL } from '../services/api';
+import { readStoredAuthUser } from '../utils/auth';
 import * as xlsx from 'xlsx';
 
 export default function FirstFactoryPage() {
@@ -353,6 +355,9 @@ export default function FirstFactoryPage() {
 
   const handleSaveSchedule = async () => {
     try {
+      const authUser = readStoredAuthUser() || {};
+      const scheduledBy = authUser.firstName ? `${authUser.firstName} ${authUser.lastName || ''}`.trim() : (authUser.username || 'Admin');
+
       const res = await fetch(BASE_URL + 'api/production/schedule', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -360,7 +365,8 @@ export default function FirstFactoryPage() {
           scheduleOrder,
           startTime, 
           month: selectedMonth, 
-          date: selectedDay 
+          date: selectedDay,
+          scheduledBy
         })
       });
       const json = await res.json();
@@ -372,6 +378,272 @@ export default function FirstFactoryPage() {
       console.error('Error saving order:', err);
     }
   };
+
+  // --- MONTHLY SUMMARY COMPUTATION ---
+  const daysInSelectedMonth = useMemo(() => {
+    if (!selectedMonth) return 31;
+    const [y, m] = selectedMonth.split('-').map(Number);
+    return new Date(y, m, 0).getDate();
+  }, [selectedMonth]);
+
+  const monthSummaryData = useMemo(() => {
+    let totalScheduledMins = 0;
+    let scheduledDaysCount = 0;
+    let totalScheduledItemsCount = 0;
+    let totalSetupCount = 0;
+    const monthUniqueHinbans = new Set();
+    const dayRows = [];
+
+    let maxDayMins = 0;
+
+    for (let day = 1; day <= daysInSelectedMonth; day++) {
+      const dayStr = String(day).padStart(2, '0');
+      const dateKey = `${selectedMonth}-${dayStr}`;
+      const dateObj = new Date(`${dateKey}T00:00:00`);
+      const dayOfWeek = dateObj.getDay(); // 0: Sun, 6: Sat
+      const dayOfWeekStr = ['日', '月', '火', '水', '木', '金', '土'][dayOfWeek];
+
+      const saved = savedSchedules.find(s => s.date === day);
+      const isScheduled = Boolean(saved && Array.isArray(saved.scheduleOrder) && saved.scheduleOrder.length > 0);
+
+      let dayTotalMins = 0;
+      let startTime = saved?.startTime || '09:00';
+      let endTime = '—';
+      let scheduledBy = saved?.scheduledBy || '—';
+      let updatedAtStr = saved?.updatedAt ? new Date(saved.updatedAt).toLocaleString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—';
+      let itemCount = 0;
+      let setupCount = 0;
+      let hinbanCount = 0;
+      const dayUniqueHinbans = new Set();
+
+      if (isScheduled) {
+        scheduledDaysCount++;
+        itemCount = saved.scheduleOrder.length;
+        totalScheduledItemsCount += itemCount;
+
+        saved.scheduleOrder.forEach(item => {
+          dayTotalMins += (Number(item.duration) || 0);
+          if (item.type === 'setup') {
+            setupCount++;
+            totalSetupCount++;
+          } else {
+            hinbanCount++;
+            if (item.hinban) {
+              dayUniqueHinbans.add(item.hinban);
+              monthUniqueHinbans.add(item.hinban);
+            }
+          }
+        });
+
+        totalScheduledMins += dayTotalMins;
+        if (dayTotalMins > maxDayMins) maxDayMins = dayTotalMins;
+
+        // Calculate end time
+        const [sh, sm] = (startTime || '09:00').split(':').map(Number);
+        const endTotal = (sh * 60 + sm) + dayTotalMins;
+        const eh = Math.floor((endTotal / 60) % 24);
+        const em = endTotal % 60;
+        endTime = `${String(eh).padStart(2, '0')}:${String(em).padStart(2, '0')}`;
+      }
+
+      dayRows.push({
+        day,
+        dateKey,
+        dayOfWeek,
+        dayOfWeekStr,
+        isScheduled,
+        dayTotalMins,
+        dayTotalHours: (dayTotalMins / 60).toFixed(1),
+        startTime,
+        endTime,
+        timeRange: isScheduled ? `${startTime} ～ ${endTime}` : '—',
+        itemCount,
+        setupCount,
+        hinbanCount,
+        uniqueHinbanCount: dayUniqueHinbans.size,
+        scheduledBy,
+        updatedAtStr
+      });
+    }
+
+    const totalScheduledHours = (totalScheduledMins / 60).toFixed(1);
+    const avgHoursPerScheduledDay = scheduledDaysCount > 0 ? (totalScheduledMins / scheduledDaysCount / 60).toFixed(1) : '0.0';
+
+    return {
+      totalScheduledMins,
+      totalScheduledHours,
+      scheduledDaysCount,
+      totalScheduledItemsCount,
+      totalSetupCount,
+      totalMonthUniqueHinbansCount: monthUniqueHinbans.size,
+      avgHoursPerScheduledDay,
+      maxDayMins: maxDayMins || 480,
+      dayRows
+    };
+  }, [selectedMonth, daysInSelectedMonth, savedSchedules]);
+
+  const [summarySort, setSummarySort] = useState({ key: 'day', direction: 'asc' });
+
+  const sortedSummaryRows = useMemo(() => {
+    const rows = [...monthSummaryData.dayRows];
+    if (!summarySort?.key) return rows;
+    const { key, direction } = summarySort;
+    const mult = direction === 'desc' ? -1 : 1;
+
+    rows.sort((a, b) => {
+      let valA = a[key];
+      let valB = b[key];
+      if (typeof valA === 'boolean') {
+        valA = valA ? 1 : 0;
+        valB = valB ? 1 : 0;
+      }
+      if (typeof valA === 'string') {
+        return mult * valA.localeCompare(valB || '', 'ja');
+      }
+      return mult * ((valA ?? 0) - (valB ?? 0));
+    });
+    return rows;
+  }, [monthSummaryData.dayRows, summarySort]);
+
+  const summaryColumns = useMemo(() => [
+    {
+      key: 'day',
+      label: 'Date',
+      sortable: true,
+      minWidth: 110,
+      renderCell: (row) => {
+        const isSunday = row.dayOfWeek === 0;
+        const isSaturday = row.dayOfWeek === 6;
+        return (
+          <div className="flex items-center gap-1.5 font-bold text-on-surface">
+            <span className="text-sm">
+              {parseInt(selectedMonth.split('-')[1], 10)}/{row.day}
+            </span>
+            <span className={`rounded px-1.5 py-0.5 text-[11px] font-extrabold ${isSunday ? 'bg-red-500/10 text-red-600' : (isSaturday ? 'bg-blue-500/10 text-blue-600' : 'bg-surface-variant/50 text-outline')}`}>
+              ({row.dayOfWeekStr})
+            </span>
+          </div>
+        );
+      }
+    },
+    {
+      key: 'isScheduled',
+      label: 'Status',
+      sortable: true,
+      minWidth: 130,
+      renderCell: (row) => {
+        return row.isScheduled ? (
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/10 px-2.5 py-1 text-xs font-bold text-emerald-600 border border-emerald-500/20">
+            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>
+            Scheduled ({row.itemCount})
+          </span>
+        ) : (
+          <span className="inline-flex items-center gap-1 text-xs text-outline font-medium">
+            — No schedule
+          </span>
+        );
+      }
+    },
+    {
+      key: 'timeRange',
+      label: 'Time Range',
+      sortable: true,
+      minWidth: 150,
+      renderCell: (row) => {
+        return row.isScheduled ? (
+          <span className="rounded-lg bg-surface-variant/40 px-2.5 py-1 text-xs font-mono font-semibold text-on-surface border border-outline-variant/30">
+            🕒 {row.startTime} ～ {row.endTime}
+          </span>
+        ) : (
+          <span className="text-outline text-xs">—</span>
+        );
+      }
+    },
+    {
+      key: 'dayTotalMins',
+      label: 'Total Duration',
+      sortable: true,
+      minWidth: 150,
+      renderCell: (row) => {
+        return row.isScheduled ? (
+          <span className="text-xs font-bold text-on-surface font-mono">
+            {formatTime(row.dayTotalMins)} - {row.dayTotalHours}hrs
+          </span>
+        ) : (
+          <span className="text-xs text-outline">—</span>
+        );
+      }
+    },
+    {
+      key: 'itemCount',
+      label: 'Items Breakdown',
+      sortable: true,
+      minWidth: 210,
+      renderCell: (row) => {
+        return row.isScheduled ? (
+          <div className="flex items-center gap-1.5 text-xs flex-wrap">
+            <span className="rounded bg-indigo-500/10 px-2 py-0.5 font-bold text-indigo-600 border border-indigo-500/20" title={`${row.uniqueHinbanCount} Unique Hinban`}>
+              {row.uniqueHinbanCount} 品番
+            </span>
+            <span className="rounded bg-primary/10 px-2 py-0.5 font-bold text-primary" title={`${row.hinbanCount} Total Rolls`}>
+              {row.hinbanCount} rolls
+            </span>
+            {row.setupCount > 0 && (
+              <span className="rounded bg-amber-500/10 px-2 py-0.5 font-bold text-amber-700" title={`${row.setupCount} Setup Events`}>
+                {row.setupCount} setups
+              </span>
+            )}
+          </div>
+        ) : (
+          <span className="text-outline text-xs">—</span>
+        );
+      }
+    },
+    {
+      key: 'scheduledBy',
+      label: 'Scheduled By',
+      sortable: true,
+      minWidth: 140,
+      renderCell: (row) => {
+        return row.isScheduled ? (
+          <div className="flex items-center gap-1.5 text-xs font-semibold text-on-surface">
+            <span className="material-symbols-outlined text-outline" style={{ fontSize: 16 }}>person</span>
+            <span>{row.scheduledBy}</span>
+          </div>
+        ) : (
+          <span className="text-outline text-xs">—</span>
+        );
+      }
+    },
+    {
+      key: 'updatedAtStr',
+      label: 'Last Saved',
+      sortable: true,
+      minWidth: 130,
+      renderCell: (row) => (
+        <span className="text-xs text-outline font-mono">{row.updatedAtStr}</span>
+      )
+    },
+    {
+      key: 'actions',
+      label: 'Action',
+      sortable: false,
+      minWidth: 100,
+      renderCell: (row) => (
+        <button
+          onClick={() => {
+            setSelectedDateStr(row.dateKey);
+            setActiveTab('scheduling');
+          }}
+          className="inline-flex items-center gap-1 rounded-lg border border-primary/30 bg-primary/5 px-2.5 py-1 text-xs font-bold text-primary hover:bg-primary hover:text-on-primary transition-colors shadow-sm"
+          title="Open in Scheduling Tab"
+        >
+          <span className="material-symbols-outlined" style={{ fontSize: 14 }}>edit_calendar</span>
+          Open
+        </button>
+      )
+    }
+  ], [selectedMonth]);
 
   // HTML5 Drag and Drop for Scheduling
   const onDragStartSchedule = (e, dragData, source) => {
@@ -574,7 +846,8 @@ export default function FirstFactoryPage() {
       <MasterTabNav 
         tabs={[
           { key: 'fetching', label: 'Data Fetching', ready: true },
-          { key: 'scheduling', label: 'Scheduling', ready: true }
+          { key: 'scheduling', label: 'Scheduling', ready: true },
+          { key: 'summary', label: 'Summary', ready: true }
         ]}
         activeTab={activeTab}
         onSelect={(tab) => handleTabChange(tab.key)}
@@ -999,6 +1272,124 @@ export default function FirstFactoryPage() {
                 )}
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Summary Tab */}
+      {activeTab === 'summary' && (
+        <div className="flex flex-col gap-6">
+          {/* Header Controls & Month Selector */}
+          <div className="rounded-2xl border border-outline-variant/30 bg-surface/50 p-4 backdrop-blur-xl flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <span className="material-symbols-outlined text-outline" style={{ fontSize: 22 }}>calendar_month</span>
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-semibold text-on-surface">Target Month:</span>
+                <input
+                  type="month"
+                  value={selectedMonth}
+                  onChange={handleMonthChange}
+                  className="rounded-xl border border-outline-variant/50 bg-background/50 px-3 py-2 text-sm text-on-surface focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary font-bold"
+                  title="Select month for summary"
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 text-xs text-outline">
+              <span className="material-symbols-outlined" style={{ fontSize: 16 }}>info</span>
+              <span>Showing daily priority scheduling overview for {selectedMonth}</span>
+            </div>
+          </div>
+
+          {/* KPI Stat Cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="rounded-2xl border border-outline-variant/30 bg-surface/60 p-5 backdrop-blur-md flex items-center justify-between shadow-sm">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wider text-outline">Total Scheduled Time</p>
+                <h3 className="text-2xl font-black text-primary mt-1">
+                  {formatTime(monthSummaryData.totalScheduledMins)}
+                </h3>
+                <p className="text-xs text-outline mt-0.5">({monthSummaryData.totalScheduledHours} hrs total)</p>
+              </div>
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+                <span className="material-symbols-outlined" style={{ fontSize: 26 }}>schedule</span>
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-outline-variant/30 bg-surface/60 p-5 backdrop-blur-md flex items-center justify-between shadow-sm">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wider text-outline">Scheduled Days</p>
+                <h3 className="text-2xl font-black text-emerald-600 mt-1">
+                  {monthSummaryData.scheduledDaysCount} <span className="text-sm font-medium text-outline">/ {daysInSelectedMonth} days</span>
+                </h3>
+                <p className="text-xs text-outline mt-0.5">
+                  {((monthSummaryData.scheduledDaysCount / daysInSelectedMonth) * 100).toFixed(0)}% month planned
+                </p>
+              </div>
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-500/10 text-emerald-600">
+                <span className="material-symbols-outlined" style={{ fontSize: 26 }}>event_available</span>
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-outline-variant/30 bg-surface/60 p-5 backdrop-blur-md flex items-center justify-between shadow-sm">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wider text-outline">Total Items & Tasks</p>
+                <h3 className="text-2xl font-black text-indigo-600 mt-1">
+                  {monthSummaryData.totalScheduledItemsCount} <span className="text-sm font-medium text-outline">items</span>
+                </h3>
+                <p className="text-xs text-outline mt-0.5">
+                  {monthSummaryData.totalMonthUniqueHinbansCount} unique 品番 • {monthSummaryData.totalSetupCount} setups
+                </p>
+              </div>
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-indigo-500/10 text-indigo-600">
+                <span className="material-symbols-outlined" style={{ fontSize: 26 }}>inventory_2</span>
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-outline-variant/30 bg-surface/60 p-5 backdrop-blur-md flex items-center justify-between shadow-sm">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wider text-outline">Avg Daily Scheduled</p>
+                <h3 className="text-2xl font-black text-amber-600 mt-1">
+                  {monthSummaryData.avgHoursPerScheduledDay} <span className="text-sm font-medium text-outline">hrs / day</span>
+                </h3>
+                <p className="text-xs text-outline mt-0.5">Across active scheduled days</p>
+              </div>
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-500/10 text-amber-600">
+                <span className="material-symbols-outlined" style={{ fontSize: 26 }}>timelapse</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Daily Breakdown Table */}
+          <div className="flex flex-col gap-3">
+            <div className="flex items-center justify-between px-1">
+              <div className="flex items-center gap-2">
+                <span className="material-symbols-outlined text-primary" style={{ fontSize: 22 }}>calendar_view_month</span>
+                <h3 className="text-lg font-bold text-on-surface">Daily Schedule & Priority Allocation</h3>
+              </div>
+              <span className="text-xs text-outline font-medium">1st ～ {daysInSelectedMonth}th of {selectedMonth}</span>
+            </div>
+
+            <DataTable
+              columns={summaryColumns}
+              rows={sortedSummaryRows}
+              enableColumnResize={true}
+              enableColumnReorder={true}
+              layoutStorageKey="firstFactory_monthly_summary_table_layout"
+              sort={summarySort}
+              onSort={setSummarySort}
+              pageSize={35}
+              filteredCount={sortedSummaryRows.length}
+              totalPages={1}
+              stickyHeader={true}
+              stickyHeaderOffset={0}
+              stickyHeaderCellClassName="bg-surface/95 backdrop-blur-md shadow-[inset_0_-1px_0_rgba(148,163,184,0.18)]"
+              tableViewportClassName="max-h-[85vh] overflow-auto overscroll-contain"
+              className="glass-card rounded-2xl overflow-hidden shadow-sm border border-outline-variant/30"
+              rowKey={(row) => row.dateKey}
+              emptyTitle="No schedule data"
+              emptyMessage="No schedules found for this month."
+            />
           </div>
         </div>
       )}
