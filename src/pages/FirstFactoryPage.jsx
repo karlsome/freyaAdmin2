@@ -189,11 +189,61 @@ export default function FirstFactoryPage() {
     return savedSchedules.find(s => s.date === selectedDay) || { scheduleOrder: [] };
   }, [savedSchedules, selectedDay]);
 
+  const PRESET_SETUP_ITEMS = [
+    { name: '段取り', defaultTime: 15 },
+    { name: '段替え', defaultTime: 15 },
+    { name: '乾燥温度設定', defaultTime: 15 },
+    { name: 'ロール温度設定', defaultTime: 15 },
+    { name: '試作', defaultTime: 30 },
+    { name: '紙替', defaultTime: 15 },
+  ];
+
   const [scheduleOrder, setScheduleOrder] = useState([]);
   const [startTime, setStartTime] = useState('09:00');
   
-  const [dandoriTime, setDandoriTime] = useState(15);
-  const [dangaeTime, setDangaeTime] = useState(15);
+  const [setupTimes, setSetupTimes] = useState(() => {
+    try {
+      const saved = localStorage.getItem('firstFactory_setup_times');
+      const parsed = saved ? JSON.parse(saved) : {};
+      const defaults = {};
+      PRESET_SETUP_ITEMS.forEach(p => {
+        defaults[p.name] = parsed[p.name] !== undefined ? parsed[p.name] : p.defaultTime;
+      });
+      return defaults;
+    } catch (e) {
+      const defaults = {};
+      PRESET_SETUP_ITEMS.forEach(p => { defaults[p.name] = p.defaultTime; });
+      return defaults;
+    }
+  });
+
+  const [customSetupName, setCustomSetupName] = useState(() => {
+    return localStorage.getItem('firstFactory_custom_setup_name') || '';
+  });
+
+  const [customSetupDuration, setCustomSetupDuration] = useState(() => {
+    const saved = localStorage.getItem('firstFactory_custom_setup_duration');
+    return saved !== null ? saved : '';
+  });
+
+  const handleUpdateSetupTime = (name, val) => {
+    const num = Math.max(0, Number(val) || 0);
+    setSetupTimes(prev => {
+      const updated = { ...prev, [name]: num };
+      localStorage.setItem('firstFactory_setup_times', JSON.stringify(updated));
+      return updated;
+    });
+  };
+
+  const handleUpdateCustomName = (val) => {
+    setCustomSetupName(val);
+    localStorage.setItem('firstFactory_custom_setup_name', val);
+  };
+
+  const handleUpdateCustomDuration = (val) => {
+    setCustomSetupDuration(val);
+    localStorage.setItem('firstFactory_custom_setup_duration', val);
+  };
 
   const [modalData, setModalData] = useState(null);
 
@@ -710,66 +760,95 @@ export default function FirstFactoryPage() {
                 </div>
               </div>
               <div className="flex flex-col gap-2 flex-1 overflow-y-auto">
-                {/* Static setup items */}
-                <div className="flex gap-2 mb-4 pb-4 border-b border-outline-variant/30">
-                   <div 
-                     draggable
-                     onDragStart={(e) => {
-                       if (e.target.tagName && e.target.tagName.toLowerCase() === 'input') {
-                         e.preventDefault();
-                         return;
-                       }
-                       onDragStartSchedule(e, { type: 'setup', name: '段取り', duration: dandoriTime }, 'pool');
-                     }}
-                     className="cursor-grab flex-1 rounded-xl border border-dashed border-primary/50 bg-primary/5 p-3 flex items-center justify-between hover:border-primary transition-colors text-primary font-bold text-sm"
-                   >
-                     <div className="flex items-center gap-2">
-                       <span>段取り</span>
-                       <input 
-                         type="number" 
-                         value={dandoriTime} 
-                         onChange={e => setDandoriTime(Number(e.target.value) || 0)}
-                         className="w-14 rounded bg-background/80 border border-primary/30 px-1 py-0.5 text-center text-xs focus:outline-none focus:border-primary"
-                         min="0"
-                       />
-                       <span className="text-xs font-medium">m</span>
-                     </div>
-                     <button 
-                       onClick={() => handleAddToSchedule({ type: 'setup', name: '段取り', duration: dandoriTime })}
-                       className="flex h-6 w-6 items-center justify-center rounded-full hover:bg-primary/20 text-primary transition-colors"
-                     >
-                       <span className="material-symbols-outlined" style={{fontSize: 16}}>arrow_forward</span>
-                     </button>
-                   </div>
-                   <div 
-                     draggable
-                     onDragStart={(e) => {
-                       if (e.target.tagName && e.target.tagName.toLowerCase() === 'input') {
-                         e.preventDefault();
-                         return;
-                       }
-                       onDragStartSchedule(e, { type: 'setup', name: '段替え', duration: dangaeTime }, 'pool');
-                     }}
-                     className="cursor-grab flex-1 rounded-xl border border-dashed border-primary/50 bg-primary/5 p-3 flex items-center justify-between hover:border-primary transition-colors text-primary font-bold text-sm"
-                   >
-                     <div className="flex items-center gap-2">
-                       <span>段替え</span>
-                       <input 
-                         type="number" 
-                         value={dangaeTime} 
-                         onChange={e => setDangaeTime(Number(e.target.value) || 0)}
-                         className="w-14 rounded bg-background/80 border border-primary/30 px-1 py-0.5 text-center text-xs focus:outline-none focus:border-primary"
-                         min="0"
-                       />
-                       <span className="text-xs font-medium">m</span>
-                     </div>
-                     <button 
-                       onClick={() => handleAddToSchedule({ type: 'setup', name: '段替え', duration: dangaeTime })}
-                       className="flex h-6 w-6 items-center justify-center rounded-full hover:bg-primary/20 text-primary transition-colors"
-                     >
-                       <span className="material-symbols-outlined" style={{fontSize: 16}}>arrow_forward</span>
-                     </button>
-                   </div>
+                {/* Setup & Task Items */}
+                <div className="flex flex-col gap-2 mb-4 pb-4 border-b border-outline-variant/30">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                    {PRESET_SETUP_ITEMS.map(preset => {
+                      const duration = setupTimes[preset.name] !== undefined ? setupTimes[preset.name] : preset.defaultTime;
+                      return (
+                        <div 
+                          key={preset.name}
+                          draggable
+                          onDragStart={(e) => {
+                            if (e.target.tagName && e.target.tagName.toLowerCase() === 'input') {
+                              e.preventDefault();
+                              return;
+                            }
+                            onDragStartSchedule(e, { type: 'setup', name: preset.name, duration }, 'pool');
+                          }}
+                          className="cursor-grab rounded-xl border border-dashed border-primary/50 bg-primary/5 p-2.5 flex items-center justify-between hover:border-primary transition-colors text-primary font-bold text-xs"
+                        >
+                          <div className="flex items-center gap-1.5 min-w-0 flex-1">
+                            <span className="truncate" title={preset.name}>{preset.name}</span>
+                            <input 
+                              type="number" 
+                              value={duration} 
+                              onChange={e => handleUpdateSetupTime(preset.name, e.target.value)}
+                              className="w-12 rounded bg-background/80 border border-primary/30 px-1 py-0.5 text-center text-xs focus:outline-none focus:border-primary shrink-0"
+                              min="0"
+                            />
+                            <span className="text-[11px] font-medium shrink-0">m</span>
+                          </div>
+                          <button 
+                            type="button"
+                            onClick={() => handleAddToSchedule({ type: 'setup', name: preset.name, duration })}
+                            className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full hover:bg-primary/20 text-primary transition-colors ml-1"
+                            title="スケジュールに追加"
+                          >
+                            <span className="material-symbols-outlined" style={{fontSize: 16}}>arrow_forward</span>
+                          </button>
+                        </div>
+                      );
+                    })}
+
+                    {/* Dynamic Custom Setup Item */}
+                    <div 
+                      draggable
+                      onDragStart={(e) => {
+                        if (e.target.tagName && e.target.tagName.toLowerCase() === 'input') {
+                          e.preventDefault();
+                          return;
+                        }
+                        onDragStartSchedule(e, { 
+                          type: 'setup', 
+                          name: customSetupName.trim() || 'カスタム設定', 
+                          duration: Number(customSetupDuration) || 0 
+                        }, 'pool');
+                      }}
+                      className="cursor-grab rounded-xl border border-dashed border-amber-500/50 bg-amber-500/5 p-2.5 flex items-center justify-between hover:border-amber-500 transition-colors text-amber-700 font-bold text-xs"
+                    >
+                      <div className="flex items-center gap-1.5 min-w-0 flex-1">
+                        <input 
+                          type="text" 
+                          value={customSetupName} 
+                          placeholder="項目名入力..."
+                          onChange={e => handleUpdateCustomName(e.target.value)}
+                          className="w-full min-w-0 rounded bg-background/80 border border-amber-500/30 px-1.5 py-0.5 text-xs text-on-surface placeholder:text-outline focus:outline-none focus:border-amber-500 font-normal"
+                        />
+                        <input 
+                          type="number" 
+                          value={customSetupDuration} 
+                          placeholder="分"
+                          onChange={e => handleUpdateCustomDuration(e.target.value)}
+                          className="w-12 rounded bg-background/80 border border-amber-500/30 px-1 py-0.5 text-center text-xs focus:outline-none focus:border-amber-500 shrink-0 font-normal"
+                          min="0"
+                        />
+                        <span className="text-[11px] font-medium shrink-0">m</span>
+                      </div>
+                      <button 
+                        type="button"
+                        onClick={() => handleAddToSchedule({ 
+                          type: 'setup', 
+                          name: customSetupName.trim() || 'カスタム設定', 
+                          duration: Number(customSetupDuration) || 0 
+                        })}
+                        className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full hover:bg-amber-500/20 text-amber-600 transition-colors ml-1"
+                        title="スケジュールに追加"
+                      >
+                        <span className="material-symbols-outlined" style={{fontSize: 16}}>arrow_forward</span>
+                      </button>
+                    </div>
+                  </div>
                 </div>
 
                 {poolItems.length === 0 ? (
