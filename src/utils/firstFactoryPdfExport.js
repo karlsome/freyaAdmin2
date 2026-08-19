@@ -71,19 +71,23 @@ export function openFirstFactorySchedulePrintWindow({
   let totalMeters = 0;
   let totalMins = 0;
   let rollCount = 0;
+  let lastKizai = null;
+  const rows = [];
 
-  const tableRows = scheduleWithTimes.map((item, idx) => {
+  scheduleWithTimes.forEach((item, idx) => {
     totalMins += Number(item.duration) || 0;
 
     if (item.type === 'setup') {
-      return `
+      rows.push(`
         <tr class="setup-row">
           <td class="center font-bold">${idx + 1}</td>
           <td class="center font-bold time-cell">${escapeHtml(item.startTime)}<br><span class="text-sub">～ ${escapeHtml(item.endTime)}</span></td>
-          <td colspan="6" class="left font-bold setup-name">⚙️ 段取り / 段替: ${escapeHtml(item.name || '段取')} (${item.duration}分)</td>
+          <td colspan="7" class="left font-bold setup-name">⚙️ 段取り / 段替: ${escapeHtml(item.name || '段取')} (${item.duration}分)</td>
           <td class="center font-bold">—</td>
         </tr>
-      `;
+      `);
+      lastKizai = null;
+      return;
     }
 
     rollCount++;
@@ -91,30 +95,41 @@ export function openFirstFactorySchedulePrintWindow({
     totalMeters += meters;
     const cmVal = meters * 100;
     const info = getMasterInfo(item.hinban);
+    const currentKizai = info.kizai || item.kizai || '';
+
+    // If 基材コード changes to a different one, insert a blank black separator row
+    if (lastKizai !== null && lastKizai !== currentKizai) {
+      rows.push(`
+        <tr class="separator-black-row">
+          <td colspan="10"></td>
+        </tr>
+      `);
+    }
+    lastKizai = currentKizai;
 
     // Clean shipping destination formatting (replace newlines with <br>)
     const formattedDest = escapeHtml(info.shippingDest).replace(/\n/g, '<br>');
 
-    return `
+    rows.push(`
       <tr class="item-row">
         <td class="center font-bold">${idx + 1}</td>
-        <td class="center font-mono time-cell">
+        <td class="center time-cell">
           <strong>${escapeHtml(item.startTime)}</strong><br>
           <span class="text-sub">～ ${escapeHtml(item.endTime)}</span>
         </td>
         <td class="center dest-cell">${formattedDest}</td>
-        <td class="left font-mono kizai-cell">${escapeHtml(info.kizai)}</td>
+        <td class="left kizai-cell">${escapeHtml(info.kizai)}</td>
         <td class="center shori-cell">${escapeHtml(info.shori)}</td>
         <td class="center color-cell">${escapeHtml(info.color)}</td>
-        <td class="center habanaga-cell font-mono">${escapeHtml(info.habanaga)}</td>
-        <td class="center kataban-cell font-mono">${escapeHtml(info.kataban)}</td>
-        <td class="right font-mono qty-cell">
-          <strong>${cmVal.toLocaleString()} cm</strong>
-          <div class="text-sub">(${meters}m • Roll ${item.rollIndex || 1}/${item.totalRolls || 1})</div>
-        </td>
+        <td class="center habanaga-cell">${escapeHtml(info.habanaga)}</td>
+        <td class="center kataban-cell">${escapeHtml(info.kataban)}</td>
+        <td class="center roll-cell font-bold">${item.rollIndex || 1}/${item.totalRolls || 1}</td>
+        <td class="right qty-cell font-bold">${cmVal.toLocaleString()} cm (${meters}m)</td>
       </tr>
-    `;
-  }).join("");
+    `);
+  });
+
+  const tableRows = rows.join("");
 
   const printTimeStr = new Date().toLocaleString('ja-JP', {
     year: 'numeric',
@@ -150,9 +165,9 @@ export function openFirstFactorySchedulePrintWindow({
             padding: 0;
             background: #ffffff;
             color: #000000;
-            font-family: "Hiragino Kaku Gothic ProN", "Yu Gothic", "Meiryo", "MS Gothic", sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Yu Gothic", "Meiryo", sans-serif;
             font-size: 11pt;
-            line-height: 1.3;
+            line-height: 1.35;
             -webkit-print-color-adjust: exact;
             print-color-adjust: exact;
           }
@@ -262,6 +277,16 @@ export function openFirstFactorySchedulePrintWindow({
             -webkit-print-color-adjust: exact;
             print-color-adjust: exact;
           }
+          tr.separator-black-row td {
+            background-color: #000000 !important;
+            height: 6px !important;
+            line-height: 6px !important;
+            padding: 0 !important;
+            border: 1.5px solid #000000 !important;
+            box-shadow: inset 0 0 0 1000px #000000 !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
           .setup-name {
             color: #92400e;
             font-size: 11pt;
@@ -270,7 +295,6 @@ export function openFirstFactorySchedulePrintWindow({
           .center { text-align: center; }
           .left { text-align: left; }
           .right { text-align: right; }
-          .font-mono { font-family: "Courier New", Courier, monospace, sans-serif; }
           .font-bold { font-weight: 700; }
           .text-sub {
             font-size: 8.5pt;
@@ -299,6 +323,16 @@ export function openFirstFactorySchedulePrintWindow({
               background-color: #fffbeb !important;
               -webkit-print-color-adjust: exact;
               print-color-adjust: exact;
+            }
+            tr.separator-black-row td {
+              background-color: #000000 !important;
+              height: 6px !important;
+              line-height: 6px !important;
+              padding: 0 !important;
+              border: 1.5px solid #000000 !important;
+              box-shadow: inset 0 0 0 1000px #000000 !important;
+              -webkit-print-color-adjust: exact !important;
+              print-color-adjust: exact !important;
             }
           }
         </style>
