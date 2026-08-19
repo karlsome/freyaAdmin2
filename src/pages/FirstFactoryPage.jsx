@@ -14,7 +14,7 @@ export default function FirstFactoryPage() {
   const navigate = useNavigate();
   const { tab: routeTab } = useParams();
   
-  const VALID_TABS = ['fetching', 'scheduling', 'summary'];
+  const VALID_TABS = ['fetching', 'scheduling', 'summary', 'production'];
   const activeTab = VALID_TABS.includes(routeTab) ? routeTab : 'fetching';
   
   const [data, setData] = useState([]);
@@ -254,10 +254,25 @@ export default function FirstFactoryPage() {
 
   const [modalData, setModalData] = useState(null);
 
-  const handleCardClick = (hinban) => {
+  const handleCardClick = async (hinban) => {
+    if (!hinban) return;
     const found = data.find(i => i.hinban === hinban);
     if (found && found.materialInfo && found.materialInfo.rawMaster) {
       setModalData(found.materialInfo.rawMaster);
+      return;
+    }
+
+    try {
+      const res = await fetch(`${BASE_URL}api/production/material-detail?hinban=${encodeURIComponent(hinban)}`);
+      if (res.ok) {
+        const json = await res.json();
+        if (json.success && json.product) {
+          setModalData(json.product);
+          return;
+        }
+      }
+    } catch (err) {
+      console.warn("Failed to fetch material detail from server:", err);
     }
   };
   
@@ -650,6 +665,191 @@ export default function FirstFactoryPage() {
     }
   ], [selectedMonth]);
 
+  // -------------------------------------------------------------
+  // Production Tab State & Fetching (Realtime Tracking)
+  // -------------------------------------------------------------
+  const [productionDateStr, setProductionDateStr] = useState(getLocalYYYYMMDD());
+  const [productionSchedule, setProductionSchedule] = useState(null);
+  const [productionStatuses, setProductionStatuses] = useState([]);
+  const [loadingProduction, setLoadingProduction] = useState(false);
+  const [productionFilter, setProductionFilter] = useState('all');
+
+  const fetchProductionData = async (dateStr) => {
+    setLoadingProduction(true);
+    try {
+      const [year, monthNum, dayNum] = dateStr.split('-');
+      const month = `${year}-${monthNum}`;
+      const date = Number(dayNum);
+
+      let scheduleDoc = null;
+      try {
+        const schedRes = await fetch(`${BASE_URL}api/production/schedule/daily?month=${encodeURIComponent(month)}&date=${date}`);
+        if (schedRes.ok) {
+          const schedJson = await schedRes.json();
+          if (schedJson.success && schedJson.schedule) {
+            scheduleDoc = schedJson.schedule;
+          }
+        }
+      } catch (e) {
+        console.warn("Daily schedule fetch error:", e);
+      }
+
+      if (!scheduleDoc) {
+        const res = await fetch(`${BASE_URL}api/production/schedule?month=${encodeURIComponent(month)}`);
+        if (res.ok) {
+          const json = await res.json();
+          if (json.success && Array.isArray(json.schedules)) {
+            scheduleDoc = json.schedules.find(s => s.month === month && Number(s.date) === date) || null;
+          }
+        }
+      }
+      setProductionSchedule(scheduleDoc);
+
+      try {
+        const statusRes = await fetch(`${BASE_URL}api/production/status?date=${encodeURIComponent(dateStr)}`);
+        if (statusRes.ok) {
+          const statusJson = await statusRes.json();
+          if (statusJson.success && Array.isArray(statusJson.records)) {
+            setProductionStatuses(statusJson.records);
+          } else {
+            setProductionStatuses([]);
+          }
+        }
+      } catch (err) {
+        console.warn("Status fetch error:", err);
+        setProductionStatuses([]);
+      }
+    } catch (err) {
+      console.error("Failed to load production tracking data:", err);
+    } finally {
+      setLoadingProduction(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === 'production') {
+      fetchProductionData(productionDateStr);
+    }
+  }, [activeTab, productionDateStr]);
+
+  const productionGroups = useMemo(() => {
+    if (!productionSchedule || !Array.isArray(productionSchedule.scheduleOrder) || productionSchedule.scheduleOrder.length === 0) {
+      return [];
+    }
+
+    const startTime = productionSchedule.startTime || '08:00';
+    let current = new Date(`2000-01-01T${startTime}:00`);
+    if (isNaN(current.getTime())) current = new Date(`2000-01-01T08:00:00`);
+
+    const timedItems = productionSchedule.scheduleOrder.map((item, idx) => {
+      const start = current.toTimeString().substring(0, 5);
+      const duration = Number(item.duration) || 0;
+      current = new Date(current.getTime() + duration * 60000);
+      const end = current.toTimeString().substring(0, 5);
+      return {
+        ...item,
+        orderIndex: idx + 1,
+        startTime: start,
+        endTime: end,
+        duration
+      };
+    });
+
+    const groups = [];
+    let currentGroup = null;
+
+    timedItems.forEach((item, idx) => {
+      if (item.type === 'setup') {
+        groups.push({
+          type: 'setup',
+          groupId: `setup_${item.id || idx}`,
+          name: item.name || '段取り / 段替',
+          items: [item],
+          orderRange: `#${item.orderIndex}`,
+          totalDuration: Number(item.duration) || 0,
+          totalMeters: 0,
+          startTime: item.startTime,
+          endTime: item.endTime
+        });
+        currentGroup = null;
+        return;
+      }
+
+      if (currentGroup && currentGroup.type === 'hinban' && currentGroup.hinban === item.hinban) {
+        currentGroup.items.push(item);
+        currentGroup.totalDuration += Number(item.duration) || 0;
+        currentGroup.totalMeters += Number(item.meters) || 0;
+        currentGroup.endTime = item.endTime;
+        currentGroup.orderRange = `#${currentGroup.items[0].orderIndex} - #${item.orderIndex}`;
+      } else {
+        currentGroup = {
+          type: 'hinban',
+          groupId: `group_${item.hinban}_${idx}`,
+          hinban: item.hinban,
+          hinmei: item.hinmei || '',
+          kizai: item.kizai || '',
+          color: item.color || '',
+          shori: item.shori || '',
+          habanaga: item.habanaga || '',
+          shippingDest: item.shippingDest || '',
+          labelHinban: item.labelHinban || '',
+          zuban: item.zuban || '',
+          items: [item],
+          orderRange: `#${item.orderIndex}`,
+          totalDuration: Number(item.duration) || 0,
+          totalMeters: Number(item.meters) || 0,
+          startTime: item.startTime,
+          endTime: item.endTime
+        };
+        groups.push(currentGroup);
+      }
+    });
+
+    return groups.map((grp) => {
+      const rec = productionStatuses.find(s => s.groupId === grp.groupId || (s.hinban === grp.hinban && grp.type === 'hinban'));
+      let status = rec?.status || 'pending';
+      if (status === 'running') status = 'in-progress';
+
+      return {
+        ...grp,
+        status,
+        worker: rec?.worker || '',
+        machine: rec?.machine || 'PSA2',
+        actualStartTime: rec?.actualStartTime || null,
+        actualEndTime: rec?.actualEndTime || null,
+        actualDurationMins: rec?.actualDurationMins ?? null,
+        statusRecord: rec || null
+      };
+    });
+  }, [productionSchedule, productionStatuses]);
+
+  const productionStats = useMemo(() => {
+    // Only account for product hinban batches (exclude setup items since setups are non-production changeovers)
+    const hinbanGroups = productionGroups.filter(g => g.type === 'hinban');
+    const total = hinbanGroups.length;
+    const inProgress = hinbanGroups.filter(g => g.status === 'in-progress').length;
+    const completed = hinbanGroups.filter(g => g.status === 'completed').length;
+    const pending = hinbanGroups.filter(g => g.status === 'pending').length;
+    const canceled = hinbanGroups.filter(g => g.status === 'canceled').length;
+    const progressPercent = total > 0 ? Math.round((completed / total) * 100) : 0;
+    return { total, inProgress, completed, pending, canceled, progressPercent };
+  }, [productionGroups]);
+
+  const filteredProductionGroups = useMemo(() => {
+    if (productionFilter === 'all') return productionGroups;
+    if (productionFilter === 'pending') return productionGroups.filter(g => g.type === 'hinban' && g.status === 'pending');
+    return productionGroups.filter(g => g.status === productionFilter);
+  }, [productionGroups, productionFilter]);
+
+  const stepProductionDate = (days) => {
+    const d = new Date(`${productionDateStr}T00:00:00`);
+    d.setDate(d.getDate() + days);
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    setProductionDateStr(`${y}-${m}-${day}`);
+  };
+
   // HTML5 Drag and Drop for Scheduling
   const onDragStartSchedule = (e, dragData, source) => {
     e.dataTransfer.setData('dragData', JSON.stringify(dragData));
@@ -852,7 +1052,8 @@ export default function FirstFactoryPage() {
         tabs={[
           { key: 'fetching', label: 'Data Fetching', ready: true },
           { key: 'scheduling', label: 'Scheduling', ready: true },
-          { key: 'summary', label: 'Summary', ready: true }
+          { key: 'summary', label: 'Summary', ready: true },
+          { key: 'production', label: 'Production', ready: true }
         ]}
         activeTab={activeTab}
         onSelect={(tab) => handleTabChange(tab.key)}
@@ -1337,6 +1538,407 @@ export default function FirstFactoryPage() {
               emptyMessage="No schedules found for this month."
             />
           </div>
+        </div>
+      )}
+
+      {/* Production Tab (Live Production Tracking) */}
+      {activeTab === 'production' && (
+        <div className="flex flex-col gap-6">
+          {/* Header Controls & Date Navigation */}
+          <div className="rounded-2xl border border-outline-variant/30 bg-surface/50 p-4 backdrop-blur-xl flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-sm">
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="flex items-center gap-2">
+                <span className="material-symbols-outlined text-outline" style={{ fontSize: 22 }}>event</span>
+                <input
+                  type="date"
+                  value={productionDateStr}
+                  onChange={(e) => {
+                    if (e.target.value) setProductionDateStr(e.target.value);
+                  }}
+                  className="rounded-xl border border-outline-variant/50 bg-background/50 px-3 py-2 text-sm font-bold text-on-surface focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary shadow-sm"
+                  title="Select production date"
+                />
+              </div>
+
+              {/* Quick Date Switchers */}
+              <div className="flex items-center rounded-xl border border-outline-variant/40 bg-surface-variant/20 p-1">
+                <button
+                  type="button"
+                  onClick={() => stepProductionDate(-1)}
+                  className="flex h-7 w-7 items-center justify-center rounded-lg hover:bg-surface-variant/50 text-outline transition-colors"
+                  title="Previous Day"
+                >
+                  <span className="material-symbols-outlined" style={{ fontSize: 18 }}>chevron_left</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setProductionDateStr(getLocalYYYYMMDD())}
+                  className={`px-2.5 py-1 text-xs font-bold rounded-lg transition-colors ${productionDateStr === getLocalYYYYMMDD() ? 'bg-primary text-on-primary shadow-xs' : 'text-outline hover:text-on-surface'}`}
+                >
+                  Today (今日)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => stepProductionDate(1)}
+                  className="flex h-7 w-7 items-center justify-center rounded-lg hover:bg-surface-variant/50 text-outline transition-colors"
+                  title="Next Day"
+                >
+                  <span className="material-symbols-outlined" style={{ fontSize: 18 }}>chevron_right</span>
+                </button>
+              </div>
+
+              {/* Machine Badge */}
+              <span className="inline-flex items-center gap-1.5 rounded-xl bg-surface-variant/40 px-3 py-1.5 text-xs font-bold text-on-surface border border-outline-variant/30">
+                <span className="material-symbols-outlined text-outline" style={{ fontSize: 16 }}>precision_manufacturing</span>
+                <span>PSA-2 (1号機)</span>
+              </span>
+            </div>
+
+            {/* Refresh Button */}
+            <div className="flex items-center gap-3">
+              <span className="text-xs text-outline font-medium hidden sm:inline">
+                {productionGroups.length} processes scheduled
+              </span>
+              <button
+                type="button"
+                onClick={() => fetchProductionData(productionDateStr)}
+                disabled={loadingProduction}
+                className="flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-bold text-on-primary shadow-sm hover:bg-primary/90 active:scale-95 transition-all disabled:opacity-50"
+                title="Refresh live production tracking data"
+              >
+                <span className={`material-symbols-outlined ${loadingProduction ? 'animate-spin' : ''}`} style={{ fontSize: 18 }}>
+                  refresh
+                </span>
+                <span>{loadingProduction ? 'Refreshing...' : 'Refresh'}</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Progress Overview Bar */}
+          {productionGroups.length > 0 && (
+            <div className="glass-card rounded-2xl border border-outline-variant/30 p-4 shadow-sm flex flex-col gap-3">
+              <div className="flex items-center justify-between text-xs">
+                <div className="flex items-center gap-2">
+                  <span className="font-bold text-on-surface text-sm">
+                    {parseInt(productionDateStr.split('-')[1], 10)}/{parseInt(productionDateStr.split('-')[2], 10)} Production Progress
+                  </span>
+                  <span className="rounded bg-primary/10 px-2 py-0.5 font-bold text-primary">
+                    {productionStats.completed} / {productionStats.total} Completed ({productionStats.progressPercent}%)
+                  </span>
+                </div>
+                {productionStats.inProgress > 0 && (
+                  <span className="inline-flex items-center gap-1.5 font-bold text-purple-600 animate-pulse">
+                    <span className="h-2 w-2 rounded-full bg-purple-600"></span>
+                    {productionStats.inProgress} In-Progress Now
+                  </span>
+                )}
+              </div>
+
+              {/* Progress bar visual */}
+              <div className="h-2.5 w-full overflow-hidden rounded-full bg-surface-variant/40 flex">
+                <div 
+                  className="h-full bg-emerald-500 transition-all duration-500" 
+                  style={{ width: `${(productionStats.completed / productionStats.total) * 100}%` }}
+                  title={`${productionStats.completed} Completed`}
+                />
+                <div 
+                  className="h-full bg-purple-600 transition-all duration-500 animate-pulse" 
+                  style={{ width: `${(productionStats.inProgress / productionStats.total) * 100}%` }}
+                  title={`${productionStats.inProgress} In-Progress`}
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Status Filter Tabs / Chips */}
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setProductionFilter('all')}
+              className={`flex items-center gap-1.5 rounded-xl px-3.5 py-1.5 text-xs font-bold transition-all ${productionFilter === 'all' ? 'bg-on-surface text-surface shadow-sm' : 'bg-surface border border-outline-variant/40 text-outline hover:text-on-surface'}`}
+            >
+              <span>All Statuses</span>
+              <span className="rounded-full bg-surface-variant/60 px-1.5 py-0.2 text-[10px] font-black">
+                {productionStats.total}
+              </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setProductionFilter('in-progress')}
+              className={`flex items-center gap-1.5 rounded-xl px-3.5 py-1.5 text-xs font-bold transition-all ${productionFilter === 'in-progress' ? 'bg-purple-600 text-white shadow-sm ring-2 ring-purple-500/30' : 'bg-surface border border-purple-500/30 text-purple-600 hover:bg-purple-500/5'}`}
+            >
+              <span className={`h-2 w-2 rounded-full bg-purple-500 ${productionStats.inProgress > 0 ? 'animate-ping' : ''}`}></span>
+              <span>🟣 In-Progress (生産中)</span>
+              <span className="rounded-full bg-purple-500/20 px-1.5 py-0.2 text-[10px] font-black">
+                {productionStats.inProgress}
+              </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setProductionFilter('completed')}
+              className={`flex items-center gap-1.5 rounded-xl px-3.5 py-1.5 text-xs font-bold transition-all ${productionFilter === 'completed' ? 'bg-emerald-600 text-white shadow-sm' : 'bg-surface border border-emerald-500/30 text-emerald-600 hover:bg-emerald-500/5'}`}
+            >
+              <span>✅ Completed (完了)</span>
+              <span className="rounded-full bg-emerald-500/20 px-1.5 py-0.2 text-[10px] font-black">
+                {productionStats.completed}
+              </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setProductionFilter('pending')}
+              className={`flex items-center gap-1.5 rounded-xl px-3.5 py-1.5 text-xs font-bold transition-all ${productionFilter === 'pending' ? 'bg-slate-700 text-white shadow-sm' : 'bg-surface border border-outline-variant/40 text-outline hover:text-on-surface'}`}
+            >
+              <span>⏸️ Pending (待機中)</span>
+              <span className="rounded-full bg-surface-variant/60 px-1.5 py-0.2 text-[10px] font-black">
+                {productionStats.pending}
+              </span>
+            </button>
+
+            {productionStats.canceled > 0 && (
+              <button
+                type="button"
+                onClick={() => setProductionFilter('canceled')}
+                className={`flex items-center gap-1.5 rounded-xl px-3.5 py-1.5 text-xs font-bold transition-all ${productionFilter === 'canceled' ? 'bg-rose-600 text-white shadow-sm' : 'bg-surface border border-rose-500/30 text-rose-600 hover:bg-rose-500/5'}`}
+              >
+                <span>❌ Canceled (中止)</span>
+                <span className="rounded-full bg-rose-500/20 px-1.5 py-0.2 text-[10px] font-black">
+                  {productionStats.canceled}
+                </span>
+              </button>
+            )}
+          </div>
+
+          {/* Processes List */}
+          {loadingProduction ? (
+            <div className="flex flex-col items-center justify-center p-12 glass-card rounded-2xl border border-outline-variant/30">
+              <span className="material-symbols-outlined text-primary animate-spin" style={{ fontSize: 36 }}>sync</span>
+              <p className="mt-3 text-sm font-semibold text-outline">Loading production status from tablet...</p>
+            </div>
+          ) : filteredProductionGroups.length === 0 ? (
+            <div className="flex flex-col items-center justify-center p-12 glass-card rounded-2xl border border-outline-variant/30 text-center">
+              <span className="material-symbols-outlined text-outline mb-2" style={{ fontSize: 44 }}>event_busy</span>
+              <h3 className="text-base font-bold text-on-surface">
+                {productionGroups.length === 0 ? `No production schedule found for ${productionDateStr}` : `No processes matching "${productionFilter}" filter`}
+              </h3>
+              <p className="text-xs text-outline mt-1 max-w-md">
+                {productionGroups.length === 0 
+                  ? 'There is no priority schedule configured for this day yet. You can create one in the Scheduling tab.' 
+                  : 'Try selecting a different status filter above to see scheduled processes.'}
+              </p>
+              {productionGroups.length === 0 && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedDateStr(productionDateStr);
+                    navigate('/firstFactory/scheduling');
+                  }}
+                  className="mt-4 inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-xs font-bold text-on-primary hover:bg-primary/90 transition-colors shadow-sm"
+                >
+                  <span className="material-symbols-outlined" style={{ fontSize: 16 }}>edit_calendar</span>
+                  Create Schedule for this Date
+                </button>
+              )}
+            </div>
+          ) : (
+            <div className="flex flex-col gap-4">
+              {filteredProductionGroups.map((group) => {
+                const isInProgress = group.status === 'in-progress';
+                const isCompleted = group.status === 'completed';
+                const isCanceled = group.status === 'canceled';
+                const isPending = group.status === 'pending';
+
+                if (group.type === 'setup') {
+                  const setupItem = group.items[0];
+                  return (
+                    <div 
+                      key={group.groupId}
+                      className="rounded-2xl border border-amber-500/30 bg-amber-500/5 p-4 flex flex-col md:flex-row md:items-center justify-between gap-3 shadow-xs"
+                    >
+                      <div className="flex items-center gap-3">
+                        <span className="inline-flex min-h-[36px] min-w-[54px] px-3 py-1.5 shrink-0 items-center justify-center rounded-xl bg-amber-500/20 text-xs font-black text-amber-700 whitespace-nowrap shadow-xs">
+                          {group.orderRange}
+                        </span>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="rounded bg-amber-500/20 px-2 py-0.5 text-[11px] font-extrabold text-amber-800">
+                              段取り / 段替 (Setup)
+                            </span>
+                            <h4 className="font-bold text-sm text-on-surface">{group.name}</h4>
+                          </div>
+                          <p className="text-xs text-outline mt-0.5">
+                            🕒 Scheduled: {group.startTime} ～ {group.endTime} ({group.totalDuration} mins)
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <span className="rounded-full bg-amber-500/10 px-3 py-1 text-xs font-bold text-amber-700 border border-amber-500/20">
+                          ⚙️ {group.totalDuration} 分
+                        </span>
+                      </div>
+                    </div>
+                  );
+                }
+
+                // Hinban Group Card
+                return (
+                  <div
+                    key={group.groupId}
+                    className={`glass-card rounded-2xl border p-5 flex flex-col gap-4 transition-all shadow-xs ${
+                      isInProgress
+                        ? 'border-purple-500/60 bg-purple-500/[0.04] ring-2 ring-purple-500/20 dark:bg-purple-950/20'
+                        : isCompleted
+                        ? 'border-emerald-500/40 bg-emerald-500/[0.03] dark:bg-emerald-950/10'
+                        : isCanceled
+                        ? 'border-rose-500/40 bg-rose-500/[0.03]'
+                        : 'border-outline-variant/30 hover:border-primary/40'
+                    }`}
+                  >
+                    {/* Card Top Row */}
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-outline-variant/20">
+                      <div className="flex items-center gap-3">
+                        <span className={`inline-flex min-h-[36px] min-w-[54px] px-3 py-1.5 shrink-0 items-center justify-center rounded-xl text-xs font-black whitespace-nowrap shadow-xs ${
+                          isInProgress
+                            ? 'bg-purple-600 text-white animate-pulse'
+                            : isCompleted
+                            ? 'bg-emerald-600 text-white'
+                            : 'bg-primary/10 text-primary'
+                        }`}>
+                          {group.orderRange}
+                        </span>
+
+                        <div>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <button 
+                              type="button"
+                              onClick={() => handleCardClick(group.hinban)}
+                              className="text-lg font-black text-on-surface hover:text-primary transition-colors cursor-pointer tracking-tight inline-flex items-center gap-1.5 group text-left"
+                              title="Click to view material master details"
+                            >
+                              <span className="group-hover:underline underline-offset-4 decoration-primary decoration-2">{group.hinban}</span>
+                              <span className="material-symbols-outlined text-outline group-hover:text-primary transition-colors opacity-60 group-hover:opacity-100" style={{ fontSize: 18 }}>
+                                open_in_new
+                              </span>
+                            </button>
+                            {group.labelHinban && group.labelHinban !== group.hinban && (
+                              <span className="rounded bg-surface-variant/60 px-2 py-0.5 text-xs font-mono font-medium text-outline">
+                                Label: {group.labelHinban}
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-xs text-outline font-medium mt-0.5">
+                            {group.hinmei || '—'}
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Status Badge */}
+                      <div className="flex items-center gap-2">
+                        {isInProgress && (
+                          <div className="inline-flex items-center gap-2 rounded-xl bg-purple-600 px-3.5 py-1.5 text-xs font-bold text-white shadow-sm animate-pulse">
+                            <span className="h-2 w-2 rounded-full bg-white animate-ping"></span>
+                            <span>🟣 生産中 (In-Progress)</span>
+                            {group.actualStartTime && (
+                              <span className="font-mono opacity-90">({group.actualStartTime}〜)</span>
+                            )}
+                          </div>
+                        )}
+
+                        {isCompleted && (
+                          <div className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-500/10 px-3 py-1.5 text-xs font-bold text-emerald-600 border border-emerald-500/20">
+                            <span className="material-symbols-outlined" style={{ fontSize: 16 }}>check_circle</span>
+                            <span>完了 (Completed)</span>
+                            {group.actualDurationMins && (
+                              <span className="font-mono font-semibold">({group.actualDurationMins}分)</span>
+                            )}
+                          </div>
+                        )}
+
+                        {isPending && (
+                          <div className="inline-flex items-center gap-1.5 rounded-xl bg-surface-variant/40 px-3 py-1.5 text-xs font-semibold text-outline border border-outline-variant/30">
+                            <span className="material-symbols-outlined" style={{ fontSize: 16 }}>hourglass_empty</span>
+                            <span>待機中 (Pending)</span>
+                          </div>
+                        )}
+
+                        {isCanceled && (
+                          <div className="inline-flex items-center gap-1.5 rounded-xl bg-rose-500/10 px-3 py-1.5 text-xs font-bold text-rose-600 border border-rose-500/20">
+                            <span className="material-symbols-outlined" style={{ fontSize: 16 }}>cancel</span>
+                            <span>中止 (Canceled)</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Metadata Specs Strip */}
+                    <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-3 text-xs">
+                      <div className="rounded-xl bg-surface-variant/20 p-2.5">
+                        <span className="text-[10px] font-semibold uppercase text-outline block">Scheduled Time</span>
+                        <span className="font-mono font-bold text-on-surface mt-0.5 block">
+                          🕒 {group.startTime} ～ {group.endTime}
+                        </span>
+                      </div>
+
+                      <div className="rounded-xl bg-surface-variant/20 p-2.5">
+                        <span className="text-[10px] font-semibold uppercase text-outline block">Total Volume</span>
+                        <span className="font-bold text-primary mt-0.5 block">
+                          {group.items.length} rolls ({group.totalMeters}m)
+                        </span>
+                      </div>
+
+                      <div className="rounded-xl bg-surface-variant/20 p-2.5">
+                        <span className="text-[10px] font-semibold uppercase text-outline block">Kizai / Color</span>
+                        <span className="font-medium text-on-surface mt-0.5 block truncate">
+                          {group.kizai || '—'} {group.color ? `• ${group.color}` : ''}
+                        </span>
+                      </div>
+
+                      <div className="rounded-xl bg-surface-variant/20 p-2.5">
+                        <span className="text-[10px] font-semibold uppercase text-outline block">Destination</span>
+                        <span className="font-medium text-on-surface mt-0.5 block truncate">
+                          {group.shippingDest || '—'}
+                        </span>
+                      </div>
+
+                      <div className="rounded-xl bg-surface-variant/20 p-2.5">
+                        <span className="text-[10px] font-semibold uppercase text-outline block">Operator</span>
+                        <span className="font-semibold text-on-surface mt-0.5 block truncate">
+                          👤 {group.worker || '—'}
+                        </span>
+                      </div>
+
+                      <div className="rounded-xl bg-surface-variant/20 p-2.5">
+                        <span className="text-[10px] font-semibold uppercase text-outline block">Machine</span>
+                        <span className="font-mono font-bold text-on-surface mt-0.5 block">
+                          🏭 {group.machine || 'PSA2'}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Rolls Sub-list */}
+                    <div className="flex flex-wrap items-center gap-2 pt-1">
+                      <span className="text-[11px] font-bold text-outline uppercase mr-1">Rolls:</span>
+                      {group.items.map((roll, rIdx) => (
+                        <div
+                          key={roll.id || rIdx}
+                          className="inline-flex items-center gap-2 rounded-lg border border-outline-variant/30 bg-background/50 px-2.5 py-1 text-xs"
+                        >
+                          <span className="font-bold text-primary">
+                            #{roll.rollIndex || (rIdx + 1)}/{roll.totalRolls || group.items.length}
+                          </span>
+                          <span className="text-outline font-mono">{roll.meters}m</span>
+                          <span className="text-outline text-[11px]">({roll.duration}m)</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       )}
 
