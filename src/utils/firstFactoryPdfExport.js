@@ -301,14 +301,15 @@ export function openFirstFactorySchedulePrintWindow({
             color: #475569;
             font-weight: normal;
           }
-          .time-cell { width: 9%; }
+          .time-cell { width: 8%; }
           .dest-cell { width: 14%; font-size: 10pt; }
-          .kizai-cell { width: 24%; font-size: 10pt; font-weight: 700; }
-          .shori-cell { width: 9%; font-size: 10pt; font-weight: 700; }
-          .color-cell { width: 10%; font-size: 10pt; font-weight: 700; }
-          .habanaga-cell { width: 10%; font-weight: 700; }
-          .kataban-cell { width: 11%; font-weight: 700; }
-          .qty-cell { width: 13%; }
+          .kizai-cell { width: 22%; font-size: 10pt; font-weight: 700; }
+          .shori-cell { width: 8%; font-size: 10pt; font-weight: 700; }
+          .color-cell { width: 9%; font-size: 10pt; font-weight: 700; }
+          .habanaga-cell { width: 9%; font-weight: 700; }
+          .kataban-cell { width: 9%; font-weight: 700; }
+          .roll-cell { width: 6%; font-weight: 700; font-size: 10pt; }
+          .qty-cell { width: 11%; font-weight: 700; }
 
           @media print {
             .no-print-bar { display: none !important; }
@@ -388,15 +389,16 @@ export function openFirstFactorySchedulePrintWindow({
           <table>
             <thead>
               <tr>
-                <th style="width: 5%;">No.</th>
-                <th style="width: 9%;">時間</th>
+                <th style="width: 4%;">No.</th>
+                <th style="width: 8%;">時間</th>
                 <th style="width: 14%;">出荷先名</th>
-                <th style="width: 24%;">基材コード</th>
-                <th style="width: 9%;">処理コード</th>
-                <th style="width: 10%;">色コード</th>
-                <th style="width: 10%;">幅長コード</th>
-                <th style="width: 11%;">型番</th>
-                <th style="width: 13%;">生産数量</th>
+                <th style="width: 22%;">基材コード</th>
+                <th style="width: 8%;">処理コード</th>
+                <th style="width: 9%;">色コード</th>
+                <th style="width: 9%;">幅長コード</th>
+                <th style="width: 9%;">型番</th>
+                <th style="width: 6%;">巻数</th>
+                <th style="width: 11%;">生産数量</th>
               </tr>
             </thead>
             <tbody>
