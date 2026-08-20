@@ -797,7 +797,22 @@ export default function FirstFactoryPage() {
     return new Date(y, m, 0).getDate();
   }, [selectedMonth]);
 
-  const [summaryViewMode, setSummaryViewMode] = useState('priority'); // 'priority' | 'raw'
+  const [summaryViewMode, setSummaryViewMode] = useState(() => {
+    try {
+      return localStorage.getItem('firstFactory_summaryViewMode') || 'priority';
+    } catch {
+      return 'priority';
+    }
+  });
+
+  const handleSummaryViewModeChange = (mode) => {
+    setSummaryViewMode(mode);
+    try {
+      localStorage.setItem('firstFactory_summaryViewMode', mode);
+    } catch (err) {
+      console.warn('Failed to save summaryViewMode to localStorage:', err);
+    }
+  };
 
   const monthSummaryData = useMemo(() => {
     let totalMins = 0;
@@ -1019,25 +1034,49 @@ export default function FirstFactoryPage() {
     };
   }, [selectedMonth, daysInSelectedMonth, savedSchedules, data, summaryViewMode]);
 
-  const [summarySort, setSummarySort] = useState({ key: 'day', direction: 'asc' });
+  const [summarySort, setSummarySort] = useState({ column: 'day', direction: 1 });
+
+  const handleSummarySort = (colKey) => {
+    setSummarySort(prev => {
+      const currentKey = prev?.column || prev?.key || 'day';
+      const currentDir = prev?.direction === -1 || prev?.direction === 'desc' ? -1 : 1;
+      if (currentKey === colKey) {
+        return { column: colKey, direction: currentDir === 1 ? -1 : 1 };
+      }
+      return { column: colKey, direction: 1 };
+    });
+  };
 
   const sortedSummaryRows = useMemo(() => {
     const rows = [...monthSummaryData.dayRows];
-    if (!summarySort?.key) return rows;
-    const { key, direction } = summarySort;
-    const mult = direction === 'desc' ? -1 : 1;
+    const key = summarySort?.column || summarySort?.key || 'day';
+    const direction = summarySort?.direction === -1 || summarySort?.direction === 'desc' ? -1 : 1;
 
     rows.sort((a, b) => {
       let valA = a[key];
       let valB = b[key];
+
+      // Custom key extraction for composite fields
+      if (key === 'status') {
+        valA = a.isScheduled ? (a.itemCount || 0) : (a.hasDemand ? 0.5 : 0);
+        valB = b.isScheduled ? (b.itemCount || 0) : (b.hasDemand ? 0.5 : 0);
+      } else if (key === 'syncStatus') {
+        valA = a.hasMismatch ? -(a.mismatchCount || 1) : (a.isScheduled ? 1 : 0);
+        valB = b.hasMismatch ? -(b.mismatchCount || 1) : (b.isScheduled ? 1 : 0);
+      }
+
       if (typeof valA === 'boolean') {
         valA = valA ? 1 : 0;
         valB = valB ? 1 : 0;
       }
-      if (typeof valA === 'string') {
-        return mult * valA.localeCompare(valB || '', 'ja');
+
+      if (typeof valA === 'string' && typeof valB === 'string') {
+        return direction * valA.localeCompare(valB, 'ja');
       }
-      return mult * ((valA ?? 0) - (valB ?? 0));
+
+      const numA = Number(valA) || 0;
+      const numB = Number(valB) || 0;
+      return direction * (numA - numB);
     });
     return rows;
   }, [monthSummaryData.dayRows, summarySort]);
@@ -2414,7 +2453,7 @@ export default function FirstFactoryPage() {
                 <span className="text-outline font-semibold">Data Source:</span>
                 <select
                   value={summaryViewMode}
-                  onChange={(e) => setSummaryViewMode(e.target.value)}
+                  onChange={(e) => handleSummaryViewModeChange(e.target.value)}
                   className="bg-transparent font-bold text-on-surface focus:outline-none cursor-pointer"
                 >
                   <option value="priority">Priority Order (Scheduled Workload)</option>
@@ -2452,7 +2491,7 @@ export default function FirstFactoryPage() {
               enableColumnReorder={true}
               layoutStorageKey="firstFactory_monthly_summary_table_layout"
               sort={summarySort}
-              onSort={setSummarySort}
+              onSort={handleSummarySort}
               pageSize={35}
               filteredCount={sortedSummaryRows.length}
               totalPages={1}
