@@ -470,15 +470,48 @@ export default function FirstFactoryPage() {
 
   const [poolSearch, setPoolSearch] = useState('');
   const [showNoAdhesive, setShowNoAdhesive] = useState(false);
-  const [poolSortBy, setPoolSortBy] = useState('default');
+  const [poolSortBy, setPoolSortBy] = useState('kataban-asc');
   const [poolBatchFilter, setPoolBatchFilter] = useState('all'); // 'all' | 'large' (>=500m) | 'small' (<200m)
   const [poolWidthFilter, setPoolWidthFilter] = useState('all');
   
+  // Helper to extract Kataban (型番) from material/BOM master
+  const extractKataban = (item) => {
+    if (!item) return '';
+    const rawMaster = item.materialInfo?.rawMaster || {};
+    const hinmoku = rawMaster['品目マスタ'] || {};
+    if (hinmoku['型番'] && hinmoku['型番'] !== '*' && String(hinmoku['型番']).trim() !== '') {
+      return String(hinmoku['型番']).trim();
+    }
+    if (rawMaster['型番'] && rawMaster['型番'] !== '*' && String(rawMaster['型番']).trim() !== '') {
+      return String(rawMaster['型番']).trim();
+    }
+    if (item['型番'] && item['型番'] !== '*' && String(item['型番']).trim() !== '') {
+      return String(item['型番']).trim();
+    }
+    const bom = Array.isArray(rawMaster.BOM) ? rawMaster.BOM : [];
+    const p2010 = bom.find(b => Number(b['工程コード']) === 2010 || b['工程名'] === '粘着工程');
+    if (p2010 && p2010['型番'] && p2010['型番'] !== '*' && String(p2010['型番']).trim() !== '') {
+      return String(p2010['型番']).trim();
+    }
+    for (const b of bom) {
+      if (b['型番'] && b['型番'] !== '*' && String(b['型番']).trim() !== '') {
+        return String(b['型番']).trim();
+      }
+    }
+    return '';
+  };
+
   const poolItems = useMemo(() => {
     const scheduledIds = new Set(scheduleOrder.map(s => s.poolItemId).filter(Boolean));
     return dailyProductionItems.filter(item => {
       if (scheduledIds.has(item.id)) return false;
-      if (poolSearch && !item.hinban.toLowerCase().includes(poolSearch.toLowerCase())) return false;
+      if (poolSearch) {
+        const q = poolSearch.toLowerCase();
+        const kataban = extractKataban(item).toLowerCase();
+        const matchesHinban = item.hinban.toLowerCase().includes(q);
+        const matchesKataban = kataban.includes(q);
+        if (!matchesHinban && !matchesKataban) return false;
+      }
       
       // First Factory page focuses ONLY on products that have Process 2010 (粘着工程) in BOM or Master
       const bomItems = item.materialInfo?.rawMaster?.['BOM'] || [];
@@ -524,12 +557,14 @@ export default function FirstFactoryPage() {
       const workTime = item.materialInfo?.workTime || 0.075;
       const durationMins = Math.round((workTime * qtyCm) / 60);
       const width = item.hinban?.match(/W\d+/i)?.[0]?.toUpperCase() || '';
+      const kataban = extractKataban(item);
       return {
         ...item,
         _qty: qty,
         _numRolls: numRolls,
         _durationMins: durationMins,
-        _width: width
+        _width: width,
+        _kataban: kataban
       };
     });
 
@@ -546,7 +581,11 @@ export default function FirstFactoryPage() {
     }
 
     // Apply sorting
-    if (poolSortBy === 'duration-desc') {
+    if (poolSortBy === 'kataban-asc') {
+      items.sort((a, b) => (a._kataban || '').localeCompare(b._kataban || '') || a.hinban.localeCompare(b.hinban));
+    } else if (poolSortBy === 'kataban-desc') {
+      items.sort((a, b) => (b._kataban || '').localeCompare(a._kataban || '') || a.hinban.localeCompare(b.hinban));
+    } else if (poolSortBy === 'duration-desc') {
       items.sort((a, b) => b._durationMins - a._durationMins || b._qty - a._qty);
     } else if (poolSortBy === 'duration-asc') {
       items.sort((a, b) => a._durationMins - b._durationMins || a._qty - b._qty);
@@ -1773,7 +1812,9 @@ export default function FirstFactoryPage() {
                       onChange={(e) => setPoolSortBy(e.target.value)}
                       className="bg-transparent font-bold text-on-surface focus:outline-none cursor-pointer"
                     >
-                      <option value="default">Default (Excel Sequence)</option>
+                      <option value="kataban-asc">型番 (A → Z)</option>
+                      <option value="kataban-desc">型番 (Z → A)</option>
+                      <option value="default">Excel Sequence</option>
                       <option value="duration-desc">Longest Time (時間 長→短)</option>
                       <option value="duration-asc">Shortest Time (時間 短→長)</option>
                       <option value="qty-desc">Most Meters (数量 多→少)</option>
@@ -1830,13 +1871,13 @@ export default function FirstFactoryPage() {
                   )}
 
                   {/* Reset Filters button if any filter active */}
-                  {(poolBatchFilter !== 'all' || poolWidthFilter !== 'all' || poolSortBy !== 'default' || poolSearch) && (
+                  {(poolBatchFilter !== 'all' || poolWidthFilter !== 'all' || poolSortBy !== 'kataban-asc' || poolSearch) && (
                     <button
                       type="button"
                       onClick={() => {
                         setPoolBatchFilter('all');
                         setPoolWidthFilter('all');
-                        setPoolSortBy('default');
+                        setPoolSortBy('kataban-asc');
                         setPoolSearch('');
                       }}
                       className="ml-auto text-[11px] font-bold text-primary hover:underline"
@@ -2007,7 +2048,9 @@ export default function FirstFactoryPage() {
                     >
                       <div className="flex-1 flex flex-col cursor-pointer" onClick={() => handleCardClick(item.hinban)}>
                         <div className="flex items-center gap-2">
-                          <span className="font-medium text-sm text-on-surface">{item.hinban}</span>
+                          <span className="font-medium text-sm text-on-surface">
+                            {item.hinban}{item._kataban ? ` - ${item._kataban}` : ''}
+                          </span>
                           {isRawMaterial && (
                             <span className="rounded bg-amber-500/10 px-1.5 py-0.5 text-[9px] font-bold text-amber-600 uppercase tracking-wider">
                               Raw Material
