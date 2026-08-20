@@ -467,6 +467,9 @@ export default function FirstFactoryPage() {
 
   const [poolSearch, setPoolSearch] = useState('');
   const [showNoAdhesive, setShowNoAdhesive] = useState(false);
+  const [poolSortBy, setPoolSortBy] = useState('default');
+  const [poolBatchFilter, setPoolBatchFilter] = useState('all'); // 'all' | 'large' (>=500m) | 'small' (<200m)
+  const [poolWidthFilter, setPoolWidthFilter] = useState('all');
   
   const poolItems = useMemo(() => {
     const scheduledIds = new Set(scheduleOrder.map(s => s.poolItemId).filter(Boolean));
@@ -499,14 +502,67 @@ export default function FirstFactoryPage() {
     });
   }, [scheduleOrder, dailyProductionItems, poolSearch, showNoAdhesive]);
 
-  const poolTotalMins = useMemo(() => {
-    return poolItems.reduce((acc, item) => {
+  // Compute available widths from poolItems
+  const availableWidths = useMemo(() => {
+    const set = new Set();
+    poolItems.forEach(item => {
+      const match = item.hinban?.match(/W\d+/i);
+      if (match) set.add(match[0].toUpperCase());
+    });
+    return Array.from(set).sort();
+  }, [poolItems]);
+
+  const processedPoolItems = useMemo(() => {
+    let items = poolItems.map(item => {
       const qty = item.production[selectedDay - 1] || 0;
       const qtyCm = qty * 100;
+      const packCountCm = item.materialInfo?.packCount ? item.materialInfo.packCount * 100 : 4000;
+      const numRolls = qtyCm > 0 ? Math.ceil(qtyCm / packCountCm) : 0;
       const workTime = item.materialInfo?.workTime || 0.075;
-      return acc + Math.round((workTime * qtyCm) / 60);
-    }, 0);
-  }, [poolItems, selectedDay]);
+      const durationMins = Math.round((workTime * qtyCm) / 60);
+      const width = item.hinban?.match(/W\d+/i)?.[0]?.toUpperCase() || '';
+      return {
+        ...item,
+        _qty: qty,
+        _numRolls: numRolls,
+        _durationMins: durationMins,
+        _width: width
+      };
+    });
+
+    // Apply batch size filter
+    if (poolBatchFilter === 'large') {
+      items = items.filter(i => i._qty >= 500 || i._numRolls >= 5);
+    } else if (poolBatchFilter === 'small') {
+      items = items.filter(i => i._qty < 200);
+    }
+
+    // Apply width filter
+    if (poolWidthFilter !== 'all') {
+      items = items.filter(i => i._width === poolWidthFilter);
+    }
+
+    // Apply sorting
+    if (poolSortBy === 'duration-desc') {
+      items.sort((a, b) => b._durationMins - a._durationMins || b._qty - a._qty);
+    } else if (poolSortBy === 'duration-asc') {
+      items.sort((a, b) => a._durationMins - b._durationMins || a._qty - b._qty);
+    } else if (poolSortBy === 'qty-desc') {
+      items.sort((a, b) => b._qty - a._qty);
+    } else if (poolSortBy === 'qty-asc') {
+      items.sort((a, b) => a._qty - b._qty);
+    } else if (poolSortBy === 'rolls-desc') {
+      items.sort((a, b) => b._numRolls - a._numRolls || b._qty - a._qty);
+    } else if (poolSortBy === 'hinban-asc') {
+      items.sort((a, b) => a.hinban.localeCompare(b.hinban));
+    }
+
+    return items;
+  }, [poolItems, selectedDay, poolBatchFilter, poolWidthFilter, poolSortBy]);
+
+  const poolTotalMins = useMemo(() => {
+    return processedPoolItems.reduce((acc, item) => acc + (item._durationMins || 0), 0);
+  }, [processedPoolItems]);
 
   const scheduledTotalMins = useMemo(() => {
     return scheduledItems.reduce((acc, item) => acc + (item.duration || 0), 0);
@@ -1654,16 +1710,18 @@ export default function FirstFactoryPage() {
               onDragOver={(e) => e.preventDefault()}
               onDrop={onDropPool}
             >
-              <div className="mb-4">
-                <h3 className="mb-2 text-lg font-bold text-on-surface flex items-center justify-between">
-                  Available to Schedule
-                  <div className="flex items-center gap-3">
-                    <span className="rounded bg-primary/10 px-2 py-1 text-xs font-bold text-primary shadow-sm border border-primary/20">
+              <div className="mb-4 flex flex-col gap-3">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-bold text-on-surface">
+                    Available to Schedule
+                  </h3>
+                  <div className="flex items-center gap-2">
+                    <span className="rounded bg-primary/10 px-2 py-1 text-xs font-bold text-primary shadow-sm border border-primary/20" title="Total estimated production time for filtered items">
                       {formatTime(poolTotalMins)}
                     </span>
                     <button 
                       onClick={() => setShowNoAdhesive(!showNoAdhesive)}
-                      className={`flex items-center gap-1.5 text-xs px-2 py-1 rounded-lg border transition-colors ${showNoAdhesive ? 'border-primary bg-primary/10 text-primary' : 'border-outline-variant/50 text-outline hover:bg-surface-variant/50'}`}
+                      className={`flex items-center gap-1 text-xs px-2 py-1 rounded-lg border transition-colors ${showNoAdhesive ? 'border-primary bg-primary/10 text-primary' : 'border-outline-variant/50 text-outline hover:bg-surface-variant/50'}`}
                       title={showNoAdhesive ? "Hide raw materials (粘着無し)" : "Show raw materials (粘着無し)"}
                     >
                       <span className="material-symbols-outlined" style={{fontSize: 16}}>
@@ -1671,18 +1729,116 @@ export default function FirstFactoryPage() {
                       </span>
                       {showNoAdhesive ? 'Hide 粘着無し' : 'Show 粘着無し'}
                     </button>
-                    <span className="text-sm font-normal text-outline">{poolItems.length} items</span>
+                    <span className="text-xs font-semibold text-outline">
+                      {processedPoolItems.length !== poolItems.length 
+                        ? `${processedPoolItems.length} / ${poolItems.length} items`
+                        : `${poolItems.length} items`}
+                    </span>
                   </div>
-                </h3>
+                </div>
+
+                {/* Search Bar */}
                 <div className="relative">
                   <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline" style={{ fontSize: 18 }}>search</span>
                   <input
                     type="text"
-                    placeholder="Search available..."
+                    placeholder="Search hinban..."
                     className="w-full rounded-xl border border-outline-variant/50 bg-background/50 py-2 pl-9 pr-3 text-sm text-on-surface placeholder:text-outline focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
                     value={poolSearch}
                     onChange={(e) => setPoolSearch(e.target.value)}
                   />
+                  {poolSearch && (
+                    <button
+                      type="button"
+                      onClick={() => setPoolSearch('')}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-outline hover:text-on-surface"
+                    >
+                      <span className="material-symbols-outlined" style={{ fontSize: 16 }}>close</span>
+                    </button>
+                  )}
+                </div>
+
+                {/* Sorting & Filter Controls Toolbar */}
+                <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-outline-variant/20">
+                  {/* Sort Selector */}
+                  <div className="flex items-center gap-1.5 rounded-lg border border-outline-variant/40 bg-surface-variant/20 px-2 py-1 text-xs">
+                    <span className="material-symbols-outlined text-outline" style={{ fontSize: 16 }}>sort</span>
+                    <select
+                      value={poolSortBy}
+                      onChange={(e) => setPoolSortBy(e.target.value)}
+                      className="bg-transparent font-bold text-on-surface focus:outline-none cursor-pointer"
+                    >
+                      <option value="default">Default (Excel Sequence)</option>
+                      <option value="duration-desc">Longest Time (時間 長→短)</option>
+                      <option value="duration-asc">Shortest Time (時間 短→長)</option>
+                      <option value="qty-desc">Most Meters (数量 多→少)</option>
+                      <option value="qty-asc">Least Meters (数量 少→多)</option>
+                      <option value="rolls-desc">Most Rolls (巻数 多→少)</option>
+                      <option value="hinban-asc">Hinban (A → Z)</option>
+                    </select>
+                  </div>
+
+                  {/* Batch Size Quick Filters */}
+                  <div className="flex items-center rounded-lg border border-outline-variant/40 bg-surface-variant/20 p-0.5 text-xs font-semibold">
+                    <button
+                      type="button"
+                      onClick={() => setPoolBatchFilter('all')}
+                      className={`px-2 py-1 rounded-md transition-colors ${poolBatchFilter === 'all' ? 'bg-primary text-on-primary shadow-2xs' : 'text-outline hover:text-on-surface'}`}
+                    >
+                      All Sizes
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setPoolBatchFilter('large')}
+                      className={`flex items-center gap-1 px-2 py-1 rounded-md transition-colors ${poolBatchFilter === 'large' ? 'bg-primary text-on-primary shadow-2xs' : 'text-outline hover:text-on-surface'}`}
+                      title="Items >= 500m or >= 5 rolls"
+                    >
+                      <span>Large</span>
+                      <span className="text-[10px] opacity-75 font-normal">≥500m</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setPoolBatchFilter('small')}
+                      className={`flex items-center gap-1 px-2 py-1 rounded-md transition-colors ${poolBatchFilter === 'small' ? 'bg-primary text-on-primary shadow-2xs' : 'text-outline hover:text-on-surface'}`}
+                      title="Items < 200m"
+                    >
+                      <span>Small</span>
+                      <span className="text-[10px] opacity-75 font-normal">&lt;200m</span>
+                    </button>
+                  </div>
+
+                  {/* Width Filter (if multiple widths present) */}
+                  {availableWidths.length > 1 && (
+                    <div className="flex items-center gap-1 rounded-lg border border-outline-variant/40 bg-surface-variant/20 px-2 py-1 text-xs">
+                      <span className="text-outline font-medium">Width:</span>
+                      <select
+                        value={poolWidthFilter}
+                        onChange={(e) => setPoolWidthFilter(e.target.value)}
+                        className="bg-transparent font-bold text-on-surface focus:outline-none cursor-pointer"
+                      >
+                        <option value="all">All Widths ({availableWidths.length})</option>
+                        {availableWidths.map(w => (
+                          <option key={w} value={w}>{w}</option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+
+                  {/* Reset Filters button if any filter active */}
+                  {(poolBatchFilter !== 'all' || poolWidthFilter !== 'all' || poolSortBy !== 'default' || poolSearch) && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPoolBatchFilter('all');
+                        setPoolWidthFilter('all');
+                        setPoolSortBy('default');
+                        setPoolSearch('');
+                      }}
+                      className="ml-auto text-[11px] font-bold text-primary hover:underline"
+                    >
+                      Reset
+                    </button>
+                  )}
                 </div>
               </div>
               <div className="flex flex-col gap-2 flex-1 overflow-y-auto">
@@ -1777,16 +1933,15 @@ export default function FirstFactoryPage() {
                   </div>
                 </div>
 
-                {poolItems.length === 0 ? (
-                  <div className="text-center text-sm text-outline mt-10">No items available for this date.</div>
+                {processedPoolItems.length === 0 ? (
+                  <div className="text-center text-sm text-outline mt-10">
+                    {poolItems.length === 0 ? 'No items available for this date.' : 'No items match the current filters.'}
+                  </div>
                 ) : (
-                  poolItems.map(item => {
-                    const qty = item.production[selectedDay - 1] || 0;
-                    const qtyCm = qty * 100;
-                    const packCountCm = item.materialInfo?.packCount || 4000;
-                    const workTime = item.materialInfo?.workTime || 0.075;
-                    const numRolls = qtyCm > 0 ? Math.ceil(qtyCm / packCountCm) : 0;
-                    const durationMins = Math.round((workTime * qtyCm) / 60);
+                  processedPoolItems.map(item => {
+                    const qty = item._qty;
+                    const numRolls = item._numRolls;
+                    const durationMins = item._durationMins;
                     const segments = item.materialInfo?.rawMaster?.['品番構造']?.segments || [];
                     const adhesiveSegment = segments.find(s => s.segment === '粘着コード');
                     const isRawMaterial = adhesiveSegment && adhesiveSegment.name === '粘着無し';
