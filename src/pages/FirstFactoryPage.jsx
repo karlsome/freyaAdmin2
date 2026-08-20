@@ -797,11 +797,14 @@ export default function FirstFactoryPage() {
     return new Date(y, m, 0).getDate();
   }, [selectedMonth]);
 
+  const [summaryViewMode, setSummaryViewMode] = useState('priority'); // 'priority' | 'raw'
+
   const monthSummaryData = useMemo(() => {
-    let totalScheduledMins = 0;
-    let scheduledDaysCount = 0;
-    let totalScheduledItemsCount = 0;
+    let totalMins = 0;
+    let daysWithWorkCount = 0;
+    let totalItemsCount = 0;
     let totalSetupCount = 0;
+    let totalMetersMonth = 0;
     const monthUniqueHinbans = new Set();
     const dayRows = [];
 
@@ -817,39 +820,147 @@ export default function FirstFactoryPage() {
       const saved = savedSchedules.find(s => s.date === day);
       const isScheduled = Boolean(saved && Array.isArray(saved.scheduleOrder) && saved.scheduleOrder.length > 0);
 
-      let dayTotalMins = 0;
-      let startTime = saved?.startTime || '09:00';
-      let endTime = '—';
-      let scheduledBy = saved?.scheduledBy || '—';
-      let updatedAtStr = saved?.updatedAt ? new Date(saved.updatedAt).toLocaleString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—';
-      let itemCount = 0;
-      let setupCount = 0;
-      let hinbanCount = 0;
-      const dayUniqueHinbans = new Set();
-      let mismatchCount = 0;
+      if (summaryViewMode === 'priority') {
+        let dayTotalMins = 0;
+        let startTime = saved?.startTime || '09:00';
+        let endTime = '—';
+        let scheduledBy = saved?.scheduledBy || '—';
+        let updatedAtStr = saved?.updatedAt ? new Date(saved.updatedAt).toLocaleString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—';
+        let itemCount = 0;
+        let setupCount = 0;
+        let hinbanCount = 0;
+        const dayUniqueHinbans = new Set();
+        let mismatchCount = 0;
 
-      if (isScheduled) {
-        scheduledDaysCount++;
-        itemCount = saved.scheduleOrder.length;
-        totalScheduledItemsCount += itemCount;
+        if (isScheduled) {
+          daysWithWorkCount++;
+          itemCount = saved.scheduleOrder.length;
+          totalItemsCount += itemCount;
 
-        saved.scheduleOrder.forEach(item => {
-          dayTotalMins += (Number(item.duration) || 0);
-          if (item.type === 'setup') {
-            setupCount++;
-            totalSetupCount++;
-          } else {
-            hinbanCount++;
-            if (item.hinban) {
-              dayUniqueHinbans.add(item.hinban);
-              monthUniqueHinbans.add(item.hinban);
+          saved.scheduleOrder.forEach(item => {
+            dayTotalMins += (Number(item.duration) || 0);
+            if (item.type === 'setup') {
+              setupCount++;
+              totalSetupCount++;
+            } else {
+              hinbanCount++;
+              if (item.hinban) {
+                dayUniqueHinbans.add(item.hinban);
+                monthUniqueHinbans.add(item.hinban);
+              }
             }
+          });
+
+          // Compute mismatch count against current Excel data
+          if (data.length > 0) {
+            dayUniqueHinbans.forEach(h => {
+              const found = data.find(item => item.hinban === h);
+              if (!found) {
+                mismatchCount++;
+              } else {
+                const q = Number((found.production[day - 1] || 0).toFixed(1));
+                const scheduledMeters = Number(saved.scheduleOrder
+                  .filter(i => i.hinban === h)
+                  .reduce((sum, r) => sum + (Number(r.meters) || 0), 0).toFixed(1));
+                if (q === 0 || q !== scheduledMeters) {
+                  mismatchCount++;
+                }
+              }
+            });
           }
+
+          totalMins += dayTotalMins;
+          if (dayTotalMins > maxDayMins) maxDayMins = dayTotalMins;
+
+          // Calculate end time
+          const [sh, sm] = (startTime || '09:00').split(':').map(Number);
+          const endTotal = (sh * 60 + sm) + dayTotalMins;
+          const eh = Math.floor((endTotal / 60) % 24);
+          const em = endTotal % 60;
+          endTime = `${String(eh).padStart(2, '0')}:${String(em).padStart(2, '0')}`;
+        }
+
+        dayRows.push({
+          day,
+          dateKey,
+          dayOfWeek,
+          dayOfWeekStr,
+          isScheduled,
+          hasWork: isScheduled,
+          dayTotalMins,
+          dayTotalHours: (dayTotalMins / 60).toFixed(1),
+          startTime,
+          endTime,
+          timeRange: isScheduled ? `${startTime} ～ ${endTime}` : '—',
+          itemCount,
+          setupCount,
+          hinbanCount,
+          uniqueHinbanCount: dayUniqueHinbans.size,
+          mismatchCount,
+          hasMismatch: mismatchCount > 0,
+          scheduledBy,
+          updatedAtStr
+        });
+      } else {
+        // 'raw' Excel demand mode: calculates full demand regardless of schedule
+        let dayTotalMins = 0;
+        let dayTotalMeters = 0;
+        let dayRollsCount = 0;
+        const dayUniqueHinbans = new Set();
+
+        const dayRawItems = data.filter(item => {
+          const q = item.production[day - 1] || 0;
+          if (q <= 0) return false;
+
+          const bomItems = item.materialInfo?.rawMaster?.['BOM'] || [];
+          const hasProcess2010 = Boolean(
+            item.materialInfo?.hasProcess2010 ||
+            bomItems.some(b => Number(b['工程コード']) === 2010 || String(b['工程コード'] || '').startsWith('2010') || b['工程名'] === '粘着工程' || b['工程略名'] === '粘着') ||
+            String(item.materialInfo?.rawMaster?.['品目マスタ']?.['工程コード'] || '').startsWith('2010') ||
+            Number(item.materialInfo?.rawMaster?.['resolved']?.['工程コード']?.code) === 2010 ||
+            item.materialInfo?.rawMaster?.['resolved']?.['工程コード']?.name === '粘着工程'
+          );
+          return hasProcess2010;
         });
 
-        // Compute mismatch count against current Excel data
-        if (data.length > 0) {
-          dayUniqueHinbans.forEach(h => {
+        dayRawItems.forEach(item => {
+          const qty = item.production[day - 1] || 0;
+          const qtyCm = qty * 100;
+          const packCountCm = item.materialInfo?.packCount ? item.materialInfo.packCount * 100 : 4000;
+          const numRolls = qtyCm > 0 ? Math.ceil(qtyCm / packCountCm) : 0;
+          const workTime = item.materialInfo?.workTime || 0.075;
+          const durationMins = Math.round((workTime * qtyCm) / 60);
+
+          dayTotalMins += durationMins;
+          dayTotalMeters += qty;
+          dayRollsCount += numRolls;
+          dayUniqueHinbans.add(item.hinban);
+          monthUniqueHinbans.add(item.hinban);
+        });
+
+        const hasDemand = dayTotalMins > 0;
+        if (hasDemand) {
+          daysWithWorkCount++;
+          totalMins += dayTotalMins;
+          totalItemsCount += dayRollsCount;
+          totalMetersMonth += dayTotalMeters;
+        }
+
+        if (dayTotalMins > maxDayMins) maxDayMins = dayTotalMins;
+
+        const startTime = '09:00';
+        let endTime = '—';
+        if (hasDemand) {
+          const endTotal = (9 * 60) + dayTotalMins;
+          const eh = Math.floor((endTotal / 60) % 24);
+          const em = endTotal % 60;
+          endTime = `${String(eh).padStart(2, '0')}:${String(em).padStart(2, '0')}`;
+        }
+
+        let mismatchCount = 0;
+        if (isScheduled && data.length > 0) {
+          const scheduledHinbans = new Set(saved.scheduleOrder.map(i => i.hinban).filter(Boolean));
+          scheduledHinbans.forEach(h => {
             const found = data.find(item => item.hinban === h);
             if (!found) {
               mismatchCount++;
@@ -865,54 +976,48 @@ export default function FirstFactoryPage() {
           });
         }
 
-        totalScheduledMins += dayTotalMins;
-        if (dayTotalMins > maxDayMins) maxDayMins = dayTotalMins;
-
-        // Calculate end time
-        const [sh, sm] = (startTime || '09:00').split(':').map(Number);
-        const endTotal = (sh * 60 + sm) + dayTotalMins;
-        const eh = Math.floor((endTotal / 60) % 24);
-        const em = endTotal % 60;
-        endTime = `${String(eh).padStart(2, '0')}:${String(em).padStart(2, '0')}`;
+        dayRows.push({
+          day,
+          dateKey,
+          dayOfWeek,
+          dayOfWeekStr,
+          isScheduled,
+          hasWork: hasDemand,
+          hasDemand,
+          dayTotalMins,
+          dayTotalHours: (dayTotalMins / 60).toFixed(1),
+          dayTotalMeters,
+          startTime,
+          endTime,
+          timeRange: hasDemand ? `${startTime} ～ ${endTime}` : '—',
+          itemCount: dayRollsCount,
+          setupCount: 0,
+          hinbanCount: dayRollsCount,
+          uniqueHinbanCount: dayUniqueHinbans.size,
+          mismatchCount,
+          hasMismatch: mismatchCount > 0,
+          scheduledBy: saved?.scheduledBy || '—',
+          updatedAtStr: saved?.updatedAt ? new Date(saved.updatedAt).toLocaleString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—'
+        });
       }
-
-      dayRows.push({
-        day,
-        dateKey,
-        dayOfWeek,
-        dayOfWeekStr,
-        isScheduled,
-        dayTotalMins,
-        dayTotalHours: (dayTotalMins / 60).toFixed(1),
-        startTime,
-        endTime,
-        timeRange: isScheduled ? `${startTime} ～ ${endTime}` : '—',
-        itemCount,
-        setupCount,
-        hinbanCount,
-        uniqueHinbanCount: dayUniqueHinbans.size,
-        mismatchCount,
-        hasMismatch: mismatchCount > 0,
-        scheduledBy,
-        updatedAtStr
-      });
     }
 
-    const totalScheduledHours = (totalScheduledMins / 60).toFixed(1);
-    const avgHoursPerScheduledDay = scheduledDaysCount > 0 ? (totalScheduledMins / scheduledDaysCount / 60).toFixed(1) : '0.0';
+    const totalHours = (totalMins / 60).toFixed(1);
+    const avgHoursPerDay = daysWithWorkCount > 0 ? (totalMins / daysWithWorkCount / 60).toFixed(1) : '0.0';
 
     return {
-      totalScheduledMins,
-      totalScheduledHours,
-      scheduledDaysCount,
-      totalScheduledItemsCount,
+      totalMins,
+      totalHours,
+      daysWithWorkCount,
+      totalItemsCount,
       totalSetupCount,
+      totalMetersMonth,
       totalMonthUniqueHinbansCount: monthUniqueHinbans.size,
-      avgHoursPerScheduledDay,
+      avgHoursPerDay,
       maxDayMins: maxDayMins || 480,
       dayRows
     };
-  }, [selectedMonth, daysInSelectedMonth, savedSchedules]);
+  }, [selectedMonth, daysInSelectedMonth, savedSchedules, data, summaryViewMode]);
 
   const [summarySort, setSummarySort] = useState({ key: 'day', direction: 'asc' });
 
@@ -959,30 +1064,49 @@ export default function FirstFactoryPage() {
       }
     },
     {
-      key: 'isScheduled',
-      label: 'Status',
+      key: 'status',
+      label: summaryViewMode === 'priority' ? 'Schedule Status' : 'Demand & Status',
       sortable: true,
-      minWidth: 130,
+      minWidth: 160,
       renderCell: (row) => {
-        return row.isScheduled ? (
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/10 px-2.5 py-1 text-xs font-bold text-emerald-600 border border-emerald-500/20">
-            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>
-            Scheduled ({row.itemCount})
-          </span>
-        ) : (
-          <span className="inline-flex items-center gap-1 text-xs text-outline font-medium">
-            — No schedule
-          </span>
-        );
+        if (summaryViewMode === 'priority') {
+          return row.isScheduled ? (
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/10 px-2.5 py-1 text-xs font-bold text-emerald-600 border border-emerald-500/20">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>
+              Scheduled ({row.itemCount})
+            </span>
+          ) : (
+            <span className="inline-flex items-center gap-1 text-xs text-outline font-medium">
+              — No schedule
+            </span>
+          );
+        } else {
+          if (!row.hasDemand) {
+            return (
+              <span className="text-outline text-xs font-medium">— No Excel Demand</span>
+            );
+          }
+          return row.isScheduled ? (
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/10 px-2.5 py-1 text-xs font-bold text-emerald-600 border border-emerald-500/20">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>
+              Planned & Scheduled
+            </span>
+          ) : (
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-500/10 px-2.5 py-1 text-xs font-bold text-amber-700 border border-amber-500/20">
+              <span className="h-1.5 w-1.5 rounded-full bg-amber-500"></span>
+              Raw Demand (Unscheduled)
+            </span>
+          );
+        }
       }
     },
     {
       key: 'timeRange',
-      label: 'Time Range',
+      label: summaryViewMode === 'priority' ? 'Time Range' : 'Estimated Time (09:00〜)',
       sortable: true,
       minWidth: 150,
       renderCell: (row) => {
-        return row.isScheduled ? (
+        return row.hasWork ? (
           <span className="rounded-lg bg-surface-variant/40 px-2.5 py-1 text-xs font-mono font-semibold text-on-surface border border-outline-variant/30">
             🕒 {row.startTime} ～ {row.endTime}
           </span>
@@ -993,11 +1117,11 @@ export default function FirstFactoryPage() {
     },
     {
       key: 'dayTotalMins',
-      label: 'Total Duration',
+      label: summaryViewMode === 'priority' ? 'Scheduled Duration' : 'Total Possible Hours',
       sortable: true,
-      minWidth: 150,
+      minWidth: 160,
       renderCell: (row) => {
-        return row.isScheduled ? (
+        return row.hasWork ? (
           <span className="text-xs font-bold text-on-surface font-mono">
             {formatTime(row.dayTotalMins)} - {row.dayTotalHours}hrs
           </span>
@@ -1008,11 +1132,12 @@ export default function FirstFactoryPage() {
     },
     {
       key: 'itemCount',
-      label: 'Items Breakdown',
+      label: summaryViewMode === 'priority' ? 'Items Breakdown' : 'Excel Demand Breakdown',
       sortable: true,
-      minWidth: 210,
+      minWidth: 220,
       renderCell: (row) => {
-        return row.isScheduled ? (
+        if (!row.hasWork) return <span className="text-outline text-xs">—</span>;
+        return (
           <div className="flex items-center gap-1.5 text-xs flex-wrap">
             <span className="rounded bg-indigo-500/10 px-2 py-0.5 font-bold text-indigo-600 border border-indigo-500/20" title={`${row.uniqueHinbanCount} Unique Hinban`}>
               {row.uniqueHinbanCount} 品番
@@ -1020,14 +1145,17 @@ export default function FirstFactoryPage() {
             <span className="rounded bg-primary/10 px-2 py-0.5 font-bold text-primary" title={`${row.hinbanCount} Total Rolls`}>
               {row.hinbanCount} rolls
             </span>
-            {row.setupCount > 0 && (
+            {summaryViewMode === 'raw' && row.dayTotalMeters > 0 && (
+              <span className="rounded bg-emerald-500/10 px-2 py-0.5 font-bold text-emerald-700 border border-emerald-500/20">
+                {row.dayTotalMeters}m
+              </span>
+            )}
+            {summaryViewMode === 'priority' && row.setupCount > 0 && (
               <span className="rounded bg-amber-500/10 px-2 py-0.5 font-bold text-amber-700" title={`${row.setupCount} Setup Events`}>
                 {row.setupCount} setups
               </span>
             )}
           </div>
-        ) : (
-          <span className="text-outline text-xs">—</span>
         );
       }
     },
@@ -1062,7 +1190,16 @@ export default function FirstFactoryPage() {
       sortable: true,
       minWidth: 140,
       renderCell: (row) => {
-        if (!row.isScheduled) return <span className="text-outline text-xs">—</span>;
+        if (!row.isScheduled) {
+          if (summaryViewMode === 'raw' && row.hasDemand) {
+            return (
+              <span className="inline-flex items-center gap-1 rounded-full bg-surface-variant/40 px-2.5 py-1 text-xs font-semibold text-outline">
+                Unscheduled
+              </span>
+            );
+          }
+          return <span className="text-outline text-xs">—</span>;
+        }
         if (row.hasMismatch) {
           return (
             <span 
@@ -1097,11 +1234,11 @@ export default function FirstFactoryPage() {
           title="Open in Scheduling Tab"
         >
           <span className="material-symbols-outlined" style={{ fontSize: 14 }}>edit_calendar</span>
-          Open
+          {row.isScheduled ? 'Open' : 'Schedule'}
         </button>
       )
     }
-  ], [selectedMonth]);
+  ], [selectedMonth, summaryViewMode, navigate]);
 
   // -------------------------------------------------------------
   // Production Tab State & Fetching (Realtime Tracking)
@@ -2254,25 +2391,45 @@ export default function FirstFactoryPage() {
       {/* Summary Tab */}
       {activeTab === 'summary' && (
         <div className="flex flex-col gap-6">
-          {/* Header Controls & Month Selector */}
+          {/* Header Controls, Month Selector & View Mode Switcher */}
           <div className="rounded-2xl border border-outline-variant/30 bg-surface/50 p-4 backdrop-blur-xl flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <span className="material-symbols-outlined text-outline" style={{ fontSize: 22 }}>calendar_month</span>
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-semibold text-on-surface">Target Month:</span>
-                <input
-                  type="month"
-                  value={selectedMonth}
-                  onChange={handleMonthChange}
-                  className="rounded-xl border border-outline-variant/50 bg-background/50 px-3 py-2 text-sm text-on-surface focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary font-bold"
-                  title="Select month for summary"
-                />
+            <div className="flex flex-wrap items-center gap-4">
+              <div className="flex items-center gap-3">
+                <span className="material-symbols-outlined text-outline" style={{ fontSize: 22 }}>calendar_month</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-semibold text-on-surface">Target Month:</span>
+                  <input
+                    type="month"
+                    value={selectedMonth}
+                    onChange={handleMonthChange}
+                    className="rounded-xl border border-outline-variant/50 bg-background/50 px-3 py-2 text-sm text-on-surface focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary font-bold"
+                    title="Select month for summary"
+                  />
+                </div>
+              </div>
+
+              {/* View Mode Switcher */}
+              <div className="flex items-center gap-2 rounded-xl border border-outline-variant/40 bg-surface-variant/20 px-3 py-1.5 text-xs">
+                <span className="material-symbols-outlined text-outline" style={{ fontSize: 18 }}>view_list</span>
+                <span className="text-outline font-semibold">Data Source:</span>
+                <select
+                  value={summaryViewMode}
+                  onChange={(e) => setSummaryViewMode(e.target.value)}
+                  className="bg-transparent font-bold text-on-surface focus:outline-none cursor-pointer"
+                >
+                  <option value="priority">Priority Order (Scheduled Workload)</option>
+                  <option value="raw">Raw Excel Data (Total Possible Hours)</option>
+                </select>
               </div>
             </div>
 
             <div className="flex items-center gap-2 text-xs text-outline">
               <span className="material-symbols-outlined" style={{ fontSize: 16 }}>info</span>
-              <span>Showing daily priority scheduling overview for {selectedMonth}</span>
+              <span>
+                {summaryViewMode === 'priority' 
+                  ? `Showing saved daily priority scheduling overview for ${selectedMonth}`
+                  : `Showing total possible production hours from raw Excel for ${selectedMonth}`}
+              </span>
             </div>
           </div>
 
@@ -2281,7 +2438,9 @@ export default function FirstFactoryPage() {
             <div className="flex items-center justify-between px-1">
               <div className="flex items-center gap-2">
                 <span className="material-symbols-outlined text-primary" style={{ fontSize: 22 }}>calendar_view_month</span>
-                <h3 className="text-lg font-bold text-on-surface">Daily Schedule & Priority Allocation</h3>
+                <h3 className="text-lg font-bold text-on-surface">
+                  {summaryViewMode === 'priority' ? 'Daily Priority Scheduling Breakdown' : 'Daily Raw Excel Demand & Possible Hours'}
+                </h3>
               </div>
               <span className="text-xs text-outline font-medium">1st ～ {daysInSelectedMonth}th of {selectedMonth}</span>
             </div>
