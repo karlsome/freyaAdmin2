@@ -73,6 +73,40 @@ export default function FirstFactoryPage() {
 
   const [isSyncModalOpen, setIsSyncModalOpen] = useState(false);
   const [syncTargetMonth, setSyncTargetMonth] = useState(selectedMonth);
+  const [syncImpactReport, setSyncImpactReport] = useState([]);
+  const [isImpactModalOpen, setIsImpactModalOpen] = useState(false);
+  const [isDiscrepancyModalOpen, setIsDiscrepancyModalOpen] = useState(false);
+
+  // Helper to split a hinban production quantity into roll items
+  const createRollItemsForHinban = (foundItem, dayIndex) => {
+    if (!foundItem) return [];
+    const qty = foundItem.production[dayIndex] || 0;
+    const qtyCm = qty * 100;
+    const packCountCm = foundItem.materialInfo?.packCount || 4000;
+    const workTime = foundItem.materialInfo?.workTime || 0.075;
+    
+    if (qtyCm <= 0) return [];
+    const numRolls = Math.ceil(qtyCm / packCountCm);
+    const items = [];
+    for (let i = 0; i < numRolls; i++) {
+      let lengthCm = packCountCm;
+      if (i === numRolls - 1 && (qtyCm % packCountCm !== 0)) {
+        lengthCm = qtyCm % packCountCm;
+      }
+      const durationMins = (workTime * lengthCm) / 60;
+      items.push({
+        id: Date.now() + String(i) + Math.random().toString(36).substring(2, 7),
+        type: 'hinban',
+        hinban: foundItem.hinban,
+        poolItemId: foundItem.id,
+        rollIndex: i + 1,
+        totalRolls: numRolls,
+        meters: lengthCm / 100,
+        duration: Math.round(durationMins)
+      });
+    }
+    return items;
+  };
 
   const handleSyncExcel = async (monthToSync) => {
     setIsSyncModalOpen(false);
@@ -156,7 +190,66 @@ export default function FirstFactoryPage() {
       
       const saveJson = await saveRes.json();
       if (saveJson.success) {
-        alert(saveJson.message);
+        // Detect impact across existing saved schedules
+        const impact = [];
+        savedSchedules.forEach(sched => {
+          const dayNum = Number(sched.date);
+          if (!dayNum || !Array.isArray(sched.scheduleOrder) || sched.scheduleOrder.length === 0) return;
+
+          const dayIssues = [];
+          const uniqueHinbans = [...new Set(sched.scheduleOrder.filter(i => i.type === 'hinban' && i.hinban).map(i => i.hinban))];
+
+          uniqueHinbans.forEach(hinban => {
+            const scheduledRolls = sched.scheduleOrder.filter(i => i.hinban === hinban);
+            const scheduledMeters = scheduledRolls.reduce((sum, r) => sum + (Number(r.meters) || 0), 0);
+            const found = parsedData.find(i => i.hinban === hinban);
+
+            if (!found) {
+              dayIssues.push({
+                hinban,
+                type: 'missing',
+                text: 'Not found in Excel dataset for this month'
+              });
+            } else {
+              const prodQty = found.production[dayNum - 1] || 0;
+              if (prodQty === 0) {
+                const otherDays = [];
+                for (let d = 1; d <= 31; d++) {
+                  if ((found.production[d - 1] || 0) > 0) {
+                    otherDays.push(`${d}th (${found.production[d - 1]}m)`);
+                  }
+                }
+                dayIssues.push({
+                  hinban,
+                  type: 'moved_or_zero',
+                  text: otherDays.length > 0 ? `Moved in Excel to: Day ${otherDays.join(', ')} (0m on Day ${dayNum})` : `Excel production reduced to 0m`
+                });
+              } else if (Number(prodQty.toFixed(1)) !== Number(scheduledMeters.toFixed(1))) {
+                dayIssues.push({
+                  hinban,
+                  type: 'qty_mismatch',
+                  text: `Quantity changed: Scheduled ${scheduledMeters}m → Excel ${prodQty}m`
+                });
+              }
+            }
+          });
+
+          if (dayIssues.length > 0) {
+            impact.push({
+              date: dayNum,
+              dateKey: `${monthToSync}-${String(dayNum).padStart(2, '0')}`,
+              issues: dayIssues
+            });
+          }
+        });
+
+        if (impact.length > 0) {
+          setSyncImpactReport(impact);
+          setIsImpactModalOpen(true);
+        } else {
+          alert(saveJson.message);
+        }
+
         if (monthToSync === selectedMonth) {
           fetchSchedule(selectedMonth);
         }
@@ -374,6 +467,154 @@ export default function FirstFactoryPage() {
     return h > 0 ? `${h}h ${m}m` : `${m}m`;
   };
 
+  // --- DISCREPANCY DETECTION FOR THE SELECTED DATE ---
+  const currentDayDiscrepancies = useMemo(() => {
+    if (!scheduleOrder || scheduleOrder.length === 0) {
+      return { map: {}, list: [], count: 0 };
+    }
+
+    const hinbanGroups = {};
+    scheduleOrder.forEach(item => {
+      if (item.type === 'hinban' && item.hinban) {
+        if (!hinbanGroups[item.hinban]) {
+          hinbanGroups[item.hinban] = [];
+        }
+        hinbanGroups[item.hinban].push(item);
+      }
+    });
+
+    const map = {};
+    const list = [];
+
+    Object.entries(hinbanGroups).forEach(([hinban, rolls]) => {
+      const scheduledMeters = Number(rolls.reduce((sum, r) => sum + (Number(r.meters) || 0), 0).toFixed(1));
+      const foundRow = data.find(i => i.hinban === hinban);
+
+      if (!foundRow) {
+        const disc = {
+          hinban,
+          type: 'missing_in_excel',
+          excelQty: 0,
+          scheduledMeters,
+          message: '品番が今月のエクセルデータに存在しません (Not in Excel)',
+          rollsCount: rolls.length
+        };
+        map[hinban] = disc;
+        list.push(disc);
+      } else {
+        const excelQty = Number((foundRow.production[selectedDay - 1] || 0).toFixed(1));
+        if (excelQty === 0) {
+          const otherDays = [];
+          for (let d = 1; d <= 31; d++) {
+            const q = foundRow.production[d - 1] || 0;
+            if (q > 0) {
+              otherDays.push(`${d}日 (${q}m)`);
+            }
+          }
+          const movedText = otherDays.length > 0 
+            ? `エクセルで他日程に移動: ${otherDays.join(', ')}` 
+            : 'エクセル生産数: 0m';
+          
+          const disc = {
+            hinban,
+            type: 'moved_or_zero',
+            excelQty: 0,
+            scheduledMeters,
+            movedText,
+            message: movedText,
+            rollsCount: rolls.length,
+            foundRow
+          };
+          map[hinban] = disc;
+          list.push(disc);
+        } else if (excelQty !== scheduledMeters) {
+          const disc = {
+            hinban,
+            type: 'qty_mismatch',
+            excelQty,
+            scheduledMeters,
+            message: `エクセル数量不一致: スケジュール ${scheduledMeters}m → エクセル ${excelQty}m`,
+            rollsCount: rolls.length,
+            foundRow
+          };
+          map[hinban] = disc;
+          list.push(disc);
+        }
+      }
+    });
+
+    return {
+      map,
+      list,
+      count: list.length
+    };
+  }, [scheduleOrder, data, selectedDay]);
+
+  // Auto-align ONLY for the currently selected date (does not touch any other dates)
+  const handleAutoAlignCurrentDate = () => {
+    if (currentDayDiscrepancies.count === 0) return;
+
+    setScheduleOrder(prevOrder => {
+      let newOrder = [];
+      const processedHinbans = new Set();
+
+      for (let i = 0; i < prevOrder.length; i++) {
+        const item = prevOrder[i];
+        if (item.type === 'setup') {
+          newOrder.push(item);
+          continue;
+        }
+
+        const hinban = item.hinban;
+        const disc = currentDayDiscrepancies.map[hinban];
+
+        if (!disc) {
+          // No discrepancy, retain item
+          newOrder.push(item);
+        } else if (disc.type === 'moved_or_zero' || disc.type === 'missing_in_excel') {
+          // 0m or missing in Excel: remove from this day's schedule
+          continue;
+        } else if (disc.type === 'qty_mismatch') {
+          // Replace rolls with updated roll breakdown at this position
+          if (!processedHinbans.has(hinban)) {
+            processedHinbans.add(hinban);
+            const updatedRolls = createRollItemsForHinban(disc.foundRow, selectedDay - 1);
+            newOrder.push(...updatedRolls);
+          }
+        }
+      }
+
+      return newOrder;
+    });
+
+    setIsDiscrepancyModalOpen(false);
+  };
+
+  const handleUpdateHinbanQty = (hinban) => {
+    const disc = currentDayDiscrepancies.map[hinban];
+    if (!disc || !disc.foundRow) return;
+
+    setScheduleOrder(prevOrder => {
+      const newOrder = [];
+      let replaced = false;
+
+      for (let i = 0; i < prevOrder.length; i++) {
+        const item = prevOrder[i];
+        if (item.type === 'hinban' && item.hinban === hinban) {
+          if (!replaced) {
+            replaced = true;
+            const updatedRolls = createRollItemsForHinban(disc.foundRow, selectedDay - 1);
+            newOrder.push(...updatedRolls);
+          }
+        } else {
+          newOrder.push(item);
+        }
+      }
+
+      return newOrder;
+    });
+  };
+
   const handleSaveSchedule = async () => {
     try {
       const authUser = readStoredAuthUser() || {};
@@ -436,6 +677,7 @@ export default function FirstFactoryPage() {
       let setupCount = 0;
       let hinbanCount = 0;
       const dayUniqueHinbans = new Set();
+      let mismatchCount = 0;
 
       if (isScheduled) {
         scheduledDaysCount++;
@@ -455,6 +697,24 @@ export default function FirstFactoryPage() {
             }
           }
         });
+
+        // Compute mismatch count against current Excel data
+        if (data.length > 0) {
+          dayUniqueHinbans.forEach(h => {
+            const found = data.find(item => item.hinban === h);
+            if (!found) {
+              mismatchCount++;
+            } else {
+              const q = Number((found.production[day - 1] || 0).toFixed(1));
+              const scheduledMeters = Number(saved.scheduleOrder
+                .filter(i => i.hinban === h)
+                .reduce((sum, r) => sum + (Number(r.meters) || 0), 0).toFixed(1));
+              if (q === 0 || q !== scheduledMeters) {
+                mismatchCount++;
+              }
+            }
+          });
+        }
 
         totalScheduledMins += dayTotalMins;
         if (dayTotalMins > maxDayMins) maxDayMins = dayTotalMins;
@@ -482,6 +742,8 @@ export default function FirstFactoryPage() {
         setupCount,
         hinbanCount,
         uniqueHinbanCount: dayUniqueHinbans.size,
+        mismatchCount,
+        hasMismatch: mismatchCount > 0,
         scheduledBy,
         updatedAtStr
       });
@@ -644,6 +906,32 @@ export default function FirstFactoryPage() {
       renderCell: (row) => (
         <span className="text-xs text-outline font-mono">{row.updatedAtStr}</span>
       )
+    },
+    {
+      key: 'syncStatus',
+      label: 'Excel Sync',
+      sortable: true,
+      minWidth: 140,
+      renderCell: (row) => {
+        if (!row.isScheduled) return <span className="text-outline text-xs">—</span>;
+        if (row.hasMismatch) {
+          return (
+            <span 
+              className="inline-flex items-center gap-1 rounded-full bg-amber-500/10 px-2.5 py-1 text-xs font-bold text-amber-600 border border-amber-500/30"
+              title={`${row.mismatchCount} scheduled hinban(s) differ from the latest Excel on this date`}
+            >
+              <span className="material-symbols-outlined" style={{ fontSize: 14 }}>sync_problem</span>
+              {row.mismatchCount} Discrepanc{row.mismatchCount === 1 ? 'y' : 'ies'}
+            </span>
+          );
+        }
+        return (
+          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2.5 py-1 text-xs font-semibold text-emerald-600 border border-emerald-500/20">
+            <span className="material-symbols-outlined" style={{ fontSize: 14 }}>check_circle</span>
+            Synced
+          </span>
+        );
+      }
     },
     {
       key: 'actions',
@@ -986,31 +1274,7 @@ export default function FirstFactoryPage() {
         } else if (dragData.type === 'pool-hinban') {
           const found = data.find(i => i.id === dragData.id);
           if (found) {
-             const qty = found.production[selectedDay - 1] || 0;
-             const qtyCm = qty * 100;
-             const packCountCm = found.materialInfo?.packCount || 4000;
-             const workTime = found.materialInfo?.workTime || 0.075;
-             
-             if (qtyCm > 0) {
-               const numRolls = Math.ceil(qtyCm / packCountCm);
-               for (let i = 0; i < numRolls; i++) {
-                 let lengthCm = packCountCm;
-                 if (i === numRolls - 1 && (qtyCm % packCountCm !== 0)) {
-                   lengthCm = qtyCm % packCountCm;
-                 }
-                 const durationMins = (workTime * lengthCm) / 60;
-                 itemsToInsert.push({
-                   id: Date.now() + String(i) + Math.random().toString(),
-                   type: 'hinban',
-                   hinban: dragData.hinban,
-                   poolItemId: dragData.id,
-                   rollIndex: i + 1,
-                   totalRolls: numRolls,
-                   meters: lengthCm / 100,
-                   duration: Math.round(durationMins)
-                 });
-               }
-             }
+            itemsToInsert = createRollItemsForHinban(found, selectedDay - 1);
           }
         }
         
@@ -1039,31 +1303,7 @@ export default function FirstFactoryPage() {
       } else if (dragData.type === 'pool-hinban') {
         const found = data.find(i => i.id === dragData.id);
         if (found) {
-           const qty = found.production[selectedDay - 1] || 0;
-           const qtyCm = qty * 100;
-           const packCountCm = found.materialInfo?.packCount || 4000;
-           const workTime = found.materialInfo?.workTime || 0.075;
-           
-           if (qtyCm > 0) {
-             const numRolls = Math.ceil(qtyCm / packCountCm);
-             for (let i = 0; i < numRolls; i++) {
-               let lengthCm = packCountCm;
-               if (i === numRolls - 1 && (qtyCm % packCountCm !== 0)) {
-                 lengthCm = qtyCm % packCountCm;
-               }
-               const durationMins = (workTime * lengthCm) / 60;
-               itemsToInsert.push({
-                 id: Date.now() + String(i) + Math.random().toString(),
-                 type: 'hinban',
-                 hinban: dragData.hinban,
-                 poolItemId: dragData.id,
-                 rollIndex: i + 1,
-                 totalRolls: numRolls,
-                 meters: lengthCm / 100,
-                 duration: Math.round(durationMins)
-               });
-             }
-           }
+          itemsToInsert = createRollItemsForHinban(found, selectedDay - 1);
         }
       }
       
@@ -1270,6 +1510,45 @@ export default function FirstFactoryPage() {
 
       {activeTab === 'scheduling' && (
         <div className="flex flex-col gap-6">
+          {/* Discrepancy Notice Banner for the Current Date */}
+          {currentDayDiscrepancies.count > 0 && (
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 rounded-2xl border border-amber-500/40 bg-amber-500/10 p-4 backdrop-blur-xl shadow-sm">
+              <div className="flex items-center gap-3">
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-500/20 text-amber-600">
+                  <span className="material-symbols-outlined" style={{ fontSize: 24 }}>sync_problem</span>
+                </span>
+                <div>
+                  <h4 className="text-sm font-bold text-on-surface flex items-center gap-2">
+                    Excel Discrepancy on {parseInt(selectedMonth.split('-')[1], 10)}/{selectedDay}
+                    <span className="rounded-full bg-amber-500/20 px-2 py-0.5 text-xs font-bold text-amber-700">
+                      {currentDayDiscrepancies.count} affected hinban{currentDayDiscrepancies.count === 1 ? '' : 's'}
+                    </span>
+                  </h4>
+                  <p className="text-xs text-outline mt-0.5">
+                    Some scheduled hinbans have 0m in Excel or changed quantities. Auto-aligning will <strong>only update this specific date ({selectedDateStr})</strong> without affecting other dates.
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 w-full sm:w-auto justify-end shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setIsDiscrepancyModalOpen(true)}
+                  className="rounded-xl border border-amber-500/40 bg-surface/80 px-3 py-2 text-xs font-bold text-amber-700 hover:bg-surface transition-colors shadow-xs"
+                >
+                  Review Details
+                </button>
+                <button
+                  type="button"
+                  onClick={handleAutoAlignCurrentDate}
+                  className="flex items-center gap-1.5 rounded-xl bg-amber-600 px-3.5 py-2 text-xs font-bold text-white shadow-sm hover:bg-amber-700 transition-colors"
+                >
+                  <span className="material-symbols-outlined" style={{ fontSize: 16 }}>auto_fix_high</span>
+                  Auto-Align {parseInt(selectedMonth.split('-')[1], 10)}/{selectedDay} with Excel
+                </button>
+              </div>
+            </div>
+          )}
+
           <div className="flex items-center justify-between rounded-2xl border border-outline-variant/30 bg-surface/50 p-4 backdrop-blur-xl">
             <div className="flex items-center gap-4">
               <span className="text-sm font-medium text-on-surface">Select Date:</span>
@@ -1531,51 +1810,97 @@ export default function FirstFactoryPage() {
                     Drag items here to set priority order
                   </div>
                 ) : (
-                  scheduleWithTimes.map((item, index) => (
-                    <div 
-                      key={item.id}
-                      draggable
-                      onDragStart={(e) => onDragStartSchedule(e, item, 'scheduled')}
-                      onDragOver={(e) => e.preventDefault()}
-                      onDrop={(e) => {
-                        e.stopPropagation(); // Prevent column drop
-                        onDropScheduled(e, index);
-                      }}
-                      className={`cursor-grab active:cursor-grabbing rounded-xl border p-3 flex items-center gap-3 shadow-sm transition-colors ${item.type === 'setup' ? 'border-amber-500/30 bg-amber-500/5 hover:border-amber-500/60' : 'border-primary/20 bg-surface hover:border-primary/60'}`}
-                    >
-                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-bold text-primary">
-                        {index + 1}
-                      </span>
-                      <span className="flex flex-col items-center justify-center rounded bg-surface-variant/30 px-2 py-1 text-xs font-medium text-outline min-w-[50px]">
-                        <span>{item.startTime}</span>
-                        <span className="text-[10px] opacity-70">to {item.endTime}</span>
-                      </span>
-                      
-                      {item.type === 'setup' ? (
-                        <>
-                          <span className="font-bold text-sm text-amber-600 flex-1">{item.name}</span>
-                          <span className="text-xs font-medium text-amber-600/70">{item.duration} mins</span>
-                        </>
-                      ) : (
-                        <>
-                          <div className="flex-1 flex flex-col cursor-pointer" onClick={() => handleCardClick(item.hinban)}>
-                            <span className="font-medium text-sm text-on-surface hover:text-primary transition-colors">{item.hinban}</span>
-                            <span className="text-xs text-outline flex items-center gap-2 mt-1">
-                               <span className="bg-primary/10 text-primary px-1.5 rounded-sm">Roll {item.rollIndex}/{item.totalRolls}</span>
-                               <span>{item.meters}m</span>
-                            </span>
-                          </div>
-                          <span className="text-xs font-bold text-primary whitespace-nowrap">{item.duration} mins</span>
-                        </>
-                      )}
-                      <button 
-                        onClick={() => handleRemoveFromSchedule(item)}
-                        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full hover:bg-red-500/10 text-red-500 transition-colors ml-2"
+                  scheduleWithTimes.map((item, index) => {
+                    const disc = item.type === 'hinban' ? currentDayDiscrepancies.map[item.hinban] : null;
+                    const isZeroOrMissing = disc && (disc.type === 'moved_or_zero' || disc.type === 'missing_in_excel');
+                    const isQtyMismatch = disc && disc.type === 'qty_mismatch';
+
+                    let cardBorderClass = 'border-primary/20 bg-surface hover:border-primary/60';
+                    if (item.type === 'setup') {
+                      cardBorderClass = 'border-amber-500/30 bg-amber-500/5 hover:border-amber-500/60';
+                    } else if (isZeroOrMissing) {
+                      cardBorderClass = 'border-red-500/40 bg-red-500/5 hover:border-red-500/70';
+                    } else if (isQtyMismatch) {
+                      cardBorderClass = 'border-amber-500/40 bg-amber-500/5 hover:border-amber-500/70';
+                    }
+
+                    return (
+                      <div 
+                        key={item.id}
+                        draggable
+                        onDragStart={(e) => onDragStartSchedule(e, item, 'scheduled')}
+                        onDragOver={(e) => e.preventDefault()}
+                        onDrop={(e) => {
+                          e.stopPropagation(); // Prevent column drop
+                          onDropScheduled(e, index);
+                        }}
+                        className={`cursor-grab active:cursor-grabbing rounded-xl border p-3 flex items-center gap-3 shadow-sm transition-colors ${cardBorderClass}`}
                       >
-                        <span className="material-symbols-outlined" style={{fontSize: 20}}>arrow_back</span>
-                      </button>
-                    </div>
-                  ))
+                        <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
+                          isZeroOrMissing ? 'bg-red-500/20 text-red-600' : (isQtyMismatch ? 'bg-amber-500/20 text-amber-700' : 'bg-primary/10 text-primary')
+                        }`}>
+                          {index + 1}
+                        </span>
+                        <span className="flex flex-col items-center justify-center rounded bg-surface-variant/30 px-2 py-1 text-xs font-medium text-outline min-w-[50px]">
+                          <span>{item.startTime}</span>
+                          <span className="text-[10px] opacity-70">to {item.endTime}</span>
+                        </span>
+                        
+                        {item.type === 'setup' ? (
+                          <>
+                            <span className="font-bold text-sm text-amber-600 flex-1">{item.name}</span>
+                            <span className="text-xs font-medium text-amber-600/70">{item.duration} mins</span>
+                          </>
+                        ) : (
+                          <>
+                            <div className="flex-1 flex flex-col cursor-pointer min-w-0" onClick={() => handleCardClick(item.hinban)}>
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span className="font-medium text-sm text-on-surface hover:text-primary transition-colors">{item.hinban}</span>
+                                {isZeroOrMissing && (
+                                  <span className="inline-flex items-center gap-1 rounded bg-red-500/15 px-1.5 py-0.5 text-[10px] font-bold text-red-600 border border-red-500/30">
+                                    <span className="material-symbols-outlined" style={{ fontSize: 12 }}>warning</span>
+                                    {disc.type === 'missing_in_excel' ? 'Not in Excel' : (disc.movedText || '0m in Excel today')}
+                                  </span>
+                                )}
+                                {isQtyMismatch && (
+                                  <span className="inline-flex items-center gap-1 rounded bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-bold text-amber-700 border border-amber-500/30">
+                                    <span className="material-symbols-outlined" style={{ fontSize: 12 }}>difference</span>
+                                    Excel: {disc.excelQty}m
+                                  </span>
+                                )}
+                              </div>
+                              <div className="flex items-center gap-2 mt-1 text-xs text-outline flex-wrap">
+                                <span className="bg-primary/10 text-primary px-1.5 rounded-sm">Roll {item.rollIndex}/{item.totalRolls}</span>
+                                <span>{item.meters}m</span>
+                                {isQtyMismatch && item.rollIndex === 1 && (
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleUpdateHinbanQty(item.hinban);
+                                    }}
+                                    className="inline-flex items-center gap-1 rounded bg-amber-500/20 px-2 py-0.5 text-[11px] font-bold text-amber-800 hover:bg-amber-500/30 transition-colors ml-1"
+                                    title="Update rolls and duration to match Excel"
+                                  >
+                                    <span className="material-symbols-outlined" style={{ fontSize: 12 }}>sync</span>
+                                    Update Qty ({disc.excelQty}m)
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+                            <span className="text-xs font-bold text-primary whitespace-nowrap">{item.duration} mins</span>
+                          </>
+                        )}
+                        <button 
+                          onClick={() => handleRemoveFromSchedule(item)}
+                          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full hover:bg-red-500/10 text-red-500 transition-colors ml-2"
+                          title="Remove from schedule"
+                        >
+                          <span className="material-symbols-outlined" style={{fontSize: 20}}>arrow_back</span>
+                        </button>
+                      </div>
+                    );
+                  })
                 )}
               </div>
             </div>
@@ -2146,6 +2471,190 @@ export default function FirstFactoryPage() {
                 className="rounded-lg bg-primary px-5 py-2 text-sm font-medium text-on-primary hover:bg-primary/90 transition-colors"
               >
                 Fetch Data
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* Discrepancy Review Modal for Selected Date */}
+      {isDiscrepancyModalOpen && createPortal(
+        <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+          <div className="bg-surface border border-outline-variant/30 rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[85vh] animate-[fadeIn_0.15s_ease-out]">
+            <div className="flex items-center justify-between p-5 border-b border-outline-variant/30 bg-amber-500/10">
+              <div className="flex items-center gap-2.5">
+                <span className="material-symbols-outlined text-amber-600" style={{ fontSize: 24 }}>sync_problem</span>
+                <div>
+                  <h2 className="text-base font-bold text-on-surface">Excel Discrepancies on {selectedDateStr}</h2>
+                  <p className="text-xs text-outline">{currentDayDiscrepancies.count} affected hinban(s) detected</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setIsDiscrepancyModalOpen(false)}
+                className="flex h-8 w-8 items-center justify-center rounded-full hover:bg-surface-variant/50 text-outline transition-colors"
+              >
+                <span className="material-symbols-outlined" style={{fontSize: 20}}>close</span>
+              </button>
+            </div>
+
+            <div className="p-5 flex-1 overflow-y-auto flex flex-col gap-3">
+              <p className="text-xs text-outline leading-relaxed">
+                The items below are currently in this date's priority schedule, but differ from the latest synced Excel data. You can resolve them individually or click <strong>Auto-Align All</strong> to update this date ({selectedDateStr}).
+              </p>
+
+              {currentDayDiscrepancies.list.map(disc => {
+                const isZeroOrMissing = disc.type === 'moved_or_zero' || disc.type === 'missing_in_excel';
+                return (
+                  <div 
+                    key={disc.hinban} 
+                    className={`rounded-xl border p-3 flex flex-col gap-2 ${
+                      isZeroOrMissing ? 'border-red-500/30 bg-red-500/5' : 'border-amber-500/30 bg-amber-500/5'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="font-bold text-sm text-on-surface">{disc.hinban}</span>
+                      <span className="text-xs text-outline font-mono">
+                        Scheduled: {disc.scheduledMeters}m ({disc.rollsCount} roll{disc.rollsCount === 1 ? '' : 's'})
+                      </span>
+                    </div>
+
+                    <div className="text-xs">
+                      {isZeroOrMissing ? (
+                        <div className="flex items-center gap-1.5 text-red-600 font-medium">
+                          <span className="material-symbols-outlined" style={{ fontSize: 16 }}>cancel</span>
+                          <span>{disc.type === 'missing_in_excel' ? 'Not in Excel for this month' : (disc.movedText || '0m in Excel today')}</span>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-1.5 text-amber-700 font-medium">
+                          <span className="material-symbols-outlined" style={{ fontSize: 16 }}>difference</span>
+                          <span>Excel Quantity: <strong>{disc.excelQty}m</strong> (Difference: {(disc.excelQty - disc.scheduledMeters).toFixed(1)}m)</span>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="flex justify-end pt-1">
+                      {isZeroOrMissing ? (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setScheduleOrder(prev => prev.filter(i => i.hinban !== disc.hinban));
+                          }}
+                          className="inline-flex items-center gap-1 rounded-lg bg-red-500/10 px-2.5 py-1 text-xs font-bold text-red-600 hover:bg-red-500/20 transition-colors"
+                        >
+                          <span className="material-symbols-outlined" style={{ fontSize: 14 }}>delete</span>
+                          Remove from {parseInt(selectedMonth.split('-')[1], 10)}/{selectedDay}
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => handleUpdateHinbanQty(disc.hinban)}
+                          className="inline-flex items-center gap-1 rounded-lg bg-amber-500/20 px-2.5 py-1 text-xs font-bold text-amber-800 hover:bg-amber-500/30 transition-colors"
+                        >
+                          <span className="material-symbols-outlined" style={{ fontSize: 14 }}>sync</span>
+                          Update Qty & Rolls to {disc.excelQty}m
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="flex items-center justify-between p-4 border-t border-outline-variant/30 bg-surface-variant/10">
+              <button 
+                onClick={() => setIsDiscrepancyModalOpen(false)}
+                className="rounded-lg px-4 py-2 text-xs font-semibold text-outline hover:bg-surface-variant/50 transition-colors"
+              >
+                Close
+              </button>
+              <button 
+                onClick={handleAutoAlignCurrentDate}
+                className="flex items-center gap-1.5 rounded-xl bg-amber-600 px-4 py-2 text-xs font-bold text-white hover:bg-amber-700 transition-colors shadow-sm"
+              >
+                <span className="material-symbols-outlined" style={{ fontSize: 16 }}>auto_fix_high</span>
+                Auto-Align All on {parseInt(selectedMonth.split('-')[1], 10)}/{selectedDay}
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* Post-Sync Schedule Impact Summary Modal */}
+      {isImpactModalOpen && createPortal(
+        <div className="fixed inset-0 z-[115] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+          <div className="bg-surface border border-outline-variant/30 rounded-2xl shadow-2xl w-full max-w-xl overflow-hidden flex flex-col max-h-[85vh] animate-[fadeIn_0.15s_ease-out]">
+            <div className="flex items-center justify-between p-5 border-b border-outline-variant/30 bg-primary/10">
+              <div className="flex items-center gap-2.5">
+                <span className="material-symbols-outlined text-primary" style={{ fontSize: 24 }}>assessment</span>
+                <div>
+                  <h2 className="text-base font-bold text-on-surface">Excel Sync Complete — Affected Schedules</h2>
+                  <p className="text-xs text-outline">New Excel data affects existing priority schedules in {selectedMonth}</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setIsImpactModalOpen(false)}
+                className="flex h-8 w-8 items-center justify-center rounded-full hover:bg-surface-variant/50 text-outline transition-colors"
+              >
+                <span className="material-symbols-outlined" style={{fontSize: 20}}>close</span>
+              </button>
+            </div>
+
+            <div className="p-5 flex-1 overflow-y-auto flex flex-col gap-4">
+              <div className="rounded-xl border border-primary/20 bg-primary/5 p-3 text-xs text-on-surface leading-relaxed">
+                The Excel file has been synced successfully. The following saved daily schedules contain hinbans whose dates or quantities were updated in Excel. You can review each date individually:
+              </div>
+
+              <div className="flex flex-col gap-3">
+                {syncImpactReport.map(report => (
+                  <div key={report.dateKey} className="rounded-xl border border-outline-variant/30 bg-surface-variant/10 p-3 flex flex-col gap-2">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2 font-bold text-sm text-on-surface">
+                        <span className="material-symbols-outlined text-outline" style={{ fontSize: 16 }}>calendar_today</span>
+                        <span>{parseInt(selectedMonth.split('-')[1], 10)}/{report.date}</span>
+                        <span className="rounded-full bg-amber-500/20 px-2 py-0.5 text-[11px] font-bold text-amber-700">
+                          {report.issues.length} issue{report.issues.length === 1 ? '' : 's'}
+                        </span>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSelectedDateStr(report.dateKey);
+                          setIsImpactModalOpen(false);
+                          if (activeTab !== 'scheduling') {
+                            navigate('/firstFactory/scheduling');
+                          }
+                        }}
+                        className="inline-flex items-center gap-1 rounded-lg border border-primary/40 bg-primary/10 px-2.5 py-1 text-xs font-bold text-primary hover:bg-primary hover:text-on-primary transition-colors"
+                      >
+                        <span className="material-symbols-outlined" style={{ fontSize: 14 }}>arrow_forward</span>
+                        Open Schedule
+                      </button>
+                    </div>
+
+                    <div className="flex flex-col gap-1.5 pl-6 border-l-2 border-outline-variant/30">
+                      {report.issues.map((iss, i) => (
+                        <div key={i} className="text-xs flex items-start gap-1.5">
+                          <span className="font-semibold text-on-surface shrink-0">{iss.hinban}:</span>
+                          <span className={iss.type === 'moved_or_zero' || iss.type === 'missing' ? 'text-red-600 font-medium' : 'text-amber-700 font-medium'}>
+                            {iss.text}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end p-4 border-t border-outline-variant/30 bg-surface-variant/10">
+              <button 
+                onClick={() => setIsImpactModalOpen(false)}
+                className="rounded-lg bg-primary px-5 py-2 text-xs font-bold text-on-primary hover:bg-primary/90 transition-colors shadow-sm"
+              >
+                Close & Review
               </button>
             </div>
           </div>
