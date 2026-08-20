@@ -92,6 +92,9 @@ export default function FirstFactoryPage() {
   const [syncImpactReport, setSyncImpactReport] = useState([]);
   const [isImpactModalOpen, setIsImpactModalOpen] = useState(false);
   const [isDiscrepancyModalOpen, setIsDiscrepancyModalOpen] = useState(false);
+  const [setupComments, setSetupComments] = useState({});
+  const [commentModalItem, setCommentModalItem] = useState(null);
+  const [tempCommentText, setTempCommentText] = useState('');
 
   // Helper to split a hinban production quantity into roll items
   const createRollItemsForHinban = (foundItem, dayIndex) => {
@@ -1376,6 +1379,7 @@ export default function FirstFactoryPage() {
             id: Date.now() + Math.random().toString(),
             type: 'setup',
             name: dragData.name,
+            comment: dragData.comment || '',
             duration: dragData.duration || 15
           });
         } else if (dragData.type === 'pool-hinban') {
@@ -1405,6 +1409,7 @@ export default function FirstFactoryPage() {
           id: Date.now() + Math.random().toString(),
           type: 'setup',
           name: dragData.name,
+          comment: dragData.comment || '',
           duration: dragData.duration || 15
         });
       } else if (dragData.type === 'pool-hinban') {
@@ -1847,38 +1852,59 @@ export default function FirstFactoryPage() {
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
                     {PRESET_SETUP_ITEMS.map(preset => {
                       const duration = setupTimes[preset.name] !== undefined ? setupTimes[preset.name] : preset.defaultTime;
+                      const comment = setupComments[preset.name] || '';
                       return (
                         <div 
                           key={preset.name}
                           draggable
                           onDragStart={(e) => {
-                            if (e.target.tagName && e.target.tagName.toLowerCase() === 'input') {
+                            if (e.target.tagName && (e.target.tagName.toLowerCase() === 'input' || e.target.tagName.toLowerCase() === 'button')) {
                               e.preventDefault();
                               return;
                             }
-                            onDragStartSchedule(e, { type: 'setup', name: preset.name, duration }, 'pool');
+                            onDragStartSchedule(e, { type: 'setup', name: preset.name, comment, duration }, 'pool');
                           }}
-                          className="cursor-grab rounded-xl border border-dashed border-primary/50 bg-primary/5 p-2.5 flex items-center justify-between hover:border-primary transition-colors text-primary font-bold text-xs"
+                          className="cursor-grab rounded-xl border border-dashed border-primary/50 bg-primary/5 p-2.5 flex flex-col justify-between hover:border-primary transition-colors text-primary font-bold text-xs"
                         >
-                          <div className="flex items-center gap-1.5 min-w-0 flex-1">
-                            <span className="truncate" title={preset.name}>{preset.name}</span>
-                            <input 
-                              type="number" 
-                              value={duration} 
-                              onChange={e => handleUpdateSetupTime(preset.name, e.target.value)}
-                              className="w-12 rounded bg-background/80 border border-primary/30 px-1 py-0.5 text-center text-xs focus:outline-none focus:border-primary shrink-0"
-                              min="0"
-                            />
-                            <span className="text-[11px] font-medium shrink-0">m</span>
+                          <div className="flex items-center justify-between gap-1 w-full">
+                            <div className="flex items-center gap-1 min-w-0 flex-1">
+                              <span className="truncate font-bold" title={comment ? `${preset.name} ${comment}` : preset.name}>
+                                {comment ? `${preset.name} ${comment}` : preset.name}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setCommentModalItem({ name: preset.name, isPreset: true, comment });
+                                  setTempCommentText(comment);
+                                }}
+                                className={`p-0.5 rounded hover:bg-primary/20 transition-colors shrink-0 ${comment ? 'text-primary font-bold' : 'text-primary/40 hover:text-primary'}`}
+                                title={comment ? `Title: ${preset.name} ${comment}` : "Click to edit title / add text"}
+                              >
+                                <span className="material-symbols-outlined" style={{ fontSize: 16 }}>
+                                  edit_note
+                                </span>
+                              </button>
+                            </div>
+                            <div className="flex items-center gap-1 shrink-0">
+                              <input 
+                                type="number" 
+                                value={duration} 
+                                onChange={e => handleUpdateSetupTime(preset.name, e.target.value)}
+                                className="w-11 rounded bg-background/80 border border-primary/30 px-1 py-0.5 text-center text-xs focus:outline-none focus:border-primary font-normal"
+                                min="0"
+                              />
+                              <span className="text-[11px] font-medium">m</span>
+                              <button 
+                                type="button"
+                                onClick={() => handleAddToSchedule({ type: 'setup', name: preset.name, comment, duration })}
+                                className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full hover:bg-primary/20 text-primary transition-colors ml-0.5"
+                                title="スケジュールに追加"
+                              >
+                                <span className="material-symbols-outlined" style={{fontSize: 16}}>arrow_forward</span>
+                              </button>
+                            </div>
                           </div>
-                          <button 
-                            type="button"
-                            onClick={() => handleAddToSchedule({ type: 'setup', name: preset.name, duration })}
-                            className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full hover:bg-primary/20 text-primary transition-colors ml-1"
-                            title="スケジュールに追加"
-                          >
-                            <span className="material-symbols-outlined" style={{fontSize: 16}}>arrow_forward</span>
-                          </button>
                         </div>
                       );
                     })}
@@ -1887,19 +1913,20 @@ export default function FirstFactoryPage() {
                     <div 
                       draggable
                       onDragStart={(e) => {
-                        if (e.target.tagName && e.target.tagName.toLowerCase() === 'input') {
+                        if (e.target.tagName && (e.target.tagName.toLowerCase() === 'input' || e.target.tagName.toLowerCase() === 'button')) {
                           e.preventDefault();
                           return;
                         }
                         onDragStartSchedule(e, { 
                           type: 'setup', 
                           name: customSetupName.trim() || 'カスタム設定', 
+                          comment: setupComments['custom'] || '',
                           duration: Number(customSetupDuration) || 0 
                         }, 'pool');
                       }}
-                      className="cursor-grab rounded-xl border border-dashed border-amber-500/50 bg-amber-500/5 p-2.5 flex items-center justify-between hover:border-amber-500 transition-colors text-amber-700 font-bold text-xs"
+                      className="cursor-grab rounded-xl border border-dashed border-amber-500/50 bg-amber-500/5 p-2.5 flex flex-col justify-between hover:border-amber-500 transition-colors text-amber-700 font-bold text-xs"
                     >
-                      <div className="flex items-center gap-1.5 min-w-0 flex-1">
+                      <div className="flex items-center gap-1 min-w-0 flex-1">
                         <input 
                           type="text" 
                           value={customSetupName} 
@@ -1907,28 +1934,49 @@ export default function FirstFactoryPage() {
                           onChange={e => handleUpdateCustomName(e.target.value)}
                           className="w-full min-w-0 rounded bg-background/80 border border-amber-500/30 px-1.5 py-0.5 text-xs text-on-surface placeholder:text-outline focus:outline-none focus:border-amber-500 font-normal"
                         />
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setCommentModalItem({ name: customSetupName.trim() || 'カスタム設定', isPreset: true, isCustom: true, comment: setupComments['custom'] || '' });
+                            setTempCommentText(setupComments['custom'] || '');
+                          }}
+                          className={`p-0.5 rounded hover:bg-amber-500/20 transition-colors shrink-0 ${setupComments['custom'] ? 'text-amber-700 font-bold' : 'text-amber-600/40 hover:text-amber-700'}`}
+                          title={setupComments['custom'] ? `Note: ${setupComments['custom']}` : "Add comment/instruction"}
+                        >
+                          <span className="material-symbols-outlined" style={{ fontSize: 16 }}>
+                            {setupComments['custom'] ? 'chat' : 'add_comment'}
+                          </span>
+                        </button>
                         <input 
                           type="number" 
                           value={customSetupDuration} 
                           placeholder="分"
                           onChange={e => handleUpdateCustomDuration(e.target.value)}
-                          className="w-12 rounded bg-background/80 border border-amber-500/30 px-1 py-0.5 text-center text-xs focus:outline-none focus:border-amber-500 shrink-0 font-normal"
+                          className="w-11 rounded bg-background/80 border border-amber-500/30 px-1 py-0.5 text-center text-xs focus:outline-none focus:border-amber-500 shrink-0 font-normal"
                           min="0"
                         />
                         <span className="text-[11px] font-medium shrink-0">m</span>
+                        <button 
+                          type="button"
+                          onClick={() => handleAddToSchedule({ 
+                            type: 'setup', 
+                            name: customSetupName.trim() || 'カスタム設定', 
+                            comment: setupComments['custom'] || '',
+                            duration: Number(customSetupDuration) || 0 
+                          })}
+                          className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full hover:bg-amber-500/20 text-amber-600 transition-colors ml-0.5"
+                          title="スケジュールに追加"
+                        >
+                          <span className="material-symbols-outlined" style={{fontSize: 16}}>arrow_forward</span>
+                        </button>
                       </div>
-                      <button 
-                        type="button"
-                        onClick={() => handleAddToSchedule({ 
-                          type: 'setup', 
-                          name: customSetupName.trim() || 'カスタム設定', 
-                          duration: Number(customSetupDuration) || 0 
-                        })}
-                        className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full hover:bg-amber-500/20 text-amber-600 transition-colors ml-1"
-                        title="スケジュールに追加"
-                      >
-                        <span className="material-symbols-outlined" style={{fontSize: 16}}>arrow_forward</span>
-                      </button>
+                      {setupComments['custom'] && (
+                        <div className="text-[10px] text-amber-800/80 font-normal italic truncate mt-1 pt-1 border-t border-amber-500/20 flex items-center gap-1">
+                          <span>💬</span>
+                          <span className="truncate">{setupComments['custom']}</span>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -2081,10 +2129,28 @@ export default function FirstFactoryPage() {
                         </span>
                         
                         {item.type === 'setup' ? (
-                          <>
-                            <span className="font-bold text-sm text-amber-600 flex-1">{item.name}</span>
-                            <span className="text-xs font-medium text-amber-600/70">{item.duration} mins</span>
-                          </>
+                          <div className="flex-1 flex items-center justify-between min-w-0 pr-2">
+                            <div className="flex items-center gap-2 min-w-0 flex-1">
+                              <span className="font-bold text-sm text-amber-700 truncate" title={item.comment ? `${item.name} ${item.comment}` : item.name}>
+                                {item.comment ? `${item.name} ${item.comment}` : item.name}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setCommentModalItem(item);
+                                  setTempCommentText(item.comment || '');
+                                }}
+                                className={`p-1 rounded-md hover:bg-amber-500/20 transition-colors shrink-0 ${item.comment ? 'text-amber-800 font-bold' : 'text-amber-600/40 hover:text-amber-700'}`}
+                                title={item.comment ? "Edit title suffix/text" : "Add text to title"}
+                              >
+                                <span className="material-symbols-outlined" style={{ fontSize: 16 }}>
+                                  edit_note
+                                </span>
+                              </button>
+                            </div>
+                            <span className="text-xs font-bold text-amber-700 whitespace-nowrap ml-2">{item.duration} mins</span>
+                          </div>
                         ) : (
                           <>
                             <div className="flex-1 flex flex-col cursor-pointer min-w-0" onClick={() => handleCardClick(item.hinban)}>
@@ -2439,7 +2505,9 @@ export default function FirstFactoryPage() {
                             <span className="rounded bg-amber-500/20 px-2 py-0.5 text-[11px] font-extrabold text-amber-800">
                               段取り / 段替 (Setup)
                             </span>
-                            <h4 className="font-bold text-sm text-on-surface">{group.name}</h4>
+                            <h4 className="font-bold text-sm text-on-surface">
+                              {setupItem?.comment ? `${group.name} ${setupItem.comment}` : group.name}
+                            </h4>
                           </div>
                           <p className="text-xs text-outline mt-0.5">
                             🕒 Scheduled: {group.startTime} ～ {group.endTime} ({group.totalDuration} mins)
@@ -2890,6 +2958,110 @@ export default function FirstFactoryPage() {
               >
                 Close & Review
               </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* Setup Comment / Custom Title Modal */}
+      {commentModalItem && createPortal(
+        <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-[fadeIn_0.15s_ease-out]">
+          <div className="w-full max-w-md rounded-2xl border border-outline-variant/30 bg-surface p-6 shadow-2xl flex flex-col gap-4">
+            <div className="flex items-center justify-between pb-3 border-b border-outline-variant/20">
+              <div className="flex items-center gap-2">
+                <span className="material-symbols-outlined text-amber-600" style={{ fontSize: 22 }}>edit_note</span>
+                <h3 className="text-base font-bold text-on-surface">
+                  Custom Title for <span className="text-amber-600 font-extrabold">{commentModalItem.name}</span>
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setCommentModalItem(null)}
+                className="rounded-lg p-1 text-outline hover:bg-surface-variant/50 hover:text-on-surface transition-colors"
+              >
+                <span className="material-symbols-outlined" style={{ fontSize: 20 }}>close</span>
+              </button>
+            </div>
+
+            <p className="text-xs text-outline leading-relaxed">
+              Enter details to append to the title. This title will appear in the priority schedule list and in the <strong>printed PDF table</strong>:
+            </p>
+
+            <div className="rounded-xl bg-amber-500/10 border border-amber-500/20 p-3 text-xs text-amber-900 font-bold flex items-center gap-2">
+              <span className="text-outline text-[11px] font-normal shrink-0">Title Preview:</span>
+              <span className="font-extrabold text-amber-800">{commentModalItem.name} {tempCommentText.trim()}</span>
+            </div>
+
+            <input
+              type="text"
+              value={tempCommentText}
+              onChange={(e) => setTempCommentText(e.target.value)}
+              placeholder="e.g. hello madapaka"
+              className="w-full rounded-xl border border-outline-variant/50 bg-background/50 p-3 text-sm text-on-surface placeholder:text-outline focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary font-medium"
+              autoFocus
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  const text = tempCommentText.trim();
+                  if (commentModalItem.isPreset) {
+                    const key = commentModalItem.isCustom ? 'custom' : commentModalItem.name;
+                    setSetupComments(prev => ({ ...prev, [key]: text }));
+                  } else if (commentModalItem.id) {
+                    setScheduleOrder(prev => prev.map(item => {
+                      if (item.id === commentModalItem.id) {
+                        return { ...item, comment: text };
+                      }
+                      return item;
+                    }));
+                    setHasUnsavedChanges(true);
+                  }
+                  setCommentModalItem(null);
+                }
+              }}
+            />
+
+            <div className="flex items-center justify-between gap-3 pt-2">
+              {tempCommentText ? (
+                <button
+                  type="button"
+                  onClick={() => setTempCommentText('')}
+                  className="text-xs font-bold text-red-500 hover:underline"
+                >
+                  Clear Suffix
+                </button>
+              ) : <div />}
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setCommentModalItem(null)}
+                  className="rounded-xl border border-outline-variant/50 px-4 py-2 text-xs font-bold text-outline hover:bg-surface-variant/50 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const text = tempCommentText.trim();
+                    if (commentModalItem.isPreset) {
+                      const key = commentModalItem.isCustom ? 'custom' : commentModalItem.name;
+                      setSetupComments(prev => ({ ...prev, [key]: text }));
+                    } else if (commentModalItem.id) {
+                      setScheduleOrder(prev => prev.map(item => {
+                        if (item.id === commentModalItem.id) {
+                          return { ...item, comment: text };
+                        }
+                        return item;
+                      }));
+                      setHasUnsavedChanges(true);
+                    }
+                    setCommentModalItem(null);
+                  }}
+                  className="rounded-xl bg-primary px-4 py-2 text-xs font-bold text-on-primary shadow-sm hover:bg-primary/90 transition-colors"
+                >
+                  Save Title
+                </button>
+              </div>
             </div>
           </div>
         </div>,

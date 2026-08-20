@@ -78,11 +78,12 @@ export function openFirstFactorySchedulePrintWindow({
     totalMins += Number(item.duration) || 0;
 
     if (item.type === 'setup') {
+      const displayName = item.comment ? `${item.name} ${item.comment}` : (item.name || '段取');
       rows.push(`
         <tr class="setup-row">
           <td class="center font-bold">${idx + 1}</td>
           <td class="center font-bold time-cell">${escapeHtml(item.startTime)}<br><span class="text-sub">～ ${escapeHtml(item.endTime)}</span></td>
-          <td colspan="7" class="left font-bold setup-name">⚙️ 段取り / 段替: ${escapeHtml(item.name || '段取')} (${item.duration}分)</td>
+          <td colspan="7" class="left font-bold setup-name">⚙️ 段取り / 段替: ${escapeHtml(displayName)} (${item.duration}分)</td>
           <td class="center font-bold">—</td>
         </tr>
       `);
