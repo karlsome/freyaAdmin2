@@ -407,6 +407,22 @@ export default function FirstFactoryPage() {
     setSelectedDateStr(newDate);
   };
 
+  const handleStepDate = (offset) => {
+    if (hasUnsavedChanges) {
+      if (!window.confirm(t('unsavedChangesWarning') || "You have unsaved changes! Are you sure you want to change the date? Unsaved progress will be lost.")) {
+        return;
+      }
+    }
+    const [y, m, d] = selectedDateStr.split('-').map(Number);
+    const dateObj = new Date(y, m - 1, d);
+    dateObj.setDate(dateObj.getDate() + offset);
+    
+    const nextY = dateObj.getFullYear();
+    const nextM = String(dateObj.getMonth() + 1).padStart(2, '0');
+    const nextD = String(dateObj.getDate()).padStart(2, '0');
+    setSelectedDateStr(`${nextY}-${nextM}-${nextD}`);
+  };
+
   const handleTabChange = (nextTab) => {
     if (activeTab === 'scheduling' && nextTab !== 'scheduling' && hasUnsavedChanges) {
       if (!window.confirm(t('unsavedChangesWarning') || "You have unsaved changes! Are you sure you want to switch tabs? Unsaved progress will be lost.")) {
@@ -1550,14 +1566,32 @@ export default function FirstFactoryPage() {
           )}
 
           <div className="flex items-center justify-between rounded-2xl border border-outline-variant/30 bg-surface/50 p-4 backdrop-blur-xl">
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-3">
               <span className="text-sm font-medium text-on-surface">Select Date:</span>
-              <input 
-                type="date" 
-                value={selectedDateStr}
-                onChange={handleDateChange}
-                className="rounded-xl border border-outline-variant/50 bg-background/50 px-4 py-2 text-sm text-on-surface focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-              />
+              <div className="flex items-center gap-1 rounded-xl border border-outline-variant/50 bg-background/50 p-1">
+                <button
+                  type="button"
+                  onClick={() => handleStepDate(-1)}
+                  className="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-surface-variant/50 text-on-surface transition-colors active:scale-95 cursor-pointer"
+                  title="Previous Day"
+                >
+                  <span className="material-symbols-outlined" style={{ fontSize: 20 }}>chevron_left</span>
+                </button>
+                <input 
+                  type="date" 
+                  value={selectedDateStr}
+                  onChange={handleDateChange}
+                  className="rounded-lg border-0 bg-transparent px-2.5 py-1 text-sm font-semibold text-on-surface focus:outline-none cursor-pointer"
+                />
+                <button
+                  type="button"
+                  onClick={() => handleStepDate(1)}
+                  className="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-surface-variant/50 text-on-surface transition-colors active:scale-95 cursor-pointer"
+                  title="Next Day"
+                >
+                  <span className="material-symbols-outlined" style={{ fontSize: 20 }}>chevron_right</span>
+                </button>
+              </div>
             </div>
             <button 
               onClick={handleSaveSchedule}
