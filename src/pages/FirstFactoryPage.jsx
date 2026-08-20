@@ -41,6 +41,22 @@ export default function FirstFactoryPage() {
   const selectedMonth = selectedDateStr.substring(0, 7);
   const selectedDay = parseInt(selectedDateStr.substring(8, 10), 10);
 
+  const selectedDayOfWeekInfo = useMemo(() => {
+    if (!selectedDateStr) return { day: 0, ja: '—', en: '—', isSunday: false, isSaturday: false };
+    const [y, m, d] = selectedDateStr.split('-').map(Number);
+    const dateObj = new Date(y, m - 1, d);
+    const day = dateObj.getDay();
+    const ja = ['日', '月', '火', '水', '木', '金', '土'][day];
+    const en = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][day];
+    return {
+      day,
+      ja,
+      en,
+      isSunday: day === 0,
+      isSaturday: day === 6
+    };
+  }, [selectedDateStr]);
+
   const handleMonthChange = (e) => {
     const newMonth = e.target.value;
     if (!newMonth) return;
@@ -142,39 +158,45 @@ export default function FirstFactoryPage() {
       
       let parsedData = [];
       let currentBlock = null;
+      let hasFoundOrders = false;
+      let hasFoundProd = false;
       
       for (let r = 0; r < rows.length; r++) {
         const row = rows[r];
         const valB = String(row[1] || '').trim();
-        const isHinbanRow = valB.length > 5 && /^[A-Z0-9\/\*\-\.]+$/.test(valB);
+        const isHinbanRow = valB.length === 20 && /^[A-Z0-9\/\*\-\.]+$/.test(valB);
 
         if (isHinbanRow) {
           if (currentBlock) parsedData.push(currentBlock);
-          currentBlock = null; 
-          
-          if (valB.length === 20) {
-            currentBlock = {
-              id: Date.now().toString() + Math.random().toString(36).substring(2, 9),
-              month: monthToSync,
-              hinban: valB,
-              orders: Array(31).fill(0),
-              production: Array(31).fill(0)
-            };
-          }
+          currentBlock = {
+            id: Date.now().toString() + Math.random().toString(36).substring(2, 9),
+            month: monthToSync,
+            hinban: valB,
+            orders: Array(31).fill(0),
+            production: Array(31).fill(0)
+          };
+          hasFoundOrders = false;
+          hasFoundProd = false;
+          continue;
         }
 
         if (currentBlock) {
           let rowLabel = '';
           for (let c = 0; c < 6; c++) if (row[c]) rowLabel += String(row[c]);
 
-          if (rowLabel.includes('受注')) {
+          const isOrderRow = rowLabel.includes('受注') || rowLabel.includes('出荷');
+          const isProdRow = rowLabel.includes('生産');
+
+          if (isOrderRow && !hasFoundOrders) {
             for (let i = 0; i < 31; i++) {
               currentBlock.orders[i] = Number(Number(row[5 + i] || 0).toFixed(1));
             }
-          } else if (rowLabel.includes('生産')) {
+            hasFoundOrders = true;
+          } else if (isProdRow && !hasFoundProd) {
             for (let i = 0; i < 31; i++) {
               currentBlock.production[i] = Number(Number(row[5 + i] || 0).toFixed(1));
             }
+            hasFoundProd = true;
           }
         }
       }
@@ -452,6 +474,19 @@ export default function FirstFactoryPage() {
       if (scheduledIds.has(item.id)) return false;
       if (poolSearch && !item.hinban.toLowerCase().includes(poolSearch.toLowerCase())) return false;
       
+      // First Factory page focuses ONLY on products that have Process 2010 (粘着工程) in BOM or Master
+      const bomItems = item.materialInfo?.rawMaster?.['BOM'] || [];
+      const hasProcess2010 = Boolean(
+        item.materialInfo?.hasProcess2010 ||
+        bomItems.some(b => Number(b['工程コード']) === 2010 || String(b['工程コード'] || '').startsWith('2010') || b['工程名'] === '粘着工程' || b['工程略名'] === '粘着') ||
+        String(item.materialInfo?.rawMaster?.['品目マスタ']?.['工程コード'] || '').startsWith('2010') ||
+        Number(item.materialInfo?.rawMaster?.['resolved']?.['工程コード']?.code) === 2010 ||
+        item.materialInfo?.rawMaster?.['resolved']?.['工程コード']?.name === '粘着工程'
+      );
+      if (!hasProcess2010) {
+        return false;
+      }
+
       if (!showNoAdhesive) {
         const segments = item.materialInfo?.rawMaster?.['品番構造']?.segments || [];
         const adhesiveSegment = segments.find(s => s.segment === '粘着コード');
@@ -1581,8 +1616,18 @@ export default function FirstFactoryPage() {
                   type="date" 
                   value={selectedDateStr}
                   onChange={handleDateChange}
-                  className="rounded-lg border-0 bg-transparent px-2.5 py-1 text-sm font-semibold text-on-surface focus:outline-none cursor-pointer"
+                  className="rounded-lg border-0 bg-transparent px-2 py-1 text-sm font-bold text-on-surface focus:outline-none cursor-pointer"
                 />
+                <span className={`inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-black shrink-0 ${
+                  selectedDayOfWeekInfo.isSunday 
+                    ? 'bg-red-500/15 text-red-600 dark:text-red-400 border border-red-500/30' 
+                    : selectedDayOfWeekInfo.isSaturday 
+                      ? 'bg-blue-500/15 text-blue-600 dark:text-blue-400 border border-blue-500/30' 
+                      : 'bg-surface-variant/70 text-on-surface border border-outline-variant/40'
+                }`}>
+                  <span>{selectedDayOfWeekInfo.ja}曜日</span>
+                  <span className="opacity-70 font-semibold text-[11px]">({selectedDayOfWeekInfo.en})</span>
+                </span>
                 <button
                   type="button"
                   onClick={() => handleStepDate(1)}
