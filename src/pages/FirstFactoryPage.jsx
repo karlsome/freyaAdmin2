@@ -168,18 +168,51 @@ export default function FirstFactoryPage() {
     return '';
   };
 
-  // Helper to extract unit (m vs 枚) from BOM process 2010
-  const extractUnit = (item) => {
+  // Helper to extract production unit string ('cm'/'㎝', 'm', '枚', etc.) from process 2010
+  const extractProdUnitName = (item) => {
     if (!item) return 'm';
-    if (item.materialInfo?.unit) return item.materialInfo.unit;
+    const rawUnit = item.materialInfo?.rawUnit;
+    if (rawUnit) {
+      const name = typeof rawUnit === 'object' ? (rawUnit.name || '') : String(rawUnit);
+      if (name) return name.trim();
+    }
     const rawMaster = item.materialInfo?.rawMaster || {};
     const bom = Array.isArray(rawMaster.BOM) ? rawMaster.BOM : [];
     const p2010 = bom.find(b => Number(b['工程コード']) === 2010 || b['工程名'] === '粘着工程' || b['工程略名'] === '粘着');
     if (p2010 && p2010['生産単位']) {
-      const uName = typeof p2010['生産単位'] === 'object' ? p2010['生産単位'].name : String(p2010['生産単位']);
-      if (uName === '枚') return '枚';
+      const name = typeof p2010['生産単位'] === 'object' ? (p2010['生産単位'].name || '') : String(p2010['生産単位']);
+      if (name) return name.trim();
     }
+    return item.materialInfo?.unit || 'm';
+  };
+
+  // Helper to extract unit (m vs 枚) from BOM process 2010
+  const extractUnit = (item) => {
+    if (!item) return 'm';
+    const prodUnitName = extractProdUnitName(item);
+    if (prodUnitName === '枚') return '枚';
     return 'm';
+  };
+
+  // Helper to get packCount converted to centimeters based on 生産単位.name
+  const getPackCountCm = (item, defaultCm = 4000) => {
+    const rawPackCount = Number(item?.materialInfo?.packCount);
+    if (!rawPackCount || rawPackCount <= 0) return defaultCm;
+
+    const prodUnitName = extractProdUnitName(item);
+    
+    // If unit is explicitly cm / ㎝ / センチ
+    if (prodUnitName === '㎝' || prodUnitName.toLowerCase() === 'cm' || prodUnitName === 'センチ') {
+      return rawPackCount; // already in cm (e.g. 4000 cm = 40m)
+    }
+    
+    // If unit is explicitly meters (m / ｍ / メートル)
+    if (prodUnitName === 'm' || prodUnitName === 'M' || prodUnitName === 'ｍ' || prodUnitName === 'メートル') {
+      return rawPackCount * 100; // convert meters to cm (e.g. 40m -> 4000 cm)
+    }
+
+    // Heuristic fallback if unit is unknown: >= 500 is almost certainly in cm (e.g. 4000, 2500), otherwise meters (e.g. 40, 50)
+    return rawPackCount >= 500 ? rawPackCount : rawPackCount * 100;
   };
 
   // Helper to split a hinban production quantity into roll / pack items
@@ -192,7 +225,7 @@ export default function FirstFactoryPage() {
     if (qty <= 0) return [];
 
     if (unit === '枚') {
-      const packCount = foundItem.materialInfo?.packCount || 100;
+      const packCount = Number(foundItem.materialInfo?.packCount) > 0 ? Number(foundItem.materialInfo.packCount) : 100;
       const numRolls = Math.ceil(qty / packCount);
       const items = [];
       for (let i = 0; i < numRolls; i++) {
@@ -216,7 +249,7 @@ export default function FirstFactoryPage() {
       return items;
     } else {
       const qtyCm = qty * 100;
-      const packCountCm = Number(foundItem.materialInfo?.packCount) > 0 ? Number(foundItem.materialInfo.packCount) : 4000;
+      const packCountCm = getPackCountCm(foundItem, 4000);
       const numRolls = Math.ceil(qtyCm / packCountCm);
       const items = [];
       for (let i = 0; i < numRolls; i++) {
@@ -662,12 +695,12 @@ export default function FirstFactoryPage() {
       let durationMins = 0;
 
       if (unit === '枚') {
-        const packCount = item.materialInfo?.packCount || 100;
+        const packCount = Number(item.materialInfo?.packCount) > 0 ? Number(item.materialInfo.packCount) : 100;
         numRolls = qty > 0 ? Math.ceil(qty / packCount) : 0;
         durationMins = Math.round((workTime * qty) / 60);
       } else {
         const qtyCm = qty * 100;
-        const packCountCm = Number(item.materialInfo?.packCount) > 0 ? Number(item.materialInfo.packCount) : 4000;
+        const packCountCm = getPackCountCm(item, 4000);
         numRolls = qtyCm > 0 ? Math.ceil(qtyCm / packCountCm) : 0;
         durationMins = Math.round((workTime * qtyCm) / 60);
       }
@@ -1067,12 +1100,12 @@ export default function FirstFactoryPage() {
           let durationMins = 0;
 
           if (unit === '枚') {
-            const packCount = item.materialInfo?.packCount || 100;
+            const packCount = Number(item.materialInfo?.packCount) > 0 ? Number(item.materialInfo.packCount) : 100;
             numRolls = qty > 0 ? Math.ceil(qty / packCount) : 0;
             durationMins = Math.round((workTime * qty) / 60);
           } else {
             const qtyCm = qty * 100;
-            const packCountCm = Number(item.materialInfo?.packCount) > 0 ? Number(item.materialInfo.packCount) : 4000;
+            const packCountCm = getPackCountCm(item, 4000);
             numRolls = qtyCm > 0 ? Math.ceil(qtyCm / packCountCm) : 0;
             durationMins = Math.round((workTime * qtyCm) / 60);
           }
