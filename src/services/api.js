@@ -331,7 +331,14 @@ function buildSensorFactoryNameExpression() {
   };
 }
 
-export async function fetchSensorFactoryOverview(date = new Date().toISOString().split("T")[0]) {
+// Sensor `Date` fields are written in JST (factory-local time). `toISOString()`
+// is UTC, which lags JST by up to 9 hours and misses today's readings between
+// 00:00-09:00 JST — use this instead when matching against sensor data.
+function todayJST() {
+  return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Tokyo" }).format(new Date());
+}
+
+export async function fetchSensorFactoryOverview(date = todayJST()) {
   const cacheKey = `sensorFactoryOverview:${date}`;
   const cached = _getCached(cacheKey, SENSOR_TTL);
   if (cached) return cached;

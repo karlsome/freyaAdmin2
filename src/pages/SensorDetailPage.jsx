@@ -72,7 +72,10 @@ function formatSensorLastSeen(minutesSinceLastReading) {
   return `Last seen ${hours} hr ${minutes} min ago`;
 }
 
-function toISO(d) { return d.toISOString().split("T")[0]; }
+// Sensor `Date` fields are written in JST (factory-local time). `toISOString()`
+// is UTC, which lags JST by up to 9 hours and misses today's readings between
+// 00:00-09:00 JST — format against Asia/Tokyo instead when matching sensor data.
+function toISO(d) { return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Tokyo" }).format(d); }
 
 function dateRangeDefault() {
   const end   = new Date();
