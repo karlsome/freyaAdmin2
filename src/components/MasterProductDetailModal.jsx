@@ -1,6 +1,9 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
+import { query } from "../services/api";
 import { useLanguage } from "../contexts/LanguageContext";
+import MaterialDetailModal from "./MaterialDetailModal";
+import MasterProductEditModal from "./MasterProductEditModal";
 
 export default function MasterProductDetailModal({
   record,
@@ -12,183 +15,231 @@ export default function MasterProductDetailModal({
   onUploadImage,
 }) {
   const { t, language } = useLanguage();
-  const [editing, setEditing] = useState(false);
-  const [draft, setDraft] = useState(() => ({ ...record }));
+  const isJa = language === "ja";
+  const [editModalOpen, setEditModalOpen] = useState(false);
   const [zoomImage, setZoomImage] = useState(false);
   const fileInputRef = useRef(null);
 
+  // Linked Material State
+  const [linkedMaterial, setLinkedMaterial] = useState(null);
+  const [loadingLinked, setLoadingLinked] = useState(false);
+  const [activeMaterialModal, setActiveMaterialModal] = useState(null);
+
+  const materialBackNo = record?.["材料背番号"] || "";
+  const materialHinban = record?.["材料品番"] || "";
+
+  useEffect(() => {
+    if (!open || !record) {
+      setLinkedMaterial(null);
+      return;
+    }
+
+    const searchKey = materialBackNo || materialHinban;
+    if (!searchKey) {
+      setLinkedMaterial(null);
+      return;
+    }
+
+    let cancelled = false;
+    setLoadingLinked(true);
+
+    const queryFilter = {
+      $or: [
+        { "品目マスタ.ラベル品番": searchKey },
+        { "ラベル品番": searchKey },
+        { "品番": searchKey },
+        { "品目マスタ.品番": searchKey },
+      ],
+    };
+
+    query("Sasaki_Coating_MasterDB", "materialMasterDB3", queryFilter)
+      .then((res) => {
+        if (cancelled) return;
+        const data = Array.isArray(res) ? res[0] : res?.data?.[0];
+        setLinkedMaterial(data || null);
+      })
+      .catch((err) => {
+        console.error("Failed to query linked material:", err);
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingLinked(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [open, record, materialBackNo, materialHinban]);
+
   if (!open || !record) return null;
 
-  const handleFieldChange = (key, value) => {
-    setDraft((prev) => ({ ...prev, [key]: value }));
-  };
-
-  const handleSave = () => {
-    if (onSave) {
-      onSave(draft);
+  const handleOpenMaterialModal = async () => {
+    if (linkedMaterial) {
+      setActiveMaterialModal(linkedMaterial);
+      return;
     }
-    setEditing(false);
-  };
 
-  const handleCancel = () => {
-    setDraft({ ...record });
-    setEditing(false);
-  };
+    const searchKey = materialBackNo || materialHinban;
+    if (!searchKey) return;
 
-  const isJa = language === "ja";
+    setLoadingLinked(true);
+    try {
+      const res = await query("Sasaki_Coating_MasterDB", "materialMasterDB3", {
+        $or: [
+          { "品目マスタ.ラベル品番": searchKey },
+          { "ラベル品番": searchKey },
+          { "品番": searchKey },
+        ],
+      });
+      const data = Array.isArray(res) ? res[0] : res?.data?.[0];
+      if (data) {
+        setLinkedMaterial(data);
+        setActiveMaterialModal(data);
+      } else {
+        alert(
+          isJa
+            ? `材料DBに該当するレコードが見つかりませんでした (キー: ${searchKey})`
+            : `No matching record found in Material DB (Key: ${searchKey})`
+        );
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoadingLinked(false);
+    }
+  };
 
   const renderValue = (val) => {
     if (val === null || val === undefined || val === "") return "—";
     return String(val);
   };
 
-  return createPortal(
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-[fadeIn_0.15s_ease-out]">
-      <div
-        className="bg-surface border border-outline-variant/30 rounded-2xl shadow-2xl w-full max-w-3xl overflow-hidden flex flex-col max-h-[90vh]"
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Header */}
-        <div className="flex items-start justify-between p-5 md:p-6 border-b border-outline-variant/30 bg-surface-variant/20">
-          <div className="flex-1 pr-4">
-            <div className="flex items-center gap-2 mb-1">
-              <span className="text-[10px] font-bold text-primary bg-primary/10 px-2.5 py-0.5 rounded-full uppercase tracking-wider">
-                {isJa ? "内装品 DB" : "Product Record"}
-              </span>
-              {record["工場"] && (
-                <span className="text-[10px] font-semibold text-on-surface-variant bg-surface-variant/60 border border-outline-variant/30 px-2 py-0.5 rounded-md">
-                  {record["工場"]}
-                </span>
-              )}
-              {record["pickingIOT"] && (
-                <span
-                  className={`text-[10px] font-bold px-2 py-0.5 rounded-md border ${
-                    String(record["pickingIOT"]).toLowerCase() === "yes"
-                      ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/30"
-                      : "bg-surface-variant/40 text-outline border-outline-variant/30"
-                  }`}
-                >
-                  IoT: {String(record["pickingIOT"]).toUpperCase()}
-                </span>
-              )}
-            </div>
-            <h2 className="text-xl md:text-2xl font-bold text-on-surface tracking-tight">
-              {record["品番"]}
-            </h2>
-            <p className="text-xs md:text-sm text-outline mt-0.5">
-              {record["モデル"] && <span className="font-semibold text-on-surface/80 mr-1.5">{record["モデル"]}</span>}
-              {record["背番号"] && <span className="text-primary font-mono font-bold mr-2">[{record["背番号"]}]</span>}
-              {record["品名"] && <span>{record["品名"]}</span>}
-            </p>
-          </div>
-
-          <div className="flex items-center gap-2">
-            {!editing ? (
-              <button
-                type="button"
-                onClick={() => {
-                  setDraft({ ...record });
-                  setEditing(true);
-                }}
-                className="inline-flex items-center gap-1.5 rounded-xl border border-primary/30 bg-primary/10 px-3.5 py-1.5 text-xs font-bold text-primary hover:bg-primary hover:text-on-primary transition-all active:scale-95 cursor-pointer shadow-xs"
-              >
-                <span className="material-symbols-outlined" style={{ fontSize: 16 }}>edit</span>
-                <span>{isJa ? "編集" : "Edit"}</span>
-              </button>
-            ) : (
-              <div className="flex items-center gap-1.5">
-                <button
-                  type="button"
-                  onClick={handleCancel}
-                  disabled={saving}
-                  className="rounded-xl border border-outline-variant/30 bg-surface px-3 py-1.5 text-xs font-semibold text-on-surface hover:bg-surface-variant/30 transition-all"
-                >
-                  {isJa ? "キャンセル" : "Cancel"}
-                </button>
-                <button
-                  type="button"
-                  onClick={handleSave}
-                  disabled={saving}
-                  className="rounded-xl bg-primary px-3.5 py-1.5 text-xs font-bold text-on-primary hover:bg-primary/90 transition-all shadow-xs disabled:opacity-50"
-                >
-                  {saving ? (isJa ? "保存中…" : "Saving…") : (isJa ? "保存" : "Save")}
-                </button>
-              </div>
-            )}
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex h-8 w-8 items-center justify-center rounded-full hover:bg-surface-variant/50 text-outline transition-colors cursor-pointer"
-              title={t("ff_close")}
-            >
-              <span className="material-symbols-outlined" style={{ fontSize: 24 }}>close</span>
-            </button>
-          </div>
-        </div>
-
-        {/* Scrollable Body */}
-        <div className="p-5 md:p-6 overflow-y-auto flex-1 flex flex-col gap-6">
-
-          {/* Product Image Banner */}
-          <div className="relative overflow-hidden rounded-2xl border border-outline-variant/30 bg-surface-variant/15 flex flex-col items-center justify-center min-h-[160px] max-h-[260px] p-3 group">
-            {record.imageURL ? (
-              <div className="relative w-full h-full flex items-center justify-center">
-                <img
-                  src={record.imageURL}
-                  alt={record["品番"]}
-                  className="max-h-[220px] object-contain rounded-xl cursor-zoom-in shadow-sm hover:scale-[1.02] transition-transform duration-200"
-                  onClick={() => setZoomImage(true)}
-                />
-                <button
-                  type="button"
-                  onClick={() => setZoomImage(true)}
-                  className="absolute bottom-2 right-2 flex items-center gap-1 rounded-lg bg-black/60 backdrop-blur-md px-2.5 py-1 text-[11px] font-medium text-white opacity-0 group-hover:opacity-100 transition-opacity"
-                >
-                  <span className="material-symbols-outlined" style={{ fontSize: 14 }}>zoom_in</span>
-                  <span>{isJa ? "拡大" : "Zoom"}</span>
-                </button>
-              </div>
-            ) : (
-              <div className="flex flex-col items-center justify-center gap-2 text-outline py-8">
-                <span className="material-symbols-outlined opacity-40" style={{ fontSize: 40 }}>image_not_supported</span>
-                <span className="text-xs font-medium">{isJa ? "画像が登録されていません" : "No image uploaded"}</span>
-              </div>
-            )}
-
-            {/* Upload Button */}
-            {onUploadImage && (
-              <div className="mt-2 flex items-center gap-2">
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (file) {
-                      onUploadImage(file);
-                      e.target.value = "";
-                    }
-                  }}
-                />
-                <button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  disabled={uploading}
-                  className="inline-flex items-center gap-1.5 rounded-lg border border-outline-variant/40 bg-surface/80 backdrop-blur-md px-3 py-1 text-xs font-semibold text-on-surface hover:bg-surface transition-colors cursor-pointer shadow-xs disabled:opacity-50"
-                >
-                  <span className="material-symbols-outlined" style={{ fontSize: 14 }}>
-                    {uploading ? "progress_activity" : "upload"}
+  return (
+    <>
+      {createPortal(
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-[fadeIn_0.15s_ease-out]">
+          <div
+            className="bg-surface border border-outline-variant/30 rounded-2xl shadow-2xl w-full max-w-3xl overflow-hidden flex flex-col max-h-[90vh]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="flex items-start justify-between p-5 md:p-6 border-b border-outline-variant/30 bg-surface-variant/20">
+              <div className="flex-1 pr-4">
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="text-[10px] font-bold text-primary bg-primary/10 px-2.5 py-0.5 rounded-full uppercase tracking-wider">
+                    {isJa ? "内装品 DB" : "Product Record"}
                   </span>
-                  <span>{uploading ? (isJa ? "アップロード中…" : "Uploading…") : record.imageURL ? (isJa ? "画像を変更" : "Change Image") : (isJa ? "画像をアップロード" : "Upload Image")}</span>
+                  {record["工場"] && (
+                    <span className="text-[10px] font-semibold text-on-surface-variant bg-surface-variant/60 border border-outline-variant/30 px-2 py-0.5 rounded-md">
+                      {record["工場"]}
+                    </span>
+                  )}
+                  {record["pickingIOT"] && (
+                    <span
+                      className={`text-[10px] font-bold px-2 py-0.5 rounded-md border ${
+                        String(record["pickingIOT"]).toLowerCase() === "yes"
+                          ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/30"
+                          : "bg-surface-variant/40 text-outline border-outline-variant/30"
+                      }`}
+                    >
+                      IoT: {String(record["pickingIOT"]).toUpperCase()}
+                    </span>
+                  )}
+                </div>
+                <h2 className="text-xl md:text-2xl font-bold text-on-surface tracking-tight">
+                  {record["品番"]}
+                </h2>
+                <p className="text-xs md:text-sm text-outline mt-0.5">
+                  {record["モデル"] && <span className="font-semibold text-on-surface/80 mr-1.5">{record["モデル"]}</span>}
+                  {record["背番号"] && <span className="text-primary font-mono font-bold mr-2">[{record["背番号"]}]</span>}
+                  {record["品名"] && <span>{record["品名"]}</span>}
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setEditModalOpen(true)}
+                  className="inline-flex items-center gap-1.5 rounded-xl border border-primary/30 bg-primary/10 px-3.5 py-1.5 text-xs font-bold text-primary hover:bg-primary hover:text-on-primary transition-all active:scale-95 cursor-pointer shadow-xs"
+                >
+                  <span className="material-symbols-outlined" style={{ fontSize: 16 }}>edit</span>
+                  <span>{isJa ? "レコードを編集" : "Edit Record"}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="flex h-8 w-8 items-center justify-center rounded-full hover:bg-surface-variant/50 text-outline transition-colors cursor-pointer"
+                  title={t("ff_close")}
+                >
+                  <span className="material-symbols-outlined" style={{ fontSize: 24 }}>close</span>
                 </button>
               </div>
-            )}
-          </div>
+            </div>
 
-          {!editing ? (
-            /* ──────────────── VIEW MODE ──────────────── */
-            <div className="flex flex-col gap-6">
+            {/* Scrollable Body */}
+            <div className="p-5 md:p-6 overflow-y-auto flex-1 flex flex-col gap-6">
+
+              {/* Product Image Banner */}
+              <div className="relative overflow-hidden rounded-2xl border border-outline-variant/30 bg-surface-variant/15 flex flex-col items-center justify-center min-h-[160px] max-h-[260px] p-3 group">
+                {record.imageURL ? (
+                  <div className="relative w-full h-full flex items-center justify-center">
+                    <img
+                      src={record.imageURL}
+                      alt={record["品番"]}
+                      className="max-h-[220px] object-contain rounded-xl cursor-zoom-in shadow-sm hover:scale-[1.02] transition-transform duration-200"
+                      onClick={() => setZoomImage(true)}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setZoomImage(true)}
+                      className="absolute bottom-2 right-2 flex items-center gap-1 rounded-lg bg-black/60 backdrop-blur-md px-2.5 py-1 text-[11px] font-medium text-white opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      <span className="material-symbols-outlined" style={{ fontSize: 14 }}>zoom_in</span>
+                      <span>{isJa ? "拡大" : "Zoom"}</span>
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center justify-center gap-2 text-outline py-8">
+                    <span className="material-symbols-outlined opacity-40" style={{ fontSize: 40 }}>image_not_supported</span>
+                    <span className="text-xs font-medium">{isJa ? "画像が登録されていません" : "No image uploaded"}</span>
+                  </div>
+                )}
+
+                {/* Upload Button */}
+                {onUploadImage && (
+                  <div className="mt-2 flex items-center gap-2">
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          onUploadImage(file);
+                          e.target.value = "";
+                        }
+                      }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={uploading}
+                      className="inline-flex items-center gap-1.5 rounded-lg border border-outline-variant/40 bg-surface/80 backdrop-blur-md px-3 py-1 text-xs font-semibold text-on-surface hover:bg-surface transition-colors cursor-pointer shadow-xs disabled:opacity-50"
+                    >
+                      <span className="material-symbols-outlined" style={{ fontSize: 14 }}>
+                        {uploading ? "progress_activity" : "upload"}
+                      </span>
+                      <span>
+                        {uploading
+                          ? isJa ? "アップロード中…" : "Uploading…"
+                          : record.imageURL
+                          ? isJa ? "画像を変更" : "Change Image"
+                          : isJa ? "画像をアップロード" : "Upload Image"}
+                      </span>
+                    </button>
+                  </div>
+                )}
+              </div>
 
               {/* 1. Basic Vehicle & Product Identity */}
               <div>
@@ -278,25 +329,84 @@ export default function MasterProductDetailModal({
                 </div>
               </div>
 
-              {/* 3. Material Specifications */}
+              {/* 3. Material Specifications with LINK to 材料DB */}
               <div>
-                <div className="text-xs font-bold text-outline mb-3 uppercase tracking-wider flex items-center gap-1.5">
-                  <span className="material-symbols-outlined text-primary" style={{ fontSize: 16 }}>layers</span>
-                  <span>{isJa ? "使用材料情報" : "Material Information"}</span>
+                <div className="text-xs font-bold text-outline mb-3 uppercase tracking-wider flex items-center justify-between">
+                  <div className="flex items-center gap-1.5">
+                    <span className="material-symbols-outlined text-primary" style={{ fontSize: 16 }}>layers</span>
+                    <span>{isJa ? "使用材料情報 (材料DB連携)" : "Material Specs & DB Link"}</span>
+                  </div>
+                  {(materialBackNo || materialHinban) && (
+                    <span className="text-[10px] text-primary/80 font-normal">
+                      {isJa ? "材料背番号 = 材料DB「ラベル品番」" : "Linked via ラベル品番"}
+                    </span>
+                  )}
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                  <div className="flex flex-col bg-primary/5 border border-primary/20 rounded-xl p-3">
-                    <span className="text-[10px] font-bold text-primary uppercase">{isJa ? "材料名" : "Material"}</span>
-                    <span className="font-bold text-sm text-on-surface mt-0.5">{renderValue(record["材料"])}</span>
+
+                <div className="flex flex-col gap-3">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <div className="flex flex-col bg-primary/5 border border-primary/20 rounded-xl p-3">
+                      <span className="text-[10px] font-bold text-primary uppercase">{isJa ? "材料名" : "Material"}</span>
+                      <span className="font-bold text-sm text-on-surface mt-0.5">{renderValue(record["材料"])}</span>
+                    </div>
+                    <div className="flex flex-col bg-primary/5 border border-primary/20 rounded-xl p-3">
+                      <span className="text-[10px] font-bold text-primary uppercase">{isJa ? "材料背番号 (ラベル品番)" : "Material Back No."}</span>
+                      <span className="font-mono font-bold text-sm text-primary mt-0.5">{renderValue(record["材料背番号"])}</span>
+                    </div>
+                    <div className="flex flex-col bg-primary/5 border border-primary/20 rounded-xl p-3">
+                      <span className="text-[10px] font-bold text-primary uppercase">{isJa ? "材料品番 (構成品番)" : "Material Hinban"}</span>
+                      <span className="font-mono font-semibold text-sm text-on-surface mt-0.5">{renderValue(record["材料品番"])}</span>
+                    </div>
                   </div>
-                  <div className="flex flex-col bg-primary/5 border border-primary/20 rounded-xl p-3">
-                    <span className="text-[10px] font-bold text-primary uppercase">{isJa ? "材料背番号" : "Material Back No."}</span>
-                    <span className="font-mono font-bold text-sm text-primary mt-0.5">{renderValue(record["材料背番号"])}</span>
-                  </div>
-                  <div className="flex flex-col bg-primary/5 border border-primary/20 rounded-xl p-3">
-                    <span className="text-[10px] font-bold text-primary uppercase">{isJa ? "材料品番" : "Material Part No."}</span>
-                    <span className="font-mono font-semibold text-sm text-on-surface mt-0.5">{renderValue(record["材料品番"])}</span>
-                  </div>
+
+                  {/* Connected Material DB Action Card */}
+                  {(materialBackNo || materialHinban) && (
+                    <div
+                      onClick={handleOpenMaterialModal}
+                      className="group rounded-xl border border-primary/30 bg-primary/10 hover:bg-primary/15 transition-all p-4 flex items-center justify-between cursor-pointer shadow-xs active:scale-[0.99]"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-on-primary shadow-xs">
+                          <span className="material-symbols-outlined" style={{ fontSize: 20 }}>
+                            inventory_2
+                          </span>
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs font-bold text-primary uppercase tracking-wide">
+                              {isJa ? "連携材料 (材料DB)" : "Linked Material Record"}
+                            </span>
+                            {loadingLinked && (
+                              <span className="text-[10px] text-primary/70 animate-pulse">
+                                {isJa ? "読込中…" : "Loading…"}
+                              </span>
+                            )}
+                          </div>
+                          <div className="text-sm font-semibold text-on-surface mt-0.5">
+                            {linkedMaterial ? (
+                              <span>
+                                {linkedMaterial["品番"]}
+                                <span className="text-xs font-normal text-outline ml-2">
+                                  ({linkedMaterial["品目マスタ"]?.["品名"] || linkedMaterial["品名"] || "No Name"})
+                                </span>
+                              </span>
+                            ) : (
+                              <span>
+                                {isJa ? "材料背番号:" : "Back No:"} {materialBackNo || materialHinban}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-1 text-primary font-bold text-xs group-hover:translate-x-0.5 transition-transform">
+                        <span>{isJa ? "材料詳細を開く" : "View Material"}</span>
+                        <span className="material-symbols-outlined" style={{ fontSize: 18 }}>
+                          arrow_forward
+                        </span>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -349,342 +459,55 @@ export default function MasterProductDetailModal({
               )}
 
             </div>
-          ) : (
-            /* ──────────────── EDIT MODE ──────────────── */
-            <div className="flex flex-col gap-6">
 
-              {/* 1. Basic Product Info */}
-              <div>
-                <div className="text-xs font-bold text-outline mb-3 uppercase tracking-wider">
-                  {isJa ? "車両・製品基本情報" : "Vehicle & Product Identity"}
-                </div>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                  <div>
-                    <label className="block text-[10px] font-semibold uppercase text-outline mb-1">品番</label>
-                    <input
-                      type="text"
-                      value={draft["品番"] ?? ""}
-                      onChange={(e) => handleFieldChange("品番", e.target.value)}
-                      className="w-full rounded-xl border border-outline-variant/40 bg-surface px-3 py-1.5 text-xs text-on-surface outline-none focus:border-primary"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[10px] font-semibold uppercase text-outline mb-1">モデル</label>
-                    <input
-                      type="text"
-                      value={draft["モデル"] ?? ""}
-                      onChange={(e) => handleFieldChange("モデル", e.target.value)}
-                      className="w-full rounded-xl border border-outline-variant/40 bg-surface px-3 py-1.5 text-xs text-on-surface outline-none focus:border-primary"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[10px] font-semibold uppercase text-outline mb-1">背番号</label>
-                    <input
-                      type="text"
-                      value={draft["背番号"] ?? ""}
-                      onChange={(e) => handleFieldChange("背番号", e.target.value)}
-                      className="w-full rounded-xl border border-outline-variant/40 bg-surface px-3 py-1.5 text-xs text-on-surface outline-none focus:border-primary"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[10px] font-semibold uppercase text-outline mb-1">形状</label>
-                    <input
-                      type="text"
-                      value={draft["形状"] ?? ""}
-                      onChange={(e) => handleFieldChange("形状", e.target.value)}
-                      className="w-full rounded-xl border border-outline-variant/40 bg-surface px-3 py-1.5 text-xs text-on-surface outline-none focus:border-primary"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[10px] font-semibold uppercase text-outline mb-1">R/L</label>
-                    <select
-                      value={draft["R/L"] ?? ""}
-                      onChange={(e) => handleFieldChange("R/L", e.target.value)}
-                      className="w-full rounded-xl border border-outline-variant/40 bg-surface px-3 py-1.5 text-xs text-on-surface outline-none focus:border-primary"
-                    >
-                      <option value="">—</option>
-                      <option value="LH">LH</option>
-                      <option value="RH">RH</option>
-                      <option value="-">-</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-[10px] font-semibold uppercase text-outline mb-1">色</label>
-                    <input
-                      type="text"
-                      value={draft["色"] ?? ""}
-                      onChange={(e) => handleFieldChange("色", e.target.value)}
-                      className="w-full rounded-xl border border-outline-variant/40 bg-surface px-3 py-1.5 text-xs text-on-surface outline-none focus:border-primary"
-                    />
-                  </div>
-                  <div className="md:col-span-2">
-                    <label className="block text-[10px] font-semibold uppercase text-outline mb-1">品名</label>
-                    <input
-                      type="text"
-                      value={draft["品名"] ?? ""}
-                      onChange={(e) => handleFieldChange("品名", e.target.value)}
-                      className="w-full rounded-xl border border-outline-variant/40 bg-surface px-3 py-1.5 text-xs text-on-surface outline-none focus:border-primary"
-                    />
-                  </div>
-                </div>
+            {/* Footer */}
+            <div className="flex items-center justify-between p-4 border-t border-outline-variant/30 bg-surface-variant/10 text-xs text-outline">
+              <span>{isJa ? "表示専用モード" : "Read-only mode."}</span>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setEditModalOpen(true)}
+                  className="rounded-xl bg-primary px-5 py-2 text-xs font-bold text-on-primary hover:bg-primary/90 transition-all shadow-sm cursor-pointer"
+                >
+                  {isJa ? "レコードを編集" : "Edit Record"}
+                </button>
               </div>
-
-              {/* 2. Manufacturing Info */}
-              <div>
-                <div className="text-xs font-bold text-outline mb-3 uppercase tracking-wider">
-                  {isJa ? "製造・設備仕様" : "Manufacturing & Equipment"}
-                </div>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                  <div>
-                    <label className="block text-[10px] font-semibold uppercase text-outline mb-1">工場</label>
-                    <input
-                      type="text"
-                      value={draft["工場"] ?? ""}
-                      onChange={(e) => handleFieldChange("工場", e.target.value)}
-                      className="w-full rounded-xl border border-outline-variant/40 bg-surface px-3 py-1.5 text-xs text-on-surface outline-none focus:border-primary"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[10px] font-semibold uppercase text-outline mb-1">加工設備</label>
-                    <input
-                      type="text"
-                      value={draft["加工設備"] ?? ""}
-                      onChange={(e) => handleFieldChange("加工設備", e.target.value)}
-                      className="w-full rounded-xl border border-outline-variant/40 bg-surface px-3 py-1.5 text-xs text-on-surface outline-none focus:border-primary"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[10px] font-semibold uppercase text-outline mb-1">型番</label>
-                    <input
-                      type="text"
-                      value={draft["型番"] ?? ""}
-                      onChange={(e) => handleFieldChange("型番", e.target.value)}
-                      className="w-full rounded-xl border border-outline-variant/40 bg-surface px-3 py-1.5 text-xs text-on-surface outline-none focus:border-primary"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[10px] font-semibold uppercase text-outline mb-1">収容数</label>
-                    <input
-                      type="text"
-                      value={draft["収容数"] ?? ""}
-                      onChange={(e) => handleFieldChange("収容数", e.target.value)}
-                      className="w-full rounded-xl border border-outline-variant/40 bg-surface px-3 py-1.5 text-xs text-on-surface outline-none focus:border-primary"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[10px] font-semibold uppercase text-outline mb-1">送りピッチ</label>
-                    <input
-                      type="number"
-                      value={draft["送りピッチ"] ?? ""}
-                      onChange={(e) => handleFieldChange("送りピッチ", e.target.value === "" ? "" : Number(e.target.value))}
-                      className="w-full rounded-xl border border-outline-variant/40 bg-surface px-3 py-1.5 text-xs text-on-surface outline-none focus:border-primary"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[10px] font-semibold uppercase text-outline mb-1">離型紙上/下</label>
-                    <select
-                      value={draft["離型紙上/下"] ?? ""}
-                      onChange={(e) => handleFieldChange("離型紙上/下", e.target.value)}
-                      className="w-full rounded-xl border border-outline-variant/40 bg-surface px-3 py-1.5 text-xs text-on-surface outline-none focus:border-primary"
-                    >
-                      <option value="">—</option>
-                      <option value="上">上</option>
-                      <option value="下">下</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-[10px] font-semibold uppercase text-outline mb-1">秒数(1pcs何秒)</label>
-                    <input
-                      type="text"
-                      value={draft["秒数(1pcs何秒)"] ?? ""}
-                      onChange={(e) => handleFieldChange("秒数(1pcs何秒)", e.target.value)}
-                      className="w-full rounded-xl border border-outline-variant/40 bg-surface px-3 py-1.5 text-xs text-on-surface outline-none focus:border-primary"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[10px] font-semibold uppercase text-outline mb-1">取数 (pcPerCycle)</label>
-                    <input
-                      type="number"
-                      value={draft["pcPerCycle"] ?? ""}
-                      onChange={(e) => handleFieldChange("pcPerCycle", e.target.value === "" ? "" : Number(e.target.value))}
-                      className="w-full rounded-xl border border-outline-variant/40 bg-surface px-3 py-1.5 text-xs text-on-surface outline-none focus:border-primary"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* 3. Material Info */}
-              <div>
-                <div className="text-xs font-bold text-outline mb-3 uppercase tracking-wider">
-                  {isJa ? "使用材料情報" : "Material Information"}
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                  <div>
-                    <label className="block text-[10px] font-semibold uppercase text-outline mb-1">材料</label>
-                    <input
-                      type="text"
-                      value={draft["材料"] ?? ""}
-                      onChange={(e) => handleFieldChange("材料", e.target.value)}
-                      className="w-full rounded-xl border border-outline-variant/40 bg-surface px-3 py-1.5 text-xs text-on-surface outline-none focus:border-primary"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[10px] font-semibold uppercase text-outline mb-1">材料背番号</label>
-                    <input
-                      type="text"
-                      value={draft["材料背番号"] ?? ""}
-                      onChange={(e) => handleFieldChange("材料背番号", e.target.value)}
-                      className="w-full rounded-xl border border-outline-variant/40 bg-surface px-3 py-1.5 text-xs text-on-surface outline-none focus:border-primary"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[10px] font-semibold uppercase text-outline mb-1">材料品番</label>
-                    <input
-                      type="text"
-                      value={draft["材料品番"] ?? ""}
-                      onChange={(e) => handleFieldChange("材料品番", e.target.value)}
-                      className="w-full rounded-xl border border-outline-variant/40 bg-surface px-3 py-1.5 text-xs text-on-surface outline-none focus:border-primary"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* 4. Pricing & Operations */}
-              <div>
-                <div className="text-xs font-bold text-outline mb-3 uppercase tracking-wider">
-                  {isJa ? "価格・運用・IoT情報" : "Pricing, Logistics & Operations"}
-                </div>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                  <div className="md:col-span-2">
-                    <label className="block text-[10px] font-semibold uppercase text-outline mb-1">顧客/納入先</label>
-                    <input
-                      type="text"
-                      value={draft["顧客/納入先"] ?? ""}
-                      onChange={(e) => handleFieldChange("顧客/納入先", e.target.value)}
-                      className="w-full rounded-xl border border-outline-variant/40 bg-surface px-3 py-1.5 text-xs text-on-surface outline-none focus:border-primary"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[10px] font-semibold uppercase text-outline mb-1">個単価 (¥)</label>
-                    <input
-                      type="number"
-                      step="any"
-                      value={draft["pricePerPc"] ?? ""}
-                      onChange={(e) => handleFieldChange("pricePerPc", e.target.value === "" ? "" : Number(e.target.value))}
-                      className="w-full rounded-xl border border-outline-variant/40 bg-surface px-3 py-1.5 text-xs text-on-surface outline-none focus:border-primary"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[10px] font-semibold uppercase text-outline mb-1">箱単価 (¥)</label>
-                    <input
-                      type="number"
-                      step="any"
-                      value={draft["pricePerBox"] ?? ""}
-                      onChange={(e) => handleFieldChange("pricePerBox", e.target.value === "" ? "" : Number(e.target.value))}
-                      className="w-full rounded-xl border border-outline-variant/40 bg-surface px-3 py-1.5 text-xs text-on-surface outline-none focus:border-primary"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[10px] font-semibold uppercase text-outline mb-1">pickingIOT</label>
-                    <select
-                      value={draft["pickingIOT"] ?? ""}
-                      onChange={(e) => handleFieldChange("pickingIOT", e.target.value)}
-                      className="w-full rounded-xl border border-outline-variant/40 bg-surface px-3 py-1.5 text-xs text-on-surface outline-none focus:border-primary"
-                    >
-                      <option value="">—</option>
-                      <option value="yes">yes</option>
-                      <option value="no">no</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-[10px] font-semibold uppercase text-outline mb-1">カンバン (boardData)</label>
-                    <input
-                      type="text"
-                      value={draft["boardData"] ?? ""}
-                      onChange={(e) => handleFieldChange("boardData", e.target.value)}
-                      className="w-full rounded-xl border border-outline-variant/40 bg-surface px-3 py-1.5 text-xs text-on-surface outline-none focus:border-primary"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[10px] font-semibold uppercase text-outline mb-1">ラベル刻印 (labelMarking)</label>
-                    <input
-                      type="text"
-                      value={draft["labelMarking"] ?? ""}
-                      onChange={(e) => handleFieldChange("labelMarking", e.target.value)}
-                      className="w-full rounded-xl border border-outline-variant/40 bg-surface px-3 py-1.5 text-xs text-on-surface outline-none focus:border-primary"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[10px] font-semibold uppercase text-outline mb-1">QR CODE</label>
-                    <input
-                      type="text"
-                      value={draft["QR CODE"] ?? ""}
-                      onChange={(e) => handleFieldChange("QR CODE", e.target.value)}
-                      className="w-full rounded-xl border border-outline-variant/40 bg-surface px-3 py-1.5 text-xs text-on-surface outline-none focus:border-primary"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* 5. Remarks */}
-              <div>
-                <label className="block text-[10px] font-semibold uppercase text-outline mb-1">備考</label>
-                <textarea
-                  rows={3}
-                  value={draft["備考"] ?? ""}
-                  onChange={(e) => handleFieldChange("備考", e.target.value)}
-                  className="w-full rounded-xl border border-outline-variant/40 bg-surface px-3 py-2 text-xs text-on-surface outline-none focus:border-primary resize-none"
-                />
-              </div>
-
             </div>
-          )}
-
-        </div>
-
-        {/* Footer */}
-        <div className="flex items-center justify-between p-4 border-t border-outline-variant/30 bg-surface-variant/10 text-xs text-outline">
-          <span>{editing ? (isJa ? "編集中です。変更を保存してください。" : "Editing record. Click Save to commit changes.") : (isJa ? "表示専用モード" : "Read-only mode.")}</span>
-          <div className="flex items-center gap-2">
-            {editing ? (
-              <>
-                <button
-                  type="button"
-                  onClick={handleCancel}
-                  disabled={saving}
-                  className="rounded-xl border border-outline-variant/30 bg-surface px-4 py-2 text-xs font-semibold text-on-surface hover:bg-surface-variant/30 transition-all cursor-pointer"
-                >
-                  {isJa ? "キャンセル" : "Cancel"}
-                </button>
-                <button
-                  type="button"
-                  onClick={handleSave}
-                  disabled={saving}
-                  className="rounded-xl bg-primary px-5 py-2 text-xs font-bold text-on-primary hover:bg-primary/90 transition-all shadow-sm cursor-pointer disabled:opacity-50"
-                >
-                  {saving ? (isJa ? "保存中…" : "Saving…") : (isJa ? "変更を保存" : "Save Changes")}
-                </button>
-              </>
-            ) : (
-              <button
-                type="button"
-                onClick={() => {
-                  setDraft({ ...record });
-                  setEditing(true);
-                }}
-                className="rounded-xl bg-primary px-5 py-2 text-xs font-bold text-on-primary hover:bg-primary/90 transition-all shadow-sm cursor-pointer"
-              >
-                {isJa ? "レコードを編集" : "Edit Record"}
-              </button>
-            )}
           </div>
-        </div>
-      </div>
+        </div>,
+        document.body
+      )}
+
+      {/* Dedicated Edit Modal */}
+      {editModalOpen && (
+        <MasterProductEditModal
+          open={editModalOpen}
+          record={record}
+          isNew={false}
+          submitting={saving}
+          onClose={() => setEditModalOpen(false)}
+          onSubmit={(draft) => {
+            if (onSave) {
+              onSave(draft);
+            }
+            setEditModalOpen(false);
+          }}
+          onUploadImage={onUploadImage}
+        />
+      )}
+
+      {/* Linked Material Detail Modal (nested popup) */}
+      {activeMaterialModal && (
+        <MaterialDetailModal
+          modalData={activeMaterialModal}
+          onClose={() => setActiveMaterialModal(null)}
+        />
+      )}
 
       {/* Image Zoom Lightbox */}
       {zoomImage && record.imageURL && (
         <div
-          className="fixed inset-0 z-[120] flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-[fadeIn_0.15s_ease-out]"
+          className="fixed inset-0 z-[130] flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-[fadeIn_0.15s_ease-out]"
           onClick={() => setZoomImage(false)}
         >
           <div className="relative max-w-4xl max-h-[90vh] flex flex-col items-center" onClick={(e) => e.stopPropagation()}>
@@ -708,7 +531,6 @@ export default function MasterProductDetailModal({
           </div>
         </div>
       )}
-    </div>,
-    document.body
+    </>
   );
 }

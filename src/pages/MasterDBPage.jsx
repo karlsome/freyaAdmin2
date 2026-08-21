@@ -9,6 +9,7 @@ import MasterProductDetailModal from "../components/MasterProductDetailModal";
 import MasterFilterPanel from "../components/MasterFilterPanel";
 import PageHeader from "../components/PageHeader";
 import MasterRecordModal from "../components/MasterRecordModal";
+import MasterProductEditModal from "../components/MasterProductEditModal";
 import MasterStatsStrip from "../components/MasterStatsStrip";
 import MasterTable from "../components/MasterTable";
 import MasterTabNav from "../components/MasterTabNav";
@@ -730,15 +731,25 @@ export default function MasterDBPage() {
       )}
 
       {!isSpecialTab && addModalOpen && (
-        <MasterRecordModal
-          open={addModalOpen}
-          fieldDefinitions={fieldDefinitions}
-          tabLabel={activeTabMeta.label}
-          recordLabel={activeTabUI.recordLabel}
-          submitting={addSubmitting}
-          onClose={() => setAddModalOpen(false)}
-          onSubmit={handleCreateRecord}
-        />
+        activeTab === "masterDB" ? (
+          <MasterProductEditModal
+            open={addModalOpen}
+            isNew={true}
+            submitting={addSubmitting}
+            onClose={() => setAddModalOpen(false)}
+            onSubmit={(draft) => handleCreateRecord(draft)}
+          />
+        ) : (
+          <MasterRecordModal
+            open={addModalOpen}
+            fieldDefinitions={fieldDefinitions}
+            tabLabel={activeTabMeta.label}
+            recordLabel={activeTabUI.recordLabel}
+            submitting={addSubmitting}
+            onClose={() => setAddModalOpen(false)}
+            onSubmit={handleCreateRecord}
+          />
+        )
       )}
 
       {!isSpecialTab && batchModalOpen && (
