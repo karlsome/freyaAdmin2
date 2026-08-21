@@ -215,12 +215,34 @@ export default function FirstFactoryPage() {
     return rawPackCount >= 500 ? rawPackCount : rawPackCount * 100;
   };
 
+  // Helper to compute duration in minutes based on workTime, quantity, and 生産単位.name
+  const computeDurationMins = (item, qty, unit) => {
+    const workTime = item?.materialInfo?.workTime || 0.075;
+    if (!qty || qty <= 0) return 0;
+
+    const prodUnitName = extractProdUnitName(item);
+
+    // If unit is sheets (枚)
+    if (unit === '枚' || prodUnitName === '枚') {
+      return (workTime * qty) / 60;
+    }
+
+    // If unit is meters and 生産単位 is explicitly meters (m / M / ｍ / メートル)
+    if (prodUnitName === 'm' || prodUnitName === 'M' || prodUnitName === 'ｍ' || prodUnitName === 'メートル') {
+      return (workTime * qty) / 60;
+    }
+
+    // Otherwise, for meter products with 生産単位 in cm (㎝ / cm / センチ) or default:
+    // qty (in meters) converted to cm is qty * 100
+    const qtyCm = qty * 100;
+    return (workTime * qtyCm) / 60;
+  };
+
   // Helper to split a hinban production quantity into roll / pack items
   const createRollItemsForHinban = (foundItem, dayIndex) => {
     if (!foundItem) return [];
     const qty = foundItem.production[dayIndex] || 0;
     const unit = extractUnit(foundItem);
-    const workTime = foundItem.materialInfo?.workTime || 0.075;
     
     if (qty <= 0) return [];
 
@@ -233,7 +255,7 @@ export default function FirstFactoryPage() {
         if (i === numRolls - 1 && (qty % packCount !== 0)) {
           sheetCount = qty % packCount;
         }
-        const durationMins = (workTime * sheetCount) / 60;
+        const durationMins = computeDurationMins(foundItem, sheetCount, '枚');
         items.push({
           id: Date.now() + String(i) + Math.random().toString(36).substring(2, 7),
           type: 'hinban',
@@ -257,7 +279,8 @@ export default function FirstFactoryPage() {
         if (i === numRolls - 1 && (qtyCm % packCountCm !== 0)) {
           lengthCm = qtyCm % packCountCm;
         }
-        const durationMins = (workTime * lengthCm) / 60;
+        const rollMeters = lengthCm / 100;
+        const durationMins = computeDurationMins(foundItem, rollMeters, 'm');
         items.push({
           id: Date.now() + String(i) + Math.random().toString(36).substring(2, 7),
           type: 'hinban',
@@ -265,7 +288,7 @@ export default function FirstFactoryPage() {
           poolItemId: foundItem.id,
           rollIndex: i + 1,
           totalRolls: numRolls,
-          meters: lengthCm / 100,
+          meters: rollMeters,
           unit: 'm',
           duration: Math.round(durationMins)
         });
@@ -692,17 +715,15 @@ export default function FirstFactoryPage() {
       const width = item.hinban?.match(/W\d+/i)?.[0]?.toUpperCase() || '';
 
       let numRolls = 0;
-      let durationMins = 0;
+      const durationMins = Math.round(computeDurationMins(item, qty, unit));
 
       if (unit === '枚') {
         const packCount = Number(item.materialInfo?.packCount) > 0 ? Number(item.materialInfo.packCount) : 100;
         numRolls = qty > 0 ? Math.ceil(qty / packCount) : 0;
-        durationMins = Math.round((workTime * qty) / 60);
       } else {
         const qtyCm = qty * 100;
         const packCountCm = getPackCountCm(item, 4000);
         numRolls = qtyCm > 0 ? Math.ceil(qtyCm / packCountCm) : 0;
-        durationMins = Math.round((workTime * qtyCm) / 60);
       }
 
       return {
@@ -1097,17 +1118,15 @@ export default function FirstFactoryPage() {
           const unit = extractUnit(item);
           const workTime = item.materialInfo?.workTime || 0.075;
           let numRolls = 0;
-          let durationMins = 0;
+          const durationMins = Math.round(computeDurationMins(item, qty, unit));
 
           if (unit === '枚') {
             const packCount = Number(item.materialInfo?.packCount) > 0 ? Number(item.materialInfo.packCount) : 100;
             numRolls = qty > 0 ? Math.ceil(qty / packCount) : 0;
-            durationMins = Math.round((workTime * qty) / 60);
           } else {
             const qtyCm = qty * 100;
             const packCountCm = getPackCountCm(item, 4000);
             numRolls = qtyCm > 0 ? Math.ceil(qtyCm / packCountCm) : 0;
-            durationMins = Math.round((workTime * qtyCm) / 60);
           }
 
           dayTotalMins += durationMins;
