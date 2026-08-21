@@ -5,6 +5,7 @@ import MasterBatchEditModal from "../components/MasterBatchEditModal";
 import MasterCsvImportCard from "../components/MasterCsvImportCard";
 import MasterDetailDrawer from "../components/MasterDetailDrawer";
 import MaterialDetailModal from "../components/MaterialDetailModal";
+import MasterProductDetailModal from "../components/MasterProductDetailModal";
 import MasterFilterPanel from "../components/MasterFilterPanel";
 import PageHeader from "../components/PageHeader";
 import MasterRecordModal from "../components/MasterRecordModal";
@@ -715,12 +716,10 @@ export default function MasterDBPage() {
             onClose={() => setSelectedRecord(null)}
           />
         ) : (
-          <MasterDetailDrawer
-            key={extractRecordId(selectedRecord) || "master-detail"}
+          <MasterProductDetailModal
+            key={extractRecordId(selectedRecord) || selectedRecord?.['品番'] || "product-detail"}
             open={!!selectedRecord}
             record={selectedRecord}
-            tabKey={activeTab}
-            fieldDefinitions={fieldDefinitions}
             saving={drawerSaving}
             uploading={drawerUploading}
             onClose={() => setSelectedRecord(null)}
