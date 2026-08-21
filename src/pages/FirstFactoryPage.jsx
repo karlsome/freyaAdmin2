@@ -11,7 +11,7 @@ import { openFirstFactorySchedulePrintWindow } from '../utils/firstFactoryPdfExp
 import * as xlsx from 'xlsx';
 
 export default function FirstFactoryPage() {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const navigate = useNavigate();
   const { tab: routeTab } = useParams();
   
@@ -782,11 +782,12 @@ export default function FirstFactoryPage() {
       });
       const json = await res.json();
       if (json.success) {
-        alert('Schedule order saved successfully for ' + selectedDateStr);
+        alert(t('ff_scheduleSavedSuccess') + ` (${selectedDateStr})`);
         fetchSchedule(selectedMonth); // Refresh
       }
     } catch (err) {
       console.error('Error saving order:', err);
+      alert(t('ff_scheduleSaveError'));
     }
   };
 
@@ -1084,7 +1085,7 @@ export default function FirstFactoryPage() {
   const summaryColumns = useMemo(() => [
     {
       key: 'day',
-      label: 'Date',
+      label: t('ff_colDate'),
       sortable: true,
       minWidth: 110,
       renderCell: (row) => {
@@ -1104,7 +1105,7 @@ export default function FirstFactoryPage() {
     },
     {
       key: 'status',
-      label: summaryViewMode === 'priority' ? 'Schedule Status' : 'Demand & Status',
+      label: summaryViewMode === 'priority' ? t('ff_colStatusPriority') : t('ff_colStatusRaw'),
       sortable: true,
       minWidth: 160,
       renderCell: (row) => {
@@ -1112,28 +1113,28 @@ export default function FirstFactoryPage() {
           return row.isScheduled ? (
             <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/10 px-2.5 py-1 text-xs font-bold text-emerald-600 border border-emerald-500/20">
               <span className="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>
-              Scheduled ({row.itemCount})
+              {t('ff_scheduledBadge').replace('{count}', row.itemCount)}
             </span>
           ) : (
             <span className="inline-flex items-center gap-1 text-xs text-outline font-medium">
-              — No schedule
+              {t('ff_noScheduleBadge')}
             </span>
           );
         } else {
           if (!row.hasDemand) {
             return (
-              <span className="text-outline text-xs font-medium">— No Excel Demand</span>
+              <span className="text-outline text-xs font-medium">{t('ff_noExcelDemandBadge')}</span>
             );
           }
           return row.isScheduled ? (
             <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/10 px-2.5 py-1 text-xs font-bold text-emerald-600 border border-emerald-500/20">
               <span className="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>
-              Planned & Scheduled
+              {t('ff_plannedAndScheduledBadge')}
             </span>
           ) : (
             <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-500/10 px-2.5 py-1 text-xs font-bold text-amber-700 border border-amber-500/20">
               <span className="h-1.5 w-1.5 rounded-full bg-amber-500"></span>
-              Raw Demand (Unscheduled)
+              {t('ff_rawDemandUnscheduledBadge')}
             </span>
           );
         }
@@ -1141,7 +1142,7 @@ export default function FirstFactoryPage() {
     },
     {
       key: 'timeRange',
-      label: summaryViewMode === 'priority' ? 'Time Range' : 'Estimated Time (09:00〜)',
+      label: summaryViewMode === 'priority' ? t('ff_colTimeRangePriority') : t('ff_colTimeRangeRaw'),
       sortable: true,
       minWidth: 150,
       renderCell: (row) => {
@@ -1156,13 +1157,13 @@ export default function FirstFactoryPage() {
     },
     {
       key: 'dayTotalMins',
-      label: summaryViewMode === 'priority' ? 'Scheduled Duration' : 'Total Possible Hours',
+      label: summaryViewMode === 'priority' ? t('ff_colDurationPriority') : t('ff_colDurationRaw'),
       sortable: true,
       minWidth: 160,
       renderCell: (row) => {
         return row.hasWork ? (
           <span className="text-xs font-bold text-on-surface font-mono">
-            {formatTime(row.dayTotalMins)} - {row.dayTotalHours}hrs
+            {formatTime(row.dayTotalMins)} - {row.dayTotalHours}{language === 'ja' ? '時間' : 'hrs'}
           </span>
         ) : (
           <span className="text-xs text-outline">—</span>
@@ -1171,7 +1172,7 @@ export default function FirstFactoryPage() {
     },
     {
       key: 'itemCount',
-      label: summaryViewMode === 'priority' ? 'Items Breakdown' : 'Excel Demand Breakdown',
+      label: summaryViewMode === 'priority' ? t('ff_colBreakdownPriority') : t('ff_colBreakdownRaw'),
       sortable: true,
       minWidth: 220,
       renderCell: (row) => {
@@ -1179,10 +1180,10 @@ export default function FirstFactoryPage() {
         return (
           <div className="flex items-center gap-1.5 text-xs flex-wrap">
             <span className="rounded bg-indigo-500/10 px-2 py-0.5 font-bold text-indigo-600 border border-indigo-500/20" title={`${row.uniqueHinbanCount} Unique Hinban`}>
-              {row.uniqueHinbanCount} 品番
+              {row.uniqueHinbanCount} {language === 'ja' ? '品番' : 'Hinban'}
             </span>
             <span className="rounded bg-primary/10 px-2 py-0.5 font-bold text-primary" title={`${row.hinbanCount} Total Rolls`}>
-              {row.hinbanCount} rolls
+              {row.hinbanCount} {language === 'ja' ? '巻' : 'rolls'}
             </span>
             {summaryViewMode === 'raw' && row.dayTotalMeters > 0 && (
               <span className="rounded bg-emerald-500/10 px-2 py-0.5 font-bold text-emerald-700 border border-emerald-500/20">
@@ -1191,7 +1192,7 @@ export default function FirstFactoryPage() {
             )}
             {summaryViewMode === 'priority' && row.setupCount > 0 && (
               <span className="rounded bg-amber-500/10 px-2 py-0.5 font-bold text-amber-700" title={`${row.setupCount} Setup Events`}>
-                {row.setupCount} setups
+                {row.setupCount} {language === 'ja' ? '段替' : 'setups'}
               </span>
             )}
           </div>
@@ -1200,7 +1201,7 @@ export default function FirstFactoryPage() {
     },
     {
       key: 'scheduledBy',
-      label: 'Scheduled By',
+      label: t('ff_colScheduledBy'),
       sortable: true,
       minWidth: 140,
       renderCell: (row) => {
@@ -1216,7 +1217,7 @@ export default function FirstFactoryPage() {
     },
     {
       key: 'updatedAtStr',
-      label: 'Last Saved',
+      label: t('ff_colLastSaved'),
       sortable: true,
       minWidth: 130,
       renderCell: (row) => (
@@ -1225,7 +1226,7 @@ export default function FirstFactoryPage() {
     },
     {
       key: 'syncStatus',
-      label: 'Excel Sync',
+      label: t('ff_colExcelSync'),
       sortable: true,
       minWidth: 140,
       renderCell: (row) => {
@@ -1233,7 +1234,7 @@ export default function FirstFactoryPage() {
           if (summaryViewMode === 'raw' && row.hasDemand) {
             return (
               <span className="inline-flex items-center gap-1 rounded-full bg-surface-variant/40 px-2.5 py-1 text-xs font-semibold text-outline">
-                Unscheduled
+                {t('ff_unscheduledBadge')}
               </span>
             );
           }
@@ -1246,21 +1247,21 @@ export default function FirstFactoryPage() {
               title={`${row.mismatchCount} scheduled hinban(s) differ from the latest Excel on this date`}
             >
               <span className="material-symbols-outlined" style={{ fontSize: 14 }}>sync_problem</span>
-              {row.mismatchCount} Discrepanc{row.mismatchCount === 1 ? 'y' : 'ies'}
+              {language === 'ja' ? `${row.mismatchCount} 件の差異あり` : `${row.mismatchCount} Discrepanc${row.mismatchCount === 1 ? 'y' : 'ies'}`}
             </span>
           );
         }
         return (
           <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2.5 py-1 text-xs font-semibold text-emerald-600 border border-emerald-500/20">
             <span className="material-symbols-outlined" style={{ fontSize: 14 }}>check_circle</span>
-            Synced
+            {t('ff_syncedBadge')}
           </span>
         );
       }
     },
     {
       key: 'actions',
-      label: 'Action',
+      label: t('ff_colAction'),
       sortable: false,
       minWidth: 100,
       renderCell: (row) => (
@@ -1269,15 +1270,15 @@ export default function FirstFactoryPage() {
             setSelectedDateStr(row.dateKey);
             navigate('/firstFactory/scheduling');
           }}
-          className="inline-flex items-center gap-1 rounded-lg border border-primary/30 bg-primary/5 px-2.5 py-1 text-xs font-bold text-primary hover:bg-primary hover:text-on-primary transition-colors shadow-sm"
-          title="Open in Scheduling Tab"
+          className="inline-flex items-center gap-1 rounded-lg border border-primary/30 bg-primary/5 px-2.5 py-1 text-xs font-bold text-primary hover:bg-primary hover:text-on-primary transition-colors shadow-sm cursor-pointer"
+          title={t('ff_openScheduleBtn')}
         >
           <span className="material-symbols-outlined" style={{ fontSize: 14 }}>edit_calendar</span>
-          {row.isScheduled ? 'Open' : 'Schedule'}
+          {row.isScheduled ? t('ff_openAction') : t('ff_scheduleAction')}
         </button>
       )
     }
-  ], [selectedMonth, summaryViewMode, navigate]);
+  ], [selectedMonth, summaryViewMode, language, navigate, t]);
 
   // -------------------------------------------------------------
   // Production Tab State & Fetching (Realtime Tracking)
@@ -1679,13 +1680,13 @@ export default function FirstFactoryPage() {
     <div className="p-6 pt-24 pb-24 overflow-y-auto h-screen">
       <div className="mb-6 flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-on-surface">{t('firstFactory')}</h1>
-          <p className="mt-1 text-sm text-outline">Manage schedule and priorities</p>
+          <h1 className="text-2xl font-bold text-on-surface">{t('ff_title')}</h1>
+          <p className="mt-1 text-sm text-outline">{t('ff_subtitle')}</p>
         </div>
         <div className="flex items-center gap-4">
           {lastSynced && (
             <div className="text-xs text-outline text-right">
-              <span className="block font-medium">Last Synced:</span>
+              <span className="block font-medium">{language === 'ja' ? '最終同期:' : 'Last Synced:'}</span>
               <span>{lastSynced}</span>
             </div>
           )}
@@ -1695,10 +1696,11 @@ export default function FirstFactoryPage() {
               setIsSyncModalOpen(true);
             }}
             disabled={syncing}
-            className="flex items-center gap-2 rounded-xl border border-primary/30 px-4 py-2 text-sm font-semibold text-primary transition-all hover:bg-primary/5 disabled:opacity-50"
+            className="flex items-center gap-2 rounded-xl border border-primary/30 px-4 py-2 text-sm font-semibold text-primary transition-all hover:bg-primary/5 disabled:opacity-50 cursor-pointer"
+            title={t('ff_syncFromExcel')}
           >
             <span className={`material-symbols-outlined ${syncing ? 'animate-spin' : ''}`} style={{ fontSize: 20 }}>sync</span>
-            {syncing ? 'Syncing...' : 'Sync Excel'}
+            {syncing ? t('ff_syncing') : t('ff_syncFromExcel')}
           </button>
         </div>
       </div>
@@ -1706,10 +1708,10 @@ export default function FirstFactoryPage() {
       {/* Tabs */}
       <MasterTabNav 
         tabs={[
-          { key: 'fetching', label: 'Data Fetching', ready: true },
-          { key: 'scheduling', label: 'Scheduling', ready: true },
-          { key: 'summary', label: 'Summary', ready: true },
-          { key: 'production', label: 'Production', ready: true }
+          { key: 'fetching', label: t('ff_tab_fetching'), ready: true },
+          { key: 'scheduling', label: t('ff_tab_scheduling'), ready: true },
+          { key: 'summary', label: t('ff_tab_summary'), ready: true },
+          { key: 'production', label: t('ff_tab_production'), ready: true }
         ]}
         activeTab={activeTab}
         onSelect={(tab) => handleTabChange(tab.key)}
@@ -1726,14 +1728,14 @@ export default function FirstFactoryPage() {
                   value={selectedMonth}
                   onChange={handleMonthChange}
                   className="rounded-xl border border-outline-variant/50 bg-background/50 px-3 py-2.5 text-sm text-on-surface focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary font-medium"
-                  title="Select month to view"
+                  title={language === 'ja' ? '表示する月を選択' : 'Select month to view'}
                 />
               </div>
               <div className="relative flex-1">
                 <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline">search</span>
                 <input
                   type="text"
-                  placeholder={t('search')}
+                  placeholder={t('ff_searchPlaceholder')}
                   className="w-full rounded-xl border border-outline-variant/50 bg-background/50 py-2.5 pl-10 pr-4 text-sm text-on-surface placeholder:text-outline focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
                   value={filter}
                   onChange={handleFilterChange}
@@ -1751,8 +1753,8 @@ export default function FirstFactoryPage() {
               <table className="w-full text-left text-sm text-on-surface">
                 <thead className="bg-surface-variant/30 text-xs uppercase text-outline">
                   <tr>
-                    <th className="sticky left-0 z-10 bg-surface px-4 py-3 min-w-[200px]">Hinban</th>
-                    <th className="sticky left-[200px] z-10 bg-surface px-4 py-3 min-w-[80px]">Type</th>
+                    <th className="sticky left-0 z-10 bg-surface px-4 py-3 min-w-[200px]">{language === 'ja' ? '品番' : 'Hinban'}</th>
+                    <th className="sticky left-[200px] z-10 bg-surface px-4 py-3 min-w-[80px]">{language === 'ja' ? '区分' : 'Type'}</th>
                     {days.map(day => (
                       <th key={day} className="px-2 py-3 text-center min-w-[40px]">{day}</th>
                     ))}
@@ -1766,7 +1768,7 @@ export default function FirstFactoryPage() {
                   ) : filteredData.length === 0 ? (
                     <tr>
                       <td colSpan={33} className="px-4 py-8 text-center text-outline">
-                        {filter ? t('noData') : `No data fetched yet for ${selectedMonth}. Please sync from Excel.`}
+                        {filter ? t('noData') : (language === 'ja' ? `${selectedMonth} のデータはまだ同期されていません。Excelから同期してください。` : `No data fetched yet for ${selectedMonth}. Please sync from Excel.`)}
                       </td>
                     </tr>
                   ) : (
@@ -1783,7 +1785,7 @@ export default function FirstFactoryPage() {
                             </span>
                           </td>
                           <td className="sticky left-[200px] bg-surface px-4 py-2 text-primary font-semibold text-xs border-r border-outline-variant/20">
-                            受注
+                            {language === 'ja' ? '受注' : 'Orders'}
                           </td>
                           {item.orders.map((val, i) => (
                             <td key={i} className="px-2 py-2 text-center text-xs border-r border-outline-variant/20">{val}</td>
@@ -1792,7 +1794,7 @@ export default function FirstFactoryPage() {
                         {/* Production Row */}
                         <tr className="border-b border-outline-variant/20 hover:bg-surface-variant/20">
                           <td className="sticky left-[200px] bg-surface px-4 py-2 text-[#006064] dark:text-[#4dd0e1] font-semibold text-xs border-r border-outline-variant/20">
-                            生産
+                            {language === 'ja' ? '生産' : 'Prod'}
                           </td>
                           {item.production.map((val, i) => (
                             <td key={i} className="px-2 py-2 text-center text-xs border-r border-outline-variant/20">{val}</td>
@@ -1809,23 +1811,25 @@ export default function FirstFactoryPage() {
           {totalPages > 1 && (
             <div className="mt-4 flex items-center justify-between px-2">
               <div className="text-sm text-outline">
-                Showing {((currentPage - 1) * ITEMS_PER_PAGE) + 1} to {Math.min(currentPage * ITEMS_PER_PAGE, filteredData.length)} of {filteredData.length} entries
+                {language === 'ja' 
+                  ? `${filteredData.length} 件中 ${((currentPage - 1) * ITEMS_PER_PAGE) + 1} ～ ${Math.min(currentPage * ITEMS_PER_PAGE, filteredData.length)} 件を表示`
+                  : `Showing ${((currentPage - 1) * ITEMS_PER_PAGE) + 1} to ${Math.min(currentPage * ITEMS_PER_PAGE, filteredData.length)} of ${filteredData.length} entries`}
               </div>
               <div className="flex items-center gap-2">
                 <button 
                   onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                   disabled={currentPage === 1}
-                  className="flex items-center justify-center rounded-lg border border-outline-variant/50 p-2 text-on-surface hover:bg-surface-variant/50 disabled:opacity-50"
+                  className="flex items-center justify-center rounded-lg border border-outline-variant/50 p-2 text-on-surface hover:bg-surface-variant/50 disabled:opacity-50 cursor-pointer"
                 >
                   <span className="material-symbols-outlined" style={{ fontSize: 20 }}>chevron_left</span>
                 </button>
                 <span className="text-sm font-medium text-on-surface px-2">
-                  Page {currentPage} of {totalPages}
+                  {language === 'ja' ? `ページ ${currentPage} / ${totalPages}` : `Page ${currentPage} of ${totalPages}`}
                 </span>
                 <button 
                   onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
                   disabled={currentPage === totalPages}
-                  className="flex items-center justify-center rounded-lg border border-outline-variant/50 p-2 text-on-surface hover:bg-surface-variant/50 disabled:opacity-50"
+                  className="flex items-center justify-center rounded-lg border border-outline-variant/50 p-2 text-on-surface hover:bg-surface-variant/50 disabled:opacity-50 cursor-pointer"
                 >
                   <span className="material-symbols-outlined" style={{ fontSize: 20 }}>chevron_right</span>
                 </button>
@@ -1846,13 +1850,15 @@ export default function FirstFactoryPage() {
                 </span>
                 <div>
                   <h4 className="text-sm font-bold text-on-surface flex items-center gap-2">
-                    Excel Discrepancy on {parseInt(selectedMonth.split('-')[1], 10)}/{selectedDay}
+                    {language === 'ja' ? `${parseInt(selectedMonth.split('-')[1], 10)}/${selectedDay} にExcelとの差異を検知` : `Excel Discrepancy on ${parseInt(selectedMonth.split('-')[1], 10)}/${selectedDay}`}
                     <span className="rounded-full bg-amber-500/20 px-2 py-0.5 text-xs font-bold text-amber-700">
-                      {currentDayDiscrepancies.count} affected hinban{currentDayDiscrepancies.count === 1 ? '' : 's'}
+                      {language === 'ja' ? `${currentDayDiscrepancies.count} 件の差異品番` : `${currentDayDiscrepancies.count} affected hinban${currentDayDiscrepancies.count === 1 ? '' : 's'}`}
                     </span>
                   </h4>
                   <p className="text-xs text-outline mt-0.5">
-                    Some scheduled hinbans have 0m in Excel or changed quantities. Auto-aligning will <strong>only update this specific date ({selectedDateStr})</strong> without affecting other dates.
+                    {language === 'ja' 
+                      ? `一部の設定済品番が最新Excelで0mまたは数量変更されています。「自動反映」を実行するとこの日付 (${selectedDateStr}) のみ更新されます。` 
+                      : `Some scheduled hinbans have 0m in Excel or changed quantities. Auto-aligning will only update this specific date (${selectedDateStr}) without affecting other dates.`}
                   </p>
                 </div>
               </div>
@@ -1860,17 +1866,17 @@ export default function FirstFactoryPage() {
                 <button
                   type="button"
                   onClick={() => setIsDiscrepancyModalOpen(true)}
-                  className="rounded-xl border border-amber-500/40 bg-surface/80 px-3 py-2 text-xs font-bold text-amber-700 hover:bg-surface transition-colors shadow-xs"
+                  className="rounded-xl border border-amber-500/40 bg-surface/80 px-3 py-2 text-xs font-bold text-amber-700 hover:bg-surface transition-colors shadow-xs cursor-pointer"
                 >
-                  Review Details
+                  {language === 'ja' ? '詳細を確認' : 'Review Details'}
                 </button>
                 <button
                   type="button"
                   onClick={handleAutoAlignCurrentDate}
-                  className="flex items-center gap-1.5 rounded-xl bg-amber-600 px-3.5 py-2 text-xs font-bold text-white shadow-sm hover:bg-amber-700 transition-colors"
+                  className="flex items-center gap-1.5 rounded-xl bg-amber-600 px-3.5 py-2 text-xs font-bold text-white shadow-sm hover:bg-amber-700 transition-colors cursor-pointer"
                 >
                   <span className="material-symbols-outlined" style={{ fontSize: 16 }}>auto_fix_high</span>
-                  Auto-Align {parseInt(selectedMonth.split('-')[1], 10)}/{selectedDay} with Excel
+                  {language === 'ja' ? `${parseInt(selectedMonth.split('-')[1], 10)}/${selectedDay} をExcelに自動反映` : `Auto-Align ${parseInt(selectedMonth.split('-')[1], 10)}/${selectedDay} with Excel`}
                 </button>
               </div>
             </div>
@@ -1878,13 +1884,13 @@ export default function FirstFactoryPage() {
 
           <div className="flex items-center justify-between rounded-2xl border border-outline-variant/30 bg-surface/50 p-4 backdrop-blur-xl">
             <div className="flex items-center gap-3">
-              <span className="text-sm font-medium text-on-surface">Select Date:</span>
+              <span className="text-sm font-medium text-on-surface">{t('ff_targetDate')}</span>
               <div className="flex items-center gap-1 rounded-xl border border-outline-variant/50 bg-background/50 p-1">
                 <button
                   type="button"
                   onClick={() => handleStepDate(-1)}
                   className="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-surface-variant/50 text-on-surface transition-colors active:scale-95 cursor-pointer"
-                  title="Previous Day"
+                  title={t('ff_prevDay')}
                 >
                   <span className="material-symbols-outlined" style={{ fontSize: 20 }}>chevron_left</span>
                 </button>
@@ -1901,14 +1907,13 @@ export default function FirstFactoryPage() {
                       ? 'bg-blue-500/15 text-blue-600 dark:text-blue-400 border border-blue-500/30' 
                       : 'bg-surface-variant/70 text-on-surface border border-outline-variant/40'
                 }`}>
-                  <span>{selectedDayOfWeekInfo.ja}曜日</span>
-                  <span className="opacity-70 font-semibold text-[11px]">({selectedDayOfWeekInfo.en})</span>
+                  <span>{language === 'ja' ? `${selectedDayOfWeekInfo.ja}曜日` : selectedDayOfWeekInfo.en}</span>
                 </span>
                 <button
                   type="button"
                   onClick={() => handleStepDate(1)}
                   className="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-surface-variant/50 text-on-surface transition-colors active:scale-95 cursor-pointer"
-                  title="Next Day"
+                  title={t('ff_nextDay')}
                 >
                   <span className="material-symbols-outlined" style={{ fontSize: 20 }}>chevron_right</span>
                 </button>
@@ -1916,10 +1921,10 @@ export default function FirstFactoryPage() {
             </div>
             <button 
               onClick={handleSaveSchedule}
-              className="flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-on-primary shadow-lg shadow-primary/20 transition-all hover:bg-primary/90"
+              className="flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-on-primary shadow-lg shadow-primary/20 transition-all hover:bg-primary/90 cursor-pointer"
             >
               <span className="material-symbols-outlined" style={{ fontSize: 20 }}>save</span>
-              Save Daily Schedule
+              {t('ff_saveDailySchedule')}
             </button>
           </div>
 
@@ -1933,26 +1938,26 @@ export default function FirstFactoryPage() {
               <div className="mb-4 flex flex-col gap-3">
                 <div className="flex items-center justify-between">
                   <h3 className="text-lg font-bold text-on-surface">
-                    Available to Schedule
+                    {t('ff_availableToSchedule')}
                   </h3>
                   <div className="flex items-center gap-2">
-                    <span className="rounded bg-primary/10 px-2 py-1 text-xs font-bold text-primary shadow-sm border border-primary/20" title="Total estimated production time for filtered items">
+                    <span className="rounded bg-primary/10 px-2 py-1 text-xs font-bold text-primary shadow-sm border border-primary/20" title={t('ff_totalEstimatedFilteredTime')}>
                       {formatTime(poolTotalMins)}
                     </span>
                     <button 
                       onClick={() => setShowNoAdhesive(!showNoAdhesive)}
-                      className={`flex items-center gap-1 text-xs px-2 py-1 rounded-lg border transition-colors ${showNoAdhesive ? 'border-primary bg-primary/10 text-primary' : 'border-outline-variant/50 text-outline hover:bg-surface-variant/50'}`}
-                      title={showNoAdhesive ? "Hide raw materials (粘着無し)" : "Show raw materials (粘着無し)"}
+                      className={`flex items-center gap-1 text-xs px-2 py-1 rounded-lg border transition-colors cursor-pointer ${showNoAdhesive ? 'border-primary bg-primary/10 text-primary' : 'border-outline-variant/50 text-outline hover:bg-surface-variant/50'}`}
+                      title={showNoAdhesive ? t('ff_hideNoAdhesive') : t('ff_showNoAdhesive')}
                     >
                       <span className="material-symbols-outlined" style={{fontSize: 16}}>
                         {showNoAdhesive ? 'visibility' : 'visibility_off'}
                       </span>
-                      {showNoAdhesive ? 'Hide 粘着無し' : 'Show 粘着無し'}
+                      {showNoAdhesive ? t('ff_hideNoAdhesive') : t('ff_showNoAdhesive')}
                     </button>
                     <span className="text-xs font-semibold text-outline">
                       {processedPoolItems.length !== poolItems.length 
-                        ? `${processedPoolItems.length} / ${poolItems.length} items`
-                        : `${poolItems.length} items`}
+                        ? (language === 'ja' ? `${processedPoolItems.length} / ${poolItems.length} 件` : `${processedPoolItems.length} / ${poolItems.length} items`)
+                        : (language === 'ja' ? `${poolItems.length} 件` : `${poolItems.length} items`)}
                     </span>
                   </div>
                 </div>
@@ -1962,7 +1967,7 @@ export default function FirstFactoryPage() {
                   <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline" style={{ fontSize: 18 }}>search</span>
                   <input
                     type="text"
-                    placeholder="Search hinban..."
+                    placeholder={t('ff_searchHinban')}
                     className="w-full rounded-xl border border-outline-variant/50 bg-background/50 py-2 pl-9 pr-3 text-sm text-on-surface placeholder:text-outline focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
                     value={poolSearch}
                     onChange={(e) => setPoolSearch(e.target.value)}
@@ -1971,7 +1976,7 @@ export default function FirstFactoryPage() {
                     <button
                       type="button"
                       onClick={() => setPoolSearch('')}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-outline hover:text-on-surface"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-outline hover:text-on-surface cursor-pointer"
                     >
                       <span className="material-symbols-outlined" style={{ fontSize: 16 }}>close</span>
                     </button>
@@ -1988,15 +1993,15 @@ export default function FirstFactoryPage() {
                       onChange={(e) => setPoolSortBy(e.target.value)}
                       className="bg-transparent font-bold text-on-surface focus:outline-none cursor-pointer"
                     >
-                      <option value="kataban-asc">型番 (A → Z)</option>
-                      <option value="kataban-desc">型番 (Z → A)</option>
-                      <option value="default">Excel Sequence</option>
-                      <option value="duration-desc">Longest Time (時間 長→短)</option>
-                      <option value="duration-asc">Shortest Time (時間 短→長)</option>
-                      <option value="qty-desc">Most Meters (数量 多→少)</option>
-                      <option value="qty-asc">Least Meters (数量 少→多)</option>
-                      <option value="rolls-desc">Most Rolls (巻数 多→少)</option>
-                      <option value="hinban-asc">Hinban (A → Z)</option>
+                      <option value="kataban-asc">{t('ff_sort_katabanAsc')}</option>
+                      <option value="kataban-desc">{t('ff_sort_katabanDesc')}</option>
+                      <option value="default">{t('ff_sort_default')}</option>
+                      <option value="duration-desc">{t('ff_sort_durationDesc')}</option>
+                      <option value="duration-asc">{t('ff_sort_durationAsc')}</option>
+                      <option value="qty-desc">{t('ff_sort_qtyDesc')}</option>
+                      <option value="qty-asc">{t('ff_sort_qtyAsc')}</option>
+                      <option value="rolls-desc">{t('ff_sort_rollsDesc')}</option>
+                      <option value="hinban-asc">{t('ff_sort_hinbanAsc')}</option>
                     </select>
                   </div>
 
@@ -2005,40 +2010,38 @@ export default function FirstFactoryPage() {
                     <button
                       type="button"
                       onClick={() => setPoolBatchFilter('all')}
-                      className={`px-2 py-1 rounded-md transition-colors ${poolBatchFilter === 'all' ? 'bg-primary text-on-primary shadow-2xs' : 'text-outline hover:text-on-surface'}`}
+                      className={`px-2 py-1 rounded-md transition-colors cursor-pointer ${poolBatchFilter === 'all' ? 'bg-primary text-on-primary shadow-2xs' : 'text-outline hover:text-on-surface'}`}
                     >
-                      All Sizes
+                      {t('ff_allSizes')}
                     </button>
                     <button
                       type="button"
                       onClick={() => setPoolBatchFilter('large')}
-                      className={`flex items-center gap-1 px-2 py-1 rounded-md transition-colors ${poolBatchFilter === 'large' ? 'bg-primary text-on-primary shadow-2xs' : 'text-outline hover:text-on-surface'}`}
-                      title="Items >= 500m or >= 5 rolls"
+                      className={`flex items-center gap-1 px-2 py-1 rounded-md transition-colors cursor-pointer ${poolBatchFilter === 'large' ? 'bg-primary text-on-primary shadow-2xs' : 'text-outline hover:text-on-surface'}`}
+                      title={language === 'ja' ? '500m以上または5巻以上の大ロット' : 'Items >= 500m or >= 5 rolls'}
                     >
-                      <span>Large</span>
-                      <span className="text-[10px] opacity-75 font-normal">≥500m</span>
+                      <span>{t('ff_largeBatch')}</span>
                     </button>
                     <button
                       type="button"
                       onClick={() => setPoolBatchFilter('small')}
-                      className={`flex items-center gap-1 px-2 py-1 rounded-md transition-colors ${poolBatchFilter === 'small' ? 'bg-primary text-on-primary shadow-2xs' : 'text-outline hover:text-on-surface'}`}
-                      title="Items < 200m"
+                      className={`flex items-center gap-1 px-2 py-1 rounded-md transition-colors cursor-pointer ${poolBatchFilter === 'small' ? 'bg-primary text-on-primary shadow-2xs' : 'text-outline hover:text-on-surface'}`}
+                      title={language === 'ja' ? '200m未満の小ロット' : 'Items < 200m'}
                     >
-                      <span>Small</span>
-                      <span className="text-[10px] opacity-75 font-normal">&lt;200m</span>
+                      <span>{t('ff_smallBatch')}</span>
                     </button>
                   </div>
 
                   {/* Width Filter (if multiple widths present) */}
                   {availableWidths.length > 1 && (
                     <div className="flex items-center gap-1 rounded-lg border border-outline-variant/40 bg-surface-variant/20 px-2 py-1 text-xs">
-                      <span className="text-outline font-medium">Width:</span>
+                      <span className="text-outline font-medium">{t('ff_width')}</span>
                       <select
                         value={poolWidthFilter}
                         onChange={(e) => setPoolWidthFilter(e.target.value)}
                         className="bg-transparent font-bold text-on-surface focus:outline-none cursor-pointer"
                       >
-                        <option value="all">All Widths ({availableWidths.length})</option>
+                        <option value="all">{language === 'ja' ? `全幅 (${availableWidths.length})` : `All Widths (${availableWidths.length})`}</option>
                         {availableWidths.map(w => (
                           <option key={w} value={w}>{w}</option>
                         ))}
@@ -2056,9 +2059,9 @@ export default function FirstFactoryPage() {
                         setPoolSortBy('kataban-asc');
                         setPoolSearch('');
                       }}
-                      className="ml-auto text-[11px] font-bold text-primary hover:underline"
+                      className="ml-auto text-[11px] font-bold text-primary hover:underline cursor-pointer"
                     >
-                      Reset
+                      {t('ff_resetFilters')}
                     </button>
                   )}
                 </div>
@@ -2070,6 +2073,7 @@ export default function FirstFactoryPage() {
                     {PRESET_SETUP_ITEMS.map(preset => {
                       const duration = setupTimes[preset.name] !== undefined ? setupTimes[preset.name] : preset.defaultTime;
                       const comment = setupComments[preset.name] || '';
+                      const presetDisplayName = preset.name === '段取り' ? t('ff_dandori') : (preset.name === '試作' ? t('ff_trial') : preset.name);
                       return (
                         <div 
                           key={preset.name}
@@ -2085,18 +2089,18 @@ export default function FirstFactoryPage() {
                         >
                           <div className="flex items-center justify-between gap-1 w-full">
                             <div className="flex items-center gap-1 min-w-0 flex-1">
-                              <span className="truncate font-bold" title={comment ? `${preset.name} ${comment}` : preset.name}>
-                                {comment ? `${preset.name} ${comment}` : preset.name}
+                              <span className="truncate font-bold" title={comment ? `${presetDisplayName} ${comment}` : presetDisplayName}>
+                                {comment ? `${presetDisplayName} ${comment}` : presetDisplayName}
                               </span>
                               <button
                                 type="button"
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  setCommentModalItem({ name: preset.name, isPreset: true, comment });
+                                  setCommentModalItem({ name: preset.name, displayName: presetDisplayName, isPreset: true, comment });
                                   setTempCommentText(comment);
                                 }}
-                                className={`p-0.5 rounded hover:bg-primary/20 transition-colors shrink-0 ${comment ? 'text-primary font-bold' : 'text-primary/40 hover:text-primary'}`}
-                                title={comment ? `Title: ${preset.name} ${comment}` : "Click to edit title / add text"}
+                                className={`p-0.5 rounded hover:bg-primary/20 transition-colors shrink-0 cursor-pointer ${comment ? 'text-primary font-bold' : 'text-primary/40 hover:text-primary'}`}
+                                title={comment ? `Title: ${presetDisplayName} ${comment}` : t('ff_editTitleNote')}
                               >
                                 <span className="material-symbols-outlined" style={{ fontSize: 16 }}>
                                   edit_note
@@ -2111,12 +2115,12 @@ export default function FirstFactoryPage() {
                                 className="w-11 rounded bg-background/80 border border-primary/30 px-1 py-0.5 text-center text-xs focus:outline-none focus:border-primary font-normal"
                                 min="0"
                               />
-                              <span className="text-[11px] font-medium">m</span>
+                              <span className="text-[11px] font-medium">{t('ff_minutesShort')}</span>
                               <button 
                                 type="button"
                                 onClick={() => handleAddToSchedule({ type: 'setup', name: preset.name, comment, duration })}
-                                className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full hover:bg-primary/20 text-primary transition-colors ml-0.5"
-                                title="スケジュールに追加"
+                                className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full hover:bg-primary/20 text-primary transition-colors ml-0.5 cursor-pointer"
+                                title={t('ff_addToSchedule')}
                               >
                                 <span className="material-symbols-outlined" style={{fontSize: 16}}>arrow_forward</span>
                               </button>
@@ -2136,7 +2140,7 @@ export default function FirstFactoryPage() {
                         }
                         onDragStartSchedule(e, { 
                           type: 'setup', 
-                          name: customSetupName.trim() || 'カスタム設定', 
+                          name: customSetupName.trim() || t('ff_customSetup'), 
                           comment: setupComments['custom'] || '',
                           duration: Number(customSetupDuration) || 0 
                         }, 'pool');
@@ -2147,7 +2151,7 @@ export default function FirstFactoryPage() {
                         <input 
                           type="text" 
                           value={customSetupName} 
-                          placeholder="項目名入力..."
+                          placeholder={t('ff_enterCustomName')}
                           onChange={e => handleUpdateCustomName(e.target.value)}
                           className="w-full min-w-0 rounded bg-background/80 border border-amber-500/30 px-1.5 py-0.5 text-xs text-on-surface placeholder:text-outline focus:outline-none focus:border-amber-500 font-normal"
                         />
@@ -2155,11 +2159,11 @@ export default function FirstFactoryPage() {
                           type="button"
                           onClick={(e) => {
                             e.stopPropagation();
-                            setCommentModalItem({ name: customSetupName.trim() || 'カスタム設定', isPreset: true, isCustom: true, comment: setupComments['custom'] || '' });
+                            setCommentModalItem({ name: customSetupName.trim() || t('ff_customSetup'), isPreset: true, isCustom: true, comment: setupComments['custom'] || '' });
                             setTempCommentText(setupComments['custom'] || '');
                           }}
-                          className={`p-0.5 rounded hover:bg-amber-500/20 transition-colors shrink-0 ${setupComments['custom'] ? 'text-amber-700 font-bold' : 'text-amber-600/40 hover:text-amber-700'}`}
-                          title={setupComments['custom'] ? `Note: ${setupComments['custom']}` : "Add comment/instruction"}
+                          className={`p-0.5 rounded hover:bg-amber-500/20 transition-colors shrink-0 cursor-pointer ${setupComments['custom'] ? 'text-amber-700 font-bold' : 'text-amber-600/40 hover:text-amber-700'}`}
+                          title={setupComments['custom'] ? `Note: ${setupComments['custom']}` : t('ff_editTitleNote')}
                         >
                           <span className="material-symbols-outlined" style={{ fontSize: 16 }}>
                             {setupComments['custom'] ? 'chat' : 'add_comment'}
@@ -2168,22 +2172,22 @@ export default function FirstFactoryPage() {
                         <input 
                           type="number" 
                           value={customSetupDuration} 
-                          placeholder="分"
+                          placeholder={t('ff_minutesShort')}
                           onChange={e => handleUpdateCustomDuration(e.target.value)}
                           className="w-11 rounded bg-background/80 border border-amber-500/30 px-1 py-0.5 text-center text-xs focus:outline-none focus:border-amber-500 shrink-0 font-normal"
                           min="0"
                         />
-                        <span className="text-[11px] font-medium shrink-0">m</span>
+                        <span className="text-[11px] font-medium shrink-0">{t('ff_minutesShort')}</span>
                         <button 
                           type="button"
                           onClick={() => handleAddToSchedule({ 
                             type: 'setup', 
-                            name: customSetupName.trim() || 'カスタム設定', 
+                            name: customSetupName.trim() || t('ff_customSetup'), 
                             comment: setupComments['custom'] || '',
                             duration: Number(customSetupDuration) || 0 
                           })}
-                          className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full hover:bg-amber-500/20 text-amber-600 transition-colors ml-0.5"
-                          title="スケジュールに追加"
+                          className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full hover:bg-amber-500/20 text-amber-600 transition-colors ml-0.5 cursor-pointer"
+                          title={t('ff_addToSchedule')}
                         >
                           <span className="material-symbols-outlined" style={{fontSize: 16}}>arrow_forward</span>
                         </button>
@@ -2200,7 +2204,7 @@ export default function FirstFactoryPage() {
 
                 {processedPoolItems.length === 0 ? (
                   <div className="text-center text-sm text-outline mt-10">
-                    {poolItems.length === 0 ? 'No items available for this date.' : 'No items match the current filters.'}
+                    {poolItems.length === 0 ? t('ff_noItemsForDate') : t('ff_noItemsMatchFilter')}
                   </div>
                 ) : (
                   processedPoolItems.map(item => {
@@ -2229,21 +2233,22 @@ export default function FirstFactoryPage() {
                           </span>
                           {isRawMaterial && (
                             <span className="rounded bg-amber-500/10 px-1.5 py-0.5 text-[9px] font-bold text-amber-600 uppercase tracking-wider">
-                              Raw Material
+                              {language === 'ja' ? '原材料 (粘着無)' : 'Raw Material'}
                             </span>
                           )}
                         </div>
                         <div className="flex items-center gap-2 mt-1 text-xs text-outline">
                           <span className="rounded bg-primary/10 px-1.5 py-0.5 font-bold text-primary">
-                            Qty: {qty}m
+                            {language === 'ja' ? `数量: ${qty}m` : `Qty: ${qty}m`}
                           </span>
-                          <span>{numRolls} rolls</span>
-                          <span>{durationMins} mins</span>
+                          <span>{numRolls} {language === 'ja' ? '巻' : 'rolls'}</span>
+                          <span>{durationMins} {t('ff_minutesShort')}</span>
                         </div>
                       </div>
                       <button 
                         onClick={() => handleAddToSchedule({ type: 'pool-hinban', hinban: item.hinban, id: item.id })}
-                        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full hover:bg-primary/10 text-primary transition-colors"
+                        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full hover:bg-primary/10 text-primary transition-colors cursor-pointer"
+                        title={t('ff_addToSchedule')}
                       >
                         <span className="material-symbols-outlined" style={{fontSize: 20}}>arrow_forward</span>
                       </button>
@@ -2261,15 +2266,15 @@ export default function FirstFactoryPage() {
             >
               <h3 className="mb-4 text-lg font-bold text-primary flex items-center justify-between">
                 <div className="flex items-center gap-4">
-                  Priority Order
+                  {t('ff_priorityOrder')}
                   <div className="flex items-center gap-2 text-sm font-normal text-on-surface">
                     <span className="material-symbols-outlined text-outline" style={{fontSize:18}}>schedule</span>
-                    Start: 
+                    {t('ff_start')} 
                     <input 
                       type="time" 
                       value={startTime}
                       onChange={e => setStartTime(e.target.value)}
-                      className="rounded bg-background/50 border border-outline-variant/50 px-2 py-0.5 text-xs focus:outline-none focus:border-primary"
+                      className="rounded bg-background/50 border border-outline-variant/50 px-2 py-0.5 text-xs focus:outline-none focus:border-primary font-bold"
                     />
                   </div>
                 </div>
@@ -2283,32 +2288,35 @@ export default function FirstFactoryPage() {
                         type="button"
                         onClick={handlePrintSchedulePDF}
                         className="flex items-center gap-1 rounded-lg border border-primary/40 bg-primary/10 px-2.5 py-1 text-xs font-bold text-primary transition-all hover:bg-primary hover:text-on-primary shadow-xs active:scale-95 cursor-pointer"
-                        title="A3縦 生産計画PDF印刷 (Print A3 Schedule PDF)"
+                        title={t('ff_printTooltip')}
                       >
                         <span className="material-symbols-outlined" style={{ fontSize: 16 }}>print</span>
-                        Print
+                        {t('ff_print')}
                       </button>
                       <button 
                         type="button"
                         onClick={() => {
-                          if (window.confirm("Are you sure you want to reset the schedule? All items will be moved back to the pool.")) {
+                          if (window.confirm(t('ff_resetScheduleConfirm'))) {
                             setScheduleOrder([]);
                           }
                         }}
                         className="flex items-center gap-1 rounded-lg border border-red-500/30 bg-red-500/10 px-2 py-1 text-xs font-semibold text-red-600 transition-colors hover:bg-red-500/20 cursor-pointer"
+                        title={t('ff_reset')}
                       >
                         <span className="material-symbols-outlined" style={{ fontSize: 16 }}>restart_alt</span>
-                        Reset
+                        {t('ff_reset')}
                       </button>
                     </>
                   )}
-                  <span className="text-sm font-normal text-primary/70">{scheduledItems.length} scheduled</span>
+                  <span className="text-sm font-normal text-primary/70">
+                    {language === 'ja' ? `${scheduledItems.length} 件設定済` : `${scheduledItems.length} scheduled`}
+                  </span>
                 </div>
               </h3>
               <div className="flex flex-col gap-2 flex-1 overflow-y-auto">
                 {scheduleWithTimes.length === 0 ? (
                   <div className="text-center text-sm text-primary/50 mt-10 border-2 border-dashed border-primary/20 rounded-xl p-8">
-                    Drag items here to set priority order
+                    {t('ff_dragToSetPriority')}
                   </div>
                 ) : (
                   scheduleWithTimes.map((item, index) => {
@@ -2324,6 +2332,10 @@ export default function FirstFactoryPage() {
                     } else if (isQtyMismatch) {
                       cardBorderClass = 'border-amber-500/40 bg-amber-500/5 hover:border-amber-500/70';
                     }
+
+                    const setupDisplayName = item.type === 'setup' 
+                      ? (item.name === '段取り' ? t('ff_dandori') : (item.name === '試作' ? t('ff_trial') : item.name))
+                      : item.name;
 
                     return (
                       <div 
@@ -2350,8 +2362,8 @@ export default function FirstFactoryPage() {
                         {item.type === 'setup' ? (
                           <div className="flex-1 flex items-center justify-between min-w-0 pr-2">
                             <div className="flex items-center gap-2 min-w-0 flex-1">
-                              <span className="font-bold text-sm text-amber-700 truncate" title={item.comment ? `${item.name} ${item.comment}` : item.name}>
-                                {item.comment ? `${item.name} ${item.comment}` : item.name}
+                              <span className="font-bold text-sm text-amber-700 truncate" title={item.comment ? `${setupDisplayName} ${item.comment}` : setupDisplayName}>
+                                {item.comment ? `${setupDisplayName} ${item.comment}` : setupDisplayName}
                               </span>
                               <button
                                 type="button"
@@ -2360,15 +2372,15 @@ export default function FirstFactoryPage() {
                                   setCommentModalItem(item);
                                   setTempCommentText(item.comment || '');
                                 }}
-                                className={`p-1 rounded-md hover:bg-amber-500/20 transition-colors shrink-0 ${item.comment ? 'text-amber-800 font-bold' : 'text-amber-600/40 hover:text-amber-700'}`}
-                                title={item.comment ? "Edit title suffix/text" : "Add text to title"}
+                                className={`p-1 rounded-md hover:bg-amber-500/20 transition-colors shrink-0 cursor-pointer ${item.comment ? 'text-amber-800 font-bold' : 'text-amber-600/40 hover:text-amber-700'}`}
+                                title={t('ff_editTitleNote')}
                               >
                                 <span className="material-symbols-outlined" style={{ fontSize: 16 }}>
                                   edit_note
                                 </span>
                               </button>
                             </div>
-                            <span className="text-xs font-bold text-amber-700 whitespace-nowrap ml-2">{item.duration} mins</span>
+                            <span className="text-xs font-bold text-amber-700 whitespace-nowrap ml-2">{item.duration} {t('ff_minutesShort')}</span>
                           </div>
                         ) : (
                           <>
@@ -2378,18 +2390,20 @@ export default function FirstFactoryPage() {
                                 {isZeroOrMissing && (
                                   <span className="inline-flex items-center gap-1 rounded bg-red-500/15 px-1.5 py-0.5 text-[10px] font-bold text-red-600 border border-red-500/30">
                                     <span className="material-symbols-outlined" style={{ fontSize: 12 }}>warning</span>
-                                    {disc.type === 'missing_in_excel' ? 'Not in Excel' : (disc.movedText || '0m in Excel today')}
+                                    {disc.type === 'missing_in_excel' ? t('ff_notInExcel') : (disc.movedText || t('ff_zeroMetersToday'))}
                                   </span>
                                 )}
                                 {isQtyMismatch && (
                                   <span className="inline-flex items-center gap-1 rounded bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-bold text-amber-700 border border-amber-500/30">
                                     <span className="material-symbols-outlined" style={{ fontSize: 12 }}>difference</span>
-                                    Excel: {disc.excelQty}m
+                                    {t('ff_excelMismatchBadge').replace('{qty}', disc.excelQty)}
                                   </span>
                                 )}
                               </div>
                               <div className="flex items-center gap-2 mt-1 text-xs text-outline flex-wrap">
-                                <span className="bg-primary/10 text-primary px-1.5 rounded-sm">Roll {item.rollIndex}/{item.totalRolls}</span>
+                                <span className="bg-primary/10 text-primary px-1.5 rounded-sm">
+                                  {language === 'ja' ? `巻 ${item.rollIndex}/${item.totalRolls}` : `Roll ${item.rollIndex}/${item.totalRolls}`}
+                                </span>
                                 <span>{item.meters}m</span>
                                 {isQtyMismatch && item.rollIndex === 1 && (
                                   <button
@@ -2398,22 +2412,22 @@ export default function FirstFactoryPage() {
                                       e.stopPropagation();
                                       handleUpdateHinbanQty(item.hinban);
                                     }}
-                                    className="inline-flex items-center gap-1 rounded bg-amber-500/20 px-2 py-0.5 text-[11px] font-bold text-amber-800 hover:bg-amber-500/30 transition-colors ml-1"
-                                    title="Update rolls and duration to match Excel"
+                                    className="inline-flex items-center gap-1 rounded bg-amber-500/20 px-2 py-0.5 text-[11px] font-bold text-amber-800 hover:bg-amber-500/30 transition-colors ml-1 cursor-pointer"
+                                    title={language === 'ja' ? '最新Excelデータに合わせて巻数・所要時間を更新' : 'Update rolls and duration to match Excel'}
                                   >
                                     <span className="material-symbols-outlined" style={{ fontSize: 12 }}>sync</span>
-                                    Update Qty ({disc.excelQty}m)
+                                    {t('ff_updateQtyPrompt').replace('{qty}', disc.excelQty)}
                                   </button>
                                 )}
                               </div>
                             </div>
-                            <span className="text-xs font-bold text-primary whitespace-nowrap">{item.duration} mins</span>
+                            <span className="text-xs font-bold text-primary whitespace-nowrap">{item.duration} {t('ff_minutesShort')}</span>
                           </>
                         )}
                         <button 
                           onClick={() => handleRemoveFromSchedule(item)}
-                          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full hover:bg-red-500/10 text-red-500 transition-colors ml-2"
-                          title="Remove from schedule"
+                          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full hover:bg-red-500/10 text-red-500 transition-colors ml-2 cursor-pointer"
+                          title={t('ff_removeFromSchedule')}
                         >
                           <span className="material-symbols-outlined" style={{fontSize: 20}}>arrow_back</span>
                         </button>
@@ -2436,13 +2450,13 @@ export default function FirstFactoryPage() {
               <div className="flex items-center gap-3">
                 <span className="material-symbols-outlined text-outline" style={{ fontSize: 22 }}>calendar_month</span>
                 <div className="flex items-center gap-2">
-                  <span className="text-sm font-semibold text-on-surface">Target Month:</span>
+                  <span className="text-sm font-semibold text-on-surface">{t('ff_targetMonth')}</span>
                   <input
                     type="month"
                     value={selectedMonth}
                     onChange={handleMonthChange}
                     className="rounded-xl border border-outline-variant/50 bg-background/50 px-3 py-2 text-sm text-on-surface focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary font-bold"
-                    title="Select month for summary"
+                    title={language === 'ja' ? '表示する月を選択' : 'Select month for summary'}
                   />
                 </div>
               </div>
@@ -2450,14 +2464,14 @@ export default function FirstFactoryPage() {
               {/* View Mode Switcher */}
               <div className="flex items-center gap-2 rounded-xl border border-outline-variant/40 bg-surface-variant/20 px-3 py-1.5 text-xs">
                 <span className="material-symbols-outlined text-outline" style={{ fontSize: 18 }}>view_list</span>
-                <span className="text-outline font-semibold">Data Source:</span>
+                <span className="text-outline font-semibold">{t('ff_dataSource')}</span>
                 <select
                   value={summaryViewMode}
                   onChange={(e) => handleSummaryViewModeChange(e.target.value)}
                   className="bg-transparent font-bold text-on-surface focus:outline-none cursor-pointer"
                 >
-                  <option value="priority">Priority Order (Scheduled Workload)</option>
-                  <option value="raw">Raw Excel Data (Total Possible Hours)</option>
+                  <option value="priority">{t('ff_dataSourcePriority')}</option>
+                  <option value="raw">{t('ff_dataSourceRaw')}</option>
                 </select>
               </div>
             </div>
@@ -2466,8 +2480,8 @@ export default function FirstFactoryPage() {
               <span className="material-symbols-outlined" style={{ fontSize: 16 }}>info</span>
               <span>
                 {summaryViewMode === 'priority' 
-                  ? `Showing saved daily priority scheduling overview for ${selectedMonth}`
-                  : `Showing total possible production hours from raw Excel for ${selectedMonth}`}
+                  ? t('ff_summaryInfoPriority').replace('{month}', selectedMonth)
+                  : t('ff_summaryInfoRaw').replace('{month}', selectedMonth)}
               </span>
             </div>
           </div>
@@ -2478,10 +2492,12 @@ export default function FirstFactoryPage() {
               <div className="flex items-center gap-2">
                 <span className="material-symbols-outlined text-primary" style={{ fontSize: 22 }}>calendar_view_month</span>
                 <h3 className="text-lg font-bold text-on-surface">
-                  {summaryViewMode === 'priority' ? 'Daily Priority Scheduling Breakdown' : 'Daily Raw Excel Demand & Possible Hours'}
+                  {summaryViewMode === 'priority' ? t('ff_dailyScheduleTableTitlePriority') : t('ff_dailyScheduleTableTitleRaw')}
                 </h3>
               </div>
-              <span className="text-xs text-outline font-medium">1st ～ {daysInSelectedMonth}th of {selectedMonth}</span>
+              <span className="text-xs text-outline font-medium">
+                {language === 'ja' ? `${selectedMonth} 1日 ～ ${daysInSelectedMonth}日` : `1st ～ ${daysInSelectedMonth}th of ${selectedMonth}`}
+              </span>
             </div>
 
             <DataTable
@@ -2501,8 +2517,8 @@ export default function FirstFactoryPage() {
               tableViewportClassName="overflow-x-auto"
               className="glass-card rounded-2xl shadow-sm border border-outline-variant/30"
               rowKey={(row) => row.dateKey}
-              emptyTitle="No schedule data"
-              emptyMessage="No schedules found for this month."
+              emptyTitle={t('ff_noScheduleData')}
+              emptyMessage={t('ff_noSchedulesFoundMonth')}
             />
           </div>
         </div>
@@ -2522,8 +2538,8 @@ export default function FirstFactoryPage() {
                   onChange={(e) => {
                     if (e.target.value) setProductionDateStr(e.target.value);
                   }}
-                  className="rounded-xl border border-outline-variant/50 bg-background/50 px-3 py-2 text-sm font-bold text-on-surface focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary shadow-sm"
-                  title="Select production date"
+                  className="rounded-xl border border-outline-variant/50 bg-background/50 px-3 py-2 text-sm font-bold text-on-surface focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary shadow-sm cursor-pointer"
+                  title={language === 'ja' ? '生産実績日を選択' : 'Select production date'}
                 />
               </div>
 
@@ -2532,23 +2548,23 @@ export default function FirstFactoryPage() {
                 <button
                   type="button"
                   onClick={() => stepProductionDate(-1)}
-                  className="flex h-7 w-7 items-center justify-center rounded-lg hover:bg-surface-variant/50 text-outline transition-colors"
-                  title="Previous Day"
+                  className="flex h-7 w-7 items-center justify-center rounded-lg hover:bg-surface-variant/50 text-outline transition-colors cursor-pointer"
+                  title={t('ff_prevDay')}
                 >
                   <span className="material-symbols-outlined" style={{ fontSize: 18 }}>chevron_left</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => setProductionDateStr(getLocalYYYYMMDD())}
-                  className={`px-2.5 py-1 text-xs font-bold rounded-lg transition-colors ${productionDateStr === getLocalYYYYMMDD() ? 'bg-primary text-on-primary shadow-xs' : 'text-outline hover:text-on-surface'}`}
+                  className={`px-2.5 py-1 text-xs font-bold rounded-lg transition-colors cursor-pointer ${productionDateStr === getLocalYYYYMMDD() ? 'bg-primary text-on-primary shadow-xs' : 'text-outline hover:text-on-surface'}`}
                 >
-                  Today (今日)
+                  {t('ff_today')}
                 </button>
                 <button
                   type="button"
                   onClick={() => stepProductionDate(1)}
-                  className="flex h-7 w-7 items-center justify-center rounded-lg hover:bg-surface-variant/50 text-outline transition-colors"
-                  title="Next Day"
+                  className="flex h-7 w-7 items-center justify-center rounded-lg hover:bg-surface-variant/50 text-outline transition-colors cursor-pointer"
+                  title={t('ff_nextDay')}
                 >
                   <span className="material-symbols-outlined" style={{ fontSize: 18 }}>chevron_right</span>
                 </button>
@@ -2557,7 +2573,7 @@ export default function FirstFactoryPage() {
               {/* Machine Badge */}
               <span className="inline-flex items-center gap-1.5 rounded-xl bg-surface-variant/40 px-3 py-1.5 text-xs font-bold text-on-surface border border-outline-variant/30">
                 <span className="material-symbols-outlined text-outline" style={{ fontSize: 16 }}>precision_manufacturing</span>
-                <span>PSA-2 (1号機)</span>
+                <span>{t('ff_machine')}</span>
               </span>
 
               {/* Realtime Live Connection Indicator */}
@@ -2567,29 +2583,29 @@ export default function FirstFactoryPage() {
                     ? 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/20' 
                     : 'bg-surface-variant/40 text-outline border border-outline-variant/30'
                 }`}
-                title={isLiveConnected ? 'Realtime Event Stream Active - Instant updates from tablet' : 'Connecting to live event stream...'}
+                title={isLiveConnected ? t('ff_liveTooltipConnected') : t('ff_liveTooltipConnecting')}
               >
                 <span className={`h-2 w-2 rounded-full ${isLiveConnected ? 'bg-emerald-500 animate-pulse' : 'bg-outline'}`}></span>
-                <span>{isLiveConnected ? 'Live Realtime' : 'Syncing'}</span>
+                <span>{isLiveConnected ? t('ff_liveRealtime') : t('ff_liveSyncing')}</span>
               </span>
             </div>
 
             {/* Refresh Button */}
             <div className="flex items-center gap-3">
               <span className="text-xs text-outline font-medium hidden sm:inline">
-                {productionGroups.length} processes scheduled
+                {t('ff_processesScheduled').replace('{count}', productionGroups.length)}
               </span>
               <button
                 type="button"
                 onClick={() => fetchProductionData(productionDateStr)}
                 disabled={loadingProduction}
-                className="flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-bold text-on-primary shadow-sm hover:bg-primary/90 active:scale-95 transition-all disabled:opacity-50"
-                title="Refresh live production tracking data"
+                className="flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-bold text-on-primary shadow-sm hover:bg-primary/90 active:scale-95 transition-all disabled:opacity-50 cursor-pointer"
+                title={language === 'ja' ? 'リアルタイム生産状況を更新' : 'Refresh live production tracking data'}
               >
                 <span className={`material-symbols-outlined ${loadingProduction ? 'animate-spin' : ''}`} style={{ fontSize: 18 }}>
                   refresh
                 </span>
-                <span>{loadingProduction ? 'Refreshing...' : 'Refresh'}</span>
+                <span>{loadingProduction ? t('ff_refreshing') : t('ff_refresh')}</span>
               </button>
             </div>
           </div>
@@ -2600,16 +2616,19 @@ export default function FirstFactoryPage() {
               <div className="flex items-center justify-between text-xs">
                 <div className="flex items-center gap-2">
                   <span className="font-bold text-on-surface text-sm">
-                    {parseInt(productionDateStr.split('-')[1], 10)}/{parseInt(productionDateStr.split('-')[2], 10)} Production Progress
+                    {parseInt(productionDateStr.split('-')[1], 10)}/{parseInt(productionDateStr.split('-')[2], 10)} {t('ff_productionProgress')}
                   </span>
                   <span className="rounded bg-primary/10 px-2 py-0.5 font-bold text-primary">
-                    {productionStats.completed} / {productionStats.total} Completed ({productionStats.progressPercent}%)
+                    {t('ff_completedCount')
+                      .replace('{completed}', productionStats.completed)
+                      .replace('{total}', productionStats.total)
+                      .replace('{percent}', productionStats.progressPercent)}
                   </span>
                 </div>
                 {productionStats.inProgress > 0 && (
                   <span className="inline-flex items-center gap-1.5 font-bold text-purple-600 animate-pulse">
                     <span className="h-2 w-2 rounded-full bg-purple-600"></span>
-                    {productionStats.inProgress} In-Progress Now
+                    {t('ff_inProgressNow').replace('{count}', productionStats.inProgress)}
                   </span>
                 )}
               </div>
@@ -2635,9 +2654,9 @@ export default function FirstFactoryPage() {
             <button
               type="button"
               onClick={() => setProductionFilter('all')}
-              className={`flex items-center gap-1.5 rounded-xl px-3.5 py-1.5 text-xs font-bold transition-all ${productionFilter === 'all' ? 'bg-on-surface text-surface shadow-sm' : 'bg-surface border border-outline-variant/40 text-outline hover:text-on-surface'}`}
+              className={`flex items-center gap-1.5 rounded-xl px-3.5 py-1.5 text-xs font-bold transition-all cursor-pointer ${productionFilter === 'all' ? 'bg-on-surface text-surface shadow-sm' : 'bg-surface border border-outline-variant/40 text-outline hover:text-on-surface'}`}
             >
-              <span>All Statuses</span>
+              <span>{t('ff_filterAll')}</span>
               <span className="rounded-full bg-surface-variant/60 px-1.5 py-0.2 text-[10px] font-black">
                 {productionStats.total}
               </span>
@@ -2646,10 +2665,10 @@ export default function FirstFactoryPage() {
             <button
               type="button"
               onClick={() => setProductionFilter('in-progress')}
-              className={`flex items-center gap-1.5 rounded-xl px-3.5 py-1.5 text-xs font-bold transition-all ${productionFilter === 'in-progress' ? 'bg-purple-600 text-white shadow-sm ring-2 ring-purple-500/30' : 'bg-surface border border-purple-500/30 text-purple-600 hover:bg-purple-500/5'}`}
+              className={`flex items-center gap-1.5 rounded-xl px-3.5 py-1.5 text-xs font-bold transition-all cursor-pointer ${productionFilter === 'in-progress' ? 'bg-purple-600 text-white shadow-sm ring-2 ring-purple-500/30' : 'bg-surface border border-purple-500/30 text-purple-600 hover:bg-purple-500/5'}`}
             >
               <span className={`h-2 w-2 rounded-full bg-purple-500 ${productionStats.inProgress > 0 ? 'animate-ping' : ''}`}></span>
-              <span>🟣 In-Progress (生産中)</span>
+              <span>{t('ff_filterInProgress')}</span>
               <span className="rounded-full bg-purple-500/20 px-1.5 py-0.2 text-[10px] font-black">
                 {productionStats.inProgress}
               </span>
@@ -2658,9 +2677,9 @@ export default function FirstFactoryPage() {
             <button
               type="button"
               onClick={() => setProductionFilter('completed')}
-              className={`flex items-center gap-1.5 rounded-xl px-3.5 py-1.5 text-xs font-bold transition-all ${productionFilter === 'completed' ? 'bg-emerald-600 text-white shadow-sm' : 'bg-surface border border-emerald-500/30 text-emerald-600 hover:bg-emerald-500/5'}`}
+              className={`flex items-center gap-1.5 rounded-xl px-3.5 py-1.5 text-xs font-bold transition-all cursor-pointer ${productionFilter === 'completed' ? 'bg-emerald-600 text-white shadow-sm' : 'bg-surface border border-emerald-500/30 text-emerald-600 hover:bg-emerald-500/5'}`}
             >
-              <span>✅ Completed (完了)</span>
+              <span>{t('ff_filterCompleted')}</span>
               <span className="rounded-full bg-emerald-500/20 px-1.5 py-0.2 text-[10px] font-black">
                 {productionStats.completed}
               </span>
@@ -2669,9 +2688,9 @@ export default function FirstFactoryPage() {
             <button
               type="button"
               onClick={() => setProductionFilter('pending')}
-              className={`flex items-center gap-1.5 rounded-xl px-3.5 py-1.5 text-xs font-bold transition-all ${productionFilter === 'pending' ? 'bg-slate-700 text-white shadow-sm' : 'bg-surface border border-outline-variant/40 text-outline hover:text-on-surface'}`}
+              className={`flex items-center gap-1.5 rounded-xl px-3.5 py-1.5 text-xs font-bold transition-all cursor-pointer ${productionFilter === 'pending' ? 'bg-slate-700 text-white shadow-sm' : 'bg-surface border border-outline-variant/40 text-outline hover:text-on-surface'}`}
             >
-              <span>⏸️ Pending (待機中)</span>
+              <span>{t('ff_filterPending')}</span>
               <span className="rounded-full bg-surface-variant/60 px-1.5 py-0.2 text-[10px] font-black">
                 {productionStats.pending}
               </span>
@@ -2681,9 +2700,9 @@ export default function FirstFactoryPage() {
               <button
                 type="button"
                 onClick={() => setProductionFilter('canceled')}
-                className={`flex items-center gap-1.5 rounded-xl px-3.5 py-1.5 text-xs font-bold transition-all ${productionFilter === 'canceled' ? 'bg-rose-600 text-white shadow-sm' : 'bg-surface border border-rose-500/30 text-rose-600 hover:bg-rose-500/5'}`}
+                className={`flex items-center gap-1.5 rounded-xl px-3.5 py-1.5 text-xs font-bold transition-all cursor-pointer ${productionFilter === 'canceled' ? 'bg-rose-600 text-white shadow-sm' : 'bg-surface border border-rose-500/30 text-rose-600 hover:bg-rose-500/5'}`}
               >
-                <span>❌ Canceled (中止)</span>
+                <span>{t('ff_filterCanceled')}</span>
                 <span className="rounded-full bg-rose-500/20 px-1.5 py-0.2 text-[10px] font-black">
                   {productionStats.canceled}
                 </span>
@@ -2695,18 +2714,20 @@ export default function FirstFactoryPage() {
           {loadingProduction ? (
             <div className="flex flex-col items-center justify-center p-12 glass-card rounded-2xl border border-outline-variant/30">
               <span className="material-symbols-outlined text-primary animate-spin" style={{ fontSize: 36 }}>sync</span>
-              <p className="mt-3 text-sm font-semibold text-outline">Loading production status from tablet...</p>
+              <p className="mt-3 text-sm font-semibold text-outline">{t('ff_loadingProductionStatus')}</p>
             </div>
           ) : filteredProductionGroups.length === 0 ? (
             <div className="flex flex-col items-center justify-center p-12 glass-card rounded-2xl border border-outline-variant/30 text-center">
               <span className="material-symbols-outlined text-outline mb-2" style={{ fontSize: 44 }}>event_busy</span>
               <h3 className="text-base font-bold text-on-surface">
-                {productionGroups.length === 0 ? `No production schedule found for ${productionDateStr}` : `No processes matching "${productionFilter}" filter`}
+                {productionGroups.length === 0 
+                  ? t('ff_noScheduleFoundDate').replace('{date}', productionDateStr)
+                  : t('ff_noProcessesMatchFilter').replace('{filter}', productionFilter)}
               </h3>
               <p className="text-xs text-outline mt-1 max-w-md">
                 {productionGroups.length === 0 
-                  ? 'There is no priority schedule configured for this day yet. You can create one in the Scheduling tab.' 
-                  : 'Try selecting a different status filter above to see scheduled processes.'}
+                  ? t('ff_noScheduleHint')
+                  : t('ff_tryDifferentFilterHint')}
               </p>
               {productionGroups.length === 0 && (
                 <button
@@ -2715,10 +2736,10 @@ export default function FirstFactoryPage() {
                     setSelectedDateStr(productionDateStr);
                     navigate('/firstFactory/scheduling');
                   }}
-                  className="mt-4 inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-xs font-bold text-on-primary hover:bg-primary/90 transition-colors shadow-sm"
+                  className="mt-4 inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-xs font-bold text-on-primary hover:bg-primary/90 transition-colors shadow-sm cursor-pointer"
                 >
                   <span className="material-symbols-outlined" style={{ fontSize: 16 }}>edit_calendar</span>
-                  Create Schedule for this Date
+                  {t('ff_createScheduleForDate')}
                 </button>
               )}
             </div>
@@ -2744,21 +2765,21 @@ export default function FirstFactoryPage() {
                         <div>
                           <div className="flex items-center gap-2">
                             <span className="rounded bg-amber-500/20 px-2 py-0.5 text-[11px] font-extrabold text-amber-800">
-                              段取り / 段替 (Setup)
+                              {t('ff_setupBadge')}
                             </span>
                             <h4 className="font-bold text-sm text-on-surface">
                               {setupItem?.comment ? `${group.name} ${setupItem.comment}` : group.name}
                             </h4>
                           </div>
                           <p className="text-xs text-outline mt-0.5">
-                            🕒 Scheduled: {group.startTime} ～ {group.endTime} ({group.totalDuration} mins)
+                            🕒 {t('ff_scheduledTime')}: {group.startTime} ～ {group.endTime} ({group.totalDuration} {t('ff_minutesShort')})
                           </p>
                         </div>
                       </div>
 
                       <div className="flex items-center gap-2">
                         <span className="rounded-full bg-amber-500/10 px-3 py-1 text-xs font-bold text-amber-700 border border-amber-500/20">
-                          ⚙️ {group.totalDuration} 分
+                          ⚙️ {group.totalDuration} {t('ff_minutesShort')}
                         </span>
                       </div>
                     </div>
@@ -2798,7 +2819,7 @@ export default function FirstFactoryPage() {
                               type="button"
                               onClick={() => handleCardClick(group.hinban)}
                               className="text-lg font-black text-on-surface hover:text-primary transition-colors cursor-pointer tracking-tight inline-flex items-center gap-1.5 group text-left"
-                              title="Click to view material master details"
+                              title={t('ff_viewDetails')}
                             >
                               <span className="group-hover:underline underline-offset-4 decoration-primary decoration-2">{group.hinban}</span>
                               <span className="material-symbols-outlined text-outline group-hover:text-primary transition-colors opacity-60 group-hover:opacity-100" style={{ fontSize: 18 }}>
@@ -2822,7 +2843,7 @@ export default function FirstFactoryPage() {
                         {isInProgress && (
                           <div className="inline-flex items-center gap-2 rounded-xl bg-purple-600 px-3.5 py-1.5 text-xs font-bold text-white shadow-sm animate-pulse">
                             <span className="h-2 w-2 rounded-full bg-white animate-ping"></span>
-                            <span>🟣 生産中 (In-Progress)</span>
+                            <span>{language === 'ja' ? '🟣 生産中' : '🟣 In-Progress'}</span>
                             {group.actualStartTime && (
                               <span className="font-mono opacity-90">({group.actualStartTime}〜)</span>
                             )}
@@ -2832,9 +2853,9 @@ export default function FirstFactoryPage() {
                         {isCompleted && (
                           <div className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-500/10 px-3 py-1.5 text-xs font-bold text-emerald-600 border border-emerald-500/20">
                             <span className="material-symbols-outlined" style={{ fontSize: 16 }}>check_circle</span>
-                            <span>完了 (Completed)</span>
+                            <span>{language === 'ja' ? '完了' : 'Completed'}</span>
                             {group.actualDurationMins && (
-                              <span className="font-mono font-semibold">({group.actualDurationMins}分)</span>
+                              <span className="font-mono font-semibold">({group.actualDurationMins}{t('ff_minutesShort')})</span>
                             )}
                           </div>
                         )}
@@ -2842,14 +2863,14 @@ export default function FirstFactoryPage() {
                         {isPending && (
                           <div className="inline-flex items-center gap-1.5 rounded-xl bg-surface-variant/40 px-3 py-1.5 text-xs font-semibold text-outline border border-outline-variant/30">
                             <span className="material-symbols-outlined" style={{ fontSize: 16 }}>hourglass_empty</span>
-                            <span>待機中 (Pending)</span>
+                            <span>{language === 'ja' ? '待機中' : 'Pending'}</span>
                           </div>
                         )}
 
                         {isCanceled && (
                           <div className="inline-flex items-center gap-1.5 rounded-xl bg-rose-500/10 px-3 py-1.5 text-xs font-bold text-rose-600 border border-rose-500/20">
                             <span className="material-symbols-outlined" style={{ fontSize: 16 }}>cancel</span>
-                            <span>中止 (Canceled)</span>
+                            <span>{language === 'ja' ? '中止' : 'Canceled'}</span>
                           </div>
                         )}
                       </div>
@@ -2858,14 +2879,14 @@ export default function FirstFactoryPage() {
                     {/* Metadata Specs Strip */}
                     <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-3 text-xs">
                       <div className="rounded-xl bg-surface-variant/20 p-2.5">
-                        <span className="text-[10px] font-semibold uppercase text-outline block">Scheduled Time</span>
+                        <span className="text-[10px] font-semibold uppercase text-outline block">{t('ff_scheduledTime')}</span>
                         <span className="font-mono font-bold text-on-surface mt-0.5 block">
                           🕒 {group.startTime} ～ {group.endTime}
                         </span>
                       </div>
 
                       <div className="rounded-xl bg-surface-variant/20 p-2.5">
-                        <span className="text-[10px] font-semibold uppercase text-outline block">Actual Time</span>
+                        <span className="text-[10px] font-semibold uppercase text-outline block">{t('ff_actualTime')}</span>
                         <span className="font-mono font-bold mt-0.5 block truncate">
                           {isCompleted && group.actualStartTime ? (
                             <span className="text-emerald-600 dark:text-emerald-400">
@@ -2882,37 +2903,37 @@ export default function FirstFactoryPage() {
                       </div>
 
                       <div className="rounded-xl bg-surface-variant/20 p-2.5">
-                        <span className="text-[10px] font-semibold uppercase text-outline block">Total Volume</span>
+                        <span className="text-[10px] font-semibold uppercase text-outline block">{t('ff_totalVolume')}</span>
                         <span className="font-bold text-primary mt-0.5 block">
-                          {group.items.length} rolls ({group.totalMeters}m)
+                          {group.items.length} {language === 'ja' ? '巻' : 'rolls'} ({group.totalMeters}m)
                         </span>
                       </div>
 
                       <div className="rounded-xl bg-surface-variant/20 p-2.5">
-                        <span className="text-[10px] font-semibold uppercase text-outline block">Kizai / Color</span>
+                        <span className="text-[10px] font-semibold uppercase text-outline block">{t('ff_kizaiColor')}</span>
                         <span className="font-medium text-on-surface mt-0.5 block truncate">
                           {group.kizai || '—'} {group.color ? `• ${group.color}` : ''}
                         </span>
                       </div>
 
                       <div className="rounded-xl bg-surface-variant/20 p-2.5">
-                        <span className="text-[10px] font-semibold uppercase text-outline block">Destination</span>
+                        <span className="text-[10px] font-semibold uppercase text-outline block">{t('ff_destination')}</span>
                         <span className="font-medium text-on-surface mt-0.5 block truncate">
                           {group.shippingDest || '—'}
                         </span>
                       </div>
 
                       <div className="rounded-xl bg-surface-variant/20 p-2.5">
-                        <span className="text-[10px] font-semibold uppercase text-outline block">Operator</span>
+                        <span className="text-[10px] font-semibold uppercase text-outline block">{t('ff_operator')}</span>
                         <span className="font-semibold text-on-surface mt-0.5 block truncate">
                           👤 {group.worker || '—'}
                         </span>
                       </div>
 
                       <div className="rounded-xl bg-surface-variant/20 p-2.5">
-                        <span className="text-[10px] font-semibold uppercase text-outline block">Machine</span>
+                        <span className="text-[10px] font-semibold uppercase text-outline block">{t('ff_machineLabel')}</span>
                         <span className="font-mono font-bold text-on-surface mt-0.5 block truncate">
-                          🏭 {group.machine || 'PSA2'}
+                          🏭 {group.machine || 'PSA-2'}
                         </span>
                       </div>
                     </div>
@@ -2932,9 +2953,9 @@ export default function FirstFactoryPage() {
                         <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-outline-variant/15 mt-1">
                           <div className="flex items-center gap-1.5 mr-1">
                             <span className="material-symbols-outlined text-outline" style={{ fontSize: 16 }}>print</span>
-                            <span className="text-[11px] font-bold text-outline uppercase">Print Status:</span>
+                            <span className="text-[11px] font-bold text-outline uppercase">{t('ff_printStatus')}</span>
                             <span className={`rounded px-1.5 py-0.2 text-[10px] font-black ${allDone ? 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-300' : 'bg-surface-variant/60 text-outline'}`}>
-                              {printedCount} / {totalRolls} Printed
+                              {language === 'ja' ? `${printedCount} / ${totalRolls} 枚 印刷済` : `${printedCount} / ${totalRolls} Printed`}
                             </span>
                           </div>
 
@@ -2950,7 +2971,7 @@ export default function FirstFactoryPage() {
                                     ? 'border border-emerald-500/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 font-bold shadow-xs'
                                     : 'border border-outline-variant/30 bg-surface-variant/20 text-outline font-medium'
                                 }`}
-                                title={isPrinted ? `Roll #${rollNum}/${totalRolls} - Printed` : `Roll #${rollNum}/${totalRolls} - Waiting for Print`}
+                                title={isPrinted ? t('ff_rollPrintedTooltip').replace('{roll}', rollNum).replace('{total}', totalRolls) : t('ff_rollWaitingPrintTooltip').replace('{roll}', rollNum).replace('{total}', totalRolls)}
                               >
                                 <span className={`material-symbols-outlined ${isPrinted ? 'text-emerald-600 dark:text-emerald-400' : 'text-outline/60'}`} style={{ fontSize: 14 }}>
                                   {isPrinted ? 'check_circle' : 'radio_button_unchecked'}
@@ -2976,44 +2997,46 @@ export default function FirstFactoryPage() {
       {/* Modal */}
       <MaterialDetailModal modalData={modalData} onClose={() => setModalData(null)} />
 
-
       {/* Sync Excel Modal */}
       {isSyncModalOpen && createPortal(
         <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
           <div className="bg-surface border border-outline-variant/30 rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden flex flex-col animate-[fadeIn_0.15s_ease-out]">
             <div className="flex items-center justify-between p-5 border-b border-outline-variant/30 bg-surface-variant/20">
-              <h2 className="text-lg font-bold text-on-surface">Sync Excel Data</h2>
+              <h2 className="text-lg font-bold text-on-surface">{t('ff_modalSyncTitle')}</h2>
               <button 
                 onClick={() => setIsSyncModalOpen(false)}
-                className="flex h-8 w-8 items-center justify-center rounded-full hover:bg-surface-variant/50 text-outline transition-colors"
+                className="flex h-8 w-8 items-center justify-center rounded-full hover:bg-surface-variant/50 text-outline transition-colors cursor-pointer"
+                title={t('ff_close')}
               >
                 <span className="material-symbols-outlined" style={{fontSize: 20}}>close</span>
               </button>
             </div>
             <div className="p-6">
-              <label className="block text-sm font-medium text-on-surface mb-2">Select Year and Month</label>
+              <label className="block text-sm font-medium text-on-surface mb-2">{t('ff_modalSelectYearMonth')}</label>
               <input
                 type="month"
                 value={syncTargetMonth}
                 onChange={(e) => setSyncTargetMonth(e.target.value)}
-                className="w-full rounded-xl border border-outline-variant/50 bg-background/50 px-4 py-3 text-sm text-on-surface focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                className="w-full rounded-xl border border-outline-variant/50 bg-background/50 px-4 py-3 text-sm text-on-surface focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary font-bold"
               />
               <p className="text-xs text-outline mt-3">
-                This will fetch data from the <strong>{syncTargetMonth ? `${syncTargetMonth.split('-')[0]}年${parseInt(syncTargetMonth.split('-')[1], 10)}月` : '...'}</strong> tab in the Google Sheet.
+                {language === 'ja' 
+                  ? `Googleスプレッドシートの ${syncTargetMonth ? `${syncTargetMonth.split('-')[0]}年${parseInt(syncTargetMonth.split('-')[1], 10)}月` : '...'} タブからデータを取得します。`
+                  : `This will fetch data from the ${syncTargetMonth ? `${syncTargetMonth.split('-')[0]}年${parseInt(syncTargetMonth.split('-')[1], 10)}月` : '...'} tab in the Google Sheet.`}
               </p>
             </div>
             <div className="flex items-center justify-end gap-3 p-5 border-t border-outline-variant/30 bg-surface-variant/10">
               <button 
                 onClick={() => setIsSyncModalOpen(false)}
-                className="rounded-lg px-4 py-2 text-sm font-medium text-outline hover:bg-surface-variant/50 transition-colors"
+                className="rounded-lg px-4 py-2 text-sm font-medium text-outline hover:bg-surface-variant/50 transition-colors cursor-pointer"
               >
-                Cancel
+                {t('ff_cancel')}
               </button>
               <button 
                 onClick={() => handleSyncExcel(syncTargetMonth)}
-                className="rounded-lg bg-primary px-5 py-2 text-sm font-medium text-on-primary hover:bg-primary/90 transition-colors"
+                className="rounded-lg bg-primary px-5 py-2 text-sm font-medium text-on-primary hover:bg-primary/90 transition-colors cursor-pointer"
               >
-                Fetch Data
+                {t('ff_fetchData')}
               </button>
             </div>
           </div>
@@ -3029,13 +3052,18 @@ export default function FirstFactoryPage() {
               <div className="flex items-center gap-2.5">
                 <span className="material-symbols-outlined text-amber-600" style={{ fontSize: 24 }}>sync_problem</span>
                 <div>
-                  <h2 className="text-base font-bold text-on-surface">Excel Discrepancies on {selectedDateStr}</h2>
-                  <p className="text-xs text-outline">{currentDayDiscrepancies.count} affected hinban(s) detected</p>
+                  <h2 className="text-base font-bold text-on-surface">
+                    {language === 'ja' ? `${selectedDateStr} のExcel同期差異` : `Excel Discrepancies on ${selectedDateStr}`}
+                  </h2>
+                  <p className="text-xs text-outline">
+                    {language === 'ja' ? `${currentDayDiscrepancies.count} 件の差異品番を検知` : `${currentDayDiscrepancies.count} affected hinban(s) detected`}
+                  </p>
                 </div>
               </div>
               <button 
                 onClick={() => setIsDiscrepancyModalOpen(false)}
-                className="flex h-8 w-8 items-center justify-center rounded-full hover:bg-surface-variant/50 text-outline transition-colors"
+                className="flex h-8 w-8 items-center justify-center rounded-full hover:bg-surface-variant/50 text-outline transition-colors cursor-pointer"
+                title={t('ff_close')}
               >
                 <span className="material-symbols-outlined" style={{fontSize: 20}}>close</span>
               </button>
@@ -3043,7 +3071,9 @@ export default function FirstFactoryPage() {
 
             <div className="p-5 flex-1 overflow-y-auto flex flex-col gap-3">
               <p className="text-xs text-outline leading-relaxed">
-                The items below are currently in this date's priority schedule, but differ from the latest synced Excel data. You can resolve them individually or click <strong>Auto-Align All</strong> to update this date ({selectedDateStr}).
+                {language === 'ja'
+                  ? `以下の項目は作成済スケジュールと最新のExcelデータで差異があります。個別に反映するか、「すべて自動反映」をクリックして更新できます (${selectedDateStr})。`
+                  : `The items below are currently in this date's priority schedule, but differ from the latest synced Excel data. You can resolve them individually or click Auto-Align All to update this date (${selectedDateStr}).`}
               </p>
 
               {currentDayDiscrepancies.list.map(disc => {
@@ -3058,7 +3088,9 @@ export default function FirstFactoryPage() {
                     <div className="flex items-center justify-between gap-2">
                       <span className="font-bold text-sm text-on-surface">{disc.hinban}</span>
                       <span className="text-xs text-outline font-mono">
-                        Scheduled: {disc.scheduledMeters}m ({disc.rollsCount} roll{disc.rollsCount === 1 ? '' : 's'})
+                        {language === 'ja' 
+                          ? `設定済: ${disc.scheduledMeters}m (${disc.rollsCount} 巻)` 
+                          : `Scheduled: ${disc.scheduledMeters}m (${disc.rollsCount} roll${disc.rollsCount === 1 ? '' : 's'})`}
                       </span>
                     </div>
 
@@ -3066,12 +3098,12 @@ export default function FirstFactoryPage() {
                       {isZeroOrMissing ? (
                         <div className="flex items-center gap-1.5 text-red-600 font-medium">
                           <span className="material-symbols-outlined" style={{ fontSize: 16 }}>cancel</span>
-                          <span>{disc.type === 'missing_in_excel' ? 'Not in Excel for this month' : (disc.movedText || '0m in Excel today')}</span>
+                          <span>{disc.type === 'missing_in_excel' ? t('ff_notInExcelThisMonth') : (disc.movedText || t('ff_zeroMetersToday'))}</span>
                         </div>
                       ) : (
                         <div className="flex items-center gap-1.5 text-amber-700 font-medium">
                           <span className="material-symbols-outlined" style={{ fontSize: 16 }}>difference</span>
-                          <span>Excel Quantity: <strong>{disc.excelQty}m</strong> (Difference: {(disc.excelQty - disc.scheduledMeters).toFixed(1)}m)</span>
+                          <span>{language === 'ja' ? `Excel数量: ${disc.excelQty}m (差分: ${(disc.excelQty - disc.scheduledMeters).toFixed(1)}m)` : `Excel Quantity: ${disc.excelQty}m (Difference: ${(disc.excelQty - disc.scheduledMeters).toFixed(1)}m)`}</span>
                         </div>
                       )}
                     </div>
@@ -3083,19 +3115,19 @@ export default function FirstFactoryPage() {
                           onClick={() => {
                             setScheduleOrder(prev => prev.filter(i => i.hinban !== disc.hinban));
                           }}
-                          className="inline-flex items-center gap-1 rounded-lg bg-red-500/10 px-2.5 py-1 text-xs font-bold text-red-600 hover:bg-red-500/20 transition-colors"
+                          className="inline-flex items-center gap-1 rounded-lg bg-red-500/10 px-2.5 py-1 text-xs font-bold text-red-600 hover:bg-red-500/20 transition-colors cursor-pointer"
                         >
                           <span className="material-symbols-outlined" style={{ fontSize: 14 }}>delete</span>
-                          Remove from {parseInt(selectedMonth.split('-')[1], 10)}/{selectedDay}
+                          {language === 'ja' ? `${parseInt(selectedMonth.split('-')[1], 10)}/${selectedDay} から削除` : `Remove from ${parseInt(selectedMonth.split('-')[1], 10)}/${selectedDay}`}
                         </button>
                       ) : (
                         <button
                           type="button"
                           onClick={() => handleUpdateHinbanQty(disc.hinban)}
-                          className="inline-flex items-center gap-1 rounded-lg bg-amber-500/20 px-2.5 py-1 text-xs font-bold text-amber-800 hover:bg-amber-500/30 transition-colors"
+                          className="inline-flex items-center gap-1 rounded-lg bg-amber-500/20 px-2.5 py-1 text-xs font-bold text-amber-800 hover:bg-amber-500/30 transition-colors cursor-pointer"
                         >
                           <span className="material-symbols-outlined" style={{ fontSize: 14 }}>sync</span>
-                          Update Qty & Rolls to {disc.excelQty}m
+                          {language === 'ja' ? `数量・巻数を ${disc.excelQty}m に更新` : `Update Qty & Rolls to ${disc.excelQty}m`}
                         </button>
                       )}
                     </div>
@@ -3107,16 +3139,16 @@ export default function FirstFactoryPage() {
             <div className="flex items-center justify-between p-4 border-t border-outline-variant/30 bg-surface-variant/10">
               <button 
                 onClick={() => setIsDiscrepancyModalOpen(false)}
-                className="rounded-lg px-4 py-2 text-xs font-semibold text-outline hover:bg-surface-variant/50 transition-colors"
+                className="rounded-lg px-4 py-2 text-xs font-semibold text-outline hover:bg-surface-variant/50 transition-colors cursor-pointer"
               >
-                Close
+                {t('ff_close')}
               </button>
               <button 
                 onClick={handleAutoAlignCurrentDate}
-                className="flex items-center gap-1.5 rounded-xl bg-amber-600 px-4 py-2 text-xs font-bold text-white hover:bg-amber-700 transition-colors shadow-sm"
+                className="flex items-center gap-1.5 rounded-xl bg-amber-600 px-4 py-2 text-xs font-bold text-white hover:bg-amber-700 transition-colors shadow-sm cursor-pointer"
               >
                 <span className="material-symbols-outlined" style={{ fontSize: 16 }}>auto_fix_high</span>
-                Auto-Align All on {parseInt(selectedMonth.split('-')[1], 10)}/{selectedDay}
+                {language === 'ja' ? `${parseInt(selectedMonth.split('-')[1], 10)}/${selectedDay} の差異をすべて自動反映` : `Auto-Align All on ${parseInt(selectedMonth.split('-')[1], 10)}/${selectedDay}`}
               </button>
             </div>
           </div>
@@ -3132,13 +3164,16 @@ export default function FirstFactoryPage() {
               <div className="flex items-center gap-2.5">
                 <span className="material-symbols-outlined text-primary" style={{ fontSize: 24 }}>assessment</span>
                 <div>
-                  <h2 className="text-base font-bold text-on-surface">Excel Sync Complete — Affected Schedules</h2>
-                  <p className="text-xs text-outline">New Excel data affects existing priority schedules in {selectedMonth}</p>
+                  <h2 className="text-base font-bold text-on-surface">{t('ff_syncImpactTitle')}</h2>
+                  <p className="text-xs text-outline">
+                    {language === 'ja' ? `${selectedMonth} の既存優先順位スケジュールに差異が検出されました` : `New Excel data affects existing priority schedules in ${selectedMonth}`}
+                  </p>
                 </div>
               </div>
               <button 
                 onClick={() => setIsImpactModalOpen(false)}
-                className="flex h-8 w-8 items-center justify-center rounded-full hover:bg-surface-variant/50 text-outline transition-colors"
+                className="flex h-8 w-8 items-center justify-center rounded-full hover:bg-surface-variant/50 text-outline transition-colors cursor-pointer"
+                title={t('ff_close')}
               >
                 <span className="material-symbols-outlined" style={{fontSize: 20}}>close</span>
               </button>
@@ -3146,7 +3181,7 @@ export default function FirstFactoryPage() {
 
             <div className="p-5 flex-1 overflow-y-auto flex flex-col gap-4">
               <div className="rounded-xl border border-primary/20 bg-primary/5 p-3 text-xs text-on-surface leading-relaxed">
-                The Excel file has been synced successfully. The following saved daily schedules contain hinbans whose dates or quantities were updated in Excel. You can review each date individually:
+                {t('ff_syncImpactDesc')}
               </div>
 
               <div className="flex flex-col gap-3">
@@ -3157,7 +3192,7 @@ export default function FirstFactoryPage() {
                         <span className="material-symbols-outlined text-outline" style={{ fontSize: 16 }}>calendar_today</span>
                         <span>{parseInt(selectedMonth.split('-')[1], 10)}/{report.date}</span>
                         <span className="rounded-full bg-amber-500/20 px-2 py-0.5 text-[11px] font-bold text-amber-700">
-                          {report.issues.length} issue{report.issues.length === 1 ? '' : 's'}
+                          {language === 'ja' ? `${report.issues.length} 件の変更` : `${report.issues.length} issue${report.issues.length === 1 ? '' : 's'}`}
                         </span>
                       </div>
 
@@ -3170,10 +3205,10 @@ export default function FirstFactoryPage() {
                             navigate('/firstFactory/scheduling');
                           }
                         }}
-                        className="inline-flex items-center gap-1 rounded-lg border border-primary/40 bg-primary/10 px-2.5 py-1 text-xs font-bold text-primary hover:bg-primary hover:text-on-primary transition-colors"
+                        className="inline-flex items-center gap-1 rounded-lg border border-primary/40 bg-primary/10 px-2.5 py-1 text-xs font-bold text-primary hover:bg-primary hover:text-on-primary transition-colors cursor-pointer"
                       >
                         <span className="material-symbols-outlined" style={{ fontSize: 14 }}>arrow_forward</span>
-                        Open Schedule
+                        {t('ff_openScheduleBtn')}
                       </button>
                     </div>
 
@@ -3195,9 +3230,9 @@ export default function FirstFactoryPage() {
             <div className="flex items-center justify-end p-4 border-t border-outline-variant/30 bg-surface-variant/10">
               <button 
                 onClick={() => setIsImpactModalOpen(false)}
-                className="rounded-lg bg-primary px-5 py-2 text-xs font-bold text-on-primary hover:bg-primary/90 transition-colors shadow-sm"
+                className="rounded-lg bg-primary px-5 py-2 text-xs font-bold text-on-primary hover:bg-primary/90 transition-colors shadow-sm cursor-pointer"
               >
-                Close & Review
+                {t('ff_closeAndReview')}
               </button>
             </div>
           </div>
@@ -3213,32 +3248,35 @@ export default function FirstFactoryPage() {
               <div className="flex items-center gap-2">
                 <span className="material-symbols-outlined text-amber-600" style={{ fontSize: 22 }}>edit_note</span>
                 <h3 className="text-base font-bold text-on-surface">
-                  Custom Title for <span className="text-amber-600 font-extrabold">{commentModalItem.name}</span>
+                  {language === 'ja' 
+                    ? `${commentModalItem.displayName || commentModalItem.name} の追加タイトル・指示` 
+                    : `Custom Title for ${commentModalItem.displayName || commentModalItem.name}`}
                 </h3>
               </div>
               <button
                 type="button"
                 onClick={() => setCommentModalItem(null)}
-                className="rounded-lg p-1 text-outline hover:bg-surface-variant/50 hover:text-on-surface transition-colors"
+                className="rounded-lg p-1 text-outline hover:bg-surface-variant/50 hover:text-on-surface transition-colors cursor-pointer"
+                title={t('ff_close')}
               >
                 <span className="material-symbols-outlined" style={{ fontSize: 20 }}>close</span>
               </button>
             </div>
 
             <p className="text-xs text-outline leading-relaxed">
-              Enter details to append to the title. This title will appear in the priority schedule list and in the <strong>printed PDF table</strong>:
+              {t('ff_setupCardDesc')}
             </p>
 
             <div className="rounded-xl bg-amber-500/10 border border-amber-500/20 p-3 text-xs text-amber-900 font-bold flex items-center gap-2">
-              <span className="text-outline text-[11px] font-normal shrink-0">Title Preview:</span>
-              <span className="font-extrabold text-amber-800">{commentModalItem.name} {tempCommentText.trim()}</span>
+              <span className="text-outline text-[11px] font-normal shrink-0">{t('ff_titlePreview')}</span>
+              <span className="font-extrabold text-amber-800">{commentModalItem.displayName || commentModalItem.name} {tempCommentText.trim()}</span>
             </div>
 
             <input
               type="text"
               value={tempCommentText}
               onChange={(e) => setTempCommentText(e.target.value)}
-              placeholder="e.g. hello madapaka"
+              placeholder={t('ff_placeholderCustomText')}
               className="w-full rounded-xl border border-outline-variant/50 bg-background/50 p-3 text-sm text-on-surface placeholder:text-outline focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary font-medium"
               autoFocus
               onKeyDown={(e) => {
@@ -3266,9 +3304,9 @@ export default function FirstFactoryPage() {
                 <button
                   type="button"
                   onClick={() => setTempCommentText('')}
-                  className="text-xs font-bold text-red-500 hover:underline"
+                  className="text-xs font-bold text-red-500 hover:underline cursor-pointer"
                 >
-                  Clear Suffix
+                  {t('ff_clearSuffix')}
                 </button>
               ) : <div />}
 
@@ -3276,9 +3314,9 @@ export default function FirstFactoryPage() {
                 <button
                   type="button"
                   onClick={() => setCommentModalItem(null)}
-                  className="rounded-xl border border-outline-variant/50 px-4 py-2 text-xs font-bold text-outline hover:bg-surface-variant/50 transition-colors"
+                  className="rounded-xl border border-outline-variant/50 px-4 py-2 text-xs font-bold text-outline hover:bg-surface-variant/50 transition-colors cursor-pointer"
                 >
-                  Cancel
+                  {t('ff_cancel')}
                 </button>
                 <button
                   type="button"
@@ -3298,9 +3336,9 @@ export default function FirstFactoryPage() {
                     }
                     setCommentModalItem(null);
                   }}
-                  className="rounded-xl bg-primary px-4 py-2 text-xs font-bold text-on-primary shadow-sm hover:bg-primary/90 transition-colors"
+                  className="rounded-xl bg-primary px-4 py-2 text-xs font-bold text-on-primary shadow-sm hover:bg-primary/90 transition-colors cursor-pointer"
                 >
-                  Save Title
+                  {t('ff_saveTitle')}
                 </button>
               </div>
             </div>
@@ -3312,3 +3350,4 @@ export default function FirstFactoryPage() {
     </div>
   );
 }
+
