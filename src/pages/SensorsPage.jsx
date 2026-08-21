@@ -111,8 +111,9 @@ export default function SensorsPage() {
     setError("");
 
     try {
-      const today = new Date().toISOString().split("T")[0];
-      const result = await fetchSensorFactoryOverview(today);
+      // Sensor `Date` fields are JST; call with no arg so the JST-aware
+      // default in fetchSensorFactoryOverview is used instead of UTC "today".
+      const result = await fetchSensorFactoryOverview();
       setFactories(Array.isArray(result) ? result : []);
     } catch (loadError) {
       setFactories([]);
