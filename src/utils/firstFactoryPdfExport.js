@@ -55,6 +55,13 @@ export function openFirstFactorySchedulePrintWindow({
     const hinmei = hinmoku['品名'] || found?.hinmei || '—';
     const labelHinban = hinmoku['ラベル品番'] || found?.labelHinban || '—';
 
+    const bom = Array.isArray(rawMaster.BOM) ? rawMaster.BOM : [];
+    const p2010 = bom.find(b => Number(b['工程コード']) === 2010 || b['工程名'] === '粘着工程');
+    const timeOption = p2010?.['時間オプション'] || found?.materialInfo?.timeOption || '';
+    const rawUnit = p2010?.['生産単位'] || found?.materialInfo?.rawUnit || null;
+    const unitName = typeof rawUnit === 'object' ? rawUnit?.name : String(rawUnit || '');
+    const unit = (unitName === '枚' || found?.materialInfo?.unit === '枚') ? '枚' : 'm';
+
     return {
       kizai,
       shori,
@@ -62,6 +69,8 @@ export function openFirstFactorySchedulePrintWindow({
       habanaga,
       shippingDest,
       kataban,
+      timeOption,
+      unit,
       zuban,
       hinmei,
       labelHinban
@@ -69,6 +78,7 @@ export function openFirstFactorySchedulePrintWindow({
   };
 
   let totalMeters = 0;
+  let totalPieces = 0;
   let totalMins = 0;
   let rollCount = 0;
   let lastKizai = null;
@@ -92,10 +102,17 @@ export function openFirstFactorySchedulePrintWindow({
     }
 
     rollCount++;
-    const meters = Number(item.meters) || 0;
-    totalMeters += meters;
-    const cmVal = meters * 100;
+    const qtyVal = Number(item.meters) || 0;
     const info = getMasterInfo(item.hinban);
+    const itemUnit = item.unit || info.unit || 'm';
+
+    if (itemUnit === '枚') {
+      totalPieces += qtyVal;
+    } else {
+      totalMeters += qtyVal;
+    }
+
+    const cmVal = qtyVal * 100;
     const currentKizai = info.kizai || item.kizai || '';
 
     // If 基材コード changes to a different one, insert a blank black separator row
@@ -110,6 +127,13 @@ export function openFirstFactorySchedulePrintWindow({
 
     // Clean shipping destination formatting (replace newlines with <br>)
     const formattedDest = escapeHtml(info.shippingDest).replace(/\n/g, '<br>');
+    const katabanDisplay = info.kataban !== '—' 
+      ? `${escapeHtml(info.kataban)}${info.timeOption ? `<br><span class="text-sub">(${escapeHtml(info.timeOption)})</span>` : ''}`
+      : '—';
+
+    const qtyDisplay = itemUnit === '枚'
+      ? `${qtyVal.toLocaleString()} 枚`
+      : `${cmVal.toLocaleString()} cm (${qtyVal}m)`;
 
     rows.push(`
       <tr class="item-row">
@@ -123,9 +147,9 @@ export function openFirstFactorySchedulePrintWindow({
         <td class="center shori-cell">${escapeHtml(info.shori)}</td>
         <td class="center color-cell">${escapeHtml(info.color)}</td>
         <td class="center habanaga-cell">${escapeHtml(info.habanaga)}</td>
-        <td class="center kataban-cell">${escapeHtml(info.kataban)}</td>
+        <td class="center kataban-cell">${katabanDisplay}</td>
         <td class="center roll-cell font-bold">${item.rollIndex || 1}/${item.totalRolls || 1}</td>
-        <td class="right qty-cell font-bold">${cmVal.toLocaleString()} cm (${meters}m)</td>
+        <td class="right qty-cell font-bold">${qtyDisplay}</td>
       </tr>
     `);
   });
@@ -383,8 +407,8 @@ export function openFirstFactorySchedulePrintWindow({
 
           <div class="summary-strip">
             <span>予定時: <strong>${escapeHtml(plannedTimeSpan)}</strong> (${escapeHtml(timeFormatted)})</span>
-            <span>予定総巻数: <strong>${rollCount} 巻き</strong> (${scheduleWithTimes.length} 工程)</span>
-            <span>予定総生産量: <strong>${totalMeters.toLocaleString()} m</strong> (${(totalMeters * 100).toLocaleString()} cm)</span>
+            <span>予定総数: <strong>${rollCount} 巻/束</strong> (${scheduleWithTimes.length} 工程)</span>
+            <span>予定総生産量: <strong>${totalMeters > 0 ? `${totalMeters.toLocaleString()} m` : ''}${totalMeters > 0 && totalPieces > 0 ? ' / ' : ''}${totalPieces > 0 ? `${totalPieces.toLocaleString()} 枚` : ''}</strong>${totalMeters > 0 ? ` (${(totalMeters * 100).toLocaleString()} cm)` : ''}</span>
           </div>
 
           <table>

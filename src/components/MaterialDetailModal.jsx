@@ -132,6 +132,10 @@ export default function MaterialDetailModal({ modalData, onClose }) {
                         <span className="text-[10px] text-outline">{t('ff_modelNumber')}</span>
                         <span className="font-medium text-sm text-primary">{process2010['型番'] ?? 'N/A'}</span>
                       </div>
+                      <div className="flex flex-col bg-surface-variant/20 border border-outline-variant/30 rounded-lg p-3">
+                        <span className="text-[10px] text-outline">{t('ff_timeOption')}</span>
+                        <span className="font-medium text-sm text-primary">{process2010['時間オプション'] ?? 'N/A'}</span>
+                      </div>
                     </div>
                   </div>
                 );
@@ -141,6 +145,10 @@ export default function MaterialDetailModal({ modalData, onClose }) {
               <div>
                 <div className="text-xs font-bold text-outline mb-3 uppercase tracking-wider">{t('ff_materialMasterInfo')}</div>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="flex flex-col">
+                    <span className="text-[10px] text-outline">{t('ff_labelHinban')}</span>
+                    <span className="font-medium text-sm text-on-surface">{modalData['品目マスタ']?.['ラベル品番'] || 'N/A'}</span>
+                  </div>
                   <div className="flex flex-col">
                     <span className="text-[10px] text-outline">{t('ff_packQty')}</span>
                     <span className="font-medium text-sm text-on-surface">{modalData['品目マスタ']?.['梱包数'] || 'N/A'}</span>

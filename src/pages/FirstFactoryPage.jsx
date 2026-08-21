@@ -96,35 +96,118 @@ export default function FirstFactoryPage() {
   const [commentModalItem, setCommentModalItem] = useState(null);
   const [tempCommentText, setTempCommentText] = useState('');
 
-  // Helper to split a hinban production quantity into roll items
+  // Helper to extract Kataban (型番) from material/BOM master
+  const extractKataban = (item) => {
+    if (!item) return '';
+    if (item.materialInfo?.kataban) return item.materialInfo.kataban;
+    const rawMaster = item.materialInfo?.rawMaster || {};
+    const hinmoku = rawMaster['品目マスタ'] || {};
+    if (hinmoku['型番'] && hinmoku['型番'] !== '*' && String(hinmoku['型番']).trim() !== '') {
+      return String(hinmoku['型番']).trim();
+    }
+    if (rawMaster['型番'] && rawMaster['型番'] !== '*' && String(rawMaster['型番']).trim() !== '') {
+      return String(rawMaster['型番']).trim();
+    }
+    if (item['型番'] && item['型番'] !== '*' && String(item['型番']).trim() !== '') {
+      return String(item['型番']).trim();
+    }
+    const bom = Array.isArray(rawMaster.BOM) ? rawMaster.BOM : [];
+    const p2010 = bom.find(b => Number(b['工程コード']) === 2010 || b['工程名'] === '粘着工程' || b['工程略名'] === '粘着');
+    if (p2010 && p2010['型番'] && p2010['型番'] !== '*' && String(p2010['型番']).trim() !== '') {
+      return String(p2010['型番']).trim();
+    }
+    for (const b of bom) {
+      if (b['型番'] && b['型番'] !== '*' && String(b['型番']).trim() !== '') {
+        return String(b['型番']).trim();
+      }
+    }
+    return '';
+  };
+
+  // Helper to extract Time Option (時間オプション) from BOM process 2010
+  const extractTimeOption = (item) => {
+    if (!item) return '';
+    if (item.materialInfo?.timeOption) return item.materialInfo.timeOption;
+    const rawMaster = item.materialInfo?.rawMaster || {};
+    const bom = Array.isArray(rawMaster.BOM) ? rawMaster.BOM : [];
+    const p2010 = bom.find(b => Number(b['工程コード']) === 2010 || b['工程名'] === '粘着工程' || b['工程略名'] === '粘着');
+    if (p2010 && p2010['時間オプション'] && p2010['時間オプション'] !== '*' && String(p2010['時間オプション']).trim() !== '') {
+      return String(p2010['時間オプション']).trim();
+    }
+    return '';
+  };
+
+  // Helper to extract unit (m vs 枚) from BOM process 2010
+  const extractUnit = (item) => {
+    if (!item) return 'm';
+    if (item.materialInfo?.unit) return item.materialInfo.unit;
+    const rawMaster = item.materialInfo?.rawMaster || {};
+    const bom = Array.isArray(rawMaster.BOM) ? rawMaster.BOM : [];
+    const p2010 = bom.find(b => Number(b['工程コード']) === 2010 || b['工程名'] === '粘着工程' || b['工程略名'] === '粘着');
+    if (p2010 && p2010['生産単位']) {
+      const uName = typeof p2010['生産単位'] === 'object' ? p2010['生産単位'].name : String(p2010['生産単位']);
+      if (uName === '枚') return '枚';
+    }
+    return 'm';
+  };
+
+  // Helper to split a hinban production quantity into roll / pack items
   const createRollItemsForHinban = (foundItem, dayIndex) => {
     if (!foundItem) return [];
     const qty = foundItem.production[dayIndex] || 0;
-    const qtyCm = qty * 100;
-    const packCountCm = foundItem.materialInfo?.packCount || 4000;
+    const unit = extractUnit(foundItem);
     const workTime = foundItem.materialInfo?.workTime || 0.075;
     
-    if (qtyCm <= 0) return [];
-    const numRolls = Math.ceil(qtyCm / packCountCm);
-    const items = [];
-    for (let i = 0; i < numRolls; i++) {
-      let lengthCm = packCountCm;
-      if (i === numRolls - 1 && (qtyCm % packCountCm !== 0)) {
-        lengthCm = qtyCm % packCountCm;
+    if (qty <= 0) return [];
+
+    if (unit === '枚') {
+      const packCount = foundItem.materialInfo?.packCount || 100;
+      const numRolls = Math.ceil(qty / packCount);
+      const items = [];
+      for (let i = 0; i < numRolls; i++) {
+        let sheetCount = packCount;
+        if (i === numRolls - 1 && (qty % packCount !== 0)) {
+          sheetCount = qty % packCount;
+        }
+        const durationMins = (workTime * sheetCount) / 60;
+        items.push({
+          id: Date.now() + String(i) + Math.random().toString(36).substring(2, 7),
+          type: 'hinban',
+          hinban: foundItem.hinban,
+          poolItemId: foundItem.id,
+          rollIndex: i + 1,
+          totalRolls: numRolls,
+          meters: sheetCount,
+          unit: '枚',
+          duration: Math.round(durationMins)
+        });
       }
-      const durationMins = (workTime * lengthCm) / 60;
-      items.push({
-        id: Date.now() + String(i) + Math.random().toString(36).substring(2, 7),
-        type: 'hinban',
-        hinban: foundItem.hinban,
-        poolItemId: foundItem.id,
-        rollIndex: i + 1,
-        totalRolls: numRolls,
-        meters: lengthCm / 100,
-        duration: Math.round(durationMins)
-      });
+      return items;
+    } else {
+      const qtyCm = qty * 100;
+      const packCountCm = foundItem.materialInfo?.packCount ? foundItem.materialInfo.packCount * 100 : 4000;
+      const numRolls = Math.ceil(qtyCm / packCountCm);
+      const items = [];
+      for (let i = 0; i < numRolls; i++) {
+        let lengthCm = packCountCm;
+        if (i === numRolls - 1 && (qtyCm % packCountCm !== 0)) {
+          lengthCm = qtyCm % packCountCm;
+        }
+        const durationMins = (workTime * lengthCm) / 60;
+        items.push({
+          id: Date.now() + String(i) + Math.random().toString(36).substring(2, 7),
+          type: 'hinban',
+          hinban: foundItem.hinban,
+          poolItemId: foundItem.id,
+          rollIndex: i + 1,
+          totalRolls: numRolls,
+          meters: lengthCm / 100,
+          unit: 'm',
+          duration: Math.round(durationMins)
+        });
+      }
+      return items;
     }
-    return items;
   };
 
   const handleSyncExcel = async (monthToSync) => {
@@ -470,37 +553,10 @@ export default function FirstFactoryPage() {
 
   const [poolSearch, setPoolSearch] = useState('');
   const [showNoAdhesive, setShowNoAdhesive] = useState(false);
-  const [poolSortBy, setPoolSortBy] = useState('kataban-asc');
+  const [poolSortBy, setPoolSortBy] = useState('timeOption-asc');
   const [poolBatchFilter, setPoolBatchFilter] = useState('all'); // 'all' | 'large' (>=500m) | 'small' (<200m)
   const [poolWidthFilter, setPoolWidthFilter] = useState('all');
   
-  // Helper to extract Kataban (型番) from material/BOM master
-  const extractKataban = (item) => {
-    if (!item) return '';
-    const rawMaster = item.materialInfo?.rawMaster || {};
-    const hinmoku = rawMaster['品目マスタ'] || {};
-    if (hinmoku['型番'] && hinmoku['型番'] !== '*' && String(hinmoku['型番']).trim() !== '') {
-      return String(hinmoku['型番']).trim();
-    }
-    if (rawMaster['型番'] && rawMaster['型番'] !== '*' && String(rawMaster['型番']).trim() !== '') {
-      return String(rawMaster['型番']).trim();
-    }
-    if (item['型番'] && item['型番'] !== '*' && String(item['型番']).trim() !== '') {
-      return String(item['型番']).trim();
-    }
-    const bom = Array.isArray(rawMaster.BOM) ? rawMaster.BOM : [];
-    const p2010 = bom.find(b => Number(b['工程コード']) === 2010 || b['工程名'] === '粘着工程');
-    if (p2010 && p2010['型番'] && p2010['型番'] !== '*' && String(p2010['型番']).trim() !== '') {
-      return String(p2010['型番']).trim();
-    }
-    for (const b of bom) {
-      if (b['型番'] && b['型番'] !== '*' && String(b['型番']).trim() !== '') {
-        return String(b['型番']).trim();
-      }
-    }
-    return '';
-  };
-
   const poolItems = useMemo(() => {
     const scheduledIds = new Set(scheduleOrder.map(s => s.poolItemId).filter(Boolean));
     return dailyProductionItems.filter(item => {
@@ -508,9 +564,11 @@ export default function FirstFactoryPage() {
       if (poolSearch) {
         const q = poolSearch.toLowerCase();
         const kataban = extractKataban(item).toLowerCase();
+        const timeOpt = extractTimeOption(item).toLowerCase();
         const matchesHinban = item.hinban.toLowerCase().includes(q);
         const matchesKataban = kataban.includes(q);
-        if (!matchesHinban && !matchesKataban) return false;
+        const matchesTimeOpt = timeOpt.includes(q);
+        if (!matchesHinban && !matchesKataban && !matchesTimeOpt) return false;
       }
       
       // First Factory page focuses ONLY on products that have Process 2010 (粘着工程) in BOM or Master
@@ -551,20 +609,35 @@ export default function FirstFactoryPage() {
   const processedPoolItems = useMemo(() => {
     let items = poolItems.map(item => {
       const qty = item.production[selectedDay - 1] || 0;
-      const qtyCm = qty * 100;
-      const packCountCm = item.materialInfo?.packCount ? item.materialInfo.packCount * 100 : 4000;
-      const numRolls = qtyCm > 0 ? Math.ceil(qtyCm / packCountCm) : 0;
-      const workTime = item.materialInfo?.workTime || 0.075;
-      const durationMins = Math.round((workTime * qtyCm) / 60);
-      const width = item.hinban?.match(/W\d+/i)?.[0]?.toUpperCase() || '';
+      const unit = extractUnit(item);
       const kataban = extractKataban(item);
+      const timeOption = extractTimeOption(item);
+      const workTime = item.materialInfo?.workTime || 0.075;
+      const width = item.hinban?.match(/W\d+/i)?.[0]?.toUpperCase() || '';
+
+      let numRolls = 0;
+      let durationMins = 0;
+
+      if (unit === '枚') {
+        const packCount = item.materialInfo?.packCount || 100;
+        numRolls = qty > 0 ? Math.ceil(qty / packCount) : 0;
+        durationMins = Math.round((workTime * qty) / 60);
+      } else {
+        const qtyCm = qty * 100;
+        const packCountCm = item.materialInfo?.packCount ? item.materialInfo.packCount * 100 : 4000;
+        numRolls = qtyCm > 0 ? Math.ceil(qtyCm / packCountCm) : 0;
+        durationMins = Math.round((workTime * qtyCm) / 60);
+      }
+
       return {
         ...item,
         _qty: qty,
+        _unit: unit,
         _numRolls: numRolls,
         _durationMins: durationMins,
         _width: width,
-        _kataban: kataban
+        _kataban: kataban,
+        _timeOption: timeOption
       };
     });
 
@@ -582,9 +655,13 @@ export default function FirstFactoryPage() {
 
     // Apply sorting
     if (poolSortBy === 'kataban-asc') {
-      items.sort((a, b) => (a._kataban || '').localeCompare(b._kataban || '') || a.hinban.localeCompare(b.hinban));
+      items.sort((a, b) => (a._kataban || '').localeCompare(b._kataban || '') || (a._timeOption || '').localeCompare(b._timeOption || '') || a.hinban.localeCompare(b.hinban));
     } else if (poolSortBy === 'kataban-desc') {
-      items.sort((a, b) => (b._kataban || '').localeCompare(a._kataban || '') || a.hinban.localeCompare(b.hinban));
+      items.sort((a, b) => (b._kataban || '').localeCompare(a._kataban || '') || (b._timeOption || '').localeCompare(a._timeOption || '') || a.hinban.localeCompare(b.hinban));
+    } else if (poolSortBy === 'timeOption-asc') {
+      items.sort((a, b) => (a._timeOption || '').localeCompare(b._timeOption || '') || (a._kataban || '').localeCompare(b._kataban || '') || a.hinban.localeCompare(b.hinban));
+    } else if (poolSortBy === 'timeOption-desc') {
+      items.sort((a, b) => (b._timeOption || '').localeCompare(a._timeOption || '') || (b._kataban || '').localeCompare(a._kataban || '') || a.hinban.localeCompare(b.hinban));
     } else if (poolSortBy === 'duration-desc') {
       items.sort((a, b) => b._durationMins - a._durationMins || b._qty - a._qty);
     } else if (poolSortBy === 'duration-asc') {
@@ -941,11 +1018,21 @@ export default function FirstFactoryPage() {
 
         dayRawItems.forEach(item => {
           const qty = item.production[day - 1] || 0;
-          const qtyCm = qty * 100;
-          const packCountCm = item.materialInfo?.packCount ? item.materialInfo.packCount * 100 : 4000;
-          const numRolls = qtyCm > 0 ? Math.ceil(qtyCm / packCountCm) : 0;
+          const unit = extractUnit(item);
           const workTime = item.materialInfo?.workTime || 0.075;
-          const durationMins = Math.round((workTime * qtyCm) / 60);
+          let numRolls = 0;
+          let durationMins = 0;
+
+          if (unit === '枚') {
+            const packCount = item.materialInfo?.packCount || 100;
+            numRolls = qty > 0 ? Math.ceil(qty / packCount) : 0;
+            durationMins = Math.round((workTime * qty) / 60);
+          } else {
+            const qtyCm = qty * 100;
+            const packCountCm = item.materialInfo?.packCount ? item.materialInfo.packCount * 100 : 4000;
+            numRolls = qtyCm > 0 ? Math.ceil(qtyCm / packCountCm) : 0;
+            durationMins = Math.round((workTime * qtyCm) / 60);
+          }
 
           dayTotalMins += durationMins;
           dayTotalMeters += qty;
@@ -1993,6 +2080,8 @@ export default function FirstFactoryPage() {
                       onChange={(e) => setPoolSortBy(e.target.value)}
                       className="bg-transparent font-bold text-on-surface focus:outline-none cursor-pointer"
                     >
+                      <option value="timeOption-asc">{t('ff_sort_timeOptionAsc')}</option>
+                      <option value="timeOption-desc">{t('ff_sort_timeOptionDesc')}</option>
                       <option value="kataban-asc">{t('ff_sort_katabanAsc')}</option>
                       <option value="kataban-desc">{t('ff_sort_katabanDesc')}</option>
                       <option value="default">{t('ff_sort_default')}</option>
@@ -2050,13 +2139,13 @@ export default function FirstFactoryPage() {
                   )}
 
                   {/* Reset Filters button if any filter active */}
-                  {(poolBatchFilter !== 'all' || poolWidthFilter !== 'all' || poolSortBy !== 'kataban-asc' || poolSearch) && (
+                  {(poolBatchFilter !== 'all' || poolWidthFilter !== 'all' || poolSortBy !== 'timeOption-asc' || poolSearch) && (
                     <button
                       type="button"
                       onClick={() => {
                         setPoolBatchFilter('all');
                         setPoolWidthFilter('all');
-                        setPoolSortBy('kataban-asc');
+                        setPoolSortBy('timeOption-asc');
                         setPoolSearch('');
                       }}
                       className="ml-auto text-[11px] font-bold text-primary hover:underline cursor-pointer"
@@ -2201,8 +2290,7 @@ export default function FirstFactoryPage() {
                     </div>
                   </div>
                 </div>
-
-                {processedPoolItems.length === 0 ? (
+{processedPoolItems.length === 0 ? (
                   <div className="text-center text-sm text-outline mt-10">
                     {poolItems.length === 0 ? t('ff_noItemsForDate') : t('ff_noItemsMatchFilter')}
                   </div>
@@ -2226,28 +2314,54 @@ export default function FirstFactoryPage() {
                           : 'border-outline-variant/30 bg-background hover:border-primary/50'
                       }`}
                     >
-                      <div className="flex-1 flex flex-col cursor-pointer" onClick={() => handleCardClick(item.hinban)}>
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium text-sm text-on-surface">
-                            {item.hinban}{item._kataban ? ` - ${item._kataban}` : ''}
-                          </span>
-                          {isRawMaterial && (
-                            <span className="rounded bg-amber-500/10 px-1.5 py-0.5 text-[9px] font-bold text-amber-600 uppercase tracking-wider">
-                              {language === 'ja' ? '原材料 (粘着無)' : 'Raw Material'}
+                      <div className="flex-1 flex flex-col cursor-pointer min-w-0 pr-1" onClick={() => handleCardClick(item.hinban)}>
+                        <div className="flex items-center gap-4 w-full">
+                          {/* Column 1: Hinban */}
+                          <div className="w-[230px] shrink-0 flex items-center gap-1.5 min-w-0">
+                            <span className="font-semibold text-sm text-on-surface truncate" title={item.hinban}>
+                              {item.hinban}
                             </span>
-                          )}
+                            {isRawMaterial && (
+                              <span className="shrink-0 rounded bg-amber-500/10 px-1.5 py-0.5 text-[9px] font-bold text-amber-600 uppercase tracking-wider">
+                                {language === 'ja' ? '原材料 (粘着無)' : 'Raw Material'}
+                              </span>
+                            )}
+                          </div>
+
+                          {/* Column 2: Kataban */}
+                          <div className="w-[90px] shrink-0 text-left">
+                            {item._kataban ? (
+                              <span className="font-semibold text-xs text-on-surface/90 truncate block" title={`型番: ${item._kataban}`}>
+                                {item._kataban}
+                              </span>
+                            ) : (
+                              <span className="text-outline/30 text-xs">—</span>
+                            )}
+                          </div>
+
+                          {/* Column 3: Time Option */}
+                          <div className="w-[70px] shrink-0 text-left">
+                            {item._timeOption ? (
+                              <span className="font-mono font-bold text-xs text-primary truncate block" title={`時間オプション: ${item._timeOption}`}>
+                                {item._timeOption}
+                              </span>
+                            ) : (
+                              <span className="text-outline/30 text-xs">—</span>
+                            )}
+                          </div>
                         </div>
-                        <div className="flex items-center gap-2 mt-1 text-xs text-outline">
+
+                        <div className="flex items-center gap-2 mt-1.5 text-xs text-outline flex-wrap">
                           <span className="rounded bg-primary/10 px-1.5 py-0.5 font-bold text-primary">
-                            {language === 'ja' ? `数量: ${qty}m` : `Qty: ${qty}m`}
+                            {language === 'ja' ? `数量: ${qty}${item._unit}` : `Qty: ${qty}${item._unit}`}
                           </span>
-                          <span>{numRolls} {language === 'ja' ? '巻' : 'rolls'}</span>
+                          <span>{numRolls} {item._unit === '枚' ? (language === 'ja' ? '束' : 'packs') : (language === 'ja' ? '巻' : 'rolls')}</span>
                           <span>{durationMins} {t('ff_minutesShort')}</span>
                         </div>
                       </div>
                       <button 
                         onClick={() => handleAddToSchedule({ type: 'pool-hinban', hinban: item.hinban, id: item.id })}
-                        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full hover:bg-primary/10 text-primary transition-colors cursor-pointer"
+                        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full hover:bg-primary/10 text-primary transition-colors cursor-pointer ml-1"
                         title={t('ff_addToSchedule')}
                       >
                         <span className="material-symbols-outlined" style={{fontSize: 20}}>arrow_forward</span>
@@ -2278,39 +2392,32 @@ export default function FirstFactoryPage() {
                     />
                   </div>
                 </div>
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2">
                   <span className="rounded bg-primary/10 px-2 py-1 text-xs font-bold text-primary shadow-sm border border-primary/20">
                     {formatTime(scheduledTotalMins)}
                   </span>
-                  {scheduledItems.length > 0 && (
-                    <>
-                      <button
-                        type="button"
-                        onClick={handlePrintSchedulePDF}
-                        className="flex items-center gap-1 rounded-lg border border-primary/40 bg-primary/10 px-2.5 py-1 text-xs font-bold text-primary transition-all hover:bg-primary hover:text-on-primary shadow-xs active:scale-95 cursor-pointer"
-                        title={t('ff_printTooltip')}
-                      >
-                        <span className="material-symbols-outlined" style={{ fontSize: 16 }}>print</span>
-                        {t('ff_print')}
-                      </button>
-                      <button 
-                        type="button"
-                        onClick={() => {
-                          if (window.confirm(t('ff_resetScheduleConfirm'))) {
-                            setScheduleOrder([]);
-                          }
-                        }}
-                        className="flex items-center gap-1 rounded-lg border border-red-500/30 bg-red-500/10 px-2 py-1 text-xs font-semibold text-red-600 transition-colors hover:bg-red-500/20 cursor-pointer"
-                        title={t('ff_reset')}
-                      >
-                        <span className="material-symbols-outlined" style={{ fontSize: 16 }}>restart_alt</span>
-                        {t('ff_reset')}
-                      </button>
-                    </>
-                  )}
-                  <span className="text-sm font-normal text-primary/70">
-                    {language === 'ja' ? `${scheduledItems.length} 件設定済` : `${scheduledItems.length} scheduled`}
-                  </span>
+                  <button
+                    type="button"
+                    onClick={handlePrintSchedulePDF}
+                    disabled={scheduledItems.length === 0}
+                    className="flex items-center gap-1.5 rounded-lg border border-primary/40 bg-primary/10 px-2.5 py-1 text-xs font-bold text-primary shadow-xs hover:bg-primary hover:text-on-primary active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                    title={language === 'ja' ? '優先順位スケジュール表 (A3) を印刷' : 'Print A3 Priority Production Schedule'}
+                  >
+                    <span className="material-symbols-outlined" style={{ fontSize: 16 }}>print</span>
+                    <span>{language === 'ja' ? '印刷 (A3)' : 'Print (A3)'}</span>
+                  </button>
+                  <button 
+                    type="button"
+                    onClick={() => {
+                      if (window.confirm(t('ff_resetScheduleConfirm'))) {
+                        setScheduleOrder([]);
+                      }
+                    }}
+                    className="flex items-center gap-1 rounded-lg border border-outline-variant/50 px-2 py-1 text-xs text-outline hover:bg-surface-variant/50 hover:text-on-surface transition-colors cursor-pointer"
+                  >
+                    <span className="material-symbols-outlined" style={{fontSize: 16}}>restart_alt</span>
+                    {t('ff_reset')}
+                  </button>
                 </div>
               </h3>
               <div className="flex flex-col gap-2 flex-1 overflow-y-auto">
@@ -2336,6 +2443,10 @@ export default function FirstFactoryPage() {
                     const setupDisplayName = item.type === 'setup' 
                       ? (item.name === '段取り' ? t('ff_dandori') : (item.name === '試作' ? t('ff_trial') : item.name))
                       : item.name;
+
+                    const matchedPool = data.find(d => d.hinban === item.hinban);
+                    const itemKataban = item._kataban || extractKataban(matchedPool || item);
+                    const itemTimeOption = item._timeOption || extractTimeOption(matchedPool || item);
 
                     return (
                       <div 
@@ -2384,27 +2495,58 @@ export default function FirstFactoryPage() {
                           </div>
                         ) : (
                           <>
-                            <div className="flex-1 flex flex-col cursor-pointer min-w-0" onClick={() => handleCardClick(item.hinban)}>
-                              <div className="flex items-center gap-2 flex-wrap">
-                                <span className="font-medium text-sm text-on-surface hover:text-primary transition-colors">{item.hinban}</span>
-                                {isZeroOrMissing && (
-                                  <span className="inline-flex items-center gap-1 rounded bg-red-500/15 px-1.5 py-0.5 text-[10px] font-bold text-red-600 border border-red-500/30">
-                                    <span className="material-symbols-outlined" style={{ fontSize: 12 }}>warning</span>
-                                    {disc.type === 'missing_in_excel' ? t('ff_notInExcel') : (disc.movedText || t('ff_zeroMetersToday'))}
+                            <div className="flex-1 flex flex-col cursor-pointer min-w-0 pr-1" onClick={() => handleCardClick(item.hinban)}>
+                              <div className="flex items-center gap-4 w-full">
+                                {/* Column 1: Hinban + Discrepancy Warnings */}
+                                <div className="w-[220px] shrink-0 flex items-center gap-1.5 min-w-0">
+                                  <span className="font-semibold text-sm text-on-surface hover:text-primary transition-colors truncate" title={item.hinban}>
+                                    {item.hinban}
                                   </span>
-                                )}
-                                {isQtyMismatch && (
-                                  <span className="inline-flex items-center gap-1 rounded bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-bold text-amber-700 border border-amber-500/30">
-                                    <span className="material-symbols-outlined" style={{ fontSize: 12 }}>difference</span>
-                                    {t('ff_excelMismatchBadge').replace('{qty}', disc.excelQty)}
-                                  </span>
-                                )}
+                                  {isZeroOrMissing && (
+                                    <span className="shrink-0 inline-flex items-center gap-0.5 rounded bg-red-500/15 px-1 py-0.5 text-[9px] font-bold text-red-600 border border-red-500/30">
+                                      <span className="material-symbols-outlined" style={{ fontSize: 11 }}>warning</span>
+                                      <span className="truncate max-w-[65px]">{disc.type === 'missing_in_excel' ? t('ff_notInExcel') : (disc.movedText || t('ff_zeroMetersToday'))}</span>
+                                    </span>
+                                  )}
+                                  {isQtyMismatch && (
+                                    <span className="shrink-0 inline-flex items-center gap-0.5 rounded bg-amber-500/15 px-1 py-0.5 text-[9px] font-bold text-amber-700 border border-amber-500/30">
+                                      <span className="material-symbols-outlined" style={{ fontSize: 11 }}>difference</span>
+                                      <span>{disc.excelQty}{item.unit || 'm'}</span>
+                                    </span>
+                                  )}
+                                </div>
+
+                                {/* Column 2: Kataban */}
+                                <div className="w-[90px] shrink-0 text-left">
+                                  {itemKataban ? (
+                                    <span className="font-semibold text-xs text-on-surface/90 truncate block" title={`型番: ${itemKataban}`}>
+                                      {itemKataban}
+                                    </span>
+                                  ) : (
+                                    <span className="text-outline/30 text-xs">—</span>
+                                  )}
+                                </div>
+
+                                {/* Column 3: Time Option */}
+                                <div className="w-[70px] shrink-0 text-left">
+                                  {itemTimeOption ? (
+                                    <span className="font-mono font-bold text-xs text-primary truncate block" title={`時間オプション: ${itemTimeOption}`}>
+                                      {itemTimeOption}
+                                    </span>
+                                  ) : (
+                                    <span className="text-outline/30 text-xs">—</span>
+                                  )}
+                                </div>
                               </div>
-                              <div className="flex items-center gap-2 mt-1 text-xs text-outline flex-wrap">
+
+                              <div className="flex items-center gap-2 mt-1.5 text-xs text-outline flex-wrap">
                                 <span className="bg-primary/10 text-primary px-1.5 rounded-sm">
-                                  {language === 'ja' ? `巻 ${item.rollIndex}/${item.totalRolls}` : `Roll ${item.rollIndex}/${item.totalRolls}`}
+                                  {item.unit === '枚'
+                                    ? (language === 'ja' ? `束 ${item.rollIndex}/${item.totalRolls}` : `Pack ${item.rollIndex}/${item.totalRolls}`)
+                                    : (language === 'ja' ? `巻 ${item.rollIndex}/${item.totalRolls}` : `Roll ${item.rollIndex}/${item.totalRolls}`)
+                                  }
                                 </span>
-                                <span>{item.meters}m</span>
+                                <span>{item.meters}{item.unit || 'm'}</span>
                                 {isQtyMismatch && item.rollIndex === 1 && (
                                   <button
                                     type="button"
@@ -2416,7 +2558,7 @@ export default function FirstFactoryPage() {
                                     title={language === 'ja' ? '最新Excelデータに合わせて巻数・所要時間を更新' : 'Update rolls and duration to match Excel'}
                                   >
                                     <span className="material-symbols-outlined" style={{ fontSize: 12 }}>sync</span>
-                                    {t('ff_updateQtyPrompt').replace('{qty}', disc.excelQty)}
+                                    {t('ff_updateQtyPrompt').replace('{qty}', `${disc.excelQty}${item.unit || 'm'}`)}
                                   </button>
                                 )}
                               </div>
