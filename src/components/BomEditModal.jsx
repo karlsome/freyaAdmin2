@@ -395,9 +395,9 @@ export default function BomEditModal({ existingBom, onClose, onSaved, onEditExis
                           </div>
 
                           {/* Numeric Inputs Row 1 */}
-                          <div className="grid grid-cols-3 gap-2">
+                          <div className="grid grid-cols-4 gap-2">
                             <div>
-                              <label className="block text-[10px] uppercase text-outline mb-1">作業時間 (Work Time)</label>
+                              <label className="block text-[10px] uppercase text-outline mb-1">作業時間 (Work)</label>
                               <input 
                                 type="number" 
                                 readOnly
@@ -423,6 +423,15 @@ export default function BomEditModal({ existingBom, onClose, onSaved, onEditExis
                                 value={step['型番'] ?? ""}
                               />
                             </div>
+                            <div>
+                              <label className="block text-[10px] uppercase text-outline mb-1">時間オプション</label>
+                              <input 
+                                type="text" 
+                                readOnly
+                                className="w-full bg-surface-variant/30 border border-outline-variant/30 rounded md px-2 py-1 text-sm text-outline focus:outline-none cursor-not-allowed font-mono font-bold"
+                                value={step['時間オプション'] ?? ""}
+                              />
+                            </div>
                           </div>
 
                           {/* Numeric Inputs Row 2 */}
@@ -430,10 +439,10 @@ export default function BomEditModal({ existingBom, onClose, onSaved, onEditExis
                             <div>
                               <label className="block text-[9px] uppercase text-outline mb-1 whitespace-nowrap">生産単位</label>
                               <input 
-                                type="number" 
+                                type="text" 
                                 readOnly
                                 className="w-full bg-surface-variant/30 border border-outline-variant/30 rounded md px-2 py-1 text-sm text-outline focus:outline-none cursor-not-allowed"
-                                value={step['生産単位'] ?? ""}
+                                value={typeof step['生産単位'] === 'object' ? `${step['生産単位']?.name || ''} (${step['生産単位']?.code ?? ''})` : (step['生産単位'] ?? "")}
                               />
                             </div>
                             <div>

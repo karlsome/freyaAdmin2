@@ -32,6 +32,15 @@ function renderImageCell(record) {
   );
 }
 
+function getRecordValue(record, key) {
+  if (!record || typeof record !== 'object') return '';
+  if (record[key] !== undefined && record[key] !== null) return record[key];
+  if (record['品目マスタ']?.[key] !== undefined && record['品目マスタ']?.[key] !== null) return record['品目マスタ'][key];
+  if (record['resolved']?.[key]?.name !== undefined) return record['resolved'][key].name;
+  if (record['resolved']?.[key]?.code !== undefined) return record['resolved'][key].code;
+  return '';
+}
+
 export default function MasterTable({
   columns,
   records,
@@ -75,8 +84,8 @@ export default function MasterTable({
         emphasis ? "font-semibold text-primary" : "text-on-surface",
       ].join(" "),
       contentClassName: "block w-full",
-      getCellTitle: (record) => formatMasterValue(record[column.key]),
-      renderCell: (record) => formatMasterValue(record[column.key]),
+      getCellTitle: (record) => formatMasterValue(getRecordValue(record, column.key)),
+      renderCell: (record) => formatMasterValue(getRecordValue(record, column.key)),
     };
   });
 

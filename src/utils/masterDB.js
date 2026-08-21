@@ -22,14 +22,14 @@ const MATERIAL_PRIORITY_COLUMNS = [
   { key: "品番", label: "品番" },
   { key: "品名", label: "品名" },
   { key: "ラベル品番", label: "ラベル品番" },
-  { key: "NMOJI_色コード", label: "色" },
-  { key: "梱包数", label: "梱包数" },
   { key: "仕様", label: "仕様" },
   { key: "型番", label: "型番" },
+  { key: "梱包数", label: "梱包数" },
   { key: "ロール温度", label: "ロール温度" },
+  { key: "ライン形態", label: "ライン形態" },
+  { key: "出荷先名", label: "出荷先名" },
+  { key: "工程コード", label: "工程コード" },
   { key: "imageURL", label: "画像" },
-  { key: "NMOJI_ユーザー", label: "次工程" },
-  { key: "原材料品番", label: "原材料品番" },
 ];
 
 const MATERIAL_DEFAULT_FIELDS = MATERIAL_PRIORITY_COLUMNS
@@ -49,9 +49,9 @@ const MASTER_TAB_UI = {
     processFilterLabel: "Material",
     processAllLabel: "All Material",
     recordLabel: "Material Record",
-    previewFields: ["品番", "品名", "ラベル品番", "NMOJI_色コード", "NMOJI_ユーザー", "原材料品番"],
-    identityTitleFields: ["品番", "品名", "ラベル品番", "原材料品番"],
-    identitySubtitleFields: ["型番", "NMOJI_色コード", "NMOJI_ユーザー"],
+    previewFields: ["品番", "品名", "ラベル品番", "仕様", "型番", "梱包数"],
+    identityTitleFields: ["品番", "品名", "ラベル品番"],
+    identitySubtitleFields: ["型番", "仕様", "工程コード"],
   },
 };
 
@@ -295,10 +295,30 @@ export function buildMasterFieldDefinitions(schemaFields = [], records = [], tab
   });
 }
 
-export function buildSearchFields(fieldDefinitions = []) {
-  return fieldDefinitions
+export function buildSearchFields(fieldDefinitions = [], tabKey = "masterDB") {
+  const fields = fieldDefinitions
     .filter((field) => ["text", "textarea", "time"].includes(field.type))
     .map((field) => field.field);
+
+  if (tabKey === "materialDB") {
+    const extraMaterialFields = [
+      "品番",
+      "品名",
+      "仕様",
+      "型番",
+      "ラベル品番",
+      "品目マスタ.品番",
+      "品目マスタ.品名",
+      "品目マスタ.仕様",
+      "品目マスタ.型番",
+      "品目マスタ.ラベル品番",
+    ];
+    extraMaterialFields.forEach((f) => {
+      if (!fields.includes(f)) fields.push(f);
+    });
+  }
+
+  return fields;
 }
 
 export function getMasterTableColumns(records = [], schemaFields = [], tabKey = "masterDB") {

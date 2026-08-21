@@ -1,8 +1,10 @@
 import { Suspense, lazy, useCallback, useEffect, useRef, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import Papa from "papaparse";
 import MasterBatchEditModal from "../components/MasterBatchEditModal";
 import MasterCsvImportCard from "../components/MasterCsvImportCard";
 import MasterDetailDrawer from "../components/MasterDetailDrawer";
+import MaterialDetailModal from "../components/MaterialDetailModal";
 import MasterFilterPanel from "../components/MasterFilterPanel";
 import PageHeader from "../components/PageHeader";
 import MasterRecordModal from "../components/MasterRecordModal";
@@ -81,7 +83,13 @@ function toBase64(file) {
 }
 
 export default function MasterDBPage() {
-  const [activeTab, setActiveTab] = useState("masterDB");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tabFromUrl = searchParams.get("tab");
+  const searchFromUrl = searchParams.get("search");
+
+  const [activeTab, setActiveTab] = useState(() => {
+    return tabFromUrl && MASTER_TABS.some((item) => item.key === tabFromUrl) ? tabFromUrl : "masterDB";
+  });
   const [records, setRecords] = useState([]);
   const [schemaFields, setSchemaFields] = useState([]);
   const [filterOptions, setFilterOptions] = useState({ factories: [], rl: [], colors: [], processes: [] });
@@ -192,7 +200,7 @@ export default function MasterDBPage() {
           simpleFilters,
           advancedFilters: advancedQuery,
           searchTags,
-          searchFields: buildSearchFields(buildMasterFieldDefinitions(schemaFields, [], activeTab)),
+          searchFields: buildSearchFields(buildMasterFieldDefinitions(schemaFields, [], activeTab), activeTab),
           searchLogicMode,
         });
 
@@ -264,6 +272,12 @@ export default function MasterDBPage() {
     }
 
     if (tab.key !== activeTab) {
+      setSearchParams((params) => {
+        const next = new URLSearchParams(params);
+        next.set("tab", tab.key);
+        next.delete("search");
+        return next;
+      });
       resetFirstTabState(tab.key);
     }
   }
@@ -617,7 +631,7 @@ export default function MasterDBPage() {
           ) : isPceFilesTab ? (
             <PceFilesWorkspace onFlash={setFlash} />
           ) : isBomDBTab ? (
-            <BomWorkspace onFlash={setFlash} />
+            <BomWorkspace initialSearch={searchFromUrl || ""} onFlash={setFlash} />
           ) : (
             <SetsubiDBWorkspace refreshToken={refreshNonce} />
           )}
@@ -686,18 +700,26 @@ export default function MasterDBPage() {
       )}
 
       {!isSpecialTab && selectedRecord && (
-        <MasterDetailDrawer
-          key={extractRecordId(selectedRecord) || "master-detail"}
-          open={!!selectedRecord}
-          record={selectedRecord}
-          tabKey={activeTab}
-          fieldDefinitions={fieldDefinitions}
-          saving={drawerSaving}
-          uploading={drawerUploading}
-          onClose={() => setSelectedRecord(null)}
-          onSave={handleSaveRecord}
-          onUploadImage={handleUploadImage}
-        />
+        activeTab === "materialDB" ? (
+          <MaterialDetailModal
+            key={extractRecordId(selectedRecord) || selectedRecord?.['品番'] || "material-detail"}
+            modalData={selectedRecord}
+            onClose={() => setSelectedRecord(null)}
+          />
+        ) : (
+          <MasterDetailDrawer
+            key={extractRecordId(selectedRecord) || "master-detail"}
+            open={!!selectedRecord}
+            record={selectedRecord}
+            tabKey={activeTab}
+            fieldDefinitions={fieldDefinitions}
+            saving={drawerSaving}
+            uploading={drawerUploading}
+            onClose={() => setSelectedRecord(null)}
+            onSave={handleSaveRecord}
+            onUploadImage={handleUploadImage}
+          />
+        )
       )}
 
       {!isSpecialTab && addModalOpen && (

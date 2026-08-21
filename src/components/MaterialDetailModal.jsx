@@ -1,13 +1,21 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
+import { useNavigate } from 'react-router-dom';
 import { query } from "../services/api";
 import { useLanguage } from '../contexts/LanguageContext';
 
 export default function MaterialDetailModal({ modalData, onClose }) {
   const { t, language } = useLanguage();
+  const navigate = useNavigate();
   const [nestedMaterialData, setNestedMaterialData] = useState(null);
   const [loadingNested, setLoadingNested] = useState(false);
   const [bomData, setBomData] = useState(modalData?.['BOM'] || null);
+
+  const handleShowBom = (hinban) => {
+    if (!hinban) return;
+    if (onClose) onClose();
+    navigate(`/masterDB?tab=bomDB&search=${encodeURIComponent(hinban)}`);
+  };
 
   useEffect(() => {
     if (modalData && !modalData['BOM'] && modalData['品番']) {
@@ -52,18 +60,36 @@ export default function MaterialDetailModal({ modalData, onClose }) {
             <div className="flex items-center justify-between p-6 border-b border-outline-variant/30 bg-surface-variant/20">
               <div>
                 <h2 className="text-xl font-bold text-on-surface">{modalData['品番']}</h2>
-                <p className="text-sm text-outline mt-1">{modalData['品目マスタ']?.['品名']}</p>
+                <p className="text-sm text-outline mt-1">{modalData['品目マスタ']?.['品名'] || modalData['品名']}</p>
               </div>
-              <button 
-                onClick={onClose}
-                className="flex h-8 w-8 items-center justify-center rounded-full hover:bg-surface-variant/50 text-outline transition-colors"
-                title={t('ff_close')}
-              >
-                <span className="material-symbols-outlined" style={{fontSize: 24}}>close</span>
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => handleShowBom(modalData['品番'])}
+                  className="inline-flex items-center gap-1.5 rounded-xl border border-primary/40 bg-primary/10 px-3 py-1.5 text-xs font-bold text-primary hover:bg-primary hover:text-on-primary transition-all active:scale-95 cursor-pointer shadow-xs"
+                  title={language === 'ja' ? 'BOM DBでこの品番を表示' : 'Show BOM in BOM DB tab'}
+                >
+                  <span className="material-symbols-outlined" style={{ fontSize: 16 }}>account_tree</span>
+                  <span>{language === 'ja' ? 'BOMを表示' : 'Show BOM'}</span>
+                </button>
+                <button 
+                  onClick={onClose}
+                  className="flex h-8 w-8 items-center justify-center rounded-full hover:bg-surface-variant/50 text-outline transition-colors cursor-pointer"
+                  title={t('ff_close')}
+                >
+                  <span className="material-symbols-outlined" style={{fontSize: 24}}>close</span>
+                </button>
+              </div>
             </div>
             <div className="p-6 overflow-y-auto flex-1 flex flex-col gap-6">
               
+              {/* Image Preview if available */}
+              {modalData['imageURL'] && (
+                <div className="relative overflow-hidden rounded-xl border border-outline-variant/30 bg-surface-variant/20 flex items-center justify-center max-h-52 p-2">
+                  <img src={modalData['imageURL']} alt={modalData['品番']} className="max-h-48 object-contain rounded-lg shadow-sm" />
+                </div>
+              )}
+
               {/* Bom Info - clickable to open material sub-modal */}
               {(() => {
                 const bomEntry = bomData?.find(b => b['工程コード'] === 1010);
@@ -95,22 +121,46 @@ export default function MaterialDetailModal({ modalData, onClose }) {
                 );
               })()}
 
-              {/* Segments Info */}
-              <div>
-                <div className="text-xs font-bold text-outline mb-3 uppercase tracking-wider">{t('ff_materialHinbanStructure')}</div>
-                <div className="flex flex-wrap gap-2">
-                  {modalData['品番構造']?.segments?.map((s, i) => {
-                     const name = s.name || s['得意先'] || s['入出荷先'];
-                     if (!name) return null;
-                     return (
-                       <div key={i} className="flex flex-col bg-surface-variant/30 border border-outline-variant/50 rounded-lg px-3 py-2 text-sm">
-                         <span className="text-[10px] text-outline">{s.segment}</span>
-                         <span className="font-medium text-on-surface">{name}</span>
-                       </div>
-                     );
-                  })}
+              {/* Resolved Master Codes */}
+              {modalData['resolved'] && Object.keys(modalData['resolved']).length > 0 && (
+                <div>
+                  <div className="text-xs font-bold text-outline mb-3 uppercase tracking-wider">
+                    {language === 'ja' ? 'マスター解決情報 (Resolved Codes)' : 'Resolved Master Codes'}
+                  </div>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-2.5">
+                    {Object.entries(modalData['resolved']).map(([key, val]) => {
+                      const displayVal = typeof val === 'object' && val !== null 
+                        ? (val.name ? `${val.code != null ? `${val.code} - ` : ''}${val.name}` : (val.code ?? JSON.stringify(val)))
+                        : String(val ?? '');
+                      return (
+                        <div key={key} className="flex flex-col bg-surface-variant/20 border border-outline-variant/30 rounded-xl p-3">
+                          <span className="text-[10px] font-bold text-outline uppercase tracking-wide">{key}</span>
+                          <span className="font-semibold text-xs text-on-surface mt-1">{displayVal}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
-              </div>
+              )}
+
+              {/* Segments Info */}
+              {modalData['品番構造']?.segments && (
+                <div>
+                  <div className="text-xs font-bold text-outline mb-3 uppercase tracking-wider">{t('ff_materialHinbanStructure')}</div>
+                  <div className="flex flex-wrap gap-2">
+                    {modalData['品番構造'].segments.map((s, i) => {
+                       const name = s.name || s['得意先'] || s['入出荷先'];
+                       if (!name) return null;
+                       return (
+                         <div key={i} className="flex flex-col bg-surface-variant/30 border border-outline-variant/50 rounded-lg px-3 py-2 text-sm">
+                           <span className="text-[10px] text-outline">{s.segment}</span>
+                           <span className="font-medium text-on-surface">{name}</span>
+                         </div>
+                       );
+                    })}
+                  </div>
+                </div>
+              )}
 
               {/* Process Data */}
               {(() => {
@@ -270,16 +320,27 @@ export default function MaterialDetailModal({ modalData, onClose }) {
                   <span className="material-symbols-outlined text-primary" style={{fontSize: 24}}>inventory_2</span>
                   <div>
                     <h3 className="text-xl font-bold text-on-surface">{materialDetail['品番']}</h3>
-                    <p className="text-sm text-outline mt-1">{materialDetail['品目マスタ']?.['品名']} — {materialDetail['品目マスタ']?.['仕様']}</p>
+                    <p className="text-sm text-outline mt-1">{materialDetail['品目マスタ']?.['品名'] || materialDetail['品名']} — {materialDetail['品目マスタ']?.['仕様'] || materialDetail['仕様']}</p>
                   </div>
                 </div>
-                <button 
-                  onClick={() => setNestedMaterialData(null)}
-                  className="flex h-8 w-8 items-center justify-center rounded-full hover:bg-surface-variant/50 text-outline transition-colors"
-                  title={t('ff_close')}
-                >
-                  <span className="material-symbols-outlined" style={{fontSize: 24}}>close</span>
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => handleShowBom(materialDetail['品番'])}
+                    className="inline-flex items-center gap-1.5 rounded-xl border border-primary/40 bg-primary/10 px-3 py-1.5 text-xs font-bold text-primary hover:bg-primary hover:text-on-primary transition-all active:scale-95 cursor-pointer shadow-xs"
+                    title={language === 'ja' ? 'BOM DBでこの品番を表示' : 'Show BOM in BOM DB tab'}
+                  >
+                    <span className="material-symbols-outlined" style={{ fontSize: 16 }}>account_tree</span>
+                    <span>{language === 'ja' ? 'BOMを表示' : 'Show BOM'}</span>
+                  </button>
+                  <button 
+                    onClick={() => setNestedMaterialData(null)}
+                    className="flex h-8 w-8 items-center justify-center rounded-full hover:bg-surface-variant/50 text-outline transition-colors cursor-pointer"
+                    title={t('ff_close')}
+                  >
+                    <span className="material-symbols-outlined" style={{fontSize: 24}}>close</span>
+                  </button>
+                </div>
               </div>
               
               {/* Body */}
