@@ -458,7 +458,7 @@ const translations = {
     ff_trial: "Trial Run",
     ff_customSetup: "Custom Setup",
     ff_enterCustomName: "Enter name...",
-    ff_minutesShort: "m",
+    ff_minutesShort: "min",
     ff_addToSchedule: "Add to schedule",
     ff_removeFromSchedule: "Remove from schedule",
     ff_editTitleNote: "Click to edit title / add text",

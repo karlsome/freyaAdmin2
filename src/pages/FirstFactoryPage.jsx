@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useLanguage } from '../contexts/LanguageContext';
 import MasterTabNav from '../components/MasterTabNav';
 import MaterialDetailModal from '../components/MaterialDetailModal';
@@ -14,6 +14,7 @@ export default function FirstFactoryPage() {
   const { t, language } = useLanguage();
   const navigate = useNavigate();
   const { tab: routeTab } = useParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   
   const VALID_TABS = ['fetching', 'scheduling', 'summary', 'production'];
   const activeTab = VALID_TABS.includes(routeTab) ? routeTab : 'fetching';
@@ -34,8 +35,38 @@ export default function FirstFactoryPage() {
     d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
     return d.toISOString().split('T')[0];
   };
+
+  const isValidDateStr = (str) => typeof str === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(str);
+  const dateFromUrl = searchParams.get('date');
   
-  const [selectedDateStr, setSelectedDateStr] = useState(getLocalYYYYMMDD());
+  const [selectedDateStr, setSelectedDateStr] = useState(() => {
+    if (dateFromUrl && isValidDateStr(dateFromUrl)) {
+      return dateFromUrl;
+    }
+    return getLocalYYYYMMDD();
+  });
+
+  const updateSelectedDate = (newDate) => {
+    setSelectedDateStr(newDate);
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      next.set('date', newDate);
+      return next;
+    }, { replace: true });
+  };
+
+  useEffect(() => {
+    const urlDate = searchParams.get('date');
+    if (urlDate && isValidDateStr(urlDate) && urlDate !== selectedDateStr) {
+      setSelectedDateStr(urlDate);
+    } else if (!urlDate && activeTab === 'scheduling') {
+      setSearchParams((prev) => {
+        const next = new URLSearchParams(prev);
+        next.set('date', selectedDateStr);
+        return next;
+      }, { replace: true });
+    }
+  }, [searchParams, activeTab, selectedDateStr]);
   
   // Extract month (YYYY-MM) and day (1-31) from selectedDateStr
   const selectedMonth = selectedDateStr.substring(0, 7);
@@ -63,7 +94,7 @@ export default function FirstFactoryPage() {
     const parts = selectedDateStr.split('-');
     let day = parts[2];
     if (parseInt(day, 10) > 28) day = '01'; // Safe fallback for shortest month
-    setSelectedDateStr(`${newMonth}-${day}`);
+    updateSelectedDate(`${newMonth}-${day}`);
   };
 
   const fetchSchedule = async (month) => {
@@ -507,12 +538,13 @@ export default function FirstFactoryPage() {
 
   const handleDateChange = (e) => {
     const newDate = e.target.value;
+    if (!newDate) return;
     if (hasUnsavedChanges) {
       if (!window.confirm(t('unsavedChangesWarning') || "You have unsaved changes! Are you sure you want to change the date? Unsaved progress will be lost.")) {
         return;
       }
     }
-    setSelectedDateStr(newDate);
+    updateSelectedDate(newDate);
   };
 
   const handleStepDate = (offset) => {
@@ -528,7 +560,18 @@ export default function FirstFactoryPage() {
     const nextY = dateObj.getFullYear();
     const nextM = String(dateObj.getMonth() + 1).padStart(2, '0');
     const nextD = String(dateObj.getDate()).padStart(2, '0');
-    setSelectedDateStr(`${nextY}-${nextM}-${nextD}`);
+    updateSelectedDate(`${nextY}-${nextM}-${nextD}`);
+  };
+
+  const handleGoToToday = () => {
+    const today = getLocalYYYYMMDD();
+    if (selectedDateStr === today) return;
+    if (hasUnsavedChanges) {
+      if (!window.confirm(t('unsavedChangesWarning') || "You have unsaved changes! Are you sure you want to change the date? Unsaved progress will be lost.")) {
+        return;
+      }
+    }
+    updateSelectedDate(today);
   };
 
   const handleTabChange = (nextTab) => {
@@ -537,7 +580,7 @@ export default function FirstFactoryPage() {
         return;
       }
     }
-    navigate(`/firstFactory/${nextTab}`);
+    navigate(`/firstFactory/${nextTab}?date=${selectedDateStr}`);
   };
 
   // Items that have production > 0 for this day
@@ -690,7 +733,7 @@ export default function FirstFactoryPage() {
   const formatTime = (mins) => {
     const h = Math.floor(mins / 60);
     const m = mins % 60;
-    return h > 0 ? `${h}h ${m}m` : `${m}m`;
+    return h > 0 ? `${h}h ${m}min` : `${m}min`;
   };
 
   // --- DISCREPANCY DETECTION FOR THE SELECTED DATE ---
@@ -1354,8 +1397,8 @@ export default function FirstFactoryPage() {
       renderCell: (row) => (
         <button
           onClick={() => {
-            setSelectedDateStr(row.dateKey);
-            navigate('/firstFactory/scheduling');
+            updateSelectedDate(row.dateKey);
+            navigate(`/firstFactory/scheduling?date=${row.dateKey}`);
           }}
           className="inline-flex items-center gap-1 rounded-lg border border-primary/30 bg-primary/5 px-2.5 py-1 text-xs font-bold text-primary hover:bg-primary hover:text-on-primary transition-colors shadow-sm cursor-pointer"
           title={t('ff_openScheduleBtn')}
@@ -1970,13 +2013,13 @@ export default function FirstFactoryPage() {
           )}
 
           <div className="flex items-center justify-between rounded-2xl border border-outline-variant/30 bg-surface/50 p-4 backdrop-blur-xl">
-            <div className="flex items-center gap-3">
+            <div className="flex flex-wrap items-center gap-3">
               <span className="text-sm font-medium text-on-surface">{t('ff_targetDate')}</span>
-              <div className="flex items-center gap-1 rounded-xl border border-outline-variant/50 bg-background/50 p-1">
+              <div className="flex items-center gap-1 rounded-xl border border-outline-variant/50 bg-background/50 p-1 shrink-0">
                 <button
                   type="button"
                   onClick={() => handleStepDate(-1)}
-                  className="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-surface-variant/50 text-on-surface transition-colors active:scale-95 cursor-pointer"
+                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg hover:bg-surface-variant/50 text-on-surface transition-colors active:scale-95 cursor-pointer"
                   title={t('ff_prevDay')}
                 >
                   <span className="material-symbols-outlined" style={{ fontSize: 20 }}>chevron_left</span>
@@ -1985,9 +2028,9 @@ export default function FirstFactoryPage() {
                   type="date" 
                   value={selectedDateStr}
                   onChange={handleDateChange}
-                  className="rounded-lg border-0 bg-transparent px-2 py-1 text-sm font-bold text-on-surface focus:outline-none cursor-pointer"
+                  className="w-[135px] shrink-0 rounded-lg border-0 bg-transparent px-2 py-1 text-sm font-bold font-mono tabular-nums text-on-surface focus:outline-none cursor-pointer"
                 />
-                <span className={`inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-black shrink-0 ${
+                <span className={`inline-flex items-center justify-center rounded-lg w-[58px] py-1 text-xs font-black shrink-0 text-center ${
                   selectedDayOfWeekInfo.isSunday 
                     ? 'bg-red-500/15 text-red-600 dark:text-red-400 border border-red-500/30' 
                     : selectedDayOfWeekInfo.isSaturday 
@@ -1999,12 +2042,25 @@ export default function FirstFactoryPage() {
                 <button
                   type="button"
                   onClick={() => handleStepDate(1)}
-                  className="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-surface-variant/50 text-on-surface transition-colors active:scale-95 cursor-pointer"
+                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg hover:bg-surface-variant/50 text-on-surface transition-colors active:scale-95 cursor-pointer"
                   title={t('ff_nextDay')}
                 >
                   <span className="material-symbols-outlined" style={{ fontSize: 20 }}>chevron_right</span>
                 </button>
               </div>
+
+              {/* Today button if date is not current date */}
+              {selectedDateStr !== getLocalYYYYMMDD() && (
+                <button
+                  type="button"
+                  onClick={handleGoToToday}
+                  className="inline-flex items-center gap-1 rounded-xl border border-primary/40 bg-primary/10 px-3 py-1.5 text-xs font-bold text-primary hover:bg-primary hover:text-on-primary transition-all active:scale-95 cursor-pointer shadow-xs"
+                  title={language === 'ja' ? '今日の日付に戻る' : 'Go to today'}
+                >
+                  <span className="material-symbols-outlined" style={{ fontSize: 16 }}>today</span>
+                  {t('ff_today')}
+                </button>
+              )}
             </div>
             <button 
               onClick={handleSaveSchedule}
@@ -2875,8 +2931,8 @@ export default function FirstFactoryPage() {
                 <button
                   type="button"
                   onClick={() => {
-                    setSelectedDateStr(productionDateStr);
-                    navigate('/firstFactory/scheduling');
+                    updateSelectedDate(productionDateStr);
+                    navigate(`/firstFactory/scheduling?date=${productionDateStr}`);
                   }}
                   className="mt-4 inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-xs font-bold text-on-primary hover:bg-primary/90 transition-colors shadow-sm cursor-pointer"
                 >
@@ -3341,10 +3397,10 @@ export default function FirstFactoryPage() {
                       <button
                         type="button"
                         onClick={() => {
-                          setSelectedDateStr(report.dateKey);
+                          updateSelectedDate(report.dateKey);
                           setIsImpactModalOpen(false);
                           if (activeTab !== 'scheduling') {
-                            navigate('/firstFactory/scheduling');
+                            navigate(`/firstFactory/scheduling?date=${report.dateKey}`);
                           }
                         }}
                         className="inline-flex items-center gap-1 rounded-lg border border-primary/40 bg-primary/10 px-2.5 py-1 text-xs font-bold text-primary hover:bg-primary hover:text-on-primary transition-colors cursor-pointer"
