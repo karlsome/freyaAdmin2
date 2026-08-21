@@ -22,6 +22,7 @@ export default function BomWorkspace({ initialSearch = "", onFlash }) {
     if (initialSearch) {
       setSearchQuery(initialSearch);
       setDebouncedSearch(initialSearch);
+      setCurrentPage(1);
     }
   }, [initialSearch]);
 
@@ -62,12 +63,17 @@ export default function BomWorkspace({ initialSearch = "", onFlash }) {
 
       // If there's an active search or initialSearch, auto-select matching BOM
       if (dataList.length > 0) {
-        if (debouncedSearch) {
-          const match = dataList.find(b => b['品番'] === debouncedSearch) || dataList[0];
+        const queryNorm = (debouncedSearch || initialSearch || '').trim().toLowerCase();
+        if (queryNorm) {
+          const match = dataList.find(b => (b['品番'] || '').toLowerCase() === queryNorm) ||
+                        dataList.find(b => (b['品番'] || '').toLowerCase().includes(queryNorm)) ||
+                        dataList[0];
           setSelectedBom(match);
         } else if (!selectedBom) {
           setSelectedBom(dataList[0]);
         }
+      } else {
+        setSelectedBom(null);
       }
     } catch (err) {
       console.error(err);

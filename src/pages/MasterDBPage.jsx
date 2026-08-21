@@ -264,6 +264,14 @@ export default function MasterDBPage() {
     distinctCacheRef.current.clear();
   }
 
+  useEffect(() => {
+    if (tabFromUrl && MASTER_TABS.some((item) => item.key === tabFromUrl)) {
+      if (tabFromUrl !== activeTab) {
+        resetFirstTabState(tabFromUrl);
+      }
+    }
+  }, [tabFromUrl, activeTab]);
+
   function handleTabSelect(tab) {
     if (!tab.ready) {
       const liveTabs = MASTER_TABS.filter((item) => item.ready).map((item) => item.label).join(" / ");
