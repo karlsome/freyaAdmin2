@@ -216,7 +216,7 @@ export default function FirstFactoryPage() {
       return items;
     } else {
       const qtyCm = qty * 100;
-      const packCountCm = foundItem.materialInfo?.packCount ? foundItem.materialInfo.packCount * 100 : 4000;
+      const packCountCm = Number(foundItem.materialInfo?.packCount) > 0 ? Number(foundItem.materialInfo.packCount) : 4000;
       const numRolls = Math.ceil(qtyCm / packCountCm);
       const items = [];
       for (let i = 0; i < numRolls; i++) {
@@ -667,7 +667,7 @@ export default function FirstFactoryPage() {
         durationMins = Math.round((workTime * qty) / 60);
       } else {
         const qtyCm = qty * 100;
-        const packCountCm = item.materialInfo?.packCount ? item.materialInfo.packCount * 100 : 4000;
+        const packCountCm = Number(item.materialInfo?.packCount) > 0 ? Number(item.materialInfo.packCount) : 4000;
         numRolls = qtyCm > 0 ? Math.ceil(qtyCm / packCountCm) : 0;
         durationMins = Math.round((workTime * qtyCm) / 60);
       }
@@ -1072,7 +1072,7 @@ export default function FirstFactoryPage() {
             durationMins = Math.round((workTime * qty) / 60);
           } else {
             const qtyCm = qty * 100;
-            const packCountCm = item.materialInfo?.packCount ? item.materialInfo.packCount * 100 : 4000;
+            const packCountCm = Number(item.materialInfo?.packCount) > 0 ? Number(item.materialInfo.packCount) : 4000;
             numRolls = qtyCm > 0 ? Math.ceil(qtyCm / packCountCm) : 0;
             durationMins = Math.round((workTime * qtyCm) / 60);
           }
@@ -2346,7 +2346,25 @@ export default function FirstFactoryPage() {
                     </div>
                   </div>
                 </div>
-{processedPoolItems.length === 0 ? (
+                {/* Column Headers for Available Hinbans */}
+                {processedPoolItems.length > 0 && (
+                  <div className="flex items-center gap-3 px-3 py-1 text-[11px] font-bold text-outline select-none border-b border-outline-variant/20 mb-1">
+                    <div className="flex-1 flex items-center gap-4 min-w-0 pr-1">
+                      <div className="w-[230px] shrink-0 text-left">
+                        {language === 'ja' ? '品番' : 'Hinban'}
+                      </div>
+                      <div className="w-[90px] shrink-0 text-left">
+                        {language === 'ja' ? '型番' : 'Kataban'}
+                      </div>
+                      <div className="w-[70px] shrink-0 text-left">
+                        {language === 'ja' ? '時間オプション' : 'Time Option'}
+                      </div>
+                    </div>
+                    <div className="w-8 shrink-0 ml-1" />
+                  </div>
+                )}
+
+                {processedPoolItems.length === 0 ? (
                   <div className="text-center text-sm text-outline mt-10">
                     {poolItems.length === 0 ? t('ff_noItemsForDate') : t('ff_noItemsMatchFilter')}
                   </div>
