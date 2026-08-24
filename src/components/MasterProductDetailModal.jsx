@@ -510,9 +510,9 @@ export default function MasterProductDetailModal({
       )}
 
       {/* Image Zoom Lightbox */}
-      {zoomImage && record.imageURL && (
+      {zoomImage && record.imageURL && createPortal(
         <div
-          className="fixed inset-0 z-[130] flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-[fadeIn_0.15s_ease-out]"
+          className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-[fadeIn_0.15s_ease-out]"
           onClick={() => setZoomImage(false)}
         >
           <div className="relative max-w-4xl max-h-[90vh] flex flex-col items-center" onClick={(e) => e.stopPropagation()}>
@@ -534,7 +534,8 @@ export default function MasterProductDetailModal({
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </>
   );

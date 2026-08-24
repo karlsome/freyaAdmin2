@@ -10,6 +10,9 @@ export default function MaterialDetailModal({ modalData, onClose }) {
   const [nestedMaterialData, setNestedMaterialData] = useState(null);
   const [loadingNested, setLoadingNested] = useState(false);
   const [bomData, setBomData] = useState(modalData?.['BOM'] || null);
+  const [zoomImage, setZoomImage] = useState(null);
+
+  const mainImageUrl = modalData?.['品目マスタ']?.['imageURL'] || modalData?.['imageURL'] || modalData?.imageURL;
 
   const handleShowBom = (hinban) => {
     if (!hinban) return;
@@ -55,7 +58,7 @@ export default function MaterialDetailModal({ modalData, onClose }) {
   return (
     <>
       {createPortal(
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+        <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
           <div className="bg-surface border border-outline-variant/30 rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh]">
             <div className="flex items-center justify-between p-6 border-b border-outline-variant/30 bg-surface-variant/20">
               <div>
@@ -84,9 +87,20 @@ export default function MaterialDetailModal({ modalData, onClose }) {
             <div className="p-6 overflow-y-auto flex-1 flex flex-col gap-6">
               
               {/* Image Preview if available */}
-              {modalData['imageURL'] && (
-                <div className="relative overflow-hidden rounded-xl border border-outline-variant/30 bg-surface-variant/20 flex items-center justify-center max-h-52 p-2">
-                  <img src={modalData['imageURL']} alt={modalData['品番']} className="max-h-48 object-contain rounded-lg shadow-sm" />
+              {mainImageUrl && (
+                <div 
+                  onClick={() => setZoomImage({ url: mainImageUrl, title: modalData['品番'] })}
+                  className="group relative overflow-hidden rounded-2xl border border-outline-variant/30 bg-surface-variant/20 flex items-center justify-center p-3 cursor-zoom-in hover:border-primary/40 hover:bg-surface-variant/30 transition-all shadow-xs"
+                >
+                  <img 
+                    src={mainImageUrl} 
+                    alt={modalData['品番']} 
+                    className="max-h-56 w-auto object-contain rounded-xl shadow-xs transition-transform duration-200 group-hover:scale-[1.02]" 
+                  />
+                  <div className="absolute bottom-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity bg-black/70 backdrop-blur-xs text-white rounded-lg px-2.5 py-1 text-[11px] font-semibold flex items-center gap-1.5 shadow-md">
+                    <span className="material-symbols-outlined" style={{ fontSize: 16 }}>zoom_in</span>
+                    <span>{language === 'ja' ? '拡大表示' : 'Zoom'}</span>
+                  </div>
                 </div>
               )}
 
@@ -345,6 +359,28 @@ export default function MaterialDetailModal({ modalData, onClose }) {
               
               {/* Body */}
               <div className="p-5 overflow-y-auto flex-1 flex flex-col gap-5">
+                {/* Nested Material Image */}
+                {(() => {
+                  const nestedImageUrl = materialDetail?.['品目マスタ']?.['imageURL'] || materialDetail?.['imageURL'] || materialDetail?.imageURL;
+                  if (!nestedImageUrl) return null;
+                  return (
+                    <div 
+                      onClick={() => setZoomImage({ url: nestedImageUrl, title: materialDetail['品番'] })}
+                      className="group relative overflow-hidden rounded-2xl border border-outline-variant/30 bg-surface-variant/20 flex items-center justify-center p-3 cursor-zoom-in hover:border-primary/40 hover:bg-surface-variant/30 transition-all shadow-xs"
+                    >
+                      <img 
+                        src={nestedImageUrl} 
+                        alt={materialDetail['品番']} 
+                        className="max-h-48 w-auto object-contain rounded-xl shadow-xs transition-transform duration-200 group-hover:scale-[1.02]" 
+                      />
+                      <div className="absolute bottom-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity bg-black/70 backdrop-blur-xs text-white rounded-lg px-2.5 py-1 text-[11px] font-semibold flex items-center gap-1.5 shadow-md">
+                        <span className="material-symbols-outlined" style={{ fontSize: 16 }}>zoom_in</span>
+                        <span>{language === 'ja' ? '拡大表示' : 'Zoom'}</span>
+                      </div>
+                    </div>
+                  );
+                })()}
+
                 {/* Material Structure */}
                 {materialDetail['品番構造']?.segments && (
                   <div>
@@ -459,6 +495,37 @@ export default function MaterialDetailModal({ modalData, onClose }) {
           document.body
         );
       })()}
+
+      {/* Image Zoom Lightbox */}
+      {zoomImage && createPortal(
+        <div
+          className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-[fadeIn_0.15s_ease-out]"
+          onClick={() => setZoomImage(null)}
+        >
+          <div className="relative max-w-4xl max-h-[90vh] flex flex-col items-center" onClick={(e) => e.stopPropagation()}>
+            <img
+              src={zoomImage.url}
+              alt={zoomImage.title || "Material Image"}
+              className="max-h-[80vh] max-w-full object-contain rounded-2xl shadow-2xl"
+            />
+            <div className="mt-3 flex items-center gap-3">
+              {zoomImage.title && (
+                <span className="text-white font-mono font-bold text-sm bg-black/50 px-3 py-1 rounded-full">
+                  {zoomImage.title}
+                </span>
+              )}
+              <button
+                type="button"
+                onClick={() => setZoomImage(null)}
+                className="flex h-8 w-8 items-center justify-center rounded-full bg-white/20 hover:bg-white/30 text-white transition-colors cursor-pointer"
+              >
+                <span className="material-symbols-outlined" style={{ fontSize: 20 }}>close</span>
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
     </>
   );
 }
