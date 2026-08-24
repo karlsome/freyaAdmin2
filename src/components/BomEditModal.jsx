@@ -690,22 +690,39 @@ export default function BomEditModal({ existingBom, initialHinban = "", onClose,
                     bomSteps.map((step, index) => (
                       <div 
                         key={index} 
+                        data-step-card="true"
                         className="bg-surface border border-outline-variant/30 rounded-xl shadow-sm relative transition-all duration-200 hover:border-primary/50 focus-within:z-30"
                         style={{ zIndex: bomSteps.length - index + 5 }}
-                        draggable
-                        onDragStart={(e) => (dragItem.current = index)}
-                        onDragEnter={(e) => (dragOverItem.current = index)}
-                        onDragEnd={handleSort}
+                        onDragEnter={() => (dragOverItem.current = index)}
                         onDragOver={(e) => e.preventDefault()}
                       >
-                        <div className="bg-surface-variant/20 px-4 py-2 border-b border-outline-variant/30 rounded-t-xl flex items-center justify-between cursor-move">
+                        <div className="bg-surface-variant/20 px-4 py-2 border-b border-outline-variant/30 rounded-t-xl flex items-center justify-between">
                           <div className="flex items-center gap-2">
-                            <span className="material-symbols-outlined text-outline hover:text-primary transition-colors text-lg">drag_indicator</span>
-                            <span className="text-xs font-bold text-primary bg-primary/10 px-2 py-0.5 rounded pointer-events-none">
+                            <span
+                              draggable
+                              onDragStart={(e) => {
+                                dragItem.current = index;
+                                const cardElement = e.currentTarget.closest('[data-step-card="true"]');
+                                if (cardElement && e.dataTransfer?.setDragImage) {
+                                  const handleRect = e.currentTarget.getBoundingClientRect();
+                                  const cardRect = cardElement.getBoundingClientRect();
+                                  const offsetX = handleRect.left - cardRect.left + handleRect.width / 2;
+                                  const offsetY = handleRect.top - cardRect.top + handleRect.height / 2;
+                                  e.dataTransfer.setDragImage(cardElement, offsetX, offsetY);
+                                }
+                              }}
+                              onDragEnd={handleSort}
+                              className="material-symbols-outlined text-outline hover:text-primary transition-colors text-lg cursor-grab active:cursor-grabbing select-none p-1 -m-1 rounded hover:bg-surface-variant/60"
+                              title="Drag to reorder step"
+                            >
+                              drag_indicator
+                            </span>
+                            <span className="text-xs font-bold text-primary bg-primary/10 px-2 py-0.5 rounded pointer-events-none select-none">
                               Step {index + 1}
                             </span>
                           </div>
                           <button 
+                            type="button"
                             onClick={() => handleRemoveStep(index)}
                             className="text-error/70 hover:text-error hover:bg-error/10 p-1 rounded transition-colors"
                             title="Remove Step"
