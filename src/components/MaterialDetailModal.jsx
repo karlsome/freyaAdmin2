@@ -12,13 +12,30 @@ export default function MaterialDetailModal({ modalData, onClose }) {
   const [loadingNested, setLoadingNested] = useState(false);
   const [bomData, setBomData] = useState(modalData?.['BOM'] || null);
   const [previewImage, setPreviewImage] = useState(null);
+  const [bomNotFoundHinban, setBomNotFoundHinban] = useState(null);
 
   const mainImageUrl = modalData?.['品目マスタ']?.['imageURL'] || modalData?.['imageURL'] || modalData?.imageURL;
 
-  const handleShowBom = (hinban) => {
+  const handleShowBom = async (hinban) => {
     if (!hinban) return;
-    if (onClose) onClose();
-    navigate(`/masterDB?tab=bomDB&search=${encodeURIComponent(hinban)}`);
+    try {
+      const res = await query("Sasaki_Coating_MasterDB", "bomMasterDB", { "品番": hinban });
+      const list = Array.isArray(res) ? res : res?.data || [];
+      if (list.length > 0) {
+        navigate(`/masterDB?tab=bomDB&search=${encodeURIComponent(hinban)}`);
+      } else {
+        setBomNotFoundHinban(hinban);
+      }
+    } catch (err) {
+      console.error("Failed to check BOM:", err);
+      navigate(`/masterDB?tab=bomDB&search=${encodeURIComponent(hinban)}`);
+    }
+  };
+
+  const handleConfirmCreateBom = () => {
+    const target = bomNotFoundHinban;
+    setBomNotFoundHinban(null);
+    navigate(`/masterDB?tab=bomDB&search=${encodeURIComponent(target)}&createHinban=${encodeURIComponent(target)}`);
   };
 
   useEffect(() => {
@@ -519,6 +536,58 @@ export default function MaterialDetailModal({ modalData, onClose }) {
           preview={previewImage}
           onClose={() => setPreviewImage(null)}
         />
+      )}
+
+      {/* BOM Not Found Confirmation Modal */}
+      {bomNotFoundHinban && createPortal(
+        <div
+          className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-[fadeIn_0.15s_ease-out]"
+          onClick={() => setBomNotFoundHinban(null)}
+        >
+          <div
+            className="bg-surface border border-outline-variant/30 rounded-2xl shadow-2xl w-full max-w-md p-6 flex flex-col gap-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center gap-3">
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-amber-500/15 text-amber-600 dark:text-amber-400 shrink-0">
+                <span className="material-symbols-outlined" style={{ fontSize: 26 }}>account_tree</span>
+              </div>
+              <div className="flex-1 min-w-0">
+                <h3 className="text-base font-bold text-on-surface">
+                  {language === 'ja' ? "BOMデータが見つかりません" : "BOM Not Found"}
+                </h3>
+                <p className="text-xs text-outline mt-0.5 truncate font-mono font-semibold">
+                  {bomNotFoundHinban}
+                </p>
+              </div>
+            </div>
+
+            <p className="text-xs text-on-surface-variant leading-relaxed">
+              {language === 'ja'
+                ? `「${bomNotFoundHinban}」のBOMマスターデータが登録されていません。新しくBOMを作成しますか？`
+                : `BOM master data for "${bomNotFoundHinban}" does not exist. Would you like to create a new BOM?`}
+            </p>
+
+            <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-outline-variant/30">
+              <button
+                type="button"
+                onClick={() => setBomNotFoundHinban(null)}
+                className="rounded-xl border border-outline-variant/40 bg-surface px-4 py-2 text-xs font-semibold text-on-surface hover:bg-surface-variant/40 transition-colors cursor-pointer"
+              >
+                {language === 'ja' ? "キャンセル" : "Cancel"}
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmCreateBom}
+                className="inline-flex items-center gap-1.5 rounded-xl bg-primary px-4 py-2 text-xs font-bold text-on-primary hover:bg-primary/90 transition-all shadow-xs cursor-pointer"
+              >
+                <span className="material-symbols-outlined" style={{ fontSize: 16 }}>add</span>
+                <span>{language === 'ja' ? "新規作成" : "Create New"}</span>
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
       )}
     </>
   );

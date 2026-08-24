@@ -88,6 +88,8 @@ export default function MasterDBPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const tabFromUrl = searchParams.get("tab");
   const searchFromUrl = searchParams.get("search");
+  const detailFromUrl = searchParams.get("detail");
+  const createHinbanFromUrl = searchParams.get("createHinban");
 
   const [activeTab, setActiveTab] = useState(() => {
     return tabFromUrl && MASTER_TABS.some((item) => item.key === tabFromUrl) ? tabFromUrl : "masterDB";
@@ -266,13 +268,73 @@ export default function MasterDBPage() {
     distinctCacheRef.current.clear();
   }
 
+  const effectiveTab = tabFromUrl && MASTER_TABS.some((item) => item.key === tabFromUrl) ? tabFromUrl : "masterDB";
+
   useEffect(() => {
-    if (tabFromUrl && MASTER_TABS.some((item) => item.key === tabFromUrl)) {
-      if (tabFromUrl !== activeTab) {
-        resetFirstTabState(tabFromUrl);
-      }
+    if (effectiveTab !== activeTab) {
+      resetFirstTabState(effectiveTab);
     }
-  }, [tabFromUrl, activeTab]);
+  }, [effectiveTab, activeTab]);
+
+  // Synchronize detail query param with selectedRecord modal state
+  useEffect(() => {
+    if (!detailFromUrl || isSpecialTab) {
+      if (!detailFromUrl && selectedRecord) {
+        setSelectedRecord(null);
+      }
+      return;
+    }
+
+    const currentId = extractRecordId(selectedRecord);
+    const currentHinban = selectedRecord?.["品番"];
+    if (selectedRecord && (currentId === detailFromUrl || currentHinban === detailFromUrl)) {
+      return;
+    }
+
+    const found = records.find(
+      (r) => r["品番"] === detailFromUrl || extractRecordId(r) === detailFromUrl
+    );
+    if (found) {
+      setSelectedRecord(found);
+      return;
+    }
+
+    const { collectionName } = getMasterCollectionConfig(activeTab);
+    const isObjectId = /^[0-9a-fA-F]{24}$/.test(detailFromUrl);
+    const queryFilter = isObjectId
+      ? { $or: [{ _id: detailFromUrl }, { "品番": detailFromUrl }] }
+      : { "品番": detailFromUrl };
+
+    query("Sasaki_Coating_MasterDB", collectionName, queryFilter)
+      .then((res) => {
+        const item = Array.isArray(res) ? res[0] : res?.data?.[0];
+        if (item) setSelectedRecord(item);
+      })
+      .catch(console.error);
+  }, [detailFromUrl, activeTab, records, isSpecialTab]);
+
+  function handleSelectRecord(record) {
+    setSelectedRecord(record);
+    const detailKey = record ? (record["品番"] || extractRecordId(record) || "") : "";
+    setSearchParams((params) => {
+      const next = new URLSearchParams(params);
+      if (detailKey) {
+        next.set("detail", detailKey);
+      } else {
+        next.delete("detail");
+      }
+      return next;
+    });
+  }
+
+  function handleCloseDetailModal() {
+    setSelectedRecord(null);
+    setSearchParams((params) => {
+      const next = new URLSearchParams(params);
+      next.delete("detail");
+      return next;
+    });
+  }
 
   function handleTabSelect(tab) {
     if (!tab.ready) {
@@ -286,6 +348,7 @@ export default function MasterDBPage() {
         const next = new URLSearchParams(params);
         next.set("tab", tab.key);
         next.delete("search");
+        next.delete("detail");
         return next;
       });
       resetFirstTabState(tab.key);
@@ -484,7 +547,7 @@ export default function MasterDBPage() {
         tabKey: activeTab,
       });
 
-      setSelectedRecord(null);
+      handleCloseDetailModal();
       setFlash({ type: "success", message: "Master record updated successfully." });
       setRefreshNonce((current) => current + 1);
     } catch (saveError) {
@@ -642,7 +705,11 @@ export default function MasterDBPage() {
           ) : isPceFilesTab ? (
             <PceFilesWorkspace onFlash={setFlash} />
           ) : isBomDBTab ? (
-            <BomWorkspace initialSearch={searchFromUrl || ""} onFlash={setFlash} />
+            <BomWorkspace
+              initialSearch={searchFromUrl || ""}
+              initialCreateHinban={createHinbanFromUrl || ""}
+              onFlash={setFlash}
+            />
           ) : (
             <SetsubiDBWorkspace refreshToken={refreshNonce} />
           )}
@@ -705,7 +772,7 @@ export default function MasterDBPage() {
               setPage(1);
               setPageSize(nextPageSize);
             }}
-            onRowClick={(record) => setSelectedRecord(record)}
+            onRowClick={handleSelectRecord}
           />
         </>
       )}
@@ -715,7 +782,7 @@ export default function MasterDBPage() {
           <MaterialDetailModal
             key={extractRecordId(selectedRecord) || selectedRecord?.['品番'] || "material-detail"}
             modalData={selectedRecord}
-            onClose={() => setSelectedRecord(null)}
+            onClose={handleCloseDetailModal}
           />
         ) : (
           <MasterProductDetailModal
@@ -724,7 +791,7 @@ export default function MasterDBPage() {
             record={selectedRecord}
             saving={drawerSaving}
             uploading={drawerUploading}
-            onClose={() => setSelectedRecord(null)}
+            onClose={handleCloseDetailModal}
             onSave={handleSaveRecord}
             onUploadImage={handleUploadImage}
           />

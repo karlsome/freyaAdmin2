@@ -4,7 +4,7 @@ import BomEditModal from './BomEditModal';
 import MaterialDetailModal from './MaterialDetailModal';
 import PaginationControls from './PaginationControls';
 
-export default function BomWorkspace({ initialSearch = "", onFlash }) {
+export default function BomWorkspace({ initialSearch = "", initialCreateHinban = "", onFlash }) {
   const [boms, setBoms] = useState([]);
   const [loading, setLoading] = useState(true);
   const [editModalOpen, setEditModalOpen] = useState(false);
@@ -17,6 +17,13 @@ export default function BomWorkspace({ initialSearch = "", onFlash }) {
   // Search
   const [searchQuery, setSearchQuery] = useState(initialSearch || "");
   const [debouncedSearch, setDebouncedSearch] = useState(initialSearch || "");
+
+  useEffect(() => {
+    if (initialCreateHinban) {
+      setSelectedBom(null);
+      setEditModalOpen(true);
+    }
+  }, [initialCreateHinban]);
 
   useEffect(() => {
     if (initialSearch) {
@@ -304,8 +311,9 @@ export default function BomWorkspace({ initialSearch = "", onFlash }) {
 
       {editModalOpen && (
         <BomEditModal 
-          key={selectedBom?._id?.$oid || selectedBom?._id || 'new'}
+          key={selectedBom?._id?.$oid || selectedBom?._id || initialCreateHinban || 'new'}
           existingBom={selectedBom}
+          initialHinban={initialCreateHinban}
           onClose={() => setEditModalOpen(false)}
           onSaved={() => {
             setEditModalOpen(false);

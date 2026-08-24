@@ -109,7 +109,7 @@ function AsyncHinbanSelect({ value, onChange, placeholder = "Search 品番...", 
   );
 }
 
-export default function BomEditModal({ existingBom, onClose, onSaved, onEditExisting, onFlash }) {
+export default function BomEditModal({ existingBom, initialHinban = "", onClose, onSaved, onEditExisting, onFlash }) {
   const [loadingInitial, setLoadingInitial] = useState(true);
   
   // Data for selectors
@@ -118,7 +118,7 @@ export default function BomEditModal({ existingBom, onClose, onSaved, onEditExis
   // Form state
   const [saving, setSaving] = useState(false);
   
-  const [targetHinban, setTargetHinban] = useState(existingBom?.['品番'] || "");
+  const [targetHinban, setTargetHinban] = useState(existingBom?.['品番'] || initialHinban || "");
   const [bomSteps, setBomSteps] = useState(existingBom?.BOM || []);
 
   const dragItem = React.useRef(null);
