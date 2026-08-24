@@ -80,7 +80,7 @@ export default function SensorDevicePhotoPreviewModal({ preview, onClose, onNavi
 
   return createPortal(
     <div
-      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm"
+      className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 p-4 backdrop-blur-md animate-[fadeIn_0.15s_ease-out]"
       onMouseDown={(event) => {
         if (event.target === event.currentTarget) onClose();
       }}

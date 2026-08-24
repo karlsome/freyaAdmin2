@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useMemo } from "react";
 import { createPortal } from "react-dom";
 import { query } from "../services/api";
 import { useLanguage } from "../contexts/LanguageContext";
+import SensorDevicePhotoPreviewModal from "./SensorDevicePhotoPreviewModal";
 
 function SearchableDropdown({
   label,
@@ -275,6 +276,7 @@ export default function MasterProductEditModal({
   const [draft, setDraft] = useState(initialDraft);
   const [isLookingUpMaterial, setIsLookingUpMaterial] = useState(false);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
+  const [previewImage, setPreviewImage] = useState(null);
 
   // DB Data for Dropdowns
   const [factories, setFactories] = useState([]);
@@ -984,21 +986,27 @@ export default function MasterProductEditModal({
                 <div className="flex flex-col sm:flex-row items-center gap-4">
                   {/* Thumbnail Preview */}
                   {draft.imageURL ? (
-                    <div className="relative group shrink-0 h-28 w-28 rounded-xl border border-outline-variant/40 bg-surface flex items-center justify-center p-1.5 overflow-hidden shadow-xs">
+                    <div
+                      onClick={() =>
+                        setPreviewImage({
+                          displayName: draft["品番"] || "Product Image",
+                          eyebrow: "Product Reference Image",
+                          subtitle: `${draft["モデル"] ? draft["モデル"] + " • " : ""}${draft["品名"] || ""}`,
+                          images: [{ url: draft.imageURL, label: draft["品番"] || "Product Image" }],
+                          activeIndex: 0,
+                        })
+                      }
+                      className="relative group shrink-0 h-28 w-28 rounded-xl border border-outline-variant/40 bg-surface flex items-center justify-center p-1.5 overflow-hidden shadow-xs cursor-pointer hover:border-primary transition-all"
+                      title={isJa ? "クリックして拡大表示" : "Click to preview"}
+                    >
                       <img
                         src={draft.imageURL}
                         alt="Product"
                         className="h-full w-full object-contain rounded-lg"
                       />
-                      <a
-                        href={draft.imageURL}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white cursor-pointer"
-                        title={isJa ? "別タブで開く" : "Open in new tab"}
-                      >
-                        <span className="material-symbols-outlined" style={{ fontSize: 22 }}>open_in_new</span>
-                      </a>
+                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white">
+                        <span className="material-symbols-outlined" style={{ fontSize: 24 }}>zoom_in</span>
+                      </div>
                     </div>
                   ) : (
                     <div className="h-28 w-28 rounded-xl border-2 border-dashed border-outline-variant/50 bg-surface flex flex-col items-center justify-center gap-1 text-outline shrink-0">
@@ -1117,6 +1125,13 @@ export default function MasterProductEditModal({
           </button>
         </div>
       </div>
+
+      {previewImage && (
+        <SensorDevicePhotoPreviewModal
+          preview={previewImage}
+          onClose={() => setPreviewImage(null)}
+        />
+      )}
     </div>,
     document.body
   );

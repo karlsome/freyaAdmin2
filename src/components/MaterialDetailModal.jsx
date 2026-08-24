@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { query } from "../services/api";
 import { useLanguage } from '../contexts/LanguageContext';
+import SensorDevicePhotoPreviewModal from './SensorDevicePhotoPreviewModal';
 
 export default function MaterialDetailModal({ modalData, onClose }) {
   const { t, language } = useLanguage();
@@ -10,7 +11,7 @@ export default function MaterialDetailModal({ modalData, onClose }) {
   const [nestedMaterialData, setNestedMaterialData] = useState(null);
   const [loadingNested, setLoadingNested] = useState(false);
   const [bomData, setBomData] = useState(modalData?.['BOM'] || null);
-  const [zoomImage, setZoomImage] = useState(null);
+  const [previewImage, setPreviewImage] = useState(null);
 
   const mainImageUrl = modalData?.['品目マスタ']?.['imageURL'] || modalData?.['imageURL'] || modalData?.imageURL;
 
@@ -89,7 +90,15 @@ export default function MaterialDetailModal({ modalData, onClose }) {
               {/* Image Preview if available */}
               {mainImageUrl && (
                 <div 
-                  onClick={() => setZoomImage({ url: mainImageUrl, title: modalData['品番'] })}
+                  onClick={() =>
+                    setPreviewImage({
+                      displayName: modalData['品番'] || 'Material Image',
+                      eyebrow: 'Material Reference Image',
+                      subtitle: `${modalData['ラベル品番'] ? modalData['ラベル品番'] + ' • ' : ''}${modalData['品目マスタ']?.['品名'] || modalData['品名'] || ''}`,
+                      images: [{ url: mainImageUrl, label: modalData['品番'] || 'Material Image' }],
+                      activeIndex: 0,
+                    })
+                  }
                   className="group relative overflow-hidden rounded-2xl border border-outline-variant/30 bg-surface-variant/20 flex items-center justify-center p-3 cursor-zoom-in hover:border-primary/40 hover:bg-surface-variant/30 transition-all shadow-xs"
                 >
                   <img 
@@ -365,7 +374,15 @@ export default function MaterialDetailModal({ modalData, onClose }) {
                   if (!nestedImageUrl) return null;
                   return (
                     <div 
-                      onClick={() => setZoomImage({ url: nestedImageUrl, title: materialDetail['品番'] })}
+                      onClick={() =>
+                        setPreviewImage({
+                          displayName: materialDetail['品番'] || 'Material Image',
+                          eyebrow: 'Material Sub-Component Image',
+                          subtitle: `${materialDetail['ラベル品番'] ? materialDetail['ラベル品番'] + ' • ' : ''}${materialDetail['品目マスタ']?.['品名'] || materialDetail['品名'] || ''}`,
+                          images: [{ url: nestedImageUrl, label: materialDetail['品番'] || 'Material Image' }],
+                          activeIndex: 0,
+                        })
+                      }
                       className="group relative overflow-hidden rounded-2xl border border-outline-variant/30 bg-surface-variant/20 flex items-center justify-center p-3 cursor-zoom-in hover:border-primary/40 hover:bg-surface-variant/30 transition-all shadow-xs"
                     >
                       <img 
@@ -496,35 +513,12 @@ export default function MaterialDetailModal({ modalData, onClose }) {
         );
       })()}
 
-      {/* Image Zoom Lightbox */}
-      {zoomImage && createPortal(
-        <div
-          className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-[fadeIn_0.15s_ease-out]"
-          onClick={() => setZoomImage(null)}
-        >
-          <div className="relative max-w-4xl max-h-[90vh] flex flex-col items-center" onClick={(e) => e.stopPropagation()}>
-            <img
-              src={zoomImage.url}
-              alt={zoomImage.title || "Material Image"}
-              className="max-h-[80vh] max-w-full object-contain rounded-2xl shadow-2xl"
-            />
-            <div className="mt-3 flex items-center gap-3">
-              {zoomImage.title && (
-                <span className="text-white font-mono font-bold text-sm bg-black/50 px-3 py-1 rounded-full">
-                  {zoomImage.title}
-                </span>
-              )}
-              <button
-                type="button"
-                onClick={() => setZoomImage(null)}
-                className="flex h-8 w-8 items-center justify-center rounded-full bg-white/20 hover:bg-white/30 text-white transition-colors cursor-pointer"
-              >
-                <span className="material-symbols-outlined" style={{ fontSize: 20 }}>close</span>
-              </button>
-            </div>
-          </div>
-        </div>,
-        document.body
+      {/* Reusable Photo Preview Lightbox */}
+      {previewImage && (
+        <SensorDevicePhotoPreviewModal
+          preview={previewImage}
+          onClose={() => setPreviewImage(null)}
+        />
       )}
     </>
   );

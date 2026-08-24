@@ -4,6 +4,7 @@ import { query } from "../services/api";
 import { useLanguage } from "../contexts/LanguageContext";
 import MaterialDetailModal from "./MaterialDetailModal";
 import MasterProductEditModal from "./MasterProductEditModal";
+import SensorDevicePhotoPreviewModal from "./SensorDevicePhotoPreviewModal";
 
 export default function MasterProductDetailModal({
   record,
@@ -17,7 +18,7 @@ export default function MasterProductDetailModal({
   const { t, language } = useLanguage();
   const isJa = language === "ja";
   const [editModalOpen, setEditModalOpen] = useState(false);
-  const [zoomImage, setZoomImage] = useState(false);
+  const [previewImage, setPreviewImage] = useState(null);
   const fileInputRef = useRef(null);
 
   // Linked Material State
@@ -178,11 +179,27 @@ export default function MasterProductDetailModal({
                       src={record.imageURL}
                       alt={record["品番"]}
                       className="max-h-[220px] object-contain rounded-xl cursor-zoom-in shadow-sm hover:scale-[1.02] transition-transform duration-200"
-                      onClick={() => setZoomImage(true)}
+                      onClick={() =>
+                        setPreviewImage({
+                          displayName: record["品番"] || "Product Image",
+                          eyebrow: "Product Reference Image",
+                          subtitle: `${record["モデル"] ? record["モデル"] + " • " : ""}${record["品名"] || ""}`,
+                          images: [{ url: record.imageURL, label: record["品番"] || "Product Image" }],
+                          activeIndex: 0,
+                        })
+                      }
                     />
                     <button
                       type="button"
-                      onClick={() => setZoomImage(true)}
+                      onClick={() =>
+                        setPreviewImage({
+                          displayName: record["品番"] || "Product Image",
+                          eyebrow: "Product Reference Image",
+                          subtitle: `${record["モデル"] ? record["モデル"] + " • " : ""}${record["品名"] || ""}`,
+                          images: [{ url: record.imageURL, label: record["品番"] || "Product Image" }],
+                          activeIndex: 0,
+                        })
+                      }
                       className="absolute bottom-2 right-2 flex items-center gap-1 rounded-lg bg-black/60 backdrop-blur-md px-2.5 py-1 text-[11px] font-medium text-white opacity-0 group-hover:opacity-100 transition-opacity"
                     >
                       <span className="material-symbols-outlined" style={{ fontSize: 14 }}>zoom_in</span>
@@ -571,33 +588,12 @@ export default function MasterProductDetailModal({
         />
       )}
 
-      {/* Image Zoom Lightbox */}
-      {zoomImage && record.imageURL && createPortal(
-        <div
-          className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-[fadeIn_0.15s_ease-out]"
-          onClick={() => setZoomImage(false)}
-        >
-          <div className="relative max-w-4xl max-h-[90vh] flex flex-col items-center" onClick={(e) => e.stopPropagation()}>
-            <img
-              src={record.imageURL}
-              alt={record["品番"]}
-              className="max-h-[80vh] max-w-full object-contain rounded-2xl shadow-2xl"
-            />
-            <div className="mt-3 flex items-center gap-3">
-              <span className="text-white font-mono font-bold text-sm bg-black/50 px-3 py-1 rounded-full">
-                {record["品番"]}
-              </span>
-              <button
-                type="button"
-                onClick={() => setZoomImage(false)}
-                className="flex h-8 w-8 items-center justify-center rounded-full bg-white/20 hover:bg-white/30 text-white transition-colors cursor-pointer"
-              >
-                <span className="material-symbols-outlined" style={{ fontSize: 20 }}>close</span>
-              </button>
-            </div>
-          </div>
-        </div>,
-        document.body
+      {/* Photo Preview Lightbox */}
+      {previewImage && (
+        <SensorDevicePhotoPreviewModal
+          preview={previewImage}
+          onClose={() => setPreviewImage(null)}
+        />
       )}
     </>
   );
