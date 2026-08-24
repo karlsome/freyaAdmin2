@@ -76,6 +76,7 @@ export const MASTER_DEFAULT_FIELDS = [
   "秒数(1pcs何秒)",
   "離型紙上/下",
   "送りピッチ",
+  "刃物",
   "SRS",
   "SLIT",
   "boardData",

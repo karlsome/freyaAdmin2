@@ -116,6 +116,21 @@ export default function MasterProductDetailModal({
     };
   }, [open, record, rawMaterialBackNo, rawMaterialHinban]);
 
+  const [bladeInfo, setBladeInfo] = useState(null);
+
+  useEffect(() => {
+    if (open && record?.["刃物"]) {
+      query("Sasaki_Coating_MasterDB", "NCBladeDB", { name: record["刃物"] })
+        .then((res) => {
+          const item = Array.isArray(res) ? res[0] : res?.data?.[0];
+          setBladeInfo(item || null);
+        })
+        .catch(() => setBladeInfo(null));
+    } else {
+      setBladeInfo(null);
+    }
+  }, [open, record]);
+
   if (!open || !record) return null;
 
   const resolvedHinbans = linkedMaterials
@@ -344,6 +359,19 @@ export default function MasterProductDetailModal({
                   <div className="flex flex-col bg-surface-variant/15 border border-outline-variant/25 rounded-xl p-3">
                     <span className="text-[10px] font-semibold text-outline uppercase">{isJa ? "送りピッチ" : "Feed Pitch"}</span>
                     <span className="font-medium text-sm text-on-surface mt-0.5">{renderValue(record["送りピッチ"])}</span>
+                  </div>
+                  <div className="flex flex-col bg-surface-variant/15 border border-outline-variant/25 rounded-xl p-3">
+                    <span className="text-[10px] font-semibold text-outline uppercase">{isJa ? "刃物" : "Cutter / Tooling"}</span>
+                    <div className="flex items-center gap-2 mt-0.5 min-w-0">
+                      {bladeInfo?.imageURL && (
+                        <img
+                          src={bladeInfo.imageURL}
+                          alt={record["刃物"] || ""}
+                          className="w-5 h-5 object-contain rounded border border-outline-variant/30 bg-surface shrink-0"
+                        />
+                      )}
+                      <span className="font-medium text-sm text-on-surface truncate">{renderValue(record["刃物"])}</span>
+                    </div>
                   </div>
                   <div className="flex flex-col bg-surface-variant/15 border border-outline-variant/25 rounded-xl p-3">
                     <span className="text-[10px] font-semibold text-outline uppercase">{isJa ? "離型紙上/下" : "Release Paper"}</span>

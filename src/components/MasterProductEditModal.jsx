@@ -248,6 +248,7 @@ export default function MasterProductEditModal({
     型番: "",
     収容数: "",
     送りピッチ: "",
+    刃物: "",
     "離型紙上/下": "下",
     "秒数(1pcs何秒)": "",
     pcPerCycle: "",
@@ -281,13 +282,16 @@ export default function MasterProductEditModal({
   // DB Data for Dropdowns
   const [factories, setFactories] = useState([]);
   const [setsubis, setSetsubis] = useState([]);
+  const [blades, setBlades] = useState([]);
   const [loadingFactories, setLoadingFactories] = useState(false);
   const [loadingSetsubis, setLoadingSetsubis] = useState(false);
+  const [loadingBlades, setLoadingBlades] = useState(false);
 
   useEffect(() => {
     if (open) {
       setLoadingFactories(true);
       setLoadingSetsubis(true);
+      setLoadingBlades(true);
 
       query("Sasaki_Coating_MasterDB", "factoryDB", {}, { sort: { 工場: 1 } })
         .then((res) => {
@@ -304,6 +308,14 @@ export default function MasterProductEditModal({
         })
         .catch((err) => console.error("Failed to load setsubiDB:", err))
         .finally(() => setLoadingSetsubis(false));
+
+      query("Sasaki_Coating_MasterDB", "NCBladeDB", {}, { sort: { name: 1 } })
+        .then((res) => {
+          const list = Array.isArray(res) ? res : res?.data || [];
+          setBlades(list);
+        })
+        .catch((err) => console.error("Failed to load NCBladeDB:", err))
+        .finally(() => setLoadingBlades(false));
     }
   }, [open]);
 
@@ -347,6 +359,15 @@ export default function MasterProductEditModal({
       icon: "precision_manufacturing",
     }));
   }, [setsubis, draft["工場"]]);
+
+  const bladeOptions = useMemo(() => {
+    return blades.map((b) => ({
+      value: b.name || b.Name || b["刃物"] || b["型番"] || "",
+      label: b.name || b.Name || b["刃物"] || b["型番"] || "",
+      image: b.imageURL || null,
+      icon: "content_cut",
+    })).filter((opt) => opt.value);
+  }, [blades]);
 
   if (!open) return null;
 
@@ -720,17 +741,32 @@ export default function MasterProductEditModal({
               </div>
 
               <div>
-                <label className="block text-[11px] font-bold text-on-surface mb-1">
-                  {isJa ? "送りピッチ" : "Pitch (送りピッチ)"}
+                <label className="block text-[11px] font-bold text-on-surface mb-1 flex items-center justify-between">
+                  <span>{isJa ? "送りピッチ" : "Pitch (送りピッチ)"}</span>
+                  <span className="text-[10px] text-outline font-normal">複数行・カンマ区切り可</span>
                 </label>
-                <input
-                  type="text"
+                <textarea
+                  rows={2}
                   value={draft["送りピッチ"] ?? ""}
                   onChange={(e) => handleChange("送りピッチ", e.target.value)}
-                  placeholder="e.g. 820 or OZNC(04):820"
-                  className="w-full rounded-xl border border-outline-variant/40 bg-surface px-3 py-2 text-xs text-on-surface outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+                  placeholder="e.g. 820 or OZNC(04,06,08,10):820 OZNC(03..."
+                  className="w-full rounded-xl border border-outline-variant/40 bg-surface p-2.5 text-xs text-on-surface outline-none focus:border-primary focus:ring-1 focus:ring-primary resize-y min-h-[42px] leading-relaxed"
                 />
               </div>
+
+              {/* Blade / Tooling Dropdown (from NCBladeDB) */}
+              <SearchableDropdown
+                label={isJa ? "刃物" : "Cutter / Blade (刃物)"}
+                value={draft["刃物"] ?? ""}
+                onChange={(val) => handleChange("刃物", val)}
+                options={bladeOptions}
+                placeholder={isJa ? "刃物を選択…" : "Select Blade…"}
+                searchPlaceholder={isJa ? "刃物名を検索…" : "Search blade…"}
+                loading={loadingBlades}
+                helpText="NCBladeDB"
+                icon="content_cut"
+                allowCustom={true}
+              />
 
               <div>
                 <label className="block text-[11px] font-bold text-on-surface mb-1">
