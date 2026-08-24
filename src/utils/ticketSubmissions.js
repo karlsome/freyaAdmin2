@@ -1,10 +1,13 @@
 export const TICKET_SUBMISSION_OPERATOR_LABELS = {
-  equals: "Equals",
-  contains: "Contains",
-  in: "In",
-  greater: "Greater than",
-  less: "Less than",
-  range: "Range",
+  equals: "equals",
+  not_equals: "is not",
+  contains: "contains",
+  in: "in",
+  exists: "exists",
+  not_exists: "does not exist",
+  greater: "greater than",
+  less: "less than",
+  range: "range",
 };
 
 export const TICKET_SUBMISSION_IMAGE_OPTIONS = ["With Images", "Without Images"];
@@ -20,17 +23,17 @@ export const EMPTY_TICKET_SUMMARY = {
 
 export const TICKET_SUBMISSION_ADVANCED_FILTER_FIELDS = [
   { field: "keyword", label: "Keyword", group: "Search", type: "text", operators: ["contains"] },
-  { field: "factory", label: "Factory", group: "Scope", type: "select", operators: ["equals", "contains", "in"] },
-  { field: "machineName", label: "Machine", group: "Scope", type: "select", operators: ["equals", "contains", "in"] },
-  { field: "formName", label: "Checklist Form", group: "Submission", type: "select", operators: ["equals", "contains", "in"] },
-  { field: "completedBy", label: "Submitted By", group: "Submission", type: "select", operators: ["equals", "contains", "in"] },
-  { field: "status", label: "Ticket Status", group: "Ticket", type: "select", operators: ["equals", "in"] },
-  { field: "fieldLabel", label: "Check Item", group: "Ticket", type: "select", operators: ["equals", "contains", "in"] },
-  { field: "fieldType", label: "Field Type", group: "Ticket", type: "select", operators: ["equals", "contains", "in"] },
-  { field: "answerValue", label: "Submitted Value", group: "Ticket", type: "text", operators: ["equals", "contains"] },
-  { field: "hasImages", label: "Image Evidence", group: "Ticket", type: "select", operators: ["equals", "in"], options: TICKET_SUBMISSION_IMAGE_OPTIONS },
-  { field: "imageCount", label: "Image Count", group: "Ticket", type: "number", operators: ["equals", "greater", "less", "range"] },
-  { field: "createdAt", label: "Ticket Date", group: "Ticket", type: "date", operators: ["equals", "greater", "less", "range"] },
+  { field: "factory", label: "Factory", group: "Scope", type: "select", operators: ["equals", "not_equals", "contains", "in", "exists", "not_exists"] },
+  { field: "machineName", label: "Machine", group: "Scope", type: "select", operators: ["equals", "not_equals", "contains", "in", "exists", "not_exists"] },
+  { field: "formName", label: "Checklist Form", group: "Submission", type: "select", operators: ["equals", "not_equals", "contains", "in", "exists", "not_exists"] },
+  { field: "completedBy", label: "Submitted By", group: "Submission", type: "select", operators: ["equals", "not_equals", "contains", "in", "exists", "not_exists"] },
+  { field: "status", label: "Ticket Status", group: "Ticket", type: "select", operators: ["equals", "not_equals", "in", "exists", "not_exists"] },
+  { field: "fieldLabel", label: "Check Item", group: "Ticket", type: "select", operators: ["equals", "not_equals", "contains", "in", "exists", "not_exists"] },
+  { field: "fieldType", label: "Field Type", group: "Ticket", type: "select", operators: ["equals", "not_equals", "contains", "in", "exists", "not_exists"] },
+  { field: "answerValue", label: "Submitted Value", group: "Ticket", type: "text", operators: ["equals", "not_equals", "contains", "exists", "not_exists"] },
+  { field: "hasImages", label: "Image Evidence", group: "Ticket", type: "select", operators: ["equals", "not_equals", "in"], options: TICKET_SUBMISSION_IMAGE_OPTIONS },
+  { field: "imageCount", label: "Image Count", group: "Ticket", type: "number", operators: ["equals", "not_equals", "greater", "less", "range", "exists", "not_exists"] },
+  { field: "createdAt", label: "Ticket Date", group: "Ticket", type: "date", operators: ["equals", "not_equals", "greater", "less", "range", "exists", "not_exists"] },
 ];
 
 let ticketSubmissionFilterRowCount = 0;

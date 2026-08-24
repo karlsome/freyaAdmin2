@@ -1107,7 +1107,7 @@ const MASTER_FACTORY_COLLECTIONS = ["kensaDB", "pressDB", "SRSDB", "slitDB"];
 
 export function getMasterCollectionConfig(tabKey = "masterDB") {
   if (tabKey === "materialDB") {
-    return { collectionName: "materialMasterDB2", baseQuery: { 工程名: "粘着工程" } };
+    return { collectionName: "materialMasterDB3", baseQuery: {} };
   }
   if (tabKey === "factoryDB") {
     return { collectionName: "factoryDB", baseQuery: {} };

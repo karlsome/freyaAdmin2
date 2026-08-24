@@ -1,5 +1,6 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
+import { BASE_URL } from "../services/api";
 
 function isVideoUrl(url) {
   return /\.(mp4|mov)$/i.test(url.split("?")[0]);
@@ -25,7 +26,11 @@ function buildImageDownloadName(url, label) {
   try {
     const pathname = new URL(url).pathname;
     const fileName = decodeURIComponent(pathname.split("/").filter(Boolean).pop() ?? "");
-    if (fileName) return fileName;
+    if (fileName) {
+      // Ensure file has extension
+      if (fileName.includes(".")) return fileName;
+      return `${fileName}.jpg`;
+    }
   } catch {
     // Fall back to a generated file name when the URL cannot be parsed.
   }
@@ -34,6 +39,7 @@ function buildImageDownloadName(url, label) {
 }
 
 export default function SensorDevicePhotoPreviewModal({ preview, onClose, onNavigate }) {
+  const [isDownloading, setIsDownloading] = useState(false);
   const images = Array.isArray(preview?.images) ? preview.images.filter((image) => image?.url) : [];
   const activeIndex = clampPreviewIndex(preview?.activeIndex, images.length);
   const activeImage = images[activeIndex] || null;
@@ -50,6 +56,39 @@ export default function SensorDevicePhotoPreviewModal({ preview, onClose, onNavi
         String(preview?.factoryName ?? "").trim(),
         hasMultipleImages ? `Photo ${activeIndex + 1} of ${images.length}` : "",
       ].filter(Boolean);
+
+  const handleDownload = async () => {
+    if (!activeImage?.url || isDownloading) return;
+    setIsDownloading(true);
+    try {
+      const filename = buildImageDownloadName(activeImage.url, activeImage.label || title);
+      const proxyUrl = `${BASE_URL}api/download-proxy?url=${encodeURIComponent(activeImage.url)}&filename=${encodeURIComponent(filename)}`;
+
+      const response = await fetch(proxyUrl);
+      if (!response.ok) throw new Error("Proxy download failed");
+      const blob = await response.blob();
+      const blobUrl = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = blobUrl;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 2000);
+    } catch (error) {
+      console.warn("Blob download failed, falling back to direct proxy anchor:", error);
+      const filename = buildImageDownloadName(activeImage.url, activeImage.label || title);
+      const proxyUrl = `${BASE_URL}api/download-proxy?url=${encodeURIComponent(activeImage.url)}&filename=${encodeURIComponent(filename)}`;
+      const link = document.createElement("a");
+      link.href = proxyUrl;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } finally {
+      setIsDownloading(false);
+    }
+  };
 
   useEffect(() => {
     if (!activeImage?.url) return undefined;
@@ -80,7 +119,7 @@ export default function SensorDevicePhotoPreviewModal({ preview, onClose, onNavi
 
   return createPortal(
     <div
-      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm"
+      className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 p-4 backdrop-blur-md animate-[fadeIn_0.15s_ease-out]"
       onMouseDown={(event) => {
         if (event.target === event.currentTarget) onClose();
       }}
@@ -215,13 +254,19 @@ export default function SensorDevicePhotoPreviewModal({ preview, onClose, onNavi
               Open File
             </a>
 
-            <a
-              href={activeImage.url}
-              download={buildImageDownloadName(activeImage.url, activeImage.label)}
-              className="rounded-xl bg-primary px-4 py-2 text-xs font-semibold text-on-primary transition-all duration-150 hover:opacity-90 active:scale-95"
+            <button
+              type="button"
+              onClick={handleDownload}
+              disabled={isDownloading}
+              className="inline-flex items-center gap-1.5 rounded-xl bg-primary px-4 py-2 text-xs font-semibold text-on-primary transition-all duration-150 hover:opacity-90 active:scale-95 cursor-pointer disabled:opacity-50"
             >
-              Download File
-            </a>
+              {isDownloading && (
+                <span className="material-symbols-outlined animate-spin" style={{ fontSize: 14 }}>
+                  progress_activity
+                </span>
+              )}
+              <span>{isDownloading ? "Downloading…" : "Download File"}</span>
+            </button>
           </div>
         </div>
       </div>

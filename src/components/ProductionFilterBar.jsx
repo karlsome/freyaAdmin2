@@ -17,33 +17,36 @@ const APPROVAL_STATUS_VALUES = [
 export const FILTER_SCHEMA = [
   // Basic
   { field: "品番",              label: "品番",                type: "select", group: "Basic",                  operators: ["equals", "in"] },
-  { field: "背番号",            label: "背番号",              type: "select", group: "Basic",                  operators: ["equals", "in"] },
-  { field: "モデル",            label: "モデル",              type: "select", group: "Basic",                  operators: ["equals", "in"] },
-  { field: "製造ロット",        label: "製造ロット",          type: "text",   group: "Basic",                  operators: ["equals", "contains"] },
-  { field: "Date",              label: "Date",                type: "date",   group: "Basic",                  operators: ["equals", "greater_than", "less_than"] },
+  { field: "背番号",            label: "背番号",              type: "select", group: "Basic",                  operators: ["equals", "not_equals", "in", "exists", "not_exists"] },
+  { field: "モデル",            label: "モデル",              type: "select", group: "Basic",                  operators: ["equals", "not_equals", "in", "exists", "not_exists"] },
+  { field: "製造ロット",        label: "製造ロット",          type: "text",   group: "Basic",                  operators: ["equals", "not_equals", "contains", "exists", "not_exists"] },
+  { field: "Date",              label: "Date",                type: "date",   group: "Basic",                  operators: ["equals", "not_equals", "greater_than", "less_than", "exists", "not_exists"] },
   // Quantity & Performance
-  { field: "Total",             label: "Total",               type: "number", group: "Quantity & Performance", operators: ["equals", "greater_than", "less_than"] },
-  { field: "Total_NG",          label: "Total NG",            type: "number", group: "Quantity & Performance", operators: ["equals", "greater_than", "less_than"] },
-  { field: "Process_Quantity",  label: "Process Quantity",    type: "number", group: "Quantity & Performance", operators: ["equals", "greater_than", "less_than"] },
-  { field: "Remaining_Quantity",label: "Remaining Quantity",  type: "number", group: "Quantity & Performance", operators: ["equals", "greater_than", "less_than"] },
-  { field: "Cycle_Time",        label: "Cycle Time",          type: "number", group: "Quantity & Performance", operators: ["equals", "greater_than", "less_than"] },
-  { field: "Spare",             label: "Spare",               type: "number", group: "Quantity & Performance", operators: ["equals", "greater_than", "less_than"] },
+  { field: "Total",             label: "Total",               type: "number", group: "Quantity & Performance", operators: ["equals", "not_equals", "greater_than", "less_than", "exists", "not_exists"] },
+  { field: "Total_NG",          label: "Total NG",            type: "number", group: "Quantity & Performance", operators: ["equals", "not_equals", "greater_than", "less_than", "exists", "not_exists"] },
+  { field: "Process_Quantity",  label: "Process Quantity",    type: "number", group: "Quantity & Performance", operators: ["equals", "not_equals", "greater_than", "less_than", "exists", "not_exists"] },
+  { field: "Remaining_Quantity",label: "Remaining Quantity",  type: "number", group: "Quantity & Performance", operators: ["equals", "not_equals", "greater_than", "less_than", "exists", "not_exists"] },
+  { field: "Cycle_Time",        label: "Cycle Time",          type: "number", group: "Quantity & Performance", operators: ["equals", "not_equals", "greater_than", "less_than", "exists", "not_exists"] },
+  { field: "Spare",             label: "Spare",               type: "number", group: "Quantity & Performance", operators: ["equals", "not_equals", "greater_than", "less_than", "exists", "not_exists"] },
   // Time
-  { field: "Time_start",        label: "Time Start",          type: "time",   group: "Time",                   operators: ["equals", "greater_than", "less_than"] },
-  { field: "Time_end",          label: "Time End",            type: "time",   group: "Time",                   operators: ["equals", "greater_than", "less_than"] },
+  { field: "Time_start",        label: "Time Start",          type: "time",   group: "Time",                   operators: ["equals", "not_equals", "greater_than", "less_than", "exists", "not_exists"] },
+  { field: "Time_end",          label: "Time End",            type: "time",   group: "Time",                   operators: ["equals", "not_equals", "greater_than", "less_than", "exists", "not_exists"] },
   // Worker & Equipment
-  { field: "Worker_Name",       label: "Worker Name",         type: "select", group: "Worker & Equipment",     operators: ["equals", "in"] },
-  { field: "設備",              label: "設備",                type: "select", group: "Worker & Equipment",     operators: ["equals", "in"] },
+  { field: "Worker_Name",       label: "Worker Name",         type: "select", group: "Worker & Equipment",     operators: ["equals", "not_equals", "in", "exists", "not_exists"] },
+  { field: "設備",              label: "設備",                type: "select", group: "Worker & Equipment",     operators: ["equals", "not_equals", "in", "exists", "not_exists"] },
   // Status
-  { field: "approvalStatus",    label: "Approval Status",     type: "select", group: "Status",                 operators: ["equals", "in"], options: APPROVAL_STATUS_VALUES },
+  { field: "approvalStatus",    label: "Approval Status",     type: "select", group: "Status",                 operators: ["equals", "not_equals", "in", "exists", "not_exists"], options: APPROVAL_STATUS_VALUES },
 ];
 
 const OPERATOR_LABELS = {
-  equals:       "= Equals",
-  contains:     "Contains",
-  in:           "In",
-  greater_than: "> Greater than",
-  less_than:    "< Less than",
+  equals:       "= equals",
+  not_equals:   "≠ is not",
+  contains:     "contains",
+  in:           "in",
+  exists:       "exists",
+  not_exists:   "does not exist",
+  greater_than: "> greater than",
+  less_than:    "< less than",
 };
 
 function hasFilterValue(row) {

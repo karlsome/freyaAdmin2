@@ -1,14 +1,23 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useLanguage } from '../contexts/LanguageContext';
 import MasterTabNav from '../components/MasterTabNav';
 import MaterialDetailModal from '../components/MaterialDetailModal';
+import DataTable from '../components/DataTable';
 import { BASE_URL } from '../services/api';
+import { readStoredAuthUser, getAuthDisplayName } from '../utils/auth';
+import { openFirstFactorySchedulePrintWindow } from '../utils/firstFactoryPdfExport';
 import * as xlsx from 'xlsx';
 
 export default function FirstFactoryPage() {
-  const { t } = useLanguage();
-  const [activeTab, setActiveTab] = useState('fetching'); // 'fetching' | 'scheduling'
+  const { t, language } = useLanguage();
+  const navigate = useNavigate();
+  const { tab: routeTab } = useParams();
+  const [searchParams, setSearchParams] = useSearchParams();
+  
+  const VALID_TABS = ['fetching', 'scheduling', 'summary', 'production'];
+  const activeTab = VALID_TABS.includes(routeTab) ? routeTab : 'fetching';
   
   const [data, setData] = useState([]);
   const [savedSchedules, setSavedSchedules] = useState([]);
@@ -26,12 +35,58 @@ export default function FirstFactoryPage() {
     d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
     return d.toISOString().split('T')[0];
   };
+
+  const isValidDateStr = (str) => typeof str === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(str);
+  const dateFromUrl = searchParams.get('date');
   
-  const [selectedDateStr, setSelectedDateStr] = useState(getLocalYYYYMMDD());
+  const [selectedDateStr, setSelectedDateStr] = useState(() => {
+    if (dateFromUrl && isValidDateStr(dateFromUrl)) {
+      return dateFromUrl;
+    }
+    return getLocalYYYYMMDD();
+  });
+
+  const updateSelectedDate = (newDate) => {
+    setSelectedDateStr(newDate);
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      next.set('date', newDate);
+      return next;
+    }, { replace: true });
+  };
+
+  useEffect(() => {
+    const urlDate = searchParams.get('date');
+    if (urlDate && isValidDateStr(urlDate) && urlDate !== selectedDateStr) {
+      setSelectedDateStr(urlDate);
+    } else if (!urlDate && activeTab === 'scheduling') {
+      setSearchParams((prev) => {
+        const next = new URLSearchParams(prev);
+        next.set('date', selectedDateStr);
+        return next;
+      }, { replace: true });
+    }
+  }, [searchParams, activeTab, selectedDateStr]);
   
   // Extract month (YYYY-MM) and day (1-31) from selectedDateStr
   const selectedMonth = selectedDateStr.substring(0, 7);
   const selectedDay = parseInt(selectedDateStr.substring(8, 10), 10);
+
+  const selectedDayOfWeekInfo = useMemo(() => {
+    if (!selectedDateStr) return { day: 0, ja: '—', en: '—', isSunday: false, isSaturday: false };
+    const [y, m, d] = selectedDateStr.split('-').map(Number);
+    const dateObj = new Date(y, m - 1, d);
+    const day = dateObj.getDay();
+    const ja = ['日', '月', '火', '水', '木', '金', '土'][day];
+    const en = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][day];
+    return {
+      day,
+      ja,
+      en,
+      isSunday: day === 0,
+      isSaturday: day === 6
+    };
+  }, [selectedDateStr]);
 
   const handleMonthChange = (e) => {
     const newMonth = e.target.value;
@@ -39,7 +94,7 @@ export default function FirstFactoryPage() {
     const parts = selectedDateStr.split('-');
     let day = parts[2];
     if (parseInt(day, 10) > 28) day = '01'; // Safe fallback for shortest month
-    setSelectedDateStr(`${newMonth}-${day}`);
+    updateSelectedDate(`${newMonth}-${day}`);
   };
 
   const fetchSchedule = async (month) => {
@@ -65,6 +120,182 @@ export default function FirstFactoryPage() {
 
   const [isSyncModalOpen, setIsSyncModalOpen] = useState(false);
   const [syncTargetMonth, setSyncTargetMonth] = useState(selectedMonth);
+  const [syncImpactReport, setSyncImpactReport] = useState([]);
+  const [isImpactModalOpen, setIsImpactModalOpen] = useState(false);
+  const [isDiscrepancyModalOpen, setIsDiscrepancyModalOpen] = useState(false);
+  const [setupComments, setSetupComments] = useState({});
+  const [commentModalItem, setCommentModalItem] = useState(null);
+  const [tempCommentText, setTempCommentText] = useState('');
+
+  // Helper to extract Kataban (型番) from material/BOM master
+  const extractKataban = (item) => {
+    if (!item) return '';
+    if (item.materialInfo?.kataban) return item.materialInfo.kataban;
+    const rawMaster = item.materialInfo?.rawMaster || {};
+    const hinmoku = rawMaster['品目マスタ'] || {};
+    if (hinmoku['型番'] && hinmoku['型番'] !== '*' && String(hinmoku['型番']).trim() !== '') {
+      return String(hinmoku['型番']).trim();
+    }
+    if (rawMaster['型番'] && rawMaster['型番'] !== '*' && String(rawMaster['型番']).trim() !== '') {
+      return String(rawMaster['型番']).trim();
+    }
+    if (item['型番'] && item['型番'] !== '*' && String(item['型番']).trim() !== '') {
+      return String(item['型番']).trim();
+    }
+    const bom = Array.isArray(rawMaster.BOM) ? rawMaster.BOM : [];
+    const p2010 = bom.find(b => Number(b['工程コード']) === 2010 || b['工程名'] === '粘着工程' || b['工程略名'] === '粘着');
+    if (p2010 && p2010['型番'] && p2010['型番'] !== '*' && String(p2010['型番']).trim() !== '') {
+      return String(p2010['型番']).trim();
+    }
+    for (const b of bom) {
+      if (b['型番'] && b['型番'] !== '*' && String(b['型番']).trim() !== '') {
+        return String(b['型番']).trim();
+      }
+    }
+    return '';
+  };
+
+  // Helper to extract Time Option (時間オプション) from BOM process 2010
+  const extractTimeOption = (item) => {
+    if (!item) return '';
+    if (item.materialInfo?.timeOption) return item.materialInfo.timeOption;
+    const rawMaster = item.materialInfo?.rawMaster || {};
+    const bom = Array.isArray(rawMaster.BOM) ? rawMaster.BOM : [];
+    const p2010 = bom.find(b => Number(b['工程コード']) === 2010 || b['工程名'] === '粘着工程' || b['工程略名'] === '粘着');
+    if (p2010 && p2010['時間オプション'] && p2010['時間オプション'] !== '*' && String(p2010['時間オプション']).trim() !== '') {
+      return String(p2010['時間オプション']).trim();
+    }
+    return '';
+  };
+
+  // Helper to extract production unit string ('cm'/'㎝', 'm', '枚', etc.) from process 2010
+  const extractProdUnitName = (item) => {
+    if (!item) return 'm';
+    const rawUnit = item.materialInfo?.rawUnit;
+    if (rawUnit) {
+      const name = typeof rawUnit === 'object' ? (rawUnit.name || '') : String(rawUnit);
+      if (name) return name.trim();
+    }
+    const rawMaster = item.materialInfo?.rawMaster || {};
+    const bom = Array.isArray(rawMaster.BOM) ? rawMaster.BOM : [];
+    const p2010 = bom.find(b => Number(b['工程コード']) === 2010 || b['工程名'] === '粘着工程' || b['工程略名'] === '粘着');
+    if (p2010 && p2010['生産単位']) {
+      const name = typeof p2010['生産単位'] === 'object' ? (p2010['生産単位'].name || '') : String(p2010['生産単位']);
+      if (name) return name.trim();
+    }
+    return item.materialInfo?.unit || 'm';
+  };
+
+  // Helper to extract unit (m vs 枚) from BOM process 2010
+  const extractUnit = (item) => {
+    if (!item) return 'm';
+    const prodUnitName = extractProdUnitName(item);
+    if (prodUnitName === '枚') return '枚';
+    return 'm';
+  };
+
+  // Helper to get packCount converted to centimeters based on 生産単位.name
+  const getPackCountCm = (item, defaultCm = 4000) => {
+    const rawPackCount = Number(item?.materialInfo?.packCount);
+    if (!rawPackCount || rawPackCount <= 0) return defaultCm;
+
+    const prodUnitName = extractProdUnitName(item);
+    
+    // If unit is explicitly cm / ㎝ / センチ
+    if (prodUnitName === '㎝' || prodUnitName.toLowerCase() === 'cm' || prodUnitName === 'センチ') {
+      return rawPackCount; // already in cm (e.g. 4000 cm = 40m)
+    }
+    
+    // If unit is explicitly meters (m / ｍ / メートル)
+    if (prodUnitName === 'm' || prodUnitName === 'M' || prodUnitName === 'ｍ' || prodUnitName === 'メートル') {
+      return rawPackCount * 100; // convert meters to cm (e.g. 40m -> 4000 cm)
+    }
+
+    // Heuristic fallback if unit is unknown: >= 500 is almost certainly in cm (e.g. 4000, 2500), otherwise meters (e.g. 40, 50)
+    return rawPackCount >= 500 ? rawPackCount : rawPackCount * 100;
+  };
+
+  // Helper to compute duration in minutes based on workTime, quantity, and 生産単位.name
+  const computeDurationMins = (item, qty, unit) => {
+    const workTime = item?.materialInfo?.workTime || 0.075;
+    if (!qty || qty <= 0) return 0;
+
+    const prodUnitName = extractProdUnitName(item);
+
+    // If unit is sheets (枚)
+    if (unit === '枚' || prodUnitName === '枚') {
+      return (workTime * qty) / 60;
+    }
+
+    // If unit is meters and 生産単位 is explicitly meters (m / M / ｍ / メートル)
+    if (prodUnitName === 'm' || prodUnitName === 'M' || prodUnitName === 'ｍ' || prodUnitName === 'メートル') {
+      return (workTime * qty) / 60;
+    }
+
+    // Otherwise, for meter products with 生産単位 in cm (㎝ / cm / センチ) or default:
+    // qty (in meters) converted to cm is qty * 100
+    const qtyCm = qty * 100;
+    return (workTime * qtyCm) / 60;
+  };
+
+  // Helper to split a hinban production quantity into roll / pack items
+  const createRollItemsForHinban = (foundItem, dayIndex) => {
+    if (!foundItem) return [];
+    const qty = foundItem.production[dayIndex] || 0;
+    const unit = extractUnit(foundItem);
+    
+    if (qty <= 0) return [];
+
+    if (unit === '枚') {
+      const packCount = Number(foundItem.materialInfo?.packCount) > 0 ? Number(foundItem.materialInfo.packCount) : 100;
+      const numRolls = Math.ceil(qty / packCount);
+      const items = [];
+      for (let i = 0; i < numRolls; i++) {
+        let sheetCount = packCount;
+        if (i === numRolls - 1 && (qty % packCount !== 0)) {
+          sheetCount = qty % packCount;
+        }
+        const durationMins = computeDurationMins(foundItem, sheetCount, '枚');
+        items.push({
+          id: Date.now() + String(i) + Math.random().toString(36).substring(2, 7),
+          type: 'hinban',
+          hinban: foundItem.hinban,
+          poolItemId: foundItem.id,
+          rollIndex: i + 1,
+          totalRolls: numRolls,
+          meters: sheetCount,
+          unit: '枚',
+          duration: Math.round(durationMins)
+        });
+      }
+      return items;
+    } else {
+      const qtyCm = qty * 100;
+      const packCountCm = getPackCountCm(foundItem, 4000);
+      const numRolls = Math.ceil(qtyCm / packCountCm);
+      const items = [];
+      for (let i = 0; i < numRolls; i++) {
+        let lengthCm = packCountCm;
+        if (i === numRolls - 1 && (qtyCm % packCountCm !== 0)) {
+          lengthCm = qtyCm % packCountCm;
+        }
+        const rollMeters = lengthCm / 100;
+        const durationMins = computeDurationMins(foundItem, rollMeters, 'm');
+        items.push({
+          id: Date.now() + String(i) + Math.random().toString(36).substring(2, 7),
+          type: 'hinban',
+          hinban: foundItem.hinban,
+          poolItemId: foundItem.id,
+          rollIndex: i + 1,
+          totalRolls: numRolls,
+          meters: rollMeters,
+          unit: 'm',
+          duration: Math.round(durationMins)
+        });
+      }
+      return items;
+    }
+  };
 
   const handleSyncExcel = async (monthToSync) => {
     setIsSyncModalOpen(false);
@@ -100,39 +331,45 @@ export default function FirstFactoryPage() {
       
       let parsedData = [];
       let currentBlock = null;
+      let hasFoundOrders = false;
+      let hasFoundProd = false;
       
       for (let r = 0; r < rows.length; r++) {
         const row = rows[r];
         const valB = String(row[1] || '').trim();
-        const isHinbanRow = valB.length > 5 && /^[A-Z0-9\/\*\-\.]+$/.test(valB);
+        const isHinbanRow = valB.length === 20 && /^[A-Z0-9\/\*\-\.]+$/.test(valB);
 
         if (isHinbanRow) {
           if (currentBlock) parsedData.push(currentBlock);
-          currentBlock = null; 
-          
-          if (valB.length === 20) {
-            currentBlock = {
-              id: Date.now().toString() + Math.random().toString(36).substring(2, 9),
-              month: monthToSync,
-              hinban: valB,
-              orders: Array(31).fill(0),
-              production: Array(31).fill(0)
-            };
-          }
+          currentBlock = {
+            id: Date.now().toString() + Math.random().toString(36).substring(2, 9),
+            month: monthToSync,
+            hinban: valB,
+            orders: Array(31).fill(0),
+            production: Array(31).fill(0)
+          };
+          hasFoundOrders = false;
+          hasFoundProd = false;
+          continue;
         }
 
         if (currentBlock) {
           let rowLabel = '';
           for (let c = 0; c < 6; c++) if (row[c]) rowLabel += String(row[c]);
 
-          if (rowLabel.includes('受注')) {
+          const isOrderRow = rowLabel.includes('受注') || rowLabel.includes('出荷');
+          const isProdRow = rowLabel.includes('生産');
+
+          if (isOrderRow && !hasFoundOrders) {
             for (let i = 0; i < 31; i++) {
               currentBlock.orders[i] = Number(Number(row[5 + i] || 0).toFixed(1));
             }
-          } else if (rowLabel.includes('生産')) {
+            hasFoundOrders = true;
+          } else if (isProdRow && !hasFoundProd) {
             for (let i = 0; i < 31; i++) {
               currentBlock.production[i] = Number(Number(row[5 + i] || 0).toFixed(1));
             }
+            hasFoundProd = true;
           }
         }
       }
@@ -148,7 +385,66 @@ export default function FirstFactoryPage() {
       
       const saveJson = await saveRes.json();
       if (saveJson.success) {
-        alert(saveJson.message);
+        // Detect impact across existing saved schedules
+        const impact = [];
+        savedSchedules.forEach(sched => {
+          const dayNum = Number(sched.date);
+          if (!dayNum || !Array.isArray(sched.scheduleOrder) || sched.scheduleOrder.length === 0) return;
+
+          const dayIssues = [];
+          const uniqueHinbans = [...new Set(sched.scheduleOrder.filter(i => i.type === 'hinban' && i.hinban).map(i => i.hinban))];
+
+          uniqueHinbans.forEach(hinban => {
+            const scheduledRolls = sched.scheduleOrder.filter(i => i.hinban === hinban);
+            const scheduledMeters = scheduledRolls.reduce((sum, r) => sum + (Number(r.meters) || 0), 0);
+            const found = parsedData.find(i => i.hinban === hinban);
+
+            if (!found) {
+              dayIssues.push({
+                hinban,
+                type: 'missing',
+                text: 'Not found in Excel dataset for this month'
+              });
+            } else {
+              const prodQty = found.production[dayNum - 1] || 0;
+              if (prodQty === 0) {
+                const otherDays = [];
+                for (let d = 1; d <= 31; d++) {
+                  if ((found.production[d - 1] || 0) > 0) {
+                    otherDays.push(`${d}th (${found.production[d - 1]}m)`);
+                  }
+                }
+                dayIssues.push({
+                  hinban,
+                  type: 'moved_or_zero',
+                  text: otherDays.length > 0 ? `Moved in Excel to: Day ${otherDays.join(', ')} (0m on Day ${dayNum})` : `Excel production reduced to 0m`
+                });
+              } else if (Number(prodQty.toFixed(1)) !== Number(scheduledMeters.toFixed(1))) {
+                dayIssues.push({
+                  hinban,
+                  type: 'qty_mismatch',
+                  text: `Quantity changed: Scheduled ${scheduledMeters}m → Excel ${prodQty}m`
+                });
+              }
+            }
+          });
+
+          if (dayIssues.length > 0) {
+            impact.push({
+              date: dayNum,
+              dateKey: `${monthToSync}-${String(dayNum).padStart(2, '0')}`,
+              issues: dayIssues
+            });
+          }
+        });
+
+        if (impact.length > 0) {
+          setSyncImpactReport(impact);
+          setIsImpactModalOpen(true);
+        } else {
+          alert(saveJson.message);
+        }
+
         if (monthToSync === selectedMonth) {
           fetchSchedule(selectedMonth);
         }
@@ -247,10 +543,25 @@ export default function FirstFactoryPage() {
 
   const [modalData, setModalData] = useState(null);
 
-  const handleCardClick = (hinban) => {
+  const handleCardClick = async (hinban) => {
+    if (!hinban) return;
     const found = data.find(i => i.hinban === hinban);
     if (found && found.materialInfo && found.materialInfo.rawMaster) {
       setModalData(found.materialInfo.rawMaster);
+      return;
+    }
+
+    try {
+      const res = await fetch(`${BASE_URL}api/production/material-detail?hinban=${encodeURIComponent(hinban)}`);
+      if (res.ok) {
+        const json = await res.json();
+        if (json.success && json.product) {
+          setModalData(json.product);
+          return;
+        }
+      }
+    } catch (err) {
+      console.warn("Failed to fetch material detail from server:", err);
     }
   };
   
@@ -283,21 +594,49 @@ export default function FirstFactoryPage() {
 
   const handleDateChange = (e) => {
     const newDate = e.target.value;
+    if (!newDate) return;
     if (hasUnsavedChanges) {
       if (!window.confirm(t('unsavedChangesWarning') || "You have unsaved changes! Are you sure you want to change the date? Unsaved progress will be lost.")) {
         return;
       }
     }
-    setSelectedDateStr(newDate);
+    updateSelectedDate(newDate);
   };
 
-  const handleTabChange = (tab) => {
-    if (activeTab === 'scheduling' && tab !== 'scheduling' && hasUnsavedChanges) {
+  const handleStepDate = (offset) => {
+    if (hasUnsavedChanges) {
+      if (!window.confirm(t('unsavedChangesWarning') || "You have unsaved changes! Are you sure you want to change the date? Unsaved progress will be lost.")) {
+        return;
+      }
+    }
+    const [y, m, d] = selectedDateStr.split('-').map(Number);
+    const dateObj = new Date(y, m - 1, d);
+    dateObj.setDate(dateObj.getDate() + offset);
+    
+    const nextY = dateObj.getFullYear();
+    const nextM = String(dateObj.getMonth() + 1).padStart(2, '0');
+    const nextD = String(dateObj.getDate()).padStart(2, '0');
+    updateSelectedDate(`${nextY}-${nextM}-${nextD}`);
+  };
+
+  const handleGoToToday = () => {
+    const today = getLocalYYYYMMDD();
+    if (selectedDateStr === today) return;
+    if (hasUnsavedChanges) {
+      if (!window.confirm(t('unsavedChangesWarning') || "You have unsaved changes! Are you sure you want to change the date? Unsaved progress will be lost.")) {
+        return;
+      }
+    }
+    updateSelectedDate(today);
+  };
+
+  const handleTabChange = (nextTab) => {
+    if (activeTab === 'scheduling' && nextTab !== 'scheduling' && hasUnsavedChanges) {
       if (!window.confirm(t('unsavedChangesWarning') || "You have unsaved changes! Are you sure you want to switch tabs? Unsaved progress will be lost.")) {
         return;
       }
     }
-    setActiveTab(tab);
+    navigate(`/firstFactory/${nextTab}?date=${selectedDateStr}`);
   };
 
   // Items that have production > 0 for this day
@@ -313,13 +652,37 @@ export default function FirstFactoryPage() {
 
   const [poolSearch, setPoolSearch] = useState('');
   const [showNoAdhesive, setShowNoAdhesive] = useState(false);
+  const [poolSortBy, setPoolSortBy] = useState('timeOption-asc');
+  const [poolBatchFilter, setPoolBatchFilter] = useState('all'); // 'all' | 'large' (>=500m) | 'small' (<200m)
+  const [poolWidthFilter, setPoolWidthFilter] = useState('all');
   
   const poolItems = useMemo(() => {
     const scheduledIds = new Set(scheduleOrder.map(s => s.poolItemId).filter(Boolean));
     return dailyProductionItems.filter(item => {
       if (scheduledIds.has(item.id)) return false;
-      if (poolSearch && !item.hinban.toLowerCase().includes(poolSearch.toLowerCase())) return false;
+      if (poolSearch) {
+        const q = poolSearch.toLowerCase();
+        const kataban = extractKataban(item).toLowerCase();
+        const timeOpt = extractTimeOption(item).toLowerCase();
+        const matchesHinban = item.hinban.toLowerCase().includes(q);
+        const matchesKataban = kataban.includes(q);
+        const matchesTimeOpt = timeOpt.includes(q);
+        if (!matchesHinban && !matchesKataban && !matchesTimeOpt) return false;
+      }
       
+      // First Factory page focuses ONLY on products that have Process 2010 (粘着工程) in BOM or Master
+      const bomItems = item.materialInfo?.rawMaster?.['BOM'] || [];
+      const hasProcess2010 = Boolean(
+        item.materialInfo?.hasProcess2010 ||
+        bomItems.some(b => Number(b['工程コード']) === 2010 || String(b['工程コード'] || '').startsWith('2010') || b['工程名'] === '粘着工程' || b['工程略名'] === '粘着') ||
+        String(item.materialInfo?.rawMaster?.['品目マスタ']?.['工程コード'] || '').startsWith('2010') ||
+        Number(item.materialInfo?.rawMaster?.['resolved']?.['工程コード']?.code) === 2010 ||
+        item.materialInfo?.rawMaster?.['resolved']?.['工程コード']?.name === '粘着工程'
+      );
+      if (!hasProcess2010) {
+        return false;
+      }
+
       if (!showNoAdhesive) {
         const segments = item.materialInfo?.rawMaster?.['品番構造']?.segments || [];
         const adhesiveSegment = segments.find(s => s.segment === '粘着コード');
@@ -332,14 +695,90 @@ export default function FirstFactoryPage() {
     });
   }, [scheduleOrder, dailyProductionItems, poolSearch, showNoAdhesive]);
 
-  const poolTotalMins = useMemo(() => {
-    return poolItems.reduce((acc, item) => {
+  // Compute available widths from poolItems
+  const availableWidths = useMemo(() => {
+    const set = new Set();
+    poolItems.forEach(item => {
+      const match = item.hinban?.match(/W\d+/i);
+      if (match) set.add(match[0].toUpperCase());
+    });
+    return Array.from(set).sort();
+  }, [poolItems]);
+
+  const processedPoolItems = useMemo(() => {
+    let items = poolItems.map(item => {
       const qty = item.production[selectedDay - 1] || 0;
-      const qtyCm = qty * 100;
+      const unit = extractUnit(item);
+      const kataban = extractKataban(item);
+      const timeOption = extractTimeOption(item);
       const workTime = item.materialInfo?.workTime || 0.075;
-      return acc + Math.round((workTime * qtyCm) / 60);
-    }, 0);
-  }, [poolItems, selectedDay]);
+      const width = item.hinban?.match(/W\d+/i)?.[0]?.toUpperCase() || '';
+
+      let numRolls = 0;
+      const durationMins = Math.round(computeDurationMins(item, qty, unit));
+
+      if (unit === '枚') {
+        const packCount = Number(item.materialInfo?.packCount) > 0 ? Number(item.materialInfo.packCount) : 100;
+        numRolls = qty > 0 ? Math.ceil(qty / packCount) : 0;
+      } else {
+        const qtyCm = qty * 100;
+        const packCountCm = getPackCountCm(item, 4000);
+        numRolls = qtyCm > 0 ? Math.ceil(qtyCm / packCountCm) : 0;
+      }
+
+      return {
+        ...item,
+        _qty: qty,
+        _unit: unit,
+        _numRolls: numRolls,
+        _durationMins: durationMins,
+        _width: width,
+        _kataban: kataban,
+        _timeOption: timeOption
+      };
+    });
+
+    // Apply batch size filter
+    if (poolBatchFilter === 'large') {
+      items = items.filter(i => i._qty >= 500 || i._numRolls >= 5);
+    } else if (poolBatchFilter === 'small') {
+      items = items.filter(i => i._qty < 200);
+    }
+
+    // Apply width filter
+    if (poolWidthFilter !== 'all') {
+      items = items.filter(i => i._width === poolWidthFilter);
+    }
+
+    // Apply sorting
+    if (poolSortBy === 'kataban-asc') {
+      items.sort((a, b) => (a._kataban || '').localeCompare(b._kataban || '') || (a._timeOption || '').localeCompare(b._timeOption || '') || a.hinban.localeCompare(b.hinban));
+    } else if (poolSortBy === 'kataban-desc') {
+      items.sort((a, b) => (b._kataban || '').localeCompare(a._kataban || '') || (b._timeOption || '').localeCompare(a._timeOption || '') || a.hinban.localeCompare(b.hinban));
+    } else if (poolSortBy === 'timeOption-asc') {
+      items.sort((a, b) => (a._timeOption || '').localeCompare(b._timeOption || '') || (a._kataban || '').localeCompare(b._kataban || '') || a.hinban.localeCompare(b.hinban));
+    } else if (poolSortBy === 'timeOption-desc') {
+      items.sort((a, b) => (b._timeOption || '').localeCompare(a._timeOption || '') || (b._kataban || '').localeCompare(a._kataban || '') || a.hinban.localeCompare(b.hinban));
+    } else if (poolSortBy === 'duration-desc') {
+      items.sort((a, b) => b._durationMins - a._durationMins || b._qty - a._qty);
+    } else if (poolSortBy === 'duration-asc') {
+      items.sort((a, b) => a._durationMins - b._durationMins || a._qty - b._qty);
+    } else if (poolSortBy === 'qty-desc') {
+      items.sort((a, b) => b._qty - a._qty);
+    } else if (poolSortBy === 'qty-asc') {
+      items.sort((a, b) => a._qty - b._qty);
+    } else if (poolSortBy === 'rolls-desc') {
+      items.sort((a, b) => b._numRolls - a._numRolls || b._qty - a._qty);
+    } else if (poolSortBy === 'hinban-asc') {
+      items.sort((a, b) => a.hinban.localeCompare(b.hinban));
+    }
+
+    return items;
+  }, [poolItems, selectedDay, poolBatchFilter, poolWidthFilter, poolSortBy]);
+
+  const poolTotalMins = useMemo(() => {
+    return processedPoolItems.reduce((acc, item) => acc + (item._durationMins || 0), 0);
+  }, [processedPoolItems]);
 
   const scheduledTotalMins = useMemo(() => {
     return scheduledItems.reduce((acc, item) => acc + (item.duration || 0), 0);
@@ -348,11 +787,162 @@ export default function FirstFactoryPage() {
   const formatTime = (mins) => {
     const h = Math.floor(mins / 60);
     const m = mins % 60;
-    return h > 0 ? `${h}h ${m}m` : `${m}m`;
+    return h > 0 ? `${h}h ${m}min` : `${m}min`;
+  };
+
+  // --- DISCREPANCY DETECTION FOR THE SELECTED DATE ---
+  const currentDayDiscrepancies = useMemo(() => {
+    if (!scheduleOrder || scheduleOrder.length === 0) {
+      return { map: {}, list: [], count: 0 };
+    }
+
+    const hinbanGroups = {};
+    scheduleOrder.forEach(item => {
+      if (item.type === 'hinban' && item.hinban) {
+        if (!hinbanGroups[item.hinban]) {
+          hinbanGroups[item.hinban] = [];
+        }
+        hinbanGroups[item.hinban].push(item);
+      }
+    });
+
+    const map = {};
+    const list = [];
+
+    Object.entries(hinbanGroups).forEach(([hinban, rolls]) => {
+      const scheduledMeters = Number(rolls.reduce((sum, r) => sum + (Number(r.meters) || 0), 0).toFixed(1));
+      const foundRow = data.find(i => i.hinban === hinban);
+
+      if (!foundRow) {
+        const disc = {
+          hinban,
+          type: 'missing_in_excel',
+          excelQty: 0,
+          scheduledMeters,
+          message: '品番が今月のエクセルデータに存在しません (Not in Excel)',
+          rollsCount: rolls.length
+        };
+        map[hinban] = disc;
+        list.push(disc);
+      } else {
+        const excelQty = Number((foundRow.production[selectedDay - 1] || 0).toFixed(1));
+        if (excelQty === 0) {
+          const otherDays = [];
+          for (let d = 1; d <= 31; d++) {
+            const q = foundRow.production[d - 1] || 0;
+            if (q > 0) {
+              otherDays.push(`${d}日 (${q}m)`);
+            }
+          }
+          const movedText = otherDays.length > 0 
+            ? `エクセルで他日程に移動: ${otherDays.join(', ')}` 
+            : 'エクセル生産数: 0m';
+          
+          const disc = {
+            hinban,
+            type: 'moved_or_zero',
+            excelQty: 0,
+            scheduledMeters,
+            movedText,
+            message: movedText,
+            rollsCount: rolls.length,
+            foundRow
+          };
+          map[hinban] = disc;
+          list.push(disc);
+        } else if (excelQty !== scheduledMeters) {
+          const disc = {
+            hinban,
+            type: 'qty_mismatch',
+            excelQty,
+            scheduledMeters,
+            message: `エクセル数量不一致: スケジュール ${scheduledMeters}m → エクセル ${excelQty}m`,
+            rollsCount: rolls.length,
+            foundRow
+          };
+          map[hinban] = disc;
+          list.push(disc);
+        }
+      }
+    });
+
+    return {
+      map,
+      list,
+      count: list.length
+    };
+  }, [scheduleOrder, data, selectedDay]);
+
+  // Auto-align ONLY for the currently selected date (does not touch any other dates)
+  const handleAutoAlignCurrentDate = () => {
+    if (currentDayDiscrepancies.count === 0) return;
+
+    setScheduleOrder(prevOrder => {
+      let newOrder = [];
+      const processedHinbans = new Set();
+
+      for (let i = 0; i < prevOrder.length; i++) {
+        const item = prevOrder[i];
+        if (item.type === 'setup') {
+          newOrder.push(item);
+          continue;
+        }
+
+        const hinban = item.hinban;
+        const disc = currentDayDiscrepancies.map[hinban];
+
+        if (!disc) {
+          // No discrepancy, retain item
+          newOrder.push(item);
+        } else if (disc.type === 'moved_or_zero' || disc.type === 'missing_in_excel') {
+          // 0m or missing in Excel: remove from this day's schedule
+          continue;
+        } else if (disc.type === 'qty_mismatch') {
+          // Replace rolls with updated roll breakdown at this position
+          if (!processedHinbans.has(hinban)) {
+            processedHinbans.add(hinban);
+            const updatedRolls = createRollItemsForHinban(disc.foundRow, selectedDay - 1);
+            newOrder.push(...updatedRolls);
+          }
+        }
+      }
+
+      return newOrder;
+    });
+
+    setIsDiscrepancyModalOpen(false);
+  };
+
+  const handleUpdateHinbanQty = (hinban) => {
+    const disc = currentDayDiscrepancies.map[hinban];
+    if (!disc || !disc.foundRow) return;
+
+    setScheduleOrder(prevOrder => {
+      const newOrder = [];
+      let replaced = false;
+
+      for (let i = 0; i < prevOrder.length; i++) {
+        const item = prevOrder[i];
+        if (item.type === 'hinban' && item.hinban === hinban) {
+          if (!replaced) {
+            replaced = true;
+            const updatedRolls = createRollItemsForHinban(disc.foundRow, selectedDay - 1);
+            newOrder.push(...updatedRolls);
+          }
+        } else {
+          newOrder.push(item);
+        }
+      }
+
+      return newOrder;
+    });
   };
 
   const handleSaveSchedule = async () => {
     try {
+      const authUser = readStoredAuthUser() || {};
+      const scheduledBy = authUser.firstName ? `${authUser.firstName} ${authUser.lastName || ''}`.trim() : (authUser.username || 'Admin');
+
       const res = await fetch(BASE_URL + 'api/production/schedule', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -360,17 +950,777 @@ export default function FirstFactoryPage() {
           scheduleOrder,
           startTime, 
           month: selectedMonth, 
-          date: selectedDay 
+          date: selectedDay,
+          scheduledBy
         })
       });
       const json = await res.json();
       if (json.success) {
-        alert('Schedule order saved successfully for ' + selectedDateStr);
+        alert(t('ff_scheduleSavedSuccess') + ` (${selectedDateStr})`);
         fetchSchedule(selectedMonth); // Refresh
       }
     } catch (err) {
       console.error('Error saving order:', err);
+      alert(t('ff_scheduleSaveError'));
     }
+  };
+
+  // --- MONTHLY SUMMARY COMPUTATION ---
+  const daysInSelectedMonth = useMemo(() => {
+    if (!selectedMonth) return 31;
+    const [y, m] = selectedMonth.split('-').map(Number);
+    return new Date(y, m, 0).getDate();
+  }, [selectedMonth]);
+
+  const [summaryViewMode, setSummaryViewMode] = useState(() => {
+    try {
+      return localStorage.getItem('firstFactory_summaryViewMode') || 'priority';
+    } catch {
+      return 'priority';
+    }
+  });
+
+  const handleSummaryViewModeChange = (mode) => {
+    setSummaryViewMode(mode);
+    try {
+      localStorage.setItem('firstFactory_summaryViewMode', mode);
+    } catch (err) {
+      console.warn('Failed to save summaryViewMode to localStorage:', err);
+    }
+  };
+
+  const monthSummaryData = useMemo(() => {
+    let totalMins = 0;
+    let daysWithWorkCount = 0;
+    let totalItemsCount = 0;
+    let totalSetupCount = 0;
+    let totalMetersMonth = 0;
+    const monthUniqueHinbans = new Set();
+    const dayRows = [];
+
+    let maxDayMins = 0;
+
+    for (let day = 1; day <= daysInSelectedMonth; day++) {
+      const dayStr = String(day).padStart(2, '0');
+      const dateKey = `${selectedMonth}-${dayStr}`;
+      const dateObj = new Date(`${dateKey}T00:00:00`);
+      const dayOfWeek = dateObj.getDay(); // 0: Sun, 6: Sat
+      const dayOfWeekStr = ['日', '月', '火', '水', '木', '金', '土'][dayOfWeek];
+
+      const saved = savedSchedules.find(s => s.date === day);
+      const isScheduled = Boolean(saved && Array.isArray(saved.scheduleOrder) && saved.scheduleOrder.length > 0);
+
+      if (summaryViewMode === 'priority') {
+        let dayTotalMins = 0;
+        let startTime = saved?.startTime || '09:00';
+        let endTime = '—';
+        let scheduledBy = saved?.scheduledBy || '—';
+        let updatedAtStr = saved?.updatedAt ? new Date(saved.updatedAt).toLocaleString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—';
+        let itemCount = 0;
+        let setupCount = 0;
+        let hinbanCount = 0;
+        const dayUniqueHinbans = new Set();
+        let mismatchCount = 0;
+
+        if (isScheduled) {
+          daysWithWorkCount++;
+          itemCount = saved.scheduleOrder.length;
+          totalItemsCount += itemCount;
+
+          saved.scheduleOrder.forEach(item => {
+            dayTotalMins += (Number(item.duration) || 0);
+            if (item.type === 'setup') {
+              setupCount++;
+              totalSetupCount++;
+            } else {
+              hinbanCount++;
+              if (item.hinban) {
+                dayUniqueHinbans.add(item.hinban);
+                monthUniqueHinbans.add(item.hinban);
+              }
+            }
+          });
+
+          // Compute mismatch count against current Excel data
+          if (data.length > 0) {
+            dayUniqueHinbans.forEach(h => {
+              const found = data.find(item => item.hinban === h);
+              if (!found) {
+                mismatchCount++;
+              } else {
+                const q = Number((found.production[day - 1] || 0).toFixed(1));
+                const scheduledMeters = Number(saved.scheduleOrder
+                  .filter(i => i.hinban === h)
+                  .reduce((sum, r) => sum + (Number(r.meters) || 0), 0).toFixed(1));
+                if (q === 0 || q !== scheduledMeters) {
+                  mismatchCount++;
+                }
+              }
+            });
+          }
+
+          totalMins += dayTotalMins;
+          if (dayTotalMins > maxDayMins) maxDayMins = dayTotalMins;
+
+          // Calculate end time
+          const [sh, sm] = (startTime || '09:00').split(':').map(Number);
+          const endTotal = (sh * 60 + sm) + dayTotalMins;
+          const eh = Math.floor((endTotal / 60) % 24);
+          const em = endTotal % 60;
+          endTime = `${String(eh).padStart(2, '0')}:${String(em).padStart(2, '0')}`;
+        }
+
+        dayRows.push({
+          day,
+          dateKey,
+          dayOfWeek,
+          dayOfWeekStr,
+          isScheduled,
+          hasWork: isScheduled,
+          dayTotalMins,
+          dayTotalHours: (dayTotalMins / 60).toFixed(1),
+          startTime,
+          endTime,
+          timeRange: isScheduled ? `${startTime} ～ ${endTime}` : '—',
+          itemCount,
+          setupCount,
+          hinbanCount,
+          uniqueHinbanCount: dayUniqueHinbans.size,
+          mismatchCount,
+          hasMismatch: mismatchCount > 0,
+          scheduledBy,
+          updatedAtStr
+        });
+      } else {
+        // 'raw' Excel demand mode: calculates full demand regardless of schedule
+        let dayTotalMins = 0;
+        let dayTotalMeters = 0;
+        let dayRollsCount = 0;
+        const dayUniqueHinbans = new Set();
+
+        const dayRawItems = data.filter(item => {
+          const q = item.production[day - 1] || 0;
+          if (q <= 0) return false;
+
+          const bomItems = item.materialInfo?.rawMaster?.['BOM'] || [];
+          const hasProcess2010 = Boolean(
+            item.materialInfo?.hasProcess2010 ||
+            bomItems.some(b => Number(b['工程コード']) === 2010 || String(b['工程コード'] || '').startsWith('2010') || b['工程名'] === '粘着工程' || b['工程略名'] === '粘着') ||
+            String(item.materialInfo?.rawMaster?.['品目マスタ']?.['工程コード'] || '').startsWith('2010') ||
+            Number(item.materialInfo?.rawMaster?.['resolved']?.['工程コード']?.code) === 2010 ||
+            item.materialInfo?.rawMaster?.['resolved']?.['工程コード']?.name === '粘着工程'
+          );
+          return hasProcess2010;
+        });
+
+        dayRawItems.forEach(item => {
+          const qty = item.production[day - 1] || 0;
+          const unit = extractUnit(item);
+          const workTime = item.materialInfo?.workTime || 0.075;
+          let numRolls = 0;
+          const durationMins = Math.round(computeDurationMins(item, qty, unit));
+
+          if (unit === '枚') {
+            const packCount = Number(item.materialInfo?.packCount) > 0 ? Number(item.materialInfo.packCount) : 100;
+            numRolls = qty > 0 ? Math.ceil(qty / packCount) : 0;
+          } else {
+            const qtyCm = qty * 100;
+            const packCountCm = getPackCountCm(item, 4000);
+            numRolls = qtyCm > 0 ? Math.ceil(qtyCm / packCountCm) : 0;
+          }
+
+          dayTotalMins += durationMins;
+          dayTotalMeters += qty;
+          dayRollsCount += numRolls;
+          dayUniqueHinbans.add(item.hinban);
+          monthUniqueHinbans.add(item.hinban);
+        });
+
+        const hasDemand = dayTotalMins > 0;
+        if (hasDemand) {
+          daysWithWorkCount++;
+          totalMins += dayTotalMins;
+          totalItemsCount += dayRollsCount;
+          totalMetersMonth += dayTotalMeters;
+        }
+
+        if (dayTotalMins > maxDayMins) maxDayMins = dayTotalMins;
+
+        const startTime = '09:00';
+        let endTime = '—';
+        if (hasDemand) {
+          const endTotal = (9 * 60) + dayTotalMins;
+          const eh = Math.floor((endTotal / 60) % 24);
+          const em = endTotal % 60;
+          endTime = `${String(eh).padStart(2, '0')}:${String(em).padStart(2, '0')}`;
+        }
+
+        let mismatchCount = 0;
+        if (isScheduled && data.length > 0) {
+          const scheduledHinbans = new Set(saved.scheduleOrder.map(i => i.hinban).filter(Boolean));
+          scheduledHinbans.forEach(h => {
+            const found = data.find(item => item.hinban === h);
+            if (!found) {
+              mismatchCount++;
+            } else {
+              const q = Number((found.production[day - 1] || 0).toFixed(1));
+              const scheduledMeters = Number(saved.scheduleOrder
+                .filter(i => i.hinban === h)
+                .reduce((sum, r) => sum + (Number(r.meters) || 0), 0).toFixed(1));
+              if (q === 0 || q !== scheduledMeters) {
+                mismatchCount++;
+              }
+            }
+          });
+        }
+
+        dayRows.push({
+          day,
+          dateKey,
+          dayOfWeek,
+          dayOfWeekStr,
+          isScheduled,
+          hasWork: hasDemand,
+          hasDemand,
+          dayTotalMins,
+          dayTotalHours: (dayTotalMins / 60).toFixed(1),
+          dayTotalMeters,
+          startTime,
+          endTime,
+          timeRange: hasDemand ? `${startTime} ～ ${endTime}` : '—',
+          itemCount: dayRollsCount,
+          setupCount: 0,
+          hinbanCount: dayRollsCount,
+          uniqueHinbanCount: dayUniqueHinbans.size,
+          mismatchCount,
+          hasMismatch: mismatchCount > 0,
+          scheduledBy: saved?.scheduledBy || '—',
+          updatedAtStr: saved?.updatedAt ? new Date(saved.updatedAt).toLocaleString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—'
+        });
+      }
+    }
+
+    const totalHours = (totalMins / 60).toFixed(1);
+    const avgHoursPerDay = daysWithWorkCount > 0 ? (totalMins / daysWithWorkCount / 60).toFixed(1) : '0.0';
+
+    return {
+      totalMins,
+      totalHours,
+      daysWithWorkCount,
+      totalItemsCount,
+      totalSetupCount,
+      totalMetersMonth,
+      totalMonthUniqueHinbansCount: monthUniqueHinbans.size,
+      avgHoursPerDay,
+      maxDayMins: maxDayMins || 480,
+      dayRows
+    };
+  }, [selectedMonth, daysInSelectedMonth, savedSchedules, data, summaryViewMode]);
+
+  const [summarySort, setSummarySort] = useState({ column: 'day', direction: 1 });
+
+  const handleSummarySort = (colKey) => {
+    setSummarySort(prev => {
+      const currentKey = prev?.column || prev?.key || 'day';
+      const currentDir = prev?.direction === -1 || prev?.direction === 'desc' ? -1 : 1;
+      if (currentKey === colKey) {
+        return { column: colKey, direction: currentDir === 1 ? -1 : 1 };
+      }
+      return { column: colKey, direction: 1 };
+    });
+  };
+
+  const sortedSummaryRows = useMemo(() => {
+    const rows = [...monthSummaryData.dayRows];
+    const key = summarySort?.column || summarySort?.key || 'day';
+    const direction = summarySort?.direction === -1 || summarySort?.direction === 'desc' ? -1 : 1;
+
+    rows.sort((a, b) => {
+      let valA = a[key];
+      let valB = b[key];
+
+      // Custom key extraction for composite fields
+      if (key === 'status') {
+        valA = a.isScheduled ? (a.itemCount || 0) : (a.hasDemand ? 0.5 : 0);
+        valB = b.isScheduled ? (b.itemCount || 0) : (b.hasDemand ? 0.5 : 0);
+      } else if (key === 'syncStatus') {
+        valA = a.hasMismatch ? -(a.mismatchCount || 1) : (a.isScheduled ? 1 : 0);
+        valB = b.hasMismatch ? -(b.mismatchCount || 1) : (b.isScheduled ? 1 : 0);
+      }
+
+      if (typeof valA === 'boolean') {
+        valA = valA ? 1 : 0;
+        valB = valB ? 1 : 0;
+      }
+
+      if (typeof valA === 'string' && typeof valB === 'string') {
+        return direction * valA.localeCompare(valB, 'ja');
+      }
+
+      const numA = Number(valA) || 0;
+      const numB = Number(valB) || 0;
+      return direction * (numA - numB);
+    });
+    return rows;
+  }, [monthSummaryData.dayRows, summarySort]);
+
+  const summaryColumns = useMemo(() => [
+    {
+      key: 'day',
+      label: t('ff_colDate'),
+      sortable: true,
+      minWidth: 110,
+      renderCell: (row) => {
+        const isSunday = row.dayOfWeek === 0;
+        const isSaturday = row.dayOfWeek === 6;
+        return (
+          <div className="flex items-center gap-1.5 font-bold text-on-surface">
+            <span className="text-sm">
+              {parseInt(selectedMonth.split('-')[1], 10)}/{row.day}
+            </span>
+            <span className={`rounded px-1.5 py-0.5 text-[11px] font-extrabold ${isSunday ? 'bg-red-500/10 text-red-600' : (isSaturday ? 'bg-blue-500/10 text-blue-600' : 'bg-surface-variant/50 text-outline')}`}>
+              ({row.dayOfWeekStr})
+            </span>
+          </div>
+        );
+      }
+    },
+    {
+      key: 'status',
+      label: summaryViewMode === 'priority' ? t('ff_colStatusPriority') : t('ff_colStatusRaw'),
+      sortable: true,
+      minWidth: 160,
+      renderCell: (row) => {
+        if (summaryViewMode === 'priority') {
+          return row.isScheduled ? (
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/10 px-2.5 py-1 text-xs font-bold text-emerald-600 border border-emerald-500/20">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>
+              {t('ff_scheduledBadge').replace('{count}', row.itemCount)}
+            </span>
+          ) : (
+            <span className="inline-flex items-center gap-1 text-xs text-outline font-medium">
+              {t('ff_noScheduleBadge')}
+            </span>
+          );
+        } else {
+          if (!row.hasDemand) {
+            return (
+              <span className="text-outline text-xs font-medium">{t('ff_noExcelDemandBadge')}</span>
+            );
+          }
+          return row.isScheduled ? (
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/10 px-2.5 py-1 text-xs font-bold text-emerald-600 border border-emerald-500/20">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>
+              {t('ff_plannedAndScheduledBadge')}
+            </span>
+          ) : (
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-500/10 px-2.5 py-1 text-xs font-bold text-amber-700 border border-amber-500/20">
+              <span className="h-1.5 w-1.5 rounded-full bg-amber-500"></span>
+              {t('ff_rawDemandUnscheduledBadge')}
+            </span>
+          );
+        }
+      }
+    },
+    {
+      key: 'timeRange',
+      label: summaryViewMode === 'priority' ? t('ff_colTimeRangePriority') : t('ff_colTimeRangeRaw'),
+      sortable: true,
+      minWidth: 150,
+      renderCell: (row) => {
+        return row.hasWork ? (
+          <span className="rounded-lg bg-surface-variant/40 px-2.5 py-1 text-xs font-mono font-semibold text-on-surface border border-outline-variant/30">
+            🕒 {row.startTime} ～ {row.endTime}
+          </span>
+        ) : (
+          <span className="text-outline text-xs">—</span>
+        );
+      }
+    },
+    {
+      key: 'dayTotalMins',
+      label: summaryViewMode === 'priority' ? t('ff_colDurationPriority') : t('ff_colDurationRaw'),
+      sortable: true,
+      minWidth: 160,
+      renderCell: (row) => {
+        return row.hasWork ? (
+          <span className="text-xs font-bold text-on-surface font-mono">
+            {formatTime(row.dayTotalMins)} - {row.dayTotalHours}{language === 'ja' ? '時間' : 'hrs'}
+          </span>
+        ) : (
+          <span className="text-xs text-outline">—</span>
+        );
+      }
+    },
+    {
+      key: 'itemCount',
+      label: summaryViewMode === 'priority' ? t('ff_colBreakdownPriority') : t('ff_colBreakdownRaw'),
+      sortable: true,
+      minWidth: 220,
+      renderCell: (row) => {
+        if (!row.hasWork) return <span className="text-outline text-xs">—</span>;
+        return (
+          <div className="flex items-center gap-1.5 text-xs flex-wrap">
+            <span className="rounded bg-indigo-500/10 px-2 py-0.5 font-bold text-indigo-600 border border-indigo-500/20" title={`${row.uniqueHinbanCount} Unique Hinban`}>
+              {row.uniqueHinbanCount} {language === 'ja' ? '品番' : 'Hinban'}
+            </span>
+            <span className="rounded bg-primary/10 px-2 py-0.5 font-bold text-primary" title={`${row.hinbanCount} Total Rolls`}>
+              {row.hinbanCount} {language === 'ja' ? '巻' : 'rolls'}
+            </span>
+            {summaryViewMode === 'raw' && row.dayTotalMeters > 0 && (
+              <span className="rounded bg-emerald-500/10 px-2 py-0.5 font-bold text-emerald-700 border border-emerald-500/20">
+                {row.dayTotalMeters}m
+              </span>
+            )}
+            {summaryViewMode === 'priority' && row.setupCount > 0 && (
+              <span className="rounded bg-amber-500/10 px-2 py-0.5 font-bold text-amber-700" title={`${row.setupCount} Setup Events`}>
+                {row.setupCount} {language === 'ja' ? '段替' : 'setups'}
+              </span>
+            )}
+          </div>
+        );
+      }
+    },
+    {
+      key: 'scheduledBy',
+      label: t('ff_colScheduledBy'),
+      sortable: true,
+      minWidth: 140,
+      renderCell: (row) => {
+        return row.isScheduled ? (
+          <div className="flex items-center gap-1.5 text-xs font-semibold text-on-surface">
+            <span className="material-symbols-outlined text-outline" style={{ fontSize: 16 }}>person</span>
+            <span>{row.scheduledBy}</span>
+          </div>
+        ) : (
+          <span className="text-outline text-xs">—</span>
+        );
+      }
+    },
+    {
+      key: 'updatedAtStr',
+      label: t('ff_colLastSaved'),
+      sortable: true,
+      minWidth: 130,
+      renderCell: (row) => (
+        <span className="text-xs text-outline font-mono">{row.updatedAtStr}</span>
+      )
+    },
+    {
+      key: 'syncStatus',
+      label: t('ff_colExcelSync'),
+      sortable: true,
+      minWidth: 140,
+      renderCell: (row) => {
+        if (!row.isScheduled) {
+          if (summaryViewMode === 'raw' && row.hasDemand) {
+            return (
+              <span className="inline-flex items-center gap-1 rounded-full bg-surface-variant/40 px-2.5 py-1 text-xs font-semibold text-outline">
+                {t('ff_unscheduledBadge')}
+              </span>
+            );
+          }
+          return <span className="text-outline text-xs">—</span>;
+        }
+        if (row.hasMismatch) {
+          return (
+            <span 
+              className="inline-flex items-center gap-1 rounded-full bg-amber-500/10 px-2.5 py-1 text-xs font-bold text-amber-600 border border-amber-500/30"
+              title={`${row.mismatchCount} scheduled hinban(s) differ from the latest Excel on this date`}
+            >
+              <span className="material-symbols-outlined" style={{ fontSize: 14 }}>sync_problem</span>
+              {language === 'ja' ? `${row.mismatchCount} 件の差異あり` : `${row.mismatchCount} Discrepanc${row.mismatchCount === 1 ? 'y' : 'ies'}`}
+            </span>
+          );
+        }
+        return (
+          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2.5 py-1 text-xs font-semibold text-emerald-600 border border-emerald-500/20">
+            <span className="material-symbols-outlined" style={{ fontSize: 14 }}>check_circle</span>
+            {t('ff_syncedBadge')}
+          </span>
+        );
+      }
+    },
+    {
+      key: 'actions',
+      label: t('ff_colAction'),
+      sortable: false,
+      minWidth: 100,
+      renderCell: (row) => (
+        <button
+          onClick={() => {
+            updateSelectedDate(row.dateKey);
+            navigate(`/firstFactory/scheduling?date=${row.dateKey}`);
+          }}
+          className="inline-flex items-center gap-1 rounded-lg border border-primary/30 bg-primary/5 px-2.5 py-1 text-xs font-bold text-primary hover:bg-primary hover:text-on-primary transition-colors shadow-sm cursor-pointer"
+          title={t('ff_openScheduleBtn')}
+        >
+          <span className="material-symbols-outlined" style={{ fontSize: 14 }}>edit_calendar</span>
+          {row.isScheduled ? t('ff_openAction') : t('ff_scheduleAction')}
+        </button>
+      )
+    }
+  ], [selectedMonth, summaryViewMode, language, navigate, t]);
+
+  // -------------------------------------------------------------
+  // Production Tab State & Fetching (Realtime Tracking)
+  // -------------------------------------------------------------
+  const [productionDateStr, setProductionDateStr] = useState(getLocalYYYYMMDD());
+  const [productionSchedule, setProductionSchedule] = useState(null);
+  const [productionStatuses, setProductionStatuses] = useState([]);
+  const [loadingProduction, setLoadingProduction] = useState(false);
+  const [productionFilter, setProductionFilter] = useState('all');
+  const [isLiveConnected, setIsLiveConnected] = useState(false);
+
+  const fetchProductionData = async (dateStr, isBackground = false) => {
+    if (!isBackground) setLoadingProduction(true);
+    try {
+      const [year, monthNum, dayNum] = dateStr.split('-');
+      const month = `${year}-${monthNum}`;
+      const date = Number(dayNum);
+
+      let scheduleDoc = null;
+      try {
+        const schedRes = await fetch(`${BASE_URL}api/production/schedule/daily?month=${encodeURIComponent(month)}&date=${date}`);
+        if (schedRes.ok) {
+          const schedJson = await schedRes.json();
+          if (schedJson.success && schedJson.schedule) {
+            scheduleDoc = schedJson.schedule;
+          }
+        }
+      } catch (e) {
+        console.warn("Daily schedule fetch error:", e);
+      }
+
+      if (!scheduleDoc) {
+        const res = await fetch(`${BASE_URL}api/production/schedule?month=${encodeURIComponent(month)}`);
+        if (res.ok) {
+          const json = await res.json();
+          if (json.success && Array.isArray(json.schedules)) {
+            scheduleDoc = json.schedules.find(s => s.month === month && Number(s.date) === date) || null;
+          }
+        }
+      }
+      setProductionSchedule(scheduleDoc);
+
+      try {
+        const statusRes = await fetch(`${BASE_URL}api/production/status?date=${encodeURIComponent(dateStr)}`);
+        if (statusRes.ok) {
+          const statusJson = await statusRes.json();
+          if (statusJson.success && Array.isArray(statusJson.records)) {
+            setProductionStatuses(statusJson.records);
+          } else {
+            setProductionStatuses([]);
+          }
+        }
+      } catch (err) {
+        console.warn("Status fetch error:", err);
+        setProductionStatuses([]);
+      }
+    } catch (err) {
+      console.error("Failed to load production tracking data:", err);
+    } finally {
+      if (!isBackground) setLoadingProduction(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab !== 'production') return;
+
+    fetchProductionData(productionDateStr);
+
+    // -------------------------------------------------------------
+    // Realtime EventSource (SSE) Connection
+    // -------------------------------------------------------------
+    let eventSource = null;
+    try {
+      const sseUrl = `${BASE_URL}api/production/events?date=${encodeURIComponent(productionDateStr)}`;
+      eventSource = new EventSource(sseUrl);
+
+      eventSource.onopen = () => {
+        setIsLiveConnected(true);
+      };
+
+      eventSource.onmessage = (e) => {
+        try {
+          const data = JSON.parse(e.data);
+          if (data.type === 'status_update') {
+            if (data.date === productionDateStr && data.record) {
+              setProductionStatuses((prev) => {
+                const idx = prev.findIndex(r => r.groupId === data.groupId);
+                if (idx !== -1) {
+                  const updated = [...prev];
+                  updated[idx] = { ...updated[idx], ...data.record };
+                  return updated;
+                } else {
+                  return [...prev, data.record];
+                }
+              });
+            }
+          } else if (data.type === 'print_log') {
+            if (data.date === productionDateStr && data.printEntry) {
+              setProductionStatuses((prev) => {
+                const idx = prev.findIndex(r => r.groupId === data.groupId);
+                if (idx !== -1) {
+                  const updated = [...prev];
+                  const existingHistory = Array.isArray(updated[idx].printHistory) ? updated[idx].printHistory : [];
+                  updated[idx] = {
+                    ...updated[idx],
+                    printHistory: [...existingHistory, data.printEntry]
+                  };
+                  return updated;
+                } else {
+                  return [...prev, { groupId: data.groupId, hinban: data.hinban, date: data.date, printHistory: [data.printEntry] }];
+                }
+              });
+            }
+          } else if (data.type === 'schedule_update') {
+            fetchProductionData(productionDateStr, true);
+          }
+        } catch (err) {
+          console.error("Error processing SSE event:", err);
+        }
+      };
+
+      eventSource.onerror = () => {
+        setIsLiveConnected(false);
+      };
+    } catch (err) {
+      console.warn("Could not connect to SSE stream:", err);
+    }
+
+    // 5-second resilient polling fallback
+    const interval = setInterval(() => {
+      if (document.visibilityState === 'visible') {
+        fetchProductionData(productionDateStr, true);
+      }
+    }, 5000);
+
+    return () => {
+      if (eventSource) {
+        eventSource.close();
+      }
+      clearInterval(interval);
+      setIsLiveConnected(false);
+    };
+  }, [activeTab, productionDateStr]);
+
+  const productionGroups = useMemo(() => {
+    if (!productionSchedule || !Array.isArray(productionSchedule.scheduleOrder) || productionSchedule.scheduleOrder.length === 0) {
+      return [];
+    }
+
+    const startTime = productionSchedule.startTime || '08:00';
+    let current = new Date(`2000-01-01T${startTime}:00`);
+    if (isNaN(current.getTime())) current = new Date(`2000-01-01T08:00:00`);
+
+    const timedItems = productionSchedule.scheduleOrder.map((item, idx) => {
+      const start = current.toTimeString().substring(0, 5);
+      const duration = Number(item.duration) || 0;
+      current = new Date(current.getTime() + duration * 60000);
+      const end = current.toTimeString().substring(0, 5);
+      return {
+        ...item,
+        orderIndex: idx + 1,
+        startTime: start,
+        endTime: end,
+        duration
+      };
+    });
+
+    const groups = [];
+    let currentGroup = null;
+
+    timedItems.forEach((item, idx) => {
+      if (item.type === 'setup') {
+        groups.push({
+          type: 'setup',
+          groupId: `setup_${item.id || idx}`,
+          name: item.name || '段取り / 段替',
+          items: [item],
+          orderRange: `#${item.orderIndex}`,
+          totalDuration: Number(item.duration) || 0,
+          totalMeters: 0,
+          startTime: item.startTime,
+          endTime: item.endTime
+        });
+        currentGroup = null;
+        return;
+      }
+
+      if (currentGroup && currentGroup.type === 'hinban' && currentGroup.hinban === item.hinban) {
+        currentGroup.items.push(item);
+        currentGroup.totalDuration += Number(item.duration) || 0;
+        currentGroup.totalMeters += Number(item.meters) || 0;
+        currentGroup.endTime = item.endTime;
+        currentGroup.orderRange = `#${currentGroup.items[0].orderIndex} - #${item.orderIndex}`;
+      } else {
+        currentGroup = {
+          type: 'hinban',
+          groupId: `group_${item.hinban}_${idx}`,
+          hinban: item.hinban,
+          hinmei: item.hinmei || '',
+          kizai: item.kizai || '',
+          color: item.color || '',
+          shori: item.shori || '',
+          habanaga: item.habanaga || '',
+          shippingDest: item.shippingDest || '',
+          labelHinban: item.labelHinban || '',
+          zuban: item.zuban || '',
+          items: [item],
+          orderRange: `#${item.orderIndex}`,
+          totalDuration: Number(item.duration) || 0,
+          totalMeters: Number(item.meters) || 0,
+          startTime: item.startTime,
+          endTime: item.endTime
+        };
+        groups.push(currentGroup);
+      }
+    });
+
+    return groups.map((grp) => {
+      const rec = productionStatuses.find(s => s.groupId === grp.groupId || (s.hinban === grp.hinban && grp.type === 'hinban'));
+      let status = rec?.status || 'pending';
+      if (status === 'running') status = 'in-progress';
+
+      return {
+        ...grp,
+        status,
+        worker: rec?.worker || '',
+        machine: rec?.machine || 'PSA2',
+        actualStartTime: rec?.actualStartTime || null,
+        actualEndTime: rec?.actualEndTime || null,
+        actualDurationMins: rec?.actualDurationMins ?? null,
+        statusRecord: rec || null
+      };
+    });
+  }, [productionSchedule, productionStatuses]);
+
+  const productionStats = useMemo(() => {
+    // Only account for product hinban batches (exclude setup items since setups are non-production changeovers)
+    const hinbanGroups = productionGroups.filter(g => g.type === 'hinban');
+    const total = hinbanGroups.length;
+    const inProgress = hinbanGroups.filter(g => g.status === 'in-progress').length;
+    const completed = hinbanGroups.filter(g => g.status === 'completed').length;
+    const pending = hinbanGroups.filter(g => g.status === 'pending').length;
+    const canceled = hinbanGroups.filter(g => g.status === 'canceled').length;
+    const progressPercent = total > 0 ? Math.round((completed / total) * 100) : 0;
+    return { total, inProgress, completed, pending, canceled, progressPercent };
+  }, [productionGroups]);
+
+  const filteredProductionGroups = useMemo(() => {
+    if (productionFilter === 'all') return productionGroups;
+    if (productionFilter === 'pending') return productionGroups.filter(g => g.type === 'hinban' && g.status === 'pending');
+    return productionGroups.filter(g => g.status === productionFilter);
+  }, [productionGroups, productionFilter]);
+
+  const stepProductionDate = (days) => {
+    const d = new Date(`${productionDateStr}T00:00:00`);
+    d.setDate(d.getDate() + days);
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    setProductionDateStr(`${y}-${m}-${day}`);
   };
 
   // HTML5 Drag and Drop for Scheduling
@@ -427,36 +1777,13 @@ export default function FirstFactoryPage() {
             id: Date.now() + Math.random().toString(),
             type: 'setup',
             name: dragData.name,
+            comment: dragData.comment || '',
             duration: dragData.duration || 15
           });
         } else if (dragData.type === 'pool-hinban') {
           const found = data.find(i => i.id === dragData.id);
           if (found) {
-             const qty = found.production[selectedDay - 1] || 0;
-             const qtyCm = qty * 100;
-             const packCountCm = found.materialInfo?.packCount || 4000;
-             const workTime = found.materialInfo?.workTime || 0.075;
-             
-             if (qtyCm > 0) {
-               const numRolls = Math.ceil(qtyCm / packCountCm);
-               for (let i = 0; i < numRolls; i++) {
-                 let lengthCm = packCountCm;
-                 if (i === numRolls - 1 && (qtyCm % packCountCm !== 0)) {
-                   lengthCm = qtyCm % packCountCm;
-                 }
-                 const durationMins = (workTime * lengthCm) / 60;
-                 itemsToInsert.push({
-                   id: Date.now() + String(i) + Math.random().toString(),
-                   type: 'hinban',
-                   hinban: dragData.hinban,
-                   poolItemId: dragData.id,
-                   rollIndex: i + 1,
-                   totalRolls: numRolls,
-                   meters: lengthCm / 100,
-                   duration: Math.round(durationMins)
-                 });
-               }
-             }
+            itemsToInsert = createRollItemsForHinban(found, selectedDay - 1);
           }
         }
         
@@ -480,36 +1807,13 @@ export default function FirstFactoryPage() {
           id: Date.now() + Math.random().toString(),
           type: 'setup',
           name: dragData.name,
+          comment: dragData.comment || '',
           duration: dragData.duration || 15
         });
       } else if (dragData.type === 'pool-hinban') {
         const found = data.find(i => i.id === dragData.id);
         if (found) {
-           const qty = found.production[selectedDay - 1] || 0;
-           const qtyCm = qty * 100;
-           const packCountCm = found.materialInfo?.packCount || 4000;
-           const workTime = found.materialInfo?.workTime || 0.075;
-           
-           if (qtyCm > 0) {
-             const numRolls = Math.ceil(qtyCm / packCountCm);
-             for (let i = 0; i < numRolls; i++) {
-               let lengthCm = packCountCm;
-               if (i === numRolls - 1 && (qtyCm % packCountCm !== 0)) {
-                 lengthCm = qtyCm % packCountCm;
-               }
-               const durationMins = (workTime * lengthCm) / 60;
-               itemsToInsert.push({
-                 id: Date.now() + String(i) + Math.random().toString(),
-                 type: 'hinban',
-                 hinban: dragData.hinban,
-                 poolItemId: dragData.id,
-                 rollIndex: i + 1,
-                 totalRolls: numRolls,
-                 meters: lengthCm / 100,
-                 duration: Math.round(durationMins)
-               });
-             }
-           }
+          itemsToInsert = createRollItemsForHinban(found, selectedDay - 1);
         }
       }
       
@@ -542,17 +1846,29 @@ export default function FirstFactoryPage() {
   
   const scheduleWithTimes = computeTimeSchedule(scheduledItems, startTime);
 
+  const handlePrintSchedulePDF = () => {
+    const authUser = readStoredAuthUser() || {};
+    const fullName = getAuthDisplayName(authUser);
+    openFirstFactorySchedulePrintWindow({
+      dateStr: selectedDateStr,
+      startTime,
+      scheduleWithTimes,
+      data,
+      scheduledBy: fullName
+    });
+  };
+
   return (
     <div className="p-6 pt-24 pb-24 overflow-y-auto h-screen">
       <div className="mb-6 flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-on-surface">{t('firstFactory')}</h1>
-          <p className="mt-1 text-sm text-outline">Manage schedule and priorities</p>
+          <h1 className="text-2xl font-bold text-on-surface">{t('ff_title')}</h1>
+          <p className="mt-1 text-sm text-outline">{t('ff_subtitle')}</p>
         </div>
         <div className="flex items-center gap-4">
           {lastSynced && (
             <div className="text-xs text-outline text-right">
-              <span className="block font-medium">Last Synced:</span>
+              <span className="block font-medium">{language === 'ja' ? '最終同期:' : 'Last Synced:'}</span>
               <span>{lastSynced}</span>
             </div>
           )}
@@ -562,10 +1878,11 @@ export default function FirstFactoryPage() {
               setIsSyncModalOpen(true);
             }}
             disabled={syncing}
-            className="flex items-center gap-2 rounded-xl border border-primary/30 px-4 py-2 text-sm font-semibold text-primary transition-all hover:bg-primary/5 disabled:opacity-50"
+            className="flex items-center gap-2 rounded-xl border border-primary/30 px-4 py-2 text-sm font-semibold text-primary transition-all hover:bg-primary/5 disabled:opacity-50 cursor-pointer"
+            title={t('ff_syncFromExcel')}
           >
             <span className={`material-symbols-outlined ${syncing ? 'animate-spin' : ''}`} style={{ fontSize: 20 }}>sync</span>
-            {syncing ? 'Syncing...' : 'Sync Excel'}
+            {syncing ? t('ff_syncing') : t('ff_syncFromExcel')}
           </button>
         </div>
       </div>
@@ -573,8 +1890,10 @@ export default function FirstFactoryPage() {
       {/* Tabs */}
       <MasterTabNav 
         tabs={[
-          { key: 'fetching', label: 'Data Fetching', ready: true },
-          { key: 'scheduling', label: 'Scheduling', ready: true }
+          { key: 'fetching', label: t('ff_tab_fetching'), ready: true },
+          { key: 'scheduling', label: t('ff_tab_scheduling'), ready: true },
+          { key: 'summary', label: t('ff_tab_summary'), ready: true },
+          { key: 'production', label: t('ff_tab_production'), ready: true }
         ]}
         activeTab={activeTab}
         onSelect={(tab) => handleTabChange(tab.key)}
@@ -591,14 +1910,14 @@ export default function FirstFactoryPage() {
                   value={selectedMonth}
                   onChange={handleMonthChange}
                   className="rounded-xl border border-outline-variant/50 bg-background/50 px-3 py-2.5 text-sm text-on-surface focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary font-medium"
-                  title="Select month to view"
+                  title={language === 'ja' ? '表示する月を選択' : 'Select month to view'}
                 />
               </div>
               <div className="relative flex-1">
                 <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline">search</span>
                 <input
                   type="text"
-                  placeholder={t('search')}
+                  placeholder={t('ff_searchPlaceholder')}
                   className="w-full rounded-xl border border-outline-variant/50 bg-background/50 py-2.5 pl-10 pr-4 text-sm text-on-surface placeholder:text-outline focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
                   value={filter}
                   onChange={handleFilterChange}
@@ -616,8 +1935,8 @@ export default function FirstFactoryPage() {
               <table className="w-full text-left text-sm text-on-surface">
                 <thead className="bg-surface-variant/30 text-xs uppercase text-outline">
                   <tr>
-                    <th className="sticky left-0 z-10 bg-surface px-4 py-3 min-w-[200px]">Hinban</th>
-                    <th className="sticky left-[200px] z-10 bg-surface px-4 py-3 min-w-[80px]">Type</th>
+                    <th className="sticky left-0 z-10 bg-surface px-4 py-3 min-w-[200px]">{language === 'ja' ? '品番' : 'Hinban'}</th>
+                    <th className="sticky left-[200px] z-10 bg-surface px-4 py-3 min-w-[80px]">{language === 'ja' ? '区分' : 'Type'}</th>
                     {days.map(day => (
                       <th key={day} className="px-2 py-3 text-center min-w-[40px]">{day}</th>
                     ))}
@@ -631,7 +1950,7 @@ export default function FirstFactoryPage() {
                   ) : filteredData.length === 0 ? (
                     <tr>
                       <td colSpan={33} className="px-4 py-8 text-center text-outline">
-                        {filter ? t('noData') : `No data fetched yet for ${selectedMonth}. Please sync from Excel.`}
+                        {filter ? t('noData') : (language === 'ja' ? `${selectedMonth} のデータはまだ同期されていません。Excelから同期してください。` : `No data fetched yet for ${selectedMonth}. Please sync from Excel.`)}
                       </td>
                     </tr>
                   ) : (
@@ -648,7 +1967,7 @@ export default function FirstFactoryPage() {
                             </span>
                           </td>
                           <td className="sticky left-[200px] bg-surface px-4 py-2 text-primary font-semibold text-xs border-r border-outline-variant/20">
-                            受注
+                            {language === 'ja' ? '受注' : 'Orders'}
                           </td>
                           {item.orders.map((val, i) => (
                             <td key={i} className="px-2 py-2 text-center text-xs border-r border-outline-variant/20">{val}</td>
@@ -657,7 +1976,7 @@ export default function FirstFactoryPage() {
                         {/* Production Row */}
                         <tr className="border-b border-outline-variant/20 hover:bg-surface-variant/20">
                           <td className="sticky left-[200px] bg-surface px-4 py-2 text-[#006064] dark:text-[#4dd0e1] font-semibold text-xs border-r border-outline-variant/20">
-                            生産
+                            {language === 'ja' ? '生産' : 'Prod'}
                           </td>
                           {item.production.map((val, i) => (
                             <td key={i} className="px-2 py-2 text-center text-xs border-r border-outline-variant/20">{val}</td>
@@ -674,23 +1993,25 @@ export default function FirstFactoryPage() {
           {totalPages > 1 && (
             <div className="mt-4 flex items-center justify-between px-2">
               <div className="text-sm text-outline">
-                Showing {((currentPage - 1) * ITEMS_PER_PAGE) + 1} to {Math.min(currentPage * ITEMS_PER_PAGE, filteredData.length)} of {filteredData.length} entries
+                {language === 'ja' 
+                  ? `${filteredData.length} 件中 ${((currentPage - 1) * ITEMS_PER_PAGE) + 1} ～ ${Math.min(currentPage * ITEMS_PER_PAGE, filteredData.length)} 件を表示`
+                  : `Showing ${((currentPage - 1) * ITEMS_PER_PAGE) + 1} to ${Math.min(currentPage * ITEMS_PER_PAGE, filteredData.length)} of ${filteredData.length} entries`}
               </div>
               <div className="flex items-center gap-2">
                 <button 
                   onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                   disabled={currentPage === 1}
-                  className="flex items-center justify-center rounded-lg border border-outline-variant/50 p-2 text-on-surface hover:bg-surface-variant/50 disabled:opacity-50"
+                  className="flex items-center justify-center rounded-lg border border-outline-variant/50 p-2 text-on-surface hover:bg-surface-variant/50 disabled:opacity-50 cursor-pointer"
                 >
                   <span className="material-symbols-outlined" style={{ fontSize: 20 }}>chevron_left</span>
                 </button>
                 <span className="text-sm font-medium text-on-surface px-2">
-                  Page {currentPage} of {totalPages}
+                  {language === 'ja' ? `ページ ${currentPage} / ${totalPages}` : `Page ${currentPage} of ${totalPages}`}
                 </span>
                 <button 
                   onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
                   disabled={currentPage === totalPages}
-                  className="flex items-center justify-center rounded-lg border border-outline-variant/50 p-2 text-on-surface hover:bg-surface-variant/50 disabled:opacity-50"
+                  className="flex items-center justify-center rounded-lg border border-outline-variant/50 p-2 text-on-surface hover:bg-surface-variant/50 disabled:opacity-50 cursor-pointer"
                 >
                   <span className="material-symbols-outlined" style={{ fontSize: 20 }}>chevron_right</span>
                 </button>
@@ -702,22 +2023,103 @@ export default function FirstFactoryPage() {
 
       {activeTab === 'scheduling' && (
         <div className="flex flex-col gap-6">
+          {/* Discrepancy Notice Banner for the Current Date */}
+          {currentDayDiscrepancies.count > 0 && (
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 rounded-2xl border border-amber-500/40 bg-amber-500/10 p-4 backdrop-blur-xl shadow-sm">
+              <div className="flex items-center gap-3">
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-500/20 text-amber-600">
+                  <span className="material-symbols-outlined" style={{ fontSize: 24 }}>sync_problem</span>
+                </span>
+                <div>
+                  <h4 className="text-sm font-bold text-on-surface flex items-center gap-2">
+                    {language === 'ja' ? `${parseInt(selectedMonth.split('-')[1], 10)}/${selectedDay} にExcelとの差異を検知` : `Excel Discrepancy on ${parseInt(selectedMonth.split('-')[1], 10)}/${selectedDay}`}
+                    <span className="rounded-full bg-amber-500/20 px-2 py-0.5 text-xs font-bold text-amber-700">
+                      {language === 'ja' ? `${currentDayDiscrepancies.count} 件の差異品番` : `${currentDayDiscrepancies.count} affected hinban${currentDayDiscrepancies.count === 1 ? '' : 's'}`}
+                    </span>
+                  </h4>
+                  <p className="text-xs text-outline mt-0.5">
+                    {language === 'ja' 
+                      ? `一部の設定済品番が最新Excelで0mまたは数量変更されています。「自動反映」を実行するとこの日付 (${selectedDateStr}) のみ更新されます。` 
+                      : `Some scheduled hinbans have 0m in Excel or changed quantities. Auto-aligning will only update this specific date (${selectedDateStr}) without affecting other dates.`}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 w-full sm:w-auto justify-end shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setIsDiscrepancyModalOpen(true)}
+                  className="rounded-xl border border-amber-500/40 bg-surface/80 px-3 py-2 text-xs font-bold text-amber-700 hover:bg-surface transition-colors shadow-xs cursor-pointer"
+                >
+                  {language === 'ja' ? '詳細を確認' : 'Review Details'}
+                </button>
+                <button
+                  type="button"
+                  onClick={handleAutoAlignCurrentDate}
+                  className="flex items-center gap-1.5 rounded-xl bg-amber-600 px-3.5 py-2 text-xs font-bold text-white shadow-sm hover:bg-amber-700 transition-colors cursor-pointer"
+                >
+                  <span className="material-symbols-outlined" style={{ fontSize: 16 }}>auto_fix_high</span>
+                  {language === 'ja' ? `${parseInt(selectedMonth.split('-')[1], 10)}/${selectedDay} をExcelに自動反映` : `Auto-Align ${parseInt(selectedMonth.split('-')[1], 10)}/${selectedDay} with Excel`}
+                </button>
+              </div>
+            </div>
+          )}
+
           <div className="flex items-center justify-between rounded-2xl border border-outline-variant/30 bg-surface/50 p-4 backdrop-blur-xl">
-            <div className="flex items-center gap-4">
-              <span className="text-sm font-medium text-on-surface">Select Date:</span>
-              <input 
-                type="date" 
-                value={selectedDateStr}
-                onChange={handleDateChange}
-                className="rounded-xl border border-outline-variant/50 bg-background/50 px-4 py-2 text-sm text-on-surface focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-              />
+            <div className="flex flex-wrap items-center gap-3">
+              <span className="text-sm font-medium text-on-surface">{t('ff_targetDate')}</span>
+              <div className="flex items-center gap-1 rounded-xl border border-outline-variant/50 bg-background/50 p-1 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => handleStepDate(-1)}
+                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg hover:bg-surface-variant/50 text-on-surface transition-colors active:scale-95 cursor-pointer"
+                  title={t('ff_prevDay')}
+                >
+                  <span className="material-symbols-outlined" style={{ fontSize: 20 }}>chevron_left</span>
+                </button>
+                <input 
+                  type="date" 
+                  value={selectedDateStr}
+                  onChange={handleDateChange}
+                  className="w-[135px] shrink-0 rounded-lg border-0 bg-transparent px-2 py-1 text-sm font-bold font-mono tabular-nums text-on-surface focus:outline-none cursor-pointer"
+                />
+                <span className={`inline-flex items-center justify-center rounded-lg w-[58px] py-1 text-xs font-black shrink-0 text-center ${
+                  selectedDayOfWeekInfo.isSunday 
+                    ? 'bg-red-500/15 text-red-600 dark:text-red-400 border border-red-500/30' 
+                    : selectedDayOfWeekInfo.isSaturday 
+                      ? 'bg-blue-500/15 text-blue-600 dark:text-blue-400 border border-blue-500/30' 
+                      : 'bg-surface-variant/70 text-on-surface border border-outline-variant/40'
+                }`}>
+                  <span>{language === 'ja' ? `${selectedDayOfWeekInfo.ja}曜日` : selectedDayOfWeekInfo.en}</span>
+                </span>
+                <button
+                  type="button"
+                  onClick={() => handleStepDate(1)}
+                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg hover:bg-surface-variant/50 text-on-surface transition-colors active:scale-95 cursor-pointer"
+                  title={t('ff_nextDay')}
+                >
+                  <span className="material-symbols-outlined" style={{ fontSize: 20 }}>chevron_right</span>
+                </button>
+              </div>
+
+              {/* Today button if date is not current date */}
+              {selectedDateStr !== getLocalYYYYMMDD() && (
+                <button
+                  type="button"
+                  onClick={handleGoToToday}
+                  className="inline-flex items-center gap-1 rounded-xl border border-primary/40 bg-primary/10 px-3 py-1.5 text-xs font-bold text-primary hover:bg-primary hover:text-on-primary transition-all active:scale-95 cursor-pointer shadow-xs"
+                  title={language === 'ja' ? '今日の日付に戻る' : 'Go to today'}
+                >
+                  <span className="material-symbols-outlined" style={{ fontSize: 16 }}>today</span>
+                  {t('ff_today')}
+                </button>
+              )}
             </div>
             <button 
               onClick={handleSaveSchedule}
-              className="flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-on-primary shadow-lg shadow-primary/20 transition-all hover:bg-primary/90"
+              className="flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-on-primary shadow-lg shadow-primary/20 transition-all hover:bg-primary/90 cursor-pointer"
             >
               <span className="material-symbols-outlined" style={{ fontSize: 20 }}>save</span>
-              Save Daily Schedule
+              {t('ff_saveDailySchedule')}
             </button>
           </div>
 
@@ -728,35 +2130,137 @@ export default function FirstFactoryPage() {
               onDragOver={(e) => e.preventDefault()}
               onDrop={onDropPool}
             >
-              <div className="mb-4">
-                <h3 className="mb-2 text-lg font-bold text-on-surface flex items-center justify-between">
-                  Available to Schedule
-                  <div className="flex items-center gap-3">
-                    <span className="rounded bg-primary/10 px-2 py-1 text-xs font-bold text-primary shadow-sm border border-primary/20">
+              <div className="mb-4 flex flex-col gap-3">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-bold text-on-surface">
+                    {t('ff_availableToSchedule')}
+                  </h3>
+                  <div className="flex items-center gap-2">
+                    <span className="rounded bg-primary/10 px-2 py-1 text-xs font-bold text-primary shadow-sm border border-primary/20" title={t('ff_totalEstimatedFilteredTime')}>
                       {formatTime(poolTotalMins)}
                     </span>
                     <button 
                       onClick={() => setShowNoAdhesive(!showNoAdhesive)}
-                      className={`flex items-center gap-1.5 text-xs px-2 py-1 rounded-lg border transition-colors ${showNoAdhesive ? 'border-primary bg-primary/10 text-primary' : 'border-outline-variant/50 text-outline hover:bg-surface-variant/50'}`}
-                      title={showNoAdhesive ? "Hide raw materials (粘着無し)" : "Show raw materials (粘着無し)"}
+                      className={`flex items-center gap-1 text-xs px-2 py-1 rounded-lg border transition-colors cursor-pointer ${showNoAdhesive ? 'border-primary bg-primary/10 text-primary' : 'border-outline-variant/50 text-outline hover:bg-surface-variant/50'}`}
+                      title={showNoAdhesive ? t('ff_hideNoAdhesive') : t('ff_showNoAdhesive')}
                     >
                       <span className="material-symbols-outlined" style={{fontSize: 16}}>
                         {showNoAdhesive ? 'visibility' : 'visibility_off'}
                       </span>
-                      {showNoAdhesive ? 'Hide 粘着無し' : 'Show 粘着無し'}
+                      {showNoAdhesive ? t('ff_hideNoAdhesive') : t('ff_showNoAdhesive')}
                     </button>
-                    <span className="text-sm font-normal text-outline">{poolItems.length} items</span>
+                    <span className="text-xs font-semibold text-outline">
+                      {processedPoolItems.length !== poolItems.length 
+                        ? (language === 'ja' ? `${processedPoolItems.length} / ${poolItems.length} 件` : `${processedPoolItems.length} / ${poolItems.length} items`)
+                        : (language === 'ja' ? `${poolItems.length} 件` : `${poolItems.length} items`)}
+                    </span>
                   </div>
-                </h3>
+                </div>
+
+                {/* Search Bar */}
                 <div className="relative">
                   <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline" style={{ fontSize: 18 }}>search</span>
                   <input
                     type="text"
-                    placeholder="Search available..."
+                    placeholder={t('ff_searchHinban')}
                     className="w-full rounded-xl border border-outline-variant/50 bg-background/50 py-2 pl-9 pr-3 text-sm text-on-surface placeholder:text-outline focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
                     value={poolSearch}
                     onChange={(e) => setPoolSearch(e.target.value)}
                   />
+                  {poolSearch && (
+                    <button
+                      type="button"
+                      onClick={() => setPoolSearch('')}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-outline hover:text-on-surface cursor-pointer"
+                    >
+                      <span className="material-symbols-outlined" style={{ fontSize: 16 }}>close</span>
+                    </button>
+                  )}
+                </div>
+
+                {/* Sorting & Filter Controls Toolbar */}
+                <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-outline-variant/20">
+                  {/* Sort Selector */}
+                  <div className="flex items-center gap-1.5 rounded-lg border border-outline-variant/40 bg-surface-variant/20 px-2 py-1 text-xs">
+                    <span className="material-symbols-outlined text-outline" style={{ fontSize: 16 }}>sort</span>
+                    <select
+                      value={poolSortBy}
+                      onChange={(e) => setPoolSortBy(e.target.value)}
+                      className="bg-transparent font-bold text-on-surface focus:outline-none cursor-pointer"
+                    >
+                      <option value="timeOption-asc">{t('ff_sort_timeOptionAsc')}</option>
+                      <option value="timeOption-desc">{t('ff_sort_timeOptionDesc')}</option>
+                      <option value="kataban-asc">{t('ff_sort_katabanAsc')}</option>
+                      <option value="kataban-desc">{t('ff_sort_katabanDesc')}</option>
+                      <option value="default">{t('ff_sort_default')}</option>
+                      <option value="duration-desc">{t('ff_sort_durationDesc')}</option>
+                      <option value="duration-asc">{t('ff_sort_durationAsc')}</option>
+                      <option value="qty-desc">{t('ff_sort_qtyDesc')}</option>
+                      <option value="qty-asc">{t('ff_sort_qtyAsc')}</option>
+                      <option value="rolls-desc">{t('ff_sort_rollsDesc')}</option>
+                      <option value="hinban-asc">{t('ff_sort_hinbanAsc')}</option>
+                    </select>
+                  </div>
+
+                  {/* Batch Size Quick Filters */}
+                  <div className="flex items-center rounded-lg border border-outline-variant/40 bg-surface-variant/20 p-0.5 text-xs font-semibold">
+                    <button
+                      type="button"
+                      onClick={() => setPoolBatchFilter('all')}
+                      className={`px-2 py-1 rounded-md transition-colors cursor-pointer ${poolBatchFilter === 'all' ? 'bg-primary text-on-primary shadow-2xs' : 'text-outline hover:text-on-surface'}`}
+                    >
+                      {t('ff_allSizes')}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setPoolBatchFilter('large')}
+                      className={`flex items-center gap-1 px-2 py-1 rounded-md transition-colors cursor-pointer ${poolBatchFilter === 'large' ? 'bg-primary text-on-primary shadow-2xs' : 'text-outline hover:text-on-surface'}`}
+                      title={language === 'ja' ? '500m以上または5巻以上の大ロット' : 'Items >= 500m or >= 5 rolls'}
+                    >
+                      <span>{t('ff_largeBatch')}</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setPoolBatchFilter('small')}
+                      className={`flex items-center gap-1 px-2 py-1 rounded-md transition-colors cursor-pointer ${poolBatchFilter === 'small' ? 'bg-primary text-on-primary shadow-2xs' : 'text-outline hover:text-on-surface'}`}
+                      title={language === 'ja' ? '200m未満の小ロット' : 'Items < 200m'}
+                    >
+                      <span>{t('ff_smallBatch')}</span>
+                    </button>
+                  </div>
+
+                  {/* Width Filter (if multiple widths present) */}
+                  {availableWidths.length > 1 && (
+                    <div className="flex items-center gap-1 rounded-lg border border-outline-variant/40 bg-surface-variant/20 px-2 py-1 text-xs">
+                      <span className="text-outline font-medium">{t('ff_width')}</span>
+                      <select
+                        value={poolWidthFilter}
+                        onChange={(e) => setPoolWidthFilter(e.target.value)}
+                        className="bg-transparent font-bold text-on-surface focus:outline-none cursor-pointer"
+                      >
+                        <option value="all">{language === 'ja' ? `全幅 (${availableWidths.length})` : `All Widths (${availableWidths.length})`}</option>
+                        {availableWidths.map(w => (
+                          <option key={w} value={w}>{w}</option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+
+                  {/* Reset Filters button if any filter active */}
+                  {(poolBatchFilter !== 'all' || poolWidthFilter !== 'all' || poolSortBy !== 'timeOption-asc' || poolSearch) && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPoolBatchFilter('all');
+                        setPoolWidthFilter('all');
+                        setPoolSortBy('timeOption-asc');
+                        setPoolSearch('');
+                      }}
+                      className="ml-auto text-[11px] font-bold text-primary hover:underline cursor-pointer"
+                    >
+                      {t('ff_resetFilters')}
+                    </button>
+                  )}
                 </div>
               </div>
               <div className="flex flex-col gap-2 flex-1 overflow-y-auto">
@@ -765,38 +2269,60 @@ export default function FirstFactoryPage() {
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
                     {PRESET_SETUP_ITEMS.map(preset => {
                       const duration = setupTimes[preset.name] !== undefined ? setupTimes[preset.name] : preset.defaultTime;
+                      const comment = setupComments[preset.name] || '';
+                      const presetDisplayName = preset.name === '段取り' ? t('ff_dandori') : (preset.name === '試作' ? t('ff_trial') : preset.name);
                       return (
                         <div 
                           key={preset.name}
                           draggable
                           onDragStart={(e) => {
-                            if (e.target.tagName && e.target.tagName.toLowerCase() === 'input') {
+                            if (e.target.tagName && (e.target.tagName.toLowerCase() === 'input' || e.target.tagName.toLowerCase() === 'button')) {
                               e.preventDefault();
                               return;
                             }
-                            onDragStartSchedule(e, { type: 'setup', name: preset.name, duration }, 'pool');
+                            onDragStartSchedule(e, { type: 'setup', name: preset.name, comment, duration }, 'pool');
                           }}
-                          className="cursor-grab rounded-xl border border-dashed border-primary/50 bg-primary/5 p-2.5 flex items-center justify-between hover:border-primary transition-colors text-primary font-bold text-xs"
+                          className="cursor-grab rounded-xl border border-dashed border-primary/50 bg-primary/5 p-2.5 flex flex-col justify-between hover:border-primary transition-colors text-primary font-bold text-xs"
                         >
-                          <div className="flex items-center gap-1.5 min-w-0 flex-1">
-                            <span className="truncate" title={preset.name}>{preset.name}</span>
-                            <input 
-                              type="number" 
-                              value={duration} 
-                              onChange={e => handleUpdateSetupTime(preset.name, e.target.value)}
-                              className="w-12 rounded bg-background/80 border border-primary/30 px-1 py-0.5 text-center text-xs focus:outline-none focus:border-primary shrink-0"
-                              min="0"
-                            />
-                            <span className="text-[11px] font-medium shrink-0">m</span>
+                          <div className="flex items-center justify-between gap-1 w-full">
+                            <div className="flex items-center gap-1 min-w-0 flex-1">
+                              <span className="truncate font-bold" title={comment ? `${presetDisplayName} ${comment}` : presetDisplayName}>
+                                {comment ? `${presetDisplayName} ${comment}` : presetDisplayName}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setCommentModalItem({ name: preset.name, displayName: presetDisplayName, isPreset: true, comment });
+                                  setTempCommentText(comment);
+                                }}
+                                className={`p-0.5 rounded hover:bg-primary/20 transition-colors shrink-0 cursor-pointer ${comment ? 'text-primary font-bold' : 'text-primary/40 hover:text-primary'}`}
+                                title={comment ? `Title: ${presetDisplayName} ${comment}` : t('ff_editTitleNote')}
+                              >
+                                <span className="material-symbols-outlined" style={{ fontSize: 16 }}>
+                                  edit_note
+                                </span>
+                              </button>
+                            </div>
+                            <div className="flex items-center gap-1 shrink-0">
+                              <input 
+                                type="number" 
+                                value={duration} 
+                                onChange={e => handleUpdateSetupTime(preset.name, e.target.value)}
+                                className="w-11 rounded bg-background/80 border border-primary/30 px-1 py-0.5 text-center text-xs focus:outline-none focus:border-primary font-normal"
+                                min="0"
+                              />
+                              <span className="text-[11px] font-medium">{t('ff_minutesShort')}</span>
+                              <button 
+                                type="button"
+                                onClick={() => handleAddToSchedule({ type: 'setup', name: preset.name, comment, duration })}
+                                className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full hover:bg-primary/20 text-primary transition-colors ml-0.5 cursor-pointer"
+                                title={t('ff_addToSchedule')}
+                              >
+                                <span className="material-symbols-outlined" style={{fontSize: 16}}>arrow_forward</span>
+                              </button>
+                            </div>
                           </div>
-                          <button 
-                            type="button"
-                            onClick={() => handleAddToSchedule({ type: 'setup', name: preset.name, duration })}
-                            className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full hover:bg-primary/20 text-primary transition-colors ml-1"
-                            title="スケジュールに追加"
-                          >
-                            <span className="material-symbols-outlined" style={{fontSize: 16}}>arrow_forward</span>
-                          </button>
                         </div>
                       );
                     })}
@@ -805,62 +2331,100 @@ export default function FirstFactoryPage() {
                     <div 
                       draggable
                       onDragStart={(e) => {
-                        if (e.target.tagName && e.target.tagName.toLowerCase() === 'input') {
+                        if (e.target.tagName && (e.target.tagName.toLowerCase() === 'input' || e.target.tagName.toLowerCase() === 'button')) {
                           e.preventDefault();
                           return;
                         }
                         onDragStartSchedule(e, { 
                           type: 'setup', 
-                          name: customSetupName.trim() || 'カスタム設定', 
+                          name: customSetupName.trim() || t('ff_customSetup'), 
+                          comment: setupComments['custom'] || '',
                           duration: Number(customSetupDuration) || 0 
                         }, 'pool');
                       }}
-                      className="cursor-grab rounded-xl border border-dashed border-amber-500/50 bg-amber-500/5 p-2.5 flex items-center justify-between hover:border-amber-500 transition-colors text-amber-700 font-bold text-xs"
+                      className="cursor-grab rounded-xl border border-dashed border-amber-500/50 bg-amber-500/5 p-2.5 flex flex-col justify-between hover:border-amber-500 transition-colors text-amber-700 font-bold text-xs"
                     >
-                      <div className="flex items-center gap-1.5 min-w-0 flex-1">
+                      <div className="flex items-center gap-1 min-w-0 flex-1">
                         <input 
                           type="text" 
                           value={customSetupName} 
-                          placeholder="項目名入力..."
+                          placeholder={t('ff_enterCustomName')}
                           onChange={e => handleUpdateCustomName(e.target.value)}
                           className="w-full min-w-0 rounded bg-background/80 border border-amber-500/30 px-1.5 py-0.5 text-xs text-on-surface placeholder:text-outline focus:outline-none focus:border-amber-500 font-normal"
                         />
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setCommentModalItem({ name: customSetupName.trim() || t('ff_customSetup'), isPreset: true, isCustom: true, comment: setupComments['custom'] || '' });
+                            setTempCommentText(setupComments['custom'] || '');
+                          }}
+                          className={`p-0.5 rounded hover:bg-amber-500/20 transition-colors shrink-0 cursor-pointer ${setupComments['custom'] ? 'text-amber-700 font-bold' : 'text-amber-600/40 hover:text-amber-700'}`}
+                          title={setupComments['custom'] ? `Note: ${setupComments['custom']}` : t('ff_editTitleNote')}
+                        >
+                          <span className="material-symbols-outlined" style={{ fontSize: 16 }}>
+                            {setupComments['custom'] ? 'chat' : 'add_comment'}
+                          </span>
+                        </button>
                         <input 
                           type="number" 
                           value={customSetupDuration} 
-                          placeholder="分"
+                          placeholder={t('ff_minutesShort')}
                           onChange={e => handleUpdateCustomDuration(e.target.value)}
-                          className="w-12 rounded bg-background/80 border border-amber-500/30 px-1 py-0.5 text-center text-xs focus:outline-none focus:border-amber-500 shrink-0 font-normal"
+                          className="w-11 rounded bg-background/80 border border-amber-500/30 px-1 py-0.5 text-center text-xs focus:outline-none focus:border-amber-500 shrink-0 font-normal"
                           min="0"
                         />
-                        <span className="text-[11px] font-medium shrink-0">m</span>
+                        <span className="text-[11px] font-medium shrink-0">{t('ff_minutesShort')}</span>
+                        <button 
+                          type="button"
+                          onClick={() => handleAddToSchedule({ 
+                            type: 'setup', 
+                            name: customSetupName.trim() || t('ff_customSetup'), 
+                            comment: setupComments['custom'] || '',
+                            duration: Number(customSetupDuration) || 0 
+                          })}
+                          className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full hover:bg-amber-500/20 text-amber-600 transition-colors ml-0.5 cursor-pointer"
+                          title={t('ff_addToSchedule')}
+                        >
+                          <span className="material-symbols-outlined" style={{fontSize: 16}}>arrow_forward</span>
+                        </button>
                       </div>
-                      <button 
-                        type="button"
-                        onClick={() => handleAddToSchedule({ 
-                          type: 'setup', 
-                          name: customSetupName.trim() || 'カスタム設定', 
-                          duration: Number(customSetupDuration) || 0 
-                        })}
-                        className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full hover:bg-amber-500/20 text-amber-600 transition-colors ml-1"
-                        title="スケジュールに追加"
-                      >
-                        <span className="material-symbols-outlined" style={{fontSize: 16}}>arrow_forward</span>
-                      </button>
+                      {setupComments['custom'] && (
+                        <div className="text-[10px] text-amber-800/80 font-normal italic truncate mt-1 pt-1 border-t border-amber-500/20 flex items-center gap-1">
+                          <span>💬</span>
+                          <span className="truncate">{setupComments['custom']}</span>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
+                {/* Column Headers for Available Hinbans */}
+                {processedPoolItems.length > 0 && (
+                  <div className="flex items-center gap-3 px-3 py-1 text-[11px] font-bold text-outline select-none border-b border-outline-variant/20 mb-1">
+                    <div className="flex-1 flex items-center gap-4 min-w-0 pr-1">
+                      <div className="w-[230px] shrink-0 text-left">
+                        {language === 'ja' ? '品番' : 'Hinban'}
+                      </div>
+                      <div className="w-[90px] shrink-0 text-left">
+                        {language === 'ja' ? '型番' : 'Kataban'}
+                      </div>
+                      <div className="w-[70px] shrink-0 text-left">
+                        {language === 'ja' ? '時間オプション' : 'Time Option'}
+                      </div>
+                    </div>
+                    <div className="w-8 shrink-0 ml-1" />
+                  </div>
+                )}
 
-                {poolItems.length === 0 ? (
-                  <div className="text-center text-sm text-outline mt-10">No items available for this date.</div>
+                {processedPoolItems.length === 0 ? (
+                  <div className="text-center text-sm text-outline mt-10">
+                    {poolItems.length === 0 ? t('ff_noItemsForDate') : t('ff_noItemsMatchFilter')}
+                  </div>
                 ) : (
-                  poolItems.map(item => {
-                    const qty = item.production[selectedDay - 1] || 0;
-                    const qtyCm = qty * 100;
-                    const packCountCm = item.materialInfo?.packCount || 4000;
-                    const workTime = item.materialInfo?.workTime || 0.075;
-                    const numRolls = qtyCm > 0 ? Math.ceil(qtyCm / packCountCm) : 0;
-                    const durationMins = Math.round((workTime * qtyCm) / 60);
+                  processedPoolItems.map(item => {
+                    const qty = item._qty;
+                    const numRolls = item._numRolls;
+                    const durationMins = item._durationMins;
                     const segments = item.materialInfo?.rawMaster?.['品番構造']?.segments || [];
                     const adhesiveSegment = segments.find(s => s.segment === '粘着コード');
                     const isRawMaterial = adhesiveSegment && adhesiveSegment.name === '粘着無し';
@@ -876,26 +2440,55 @@ export default function FirstFactoryPage() {
                           : 'border-outline-variant/30 bg-background hover:border-primary/50'
                       }`}
                     >
-                      <div className="flex-1 flex flex-col cursor-pointer" onClick={() => handleCardClick(item.hinban)}>
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium text-sm text-on-surface">{item.hinban}</span>
-                          {isRawMaterial && (
-                            <span className="rounded bg-amber-500/10 px-1.5 py-0.5 text-[9px] font-bold text-amber-600 uppercase tracking-wider">
-                              Raw Material
+                      <div className="flex-1 flex flex-col cursor-pointer min-w-0 pr-1" onClick={() => handleCardClick(item.hinban)}>
+                        <div className="flex items-center gap-4 w-full">
+                          {/* Column 1: Hinban */}
+                          <div className="w-[230px] shrink-0 flex items-center gap-1.5 min-w-0">
+                            <span className="font-semibold text-sm text-on-surface truncate" title={item.hinban}>
+                              {item.hinban}
                             </span>
-                          )}
+                            {isRawMaterial && (
+                              <span className="shrink-0 rounded bg-amber-500/10 px-1.5 py-0.5 text-[9px] font-bold text-amber-600 uppercase tracking-wider">
+                                {language === 'ja' ? '原材料 (粘着無)' : 'Raw Material'}
+                              </span>
+                            )}
+                          </div>
+
+                          {/* Column 2: Kataban */}
+                          <div className="w-[90px] shrink-0 text-left">
+                            {item._kataban ? (
+                              <span className="font-semibold text-xs text-on-surface/90 truncate block" title={`型番: ${item._kataban}`}>
+                                {item._kataban}
+                              </span>
+                            ) : (
+                              <span className="text-outline/30 text-xs">—</span>
+                            )}
+                          </div>
+
+                          {/* Column 3: Time Option */}
+                          <div className="w-[70px] shrink-0 text-left">
+                            {item._timeOption ? (
+                              <span className="font-mono font-bold text-xs text-primary truncate block" title={`時間オプション: ${item._timeOption}`}>
+                                {item._timeOption}
+                              </span>
+                            ) : (
+                              <span className="text-outline/30 text-xs">—</span>
+                            )}
+                          </div>
                         </div>
-                        <div className="flex items-center gap-2 mt-1 text-xs text-outline">
+
+                        <div className="flex items-center gap-2 mt-1.5 text-xs text-outline flex-wrap">
                           <span className="rounded bg-primary/10 px-1.5 py-0.5 font-bold text-primary">
-                            Qty: {qty}m
+                            {language === 'ja' ? `数量: ${qty}${item._unit}` : `Qty: ${qty}${item._unit}`}
                           </span>
-                          <span>{numRolls} rolls</span>
-                          <span>{durationMins} mins</span>
+                          <span>{numRolls} {item._unit === '枚' ? (language === 'ja' ? '束' : 'packs') : (language === 'ja' ? '巻' : 'rolls')}</span>
+                          <span>{durationMins} {t('ff_minutesShort')}</span>
                         </div>
                       </div>
                       <button 
                         onClick={() => handleAddToSchedule({ type: 'pool-hinban', hinban: item.hinban, id: item.id })}
-                        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full hover:bg-primary/10 text-primary transition-colors"
+                        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full hover:bg-primary/10 text-primary transition-colors cursor-pointer ml-1"
+                        title={t('ff_addToSchedule')}
                       >
                         <span className="material-symbols-outlined" style={{fontSize: 20}}>arrow_forward</span>
                       </button>
@@ -913,89 +2506,202 @@ export default function FirstFactoryPage() {
             >
               <h3 className="mb-4 text-lg font-bold text-primary flex items-center justify-between">
                 <div className="flex items-center gap-4">
-                  Priority Order
+                  {t('ff_priorityOrder')}
                   <div className="flex items-center gap-2 text-sm font-normal text-on-surface">
                     <span className="material-symbols-outlined text-outline" style={{fontSize:18}}>schedule</span>
-                    Start: 
+                    {t('ff_start')} 
                     <input 
                       type="time" 
                       value={startTime}
                       onChange={e => setStartTime(e.target.value)}
-                      className="rounded bg-background/50 border border-outline-variant/50 px-2 py-0.5 text-xs focus:outline-none focus:border-primary"
+                      className="rounded bg-background/50 border border-outline-variant/50 px-2 py-0.5 text-xs focus:outline-none focus:border-primary font-bold"
                     />
                   </div>
                 </div>
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2">
                   <span className="rounded bg-primary/10 px-2 py-1 text-xs font-bold text-primary shadow-sm border border-primary/20">
                     {formatTime(scheduledTotalMins)}
                   </span>
-                  {scheduledItems.length > 0 && (
-                    <button 
-                      onClick={() => {
-                        if (window.confirm("Are you sure you want to reset the schedule? All items will be moved back to the pool.")) {
-                          setScheduleOrder([]);
-                        }
-                      }}
-                      className="flex items-center gap-1 rounded-lg border border-red-500/30 bg-red-500/10 px-2 py-1 text-xs font-semibold text-red-600 transition-colors hover:bg-red-500/20"
-                    >
-                      <span className="material-symbols-outlined" style={{ fontSize: 16 }}>restart_alt</span>
-                      Reset
-                    </button>
-                  )}
-                  <span className="text-sm font-normal text-primary/70">{scheduledItems.length} scheduled</span>
+                  <button
+                    type="button"
+                    onClick={handlePrintSchedulePDF}
+                    disabled={scheduledItems.length === 0}
+                    className="flex items-center gap-1.5 rounded-lg border border-primary/40 bg-primary/10 px-2.5 py-1 text-xs font-bold text-primary shadow-xs hover:bg-primary hover:text-on-primary active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                    title={language === 'ja' ? '優先順位スケジュール表 (A3) を印刷' : 'Print A3 Priority Production Schedule'}
+                  >
+                    <span className="material-symbols-outlined" style={{ fontSize: 16 }}>print</span>
+                    <span>{language === 'ja' ? '印刷 (A3)' : 'Print (A3)'}</span>
+                  </button>
+                  <button 
+                    type="button"
+                    onClick={() => {
+                      if (window.confirm(t('ff_resetScheduleConfirm'))) {
+                        setScheduleOrder([]);
+                      }
+                    }}
+                    className="flex items-center gap-1 rounded-lg border border-outline-variant/50 px-2 py-1 text-xs text-outline hover:bg-surface-variant/50 hover:text-on-surface transition-colors cursor-pointer"
+                  >
+                    <span className="material-symbols-outlined" style={{fontSize: 16}}>restart_alt</span>
+                    {t('ff_reset')}
+                  </button>
                 </div>
               </h3>
               <div className="flex flex-col gap-2 flex-1 overflow-y-auto">
                 {scheduleWithTimes.length === 0 ? (
                   <div className="text-center text-sm text-primary/50 mt-10 border-2 border-dashed border-primary/20 rounded-xl p-8">
-                    Drag items here to set priority order
+                    {t('ff_dragToSetPriority')}
                   </div>
                 ) : (
-                  scheduleWithTimes.map((item, index) => (
-                    <div 
-                      key={item.id}
-                      draggable
-                      onDragStart={(e) => onDragStartSchedule(e, item, 'scheduled')}
-                      onDragOver={(e) => e.preventDefault()}
-                      onDrop={(e) => {
-                        e.stopPropagation(); // Prevent column drop
-                        onDropScheduled(e, index);
-                      }}
-                      className={`cursor-grab active:cursor-grabbing rounded-xl border p-3 flex items-center gap-3 shadow-sm transition-colors ${item.type === 'setup' ? 'border-amber-500/30 bg-amber-500/5 hover:border-amber-500/60' : 'border-primary/20 bg-surface hover:border-primary/60'}`}
-                    >
-                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-bold text-primary">
-                        {index + 1}
-                      </span>
-                      <span className="flex flex-col items-center justify-center rounded bg-surface-variant/30 px-2 py-1 text-xs font-medium text-outline min-w-[50px]">
-                        <span>{item.startTime}</span>
-                        <span className="text-[10px] opacity-70">to {item.endTime}</span>
-                      </span>
-                      
-                      {item.type === 'setup' ? (
-                        <>
-                          <span className="font-bold text-sm text-amber-600 flex-1">{item.name}</span>
-                          <span className="text-xs font-medium text-amber-600/70">{item.duration} mins</span>
-                        </>
-                      ) : (
-                        <>
-                          <div className="flex-1 flex flex-col cursor-pointer" onClick={() => handleCardClick(item.hinban)}>
-                            <span className="font-medium text-sm text-on-surface hover:text-primary transition-colors">{item.hinban}</span>
-                            <span className="text-xs text-outline flex items-center gap-2 mt-1">
-                               <span className="bg-primary/10 text-primary px-1.5 rounded-sm">Roll {item.rollIndex}/{item.totalRolls}</span>
-                               <span>{item.meters}m</span>
-                            </span>
-                          </div>
-                          <span className="text-xs font-bold text-primary whitespace-nowrap">{item.duration} mins</span>
-                        </>
-                      )}
-                      <button 
-                        onClick={() => handleRemoveFromSchedule(item)}
-                        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full hover:bg-red-500/10 text-red-500 transition-colors ml-2"
+                  scheduleWithTimes.map((item, index) => {
+                    const disc = item.type === 'hinban' ? currentDayDiscrepancies.map[item.hinban] : null;
+                    const isZeroOrMissing = disc && (disc.type === 'moved_or_zero' || disc.type === 'missing_in_excel');
+                    const isQtyMismatch = disc && disc.type === 'qty_mismatch';
+
+                    let cardBorderClass = 'border-primary/20 bg-surface hover:border-primary/60';
+                    if (item.type === 'setup') {
+                      cardBorderClass = 'border-amber-500/30 bg-amber-500/5 hover:border-amber-500/60';
+                    } else if (isZeroOrMissing) {
+                      cardBorderClass = 'border-red-500/40 bg-red-500/5 hover:border-red-500/70';
+                    } else if (isQtyMismatch) {
+                      cardBorderClass = 'border-amber-500/40 bg-amber-500/5 hover:border-amber-500/70';
+                    }
+
+                    const setupDisplayName = item.type === 'setup' 
+                      ? (item.name === '段取り' ? t('ff_dandori') : (item.name === '試作' ? t('ff_trial') : item.name))
+                      : item.name;
+
+                    const matchedPool = data.find(d => d.hinban === item.hinban);
+                    const itemKataban = item._kataban || extractKataban(matchedPool || item);
+                    const itemTimeOption = item._timeOption || extractTimeOption(matchedPool || item);
+
+                    return (
+                      <div 
+                        key={item.id}
+                        draggable
+                        onDragStart={(e) => onDragStartSchedule(e, item, 'scheduled')}
+                        onDragOver={(e) => e.preventDefault()}
+                        onDrop={(e) => {
+                          e.stopPropagation(); // Prevent column drop
+                          onDropScheduled(e, index);
+                        }}
+                        className={`cursor-grab active:cursor-grabbing rounded-xl border p-3 flex items-center gap-3 shadow-sm transition-colors ${cardBorderClass}`}
                       >
-                        <span className="material-symbols-outlined" style={{fontSize: 20}}>arrow_back</span>
-                      </button>
-                    </div>
-                  ))
+                        <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
+                          isZeroOrMissing ? 'bg-red-500/20 text-red-600' : (isQtyMismatch ? 'bg-amber-500/20 text-amber-700' : 'bg-primary/10 text-primary')
+                        }`}>
+                          {index + 1}
+                        </span>
+                        <span className="flex flex-col items-center justify-center rounded bg-surface-variant/30 px-2 py-1 text-xs font-medium text-outline min-w-[50px]">
+                          <span>{item.startTime}</span>
+                          <span className="text-[10px] opacity-70">to {item.endTime}</span>
+                        </span>
+                        
+                        {item.type === 'setup' ? (
+                          <div className="flex-1 flex items-center justify-between min-w-0 pr-2">
+                            <div className="flex items-center gap-2 min-w-0 flex-1">
+                              <span className="font-bold text-sm text-amber-700 truncate" title={item.comment ? `${setupDisplayName} ${item.comment}` : setupDisplayName}>
+                                {item.comment ? `${setupDisplayName} ${item.comment}` : setupDisplayName}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setCommentModalItem(item);
+                                  setTempCommentText(item.comment || '');
+                                }}
+                                className={`p-1 rounded-md hover:bg-amber-500/20 transition-colors shrink-0 cursor-pointer ${item.comment ? 'text-amber-800 font-bold' : 'text-amber-600/40 hover:text-amber-700'}`}
+                                title={t('ff_editTitleNote')}
+                              >
+                                <span className="material-symbols-outlined" style={{ fontSize: 16 }}>
+                                  edit_note
+                                </span>
+                              </button>
+                            </div>
+                            <span className="text-xs font-bold text-amber-700 whitespace-nowrap ml-2">{item.duration} {t('ff_minutesShort')}</span>
+                          </div>
+                        ) : (
+                          <>
+                            <div className="flex-1 flex flex-col cursor-pointer min-w-0 pr-1" onClick={() => handleCardClick(item.hinban)}>
+                              <div className="flex items-center gap-4 w-full">
+                                {/* Column 1: Hinban + Discrepancy Warnings */}
+                                <div className="w-[220px] shrink-0 flex items-center gap-1.5 min-w-0">
+                                  <span className="font-semibold text-sm text-on-surface hover:text-primary transition-colors truncate" title={item.hinban}>
+                                    {item.hinban}
+                                  </span>
+                                  {isZeroOrMissing && (
+                                    <span className="shrink-0 inline-flex items-center gap-0.5 rounded bg-red-500/15 px-1 py-0.5 text-[9px] font-bold text-red-600 border border-red-500/30">
+                                      <span className="material-symbols-outlined" style={{ fontSize: 11 }}>warning</span>
+                                      <span className="truncate max-w-[65px]">{disc.type === 'missing_in_excel' ? t('ff_notInExcel') : (disc.movedText || t('ff_zeroMetersToday'))}</span>
+                                    </span>
+                                  )}
+                                  {isQtyMismatch && (
+                                    <span className="shrink-0 inline-flex items-center gap-0.5 rounded bg-amber-500/15 px-1 py-0.5 text-[9px] font-bold text-amber-700 border border-amber-500/30">
+                                      <span className="material-symbols-outlined" style={{ fontSize: 11 }}>difference</span>
+                                      <span>{disc.excelQty}{item.unit || 'm'}</span>
+                                    </span>
+                                  )}
+                                </div>
+
+                                {/* Column 2: Kataban */}
+                                <div className="w-[90px] shrink-0 text-left">
+                                  {itemKataban ? (
+                                    <span className="font-semibold text-xs text-on-surface/90 truncate block" title={`型番: ${itemKataban}`}>
+                                      {itemKataban}
+                                    </span>
+                                  ) : (
+                                    <span className="text-outline/30 text-xs">—</span>
+                                  )}
+                                </div>
+
+                                {/* Column 3: Time Option */}
+                                <div className="w-[70px] shrink-0 text-left">
+                                  {itemTimeOption ? (
+                                    <span className="font-mono font-bold text-xs text-primary truncate block" title={`時間オプション: ${itemTimeOption}`}>
+                                      {itemTimeOption}
+                                    </span>
+                                  ) : (
+                                    <span className="text-outline/30 text-xs">—</span>
+                                  )}
+                                </div>
+                              </div>
+
+                              <div className="flex items-center gap-2 mt-1.5 text-xs text-outline flex-wrap">
+                                <span className="bg-primary/10 text-primary px-1.5 rounded-sm">
+                                  {item.unit === '枚'
+                                    ? (language === 'ja' ? `束 ${item.rollIndex}/${item.totalRolls}` : `Pack ${item.rollIndex}/${item.totalRolls}`)
+                                    : (language === 'ja' ? `巻 ${item.rollIndex}/${item.totalRolls}` : `Roll ${item.rollIndex}/${item.totalRolls}`)
+                                  }
+                                </span>
+                                <span>{item.meters}{item.unit || 'm'}</span>
+                                {isQtyMismatch && item.rollIndex === 1 && (
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleUpdateHinbanQty(item.hinban);
+                                    }}
+                                    className="inline-flex items-center gap-1 rounded bg-amber-500/20 px-2 py-0.5 text-[11px] font-bold text-amber-800 hover:bg-amber-500/30 transition-colors ml-1 cursor-pointer"
+                                    title={language === 'ja' ? '最新Excelデータに合わせて巻数・所要時間を更新' : 'Update rolls and duration to match Excel'}
+                                  >
+                                    <span className="material-symbols-outlined" style={{ fontSize: 12 }}>sync</span>
+                                    {t('ff_updateQtyPrompt').replace('{qty}', `${disc.excelQty}${item.unit || 'm'}`)}
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+                            <span className="text-xs font-bold text-primary whitespace-nowrap">{item.duration} {t('ff_minutesShort')}</span>
+                          </>
+                        )}
+                        <button 
+                          onClick={() => handleRemoveFromSchedule(item)}
+                          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full hover:bg-red-500/10 text-red-500 transition-colors ml-2 cursor-pointer"
+                          title={t('ff_removeFromSchedule')}
+                        >
+                          <span className="material-symbols-outlined" style={{fontSize: 20}}>arrow_back</span>
+                        </button>
+                      </div>
+                    );
+                  })
                 )}
               </div>
             </div>
@@ -1003,48 +2709,906 @@ export default function FirstFactoryPage() {
         </div>
       )}
 
+      {/* Summary Tab */}
+      {activeTab === 'summary' && (
+        <div className="flex flex-col gap-6">
+          {/* Header Controls, Month Selector & View Mode Switcher */}
+          <div className="rounded-2xl border border-outline-variant/30 bg-surface/50 p-4 backdrop-blur-xl flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div className="flex flex-wrap items-center gap-4">
+              <div className="flex items-center gap-3">
+                <span className="material-symbols-outlined text-outline" style={{ fontSize: 22 }}>calendar_month</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-semibold text-on-surface">{t('ff_targetMonth')}</span>
+                  <input
+                    type="month"
+                    value={selectedMonth}
+                    onChange={handleMonthChange}
+                    className="rounded-xl border border-outline-variant/50 bg-background/50 px-3 py-2 text-sm text-on-surface focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary font-bold"
+                    title={language === 'ja' ? '表示する月を選択' : 'Select month for summary'}
+                  />
+                </div>
+              </div>
+
+              {/* View Mode Switcher */}
+              <div className="flex items-center gap-2 rounded-xl border border-outline-variant/40 bg-surface-variant/20 px-3 py-1.5 text-xs">
+                <span className="material-symbols-outlined text-outline" style={{ fontSize: 18 }}>view_list</span>
+                <span className="text-outline font-semibold">{t('ff_dataSource')}</span>
+                <select
+                  value={summaryViewMode}
+                  onChange={(e) => handleSummaryViewModeChange(e.target.value)}
+                  className="bg-transparent font-bold text-on-surface focus:outline-none cursor-pointer"
+                >
+                  <option value="priority">{t('ff_dataSourcePriority')}</option>
+                  <option value="raw">{t('ff_dataSourceRaw')}</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 text-xs text-outline">
+              <span className="material-symbols-outlined" style={{ fontSize: 16 }}>info</span>
+              <span>
+                {summaryViewMode === 'priority' 
+                  ? t('ff_summaryInfoPriority').replace('{month}', selectedMonth)
+                  : t('ff_summaryInfoRaw').replace('{month}', selectedMonth)}
+              </span>
+            </div>
+          </div>
+
+          {/* Daily Breakdown Table */}
+          <div className="flex flex-col gap-3">
+            <div className="flex items-center justify-between px-1">
+              <div className="flex items-center gap-2">
+                <span className="material-symbols-outlined text-primary" style={{ fontSize: 22 }}>calendar_view_month</span>
+                <h3 className="text-lg font-bold text-on-surface">
+                  {summaryViewMode === 'priority' ? t('ff_dailyScheduleTableTitlePriority') : t('ff_dailyScheduleTableTitleRaw')}
+                </h3>
+              </div>
+              <span className="text-xs text-outline font-medium">
+                {language === 'ja' ? `${selectedMonth} 1日 ～ ${daysInSelectedMonth}日` : `1st ～ ${daysInSelectedMonth}th of ${selectedMonth}`}
+              </span>
+            </div>
+
+            <DataTable
+              columns={summaryColumns}
+              rows={sortedSummaryRows}
+              enableColumnResize={true}
+              enableColumnReorder={true}
+              layoutStorageKey="firstFactory_monthly_summary_table_layout"
+              sort={summarySort}
+              onSort={handleSummarySort}
+              pageSize={35}
+              filteredCount={sortedSummaryRows.length}
+              totalPages={1}
+              stickyHeader={true}
+              stickyHeaderOffset={0}
+              stickyHeaderCellClassName="bg-surface/95 backdrop-blur-md shadow-[inset_0_-1px_0_rgba(148,163,184,0.18)]"
+              tableViewportClassName="overflow-x-auto"
+              className="glass-card rounded-2xl shadow-sm border border-outline-variant/30"
+              rowKey={(row) => row.dateKey}
+              emptyTitle={t('ff_noScheduleData')}
+              emptyMessage={t('ff_noSchedulesFoundMonth')}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Production Tab (Live Production Tracking) */}
+      {activeTab === 'production' && (
+        <div className="flex flex-col gap-6">
+          {/* Header Controls & Date Navigation */}
+          <div className="rounded-2xl border border-outline-variant/30 bg-surface/50 p-4 backdrop-blur-xl flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-sm">
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="flex items-center gap-2">
+                <span className="material-symbols-outlined text-outline" style={{ fontSize: 22 }}>event</span>
+                <input
+                  type="date"
+                  value={productionDateStr}
+                  onChange={(e) => {
+                    if (e.target.value) setProductionDateStr(e.target.value);
+                  }}
+                  className="rounded-xl border border-outline-variant/50 bg-background/50 px-3 py-2 text-sm font-bold text-on-surface focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary shadow-sm cursor-pointer"
+                  title={language === 'ja' ? '生産実績日を選択' : 'Select production date'}
+                />
+              </div>
+
+              {/* Quick Date Switchers */}
+              <div className="flex items-center rounded-xl border border-outline-variant/40 bg-surface-variant/20 p-1">
+                <button
+                  type="button"
+                  onClick={() => stepProductionDate(-1)}
+                  className="flex h-7 w-7 items-center justify-center rounded-lg hover:bg-surface-variant/50 text-outline transition-colors cursor-pointer"
+                  title={t('ff_prevDay')}
+                >
+                  <span className="material-symbols-outlined" style={{ fontSize: 18 }}>chevron_left</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setProductionDateStr(getLocalYYYYMMDD())}
+                  className={`px-2.5 py-1 text-xs font-bold rounded-lg transition-colors cursor-pointer ${productionDateStr === getLocalYYYYMMDD() ? 'bg-primary text-on-primary shadow-xs' : 'text-outline hover:text-on-surface'}`}
+                >
+                  {t('ff_today')}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => stepProductionDate(1)}
+                  className="flex h-7 w-7 items-center justify-center rounded-lg hover:bg-surface-variant/50 text-outline transition-colors cursor-pointer"
+                  title={t('ff_nextDay')}
+                >
+                  <span className="material-symbols-outlined" style={{ fontSize: 18 }}>chevron_right</span>
+                </button>
+              </div>
+
+              {/* Machine Badge */}
+              <span className="inline-flex items-center gap-1.5 rounded-xl bg-surface-variant/40 px-3 py-1.5 text-xs font-bold text-on-surface border border-outline-variant/30">
+                <span className="material-symbols-outlined text-outline" style={{ fontSize: 16 }}>precision_manufacturing</span>
+                <span>{t('ff_machine')}</span>
+              </span>
+
+              {/* Realtime Live Connection Indicator */}
+              <span 
+                className={`inline-flex items-center gap-1.5 rounded-xl px-2.5 py-1 text-xs font-bold transition-colors ${
+                  isLiveConnected 
+                    ? 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/20' 
+                    : 'bg-surface-variant/40 text-outline border border-outline-variant/30'
+                }`}
+                title={isLiveConnected ? t('ff_liveTooltipConnected') : t('ff_liveTooltipConnecting')}
+              >
+                <span className={`h-2 w-2 rounded-full ${isLiveConnected ? 'bg-emerald-500 animate-pulse' : 'bg-outline'}`}></span>
+                <span>{isLiveConnected ? t('ff_liveRealtime') : t('ff_liveSyncing')}</span>
+              </span>
+            </div>
+
+            {/* Refresh Button */}
+            <div className="flex items-center gap-3">
+              <span className="text-xs text-outline font-medium hidden sm:inline">
+                {t('ff_processesScheduled').replace('{count}', productionGroups.length)}
+              </span>
+              <button
+                type="button"
+                onClick={() => fetchProductionData(productionDateStr)}
+                disabled={loadingProduction}
+                className="flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-bold text-on-primary shadow-sm hover:bg-primary/90 active:scale-95 transition-all disabled:opacity-50 cursor-pointer"
+                title={language === 'ja' ? 'リアルタイム生産状況を更新' : 'Refresh live production tracking data'}
+              >
+                <span className={`material-symbols-outlined ${loadingProduction ? 'animate-spin' : ''}`} style={{ fontSize: 18 }}>
+                  refresh
+                </span>
+                <span>{loadingProduction ? t('ff_refreshing') : t('ff_refresh')}</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Progress Overview Bar */}
+          {productionGroups.length > 0 && (
+            <div className="glass-card rounded-2xl border border-outline-variant/30 p-4 shadow-sm flex flex-col gap-3">
+              <div className="flex items-center justify-between text-xs">
+                <div className="flex items-center gap-2">
+                  <span className="font-bold text-on-surface text-sm">
+                    {parseInt(productionDateStr.split('-')[1], 10)}/{parseInt(productionDateStr.split('-')[2], 10)} {t('ff_productionProgress')}
+                  </span>
+                  <span className="rounded bg-primary/10 px-2 py-0.5 font-bold text-primary">
+                    {t('ff_completedCount')
+                      .replace('{completed}', productionStats.completed)
+                      .replace('{total}', productionStats.total)
+                      .replace('{percent}', productionStats.progressPercent)}
+                  </span>
+                </div>
+                {productionStats.inProgress > 0 && (
+                  <span className="inline-flex items-center gap-1.5 font-bold text-purple-600 animate-pulse">
+                    <span className="h-2 w-2 rounded-full bg-purple-600"></span>
+                    {t('ff_inProgressNow').replace('{count}', productionStats.inProgress)}
+                  </span>
+                )}
+              </div>
+
+              {/* Progress bar visual */}
+              <div className="h-2.5 w-full overflow-hidden rounded-full bg-surface-variant/40 flex">
+                <div 
+                  className="h-full bg-emerald-500 transition-all duration-500" 
+                  style={{ width: `${(productionStats.completed / productionStats.total) * 100}%` }}
+                  title={`${productionStats.completed} Completed`}
+                />
+                <div 
+                  className="h-full bg-purple-600 transition-all duration-500 animate-pulse" 
+                  style={{ width: `${(productionStats.inProgress / productionStats.total) * 100}%` }}
+                  title={`${productionStats.inProgress} In-Progress`}
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Status Filter Tabs / Chips */}
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setProductionFilter('all')}
+              className={`flex items-center gap-1.5 rounded-xl px-3.5 py-1.5 text-xs font-bold transition-all cursor-pointer ${productionFilter === 'all' ? 'bg-on-surface text-surface shadow-sm' : 'bg-surface border border-outline-variant/40 text-outline hover:text-on-surface'}`}
+            >
+              <span>{t('ff_filterAll')}</span>
+              <span className="rounded-full bg-surface-variant/60 px-1.5 py-0.2 text-[10px] font-black">
+                {productionStats.total}
+              </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setProductionFilter('in-progress')}
+              className={`flex items-center gap-1.5 rounded-xl px-3.5 py-1.5 text-xs font-bold transition-all cursor-pointer ${productionFilter === 'in-progress' ? 'bg-purple-600 text-white shadow-sm ring-2 ring-purple-500/30' : 'bg-surface border border-purple-500/30 text-purple-600 hover:bg-purple-500/5'}`}
+            >
+              <span className={`h-2 w-2 rounded-full bg-purple-500 ${productionStats.inProgress > 0 ? 'animate-ping' : ''}`}></span>
+              <span>{t('ff_filterInProgress')}</span>
+              <span className="rounded-full bg-purple-500/20 px-1.5 py-0.2 text-[10px] font-black">
+                {productionStats.inProgress}
+              </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setProductionFilter('completed')}
+              className={`flex items-center gap-1.5 rounded-xl px-3.5 py-1.5 text-xs font-bold transition-all cursor-pointer ${productionFilter === 'completed' ? 'bg-emerald-600 text-white shadow-sm' : 'bg-surface border border-emerald-500/30 text-emerald-600 hover:bg-emerald-500/5'}`}
+            >
+              <span>{t('ff_filterCompleted')}</span>
+              <span className="rounded-full bg-emerald-500/20 px-1.5 py-0.2 text-[10px] font-black">
+                {productionStats.completed}
+              </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setProductionFilter('pending')}
+              className={`flex items-center gap-1.5 rounded-xl px-3.5 py-1.5 text-xs font-bold transition-all cursor-pointer ${productionFilter === 'pending' ? 'bg-slate-700 text-white shadow-sm' : 'bg-surface border border-outline-variant/40 text-outline hover:text-on-surface'}`}
+            >
+              <span>{t('ff_filterPending')}</span>
+              <span className="rounded-full bg-surface-variant/60 px-1.5 py-0.2 text-[10px] font-black">
+                {productionStats.pending}
+              </span>
+            </button>
+
+            {productionStats.canceled > 0 && (
+              <button
+                type="button"
+                onClick={() => setProductionFilter('canceled')}
+                className={`flex items-center gap-1.5 rounded-xl px-3.5 py-1.5 text-xs font-bold transition-all cursor-pointer ${productionFilter === 'canceled' ? 'bg-rose-600 text-white shadow-sm' : 'bg-surface border border-rose-500/30 text-rose-600 hover:bg-rose-500/5'}`}
+              >
+                <span>{t('ff_filterCanceled')}</span>
+                <span className="rounded-full bg-rose-500/20 px-1.5 py-0.2 text-[10px] font-black">
+                  {productionStats.canceled}
+                </span>
+              </button>
+            )}
+          </div>
+
+          {/* Processes List */}
+          {loadingProduction ? (
+            <div className="flex flex-col items-center justify-center p-12 glass-card rounded-2xl border border-outline-variant/30">
+              <span className="material-symbols-outlined text-primary animate-spin" style={{ fontSize: 36 }}>sync</span>
+              <p className="mt-3 text-sm font-semibold text-outline">{t('ff_loadingProductionStatus')}</p>
+            </div>
+          ) : filteredProductionGroups.length === 0 ? (
+            <div className="flex flex-col items-center justify-center p-12 glass-card rounded-2xl border border-outline-variant/30 text-center">
+              <span className="material-symbols-outlined text-outline mb-2" style={{ fontSize: 44 }}>event_busy</span>
+              <h3 className="text-base font-bold text-on-surface">
+                {productionGroups.length === 0 
+                  ? t('ff_noScheduleFoundDate').replace('{date}', productionDateStr)
+                  : t('ff_noProcessesMatchFilter').replace('{filter}', productionFilter)}
+              </h3>
+              <p className="text-xs text-outline mt-1 max-w-md">
+                {productionGroups.length === 0 
+                  ? t('ff_noScheduleHint')
+                  : t('ff_tryDifferentFilterHint')}
+              </p>
+              {productionGroups.length === 0 && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    updateSelectedDate(productionDateStr);
+                    navigate(`/firstFactory/scheduling?date=${productionDateStr}`);
+                  }}
+                  className="mt-4 inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-xs font-bold text-on-primary hover:bg-primary/90 transition-colors shadow-sm cursor-pointer"
+                >
+                  <span className="material-symbols-outlined" style={{ fontSize: 16 }}>edit_calendar</span>
+                  {t('ff_createScheduleForDate')}
+                </button>
+              )}
+            </div>
+          ) : (
+            <div className="flex flex-col gap-4">
+              {filteredProductionGroups.map((group) => {
+                const isInProgress = group.status === 'in-progress';
+                const isCompleted = group.status === 'completed';
+                const isCanceled = group.status === 'canceled';
+                const isPending = group.status === 'pending';
+
+                if (group.type === 'setup') {
+                  const setupItem = group.items[0];
+                  return (
+                    <div 
+                      key={group.groupId}
+                      className="rounded-2xl border border-amber-500/30 bg-amber-500/5 p-4 flex flex-col md:flex-row md:items-center justify-between gap-3 shadow-xs"
+                    >
+                      <div className="flex items-center gap-3">
+                        <span className="inline-flex min-h-[36px] min-w-[54px] px-3 py-1.5 shrink-0 items-center justify-center rounded-xl bg-amber-500/20 text-xs font-black text-amber-700 whitespace-nowrap shadow-xs">
+                          {group.orderRange}
+                        </span>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="rounded bg-amber-500/20 px-2 py-0.5 text-[11px] font-extrabold text-amber-800">
+                              {t('ff_setupBadge')}
+                            </span>
+                            <h4 className="font-bold text-sm text-on-surface">
+                              {setupItem?.comment ? `${group.name} ${setupItem.comment}` : group.name}
+                            </h4>
+                          </div>
+                          <p className="text-xs text-outline mt-0.5">
+                            🕒 {t('ff_scheduledTime')}: {group.startTime} ～ {group.endTime} ({group.totalDuration} {t('ff_minutesShort')})
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <span className="rounded-full bg-amber-500/10 px-3 py-1 text-xs font-bold text-amber-700 border border-amber-500/20">
+                          ⚙️ {group.totalDuration} {t('ff_minutesShort')}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                }
+
+                // Hinban Group Card
+                return (
+                  <div
+                    key={group.groupId}
+                    className={`glass-card rounded-2xl border p-5 flex flex-col gap-4 transition-all shadow-xs ${
+                      isInProgress
+                        ? 'border-purple-500/60 bg-purple-500/[0.04] ring-2 ring-purple-500/20 dark:bg-purple-950/20'
+                        : isCompleted
+                        ? 'border-emerald-500/40 bg-emerald-500/[0.03] dark:bg-emerald-950/10'
+                        : isCanceled
+                        ? 'border-rose-500/40 bg-rose-500/[0.03]'
+                        : 'border-outline-variant/30 hover:border-primary/40'
+                    }`}
+                  >
+                    {/* Card Top Row */}
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-outline-variant/20">
+                      <div className="flex items-center gap-3">
+                        <span className={`inline-flex min-h-[36px] min-w-[54px] px-3 py-1.5 shrink-0 items-center justify-center rounded-xl text-xs font-black whitespace-nowrap shadow-xs ${
+                          isInProgress
+                            ? 'bg-purple-600 text-white animate-pulse'
+                            : isCompleted
+                            ? 'bg-emerald-600 text-white'
+                            : 'bg-primary/10 text-primary'
+                        }`}>
+                          {group.orderRange}
+                        </span>
+
+                        <div>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <button 
+                              type="button"
+                              onClick={() => handleCardClick(group.hinban)}
+                              className="text-lg font-black text-on-surface hover:text-primary transition-colors cursor-pointer tracking-tight inline-flex items-center gap-1.5 group text-left"
+                              title={t('ff_viewDetails')}
+                            >
+                              <span className="group-hover:underline underline-offset-4 decoration-primary decoration-2">{group.hinban}</span>
+                              <span className="material-symbols-outlined text-outline group-hover:text-primary transition-colors opacity-60 group-hover:opacity-100" style={{ fontSize: 18 }}>
+                                open_in_new
+                              </span>
+                            </button>
+                            {group.labelHinban && group.labelHinban !== group.hinban && (
+                              <span className="rounded bg-surface-variant/60 px-2 py-0.5 text-xs font-mono font-medium text-outline">
+                                Label: {group.labelHinban}
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-xs text-outline font-medium mt-0.5">
+                            {group.hinmei || '—'}
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Status Badge */}
+                      <div className="flex items-center gap-2">
+                        {isInProgress && (
+                          <div className="inline-flex items-center gap-2 rounded-xl bg-purple-600 px-3.5 py-1.5 text-xs font-bold text-white shadow-sm animate-pulse">
+                            <span className="h-2 w-2 rounded-full bg-white animate-ping"></span>
+                            <span>{language === 'ja' ? '🟣 生産中' : '🟣 In-Progress'}</span>
+                            {group.actualStartTime && (
+                              <span className="font-mono opacity-90">({group.actualStartTime}〜)</span>
+                            )}
+                          </div>
+                        )}
+
+                        {isCompleted && (
+                          <div className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-500/10 px-3 py-1.5 text-xs font-bold text-emerald-600 border border-emerald-500/20">
+                            <span className="material-symbols-outlined" style={{ fontSize: 16 }}>check_circle</span>
+                            <span>{language === 'ja' ? '完了' : 'Completed'}</span>
+                            {group.actualDurationMins && (
+                              <span className="font-mono font-semibold">({group.actualDurationMins}{t('ff_minutesShort')})</span>
+                            )}
+                          </div>
+                        )}
+
+                        {isPending && (
+                          <div className="inline-flex items-center gap-1.5 rounded-xl bg-surface-variant/40 px-3 py-1.5 text-xs font-semibold text-outline border border-outline-variant/30">
+                            <span className="material-symbols-outlined" style={{ fontSize: 16 }}>hourglass_empty</span>
+                            <span>{language === 'ja' ? '待機中' : 'Pending'}</span>
+                          </div>
+                        )}
+
+                        {isCanceled && (
+                          <div className="inline-flex items-center gap-1.5 rounded-xl bg-rose-500/10 px-3 py-1.5 text-xs font-bold text-rose-600 border border-rose-500/20">
+                            <span className="material-symbols-outlined" style={{ fontSize: 16 }}>cancel</span>
+                            <span>{language === 'ja' ? '中止' : 'Canceled'}</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Metadata Specs Strip */}
+                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-3 text-xs">
+                      <div className="rounded-xl bg-surface-variant/20 p-2.5">
+                        <span className="text-[10px] font-semibold uppercase text-outline block">{t('ff_scheduledTime')}</span>
+                        <span className="font-mono font-bold text-on-surface mt-0.5 block">
+                          🕒 {group.startTime} ～ {group.endTime}
+                        </span>
+                      </div>
+
+                      <div className="rounded-xl bg-surface-variant/20 p-2.5">
+                        <span className="text-[10px] font-semibold uppercase text-outline block">{t('ff_actualTime')}</span>
+                        <span className="font-mono font-bold mt-0.5 block truncate">
+                          {isCompleted && group.actualStartTime ? (
+                            <span className="text-emerald-600 dark:text-emerald-400">
+                              ⏱️ {group.actualStartTime} ～ {group.actualEndTime || ''}
+                            </span>
+                          ) : isInProgress && (group.actualStartTime || group.startTime) ? (
+                            <span className="text-purple-600 dark:text-purple-400 animate-pulse">
+                              ⏱️ {group.actualStartTime || group.startTime}〜
+                            </span>
+                          ) : (
+                            <span className="text-outline">—</span>
+                          )}
+                        </span>
+                      </div>
+
+                      <div className="rounded-xl bg-surface-variant/20 p-2.5">
+                        <span className="text-[10px] font-semibold uppercase text-outline block">{t('ff_totalVolume')}</span>
+                        <span className="font-bold text-primary mt-0.5 block">
+                          {group.items.length} {language === 'ja' ? '巻' : 'rolls'} ({group.totalMeters}m)
+                        </span>
+                      </div>
+
+                      <div className="rounded-xl bg-surface-variant/20 p-2.5">
+                        <span className="text-[10px] font-semibold uppercase text-outline block">{t('ff_kizaiColor')}</span>
+                        <span className="font-medium text-on-surface mt-0.5 block truncate">
+                          {group.kizai || '—'} {group.color ? `• ${group.color}` : ''}
+                        </span>
+                      </div>
+
+                      <div className="rounded-xl bg-surface-variant/20 p-2.5">
+                        <span className="text-[10px] font-semibold uppercase text-outline block">{t('ff_destination')}</span>
+                        <span className="font-medium text-on-surface mt-0.5 block truncate">
+                          {group.shippingDest || '—'}
+                        </span>
+                      </div>
+
+                      <div className="rounded-xl bg-surface-variant/20 p-2.5">
+                        <span className="text-[10px] font-semibold uppercase text-outline block">{t('ff_operator')}</span>
+                        <span className="font-semibold text-on-surface mt-0.5 block truncate">
+                          👤 {group.worker || '—'}
+                        </span>
+                      </div>
+
+                      <div className="rounded-xl bg-surface-variant/20 p-2.5">
+                        <span className="text-[10px] font-semibold uppercase text-outline block">{t('ff_machineLabel')}</span>
+                        <span className="font-mono font-bold text-on-surface mt-0.5 block truncate">
+                          🏭 {group.machine || 'PSA-2'}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Print Status Sub-list */}
+                    {(() => {
+                      const printedRollIndices = new Set(
+                        Array.isArray(group.statusRecord?.printHistory)
+                          ? group.statusRecord.printHistory.map(p => Number(p.rollIndex))
+                          : []
+                      );
+                      const printedCount = printedRollIndices.size;
+                      const totalRolls = group.items.length;
+                      const allDone = totalRolls > 0 && printedCount >= totalRolls;
+
+                      return (
+                        <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-outline-variant/15 mt-1">
+                          <div className="flex items-center gap-1.5 mr-1">
+                            <span className="material-symbols-outlined text-outline" style={{ fontSize: 16 }}>print</span>
+                            <span className="text-[11px] font-bold text-outline uppercase">{t('ff_printStatus')}</span>
+                            <span className={`rounded px-1.5 py-0.2 text-[10px] font-black ${allDone ? 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-300' : 'bg-surface-variant/60 text-outline'}`}>
+                              {language === 'ja' ? `${printedCount} / ${totalRolls} 枚 印刷済` : `${printedCount} / ${totalRolls} Printed`}
+                            </span>
+                          </div>
+
+                          {group.items.map((roll, rIdx) => {
+                            const rollNum = Number(roll.rollIndex) || (rIdx + 1);
+                            const isPrinted = printedRollIndices.has(rollNum);
+
+                            return (
+                              <div
+                                key={roll.id || rIdx}
+                                className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs transition-colors ${
+                                  isPrinted
+                                    ? 'border border-emerald-500/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 font-bold shadow-xs'
+                                    : 'border border-outline-variant/30 bg-surface-variant/20 text-outline font-medium'
+                                }`}
+                                title={isPrinted ? t('ff_rollPrintedTooltip').replace('{roll}', rollNum).replace('{total}', totalRolls) : t('ff_rollWaitingPrintTooltip').replace('{roll}', rollNum).replace('{total}', totalRolls)}
+                              >
+                                <span className={`material-symbols-outlined ${isPrinted ? 'text-emerald-600 dark:text-emerald-400' : 'text-outline/60'}`} style={{ fontSize: 14 }}>
+                                  {isPrinted ? 'check_circle' : 'radio_button_unchecked'}
+                                </span>
+                                <span>
+                                  {rollNum}/{totalRolls}
+                                </span>
+                                <span className="opacity-75 font-mono text-[11px]">({roll.meters}m)</span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      );
+                    })()}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Modal */}
       <MaterialDetailModal modalData={modalData} onClose={() => setModalData(null)} />
-
 
       {/* Sync Excel Modal */}
       {isSyncModalOpen && createPortal(
         <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
           <div className="bg-surface border border-outline-variant/30 rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden flex flex-col animate-[fadeIn_0.15s_ease-out]">
             <div className="flex items-center justify-between p-5 border-b border-outline-variant/30 bg-surface-variant/20">
-              <h2 className="text-lg font-bold text-on-surface">Sync Excel Data</h2>
+              <h2 className="text-lg font-bold text-on-surface">{t('ff_modalSyncTitle')}</h2>
               <button 
                 onClick={() => setIsSyncModalOpen(false)}
-                className="flex h-8 w-8 items-center justify-center rounded-full hover:bg-surface-variant/50 text-outline transition-colors"
+                className="flex h-8 w-8 items-center justify-center rounded-full hover:bg-surface-variant/50 text-outline transition-colors cursor-pointer"
+                title={t('ff_close')}
               >
                 <span className="material-symbols-outlined" style={{fontSize: 20}}>close</span>
               </button>
             </div>
             <div className="p-6">
-              <label className="block text-sm font-medium text-on-surface mb-2">Select Year and Month</label>
+              <label className="block text-sm font-medium text-on-surface mb-2">{t('ff_modalSelectYearMonth')}</label>
               <input
                 type="month"
                 value={syncTargetMonth}
                 onChange={(e) => setSyncTargetMonth(e.target.value)}
-                className="w-full rounded-xl border border-outline-variant/50 bg-background/50 px-4 py-3 text-sm text-on-surface focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                className="w-full rounded-xl border border-outline-variant/50 bg-background/50 px-4 py-3 text-sm text-on-surface focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary font-bold"
               />
               <p className="text-xs text-outline mt-3">
-                This will fetch data from the <strong>{syncTargetMonth ? `${syncTargetMonth.split('-')[0]}年${parseInt(syncTargetMonth.split('-')[1], 10)}月` : '...'}</strong> tab in the Google Sheet.
+                {language === 'ja' 
+                  ? `Googleスプレッドシートの ${syncTargetMonth ? `${syncTargetMonth.split('-')[0]}年${parseInt(syncTargetMonth.split('-')[1], 10)}月` : '...'} タブからデータを取得します。`
+                  : `This will fetch data from the ${syncTargetMonth ? `${syncTargetMonth.split('-')[0]}年${parseInt(syncTargetMonth.split('-')[1], 10)}月` : '...'} tab in the Google Sheet.`}
               </p>
             </div>
             <div className="flex items-center justify-end gap-3 p-5 border-t border-outline-variant/30 bg-surface-variant/10">
               <button 
                 onClick={() => setIsSyncModalOpen(false)}
-                className="rounded-lg px-4 py-2 text-sm font-medium text-outline hover:bg-surface-variant/50 transition-colors"
+                className="rounded-lg px-4 py-2 text-sm font-medium text-outline hover:bg-surface-variant/50 transition-colors cursor-pointer"
               >
-                Cancel
+                {t('ff_cancel')}
               </button>
               <button 
                 onClick={() => handleSyncExcel(syncTargetMonth)}
-                className="rounded-lg bg-primary px-5 py-2 text-sm font-medium text-on-primary hover:bg-primary/90 transition-colors"
+                className="rounded-lg bg-primary px-5 py-2 text-sm font-medium text-on-primary hover:bg-primary/90 transition-colors cursor-pointer"
               >
-                Fetch Data
+                {t('ff_fetchData')}
               </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* Discrepancy Review Modal for Selected Date */}
+      {isDiscrepancyModalOpen && createPortal(
+        <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+          <div className="bg-surface border border-outline-variant/30 rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[85vh] animate-[fadeIn_0.15s_ease-out]">
+            <div className="flex items-center justify-between p-5 border-b border-outline-variant/30 bg-amber-500/10">
+              <div className="flex items-center gap-2.5">
+                <span className="material-symbols-outlined text-amber-600" style={{ fontSize: 24 }}>sync_problem</span>
+                <div>
+                  <h2 className="text-base font-bold text-on-surface">
+                    {language === 'ja' ? `${selectedDateStr} のExcel同期差異` : `Excel Discrepancies on ${selectedDateStr}`}
+                  </h2>
+                  <p className="text-xs text-outline">
+                    {language === 'ja' ? `${currentDayDiscrepancies.count} 件の差異品番を検知` : `${currentDayDiscrepancies.count} affected hinban(s) detected`}
+                  </p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setIsDiscrepancyModalOpen(false)}
+                className="flex h-8 w-8 items-center justify-center rounded-full hover:bg-surface-variant/50 text-outline transition-colors cursor-pointer"
+                title={t('ff_close')}
+              >
+                <span className="material-symbols-outlined" style={{fontSize: 20}}>close</span>
+              </button>
+            </div>
+
+            <div className="p-5 flex-1 overflow-y-auto flex flex-col gap-3">
+              <p className="text-xs text-outline leading-relaxed">
+                {language === 'ja'
+                  ? `以下の項目は作成済スケジュールと最新のExcelデータで差異があります。個別に反映するか、「すべて自動反映」をクリックして更新できます (${selectedDateStr})。`
+                  : `The items below are currently in this date's priority schedule, but differ from the latest synced Excel data. You can resolve them individually or click Auto-Align All to update this date (${selectedDateStr}).`}
+              </p>
+
+              {currentDayDiscrepancies.list.map(disc => {
+                const isZeroOrMissing = disc.type === 'moved_or_zero' || disc.type === 'missing_in_excel';
+                return (
+                  <div 
+                    key={disc.hinban} 
+                    className={`rounded-xl border p-3 flex flex-col gap-2 ${
+                      isZeroOrMissing ? 'border-red-500/30 bg-red-500/5' : 'border-amber-500/30 bg-amber-500/5'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="font-bold text-sm text-on-surface">{disc.hinban}</span>
+                      <span className="text-xs text-outline font-mono">
+                        {language === 'ja' 
+                          ? `設定済: ${disc.scheduledMeters}m (${disc.rollsCount} 巻)` 
+                          : `Scheduled: ${disc.scheduledMeters}m (${disc.rollsCount} roll${disc.rollsCount === 1 ? '' : 's'})`}
+                      </span>
+                    </div>
+
+                    <div className="text-xs">
+                      {isZeroOrMissing ? (
+                        <div className="flex items-center gap-1.5 text-red-600 font-medium">
+                          <span className="material-symbols-outlined" style={{ fontSize: 16 }}>cancel</span>
+                          <span>{disc.type === 'missing_in_excel' ? t('ff_notInExcelThisMonth') : (disc.movedText || t('ff_zeroMetersToday'))}</span>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-1.5 text-amber-700 font-medium">
+                          <span className="material-symbols-outlined" style={{ fontSize: 16 }}>difference</span>
+                          <span>{language === 'ja' ? `Excel数量: ${disc.excelQty}m (差分: ${(disc.excelQty - disc.scheduledMeters).toFixed(1)}m)` : `Excel Quantity: ${disc.excelQty}m (Difference: ${(disc.excelQty - disc.scheduledMeters).toFixed(1)}m)`}</span>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="flex justify-end pt-1">
+                      {isZeroOrMissing ? (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setScheduleOrder(prev => prev.filter(i => i.hinban !== disc.hinban));
+                          }}
+                          className="inline-flex items-center gap-1 rounded-lg bg-red-500/10 px-2.5 py-1 text-xs font-bold text-red-600 hover:bg-red-500/20 transition-colors cursor-pointer"
+                        >
+                          <span className="material-symbols-outlined" style={{ fontSize: 14 }}>delete</span>
+                          {language === 'ja' ? `${parseInt(selectedMonth.split('-')[1], 10)}/${selectedDay} から削除` : `Remove from ${parseInt(selectedMonth.split('-')[1], 10)}/${selectedDay}`}
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => handleUpdateHinbanQty(disc.hinban)}
+                          className="inline-flex items-center gap-1 rounded-lg bg-amber-500/20 px-2.5 py-1 text-xs font-bold text-amber-800 hover:bg-amber-500/30 transition-colors cursor-pointer"
+                        >
+                          <span className="material-symbols-outlined" style={{ fontSize: 14 }}>sync</span>
+                          {language === 'ja' ? `数量・巻数を ${disc.excelQty}m に更新` : `Update Qty & Rolls to ${disc.excelQty}m`}
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="flex items-center justify-between p-4 border-t border-outline-variant/30 bg-surface-variant/10">
+              <button 
+                onClick={() => setIsDiscrepancyModalOpen(false)}
+                className="rounded-lg px-4 py-2 text-xs font-semibold text-outline hover:bg-surface-variant/50 transition-colors cursor-pointer"
+              >
+                {t('ff_close')}
+              </button>
+              <button 
+                onClick={handleAutoAlignCurrentDate}
+                className="flex items-center gap-1.5 rounded-xl bg-amber-600 px-4 py-2 text-xs font-bold text-white hover:bg-amber-700 transition-colors shadow-sm cursor-pointer"
+              >
+                <span className="material-symbols-outlined" style={{ fontSize: 16 }}>auto_fix_high</span>
+                {language === 'ja' ? `${parseInt(selectedMonth.split('-')[1], 10)}/${selectedDay} の差異をすべて自動反映` : `Auto-Align All on ${parseInt(selectedMonth.split('-')[1], 10)}/${selectedDay}`}
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* Post-Sync Schedule Impact Summary Modal */}
+      {isImpactModalOpen && createPortal(
+        <div className="fixed inset-0 z-[115] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+          <div className="bg-surface border border-outline-variant/30 rounded-2xl shadow-2xl w-full max-w-xl overflow-hidden flex flex-col max-h-[85vh] animate-[fadeIn_0.15s_ease-out]">
+            <div className="flex items-center justify-between p-5 border-b border-outline-variant/30 bg-primary/10">
+              <div className="flex items-center gap-2.5">
+                <span className="material-symbols-outlined text-primary" style={{ fontSize: 24 }}>assessment</span>
+                <div>
+                  <h2 className="text-base font-bold text-on-surface">{t('ff_syncImpactTitle')}</h2>
+                  <p className="text-xs text-outline">
+                    {language === 'ja' ? `${selectedMonth} の既存優先順位スケジュールに差異が検出されました` : `New Excel data affects existing priority schedules in ${selectedMonth}`}
+                  </p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setIsImpactModalOpen(false)}
+                className="flex h-8 w-8 items-center justify-center rounded-full hover:bg-surface-variant/50 text-outline transition-colors cursor-pointer"
+                title={t('ff_close')}
+              >
+                <span className="material-symbols-outlined" style={{fontSize: 20}}>close</span>
+              </button>
+            </div>
+
+            <div className="p-5 flex-1 overflow-y-auto flex flex-col gap-4">
+              <div className="rounded-xl border border-primary/20 bg-primary/5 p-3 text-xs text-on-surface leading-relaxed">
+                {t('ff_syncImpactDesc')}
+              </div>
+
+              <div className="flex flex-col gap-3">
+                {syncImpactReport.map(report => (
+                  <div key={report.dateKey} className="rounded-xl border border-outline-variant/30 bg-surface-variant/10 p-3 flex flex-col gap-2">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2 font-bold text-sm text-on-surface">
+                        <span className="material-symbols-outlined text-outline" style={{ fontSize: 16 }}>calendar_today</span>
+                        <span>{parseInt(selectedMonth.split('-')[1], 10)}/{report.date}</span>
+                        <span className="rounded-full bg-amber-500/20 px-2 py-0.5 text-[11px] font-bold text-amber-700">
+                          {language === 'ja' ? `${report.issues.length} 件の変更` : `${report.issues.length} issue${report.issues.length === 1 ? '' : 's'}`}
+                        </span>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          updateSelectedDate(report.dateKey);
+                          setIsImpactModalOpen(false);
+                          if (activeTab !== 'scheduling') {
+                            navigate(`/firstFactory/scheduling?date=${report.dateKey}`);
+                          }
+                        }}
+                        className="inline-flex items-center gap-1 rounded-lg border border-primary/40 bg-primary/10 px-2.5 py-1 text-xs font-bold text-primary hover:bg-primary hover:text-on-primary transition-colors cursor-pointer"
+                      >
+                        <span className="material-symbols-outlined" style={{ fontSize: 14 }}>arrow_forward</span>
+                        {t('ff_openScheduleBtn')}
+                      </button>
+                    </div>
+
+                    <div className="flex flex-col gap-1.5 pl-6 border-l-2 border-outline-variant/30">
+                      {report.issues.map((iss, i) => (
+                        <div key={i} className="text-xs flex items-start gap-1.5">
+                          <span className="font-semibold text-on-surface shrink-0">{iss.hinban}:</span>
+                          <span className={iss.type === 'moved_or_zero' || iss.type === 'missing' ? 'text-red-600 font-medium' : 'text-amber-700 font-medium'}>
+                            {iss.text}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end p-4 border-t border-outline-variant/30 bg-surface-variant/10">
+              <button 
+                onClick={() => setIsImpactModalOpen(false)}
+                className="rounded-lg bg-primary px-5 py-2 text-xs font-bold text-on-primary hover:bg-primary/90 transition-colors shadow-sm cursor-pointer"
+              >
+                {t('ff_closeAndReview')}
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* Setup Comment / Custom Title Modal */}
+      {commentModalItem && createPortal(
+        <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-[fadeIn_0.15s_ease-out]">
+          <div className="w-full max-w-md rounded-2xl border border-outline-variant/30 bg-surface p-6 shadow-2xl flex flex-col gap-4">
+            <div className="flex items-center justify-between pb-3 border-b border-outline-variant/20">
+              <div className="flex items-center gap-2">
+                <span className="material-symbols-outlined text-amber-600" style={{ fontSize: 22 }}>edit_note</span>
+                <h3 className="text-base font-bold text-on-surface">
+                  {language === 'ja' 
+                    ? `${commentModalItem.displayName || commentModalItem.name} の追加タイトル・指示` 
+                    : `Custom Title for ${commentModalItem.displayName || commentModalItem.name}`}
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setCommentModalItem(null)}
+                className="rounded-lg p-1 text-outline hover:bg-surface-variant/50 hover:text-on-surface transition-colors cursor-pointer"
+                title={t('ff_close')}
+              >
+                <span className="material-symbols-outlined" style={{ fontSize: 20 }}>close</span>
+              </button>
+            </div>
+
+            <p className="text-xs text-outline leading-relaxed">
+              {t('ff_setupCardDesc')}
+            </p>
+
+            <div className="rounded-xl bg-amber-500/10 border border-amber-500/20 p-3 text-xs text-amber-900 font-bold flex items-center gap-2">
+              <span className="text-outline text-[11px] font-normal shrink-0">{t('ff_titlePreview')}</span>
+              <span className="font-extrabold text-amber-800">{commentModalItem.displayName || commentModalItem.name} {tempCommentText.trim()}</span>
+            </div>
+
+            <input
+              type="text"
+              value={tempCommentText}
+              onChange={(e) => setTempCommentText(e.target.value)}
+              placeholder={t('ff_placeholderCustomText')}
+              className="w-full rounded-xl border border-outline-variant/50 bg-background/50 p-3 text-sm text-on-surface placeholder:text-outline focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary font-medium"
+              autoFocus
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  const text = tempCommentText.trim();
+                  if (commentModalItem.isPreset) {
+                    const key = commentModalItem.isCustom ? 'custom' : commentModalItem.name;
+                    setSetupComments(prev => ({ ...prev, [key]: text }));
+                  } else if (commentModalItem.id) {
+                    setScheduleOrder(prev => prev.map(item => {
+                      if (item.id === commentModalItem.id) {
+                        return { ...item, comment: text };
+                      }
+                      return item;
+                    }));
+                    setHasUnsavedChanges(true);
+                  }
+                  setCommentModalItem(null);
+                }
+              }}
+            />
+
+            <div className="flex items-center justify-between gap-3 pt-2">
+              {tempCommentText ? (
+                <button
+                  type="button"
+                  onClick={() => setTempCommentText('')}
+                  className="text-xs font-bold text-red-500 hover:underline cursor-pointer"
+                >
+                  {t('ff_clearSuffix')}
+                </button>
+              ) : <div />}
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setCommentModalItem(null)}
+                  className="rounded-xl border border-outline-variant/50 px-4 py-2 text-xs font-bold text-outline hover:bg-surface-variant/50 transition-colors cursor-pointer"
+                >
+                  {t('ff_cancel')}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const text = tempCommentText.trim();
+                    if (commentModalItem.isPreset) {
+                      const key = commentModalItem.isCustom ? 'custom' : commentModalItem.name;
+                      setSetupComments(prev => ({ ...prev, [key]: text }));
+                    } else if (commentModalItem.id) {
+                      setScheduleOrder(prev => prev.map(item => {
+                        if (item.id === commentModalItem.id) {
+                          return { ...item, comment: text };
+                        }
+                        return item;
+                      }));
+                      setHasUnsavedChanges(true);
+                    }
+                    setCommentModalItem(null);
+                  }}
+                  className="rounded-xl bg-primary px-4 py-2 text-xs font-bold text-on-primary shadow-sm hover:bg-primary/90 transition-colors cursor-pointer"
+                >
+                  {t('ff_saveTitle')}
+                </button>
+              </div>
             </div>
           </div>
         </div>,
@@ -1054,3 +3618,4 @@ export default function FirstFactoryPage() {
     </div>
   );
 }
+

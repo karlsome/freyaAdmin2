@@ -1,43 +1,79 @@
 import { useMemo, useState } from "react";
 import { formatMasterValue, getMasterPreviewFields, getMasterRecordIdentity, getMasterTabUI } from "../utils/masterDB";
+import { query } from "../services/api";
 import IconButton from "./IconButton";
 import ModalShell from "./ModalShell";
+import { SearchableSelect, SearchableHinbanSelect } from "./AdvancedFilterSection";
 
 function PreviewCard({ record, changes, previewFields, tabKey }) {
   const identity = getMasterRecordIdentity(record, tabKey);
   const changedFields = Object.entries(changes);
 
   return (
-    <div className="rounded-2xl border border-separator/40 bg-surface p-4 shadow-sm">
+    <div className="rounded-2xl border border-outline-variant/30 bg-surface p-4 shadow-sm transition-all hover:border-primary/30">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h4 className="text-base font-semibold text-on-surface">{identity.title}</h4>
-          <p className="mt-1 text-xs text-on-surface-variant">{identity.subtitle || "No secondary identifier"}</p>
+          <h4 className="text-base font-bold text-on-surface">{identity.title}</h4>
+          <p className="mt-0.5 text-xs text-outline">{identity.subtitle || "No secondary identifier"}</p>
         </div>
-        <span className="rounded-full bg-primary/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-primary">
+        <span className="rounded-full bg-primary/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.18em] text-primary">
           Preview
         </span>
       </div>
 
-      <div className="mt-4 space-y-3">
-        {changedFields.length ? changedFields.map(([field, nextValue]) => (
-          <div key={field} className="rounded-2xl bg-surface-container-low p-3">
-            <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">{field}</div>
-            <div className="mt-2 grid gap-2 md:grid-cols-2">
-              <div>
-                <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-error">Old</div>
-                <div className="mt-1 text-sm text-on-surface">{formatMasterValue(record[field])}</div>
+      <div className="mt-3.5 space-y-3">
+        {changedFields.length ? (
+          changedFields.map(([field, nextValue]) => {
+            const oldValue = formatMasterValue(record[field]);
+            const isUnset = oldValue === "—" || oldValue === "" || record[field] == null;
+            const newDisplayValue = formatMasterValue(nextValue);
+
+            return (
+              <div key={field} className="rounded-xl border border-outline-variant/25 bg-surface-variant/15 p-3 flex flex-col gap-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-mono font-bold text-on-surface bg-surface-variant/40 px-2 py-0.5 rounded-md border border-outline-variant/30">
+                    {field}
+                  </span>
+                  <span className="text-[10px] text-outline font-medium">Will be replaced</span>
+                </div>
+
+                <div className="grid grid-cols-[1fr,auto,1fr] items-center gap-2.5 mt-1">
+                  {/* Old Value (Red / Strikethrough) */}
+                  <div className="rounded-xl bg-error/10 border border-error/25 p-2.5 flex flex-col gap-1 min-w-0">
+                    <div className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-error">
+                      <span className="material-symbols-outlined" style={{ fontSize: 12 }}>delete</span>
+                      <span>Old</span>
+                    </div>
+                    <div className="text-xs font-mono font-medium text-error/90 line-through decoration-error decoration-2 break-all truncate" title={oldValue}>
+                      {isUnset ? "— (Empty)" : oldValue}
+                    </div>
+                  </div>
+
+                  {/* Transition Arrow */}
+                  <div className="flex items-center justify-center text-primary/80 shrink-0">
+                    <span className="material-symbols-outlined font-bold" style={{ fontSize: 20 }}>
+                      arrow_right_alt
+                    </span>
+                  </div>
+
+                  {/* New Value (Green / Highlighted) */}
+                  <div className="rounded-xl bg-emerald-500/10 border border-emerald-500/30 p-2.5 flex flex-col gap-1 min-w-0">
+                    <div className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
+                      <span className="material-symbols-outlined" style={{ fontSize: 12 }}>check_circle</span>
+                      <span>New</span>
+                    </div>
+                    <div className="text-xs font-mono font-bold text-emerald-700 dark:text-emerald-300 break-all truncate" title={newDisplayValue}>
+                      {newDisplayValue}
+                    </div>
+                  </div>
+                </div>
               </div>
-              <div>
-                <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-emerald-600 dark:text-emerald-300">New</div>
-                <div className="mt-1 text-sm font-semibold text-on-surface">{formatMasterValue(nextValue)}</div>
-              </div>
-            </div>
-          </div>
-        )) : (
+            );
+          })
+        ) : (
           previewFields.map(({ field, label }) => (
             <div key={field} className="grid grid-cols-[120px,minmax(0,1fr)] gap-3 text-sm">
-              <div className="font-semibold text-on-surface-variant">{label}</div>
+              <div className="font-semibold text-outline">{label}</div>
               <div className="text-on-surface">{formatMasterValue(record[field])}</div>
             </div>
           ))
@@ -87,8 +123,20 @@ export default function MasterBatchEditModal({
 
     setLoadingOptions(true);
     try {
-      const values = await loadDistinctOptions(field.field);
-      setOptions(Array.isArray(values) ? values : []);
+      if (fieldName === "刃物") {
+        const [bladeRes, distinctRes] = await Promise.all([
+          query("Sasaki_Coating_MasterDB", "NCBladeDB", {}, { sort: { name: 1 } }),
+          loadDistinctOptions ? loadDistinctOptions(field.field).catch(() => []) : Promise.resolve([])
+        ]);
+        const bladeList = Array.isArray(bladeRes) ? bladeRes : bladeRes?.data || [];
+        const bladeNames = bladeList.map((b) => b.name || b.Name || b["刃物"] || b["型番"] || "").filter(Boolean);
+        const distinctList = Array.isArray(distinctRes) ? distinctRes : [];
+        const combined = Array.from(new Set([...bladeNames, ...distinctList]));
+        setOptions(combined);
+      } else {
+        const values = await loadDistinctOptions(field.field);
+        setOptions(Array.isArray(values) ? values : []);
+      }
     } catch {
       setOptions([]);
     } finally {
@@ -172,24 +220,29 @@ export default function MasterBatchEditModal({
                         onChange={(event) => setDraftValue(event.target.value)}
                         className="w-full rounded-2xl border border-outline-variant/30 bg-surface-container px-3 py-3 text-sm text-on-surface outline-none transition focus:border-primary/40"
                       />
+                    ) : activeField.field === "品番" || activeField.field === "構成品番" || /品番/i.test(activeField.field) ? (
+                      <SearchableHinbanSelect
+                        value={draftValue}
+                        onChange={({ value }) => setDraftValue(value)}
+                        placeholder="Search or select 品番..."
+                        className="w-full rounded-2xl border border-outline-variant/30 bg-surface-container px-3 py-3 text-sm text-on-surface outline-none transition focus:border-primary/40"
+                      />
+                    ) : options.length > 0 || loadingOptions || activeField.type === "select" ? (
+                      <SearchableSelect
+                        value={draftValue}
+                        options={options}
+                        onChange={({ value }) => setDraftValue(value)}
+                        placeholder={loadingOptions ? `Loading ${activeField.label}...` : `Select or search ${activeField.label}...`}
+                        className="w-full rounded-2xl border border-outline-variant/30 bg-surface-container px-3 py-3 text-sm text-on-surface outline-none transition focus:border-primary/40"
+                      />
                     ) : (
-                      <>
-                        <input
-                          list={activeField.type === "text" ? `master-batch-${activeField.field}` : undefined}
-                          type={activeField.type === "number" ? "number" : activeField.type === "date" ? "date" : activeField.type === "time" ? "time" : "text"}
-                          value={draftValue}
-                          onChange={(event) => setDraftValue(event.target.value)}
-                          className="w-full rounded-2xl border border-outline-variant/30 bg-surface-container px-3 py-3 text-sm text-on-surface outline-none transition focus:border-primary/40"
-                          placeholder={loadingOptions ? "Loading known values…" : "Enter new value"}
-                        />
-                        {activeField.type === "text" && options.length > 0 && (
-                          <datalist id={`master-batch-${activeField.field}`}>
-                            {options.map((option) => (
-                              <option key={option} value={option} />
-                            ))}
-                          </datalist>
-                        )}
-                      </>
+                      <input
+                        type={activeField.type === "number" ? "number" : activeField.type === "date" ? "date" : activeField.type === "time" ? "time" : "text"}
+                        value={draftValue}
+                        onChange={(event) => setDraftValue(event.target.value)}
+                        className="w-full rounded-2xl border border-outline-variant/30 bg-surface-container px-3 py-3 text-sm text-on-surface outline-none transition focus:border-primary/40"
+                        placeholder="Enter new value"
+                      />
                     )}
 
                     <button

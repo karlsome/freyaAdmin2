@@ -12,23 +12,26 @@ export const FACTORY_STATUS_STATUS_OPTIONS = [
 ];
 
 export const FACTORY_STATUS_OPERATOR_LABELS = {
-  equals: "Equals",
-  contains: "Contains",
-  in: "In",
-  greater: "Greater than",
-  less: "Less than",
-  range: "Range",
+  equals: "equals",
+  not_equals: "is not",
+  contains: "contains",
+  in: "in",
+  exists: "exists",
+  not_exists: "does not exist",
+  greater: "greater than",
+  less: "less than",
+  range: "range",
 };
 
 export const FACTORY_STATUS_ADVANCED_FILTER_FIELDS = [
-  { field: "equipment", label: "Equipment", group: "Machine", type: "select", operators: ["equals", "contains", "in"] },
-  { field: "statusKey", label: "Status", group: "Machine", type: "select", operators: ["equals", "in"], options: FACTORY_STATUS_STATUS_OPTIONS },
-  { field: "workerName", label: "Operator", group: "Worker", type: "select", operators: ["equals", "contains", "in"] },
-  { field: "latestAction", label: "Latest Action", group: "Activity", type: "select", operators: ["equals", "contains", "in"] },
-  { field: "partNumber", label: "Part Number", group: "Product", type: "text", operators: ["equals", "contains"] },
-  { field: "backNumber", label: "Serial Number", group: "Product", type: "text", operators: ["equals", "contains"] },
-  { field: "todayActualQuantity", label: "Today Actual", group: "Output", type: "number", operators: ["equals", "greater", "less", "range"] },
-  { field: "lastUpdatedMinutes", label: "Last Update Age (min)", group: "Activity", type: "number", operators: ["equals", "greater", "less", "range"] },
+  { field: "equipment", label: "Equipment", group: "Machine", type: "select", operators: ["equals", "not_equals", "contains", "in", "exists", "not_exists"] },
+  { field: "statusKey", label: "Status", group: "Machine", type: "select", operators: ["equals", "not_equals", "in", "exists", "not_exists"], options: FACTORY_STATUS_STATUS_OPTIONS },
+  { field: "workerName", label: "Operator", group: "Worker", type: "select", operators: ["equals", "not_equals", "contains", "in", "exists", "not_exists"] },
+  { field: "latestAction", label: "Latest Action", group: "Activity", type: "select", operators: ["equals", "not_equals", "contains", "in", "exists", "not_exists"] },
+  { field: "partNumber", label: "Part Number", group: "Product", type: "text", operators: ["equals", "not_equals", "contains", "exists", "not_exists"] },
+  { field: "backNumber", label: "Serial Number", group: "Product", type: "text", operators: ["equals", "not_equals", "contains", "exists", "not_exists"] },
+  { field: "todayActualQuantity", label: "Today Actual", group: "Output", type: "number", operators: ["equals", "not_equals", "greater", "less", "range", "exists", "not_exists"] },
+  { field: "lastUpdatedMinutes", label: "Last Update Age (min)", group: "Activity", type: "number", operators: ["equals", "not_equals", "greater", "less", "range", "exists", "not_exists"] },
 ];
 
 let factoryStatusFilterRowCount = 0;

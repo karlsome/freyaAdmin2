@@ -4,7 +4,7 @@ import BomEditModal from './BomEditModal';
 import MaterialDetailModal from './MaterialDetailModal';
 import PaginationControls from './PaginationControls';
 
-export default function BomWorkspace({ onFlash }) {
+export default function BomWorkspace({ initialSearch = "", initialCreateHinban = "", onFlash }) {
   const [boms, setBoms] = useState([]);
   const [loading, setLoading] = useState(true);
   const [editModalOpen, setEditModalOpen] = useState(false);
@@ -15,8 +15,23 @@ export default function BomWorkspace({ onFlash }) {
   const [pageSize, setPageSize] = useState(30);
 
   // Search
-  const [searchQuery, setSearchQuery] = useState("");
-  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [searchQuery, setSearchQuery] = useState(initialSearch || "");
+  const [debouncedSearch, setDebouncedSearch] = useState(initialSearch || "");
+
+  useEffect(() => {
+    if (initialCreateHinban) {
+      setSelectedBom(null);
+      setEditModalOpen(true);
+    }
+  }, [initialCreateHinban]);
+
+  useEffect(() => {
+    if (initialSearch) {
+      setSearchQuery(initialSearch);
+      setDebouncedSearch(initialSearch);
+      setCurrentPage(1);
+    }
+  }, [initialSearch]);
 
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedSearch(searchQuery), 300);
@@ -49,8 +64,24 @@ export default function BomWorkspace({ onFlash }) {
         searchTags: debouncedSearch ? [debouncedSearch] : [],
         sort: { column: '品番', direction: 1 }
       });
-      setBoms(res.data || []);
+      const dataList = res.data || [];
+      setBoms(dataList);
       setTotalPages(res.totalPages || 1);
+
+      // If there's an active search or initialSearch, auto-select matching BOM
+      if (dataList.length > 0) {
+        const queryNorm = (debouncedSearch || initialSearch || '').trim().toLowerCase();
+        if (queryNorm) {
+          const match = dataList.find(b => (b['品番'] || '').toLowerCase() === queryNorm) ||
+                        dataList.find(b => (b['品番'] || '').toLowerCase().includes(queryNorm)) ||
+                        dataList[0];
+          setSelectedBom(match);
+        } else if (!selectedBom) {
+          setSelectedBom(dataList[0]);
+        }
+      } else {
+        setSelectedBom(null);
+      }
     } catch (err) {
       console.error(err);
       if (onFlash) onFlash({ type: "error", message: "Failed to load BOMs" });
@@ -193,18 +224,58 @@ export default function BomWorkspace({ onFlash }) {
                     selectedBom.BOM.map((step, sIdx) => {
                       const hinban = step['構成品番'];
                       const isClickable = hinban && hinban !== 'N/A';
+                      
+                      const procName = step['工程名'] || '';
+                      const procCode = step['工程コード'];
+                      const processDisplay = procName && procCode 
+                        ? `${procName} - ${procCode}` 
+                        : (procName || (procCode ? `Process ${procCode}` : `Step ${sIdx + 1}`));
+
+                      const rawProdUnit = step['生産単位'];
+                      const prodUnitName = typeof rawProdUnit === 'object' 
+                        ? (rawProdUnit?.name || rawProdUnit?.code || '') 
+                        : String(rawProdUnit || '');
+                      const timeOption = step['時間オプション'];
+                      const kataban = step['型番'];
+
                       return (
                         <div key={sIdx} className="bg-surface border border-outline-variant/30 rounded-xl shadow-sm p-4 flex flex-col md:flex-row md:items-center justify-between gap-4 relative overflow-hidden">
                           <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary/40"></div>
                           <div className="flex-1 pl-2">
-                            <div className="flex items-center gap-2 mb-1">
-                              <span className="text-[10px] font-bold text-primary bg-primary/10 px-2 py-0.5 rounded-full">Step {step['工程番号'] || sIdx + 1}</span>
-                              <span className="font-bold text-on-surface">{step['工程名'] || `Process ${step['工程コード']}`}</span>
+                            <div className="flex flex-wrap items-center gap-2 mb-1">
+                              <span className="text-[10px] font-bold text-primary bg-primary/10 px-2 py-0.5 rounded-full">
+                                Step {step['工程番号'] || sIdx + 1}
+                              </span>
+                              <span className="font-bold text-on-surface text-sm md:text-base">
+                                {processDisplay}
+                              </span>
+                              {timeOption && (
+                                <span className="font-mono text-xs font-bold text-primary bg-primary/10 px-2 py-0.5 rounded border border-primary/20" title={`時間オプション: ${timeOption}`}>
+                                  {timeOption}
+                                </span>
+                              )}
+                              {kataban && kataban !== '*' && (
+                                <span className="text-xs font-semibold text-on-surface/80 bg-surface-variant/40 px-2 py-0.5 rounded" title={`型番: ${kataban}`}>
+                                  {kataban}
+                                </span>
+                              )}
                             </div>
-                            <div className="text-xs text-outline flex items-center gap-4 mt-2">
+                            <div className="text-xs text-outline flex items-center flex-wrap gap-x-4 gap-y-1.5 mt-2">
                               <span><strong className="text-on-surface-variant">Lead Time:</strong> {step['作業リード日'] || 0}d</span>
                               <span><strong className="text-on-surface-variant">Setup:</strong> {step['段取時間'] || 0}m</span>
-                              <span><strong className="text-on-surface-variant">Work:</strong> {step['作業時間'] || 0}s/cm</span>
+                              <span>
+                                <strong className="text-on-surface-variant">Work:</strong> {step['作業時間'] || 0}s/{prodUnitName || 'unit'}
+                              </span>
+                              {prodUnitName && (
+                                <span>
+                                  <strong className="text-on-surface-variant">生産単位:</strong> {prodUnitName}
+                                </span>
+                              )}
+                              {timeOption && (
+                                <span>
+                                  <strong className="text-on-surface-variant">時間オプション:</strong> {timeOption}
+                                </span>
+                              )}
                             </div>
                           </div>
                           
@@ -213,7 +284,7 @@ export default function BomWorkspace({ onFlash }) {
                             {isClickable ? (
                               <button 
                                 onClick={() => handleIngredientClick(hinban)}
-                                className="text-sm font-bold text-primary hover:underline flex items-center gap-1 text-left"
+                                className="text-sm font-bold text-primary hover:underline flex items-center gap-1 text-left cursor-pointer"
                               >
                                 {hinban}
                                 <span className="material-symbols-outlined" style={{ fontSize: 16 }}>open_in_new</span>
@@ -240,8 +311,9 @@ export default function BomWorkspace({ onFlash }) {
 
       {editModalOpen && (
         <BomEditModal 
-          key={selectedBom?._id?.$oid || selectedBom?._id || 'new'}
+          key={selectedBom?._id?.$oid || selectedBom?._id || initialCreateHinban || 'new'}
           existingBom={selectedBom}
+          initialHinban={initialCreateHinban}
           onClose={() => setEditModalOpen(false)}
           onSaved={() => {
             setEditModalOpen(false);

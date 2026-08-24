@@ -1,10 +1,13 @@
 export const CHECKLIST_SUBMISSION_OPERATOR_LABELS = {
-  equals: "Equals",
-  contains: "Contains",
-  in: "In",
-  greater: "Greater than",
-  less: "Less than",
-  range: "Range",
+  equals: "equals",
+  not_equals: "is not",
+  contains: "contains",
+  in: "in",
+  exists: "exists",
+  not_exists: "does not exist",
+  greater: "greater than",
+  less: "less than",
+  range: "range",
 };
 
 export const CHECKLIST_SUBMISSION_SCHEDULE_OPTIONS = ["Daily", "Weekly", "Monthly"];
@@ -13,15 +16,15 @@ export const CHECKLIST_SUBMISSION_ACTIVITY_OPTIONS = ["Has submissions", "No sub
 
 export const CHECKLIST_SUBMISSION_ADVANCED_FILTER_FIELDS = [
   { field: "keyword", label: "Keyword", group: "Search", type: "text", operators: ["contains"] },
-  { field: "factory", label: "Factory", group: "Scope", type: "select", operators: ["equals", "contains", "in"] },
-  { field: "machineLabel", label: "Machine", group: "Machine", type: "select", operators: ["equals", "contains", "in"] },
-  { field: "formName", label: "Checklist Form", group: "Form", type: "select", operators: ["equals", "contains", "in"] },
-  { field: "schedule", label: "Schedule", group: "Form", type: "select", operators: ["equals", "in"], options: CHECKLIST_SUBMISSION_SCHEDULE_OPTIONS },
-  { field: "completedBy", label: "Submitted By", group: "Submission", type: "select", operators: ["equals", "contains", "in"] },
-  { field: "hasNGStatus", label: "NG Status", group: "Submission", type: "select", operators: ["equals", "in"], options: CHECKLIST_SUBMISSION_NG_OPTIONS },
-  { field: "submissionActivity", label: "Submission Activity", group: "Submission", type: "select", operators: ["equals", "in"], options: CHECKLIST_SUBMISSION_ACTIVITY_OPTIONS },
-  { field: "recordCount", label: "Submission Count", group: "Submission", type: "number", operators: ["equals", "greater", "less", "range"] },
-  { field: "lastCompletedAt", label: "Last Submission Date", group: "Submission", type: "date", operators: ["equals", "greater", "less", "range"] },
+  { field: "factory", label: "Factory", group: "Scope", type: "select", operators: ["equals", "not_equals", "contains", "in", "exists", "not_exists"] },
+  { field: "machineLabel", label: "Machine", group: "Machine", type: "select", operators: ["equals", "not_equals", "contains", "in", "exists", "not_exists"] },
+  { field: "formName", label: "Checklist Form", group: "Form", type: "select", operators: ["equals", "not_equals", "contains", "in", "exists", "not_exists"] },
+  { field: "schedule", label: "Schedule", group: "Form", type: "select", operators: ["equals", "not_equals", "in", "exists", "not_exists"], options: CHECKLIST_SUBMISSION_SCHEDULE_OPTIONS },
+  { field: "completedBy", label: "Submitted By", group: "Submission", type: "select", operators: ["equals", "not_equals", "contains", "in", "exists", "not_exists"] },
+  { field: "hasNGStatus", label: "NG Status", group: "Submission", type: "select", operators: ["equals", "not_equals", "in"], options: CHECKLIST_SUBMISSION_NG_OPTIONS },
+  { field: "submissionActivity", label: "Submission Activity", group: "Submission", type: "select", operators: ["equals", "not_equals", "in"], options: CHECKLIST_SUBMISSION_ACTIVITY_OPTIONS },
+  { field: "recordCount", label: "Submission Count", group: "Submission", type: "number", operators: ["equals", "not_equals", "greater", "less", "range", "exists", "not_exists"] },
+  { field: "lastCompletedAt", label: "Last Submission Date", group: "Submission", type: "date", operators: ["equals", "not_equals", "greater", "less", "range", "exists", "not_exists"] },
 ];
 
 let checklistSubmissionFilterRowCount = 0;

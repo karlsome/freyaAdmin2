@@ -237,6 +237,7 @@ function App() {
               <Route path="/" element={<Navigate to="/dashboard" replace />} />
               <Route path="/dashboard" element={<DashboardPage />} />
               <Route path="/firstFactory" element={<FirstFactoryPage />} />
+              <Route path="/firstFactory/:tab" element={<FirstFactoryPage />} />
               <Route path="/planner" element={<PlannerPage />} />
               <Route path="/approvals" element={<ApprovalsPage />} />
               <Route path="/noda" element={<NodaPage />} />

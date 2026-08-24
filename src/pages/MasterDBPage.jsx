@@ -1,11 +1,15 @@
 import { Suspense, lazy, useCallback, useEffect, useRef, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import Papa from "papaparse";
 import MasterBatchEditModal from "../components/MasterBatchEditModal";
 import MasterCsvImportCard from "../components/MasterCsvImportCard";
 import MasterDetailDrawer from "../components/MasterDetailDrawer";
+import MaterialDetailModal from "../components/MaterialDetailModal";
+import MasterProductDetailModal from "../components/MasterProductDetailModal";
 import MasterFilterPanel from "../components/MasterFilterPanel";
 import PageHeader from "../components/PageHeader";
 import MasterRecordModal from "../components/MasterRecordModal";
+import MasterProductEditModal from "../components/MasterProductEditModal";
 import MasterStatsStrip from "../components/MasterStatsStrip";
 import MasterTable from "../components/MasterTable";
 import MasterTabNav from "../components/MasterTabNav";
@@ -18,6 +22,7 @@ import {
   fetchMasterRecordIds,
   fetchMasterSchema,
   getMasterCollectionConfig,
+  query,
   updateMasterRecord,
   uploadMasterImage,
 } from "../services/api";
@@ -81,7 +86,15 @@ function toBase64(file) {
 }
 
 export default function MasterDBPage() {
-  const [activeTab, setActiveTab] = useState("masterDB");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tabFromUrl = searchParams.get("tab");
+  const searchFromUrl = searchParams.get("search");
+  const detailFromUrl = searchParams.get("detail");
+  const createHinbanFromUrl = searchParams.get("createHinban");
+
+  const [activeTab, setActiveTab] = useState(() => {
+    return tabFromUrl && MASTER_TABS.some((item) => item.key === tabFromUrl) ? tabFromUrl : "masterDB";
+  });
   const [records, setRecords] = useState([]);
   const [schemaFields, setSchemaFields] = useState([]);
   const [filterOptions, setFilterOptions] = useState({ factories: [], rl: [], colors: [], processes: [] });
@@ -192,7 +205,7 @@ export default function MasterDBPage() {
           simpleFilters,
           advancedFilters: advancedQuery,
           searchTags,
-          searchFields: buildSearchFields(buildMasterFieldDefinitions(schemaFields, [], activeTab)),
+          searchFields: buildSearchFields(buildMasterFieldDefinitions(schemaFields, [], activeTab), activeTab),
           searchLogicMode,
         });
 
@@ -256,6 +269,74 @@ export default function MasterDBPage() {
     distinctCacheRef.current.clear();
   }
 
+  const effectiveTab = tabFromUrl && MASTER_TABS.some((item) => item.key === tabFromUrl) ? tabFromUrl : "masterDB";
+
+  useEffect(() => {
+    if (effectiveTab !== activeTab) {
+      resetFirstTabState(effectiveTab);
+    }
+  }, [effectiveTab, activeTab]);
+
+  // Synchronize detail query param with selectedRecord modal state
+  useEffect(() => {
+    if (!detailFromUrl || isSpecialTab) {
+      if (!detailFromUrl && selectedRecord) {
+        setSelectedRecord(null);
+      }
+      return;
+    }
+
+    const currentId = extractRecordId(selectedRecord);
+    const currentHinban = selectedRecord?.["品番"];
+    if (selectedRecord && (currentId === detailFromUrl || currentHinban === detailFromUrl)) {
+      return;
+    }
+
+    const found = records.find(
+      (r) => r["品番"] === detailFromUrl || extractRecordId(r) === detailFromUrl
+    );
+    if (found) {
+      setSelectedRecord(found);
+      return;
+    }
+
+    const { collectionName } = getMasterCollectionConfig(activeTab);
+    const isObjectId = /^[0-9a-fA-F]{24}$/.test(detailFromUrl);
+    const queryFilter = isObjectId
+      ? { $or: [{ _id: detailFromUrl }, { "品番": detailFromUrl }] }
+      : { "品番": detailFromUrl };
+
+    query("Sasaki_Coating_MasterDB", collectionName, queryFilter)
+      .then((res) => {
+        const item = Array.isArray(res) ? res[0] : res?.data?.[0];
+        if (item) setSelectedRecord(item);
+      })
+      .catch(console.error);
+  }, [detailFromUrl, activeTab, records, isSpecialTab]);
+
+  function handleSelectRecord(record) {
+    setSelectedRecord(record);
+    const detailKey = record ? (record["品番"] || extractRecordId(record) || "") : "";
+    setSearchParams((params) => {
+      const next = new URLSearchParams(params);
+      if (detailKey) {
+        next.set("detail", detailKey);
+      } else {
+        next.delete("detail");
+      }
+      return next;
+    });
+  }
+
+  function handleCloseDetailModal() {
+    setSelectedRecord(null);
+    setSearchParams((params) => {
+      const next = new URLSearchParams(params);
+      next.delete("detail");
+      return next;
+    });
+  }
+
   function handleTabSelect(tab) {
     if (!tab.ready) {
       const liveTabs = MASTER_TABS.filter((item) => item.ready).map((item) => item.label).join(" / ");
@@ -264,6 +345,13 @@ export default function MasterDBPage() {
     }
 
     if (tab.key !== activeTab) {
+      setSearchParams((params) => {
+        const next = new URLSearchParams(params);
+        next.set("tab", tab.key);
+        next.delete("search");
+        next.delete("detail");
+        return next;
+      });
       resetFirstTabState(tab.key);
     }
   }
@@ -460,7 +548,7 @@ export default function MasterDBPage() {
         tabKey: activeTab,
       });
 
-      setSelectedRecord(null);
+      handleCloseDetailModal();
       setFlash({ type: "success", message: "Master record updated successfully." });
       setRefreshNonce((current) => current + 1);
     } catch (saveError) {
@@ -493,6 +581,7 @@ export default function MasterDBPage() {
       setSelectedRecord((current) => current ? { ...current, imageURL: result.imageURL } : current);
       setFlash({ type: "success", message: "Master image uploaded successfully." });
       setRefreshNonce((current) => current + 1);
+      return result;
     } catch (uploadError) {
       setFlash({ type: "error", message: uploadError.message || "Failed to upload the master image." });
     } finally {
@@ -617,7 +706,11 @@ export default function MasterDBPage() {
           ) : isPceFilesTab ? (
             <PceFilesWorkspace onFlash={setFlash} />
           ) : isBomDBTab ? (
-            <BomWorkspace onFlash={setFlash} />
+            <BomWorkspace
+              initialSearch={searchFromUrl || ""}
+              initialCreateHinban={createHinbanFromUrl || ""}
+              onFlash={setFlash}
+            />
           ) : (
             <SetsubiDBWorkspace refreshToken={refreshNonce} />
           )}
@@ -680,36 +773,52 @@ export default function MasterDBPage() {
               setPage(1);
               setPageSize(nextPageSize);
             }}
-            onRowClick={(record) => setSelectedRecord(record)}
+            onRowClick={handleSelectRecord}
           />
         </>
       )}
 
       {!isSpecialTab && selectedRecord && (
-        <MasterDetailDrawer
-          key={extractRecordId(selectedRecord) || "master-detail"}
-          open={!!selectedRecord}
-          record={selectedRecord}
-          tabKey={activeTab}
-          fieldDefinitions={fieldDefinitions}
-          saving={drawerSaving}
-          uploading={drawerUploading}
-          onClose={() => setSelectedRecord(null)}
-          onSave={handleSaveRecord}
-          onUploadImage={handleUploadImage}
-        />
+        activeTab === "materialDB" ? (
+          <MaterialDetailModal
+            key={extractRecordId(selectedRecord) || selectedRecord?.['品番'] || "material-detail"}
+            modalData={selectedRecord}
+            onClose={handleCloseDetailModal}
+          />
+        ) : (
+          <MasterProductDetailModal
+            key={extractRecordId(selectedRecord) || selectedRecord?.['品番'] || "product-detail"}
+            open={!!selectedRecord}
+            record={selectedRecord}
+            saving={drawerSaving}
+            uploading={drawerUploading}
+            onClose={handleCloseDetailModal}
+            onSave={handleSaveRecord}
+            onUploadImage={handleUploadImage}
+          />
+        )
       )}
 
       {!isSpecialTab && addModalOpen && (
-        <MasterRecordModal
-          open={addModalOpen}
-          fieldDefinitions={fieldDefinitions}
-          tabLabel={activeTabMeta.label}
-          recordLabel={activeTabUI.recordLabel}
-          submitting={addSubmitting}
-          onClose={() => setAddModalOpen(false)}
-          onSubmit={handleCreateRecord}
-        />
+        activeTab === "masterDB" ? (
+          <MasterProductEditModal
+            open={addModalOpen}
+            isNew={true}
+            submitting={addSubmitting}
+            onClose={() => setAddModalOpen(false)}
+            onSubmit={(draft) => handleCreateRecord(draft)}
+          />
+        ) : (
+          <MasterRecordModal
+            open={addModalOpen}
+            fieldDefinitions={fieldDefinitions}
+            tabLabel={activeTabMeta.label}
+            recordLabel={activeTabUI.recordLabel}
+            submitting={addSubmitting}
+            onClose={() => setAddModalOpen(false)}
+            onSubmit={handleCreateRecord}
+          />
+        )
       )}
 
       {!isSpecialTab && batchModalOpen && (

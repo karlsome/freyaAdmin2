@@ -4,6 +4,7 @@ import DataTable from "../components/DataTable";
 import PageHeader from "../components/PageHeader";
 import StatSummaryCard from "../components/StatSummaryCard";
 import StatusChip from "../components/StatusChip";
+import { SearchableSelect } from "../components/AdvancedFilterSection";
 import {
   fetchFactoryStatusFactories,
   fetchFactoryStatusLogs,
@@ -449,11 +450,10 @@ export default function FactoryStatusLogsPage() {
           <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-5">
             <label className="block">
               <span className="block text-xs font-semibold uppercase tracking-[0.18em] text-outline">Equipment</span>
-              <input
-                type="text"
-                list="factory-status-log-equipment-options"
+              <SearchableSelect
                 value={filters.equipment}
-                onChange={(event) => updateFilter("equipment", event.target.value)}
+                options={filterOptions.equipments}
+                onChange={({ value }) => updateFilter("equipment", value)}
                 placeholder="Filter by equipment"
                 className="planner-data-text mt-2 h-11 w-full rounded-2xl border border-outline-variant/30 bg-white px-4 text-sm text-on-surface outline-none transition focus:border-primary/40 dark:bg-surface-container"
               />
@@ -461,11 +461,10 @@ export default function FactoryStatusLogsPage() {
 
             <label className="block">
               <span className="block text-xs font-semibold uppercase tracking-[0.18em] text-outline">Operator</span>
-              <input
-                type="text"
-                list="factory-status-log-worker-options"
+              <SearchableSelect
                 value={filters.workerName}
-                onChange={(event) => updateFilter("workerName", event.target.value)}
+                options={filterOptions.workers}
+                onChange={({ value }) => updateFilter("workerName", value)}
                 placeholder="Filter by operator"
                 className="planner-data-text mt-2 h-11 w-full rounded-2xl border border-outline-variant/30 bg-white px-4 text-sm text-on-surface outline-none transition focus:border-primary/40 dark:bg-surface-container"
               />
@@ -473,16 +472,13 @@ export default function FactoryStatusLogsPage() {
 
             <label className="block">
               <span className="block text-xs font-semibold uppercase tracking-[0.18em] text-outline">Status</span>
-              <select
+              <SearchableSelect
                 value={filters.status}
-                onChange={(event) => updateFilter("status", event.target.value)}
+                options={filterOptions.statuses}
+                onChange={({ value }) => updateFilter("status", value)}
+                placeholder="All statuses"
                 className="planner-data-text mt-2 h-11 w-full rounded-2xl border border-outline-variant/30 bg-white px-4 text-sm text-on-surface outline-none transition focus:border-primary/40 dark:bg-surface-container"
-              >
-                <option value="">All statuses</option>
-                {filterOptions.statuses.map((status) => (
-                  <option key={status} value={status}>{status}</option>
-                ))}
-              </select>
+              />
             </label>
 
             <label className="block">
@@ -507,18 +503,6 @@ export default function FactoryStatusLogsPage() {
               />
             </label>
           </div>
-
-          <datalist id="factory-status-log-equipment-options">
-            {filterOptions.equipments.map((equipment) => (
-              <option key={equipment} value={equipment} />
-            ))}
-          </datalist>
-
-          <datalist id="factory-status-log-worker-options">
-            {filterOptions.workers.map((worker) => (
-              <option key={worker} value={worker} />
-            ))}
-          </datalist>
         </div>
 
         <div className="mb-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
