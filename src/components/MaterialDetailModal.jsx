@@ -59,7 +59,7 @@ export default function MaterialDetailModal({ modalData, onClose }) {
     <>
       {createPortal(
         <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-          <div className="bg-surface border border-outline-variant/30 rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh]">
+          <div className="bg-surface border border-outline-variant/30 rounded-2xl shadow-2xl w-full max-w-4xl overflow-hidden flex flex-col max-h-[90vh]">
             <div className="flex items-center justify-between p-6 border-b border-outline-variant/30 bg-surface-variant/20">
               <div>
                 <h2 className="text-xl font-bold text-on-surface">{modalData['品番']}</h2>
@@ -326,8 +326,8 @@ export default function MaterialDetailModal({ modalData, onClose }) {
         const bomEntry = bomData?.find(b => b['工程コード'] === 1010);
         
         return createPortal(
-          <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4" onClick={() => setNestedMaterialData(null)}>
-            <div className="bg-surface border border-outline-variant/30 rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[85vh] animate-[fadeIn_0.15s_ease-out]" onClick={e => e.stopPropagation()}>
+          <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4" onClick={() => setNestedMaterialData(null)}>
+            <div className="bg-surface border border-outline-variant/30 rounded-2xl shadow-2xl w-full max-w-4xl overflow-hidden flex flex-col max-h-[85vh] animate-[fadeIn_0.15s_ease-out]" onClick={e => e.stopPropagation()}>
               {/* Header */}
               <div className="flex items-center justify-between p-5 border-b border-outline-variant/30 bg-primary/5">
                 <div className="flex items-center gap-3">

@@ -21,45 +21,61 @@ export default function MasterProductDetailModal({
   const fileInputRef = useRef(null);
 
   // Linked Material State
-  const [linkedMaterial, setLinkedMaterial] = useState(null);
+  const [linkedMaterials, setLinkedMaterials] = useState([]);
   const [loadingLinked, setLoadingLinked] = useState(false);
   const [activeMaterialModal, setActiveMaterialModal] = useState(null);
 
-  const materialBackNo = record?.["材料背番号"] || "";
-  const materialHinban = record?.["材料品番"] || "";
+  const parseKeys = (str) => {
+    if (!str) return [];
+    return String(str)
+      .split(/[,、\n]/)
+      .map((s) => s.trim())
+      .filter(Boolean);
+  };
+
+  const rawMaterialBackNo = record?.["材料背番号"] || "";
+  const rawMaterialHinban = record?.["材料品番"] || "";
+  const backNoKeys = parseKeys(rawMaterialBackNo);
+  const hinbanKeys = parseKeys(rawMaterialHinban);
 
   useEffect(() => {
     if (!open || !record) {
-      setLinkedMaterial(null);
+      setLinkedMaterials([]);
       return;
     }
 
-    const searchKey = materialBackNo || materialHinban;
-    if (!searchKey) {
-      setLinkedMaterial(null);
+    const keysToSearch = backNoKeys.length > 0 ? backNoKeys : hinbanKeys;
+    if (keysToSearch.length === 0) {
+      setLinkedMaterials([]);
       return;
     }
 
     let cancelled = false;
     setLoadingLinked(true);
 
-    const queryFilter = {
-      $or: [
-        { "品目マスタ.ラベル品番": searchKey },
-        { "ラベル品番": searchKey },
-        { "品番": searchKey },
-        { "品目マスタ.品番": searchKey },
-      ],
-    };
-
-    query("Sasaki_Coating_MasterDB", "materialMasterDB3", queryFilter)
-      .then((res) => {
-        if (cancelled) return;
-        const data = Array.isArray(res) ? res[0] : res?.data?.[0];
-        setLinkedMaterial(data || null);
+    Promise.all(
+      keysToSearch.map(async (key) => {
+        const queryFilter = {
+          $or: [
+            { "品目マスタ.ラベル品番": key },
+            { "ラベル品番": key },
+            { "品番": key },
+            { "品目マスタ.品番": key },
+          ],
+        };
+        try {
+          const res = await query("Sasaki_Coating_MasterDB", "materialMasterDB3", queryFilter);
+          const data = Array.isArray(res) ? res[0] : res?.data?.[0];
+          return { key, material: data || null };
+        } catch (err) {
+          console.error("Failed to query linked material for key:", key, err);
+          return { key, material: null };
+        }
       })
-      .catch((err) => {
-        console.error("Failed to query linked material:", err);
+    )
+      .then((results) => {
+        if (cancelled) return;
+        setLinkedMaterials(results);
       })
       .finally(() => {
         if (!cancelled) setLoadingLinked(false);
@@ -68,45 +84,21 @@ export default function MasterProductDetailModal({
     return () => {
       cancelled = true;
     };
-  }, [open, record, materialBackNo, materialHinban]);
+  }, [open, record, rawMaterialBackNo, rawMaterialHinban]);
 
   if (!open || !record) return null;
 
-  const handleOpenMaterialModal = async () => {
-    if (linkedMaterial) {
-      setActiveMaterialModal(linkedMaterial);
-      return;
-    }
+  const resolvedHinbans = linkedMaterials
+    .map((item) => item.material?.["品番"] || item.material?.["品目マスタ"]?.["品番"])
+    .filter(Boolean);
 
-    const searchKey = materialBackNo || materialHinban;
-    if (!searchKey) return;
+  const effectiveMaterialHinbanList = hinbanKeys.length > 0
+    ? hinbanKeys
+    : resolvedHinbans;
 
-    setLoadingLinked(true);
-    try {
-      const res = await query("Sasaki_Coating_MasterDB", "materialMasterDB3", {
-        $or: [
-          { "品目マスタ.ラベル品番": searchKey },
-          { "ラベル品番": searchKey },
-          { "品番": searchKey },
-        ],
-      });
-      const data = Array.isArray(res) ? res[0] : res?.data?.[0];
-      if (data) {
-        setLinkedMaterial(data);
-        setActiveMaterialModal(data);
-      } else {
-        alert(
-          isJa
-            ? `材料DBに該当するレコードが見つかりませんでした (キー: ${searchKey})`
-            : `No matching record found in Material DB (Key: ${searchKey})`
-        );
-      }
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoadingLinked(false);
-    }
-  };
+  const effectiveMaterialHinbanString = rawMaterialHinban.trim()
+    ? rawMaterialHinban
+    : resolvedHinbans.join(", ");
 
   const renderValue = (val) => {
     if (val === null || val === undefined || val === "") return "—";
@@ -118,7 +110,7 @@ export default function MasterProductDetailModal({
       {createPortal(
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-[fadeIn_0.15s_ease-out]">
           <div
-            className="bg-surface border border-outline-variant/30 rounded-2xl shadow-2xl w-full max-w-3xl overflow-hidden flex flex-col max-h-[90vh]"
+            className="bg-surface border border-outline-variant/30 rounded-2xl shadow-2xl w-full max-w-5xl overflow-hidden flex flex-col max-h-[90vh]"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
@@ -336,7 +328,7 @@ export default function MasterProductDetailModal({
                     <span className="material-symbols-outlined text-primary" style={{ fontSize: 16 }}>layers</span>
                     <span>{isJa ? "使用材料情報 (材料DB連携)" : "Material Specs & DB Link"}</span>
                   </div>
-                  {(materialBackNo || materialHinban) && (
+                  {(rawMaterialBackNo || rawMaterialHinban) && (
                     <span className="text-[10px] text-primary/80 font-normal">
                       {isJa ? "材料背番号 = 材料DB「ラベル品番」" : "Linked via ラベル品番"}
                     </span>
@@ -351,61 +343,131 @@ export default function MasterProductDetailModal({
                     </div>
                     <div className="flex flex-col bg-primary/5 border border-primary/20 rounded-xl p-3">
                       <span className="text-[10px] font-bold text-primary uppercase">{isJa ? "材料背番号 (ラベル品番)" : "Material Back No."}</span>
-                      <span className="font-mono font-bold text-sm text-primary mt-0.5">{renderValue(record["材料背番号"])}</span>
+                      <div className="mt-1 flex flex-wrap gap-1.5">
+                        {backNoKeys.length > 0 ? (
+                          backNoKeys.map((k, i) => (
+                            <span
+                              key={i}
+                              className="inline-flex items-center rounded-lg bg-primary/15 border border-primary/30 px-2 py-0.5 font-mono text-xs font-bold text-primary"
+                            >
+                              {k}
+                            </span>
+                          ))
+                        ) : (
+                          <span className="font-mono font-bold text-sm text-primary">
+                            {renderValue(record["材料背番号"])}
+                          </span>
+                        )}
+                      </div>
                     </div>
                     <div className="flex flex-col bg-primary/5 border border-primary/20 rounded-xl p-3">
                       <span className="text-[10px] font-bold text-primary uppercase">{isJa ? "材料品番 (構成品番)" : "Material Hinban"}</span>
-                      <span className="font-mono font-semibold text-sm text-on-surface mt-0.5">
-                        {renderValue(record["材料品番"] || linkedMaterial?.["品番"] || linkedMaterial?.["品目マスタ"]?.["品番"])}
-                      </span>
+                      <div className="mt-1 flex flex-col gap-1.5">
+                        {effectiveMaterialHinbanList.length > 0 ? (
+                          effectiveMaterialHinbanList.map((h, i) => {
+                            const matchedBackNo = backNoKeys[i];
+                            return (
+                              <div
+                                key={i}
+                                className="flex items-center gap-1.5 bg-surface/90 border border-outline-variant/30 rounded-lg px-2 py-1 shadow-2xs overflow-hidden"
+                              >
+                                {matchedBackNo && backNoKeys.length > 1 && (
+                                  <span className="inline-flex items-center rounded bg-primary/15 border border-primary/30 px-1.5 py-0.2 font-mono text-[10px] font-bold text-primary shrink-0">
+                                    {matchedBackNo}
+                                  </span>
+                                )}
+                                <span className="font-mono font-bold text-xs text-on-surface truncate select-all">
+                                  {h}
+                                </span>
+                              </div>
+                            );
+                          })
+                        ) : (
+                          <span className="font-mono font-semibold text-sm text-on-surface">
+                            {renderValue(record["材料品番"])}
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
 
-                  {/* Connected Material DB Action Card */}
-                  {(materialBackNo || materialHinban) && (
-                    <div
-                      onClick={handleOpenMaterialModal}
-                      className="group rounded-xl border border-primary/30 bg-primary/10 hover:bg-primary/15 transition-all p-4 flex items-center justify-between cursor-pointer shadow-xs active:scale-[0.99]"
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-on-primary shadow-xs">
-                          <span className="material-symbols-outlined" style={{ fontSize: 20 }}>
-                            inventory_2
+                  {/* Connected Material DB Action Cards (Single or Multiple) */}
+                  {linkedMaterials.length > 0 && (
+                    <div className="flex flex-col gap-2.5">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold text-primary uppercase tracking-wide flex items-center gap-1.5">
+                          <span className="material-symbols-outlined" style={{ fontSize: 16 }}>inventory_2</span>
+                          <span>
+                            {isJa
+                              ? `連携材料 (材料DB${linkedMaterials.length > 1 ? `・${linkedMaterials.length}件` : ""})`
+                              : `Linked Material Records (${linkedMaterials.length})`}
                           </span>
-                        </div>
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <span className="text-xs font-bold text-primary uppercase tracking-wide">
-                              {isJa ? "連携材料 (材料DB)" : "Linked Material Record"}
-                            </span>
-                            {loadingLinked && (
-                              <span className="text-[10px] text-primary/70 animate-pulse">
-                                {isJa ? "読込中…" : "Loading…"}
-                              </span>
-                            )}
-                          </div>
-                          <div className="text-sm font-semibold text-on-surface mt-0.5">
-                            {linkedMaterial ? (
-                              <span>
-                                {linkedMaterial["品番"]}
-                                <span className="text-xs font-normal text-outline ml-2">
-                                  ({linkedMaterial["品目マスタ"]?.["品名"] || linkedMaterial["品名"] || "No Name"})
-                                </span>
-                              </span>
-                            ) : (
-                              <span>
-                                {isJa ? "材料背番号:" : "Back No:"} {materialBackNo || materialHinban}
-                              </span>
-                            )}
-                          </div>
-                        </div>
+                        </span>
+                        {loadingLinked && (
+                          <span className="text-[10px] text-primary/70 animate-pulse">
+                            {isJa ? "読込中…" : "Loading…"}
+                          </span>
+                        )}
                       </div>
 
-                      <div className="flex items-center gap-1 text-primary font-bold text-xs group-hover:translate-x-0.5 transition-transform">
-                        <span>{isJa ? "材料詳細を開く" : "View Material"}</span>
-                        <span className="material-symbols-outlined" style={{ fontSize: 18 }}>
-                          arrow_forward
-                        </span>
+                      <div className={`grid gap-2.5 ${linkedMaterials.length > 1 ? "grid-cols-1 md:grid-cols-2" : "grid-cols-1"}`}>
+                        {linkedMaterials.map((item, idx) => {
+                          const mat = item.material;
+                          const matImage = mat?.["品目マスタ"]?.["imageURL"] || mat?.["imageURL"];
+                          const matHinban = mat?.["品番"] || mat?.["品目マスタ"]?.["品番"] || (isJa ? "未登録" : "Not Found");
+                          const matName = mat?.["品目マスタ"]?.["品名"] || mat?.["品名"] || "";
+                          const matSpec = mat?.["品目マスタ"]?.["仕様"] || mat?.["仕様"] || "";
+
+                          return (
+                            <div
+                              key={idx}
+                              onClick={() => {
+                                if (mat) setActiveMaterialModal(mat);
+                              }}
+                              className={`group rounded-xl border border-primary/30 bg-primary/10 hover:bg-primary/15 transition-all p-3 flex items-center justify-between shadow-xs active:scale-[0.99] ${
+                                mat ? "cursor-pointer" : "cursor-default opacity-80"
+                              }`}
+                            >
+                              <div className="flex items-center gap-3 min-w-0 flex-1 pr-2">
+                                {matImage ? (
+                                  <div className="h-10 w-10 rounded-lg border border-primary/30 bg-surface/80 flex items-center justify-center p-1 overflow-hidden shrink-0">
+                                    <img src={matImage} alt={matHinban} className="h-full w-full object-contain" />
+                                  </div>
+                                ) : (
+                                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary text-on-primary shadow-xs">
+                                    <span className="material-symbols-outlined" style={{ fontSize: 20 }}>
+                                      inventory_2
+                                    </span>
+                                  </div>
+                                )}
+                                <div className="min-w-0 flex-1">
+                                  <div className="flex items-center gap-1.5 flex-wrap">
+                                    <span className="inline-flex items-center rounded-md bg-primary/20 border border-primary/40 px-1.5 py-0.2 font-mono text-[10px] font-bold text-primary">
+                                      {item.key}
+                                    </span>
+                                    <span className="font-mono font-bold text-xs text-on-surface truncate">
+                                      {matHinban}
+                                    </span>
+                                  </div>
+                                  {(matName || matSpec) && (
+                                    <div className="text-xs text-outline mt-0.5 truncate">
+                                      {matName} {matSpec ? `(${matSpec})` : ""}
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+
+                              {mat && (
+                                <div className="flex items-center gap-1 text-primary font-bold text-xs group-hover:translate-x-0.5 transition-transform shrink-0">
+                                  <span className="hidden sm:inline">{isJa ? "詳細" : "View"}</span>
+                                  <span className="material-symbols-outlined" style={{ fontSize: 18 }}>
+                                    arrow_forward
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
                       </div>
                     </div>
                   )}
@@ -486,7 +548,7 @@ export default function MasterProductDetailModal({
           open={editModalOpen}
           record={{
             ...record,
-            材料品番: record?.["材料品番"] || linkedMaterial?.["品番"] || linkedMaterial?.["品目マスタ"]?.["品番"] || ""
+            材料品番: effectiveMaterialHinbanString || record?.["材料品番"] || ""
           }}
           isNew={false}
           submitting={saving}

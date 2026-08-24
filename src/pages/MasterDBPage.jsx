@@ -517,6 +517,7 @@ export default function MasterDBPage() {
       setSelectedRecord((current) => current ? { ...current, imageURL: result.imageURL } : current);
       setFlash({ type: "success", message: "Master image uploaded successfully." });
       setRefreshNonce((current) => current + 1);
+      return result;
     } catch (uploadError) {
       setFlash({ type: "error", message: uploadError.message || "Failed to upload the master image." });
     } finally {
