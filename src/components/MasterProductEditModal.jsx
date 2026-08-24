@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
+import { query } from "../services/api";
 import { useLanguage } from "../contexts/LanguageContext";
 
 export default function MasterProductEditModal({
@@ -49,6 +50,7 @@ export default function MasterProductEditModal({
 
   const [draft, setDraft] = useState(initialDraft);
   const [activeSection, setActiveSection] = useState("all");
+  const [isLookingUpMaterial, setIsLookingUpMaterial] = useState(false);
 
   useEffect(() => {
     if (open) {
@@ -67,6 +69,34 @@ export default function MasterProductEditModal({
 
   const handleChange = (field, value) => {
     setDraft((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const handleMaterialBackNoLookup = async (backNoVal) => {
+    const backNo = (backNoVal ?? draft["材料背番号"] ?? "").trim();
+    if (!backNo) return;
+    setIsLookingUpMaterial(true);
+    try {
+      const res = await query("Sasaki_Coating_MasterDB", "materialMasterDB3", {
+        $or: [
+          { "品目マスタ.ラベル品番": backNo },
+          { "ラベル品番": backNo },
+          { "品番": backNo },
+          { "品目マスタ.品番": backNo },
+        ],
+      });
+      const data = Array.isArray(res) ? res[0] : res?.data?.[0];
+      const matchedHinban = data?.["品番"] || data?.["品目マスタ"]?.["品番"];
+      if (matchedHinban) {
+        setDraft((prev) => ({
+          ...prev,
+          材料品番: prev["材料品番"]?.trim() ? prev["材料品番"] : matchedHinban,
+        }));
+      }
+    } catch (err) {
+      console.error("Failed to lookup material hinban:", err);
+    } finally {
+      setIsLookingUpMaterial(false);
+    }
   };
 
   const handleSubmit = (e) => {
@@ -419,6 +449,7 @@ export default function MasterProductEditModal({
                   type="text"
                   value={draft["材料背番号"] ?? ""}
                   onChange={(e) => handleChange("材料背番号", e.target.value)}
+                  onBlur={() => handleMaterialBackNoLookup()}
                   placeholder="e.g. Z4K1 / LMB / 880 / 12IB"
                   className="w-full rounded-xl border border-primary/40 bg-surface px-3 py-2 text-xs font-mono font-bold text-primary outline-none focus:border-primary focus:ring-1 focus:ring-primary"
                 />

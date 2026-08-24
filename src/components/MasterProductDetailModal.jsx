@@ -355,7 +355,9 @@ export default function MasterProductDetailModal({
                     </div>
                     <div className="flex flex-col bg-primary/5 border border-primary/20 rounded-xl p-3">
                       <span className="text-[10px] font-bold text-primary uppercase">{isJa ? "材料品番 (構成品番)" : "Material Hinban"}</span>
-                      <span className="font-mono font-semibold text-sm text-on-surface mt-0.5">{renderValue(record["材料品番"])}</span>
+                      <span className="font-mono font-semibold text-sm text-on-surface mt-0.5">
+                        {renderValue(record["材料品番"] || linkedMaterial?.["品番"] || linkedMaterial?.["品目マスタ"]?.["品番"])}
+                      </span>
                     </div>
                   </div>
 
@@ -482,7 +484,10 @@ export default function MasterProductDetailModal({
       {editModalOpen && (
         <MasterProductEditModal
           open={editModalOpen}
-          record={record}
+          record={{
+            ...record,
+            材料品番: record?.["材料品番"] || linkedMaterial?.["品番"] || linkedMaterial?.["品目マスタ"]?.["品番"] || ""
+          }}
           isNew={false}
           submitting={saving}
           onClose={() => setEditModalOpen(false)}
