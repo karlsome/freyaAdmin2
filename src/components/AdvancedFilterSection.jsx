@@ -1,13 +1,261 @@
 import { useEffect, useMemo, useState, useRef } from "react";
+import { createPortal } from "react-dom";
+import { query } from "../services/api";
+
+const HINBAN_PROJECTION = {
+  "品番": 1,
+  "品名": 1,
+  "品目マスタ.品番": 1,
+  "品目マスタ.品名": 1,
+};
+
+function SearchableHinbanSelect({ value, onChange, placeholder = "Search 品番...", className }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [search, setSearch] = useState("");
+  const [options, setOptions] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [coords, setCoords] = useState({ top: 0, left: 0, width: 0, showAbove: false, maxHeight: 350 });
+  const wrapperRef = useRef(null);
+  const menuRef = useRef(null);
+  const searchInputRef = useRef(null);
+
+  const updateCoords = () => {
+    if (wrapperRef.current) {
+      const rect = wrapperRef.current.getBoundingClientRect();
+      const spaceBelow = window.innerHeight - rect.bottom - 16;
+      const spaceAbove = rect.top - 16;
+      const showAbove = spaceBelow < 300 && spaceAbove > spaceBelow;
+      const availableHeight = showAbove ? Math.min(spaceAbove, 540) : Math.min(spaceBelow, 540);
+
+      setCoords({
+        top: showAbove ? rect.top - 6 : rect.bottom + 6,
+        left: rect.left,
+        width: Math.max(rect.width, 320),
+        showAbove,
+        maxHeight: Math.max(availableHeight, 350),
+      });
+    }
+  };
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (
+        wrapperRef.current && !wrapperRef.current.contains(event.target) &&
+        menuRef.current && !menuRef.current.contains(event.target)
+      ) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  useEffect(() => {
+    if (isOpen) {
+      updateCoords();
+      setSearch("");
+      setTimeout(() => searchInputRef.current?.focus(), 40);
+      window.addEventListener("scroll", updateCoords, true);
+      window.addEventListener("resize", updateCoords);
+      return () => {
+        window.removeEventListener("scroll", updateCoords, true);
+        window.removeEventListener("resize", updateCoords);
+      };
+    }
+  }, [isOpen]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    let active = true;
+    const timer = setTimeout(async () => {
+      setLoading(true);
+      try {
+        const regexQuery = search ? { "品番": { "$regex": search, "$options": "i" } } : {};
+        const [masterRes, materialRes] = await Promise.all([
+          query("Sasaki_Coating_MasterDB", "masterDB", regexQuery, { limit: 30, projection: HINBAN_PROJECTION }),
+          query("Sasaki_Coating_MasterDB", "materialMasterDB3", regexQuery, { limit: 30, projection: HINBAN_PROJECTION })
+        ]);
+        
+        if (!active) return;
+        let mData = Array.isArray(masterRes) ? masterRes : (masterRes?.data || []);
+        let matData = Array.isArray(materialRes) ? materialRes : (materialRes?.data || []);
+        
+        const combined = [...mData, ...matData];
+        const unique = [];
+        const seen = new Set();
+        for (const item of combined) {
+          const itemHinban = item['品番'] || item?.['品目マスタ']?.['品番'];
+          if (itemHinban && !seen.has(itemHinban)) {
+            seen.add(itemHinban);
+            unique.push(item);
+          }
+        }
+        setOptions(unique.slice(0, 40));
+      } catch (err) {
+        if (active) console.error(err);
+      } finally {
+        if (active) setLoading(false);
+      }
+    }, 150);
+    return () => {
+      active = false;
+      clearTimeout(timer);
+    };
+  }, [search, isOpen]);
+
+  return (
+    <div className="relative w-full" ref={wrapperRef}>
+      <button
+        type="button"
+        onClick={() => {
+          setIsOpen(!isOpen);
+          updateCoords();
+        }}
+        className={`${className} flex items-center justify-between text-left truncate px-3 cursor-pointer`}
+      >
+        <span className={`truncate ${value ? "text-on-surface font-semibold" : "opacity-60"}`}>
+          {value || placeholder}
+        </span>
+        <div className="flex items-center gap-1 shrink-0 ml-2 text-outline">
+          {value && (
+            <span
+              onMouseDown={(e) => e.stopPropagation()}
+              onClick={(e) => {
+                e.stopPropagation();
+                onChange({ value: "" });
+              }}
+              className="hover:text-error transition-colors p-0.5 rounded cursor-pointer"
+              title="Clear"
+            >
+              <span className="material-symbols-outlined" style={{ fontSize: 16 }}>close</span>
+            </span>
+          )}
+          <span
+            className="material-symbols-outlined transition-transform duration-200"
+            style={{ fontSize: 18, transform: isOpen ? "rotate(180deg)" : "none" }}
+          >
+            expand_more
+          </span>
+        </div>
+      </button>
+
+      {isOpen && createPortal(
+        <div
+          ref={menuRef}
+          style={{
+            position: "fixed",
+            top: coords.showAbove ? "auto" : `${coords.top}px`,
+            bottom: coords.showAbove ? `${window.innerHeight - coords.top}px` : "auto",
+            left: `${coords.left}px`,
+            width: `${coords.width}px`,
+            maxHeight: `${coords.maxHeight || 500}px`,
+            zIndex: 99999,
+          }}
+          className="bg-surface border border-outline-variant/50 rounded-xl shadow-2xl p-2.5 flex flex-col gap-2 backdrop-blur-md animate-[fadeIn_0.1s_ease-out]"
+        >
+          {/* Search Box at Top */}
+          <div className="relative">
+            <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-outline material-symbols-outlined" style={{ fontSize: 16 }}>
+              search
+            </span>
+            <input
+              ref={searchInputRef}
+              type="text"
+              className="w-full bg-surface-variant/30 border border-outline-variant/40 rounded-lg pl-8 pr-7 py-1.5 text-xs text-on-surface focus:border-primary focus:outline-none placeholder:text-outline"
+              placeholder="Search 品番..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+            {search && (
+              <button
+                type="button"
+                onClick={() => setSearch("")}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-outline hover:text-on-surface p-0.5 cursor-pointer"
+              >
+                <span className="material-symbols-outlined" style={{ fontSize: 14 }}>close</span>
+              </button>
+            )}
+          </div>
+
+          {/* Options List */}
+          <div className="overflow-y-auto flex-1 flex flex-col divide-y divide-outline-variant/15 pr-0.5">
+            {loading ? (
+              <div className="p-4 text-xs text-outline text-center flex items-center justify-center gap-2">
+                <span className="material-symbols-outlined animate-spin" style={{ fontSize: 16 }}>progress_activity</span>
+                <span>Searching...</span>
+              </div>
+            ) : options.length > 0 ? (
+              options.map((opt, i) => {
+                const optHinban = opt['品番'] || opt?.['品目マスタ']?.['品番'];
+                const optName = opt['品名'] || opt?.['品目マスタ']?.['品名'];
+                const isSelected = String(value) === String(optHinban);
+                return (
+                  <div
+                    key={i}
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      onChange({ value: optHinban });
+                      setIsOpen(false);
+                    }}
+                    className={`px-3 py-2 text-xs hover:bg-primary/10 hover:text-primary transition-colors cursor-pointer flex items-center justify-between rounded-lg ${
+                      isSelected ? "bg-primary/15 text-primary font-bold" : "text-on-surface font-medium"
+                    }`}
+                  >
+                    <div className="flex flex-col min-w-0 pr-2">
+                      <span className="font-mono font-bold text-xs truncate">{optHinban}</span>
+                      {optName && <span className="text-[11px] text-outline truncate">{optName}</span>}
+                    </div>
+                    {isSelected && (
+                      <span className="material-symbols-outlined text-primary shrink-0" style={{ fontSize: 16 }}>
+                        check
+                      </span>
+                    )}
+                  </div>
+                );
+              })
+            ) : (
+              <div className="p-4 text-xs text-outline text-center">No matches found</div>
+            )}
+          </div>
+        </div>,
+        document.body
+      )}
+    </div>
+  );
+}
 
 function SearchableSelect({ value, options, multiple, onChange, placeholder, className }) {
   const [isOpen, setIsOpen] = useState(false);
-  const [query, setQuery] = useState("");
+  const [queryText, setQueryText] = useState("");
+  const [coords, setCoords] = useState({ top: 0, left: 0, width: 0, showAbove: false, maxHeight: 350 });
   const containerRef = useRef(null);
+  const menuRef = useRef(null);
+  const searchInputRef = useRef(null);
+
+  const updateCoords = () => {
+    if (containerRef.current) {
+      const rect = containerRef.current.getBoundingClientRect();
+      const spaceBelow = window.innerHeight - rect.bottom - 16;
+      const spaceAbove = rect.top - 16;
+      const showAbove = spaceBelow < 300 && spaceAbove > spaceBelow;
+      const availableHeight = showAbove ? Math.min(spaceAbove, 540) : Math.min(spaceBelow, 540);
+
+      setCoords({
+        top: showAbove ? rect.top - 6 : rect.bottom + 6,
+        left: rect.left,
+        width: Math.max(rect.width, 280),
+        showAbove,
+        maxHeight: Math.max(availableHeight, 350),
+      });
+    }
+  };
 
   useEffect(() => {
     function handleClickOutside(event) {
-      if (containerRef.current && !containerRef.current.contains(event.target)) {
+      if (
+        containerRef.current && !containerRef.current.contains(event.target) &&
+        menuRef.current && !menuRef.current.contains(event.target)
+      ) {
         setIsOpen(false);
       }
     }
@@ -15,11 +263,25 @@ function SearchableSelect({ value, options, multiple, onChange, placeholder, cla
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  useEffect(() => {
+    if (isOpen) {
+      updateCoords();
+      setQueryText("");
+      setTimeout(() => searchInputRef.current?.focus(), 40);
+      window.addEventListener("scroll", updateCoords, true);
+      window.addEventListener("resize", updateCoords);
+      return () => {
+        window.removeEventListener("scroll", updateCoords, true);
+        window.removeEventListener("resize", updateCoords);
+      };
+    }
+  }, [isOpen]);
+
   const filteredOptions = useMemo(() => {
-    const q = query.trim().toLowerCase();
+    const q = queryText.trim().toLowerCase();
     if (!q) return options;
-    return options.filter((o) => o.toLowerCase().includes(q));
-  }, [options, query]);
+    return options.filter((o) => String(o).toLowerCase().includes(q));
+  }, [options, queryText]);
 
   const toggleOption = (option, e) => {
     e.preventDefault();
@@ -33,7 +295,7 @@ function SearchableSelect({ value, options, multiple, onChange, placeholder, cla
     } else {
       onChange({ value: option });
       setIsOpen(false);
-      setQuery("");
+      setQueryText("");
     }
   };
 
@@ -41,51 +303,124 @@ function SearchableSelect({ value, options, multiple, onChange, placeholder, cla
     ? (Array.isArray(value) && value.length > 0 ? value.join(", ") : placeholder)
     : (value || placeholder);
 
+  const hasValue = multiple ? (Array.isArray(value) && value.length > 0) : !!value;
+
   return (
     <div className="relative w-full" ref={containerRef}>
       <button
         type="button"
-        onClick={() => setIsOpen(!isOpen)}
-        className={`${className} flex items-center justify-between text-left truncate px-3`}
+        onClick={() => {
+          setIsOpen(!isOpen);
+          updateCoords();
+        }}
+        className={`${className} flex items-center justify-between text-left truncate px-3 cursor-pointer`}
       >
-        <span className="truncate opacity-90">{displayText}</span>
-        <span className="material-symbols-outlined shrink-0 opacity-50" style={{ fontSize: 18 }}>expand_more</span>
+        <span className={`truncate ${hasValue ? "text-on-surface font-semibold" : "opacity-70"}`}>
+          {displayText}
+        </span>
+        <div className="flex items-center gap-1 shrink-0 ml-2 text-outline">
+          {hasValue && (
+            <span
+              onMouseDown={(e) => e.stopPropagation()}
+              onClick={(e) => {
+                e.stopPropagation();
+                onChange({ value: multiple ? [] : "" });
+              }}
+              className="hover:text-error transition-colors p-0.5 rounded cursor-pointer"
+              title="Clear"
+            >
+              <span className="material-symbols-outlined" style={{ fontSize: 16 }}>close</span>
+            </span>
+          )}
+          <span
+            className="material-symbols-outlined transition-transform duration-200"
+            style={{ fontSize: 18, transform: isOpen ? "rotate(180deg)" : "none" }}
+          >
+            expand_more
+          </span>
+        </div>
       </button>
 
-      {isOpen && (
-        <div className="absolute z-50 mt-1 w-full max-h-72 overflow-y-auto rounded-xl border border-separator/40 bg-white shadow-xl dark:bg-surface-container py-1 flex flex-col">
-          <div className="px-2 pb-1 sticky top-0 bg-white dark:bg-surface-container z-10 pt-1">
+      {isOpen && createPortal(
+        <div
+          ref={menuRef}
+          style={{
+            position: "fixed",
+            top: coords.showAbove ? "auto" : `${coords.top}px`,
+            bottom: coords.showAbove ? `${window.innerHeight - coords.top}px` : "auto",
+            left: `${coords.left}px`,
+            width: `${coords.width}px`,
+            maxHeight: `${coords.maxHeight || 500}px`,
+            zIndex: 99999,
+          }}
+          className="bg-surface border border-outline-variant/50 rounded-xl shadow-2xl p-2.5 flex flex-col gap-2 backdrop-blur-md animate-[fadeIn_0.1s_ease-out]"
+        >
+          <div className="relative">
+            <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-outline material-symbols-outlined" style={{ fontSize: 16 }}>
+              search
+            </span>
             <input
+              ref={searchInputRef}
               type="text"
-              autoFocus
-              className="w-full h-8 px-3 rounded-lg border border-separator/40 bg-surface-container-low text-xs outline-none focus:border-primary/40"
+              className="w-full bg-surface-variant/30 border border-outline-variant/40 rounded-lg pl-8 pr-7 py-1.5 text-xs text-on-surface focus:border-primary focus:outline-none placeholder:text-outline"
               placeholder="Search..."
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              onClick={(e) => e.stopPropagation()}
+              value={queryText}
+              onChange={(e) => setQueryText(e.target.value)}
             />
+            {queryText && (
+              <button
+                type="button"
+                onClick={() => setQueryText("")}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-outline hover:text-on-surface p-0.5 cursor-pointer"
+              >
+                <span className="material-symbols-outlined" style={{ fontSize: 14 }}>close</span>
+              </button>
+            )}
           </div>
-          {filteredOptions.length === 0 ? (
-            <div className="px-4 py-3 text-xs text-on-surface-variant text-center">No results found</div>
-          ) : (
-            filteredOptions.map((option) => {
-              const isSelected = multiple
-                ? (Array.isArray(value) ? value.includes(option) : value === option)
-                : value === option;
-              return (
-                <button
-                  key={option}
-                  type="button"
-                  onClick={(e) => toggleOption(option, e)}
-                  className={`flex w-full items-center px-4 py-2 text-sm text-left transition-colors
-                    ${isSelected ? "bg-primary/10 text-primary font-medium" : "text-on-surface hover:bg-surface-container-highest"}`}
-                >
-                  <span className="truncate">{option}</span>
-                </button>
-              );
-            })
+
+          {/* If the user typed a query that doesn't exactly match an option, allow using custom text */}
+          {queryText.trim() && !options.map(String).includes(queryText.trim()) && (
+            <div
+              onMouseDown={(e) => {
+                e.preventDefault();
+                toggleOption(queryText.trim(), e);
+              }}
+              className="px-3 py-2 text-xs text-primary hover:bg-primary/10 transition-colors cursor-pointer flex items-center gap-1.5 border-b border-outline-variant/20 font-medium"
+            >
+              <span className="material-symbols-outlined" style={{ fontSize: 14 }}>add</span>
+              <span>Use: <strong>"{queryText.trim()}"</strong></span>
+            </div>
           )}
-        </div>
+
+          <div className="overflow-y-auto flex-1 flex flex-col divide-y divide-outline-variant/15 pr-0.5">
+            {filteredOptions.length === 0 && !queryText.trim() ? (
+              <div className="px-4 py-3 text-xs text-outline text-center">No options available</div>
+            ) : (
+              filteredOptions.map((option) => {
+                const isSelected = multiple
+                  ? (Array.isArray(value) ? value.includes(option) : value === option)
+                  : value === option;
+                return (
+                  <div
+                    key={option}
+                    onMouseDown={(e) => toggleOption(option, e)}
+                    className={`px-3 py-2 text-xs hover:bg-primary/10 hover:text-primary transition-colors cursor-pointer flex items-center justify-between rounded-lg ${
+                      isSelected ? "bg-primary/15 text-primary font-bold" : "text-on-surface font-medium"
+                    }`}
+                  >
+                    <span className="truncate">{option}</span>
+                    {isSelected && (
+                      <span className="material-symbols-outlined text-primary shrink-0" style={{ fontSize: 16 }}>
+                        check
+                      </span>
+                    )}
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </div>,
+        document.body
       )}
     </div>
   );
@@ -189,7 +524,21 @@ function RowValueInput({
     );
   }
 
-  if (fieldDefinition.type === "select") {
+  const isHinban = fieldDefinition.field === "品番" || fieldDefinition.field === "構成品番" || /品番/i.test(fieldDefinition.field) || /品番/i.test(fieldDefinition.label);
+
+  if (isHinban && row.operator !== "range") {
+    return (
+      <SearchableHinbanSelect
+        value={row.value || ""}
+        onChange={onChange}
+        placeholder="Select or search 品番..."
+        className={styles.controlBase}
+      />
+    );
+  }
+
+  // If the field is a select or has options loaded (or loading options), use the searchable clearable dropdown
+  if (fieldDefinition.type === "select" || options.length > 0 || (loading && fieldDefinition.type !== "number" && fieldDefinition.type !== "date")) {
     const isMultiSelect = row.operator === "in";
     const selectedValue = isMultiSelect
       ? (Array.isArray(row.value) ? row.value : row.value ? [row.value] : [])
@@ -199,8 +548,8 @@ function RowValueInput({
     const placeholder = loading
       ? `Loading ${fieldDefinition.label}...`
       : options.length
-        ? `Select ${fieldDefinition.label}...`
-        : `No ${fieldDefinition.label} values`;
+        ? `Select or search ${fieldDefinition.label}...`
+        : `Select or search ${fieldDefinition.label}...`;
 
     return (
       <SearchableSelect
@@ -216,54 +565,31 @@ function RowValueInput({
 
   if (row.operator === "in") {
     const inputValue = Array.isArray(row.value) ? row.value.join(", ") : row.value;
-    const inputSupportsSuggestions = enableTextSuggestions && options.length > 0;
 
     return (
-      <>
-        <input
-          type="text"
-          value={inputValue}
-          onChange={(event) => onChange({ value: event.target.value })}
-          className={styles.controlBase}
-          placeholder="Comma separated values"
-          list={inputSupportsSuggestions ? datalistId : undefined}
-        />
-        {inputSupportsSuggestions ? (
-          <datalist id={datalistId}>
-            {options.map((option) => (
-              <option key={option} value={option} />
-            ))}
-          </datalist>
-        ) : null}
-      </>
+      <input
+        type="text"
+        value={inputValue}
+        onChange={(event) => onChange({ value: event.target.value })}
+        className={styles.controlBase}
+        placeholder="Comma separated values"
+      />
     );
   }
 
   const inputType = getTextInputType(fieldDefinition.type);
-  const inputSupportsSuggestions = enableTextSuggestions && inputType === "text" && options.length > 0;
-  const placeholder = loading && inputSupportsSuggestions ? "Loading known values..." : "Enter value";
 
   return (
-    <>
-      <input
-        type={inputType}
-        value={row.value}
-        onChange={(event) => {
-          const val = fieldDefinition.type === "number" ? event.target.value.replace(/[^0-9.-]/g, '') : event.target.value;
-          onChange({ value: val });
-        }}
-        className={styles.controlBase}
-        placeholder={placeholder}
-        list={inputSupportsSuggestions ? datalistId : undefined}
-      />
-      {inputSupportsSuggestions ? (
-        <datalist id={datalistId}>
-          {options.map((option) => (
-            <option key={option} value={option} />
-          ))}
-        </datalist>
-      ) : null}
-    </>
+    <input
+      type={inputType}
+      value={row.value}
+      onChange={(event) => {
+        const val = fieldDefinition.type === "number" ? event.target.value.replace(/[^0-9.-]/g, '') : event.target.value;
+        onChange({ value: val });
+      }}
+      className={styles.controlBase}
+      placeholder="Enter value"
+    />
   );
 }
 
