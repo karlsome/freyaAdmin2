@@ -160,12 +160,15 @@ const TIME_FIELD_PATTERN = /(time|時刻|時間)/i;
 const TEXTAREA_FIELD_PATTERN = /(備考|note|boardData|説明|comment)/i;
 
 const OPERATOR_LABELS = {
-  equals: "Equals",
-  contains: "Contains",
-  in: "In",
-  greater: "Greater than",
-  less: "Less than",
-  range: "Range",
+  equals: "equals",
+  not_equals: "is not",
+  contains: "contains",
+  in: "in",
+  exists: "exists",
+  not_exists: "does not exist",
+  greater: "greater than",
+  less: "less than",
+  range: "range",
 };
 
 let filterRowCount = 0;
@@ -279,12 +282,12 @@ export function buildMasterFieldDefinitions(schemaFields = [], records = [], tab
   return getMasterFieldOrder(schemaFields, records, tabKey).map((field) => {
     const type = inferMasterFieldType(field);
     const operators = type === "date"
-      ? ["equals", "range"]
+      ? ["equals", "not_equals", "range", "exists", "not_exists"]
       : type === "number"
-        ? ["equals", "greater", "less", "range"]
+        ? ["equals", "not_equals", "greater", "less", "range", "exists", "not_exists"]
         : type === "time"
-          ? ["equals", "greater", "less"]
-          : ["equals", "contains", "in"];
+          ? ["equals", "not_equals", "greater", "less", "exists", "not_exists"]
+          : ["equals", "not_equals", "contains", "in", "exists", "not_exists"];
 
     return {
       field,
@@ -361,7 +364,11 @@ export function buildMasterAdvancedQuery(rows = [], fieldDefinitions = []) {
 
     let clause = null;
 
-    if (row.operator === "range") {
+    if (row.operator === "exists") {
+      clause = { [row.field]: { $exists: true, $nin: ["", null] } };
+    } else if (row.operator === "not_exists") {
+      clause = { $or: [{ [row.field]: { $exists: false } }, { [row.field]: null }, { [row.field]: "" }] };
+    } else if (row.operator === "range") {
       if (row.valueFrom === "" || row.valueTo === "") return;
       clause = {
         [row.field]: {
@@ -369,9 +376,7 @@ export function buildMasterAdvancedQuery(rows = [], fieldDefinitions = []) {
           $lte: coerceFilterValue(row.valueTo, fieldDefinition),
         },
       };
-    }
-
-    if (row.operator === "in" && !clause) {
+    } else if (row.operator === "in") {
       const values = Array.isArray(row.value)
         ? row.value.filter(Boolean)
         : String(row.value || "")
@@ -382,16 +387,22 @@ export function buildMasterAdvancedQuery(rows = [], fieldDefinitions = []) {
       clause = {
         [row.field]: { $in: values.map((value) => coerceFilterValue(value, fieldDefinition)) },
       };
-    }
-
-    if (!clause) {
+    } else if (row.operator === "not_equals") {
       if (row.value === "" || row.value == null) return;
-
       const value = coerceFilterValue(row.value, fieldDefinition);
-      if (row.operator === "equals") clause = { [row.field]: value };
-      if (row.operator === "contains") clause = { [row.field]: { $regex: row.value, $options: "i" } };
-      if (row.operator === "greater") clause = { [row.field]: { $gt: value } };
-      if (row.operator === "less") clause = { [row.field]: { $lt: value } };
+      clause = { [row.field]: { $ne: value } };
+    } else if (row.operator === "equals") {
+      if (row.value === "" || row.value == null) return;
+      clause = { [row.field]: coerceFilterValue(row.value, fieldDefinition) };
+    } else if (row.operator === "contains") {
+      if (row.value === "" || row.value == null) return;
+      clause = { [row.field]: { $regex: row.value, $options: "i" } };
+    } else if (row.operator === "greater") {
+      if (row.value === "" || row.value == null) return;
+      clause = { [row.field]: { $gt: coerceFilterValue(row.value, fieldDefinition) } };
+    } else if (row.operator === "less") {
+      if (row.value === "" || row.value == null) return;
+      clause = { [row.field]: { $lt: coerceFilterValue(row.value, fieldDefinition) } };
     }
 
     if (!clause) return;
@@ -418,16 +429,31 @@ export function getActiveMasterAdvancedFilters(rows = [], fieldDefinitions = [])
   const fieldMap = Object.fromEntries(fieldDefinitions.map((field) => [field.field, field]));
 
   return rows.flatMap((row) => {
-    if (!row.field || !row.operator) return [];
     const fieldDefinition = fieldMap[row.field];
-    if (!fieldDefinition) return [];
+    if (!row.field || !row.operator || !fieldDefinition) return [];
+
+    if (row.operator === "exists" || row.operator === "not_exists") {
+      return [{
+        id: row.id,
+        label: fieldDefinition.label,
+        operator: OPERATOR_LABELS[row.operator] || row.operator,
+        value: "",
+      }];
+    }
 
     let renderedValue = "";
+
     if (row.operator === "range") {
       if (row.valueFrom === "" || row.valueTo === "") return [];
       renderedValue = `${row.valueFrom} - ${row.valueTo}`;
     } else if (row.operator === "in") {
-      const values = Array.isArray(row.value) ? row.value : [];
+      const values = Array.isArray(row.value)
+        ? row.value.filter(Boolean)
+        : String(row.value || "")
+            .split(",")
+            .map((value) => value.trim())
+            .filter(Boolean);
+
       if (!values.length) return [];
       renderedValue = values.join(", ");
     } else {
@@ -437,7 +463,6 @@ export function getActiveMasterAdvancedFilters(rows = [], fieldDefinitions = [])
 
     return [{
       id: row.id,
-      field: row.field,
       label: fieldDefinition.label,
       operator: OPERATOR_LABELS[row.operator] || row.operator,
       value: renderedValue,

@@ -442,6 +442,15 @@ function buildActiveFilters(rows = [], fieldDefinitions = [], operatorLabels = {
     const fieldDefinition = fieldMap[row.field];
     if (!fieldDefinition) return [];
 
+    if (row.operator === "exists" || row.operator === "not_exists") {
+      return [{
+        id: row.id,
+        label: fieldDefinition.label,
+        operator: operatorLabels[row.operator] || row.operator,
+        value: "",
+      }];
+    }
+
     let renderedValue = "";
 
     if (row.operator === "range") {
@@ -492,6 +501,14 @@ function RowValueInput({
         disabled
         className={`${styles.controlBase} opacity-40`}
       />
+    );
+  }
+
+  if (row.operator === "exists" || row.operator === "not_exists") {
+    return (
+      <div className={`${styles.controlBase} flex items-center px-3 text-xs text-outline/80 italic bg-surface-variant/20 cursor-default select-none border-dashed`}>
+        {row.operator === "exists" ? "Field exists & is not empty" : "Field is empty or missing"}
+      </div>
     );
   }
 
@@ -873,7 +890,7 @@ export default function AdvancedFilterSection({
                     <span key={filter.id} className={chipClassName}>
                       <span>{filter.label}</span>
                       <span className={chipTone === "amber" ? "text-amber-950/50" : "text-primary/60"}>{filter.operator}</span>
-                      <span>{filter.value}</span>
+                      {filter.value ? <span>{filter.value}</span> : null}
                       <button type="button" onClick={() => onRemoveRow(filter.id)} className="leading-none hover:opacity-60">×</button>
                     </span>
                   ))}

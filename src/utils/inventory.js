@@ -24,22 +24,25 @@ export const INVENTORY_BATCH_FILTER_FIELDS = [
 ];
 
 export const INVENTORY_ADVANCED_FILTER_FIELDS = [
-  { field: "品番", label: "Part Number", group: "Identity", type: "select", operators: ["equals", "contains", "in"] },
-  { field: "背番号", label: "Serial Number", group: "Identity", type: "select", operators: ["equals", "contains", "in"] },
-  { field: "工場", label: "Factory", group: "Identity", type: "select", operators: ["equals", "contains", "in"] },
-  { field: "physicalQuantity", label: "Physical Stock", group: "Stock", type: "number", operators: ["equals", "greater", "less", "range"] },
-  { field: "reservedQuantity", label: "Reserved Stock", group: "Stock", type: "number", operators: ["equals", "greater", "less", "range"] },
-  { field: "availableQuantity", label: "Available Stock", group: "Stock", type: "number", operators: ["equals", "greater", "less", "range"] },
-  { field: "lastUpdated", label: "Last Updated", group: "Dates", type: "date", operators: ["equals", "greater", "less", "range"] },
+  { field: "品番", label: "Part Number", group: "Identity", type: "select", operators: ["equals", "not_equals", "contains", "in", "exists", "not_exists"] },
+  { field: "背番号", label: "Serial Number", group: "Identity", type: "select", operators: ["equals", "not_equals", "contains", "in", "exists", "not_exists"] },
+  { field: "工場", label: "Factory", group: "Identity", type: "select", operators: ["equals", "not_equals", "contains", "in", "exists", "not_exists"] },
+  { field: "physicalQuantity", label: "Physical Stock", group: "Stock", type: "number", operators: ["equals", "not_equals", "greater", "less", "range", "exists", "not_exists"] },
+  { field: "reservedQuantity", label: "Reserved Stock", group: "Stock", type: "number", operators: ["equals", "not_equals", "greater", "less", "range", "exists", "not_exists"] },
+  { field: "availableQuantity", label: "Available Stock", group: "Stock", type: "number", operators: ["equals", "not_equals", "greater", "less", "range", "exists", "not_exists"] },
+  { field: "lastUpdated", label: "Last Updated", group: "Dates", type: "date", operators: ["equals", "not_equals", "greater", "less", "range", "exists", "not_exists"] },
 ];
 
 export const INVENTORY_OPERATOR_LABELS = {
-  equals: "Equals",
-  contains: "Contains",
-  in: "In",
-  greater: "Greater than",
-  less: "Less than",
-  range: "Range",
+  equals: "equals",
+  not_equals: "is not",
+  contains: "contains",
+  in: "in",
+  exists: "exists",
+  not_exists: "does not exist",
+  greater: "greater than",
+  less: "less than",
+  range: "range",
 };
 
 let inventoryBatchFilterCount = 0;
@@ -121,6 +124,15 @@ export function buildInventoryAdvancedFilterClauses(rows = [], fieldDefinitions 
     const fieldDefinition = fieldMap.get(field);
 
     if (!field || !operator || !fieldDefinition) return [];
+
+    if (operator === "exists" || operator === "not_exists") {
+      return [{
+        field,
+        operator,
+        type: fieldDefinition.type,
+        value: "",
+      }];
+    }
 
     if (operator === "range") {
       const valueFrom = String(row?.valueFrom || "").trim();

@@ -74,12 +74,15 @@ export const APPROVAL_STATUS_OPTIONS = [
 ];
 
 export const APPROVAL_FILTER_OPERATOR_LABELS = {
-  equals: "Equals",
-  contains: "Contains",
-  in: "In",
-  greater: "Greater than",
-  less: "Less than",
-  range: "Range",
+  equals: "equals",
+  not_equals: "is not",
+  contains: "contains",
+  in: "in",
+  exists: "exists",
+  not_exists: "does not exist",
+  greater: "greater than",
+  less: "less than",
+  range: "range",
 };
 
 const APPROVAL_STATUS_ADVANCED_OPTIONS = APPROVAL_STATUS_OPTIONS
@@ -88,38 +91,38 @@ const APPROVAL_STATUS_ADVANCED_OPTIONS = APPROVAL_STATUS_OPTIONS
 
 const APPROVAL_COMMON_ADVANCED_FIELDS = [
   // Basic
-  { field: "品番", label: "品番", type: "text", group: "Basic", operators: ["equals", "contains"] },
-  { field: "背番号", label: "背番号", type: "text", group: "Basic", operators: ["equals", "contains"] },
-  { field: "モデル", label: "モデル", type: "select", group: "Basic", operators: ["equals", "in"], optionSource: "master-models" },
-  { field: "製造ロット", label: "製造ロット", type: "text", group: "Basic", operators: ["equals", "contains"] },
-  { field: "材料ロット", label: "材料ロット", type: "text", group: "Basic", operators: ["equals", "contains"] },
-  { field: "Date", label: "Date", type: "date", group: "Basic", operators: ["equals", "range"] },
+  { field: "品番", label: "品番", type: "text", group: "Basic", operators: ["equals", "not_equals", "contains", "exists", "not_exists"] },
+  { field: "背番号", label: "背番号", type: "text", group: "Basic", operators: ["equals", "not_equals", "contains", "exists", "not_exists"] },
+  { field: "モデル", label: "モデル", type: "select", group: "Basic", operators: ["equals", "not_equals", "in", "exists", "not_exists"], optionSource: "master-models" },
+  { field: "製造ロット", label: "製造ロット", type: "text", group: "Basic", operators: ["equals", "not_equals", "contains", "exists", "not_exists"] },
+  { field: "材料ロット", label: "材料ロット", type: "text", group: "Basic", operators: ["equals", "not_equals", "contains", "exists", "not_exists"] },
+  { field: "Date", label: "Date", type: "date", group: "Basic", operators: ["equals", "not_equals", "range", "exists", "not_exists"] },
   
   // Worker
-  { field: "Worker_Name", label: "Worker_Name", type: "select", group: "Worker", operators: ["equals", "in"], optionSource: "collection-distinct" },
+  { field: "Worker_Name", label: "Worker_Name", type: "select", group: "Worker", operators: ["equals", "not_equals", "in", "exists", "not_exists"], optionSource: "collection-distinct" },
   
   // Equipment
-  { field: "設備", label: "設備", type: "select", group: "Equipment", operators: ["equals", "in"], optionSource: "collection-distinct" },
-  { field: "工場", label: "工場", type: "select", group: "Equipment", operators: ["equals", "in"], optionSource: "collection-distinct" },
+  { field: "設備", label: "設備", type: "select", group: "Equipment", operators: ["equals", "not_equals", "in", "exists", "not_exists"], optionSource: "collection-distinct" },
+  { field: "工場", label: "工場", type: "select", group: "Equipment", operators: ["equals", "not_equals", "in", "exists", "not_exists"], optionSource: "collection-distinct" },
   
   // Time
-  { field: "Time_start", label: "Time_start", type: "time", group: "Time", operators: ["equals", "range", "greater", "less"] },
-  { field: "Time_end", label: "Time_end", type: "time", group: "Time", operators: ["equals", "range", "greater", "less"] },
+  { field: "Time_start", label: "Time_start", type: "time", group: "Time", operators: ["equals", "not_equals", "range", "greater", "less", "exists", "not_exists"] },
+  { field: "Time_end", label: "Time_end", type: "time", group: "Time", operators: ["equals", "not_equals", "range", "greater", "less", "exists", "not_exists"] },
   
   // Quantity
-  { field: "Total", label: "Total", type: "number", group: "Quantity", operators: ["equals", "range", "greater", "less"] },
-  { field: "Total_NG", label: "Total_NG", type: "number", group: "Quantity", operators: ["equals", "range", "greater", "less"] },
-  { field: "Process_Quantity", label: "Process_Quantity", type: "number", group: "Quantity", operators: ["equals", "range", "greater", "less"] },
-  { field: "Remaining_Quantity", label: "Remaining_Quantity", type: "number", group: "Quantity", operators: ["equals", "range", "greater", "less"] },
-  { field: "Spare", label: "Spare", type: "number", group: "Quantity", operators: ["equals", "range", "greater", "less"] },
+  { field: "Total", label: "Total", type: "number", group: "Quantity", operators: ["equals", "not_equals", "range", "greater", "less", "exists", "not_exists"] },
+  { field: "Total_NG", label: "Total_NG", type: "number", group: "Quantity", operators: ["equals", "not_equals", "range", "greater", "less", "exists", "not_exists"] },
+  { field: "Process_Quantity", label: "Process_Quantity", type: "number", group: "Quantity", operators: ["equals", "not_equals", "range", "greater", "less", "exists", "not_exists"] },
+  { field: "Remaining_Quantity", label: "Remaining_Quantity", type: "number", group: "Quantity", operators: ["equals", "not_equals", "range", "greater", "less", "exists", "not_exists"] },
+  { field: "Spare", label: "Spare", type: "number", group: "Quantity", operators: ["equals", "not_equals", "range", "greater", "less", "exists", "not_exists"] },
   
-  // Performance  
-  { field: "Cycle_Time", label: "Cycle_Time", type: "number", group: "Performance", operators: ["equals", "range", "greater", "less"] },
+  // Performance
+  { field: "Cycle_Time", label: "Cycle_Time", type: "number", group: "Performance", operators: ["equals", "not_equals", "range", "greater", "less", "exists", "not_exists"] },
   
   // Other
-  { field: "ScannedQR", label: "ScannedQR", type: "text", group: "Other", operators: ["equals", "contains"] },
-  { field: "Comment", label: "Comment", type: "textarea", group: "Other", operators: ["equals", "contains"] },
-  { field: "approvalStatus", label: "approvalStatus", type: "select", group: "Status", operators: ["equals", "in"], options: APPROVAL_STATUS_ADVANCED_OPTIONS },
+  { field: "ScannedQR", label: "ScannedQR", type: "text", group: "Other", operators: ["equals", "not_equals", "contains", "exists", "not_exists"] },
+  { field: "Comment", label: "Comment", type: "textarea", group: "Other", operators: ["equals", "not_equals", "contains", "exists", "not_exists"] },
+  { field: "approvalStatus", label: "approvalStatus", type: "select", group: "Status", operators: ["equals", "not_equals", "in", "exists", "not_exists"], options: APPROVAL_STATUS_ADVANCED_OPTIONS },
 ];
 
 const APPROVAL_TAB_ADVANCED_FIELDS = {
@@ -278,7 +281,11 @@ export function buildApprovalAdvancedFilterClauses(rows = [], fieldDefinitions =
 
     let clause = null;
 
-    if (row.operator === "range") {
+    if (row.operator === "exists") {
+      clause = { [row.field]: { $exists: true, $nin: ["", null] } };
+    } else if (row.operator === "not_exists") {
+      clause = { $or: [{ [row.field]: { $exists: false } }, { [row.field]: null }, { [row.field]: "" }] };
+    } else if (row.operator === "range") {
       if (row.valueFrom === "" || row.valueTo === "") return;
       clause = {
         [row.field]: {
@@ -286,9 +293,7 @@ export function buildApprovalAdvancedFilterClauses(rows = [], fieldDefinitions =
           $lte: coerceApprovalFilterValue(row.valueTo, fieldDefinition),
         },
       };
-    }
-
-    if (row.operator === "in" && !clause) {
+    } else if (row.operator === "in") {
       const values = Array.isArray(row.value)
         ? row.value.filter(Boolean)
         : asString(row.value)
@@ -301,17 +306,22 @@ export function buildApprovalAdvancedFilterClauses(rows = [], fieldDefinitions =
       clause = {
         [row.field]: { $in: values.map((value) => coerceApprovalFilterValue(value, fieldDefinition)) },
       };
-    }
-
-    if (!clause) {
+    } else if (row.operator === "not_equals") {
       if (row.value === "" || row.value == null) return;
-
       const value = coerceApprovalFilterValue(row.value, fieldDefinition);
-
-      if (row.operator === "equals") clause = { [row.field]: value };
-      if (row.operator === "contains") clause = { [row.field]: { $regex: escapeRegex(row.value), $options: "i" } };
-      if (row.operator === "greater") clause = { [row.field]: { $gt: value } };
-      if (row.operator === "less") clause = { [row.field]: { $lt: value } };
+      clause = { [row.field]: { $ne: value } };
+    } else if (row.operator === "equals") {
+      if (row.value === "" || row.value == null) return;
+      clause = { [row.field]: coerceApprovalFilterValue(row.value, fieldDefinition) };
+    } else if (row.operator === "contains") {
+      if (row.value === "" || row.value == null) return;
+      clause = { [row.field]: { $regex: escapeRegex(row.value), $options: "i" } };
+    } else if (row.operator === "greater") {
+      if (row.value === "" || row.value == null) return;
+      clause = { [row.field]: { $gt: coerceApprovalFilterValue(row.value, fieldDefinition) } };
+    } else if (row.operator === "less") {
+      if (row.value === "" || row.value == null) return;
+      clause = { [row.field]: { $lt: coerceApprovalFilterValue(row.value, fieldDefinition) } };
     }
 
     if (!clause) return;
@@ -336,6 +346,16 @@ export function getActiveApprovalAdvancedFilters(rows = [], fieldDefinitions = [
     if (!row?.field || !row?.operator) return [];
     const fieldDefinition = fieldMap[row.field];
     if (!fieldDefinition) return [];
+
+    if (row.operator === "exists" || row.operator === "not_exists") {
+      return [{
+        id: row.id,
+        field: row.field,
+        label: fieldDefinition.label,
+        operator: APPROVAL_FILTER_OPERATOR_LABELS[row.operator] || row.operator,
+        value: "",
+      }];
+    }
 
     let renderedValue = "";
     if (row.operator === "range") {
