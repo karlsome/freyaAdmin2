@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { formatMasterValue, getMasterPreviewFields, getMasterRecordIdentity, getMasterTabUI } from "../utils/masterDB";
 import IconButton from "./IconButton";
 import ModalShell from "./ModalShell";
+import { SearchableSelect, SearchableHinbanSelect } from "./AdvancedFilterSection";
 
 function PreviewCard({ record, changes, previewFields, tabKey }) {
   const identity = getMasterRecordIdentity(record, tabKey);
@@ -172,24 +173,29 @@ export default function MasterBatchEditModal({
                         onChange={(event) => setDraftValue(event.target.value)}
                         className="w-full rounded-2xl border border-outline-variant/30 bg-surface-container px-3 py-3 text-sm text-on-surface outline-none transition focus:border-primary/40"
                       />
+                    ) : activeField.field === "品番" || activeField.field === "構成品番" || /品番/i.test(activeField.field) ? (
+                      <SearchableHinbanSelect
+                        value={draftValue}
+                        onChange={({ value }) => setDraftValue(value)}
+                        placeholder="Search or select 品番..."
+                        className="w-full rounded-2xl border border-outline-variant/30 bg-surface-container px-3 py-3 text-sm text-on-surface outline-none transition focus:border-primary/40"
+                      />
+                    ) : options.length > 0 || loadingOptions || activeField.type === "select" ? (
+                      <SearchableSelect
+                        value={draftValue}
+                        options={options}
+                        onChange={({ value }) => setDraftValue(value)}
+                        placeholder={loadingOptions ? `Loading ${activeField.label}...` : `Select or search ${activeField.label}...`}
+                        className="w-full rounded-2xl border border-outline-variant/30 bg-surface-container px-3 py-3 text-sm text-on-surface outline-none transition focus:border-primary/40"
+                      />
                     ) : (
-                      <>
-                        <input
-                          list={activeField.type === "text" ? `master-batch-${activeField.field}` : undefined}
-                          type={activeField.type === "number" ? "number" : activeField.type === "date" ? "date" : activeField.type === "time" ? "time" : "text"}
-                          value={draftValue}
-                          onChange={(event) => setDraftValue(event.target.value)}
-                          className="w-full rounded-2xl border border-outline-variant/30 bg-surface-container px-3 py-3 text-sm text-on-surface outline-none transition focus:border-primary/40"
-                          placeholder={loadingOptions ? "Loading known values…" : "Enter new value"}
-                        />
-                        {activeField.type === "text" && options.length > 0 && (
-                          <datalist id={`master-batch-${activeField.field}`}>
-                            {options.map((option) => (
-                              <option key={option} value={option} />
-                            ))}
-                          </datalist>
-                        )}
-                      </>
+                      <input
+                        type={activeField.type === "number" ? "number" : activeField.type === "date" ? "date" : activeField.type === "time" ? "time" : "text"}
+                        value={draftValue}
+                        onChange={(event) => setDraftValue(event.target.value)}
+                        className="w-full rounded-2xl border border-outline-variant/30 bg-surface-container px-3 py-3 text-sm text-on-surface outline-none transition focus:border-primary/40"
+                        placeholder="Enter new value"
+                      />
                     )}
 
                     <button

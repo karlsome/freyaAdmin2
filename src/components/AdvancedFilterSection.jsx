@@ -9,7 +9,7 @@ const HINBAN_PROJECTION = {
   "品目マスタ.品名": 1,
 };
 
-function SearchableHinbanSelect({ value, onChange, placeholder = "Search 品番...", className }) {
+export function SearchableHinbanSelect({ value, onChange, placeholder = "Search 品番...", className }) {
   const [isOpen, setIsOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [options, setOptions] = useState([]);
@@ -224,7 +224,7 @@ function SearchableHinbanSelect({ value, onChange, placeholder = "Search 品番.
   );
 }
 
-function SearchableSelect({ value, options, multiple, onChange, placeholder, className }) {
+export function SearchableSelect({ value, options, multiple, onChange, placeholder, className }) {
   const [isOpen, setIsOpen] = useState(false);
   const [queryText, setQueryText] = useState("");
   const [coords, setCoords] = useState({ top: 0, left: 0, width: 0, showAbove: false, maxHeight: 350 });
