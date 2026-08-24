@@ -2,20 +2,68 @@ import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { query, createMasterRecord, updateMasterRecord } from '../services/api';
 
-function AsyncHinbanSelect({ value, onChange, placeholder = "Search 品番...", disabled = false }) {
+const HINBAN_PROJECTION = {
+  "品番": 1,
+  "品名": 1,
+  "品目マスタ.品番": 1,
+  "品目マスタ.品名": 1,
+  "品目マスタ.作業時間": 1,
+  "品目マスタ.段取時間": 1,
+  "品目マスタ.型番": 1,
+  "品目マスタ.原単位": 1,
+  "品目マスタ.生産単位": 1,
+  "品目マスタ.生産単位数": 1,
+  "品目マスタ.製品原単位": 1,
+  "品目マスタ.作業リード日": 1,
+  "作業時間": 1,
+  "段取時間": 1,
+  "型番": 1,
+  "原単位": 1,
+  "生産単位": 1,
+  "生産単位数": 1,
+  "製品原単位": 1,
+  "作業リード日": 1,
+};
+
+function AsyncHinbanSelect({
+  value,
+  onChange,
+  placeholder = "Search child material...",
+  disabled = false,
+}) {
   const [isOpen, setIsOpen] = useState(false);
-  const [search, setSearch] = useState(value || "");
+  const [search, setSearch] = useState("");
   const [options, setOptions] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [coords, setCoords] = useState({ top: 0, left: 0, width: 0, showAbove: false, maxHeight: 350 });
   const wrapperRef = React.useRef(null);
+  const menuRef = React.useRef(null);
+  const searchInputRef = React.useRef(null);
 
-  useEffect(() => {
-    setSearch(value || "");
-  }, [value]);
+  const updateCoords = () => {
+    if (wrapperRef.current) {
+      const rect = wrapperRef.current.getBoundingClientRect();
+      const spaceBelow = window.innerHeight - rect.bottom - 16;
+      const spaceAbove = rect.top - 16;
+      const showAbove = spaceBelow < 300 && spaceAbove > spaceBelow;
+      const availableHeight = showAbove ? Math.min(spaceAbove, 540) : Math.min(spaceBelow, 540);
+
+      setCoords({
+        top: showAbove ? rect.top - 6 : rect.bottom + 6,
+        left: rect.left,
+        width: Math.max(rect.width, 320),
+        showAbove,
+        maxHeight: Math.max(availableHeight, 350),
+      });
+    }
+  };
 
   useEffect(() => {
     const handleClickOutside = (event) => {
-      if (wrapperRef.current && !wrapperRef.current.contains(event.target)) {
+      if (
+        wrapperRef.current && !wrapperRef.current.contains(event.target) &&
+        menuRef.current && !menuRef.current.contains(event.target)
+      ) {
         setIsOpen(false);
       }
     };
@@ -24,16 +72,30 @@ function AsyncHinbanSelect({ value, onChange, placeholder = "Search 品番...", 
   }, []);
 
   useEffect(() => {
+    if (isOpen) {
+      updateCoords();
+      setSearch("");
+      setTimeout(() => searchInputRef.current?.focus(), 40);
+      window.addEventListener("scroll", updateCoords, true);
+      window.addEventListener("resize", updateCoords);
+      return () => {
+        window.removeEventListener("scroll", updateCoords, true);
+        window.removeEventListener("resize", updateCoords);
+      };
+    }
+  }, [isOpen]);
+
+  useEffect(() => {
     if (!isOpen) return;
     let active = true;
     const timer = setTimeout(async () => {
       setLoading(true);
       try {
-        const regexQuery = { "品番": { "$regex": search, "$options": "i" } };
-        // Fetch up to 20 from both DBs
+        const regexQuery = search ? { "品番": { "$regex": search, "$options": "i" } } : {};
+        // Fetch up to 30 with field projections from both DBs
         const [masterRes, materialRes] = await Promise.all([
-          query("Sasaki_Coating_MasterDB", "masterDB", search ? regexQuery : {}, { limit: 20 }),
-          query("Sasaki_Coating_MasterDB", "materialMasterDB3", search ? regexQuery : {}, { limit: 20 })
+          query("Sasaki_Coating_MasterDB", "masterDB", regexQuery, { limit: 30, projection: HINBAN_PROJECTION }),
+          query("Sasaki_Coating_MasterDB", "materialMasterDB3", regexQuery, { limit: 30, projection: HINBAN_PROJECTION })
         ]);
         
         if (!active) return;
@@ -46,18 +108,19 @@ function AsyncHinbanSelect({ value, onChange, placeholder = "Search 品番...", 
         const unique = [];
         const seen = new Set();
         for (const item of combined) {
-          if (!seen.has(item['品番'])) {
-            seen.add(item['品番']);
+          const itemHinban = item['品番'] || item?.['品目マスタ']?.['品番'];
+          if (itemHinban && !seen.has(itemHinban)) {
+            seen.add(itemHinban);
             unique.push(item);
           }
         }
-        setOptions(unique.slice(0, 30));
+        setOptions(unique.slice(0, 40));
       } catch (err) {
         if (active) console.error(err);
       } finally {
         if (active) setLoading(false);
       }
-    }, 300);
+    }, 150);
     return () => {
       active = false;
       clearTimeout(timer);
@@ -66,44 +129,323 @@ function AsyncHinbanSelect({ value, onChange, placeholder = "Search 品番...", 
 
   return (
     <div className="relative w-full" ref={wrapperRef}>
-      <input
-        type="text"
+      <button
+        type="button"
         disabled={disabled}
-        className="w-full bg-surface border border-outline-variant/50 rounded-lg px-4 py-2 text-sm text-on-surface focus:border-primary focus:outline-none disabled:opacity-50"
-        placeholder={placeholder}
-        value={search}
-        onChange={(e) => {
-          setSearch(e.target.value);
-          setIsOpen(true);
-          // If they clear the input, clear the value
-          if (e.target.value === "") onChange(null, "");
+        onClick={() => {
+          if (!disabled) {
+            setIsOpen(!isOpen);
+            updateCoords();
+          }
         }}
-        onFocus={() => setIsOpen(true)}
-      />
-      
-      {isOpen && !disabled && (
-        <div className="absolute z-[100] w-full mt-1 bg-surface border border-outline-variant/50 rounded-lg shadow-xl max-h-60 overflow-y-auto">
-          {loading ? (
-            <div className="p-3 text-xs text-outline text-center">Searching...</div>
-          ) : options.length > 0 ? (
-            options.map((opt, i) => (
-              <div 
-                key={i}
-                className="px-3 py-2 text-sm hover:bg-surface-variant/30 cursor-pointer flex flex-col"
-                onClick={() => {
-                  onChange(opt, opt['品番']);
-                  setSearch(opt['品番']);
-                  setIsOpen(false);
-                }}
-              >
-                <span className="font-bold">{opt['品番']}</span>
-                {opt['品名'] && <span className="text-[10px] text-outline">{opt['品名']}</span>}
-              </div>
-            ))
-          ) : (
-            <div className="p-3 text-xs text-outline text-center">No matches found</div>
+        className={`w-full bg-surface border rounded-lg px-3 py-2 text-xs flex items-center justify-between text-left transition-all ${
+          isOpen
+            ? "border-primary ring-1 ring-primary shadow-xs"
+            : "border-outline-variant/50 hover:border-outline-variant"
+        } ${disabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
+      >
+        <span className={`truncate font-medium ${value ? "text-on-surface font-semibold" : "text-outline"}`}>
+          {value || placeholder}
+        </span>
+        <div className="flex items-center gap-1 shrink-0 ml-2 text-outline">
+          {value && (
+            <span
+              onMouseDown={(e) => e.stopPropagation()}
+              onClick={(e) => {
+                e.stopPropagation();
+                onChange(null, "");
+              }}
+              className="hover:text-error transition-colors p-0.5 rounded cursor-pointer"
+              title="Clear"
+            >
+              <span className="material-symbols-outlined" style={{ fontSize: 16 }}>close</span>
+            </span>
           )}
+          <span
+            className="material-symbols-outlined transition-transform duration-200"
+            style={{ fontSize: 18, transform: isOpen ? "rotate(180deg)" : "none" }}
+          >
+            expand_more
+          </span>
         </div>
+      </button>
+
+      {isOpen && !disabled && createPortal(
+        <div
+          ref={menuRef}
+          style={{
+            position: "fixed",
+            top: coords.showAbove ? "auto" : `${coords.top}px`,
+            bottom: coords.showAbove ? `${window.innerHeight - coords.top}px` : "auto",
+            left: `${coords.left}px`,
+            width: `${coords.width}px`,
+            maxHeight: `${coords.maxHeight || 500}px`,
+            zIndex: 99999,
+          }}
+          className="bg-surface border border-outline-variant/50 rounded-xl shadow-2xl p-2.5 flex flex-col gap-2 backdrop-blur-md animate-[fadeIn_0.1s_ease-out]"
+        >
+          {/* Search Box at Top */}
+          <div className="relative">
+            <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-outline material-symbols-outlined" style={{ fontSize: 16 }}>
+              search
+            </span>
+            <input
+              ref={searchInputRef}
+              type="text"
+              className="w-full bg-surface-variant/30 border border-outline-variant/40 rounded-lg pl-8 pr-7 py-1.5 text-xs text-on-surface focus:border-primary focus:outline-none placeholder:text-outline"
+              placeholder="Search part number or name..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+            {search && (
+              <button
+                type="button"
+                onClick={() => setSearch("")}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-outline hover:text-on-surface p-0.5 cursor-pointer"
+              >
+                <span className="material-symbols-outlined" style={{ fontSize: 14 }}>close</span>
+              </button>
+            )}
+          </div>
+
+          {/* Options List */}
+          <div className="overflow-y-auto flex-1 flex flex-col divide-y divide-outline-variant/15 pr-0.5">
+            {loading ? (
+              <div className="p-4 text-xs text-outline text-center flex items-center justify-center gap-2">
+                <span className="material-symbols-outlined animate-spin" style={{ fontSize: 16 }}>progress_activity</span>
+                <span>Searching...</span>
+              </div>
+            ) : options.length > 0 ? (
+              options.map((opt, i) => {
+                const optHinban = opt['品番'] || opt?.['品目マスタ']?.['品番'];
+                const optName = opt['品名'] || opt?.['品目マスタ']?.['品名'];
+                const isSelected = String(value) === String(optHinban);
+                return (
+                  <div
+                    key={i}
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      onChange(opt, optHinban);
+                      setIsOpen(false);
+                    }}
+                    className={`px-3 py-2 text-xs hover:bg-primary/10 hover:text-primary transition-colors cursor-pointer flex items-center justify-between rounded-lg ${
+                      isSelected ? "bg-primary/15 text-primary font-bold" : "text-on-surface font-medium"
+                    }`}
+                  >
+                    <div className="flex flex-col min-w-0 pr-2">
+                      <span className="font-mono font-bold text-xs truncate">{optHinban}</span>
+                      {optName && <span className="text-[11px] text-outline truncate">{optName}</span>}
+                    </div>
+                    {isSelected && (
+                      <span className="material-symbols-outlined text-primary shrink-0" style={{ fontSize: 16 }}>
+                        check
+                      </span>
+                    )}
+                  </div>
+                );
+              })
+            ) : (
+              <div className="p-4 text-xs text-outline text-center">No matches found</div>
+            )}
+          </div>
+        </div>,
+        document.body
+      )}
+    </div>
+  );
+}
+
+function SearchableProcessSelect({
+  value,
+  onChange,
+  options = [],
+  placeholder = "-- Select Process --",
+  disabled = false,
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [search, setSearch] = useState("");
+  const [coords, setCoords] = useState({ top: 0, left: 0, width: 0, showAbove: false });
+  const wrapperRef = React.useRef(null);
+  const menuRef = React.useRef(null);
+  const searchInputRef = React.useRef(null);
+
+  const selectedOpt = options.find((o) => String(o['工程コード']) === String(value));
+
+  const updateCoords = () => {
+    if (wrapperRef.current) {
+      const rect = wrapperRef.current.getBoundingClientRect();
+      const spaceBelow = window.innerHeight - rect.bottom - 16;
+      const spaceAbove = rect.top - 16;
+      const showAbove = spaceBelow < 300 && spaceAbove > spaceBelow;
+      const availableHeight = showAbove ? Math.min(spaceAbove, 540) : Math.min(spaceBelow, 540);
+
+      setCoords({
+        top: showAbove ? rect.top - 6 : rect.bottom + 6,
+        left: rect.left,
+        width: Math.max(rect.width, 320),
+        showAbove,
+        maxHeight: Math.max(availableHeight, 350),
+      });
+    }
+  };
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (
+        wrapperRef.current && !wrapperRef.current.contains(event.target) &&
+        menuRef.current && !menuRef.current.contains(event.target)
+      ) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  useEffect(() => {
+    if (isOpen) {
+      updateCoords();
+      setSearch("");
+      setTimeout(() => searchInputRef.current?.focus(), 40);
+      window.addEventListener("scroll", updateCoords, true);
+      window.addEventListener("resize", updateCoords);
+      return () => {
+        window.removeEventListener("scroll", updateCoords, true);
+        window.removeEventListener("resize", updateCoords);
+      };
+    }
+  }, [isOpen]);
+
+  const filteredOptions = React.useMemo(() => {
+    if (!search.trim()) return options;
+    const term = search.toLowerCase().trim();
+    return options.filter((p) => {
+      const code = String(p['工程コード'] ?? "").toLowerCase();
+      const name = String(p['工程名'] ?? "").toLowerCase();
+      const short = String(p['工程略名'] ?? "").toLowerCase();
+      return code.includes(term) || name.includes(term) || short.includes(term);
+    });
+  }, [options, search]);
+
+  return (
+    <div className="relative w-full" ref={wrapperRef}>
+      <button
+        type="button"
+        disabled={disabled}
+        onClick={() => {
+          if (!disabled) {
+            setIsOpen(!isOpen);
+            updateCoords();
+          }
+        }}
+        className={`w-full bg-surface border rounded-lg px-3 py-2 text-xs flex items-center justify-between text-left transition-all ${
+          isOpen
+            ? "border-primary ring-1 ring-primary shadow-xs"
+            : "border-outline-variant/50 hover:border-outline-variant"
+        } ${disabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
+      >
+        <span className={`truncate font-medium ${selectedOpt ? "text-on-surface font-semibold" : "text-outline"}`}>
+          {selectedOpt ? `${selectedOpt['工程コード']} - ${selectedOpt['工程名']}` : placeholder}
+        </span>
+        <div className="flex items-center gap-1 shrink-0 ml-2 text-outline">
+          {value && (
+            <span
+              onMouseDown={(e) => e.stopPropagation()}
+              onClick={(e) => {
+                e.stopPropagation();
+                onChange("");
+              }}
+              className="hover:text-error transition-colors p-0.5 rounded cursor-pointer"
+              title="Clear"
+            >
+              <span className="material-symbols-outlined" style={{ fontSize: 16 }}>close</span>
+            </span>
+          )}
+          <span
+            className="material-symbols-outlined transition-transform duration-200"
+            style={{ fontSize: 18, transform: isOpen ? "rotate(180deg)" : "none" }}
+          >
+            expand_more
+          </span>
+        </div>
+      </button>
+
+      {isOpen && !disabled && createPortal(
+        <div
+          ref={menuRef}
+          style={{
+            position: "fixed",
+            top: coords.showAbove ? "auto" : `${coords.top}px`,
+            bottom: coords.showAbove ? `${window.innerHeight - coords.top}px` : "auto",
+            left: `${coords.left}px`,
+            width: `${coords.width}px`,
+            maxHeight: `${coords.maxHeight || 500}px`,
+            zIndex: 99999,
+          }}
+          className="bg-surface border border-outline-variant/50 rounded-xl shadow-2xl p-2.5 flex flex-col gap-2 backdrop-blur-md animate-[fadeIn_0.1s_ease-out]"
+        >
+          {/* Search Box at Top */}
+          <div className="relative">
+            <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-outline material-symbols-outlined" style={{ fontSize: 16 }}>
+              search
+            </span>
+            <input
+              ref={searchInputRef}
+              type="text"
+              className="w-full bg-surface-variant/30 border border-outline-variant/40 rounded-lg pl-8 pr-7 py-1.5 text-xs text-on-surface focus:border-primary focus:outline-none placeholder:text-outline"
+              placeholder="Search process code / name..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+            {search && (
+              <button
+                type="button"
+                onClick={() => setSearch("")}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-outline hover:text-on-surface p-0.5 cursor-pointer"
+              >
+                <span className="material-symbols-outlined" style={{ fontSize: 14 }}>close</span>
+              </button>
+            )}
+          </div>
+
+          {/* Options List */}
+          <div className="overflow-y-auto flex-1 flex flex-col divide-y divide-outline-variant/15 pr-0.5">
+            {filteredOptions.length > 0 ? (
+              filteredOptions.map((p) => {
+                const isSelected = String(p['工程コード']) === String(value);
+                return (
+                  <div
+                    key={p['工程コード']}
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      onChange(p['工程コード']);
+                      setIsOpen(false);
+                    }}
+                    className={`px-3 py-2 text-xs hover:bg-primary/10 hover:text-primary transition-colors cursor-pointer flex items-center justify-between rounded-lg ${
+                      isSelected ? "bg-primary/15 text-primary font-bold" : "text-on-surface font-medium"
+                    }`}
+                  >
+                    <div className="flex items-center gap-2 min-w-0 pr-2">
+                      <span className="font-mono font-bold text-xs shrink-0">{p['工程コード']}</span>
+                      <span className="truncate font-semibold">{p['工程名']}</span>
+                      {p['工程略名'] && (
+                        <span className="text-[10px] text-outline truncate">({p['工程略名']})</span>
+                      )}
+                    </div>
+                    {isSelected && (
+                      <span className="material-symbols-outlined text-primary shrink-0" style={{ fontSize: 16 }}>
+                        check
+                      </span>
+                    )}
+                  </div>
+                );
+              })
+            ) : (
+              <div className="p-3 text-xs text-outline text-center">No matching processes found</div>
+            )}
+          </div>
+        </div>,
+        document.body
       )}
     </div>
   );
@@ -215,19 +557,26 @@ export default function BomEditModal({ existingBom, initialHinban = "", onClose,
       const step = { ...next[index] };
       
       if (field === "processSelect") {
-        const proc = processes.find(p => p['工程コード'] === Number(value));
-        if (proc) {
-          step['工程コード'] = proc['工程コード'];
-          step['工程名'] = proc['工程名'] || '';
-          step['工程略名'] = proc['工程略名'] || '';
+        if (!value) {
+          step['工程コード'] = "";
+          step['工程名'] = "";
+          step['工程略名'] = "";
+        } else {
+          const proc = processes.find(p => String(p['工程コード']) === String(value));
+          if (proc) {
+            step['工程コード'] = proc['工程コード'];
+            step['工程名'] = proc['工程名'] || '';
+            step['工程略名'] = proc['工程略名'] || '';
+          }
         }
       } else if (field === "materialSelect") {
         if (!value) {
           step['構成品番'] = "";
           step['構成品_id'] = null;
         } else {
-          step['構成品番'] = value['品番'];
-          step['構成品_id'] = value._id;
+          const hinban = value['品番'] || value?.['品目マスタ']?.['品番'] || (typeof value === 'string' ? value : "");
+          step['構成品番'] = hinban;
+          step['構成品_id'] = value._id || null;
           
           // Auto-fill fields from the selected material's master data
           const src = value['品目マスタ'] || value; // materialMasterDB3 uses '品目マスタ', masterDB uses root
@@ -315,7 +664,7 @@ export default function BomEditModal({ existingBom, initialHinban = "", onClose,
           ) : (
             <>
               {/* Target Material Selector */}
-              <div className="bg-surface-variant/30 border border-outline-variant/30 rounded-xl p-5">
+              <div className="bg-surface-variant/30 border border-outline-variant/30 rounded-xl p-5 relative z-30">
                 <label className="block text-xs font-bold uppercase tracking-wider text-outline mb-2">
                   Target 品番 (Parent Material)
                 </label>
@@ -341,14 +690,15 @@ export default function BomEditModal({ existingBom, initialHinban = "", onClose,
                     bomSteps.map((step, index) => (
                       <div 
                         key={index} 
-                        className="bg-surface border border-outline-variant/30 rounded-xl shadow-sm overflow-hidden relative transition-all duration-200 hover:border-primary/50"
+                        className="bg-surface border border-outline-variant/30 rounded-xl shadow-sm relative transition-all duration-200 hover:border-primary/50 focus-within:z-30"
+                        style={{ zIndex: bomSteps.length - index + 5 }}
                         draggable
                         onDragStart={(e) => (dragItem.current = index)}
                         onDragEnter={(e) => (dragOverItem.current = index)}
                         onDragEnd={handleSort}
                         onDragOver={(e) => e.preventDefault()}
                       >
-                        <div className="bg-surface-variant/20 px-4 py-2 border-b border-outline-variant/30 flex items-center justify-between cursor-move">
+                        <div className="bg-surface-variant/20 px-4 py-2 border-b border-outline-variant/30 rounded-t-xl flex items-center justify-between cursor-move">
                           <div className="flex items-center gap-2">
                             <span className="material-symbols-outlined text-outline hover:text-primary transition-colors text-lg">drag_indicator</span>
                             <span className="text-xs font-bold text-primary bg-primary/10 px-2 py-0.5 rounded pointer-events-none">
@@ -369,18 +719,12 @@ export default function BomEditModal({ existingBom, initialHinban = "", onClose,
                           {/* Process Selection */}
                           <div>
                             <label className="block text-[10px] font-bold uppercase text-outline mb-1">Process (工程)</label>
-                            <select 
-                              className="w-full bg-surface-variant/10 border border-outline-variant/50 rounded md px-3 py-1.5 text-sm"
+                            <SearchableProcessSelect
                               value={step['工程コード'] || ""}
-                              onChange={e => handleStepChange(index, 'processSelect', e.target.value)}
-                            >
-                              <option value="">-- Select Process --</option>
-                              {processes.map(p => (
-                                <option key={p['工程コード']} value={p['工程コード']}>
-                                  {p['工程コード']} - {p['工程名']}
-                                </option>
-                              ))}
-                            </select>
+                              options={processes}
+                              onChange={(val) => handleStepChange(index, 'processSelect', val)}
+                              placeholder="-- Select Process --"
+                            />
                           </div>
 
                           {/* Material Selection */}
