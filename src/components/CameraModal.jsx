@@ -3,15 +3,22 @@ import { createPortal } from "react-dom";
 import Hls from "hls.js";
 import { BASE_URL } from "../services/api";
 
-const CAM_LABELS = [
-  { id: 'tapo_cam',  label: 'CAM 1' },
-  { id: 'tapo_cam2', label: 'CAM 2' },
-  { id: 'tapo_cam3', label: 'CAM 3' },
-];
+const FACTORY_CAMS = {
+  '小瀬': [
+    { id: 'tapo_cam',  label: 'CAM 1' },
+    { id: 'tapo_cam2', label: 'CAM 2' },
+    { id: 'tapo_cam3', label: 'CAM 3' },
+  ],
+  '倉知': [
+    { id: 'kurachi_cam',  label: 'CAM 1' },
+    { id: 'kurachi_cam2', label: 'CAM 2' },
+  ],
+};
 
-export default function CameraModal({ onClose, stream = 'tapo_cam' }) {
+export default function CameraModal({ onClose, factory = '小瀬', stream }) {
+  const camLabels = FACTORY_CAMS[factory] ?? FACTORY_CAMS['小瀬'];
   const videoRef = useRef(null);
-  const [activeStream, setActiveStream] = useState(stream);
+  const [activeStream, setActiveStream] = useState(stream || camLabels[0].id);
 
   useEffect(() => {
     const video = videoRef.current;
@@ -48,8 +55,8 @@ export default function CameraModal({ onClose, stream = 'tapo_cam' }) {
     }
   }, [activeStream]);
 
-  const activeLabel = CAM_LABELS.find(c => c.id === activeStream)?.label ?? 'CAM 1';
-  const otherCams = CAM_LABELS.filter(c => c.id !== activeStream);
+  const activeLabel = camLabels.find(c => c.id === activeStream)?.label ?? 'CAM 1';
+  const otherCams = camLabels.filter(c => c.id !== activeStream);
 
   const modal = (
     <div
@@ -63,7 +70,7 @@ export default function CameraModal({ onClose, stream = 'tapo_cam' }) {
       >
         <div className="flex items-center justify-between gap-4 border-b border-separator/40 px-6 py-5 bg-surface">
           <div>
-            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">小瀬 — Live Camera</p>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">{factory} — Live Camera</p>
             <h2 className="mt-1 text-xl font-semibold text-on-surface">Live Feed — {activeLabel}</h2>
           </div>
           <button
