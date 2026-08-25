@@ -831,6 +831,9 @@ function TicketDetailModal({ actionBusy = false, onClose, onCloseTicket = null, 
   const activeFixReason = language === "en"
     ? (ticket?.fixReason_en || ticket?.fixReason)
     : (ticket?.fixReason_ja || ticket?.fixReason);
+  const activeReason = language === "en"
+    ? (ticket?.reason_en || ticket?.reason)
+    : (ticket?.reason_ja || ticket?.reason);
   const activeFieldLabel = language === "en"
     ? (ticket?.fieldLabel_en || ticket?.fieldLabel)
     : (ticket?.fieldLabel_ja || ticket?.fieldLabel);
@@ -1051,7 +1054,7 @@ function TicketDetailModal({ actionBusy = false, onClose, onCloseTicket = null, 
                     {t("operatorNgReason") || "Operator NG Reason"}
                   </p>
                   <p className="text-sm font-medium leading-relaxed text-on-surface">
-                    {ticket.reason ? `"${ticket.reason}"` : "No specific reason text provided."}
+                    {activeReason ? `"${activeReason}"` : "No specific reason text provided."}
                   </p>
                 </div>
 
@@ -1169,7 +1172,7 @@ function TicketDetailModal({ actionBusy = false, onClose, onCloseTicket = null, 
                       const isClosure = normalizeTicketStatusValue(entry.toStatus) === "closed";
                       const entryNote = isClosure
                         ? (language === "en" ? (entry.fixReason_en || entry.fixReason || entry.comment) : (entry.fixReason_ja || entry.fixReason || entry.comment))
-                        : (entry.reason || entry.comment);
+                        : (language === "en" ? (entry.reason_en || entry.reason || entry.comment) : (entry.reason_ja || entry.reason || entry.comment));
 
                       return (
                         <div key={entry.timestamp || index} className="rounded-xl border border-separator/30 bg-white/70 p-2.5 dark:bg-surface text-xs">

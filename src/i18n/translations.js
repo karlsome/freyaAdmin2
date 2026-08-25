@@ -45,7 +45,7 @@ const translations = {
     failedToLoadTemplate: "Failed to load checklist template.",
     closeAndResolveTicketBtn: "Close & Resolve Ticket",
     awaitingMaintenanceResolution: "Awaiting Maintenance Resolution",
-    awaitingResolutionDescription: "This ticket is currently OPEN. Click the red 'Close & Resolve Ticket' button above once maintenance has completed the fix.",
+    awaitingResolutionDescription: "This ticket is currently OPEN. Click the green 'Close & Resolve Ticket' button above once maintenance has completed the fix.",
     operatorNgReason: "Operator NG Reason",
     submittedValue: "Submitted Value",
     expectedValue: "Expected Value",
