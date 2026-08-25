@@ -403,7 +403,7 @@ export default function FactoryDetailPage({ combined = false }) {
         className="mb-6 md:flex-row md:items-start md:justify-between"
         actions={(
           <>
-            {!combined && factoryName === "小瀬" && (
+            {!combined && (factoryName === "小瀬" || factoryName === "倉知") && (
               <button
                 onClick={() => setCameraModalOpen(true)}
                 className="flex-shrink-0 flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold border border-separator/40 bg-surface text-on-surface hover:bg-surface-container hover:border-primary/30 hover:text-primary active:scale-95 transition-all duration-150"
@@ -594,7 +594,7 @@ export default function FactoryDetailPage({ combined = false }) {
       )}
 
       {cameraModalOpen && (
-        <CameraModal onClose={() => setCameraModalOpen(false)} />
+        <CameraModal onClose={() => setCameraModalOpen(false)} factory={factoryName} />
       )}
     </section>
   );

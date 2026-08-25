@@ -239,7 +239,7 @@ export default function FactoryLiveCard({ factory, onRowClick }) {
           />
         </div>
         <div className="flex items-center gap-2">
-          {factory === "小瀬" && (
+          {(factory === "小瀬" || factory === "倉知") && (
             <button
               onClick={() => setCameraModalOpen(true)}
               className="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 mr-2 rounded-xl text-xs font-semibold border border-outline-variant/30 bg-surface text-on-surface hover:bg-surface-container hover:border-primary/30 hover:text-primary active:scale-95 transition-all duration-150"
@@ -305,7 +305,7 @@ export default function FactoryLiveCard({ factory, onRowClick }) {
       )}
 
       {cameraModalOpen && (
-        <CameraModal onClose={() => setCameraModalOpen(false)} />
+        <CameraModal onClose={() => setCameraModalOpen(false)} factory={factory} />
       )}
     </div>
   );
