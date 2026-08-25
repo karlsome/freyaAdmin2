@@ -145,6 +145,15 @@ function FieldRow({ field, order, onPreviewImage }) {
         </div>
       </div>
       <div className="mt-3 flex flex-wrap gap-2 text-[11px] font-semibold">
+        {field.type !== "name" ? (
+          <span className={`rounded-full px-2.5 py-1 ${
+            field.timing === "post"
+              ? "bg-amber-500/10 text-amber-700 dark:text-amber-400"
+              : "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400"
+          }`}>
+            {field.timing === "post" ? "Post-Production" : "Pre-Production"}
+          </span>
+        ) : null}
         {field.required ? (
           <span className="rounded-full bg-error/10 px-2.5 py-1 text-error">Required</span>
         ) : null}
@@ -213,6 +222,16 @@ export default function CheckFormDetailModal({ form, scheduleMeta, machineNames,
               <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-primary">
                 <span className="material-symbols-outlined" style={{ fontSize: 12 }}>{scheduleMeta?.icon || "event_busy"}</span>
                 {scheduleMeta?.label || form.schedule || "Unscheduled"}
+              </span>
+              <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide border ${
+                (form.timing || "pre") === "post"
+                  ? "bg-purple-500/15 text-purple-700 dark:text-purple-300 border-purple-500/30"
+                  : "bg-cyan-500/10 text-cyan-700 dark:text-cyan-300 border-cyan-500/20"
+              }`}>
+                <span className="material-symbols-outlined" style={{ fontSize: 12 }}>
+                  {(form.timing || "pre") === "post" ? "task" : "play_circle"}
+                </span>
+                {(form.timing || "pre") === "post" ? "Post-Production" : "Pre-Production"}
               </span>
               <span className={`inline-flex rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide ${STATUS_STYLES[form.status] ?? STATUS_STYLES.draft}`}>
                 {form.status}

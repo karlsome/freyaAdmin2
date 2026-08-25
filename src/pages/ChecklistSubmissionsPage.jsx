@@ -225,19 +225,34 @@ function getChecklistRecordKey(record) {
   ].join("::");
 }
 
-function getMachineScopedRecords(formId, machine, recordsByFormId) {
+function getMachineScopedRecords(formId, machine, recordsByFormId, equipmentMap = null) {
   return (recordsByFormId.get(formId) ?? []).filter((record) => {
-    const recordMachineId = normalizeId(record.machineId);
-    if (recordMachineId) return recordMachineId === machine.id;
-    return normalizeMachineName(record.machineName) === normalizeMachineName(machine.name);
+    const normRecName = normalizeMachineName(record.machineName || record["加工設備"]);
+    const normMachName = normalizeMachineName(machine.name);
+
+    if (normRecName && normMachName && normRecName === normMachName) return true;
+
+    const recordMachineId = normalizeId(record.machineId || record.equipmentId);
+    if (recordMachineId && recordMachineId === machine.id) return true;
+
+    if (equipmentMap && normRecName) {
+      const infoByMachineId = equipmentMap.get(machine.id);
+      if (infoByMachineId && normalizeMachineName(infoByMachineId.name) === normRecName) return true;
+
+      const infoByRecName = equipmentMap.get(normRecName);
+      if (infoByRecName && infoByRecName.id === machine.id) return true;
+    }
+
+    return false;
   });
 }
 
 function getScheduleEntries(machine, date, forms, recordsByFormId, options = {}) {
-  const { focusRecordKeys = null, focusRecordMode = false } = options;
+  const { focusRecordKeys = null, focusRecordMode = false, equipmentMap = null } = options;
   const isFocusedRecord = (record) => !focusRecordMode || focusRecordKeys?.has(getChecklistRecordKey(record));
   const machineForms = forms.filter((form) =>
     getTemplateEquipmentIds(form).some((id) => normalizeId(id) === machine.id)
+    || (Array.isArray(form.equipmentNames) && form.equipmentNames.some((n) => normalizeMachineName(n) === normalizeMachineName(machine.name)))
   );
 
   return SCHEDULE_ORDER.map((schedule) => {
@@ -264,7 +279,7 @@ function getScheduleEntries(machine, date, forms, recordsByFormId, options = {})
     let mutedCount = 0;
 
     for (const form of formsForSchedule) {
-      const machineRecords = getMachineScopedRecords(normalizeId(form._id), machine, recordsByFormId);
+      const machineRecords = getMachineScopedRecords(normalizeId(form._id), machine, recordsByFormId, equipmentMap);
       const focusedMachineRecords = focusRecordMode
         ? machineRecords.filter((record) => isFocusedRecord(record))
         : machineRecords;
@@ -848,8 +863,13 @@ function RecordDetailModal({ defaultTab = "submission", form, initialTicketFocus
   }
 
   function getFieldStatus(field) {
+    const rawVal = String(field.value ?? field.displayValue ?? "").trim().toUpperCase();
+    if (rawVal === "NG") return "ng";
+
     if (field.fieldId) {
-      return String(field.status ?? field.value ?? "").trim().toLowerCase();
+      const st = String(field.status ?? "").trim().toLowerCase();
+      if (st === "ng" || st === "out-of-range") return st;
+      return rawVal === "NG" ? "ng" : (st || "ok");
     }
     return field.type === "toggle" ? String(responses[field.id] ?? "").trim().toLowerCase() : "";
   }
@@ -1582,7 +1602,9 @@ export default function ChecklistSubmissionsPage() {
   const equipmentMap = useMemo(() => {
     const map = new Map();
     for (const equipment of allEquipment) {
-      map.set(normalizeId(equipment._id), { name: equipment.name, factory: equipment.工場 });
+      const eqName = String(equipment.name || equipment.設備名 || equipment.name_ja || equipment._id).trim();
+      const factory = String(equipment.工場 || equipment.factory || "—").trim();
+      map.set(normalizeId(equipment._id), { name: eqName, factory });
     }
     return map;
   }, [allEquipment]);
@@ -1598,7 +1620,7 @@ export default function ChecklistSubmissionsPage() {
   const recordsByFormId = useMemo(() => {
     const map = new Map();
     for (const record of records) {
-      const formId = normalizeId(record.formId);
+      const formId = normalizeId(record.formId || record.templateId);
       if (!formId) continue;
 
       const list = map.get(formId) ?? [];
@@ -1826,10 +1848,10 @@ export default function ChecklistSubmissionsPage() {
     return records.filter((record) => {
       if (!isDateWithinRange(record.completedAt, resolvedDateRange.startDate, resolvedDateRange.endDate)) return false;
 
-      const formId = normalizeId(record.formId);
+      const formId = normalizeId(record.formId || record.templateId);
       if (!filteredFormIds.has(formId)) return false;
 
-      const machineId = normalizeId(record.machineId);
+      const machineId = normalizeId(record.machineId || record.equipmentId);
       const matchesMachine = machineId
         ? filteredMachineIds.has(machineId)
         : filteredMachineNameSet.has(normalizeMachineName(record.machineName));
@@ -2137,6 +2159,7 @@ export default function ChecklistSubmissionsPage() {
                     {dates.map((date) => {
                       const isToday = date.getTime() === today.getTime();
                       const entries = getScheduleEntries(machine, date, visibleTemplates, recordsByFormId, {
+                        equipmentMap,
                         focusRecordKeys: focusedRecordKeys,
                         focusRecordMode: timelineFocusActive,
                       })

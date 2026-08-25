@@ -163,7 +163,7 @@ export function formatTicketRange(ticket) {
     return `<= ${ticket.max}${ticket.unit ? ` ${ticket.unit}` : ""}`;
   }
 
-  return "";
+  return "OK";
 }
 
 function escapeCsvValue(value) {

@@ -10,6 +10,7 @@ import {
   updateCheckFormTemplate,
   deleteCheckFormTemplate,
   uploadCheckFormReferenceImage,
+  translateTextApi,
 } from "../services/api";
 import FilePreviewModal from "./FilePreviewModal";
 import CheckFormImageOverlayEditorModal from "./CheckFormImageOverlayEditorModal";
@@ -47,6 +48,11 @@ const SCHEDULE_OPTIONS = [
   { value: "monthly", label: "Monthly", hint: "1st day of month", icon: "calendar_month" },
 ];
 
+const TIMING_OPTIONS = [
+  { value: "pre", label: "Pre-Production", hint: "Before starting production", icon: "play_circle" },
+  { value: "post", label: "Post-Production", hint: "After completing production", icon: "task" },
+];
+
 const NAME_FIELD = {
   id: "field-名前",
   label: "名前",
@@ -65,6 +71,7 @@ function newField(type = "toggle") {
     imageURL: "",
     imageFolderKey: buildFieldImageFolderKey({ id }),
     type,
+    timing: "pre",
     required: true,
     photoRequired: false,
     options: [],
@@ -80,6 +87,7 @@ function normalizeField(field) {
   const imageURL = normalizeImageURL(field.imageURL);
   return {
     ...field,
+    timing: field.timing || "pre",
     imageURL,
     imageFolderKey: buildFieldImageFolderKey({ ...field, imageURL }),
   };
@@ -97,11 +105,85 @@ function emptyDraft(presetSchedule = "") {
     description: "",
     工場: "",
     equipmentIds: [],
-    schedule: presetSchedule,
+    schedule: presetSchedule || "daily",
+    timing: "pre",
     startDate: "",
     fields: [NAME_FIELD],
     status: "draft",
   };
+}
+
+async function buildParallelTranslations(draftPayload) {
+  const cloned = JSON.parse(JSON.stringify(draftPayload));
+  const tasks = [];
+
+  const nameText = (cloned.name || "").trim();
+  const descText = (cloned.description || "").trim();
+
+  if (nameText) {
+    tasks.push((async () => {
+      try {
+        const ja = await translateTextApi(nameText, "en|ja");
+        const en = await translateTextApi(nameText, "ja|en");
+        cloned.name_ja = ja || nameText;
+        cloned.name_en = en || nameText;
+      } catch {
+        cloned.name_ja = nameText;
+        cloned.name_en = nameText;
+      }
+    })());
+  }
+
+  if (descText) {
+    tasks.push((async () => {
+      try {
+        const ja = await translateTextApi(descText, "en|ja");
+        const en = await translateTextApi(descText, "ja|en");
+        cloned.description_ja = ja || descText;
+        cloned.description_en = en || descText;
+      } catch {
+        cloned.description_ja = descText;
+        cloned.description_en = descText;
+      }
+    })());
+  }
+
+  if (Array.isArray(cloned.fields)) {
+    cloned.fields.forEach((field) => {
+      const lbl = (field.label || "").trim();
+      const desc = (field.description || "").trim();
+
+      if (lbl) {
+        tasks.push((async () => {
+          try {
+            const ja = await translateTextApi(lbl, "en|ja");
+            const en = await translateTextApi(lbl, "ja|en");
+            field.label_ja = ja || lbl;
+            field.label_en = en || lbl;
+          } catch {
+            field.label_ja = lbl;
+            field.label_en = lbl;
+          }
+        })());
+      }
+      if (desc) {
+        tasks.push((async () => {
+          try {
+            const ja = await translateTextApi(desc, "en|ja");
+            const en = await translateTextApi(desc, "ja|en");
+            field.description_ja = ja || desc;
+            field.description_en = en || desc;
+          } catch {
+            field.description_ja = desc;
+            field.description_en = desc;
+          }
+        })());
+      }
+    });
+  }
+
+  await Promise.allSettled(tasks);
+  return cloned;
 }
 
 function getFieldTypeMeta(type) {
@@ -485,9 +567,10 @@ export default function CheckFormBuilderModal({ initial, onClose, onSaved, prese
 
     const authUser = getAuthUser();
     const activeUsername = authUser?.username || "unknown";
-    const payload = { ...draft, fields: ensureNameField(draft.fields ?? []), status: deployStatus };
+    const basePayload = { ...draft, fields: ensureNameField(draft.fields ?? []), status: deployStatus };
 
     try {
+      const payload = await buildParallelTranslations(basePayload);
       if (initial?._id) {
         await updateCheckFormTemplate(initial._id, payload, activeUsername);
         onSaved();
@@ -638,6 +721,8 @@ export default function CheckFormBuilderModal({ initial, onClose, onSaved, prese
                       })}
                     </div>
                   </div>
+
+
 
                   <div>
                     <label className="mb-1.5 block text-xs font-semibold uppercase tracking-[0.18em] text-outline">First Active Date</label>
@@ -947,6 +1032,15 @@ function FieldCard({
                     {field.photoRequired ? (
                       <span className="inline-flex rounded-full bg-surface-container px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-on-surface">
                         Photo
+                      </span>
+                    ) : null}
+                    {!field.locked ? (
+                      <span className={`inline-flex rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide ${
+                        field.timing === "post"
+                          ? "bg-amber-500/10 text-amber-700 dark:text-amber-400"
+                          : "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400"
+                      }`}>
+                        {field.timing === "post" ? "Post-Prod" : "Pre-Prod"}
                       </span>
                     ) : null}
                   </div>
@@ -1513,6 +1607,36 @@ function FieldEditor({ field, onChange, username }) {
             label="Photo Required"
             description="Ask the operator to attach an image when this check is completed."
           />
+
+          <div className="pt-2">
+            <p className="mb-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-outline">Step Timing</p>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => onChange({ timing: "pre" })}
+                className={`flex items-center justify-center gap-1.5 rounded-2xl border px-3 py-2.5 text-xs font-semibold transition ${
+                  (field.timing || "pre") !== "post"
+                    ? "border-primary/40 bg-primary/10 text-primary"
+                    : "border-outline-variant/30 bg-surface text-outline hover:border-primary/30 hover:text-primary"
+                }`}
+              >
+                <span className="material-symbols-outlined" style={{ fontSize: 16 }}>play_circle</span>
+                Pre-Production
+              </button>
+              <button
+                type="button"
+                onClick={() => onChange({ timing: "post" })}
+                className={`flex items-center justify-center gap-1.5 rounded-2xl border px-3 py-2.5 text-xs font-semibold transition ${
+                  field.timing === "post"
+                    ? "border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-400"
+                    : "border-outline-variant/30 bg-surface text-outline hover:border-amber-500/30 hover:text-amber-600"
+                }`}
+              >
+                <span className="material-symbols-outlined" style={{ fontSize: 16 }}>task</span>
+                Post-Production
+              </button>
+            </div>
+          </div>
         </div>
 
         <div className="rounded-2xl border border-separator/40 bg-surface px-4 py-4">
