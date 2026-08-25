@@ -10,6 +10,7 @@ import {
   updateCheckFormTemplate,
   deleteCheckFormTemplate,
   uploadCheckFormReferenceImage,
+  translateTextApi,
 } from "../services/api";
 import FilePreviewModal from "./FilePreviewModal";
 import CheckFormImageOverlayEditorModal from "./CheckFormImageOverlayEditorModal";
@@ -45,6 +46,11 @@ const SCHEDULE_OPTIONS = [
   { value: "daily", label: "Daily", hint: "Every day", icon: "today" },
   { value: "weekly", label: "Weekly", hint: "Every Monday", icon: "date_range" },
   { value: "monthly", label: "Monthly", hint: "1st day of month", icon: "calendar_month" },
+];
+
+const TIMING_OPTIONS = [
+  { value: "pre", label: "Pre-Production", hint: "Before starting production", icon: "play_circle" },
+  { value: "post", label: "Post-Production", hint: "After completing production", icon: "task" },
 ];
 
 const NAME_FIELD = {
@@ -97,11 +103,85 @@ function emptyDraft(presetSchedule = "") {
     description: "",
     工場: "",
     equipmentIds: [],
-    schedule: presetSchedule,
+    schedule: presetSchedule || "daily",
+    timing: "pre",
     startDate: "",
     fields: [NAME_FIELD],
     status: "draft",
   };
+}
+
+async function buildParallelTranslations(draftPayload) {
+  const cloned = JSON.parse(JSON.stringify(draftPayload));
+  const tasks = [];
+
+  const nameText = (cloned.name || "").trim();
+  const descText = (cloned.description || "").trim();
+
+  if (nameText) {
+    tasks.push((async () => {
+      try {
+        const ja = await translateTextApi(nameText, "en|ja");
+        const en = await translateTextApi(nameText, "ja|en");
+        cloned.name_ja = ja || nameText;
+        cloned.name_en = en || nameText;
+      } catch {
+        cloned.name_ja = nameText;
+        cloned.name_en = nameText;
+      }
+    })());
+  }
+
+  if (descText) {
+    tasks.push((async () => {
+      try {
+        const ja = await translateTextApi(descText, "en|ja");
+        const en = await translateTextApi(descText, "ja|en");
+        cloned.description_ja = ja || descText;
+        cloned.description_en = en || descText;
+      } catch {
+        cloned.description_ja = descText;
+        cloned.description_en = descText;
+      }
+    })());
+  }
+
+  if (Array.isArray(cloned.fields)) {
+    cloned.fields.forEach((field) => {
+      const lbl = (field.label || "").trim();
+      const desc = (field.description || "").trim();
+
+      if (lbl) {
+        tasks.push((async () => {
+          try {
+            const ja = await translateTextApi(lbl, "en|ja");
+            const en = await translateTextApi(lbl, "ja|en");
+            field.label_ja = ja || lbl;
+            field.label_en = en || lbl;
+          } catch {
+            field.label_ja = lbl;
+            field.label_en = lbl;
+          }
+        })());
+      }
+      if (desc) {
+        tasks.push((async () => {
+          try {
+            const ja = await translateTextApi(desc, "en|ja");
+            const en = await translateTextApi(desc, "ja|en");
+            field.description_ja = ja || desc;
+            field.description_en = en || desc;
+          } catch {
+            field.description_ja = desc;
+            field.description_en = desc;
+          }
+        })());
+      }
+    });
+  }
+
+  await Promise.allSettled(tasks);
+  return cloned;
 }
 
 function getFieldTypeMeta(type) {
@@ -485,9 +565,10 @@ export default function CheckFormBuilderModal({ initial, onClose, onSaved, prese
 
     const authUser = getAuthUser();
     const activeUsername = authUser?.username || "unknown";
-    const payload = { ...draft, fields: ensureNameField(draft.fields ?? []), status: deployStatus };
+    const basePayload = { ...draft, fields: ensureNameField(draft.fields ?? []), status: deployStatus };
 
     try {
+      const payload = await buildParallelTranslations(basePayload);
       if (initial?._id) {
         await updateCheckFormTemplate(initial._id, payload, activeUsername);
         onSaved();
@@ -633,6 +714,32 @@ export default function CheckFormBuilderModal({ initial, onClose, onSaved, prese
                             <span className="material-symbols-outlined mb-2 block" style={{ fontSize: 18 }}>{option.icon}</span>
                             <span className="block text-xs font-semibold uppercase tracking-[0.18em]">{option.label}</span>
                             <span className={`mt-1 block text-[11px] ${isActive ? "text-primary/80" : "text-outline"}`}>{option.hint}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  <div className="lg:col-span-2">
+                    <label className="mb-1.5 block text-xs font-semibold uppercase tracking-[0.18em] text-outline">Checklist Timing</label>
+                    <div className="grid gap-2 sm:grid-cols-2">
+                      {TIMING_OPTIONS.map((option) => {
+                        const isActive = (draft.timing || "pre") === option.value;
+                        return (
+                          <button
+                            key={option.value}
+                            type="button"
+                            aria-pressed={isActive}
+                            onClick={() => setTop("timing", option.value)}
+                            className={`rounded-2xl border px-4 py-3 text-left transition ${
+                              isActive
+                                ? "border-primary/40 bg-primary/10 text-primary"
+                                : "border-outline-variant/30 bg-surface text-on-surface hover:border-primary/30 hover:bg-surface-container"
+                            }`}
+                          >
+                            <span className="material-symbols-outlined mb-1 block" style={{ fontSize: 18 }}>{option.icon}</span>
+                            <span className="block text-xs font-semibold uppercase tracking-[0.18em]">{option.label}</span>
+                            <span className={`mt-0.5 block text-[11px] ${isActive ? "text-primary/80" : "text-outline"}`}>{option.hint}</span>
                           </button>
                         );
                       })}

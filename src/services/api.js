@@ -1669,6 +1669,20 @@ export async function uploadCheckFormReferenceImage({ base64, folderKey, usernam
   return _postJson("api/check-forms/reference-images", { base64, folderKey, username });
 }
 
+export function formatWorkerNames(val) {
+  if (!val) return "";
+  if (Array.isArray(val)) {
+    const names = val
+      .map((item) => (typeof item === "object" ? (item?.name || item?.Name || "") : String(item).trim()))
+      .filter(Boolean);
+    return names.length > 0 ? names.join(", ") : "";
+  }
+  if (typeof val === "object") {
+    return val.name || val.Name || JSON.stringify(val);
+  }
+  return String(val).trim();
+}
+
 export async function createCheckFormTemplate(draft, username) {
   return _postJson("submitToMasterDB", {
     data: {
@@ -1745,7 +1759,19 @@ function normalizeCheckFormResponses(answers = []) {
   }, {});
 }
 
+function pickFirstNonEmptyDate(...candidates) {
+  for (const candidate of candidates) {
+    if (!candidate) continue;
+    if (typeof candidate === "string" && !candidate.trim()) continue;
+    const normalized = normalizeMongoDate(candidate);
+    if (normalized) return normalized;
+  }
+  return "";
+}
+
 function normalizeCheckFormRecord(record) {
+  if (!record || typeof record !== "object") return null;
+
   const answers = Array.isArray(record.answers) ? record.answers : [];
   const derivedHasNg = answers.some((answer) => {
     const status = String(answer.status ?? "").trim().toLowerCase();
@@ -1759,13 +1785,13 @@ function normalizeCheckFormRecord(record) {
     schedule: String(record.schedule ?? "").trim().toLowerCase(),
     machineId: String(record.machineId ?? record.equipmentId ?? ""),
     machineName: record.machineName ?? record["加工設備"] ?? "",
-    completedBy: record.completedBy ?? record.workerName ?? "",
-    completedAt: normalizeMongoDate(
-      record.completedAt
-      ?? record.submittedAtClient
-      ?? record.createdAt
-      ?? record.updatedAt
-      ?? record.submittedAt
+    completedBy: formatWorkerNames(record.completedBy ?? record.workerName ?? record.Worker_Name ?? ""),
+    completedAt: pickFirstNonEmptyDate(
+      record.completedAt,
+      record.submittedAtClient,
+      record.createdAt,
+      record.updatedAt,
+      record.submittedAt
     ),
     periodStart: record.periodStart ?? record.startDate ?? "",
     periodEnd: record.periodEnd ?? record.startDate ?? "",
