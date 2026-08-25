@@ -8,7 +8,7 @@ import SensorDevicePhotoPreviewModal from "../components/SensorDevicePhotoPrevie
 import StatSummaryCard from "../components/StatSummaryCard";
 import TicketSubmissionsFilterPanel from "../components/TicketSubmissionsFilterPanel";
 import { useLanguage } from "../contexts/LanguageContext";
-import { fetchNgTicketExport, fetchNgTicketFilterOptions, fetchNgTicketPage, updateNgTicketRecord, uploadMaintenanceImage } from "../services/api";
+import { fetchNgTicketExport, fetchNgTicketFilterOptions, fetchNgTicketPage, translateTextApi, updateNgTicketRecord, uploadMaintenanceImage } from "../services/api";
 import { getAuthDisplayName, readStoredAuthUser } from "../utils/auth";
 import {
   buildTicketSubmissionAdvancedFilterClauses,
@@ -601,10 +601,21 @@ function TicketStatusPill({ status }) {
 }
 
 function TicketDetailModal({ actionBusy = false, onClose, onCloseTicket = null, onOpenChecklistSubmission = null, onReopenTicket = null, ticket }) {
+  const { language, t } = useLanguage();
   const [previewImage, setPreviewImage] = useState(null);
   const statusMeta = getTicketStatusMeta(ticket?.status);
   const expectedRange = formatTicketRange(ticket);
   const normalizedStatus = normalizeTicketStatusValue(ticket?.status);
+  const activeFixReason = language === "en"
+    ? (ticket?.fixReason_en || ticket?.fixReason)
+    : (ticket?.fixReason_ja || ticket?.fixReason);
+  const activeFieldLabel = language === "en"
+    ? (ticket?.fieldLabel_en || ticket?.fieldLabel)
+    : (ticket?.fieldLabel_ja || ticket?.fieldLabel);
+  const activeFormName = language === "en"
+    ? (ticket?.formName_en || ticket?.formName)
+    : (ticket?.formName_ja || ticket?.formName);
+
   const historyEntries = useMemo(
     () => sortTicketHistoryEntries(Array.isArray(ticket?.statusHistory) ? ticket.statusHistory : []),
     [ticket?.statusHistory]
@@ -671,9 +682,9 @@ function TicketDetailModal({ actionBusy = false, onClose, onCloseTicket = null, 
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-outline">
                 Submitted Ticket{ticket.ticketNo != null ? <span className="ml-2 text-primary">#{ticket.ticketNo}</span> : null}
               </p>
-              <h3 className="mt-1 truncate text-lg font-semibold text-on-surface">{ticket.fieldLabel || "Untitled ticket"}</h3>
+              <h3 className="mt-1 truncate text-lg font-semibold text-on-surface">{activeFieldLabel || "Untitled ticket"}</h3>
               <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs text-outline">
-                {ticket.formName && <span>{ticket.formName}</span>}
+                {activeFormName && <span>{activeFormName}</span>}
                 {ticket.machineName && <span>{ticket.machineName}</span>}
                 {ticket.factory && <span>{ticket.factory}</span>}
               </div>
@@ -772,7 +783,7 @@ function TicketDetailModal({ actionBusy = false, onClose, onCloseTicket = null, 
             <div className="mt-4 grid gap-4 md:grid-cols-3">
               <article className="rounded-2xl border border-separator/40 bg-surface-container px-4 py-4">
                 <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Checklist Form</p>
-                <p className="mt-2 text-sm font-semibold text-on-surface">{ticket.formName || "—"}</p>
+                <p className="mt-2 text-sm font-semibold text-on-surface">{activeFormName || "—"}</p>
               </article>
 
               <article className="rounded-2xl border border-separator/40 bg-surface-container px-4 py-4">
@@ -786,8 +797,13 @@ function TicketDetailModal({ actionBusy = false, onClose, onCloseTicket = null, 
                   <>
                     <p className="mt-2 text-sm font-semibold text-on-surface">{ticket.closedBy || ticket.closedByUsername || "Unknown user"}</p>
                     <p className="mt-1 text-xs text-outline">{formatTicketDateTime(ticket.closedAt)}</p>
-                    {ticket.fixReason && (
-                      <p className="mt-2 text-xs leading-5 text-on-surface/70">{ticket.fixReason}</p>
+                    {activeFixReason && (
+                      <p className="mt-2 text-xs leading-5 text-on-surface/70 flex items-center gap-1">
+                        <span>{activeFixReason}</span>
+                        {(ticket.fixReason_ja && ticket.fixReason_en) && (
+                          <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500" title={t("autoTranslated")} />
+                        )}
+                      </p>
                     )}
                   </>
                 ) : (
@@ -815,7 +831,9 @@ function TicketDetailModal({ actionBusy = false, onClose, onCloseTicket = null, 
                 ) : historyEntries.map((entry, index) => {
                   const isClosure = normalizeTicketStatusValue(entry.toStatus) === "closed";
                   const isReopened = normalizeTicketStatusValue(entry.toStatus) === "open" && normalizeTicketStatusValue(entry.fromStatus) === "closed";
-                  const entryNote = isClosure ? (entry.fixReason || entry.comment) : (entry.reason || entry.comment);
+                  const entryNote = isClosure
+                    ? (language === "en" ? (entry.fixReason_en || entry.fixReason || entry.comment) : (entry.fixReason_ja || entry.fixReason || entry.comment))
+                    : (entry.reason || entry.comment);
                   const entryImages = Array.isArray(entry.imageURLs) ? entry.imageURLs.filter(Boolean) : [];
 
                   return (
@@ -934,10 +952,16 @@ function TicketDetailModal({ actionBusy = false, onClose, onCloseTicket = null, 
 }
 
 function ResolveTicketModal({ ticket, onClose, onConfirm, busy }) {
+  const { language, t } = useLanguage();
+  const activeFieldLabel = language === "en"
+    ? (ticket?.fieldLabel_en || ticket?.fieldLabel)
+    : (ticket?.fieldLabel_ja || ticket?.fieldLabel);
+  console.log("🎫 [ResolveTicketModal] language=", language, "fieldLabel_en=", ticket?.fieldLabel_en, "fieldLabel_ja=", ticket?.fieldLabel_ja, "activeFieldLabel=", activeFieldLabel);
   const [fixReason, setFixReason] = useState("");
   const [fixPhotoBase64, setFixPhotoBase64] = useState("");
   const [fixPhotoPreview, setFixPhotoPreview] = useState("");
   const [err, setErr] = useState("");
+  const [translating, setTranslating] = useState(false);
 
   const handleFileChange = (e) => {
     const file = e.target.files?.[0];
@@ -950,17 +974,45 @@ function ResolveTicketModal({ ticket, onClose, onConfirm, busy }) {
     reader.readAsDataURL(file);
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!fixReason.trim()) {
-      setErr("対応内容 (How it was fixed) is required to close this ticket.");
+      setErr(t("fixReasonRequiredErr") || "Resolution details are required to close this ticket.");
       return;
     }
+
+    setTranslating(true);
+    let fixReason_ja = fixReason.trim();
+    let fixReason_en = fixReason.trim();
+
+    const hasJapanese = /[一-龠ぁ-ゔァ-ヴー]/.test(fixReason);
+    try {
+      if (hasJapanese) {
+        const translatedEn = await translateTextApi(fixReason.trim(), "ja|en");
+        if (translatedEn && typeof translatedEn === "string") {
+          fixReason_en = translatedEn.trim();
+        }
+      } else {
+        const translatedJa = await translateTextApi(fixReason.trim(), "en|ja");
+        if (translatedJa && typeof translatedJa === "string") {
+          fixReason_ja = translatedJa.trim();
+        }
+      }
+    } catch (translateErr) {
+      console.warn("Auto-translate of resolution reason failed:", translateErr);
+    } finally {
+      setTranslating(false);
+    }
+
     onConfirm({
       fixReason: fixReason.trim(),
+      fixReason_ja,
+      fixReason_en,
       fixPhotoBase64,
     });
   };
+
+  const isSubmitting = busy || translating;
 
   return (
     <div
@@ -971,7 +1023,7 @@ function ResolveTicketModal({ ticket, onClose, onConfirm, busy }) {
         <div className="flex items-center justify-between border-b border-separator/40 pb-3">
           <h3 className="text-base font-bold text-on-surface flex items-center gap-2">
             <span className="material-symbols-outlined text-emerald-600" style={{ fontSize: 20 }}>task_alt</span>
-            Resolve NG Ticket (対応完了)
+            {t("resolveNgTicket") || "Resolve NG Ticket"}
           </h3>
           <button type="button" onClick={onClose} className="rounded-lg p-1 text-outline hover:bg-surface-container">
             <span className="material-symbols-outlined" style={{ fontSize: 18 }}>close</span>
@@ -979,27 +1031,27 @@ function ResolveTicketModal({ ticket, onClose, onConfirm, busy }) {
         </div>
 
         <p className="mt-2 text-xs text-outline font-medium">
-          {ticket?.fieldLabel || "NG Item"} • {ticket?.machineName || ticket?.加工設備 || "Equipment"} ({ticket?.factory || ""})
+          {activeFieldLabel || "NG Item"} • {ticket?.machineName || ticket?.加工設備 || "Equipment"} ({ticket?.factory || ""})
         </p>
 
         <form onSubmit={handleSubmit} className="mt-4 flex flex-col gap-4">
           <div>
             <label className="block text-xs font-semibold text-on-surface mb-1">
-              対応内容 (How did you fix it?) <span className="text-red-500">*</span>
+              {t("resolutionDetailsLabel") || "How did you fix it?"} <span className="text-red-500">*</span>
             </label>
             <textarea
               required
               rows={3}
               value={fixReason}
               onChange={(e) => { setFixReason(e.target.value); setErr(""); }}
-              placeholder="e.g. バルブを掃除して再調整しました / Cleaned and adjusted the valve..."
+              placeholder={t("resolutionDetailsPlaceholder") || "e.g. Cleaned and adjusted the valve..."}
               className="w-full rounded-xl border border-separator/50 bg-surface-container-low p-3 text-sm text-on-surface outline-none focus:border-primary focus:ring-1 focus:ring-primary"
             />
           </div>
 
           <div>
             <label className="block text-xs font-semibold text-on-surface mb-1">
-              修復後の写真 (Fix Photo / Evidence)
+              {t("fixPhotoEvidenceLabel") || "Fix Photo / Evidence"}
             </label>
             <input
               type="file"
@@ -1027,18 +1079,18 @@ function ResolveTicketModal({ ticket, onClose, onConfirm, busy }) {
             <button
               type="button"
               onClick={onClose}
-              disabled={busy}
+              disabled={isSubmitting}
               className="rounded-xl border border-separator px-4 py-2 text-xs font-semibold text-outline hover:bg-surface-container"
             >
-              Cancel
+              {t("cancel") || "Cancel"}
             </button>
             <button
               type="submit"
-              disabled={busy}
+              disabled={isSubmitting}
               className="rounded-xl bg-emerald-600 px-4 py-2 text-xs font-semibold text-white transition hover:bg-emerald-700 disabled:opacity-50 flex items-center gap-1.5"
             >
               <span className="material-symbols-outlined" style={{ fontSize: 16 }}>check_circle</span>
-              {busy ? "Resolving..." : "Confirm & Close Ticket"}
+              {isSubmitting ? (t("resolvingBtn") || "Resolving...") : (t("confirmCloseTicketBtn") || "Confirm & Close Ticket")}
             </button>
           </div>
         </form>
@@ -1051,7 +1103,7 @@ export default function TicketSubmissionsPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
-  const { t } = useLanguage();
+  const { language, t } = useLanguage();
   const [authUser] = useState(() => readStoredAuthUser());
   const actorName = useMemo(() => getAuthDisplayName(authUser), [authUser]);
   const initialViewRef = useRef(null);
@@ -1276,13 +1328,19 @@ export default function TicketSubmissionsPage() {
       key: "formName",
       label: "Checklist Form",
       width: 220,
+      renderCell: (row) => (
+        <span>{language === "en" ? (row.formName_en || row.formName) : (row.formName_ja || row.formName)}</span>
+      ),
+      disableCellWrapper: true,
     },
     {
       key: "fieldLabel",
       label: "Check Item",
       width: 220,
       renderCell: (row) => (
-        <span className="font-semibold text-on-surface">{row.fieldLabel || "Untitled field"}</span>
+        <span className="font-semibold text-on-surface">
+          {language === "en" ? (row.fieldLabel_en || row.fieldLabel) : (row.fieldLabel_ja || row.fieldLabel)}
+        </span>
       ),
       disableCellWrapper: true,
     },
@@ -1347,7 +1405,7 @@ export default function TicketSubmissionsPage() {
       renderCell: (row) => <span className="line-clamp-3 whitespace-normal text-sm leading-6 text-on-surface">{row.reason || "No reason provided."}</span>,
       disableCellWrapper: true,
     },
-  ]), []);
+  ]), [language]);
 
   const [resolvingTicket, setResolvingTicket] = useState(null);
   const [resolvingBusy, setResolvingBusy] = useState(false);
@@ -1742,7 +1800,7 @@ export default function TicketSubmissionsPage() {
   return (
     <section className="h-screen overflow-y-auto px-6 pb-16 pt-24 scrollbar-hide md:px-8">
       <PageHeader
-        eyebrow="メンテナンス"
+        eyebrow={t("maintenanceEyebrow") || "Maintenance"}
         eyebrowClassName="text-xs tracking-[0.18em]"
         title={t("submittedTickets")}
         subtitle="Review every submitted NG ticket in one place. Filters and pagination run on the server so large ticket history stays responsive even under heavy usage."
