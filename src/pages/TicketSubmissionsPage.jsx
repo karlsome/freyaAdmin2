@@ -961,9 +961,9 @@ function TicketDetailModal({ actionBusy = false, onClose, onCloseTicket = null, 
                   type="button"
                   onClick={onReopenTicket}
                   disabled={actionBusy || !onReopenTicket}
-                  className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-xs font-bold text-white shadow hover:bg-emerald-700 active:scale-95 transition disabled:opacity-50"
+                  className="inline-flex items-center gap-2 rounded-xl bg-amber-600 px-4 py-2.5 text-xs font-bold text-white shadow hover:bg-amber-700 active:scale-95 transition disabled:opacity-50"
                 >
-                  <span className="material-symbols-outlined" style={{ fontSize: 18 }}>history</span>
+                  <span className="material-symbols-outlined" style={{ fontSize: 18 }}>published_with_changes</span>
                   {actionBusy ? "Reopening..." : (t("reopenTicketBtn") || "Reopen Ticket")}
                 </button>
               ) : (
@@ -971,7 +971,7 @@ function TicketDetailModal({ actionBusy = false, onClose, onCloseTicket = null, 
                   type="button"
                   onClick={onCloseTicket}
                   disabled={actionBusy || !onCloseTicket}
-                  className="inline-flex items-center gap-2 rounded-xl bg-red-600 px-5 py-2.5 text-xs font-bold text-white shadow-lg hover:bg-red-700 active:scale-95 transition disabled:opacity-50 animate-bounce"
+                  className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-5 py-2.5 text-xs font-bold text-white shadow-lg shadow-emerald-600/25 hover:bg-emerald-700 active:scale-95 transition disabled:opacity-50"
                 >
                   <span className="material-symbols-outlined" style={{ fontSize: 18 }}>task_alt</span>
                   {actionBusy ? "Closing..." : (t("closeAndResolveTicketBtn") || "Close & Resolve Ticket")}
@@ -1372,7 +1372,7 @@ export default function TicketSubmissionsPage() {
     initialViewRef.current = parseTicketViewState(searchParams);
   }
 
-  const [filters, setFilters] = useState(() => initialViewRef.current.filters);
+  const [filters, setFilters] = useState(() => ({ machine: "", ...initialViewRef.current.filters }));
   const [dateRange, setDateRange] = useState(() => initialViewRef.current.dateRange);
   const [advancedRows, setAdvancedRows] = useState(() => initialViewRef.current.advancedRows);
   const [appliedAdvancedFilters, setAppliedAdvancedFilters] = useState(() => initialViewRef.current.appliedAdvancedFilters);
@@ -1516,6 +1516,7 @@ export default function TicketSubmissionsPage() {
           filters: {
             keyword: deferredKeyword,
             factory: filters.factory,
+            machine: filters.machine,
             status: filters.status,
             startDate: dateRange.startDate,
             endDate: dateRange.endDate,
@@ -1857,7 +1858,7 @@ export default function TicketSubmissionsPage() {
   }
 
   function handleResetBasicFilters() {
-    setFilters({ keyword: "", factory: "", status: "" });
+    setFilters({ keyword: "", factory: "", machine: "", status: "" });
     setDateRange(createDefaultDateRange());
     markPresetDirty();
     setPage(1);
@@ -1980,6 +1981,7 @@ export default function TicketSubmissionsPage() {
           : {
             keyword: deferredKeyword,
             factory: filters.factory,
+            machine: filters.machine,
             status: filters.status,
             startDate: dateRange.startDate,
             endDate: dateRange.endDate,
@@ -2056,9 +2058,20 @@ export default function TicketSubmissionsPage() {
         eyebrow={t("maintenanceEyebrow") || "Maintenance"}
         eyebrowClassName="text-xs tracking-[0.18em]"
         title={t("submittedTickets")}
-        subtitle="Review every submitted NG ticket in one place. Filters and pagination run on the server so large ticket history stays responsive even under heavy usage."
+        subtitle="Review and manage equipment inspection NG tickets."
         subtitleClassName="max-w-3xl leading-6 text-outline"
         className="mb-6"
+        actions={(
+          <button
+            type="button"
+            onClick={() => runTicketExport("filtered")}
+            disabled={loading || exporting}
+            className="inline-flex items-center gap-2 rounded-xl border border-separator/40 bg-white px-4 py-2.5 text-sm font-semibold text-on-surface shadow-xs hover:border-primary/40 hover:text-primary transition active:scale-95 disabled:opacity-50 dark:bg-surface-container"
+          >
+            <span className="material-symbols-outlined text-primary" style={{ fontSize: 18 }}>download</span>
+            {exporting ? "Exporting..." : (t("exportCsv") || "Export CSV")}
+          </button>
+        )}
       />
 
       <ActionNoticeBanner notice={actionNotice} onClose={() => setActionNotice(null)} />
@@ -2067,28 +2080,28 @@ export default function TicketSubmissionsPage() {
         <SummaryCard
           label="Submitted Tickets"
           value={formatTicketNumber(summary.totalTickets)}
-          subtitle="Matching the current filters"
+          subtitle="Matching current filters"
           icon="confirmation_number"
           accent="bg-primary/10 text-primary"
         />
         <SummaryCard
           label="Checklist Records"
           value={formatTicketNumber(summary.recordCount)}
-          subtitle="Unique submissions referenced by the current result set"
+          subtitle="Unique submissions referenced"
           icon="fact_check"
           accent="bg-tertiary/10 text-tertiary"
         />
         <SummaryCard
           label="Machines Impacted"
           value={formatTicketNumber(summary.machineCount)}
-          subtitle="Distinct machines represented by the filtered tickets"
+          subtitle="Distinct machines represented"
           icon="precision_manufacturing"
           accent="bg-amber-500/10 text-amber-700 dark:text-amber-300"
         />
         <SummaryCard
           label="With Image Evidence"
           value={formatTicketNumber(summary.imageTickets)}
-          subtitle="Tickets that include attached images"
+          subtitle="Tickets with attached defect photos"
           icon="photo_library"
           accent="bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
         />
@@ -2098,19 +2111,21 @@ export default function TicketSubmissionsPage() {
         <TicketSubmissionsFilterPanel
           keyword={filters.keyword}
           factory={filters.factory}
+          machine={filters.machine}
           status={filters.status}
           startDate={dateRange.startDate}
           endDate={dateRange.endDate}
           rangeLabel={rangeLabel}
           scopeLabel={scopeLabel}
-          paginationLabel={paginationLabel}
           appliedAdvancedFilterCount={appliedAdvancedFilters.length}
           factoryOptions={filterOptions.factories}
+          machineOptions={filterOptions.machineNames}
           statusOptions={statusOptions}
           fieldDefinitions={advancedFieldDefinitions}
           advancedRows={advancedRows}
           onKeywordChange={(value) => updateFilter("keyword", value)}
           onFactoryChange={(value) => updateFilter("factory", value)}
+          onMachineChange={(value) => updateFilter("machine", value)}
           onStatusChange={(value) => updateFilter("status", value)}
           onDateChange={handleDateChange}
           onResetBasicFilters={handleResetBasicFilters}
@@ -2122,30 +2137,6 @@ export default function TicketSubmissionsPage() {
           })}
           onApplyAdvancedFilters={handleApplyAdvancedFilters}
           onClearAdvancedFilters={handleClearAdvancedFilters}
-        />
-      </div>
-
-      <div className="mb-6 grid gap-3 xl:grid-cols-[minmax(0,1.15fr)_minmax(320px,0.85fr)]">
-        <SavedPresetManagerCard
-          activePresetId={activePresetId}
-          draftName={presetName}
-          editingPresetId={editingPresetId}
-          presets={savedPresets}
-          onDraftNameChange={setPresetName}
-          onSave={handleSavePreset}
-          onApply={handleApplyPreset}
-          onRename={handleStartRenamePreset}
-          onCancelEdit={handleCancelPresetEdit}
-          onDelete={handleDeletePreset}
-        />
-
-        <ExportTicketResultsCard
-          filteredCount={pagination.totalItems || summary.totalTickets}
-          disabled={loading || exporting}
-          exporting={exporting}
-          onCopyShareLink={handleCopyShareLink}
-          onExport={handleOpenExportDialog}
-          shareButtonLabel={shareButtonLabel}
         />
       </div>
 
