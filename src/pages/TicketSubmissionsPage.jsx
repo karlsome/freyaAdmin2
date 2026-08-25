@@ -8,7 +8,7 @@ import SensorDevicePhotoPreviewModal from "../components/SensorDevicePhotoPrevie
 import StatSummaryCard from "../components/StatSummaryCard";
 import TicketSubmissionsFilterPanel from "../components/TicketSubmissionsFilterPanel";
 import { useLanguage } from "../contexts/LanguageContext";
-import { fetchNgTicketExport, fetchNgTicketFilterOptions, fetchNgTicketPage, translateTextApi, updateNgTicketRecord, uploadMaintenanceImage } from "../services/api";
+import { fetchCheckFormTemplateById, fetchNgTicketExport, fetchNgTicketFilterOptions, fetchNgTicketPage, translateTextApi, updateNgTicketRecord, uploadMaintenanceImage } from "../services/api";
 import { getAuthDisplayName, readStoredAuthUser } from "../utils/auth";
 import {
   buildTicketSubmissionAdvancedFilterClauses,
@@ -554,16 +554,21 @@ function getTicketStatusMeta(status) {
   };
 }
 
-function formatTicketHistoryAction(entry = {}) {
-  if (entry.action) return entry.action;
-
+function formatTicketHistoryAction(entry = {}, t = (k) => k) {
   const fromStatus = normalizeTicketStatusValue(entry.fromStatus);
   const toStatus = normalizeTicketStatusValue(entry.toStatus);
 
-  if (toStatus === "closed") return "Ticket Closed";
-  if (fromStatus === "closed" && toStatus === "open") return "Ticket Reopened";
-  if (toStatus === "open") return "Ticket Opened";
-  return "Status Updated";
+  if (toStatus === "closed") return t("ticketClosed") || "Ticket Closed";
+  if (fromStatus === "closed" && toStatus === "open") return t("ticketReopened") || "Ticket Reopened";
+  if (toStatus === "open") return t("ticketOpened") || "Ticket Opened";
+
+  if (entry.action) {
+    if (entry.action === "Ticket Closed") return t("ticketClosed") || "Ticket Closed";
+    if (entry.action === "Ticket Reopened") return t("ticketReopened") || "Ticket Reopened";
+    return entry.action;
+  }
+
+  return t("statusUpdated") || "Status Updated";
 }
 
 function sortTicketHistoryEntries(entries = []) {
@@ -600,9 +605,213 @@ function TicketStatusPill({ status }) {
   );
 }
 
+function TemplateQuickPeekModal({ templateId, activeFieldId, onClose }) {
+  const { language, t } = useLanguage();
+  const [template, setTemplate] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [previewImage, setPreviewImage] = useState(null);
+
+  useEffect(() => {
+    let active = true;
+    async function load() {
+      if (!templateId) {
+        setError(t("failedToLoadTemplate") || "No template ID.");
+        setLoading(false);
+        return;
+      }
+      try {
+        setLoading(true);
+        const data = await fetchCheckFormTemplateById(templateId);
+        if (active) {
+          setTemplate(data);
+          setError("");
+        }
+      } catch (err) {
+        if (active) {
+          setError(err.message || t("failedToLoadTemplate") || "Failed to load template");
+        }
+      } finally {
+        if (active) setLoading(false);
+      }
+    }
+    load();
+    return () => { active = false; };
+  }, [templateId, t]);
+
+  const templateName = language === "en" ? (template?.name_en || template?.name) : (template?.name_ja || template?.name);
+  const templateDesc = language === "en" ? (template?.description_en || template?.description) : (template?.description_ja || template?.description);
+
+  const templateImages = useMemo(() => {
+    if (!Array.isArray(template?.fields)) return [];
+    return template.fields
+      .filter((field) => Boolean(field.imageURL))
+      .map((field) => ({
+        url: field.imageURL,
+        label: language === "en" ? (field.label_en || field.label) : (field.label_ja || field.label),
+      }));
+  }, [template?.fields, language]);
+
+  function openFieldPreviewImage(fieldImageUrl) {
+    const foundIndex = templateImages.findIndex((img) => img.url === fieldImageUrl);
+    if (foundIndex < 0) return;
+    setPreviewImage({
+      activeIndex: foundIndex,
+      images: templateImages,
+    });
+  }
+
+  function handlePreviewNavigate(direction) {
+    setPreviewImage((current) => {
+      const images = Array.isArray(current?.images) ? current.images : [];
+      const currentIndex = Number.isInteger(current?.activeIndex) ? current.activeIndex : 0;
+      const nextIndex = currentIndex + direction;
+      if (nextIndex < 0 || nextIndex >= images.length) return current;
+      return { ...current, activeIndex: nextIndex };
+    });
+  }
+
+  return (
+    <>
+      <div
+        className="fixed inset-0 z-[90] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm"
+        onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}
+      >
+        <div className="flex max-h-[85vh] w-full max-w-2xl flex-col overflow-hidden rounded-3xl bg-white shadow-2xl dark:bg-surface" onMouseDown={(e) => e.stopPropagation()}>
+          <div className="flex items-center justify-between border-b border-separator/40 bg-surface-container px-6 py-4">
+            <div>
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-2.5 py-0.5 text-[11px] font-bold text-primary uppercase tracking-wider">
+                <span className="material-symbols-outlined" style={{ fontSize: 14 }}>assignment</span>
+                {t("quickPeekTemplate") || "Quick Peek Template"}
+              </span>
+              <h3 className="mt-1 text-base font-extrabold text-on-surface">{templateName || (t("loadingTemplate") || "Loading...")}</h3>
+            </div>
+            <button type="button" onClick={onClose} className="rounded-xl p-1.5 text-outline hover:bg-surface-container-high transition">
+              <span className="material-symbols-outlined" style={{ fontSize: 20 }}>close</span>
+            </button>
+          </div>
+
+          <div className="flex-1 overflow-y-auto px-6 py-5">
+            {loading ? (
+              <div className="flex flex-col items-center justify-center py-12 text-outline gap-3">
+                <span className="material-symbols-outlined animate-spin text-primary" style={{ fontSize: 28 }}>sync</span>
+                <p className="text-sm font-medium">{t("loadingTemplate") || "Loading template..."}</p>
+              </div>
+            ) : error ? (
+              <div className="rounded-2xl border border-red-500/20 bg-red-500/5 p-4 text-center text-sm font-semibold text-red-600">
+                {error}
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div className="rounded-2xl border border-separator/40 bg-surface-container-low p-4">
+                  {templateDesc && <p className="text-xs text-outline leading-relaxed whitespace-pre-line mb-3">{templateDesc}</p>}
+                  <div className="flex flex-wrap gap-2 text-[11px] font-semibold text-outline">
+                    {template?.工場 && (
+                      <span className="rounded-lg bg-black/5 dark:bg-white/10 px-2.5 py-1 flex items-center gap-1">
+                        <span className="material-symbols-outlined" style={{ fontSize: 13 }}>factory</span>
+                        {template.工場}
+                      </span>
+                    )}
+                    {template?.schedule && (
+                      <span className="rounded-lg bg-black/5 dark:bg-white/10 px-2.5 py-1 flex items-center gap-1 capitalize">
+                        <span className="material-symbols-outlined" style={{ fontSize: 13 }}>event_repeat</span>
+                        {template.schedule}
+                      </span>
+                    )}
+                    {Array.isArray(template?.fields) && (
+                      <span className="rounded-lg bg-primary/10 px-2.5 py-1 text-primary font-bold">
+                        {template.fields.length} Check Items
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                <div className="space-y-2.5">
+                  <p className="text-xs font-bold uppercase tracking-wider text-outline">Checklist Items ({template?.fields?.length || 0})</p>
+                  {Array.isArray(template?.fields) && template.fields.map((f, idx) => {
+                    const isCurrentItem = activeFieldId && (String(f.id) === String(activeFieldId));
+                    const label = language === "en" ? (f.label_en || f.label) : (f.label_ja || f.label);
+                    const desc = language === "en" ? (f.description_en || f.description) : (f.description_ja || f.description);
+
+                    return (
+                      <div
+                        key={f.id || idx}
+                        className={joinClasses(
+                          "rounded-2xl border p-4 transition-all",
+                          isCurrentItem
+                            ? "border-red-500/40 bg-red-500/5 shadow-sm ring-2 ring-red-500/20 dark:bg-red-950/20"
+                            : "border-separator/40 bg-surface-container hover:border-separator/80"
+                        )}
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex items-start gap-2.5 min-w-0 flex-1">
+                            <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-surface-container-high text-[11px] font-bold text-outline">
+                              {idx + 1}
+                            </span>
+                            <div className="min-w-0 flex-1">
+                              <div className="flex flex-wrap items-center gap-2">
+                                {isCurrentItem && (
+                                  <span className="inline-flex items-center gap-1 rounded-full bg-red-600 px-2 py-0.5 text-[10px] font-bold text-white shadow-xs">
+                                    <span className="material-symbols-outlined" style={{ fontSize: 12 }}>error</span>
+                                    {t("currentTicketItem") || "Current Ticket Item (NG)"}
+                                  </span>
+                                )}
+                                {f.timing && (
+                                  <span className="rounded-md bg-black/5 dark:bg-white/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-outline">
+                                    {f.timing === "pre" ? (t("preProductionTiming") || "Pre-Production") : (t("postProductionTiming") || "Post-Production")}
+                                  </span>
+                                )}
+                                <span className="rounded-md bg-outline/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-outline">
+                                  {f.type || "toggle"}
+                                </span>
+                              </div>
+
+                              <p className="mt-1.5 text-sm font-bold text-on-surface leading-snug">{label || "Untitled check item"}</p>
+                              {desc && <p className="mt-1 text-xs text-outline leading-relaxed whitespace-pre-line">{desc}</p>}
+                            </div>
+                          </div>
+
+                          {f.imageURL && (
+                            <button
+                              type="button"
+                              onClick={() => openFieldPreviewImage(f.imageURL)}
+                              className="group relative shrink-0 overflow-hidden rounded-xl border border-separator/40 w-16 h-16 bg-black/5 block shadow-xs transition hover:border-primary hover:shadow-md active:scale-95 cursor-pointer"
+                            >
+                              <img src={f.imageURL} alt={label} className="w-full h-full object-cover transition group-hover:scale-105" />
+                              <div className="absolute inset-0 flex items-center justify-center bg-black/30 opacity-0 group-hover:opacity-100 transition">
+                                <span className="material-symbols-outlined text-white" style={{ fontSize: 18 }}>zoom_in</span>
+                              </div>
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      <SensorDevicePhotoPreviewModal
+        preview={previewImage ? {
+          ...previewImage,
+          eyebrow: "Checklist Template Reference Photo",
+          displayName: templateName || "Template Reference Photo",
+          subtitle: template?.工場 || undefined
+        } : null}
+        onClose={() => setPreviewImage(null)}
+        onNavigate={handlePreviewNavigate}
+      />
+    </>
+  );
+}
+
 function TicketDetailModal({ actionBusy = false, onClose, onCloseTicket = null, onOpenChecklistSubmission = null, onReopenTicket = null, ticket }) {
   const { language, t } = useLanguage();
   const [previewImage, setPreviewImage] = useState(null);
+  const [peekTemplateId, setPeekTemplateId] = useState(null);
   const statusMeta = getTicketStatusMeta(ticket?.status);
   const expectedRange = formatTicketRange(ticket);
   const normalizedStatus = normalizeTicketStatusValue(ticket?.status);
@@ -731,7 +940,7 @@ function TicketDetailModal({ actionBusy = false, onClose, onCloseTicket = null, 
                   className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-xs font-bold text-white shadow hover:bg-emerald-700 active:scale-95 transition disabled:opacity-50"
                 >
                   <span className="material-symbols-outlined" style={{ fontSize: 18 }}>history</span>
-                  {actionBusy ? "Reopening..." : "Reopen Ticket"}
+                  {actionBusy ? "Reopening..." : (t("reopenTicketBtn") || "Reopen Ticket")}
                 </button>
               ) : (
                 <button
@@ -741,7 +950,7 @@ function TicketDetailModal({ actionBusy = false, onClose, onCloseTicket = null, 
                   className="inline-flex items-center gap-2 rounded-xl bg-red-600 px-5 py-2.5 text-xs font-bold text-white shadow-lg hover:bg-red-700 active:scale-95 transition disabled:opacity-50 animate-bounce"
                 >
                   <span className="material-symbols-outlined" style={{ fontSize: 18 }}>task_alt</span>
-                  {actionBusy ? "Closing..." : "Close & Resolve Ticket"}
+                  {actionBusy ? "Closing..." : (t("closeAndResolveTicketBtn") || "Close & Resolve Ticket")}
                 </button>
               )}
 
@@ -774,16 +983,29 @@ function TicketDetailModal({ actionBusy = false, onClose, onCloseTicket = null, 
               )}
             </div>
 
-            {onOpenChecklistSubmission && ticket.recordId && (
-              <button
-                type="button"
-                onClick={onOpenChecklistSubmission}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-separator/50 bg-white px-3 py-1.5 font-semibold text-on-surface shadow-sm hover:border-primary hover:text-primary transition active:scale-95 dark:bg-surface-container"
-              >
-                <span className="material-symbols-outlined" style={{ fontSize: 16 }}>open_in_new</span>
-                View Full Checklist
-              </button>
-            )}
+            <div className="flex flex-wrap items-center gap-2">
+              {(ticket.templateId || ticket.formId) && (
+                <button
+                  type="button"
+                  onClick={() => setPeekTemplateId(ticket.templateId || ticket.formId)}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-primary/20 bg-primary/5 px-3 py-1.5 font-semibold text-primary shadow-xs hover:border-primary/40 hover:bg-primary/10 transition active:scale-95"
+                >
+                  <span className="material-symbols-outlined" style={{ fontSize: 16 }}>visibility</span>
+                  {t("quickPeekTemplate") || "Quick Peek Template"}
+                </button>
+              )}
+
+              {onOpenChecklistSubmission && ticket.recordId && (
+                <button
+                  type="button"
+                  onClick={onOpenChecklistSubmission}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-separator/50 bg-white px-3 py-1.5 font-semibold text-on-surface shadow-sm hover:border-primary hover:text-primary transition active:scale-95 dark:bg-surface-container"
+                >
+                  <span className="material-symbols-outlined" style={{ fontSize: 16 }}>open_in_new</span>
+                  {t("viewFullChecklist") || "View Full Checklist"}
+                </button>
+              )}
+            </div>
           </div>
 
           {/* Body Split Grid */}
@@ -802,7 +1024,7 @@ function TicketDetailModal({ actionBusy = false, onClose, onCloseTicket = null, 
                 {/* Problem Box */}
                 <div className="rounded-2xl border border-red-500/20 bg-red-500/5 p-4 dark:bg-red-950/20">
                   <p className="text-[10px] font-bold uppercase tracking-wider text-red-600 dark:text-red-400 mb-1">
-                    Operator NG Reason
+                    {t("operatorNgReason") || "Operator NG Reason"}
                   </p>
                   <p className="text-sm font-medium leading-relaxed text-on-surface">
                     {ticket.reason ? `"${ticket.reason}"` : "No specific reason text provided."}
@@ -812,12 +1034,14 @@ function TicketDetailModal({ actionBusy = false, onClose, onCloseTicket = null, 
                 {/* Value & Range Card */}
                 <div className="grid grid-cols-2 gap-3">
                   <div className="rounded-2xl border border-separator/40 bg-surface-container p-3.5">
-                    <p className="text-[10px] font-bold uppercase tracking-wider text-outline">Submitted Value</p>
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-outline">{t("submittedValue") || "Submitted Value"}</p>
                     <p className="mt-1 text-sm font-extrabold text-red-600 dark:text-red-400">{ticket.answerValue || "NG"}</p>
                   </div>
                   <div className="rounded-2xl border border-separator/40 bg-surface-container p-3.5">
-                    <p className="text-[10px] font-bold uppercase tracking-wider text-outline">Allowed Range</p>
-                    <p className="mt-1 text-sm font-semibold text-on-surface">{expectedRange || "No range configured"}</p>
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-outline">
+                      {ticket.min != null || ticket.max != null ? (t("allowedRange") || "Allowed Range") : (t("expectedValue") || "Expected Value")}
+                    </p>
+                    <p className="mt-1 text-sm font-semibold text-on-surface">{expectedRange || "OK"}</p>
                   </div>
                 </div>
 
@@ -861,7 +1085,7 @@ function TicketDetailModal({ actionBusy = false, onClose, onCloseTicket = null, 
                 </div>
 
                 {/* Resolution Details Card */}
-                {ticket.closedAt ? (
+                {normalizedStatus === "closed" ? (
                   <div className="rounded-2xl border border-emerald-500/25 bg-emerald-500/5 p-4 dark:bg-emerald-950/20">
                     <div className="flex items-center justify-between gap-2 border-b border-emerald-500/20 pb-2 mb-2">
                       <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-300">
@@ -897,11 +1121,13 @@ function TicketDetailModal({ actionBusy = false, onClose, onCloseTicket = null, 
                   </div>
                 ) : (
                   <div className="rounded-2xl border border-amber-500/30 bg-amber-500/5 p-4 text-xs text-amber-800 dark:text-amber-300">
-                    <p className="font-bold flex items-center gap-1 mb-1">
-                      <span className="material-symbols-outlined" style={{ fontSize: 16 }}>hourglass_empty</span>
-                      Awaiting Maintenance Action
+                    <p className="font-bold flex items-center gap-1.5 text-sm mb-1 text-amber-700 dark:text-amber-400">
+                      <span className="material-symbols-outlined" style={{ fontSize: 18 }}>hourglass_empty</span>
+                      {t("awaitingMaintenanceResolution") || "Awaiting Maintenance Resolution"}
                     </p>
-                    {t("noResolutionProvided") || "No resolution notes recorded yet."}
+                    <p className="mt-1 leading-relaxed opacity-90">
+                      {t("awaitingResolutionDescription") || "This ticket is currently OPEN. Click the red \"Close & Resolve Ticket\" button above once maintenance has completed the fix."}
+                    </p>
                   </div>
                 )}
 
@@ -909,7 +1135,7 @@ function TicketDetailModal({ actionBusy = false, onClose, onCloseTicket = null, 
                 <div className="rounded-2xl border border-separator/40 bg-surface-container p-4">
                   <p className="text-xs font-bold uppercase tracking-wider text-outline mb-3 flex items-center gap-1.5">
                     <span className="material-symbols-outlined text-primary" style={{ fontSize: 16 }}>history</span>
-                    Audit History ({historyEntries.length})
+                    {t("auditHistory") || "Audit History"} ({historyEntries.length})
                   </p>
 
                   <div className="space-y-2.5 max-h-52 overflow-y-auto pr-1">
@@ -928,7 +1154,7 @@ function TicketDetailModal({ actionBusy = false, onClose, onCloseTicket = null, 
                               <span className="material-symbols-outlined" style={{ fontSize: 14 }}>
                                 {isClosure ? "check_circle" : "published_with_changes"}
                               </span>
-                              {formatTicketHistoryAction(entry)}
+                              {formatTicketHistoryAction(entry, t)}
                             </span>
                             <span className="text-[10px] text-outline">{formatTicketDateTime(entry.timestamp)}</span>
                           </div>
@@ -950,6 +1176,14 @@ function TicketDetailModal({ actionBusy = false, onClose, onCloseTicket = null, 
         onClose={() => setPreviewImage(null)}
         onNavigate={handlePreviewNavigate}
       />
+
+      {peekTemplateId && (
+        <TemplateQuickPeekModal
+          templateId={peekTemplateId}
+          activeFieldId={ticket?.fieldId}
+          onClose={() => setPeekTemplateId(null)}
+        />
+      )}
     </>
   );
 }

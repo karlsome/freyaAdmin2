@@ -2315,6 +2315,16 @@ export async function fetchNgTicketFilterOptions() {
   return options;
 }
 
+export async function fetchCheckFormTemplateById(templateId) {
+  if (!templateId) return null;
+  const response = await fetch(`/api/check-forms/template/${templateId}`);
+  if (!response.ok) {
+    throw new Error(`Failed to load template (HTTP ${response.status})`);
+  }
+  const payload = await response.json();
+  return payload.template || payload;
+}
+
 export async function fetchNgTicketPage({ filters = {}, advancedFilters = [], page = 1, limit = 10, sort = {} } = {}) {
   const payload = await _postJson("api/check-forms/ng-tickets/page", {
     filters,
