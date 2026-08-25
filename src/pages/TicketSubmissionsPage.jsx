@@ -672,62 +672,65 @@ function TicketDetailModal({ actionBusy = false, onClose, onCloseTicket = null, 
 
   return (
     <>
-      <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
+      <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
         <div
-          className="dashboard-section flex max-h-[88vh] w-full max-w-3xl flex-col overflow-hidden rounded-2xl"
+          className="dashboard-section flex max-h-[90vh] w-full max-w-4xl flex-col overflow-hidden rounded-3xl bg-white shadow-2xl dark:bg-surface"
           onMouseDown={(event) => event.stopPropagation()}
         >
-          <div className="flex items-start justify-between gap-4 border-b border-separator/40 px-6 py-5">
+          {/* Hero Header Banner */}
+          <div className={joinClasses(
+            "relative px-6 py-5 border-b flex flex-wrap items-center justify-between gap-4 transition-colors",
+            normalizedStatus === "closed"
+              ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-950 dark:bg-emerald-950/30 dark:border-emerald-500/30 dark:text-emerald-200"
+              : "bg-red-500/10 border-red-500/20 text-red-950 dark:bg-red-950/30 dark:border-red-500/30 dark:text-red-200"
+          )}>
             <div className="min-w-0 flex-1">
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-outline">
-                Submitted Ticket{ticket.ticketNo != null ? <span className="ml-2 text-primary">#{ticket.ticketNo}</span> : null}
-              </p>
-              <h3 className="mt-1 truncate text-lg font-semibold text-on-surface">{activeFieldLabel || "Untitled ticket"}</h3>
-              <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs text-outline">
-                {activeFormName && <span>{activeFormName}</span>}
-                {ticket.machineName && <span>{ticket.machineName}</span>}
-                {ticket.factory && <span>{ticket.factory}</span>}
+              <div className="flex flex-wrap items-center gap-2">
+                <span className={joinClasses(
+                  "inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold uppercase tracking-wider shadow-sm",
+                  normalizedStatus === "closed"
+                    ? "bg-emerald-600 text-white"
+                    : "bg-red-600 text-white animate-pulse"
+                )}>
+                  <span className="material-symbols-outlined" style={{ fontSize: 16 }}>
+                    {normalizedStatus === "closed" ? "check_circle" : "warning"}
+                  </span>
+                  {normalizedStatus === "closed" ? (t("ticketResolvedClosed") || "Resolved & Closed") : (t("openActionRequired") || "Action Required • Open Ticket")}
+                </span>
+                {ticket.ticketNo != null && (
+                  <span className="text-xs font-bold opacity-75">#{ticket.ticketNo}</span>
+                )}
+              </div>
+
+              <h2 className="mt-2 text-xl font-extrabold tracking-tight truncate">
+                {activeFieldLabel || "Untitled NG Check Item"}
+              </h2>
+
+              <div className="mt-2 flex flex-wrap items-center gap-2 text-xs font-semibold">
+                <span className="inline-flex items-center gap-1 rounded-lg bg-black/5 px-2.5 py-1 dark:bg-white/10">
+                  <span className="material-symbols-outlined" style={{ fontSize: 15 }}>factory</span>
+                  {ticket.factory || "Factory"}
+                </span>
+                <span className="inline-flex items-center gap-1 rounded-lg bg-black/5 px-2.5 py-1 dark:bg-white/10">
+                  <span className="material-symbols-outlined" style={{ fontSize: 15 }}>precision_manufacturing</span>
+                  {ticket.machineName || ticket.加工設備 || "Equipment"}
+                </span>
+                <span className="inline-flex items-center gap-1 rounded-lg bg-black/5 px-2.5 py-1 dark:bg-white/10">
+                  <span className="material-symbols-outlined" style={{ fontSize: 15 }}>assignment</span>
+                  {activeFormName || "Form"}
+                </span>
               </div>
             </div>
-            <button
-              type="button"
-              onClick={onClose}
-              className="p-2 rounded-xl flex-shrink-0 text-outline hover:bg-surface-container hover:text-on-surface transition-all duration-150 active:scale-95"
-            >
-              <span className="material-symbols-outlined" style={{ fontSize: 18 }}>close</span>
-            </button>
-          </div>
 
-          <div className="flex flex-col gap-3 border-b border-separator/40 px-6 py-4 text-sm lg:flex-row lg:items-center lg:justify-between">
-            <div className="flex flex-wrap gap-3">
-              <span className={joinClasses("inline-flex items-center rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em]", statusMeta.badgeClassName)}>
-                {statusMeta.label}
-              </span>
-              <span className="inline-flex items-center gap-1.5 text-outline">
-                <span className="material-symbols-outlined text-primary" style={{ fontSize: 16 }}>schedule</span>
-                {formatTicketDateTime(ticket.createdAt)}
-              </span>
-              <span className="inline-flex items-center gap-1.5 text-outline">
-                <span className="material-symbols-outlined text-primary" style={{ fontSize: 16 }}>person</span>
-                {ticket.completedBy || "Unknown operator"}
-              </span>
-              {ticket.recordId && (
-                <span className="inline-flex items-center gap-1.5 text-outline">
-                  <span className="material-symbols-outlined text-primary" style={{ fontSize: 16 }}>fingerprint</span>
-                  {ticket.recordId}
-                </span>
-              )}
-            </div>
-
-            <div className="flex flex-wrap items-center justify-end gap-2">
+            <div className="flex items-center gap-3">
               {normalizedStatus === "closed" ? (
                 <button
                   type="button"
                   onClick={onReopenTicket}
                   disabled={actionBusy || !onReopenTicket}
-                  className="inline-flex items-center justify-center gap-2 rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-2 text-sm font-semibold text-emerald-700 transition hover:border-emerald-500/35 hover:bg-emerald-500/15 disabled:cursor-not-allowed disabled:opacity-50 dark:text-emerald-300"
+                  className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-xs font-bold text-white shadow hover:bg-emerald-700 active:scale-95 transition disabled:opacity-50"
                 >
-                  <span className="material-symbols-outlined" style={{ fontSize: 16 }}>history</span>
+                  <span className="material-symbols-outlined" style={{ fontSize: 18 }}>history</span>
                   {actionBusy ? "Reopening..." : "Reopen Ticket"}
                 </button>
               ) : (
@@ -735,215 +738,215 @@ function TicketDetailModal({ actionBusy = false, onClose, onCloseTicket = null, 
                   type="button"
                   onClick={onCloseTicket}
                   disabled={actionBusy || !onCloseTicket}
-                  className="inline-flex items-center justify-center gap-2 rounded-xl border border-error/20 bg-error/10 px-4 py-2 text-sm font-semibold text-error transition hover:border-error/35 hover:bg-error/15 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="inline-flex items-center gap-2 rounded-xl bg-red-600 px-5 py-2.5 text-xs font-bold text-white shadow-lg hover:bg-red-700 active:scale-95 transition disabled:opacity-50 animate-bounce"
                 >
-                  <span className="material-symbols-outlined" style={{ fontSize: 16 }}>task_alt</span>
-                  {actionBusy ? "Closing..." : "Close Ticket"}
+                  <span className="material-symbols-outlined" style={{ fontSize: 18 }}>task_alt</span>
+                  {actionBusy ? "Closing..." : "Close & Resolve Ticket"}
                 </button>
               )}
 
-              {onOpenChecklistSubmission && ticket.recordId && (
-                <button
-                  type="button"
-                  onClick={onOpenChecklistSubmission}
-                  className="inline-flex items-center justify-center gap-2 rounded-xl border border-separator/40 bg-white px-4 py-2 text-sm font-semibold text-on-surface transition hover:border-primary/30 hover:text-primary"
-                >
-                  <span className="material-symbols-outlined" style={{ fontSize: 16 }}>arrow_outward</span>
-                  Open Checklist Submission
-                </button>
-              )}
+              <button
+                type="button"
+                onClick={onClose}
+                className="rounded-xl p-2 text-outline hover:bg-black/10 dark:hover:bg-white/10 transition active:scale-95"
+              >
+                <span className="material-symbols-outlined" style={{ fontSize: 20 }}>close</span>
+              </button>
             </div>
           </div>
 
-          <div className="flex-1 overflow-y-auto px-6 py-5">
-            <div className="grid gap-4 lg:grid-cols-[minmax(0,1.3fr)_minmax(240px,0.7fr)]">
-              <article className="rounded-2xl border border-separator/40 bg-surface-container px-5 py-4">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">NG Reason</p>
-                <p className="mt-2 text-sm leading-6 text-on-surface">{ticket.reason || "No reason provided."}</p>
-              </article>
-
-              <div className="grid gap-4">
-                <article className="rounded-2xl border border-separator/40 bg-surface-container px-4 py-4">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Submitted Value</p>
-                  <p className="mt-2 text-sm font-semibold text-on-surface">{ticket.answerValue || "—"}</p>
-                </article>
-
-                <article className="rounded-2xl border border-separator/40 bg-surface-container px-4 py-4">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Allowed Range</p>
-                  <p className="mt-2 text-sm font-semibold text-on-surface">{expectedRange || "No range configured"}</p>
-                </article>
-
-                <article className="rounded-2xl border border-separator/40 bg-surface-container px-4 py-4">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Defect Images</p>
-                  <p className="mt-2 text-sm font-semibold text-on-surface">{formatTicketNumber(ticket.imageCount ?? ticket.imageURLs?.length ?? 0)} image{(ticket.imageCount ?? ticket.imageURLs?.length ?? 0) === 1 ? "" : "s"}</p>
-                </article>
-              </div>
-            </div>
-
-            <div className="mt-4 grid gap-4 md:grid-cols-3">
-              <article className="rounded-2xl border border-separator/40 bg-surface-container px-4 py-4">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Checklist Form</p>
-                <p className="mt-2 text-sm font-semibold text-on-surface">{activeFormName || "—"}</p>
-              </article>
-
-              <article className="rounded-2xl border border-separator/40 bg-surface-container px-4 py-4">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Machine</p>
-                <p className="mt-2 text-sm font-semibold text-on-surface">{ticket.machineName || "—"}</p>
-              </article>
-
-              <article className="rounded-2xl border border-separator/40 bg-surface-container px-4 py-4">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Latest Closure</p>
-                {ticket.closedAt ? (
-                  <>
-                    <p className="mt-2 text-sm font-semibold text-on-surface">{ticket.closedBy || ticket.closedByUsername || "Unknown user"}</p>
-                    <p className="mt-1 text-xs text-outline">{formatTicketDateTime(ticket.closedAt)}</p>
-                    {activeFixReason && (
-                      <p className="mt-2 text-xs leading-5 text-on-surface/70 flex items-center gap-1">
-                        <span>{activeFixReason}</span>
-                        {(ticket.fixReason_ja && ticket.fixReason_en) && (
-                          <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500" title={t("autoTranslated")} />
-                        )}
-                      </p>
-                    )}
-                  </>
-                ) : (
-                  <p className="mt-2 text-sm font-semibold text-on-surface">No closure recorded</p>
-                )}
-              </article>
-            </div>
-
-            <div className="mt-5 rounded-2xl border border-separator/40 bg-surface-container px-5 py-4">
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div>
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Status History</p>
-                  <p className="mt-1 text-sm text-outline">Tracks each close and reopen action for this ticket.</p>
-                </div>
-                <span className="inline-flex items-center rounded-full bg-white/75 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">
-                  {historyEntries.length} event{historyEntries.length === 1 ? "" : "s"}
+          {/* Subheader info bar */}
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-separator/30 bg-surface-container-low px-6 py-3 text-xs text-outline">
+            <div className="flex flex-wrap items-center gap-4">
+              <span className="inline-flex items-center gap-1.5 font-medium">
+                <span className="material-symbols-outlined text-primary" style={{ fontSize: 16 }}>schedule</span>
+                {formatTicketDateTime(ticket.createdAt)}
+              </span>
+              <span className="inline-flex items-center gap-1.5 font-medium">
+                <span className="material-symbols-outlined text-primary" style={{ fontSize: 16 }}>person</span>
+                {ticket.completedBy || "Unknown operator"}
+              </span>
+              {ticket.recordId && (
+                <span className="inline-flex items-center gap-1.5 font-medium">
+                  <span className="material-symbols-outlined text-primary" style={{ fontSize: 16 }}>fingerprint</span>
+                  {ticket.recordId}
                 </span>
+              )}
+            </div>
+
+            {onOpenChecklistSubmission && ticket.recordId && (
+              <button
+                type="button"
+                onClick={onOpenChecklistSubmission}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-separator/50 bg-white px-3 py-1.5 font-semibold text-on-surface shadow-sm hover:border-primary hover:text-primary transition active:scale-95 dark:bg-surface-container"
+              >
+                <span className="material-symbols-outlined" style={{ fontSize: 16 }}>open_in_new</span>
+                View Full Checklist
+              </button>
+            )}
+          </div>
+
+          {/* Body Split Grid */}
+          <div className="flex-1 overflow-y-auto px-6 py-6">
+            <div className="grid gap-6 lg:grid-cols-2">
+              
+              {/* Left Column: The Problem */}
+              <div className="flex flex-col gap-4">
+                <div className="flex items-center gap-2 border-b border-separator/30 pb-2">
+                  <span className="material-symbols-outlined text-red-500" style={{ fontSize: 20 }}>report_problem</span>
+                  <h4 className="text-sm font-bold uppercase tracking-wider text-on-surface">
+                    {t("theProblem") || "The Problem"}
+                  </h4>
+                </div>
+
+                {/* Problem Box */}
+                <div className="rounded-2xl border border-red-500/20 bg-red-500/5 p-4 dark:bg-red-950/20">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-red-600 dark:text-red-400 mb-1">
+                    Operator NG Reason
+                  </p>
+                  <p className="text-sm font-medium leading-relaxed text-on-surface">
+                    {ticket.reason ? `"${ticket.reason}"` : "No specific reason text provided."}
+                  </p>
+                </div>
+
+                {/* Value & Range Card */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="rounded-2xl border border-separator/40 bg-surface-container p-3.5">
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-outline">Submitted Value</p>
+                    <p className="mt-1 text-sm font-extrabold text-red-600 dark:text-red-400">{ticket.answerValue || "NG"}</p>
+                  </div>
+                  <div className="rounded-2xl border border-separator/40 bg-surface-container p-3.5">
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-outline">Allowed Range</p>
+                    <p className="mt-1 text-sm font-semibold text-on-surface">{expectedRange || "No range configured"}</p>
+                  </div>
+                </div>
+
+                {/* Defect Images */}
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-wider text-outline mb-2 flex items-center gap-1.5">
+                    <span className="material-symbols-outlined text-primary" style={{ fontSize: 16 }}>photo_library</span>
+                    {t("defectEvidencePhotos") || "Defect Evidence Photos"} ({previewImages.length})
+                  </p>
+
+                  {previewImages.length === 0 ? (
+                    <div className="rounded-2xl border border-dashed border-separator/50 bg-surface-container-low p-4 text-center text-xs text-outline">
+                      {t("noDefectPhotos") || "No defect photos attached."}
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-2 gap-3">
+                      {previewImages.map((imgObj, idx) => (
+                        <div
+                          key={imgObj.url || idx}
+                          onClick={() => openPreviewImage(idx)}
+                          className="group relative aspect-video cursor-pointer overflow-hidden rounded-2xl border border-separator/40 bg-black/5 shadow-sm transition hover:shadow-md hover:border-primary"
+                        >
+                          <img src={imgObj.url} alt={`Defect photo ${idx + 1}`} className="h-full w-full object-cover transition group-hover:scale-105" />
+                          <div className="absolute inset-0 flex items-center justify-center bg-black/30 opacity-0 group-hover:opacity-100 transition">
+                            <span className="material-symbols-outlined text-white" style={{ fontSize: 24 }}>zoom_in</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
 
-              <div className="mt-4 space-y-3">
-                {historyEntries.length === 0 ? (
-                  <div className="rounded-2xl border border-dashed border-outline-variant/25 bg-white/50 px-4 py-4 text-sm text-outline">
-                    No ticket status changes recorded yet.
-                  </div>
-                ) : historyEntries.map((entry, index) => {
-                  const isClosure = normalizeTicketStatusValue(entry.toStatus) === "closed";
-                  const isReopened = normalizeTicketStatusValue(entry.toStatus) === "open" && normalizeTicketStatusValue(entry.fromStatus) === "closed";
-                  const entryNote = isClosure
-                    ? (language === "en" ? (entry.fixReason_en || entry.fixReason || entry.comment) : (entry.fixReason_ja || entry.fixReason || entry.comment))
-                    : (entry.reason || entry.comment);
-                  const entryImages = Array.isArray(entry.imageURLs) ? entry.imageURLs.filter(Boolean) : [];
+              {/* Right Column: The Solution & Audit Trail */}
+              <div className="flex flex-col gap-4">
+                <div className="flex items-center gap-2 border-b border-separator/30 pb-2">
+                  <span className="material-symbols-outlined text-emerald-500" style={{ fontSize: 20 }}>verified</span>
+                  <h4 className="text-sm font-bold uppercase tracking-wider text-on-surface">
+                    {t("theSolution") || "The Solution & Resolution"}
+                  </h4>
+                </div>
 
-                  return (
-                    <article
-                      key={`${entry.timestamp || "ticket-history"}-${entry.action || index}-${entry.user || entry.username || "anonymous"}`}
-                      className="rounded-2xl border border-outline-variant/15 bg-white/70 px-4 py-4 dark:bg-surface"
-                    >
-                      <div className="flex flex-wrap items-start justify-between gap-3">
-                        <div>
-                          <p className="text-sm font-semibold text-on-surface">{formatTicketHistoryAction(entry)}</p>
-                          <p className="mt-1 text-xs text-outline">
-                            {entry.user || entry.username || "Unknown user"}
-                            {entry.username && entry.user && entry.username !== entry.user && (
-                              <span className="ml-1 text-outline/60">(@{entry.username})</span>
-                            )}
-                          </p>
-                        </div>
-                        <p className="text-xs font-medium text-outline">{formatTicketDateTime(entry.timestamp)}</p>
-                      </div>
+                {/* Resolution Details Card */}
+                {ticket.closedAt ? (
+                  <div className="rounded-2xl border border-emerald-500/25 bg-emerald-500/5 p-4 dark:bg-emerald-950/20">
+                    <div className="flex items-center justify-between gap-2 border-b border-emerald-500/20 pb-2 mb-2">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-300">
+                        Resolved by {ticket.closedBy || ticket.closedByUsername || "Maintenance User"}
+                      </span>
+                      <span className="text-[10px] text-outline">{formatTicketDateTime(ticket.closedAt)}</span>
+                    </div>
 
-                      {(entry.fromStatus || entry.toStatus) && (
-                        <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-outline">
-                          {entry.fromStatus ? (
-                            <span className="inline-flex items-center gap-1 rounded-full bg-surface-container px-2.5 py-1 font-semibold text-on-surface">
-                              From {formatTicketStatusLabel(entry.fromStatus)}
-                            </span>
-                          ) : null}
-                          <span className="material-symbols-outlined text-outline/40" style={{ fontSize: 14 }}>arrow_forward</span>
-                          {entry.toStatus ? (() => {
-                            const toStatusMeta = getTicketStatusMeta(entry.toStatus);
-                            return (
-                              <span className={joinClasses("inline-flex items-center gap-1 rounded-full px-2.5 py-1 font-semibold", toStatusMeta.badgeClassName)}>
-                                {toStatusMeta.label}
-                              </span>
-                            );
-                          })() : null}
-                        </div>
-                      )}
+                    {activeFixReason ? (
+                      <p className="text-sm font-medium leading-relaxed text-on-surface flex items-start gap-1.5">
+                        <span className="material-symbols-outlined text-emerald-600 mt-0.5" style={{ fontSize: 16 }}>build</span>
+                        <span>{activeFixReason}</span>
+                      </p>
+                    ) : (
+                      <p className="text-xs text-outline">{t("noResolutionProvided") || "No resolution notes recorded yet."}</p>
+                    )}
 
-                      {entryNote && (
-                        <div className={`mt-3 rounded-xl px-3 py-2.5 text-sm leading-6 ${isClosure ? "bg-emerald-500/8 text-emerald-900 dark:text-emerald-200" : isReopened ? "bg-amber-500/8 text-amber-900 dark:text-amber-200" : "bg-surface-container text-on-surface"}`}>
-                          <p className="text-[10px] font-semibold uppercase tracking-[0.14em] mb-1 opacity-60">
-                            {isClosure ? "Fix Note" : "Reopen Reason"}
-                          </p>
-                          {entryNote}
-                        </div>
-                      )}
-
-                      {entryImages.length > 0 && (
-                        <div className="mt-3 grid grid-cols-3 gap-2">
-                          {entryImages.map((imageUrl, imgIndex) => (
-                            <button
-                              key={`${imageUrl}-${imgIndex}`}
-                              type="button"
-                              onClick={() => {
-                                const images = entryImages.map((url, i) => ({
-                                  url,
-                                  label: `${formatTicketHistoryAction(entry)} image ${i + 1}`,
-                                }));
-                                setPreviewImage({ activeIndex: imgIndex, images });
-                              }}
-                              className="group overflow-hidden rounded-xl border border-separator/40 bg-surface transition hover:border-primary/30"
-                            >
-                              <img
-                                src={imageUrl}
-                                alt={`Fix image ${imgIndex + 1}`}
-                                className="h-24 w-full object-cover transition duration-300 group-hover:scale-[1.02]"
-                              />
-                            </button>
+                    {/* Resolution Photo if attached */}
+                    {Array.isArray(ticket.fixImageURLs) && ticket.fixImageURLs.length > 0 && (
+                      <div className="mt-3 pt-3 border-t border-emerald-500/20">
+                        <p className="text-[10px] font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-300 mb-2">
+                          {t("resolutionEvidencePhoto") || "Fix Photo / Evidence"}
+                        </p>
+                        <div className="grid grid-cols-2 gap-2">
+                          {ticket.fixImageURLs.map((fixUrl, fIdx) => (
+                            <a key={fixUrl || fIdx} href={fixUrl} target="_blank" rel="noreferrer" className="block overflow-hidden rounded-xl border border-emerald-500/30 aspect-video hover:opacity-90">
+                              <img src={fixUrl} alt="Resolution photo" className="w-full h-full object-cover" />
+                            </a>
                           ))}
                         </div>
-                      )}
-                    </article>
-                  );
-                })}
-              </div>
-            </div>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="rounded-2xl border border-amber-500/30 bg-amber-500/5 p-4 text-xs text-amber-800 dark:text-amber-300">
+                    <p className="font-bold flex items-center gap-1 mb-1">
+                      <span className="material-symbols-outlined" style={{ fontSize: 16 }}>hourglass_empty</span>
+                      Awaiting Maintenance Action
+                    </p>
+                    {t("noResolutionProvided") || "No resolution notes recorded yet."}
+                  </div>
+                )}
 
-            {Array.isArray(ticket.imageURLs) && ticket.imageURLs.length > 0 && (
-              <div className="mt-5">
-                <div className="mb-3 flex items-center justify-between gap-3">
-                  <div>
-                    <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Defect Images</p>
-                    <p className="mt-1 text-sm text-outline">Open any image for a larger preview.</p>
+                {/* Audit Trail Timeline */}
+                <div className="rounded-2xl border border-separator/40 bg-surface-container p-4">
+                  <p className="text-xs font-bold uppercase tracking-wider text-outline mb-3 flex items-center gap-1.5">
+                    <span className="material-symbols-outlined text-primary" style={{ fontSize: 16 }}>history</span>
+                    Audit History ({historyEntries.length})
+                  </p>
+
+                  <div className="space-y-2.5 max-h-52 overflow-y-auto pr-1">
+                    {historyEntries.length === 0 ? (
+                      <p className="text-xs text-outline">No history events recorded yet.</p>
+                    ) : historyEntries.map((entry, index) => {
+                      const isClosure = normalizeTicketStatusValue(entry.toStatus) === "closed";
+                      const entryNote = isClosure
+                        ? (language === "en" ? (entry.fixReason_en || entry.fixReason || entry.comment) : (entry.fixReason_ja || entry.fixReason || entry.comment))
+                        : (entry.reason || entry.comment);
+
+                      return (
+                        <div key={entry.timestamp || index} className="rounded-xl border border-separator/30 bg-white/70 p-2.5 dark:bg-surface text-xs">
+                          <div className="flex items-center justify-between font-semibold">
+                            <span className={isClosure ? "text-emerald-600 dark:text-emerald-400 flex items-center gap-1" : "text-red-600 dark:text-red-400 flex items-center gap-1"}>
+                              <span className="material-symbols-outlined" style={{ fontSize: 14 }}>
+                                {isClosure ? "check_circle" : "published_with_changes"}
+                              </span>
+                              {formatTicketHistoryAction(entry)}
+                            </span>
+                            <span className="text-[10px] text-outline">{formatTicketDateTime(entry.timestamp)}</span>
+                          </div>
+                          <p className="mt-1 text-[11px] text-outline">By: {entry.user || entry.username || "System"}</p>
+                          {entryNote && <p className="mt-1 text-xs text-on-surface/80 italic">"{entryNote}"</p>}
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
-                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-                  {ticket.imageURLs.map((imageUrl, index) => (
-                    <button
-                      key={`${imageUrl}-${index}`}
-                      type="button"
-                      onClick={() => openPreviewImage(index)}
-                      className="group overflow-hidden rounded-2xl border border-separator/40 bg-surface transition hover:border-primary/30"
-                    >
-                      <img
-                        src={imageUrl}
-                        alt={ticket.fieldLabel || "Ticket image"}
-                        className="h-36 w-full object-cover transition duration-300 group-hover:scale-[1.02]"
-                      />
-                    </button>
-                  ))}
-                </div>
               </div>
-            )}
+            </div>
           </div>
         </div>
       </div>
 
       <SensorDevicePhotoPreviewModal
-        preview={previewImage ? { ...previewImage, eyebrow: "Ticket Photos", displayName: ticket?.fieldLabel || "Ticket image", subtitle: ticket?.factory || ticket?.formName || undefined } : null}
+        preview={previewImage ? { ...previewImage, eyebrow: "Ticket Photos", displayName: activeFieldLabel || "Ticket image", subtitle: ticket?.factory || activeFormName || undefined } : null}
         onClose={() => setPreviewImage(null)}
         onNavigate={handlePreviewNavigate}
       />
@@ -956,7 +959,6 @@ function ResolveTicketModal({ ticket, onClose, onConfirm, busy }) {
   const activeFieldLabel = language === "en"
     ? (ticket?.fieldLabel_en || ticket?.fieldLabel)
     : (ticket?.fieldLabel_ja || ticket?.fieldLabel);
-  console.log("🎫 [ResolveTicketModal] language=", language, "fieldLabel_en=", ticket?.fieldLabel_en, "fieldLabel_ja=", ticket?.fieldLabel_ja, "activeFieldLabel=", activeFieldLabel);
   const [fixReason, setFixReason] = useState("");
   const [fixPhotoBase64, setFixPhotoBase64] = useState("");
   const [fixPhotoPreview, setFixPhotoPreview] = useState("");
@@ -1302,107 +1304,100 @@ export default function TicketSubmissionsPage() {
       width: 104,
       renderCell: (row) => (
         row.ticketNo != null
-          ? <span className="font-semibold text-on-surface">#{row.ticketNo}</span>
+          ? <span className="font-bold text-on-surface">#{row.ticketNo}</span>
           : <span className="text-outline">—</span>
+      ),
+      disableCellWrapper: true,
+    },
+    {
+      key: "status",
+      label: "Status",
+      width: 130,
+      align: "center",
+      renderCell: (row) => <TicketStatusPill status={row.status} />,
+      disableCellWrapper: true,
+    },
+    {
+      key: "location",
+      label: "Location & Machine",
+      width: 170,
+      renderCell: (row) => (
+        <div className="flex flex-col gap-0.5 py-0.5">
+          <span className="inline-flex items-center gap-1.5 text-xs font-bold text-on-surface">
+            <span className="material-symbols-outlined text-primary" style={{ fontSize: 16 }}>precision_manufacturing</span>
+            {row.machineName || row.加工設備 || "—"}
+          </span>
+          <span className="text-[11px] font-medium text-outline flex items-center gap-1">
+            <span className="material-symbols-outlined text-outline/60" style={{ fontSize: 13 }}>factory</span>
+            {row.factory || "—"}
+          </span>
+        </div>
+      ),
+      disableCellWrapper: true,
+    },
+    {
+      key: "fieldLabel",
+      label: "Check Item & Operator Note",
+      width: 320,
+      renderCell: (row) => {
+        const itemTitle = language === "en" ? (row.fieldLabel_en || row.fieldLabel) : (row.fieldLabel_ja || row.fieldLabel);
+        return (
+          <div className="py-1">
+            <p className="font-bold text-on-surface text-sm leading-snug">{itemTitle || "Untitled check item"}</p>
+            {row.reason && (
+              <p className="mt-1 text-xs text-outline line-clamp-1 italic bg-black/5 dark:bg-white/5 px-2 py-0.5 rounded-md border border-separator/20">
+                "{row.reason}"
+              </p>
+            )}
+          </div>
+        );
+      },
+      disableCellWrapper: true,
+    },
+    {
+      key: "formName",
+      label: "Checklist Form",
+      width: 200,
+      renderCell: (row) => (
+        <span className="text-xs text-outline font-medium">{language === "en" ? (row.formName_en || row.formName) : (row.formName_ja || row.formName)}</span>
       ),
       disableCellWrapper: true,
     },
     {
       key: "createdAt",
       label: "Submitted At",
-      width: 176,
-      renderCell: (row) => <span className="font-semibold text-on-surface">{formatTicketDateTime(row.createdAt)}</span>,
-      disableCellWrapper: true,
-    },
-    {
-      key: "factory",
-      label: "Factory",
-      width: 120,
-    },
-    {
-      key: "machineName",
-      label: "Machine",
-      width: 164,
-    },
-    {
-      key: "formName",
-      label: "Checklist Form",
-      width: 220,
-      renderCell: (row) => (
-        <span>{language === "en" ? (row.formName_en || row.formName) : (row.formName_ja || row.formName)}</span>
-      ),
-      disableCellWrapper: true,
-    },
-    {
-      key: "fieldLabel",
-      label: "Check Item",
-      width: 220,
-      renderCell: (row) => (
-        <span className="font-semibold text-on-surface">
-          {language === "en" ? (row.fieldLabel_en || row.fieldLabel) : (row.fieldLabel_ja || row.fieldLabel)}
-        </span>
-      ),
-      disableCellWrapper: true,
-    },
-    {
-      key: "fieldType",
-      label: "Input Type",
-      width: 126,
-      renderCell: (row) => row.fieldType ? (
-        <span className="inline-flex rounded-full bg-outline/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">
-          {row.fieldType}
-        </span>
-      ) : "—",
+      width: 160,
+      renderCell: (row) => <span className="text-xs font-semibold text-on-surface">{formatTicketDateTime(row.createdAt)}</span>,
       disableCellWrapper: true,
     },
     {
       key: "answerValue",
       label: "Submitted Value",
-      width: 150,
-      renderCell: (row) => <span className="font-semibold text-on-surface">{row.answerValue || "—"}</span>,
-      disableCellWrapper: true,
-    },
-    {
-      key: "expectedRange",
-      label: "Allowed Range",
-      width: 156,
-      sortable: false,
-      renderCell: (row) => <span className="text-on-surface">{formatTicketRange(row) || "—"}</span>,
-      getCellTitle: (row) => formatTicketRange(row) || "—",
+      width: 140,
+      renderCell: (row) => <span className="font-bold text-red-600 dark:text-red-400">{row.answerValue || "NG"}</span>,
       disableCellWrapper: true,
     },
     {
       key: "completedBy",
       label: "Submitted By",
-      width: 144,
-    },
-    {
-      key: "status",
-      label: "Status",
-      width: 116,
-      align: "center",
-      renderCell: (row) => <TicketStatusPill status={row.status} />,
+      width: 140,
+      renderCell: (row) => <span className="text-xs text-outline">{row.completedBy || "—"}</span>,
       disableCellWrapper: true,
     },
     {
       key: "imageCount",
-      label: "Images",
-      width: 96,
+      label: "Photos",
+      width: 90,
       align: "center",
-      renderCell: (row) => (
-        <span className="inline-flex min-w-10 items-center justify-center rounded-full bg-surface-container px-2.5 py-1 text-xs font-semibold text-on-surface">
-          {formatTicketNumber(row.imageCount ?? row.imageURLs?.length ?? 0)}
-        </span>
-      ),
-      disableCellWrapper: true,
-    },
-    {
-      key: "reason",
-      label: "Reason",
-      width: 280,
-      sortable: false,
-      wrap: true,
-      renderCell: (row) => <span className="line-clamp-3 whitespace-normal text-sm leading-6 text-on-surface">{row.reason || "No reason provided."}</span>,
+      renderCell: (row) => {
+        const count = row.imageCount ?? row.imageURLs?.length ?? 0;
+        return count > 0 ? (
+          <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2.5 py-1 text-xs font-bold text-primary">
+            <span className="material-symbols-outlined" style={{ fontSize: 14 }}>photo_camera</span>
+            {count}
+          </span>
+        ) : <span className="text-outline/40 text-xs">—</span>;
+      },
       disableCellWrapper: true,
     },
   ]), [language]);
