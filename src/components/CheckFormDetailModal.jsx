@@ -145,6 +145,15 @@ function FieldRow({ field, order, onPreviewImage }) {
         </div>
       </div>
       <div className="mt-3 flex flex-wrap gap-2 text-[11px] font-semibold">
+        {field.type !== "name" ? (
+          <span className={`rounded-full px-2.5 py-1 ${
+            field.timing === "post"
+              ? "bg-amber-500/10 text-amber-700 dark:text-amber-400"
+              : "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400"
+          }`}>
+            {field.timing === "post" ? "Post-Production" : "Pre-Production"}
+          </span>
+        ) : null}
         {field.required ? (
           <span className="rounded-full bg-error/10 px-2.5 py-1 text-error">Required</span>
         ) : null}

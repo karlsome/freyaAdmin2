@@ -71,6 +71,7 @@ function newField(type = "toggle") {
     imageURL: "",
     imageFolderKey: buildFieldImageFolderKey({ id }),
     type,
+    timing: "pre",
     required: true,
     photoRequired: false,
     options: [],
@@ -86,6 +87,7 @@ function normalizeField(field) {
   const imageURL = normalizeImageURL(field.imageURL);
   return {
     ...field,
+    timing: field.timing || "pre",
     imageURL,
     imageFolderKey: buildFieldImageFolderKey({ ...field, imageURL }),
   };
@@ -720,31 +722,7 @@ export default function CheckFormBuilderModal({ initial, onClose, onSaved, prese
                     </div>
                   </div>
 
-                  <div className="lg:col-span-2">
-                    <label className="mb-1.5 block text-xs font-semibold uppercase tracking-[0.18em] text-outline">Checklist Timing</label>
-                    <div className="grid gap-2 sm:grid-cols-2">
-                      {TIMING_OPTIONS.map((option) => {
-                        const isActive = (draft.timing || "pre") === option.value;
-                        return (
-                          <button
-                            key={option.value}
-                            type="button"
-                            aria-pressed={isActive}
-                            onClick={() => setTop("timing", option.value)}
-                            className={`rounded-2xl border px-4 py-3 text-left transition ${
-                              isActive
-                                ? "border-primary/40 bg-primary/10 text-primary"
-                                : "border-outline-variant/30 bg-surface text-on-surface hover:border-primary/30 hover:bg-surface-container"
-                            }`}
-                          >
-                            <span className="material-symbols-outlined mb-1 block" style={{ fontSize: 18 }}>{option.icon}</span>
-                            <span className="block text-xs font-semibold uppercase tracking-[0.18em]">{option.label}</span>
-                            <span className={`mt-0.5 block text-[11px] ${isActive ? "text-primary/80" : "text-outline"}`}>{option.hint}</span>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
+
 
                   <div>
                     <label className="mb-1.5 block text-xs font-semibold uppercase tracking-[0.18em] text-outline">First Active Date</label>
@@ -1054,6 +1032,15 @@ function FieldCard({
                     {field.photoRequired ? (
                       <span className="inline-flex rounded-full bg-surface-container px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-on-surface">
                         Photo
+                      </span>
+                    ) : null}
+                    {!field.locked ? (
+                      <span className={`inline-flex rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide ${
+                        field.timing === "post"
+                          ? "bg-amber-500/10 text-amber-700 dark:text-amber-400"
+                          : "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400"
+                      }`}>
+                        {field.timing === "post" ? "Post-Prod" : "Pre-Prod"}
                       </span>
                     ) : null}
                   </div>
@@ -1620,6 +1607,36 @@ function FieldEditor({ field, onChange, username }) {
             label="Photo Required"
             description="Ask the operator to attach an image when this check is completed."
           />
+
+          <div className="pt-2">
+            <p className="mb-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-outline">Step Timing</p>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => onChange({ timing: "pre" })}
+                className={`flex items-center justify-center gap-1.5 rounded-2xl border px-3 py-2.5 text-xs font-semibold transition ${
+                  (field.timing || "pre") !== "post"
+                    ? "border-primary/40 bg-primary/10 text-primary"
+                    : "border-outline-variant/30 bg-surface text-outline hover:border-primary/30 hover:text-primary"
+                }`}
+              >
+                <span className="material-symbols-outlined" style={{ fontSize: 16 }}>play_circle</span>
+                Pre-Production
+              </button>
+              <button
+                type="button"
+                onClick={() => onChange({ timing: "post" })}
+                className={`flex items-center justify-center gap-1.5 rounded-2xl border px-3 py-2.5 text-xs font-semibold transition ${
+                  field.timing === "post"
+                    ? "border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-400"
+                    : "border-outline-variant/30 bg-surface text-outline hover:border-amber-500/30 hover:text-amber-600"
+                }`}
+              >
+                <span className="material-symbols-outlined" style={{ fontSize: 16 }}>task</span>
+                Post-Production
+              </button>
+            </div>
+          </div>
         </div>
 
         <div className="rounded-2xl border border-separator/40 bg-surface px-4 py-4">
