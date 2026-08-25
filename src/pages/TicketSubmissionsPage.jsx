@@ -756,11 +756,24 @@ function TemplateQuickPeekModal({ templateId, activeFieldId, onClose }) {
                                     {t("currentTicketItem") || "Current Ticket Item (NG)"}
                                   </span>
                                 )}
-                                {f.timing && (
-                                  <span className="rounded-md bg-black/5 dark:bg-white/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-outline">
-                                    {f.timing === "pre" ? (t("preProductionTiming") || "Pre-Production") : (t("postProductionTiming") || "Post-Production")}
-                                  </span>
-                                )}
+                                {(() => {
+                                  const rawTiming = f.timing || "pre";
+                                  const isPostTiming = String(rawTiming).toLowerCase().includes("post") || String(rawTiming).includes("後");
+                                  const timingLabel = isPostTiming
+                                    ? (t("postProductionTiming") || (language === "en" ? "Post-Production" : "作業後点検"))
+                                    : (t("preProductionTiming") || (language === "en" ? "Pre-Production" : "作業前点検"));
+
+                                  return (
+                                    <span className={joinClasses(
+                                      "rounded-md px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider border shadow-2xs",
+                                      isPostTiming
+                                        ? "bg-purple-500/10 text-purple-700 dark:text-purple-300 dark:bg-purple-500/20 border-purple-500/20"
+                                        : "bg-sky-500/10 text-sky-700 dark:text-sky-300 dark:bg-sky-500/20 border-sky-500/20"
+                                    )}>
+                                      {timingLabel}
+                                    </span>
+                                  );
+                                })()}
                                 <span className="rounded-md bg-outline/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-outline">
                                   {f.type || "toggle"}
                                 </span>
@@ -834,11 +847,11 @@ function TicketDetailModal({ actionBusy = false, onClose, onCloseTicket = null, 
 
     return ticket.imageURLs
       .filter(Boolean)
-      .map((imageUrl, index) => ({
-        url: imageUrl,
-        label: `${ticket?.fieldLabel || "Ticket image"} ${index + 1}`,
+      .map((url, index) => ({
+        url,
+        label: `${activeFieldLabel || "Defect Photo"} #${index + 1}`,
       }));
-  }, [ticket?.fieldLabel, ticket?.imageURLs]);
+  }, [activeFieldLabel, ticket?.imageURLs]);
 
   useEffect(() => {
     function handleKeyDown(event) {
@@ -927,6 +940,17 @@ function TicketDetailModal({ actionBusy = false, onClose, onCloseTicket = null, 
                 <span className="inline-flex items-center gap-1 rounded-lg bg-black/5 px-2.5 py-1 dark:bg-white/10">
                   <span className="material-symbols-outlined" style={{ fontSize: 15 }}>assignment</span>
                   {activeFormName || "Form"}
+                </span>
+                <span className={joinClasses(
+                  "inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-bold border",
+                  (ticket.timing === "post" || String(ticket.timing_en || "").includes("Post"))
+                    ? "bg-purple-500/10 text-purple-700 dark:text-purple-300 dark:bg-purple-500/20 border-purple-500/20"
+                    : "bg-sky-500/10 text-sky-700 dark:text-sky-300 dark:bg-sky-500/20 border-sky-500/20"
+                )}>
+                  <span className="material-symbols-outlined" style={{ fontSize: 14 }}>
+                    {(ticket.timing === "post" || String(ticket.timing_en || "").includes("Post")) ? "event_available" : "schedule"}
+                  </span>
+                  {language === "en" ? (ticket.timing_en || "Pre-Production Check") : (ticket.timing_ja || "作業前点検")}
                 </span>
               </div>
             </div>
