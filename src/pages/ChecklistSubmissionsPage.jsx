@@ -863,8 +863,13 @@ function RecordDetailModal({ defaultTab = "submission", form, initialTicketFocus
   }
 
   function getFieldStatus(field) {
+    const rawVal = String(field.value ?? field.displayValue ?? "").trim().toUpperCase();
+    if (rawVal === "NG") return "ng";
+
     if (field.fieldId) {
-      return String(field.status ?? field.value ?? "").trim().toLowerCase();
+      const st = String(field.status ?? "").trim().toLowerCase();
+      if (st === "ng" || st === "out-of-range") return st;
+      return rawVal === "NG" ? "ng" : (st || "ok");
     }
     return field.type === "toggle" ? String(responses[field.id] ?? "").trim().toLowerCase() : "";
   }
