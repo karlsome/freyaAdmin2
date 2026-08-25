@@ -1948,11 +1948,12 @@ function buildNgTicketNormalizationStages() {
     {
       $addFields: {
         createdAtMs: {
-          $cond: [
-            { $ne: ["$createdAt", null] },
-            { $toLong: "$createdAt" },
-            null,
-          ],
+          $convert: {
+            input: "$createdAt",
+            to: "long",
+            onError: null,
+            onNull: null,
+          },
         },
         hasImages: { $gt: ["$imageCount", 0] },
       },
@@ -2274,10 +2275,8 @@ export async function updateNgTicketRecord({ ticketId, update, username, role })
     : normalizeId(ticketId);
   if (!normalizedTicketId) throw new Error("A ticket ID is required.");
 
-  return _postJson("queries", {
-    dbName: "submittedDB",
-    collectionName: "ngReportsDB",
-    query: { _id: normalizedTicketId },
+  return _postJson("api/check-forms/ng-tickets/update-status", {
+    ticketId: normalizedTicketId,
     update,
     username,
     role,
@@ -2311,200 +2310,33 @@ export async function fetchNgTicketFilterOptions() {
   const cached = _getCached(cacheKey, MASTER_TTL);
   if (cached) return cached;
 
-  const result = await query(
-    "submittedDB",
-    "ngReportsDB",
-    {},
-    {
-      aggregation: [
-        ...buildNgTicketNormalizationStages(),
-        {
-          $facet: {
-            factories: [
-              { $match: { factory: { $ne: "" } } },
-              { $group: { _id: "$factory" } },
-              { $sort: { _id: 1 } },
-            ],
-            machineNames: [
-              { $match: { machineName: { $ne: "" } } },
-              { $group: { _id: "$machineName" } },
-              { $sort: { _id: 1 } },
-            ],
-            formNames: [
-              { $match: { formName: { $ne: "" } } },
-              { $group: { _id: "$formName" } },
-              { $sort: { _id: 1 } },
-            ],
-            completedBy: [
-              { $match: { completedBy: { $ne: "" } } },
-              { $group: { _id: "$completedBy" } },
-              { $sort: { _id: 1 } },
-            ],
-            statuses: [
-              { $match: { status: { $ne: "" } } },
-              { $group: { _id: "$status" } },
-              { $sort: { _id: 1 } },
-            ],
-            fieldLabels: [
-              { $match: { fieldLabel: { $ne: "" } } },
-              { $group: { _id: "$fieldLabel" } },
-              { $sort: { _id: 1 } },
-            ],
-            fieldTypes: [
-              { $match: { fieldType: { $ne: "" } } },
-              { $group: { _id: "$fieldType" } },
-              { $sort: { _id: 1 } },
-            ],
-          },
-        },
-      ],
-    }
-  );
-
-  const payload = extractAggregationResultDocument(result);
-  const options = {
-    factories: mapAggregationFacetValues(payload.factories),
-    machineNames: mapAggregationFacetValues(payload.machineNames),
-    formNames: mapAggregationFacetValues(payload.formNames),
-    completedBy: mapAggregationFacetValues(payload.completedBy),
-    statuses: mapAggregationFacetValues(payload.statuses),
-    fieldLabels: mapAggregationFacetValues(payload.fieldLabels),
-    fieldTypes: mapAggregationFacetValues(payload.fieldTypes),
-  };
-
+  const options = await _getJson("api/check-forms/ng-tickets/filter-options");
   _setCache(cacheKey, options);
   return options;
 }
 
 export async function fetchNgTicketPage({ filters = {}, advancedFilters = [], page = 1, limit = 10, sort = {} } = {}) {
-  const safeLimit = Math.max(1, Number(limit) || 10);
-  const safePage = Math.max(1, Number(page) || 1);
-  const skip = (safePage - 1) * safeLimit;
-  const sortStage = buildNgTicketSortStage(sort);
-
-  const result = await query(
-    "submittedDB",
-    "ngReportsDB",
-    {},
-    {
-      aggregation: [
-        ...buildNgTicketFilteredAggregationStages({ filters, advancedFilters }),
-        {
-          $facet: {
-            data: [
-              { $sort: sortStage },
-              { $skip: skip },
-              { $limit: safeLimit },
-            ],
-            totalCount: [
-              { $count: "count" },
-            ],
-            summary: [
-              {
-                $group: {
-                  _id: null,
-                  totalTickets: { $sum: 1 },
-                  imageTickets: { $sum: { $cond: ["$hasImages", 1, 0] } },
-                  recordIds: { $addToSet: "$recordId" },
-                  machineKeys: {
-                    $addToSet: {
-                      $cond: [
-                        { $ne: ["$machineId", ""] },
-                        "$machineId",
-                        "$machineName",
-                      ],
-                    },
-                  },
-                  operatorNames: { $addToSet: "$completedBy" },
-                },
-              },
-              {
-                $project: {
-                  _id: 0,
-                  totalTickets: 1,
-                  imageTickets: 1,
-                  recordCount: {
-                    $size: {
-                      $filter: {
-                        input: "$recordIds",
-                        as: "value",
-                        cond: { $ne: ["$$value", ""] },
-                      },
-                    },
-                  },
-                  machineCount: {
-                    $size: {
-                      $filter: {
-                        input: "$machineKeys",
-                        as: "value",
-                        cond: { $ne: ["$$value", ""] },
-                      },
-                    },
-                  },
-                  operatorCount: {
-                    $size: {
-                      $filter: {
-                        input: "$operatorNames",
-                        as: "value",
-                        cond: { $ne: ["$$value", ""] },
-                      },
-                    },
-                  },
-                },
-              },
-            ],
-          },
-        },
-      ],
-    }
-  );
-
-  const payload = extractAggregationResultDocument(result);
-  const totalItems = Number(payload?.totalCount?.[0]?.count) || 0;
-  const totalPages = totalItems > 0 ? Math.ceil(totalItems / safeLimit) : 0;
-
-  if (totalItems > 0 && safePage > 1 && (!Array.isArray(payload?.data) || payload.data.length === 0)) {
-    return fetchNgTicketPage({
-      filters,
-      advancedFilters,
-      page: totalPages,
-      limit: safeLimit,
-      sort,
-    });
-  }
-
-  const summary = payload?.summary?.[0] ?? {};
+  const payload = await _postJson("api/check-forms/ng-tickets/page", {
+    filters,
+    advancedFilters,
+    page,
+    limit,
+    sort,
+  });
 
   return {
     data: Array.isArray(payload?.data) ? payload.data.map(normalizeNgReport) : [],
-    summary: {
-      totalTickets: Number(summary.totalTickets) || totalItems,
-      imageTickets: Number(summary.imageTickets) || 0,
-      recordCount: Number(summary.recordCount) || 0,
-      machineCount: Number(summary.machineCount) || 0,
-      operatorCount: Number(summary.operatorCount) || 0,
-    },
-    pagination: {
-      currentPage: totalPages > 0 ? Math.min(safePage, totalPages) : 1,
-      totalPages,
-      totalItems,
-      itemsPerPage: safeLimit,
-    },
+    summary: payload?.summary || { totalTickets: 0, imageTickets: 0, recordCount: 0, machineCount: 0, operatorCount: 0 },
+    pagination: payload?.pagination || { currentPage: 1, totalPages: 0, totalItems: 0, itemsPerPage: limit },
   };
 }
 
 export async function fetchNgTicketExport({ filters = {}, advancedFilters = [], sort = {} } = {}) {
-  const result = await query(
-    "submittedDB",
-    "ngReportsDB",
-    {},
-    {
-      aggregation: [
-        ...buildNgTicketFilteredAggregationStages({ filters, advancedFilters }),
-        { $sort: buildNgTicketSortStage(sort) },
-      ],
-    }
-  );
+  const result = await _postJson("api/check-forms/ng-tickets/export", {
+    filters,
+    advancedFilters,
+    sort,
+  });
 
   return Array.isArray(result) ? result.map(normalizeNgReport) : [];
 }

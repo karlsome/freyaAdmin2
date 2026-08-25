@@ -8,7 +8,7 @@ import SensorDevicePhotoPreviewModal from "../components/SensorDevicePhotoPrevie
 import StatSummaryCard from "../components/StatSummaryCard";
 import TicketSubmissionsFilterPanel from "../components/TicketSubmissionsFilterPanel";
 import { useLanguage } from "../contexts/LanguageContext";
-import { fetchNgTicketExport, fetchNgTicketFilterOptions, fetchNgTicketPage, updateNgTicketRecord } from "../services/api";
+import { fetchNgTicketExport, fetchNgTicketFilterOptions, fetchNgTicketPage, updateNgTicketRecord, uploadMaintenanceImage } from "../services/api";
 import { getAuthDisplayName, readStoredAuthUser } from "../utils/auth";
 import {
   buildTicketSubmissionAdvancedFilterClauses,
@@ -933,6 +933,120 @@ function TicketDetailModal({ actionBusy = false, onClose, onCloseTicket = null, 
   );
 }
 
+function ResolveTicketModal({ ticket, onClose, onConfirm, busy }) {
+  const [fixReason, setFixReason] = useState("");
+  const [fixPhotoBase64, setFixPhotoBase64] = useState("");
+  const [fixPhotoPreview, setFixPhotoPreview] = useState("");
+  const [err, setErr] = useState("");
+
+  const handleFileChange = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      setFixPhotoBase64(evt.target.result);
+      setFixPhotoPreview(evt.target.result);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (!fixReason.trim()) {
+      setErr("対応内容 (How it was fixed) is required to close this ticket.");
+      return;
+    }
+    onConfirm({
+      fixReason: fixReason.trim(),
+      fixPhotoBase64,
+    });
+  };
+
+  return (
+    <div
+      className="fixed inset-0 z-[80] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm"
+      onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}
+    >
+      <div className="w-full max-w-lg rounded-2xl bg-white p-6 dark:bg-surface-container shadow-2xl" onMouseDown={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between border-b border-separator/40 pb-3">
+          <h3 className="text-base font-bold text-on-surface flex items-center gap-2">
+            <span className="material-symbols-outlined text-emerald-600" style={{ fontSize: 20 }}>task_alt</span>
+            Resolve NG Ticket (対応完了)
+          </h3>
+          <button type="button" onClick={onClose} className="rounded-lg p-1 text-outline hover:bg-surface-container">
+            <span className="material-symbols-outlined" style={{ fontSize: 18 }}>close</span>
+          </button>
+        </div>
+
+        <p className="mt-2 text-xs text-outline font-medium">
+          {ticket?.fieldLabel || "NG Item"} • {ticket?.machineName || ticket?.加工設備 || "Equipment"} ({ticket?.factory || ""})
+        </p>
+
+        <form onSubmit={handleSubmit} className="mt-4 flex flex-col gap-4">
+          <div>
+            <label className="block text-xs font-semibold text-on-surface mb-1">
+              対応内容 (How did you fix it?) <span className="text-red-500">*</span>
+            </label>
+            <textarea
+              required
+              rows={3}
+              value={fixReason}
+              onChange={(e) => { setFixReason(e.target.value); setErr(""); }}
+              placeholder="e.g. バルブを掃除して再調整しました / Cleaned and adjusted the valve..."
+              className="w-full rounded-xl border border-separator/50 bg-surface-container-low p-3 text-sm text-on-surface outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-on-surface mb-1">
+              修復後の写真 (Fix Photo / Evidence)
+            </label>
+            <input
+              type="file"
+              accept="image/*"
+              onChange={handleFileChange}
+              className="block w-full text-xs text-outline file:mr-3 file:rounded-xl file:border-0 file:bg-primary/10 file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-primary hover:file:bg-primary/20"
+            />
+            {fixPhotoPreview && (
+              <div className="mt-2 relative w-24 h-24 rounded-xl overflow-hidden border border-separator">
+                <img src={fixPhotoPreview} alt="Fix evidence" className="w-full h-full object-cover" />
+                <button
+                  type="button"
+                  onClick={() => { setFixPhotoBase64(""); setFixPhotoPreview(""); }}
+                  className="absolute top-1 right-1 rounded-full bg-black/60 p-0.5 text-white hover:bg-black"
+                >
+                  <span className="material-symbols-outlined" style={{ fontSize: 14 }}>close</span>
+                </button>
+              </div>
+            )}
+          </div>
+
+          {err && <p className="text-xs font-semibold text-red-600">{err}</p>}
+
+          <div className="mt-2 flex items-center justify-end gap-3 pt-2 border-t border-separator/40">
+            <button
+              type="button"
+              onClick={onClose}
+              disabled={busy}
+              className="rounded-xl border border-separator px-4 py-2 text-xs font-semibold text-outline hover:bg-surface-container"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={busy}
+              className="rounded-xl bg-emerald-600 px-4 py-2 text-xs font-semibold text-white transition hover:bg-emerald-700 disabled:opacity-50 flex items-center gap-1.5"
+            >
+              <span className="material-symbols-outlined" style={{ fontSize: 16 }}>check_circle</span>
+              {busy ? "Resolving..." : "Confirm & Close Ticket"}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
 export default function TicketSubmissionsPage() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -1235,6 +1349,153 @@ export default function TicketSubmissionsPage() {
     },
   ]), []);
 
+  const [resolvingTicket, setResolvingTicket] = useState(null);
+  const [resolvingBusy, setResolvingBusy] = useState(false);
+
+  const activeFilters = useMemo(
+    () => ({
+      ...filters,
+      startDate: dateRange.startDate,
+      endDate: dateRange.endDate,
+    }),
+    [dateRange.endDate, dateRange.startDate, filters]
+  );
+
+  async function handleUpdateTicketStatus(ticket, nextStatus, resolutionPayload = null) {
+    if (!ticket) return;
+
+    if (!authUser?.username || !authUser?.role) {
+      setActionNotice({ type: "error", message: "Sign in again before updating ticket status." });
+      return;
+    }
+
+    const currentStatus = normalizeTicketStatusValue(ticket.status);
+    const normalizedNextStatus = normalizeTicketStatusValue(nextStatus);
+    if (!normalizedNextStatus || currentStatus === normalizedNextStatus) return;
+
+    if (normalizedNextStatus === "closed" && !resolutionPayload) {
+      setResolvingTicket(ticket);
+      return;
+    }
+
+    const ticketId = ticket?._id ?? ticket?.ticketId;
+    if (!ticketId) {
+      setActionNotice({ type: "error", message: "This ticket is missing its record ID, so the status could not be updated." });
+      return;
+    }
+
+    const timestamp = new Date().toISOString();
+    const fixReason = resolutionPayload?.fixReason || "";
+    const fixImageURLs = resolutionPayload?.fixPhotoUrl ? [resolutionPayload.fixPhotoUrl] : [];
+
+    const historyEntry = {
+      action: normalizedNextStatus === "closed" ? "Ticket Closed" : "Ticket Reopened",
+      fromStatus: currentStatus,
+      toStatus: normalizedNextStatus,
+      timestamp,
+      user: actorName,
+      username: authUser.username,
+      ...(fixReason ? { fixReason } : {}),
+      ...(fixImageURLs.length ? { imageURLs: fixImageURLs } : {}),
+    };
+
+    const update = normalizedNextStatus === "closed"
+      ? {
+        $set: {
+          status: "closed",
+          closedAt: timestamp,
+          closedBy: actorName,
+          closedByUsername: authUser.username,
+          ...(fixReason ? { fixReason } : {}),
+          ...(fixImageURLs.length ? { fixImageURLs } : {}),
+        },
+        $push: {
+          statusHistory: historyEntry,
+        },
+      }
+      : {
+        $set: {
+          status: "open",
+        },
+        $push: {
+          statusHistory: historyEntry,
+        },
+      };
+
+    const ticketKey = getTicketKey(ticket);
+    setStatusAction({ nextStatus: normalizedNextStatus, ticketKey });
+    setError("");
+
+    try {
+      await updateNgTicketRecord({
+        ticketId,
+        update,
+        username: authUser.username,
+        role: authUser.role,
+      });
+
+      const optimisticTicket = {
+        ...ticket,
+        closedAt: normalizedNextStatus === "closed" ? timestamp : ticket.closedAt,
+        closedBy: normalizedNextStatus === "closed" ? actorName : ticket.closedBy,
+        closedByUsername: normalizedNextStatus === "closed" ? authUser.username : ticket.closedByUsername,
+        ...(fixReason ? { fixReason } : {}),
+        ...(fixImageURLs.length ? { fixImageURLs } : {}),
+        status: normalizedNextStatus,
+        statusHistory: [
+          ...(Array.isArray(ticket.statusHistory) ? ticket.statusHistory : []),
+          historyEntry,
+        ],
+      };
+
+      setRows((current) => current.map((row) => (getTicketKey(row) === ticketKey ? optimisticTicket : row)));
+      setSelectedTicket((current) => (
+        current && getTicketKey(current) === ticketKey
+          ? optimisticTicket
+          : current
+      ));
+      setRefreshNonce((current) => current + 1);
+      setActionNotice({
+        type: "success",
+        message: normalizedNextStatus === "closed"
+          ? "Ticket closed. Resolution details were recorded."
+          : "Ticket reopened. History was recorded.",
+      });
+    } catch (updateError) {
+      setActionNotice({
+        type: "error",
+        message: updateError.message || "Failed to update the ticket status.",
+      });
+    } finally {
+      setStatusAction(null);
+    }
+  }
+
+  async function handleConfirmResolveTicket({ fixReason, fixPhotoBase64 }) {
+    if (!resolvingTicket) return;
+    setResolvingBusy(true);
+    try {
+      let fixPhotoUrl = "";
+      if (fixPhotoBase64) {
+        const uploadRes = await uploadMaintenanceImage({
+          base64: fixPhotoBase64,
+          factoryName: resolvingTicket.factory || "",
+          equipmentName: resolvingTicket.machineName || resolvingTicket.加工設備 || "",
+          username: authUser?.username || "admin",
+        });
+        fixPhotoUrl = uploadRes?.url || uploadRes?.imageURL || "";
+      }
+
+      const ticketToClose = resolvingTicket;
+      setResolvingTicket(null);
+      await handleUpdateTicketStatus(ticketToClose, "closed", { fixReason, fixPhotoUrl });
+    } catch (err) {
+      setActionNotice({ type: "error", message: err.message || "Failed to upload fix photo or close ticket." });
+    } finally {
+      setResolvingBusy(false);
+    }
+  }
+
   const rangeLabel = useMemo(
     () => formatDateRangeLabel(dateRange.startDate, dateRange.endDate),
     [dateRange.endDate, dateRange.startDate]
@@ -1478,102 +1739,6 @@ export default function TicketSubmissionsPage() {
     });
   }
 
-  async function handleUpdateTicketStatus(ticket, nextStatus) {
-    if (!ticket) return;
-
-    if (!authUser?.username || !authUser?.role) {
-      setActionNotice({ type: "error", message: "Sign in again before updating ticket status." });
-      return;
-    }
-
-    const currentStatus = normalizeTicketStatusValue(ticket.status);
-    const normalizedNextStatus = normalizeTicketStatusValue(nextStatus);
-    if (!normalizedNextStatus || currentStatus === normalizedNextStatus) return;
-
-    const ticketId = ticket?._id ?? ticket?.ticketId;
-    if (!ticketId) {
-      setActionNotice({ type: "error", message: "This ticket is missing its record ID, so the status could not be updated." });
-      return;
-    }
-
-    const timestamp = new Date().toISOString();
-    const historyEntry = {
-      action: normalizedNextStatus === "closed" ? "Ticket Closed" : "Ticket Reopened",
-      fromStatus: currentStatus,
-      toStatus: normalizedNextStatus,
-      timestamp,
-      user: actorName,
-      username: authUser.username,
-    };
-
-    const update = normalizedNextStatus === "closed"
-      ? {
-        $set: {
-          status: "closed",
-          closedAt: timestamp,
-          closedBy: actorName,
-          closedByUsername: authUser.username,
-        },
-        $push: {
-          statusHistory: historyEntry,
-        },
-      }
-      : {
-        $set: {
-          status: "open",
-        },
-        $push: {
-          statusHistory: historyEntry,
-        },
-      };
-
-    const ticketKey = getTicketKey(ticket);
-    setStatusAction({ nextStatus: normalizedNextStatus, ticketKey });
-    setError("");
-
-    try {
-      await updateNgTicketRecord({
-        ticketId,
-        update,
-        username: authUser.username,
-        role: authUser.role,
-      });
-
-      const optimisticTicket = {
-        ...ticket,
-        closedAt: normalizedNextStatus === "closed" ? timestamp : ticket.closedAt,
-        closedBy: normalizedNextStatus === "closed" ? actorName : ticket.closedBy,
-        closedByUsername: normalizedNextStatus === "closed" ? authUser.username : ticket.closedByUsername,
-        status: normalizedNextStatus,
-        statusHistory: [
-          ...(Array.isArray(ticket.statusHistory) ? ticket.statusHistory : []),
-          historyEntry,
-        ],
-      };
-
-      setRows((current) => current.map((row) => (getTicketKey(row) === ticketKey ? optimisticTicket : row)));
-      setSelectedTicket((current) => (
-        current && getTicketKey(current) === ticketKey
-          ? optimisticTicket
-          : current
-      ));
-      setRefreshNonce((current) => current + 1);
-      setActionNotice({
-        type: "success",
-        message: normalizedNextStatus === "closed"
-          ? "Ticket closed. Closure history was recorded."
-          : "Ticket reopened. History was recorded.",
-      });
-    } catch (updateError) {
-      setActionNotice({
-        type: "error",
-        message: updateError.message || "Failed to update the ticket status.",
-      });
-    } finally {
-      setStatusAction(null);
-    }
-  }
-
   return (
     <section className="h-screen overflow-y-auto px-6 pb-16 pt-24 scrollbar-hide md:px-8">
       <PageHeader
@@ -1730,6 +1895,16 @@ export default function TicketSubmissionsPage() {
           onClose={() => setExportChoiceOpen(false)}
           onExportFiltered={() => runTicketExport("filtered")}
           onExportAll={() => runTicketExport("all")}
+        />,
+        document.body
+      )}
+
+      {resolvingTicket && createPortal(
+        <ResolveTicketModal
+          ticket={resolvingTicket}
+          busy={resolvingBusy}
+          onClose={() => setResolvingTicket(null)}
+          onConfirm={handleConfirmResolveTicket}
         />,
         document.body
       )}
