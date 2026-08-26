@@ -1556,7 +1556,8 @@ function ScheduleFilterButton({ active, icon, label, onClick }) {
 export default function ChecklistSubmissionsPage() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
+  const isJa = language === "ja";
   const [templates, setTemplates] = useState([]);
   const [allEquipment, setAllEquipment] = useState([]);
   const [records, setRecords] = useState([]);
@@ -1990,10 +1991,21 @@ export default function ChecklistSubmissionsPage() {
   return (
     <section className="h-screen overflow-y-auto px-6 pb-16 pt-24 scrollbar-hide md:px-8">
       <PageHeader
-        eyebrow="メンテナンス"
+        eyebrow={isJa ? "点検" : "Checklist"}
         eyebrowClassName="text-xs tracking-[0.18em]"
         title={t("checklistSubmissions")}
         className="mb-6"
+        actionsClassName="flex-wrap items-center gap-2.5"
+        actions={(
+          <button
+            type="button"
+            onClick={() => navigate("/maintenance")}
+            className="inline-flex items-center gap-2 rounded-xl border border-outline-variant/30 bg-surface-container px-4 py-2.5 text-sm font-semibold text-on-surface transition-all duration-150 hover:border-primary/30 hover:bg-surface-container-high active:scale-95"
+          >
+            <span className="material-symbols-outlined" style={{ fontSize: 18 }}>checklist</span>
+            {isJa ? "点検フォーム一覧" : "Checklist Forms"}
+          </button>
+        )}
       />
 
       <div className="mb-6 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
@@ -2027,13 +2039,11 @@ export default function ChecklistSubmissionsPage() {
         />
       </div>
 
-      <div className="mb-6 grid gap-3 xl:grid-cols-[minmax(0,1.4fr)_minmax(320px,0.6fr)]">
+      {/* Simplified Filter & Advanced Filter */}
+      <div className="mb-6">
         <ChecklistSubmissionsFilterPanel
           startDate={dateRange.startDate}
           endDate={dateRange.endDate}
-          rangeLabel={timelineRangeLabel}
-          scopeLabel={timelineScopeLabel}
-          appliedAdvancedFilterCount={appliedAdvancedFilters.length}
           fieldDefinitions={advancedFieldDefinitions}
           advancedRows={advancedRows}
           onDateChange={handleDateChange}
@@ -2044,22 +2054,6 @@ export default function ChecklistSubmissionsPage() {
           onApplyAdvancedFilters={handleApplyAdvancedFilters}
           onClearAdvancedFilters={handleClearAdvancedFilters}
         />
-
-        <div className="glass-card rounded-2xl p-5">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Status Guide</p>
-          <div className="mt-4 flex flex-wrap gap-2">
-            <LegendPill label="Completed" tone="bg-emerald-500" />
-            <LegendPill label="Missed" tone="bg-error" />
-            <LegendPill label="Due" tone="bg-amber-500" />
-            <LegendPill label="Completed with NG" tone="bg-emerald-500" withNg />
-            {timelineFocusActive && <LegendPill label="Muted Context" tone="bg-outline" />}
-          </div>
-          <p className="mt-4 text-sm leading-6 text-outline">
-            {timelineFocusActive
-              ? `Turn Daily, Weekly, and Monthly on or off to focus the timeline. Activity outside the current focus (${timelineFocusSummary.join(" • ")}) is muted for context.`
-              : "Turn Daily, Weekly, and Monthly on or off to focus the timeline. The active buttons control which cadence lanes appear inside each day cell."}
-          </p>
-        </div>
       </div>
 
       <div className="dashboard-section overflow-hidden rounded-2xl">
@@ -2076,19 +2070,46 @@ export default function ChecklistSubmissionsPage() {
               </p>
             )}
           </div>
-          <div className="flex flex-wrap gap-2">
-            {SCHEDULE_ORDER.map((schedule) => {
-              const meta = SCHEDULE_META[schedule];
-              return (
-                <ScheduleFilterButton
-                  key={schedule}
-                  active={activeSchedules.includes(schedule)}
-                  icon={meta.icon}
-                  label={meta.label}
-                  onClick={() => toggleSchedule(schedule)}
-                />
-              );
-            })}
+          <div className="flex flex-wrap items-center gap-4">
+            {/* Inline Compact Status Indicators */}
+            <div className="flex flex-wrap items-center gap-3 text-xs text-outline">
+              <span className="inline-flex items-center gap-1.5 font-medium">
+                <span className="h-2.5 w-2.5 rounded-full bg-emerald-500" />
+                {isJa ? "完了" : "Completed"}
+              </span>
+              <span className="inline-flex items-center gap-1.5 font-medium">
+                <span className="h-2.5 w-2.5 rounded-full bg-error" />
+                {isJa ? "未実施" : "Missed"}
+              </span>
+              <span className="inline-flex items-center gap-1.5 font-medium">
+                <span className="h-2.5 w-2.5 rounded-full bg-amber-500" />
+                {isJa ? "予定" : "Due"}
+              </span>
+              <span className="inline-flex items-center gap-1.5 font-medium">
+                <span className="relative flex h-2.5 w-2.5">
+                  <span className="absolute inset-0 rounded-full bg-emerald-500" />
+                  <span className="absolute -right-0.5 -top-0.5 h-1.5 w-1.5 rounded-full bg-error ring-1 ring-surface" />
+                </span>
+                {isJa ? "NGあり" : "NG"}
+              </span>
+            </div>
+
+            <div className="h-4 w-px bg-separator/60 hidden sm:block" />
+
+            <div className="flex flex-wrap gap-1.5">
+              {SCHEDULE_ORDER.map((schedule) => {
+                const meta = SCHEDULE_META[schedule];
+                return (
+                  <ScheduleFilterButton
+                    key={schedule}
+                    active={activeSchedules.includes(schedule)}
+                    icon={meta.icon}
+                    label={meta.label}
+                    onClick={() => toggleSchedule(schedule)}
+                  />
+                );
+              })}
+            </div>
           </div>
         </div>
 

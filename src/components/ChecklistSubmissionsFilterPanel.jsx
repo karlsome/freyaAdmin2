@@ -6,9 +6,6 @@ export default function ChecklistSubmissionsFilterPanel({
   className = "",
   startDate,
   endDate,
-  rangeLabel,
-  scopeLabel,
-  appliedAdvancedFilterCount = 0,
   fieldDefinitions,
   advancedRows,
   onDateChange,
@@ -19,59 +16,93 @@ export default function ChecklistSubmissionsFilterPanel({
   onApplyAdvancedFilters,
   onClearAdvancedFilters,
 }) {
-  const appliedFilterLabel = appliedAdvancedFilterCount
-    ? `${appliedAdvancedFilterCount} advanced filter${appliedAdvancedFilterCount === 1 ? "" : "s"} applied`
-    : "No advanced filters applied";
+  function handlePresetRange(days) {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const start = new Date(today);
+    start.setDate(today.getDate() - (days - 1));
+
+    const formatDate = (d) => {
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, "0");
+      const day = String(d.getDate()).padStart(2, "0");
+      return `${year}-${month}-${day}`;
+    };
+
+    onDateChange("startDate", formatDate(start));
+    onDateChange("endDate", formatDate(today));
+  }
+
+  function handleThisMonth() {
+    const today = new Date();
+    const start = new Date(today.getFullYear(), today.getMonth(), 1);
+    const end = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+
+    const formatDate = (d) => {
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, "0");
+      const day = String(d.getDate()).padStart(2, "0");
+      return `${year}-${month}-${day}`;
+    };
+
+    onDateChange("startDate", formatDate(start));
+    onDateChange("endDate", formatDate(end));
+  }
 
   return (
     <div className={`glass-card rounded-2xl p-5 relative z-20 ${className}`.trim()}>
-      <div className="grid items-end gap-3 lg:grid-cols-2 xl:grid-cols-4">
-        <FormField label="From Date">
-          <input
-            type="date"
-            value={startDate}
-            onChange={(event) => onDateChange("startDate", event.target.value)}
-            className="h-10 w-full rounded-xl border border-separator/40 bg-white px-3 text-sm text-on-surface outline-none transition-colors focus:border-primary/40"
-          />
-        </FormField>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div className="flex flex-wrap items-end gap-3">
+          <FormField label="From Date">
+            <input
+              type="date"
+              value={startDate}
+              onChange={(event) => onDateChange("startDate", event.target.value)}
+              className="h-10 rounded-xl border border-separator/40 bg-surface-container px-3 text-sm text-on-surface outline-none transition-colors focus:border-primary/40"
+            />
+          </FormField>
 
-        <FormField label="To Date">
-          <input
-            type="date"
-            value={endDate}
-            onChange={(event) => onDateChange("endDate", event.target.value)}
-            className="h-10 w-full rounded-xl border border-separator/40 bg-white px-3 text-sm text-on-surface outline-none transition-colors focus:border-primary/40"
-          />
-        </FormField>
+          <FormField label="To Date">
+            <input
+              type="date"
+              value={endDate}
+              onChange={(event) => onDateChange("endDate", event.target.value)}
+              className="h-10 rounded-xl border border-separator/40 bg-surface-container px-3 text-sm text-on-surface outline-none transition-colors focus:border-primary/40"
+            />
+          </FormField>
 
-        <div className="flex flex-col gap-1.5 xl:col-span-2">
-          <div className="flex items-center justify-between gap-3">
-            <span className="text-[10px] font-semibold uppercase tracking-wider text-outline">Current Scope</span>
+          <div className="flex flex-wrap items-center gap-1.5 pb-0.5">
+            <button
+              type="button"
+              onClick={() => handlePresetRange(7)}
+              className="rounded-xl border border-outline-variant/30 bg-surface-container px-3 py-2 text-xs font-semibold text-on-surface transition hover:bg-surface-container-high active:scale-95"
+            >
+              7 Days
+            </button>
+            <button
+              type="button"
+              onClick={() => handlePresetRange(30)}
+              className="rounded-xl border border-outline-variant/30 bg-surface-container px-3 py-2 text-xs font-semibold text-on-surface transition hover:bg-surface-container-high active:scale-95"
+            >
+              30 Days
+            </button>
+            <button
+              type="button"
+              onClick={handleThisMonth}
+              className="rounded-xl border border-outline-variant/30 bg-surface-container px-3 py-2 text-xs font-semibold text-on-surface transition hover:bg-surface-container-high active:scale-95"
+            >
+              This Month
+            </button>
             <button
               type="button"
               onClick={onResetDateRange}
-              className="text-[10px] font-semibold uppercase tracking-wider text-primary transition hover:opacity-70"
+              className="inline-flex items-center gap-1 rounded-xl border border-outline-variant/30 bg-surface-container px-3 py-2 text-xs font-semibold text-outline transition hover:bg-surface-container-high hover:text-on-surface active:scale-95"
             >
-              Reset Default 30d
+              <span className="material-symbols-outlined" style={{ fontSize: 14 }}>restart_alt</span>
+              Reset
             </button>
           </div>
-          <div className="flex flex-wrap gap-2">
-            <span className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-separator/40 bg-surface px-3 py-2 text-xs font-semibold text-on-surface">
-              <span className="material-symbols-outlined text-primary" style={{ fontSize: 14 }}>calendar_month</span>
-              {rangeLabel}
-            </span>
-            <span className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-separator/40 bg-surface px-3 py-2 text-xs font-semibold text-on-surface">
-              <span className="material-symbols-outlined text-primary" style={{ fontSize: 14 }}>tune</span>
-              {scopeLabel}
-            </span>
-            <span className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-separator/40 bg-surface px-3 py-2 text-xs font-semibold text-on-surface">
-              <span className="material-symbols-outlined text-primary" style={{ fontSize: 14 }}>filter_alt</span>
-              {appliedFilterLabel}
-            </span>
-          </div>
-          <p className="text-xs leading-5 text-outline">
-            Use the date range for the timeline window. Advanced filters now cover machine scope, checklist form, schedule, operator, NG state, submission activity, counts, dates, and keyword search.
-          </p>
         </div>
       </div>
 
