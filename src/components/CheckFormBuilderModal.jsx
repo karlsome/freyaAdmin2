@@ -313,18 +313,6 @@ function getBuilderViewportSize() {
   };
 }
 
-function SummaryCard({ icon, label, value }) {
-  return (
-    <div className="rounded-2xl border border-separator/40 bg-surface px-4 py-3">
-      <div className="flex items-center gap-2 text-outline">
-        <span className="material-symbols-outlined text-primary" style={{ fontSize: 16 }}>{icon}</span>
-        <span className="text-[10px] font-semibold uppercase tracking-[0.18em]">{label}</span>
-      </div>
-      <p className="mt-2 text-sm font-semibold text-on-surface">{value}</p>
-    </div>
-  );
-}
-
 function ToggleRow({ checked, onToggle, label, description }) {
   return (
     <div className="flex items-start justify-between gap-4 rounded-2xl border border-separator/40 bg-surface px-4 py-3">
@@ -343,72 +331,6 @@ function ToggleRow({ checked, onToggle, label, description }) {
       >
         <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${checked ? "translate-x-5" : "translate-x-0"}`} />
       </button>
-    </div>
-  );
-}
-
-function FieldPreviewCard({ field }) {
-  const typeMeta = getFieldTypeMeta(field.type);
-  const hasRange = field.type === "number" && (field.min != null || field.max != null);
-
-  return (
-    <div className="rounded-2xl border border-separator/40 bg-surface px-4 py-4">
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2">
-            <span className="text-primary">{renderFieldTypeGlyph(typeMeta, 16)}</span>
-            <p className="truncate text-sm font-semibold text-on-surface">{field.label || "Untitled check"}</p>
-          </div>
-          <p className="mt-1 text-xs leading-5 text-outline">
-            {field.description || "No field instruction has been added yet."}
-          </p>
-        </div>
-        <span className="inline-flex rounded-full bg-primary/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-primary">
-          {typeMeta.label}
-        </span>
-      </div>
-
-      <div className="mt-3 flex flex-wrap gap-2 text-[11px] font-semibold">
-        {field.locked ? (
-          <span className="rounded-full bg-surface-container px-2.5 py-1 text-on-surface">Locked</span>
-        ) : null}
-        {field.required ? (
-          <span className="rounded-full bg-error/10 px-2.5 py-1 text-error">Required</span>
-        ) : null}
-        {field.photoRequired ? (
-          <span className="rounded-full bg-surface-container px-2.5 py-1 text-on-surface">Photo required</span>
-        ) : null}
-        {field.unit ? (
-          <span className="rounded-full bg-surface-container px-2.5 py-1 text-on-surface">Unit: {field.unit}</span>
-        ) : null}
-        {hasRange ? (
-          <span className="rounded-full bg-surface-container px-2.5 py-1 text-on-surface">
-            Range: {field.min != null ? field.min : "-"} - {field.max != null ? field.max : "-"}
-          </span>
-        ) : null}
-        {field.type === "select" && Array.isArray(field.options) && field.options.length > 0 ? (
-          <span className="rounded-full bg-surface-container px-2.5 py-1 text-on-surface">{field.options.length} options</span>
-        ) : null}
-      </div>
-
-      {field.imageURL ? (
-        <div className="mt-4 overflow-hidden rounded-2xl border border-separator/40 bg-surface-container">
-          <img src={normalizeImageURL(field.imageURL)} alt={field.label || "Field reference"} className="h-40 w-full object-cover" />
-        </div>
-      ) : null}
-
-      {field.type === "select" && Array.isArray(field.options) && field.options.length > 0 ? (
-        <div className="mt-4">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Options</p>
-          <div className="mt-2 flex flex-wrap gap-2">
-            {field.options.map((option) => (
-              <span key={option} className="rounded-full border border-separator/40 bg-surface-container px-2.5 py-1 text-xs font-semibold text-on-surface">
-                {option}
-              </span>
-            ))}
-          </div>
-        </div>
-      ) : null}
     </div>
   );
 }
@@ -483,13 +405,9 @@ export default function CheckFormBuilderModal({ initial, onClose, onSaved, prese
 
   const selectedScheduleOption = SCHEDULE_OPTIONS.find((option) => option.value === draft.schedule) ?? null;
   const selectedMachineIds = draft.equipmentIds.map(normalizeId).filter(Boolean);
-  const selectedMachineNames = getMachineNames(draft.equipmentIds, allEquipment);
   const allFilteredSelected =
     filteredEquipment.length > 0 &&
     filteredEquipment.every((equipment) => selectedMachineIds.includes(normalizeId(equipment._id)));
-  const expandedField = draft.fields.find((field) => field.id === expandedFieldId) ?? null;
-  const editableFieldCount = draft.fields.filter((field) => !field.locked).length;
-  const requiredFieldCount = draft.fields.filter((field) => field.required).length;
   const modalVerticalInset = viewportSize.width >= 640 ? 32 : 24;
   const modalHeight = Math.max(viewportSize.height - modalVerticalInset, 320);
 
@@ -608,7 +526,7 @@ export default function CheckFormBuilderModal({ initial, onClose, onSaved, prese
   const modal = (
     <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto overscroll-contain bg-black/50 px-3 py-3 backdrop-blur-md sm:px-4 sm:py-4">
       <div
-        className="relative flex min-h-0 w-full max-w-6xl flex-col overflow-hidden rounded-2xl border border-separator/40 glass-card"
+        className="relative flex min-h-0 w-full max-w-4xl flex-col overflow-hidden rounded-2xl border border-separator/40 glass-card"
         style={{ height: `${modalHeight}px`, maxHeight: `${modalHeight}px` }}
       >
         <div className="flex items-start justify-between border-b border-separator/40 px-6 py-5">
@@ -630,269 +548,189 @@ export default function CheckFormBuilderModal({ initial, onClose, onSaved, prese
           </button>
         </div>
 
-        <div className="min-h-0 flex-1 overflow-y-auto xl:overflow-hidden">
-          <div className="grid h-full min-h-0 xl:grid-cols-[minmax(0,1fr)_340px]">
-            <div className="px-4 py-5 sm:px-6 xl:min-h-0 xl:overflow-y-auto">
-              <section className="rounded-2xl border border-primary/15 bg-primary/5 p-4">
-                <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-                  <div>
-                    <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-primary">
-                      {initial ? "Update Flow" : "Start Here"}
-                    </p>
-                    <p className="mt-1 text-sm leading-6 text-on-surface">
-                      Start with the basics, then expand any field card below to adjust its instructions, type, rules, and reference image.
-                    </p>
-                  </div>
-                  <div className="flex flex-wrap gap-2 text-[11px] font-semibold">
-                    <span className="rounded-full bg-surface px-3 py-1.5 text-on-surface">{draft.fields.length} total fields</span>
-                    <span className="rounded-full bg-surface px-3 py-1.5 text-on-surface">{editableFieldCount} editable</span>
-                    <span className="rounded-full bg-surface px-3 py-1.5 text-on-surface">{requiredFieldCount} required</span>
-                  </div>
-                </div>
-              </section>
+        <div className="min-h-0 flex-1 overflow-y-auto px-4 py-5 sm:px-6 space-y-5">
+          <section className="rounded-2xl border border-separator/40 bg-surface-container/40 p-5">
+            <div className="mb-4">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Form Setup</p>
+              <p className="mt-1 text-sm text-outline">Define the name, description, factory, cadence, and activation date before editing the checks.</p>
+            </div>
 
-              <section className="mt-5 rounded-2xl border border-separator/40 bg-surface-container/40 p-4">
-                <div className="mb-4">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Form Setup</p>
-                  <p className="mt-1 text-sm text-outline">Define the name, description, factory, cadence, and activation date before editing the checks.</p>
-                </div>
+            <div className="grid gap-4 lg:grid-cols-2">
+              <div>
+                <label className="mb-1.5 block text-xs font-semibold uppercase tracking-[0.18em] text-outline">Form Name</label>
+                <input
+                  type="text"
+                  placeholder="Form name *"
+                  value={draft.name}
+                  onChange={(event) => setTop("name", event.target.value)}
+                  className={`${inputClass} ${nameConflict ? "border-error/50 focus:border-error/60" : ""}`}
+                />
+                {nameConflict ? (
+                  <p className="mt-1.5 flex items-center gap-1 text-xs text-error">
+                    <span className="material-symbols-outlined" style={{ fontSize: 14 }}>error</span>
+                    This form name is already in use.
+                  </p>
+                ) : null}
+              </div>
 
-                <div className="grid gap-4 lg:grid-cols-2">
-                  <div>
-                    <label className="mb-1.5 block text-xs font-semibold uppercase tracking-[0.18em] text-outline">Form Name</label>
-                    <input
-                      type="text"
-                      placeholder="Form name *"
-                      value={draft.name}
-                      onChange={(event) => setTop("name", event.target.value)}
-                      className={`${inputClass} ${nameConflict ? "border-error/50 focus:border-error/60" : ""}`}
-                    />
-                    {nameConflict ? (
-                      <p className="mt-1.5 flex items-center gap-1 text-xs text-error">
-                        <span className="material-symbols-outlined" style={{ fontSize: 14 }}>error</span>
-                        This form name is already in use.
-                      </p>
-                    ) : null}
-                  </div>
+              <div>
+                <label className="mb-1.5 block text-xs font-semibold uppercase tracking-[0.18em] text-outline">Factory</label>
+                <select value={draft.工場} onChange={(event) => setTop("工場", event.target.value)} className={inputClass}>
+                  <option value="">Select a factory</option>
+                  {factories.map((factory) => (
+                    <option key={factory._id ?? factory.工場} value={factory.工場}>{factory.工場}</option>
+                  ))}
+                </select>
+              </div>
 
-                  <div>
-                    <label className="mb-1.5 block text-xs font-semibold uppercase tracking-[0.18em] text-outline">Factory</label>
-                    <select value={draft.工場} onChange={(event) => setTop("工場", event.target.value)} className={inputClass}>
-                      <option value="">Select a factory</option>
-                      {factories.map((factory) => (
-                        <option key={factory._id ?? factory.工場} value={factory.工場}>{factory.工場}</option>
-                      ))}
-                    </select>
-                  </div>
+              <div className="lg:col-span-2">
+                <label className="mb-1.5 block text-xs font-semibold uppercase tracking-[0.18em] text-outline">Description</label>
+                <textarea
+                  rows={3}
+                  placeholder="Tell admins and operators what this checklist form is for."
+                  value={draft.description}
+                  onChange={(event) => setTop("description", event.target.value)}
+                  className={`${inputClass} resize-y`}
+                />
+              </div>
 
-                  <div className="lg:col-span-2">
-                    <label className="mb-1.5 block text-xs font-semibold uppercase tracking-[0.18em] text-outline">Description</label>
-                    <textarea
-                      rows={3}
-                      placeholder="Tell admins and operators what this checklist form is for."
-                      value={draft.description}
-                      onChange={(event) => setTop("description", event.target.value)}
-                      className={`${inputClass} resize-y`}
-                    />
-                  </div>
-
-                  <div className="lg:col-span-2">
-                    <label className="mb-1.5 block text-xs font-semibold uppercase tracking-[0.18em] text-outline">Frequency</label>
-                    <div className="grid gap-2 sm:grid-cols-3">
-                      {SCHEDULE_OPTIONS.map((option) => {
-                        const isActive = draft.schedule === option.value;
-                        return (
-                          <button
-                            key={option.value}
-                            type="button"
-                            aria-pressed={isActive}
-                            onClick={() => setTop("schedule", option.value)}
-                            className={`rounded-2xl border px-4 py-4 text-left transition ${
-                              isActive
-                                ? "border-primary/40 bg-primary/10 text-primary"
-                                : "border-outline-variant/30 bg-surface text-on-surface hover:border-primary/30 hover:bg-surface-container"
-                            }`}
-                          >
-                            <span className="material-symbols-outlined mb-2 block" style={{ fontSize: 18 }}>{option.icon}</span>
-                            <span className="block text-xs font-semibold uppercase tracking-[0.18em]">{option.label}</span>
-                            <span className={`mt-1 block text-[11px] ${isActive ? "text-primary/80" : "text-outline"}`}>{option.hint}</span>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-
-
-
-                  <div>
-                    <label className="mb-1.5 block text-xs font-semibold uppercase tracking-[0.18em] text-outline">First Active Date</label>
-                    <input
-                      type="date"
-                      value={draft.startDate}
-                      onChange={(event) => setTop("startDate", event.target.value)}
-                      className={inputClass}
-                    />
-                    <p className="mt-1.5 text-xs text-outline">
-                      {selectedScheduleOption
-                        ? `${selectedScheduleOption.label} forms repeat ${selectedScheduleOption.hint.toLowerCase()}.`
-                        : "Choose a cadence so operators know when this form should appear."}
-                    </p>
-                  </div>
-                </div>
-              </section>
-
-              <section className="mt-5 rounded-2xl border border-separator/40 bg-surface-container/40 p-4">
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                  <div>
-                    <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Machine Scope</p>
-                    <p className="mt-1 text-sm text-outline">Select the machines this form applies to. Switch factories first if needed.</p>
-                  </div>
-                  {filteredEquipment.length > 0 ? (
-                    <button
-                      type="button"
-                      onClick={toggleAllMachines}
-                      className="inline-flex items-center gap-2 rounded-full border border-separator/40 bg-surface px-3 py-2 text-xs font-semibold text-on-surface transition hover:bg-surface-container"
-                    >
-                      <span className="material-symbols-outlined" style={{ fontSize: 14 }}>{allFilteredSelected ? "remove_done" : "done_all"}</span>
-                      {allFilteredSelected ? "Clear all" : "Select all"}
-                    </button>
-                  ) : null}
-                </div>
-
-                <div className="mt-4 flex flex-wrap gap-2">
-                  {!draft.工場 ? (
-                    <span className="rounded-full border border-dashed border-outline-variant/20 bg-surface px-3 py-1.5 text-xs font-semibold text-outline">
-                      Select a factory first
-                    </span>
-                  ) : null}
-
-                  {draft.工場 && filteredEquipment.length === 0 ? (
-                    <span className="rounded-full border border-dashed border-outline-variant/20 bg-surface px-3 py-1.5 text-xs font-semibold text-outline">
-                      No machines found
-                    </span>
-                  ) : null}
-
-                  {filteredEquipment.map((equipment) => {
-                    const equipmentId = normalizeId(equipment._id);
-                    const isSelected = selectedMachineIds.includes(equipmentId);
+              <div className="lg:col-span-2">
+                <label className="mb-1.5 block text-xs font-semibold uppercase tracking-[0.18em] text-outline">Frequency</label>
+                <div className="grid gap-2 sm:grid-cols-3">
+                  {SCHEDULE_OPTIONS.map((option) => {
+                    const isActive = draft.schedule === option.value;
                     return (
                       <button
-                        key={equipmentId || equipment.name}
+                        key={option.value}
                         type="button"
-                        onClick={() => toggleMachine(equipment._id)}
-                        className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold transition ${
-                          isSelected
-                            ? "border-primary/35 bg-primary/10 text-primary"
-                            : "border-outline-variant/20 bg-surface text-on-surface hover:border-primary/30 hover:bg-surface-container"
+                        aria-pressed={isActive}
+                        onClick={() => setTop("schedule", option.value)}
+                        className={`rounded-2xl border px-4 py-4 text-left transition ${
+                          isActive
+                            ? "border-primary/40 bg-primary/10 text-primary"
+                            : "border-outline-variant/30 bg-surface text-on-surface hover:border-primary/30 hover:bg-surface-container"
                         }`}
                       >
-                        <span className="material-symbols-outlined" style={{ fontSize: 14 }}>precision_manufacturing</span>
-                        {equipment.name}
+                        <span className="material-symbols-outlined mb-2 block" style={{ fontSize: 18 }}>{option.icon}</span>
+                        <span className="block text-xs font-semibold uppercase tracking-[0.18em]">{option.label}</span>
+                        <span className={`mt-1 block text-[11px] ${isActive ? "text-primary/80" : "text-outline"}`}>{option.hint}</span>
                       </button>
                     );
                   })}
                 </div>
-              </section>
+              </div>
 
-              <section className="mt-5 rounded-2xl border border-separator/40 bg-surface-container/40 p-4">
-                <div>
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Checks</p>
-                  <p className="mt-1 text-sm text-outline">Each field card contains the full setup for that check. Use the number on the left to track checklist order, then add a new item at the bottom when needed.</p>
-                </div>
-
-                <div className="mt-4 space-y-3">
-                  {draft.fields.map((field, index) => (
-                    <FieldCard
-                      key={field.id}
-                      field={field}
-                      index={index}
-                      expanded={expandedFieldId === field.id}
-                      onToggle={() => setExpandedFieldId((current) => (current === field.id ? null : field.id))}
-                      onChange={(patch) => updateField(field.id, patch)}
-                      onMoveUp={() => moveField(field.id, -1)}
-                      onMoveDown={() => moveField(field.id, 1)}
-                      onDelete={() => removeField(field.id)}
-                      canMoveUp={index > 0}
-                      canMoveDown={index < draft.fields.length - 1}
-                      username={username}
-                    />
-                  ))}
-
-                  <button
-                    type="button"
-                    onClick={() => addField()}
-                    className="flex w-full items-center justify-center gap-3 rounded-2xl border border-dashed border-outline-variant/30 bg-surface px-5 py-4 text-sm font-semibold text-on-surface transition hover:border-primary/35 hover:bg-surface-container hover:text-primary"
-                  >
-                    <span className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-primary">
-                      <span className="material-symbols-outlined" style={{ fontSize: 20 }}>add</span>
-                    </span>
-                    Add checklist item
-                  </button>
-                </div>
-              </section>
-            </div>
-
-            <aside className="border-t border-outline-variant/20 bg-surface/50 px-4 py-5 sm:px-6 xl:min-h-0 xl:overflow-y-auto xl:border-l xl:border-t-0">
-              <div className="rounded-2xl border border-separator/40 bg-surface px-4 py-4">
-                <div className="mb-2 flex flex-wrap items-center gap-2">
-                  <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-primary">
-                    <span className="material-symbols-outlined" style={{ fontSize: 12 }}>{selectedScheduleOption?.icon || "event_busy"}</span>
-                    {selectedScheduleOption?.label || draft.schedule || "Unscheduled"}
-                  </span>
-                  <span className="inline-flex rounded-full bg-surface-container px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-outline">
-                    {draft.status}
-                  </span>
-                </div>
-                <h3 className="text-lg font-semibold text-on-surface">{draft.name.trim() || "Untitled checklist form"}</h3>
-                <p className="mt-2 text-sm leading-6 text-outline">
-                  {draft.description.trim() || "Add a description so admins know the purpose and scope of this form at a glance."}
+              <div>
+                <label className="mb-1.5 block text-xs font-semibold uppercase tracking-[0.18em] text-outline">First Active Date</label>
+                <input
+                  type="date"
+                  value={draft.startDate}
+                  onChange={(event) => setTop("startDate", event.target.value)}
+                  className={inputClass}
+                />
+                <p className="mt-1.5 text-xs text-outline">
+                  {selectedScheduleOption
+                    ? `${selectedScheduleOption.label} forms repeat ${selectedScheduleOption.hint.toLowerCase()}.`
+                    : "Choose a cadence so operators know when this form should appear."}
                 </p>
               </div>
+            </div>
+          </section>
 
-              <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
-                <SummaryCard icon="factory" label="Factory" value={draft.工場 || "Not selected"} />
-                <SummaryCard icon="event" label="Start Date" value={draft.startDate || "Not set"} />
-                <SummaryCard icon="list" label="Checks" value={`${draft.fields.length} total`} />
-                <SummaryCard icon="priority_high" label="Required" value={`${requiredFieldCount} fields`} />
+          <section className="rounded-2xl border border-separator/40 bg-surface-container/40 p-5">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+              <div>
+                <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Machine Scope</p>
+                <p className="mt-1 text-sm text-outline">Select the machines this form applies to. Switch factories first if needed.</p>
               </div>
+              {filteredEquipment.length > 0 ? (
+                <button
+                  type="button"
+                  onClick={toggleAllMachines}
+                  className="inline-flex items-center gap-2 rounded-full border border-separator/40 bg-surface px-3 py-2 text-xs font-semibold text-on-surface transition hover:bg-surface-container"
+                >
+                  <span className="material-symbols-outlined" style={{ fontSize: 14 }}>{allFilteredSelected ? "remove_done" : "done_all"}</span>
+                  {allFilteredSelected ? "Clear all" : "Select all"}
+                </button>
+              ) : null}
+            </div>
 
-              <div className="mt-4 rounded-2xl border border-separator/40 bg-surface px-4 py-4">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Selected Machines</p>
-                <div className="mt-3 flex flex-wrap gap-2">
-                  {selectedMachineNames.length > 0 ? (
-                    selectedMachineNames.map((machineName) => (
-                      <span
-                        key={machineName}
-                        className="inline-flex items-center gap-1 rounded-full border border-separator/40 bg-surface-container px-2.5 py-1 text-xs font-semibold text-on-surface"
-                      >
-                        <span className="material-symbols-outlined text-primary" style={{ fontSize: 14 }}>precision_manufacturing</span>
-                        {machineName}
-                      </span>
-                    ))
-                  ) : (
-                    <p className="text-sm leading-6 text-outline">No machines selected yet.</p>
-                  )}
-                </div>
+            <div className="mt-4 flex flex-wrap gap-2">
+              {!draft.工場 ? (
+                <span className="rounded-full border border-dashed border-outline-variant/20 bg-surface px-3 py-1.5 text-xs font-semibold text-outline">
+                  Select a factory first
+                </span>
+              ) : null}
+
+              {draft.工場 && filteredEquipment.length === 0 ? (
+                <span className="rounded-full border border-dashed border-outline-variant/20 bg-surface px-3 py-1.5 text-xs font-semibold text-outline">
+                  No machines found
+                </span>
+              ) : null}
+
+              {filteredEquipment.map((equipment) => {
+                const equipmentId = normalizeId(equipment._id);
+                const isSelected = selectedMachineIds.includes(equipmentId);
+                return (
+                  <button
+                    key={equipmentId || equipment.name}
+                    type="button"
+                    onClick={() => toggleMachine(equipment._id)}
+                    className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold transition ${
+                      isSelected
+                        ? "border-primary/35 bg-primary/10 text-primary"
+                        : "border-outline-variant/20 bg-surface text-on-surface hover:border-primary/30 hover:bg-surface-container"
+                    }`}
+                  >
+                    <span className="material-symbols-outlined" style={{ fontSize: 14 }}>precision_manufacturing</span>
+                    {equipment.name}
+                  </button>
+                );
+              })}
+            </div>
+          </section>
+
+          <section className="rounded-2xl border border-separator/40 bg-surface-container/40 p-5">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Checks</p>
+                <p className="mt-1 text-sm text-outline">Each field card contains the full setup for that check. Use the number on the left to track checklist order.</p>
               </div>
+              <span className="inline-flex w-fit rounded-full bg-primary/10 px-3 py-1 text-xs font-bold text-primary">
+                {draft.fields.length} checks total
+              </span>
+            </div>
 
-              <div className="mt-4 rounded-2xl border border-separator/40 bg-surface px-4 py-4">
-                <div className="mb-3 flex items-center justify-between gap-3">
-                  <div>
-                    <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Field Focus</p>
-                    <p className="mt-1 text-xs leading-5 text-outline">Use this preview to sanity-check the current field while editing inline.</p>
-                  </div>
-                </div>
+            <div className="mt-4 space-y-3">
+              {draft.fields.map((field, index) => (
+                <FieldCard
+                  key={field.id}
+                  field={field}
+                  index={index}
+                  expanded={expandedFieldId === field.id}
+                  onToggle={() => setExpandedFieldId((current) => (current === field.id ? null : field.id))}
+                  onChange={(patch) => updateField(field.id, patch)}
+                  onMoveUp={() => moveField(field.id, -1)}
+                  onMoveDown={() => moveField(field.id, 1)}
+                  onDelete={() => removeField(field.id)}
+                  canMoveUp={index > 0}
+                  canMoveDown={index < draft.fields.length - 1}
+                  username={username}
+                />
+              ))}
 
-                {expandedField ? (
-                  <FieldPreviewCard field={expandedField} />
-                ) : (
-                  <div className="rounded-2xl border border-dashed border-outline-variant/20 bg-surface-container/60 px-4 py-5 text-sm leading-6 text-outline">
-                    Select a field card to preview it here.
-                  </div>
-                )}
-              </div>
-            </aside>
-          </div>
+              <button
+                type="button"
+                onClick={() => addField()}
+                className="flex w-full items-center justify-center gap-3 rounded-2xl border border-dashed border-outline-variant/30 bg-surface px-5 py-4 text-sm font-semibold text-on-surface transition hover:border-primary/35 hover:bg-surface-container hover:text-primary active:scale-[0.99]"
+              >
+                <span className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-primary">
+                  <span className="material-symbols-outlined" style={{ fontSize: 20 }}>add</span>
+                </span>
+                Add checklist item
+              </button>
+            </div>
+          </section>
         </div>
 
         <div className="flex shrink-0 flex-col gap-3 border-t border-outline-variant/20 px-6 py-4 lg:flex-row lg:items-center lg:justify-between">
