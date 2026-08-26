@@ -88,11 +88,15 @@ export function buildMachineChecklistMatrix({
       if (seenFieldKeys.has(fieldKey)) return;
       seenFieldKeys.add(fieldKey);
 
-      let standard = field.standard || field.specification || field.criteria || "";
+      // Prioritize Japanese description of each step for 管理規格
+      let standard = String(field.description_ja || field.description || field.standard || field.specification || field.criteria || "").trim();
       if (!standard && field.type === "range") {
         if (field.min !== undefined && field.max !== undefined) {
           standard = `${field.min} ～ ${field.max}${field.unit ? ` ${field.unit}` : ""}`;
         }
+      }
+      if (!standard && field.description_en) {
+        standard = String(field.description_en).trim();
       }
       if (!standard && field.type === "toggle") {
         standard = "異常なきこと / 正常";
@@ -281,21 +285,22 @@ export function openTraditionalChecklistPrintWindow(matrixData, periodLabel = ""
   <title>設備点検記録_${escapeHtml(machine.name)}_${escapeHtml(periodLabel)}</title>
   <style>
     @page {
-      size: A4 landscape;
-      margin: 6mm 6mm 6mm 6mm;
+      size: A3 landscape;
+      margin: 5mm;
     }
     * {
       box-sizing: border-box;
       -webkit-print-color-adjust: exact;
       print-color-adjust: exact;
     }
-    body {
-      font-family: "Helvetica Neue", "Hiragino Kaku Gothic ProN", "Yu Gothic", Meiryo, sans-serif;
+    html, body {
+      width: 100%;
       margin: 0;
-      padding: 8px;
+      padding: 6px;
       color: #111;
       background: #fff;
-      font-size: 8.5pt;
+      font-family: "Helvetica Neue", "Hiragino Kaku Gothic ProN", "Yu Gothic", Meiryo, sans-serif;
+      font-size: 8pt;
       line-height: 1.2;
     }
     .no-print {
@@ -663,8 +668,8 @@ export function openDigitalChecklistPrintWindow(matrixData, periodLabel = "") {
   <title>デジタル点検レポート_${escapeHtml(machine.name)}_${escapeHtml(periodLabel)}</title>
   <style>
     @page {
-      size: A4 portrait;
-      margin: 12mm 12mm 12mm 12mm;
+      size: A3 landscape;
+      margin: 8mm;
     }
     * {
       box-sizing: border-box;
