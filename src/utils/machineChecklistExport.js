@@ -607,12 +607,12 @@ export function openTraditionalChecklistPrintWindow(matrixData, periodLabel = ""
 
     ${photoFields.length > 0 ? `
       <div class="photo-section">
-        <div class="photo-title">【点検箇所・ガイド写真】</div>
+        <div class="photo-title">【点検箇所・ガイド写真】（項目番号対応: 1～${fields.length}）</div>
         <div class="photo-grid">
-          ${photoFields.map((f, i) => `
+          ${photoFields.map((f) => `
             <div class="photo-card">
               <img src="${escapeHtml(f.imageURL)}" alt="${escapeHtml(f.label)}" />
-              <div class="photo-tag">${i + 1}. ${escapeHtml(f.label)}</div>
+              <div class="photo-tag" title="${escapeHtml(f.label)}"><strong>${f.index}.</strong> ${escapeHtml(f.label)}</div>
             </div>
           `).join("")}
         </div>
