@@ -277,7 +277,7 @@ export default function CheckFormDetailModal({ form, scheduleMeta, machineNames,
             </div>
             <h2 className="text-xl font-semibold text-on-surface">{formName}</h2>
             <p className="mt-2 max-w-3xl text-sm leading-6 text-outline whitespace-pre-line">
-              {formDescription || (isJa ? "この点検フォームの説明はまだ追加されていません。" : "No description has been added for this maintenance form yet.")}
+              {formDescription || (isJa ? "この点検フォームの説明はまだ追加されていません。" : "No description has been added for this checklist form yet.")}
             </p>
           </div>
           <button

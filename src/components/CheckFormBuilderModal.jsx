@@ -616,7 +616,7 @@ export default function CheckFormBuilderModal({ initial, onClose, onSaved, prese
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-outline">
               {initial ? "Edit Form" : "New Form"}
             </p>
-            <h2 className="mt-1 text-xl font-semibold text-on-surface">Maintenance Form Builder</h2>
+            <h2 className="mt-1 text-xl font-semibold text-on-surface">Checklist Form Builder</h2>
             <p className="mt-2 max-w-3xl text-sm leading-6 text-outline">
               Keep the setup simple, then shape each check inline so the form reads clearly before you save it.
             </p>
@@ -689,7 +689,7 @@ export default function CheckFormBuilderModal({ initial, onClose, onSaved, prese
                     <label className="mb-1.5 block text-xs font-semibold uppercase tracking-[0.18em] text-outline">Description</label>
                     <textarea
                       rows={3}
-                      placeholder="Tell admins and operators what this maintenance form is for."
+                      placeholder="Tell admins and operators what this checklist form is for."
                       value={draft.description}
                       onChange={(event) => setTop("description", event.target.value)}
                       className={`${inputClass} resize-y`}
@@ -843,7 +843,7 @@ export default function CheckFormBuilderModal({ initial, onClose, onSaved, prese
                     {draft.status}
                   </span>
                 </div>
-                <h3 className="text-lg font-semibold text-on-surface">{draft.name.trim() || "Untitled maintenance form"}</h3>
+                <h3 className="text-lg font-semibold text-on-surface">{draft.name.trim() || "Untitled checklist form"}</h3>
                 <p className="mt-2 text-sm leading-6 text-outline">
                   {draft.description.trim() || "Add a description so admins know the purpose and scope of this form at a glance."}
                 </p>
@@ -1124,7 +1124,7 @@ function FieldCard({
               <div className="rounded-2xl border border-separator/40 bg-surface px-4 py-4">
                 <p className="text-sm font-semibold text-on-surface">This field is fixed</p>
                 <p className="mt-1 text-sm leading-6 text-outline">
-                  The operator name field is added automatically to every maintenance form and cannot be removed or edited.
+                  The operator name field is added automatically to every checklist form and cannot be removed or edited.
                 </p>
               </div>
             ) : (

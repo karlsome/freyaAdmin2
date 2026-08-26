@@ -267,8 +267,8 @@ export default function MaintenancePage() {
     <section className="h-screen overflow-y-auto px-6 pb-16 pt-24 scrollbar-hide md:px-8">
       <section>
         <PageHeader
-          eyebrow={isJa ? "メンテナンス" : "Maintenance"}
-          title={isJa ? "点検フォーム管理" : "Maintenance Forms"}
+          eyebrow={isJa ? "点検" : "Checklist"}
+          title={isJa ? "点検フォーム" : "Checklist Forms"}
           actionsClassName="gap-2"
           actions={(
             <>
@@ -408,7 +408,7 @@ export default function MaintenancePage() {
             <p className="text-sm">
               {isJa
                 ? "このビューにはフォームが見つかりませんでした。最初の点検フォームを作成して始めましょう。"
-                : "No forms found in this view yet. Create your first maintenance form to get started."}
+                : "No forms found in this view yet. Create your first checklist form to get started."}
             </p>
             <button
               type="button"
