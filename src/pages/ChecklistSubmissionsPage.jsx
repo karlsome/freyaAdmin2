@@ -4,6 +4,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import ChecklistSubmissionsFilterPanel from "../components/ChecklistSubmissionsFilterPanel";
 import IconButton from "../components/IconButton";
 import LiquidSegmentedControl from "../components/LiquidSegmentedControl";
+import MachineExportModal from "../components/MachineExportModal";
 import PageHeader from "../components/PageHeader";
 import SensorDevicePhotoPreviewModal from "../components/SensorDevicePhotoPreviewModal";
 import { useLanguage } from "../contexts/LanguageContext";
@@ -97,11 +98,10 @@ function createDefaultTimelineRange() {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
-  const startDate = new Date(today);
-  startDate.setDate(today.getDate() - 15);
-
-  const endDate = new Date(today);
-  endDate.setDate(today.getDate() + 14);
+  const year = today.getFullYear();
+  const month = today.getMonth();
+  const startDate = new Date(year, month, 1);
+  const endDate = new Date(year, month + 1, 0);
 
   return {
     startDate: formatDateInputValue(startDate),
@@ -1631,6 +1631,7 @@ export default function ChecklistSubmissionsPage() {
   const [appliedAdvancedFilters, setAppliedAdvancedFilters] = useState([]);
   const [activeSchedules, setActiveSchedules] = useState(SCHEDULE_ORDER);
   const [selectedCell, setSelectedCell] = useState(null);
+  const [exportingMachine, setExportingMachine] = useState(null);
   const scrollRef = useRef(null);
 
   const resolvedDateRange = useMemo(
@@ -1695,7 +1696,8 @@ export default function ChecklistSubmissionsPage() {
     for (const equipment of allEquipment) {
       const eqName = String(equipment.name || equipment.設備名 || equipment.name_ja || equipment._id).trim();
       const factory = String(equipment.工場 || equipment.factory || "—").trim();
-      map.set(normalizeId(equipment._id), { name: eqName, factory });
+      const setsubiNo = String(equipment.設備No || equipment.管理番号 || equipment.設備番号 || equipment.code || equipment.machineNo || "").trim();
+      map.set(normalizeId(equipment._id), { name: eqName, factory, setsubiNo, raw: equipment });
     }
     return map;
   }, [allEquipment]);
@@ -2483,13 +2485,28 @@ export default function ChecklistSubmissionsPage() {
                 {filteredMachines.map((machine, index) => (
                   <tr key={machine.id} className={index % 2 === 0 ? "bg-surface" : "bg-surface-container/30"}>
                     <td
-                      className={`sticky left-0 z-10 border-b border-r border-outline-variant/20 px-4 ${viewMode === "compact" ? "py-1.5" : "py-2"} ${index % 2 === 0 ? "bg-surface" : "bg-surface-container"}`}
+                      className={`sticky left-0 z-10 border-b border-r border-outline-variant/20 px-3 ${viewMode === "compact" ? "py-1.5" : "py-2"} ${index % 2 === 0 ? "bg-surface" : "bg-surface-container"}`}
                       style={{ width: MACHINE_COLUMN_WIDTH, minWidth: MACHINE_COLUMN_WIDTH, maxWidth: MACHINE_COLUMN_WIDTH }}
                     >
-                      <p className="truncate text-sm font-semibold text-on-surface">{machine.name}</p>
-                      {machine.factory && machine.factory !== "—" && (
-                        <p className="truncate text-[10px] text-outline">{machine.factory}</p>
-                      )}
+                      <div className="flex items-center justify-between gap-1.5">
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-sm font-semibold text-on-surface" title={machine.name}>{machine.name}</p>
+                          {machine.factory && machine.factory !== "—" && (
+                            <p className="truncate text-[10px] text-outline">{machine.factory}</p>
+                          )}
+                        </div>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setExportingMachine(machine);
+                          }}
+                          title={isJa ? `${machine.name} の点検表を出力 (PDF / CSV)` : `Export checklist for ${machine.name}`}
+                          className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg border border-outline-variant/30 bg-surface-container text-outline hover:border-primary/40 hover:bg-primary/10 hover:text-primary transition-all active:scale-90"
+                        >
+                          <span className="material-symbols-outlined" style={{ fontSize: 15 }}>file_export</span>
+                        </button>
+                      </div>
                     </td>
                     <td
                       className={`sticky z-10 border-b border-r border-outline-variant/20 px-3 ${viewMode === "compact" ? "py-1" : "py-2"} ${viewMode === "compact" ? "align-middle" : "align-top"} ${index % 2 === 0 ? "bg-surface" : "bg-surface-container"}`}
@@ -2549,6 +2566,18 @@ export default function ChecklistSubmissionsPage() {
           onClose={() => setSelectedCell(null)}
         />,
         document.body
+      )}
+
+      {exportingMachine && (
+        <MachineExportModal
+          machine={exportingMachine}
+          templates={templates}
+          records={records}
+          currentDates={dates}
+          currentDateRange={dateRange}
+          equipmentMap={equipmentMap}
+          onClose={() => setExportingMachine(null)}
+        />
       )}
     </section>
   );
