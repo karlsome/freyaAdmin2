@@ -727,6 +727,8 @@ function SubmissionPickerModal({ dateLabel, factory, machineName, onClose, onSel
 
 function RecordDetailModal({ defaultTab = "submission", form, initialTicketFocusHint = null, onBack = null, onClose, record }) {
   const navigate = useNavigate();
+  const { language } = useLanguage();
+  const isJa = language === "ja";
   const isMissedRecord = record?.status === "missed";
   const isWaitingRecord = record?.status === "waiting";
   const isReferenceRecord = isMissedRecord || isWaitingRecord;
@@ -747,7 +749,9 @@ function RecordDetailModal({ defaultTab = "submission", form, initialTicketFocus
     : (form?.fields ?? []).filter((field) => field.type !== "name");
   const responses = record?.responses ?? {};
   const recordId = normalizeId(record?._id ?? record?.recordId);
-  const formName = form?.name ?? record?.formName ?? "Checklist Submission";
+  const formName = isJa
+    ? (form?.name_ja || form?.name || record?.formName_ja || record?.formName || "点検提出")
+    : (form?.name_en || form?.name || record?.formName_en || record?.formName || "Checklist Submission");
   const recordFactory = form?.工場 ?? record?.factory ?? "";
   const recordSchedule = record?.schedule ?? form?.schedule ?? "";
   const modalTabItems = useMemo(() => {
@@ -1132,8 +1136,18 @@ function RecordDetailModal({ defaultTab = "submission", form, initialTicketFocus
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-semibold text-on-surface">{field.label || <span className="italic text-outline">Untitled</span>}</p>
-                        {field.description && <p className="mt-0.5 text-xs text-outline">{field.description}</p>}
+                        <p className="truncate text-sm font-semibold text-on-surface">
+                          {isJa
+                            ? (field.label_ja || field.label || field.label_en || <span className="italic text-outline">無題</span>)
+                            : (field.label_en || field.label || field.label_ja || <span className="italic text-outline">Untitled</span>)}
+                        </p>
+                        {field.description && (
+                          <p className="mt-0.5 text-xs text-outline whitespace-pre-line">
+                            {isJa
+                              ? (field.description_ja || field.description || field.description_en)
+                              : (field.description_en || field.description || field.description_ja)}
+                          </p>
+                        )}
                         {answeredAtLabel && (
                           <div className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-surface px-2.5 py-1 text-[11px] font-semibold text-outline">
                             <span className="material-symbols-outlined" style={{ fontSize: 14 }}>schedule</span>
