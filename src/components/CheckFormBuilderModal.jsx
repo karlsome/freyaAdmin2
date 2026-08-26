@@ -335,22 +335,57 @@ function ToggleRow({ checked, onToggle, label, description }) {
   );
 }
 
-export default function CheckFormBuilderModal({ initial, onClose, onSaved, presetSchedule = "" }) {
+export default function CheckFormBuilderModal({
+  initial,
+  isClone = false,
+  onClose,
+  onSaved,
+  presetSchedule = "",
+}) {
   const [viewportSize, setViewportSize] = useState(() => getBuilderViewportSize());
-  const [draft, setDraft] = useState(() =>
-    initial
-      ? {
-          name: initial.name,
+  const [draft, setDraft] = useState(() => {
+    if (initial) {
+      if (isClone) {
+        const clonedFields = (initial.fields ?? []).map((f) => {
+          if (f.locked || f.type === "name") return { ...f };
+          const newId =
+            typeof crypto !== "undefined" && crypto.randomUUID
+              ? crypto.randomUUID()
+              : `field-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+          return { ...f, id: newId };
+        });
+        return {
+          name: initial.name ? `${initial.name} (Copy)` : "New Checklist Form (Copy)",
+          name_ja: initial.name_ja ? `${initial.name_ja} (コピー)` : (initial.name ? `${initial.name} (コピー)` : ""),
+          name_en: initial.name_en ? `${initial.name_en} (Copy)` : (initial.name ? `${initial.name} (Copy)` : ""),
           description: initial.description ?? "",
+          description_ja: initial.description_ja ?? "",
+          description_en: initial.description_en ?? "",
           工場: initial.工場 ?? "",
           equipmentIds: (initial.equipmentIds ?? (initial.equipmentId ? [initial.equipmentId] : [])).map(normalizeId),
-          schedule: initial.schedule ?? "",
-          startDate: initial.startDate ?? "",
-          fields: ensureNameField(initial.fields ?? []),
-          status: initial.status ?? "draft",
-        }
-      : emptyDraft(presetSchedule)
-  );
+          schedule: initial.schedule ?? presetSchedule ?? "daily",
+          startDate: initial.startDate ?? new Date().toISOString().slice(0, 10),
+          fields: ensureNameField(clonedFields),
+          status: "draft",
+        };
+      }
+      return {
+        name: initial.name,
+        name_ja: initial.name_ja ?? "",
+        name_en: initial.name_en ?? "",
+        description: initial.description ?? "",
+        description_ja: initial.description_ja ?? "",
+        description_en: initial.description_en ?? "",
+        工場: initial.工場 ?? "",
+        equipmentIds: (initial.equipmentIds ?? (initial.equipmentId ? [initial.equipmentId] : [])).map(normalizeId),
+        schedule: initial.schedule ?? "",
+        startDate: initial.startDate ?? "",
+        fields: ensureNameField(initial.fields ?? []),
+        status: initial.status ?? "draft",
+      };
+    }
+    return emptyDraft(presetSchedule);
+  });
   const [expandedFieldId, setExpandedFieldId] = useState(null);
   const [factories, setFactories] = useState([]);
   const [allEquipment, setAllEquipment] = useState([]);
@@ -391,7 +426,7 @@ export default function CheckFormBuilderModal({ initial, onClose, onSaved, prese
   }, [draft.fields, expandedFieldId]);
 
   const username = getAuthUser()?.username || "";
-  const initialId = normalizeId(initial?._id);
+  const initialId = isClone ? "" : normalizeId(initial?._id);
   const nameConflict = draft.name.trim()
     ? allTemplates.some(
         (template) =>
@@ -441,6 +476,28 @@ export default function CheckFormBuilderModal({ initial, onClose, onSaved, prese
     setExpandedFieldId(field.id);
   }
 
+  function duplicateField(id) {
+    const fieldIndex = draft.fields.findIndex((f) => f.id === id);
+    if (fieldIndex === -1) return;
+    const target = draft.fields[fieldIndex];
+    const newId =
+      typeof crypto !== "undefined" && crypto.randomUUID
+        ? crypto.randomUUID()
+        : `field-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+    const cloned = {
+      ...target,
+      id: newId,
+      label: target.label ? `${target.label} (Copy)` : "Copied check",
+      label_ja: target.label_ja ? `${target.label_ja} (コピー)` : (target.label ? `${target.label} (コピー)` : ""),
+      label_en: target.label_en ? `${target.label_en} (Copy)` : (target.label ? `${target.label} (Copy)` : ""),
+      locked: false,
+    };
+    const nextFields = [...draft.fields];
+    nextFields.splice(fieldIndex + 1, 0, cloned);
+    setDraft((current) => ({ ...current, fields: nextFields }));
+    setExpandedFieldId(newId);
+  }
+
   function removeField(id) {
     const nextFields = draft.fields.filter((field) => field.id !== id);
     setDraft((current) => ({ ...current, fields: nextFields }));
@@ -449,23 +506,42 @@ export default function CheckFormBuilderModal({ initial, onClose, onSaved, prese
     }
   }
 
-  function updateField(id, patch) {
-    setDraft((current) => ({
-      ...current,
-      fields: current.fields.map((field) => (field.id === id ? { ...field, ...patch } : field)),
-    }));
+  function moveField(id, delta) {
+    const index = draft.fields.findIndex((field) => field.id === id);
+    if (index === -1) return;
+
+    const targetIndex = index + delta;
+    if (targetIndex < 0 || targetIndex >= draft.fields.length) return;
+
+    const nextFields = [...draft.fields];
+    const [moved] = nextFields.splice(index, 1);
+    nextFields.splice(targetIndex, 0, moved);
+    setDraft((current) => ({ ...current, fields: nextFields }));
   }
 
-  function moveField(id, direction) {
+  function updateField(id, patch) {
     setDraft((current) => {
-      const index = current.fields.findIndex((field) => field.id === id);
-      if (index < 0) return current;
-
-      const nextFields = [...current.fields];
-      const swapIndex = index + direction;
-      if (swapIndex < 0 || swapIndex >= nextFields.length) return current;
-
-      [nextFields[index], nextFields[swapIndex]] = [nextFields[swapIndex], nextFields[index]];
+      const nextFields = current.fields.map((field) => {
+        if (field.id !== id) return field;
+        const merged = { ...field, ...patch };
+        if (patch.type && patch.type !== field.type) {
+          if (patch.type === "number") {
+            merged.min = 0;
+            merged.max = 100;
+            merged.unit = "";
+          } else {
+            delete merged.min;
+            delete merged.max;
+            delete merged.unit;
+          }
+          if (patch.type === "select") {
+            merged.options = field.options?.length ? field.options : ["Option 1", "Option 2"];
+          } else {
+            delete merged.options;
+          }
+        }
+        return merged;
+      });
       return { ...current, fields: nextFields };
     });
   }
@@ -489,7 +565,8 @@ export default function CheckFormBuilderModal({ initial, onClose, onSaved, prese
 
     try {
       const payload = await buildParallelTranslations(basePayload);
-      if (initial?._id) {
+      const isExistingEdit = Boolean(initial?._id && !isClone);
+      if (isExistingEdit) {
         await updateCheckFormTemplate(initial._id, payload, activeUsername);
         onSaved();
       } else {
@@ -532,11 +609,15 @@ export default function CheckFormBuilderModal({ initial, onClose, onSaved, prese
         <div className="flex items-start justify-between border-b border-separator/40 px-6 py-5">
           <div className="min-w-0 flex-1 pr-4">
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-outline">
-              {initial ? "Edit Form" : "New Form"}
+              {isClone ? "Clone Template" : initial ? "Edit Form" : "New Form"}
             </p>
-            <h2 className="mt-1 text-xl font-semibold text-on-surface">Checklist Form Builder</h2>
+            <h2 className="mt-1 text-xl font-semibold text-on-surface">
+              {isClone ? "Clone Checklist Form" : "Checklist Form Builder"}
+            </h2>
             <p className="mt-2 max-w-3xl text-sm leading-6 text-outline">
-              Keep the setup simple, then shape each check inline so the form reads clearly before you save it.
+              {isClone
+                ? "Review and customize the copied checks and scope, then deploy as a new checklist form."
+                : "Keep the setup simple, then shape each check inline so the form reads clearly before you save it."}
             </p>
           </div>
           <button
@@ -712,6 +793,7 @@ export default function CheckFormBuilderModal({ initial, onClose, onSaved, prese
                   onChange={(patch) => updateField(field.id, patch)}
                   onMoveUp={() => moveField(field.id, -1)}
                   onMoveDown={() => moveField(field.id, 1)}
+                  onDuplicate={() => duplicateField(field.id)}
                   onDelete={() => removeField(field.id)}
                   canMoveUp={index > 0}
                   canMoveDown={index < draft.fields.length - 1}
@@ -736,7 +818,7 @@ export default function CheckFormBuilderModal({ initial, onClose, onSaved, prese
         <div className="flex shrink-0 flex-col gap-3 border-t border-outline-variant/20 px-6 py-4 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex flex-1 flex-col gap-2 lg:flex-row lg:items-center">
             {error ? <p className="text-xs text-error">{error}</p> : null}
-            {initial && !error && !confirmingDelete ? (
+            {initial && !isClone && !error && !confirmingDelete ? (
               <button
                 type="button"
                 onClick={() => setConfirmingDelete(true)}
@@ -746,7 +828,7 @@ export default function CheckFormBuilderModal({ initial, onClose, onSaved, prese
                 Delete Form
               </button>
             ) : null}
-            {initial && confirmingDelete ? (
+            {initial && !isClone && confirmingDelete ? (
               <div className="flex flex-wrap items-center gap-2">
                 <p className="text-xs font-semibold text-error">Delete this form?</p>
                 <button
@@ -791,7 +873,7 @@ export default function CheckFormBuilderModal({ initial, onClose, onSaved, prese
               onClick={() => save("active")}
               className="flex-1 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-on-primary hover:opacity-90 active:scale-95 transition-all duration-150 disabled:opacity-50 sm:flex-none"
             >
-              {busy ? "Saving..." : "Deploy"}
+              {busy ? "Saving..." : isClone ? "Clone & Deploy" : initial ? "Save Changes" : "Deploy"}
             </button>
           </div>
         </div>
@@ -826,6 +908,7 @@ function FieldCard({
   onChange,
   onMoveUp,
   onMoveDown,
+  onDuplicate,
   onDelete,
   canMoveUp,
   canMoveDown,
@@ -922,6 +1005,7 @@ function FieldCard({
                     type="button"
                     disabled={!canMoveUp}
                     onClick={onMoveUp}
+                    title="Move up"
                     className="flex h-8 w-8 items-center justify-center rounded-full text-outline transition hover:bg-surface-container hover:text-primary disabled:opacity-30"
                   >
                     <span className="material-symbols-outlined" style={{ fontSize: 16 }}>arrow_upward</span>
@@ -930,13 +1014,23 @@ function FieldCard({
                     type="button"
                     disabled={!canMoveDown}
                     onClick={onMoveDown}
+                    title="Move down"
                     className="flex h-8 w-8 items-center justify-center rounded-full text-outline transition hover:bg-surface-container hover:text-primary disabled:opacity-30"
                   >
                     <span className="material-symbols-outlined" style={{ fontSize: 16 }}>arrow_downward</span>
                   </button>
                   <button
                     type="button"
+                    onClick={onDuplicate}
+                    title="Duplicate step"
+                    className="flex h-8 w-8 items-center justify-center rounded-full text-outline transition hover:bg-primary/10 hover:text-primary"
+                  >
+                    <span className="material-symbols-outlined" style={{ fontSize: 16 }}>content_copy</span>
+                  </button>
+                  <button
+                    type="button"
                     onClick={onDelete}
+                    title="Delete step"
                     className="flex h-8 w-8 items-center justify-center rounded-full text-outline transition hover:bg-error/10 hover:text-error"
                   >
                     <span className="material-symbols-outlined" style={{ fontSize: 16 }}>delete</span>

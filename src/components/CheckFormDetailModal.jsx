@@ -194,7 +194,14 @@ function FieldRow({ field, order, onPreviewImage, language }) {
   );
 }
 
-export default function CheckFormDetailModal({ form, scheduleMeta, machineNames, onClose, onEdit }) {
+export default function CheckFormDetailModal({
+  form,
+  scheduleMeta,
+  machineNames = [],
+  onClose,
+  onEdit,
+  onClone,
+}) {
   const { language } = useLanguage();
   const isJa = language === "ja";
 
@@ -349,16 +356,28 @@ export default function CheckFormDetailModal({ form, scheduleMeta, machineNames,
 
         <div className="flex flex-col gap-3 border-t border-separator/40 px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-xs leading-5 text-outline">
-            {isJa ? "このフォームを編集して、適用設備、周期、メタデータ、または点検項目を更新します。" : "Edit this form to update machine scope, cadence, metadata, or checklist fields."}
+            {isJa ? "このフォームを編集・複製して、適用設備、周期、メタデータ、または点検項目を更新します。" : "Edit or clone this form to update machine scope, cadence, metadata, or checklist fields."}
           </p>
-          <button
-            type="button"
-            onClick={onEdit}
-            className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-on-primary hover:opacity-90 active:scale-95 transition-all duration-150"
-          >
-            <span className="material-symbols-outlined" style={{ fontSize: 18 }}>edit</span>
-            {isJa ? "フォームを編集" : "Edit Form"}
-          </button>
+          <div className="flex items-center gap-2">
+            {onClone && (
+              <button
+                type="button"
+                onClick={() => onClone(form)}
+                className="inline-flex items-center justify-center gap-2 rounded-xl border border-outline-variant/30 bg-surface-container px-4 py-2.5 text-sm font-semibold text-on-surface hover:bg-surface-container-high transition-all duration-150 active:scale-95"
+              >
+                <span className="material-symbols-outlined" style={{ fontSize: 18 }}>copy_all</span>
+                {isJa ? "複製" : "Clone"}
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={onEdit}
+              className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-on-primary hover:opacity-90 active:scale-95 transition-all duration-150"
+            >
+              <span className="material-symbols-outlined" style={{ fontSize: 18 }}>edit</span>
+              {isJa ? "フォームを編集" : "Edit Form"}
+            </button>
+          </div>
         </div>
       </div>
 

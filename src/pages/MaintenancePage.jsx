@@ -98,7 +98,7 @@ function getFormMachineNames(form, equipmentMap) {
     .filter(Boolean);
 }
 
-function FormCard({ form, machineNames, onOpen, onToggleStatus, language }) {
+function FormCard({ form, machineNames, onOpen, onToggleStatus, onClone, language }) {
   const isJa = language === "ja";
   const scheduleMeta = getScheduleMeta(form.schedule, language);
   const statusMeta = STATUS_CONFIG[form.status] ?? STATUS_CONFIG.draft;
@@ -118,10 +118,17 @@ function FormCard({ form, machineNames, onOpen, onToggleStatus, language }) {
     : (statusMeta.label_en || form.status || "Draft");
 
   return (
-    <button
-      type="button"
+    <div
+      role="button"
+      tabIndex={0}
       onClick={onOpen}
-      className="glass-card group relative flex flex-col justify-between overflow-hidden rounded-2xl border border-outline-variant/25 bg-surface/60 text-left transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/40 hover:bg-surface hover:shadow-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onOpen();
+        }
+      }}
+      className="glass-card group relative flex flex-col justify-between overflow-hidden rounded-2xl border border-outline-variant/25 bg-surface/60 text-left transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/40 hover:bg-surface hover:shadow-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 cursor-pointer"
       aria-haspopup="dialog"
     >
       <div className="p-5">
@@ -232,14 +239,28 @@ function FormCard({ form, machineNames, onOpen, onToggleStatus, language }) {
             {form.fields?.length ?? 0} {isJa ? "項目" : "checks"}
           </span>
         </div>
-        <span className="inline-flex items-center gap-1 font-semibold text-primary group-hover:underline">
-          {isJa ? "詳細を見る" : "View Form"}
-          <span className="material-symbols-outlined transition-transform duration-200 group-hover:translate-x-0.5" style={{ fontSize: 14 }}>
-            arrow_forward
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            title={isJa ? "テンプレートを複製" : "Clone template"}
+            onClick={(e) => {
+              e.stopPropagation();
+              onClone?.(form);
+            }}
+            className="inline-flex items-center gap-1 font-medium text-outline hover:text-primary transition-colors duration-150"
+          >
+            <span className="material-symbols-outlined" style={{ fontSize: 15 }}>copy_all</span>
+            <span>{isJa ? "複製" : "Clone"}</span>
+          </button>
+          <span className="inline-flex items-center gap-1 font-semibold text-primary group-hover:underline">
+            {isJa ? "詳細" : "View"}
+            <span className="material-symbols-outlined transition-transform duration-200 group-hover:translate-x-0.5" style={{ fontSize: 14 }}>
+              arrow_forward
+            </span>
           </span>
-        </span>
+        </div>
       </div>
-    </button>
+    </div>
   );
 }
 
@@ -252,6 +273,7 @@ export default function MaintenancePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [builderOpen, setBuilderOpen] = useState(false);
+  const [isCloneMode, setIsCloneMode] = useState(false);
   const [builderPresetSchedule, setBuilderPresetSchedule] = useState("");
   const [editTarget, setEditTarget] = useState(null);
   const [detailTarget, setDetailTarget] = useState(null);
@@ -284,8 +306,16 @@ export default function MaintenancePage() {
     fetchSetsubiDBRecords().then((data) => setAllEquipment(Array.isArray(data) ? data : [])).catch(() => {});
   }, []);
 
+  function openCloner(form) {
+    setEditTarget(form);
+    setIsCloneMode(true);
+    setBuilderPresetSchedule(form?.schedule ?? "daily");
+    setBuilderOpen(true);
+  }
+
   function openBuilder(form = null, presetSchedule = "") {
     setEditTarget(form);
+    setIsCloneMode(false);
     setBuilderPresetSchedule(form?.schedule ?? (presetSchedule === "all" ? "daily" : presetSchedule));
     setBuilderOpen(true);
   }
@@ -293,6 +323,7 @@ export default function MaintenancePage() {
   function closeBuilder() {
     setBuilderOpen(false);
     setEditTarget(null);
+    setIsCloneMode(false);
     setBuilderPresetSchedule("");
   }
 
@@ -741,6 +772,7 @@ export default function MaintenancePage() {
                 machineNames={getFormMachineNames(form, equipmentMap)}
                 onOpen={() => setDetailTarget(form)}
                 onToggleStatus={handleToggleStatus}
+                onClone={openCloner}
                 language={language}
               />
             ))}
@@ -752,6 +784,7 @@ export default function MaintenancePage() {
       {builderOpen && (
         <CheckFormBuilderModal
           initial={editTarget}
+          isClone={isCloneMode}
           presetSchedule={builderPresetSchedule}
           onClose={closeBuilder}
           onSaved={() => { closeBuilder(); load(); }}
@@ -765,6 +798,10 @@ export default function MaintenancePage() {
           scheduleMeta={getScheduleMeta(detailTarget.schedule, language)}
           machineNames={getFormMachineNames(detailTarget, equipmentMap)}
           onClose={() => setDetailTarget(null)}
+          onClone={(form) => {
+            setDetailTarget(null);
+            openCloner(form);
+          }}
           onEdit={() => {
             const nextTarget = detailTarget;
             setDetailTarget(null);
