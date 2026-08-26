@@ -1,6 +1,12 @@
 import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { fetchCheckFormTemplates, fetchFactoryDBRecords, fetchSetsubiDBRecords } from "../services/api";
+import {
+  fetchCheckFormTemplates,
+  fetchFactoryDBRecords,
+  fetchSetsubiDBRecords,
+  updateCheckFormTemplate,
+} from "../services/api";
+import { getAuthUser } from "../utils/masterDB";
 import { useLanguage } from "../contexts/LanguageContext";
 import CheckFormBuilderModal from "../components/CheckFormBuilderModal";
 import CheckFormDetailModal from "../components/CheckFormDetailModal";
@@ -92,12 +98,13 @@ function getFormMachineNames(form, equipmentMap) {
     .filter(Boolean);
 }
 
-function FormCard({ form, machineNames, onOpen, language }) {
+function FormCard({ form, machineNames, onOpen, onToggleStatus, language }) {
   const isJa = language === "ja";
   const scheduleMeta = getScheduleMeta(form.schedule, language);
   const statusMeta = STATUS_CONFIG[form.status] ?? STATUS_CONFIG.draft;
   const visibleMachineNames = machineNames.slice(0, 3);
   const remainingMachineCount = Math.max(machineNames.length - visibleMachineNames.length, 0);
+  const isActive = form.status === "active";
 
   const formName = isJa
     ? (form.name_ja || form.name || form.name_en)
@@ -109,11 +116,6 @@ function FormCard({ form, machineNames, onOpen, language }) {
   const statusLabel = isJa
     ? (statusMeta.label_ja || form.status)
     : (statusMeta.label_en || form.status || "Draft");
-
-  const timing = form.timing || "pre";
-  const timingLabel = isJa
-    ? (timing === "post" ? "作業後点検" : "作業前点検")
-    : (timing === "post" ? "Post-Production" : "Pre-Production");
 
   return (
     <button
@@ -130,18 +132,6 @@ function FormCard({ form, machineNames, onOpen, language }) {
             <span className={`inline-flex items-center gap-1 rounded-lg border px-2.5 py-1 text-[11px] font-semibold tracking-wide ${scheduleMeta.badgeClass}`}>
               <span className="material-symbols-outlined" style={{ fontSize: 13 }}>{scheduleMeta.icon}</span>
               {scheduleMeta.label}
-            </span>
-
-            {/* Timing */}
-            <span className={`inline-flex items-center gap-1 rounded-lg border px-2.5 py-1 text-[11px] font-semibold tracking-wide ${
-              timing === "post"
-                ? "bg-purple-500/10 text-purple-700 dark:text-purple-300 border-purple-500/25"
-                : "bg-cyan-500/10 text-cyan-700 dark:text-cyan-300 border-cyan-500/25"
-            }`}>
-              <span className="material-symbols-outlined" style={{ fontSize: 13 }}>
-                {timing === "post" ? "task" : "play_circle"}
-              </span>
-              {timingLabel}
             </span>
           </div>
 
@@ -168,31 +158,63 @@ function FormCard({ form, machineNames, onOpen, language }) {
           </p>
         )}
 
-        {/* Machines Chips */}
-        <div className="mt-4 flex flex-wrap gap-1.5">
-          {visibleMachineNames.length > 0 ? (
-            <>
-              {visibleMachineNames.map((machineName) => (
-                <span
-                  key={machineName}
-                  className="inline-flex items-center gap-1 rounded-lg border border-outline-variant/30 bg-surface-container/80 px-2.5 py-1 text-[11px] font-medium text-on-surface"
-                >
-                  <span className="material-symbols-outlined text-primary" style={{ fontSize: 13 }}>precision_manufacturing</span>
-                  <span className="max-w-[120px] truncate">{machineName}</span>
-                </span>
-              ))}
-              {remainingMachineCount > 0 && (
-                <span className="inline-flex items-center rounded-lg border border-outline-variant/30 bg-surface-container-high px-2 py-1 text-[11px] font-semibold text-outline">
-                  +{remainingMachineCount} {isJa ? "台" : "more"}
-                </span>
-              )}
-            </>
-          ) : (
-            <span className="inline-flex items-center gap-1 rounded-lg border border-dashed border-outline-variant/30 bg-surface-container/40 px-2.5 py-1 text-[11px] font-medium text-outline">
-              <span className="material-symbols-outlined" style={{ fontSize: 13 }}>precision_manufacturing</span>
-              {isJa ? "設備未割り当て" : "No machines assigned"}
+        {/* Bottom row of card content: Machines on left, On/Off Switch on right */}
+        <div className="mt-4 flex items-end justify-between gap-3">
+          {/* Machines Chips */}
+          <div className="flex flex-wrap gap-1.5 min-w-0 flex-1">
+            {visibleMachineNames.length > 0 ? (
+              <>
+                {visibleMachineNames.map((machineName) => (
+                  <span
+                    key={machineName}
+                    className="inline-flex items-center gap-1 rounded-lg border border-outline-variant/30 bg-surface-container/80 px-2.5 py-1 text-[11px] font-medium text-on-surface"
+                  >
+                    <span className="material-symbols-outlined text-primary" style={{ fontSize: 13 }}>precision_manufacturing</span>
+                    <span className="max-w-[110px] truncate">{machineName}</span>
+                  </span>
+                ))}
+                {remainingMachineCount > 0 && (
+                  <span className="inline-flex items-center rounded-lg border border-outline-variant/30 bg-surface-container-high px-2 py-1 text-[11px] font-semibold text-outline">
+                    +{remainingMachineCount} {isJa ? "台" : "more"}
+                  </span>
+                )}
+              </>
+            ) : (
+              <span className="inline-flex items-center gap-1 rounded-lg border border-dashed border-outline-variant/30 bg-surface-container/40 px-2.5 py-1 text-[11px] font-medium text-outline">
+                <span className="material-symbols-outlined" style={{ fontSize: 13 }}>precision_manufacturing</span>
+                {isJa ? "設備未割り当て" : "No machines assigned"}
+              </span>
+            )}
+          </div>
+
+          {/* ON / OFF Switch */}
+          <div
+            className="flex items-center gap-2 flex-shrink-0"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <span className={`text-[11px] font-bold ${isActive ? "text-emerald-600 dark:text-emerald-400" : "text-outline"}`}>
+              {isActive ? (isJa ? "有効" : "Active") : (isJa ? "無効" : "Inactive")}
             </span>
-          )}
+            <button
+              type="button"
+              role="switch"
+              aria-checked={isActive}
+              title={isActive ? (isJa ? "クリックして無効化" : "Click to deactivate") : (isJa ? "クリックして有効化" : "Click to activate")}
+              onClick={(e) => {
+                e.stopPropagation();
+                onToggleStatus(form);
+              }}
+              className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 ${
+                isActive ? "bg-emerald-500 shadow-sm" : "bg-surface-container-high border border-outline-variant/40"
+              }`}
+            >
+              <span
+                className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out ${
+                  isActive ? "translate-x-5" : "translate-x-0"
+                }`}
+              />
+            </button>
+          </div>
         </div>
       </div>
 
@@ -274,6 +296,28 @@ export default function MaintenancePage() {
     setBuilderPresetSchedule("");
   }
 
+  async function handleToggleStatus(form) {
+    const isCurrentlyActive = form.status === "active";
+    const nextStatus = isCurrentlyActive ? "draft" : "active";
+    const authUser = getAuthUser();
+    const username = authUser?.username || "admin";
+
+    // Optimistic UI update
+    setTemplates((prev) =>
+      prev.map((t) => (t._id === form._id ? { ...t, status: nextStatus } : t))
+    );
+
+    try {
+      await updateCheckFormTemplate(form._id, { status: nextStatus }, username);
+    } catch (err) {
+      console.error("Failed to update status:", err);
+      // Revert on error
+      setTemplates((prev) =>
+        prev.map((t) => (t._id === form._id ? { ...t, status: form.status } : t))
+      );
+    }
+  }
+
   const equipmentMap = useMemo(
     () => new Map(allEquipment.map((equipment) => [normalizeId(equipment._id), equipment])),
     [allEquipment]
@@ -292,10 +336,13 @@ export default function MaintenancePage() {
         return false;
       }
 
-      // Timing filter
-      const timing = form.timing || "pre";
-      if (timingFilter !== "all" && timing !== timingFilter) {
-        return false;
+      // Timing filter based on checks contained
+      if (timingFilter === "pre") {
+        const hasPre = !form.fields?.length || form.fields.some((f) => (f.timing || "pre") === "pre");
+        if (!hasPre) return false;
+      } else if (timingFilter === "post") {
+        const hasPost = form.fields?.some((f) => f.timing === "post");
+        if (!hasPost) return false;
       }
 
       // Status filter
@@ -585,8 +632,8 @@ export default function MaintenancePage() {
                   className="rounded-xl border border-outline-variant/30 bg-surface-container px-3 py-1.5 text-xs font-semibold text-on-surface outline-none transition hover:bg-surface-container-high cursor-pointer"
                 >
                   <option value="all">{isJa ? "すべての点検" : "All Timings"}</option>
-                  <option value="pre">{isJa ? "作業前点検" : "Pre-Production"}</option>
-                  <option value="post">{isJa ? "作業後点検" : "Post-Production"}</option>
+                  <option value="pre">{isJa ? "作業前点検を含む" : "Contains Pre-Production"}</option>
+                  <option value="post">{isJa ? "作業後点検を含む" : "Contains Post-Production"}</option>
                 </select>
               </div>
 
@@ -602,7 +649,7 @@ export default function MaintenancePage() {
                 >
                   <option value="all">{isJa ? "すべての状態" : "All Status"}</option>
                   <option value="active">{isJa ? "アクティブ (稼働中)" : "Active"}</option>
-                  <option value="draft">{isJa ? "下書き" : "Draft"}</option>
+                  <option value="draft">{isJa ? "下書き (停止中)" : "Draft / Inactive"}</option>
                   <option value="archived">{isJa ? "アーカイブ" : "Archived"}</option>
                 </select>
               </div>
@@ -693,6 +740,7 @@ export default function MaintenancePage() {
                 form={form}
                 machineNames={getFormMachineNames(form, equipmentMap)}
                 onOpen={() => setDetailTarget(form)}
+                onToggleStatus={handleToggleStatus}
                 language={language}
               />
             ))}
