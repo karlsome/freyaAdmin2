@@ -570,7 +570,47 @@ function sortTicketHistoryEntries(entries = []) {
   return [...entries].sort((a, b) => new Date(b?.timestamp ?? 0) - new Date(a?.timestamp ?? 0));
 }
 
-function ScheduleStackCell({ entries, onSelect }) {
+function ScheduleStackCell({ entries, onSelect, compact = false }) {
+  if (compact) {
+    return (
+      <div className="mx-auto flex w-14 flex-wrap items-center justify-center gap-0.5">
+        {entries.map((entry) => {
+          const interactive = Boolean(entry.primary)
+            || (entry.state === "missed" && entry.missedForms?.length > 0)
+            || (entry.state === "due" && entry.dueForms?.length > 0);
+          const countLabel = getEntryCountLabel(entry);
+          const content = (
+            <div
+              className={`relative inline-flex items-center justify-center rounded px-1 py-0.5 text-[8px] font-bold ${SLOT_STYLES[entry.state]}`}
+              title={entry.title}
+            >
+              <span>{SCHEDULE_META[entry.schedule].short}{countLabel ? ` ${countLabel}` : ""}</span>
+              {entry.hasNG && (
+                <span className="absolute -right-0.5 -top-0.5 h-1.5 w-1.5 rounded-full bg-error ring-1 ring-surface" />
+              )}
+            </div>
+          );
+
+          if (!interactive) {
+            return <div key={entry.schedule}>{content}</div>;
+          }
+
+          return (
+            <button
+              key={entry.schedule}
+              type="button"
+              onClick={() => onSelect(entry)}
+              className="text-left transition hover:scale-105"
+              title={`${entry.title}. Click to ${entry.state === "missed" ? "review the missed checklist" : entry.state === "due" ? "review the checklist waiting for submission" : "open the submitted record"}.`}
+            >
+              {content}
+            </button>
+          );
+        })}
+      </div>
+    );
+  }
+
   return (
     <div className="mx-auto flex w-14 flex-col gap-1">
       {entries.map((entry) => {
@@ -611,7 +651,15 @@ function ScheduleStackCell({ entries, onSelect }) {
   );
 }
 
-function ScheduleLaneLegendCell({ schedules }) {
+function ScheduleLaneLegendCell({ schedules, compact = false }) {
+  if (compact) {
+    return (
+      <div className="flex w-24 items-center justify-center rounded-md px-1 py-1 text-[9px] font-bold uppercase tracking-wider text-outline">
+        {schedules.map((s) => SCHEDULE_META[s]?.short).join(" • ")}
+      </div>
+    );
+  }
+
   return (
     <div className="flex w-24 flex-col gap-1">
       {schedules.map((schedule) => (
@@ -1028,10 +1076,16 @@ function RecordDetailModal({ defaultTab = "submission", form, initialTicketFocus
                 </div>
               )}
               {record?.machineName && (
-                <div className="flex items-center gap-2 text-sm">
-                  <span className="material-symbols-outlined text-primary" style={{ fontSize: 18 }}>precision_manufacturing</span>
-                  <span className="font-semibold text-on-surface">{record.machineName}</span>
-                </div>
+                <button
+                  type="button"
+                  onClick={() => navigate(`/setsubi?q=${encodeURIComponent(record.machineName)}`)}
+                  title={isJa ? "設備台帳でこの設備を確認" : "View equipment in Setsubi DB"}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-outline-variant/30 bg-surface-container px-2.5 py-1 text-xs font-semibold text-on-surface hover:border-primary/40 hover:bg-surface-container-high transition active:scale-95"
+                >
+                  <span className="material-symbols-outlined text-primary" style={{ fontSize: 16 }}>precision_manufacturing</span>
+                  <span className="font-semibold">{record.machineName}</span>
+                  <span className="material-symbols-outlined text-outline" style={{ fontSize: 13 }}>open_in_new</span>
+                </button>
               )}
               {(record?.missedFormsCount > 1 || record?.waitingFormsCount > 1) && (
                 <span className="rounded-full bg-surface-container px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">
@@ -1060,10 +1114,16 @@ function RecordDetailModal({ defaultTab = "submission", form, initialTicketFocus
                 </div>
               )}
               {record?.machineName && (
-                <div className="flex items-center gap-2 text-sm">
-                  <span className="material-symbols-outlined text-primary" style={{ fontSize: 18 }}>precision_manufacturing</span>
-                  <span className="font-semibold text-on-surface">{record.machineName}</span>
-                </div>
+                <button
+                  type="button"
+                  onClick={() => navigate(`/setsubi?q=${encodeURIComponent(record.machineName)}`)}
+                  title={isJa ? "設備台帳でこの設備を確認" : "View equipment in Setsubi DB"}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-outline-variant/30 bg-surface-container px-2.5 py-1 text-xs font-semibold text-on-surface hover:border-primary/40 hover:bg-surface-container-high transition active:scale-95"
+                >
+                  <span className="material-symbols-outlined text-primary" style={{ fontSize: 16 }}>precision_manufacturing</span>
+                  <span className="font-semibold">{record.machineName}</span>
+                  <span className="material-symbols-outlined text-outline" style={{ fontSize: 13 }}>open_in_new</span>
+                </button>
               )}
               {record?.deviceId === "simulator" && (
                 <span className="rounded-full bg-outline/10 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-outline">Simulator</span>
@@ -1564,6 +1624,10 @@ export default function ChecklistSubmissionsPage() {
   const [loading, setLoading] = useState(true);
   const [dateRange, setDateRange] = useState(() => createDefaultTimelineRange());
   const [advancedRows, setAdvancedRows] = useState(() => [createChecklistSubmissionFilterRow()]);
+  const [selectedTimelineFactories, setSelectedTimelineFactories] = useState([]);
+  const [factoryDropdownOpen, setFactoryDropdownOpen] = useState(false);
+  const factoryDropdownRef = useRef(null);
+  const [viewMode, setViewMode] = useState("standard"); // "standard" | "compact"
   const [appliedAdvancedFilters, setAppliedAdvancedFilters] = useState([]);
   const [activeSchedules, setActiveSchedules] = useState(SCHEDULE_ORDER);
   const [selectedCell, setSelectedCell] = useState(null);
@@ -1577,6 +1641,18 @@ export default function ChecklistSubmissionsPage() {
     () => getDatesInRange(resolvedDateRange.startDate, resolvedDateRange.endDate),
     [resolvedDateRange.endDate, resolvedDateRange.startDate]
   );
+
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (factoryDropdownRef.current && !factoryDropdownRef.current.contains(event.target)) {
+        setFactoryDropdownOpen(false);
+      }
+    }
+    if (factoryDropdownOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+      return () => document.removeEventListener("mousedown", handleClickOutside);
+    }
+  }, [factoryDropdownOpen]);
 
   useEffect(() => {
     async function load() {
@@ -1820,10 +1896,41 @@ export default function ChecklistSubmissionsPage() {
     [filteredAssignments]
   );
 
-  const filteredMachines = useMemo(
-    () => machines.filter((machine) => filteredMachineIds.has(machine.id)),
-    [filteredMachineIds, machines]
-  );
+  const availableTimelineFactories = useMemo(() => {
+    const raw = machines.map((m) => m.factory).filter(Boolean).filter((f) => f !== "—");
+    return [...new Set(raw)].sort((a, b) => a.localeCompare(b, "ja"));
+  }, [machines]);
+
+  const timelineFactoryCounts = useMemo(() => {
+    const counts = {};
+    for (const m of machines) {
+      if (m.factory && m.factory !== "—") {
+        counts[m.factory] = (counts[m.factory] || 0) + 1;
+      }
+    }
+    return counts;
+  }, [machines]);
+
+  const timelineFactoryButtonLabel = useMemo(() => {
+    if (selectedTimelineFactories.length === 0) {
+      return isJa ? "すべての工場" : "All Factories";
+    }
+    if (selectedTimelineFactories.length === 1) {
+      return selectedTimelineFactories[0];
+    }
+    return isJa
+      ? `${selectedTimelineFactories[0]} 他 ${selectedTimelineFactories.length - 1}件`
+      : `${selectedTimelineFactories[0]} +${selectedTimelineFactories.length - 1}`;
+  }, [selectedTimelineFactories, isJa]);
+
+  const filteredMachines = useMemo(() => {
+    let list = machines.filter((machine) => filteredMachineIds.has(machine.id));
+    if (selectedTimelineFactories.length > 0) {
+      list = list.filter((m) => selectedTimelineFactories.includes(m.factory));
+    }
+    return list;
+  }, [filteredMachineIds, machines, selectedTimelineFactories]);
+
   const visibleTemplates = useMemo(
     () => templates.filter((form) => filteredFormIds.has(normalizeId(form._id))),
     [filteredFormIds, templates]
@@ -1988,6 +2095,65 @@ export default function ChecklistSubmissionsPage() {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
+  function jumpToToday() {
+    if (!scrollRef.current) return;
+    const todayTime = today.getTime();
+    const todayIndex = dates.findIndex((d) => d.getTime() === todayTime);
+    if (todayIndex >= 0) {
+      const targetScroll = Math.max(0, todayIndex * TIMELINE_CELL_WIDTH - 180);
+      scrollRef.current.scrollTo({ left: targetScroll, behavior: "smooth" });
+    }
+  }
+
+  function exportToCSV() {
+    const headers = [
+      isJa ? "日付" : "Date",
+      isJa ? "設備名" : "Machine",
+      isJa ? "工場" : "Factory",
+      isJa ? "点検フォーム" : "Checklist Form",
+      isJa ? "周期" : "Schedule",
+      isJa ? "ステータス" : "Status",
+      isJa ? "作業者" : "Operator",
+      isJa ? "NG判定" : "Has NG",
+      isJa ? "実施日時" : "Completed At",
+    ];
+
+    const rows = visibleRecords.map((r) => {
+      const machine = equipmentMap.get(normalizeId(r.machineId || r.equipmentId))?.name || r.machineName || "—";
+      const form = templatesById.get(normalizeId(r.formId || r.templateId));
+      const formName = form?.name || r.formName || "—";
+      const factory = form?.工場 || r.factory || "—";
+      const schedule = r.schedule || form?.schedule || "—";
+      const status = r.status || (r.hasNG ? "NG" : "OK");
+      const operator = r.completedBy || "—";
+      const hasNG = r.hasNG ? (isJa ? "あり" : "Yes") : (isJa ? "なし" : "No");
+      const completedAt = r.completedAt ? new Date(r.completedAt).toLocaleString(isJa ? "ja-JP" : "en-US") : "—";
+
+      return [
+        r.completedAt ? formatDateInputValue(r.completedAt) : "—",
+        `"${String(machine).replace(/"/g, '""')}"`,
+        `"${String(factory).replace(/"/g, '""')}"`,
+        `"${String(formName).replace(/"/g, '""')}"`,
+        schedule,
+        status,
+        `"${String(operator).replace(/"/g, '""')}"`,
+        hasNG,
+        `"${String(completedAt).replace(/"/g, '""')}"`,
+      ].join(",");
+    });
+
+    const csvContent = "\uFEFF" + [headers.join(","), ...rows].join("\r\n");
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `checklist_submissions_${dateRange.startDate}_to_${dateRange.endDate}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  }
+
   return (
     <section className="h-screen overflow-y-auto px-6 pb-16 pt-24 scrollbar-hide md:px-8">
       <PageHeader
@@ -2056,13 +2222,13 @@ export default function ChecklistSubmissionsPage() {
         />
       </div>
 
-      <div className="dashboard-section overflow-hidden rounded-2xl">
+      <div className="dashboard-section relative z-20 overflow-hidden rounded-2xl">
         <div className="flex flex-col gap-4 border-b border-separator/40 px-6 py-5 lg:flex-row lg:items-center lg:justify-between">
           <div>
             <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Timeline</p>
             <h3 className="mt-1 text-lg font-semibold text-on-surface">Checklist Submission Timeline</h3>
             <p className="mt-1 text-sm leading-6 text-outline">
-              Review completed, due, and missed checks across {filteredMachines.length.toLocaleString()} filtered machines and {visibleTemplates.length.toLocaleString()} active checklist forms. Show one cadence or compare multiple at the same time.
+              Review completed, due, and missed checks across {filteredMachines.length.toLocaleString()} filtered machines and {visibleTemplates.length.toLocaleString()} active checklist forms.
             </p>
             {timelineFocusActive && (
               <p className="mt-2 text-xs font-semibold uppercase tracking-[0.18em] text-primary">
@@ -2070,46 +2236,186 @@ export default function ChecklistSubmissionsPage() {
               </p>
             )}
           </div>
-          <div className="flex flex-wrap items-center gap-4">
-            {/* Inline Compact Status Indicators */}
-            <div className="flex flex-wrap items-center gap-3 text-xs text-outline">
-              <span className="inline-flex items-center gap-1.5 font-medium">
-                <span className="h-2.5 w-2.5 rounded-full bg-emerald-500" />
-                {isJa ? "完了" : "Completed"}
-              </span>
-              <span className="inline-flex items-center gap-1.5 font-medium">
-                <span className="h-2.5 w-2.5 rounded-full bg-error" />
-                {isJa ? "未実施" : "Missed"}
-              </span>
-              <span className="inline-flex items-center gap-1.5 font-medium">
-                <span className="h-2.5 w-2.5 rounded-full bg-amber-500" />
-                {isJa ? "予定" : "Due"}
-              </span>
-              <span className="inline-flex items-center gap-1.5 font-medium">
-                <span className="relative flex h-2.5 w-2.5">
-                  <span className="absolute inset-0 rounded-full bg-emerald-500" />
-                  <span className="absolute -right-0.5 -top-0.5 h-1.5 w-1.5 rounded-full bg-error ring-1 ring-surface" />
-                </span>
-                {isJa ? "NGあり" : "NG"}
-              </span>
+          <div className="flex flex-wrap items-center gap-3">
+            {/* Factory Quick Multi-Select Filter */}
+            {availableTimelineFactories.length > 0 && (
+              <div className="relative z-30 flex items-center gap-1.5" ref={factoryDropdownRef}>
+                <button
+                  type="button"
+                  onClick={() => setFactoryDropdownOpen((prev) => !prev)}
+                  className={`inline-flex items-center gap-1.5 rounded-xl border px-3 py-1.5 text-xs font-semibold transition active:scale-95 ${
+                    selectedTimelineFactories.length > 0
+                      ? "border-primary/40 bg-primary/10 text-primary"
+                      : "border-outline-variant/30 bg-surface-container text-on-surface hover:bg-surface-container-high"
+                  }`}
+                >
+                  <span className="material-symbols-outlined" style={{ fontSize: 14 }}>factory</span>
+                  <span>{timelineFactoryButtonLabel}</span>
+                  {selectedTimelineFactories.length > 0 && (
+                    <span className="flex h-4 w-4 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-on-primary">
+                      {selectedTimelineFactories.length}
+                    </span>
+                  )}
+                  <span className="material-symbols-outlined" style={{ fontSize: 14 }}>
+                    {factoryDropdownOpen ? "expand_less" : "expand_more"}
+                  </span>
+                </button>
+
+                {factoryDropdownOpen && (
+                  <div className="absolute right-0 top-full z-50 mt-1.5 min-w-[210px] rounded-2xl border border-separator/60 bg-surface p-2 shadow-2xl backdrop-blur-xl">
+                    <div className="flex items-center justify-between border-b border-separator/40 px-2 py-1.5 text-[11px] font-semibold">
+                      <button
+                        type="button"
+                        onClick={() => setSelectedTimelineFactories(availableTimelineFactories)}
+                        className="text-primary hover:underline"
+                      >
+                        {isJa ? "すべて選択" : "Select All"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setSelectedTimelineFactories([])}
+                        className="text-outline hover:text-on-surface"
+                      >
+                        {isJa ? "クリア" : "Clear"}
+                      </button>
+                    </div>
+                    <div className="mt-1.5 max-h-56 space-y-0.5 overflow-y-auto">
+                      {availableTimelineFactories.map((factoryName) => {
+                        const isSelected = selectedTimelineFactories.includes(factoryName);
+                        const count = timelineFactoryCounts[factoryName] || 0;
+                        return (
+                          <label
+                            key={factoryName}
+                            className="flex cursor-pointer items-center justify-between gap-2 rounded-xl px-2.5 py-1.5 text-xs font-medium text-on-surface hover:bg-surface-container transition-colors"
+                          >
+                            <div className="flex items-center gap-2">
+                              <input
+                                type="checkbox"
+                                checked={isSelected}
+                                onChange={() => {
+                                  setSelectedTimelineFactories((current) =>
+                                    isSelected
+                                      ? current.filter((item) => item !== factoryName)
+                                      : [...current, factoryName]
+                                  );
+                                }}
+                                className="h-3.5 w-3.5 rounded border-outline-variant/40 text-primary accent-primary focus:ring-primary/30"
+                              />
+                              <span>{factoryName}</span>
+                            </div>
+                            <span className="rounded-full bg-surface-container px-2 py-0.5 text-[10px] font-semibold text-outline">
+                              {count} {isJa ? "台" : "m"}
+                            </span>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* View Mode Toggle (Standard vs Compact) */}
+            <div className="flex items-center rounded-xl border border-outline-variant/30 bg-surface-container p-0.5">
+              <button
+                type="button"
+                onClick={() => setViewMode("standard")}
+                className={`rounded-lg px-2.5 py-1 text-xs font-semibold transition ${
+                  viewMode === "standard"
+                    ? "bg-surface text-primary shadow-sm"
+                    : "text-outline hover:text-on-surface"
+                }`}
+              >
+                {isJa ? "標準" : "Standard"}
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewMode("compact")}
+                className={`rounded-lg px-2.5 py-1 text-xs font-semibold transition ${
+                  viewMode === "compact"
+                    ? "bg-surface text-primary shadow-sm"
+                    : "text-outline hover:text-on-surface"
+                }`}
+              >
+                {isJa ? "コンパクト" : "Compact"}
+              </button>
             </div>
 
-            <div className="h-4 w-px bg-separator/60 hidden sm:block" />
+            {/* Jump to Today */}
+            <button
+              type="button"
+              onClick={jumpToToday}
+              title={isJa ? "今日の日付列へジャンプ" : "Scroll to today's date"}
+              className="inline-flex items-center gap-1.5 rounded-xl border border-outline-variant/30 bg-surface-container px-3 py-1.5 text-xs font-semibold text-on-surface hover:border-primary/40 hover:bg-surface-container-high transition active:scale-95"
+            >
+              <span className="material-symbols-outlined text-primary" style={{ fontSize: 15 }}>my_location</span>
+              <span>{isJa ? "今日" : "Today"}</span>
+            </button>
 
-            <div className="flex flex-wrap gap-1.5">
-              {SCHEDULE_ORDER.map((schedule) => {
-                const meta = SCHEDULE_META[schedule];
-                return (
-                  <ScheduleFilterButton
-                    key={schedule}
-                    active={activeSchedules.includes(schedule)}
-                    icon={meta.icon}
-                    label={meta.label}
-                    onClick={() => toggleSchedule(schedule)}
-                  />
-                );
-              })}
+            {/* Export CSV */}
+            <button
+              type="button"
+              onClick={exportToCSV}
+              title={isJa ? "選択期間の点検記録をCSV出力" : "Export submission records to CSV"}
+              className="inline-flex items-center gap-1.5 rounded-xl border border-outline-variant/30 bg-surface-container px-3 py-1.5 text-xs font-semibold text-on-surface hover:border-primary/40 hover:bg-surface-container-high transition active:scale-95"
+            >
+              <span className="material-symbols-outlined text-primary" style={{ fontSize: 15 }}>download</span>
+              <span>{isJa ? "CSV" : "Export"}</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Sub-bar: Legend & Cadence Filters */}
+        <div className="flex flex-wrap items-center justify-between gap-4 border-b border-separator/40 bg-surface-container/30 px-6 py-3">
+          {/* Inline Timeline Cell Status Indicators matching actual pills */}
+          <div className="flex flex-wrap items-center gap-3 text-xs">
+            {/* Completed */}
+            <div className="inline-flex items-center gap-1.5">
+              <span className="inline-flex min-w-[32px] items-center justify-center rounded-md border border-emerald-500/30 bg-emerald-500/12 px-1.5 py-0.5 text-[9px] font-bold text-emerald-600 dark:text-emerald-400">
+                D 1
+              </span>
+              <span className="font-medium text-outline">{isJa ? "完了" : "Completed"}</span>
             </div>
+
+            {/* Completed with NG */}
+            <div className="inline-flex items-center gap-1.5">
+              <span className="relative inline-flex min-w-[32px] items-center justify-center rounded-md border border-emerald-500/30 bg-emerald-500/12 px-1.5 py-0.5 text-[9px] font-bold text-emerald-600 dark:text-emerald-400">
+                D 1
+                <span className="absolute -right-0.5 -top-0.5 h-1.5 w-1.5 rounded-full bg-error ring-1 ring-surface" />
+              </span>
+              <span className="font-medium text-outline">{isJa ? "完了 (NGあり)" : "Completed w/ NG"}</span>
+            </div>
+
+            {/* Missed */}
+            <div className="inline-flex items-center gap-1.5">
+              <span className="inline-flex min-w-[32px] items-center justify-center rounded-md border border-error/30 bg-error/12 px-1.5 py-0.5 text-[9px] font-bold text-error">
+                D 1
+              </span>
+              <span className="font-medium text-outline">{isJa ? "未実施" : "Missed"}</span>
+            </div>
+
+            {/* Due */}
+            <div className="inline-flex items-center gap-1.5">
+              <span className="inline-flex min-w-[28px] items-center justify-center rounded-md border border-outline-variant/20 bg-surface-container px-1.5 py-0.5 text-[9px] font-medium text-outline">
+                D
+              </span>
+              <span className="font-medium text-outline">{isJa ? "未到来" : "Due"}</span>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap gap-1.5">
+            {SCHEDULE_ORDER.map((schedule) => {
+              const meta = SCHEDULE_META[schedule];
+              return (
+                <ScheduleFilterButton
+                  key={schedule}
+                  active={activeSchedules.includes(schedule)}
+                  icon={meta.icon}
+                  label={meta.label}
+                  onClick={() => toggleSchedule(schedule)}
+                />
+              );
+            })}
           </div>
         </div>
 
@@ -2177,7 +2483,7 @@ export default function ChecklistSubmissionsPage() {
                 {filteredMachines.map((machine, index) => (
                   <tr key={machine.id} className={index % 2 === 0 ? "bg-surface" : "bg-surface-container/30"}>
                     <td
-                      className={`sticky left-0 z-10 border-b border-r border-outline-variant/20 px-4 py-2 ${index % 2 === 0 ? "bg-surface" : "bg-surface-container"}`}
+                      className={`sticky left-0 z-10 border-b border-r border-outline-variant/20 px-4 ${viewMode === "compact" ? "py-1.5" : "py-2"} ${index % 2 === 0 ? "bg-surface" : "bg-surface-container"}`}
                       style={{ width: MACHINE_COLUMN_WIDTH, minWidth: MACHINE_COLUMN_WIDTH, maxWidth: MACHINE_COLUMN_WIDTH }}
                     >
                       <p className="truncate text-sm font-semibold text-on-surface">{machine.name}</p>
@@ -2186,10 +2492,10 @@ export default function ChecklistSubmissionsPage() {
                       )}
                     </td>
                     <td
-                      className={`sticky z-10 border-b border-r border-outline-variant/20 px-3 py-2 align-top ${index % 2 === 0 ? "bg-surface" : "bg-surface-container"}`}
+                      className={`sticky z-10 border-b border-r border-outline-variant/20 px-3 ${viewMode === "compact" ? "py-1" : "py-2"} ${viewMode === "compact" ? "align-middle" : "align-top"} ${index % 2 === 0 ? "bg-surface" : "bg-surface-container"}`}
                       style={{ left: MACHINE_COLUMN_WIDTH, width: CADENCE_COLUMN_WIDTH, minWidth: CADENCE_COLUMN_WIDTH, maxWidth: CADENCE_COLUMN_WIDTH }}
                     >
-                      <ScheduleLaneLegendCell schedules={activeSchedules} />
+                      <ScheduleLaneLegendCell schedules={activeSchedules} compact={viewMode === "compact"} />
                     </td>
                     {dates.map((date) => {
                       const isToday = date.getTime() === today.getTime();
@@ -2202,10 +2508,11 @@ export default function ChecklistSubmissionsPage() {
                       return (
                         <td
                           key={date.toISOString()}
-                          className={`border-b border-r border-outline-variant/10 px-1 py-1.5 align-top ${isToday ? "bg-primary/5" : ""}`}
+                          className={`border-b border-r border-outline-variant/10 px-1 ${viewMode === "compact" ? "py-1" : "py-1.5"} ${viewMode === "compact" ? "align-middle" : "align-top"} ${isToday ? "bg-primary/5" : ""}`}
                         >
                           <ScheduleStackCell
                             entries={entries}
+                            compact={viewMode === "compact"}
                             onSelect={(entry) => setSelectedCell(buildEntrySelection(entry, machine, date))}
                           />
                         </td>
