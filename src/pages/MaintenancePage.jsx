@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   fetchCheckFormTemplates,
@@ -283,7 +283,9 @@ export default function MaintenancePage() {
   // Filter States
   const [activeTab, setActiveTab] = useState("all"); // "all" | "daily" | "weekly" | "monthly"
   const [searchQuery, setSearchQuery] = useState("");
-  const [factoryFilter, setFactoryFilter] = useState("");
+  const [selectedFactories, setSelectedFactories] = useState([]);
+  const [factoryDropdownOpen, setFactoryDropdownOpen] = useState(false);
+  const factoryDropdownRef = useRef(null);
   const [timingFilter, setTimingFilter] = useState("all"); // "all" | "pre" | "post"
   const [statusFilter, setStatusFilter] = useState("all"); // "all" | "active" | "draft" | "archived"
 
@@ -305,6 +307,18 @@ export default function MaintenancePage() {
     fetchFactoryDBRecords().then((data) => setFactories(Array.isArray(data) ? data : [])).catch(() => {});
     fetchSetsubiDBRecords().then((data) => setAllEquipment(Array.isArray(data) ? data : [])).catch(() => {});
   }, []);
+
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (factoryDropdownRef.current && !factoryDropdownRef.current.contains(event.target)) {
+        setFactoryDropdownOpen(false);
+      }
+    }
+    if (factoryDropdownOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+      return () => document.removeEventListener("mousedown", handleClickOutside);
+    }
+  }, [factoryDropdownOpen]);
 
   function openCloner(form) {
     setEditTarget(form);
@@ -354,6 +368,28 @@ export default function MaintenancePage() {
     [allEquipment]
   );
 
+  const factoryCounts = useMemo(() => {
+    const counts = {};
+    for (const t of templates) {
+      if (t.工場) {
+        counts[t.工場] = (counts[t.工場] || 0) + 1;
+      }
+    }
+    return counts;
+  }, [templates]);
+
+  const factoryButtonLabel = useMemo(() => {
+    if (selectedFactories.length === 0) {
+      return isJa ? "すべての工場" : "All Factories";
+    }
+    if (selectedFactories.length === 1) {
+      return selectedFactories[0];
+    }
+    return isJa
+      ? `${selectedFactories[0]} 他 ${selectedFactories.length - 1}件`
+      : `${selectedFactories[0]} +${selectedFactories.length - 1}`;
+  }, [selectedFactories, isJa]);
+
   // Filtered Templates Calculation
   const filteredTemplates = useMemo(() => {
     return templates.filter((form) => {
@@ -362,8 +398,8 @@ export default function MaintenancePage() {
         return false;
       }
 
-      // Factory filter
-      if (factoryFilter && form.工場 !== factoryFilter) {
+      // Factory filter (multiple)
+      if (selectedFactories.length > 0 && !selectedFactories.includes(form.工場)) {
         return false;
       }
 
@@ -418,7 +454,7 @@ export default function MaintenancePage() {
 
       return true;
     });
-  }, [templates, activeTab, factoryFilter, timingFilter, statusFilter, searchQuery, equipmentMap]);
+  }, [templates, activeTab, selectedFactories, timingFilter, statusFilter, searchQuery, equipmentMap]);
 
   // Summary counts
   const totalCount = templates.length;
@@ -435,10 +471,10 @@ export default function MaintenancePage() {
     { key: "monthly", label: isJa ? "月次点検" : "Monthly", count: monthlyCount, icon: "calendar_month" },
   ];
 
-  const hasActiveFilters = Boolean(factoryFilter || timingFilter !== "all" || statusFilter !== "all" || searchQuery.trim());
+  const hasActiveFilters = Boolean(selectedFactories.length > 0 || timingFilter !== "all" || statusFilter !== "all" || searchQuery.trim());
 
   function resetFilters() {
-    setFactoryFilter("");
+    setSelectedFactories([]);
     setTimingFilter("all");
     setStatusFilter("all");
     setSearchQuery("");
@@ -578,7 +614,7 @@ export default function MaintenancePage() {
         </div>
 
         {/* Navigation Tabs & Filters Panel */}
-        <div className="dashboard-section mb-6 rounded-2xl p-4">
+        <div className="dashboard-section relative z-20 mb-6 rounded-2xl p-4">
           {/* Top Row: Cadence Tabs */}
           <div className="flex flex-col gap-4 border-b border-separator/40 pb-4 lg:flex-row lg:items-center lg:justify-between">
             <div className="flex flex-wrap gap-1.5">
@@ -635,21 +671,84 @@ export default function MaintenancePage() {
           {/* Bottom Row: Filter Dropdowns */}
           <div className="mt-3 flex flex-wrap items-center justify-between gap-3 pt-1">
             <div className="flex flex-wrap items-center gap-2">
-              {/* Factory Filter */}
-              <div className="flex items-center gap-1.5">
+              {/* Factory Multi-Select Filter */}
+              <div className="relative z-30 flex items-center gap-1.5" ref={factoryDropdownRef}>
                 <span className="text-xs font-semibold uppercase tracking-wider text-outline hidden sm:inline">
                   {isJa ? "工場:" : "Factory:"}
                 </span>
-                <select
-                  value={factoryFilter}
-                  onChange={(e) => setFactoryFilter(e.target.value)}
-                  className="rounded-xl border border-outline-variant/30 bg-surface-container px-3 py-1.5 text-xs font-semibold text-on-surface outline-none transition hover:bg-surface-container-high cursor-pointer"
+                <button
+                  type="button"
+                  onClick={() => setFactoryDropdownOpen((prev) => !prev)}
+                  className={`inline-flex items-center gap-1.5 rounded-xl border px-3 py-1.5 text-xs font-semibold transition active:scale-95 ${
+                    selectedFactories.length > 0
+                      ? "border-primary/40 bg-primary/10 text-primary"
+                      : "border-outline-variant/30 bg-surface-container text-on-surface hover:bg-surface-container-high"
+                  }`}
                 >
-                  <option value="">{isJa ? "すべての工場" : "All Factories"}</option>
-                  {factories.map((f) => (
-                    <option key={f._id ?? f.工場} value={f.工場}>{f.工場}</option>
-                  ))}
-                </select>
+                  <span className="material-symbols-outlined" style={{ fontSize: 14 }}>factory</span>
+                  <span>{factoryButtonLabel}</span>
+                  {selectedFactories.length > 0 && (
+                    <span className="flex h-4 w-4 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-on-primary">
+                      {selectedFactories.length}
+                    </span>
+                  )}
+                  <span className="material-symbols-outlined" style={{ fontSize: 14 }}>
+                    {factoryDropdownOpen ? "expand_less" : "expand_more"}
+                  </span>
+                </button>
+
+                {factoryDropdownOpen && (
+                  <div className="absolute left-0 top-full z-50 mt-1.5 min-w-[220px] rounded-2xl border border-separator/60 bg-surface shadow-2xl backdrop-blur-xl">
+                    <div className="flex items-center justify-between border-b border-separator/40 px-2 py-1.5 text-[11px] font-semibold">
+                      <button
+                        type="button"
+                        onClick={() => setSelectedFactories(factories.map((f) => f.工場).filter(Boolean))}
+                        className="text-primary hover:underline"
+                      >
+                        {isJa ? "すべて選択" : "Select All"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setSelectedFactories([])}
+                        className="text-outline hover:text-on-surface"
+                      >
+                        {isJa ? "クリア" : "Clear"}
+                      </button>
+                    </div>
+                    <div className="mt-1.5 max-h-56 space-y-0.5 overflow-y-auto">
+                      {factories.map((f) => {
+                        const factoryName = f.工場;
+                        const isSelected = selectedFactories.includes(factoryName);
+                        const count = factoryCounts[factoryName] || 0;
+                        return (
+                          <label
+                            key={f._id ?? factoryName}
+                            className="flex cursor-pointer items-center justify-between gap-2 rounded-xl px-2.5 py-1.5 text-xs font-medium text-on-surface hover:bg-surface-container transition-colors"
+                          >
+                            <div className="flex items-center gap-2">
+                              <input
+                                type="checkbox"
+                                checked={isSelected}
+                                onChange={() => {
+                                  setSelectedFactories((current) =>
+                                    isSelected
+                                      ? current.filter((item) => item !== factoryName)
+                                      : [...current, factoryName]
+                                  );
+                                }}
+                                className="h-3.5 w-3.5 rounded border-outline-variant/40 text-primary accent-primary focus:ring-primary/30"
+                              />
+                              <span>{factoryName}</span>
+                            </div>
+                            <span className="rounded-full bg-surface-container px-2 py-0.5 text-[10px] font-semibold text-outline">
+                              {count}
+                            </span>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Timing Filter */}
