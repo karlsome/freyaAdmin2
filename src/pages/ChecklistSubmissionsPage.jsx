@@ -815,13 +815,18 @@ function RecordDetailModal({ defaultTab = "submission", form, initialTicketFocus
       }];
     }
 
+    const openTicketsCount = tickets.filter(
+      (t) => normalizeTicketStatusValue(t.status) !== "closed" && normalizeTicketStatusValue(t.status) !== "fixed"
+    ).length;
+    const allClosed = tickets.length > 0 && openTicketsCount === 0;
+
     return [
       {
         key: "submission",
         label: (
           <span className="inline-flex items-center gap-2">
             <span className="material-symbols-outlined" style={{ fontSize: 14 }}>fact_check</span>
-            <span>Submitted</span>
+            <span>{isJa ? "提出内容" : "Submitted"}</span>
           </span>
         ),
       },
@@ -830,23 +835,25 @@ function RecordDetailModal({ defaultTab = "submission", form, initialTicketFocus
         label: (
           <span className="inline-flex items-center gap-2">
             <span className="material-symbols-outlined" style={{ fontSize: 14 }}>confirmation_number</span>
-            <span>NG Reasons</span>
+            <span>{isJa ? "NG理由・処置" : "NG Reasons"}</span>
             <span
               className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
                 activeTab === "tickets"
                   ? "bg-white/20 text-on-primary"
-                  : tickets.length > 0
-                    ? "bg-error/10 text-error"
-                    : "bg-outline/10 text-outline"
+                  : openTicketsCount > 0
+                    ? "bg-error/15 text-error font-bold"
+                    : allClosed
+                      ? "bg-emerald-500/15 text-emerald-700 font-bold"
+                      : "bg-outline/10 text-outline"
               }`}
             >
-              {tickets.length}
+              {allClosed ? (isJa ? "解決済" : "Fixed") : tickets.length}
             </span>
           </span>
         ),
       },
     ];
-  }, [activeTab, isMissedRecord, isReferenceRecord, tickets.length]);
+  }, [activeTab, isJa, isMissedRecord, isReferenceRecord, tickets]);
 
   useEffect(() => {
     setActiveTab(normalizedDefaultTab);
@@ -1163,11 +1170,13 @@ function RecordDetailModal({ defaultTab = "submission", form, initialTicketFocus
                 const valueTone = getFieldValueTone(field, fieldStatus);
                 const answeredAtLabel = formatAnsweredAt(field.answeredAt);
                 const isProblemField = fieldStatus === "ng" || fieldStatus === "out-of-range";
-                const isNgValue = fieldStatus === "ng";
-                const canOpenNgReason = isProblemField && hasTicketTabContent;
                 const problemFieldHint = getFieldTicketHint(field);
-                const hasMatchingTicket = tickets.some((ticket) => doesTicketMatchField(ticket, problemFieldHint));
-                const cardIsClickable = canOpenNgReason && (hasMatchingTicket || ticketsLoading || tickets.length === 0);
+                const matchingTicket = tickets.find((ticket) => doesTicketMatchField(ticket, problemFieldHint));
+                const ticketStatus = normalizeTicketStatusValue(matchingTicket?.status);
+                const isFixed = isProblemField && (ticketStatus === "closed" || ticketStatus === "fixed" || ticketStatus === "resolved");
+                const isPendingFix = isProblemField && !isFixed;
+                const canOpenNgReason = isProblemField && hasTicketTabContent;
+                const cardIsClickable = canOpenNgReason && (matchingTicket || ticketsLoading || tickets.length === 0);
 
                 return (
                   <div
@@ -1181,26 +1190,28 @@ function RecordDetailModal({ defaultTab = "submission", form, initialTicketFocus
                         openNgReasonForField(field);
                       }
                     } : undefined}
-                    title={cardIsClickable ? "Click to open the NG reason" : undefined}
-                    className={`rounded-2xl border px-4 py-3 ${
-                      isProblemField
-                        ? "border-red-400/70 bg-red-50"
-                        : "border-outline-variant/20 bg-surface-container"
+                    title={cardIsClickable ? (isFixed ? (isJa ? "クリックして処置内容・NG理由を確認" : "Click to view fix details & NG reason") : (isJa ? "クリックしてNG理由・チケットを確認" : "Click to open NG reason ticket")) : undefined}
+                    className={`rounded-2xl border px-4 py-3.5 transition-all ${
+                      isFixed
+                        ? "border-emerald-300/80 bg-emerald-50/50 hover:border-emerald-400 hover:bg-emerald-50/80"
+                        : isPendingFix
+                          ? "border-red-400/80 bg-red-50 hover:border-red-500 hover:bg-red-100/80"
+                          : "border-outline-variant/20 bg-surface-container hover:border-primary/30 hover:bg-surface-container-high"
                     } ${
                       cardIsClickable
-                        ? isProblemField
-                          ? "cursor-pointer transition hover:border-red-500 hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-red-300"
-                          : "cursor-pointer transition hover:border-primary/30 hover:bg-surface-container-high focus:outline-none focus:ring-2 focus:ring-primary/30"
+                        ? "cursor-pointer focus:outline-none focus:ring-2 " + (isFixed ? "focus:ring-emerald-300" : isPendingFix ? "focus:ring-red-300" : "focus:ring-primary/30")
                         : ""
                     }`}
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-semibold text-on-surface">
-                          {isJa
-                            ? (field.label_ja || field.label || field.label_en || <span className="italic text-outline">無題</span>)
-                            : (field.label_en || field.label || field.label_ja || <span className="italic text-outline">Untitled</span>)}
-                        </p>
+                        <div className="flex items-center gap-2">
+                          <p className="truncate text-sm font-semibold text-on-surface">
+                            {isJa
+                              ? (field.label_ja || field.label || field.label_en || <span className="italic text-outline">無題</span>)
+                              : (field.label_en || field.label || field.label_ja || <span className="italic text-outline">Untitled</span>)}
+                          </p>
+                        </div>
                         {field.description && (
                           <p className="mt-0.5 text-xs text-outline whitespace-pre-line">
                             {isJa
@@ -1215,17 +1226,71 @@ function RecordDetailModal({ defaultTab = "submission", form, initialTicketFocus
                           </div>
                         )}
                       </div>
-                      <div className="text-right">
+                      <div className="text-right flex flex-col items-end gap-1">
                         {isReferenceRecord ? (
                           <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Not submitted</p>
+                        ) : isFixed ? (
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-xs font-semibold text-red-500/70 line-through">
+                              {value}
+                            </span>
+                            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-600 px-2.5 py-0.5 text-[11px] font-bold text-white shadow-xs">
+                              <span className="material-symbols-outlined" style={{ fontSize: 13 }}>task_alt</span>
+                              {isJa ? "処置完了" : "FIXED"}
+                            </span>
+                          </div>
+                        ) : isPendingFix ? (
+                          <div className="flex items-center gap-1.5">
+                            <span className="inline-flex items-center gap-1 rounded-full bg-red-600 px-2.5 py-0.5 text-[11px] font-bold text-white shadow-xs">
+                              <span className="material-symbols-outlined" style={{ fontSize: 13 }}>error</span>
+                              {value || "NG"}
+                            </span>
+                          </div>
                         ) : (
-                          <p className={`text-sm ${isNgValue ? "font-semibold tracking-[0.04em] text-red-600" : `font-semibold ${valueTone}`}`}>{value}</p>
+                          <p className={`text-sm font-semibold ${valueTone}`}>{value}</p>
                         )}
-                        {!isReferenceRecord && fieldStatus === "out-of-range" && (
+                        {!isReferenceRecord && fieldStatus === "out-of-range" && !isFixed && (
                           <p className="mt-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-error">Out of range</p>
                         )}
                       </div>
                     </div>
+
+                    {/* Fixed Resolution Banner if fixed */}
+                    {isFixed && (
+                      <div className="mt-2.5 flex items-center justify-between rounded-xl border border-emerald-200/80 bg-white/90 px-3 py-1.5 text-xs text-emerald-900 shadow-xs">
+                        <div className="flex items-center gap-1.5 min-w-0 flex-1 pr-2">
+                          <span className="material-symbols-outlined text-emerald-600 flex-shrink-0" style={{ fontSize: 15 }}>build</span>
+                          <span className="truncate font-medium text-[11.5px]">
+                            <strong className="font-semibold text-emerald-800">{isJa ? "処置内容:" : "Fix:"}</strong> {matchingTicket?.fixReason || (isJa ? "対応完了 (Closed)" : "Resolved")}
+                          </span>
+                        </div>
+                        <span className="inline-flex items-center gap-0.5 text-[11px] font-semibold text-emerald-700 flex-shrink-0">
+                          <span>{isJa ? "詳細" : "Details"}</span>
+                          <span className="material-symbols-outlined" style={{ fontSize: 14 }}>chevron_right</span>
+                        </span>
+                      </div>
+                    )}
+
+                    {/* Unresolved Alert Banner if pending */}
+                    {isPendingFix && (
+                      <div className="mt-2.5 flex items-center justify-between rounded-xl border border-red-200 bg-white/90 px-3 py-1.5 text-xs text-red-900 shadow-xs">
+                        <div className="flex items-center gap-1.5 min-w-0 flex-1 pr-2">
+                          <span className="material-symbols-outlined text-red-600 flex-shrink-0" style={{ fontSize: 15 }}>warning</span>
+                          <span className="truncate font-medium text-[11.5px]">
+                            {matchingTicket?.reason ? (
+                              <><strong>{isJa ? "NG理由:" : "Reason:"}</strong> {matchingTicket.reason}</>
+                            ) : (
+                              isJa ? "未解決のNG指摘があります" : "Unresolved defect reported"
+                            )}
+                          </span>
+                        </div>
+                        <span className="inline-flex items-center gap-0.5 text-[11px] font-semibold text-red-700 flex-shrink-0">
+                          <span>{isJa ? "NG理由を見る" : "View NG"}</span>
+                          <span className="material-symbols-outlined" style={{ fontSize: 14 }}>chevron_right</span>
+                        </span>
+                      </div>
+                    )}
+
                     {photo && (
                       <div className="mt-3">
                         <button
