@@ -1030,10 +1030,14 @@ function RecordDetailModal({ defaultTab = "submission", form, initialTicketFocus
   useEffect(() => {
     if (activeTab !== "tickets" || ticketsLoading || !highlightedTicketKey) return;
 
-    const node = ticketRefs.current.get(highlightedTicketKey);
-    if (node) {
-      node.scrollIntoView({ block: "center", behavior: "smooth" });
-    }
+    const timer = setTimeout(() => {
+      const node = ticketRefs.current.get(highlightedTicketKey);
+      if (node) {
+        node.scrollIntoView({ block: "center", behavior: "smooth" });
+      }
+    }, 60);
+
+    return () => clearTimeout(timer);
   }, [activeTab, highlightedTicketKey, ticketsLoading]);
 
   return (
@@ -1349,14 +1353,22 @@ function RecordDetailModal({ defaultTab = "submission", form, initialTicketFocus
                       if (node) ticketRefs.current.set(ticketKey, node);
                       else ticketRefs.current.delete(ticketKey);
                     }}
-                    className={`rounded-2xl border border-separator/40 bg-surface-container px-4 py-4 ${
-                      isHighlightedTicket ? "ring-2 ring-primary/25 shadow-[0_0_0_1px_rgba(99,102,241,0.15)]" : ""
+                    className={`rounded-2xl border px-4 py-4 transition-all duration-300 ${
+                      isHighlightedTicket
+                        ? "border-primary/80 bg-primary/5 shadow-md shadow-primary/10 ring-2 ring-primary/40"
+                        : "border-separator/40 bg-surface-container"
                     }`}
                   >
                     <div className="flex flex-wrap items-start justify-between gap-3">
                       <div className="min-w-0 flex-1">
                         <div className="flex flex-wrap items-center gap-2">
                           <h4 className="truncate text-sm font-semibold text-on-surface">{ticket.fieldLabel || "Untitled field"}</h4>
+                          {isHighlightedTicket && (
+                            <span className="inline-flex items-center gap-1 rounded-full bg-primary px-2.5 py-0.5 text-[10px] font-bold text-on-primary shadow-xs">
+                              <span className="material-symbols-outlined" style={{ fontSize: 12 }}>my_location</span>
+                              {isJa ? "選択項目" : "Selected"}
+                            </span>
+                          )}
                           {ticket.fieldType && (
                             <span className="rounded-full bg-outline/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">
                               {ticket.fieldType}
