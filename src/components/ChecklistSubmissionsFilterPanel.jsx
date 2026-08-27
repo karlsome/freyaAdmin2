@@ -1,6 +1,7 @@
 import AdvancedFilterSection from "./AdvancedFilterSection";
 import FormField from "./FormField";
 import { CHECKLIST_SUBMISSION_OPERATOR_LABELS } from "../utils/checklistSubmissions";
+import { useLanguage } from "../contexts/LanguageContext";
 
 export default function ChecklistSubmissionsFilterPanel({
   className = "",
@@ -16,6 +17,9 @@ export default function ChecklistSubmissionsFilterPanel({
   onApplyAdvancedFilters,
   onClearAdvancedFilters,
 }) {
+  const { language } = useLanguage();
+  const isJa = language === "ja";
+
   function handlePresetRange(days) {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -54,7 +58,7 @@ export default function ChecklistSubmissionsFilterPanel({
     <div className={`glass-card rounded-2xl p-5 relative z-20 ${className}`.trim()}>
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div className="flex flex-wrap items-end gap-3">
-          <FormField label="From Date">
+          <FormField label={isJa ? "開始日" : "From Date"}>
             <input
               type="date"
               value={startDate}
@@ -63,7 +67,7 @@ export default function ChecklistSubmissionsFilterPanel({
             />
           </FormField>
 
-          <FormField label="To Date">
+          <FormField label={isJa ? "終了日" : "To Date"}>
             <input
               type="date"
               value={endDate}
@@ -78,21 +82,21 @@ export default function ChecklistSubmissionsFilterPanel({
               onClick={() => handlePresetRange(7)}
               className="rounded-xl border border-outline-variant/30 bg-surface-container px-3 py-2 text-xs font-semibold text-on-surface transition hover:bg-surface-container-high active:scale-95"
             >
-              7 Days
+              {isJa ? "7日間" : "7 Days"}
             </button>
             <button
               type="button"
               onClick={() => handlePresetRange(30)}
               className="rounded-xl border border-outline-variant/30 bg-surface-container px-3 py-2 text-xs font-semibold text-on-surface transition hover:bg-surface-container-high active:scale-95"
             >
-              30 Days
+              {isJa ? "30日間" : "30 Days"}
             </button>
             <button
               type="button"
               onClick={handleThisMonth}
               className="rounded-xl border border-outline-variant/30 bg-surface-container px-3 py-2 text-xs font-semibold text-on-surface transition hover:bg-surface-container-high active:scale-95"
             >
-              This Month
+              {isJa ? "今月" : "This Month"}
             </button>
             <button
               type="button"
@@ -100,7 +104,7 @@ export default function ChecklistSubmissionsFilterPanel({
               className="inline-flex items-center gap-1 rounded-xl border border-outline-variant/30 bg-surface-container px-3 py-2 text-xs font-semibold text-outline transition hover:bg-surface-container-high hover:text-on-surface active:scale-95"
             >
               <span className="material-symbols-outlined" style={{ fontSize: 14 }}>restart_alt</span>
-              Reset
+              {isJa ? "リセット" : "Reset"}
             </button>
           </div>
         </div>
@@ -115,8 +119,10 @@ export default function ChecklistSubmissionsFilterPanel({
         onClearRows={onClearAdvancedFilters}
         operatorLabels={CHECKLIST_SUBMISSION_OPERATOR_LABELS}
         useOperatorLabelsInSelect
-        title="Advanced Filters"
-        activeSummaryDescription="Draft timeline conditions ready to apply."
+        title={isJa ? "詳細フィルター" : "Advanced Filters"}
+        addRowLabel={isJa ? "フィルター条件を追加" : "Add Filter Row"}
+        activeSummaryTitle={isJa ? "適用中のフィルター" : "Active Filters"}
+        activeSummaryDescription={isJa ? "適用待ちの詳細フィルター条件" : "Draft timeline conditions ready to apply."}
         chipTone="amber"
         variant="compact"
         framed
@@ -129,7 +135,7 @@ export default function ChecklistSubmissionsFilterPanel({
               className="flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-on-primary transition-opacity hover:opacity-90"
             >
               <span className="material-symbols-outlined" style={{ fontSize: 16 }}>filter_alt</span>
-              Apply Advanced Filters
+              {isJa ? "詳細フィルターを適用" : "Apply Advanced Filters"}
             </button>
 
             <button
@@ -138,7 +144,7 @@ export default function ChecklistSubmissionsFilterPanel({
               className="flex items-center gap-2 rounded-xl border border-separator/40 glass-card px-5 py-2.5 text-sm font-semibold text-on-surface transition-all hover:border-primary/30"
             >
               <span className="material-symbols-outlined" style={{ fontSize: 16 }}>refresh</span>
-              Reset Advanced Filters
+              {isJa ? "フィルターをリセット" : "Reset Advanced Filters"}
             </button>
           </>
         )}

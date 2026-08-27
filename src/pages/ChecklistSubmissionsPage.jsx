@@ -715,6 +715,9 @@ function ScheduleStackCell({ entries, onSelect, compact = false }) {
 }
 
 function ScheduleLaneLegendCell({ schedules, compact = false }) {
+  const { language } = useLanguage();
+  const isJa = language === "ja";
+
   if (compact) {
     return (
       <div className="flex w-24 items-center justify-center rounded-md px-1 py-1 text-[9px] font-bold uppercase tracking-wider text-outline">
@@ -730,7 +733,7 @@ function ScheduleLaneLegendCell({ schedules, compact = false }) {
           key={schedule}
           className="flex min-h-[1.45rem] items-center rounded-md px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-outline"
         >
-          {SCHEDULE_META[schedule].label}
+          {isJa ? (schedule === "daily" ? "日次" : schedule === "weekly" ? "週次" : schedule === "monthly" ? "月次" : SCHEDULE_META[schedule].label) : SCHEDULE_META[schedule].label}
         </div>
       ))}
     </div>
@@ -1164,11 +1167,17 @@ function RecordDetailModal({ defaultTab = "submission", form, initialTicketFocus
                 Back to submissions
               </button>
             )}
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-outline">Inspection Record</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-outline">{isJa ? "点検提出記録" : "Inspection Record"}</p>
             <h3 className="mt-0.5 truncate text-lg font-semibold text-on-surface">{formName}</h3>
             <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-outline">
               {recordFactory && <span>{recordFactory}</span>}
-              {recordSchedule && <span className="capitalize">{recordSchedule}</span>}
+              {recordSchedule && (
+                <span>
+                  {isJa
+                    ? (recordSchedule === "daily" ? "日次" : recordSchedule === "weekly" ? "週次" : recordSchedule === "monthly" ? "月次" : recordSchedule)
+                    : recordSchedule}
+                </span>
+              )}
             </div>
           </div>
           <button
@@ -1344,13 +1353,13 @@ function RecordDetailModal({ defaultTab = "submission", form, initialTicketFocus
                         {answeredAtLabel && (
                           <div className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-surface px-2.5 py-1 text-[11px] font-semibold text-outline">
                             <span className="material-symbols-outlined" style={{ fontSize: 14 }}>schedule</span>
-                            Answered {answeredAtLabel}
+                            {isJa ? `回答日時: ${answeredAtLabel}` : `Answered ${answeredAtLabel}`}
                           </div>
                         )}
                       </div>
                       <div className="text-right flex flex-col items-end gap-1">
                         {isReferenceRecord ? (
-                          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Not submitted</p>
+                          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">{isJa ? "未提出" : "Not submitted"}</p>
                         ) : isFixed ? (
                           <div className="flex items-center gap-1.5">
                             <span className="text-xs font-semibold text-red-500/70 line-through">
@@ -1453,7 +1462,7 @@ function RecordDetailModal({ defaultTab = "submission", form, initialTicketFocus
                             className="h-32 max-w-full object-cover transition duration-300 group-hover:scale-[1.02]"
                           />
                         </button>
-                        <p className="mt-2 text-[11px] font-semibold text-primary">Click image to enlarge</p>
+                        <p className="mt-2 text-[11px] font-semibold text-primary">{isJa ? "クリックして拡大" : "Click image to enlarge"}</p>
                       </div>
                     )}
                   </div>
@@ -1465,7 +1474,7 @@ function RecordDetailModal({ defaultTab = "submission", form, initialTicketFocus
               {ticketsLoading && (
                 <div className="flex items-center gap-3 py-8 text-outline">
                   <span className="material-symbols-outlined animate-spin">progress_activity</span>
-                  Loading NG reasons…
+                  {isJa ? "NG理由を読み込み中…" : "Loading NG reasons…"}
                 </div>
               )}
 
@@ -1473,11 +1482,13 @@ function RecordDetailModal({ defaultTab = "submission", form, initialTicketFocus
                 <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-outline-variant/25 bg-surface-container/40 px-6 py-12 text-center text-outline">
                   <span className="material-symbols-outlined" style={{ fontSize: 36 }}>task_alt</span>
                   <div>
-                    <p className="text-sm font-semibold text-on-surface">No NG tickets found for this record</p>
+                    <p className="text-sm font-semibold text-on-surface">
+                      {isJa ? "この記録に関連するNGチケットはありません" : "No NG tickets found for this record"}
+                    </p>
                     <p className="mt-1 text-sm leading-6 text-outline">
                       {hasTicketTabContent
-                        ? "This record is flagged, but no ticket details were returned from ngReportsDB."
-                        : "This submission does not have any NG or out-of-range ticket reasons."}
+                        ? (isJa ? "フラグは付いていますが、ngReportsDBからチケット詳細は返されませんでした。" : "This record is flagged, but no ticket details were returned from ngReportsDB.")
+                        : (isJa ? "この提出にはNG判定や規格外の指摘理由はありません。" : "This submission does not have any NG or out-of-range ticket reasons.")}
                     </p>
                   </div>
                 </div>
@@ -2428,30 +2439,30 @@ export default function ChecklistSubmissionsPage() {
 
       <div className="mb-6 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
         <SummaryCard
-          label="Active Checklists"
+          label={isJa ? "有効な点検フォーム" : "Active Checklists"}
           value={visibleTemplates.length.toLocaleString()}
-          detail={`${scheduleCounts.daily} daily • ${scheduleCounts.weekly} weekly • ${scheduleCounts.monthly} monthly`}
+          detail={isJa ? `日次 ${scheduleCounts.daily} • 週次 ${scheduleCounts.weekly} • 月次 ${scheduleCounts.monthly}` : `${scheduleCounts.daily} daily • ${scheduleCounts.weekly} weekly • ${scheduleCounts.monthly} monthly`}
           icon="checklist"
           iconClassName="bg-primary/10 text-primary"
         />
         <SummaryCard
-          label="Tracked Machines"
+          label={isJa ? "対象設備数" : "Tracked Machines"}
           value={filteredMachines.length.toLocaleString()}
-          detail={appliedAdvancedFilters.length ? "Matching the current advanced timeline filters" : `${machines.length} machines in scope`}
+          detail={isJa ? (appliedAdvancedFilters.length ? "現在の詳細フィルター条件に一致" : `${machines.length}台の設備が対象`) : (appliedAdvancedFilters.length ? "Matching the current advanced timeline filters" : `${machines.length} machines in scope`)}
           icon="precision_manufacturing"
           iconClassName="bg-tertiary/10 text-tertiary"
         />
         <SummaryCard
-          label="Submitted Records"
+          label={isJa ? "提出済み記録" : "Submitted Records"}
           value={visibleRecords.length.toLocaleString()}
-          detail={`${rangeDayCount}-day selected window`}
+          detail={isJa ? `選択期間 (${rangeDayCount}日間)` : `${rangeDayCount}-day selected window`}
           icon="task_alt"
           iconClassName="bg-emerald-500/10 text-emerald-500"
         />
         <SummaryCard
-          label="NG Findings"
+          label={isJa ? "NG判定・指摘" : "NG Findings"}
           value={ngCount.toLocaleString()}
-          detail={ngCount > 0 ? "Completed checks with NG markers in the current scope" : "No NG markers in the current scope"}
+          detail={isJa ? (ngCount > 0 ? "対象範囲内でNG判定・指摘がある提出" : "対象範囲内にNG判定はありません") : (ngCount > 0 ? "Completed checks with NG markers in the current scope" : "No NG markers in the current scope")}
           icon="warning"
           iconClassName="bg-error/10 text-error"
         />
@@ -2477,10 +2488,12 @@ export default function ChecklistSubmissionsPage() {
       <div className="dashboard-section relative z-20 overflow-hidden rounded-2xl">
         <div className="flex flex-col gap-4 border-b border-separator/40 px-6 py-5 lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Timeline</p>
-            <h3 className="mt-1 text-lg font-semibold text-on-surface">Checklist Submission Timeline</h3>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">{isJa ? "タイムライン" : "Timeline"}</p>
+            <h3 className="mt-1 text-lg font-semibold text-on-surface">{isJa ? "チェックリスト提出タイムライン" : "Checklist Submission Timeline"}</h3>
             <p className="mt-1 text-sm leading-6 text-outline">
-              Review completed, due, and missed checks across {filteredMachines.length.toLocaleString()} filtered machines and {visibleTemplates.length.toLocaleString()} active checklist forms.
+              {isJa
+                ? `フィルター対象の${filteredMachines.length.toLocaleString()}台の設備と${visibleTemplates.length.toLocaleString()}件の有効チェックリストの提出状況を確認します。`
+                : `Review completed, due, and missed checks across ${filteredMachines.length.toLocaleString()} filtered machines and ${visibleTemplates.length.toLocaleString()} active checklist forms.`}
             </p>
             {timelineFocusActive && (
               <p className="mt-2 text-xs font-semibold uppercase tracking-[0.18em] text-primary">
@@ -2658,12 +2671,13 @@ export default function ChecklistSubmissionsPage() {
           <div className="flex flex-wrap gap-1.5">
             {SCHEDULE_ORDER.map((schedule) => {
               const meta = SCHEDULE_META[schedule];
+              const label = isJa ? (schedule === "daily" ? "日次" : schedule === "weekly" ? "週次" : schedule === "monthly" ? "月次" : meta.label) : meta.label;
               return (
                 <ScheduleFilterButton
                   key={schedule}
                   active={activeSchedules.includes(schedule)}
                   icon={meta.icon}
-                  label={meta.label}
+                  label={label}
                   onClick={() => toggleSchedule(schedule)}
                 />
               );

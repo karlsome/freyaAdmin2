@@ -1512,6 +1512,7 @@ export default function TicketSubmissionsPage() {
   const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
   const { language, t } = useLanguage();
+  const isJa = language === "ja";
   const [authUser] = useState(() => readStoredAuthUser());
   const actorName = useMemo(() => getAuthDisplayName(authUser), [authUser]);
   const initialViewRef = useRef(null);
@@ -1647,9 +1648,11 @@ export default function TicketSubmissionsPage() {
   const statusOptions = useMemo(() => {
     return normalizedTicketStatuses.map((status) => ({
       value: status,
-      label: formatTicketStatusLabel(status),
+      label: isJa
+        ? (status === "open" ? "未対応 (Open)" : status === "in_progress" ? "対応中 (In Progress)" : status === "closed" ? "完了 (Closed)" : formatTicketStatusLabel(status))
+        : formatTicketStatusLabel(status),
     }));
-  }, [normalizedTicketStatuses]);
+  }, [isJa, normalizedTicketStatuses]);
 
   useEffect(() => {
     let cancelled = false;
@@ -1965,18 +1968,22 @@ export default function TicketSubmissionsPage() {
       setResolvingTicket(null);
       await handleUpdateTicketStatus(ticketToClose, "closed", { fixReason, fixPhotoUrl });
     } catch (err) {
-      setActionNotice({ type: "error", message: err.message || "Failed to upload fix photo or close ticket." });
+      setActionNotice({ type: "error", message: err.message || (isJa ? "処置写真のアップロードまたはチケットの完了に失敗しました。" : "Failed to upload fix photo or close ticket.") });
     } finally {
       setResolvingBusy(false);
     }
   }
+
+
 
   const rangeLabel = useMemo(
     () => formatDateRangeLabel(dateRange.startDate, dateRange.endDate),
     [dateRange.endDate, dateRange.startDate]
   );
 
-  const scopeLabel = `${formatTicketNumber(pagination.totalItems || summary.totalTickets)} matching tickets`;
+  const scopeLabel = isJa
+    ? `${formatTicketNumber(pagination.totalItems || summary.totalTickets)} 件のチケット`
+    : `${formatTicketNumber(pagination.totalItems || summary.totalTickets)} matching tickets`;
   const paginationLabel = `${formatTicketNumber(summary.recordCount)} checklist records • ${pageSize} per page • server pagination`;
 
   function markPresetDirty() {
@@ -2034,7 +2041,7 @@ export default function TicketSubmissionsPage() {
     if (editingPresetId) {
       const duplicatePreset = savedPresets.find((preset) => preset.id !== editingPresetId && preset.name.trim().toLowerCase() === trimmedName.toLowerCase());
       if (duplicatePreset) {
-        setActionNotice({ type: "error", message: "A preset with that name already exists." });
+        setActionNotice({ type: "error", message: isJa ? "同名のプリセットが既に存在します。" : "A preset with that name already exists." });
         return;
       }
 
@@ -2046,7 +2053,7 @@ export default function TicketSubmissionsPage() {
       setPresetName(trimmedName);
       setActivePresetId(editingPresetId === activePresetId ? editingPresetId : activePresetId);
       setEditingPresetId("");
-      setActionNotice({ type: "success", message: "Saved preset renamed." });
+      setActionNotice({ type: "success", message: isJa ? "プリセット名を変更しました。" : "Saved preset renamed." });
       return;
     }
 
@@ -2074,7 +2081,7 @@ export default function TicketSubmissionsPage() {
 
     setPresetName(trimmedName);
     setActivePresetId(nextActivePresetId);
-    setActionNotice({ type: "success", message: "Current ticket view saved." });
+    setActionNotice({ type: "success", message: isJa ? "現在のチケット表示条件を保存しました。" : "Current ticket view saved." });
   }
 
   function handleApplyPreset(preset) {
@@ -2154,7 +2161,7 @@ export default function TicketSubmissionsPage() {
       });
 
       if (!Array.isArray(exportRows) || exportRows.length === 0) {
-        setActionNotice({ type: "warning", message: "No tickets matched the selected export scope." });
+        setActionNotice({ type: "warning", message: isJa ? "出力対象のチケットが見つかりませんでした。" : "No tickets matched the selected export scope." });
         return;
       }
 
@@ -2162,11 +2169,11 @@ export default function TicketSubmissionsPage() {
       setActionNotice({
         type: "success",
         message: scope === "all"
-          ? "All submitted ticket data exported."
-          : "Filtered ticket data exported.",
+          ? (isJa ? "すべてのチケットデータを出力しました。" : "All submitted ticket data exported.")
+          : (isJa ? "絞り込み済みチケットデータを出力しました。" : "Filtered ticket data exported."),
       });
     } catch (loadError) {
-      setError(loadError.message || "Failed to export submitted tickets.");
+      setError(loadError.message || (isJa ? "チケットのエクスポートに失敗しました。" : "Failed to export submitted tickets."));
     } finally {
       setExporting(false);
     }
@@ -2191,11 +2198,11 @@ export default function TicketSubmissionsPage() {
 
     try {
       await copyTextToClipboard(shareUrl);
-      setShareButtonLabel("Link Copied");
-      setActionNotice({ type: "success", message: "Share link copied with the current ticket view." });
-      window.setTimeout(() => setShareButtonLabel("Copy Share Link"), 2200);
+      setShareButtonLabel(isJa ? "リンクをコピーしました" : "Link Copied");
+      setActionNotice({ type: "success", message: isJa ? "現在のチケット表示リンクをクリップボードにコピーしました。" : "Share link copied with the current ticket view." });
+      window.setTimeout(() => setShareButtonLabel(isJa ? "共有リンクをコピー" : "Copy Share Link"), 2200);
     } catch {
-      setActionNotice({ type: "error", message: "Could not copy the share link." });
+      setActionNotice({ type: "error", message: isJa ? "共有リンクのコピーに失敗しました。" : "Could not copy the share link." });
     }
   }
 
@@ -2218,10 +2225,10 @@ export default function TicketSubmissionsPage() {
   return (
     <section className="h-screen overflow-y-auto px-6 pb-16 pt-24 scrollbar-hide md:px-8">
       <PageHeader
-        eyebrow={t("maintenanceEyebrow") || "Maintenance"}
+        eyebrow={t("maintenanceEyebrow") || (isJa ? "点検" : "Maintenance")}
         eyebrowClassName="text-xs tracking-[0.18em]"
         title={t("submittedTickets")}
-        subtitle="Review and manage equipment inspection NG tickets."
+        subtitle={isJa ? "設備点検で発生したNGチケット・申し送り事項の確認と対応管理を行います。" : "Review and manage equipment inspection NG tickets."}
         subtitleClassName="max-w-3xl leading-6 text-outline"
         className="mb-6"
         actions={(
@@ -2232,7 +2239,7 @@ export default function TicketSubmissionsPage() {
             className="inline-flex items-center gap-2 rounded-xl border border-separator/40 bg-white px-4 py-2.5 text-sm font-semibold text-on-surface shadow-xs hover:border-primary/40 hover:text-primary transition active:scale-95 disabled:opacity-50 dark:bg-surface-container"
           >
             <span className="material-symbols-outlined text-primary" style={{ fontSize: 18 }}>download</span>
-            {exporting ? "Exporting..." : (t("exportCsv") || "Export CSV")}
+            {exporting ? (isJa ? "出力中…" : "Exporting...") : (t("exportCsv") || "Export CSV")}
           </button>
         )}
       />
@@ -2241,28 +2248,28 @@ export default function TicketSubmissionsPage() {
 
       <div className="mb-6 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
         <SummaryCard
-          label="Submitted Tickets"
+          label={isJa ? "提出チケット総数" : "Submitted Tickets"}
           value={formatTicketNumber(summary.totalTickets)}
-          subtitle="Matching current filters"
+          subtitle={isJa ? "現在のフィルター条件に一致" : "Matching current filters"}
           icon="confirmation_number"
           accent="bg-primary/10 text-primary"
         />
         <SummaryCard
-          label="Checklist Records"
+          label={isJa ? "関連点検記録数" : "Checklist Records"}
           value={formatTicketNumber(summary.recordCount)}
-          subtitle="Unique submissions referenced"
+          subtitle={isJa ? "参照された点検提出データ" : "Unique submissions referenced"}
           icon="fact_check"
           accent="bg-tertiary/10 text-tertiary"
         />
         <SummaryCard
-          label="Machines Impacted"
+          label={isJa ? "対象設備数" : "Machines Impacted"}
           value={formatTicketNumber(summary.machineCount)}
-          subtitle="Distinct machines represented"
+          subtitle={isJa ? "関連する設備" : "Distinct machines represented"}
           icon="precision_manufacturing"
           accent="bg-amber-500/10 text-amber-700 dark:text-amber-300"
         />
         <SummaryCard
-          label="With Image Evidence"
+          label={isJa ? "写真付きチケット" : "With Image Evidence"}
           value={formatTicketNumber(summary.imageTickets)}
           subtitle="Tickets with attached defect photos"
           icon="photo_library"
