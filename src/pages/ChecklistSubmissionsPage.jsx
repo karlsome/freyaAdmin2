@@ -7,6 +7,7 @@ import LiquidSegmentedControl from "../components/LiquidSegmentedControl";
 import MachineExportModal from "../components/MachineExportModal";
 import PageHeader from "../components/PageHeader";
 import SensorDevicePhotoPreviewModal from "../components/SensorDevicePhotoPreviewModal";
+import TemplateQuickPeekModal from "../components/TemplateQuickPeekModal";
 import { useLanguage } from "../contexts/LanguageContext";
 import {
   fetchCheckFormRecordById,
@@ -840,7 +841,9 @@ function SubmissionPickerModal({ dateLabel, factory, machineName, onClose, onSel
   );
 }
 
-function TodayMachineCard({ machine, templates, recordsByFormId, equipmentMap, onSelectRecord, onExportMachine, language }) {
+
+
+function TodayMachineCard({ machine, templates, recordsByFormId, equipmentMap, onSelectRecord, onExportMachine, onOpenQuickPeek, language }) {
   const isJa = language === "ja";
   const today = useMemo(() => {
     const d = new Date();
@@ -856,11 +859,27 @@ function TodayMachineCard({ machine, templates, recordsByFormId, equipmentMap, o
     return todayEntries.flatMap((entry) => entry.submissions || []);
   }, [todayEntries]);
 
-  const hasNG = useMemo(() => {
-    return allSubmissions.some((sub) => sub.record?.hasNG);
-  }, [allSubmissions]);
-
   const hasSubmissions = allSubmissions.length > 0;
+
+  // Extract all defect answers / reasons vs optional ticket answers
+  const { defectAnswers, optionalAnswers, hasNG } = useMemo(() => {
+    const defects = [];
+    const optionals = [];
+
+    for (const sub of allSubmissions) {
+      const answers = sub?.record?.answers || [];
+      for (const ans of answers) {
+        if (ans.hasNG || ans.isDefect || String(ans.ticketType).toLowerCase() === "defect" || String(ans.value).toUpperCase() === "NG") {
+          defects.push(ans);
+        } else if (ans.ticketType === "optional" || ans.isOptional || (ans.ticketCreated && !ans.hasNG)) {
+          optionals.push(ans);
+        }
+      }
+    }
+
+    const ngFlag = defects.length > 0 || allSubmissions.some((sub) => sub.record?.hasNG);
+    return { defectAnswers: defects, optionalAnswers: optionals, hasNG: ngFlag };
+  }, [allSubmissions]);
 
   // Extract primary submission (NG first, or latest)
   const primarySubmission = useMemo(() => {
@@ -872,10 +891,21 @@ function TodayMachineCard({ machine, templates, recordsByFormId, equipmentMap, o
 
   // Extract NG reason if any
   const ngReason = useMemo(() => {
+    if (defectAnswers.length > 0) {
+      return defectAnswers.map((a) => a.reason || a.label || a.fieldLabel).filter(Boolean).join(" / ");
+    }
     if (!primarySubmission?.record?.answers) return "";
     const ngAnswer = primarySubmission.record.answers.find((a) => a.hasNG && a.reason);
     return ngAnswer?.reason || primarySubmission.record.ngReason || "";
-  }, [primarySubmission]);
+  }, [defectAnswers, primarySubmission]);
+
+  // Extract Optional notes if any
+  const optionalNote = useMemo(() => {
+    if (optionalAnswers.length > 0) {
+      return optionalAnswers.map((a) => a.reason || a.memo || a.notes || a.label).filter(Boolean).join(" / ");
+    }
+    return "";
+  }, [optionalAnswers]);
 
   const inspectorName = primarySubmission?.record?.completedBy || "";
   const submissionTime = primarySubmission?.record?.completedAt
@@ -887,6 +917,8 @@ function TodayMachineCard({ machine, templates, recordsByFormId, equipmentMap, o
   const assignedForms = useMemo(() => {
     return templates.filter((form) => getTemplateEquipmentIds(form).includes(machine.id));
   }, [machine.id, templates]);
+
+  const primaryTemplate = primarySubmission?.form || assignedForms[0] || null;
 
   return (
     <div
@@ -903,14 +935,14 @@ function TodayMachineCard({ machine, templates, recordsByFormId, equipmentMap, o
             submissions: sortSubmissionEntries(allSubmissions),
           });
         } else if (primarySubmission) {
-          onSelectRecord(buildRecordSelection(primarySubmission, hasNG ? "tickets" : "submission"));
+          onSelectRecord(buildRecordSelection(primarySubmission, (hasNG || optionalAnswers.length > 0) ? "tickets" : "submission"));
         }
       }}
       onKeyDown={(e) => {
         if (e.key === "Enter" || e.key === " ") {
           e.preventDefault();
           if (primarySubmission) {
-            onSelectRecord(buildRecordSelection(primarySubmission, hasNG ? "tickets" : "submission"));
+            onSelectRecord(buildRecordSelection(primarySubmission, (hasNG || optionalAnswers.length > 0) ? "tickets" : "submission"));
           }
         }
       }}
@@ -951,7 +983,7 @@ function TodayMachineCard({ machine, templates, recordsByFormId, equipmentMap, o
           )}
         </div>
 
-        {/* Machine Name & Export Button */}
+        {/* Machine Name, Template Quick Peek Button & Export Button */}
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-2.5 min-w-0">
             <div className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl ${
@@ -964,21 +996,39 @@ function TodayMachineCard({ machine, templates, recordsByFormId, equipmentMap, o
             </h4>
           </div>
 
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              onExportMachine(machine);
-            }}
-            title={isJa ? `${machine.name} の点検表を出力 (PDF / CSV)` : `Export checklist for ${machine.name}`}
-            className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-xl border border-outline-variant/30 bg-surface-container text-outline hover:border-primary/40 hover:bg-primary/10 hover:text-primary transition active:scale-90"
-          >
-            <span className="material-symbols-outlined" style={{ fontSize: 16 }}>file_export</span>
-          </button>
+          <div className="flex items-center gap-1.5 flex-shrink-0">
+            {/* Quick Peek Button for the whole checklist template */}
+            {primaryTemplate && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onOpenQuickPeek?.(primaryTemplate, null, machine.name);
+                }}
+                title={isJa ? `${primaryTemplate.name || "点検表"} の全項目・基準をクイック確認` : "Quick peek full checklist template"}
+                className="flex h-8 w-8 items-center justify-center rounded-xl border border-outline-variant/30 bg-surface-container text-outline hover:border-primary/40 hover:bg-primary/10 hover:text-primary transition active:scale-90"
+              >
+                <span className="material-symbols-outlined" style={{ fontSize: 16 }}>info</span>
+              </button>
+            )}
+
+            {/* Export Button */}
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onExportMachine(machine);
+              }}
+              title={isJa ? `${machine.name} の点検表を出力 (PDF / CSV)` : `Export checklist for ${machine.name}`}
+              className="flex h-8 w-8 items-center justify-center rounded-xl border border-outline-variant/30 bg-surface-container text-outline hover:border-primary/40 hover:bg-primary/10 hover:text-primary transition active:scale-90"
+            >
+              <span className="material-symbols-outlined" style={{ fontSize: 16 }}>file_export</span>
+            </button>
+          </div>
         </div>
 
         {/* Card Body Details */}
-        <div className="mt-4 pt-3 border-t border-separator/40 space-y-2">
+        <div className="mt-4 pt-3 border-t border-separator/40 space-y-2.5">
           {hasSubmissions ? (
             <>
               <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
@@ -992,21 +1042,124 @@ function TodayMachineCard({ machine, templates, recordsByFormId, equipmentMap, o
                 </span>
               </div>
 
+              {/* Ticket Breakdown Pill Row if any tickets exist */}
+              {(defectAnswers.length > 0 || optionalAnswers.length > 0) && (
+                <div className="flex flex-wrap gap-1.5 pt-0.5">
+                  {defectAnswers.length > 0 && (
+                    <span className="inline-flex items-center gap-1 rounded-md bg-rose-500/15 border border-rose-500/30 px-2 py-0.5 text-[10px] font-bold text-rose-700 dark:text-rose-300">
+                      <span>⚠️</span>
+                      <span>{isJa ? `不具合 ${defectAnswers.length}件` : `${defectAnswers.length} Defect${defectAnswers.length > 1 ? "s" : ""}`}</span>
+                    </span>
+                  )}
+                  {optionalAnswers.length > 0 && (
+                    <span className="inline-flex items-center gap-1 rounded-md bg-blue-500/15 border border-blue-500/30 px-2 py-0.5 text-[10px] font-bold text-blue-700 dark:text-blue-300">
+                      <span>💬</span>
+                      <span>{isJa ? `連絡事項 ${optionalAnswers.length}件` : `${optionalAnswers.length} Optional`}</span>
+                    </span>
+                  )}
+                </div>
+              )}
+
+              {/* Defect Callout Box with individual ℹ️ buttons per defect step */}
               {hasNG ? (
-                <div className="rounded-xl border border-rose-500/30 bg-rose-500/10 p-2.5 text-xs text-rose-800 dark:text-rose-300">
+                <div className="rounded-xl border border-rose-500/30 bg-rose-500/10 p-2.5 text-xs text-rose-800 dark:text-rose-300 space-y-2">
                   <p className="font-bold flex items-center gap-1">
                     <span className="material-symbols-outlined" style={{ fontSize: 14 }}>report_problem</span>
-                    {isJa ? "NG指摘理由:" : "Defect Reason:"}
+                    {isJa ? (defectAnswers.length > 1 ? `NG指摘項目 (${defectAnswers.length}件):` : "NG指摘項目:") : "Defects Reported:"}
                   </p>
-                  <p className="mt-1 font-medium leading-relaxed pl-5 line-clamp-2">
-                    {ngReason || (isJa ? "規格外または異常の報告があります" : "Out of range value or defect reported")}
-                  </p>
+
+                  {defectAnswers.length > 0 ? (
+                    <div className="space-y-1.5 pl-0.5">
+                      {defectAnswers.map((defect, dIdx) => {
+                        const defectLabel = defect.label || defect.fieldLabel || `指摘 #${dIdx + 1}`;
+                        const defectReasonText = defect.reason || defect.defectDetails || (isJa ? "規格外・異常の報告あり" : "Defect reported");
+                        const targetId = defect.fieldId || defect.id || defect.label || defect.fieldLabel;
+
+                        return (
+                          <div
+                            key={dIdx}
+                            className="flex items-center justify-between gap-2 rounded-lg border border-rose-500/20 bg-surface/80 p-2 shadow-xs"
+                          >
+                            <div className="min-w-0 flex-1">
+                              <p className="truncate font-bold text-[11.5px] text-on-surface">
+                                #{dIdx + 1} {defectLabel}
+                              </p>
+                              <p className="truncate text-[10.5px] font-medium text-rose-700 dark:text-rose-300 mt-0.5">
+                                {defectReasonText}
+                              </p>
+                            </div>
+
+                            {/* ℹ️ Quick peek button for this specific defect */}
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onOpenQuickPeek?.(primaryTemplate, targetId, machine.name);
+                              }}
+                              title={isJa ? `「${defectLabel}」の点検基準・定義をクイック確認` : `Quick peek checklist step for ${defectLabel}`}
+                              className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-lg bg-rose-500/15 text-rose-700 dark:text-rose-300 hover:bg-rose-500/30 hover:scale-105 transition active:scale-95 shadow-xs"
+                            >
+                              <span className="material-symbols-outlined" style={{ fontSize: 14 }}>info</span>
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <p className="font-medium leading-relaxed pl-5 line-clamp-2">
+                      {ngReason || (isJa ? "規格外または異常の報告があります" : "Out of range value or defect reported")}
+                    </p>
+                  )}
                 </div>
               ) : (
                 <p className="text-xs font-medium text-emerald-700 dark:text-emerald-400 flex items-center gap-1.5">
                   <span className="material-symbols-outlined" style={{ fontSize: 15 }}>task_alt</span>
                   {isJa ? `全 ${checkCount} 項目 正常確認済` : `All ${checkCount} checks verified normal`}
                 </p>
+              )}
+
+              {/* Optional handover note callout if present */}
+              {optionalAnswers.length > 0 && (
+                <div className="rounded-xl border border-blue-500/25 bg-blue-500/5 p-2 text-xs text-blue-800 dark:text-blue-300 space-y-1.5">
+                  <p className="font-semibold flex items-center gap-1">
+                    <span className="material-symbols-outlined" style={{ fontSize: 13 }}>chat</span>
+                    {isJa ? `申し送り・連絡メモ (${optionalAnswers.length}件):` : `Handover Notes (${optionalAnswers.length}):`}
+                  </p>
+                  <div className="space-y-1 pl-0.5">
+                    {optionalAnswers.map((opt, oIdx) => {
+                      const optLabel = opt.label || opt.fieldLabel || `連絡事項 #${oIdx + 1}`;
+                      const optText = opt.reason || opt.memo || opt.notes || (isJa ? "作業者からの連絡事項あり" : "Note attached");
+                      const targetId = opt.fieldId || opt.id || opt.label || opt.fieldLabel;
+
+                      return (
+                        <div
+                          key={oIdx}
+                          className="flex items-center justify-between gap-2 rounded-lg border border-blue-500/20 bg-surface/80 p-1.5 shadow-xs"
+                        >
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate font-semibold text-[11px] text-on-surface">
+                              {optLabel}
+                            </p>
+                            <p className="truncate text-[10px] text-blue-700 dark:text-blue-300">
+                              {optText}
+                            </p>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onOpenQuickPeek?.(primaryTemplate, targetId, machine.name);
+                            }}
+                            title={isJa ? `「${optLabel}」の点検項目をクイック確認` : `Quick peek step for ${optLabel}`}
+                            className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded bg-blue-500/15 text-blue-700 dark:text-blue-300 hover:bg-blue-500/30 transition active:scale-95"
+                          >
+                            <span className="material-symbols-outlined" style={{ fontSize: 13 }}>info</span>
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
               )}
 
               {allSubmissions.length > 1 && (
@@ -1024,10 +1177,20 @@ function TodayMachineCard({ machine, templates, recordsByFormId, equipmentMap, o
               {assignedForms.length > 0 && (
                 <div className="flex flex-wrap gap-1 pt-1">
                   {assignedForms.map((form) => (
-                    <span key={form._id} className="inline-flex items-center gap-1 rounded-md border border-outline-variant/30 bg-surface-container px-2 py-0.5 text-[10px] text-outline">
+                    <button
+                      key={form._id}
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onOpenQuickPeek?.(form, null, machine.name);
+                      }}
+                      title={isJa ? `${form.name || "点検表"} のテンプレート内容をクイック確認` : "Quick peek template"}
+                      className="inline-flex items-center gap-1 rounded-md border border-outline-variant/30 bg-surface-container px-2 py-0.5 text-[10px] text-outline hover:border-primary/40 hover:bg-primary/10 hover:text-primary transition"
+                    >
                       <span className="material-symbols-outlined text-primary" style={{ fontSize: 11 }}>fact_check</span>
-                      <span className="truncate max-w-[150px]">{form.name_ja || form.name || form.name_en}</span>
-                    </span>
+                      <span className="truncate max-w-[140px]">{form.name_ja || form.name || form.name_en}</span>
+                      <span className="material-symbols-outlined text-outline" style={{ fontSize: 12 }}>info</span>
+                    </button>
                   ))}
                 </div>
               )}
@@ -1040,7 +1203,13 @@ function TodayMachineCard({ machine, templates, recordsByFormId, equipmentMap, o
       <div className="mt-4 pt-3 border-t border-separator/30 flex items-center justify-between text-xs">
         {hasNG ? (
           <span className="inline-flex items-center gap-1 font-bold text-rose-600 dark:text-rose-400 group-hover:underline">
-            {isJa ? "NGチケット・処置内容を確認" : "View NG Ticket & Fix"} ➔
+            {isJa
+              ? (optionalAnswers.length > 0 ? `不具合(${defectAnswers.length || 1})・連絡事項(${optionalAnswers.length})を確認` : "NGチケット・処置内容を確認")
+              : "View NG Tickets & Fix"} ➔
+          </span>
+        ) : optionalAnswers.length > 0 ? (
+          <span className="inline-flex items-center gap-1 font-semibold text-blue-600 dark:text-blue-400 group-hover:underline">
+            {isJa ? `連絡事項(${optionalAnswers.length}件)・点検結果を見る` : `View Notes (${optionalAnswers.length}) & Record`} ➔
           </span>
         ) : hasSubmissions ? (
           <span className="inline-flex items-center gap-1 font-semibold text-primary group-hover:underline">
@@ -1056,7 +1225,7 @@ function TodayMachineCard({ machine, templates, recordsByFormId, equipmentMap, o
   );
 }
 
-function RecordDetailModal({ defaultTab = "submission", form, initialTicketFocusHint = null, onBack = null, onClose, record, templatesById = null }) {
+function RecordDetailModal({ defaultTab = "submission", form, initialTicketFocusHint = null, onBack = null, onClose, onOpenQuickPeek = null, record, templatesById = null }) {
   const navigate = useNavigate();
   const { language } = useLanguage();
   const isJa = language === "ja";
@@ -1068,7 +1237,7 @@ function RecordDetailModal({ defaultTab = "submission", form, initialTicketFocus
   const [tickets, setTickets] = useState([]);
   const [ticketsLoading, setTicketsLoading] = useState(false);
   const [previewImage, setPreviewImage] = useState(null);
-  const [ticketFocusHint, setTicketFocusHint] = useState(null);
+  const [ticketFocusHint, setTicketFocusHint] = useState(initialTicketFocusHint ?? null);
   const [expandedHistoryKeys, setExpandedHistoryKeys] = useState(new Set());
   const ticketRefs = useRef(new Map());
 
@@ -1385,7 +1554,20 @@ function RecordDetailModal({ defaultTab = "submission", form, initialTicketFocus
               </button>
             )}
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-outline">{isJa ? "点検提出記録" : "Inspection Record"}</p>
-            <h3 className="mt-0.5 truncate text-lg font-semibold text-on-surface">{formName}</h3>
+            <div className="mt-0.5 flex flex-wrap items-center gap-2">
+              <h3 className="truncate text-lg font-semibold text-on-surface">{formName}</h3>
+              {activeTemplate && (
+                <button
+                  type="button"
+                  onClick={() => onOpenQuickPeek?.(activeTemplate, null, false)}
+                  title={isJa ? "点検表テンプレートの全項目をクイック確認" : "Quick peek full checklist template"}
+                  className="inline-flex items-center gap-1 rounded-lg border border-separator/40 bg-surface px-2.5 py-1 text-xs font-semibold text-on-surface shadow-2xs hover:border-primary/40 hover:text-primary transition active:scale-95"
+                >
+                  <span className="material-symbols-outlined" style={{ fontSize: 14 }}>visibility</span>
+                  <span>{isJa ? "テンプレート確認" : "Quick Peek Template"}</span>
+                </button>
+              )}
+            </div>
             <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-outline">
               {recordFactory && <span>{recordFactory}</span>}
               {recordSchedule && (
@@ -1790,6 +1972,17 @@ function RecordDetailModal({ defaultTab = "submission", form, initialTicketFocus
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
+                        {activeTemplate && (
+                          <button
+                            type="button"
+                            onClick={() => onOpenQuickPeek?.(activeTemplate, ticket.fieldId || ticket.fieldLabel || ticketLabelJa || ticketLabelEn, isTicketOptional)}
+                            title={isJa ? "テンプレート上の該当項目をクイック確認" : "Quick peek this checklist step"}
+                            className="inline-flex items-center gap-1 rounded-lg border border-separator/40 bg-surface px-2 py-1 text-[10px] font-semibold text-outline hover:border-primary/40 hover:bg-primary/10 hover:text-primary transition active:scale-95 shadow-2xs"
+                          >
+                            <span className="material-symbols-outlined" style={{ fontSize: 13 }}>visibility</span>
+                            <span>{isJa ? "項目確認" : "Peek Step"}</span>
+                          </button>
+                        )}
                         <span className={`rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] ${statusMeta.badgeClassName}`}>
                           {statusMeta.label}
                         </span>
@@ -2109,10 +2302,21 @@ export default function ChecklistSubmissionsPage() {
   const [appliedAdvancedFilters, setAppliedAdvancedFilters] = useState([]);
   const [todayOverview, setTodayOverview] = useState(null);
   const [loadingToday, setLoadingToday] = useState(false);
-  const [activeSchedules, setActiveSchedules] = useState(SCHEDULE_ORDER);
   const [selectedCell, setSelectedCell] = useState(null);
   const [exportingMachine, setExportingMachine] = useState(null);
+  const [peekState, setPeekState] = useState(null);
   const scrollRef = useRef(null);
+
+  function handleOpenQuickPeek(templateOrId, activeFieldId = null, isOptional = false) {
+    if (!templateOrId) return;
+    const isObj = typeof templateOrId === "object";
+    setPeekState({
+      template: isObj ? templateOrId : null,
+      templateId: isObj ? templateOrId._id : templateOrId,
+      activeFieldId,
+      isOptional,
+    });
+  }
 
   const resolvedDateRange = useMemo(
     () => resolveTimelineRange(dateRange.startDate, dateRange.endDate),
@@ -2965,6 +3169,7 @@ export default function ChecklistSubmissionsPage() {
                     equipmentMap={equipmentMap}
                     onSelectRecord={setSelectedCell}
                     onExportMachine={setExportingMachine}
+                    onOpenQuickPeek={handleOpenQuickPeek}
                     language={language}
                   />
                 ))}
@@ -3175,7 +3380,19 @@ export default function ChecklistSubmissionsPage() {
           defaultTab={selectedCell.defaultTab ?? "submission"}
           initialTicketFocusHint={selectedCell.initialTicketFocusHint ?? null}
           onBack={selectedCell.returnToPicker ? () => setSelectedCell(selectedCell.returnToPicker) : null}
+          onOpenQuickPeek={handleOpenQuickPeek}
           onClose={() => setSelectedCell(null)}
+        />,
+        document.body
+      )}
+
+      {peekState && createPortal(
+        <TemplateQuickPeekModal
+          template={peekState.template}
+          templateId={peekState.templateId}
+          activeFieldId={peekState.activeFieldId}
+          isOptional={peekState.isOptional}
+          onClose={() => setPeekState(null)}
         />,
         document.body
       )}
