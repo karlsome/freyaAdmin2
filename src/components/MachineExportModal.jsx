@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { createPortal } from "react-dom";
+import { useLanguage } from "../contexts/LanguageContext";
 import {
   buildMachineChecklistMatrix,
   openTraditionalChecklistPrintWindow,
@@ -16,6 +17,9 @@ export default function MachineExportModal({
   equipmentMap = null,
   onClose,
 }) {
+  const { language } = useLanguage();
+  const isJa = language === "ja";
+
   const [styleMode, setStyleMode] = useState("traditional"); // "traditional" | "digital"
   const [fileType, setFileType] = useState("pdf"); // "pdf" | "csv"
   const [scopeMode, setScopeMode] = useState("month"); // "month" | "current"
@@ -45,9 +49,15 @@ export default function MachineExportModal({
     const first = dates[0];
     const last = dates[dates.length - 1];
     if (scopeMode === "month" || (first.getMonth() === last.getMonth() && first.getDate() === 1)) {
-      return `${first.getFullYear()}年${first.getMonth() + 1}月`;
+      if (isJa) {
+        return `${first.getFullYear()}年${first.getMonth() + 1}月`;
+      }
+      return `${first.toLocaleString("en-US", { month: "long", year: "numeric" })}`;
     }
-    return `${first.getMonth() + 1}月${first.getDate()}日 ～ ${last.getMonth() + 1}月${last.getDate()}日`;
+    if (isJa) {
+      return `${first.getMonth() + 1}月${first.getDate()}日 ～ ${last.getMonth() + 1}月${last.getDate()}日`;
+    }
+    return `${first.toLocaleString("en-US", { month: "short", day: "numeric" })} – ${last.toLocaleString("en-US", { month: "short", day: "numeric", year: "numeric" })}`;
   }
 
   function handleExport() {
@@ -60,6 +70,7 @@ export default function MachineExportModal({
       records,
       dates: targetDates,
       equipmentMap,
+      language,
     });
 
     if (fileType === "csv") {
@@ -85,15 +96,18 @@ export default function MachineExportModal({
               <span className="material-symbols-outlined" style={{ fontSize: 22 }}>file_export</span>
             </span>
             <div>
-              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Machine Checklist Export</p>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">
+                {isJa ? "設備点検帳票出力" : "Machine Checklist Export"}
+              </p>
               <h3 className="text-base font-bold text-on-surface">
-                {machine.name} <span className="text-xs font-normal text-outline">({machine.factory})</span>
+                {machine.name} {machine.factory && <span className="text-xs font-normal text-outline">({machine.factory})</span>}
               </h3>
             </div>
           </div>
           <button
             type="button"
             onClick={onClose}
+            aria-label={isJa ? "閉じる" : "Close"}
             className="rounded-xl p-2 text-outline hover:bg-surface-container hover:text-on-surface transition-colors"
           >
             <span className="material-symbols-outlined" style={{ fontSize: 20 }}>close</span>
@@ -105,7 +119,7 @@ export default function MachineExportModal({
           {/* Step 1: Format Style Selection */}
           <div>
             <label className="block text-xs font-semibold uppercase tracking-wider text-outline mb-2">
-              1. 帳票レイアウト形式 (Layout Style)
+              {isJa ? "1. 帳票レイアウト形式" : "1. Layout Style"}
             </label>
             <div className="grid grid-cols-2 gap-3">
               <button
@@ -120,14 +134,16 @@ export default function MachineExportModal({
                 <div className="flex w-full items-center justify-between">
                   <span className="text-sm font-bold text-on-surface flex items-center gap-1.5">
                     <span className="material-symbols-outlined text-primary" style={{ fontSize: 18 }}>article</span>
-                    紙台帳風 (Traditional)
+                    {isJa ? "紙台帳風 (Traditional)" : "Traditional Matrix"}
                   </span>
                   {styleMode === "traditional" && (
                     <span className="material-symbols-outlined text-primary" style={{ fontSize: 18 }}>check_circle</span>
                   )}
                 </div>
                 <p className="mt-1.5 text-[11px] leading-relaxed text-outline">
-                  現場の紙点検記録（○✕・実測値記入表）と同じマトリクス表レイアウト。責任者確認印欄・ガイド写真付き。
+                  {isJa
+                    ? "現場の紙点検記録（○✕・実測値記入表）と同じマトリクス表レイアウト。責任者確認印欄・ガイド写真付き。"
+                    : "Paper inspection ledger matrix layout with daily check marks, measured values, approval stamps, and guide photos."}
                 </p>
               </button>
 
@@ -143,14 +159,16 @@ export default function MachineExportModal({
                 <div className="flex w-full items-center justify-between">
                   <span className="text-sm font-bold text-on-surface flex items-center gap-1.5">
                     <span className="material-symbols-outlined text-primary" style={{ fontSize: 18 }}>dashboard</span>
-                    デジタル風 (Digital)
+                    {isJa ? "デジタル風 (Digital)" : "Digital Executive"}
                   </span>
                   {styleMode === "digital" && (
                     <span className="material-symbols-outlined text-primary" style={{ fontSize: 18 }}>check_circle</span>
                   )}
                 </div>
                 <p className="mt-1.5 text-[11px] leading-relaxed text-outline">
-                  実施率統計、KPIカード、合格率サマリーを含む現代風エグゼクティブ・監査用レポート。
+                  {isJa
+                    ? "実施率統計、KPIカード、合格率サマリーを含む現代風エグゼクティブ・監査用レポート。"
+                    : "Executive compliance report featuring completion statistics, KPI scorecards, pass rate breakdown, and audit log."}
                 </p>
               </button>
             </div>
@@ -159,7 +177,7 @@ export default function MachineExportModal({
           {/* Step 2: File Format */}
           <div>
             <label className="block text-xs font-semibold uppercase tracking-wider text-outline mb-2">
-              2. 出力ファイル種別 (Output Type)
+              {isJa ? "2. 出力ファイル種別" : "2. Output Type"}
             </label>
             <div className="grid grid-cols-2 gap-3">
               <button
@@ -172,7 +190,7 @@ export default function MachineExportModal({
                 }`}
               >
                 <span className="material-symbols-outlined" style={{ fontSize: 16 }}>picture_as_pdf</span>
-                PDF 印刷 / 保存
+                {isJa ? "PDF 印刷 / 保存" : "Print / PDF Export"}
               </button>
 
               <button
@@ -185,7 +203,7 @@ export default function MachineExportModal({
                 }`}
               >
                 <span className="material-symbols-outlined" style={{ fontSize: 16 }}>csv</span>
-                CSV ダウンロード
+                {isJa ? "CSV ダウンロード" : "Download CSV"}
               </button>
             </div>
           </div>
@@ -193,7 +211,7 @@ export default function MachineExportModal({
           {/* Step 3: Date Scope */}
           <div>
             <label className="block text-xs font-semibold uppercase tracking-wider text-outline mb-2">
-              3. 出力対象期間 (Date Period)
+              {isJa ? "3. 出力対象期間" : "3. Date Period"}
             </label>
             <div className="flex gap-2">
               <button
@@ -205,7 +223,9 @@ export default function MachineExportModal({
                     : "border-outline-variant/25 bg-surface-container text-outline hover:text-on-surface"
                 }`}
               >
-                タイムライン表示期間 ({currentDates.length}日間)
+                {isJa
+                  ? `タイムライン表示期間 (${currentDates.length}日間)`
+                  : `Current Timeline (${currentDates.length} Days)`}
               </button>
               <button
                 type="button"
@@ -216,7 +236,7 @@ export default function MachineExportModal({
                     : "border-outline-variant/25 bg-surface-container text-outline hover:text-on-surface"
                 }`}
               >
-                月間一括 (1日～末日)
+                {isJa ? "月間一括 (1日～末日)" : "Full Month (1st – End of Month)"}
               </button>
             </div>
           </div>
@@ -229,7 +249,7 @@ export default function MachineExportModal({
             onClick={onClose}
             className="rounded-xl border border-outline-variant/30 bg-surface px-4 py-2 text-xs font-semibold text-outline hover:text-on-surface transition-colors"
           >
-            キャンセル
+            {isJa ? "キャンセル" : "Cancel"}
           </button>
           <button
             type="button"
@@ -239,7 +259,9 @@ export default function MachineExportModal({
             <span className="material-symbols-outlined" style={{ fontSize: 16 }}>
               {fileType === "pdf" ? "print" : "download"}
             </span>
-            {fileType === "pdf" ? "帳票を開く (Print / PDF)" : "CSV出力 (Download)"}
+            {fileType === "pdf"
+              ? (isJa ? "帳票を開く (Print / PDF)" : "Open Report (Print / PDF)")
+              : (isJa ? "CSV出力 (Download)" : "Export CSV")}
           </button>
         </div>
       </div>

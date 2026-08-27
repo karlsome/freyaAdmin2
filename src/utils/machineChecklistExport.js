@@ -37,7 +37,9 @@ export function buildMachineChecklistMatrix({
   records = [],
   dates = [],
   equipmentMap = null,
+  language = "ja",
 }) {
+  const isEn = language === "en";
   const machineId = normalizeId(machine.id || machine._id);
   const machineName = String(machine.name || machine.設備名 || "").trim();
   const factory = String(machine.factory || machine.工場 || "—").trim();
@@ -77,7 +79,10 @@ export function buildMachineChecklistMatrix({
 
   sortedTemplates.forEach((tpl) => {
     const formId = normalizeId(tpl._id || tpl.id);
-    const scheduleLabel = tpl.schedule === "daily" ? "日常・始業" : tpl.schedule === "weekly" ? "週次" : tpl.schedule === "monthly" ? "月次" : "定期";
+    const scheduleLabel = isEn
+      ? (tpl.schedule === "daily" ? "Daily" : tpl.schedule === "weekly" ? "Weekly" : tpl.schedule === "monthly" ? "Monthly" : "Periodic")
+      : (tpl.schedule === "daily" ? "日常・始業" : tpl.schedule === "weekly" ? "週次" : tpl.schedule === "monthly" ? "月次" : "定期");
+    const formTitle = isEn ? (tpl.name_en || tpl.name || "Checklist") : (tpl.name_ja || tpl.name || "点検");
     const rawFields = Array.isArray(tpl.fields) ? tpl.fields : [];
     const sectionFields = [];
 
@@ -88,23 +93,32 @@ export function buildMachineChecklistMatrix({
       if (seenFieldKeys.has(fieldKey)) return;
       seenFieldKeys.add(fieldKey);
 
-      // Prioritize Japanese description of each step for 管理規格
-      let standard = String(field.description_ja || field.description || field.standard || field.specification || field.criteria || "").trim();
+      // Prioritize description based on selected language
+      let standard = isEn
+        ? String(field.description_en || field.description || field.description_ja || field.standard || field.specification || field.criteria || "").trim()
+        : String(field.description_ja || field.description || field.description_en || field.standard || field.specification || field.criteria || "").trim();
       if (!standard && field.type === "range") {
         if (field.min !== undefined && field.max !== undefined) {
           standard = `${field.min} ～ ${field.max}${field.unit ? ` ${field.unit}` : ""}`;
         }
       }
-      if (!standard && field.description_en) {
+      if (!standard && isEn && field.description_ja) {
+        standard = String(field.description_ja).trim();
+      }
+      if (!standard && !isEn && field.description_en) {
         standard = String(field.description_en).trim();
       }
       if (!standard && field.type === "toggle") {
-        standard = "異常なきこと / 正常";
+        standard = isEn ? "Normal / No abnormalities" : "異常なきこと / 正常";
       }
 
-      let method = "◯✕";
-      if (field.type === "range" || field.type === "number") method = "実測値";
-      else if (field.type === "text") method = "記入";
+      let method = isEn ? "◯✕ (OK/NG)" : "◯✕";
+      if (field.type === "range" || field.type === "number") method = isEn ? "Measured Value" : "実測値";
+      else if (field.type === "text") method = isEn ? "Text" : "記入";
+
+      const itemLabel = isEn
+        ? (field.label_en || field.label || field.label_ja || `Item ${fIndex + 1}`)
+        : (field.label_ja || field.label || field.label_en || `項目 ${fIndex + 1}`);
 
       const item = {
         id: field.id || `f_${fIndex}`,
@@ -112,9 +126,9 @@ export function buildMachineChecklistMatrix({
         schedule: tpl.schedule || "daily",
         scheduleLabel,
         formId,
-        formName: tpl.name || "点検",
-        label: field.label_ja || field.label || `項目 ${fIndex + 1}`,
-        standard: standard || "異常なきこと / 正常",
+        formName: formTitle,
+        label: itemLabel,
+        standard: standard || (isEn ? "Normal / No abnormalities" : "異常なきこと / 正常"),
         method,
         type: field.type,
         imageURL: field.imageURL || field.imageUrl || "",
@@ -127,7 +141,7 @@ export function buildMachineChecklistMatrix({
     if (sectionFields.length > 0) {
       formSections.push({
         formId,
-        formName: tpl.name || "点検フォーム",
+        formName: formTitle,
         schedule: tpl.schedule || "daily",
         scheduleLabel,
         fields: sectionFields,
