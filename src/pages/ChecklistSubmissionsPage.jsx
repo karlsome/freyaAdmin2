@@ -2302,6 +2302,7 @@ export default function ChecklistSubmissionsPage() {
   const [appliedAdvancedFilters, setAppliedAdvancedFilters] = useState([]);
   const [todayOverview, setTodayOverview] = useState(null);
   const [loadingToday, setLoadingToday] = useState(false);
+  const [activeSchedules, setActiveSchedules] = useState(SCHEDULE_ORDER);
   const [selectedCell, setSelectedCell] = useState(null);
   const [exportingMachine, setExportingMachine] = useState(null);
   const [peekState, setPeekState] = useState(null);
