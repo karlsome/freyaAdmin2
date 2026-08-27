@@ -508,15 +508,15 @@ export default function MaintenancePage() {
                 className="inline-flex items-center gap-2 rounded-xl border border-outline-variant/30 bg-surface-container px-4 py-2.5 text-sm font-semibold text-on-surface transition-all duration-150 hover:border-primary/30 hover:bg-surface-container-high active:scale-95"
               >
                 <span className="material-symbols-outlined text-primary" style={{ fontSize: 18 }}>table_chart</span>
-                {isJa ? "点検履歴" : "Inspection History"}
+                {isJa ? "点検提出履歴" : "Checklist Submissions"}
               </button>
               <button
                 type="button"
                 onClick={() => navigate("/maintenance/submissions/tickets")}
                 className="inline-flex items-center gap-2 rounded-xl border border-outline-variant/30 bg-surface-container px-4 py-2.5 text-sm font-semibold text-on-surface transition-all duration-150 hover:border-primary/30 hover:bg-surface-container-high active:scale-95"
               >
-                <span className="material-symbols-outlined text-amber-500" style={{ fontSize: 18 }}>confirmation_number</span>
-                {isJa ? "NGチケット" : "Submitted Tickets"}
+                <span className="material-symbols-outlined text-amber-500" style={{ fontSize: 18 }}>report_problem</span>
+                {isJa ? "点検不具合一覧" : "Checklist Defects"}
               </button>
               <button
                 type="button"

@@ -28,10 +28,10 @@ const navItems = [
   { icon: "database",                 labelKey: "masterDB",            page: "masterDB" },
   { icon: "hub",                      labelKey: "customerManagement",  page: "customerManagement" },
   { icon: "construction",             labelKey: "equipment",           page: "equipment" },
-  { icon: "checklist",                labelKey: "maintenance",         page: "maintenance",
+  { icon: "checklist",                labelKey: "checklistSubmissions", page: "maintenance/submissions",
     children: [
-      { icon: "table_chart",          labelKey: "checklistSubmissions", page: "maintenance/submissions" },
-      { icon: "confirmation_number",  labelKey: "submittedTickets",     page: "maintenance/submissions/tickets" },
+      { icon: "report_problem",       labelKey: "submittedTickets",     page: "maintenance/submissions/tickets" },
+      { icon: "checklist",            labelKey: "maintenance",          page: "maintenance" },
     ]
   },
   { icon: "science",                  labelKey: "prototype",           page: "prototype",
@@ -137,7 +137,7 @@ export default function Sidebar({ activePage, badges = {}, mobileOpen = false, o
 
             return (
               <div key={item.page}>
-                <div className={`flex items-center ${isMobile ? "" : "min-w-[232px]"}`}>
+                <div className={`flex items-center ${isMobile ? "" : "min-w-[264px]"}`}>
                   <button
                     type="button"
                     onClick={() => {
@@ -263,7 +263,7 @@ export default function Sidebar({ activePage, badges = {}, mobileOpen = false, o
         <div className="mt-auto space-y-0.5 border-t border-outline-variant/20 px-3 pt-6">
           <button
             className={`w-full flex items-center gap-3 rounded-xl text-outline transition-all duration-200 hover:bg-primary/5 hover:text-primary dark:hover:bg-white/5 dark:hover:text-on-surface ${
-              isMobile ? "px-3 py-2.5" : "min-w-[232px] px-0 py-2.5"
+              isMobile ? "px-3 py-2.5" : "min-w-[264px] px-0 py-2.5"
             }`}
             onClick={onOpenSettings}
             title={t("settings")}
@@ -274,7 +274,7 @@ export default function Sidebar({ activePage, badges = {}, mobileOpen = false, o
           </button>
           <button
             className={`w-full flex items-center gap-3 rounded-xl text-error/70 transition-all duration-200 hover:bg-error/5 hover:text-error dark:text-outline dark:hover:bg-white/5 dark:hover:text-on-surface ${
-              isMobile ? "px-3 py-2.5" : "min-w-[232px] px-0 py-2.5"
+              isMobile ? "px-3 py-2.5" : "min-w-[264px] px-0 py-2.5"
             }`}
             onClick={onLogout}
             title={t("logout")}
@@ -290,7 +290,7 @@ export default function Sidebar({ activePage, badges = {}, mobileOpen = false, o
 
   return (
     <>
-      <aside className={`group fixed left-0 top-0 z-[45] hidden h-full w-16 overflow-hidden sidebar-glass py-6 font-headline text-sm font-medium transition-[width] duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] hover:w-64 md:flex md:flex-col ${className}`}>
+      <aside className={`group fixed left-0 top-0 z-[45] hidden h-full w-16 overflow-hidden sidebar-glass py-6 font-headline text-sm font-medium transition-[width] duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] hover:w-72 md:flex md:flex-col ${className}`}>
         {renderSidebarContent(false)}
       </aside>
 

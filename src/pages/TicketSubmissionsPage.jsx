@@ -2232,15 +2232,33 @@ export default function TicketSubmissionsPage() {
         subtitleClassName="max-w-3xl leading-6 text-outline"
         className="mb-6"
         actions={(
-          <button
-            type="button"
-            onClick={() => runTicketExport("filtered")}
-            disabled={loading || exporting}
-            className="inline-flex items-center gap-2 rounded-xl border border-separator/40 bg-white px-4 py-2.5 text-sm font-semibold text-on-surface shadow-xs hover:border-primary/40 hover:text-primary transition active:scale-95 disabled:opacity-50 dark:bg-surface-container"
-          >
-            <span className="material-symbols-outlined text-primary" style={{ fontSize: 18 }}>download</span>
-            {exporting ? (isJa ? "出力中…" : "Exporting...") : (t("exportCsv") || "Export CSV")}
-          </button>
+          <>
+            <button
+              type="button"
+              onClick={() => navigate("/maintenance/submissions")}
+              className="inline-flex items-center gap-2 rounded-xl border border-outline-variant/30 bg-surface-container px-4 py-2.5 text-sm font-semibold text-on-surface transition-all duration-150 hover:border-primary/30 hover:bg-surface-container-high active:scale-95"
+            >
+              <span className="material-symbols-outlined text-primary" style={{ fontSize: 18 }}>table_chart</span>
+              {isJa ? "点検提出履歴" : "Checklist Submissions"}
+            </button>
+            <button
+              type="button"
+              onClick={() => navigate("/maintenance")}
+              className="inline-flex items-center gap-2 rounded-xl border border-outline-variant/30 bg-surface-container px-4 py-2.5 text-sm font-semibold text-on-surface transition-all duration-150 hover:border-primary/30 hover:bg-surface-container-high active:scale-95"
+            >
+              <span className="material-symbols-outlined" style={{ fontSize: 18 }}>checklist</span>
+              {isJa ? "点検フォーム管理" : "Checklist Forms"}
+            </button>
+            <button
+              type="button"
+              onClick={() => runTicketExport("filtered")}
+              disabled={loading || exporting}
+              className="inline-flex items-center gap-2 rounded-xl border border-separator/40 bg-white px-4 py-2.5 text-sm font-semibold text-on-surface shadow-xs hover:border-primary/40 hover:text-primary transition active:scale-95 disabled:opacity-50 dark:bg-surface-container"
+            >
+              <span className="material-symbols-outlined text-primary" style={{ fontSize: 18 }}>download</span>
+              {exporting ? (isJa ? "出力中…" : "Exporting...") : (t("exportCsv") || "Export CSV")}
+            </button>
+          </>
         )}
       />
 
@@ -2248,10 +2266,10 @@ export default function TicketSubmissionsPage() {
 
       <div className="mb-6 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
         <SummaryCard
-          label={isJa ? "提出チケット総数" : "Submitted Tickets"}
+          label={isJa ? "点検不具合・NG総数" : "Total Defects / Tickets"}
           value={formatTicketNumber(summary.totalTickets)}
           subtitle={isJa ? "現在のフィルター条件に一致" : "Matching current filters"}
-          icon="confirmation_number"
+          icon="report_problem"
           accent="bg-primary/10 text-primary"
         />
         <SummaryCard
