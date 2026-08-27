@@ -8,7 +8,14 @@ import MachineExportModal from "../components/MachineExportModal";
 import PageHeader from "../components/PageHeader";
 import SensorDevicePhotoPreviewModal from "../components/SensorDevicePhotoPreviewModal";
 import { useLanguage } from "../contexts/LanguageContext";
-import { fetchCheckFormRecordById, fetchCheckFormTemplates, fetchCheckFormRecords, fetchNgReportsByRecordIds, fetchSetsubiDBRecords } from "../services/api";
+import {
+  fetchCheckFormRecordById,
+  fetchCheckFormTemplateById,
+  fetchCheckFormTemplates,
+  fetchCheckFormRecords,
+  fetchNgReportsByRecordIds,
+  fetchSetsubiDBRecords,
+} from "../services/api";
 import {
   CHECKLIST_SUBMISSION_ADVANCED_FILTER_FIELDS,
   buildChecklistSubmissionAdvancedFilterClauses,
@@ -829,7 +836,7 @@ function SubmissionPickerModal({ dateLabel, factory, machineName, onClose, onSel
   );
 }
 
-function RecordDetailModal({ defaultTab = "submission", form, initialTicketFocusHint = null, onBack = null, onClose, record }) {
+function RecordDetailModal({ defaultTab = "submission", form, initialTicketFocusHint = null, onBack = null, onClose, record, templatesById = null }) {
   const navigate = useNavigate();
   const { language } = useLanguage();
   const isJa = language === "ja";
@@ -845,19 +852,47 @@ function RecordDetailModal({ defaultTab = "submission", form, initialTicketFocus
   const [expandedHistoryKeys, setExpandedHistoryKeys] = useState(new Set());
   const ticketRefs = useRef(new Map());
 
+  const targetTemplateId = normalizeId(form?._id ?? record?.formId ?? record?.templateId ?? record?.checkFormTemplateId);
+  const matchedTemplate = templatesById?.get(targetTemplateId) ?? form ?? null;
+  const [fetchedTemplate, setFetchedTemplate] = useState(null);
+
+  useEffect(() => {
+    let active = true;
+    if (targetTemplateId && (!matchedTemplate || !Array.isArray(matchedTemplate.fields) || matchedTemplate.fields.length === 0 || !matchedTemplate.name_en)) {
+      fetchCheckFormTemplateById(targetTemplateId)
+        .then((tpl) => {
+          if (active && tpl) setFetchedTemplate(tpl);
+        })
+        .catch(() => {});
+    }
+    return () => { active = false; };
+  }, [targetTemplateId, matchedTemplate]);
+
+  const activeTemplate = matchedTemplate || fetchedTemplate || form || null;
+
+  const templateFieldsMap = useMemo(() => {
+    const map = new Map();
+    const tFields = Array.isArray(activeTemplate?.fields) ? activeTemplate.fields : [];
+    for (const f of tFields) {
+      if (f.id) map.set(String(f.id), f);
+      if (f.fieldId) map.set(String(f.fieldId), f);
+    }
+    return map;
+  }, [activeTemplate]);
+
   const recordAnswers = Array.isArray(record?.answers)
     ? record.answers.filter((field) => field.type !== "name")
     : [];
   const fields = recordAnswers.length > 0
     ? recordAnswers
-    : (form?.fields ?? []).filter((field) => field.type !== "name");
+    : (activeTemplate?.fields ?? form?.fields ?? []).filter((field) => field.type !== "name");
   const responses = record?.responses ?? {};
   const recordId = normalizeId(record?._id ?? record?.recordId);
   const formName = isJa
-    ? (form?.name_ja || form?.name || record?.formName_ja || record?.formName || "点検提出")
-    : (form?.name_en || form?.name || record?.formName_en || record?.formName || "Checklist Submission");
-  const recordFactory = form?.工場 ?? record?.factory ?? "";
-  const recordSchedule = record?.schedule ?? form?.schedule ?? "";
+    ? (activeTemplate?.name_ja || activeTemplate?.name || form?.name_ja || form?.name || record?.formName_ja || record?.formName || "点検提出")
+    : (activeTemplate?.name_en || activeTemplate?.name || form?.name_en || form?.name || record?.formName_en || record?.formName || "Checklist Submission");
+  const recordFactory = form?.工場 ?? record?.factory ?? activeTemplate?.工場 ?? "";
+  const recordSchedule = record?.schedule ?? form?.schedule ?? activeTemplate?.schedule ?? "";
   const modalTabItems = useMemo(() => {
     if (isReferenceRecord) {
       return [{
@@ -1241,6 +1276,7 @@ function RecordDetailModal({ defaultTab = "submission", form, initialTicketFocus
               {fields.length === 0 && <p className="text-sm text-outline">No fields recorded.</p>}
               {fields.map((field) => {
                 const fieldId = field.fieldId ?? field.id;
+                const templateField = templateFieldsMap.get(String(fieldId)) || {};
                 const photo = field.fieldPhotoURL || responses[`${fieldId}_photo`];
                 const value = isReferenceRecord ? "" : formatValue(field);
                 const fieldStatus = getFieldStatus(field);
@@ -1257,6 +1293,14 @@ function RecordDetailModal({ defaultTab = "submission", form, initialTicketFocus
                 const hasOptionalNote = isOptional || (!isDefect && Boolean(matchingTicket));
                 const canOpenTicket = (isProblemField || Boolean(matchingTicket)) && hasTicketTabContent;
                 const cardIsClickable = canOpenTicket && (matchingTicket || ticketsLoading || tickets.length === 0);
+
+                const labelJa = field.label_ja || templateField.label_ja || field.label || templateField.label || "";
+                const labelEn = field.label_en || templateField.label_en || field.label || templateField.label || "";
+                const descJa = field.description_ja || templateField.description_ja || field.description || templateField.description || "";
+                const descEn = field.description_en || templateField.description_en || field.description || templateField.description || "";
+
+                const displayFieldLabel = isJa ? (labelJa || labelEn || (field.type === "name" ? "名前" : "無題")) : (labelEn || labelJa || (field.type === "name" ? "Name" : "Untitled"));
+                const displayFieldDesc = isJa ? (descJa || descEn || "") : (descEn || descJa || "");
 
                 return (
                   <div
@@ -1289,16 +1333,12 @@ function RecordDetailModal({ defaultTab = "submission", form, initialTicketFocus
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2">
                           <p className="truncate text-sm font-semibold text-on-surface">
-                            {isJa
-                              ? (field.label_ja || field.label || field.label_en || <span className="italic text-outline">無題</span>)
-                              : (field.label_en || field.label || field.label_ja || <span className="italic text-outline">Untitled</span>)}
+                            {displayFieldLabel}
                           </p>
                         </div>
-                        {field.description && (
+                        {displayFieldDesc && (
                           <p className="mt-0.5 text-xs text-outline whitespace-pre-line">
-                            {isJa
-                              ? (field.description_ja || field.description || field.description_en)
-                              : (field.description_en || field.description || field.description_ja)}
+                            {displayFieldDesc}
                           </p>
                         )}
                         {answeredAtLabel && (
@@ -1449,6 +1489,20 @@ function RecordDetailModal({ defaultTab = "submission", form, initialTicketFocus
                 const isHighlightedTicket = tickets.length > 1 && highlightedTicketKey === ticketKey;
                 const isTicketOptional = isOptionalTicket(ticket, fields);
                 const statusMeta = getTicketStatusMeta(ticket.status);
+
+                const templateField = templateFieldsMap.get(String(ticket.fieldId)) || {};
+                const ticketLabelJa = ticket.fieldLabel_ja || templateField.label_ja || ticket.fieldLabel || templateField.label || "";
+                const ticketLabelEn = ticket.fieldLabel_en || templateField.label_en || ticket.fieldLabel || templateField.label || "";
+                const displayTicketLabel = isJa ? (ticketLabelJa || ticketLabelEn || "無題") : (ticketLabelEn || ticketLabelJa || "Untitled field");
+
+                const displayReason = isJa
+                  ? (ticket.reason_ja || ticket.reason || ticket.reason_en || (isTicketOptional ? "連絡・申し送り" : "理由の入力はありません"))
+                  : (ticket.reason_en || ticket.reason || ticket.reason_ja || (isTicketOptional ? "Optional Note" : "No reason provided."));
+
+                const displayFixReason = isJa
+                  ? (ticket.fixReason_ja || ticket.fixReason || ticket.fixReason_en || "処置メモはありません")
+                  : (ticket.fixReason_en || ticket.fixReason || ticket.fixReason_ja || "No fix note provided.");
+
                 return (
                   <article
                     key={ticketKey}
@@ -1465,7 +1519,7 @@ function RecordDetailModal({ defaultTab = "submission", form, initialTicketFocus
                     <div className="flex flex-wrap items-start justify-between gap-3">
                       <div className="min-w-0 flex-1">
                         <div className="flex flex-wrap items-center gap-2">
-                          <h4 className="truncate text-sm font-semibold text-on-surface">{ticket.fieldLabel || "Untitled field"}</h4>
+                          <h4 className="truncate text-sm font-semibold text-on-surface">{displayTicketLabel}</h4>
                           {isHighlightedTicket && (
                             <span className="inline-flex items-center gap-1 rounded-full bg-primary px-2.5 py-0.5 text-[10px] font-bold text-on-primary shadow-xs">
                               <span className="material-symbols-outlined" style={{ fontSize: 12 }}>my_location</span>
@@ -1528,12 +1582,12 @@ function RecordDetailModal({ defaultTab = "submission", form, initialTicketFocus
                       <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">
                         {isTicketOptional ? (isJa ? "連絡・申し送り事項" : "Optional Note") : (isJa ? "NG理由" : "NG Reason")}
                       </p>
-                      <p className="mt-1 text-sm leading-6 text-on-surface">{ticket.reason || "No reason provided."}</p>
+                      <p className="mt-1 text-sm leading-6 text-on-surface">{displayReason}</p>
                       <div className="mt-2 flex flex-wrap gap-3 text-xs text-outline">
                         <span className="inline-flex items-center gap-1">
                           <span className="material-symbols-outlined" style={{ fontSize: 14 }}>schedule</span>
                           {ticket.createdAt
-                            ? new Date(ticket.createdAt).toLocaleString("ja-JP", { year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })
+                            ? new Date(ticket.createdAt).toLocaleString(isJa ? "ja-JP" : "en-US", { year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })
                             : "—"}
                         </span>
                         {ticket.completedBy && (
@@ -1554,7 +1608,7 @@ function RecordDetailModal({ defaultTab = "submission", form, initialTicketFocus
                             >
                               <img
                                 src={imageUrl}
-                                alt={ticket.fieldLabel || "ticket"}
+                                alt={displayTicketLabel}
                                 className="h-24 w-full object-cover transition duration-300 group-hover:scale-[1.02]"
                               />
                             </button>
@@ -1566,12 +1620,12 @@ function RecordDetailModal({ defaultTab = "submission", form, initialTicketFocus
                     {/* Latest Fix — shown only when ticket is closed */}
                     {normalizeTicketStatusValue(ticket.status) === "closed" && ticket.closedAt && (
                       <div className="mt-3 rounded-2xl border border-emerald-500/20 bg-emerald-500/8 px-4 py-3">
-                        <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-emerald-700 dark:text-emerald-400">Latest Fix</p>
-                        <p className="mt-1 text-sm leading-6 text-on-surface">{ticket.fixReason || "No fix note provided."}</p>
+                        <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-emerald-700 dark:text-emerald-400">{isJa ? "最新の処置内容" : "Latest Fix"}</p>
+                        <p className="mt-1 text-sm leading-6 text-on-surface">{displayFixReason}</p>
                         <div className="mt-2 flex flex-wrap gap-3 text-xs text-outline">
                           <span className="inline-flex items-center gap-1">
                             <span className="material-symbols-outlined text-emerald-600" style={{ fontSize: 14 }}>task_alt</span>
-                            {new Date(ticket.closedAt).toLocaleString("ja-JP", { year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
+                            {new Date(ticket.closedAt).toLocaleString(isJa ? "ja-JP" : "en-US", { year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
                           </span>
                           {(ticket.closedBy || ticket.closedByUsername) && (
                             <span className="inline-flex items-center gap-1">
@@ -2756,6 +2810,7 @@ export default function ChecklistSubmissionsPage() {
         <RecordDetailModal
           record={selectedCell.record}
           form={selectedCell.form}
+          templatesById={templatesById}
           defaultTab={selectedCell.defaultTab ?? "submission"}
           initialTicketFocusHint={selectedCell.initialTicketFocusHint ?? null}
           onBack={selectedCell.returnToPicker ? () => setSelectedCell(selectedCell.returnToPicker) : null}
