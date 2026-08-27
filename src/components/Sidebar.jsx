@@ -87,7 +87,7 @@ function isActiveFor(item, activePage) {
 
 export default function Sidebar({ activePage, badges = {}, mobileOpen = false, onClose, onLogout, onNavigate, onOpenSettings, className = "" }) {
   const [openItems, setOpenItems] = useState(() => new Set());
-  const { t } = useLanguage();
+  const { t, language, changeLanguage } = useLanguage();
 
   useEffect(() => {
     if (!mobileOpen) return undefined;
@@ -273,12 +273,16 @@ export default function Sidebar({ activePage, badges = {}, mobileOpen = false, o
             className={`w-full flex items-center gap-3 rounded-xl text-outline transition-all duration-200 hover:bg-primary/5 hover:text-primary dark:hover:bg-white/5 dark:hover:text-on-surface ${
               isMobile ? "px-3 py-2.5" : "min-w-[264px] px-0 py-2.5"
             }`}
-            onClick={onOpenSettings}
-            title={t("settings")}
+            onClick={() => changeLanguage(language === "ja" ? "en" : "ja")}
+            title={language === "ja" ? "Switch to English" : "日本語に切り替え"}
             type="button"
           >
-            <span className={`material-symbols-outlined ${isMobile ? "" : "w-10 flex items-center justify-center"}`}>settings</span>
-            <span className={isMobile ? "whitespace-nowrap" : "whitespace-nowrap opacity-0 transition-opacity duration-200 group-hover:opacity-100"}>{t("settings")}</span>
+            <span className={`text-base ${isMobile ? "" : "w-10 flex items-center justify-center"}`}>
+              {language === "ja" ? "🇯🇵" : "🇺🇸"}
+            </span>
+            <span className={isMobile ? "whitespace-nowrap text-xs font-semibold" : "whitespace-nowrap text-xs font-semibold opacity-0 transition-opacity duration-200 group-hover:opacity-100"}>
+              {language === "ja" ? "日本語" : "English"}
+            </span>
           </button>
           <button
             className={`w-full flex items-center gap-3 rounded-xl text-error/70 transition-all duration-200 hover:bg-error/5 hover:text-error dark:text-outline dark:hover:bg-white/5 dark:hover:text-on-surface ${
