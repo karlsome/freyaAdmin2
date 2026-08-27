@@ -669,12 +669,13 @@ function TicketStatusPill({ status }) {
   );
 }
 
-function TemplateQuickPeekModal({ templateId, activeFieldId, onClose }) {
+function TemplateQuickPeekModal({ templateId, activeFieldId, isOptional = false, onClose }) {
   const { language, t } = useLanguage();
   const [template, setTemplate] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [previewImage, setPreviewImage] = useState(null);
+  const targetItemRef = useRef(null);
 
   useEffect(() => {
     let active = true;
@@ -702,6 +703,18 @@ function TemplateQuickPeekModal({ templateId, activeFieldId, onClose }) {
     load();
     return () => { active = false; };
   }, [templateId, t]);
+
+  useEffect(() => {
+    if (!loading && template && targetItemRef.current) {
+      const timer = setTimeout(() => {
+        targetItemRef.current?.scrollIntoView({
+          behavior: "smooth",
+          block: "center",
+        });
+      }, 150);
+      return () => clearTimeout(timer);
+    }
+  }, [loading, template, activeFieldId]);
 
   const templateName = language === "en" ? (template?.name_en || template?.name) : (template?.name_ja || template?.name);
   const templateDesc = language === "en" ? (template?.description_en || template?.description) : (template?.description_ja || template?.description);
@@ -738,52 +751,55 @@ function TemplateQuickPeekModal({ templateId, activeFieldId, onClose }) {
   return (
     <>
       <div
-        className="fixed inset-0 z-[90] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm"
+        className="fixed inset-0 z-[90] flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm"
         onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}
       >
-        <div className="flex max-h-[85vh] w-full max-w-2xl flex-col overflow-hidden rounded-3xl bg-white shadow-2xl dark:bg-surface" onMouseDown={(e) => e.stopPropagation()}>
-          <div className="flex items-center justify-between border-b border-separator/40 bg-surface-container px-6 py-4">
+        <div className="dashboard-section rounded-2xl w-full max-w-2xl max-h-[85vh] flex flex-col overflow-hidden bg-surface shadow-2xl" onMouseDown={(e) => e.stopPropagation()}>
+          <div className="sticky top-0 z-10 flex items-start justify-between border-b border-separator/40 bg-surface/90 px-6 py-5 backdrop-blur-md">
             <div>
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-2.5 py-0.5 text-[11px] font-bold text-primary uppercase tracking-wider">
-                <span className="material-symbols-outlined" style={{ fontSize: 14 }}>assignment</span>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-primary">
                 {t("quickPeekTemplate") || "Quick Peek Template"}
-              </span>
-              <h3 className="mt-1 text-base font-extrabold text-on-surface">{templateName || (t("loadingTemplate") || "Loading...")}</h3>
+              </p>
+              <h3 className="mt-1 text-lg font-semibold text-on-surface">{templateName || (t("loadingTemplate") || "Loading...")}</h3>
             </div>
-            <button type="button" onClick={onClose} className="rounded-xl p-1.5 text-outline hover:bg-surface-container-high transition">
-              <span className="material-symbols-outlined" style={{ fontSize: 20 }}>close</span>
+            <button
+              type="button"
+              onClick={onClose}
+              className="p-2 rounded-xl text-outline hover:bg-surface-container hover:text-on-surface transition-all duration-150 active:scale-95"
+            >
+              <span className="material-symbols-outlined" style={{ fontSize: 18 }}>close</span>
             </button>
           </div>
 
           <div className="flex-1 overflow-y-auto px-6 py-5">
             {loading ? (
               <div className="flex flex-col items-center justify-center py-12 text-outline gap-3">
-                <span className="material-symbols-outlined animate-spin text-primary" style={{ fontSize: 28 }}>sync</span>
-                <p className="text-sm font-medium">{t("loadingTemplate") || "Loading template..."}</p>
+                <span className="material-symbols-outlined animate-spin text-primary" style={{ fontSize: 24 }}>sync</span>
+                <p className="text-xs font-medium">{t("loadingTemplate") || "Loading template..."}</p>
               </div>
             ) : error ? (
-              <div className="rounded-2xl border border-red-500/20 bg-red-500/5 p-4 text-center text-sm font-semibold text-red-600">
+              <div className="rounded-2xl border border-error/20 bg-error/5 p-4 text-center text-xs font-semibold text-error">
                 {error}
               </div>
             ) : (
               <div className="space-y-4">
                 <div className="rounded-2xl border border-separator/40 bg-surface-container-low p-4">
                   {templateDesc && <p className="text-xs text-outline leading-relaxed whitespace-pre-line mb-3">{templateDesc}</p>}
-                  <div className="flex flex-wrap gap-2 text-[11px] font-semibold text-outline">
+                  <div className="flex flex-wrap gap-2 text-xs font-semibold text-outline">
                     {template?.工場 && (
-                      <span className="rounded-lg bg-black/5 dark:bg-white/10 px-2.5 py-1 flex items-center gap-1">
-                        <span className="material-symbols-outlined" style={{ fontSize: 13 }}>factory</span>
+                      <span className="rounded-lg bg-surface-container px-2.5 py-1 flex items-center gap-1 text-on-surface">
+                        <span className="material-symbols-outlined" style={{ fontSize: 14 }}>factory</span>
                         {template.工場}
                       </span>
                     )}
                     {template?.schedule && (
-                      <span className="rounded-lg bg-black/5 dark:bg-white/10 px-2.5 py-1 flex items-center gap-1 capitalize">
-                        <span className="material-symbols-outlined" style={{ fontSize: 13 }}>event_repeat</span>
+                      <span className="rounded-lg bg-surface-container px-2.5 py-1 flex items-center gap-1 capitalize text-on-surface">
+                        <span className="material-symbols-outlined" style={{ fontSize: 14 }}>event_repeat</span>
                         {template.schedule}
                       </span>
                     )}
                     {Array.isArray(template?.fields) && (
-                      <span className="rounded-lg bg-primary/10 px-2.5 py-1 text-primary font-bold">
+                      <span className="rounded-lg bg-primary/10 px-2.5 py-1 text-primary font-semibold">
                         {template.fields.length} Check Items
                       </span>
                     )}
@@ -791,7 +807,7 @@ function TemplateQuickPeekModal({ templateId, activeFieldId, onClose }) {
                 </div>
 
                 <div className="space-y-2.5">
-                  <p className="text-xs font-bold uppercase tracking-wider text-outline">Checklist Items ({template?.fields?.length || 0})</p>
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Checklist Items ({template?.fields?.length || 0})</p>
                   {Array.isArray(template?.fields) && template.fields.map((f, idx) => {
                     const isCurrentItem = activeFieldId && (String(f.id) === String(activeFieldId));
                     const label = language === "en" ? (f.label_en || f.label) : (f.label_ja || f.label);
@@ -800,24 +816,34 @@ function TemplateQuickPeekModal({ templateId, activeFieldId, onClose }) {
                     return (
                       <div
                         key={f.id || idx}
+                        ref={isCurrentItem ? targetItemRef : null}
                         className={joinClasses(
-                          "rounded-2xl border p-4 transition-all",
+                          "rounded-2xl border p-4 transition-all scroll-mt-6",
                           isCurrentItem
-                            ? "border-red-500/40 bg-red-500/5 shadow-sm ring-2 ring-red-500/20 dark:bg-red-950/20"
+                            ? isOptional
+                              ? "border-blue-500/40 bg-blue-500/5 shadow-xs ring-1 ring-blue-500/30 dark:bg-blue-950/20"
+                              : "border-error/40 bg-error/5 shadow-xs ring-1 ring-error/30 dark:bg-red-950/20"
                             : "border-separator/40 bg-surface-container hover:border-separator/80"
                         )}
                       >
                         <div className="flex items-start justify-between gap-3">
                           <div className="flex items-start gap-2.5 min-w-0 flex-1">
-                            <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-surface-container-high text-[11px] font-bold text-outline">
+                            <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-surface-container-high text-[11px] font-semibold text-outline">
                               {idx + 1}
                             </span>
                             <div className="min-w-0 flex-1">
                               <div className="flex flex-wrap items-center gap-2">
                                 {isCurrentItem && (
-                                  <span className="inline-flex items-center gap-1 rounded-full bg-red-600 px-2 py-0.5 text-[10px] font-bold text-white shadow-xs">
-                                    <span className="material-symbols-outlined" style={{ fontSize: 12 }}>error</span>
-                                    {t("currentTicketItem") || "Current Ticket Item (NG)"}
+                                  <span className={joinClasses(
+                                    "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold shadow-2xs",
+                                    isOptional ? "bg-blue-600 text-white" : "bg-error text-white"
+                                  )}>
+                                    <span className="material-symbols-outlined" style={{ fontSize: 12 }}>
+                                      {isOptional ? "chat_bubble" : "error"}
+                                    </span>
+                                    {isOptional
+                                      ? (language === "ja" ? "対象項目 (申し送り)" : "Target Item (Optional)")
+                                      : (t("currentTicketItem") || (language === "ja" ? "対象項目 (不具合)" : "Target Item (Defect)"))}
                                   </span>
                                 )}
                                 {(() => {
@@ -828,22 +854,17 @@ function TemplateQuickPeekModal({ templateId, activeFieldId, onClose }) {
                                     : (t("preProductionTiming") || (language === "en" ? "Pre-Production" : "作業前点検"));
 
                                   return (
-                                    <span className={joinClasses(
-                                      "rounded-md px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider border shadow-2xs",
-                                      isPostTiming
-                                        ? "bg-purple-500/10 text-purple-700 dark:text-purple-300 dark:bg-purple-500/20 border-purple-500/20"
-                                        : "bg-sky-500/10 text-sky-700 dark:text-sky-300 dark:bg-sky-500/20 border-sky-500/20"
-                                    )}>
+                                    <span className="rounded-md bg-surface-container-high px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">
                                       {timingLabel}
                                     </span>
                                   );
                                 })()}
-                                <span className="rounded-md bg-outline/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-outline">
+                                <span className="rounded-md bg-surface-container-high px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">
                                   {f.type || "toggle"}
                                 </span>
                               </div>
 
-                              <p className="mt-1.5 text-sm font-bold text-on-surface leading-snug">{label || "Untitled check item"}</p>
+                              <p className="mt-1 text-sm font-semibold text-on-surface leading-snug">{label || "Untitled check item"}</p>
                               {desc && <p className="mt-1 text-xs text-outline leading-relaxed whitespace-pre-line">{desc}</p>}
                             </div>
                           </div>
@@ -890,9 +911,11 @@ function TicketDetailModal({ actionBusy = false, onClose, onCloseTicket = null, 
   const [previewImage, setPreviewImage] = useState(null);
   const [peekTemplateId, setPeekTemplateId] = useState(null);
   const isTicketOptional = isOptionalTicket(ticket);
-  const statusMeta = getTicketStatusMeta(ticket?.status);
+  const isJa = language === "ja";
   const expectedRange = formatTicketRange(ticket);
   const normalizedStatus = normalizeTicketStatusValue(ticket?.status);
+  const isClosed = normalizedStatus === "closed";
+
   const activeFixReason = language === "en"
     ? (ticket?.fixReason_en || ticket?.fixReason)
     : (ticket?.fixReason_ja || ticket?.fixReason);
@@ -962,123 +985,83 @@ function TicketDetailModal({ actionBusy = false, onClose, onCloseTicket = null, 
 
   return (
     <>
-      <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
+      <div
+        className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm"
+        onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}
+      >
         <div
-          className="dashboard-section flex max-h-[90vh] w-full max-w-4xl flex-col overflow-hidden rounded-3xl bg-white shadow-2xl dark:bg-surface"
+          className="dashboard-section rounded-2xl w-full max-w-4xl max-h-[92vh] flex flex-col overflow-hidden bg-surface shadow-2xl"
           onMouseDown={(event) => event.stopPropagation()}
         >
-          {/* Hero Header Banner */}
-          <div className={joinClasses(
-            "relative px-6 py-5 border-b flex flex-wrap items-center justify-between gap-4 transition-colors",
-            normalizedStatus === "closed"
-              ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-950 dark:bg-emerald-950/30 dark:border-emerald-500/30 dark:text-emerald-200"
-              : isTicketOptional
-                ? "bg-blue-500/10 border-blue-500/20 text-blue-950 dark:bg-blue-950/30 dark:border-blue-500/30 dark:text-blue-200"
-                : "bg-red-500/10 border-red-500/20 text-red-950 dark:bg-red-950/30 dark:border-red-500/30 dark:text-red-200"
-          )}>
-            <div className="min-w-0 flex-1">
+          {/* Sticky Modal Header */}
+          <div className="sticky top-0 z-10 rounded-t-2xl px-6 py-5 flex items-start justify-between border-b border-separator/40 bg-surface/90 backdrop-blur-md">
+            <div className="min-w-0 flex-1 pr-4">
               <div className="flex flex-wrap items-center gap-2">
-                <span className={joinClasses(
-                  "inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold uppercase tracking-wider shadow-sm",
-                  normalizedStatus === "closed"
-                    ? "bg-emerald-600 text-white"
-                    : isTicketOptional
-                      ? "bg-blue-600 text-white"
-                      : "bg-red-600 text-white animate-pulse"
-                )}>
-                  <span className="material-symbols-outlined" style={{ fontSize: 16 }}>
-                    {normalizedStatus === "closed" ? "check_circle" : isTicketOptional ? "chat_bubble" : "warning"}
-                  </span>
-                  {normalizedStatus === "closed"
-                    ? (t("ticketResolvedClosed") || "Resolved & Closed")
-                    : isTicketOptional
-                      ? (language === "ja" ? "連絡・申し送り" : "Optional Note")
-                      : (t("openActionRequired") || "Action Required • Open Ticket")}
-                </span>
-                <TicketTypePill ticket={ticket} language={language} />
-                {ticket.ticketNo != null && (
-                  <span className="text-xs font-bold opacity-75">#{ticket.ticketNo}</span>
-                )}
+                <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">
+                  {isTicketOptional
+                    ? (isJa ? "申し送りチケット" : "Optional Note Ticket")
+                    : (isJa ? "不具合・NGチケット" : "Defect Ticket")}
+                  {ticket.ticketNo != null && ` #${ticket.ticketNo}`}
+                </p>
               </div>
 
-              <h2 className="mt-2 text-xl font-extrabold tracking-tight truncate">
-                {activeFieldLabel || "Untitled NG Check Item"}
+              <h2 className="mt-1 text-xl font-semibold text-on-surface truncate">
+                {activeFieldLabel || "Untitled Check Item"}
               </h2>
 
-              <div className="mt-2 flex flex-wrap items-center gap-2 text-xs font-semibold">
-                <span className="inline-flex items-center gap-1 rounded-lg bg-black/5 px-2.5 py-1 dark:bg-white/10">
-                  <span className="material-symbols-outlined" style={{ fontSize: 15 }}>factory</span>
-                  {ticket.factory || "Factory"}
-                </span>
-                <span className="inline-flex items-center gap-1 rounded-lg bg-black/5 px-2.5 py-1 dark:bg-white/10">
-                  <span className="material-symbols-outlined" style={{ fontSize: 15 }}>precision_manufacturing</span>
-                  {ticket.machineName || ticket.加工設備 || "Equipment"}
-                </span>
-                <span className="inline-flex items-center gap-1 rounded-lg bg-black/5 px-2.5 py-1 dark:bg-white/10">
-                  <span className="material-symbols-outlined" style={{ fontSize: 15 }}>assignment</span>
-                  {activeFormName || "Form"}
-                </span>
-                <span className={joinClasses(
-                  "inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-bold border",
-                  (ticket.timing === "post" || String(ticket.timing_en || "").includes("Post"))
-                    ? "bg-purple-500/10 text-purple-700 dark:text-purple-300 dark:bg-purple-500/20 border-purple-500/20"
-                    : "bg-sky-500/10 text-sky-700 dark:text-sky-300 dark:bg-sky-500/20 border-sky-500/20"
-                )}>
-                  <span className="material-symbols-outlined" style={{ fontSize: 14 }}>
-                    {(ticket.timing === "post" || String(ticket.timing_en || "").includes("Post")) ? "event_available" : "schedule"}
+              <div className="mt-2.5 flex flex-wrap items-center gap-2">
+                <TicketTypePill ticket={ticket} language={language} />
+                <TicketStatusPill status={ticket?.status} />
+                {ticket.factory && (
+                  <span className="inline-flex items-center gap-1 rounded-lg bg-surface-container px-2.5 py-1 text-xs font-semibold text-on-surface">
+                    <span className="material-symbols-outlined text-outline" style={{ fontSize: 14 }}>factory</span>
+                    {ticket.factory}
                   </span>
-                  {language === "en" ? (ticket.timing_en || "Pre-Production Check") : (ticket.timing_ja || "作業前点検")}
-                </span>
+                )}
+                {(ticket.machineName || ticket.加工設備) && (
+                  <span className="inline-flex items-center gap-1 rounded-lg bg-surface-container px-2.5 py-1 text-xs font-semibold text-on-surface">
+                    <span className="material-symbols-outlined text-primary" style={{ fontSize: 14 }}>precision_manufacturing</span>
+                    {ticket.machineName || ticket.加工設備}
+                  </span>
+                )}
+                {activeFormName && (
+                  <span className="inline-flex items-center gap-1 rounded-lg bg-surface-container px-2.5 py-1 text-xs font-semibold text-on-surface">
+                    <span className="material-symbols-outlined text-outline" style={{ fontSize: 14 }}>assignment</span>
+                    {activeFormName}
+                  </span>
+                )}
+                {(ticket.timing || ticket.timing_en || ticket.timing_ja) && (
+                  <span className="inline-flex items-center gap-1 rounded-lg bg-surface-container px-2.5 py-1 text-xs font-semibold text-on-surface">
+                    <span className="material-symbols-outlined text-outline" style={{ fontSize: 14 }}>schedule</span>
+                    {language === "en" ? (ticket.timing_en || ticket.timing || "Pre-Production Check") : (ticket.timing_ja || "作業前点検")}
+                  </span>
+                )}
               </div>
             </div>
 
-            <div className="flex items-center gap-3">
-              {normalizedStatus === "closed" ? (
-                <button
-                  type="button"
-                  onClick={onReopenTicket}
-                  disabled={actionBusy || !onReopenTicket}
-                  className="inline-flex items-center gap-2 rounded-xl bg-amber-600 px-4 py-2.5 text-xs font-bold text-white shadow hover:bg-amber-700 active:scale-95 transition disabled:opacity-50"
-                >
-                  <span className="material-symbols-outlined" style={{ fontSize: 18 }}>published_with_changes</span>
-                  {actionBusy ? "Reopening..." : (t("reopenTicketBtn") || "Reopen Ticket")}
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  onClick={onCloseTicket}
-                  disabled={actionBusy || !onCloseTicket}
-                  className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-5 py-2.5 text-xs font-bold text-white shadow-lg shadow-emerald-600/25 hover:bg-emerald-700 active:scale-95 transition disabled:opacity-50"
-                >
-                  <span className="material-symbols-outlined" style={{ fontSize: 18 }}>task_alt</span>
-                  {actionBusy ? "Closing..." : (t("closeAndResolveTicketBtn") || "Close & Resolve Ticket")}
-                </button>
-              )}
-
-              <button
-                type="button"
-                onClick={onClose}
-                className="rounded-xl p-2 text-outline hover:bg-black/10 dark:hover:bg-white/10 transition active:scale-95"
-              >
-                <span className="material-symbols-outlined" style={{ fontSize: 20 }}>close</span>
-              </button>
-            </div>
+            <button
+              type="button"
+              onClick={onClose}
+              className="p-2 rounded-xl flex-shrink-0 text-outline hover:bg-surface-container hover:text-on-surface transition-all duration-150 active:scale-95"
+            >
+              <span className="material-symbols-outlined" style={{ fontSize: 18 }}>close</span>
+            </button>
           </div>
 
           {/* Subheader info bar */}
-          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-separator/30 bg-surface-container-low px-6 py-3 text-xs text-outline">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-separator/40 bg-surface-container-low/50 px-6 py-3 text-xs text-outline">
             <div className="flex flex-wrap items-center gap-4">
               <span className="inline-flex items-center gap-1.5 font-medium">
-                <span className="material-symbols-outlined text-primary" style={{ fontSize: 16 }}>schedule</span>
+                <span className="material-symbols-outlined text-outline/70" style={{ fontSize: 16 }}>schedule</span>
                 {formatTicketDateTime(ticket.createdAt)}
               </span>
               <span className="inline-flex items-center gap-1.5 font-medium">
-                <span className="material-symbols-outlined text-primary" style={{ fontSize: 16 }}>person</span>
+                <span className="material-symbols-outlined text-outline/70" style={{ fontSize: 16 }}>person</span>
                 {ticket.completedBy || "Unknown operator"}
               </span>
               {ticket.recordId && (
                 <span className="inline-flex items-center gap-1.5 font-medium">
-                  <span className="material-symbols-outlined text-primary" style={{ fontSize: 16 }}>fingerprint</span>
+                  <span className="material-symbols-outlined text-outline/70" style={{ fontSize: 16 }}>fingerprint</span>
                   {ticket.recordId}
                 </span>
               )}
@@ -1089,9 +1072,9 @@ function TicketDetailModal({ actionBusy = false, onClose, onCloseTicket = null, 
                 <button
                   type="button"
                   onClick={() => setPeekTemplateId(ticket.templateId || ticket.formId)}
-                  className="inline-flex items-center gap-1.5 rounded-lg border border-primary/20 bg-primary/5 px-3 py-1.5 font-semibold text-primary shadow-xs hover:border-primary/40 hover:bg-primary/10 transition active:scale-95"
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-separator/40 bg-surface px-3 py-1.5 text-xs font-semibold text-on-surface shadow-2xs hover:border-primary/40 hover:text-primary transition active:scale-95"
                 >
-                  <span className="material-symbols-outlined" style={{ fontSize: 16 }}>visibility</span>
+                  <span className="material-symbols-outlined" style={{ fontSize: 15 }}>visibility</span>
                   {t("quickPeekTemplate") || "Quick Peek Template"}
                 </button>
               )}
@@ -1100,9 +1083,9 @@ function TicketDetailModal({ actionBusy = false, onClose, onCloseTicket = null, 
                 <button
                   type="button"
                   onClick={onOpenChecklistSubmission}
-                  className="inline-flex items-center gap-1.5 rounded-lg border border-separator/50 bg-white px-3 py-1.5 font-semibold text-on-surface shadow-sm hover:border-primary hover:text-primary transition active:scale-95 dark:bg-surface-container"
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-separator/40 bg-surface px-3 py-1.5 text-xs font-semibold text-on-surface shadow-2xs hover:border-primary/40 hover:text-primary transition active:scale-95"
                 >
-                  <span className="material-symbols-outlined" style={{ fontSize: 16 }}>open_in_new</span>
+                  <span className="material-symbols-outlined" style={{ fontSize: 15 }}>open_in_new</span>
                   {t("viewFullChecklist") || "View Full Checklist"}
                 </button>
               )}
@@ -1113,49 +1096,65 @@ function TicketDetailModal({ actionBusy = false, onClose, onCloseTicket = null, 
           <div className="flex-1 overflow-y-auto px-6 py-6">
             <div className="grid gap-6 lg:grid-cols-2">
               
-              {/* Left Column: The Problem */}
+              {/* Left Column: Operator Input & Submission Details */}
               <div className="flex flex-col gap-4">
-                <div className="flex items-center gap-2 border-b border-separator/30 pb-2">
-                  <span className="material-symbols-outlined text-red-500" style={{ fontSize: 20 }}>report_problem</span>
-                  <h4 className="text-sm font-bold uppercase tracking-wider text-on-surface">
-                    {t("theProblem") || "The Problem"}
+                <div className="flex items-center gap-2 border-b border-separator/40 pb-2">
+                  <span className={`material-symbols-outlined ${isTicketOptional ? "text-blue-600" : "text-error"}`} style={{ fontSize: 18 }}>
+                    {isTicketOptional ? "chat_bubble" : "report_problem"}
+                  </span>
+                  <h4 className="text-xs font-semibold uppercase tracking-[0.18em] text-outline">
+                    {isTicketOptional
+                      ? (isJa ? "申し送り・連絡事項" : "Operator Note & Submission")
+                      : (isJa ? "指摘内容・NG理由" : "Defect & Operator Reason")}
                   </h4>
                 </div>
 
-                {/* Problem Box */}
-                <div className="rounded-2xl border border-red-500/20 bg-red-500/5 p-4 dark:bg-red-950/20">
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-red-600 dark:text-red-400 mb-1">
-                    {t("operatorNgReason") || "Operator NG Reason"}
+                {/* Note / Reason Box */}
+                <div className={`rounded-2xl border p-4 ${
+                  isTicketOptional
+                    ? "border-blue-500/20 bg-blue-500/5 dark:bg-blue-950/20"
+                    : "border-error/20 bg-error/5 dark:bg-red-950/20"
+                }`}>
+                  <p className={`text-[10px] font-semibold uppercase tracking-[0.18em] mb-1 ${
+                    isTicketOptional ? "text-blue-700 dark:text-blue-300" : "text-error dark:text-red-400"
+                  }`}>
+                    {isTicketOptional ? (isJa ? "申し送り内容" : "Operator Note") : (isJa ? "NG理由" : "Operator NG Reason")}
                   </p>
                   <p className="text-sm font-medium leading-relaxed text-on-surface">
-                    {activeReason ? `"${activeReason}"` : "No specific reason text provided."}
+                    {activeReason ? `"${activeReason}"` : (isJa ? "理由の入力はありません" : "No specific reason text provided.")}
                   </p>
                 </div>
 
                 {/* Value & Range Card */}
                 <div className="grid grid-cols-2 gap-3">
-                  <div className="rounded-2xl border border-separator/40 bg-surface-container p-3.5">
-                    <p className="text-[10px] font-bold uppercase tracking-wider text-outline">{t("submittedValue") || "Submitted Value"}</p>
-                    <p className="mt-1 text-sm font-extrabold text-red-600 dark:text-red-400">{ticket.answerValue || "NG"}</p>
+                  <div className="rounded-2xl border border-separator/40 bg-surface-container px-4 py-3">
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">
+                      {t("submittedValue") || "Submitted Value"}
+                    </p>
+                    <p className={`mt-1 text-sm font-semibold ${isTicketOptional ? "text-emerald-600 dark:text-emerald-400" : "text-error dark:text-red-400"}`}>
+                      {ticket.answerValue || (isTicketOptional ? "OK" : "NG")}
+                    </p>
                   </div>
-                  <div className="rounded-2xl border border-separator/40 bg-surface-container p-3.5">
-                    <p className="text-[10px] font-bold uppercase tracking-wider text-outline">
+                  <div className="rounded-2xl border border-separator/40 bg-surface-container px-4 py-3">
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">
                       {ticket.min != null || ticket.max != null ? (t("allowedRange") || "Allowed Range") : (t("expectedValue") || "Expected Value")}
                     </p>
-                    <p className="mt-1 text-sm font-semibold text-on-surface">{expectedRange || "OK"}</p>
+                    <p className="mt-1 text-sm font-semibold text-on-surface">
+                      {expectedRange || "OK"}
+                    </p>
                   </div>
                 </div>
 
-                {/* Defect Images */}
-                <div>
-                  <p className="text-xs font-bold uppercase tracking-wider text-outline mb-2 flex items-center gap-1.5">
-                    <span className="material-symbols-outlined text-primary" style={{ fontSize: 16 }}>photo_library</span>
-                    {t("defectEvidencePhotos") || "Defect Evidence Photos"} ({previewImages.length})
+                {/* Evidence / Attached Photos */}
+                <div className="rounded-2xl border border-separator/40 bg-surface-container p-4">
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-outline mb-3 flex items-center gap-2">
+                    <span className="material-symbols-outlined text-outline/70" style={{ fontSize: 16 }}>photo_library</span>
+                    {isTicketOptional ? (isJa ? "添付画像" : "Attached Photos") : (isJa ? "不具合写真" : "Evidence Photos")} ({previewImages.length})
                   </p>
 
                   {previewImages.length === 0 ? (
-                    <div className="rounded-2xl border border-dashed border-separator/50 bg-surface-container-low p-4 text-center text-xs text-outline">
-                      {t("noDefectPhotos") || "No defect photos attached."}
+                    <div className="rounded-xl border border-dashed border-separator/50 bg-surface-container-low px-4 py-6 text-center text-xs text-outline">
+                      {isJa ? "添付画像はありません" : "No photos attached."}
                     </div>
                   ) : (
                     <div className="grid grid-cols-2 gap-3">
@@ -1163,11 +1162,11 @@ function TicketDetailModal({ actionBusy = false, onClose, onCloseTicket = null, 
                         <div
                           key={imgObj.url || idx}
                           onClick={() => openPreviewImage(idx)}
-                          className="group relative aspect-video cursor-pointer overflow-hidden rounded-2xl border border-separator/40 bg-black/5 shadow-sm transition hover:shadow-md hover:border-primary"
+                          className="group relative aspect-video cursor-pointer overflow-hidden rounded-xl border border-separator/40 bg-black/5 shadow-xs transition hover:border-primary/60 hover:shadow-md"
                         >
-                          <img src={imgObj.url} alt={`Defect photo ${idx + 1}`} className="h-full w-full object-cover transition group-hover:scale-105" />
+                          <img src={imgObj.url} alt={`Photo ${idx + 1}`} className="h-full w-full object-cover transition duration-300 group-hover:scale-105" />
                           <div className="absolute inset-0 flex items-center justify-center bg-black/30 opacity-0 group-hover:opacity-100 transition">
-                            <span className="material-symbols-outlined text-white" style={{ fontSize: 24 }}>zoom_in</span>
+                            <span className="material-symbols-outlined text-white" style={{ fontSize: 20 }}>zoom_in</span>
                           </div>
                         </div>
                       ))}
@@ -1176,72 +1175,85 @@ function TicketDetailModal({ actionBusy = false, onClose, onCloseTicket = null, 
                 </div>
               </div>
 
-              {/* Right Column: The Solution & Audit Trail */}
+              {/* Right Column: Resolution & Maintenance Status */}
               <div className="flex flex-col gap-4">
-                <div className="flex items-center gap-2 border-b border-separator/30 pb-2">
-                  <span className="material-symbols-outlined text-emerald-500" style={{ fontSize: 20 }}>verified</span>
-                  <h4 className="text-sm font-bold uppercase tracking-wider text-on-surface">
-                    {t("theSolution") || "The Solution & Resolution"}
+                <div className="flex items-center gap-2 border-b border-separator/40 pb-2">
+                  <span className={`material-symbols-outlined ${isClosed ? "text-emerald-600" : "text-amber-500"}`} style={{ fontSize: 18 }}>
+                    {isClosed ? "verified" : "build"}
+                  </span>
+                  <h4 className="text-xs font-semibold uppercase tracking-[0.18em] text-outline">
+                    {isJa ? "対応状況・履歴" : "Status & Resolution"}
                   </h4>
                 </div>
 
                 {/* Resolution Details Card */}
-                {normalizedStatus === "closed" ? (
+                {isClosed ? (
                   <div className="rounded-2xl border border-emerald-500/25 bg-emerald-500/5 p-4 dark:bg-emerald-950/20">
                     <div className="flex items-center justify-between gap-2 border-b border-emerald-500/20 pb-2 mb-2">
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-300">
-                        Resolved by {ticket.closedBy || ticket.closedByUsername || "Maintenance User"}
+                      <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-emerald-700 dark:text-emerald-300 flex items-center gap-1.5">
+                        <span className="material-symbols-outlined" style={{ fontSize: 14 }}>check_circle</span>
+                        Resolved by {ticket.closedBy || ticket.closedByUsername || "Maintenance"}
                       </span>
                       <span className="text-[10px] text-outline">{formatTicketDateTime(ticket.closedAt)}</span>
                     </div>
 
                     {activeFixReason ? (
-                      <p className="text-sm font-medium leading-relaxed text-on-surface flex items-start gap-1.5">
-                        <span className="material-symbols-outlined text-emerald-600 mt-0.5" style={{ fontSize: 16 }}>build</span>
+                      <p className="text-sm font-medium leading-relaxed text-on-surface flex items-start gap-2 mt-2">
+                        <span className="material-symbols-outlined text-emerald-600 mt-0.5 shrink-0" style={{ fontSize: 16 }}>build</span>
                         <span>{activeFixReason}</span>
                       </p>
                     ) : (
-                      <p className="text-xs text-outline">{t("noResolutionProvided") || "No resolution notes recorded yet."}</p>
+                      <p className="text-xs text-outline">{t("noResolutionProvided") || "No resolution notes recorded."}</p>
                     )}
 
                     {/* Resolution Photo if attached */}
                     {Array.isArray(ticket.fixImageURLs) && ticket.fixImageURLs.length > 0 && (
                       <div className="mt-3 pt-3 border-t border-emerald-500/20">
-                        <p className="text-[10px] font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-300 mb-2">
+                        <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-emerald-700 dark:text-emerald-300 mb-2">
                           {t("resolutionEvidencePhoto") || "Fix Photo / Evidence"}
                         </p>
                         <div className="grid grid-cols-2 gap-2">
                           {ticket.fixImageURLs.map((fixUrl, fIdx) => (
                             <a key={fixUrl || fIdx} href={fixUrl} target="_blank" rel="noreferrer" className="block overflow-hidden rounded-xl border border-emerald-500/30 aspect-video hover:opacity-90">
-                              <img src={fixUrl} alt="Resolution photo" className="w-full h-full object-cover" />
+                              <img src={fixUrl} alt={`Fix evidence ${fIdx + 1}`} className="w-full h-full object-cover" />
                             </a>
                           ))}
                         </div>
                       </div>
                     )}
                   </div>
-                ) : (
-                  <div className="rounded-2xl border border-amber-500/30 bg-amber-500/5 p-4 text-xs text-amber-800 dark:text-amber-300">
-                    <p className="font-bold flex items-center gap-1.5 text-sm mb-1 text-amber-700 dark:text-amber-400">
-                      <span className="material-symbols-outlined" style={{ fontSize: 18 }}>hourglass_empty</span>
-                      {t("awaitingMaintenanceResolution") || "Awaiting Maintenance Resolution"}
+                ) : isTicketOptional ? (
+                  <div className="rounded-2xl border border-blue-500/25 bg-blue-500/5 p-4 text-xs text-blue-800 dark:text-blue-300">
+                    <p className="font-semibold flex items-center gap-1.5 text-sm mb-1 text-blue-700 dark:text-blue-400">
+                      <span className="material-symbols-outlined" style={{ fontSize: 18 }}>info</span>
+                      {isJa ? "申し送り事項が登録されています" : "Optional Note Recorded"}
                     </p>
                     <p className="mt-1 leading-relaxed opacity-90">
-                      {t("awaitingResolutionDescription") || "This ticket is currently OPEN. Click the red \"Close & Resolve Ticket\" button above once maintenance has completed the fix."}
+                      {isJa ? "このチケットは作業者からの連絡事項です。必要に応じて確認後に解決（完了）へ更新してください。" : "This ticket records an operator note/remark for reference. You can mark it resolved when acknowledged."}
+                    </p>
+                  </div>
+                ) : (
+                  <div className="rounded-2xl border border-amber-500/25 bg-amber-500/5 p-4 text-xs text-amber-800 dark:text-amber-300">
+                    <p className="font-semibold flex items-center gap-1.5 text-sm mb-1 text-amber-700 dark:text-amber-400">
+                      <span className="material-symbols-outlined" style={{ fontSize: 18 }}>hourglass_empty</span>
+                      {t("awaitingMaintenanceResolution") || "Awaiting Maintenance Action"}
+                    </p>
+                    <p className="mt-1 leading-relaxed opacity-90">
+                      {t("awaitingResolutionDescription") || "This ticket is currently OPEN. Once maintenance action or repair is complete, click 'Close & Resolve Ticket'."}
                     </p>
                   </div>
                 )}
 
                 {/* Audit Trail Timeline */}
                 <div className="rounded-2xl border border-separator/40 bg-surface-container p-4">
-                  <p className="text-xs font-bold uppercase tracking-wider text-outline mb-3 flex items-center gap-1.5">
-                    <span className="material-symbols-outlined text-primary" style={{ fontSize: 16 }}>history</span>
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-outline mb-3 flex items-center gap-2">
+                    <span className="material-symbols-outlined text-outline/70" style={{ fontSize: 16 }}>history</span>
                     {t("auditHistory") || "Audit History"} ({historyEntries.length})
                   </p>
 
                   <div className="space-y-2.5 max-h-52 overflow-y-auto pr-1">
                     {historyEntries.length === 0 ? (
-                      <p className="text-xs text-outline">No history events recorded yet.</p>
+                      <p className="text-xs text-outline">{isJa ? "ステータス変更履歴はありません" : "No history events recorded yet."}</p>
                     ) : historyEntries.map((entry, index) => {
                       const isClosure = normalizeTicketStatusValue(entry.toStatus) === "closed";
                       const entryNote = isClosure
@@ -1249,9 +1261,9 @@ function TicketDetailModal({ actionBusy = false, onClose, onCloseTicket = null, 
                         : (language === "en" ? (entry.reason_en || entry.reason || entry.comment) : (entry.reason_ja || entry.reason || entry.comment));
 
                       return (
-                        <div key={entry.timestamp || index} className="rounded-xl border border-separator/30 bg-white/70 p-2.5 dark:bg-surface text-xs">
+                        <div key={entry.timestamp || index} className="rounded-xl border border-separator/30 bg-surface p-2.5 text-xs">
                           <div className="flex items-center justify-between font-semibold">
-                            <span className={isClosure ? "text-emerald-600 dark:text-emerald-400 flex items-center gap-1" : "text-red-600 dark:text-red-400 flex items-center gap-1"}>
+                            <span className={isClosure ? "text-emerald-600 dark:text-emerald-400 flex items-center gap-1" : "text-error dark:text-red-400 flex items-center gap-1"}>
                               <span className="material-symbols-outlined" style={{ fontSize: 14 }}>
                                 {isClosure ? "check_circle" : "published_with_changes"}
                               </span>
@@ -1269,6 +1281,53 @@ function TicketDetailModal({ actionBusy = false, onClose, onCloseTicket = null, 
               </div>
             </div>
           </div>
+
+          {/* Sticky Modal Footer Actions */}
+          <div className="border-t border-separator/40 px-6 py-4 bg-surface-container-low/50 flex items-center justify-between">
+            <div className="text-xs text-outline font-medium">
+              {ticket.fieldType && (
+                <span className="rounded-md bg-surface-container px-2 py-1 text-[11px] uppercase font-semibold">
+                  {ticket.fieldType}
+                </span>
+              )}
+            </div>
+
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={onClose}
+                className="rounded-xl border border-separator/40 bg-surface px-4 py-2 text-xs font-semibold text-on-surface hover:bg-surface-container transition active:scale-95"
+              >
+                {isJa ? "閉じる" : "Close"}
+              </button>
+
+              {isClosed ? (
+                onReopenTicket && (
+                  <button
+                    type="button"
+                    onClick={onReopenTicket}
+                    disabled={actionBusy}
+                    className="inline-flex items-center gap-1.5 rounded-xl bg-amber-600 px-4 py-2 text-xs font-semibold text-white shadow-xs hover:bg-amber-700 active:scale-95 transition disabled:opacity-50"
+                  >
+                    <span className="material-symbols-outlined" style={{ fontSize: 16 }}>published_with_changes</span>
+                    {actionBusy ? "Reopening..." : (t("reopenTicketBtn") || "Reopen Ticket")}
+                  </button>
+                )
+              ) : (
+                onCloseTicket && (
+                  <button
+                    type="button"
+                    onClick={onCloseTicket}
+                    disabled={actionBusy}
+                    className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 px-4 py-2 text-xs font-semibold text-white shadow-xs hover:bg-emerald-700 active:scale-95 transition disabled:opacity-50"
+                  >
+                    <span className="material-symbols-outlined" style={{ fontSize: 16 }}>task_alt</span>
+                    {actionBusy ? "Closing..." : (t("closeAndResolveTicketBtn") || "Close & Resolve Ticket")}
+                  </button>
+                )
+              )}
+            </div>
+          </div>
         </div>
       </div>
 
@@ -1282,6 +1341,7 @@ function TicketDetailModal({ actionBusy = false, onClose, onCloseTicket = null, 
         <TemplateQuickPeekModal
           templateId={peekTemplateId}
           activeFieldId={ticket?.fieldId}
+          isOptional={isTicketOptional}
           onClose={() => setPeekTemplateId(null)}
         />
       )}
@@ -1353,28 +1413,39 @@ function ResolveTicketModal({ ticket, onClose, onConfirm, busy }) {
 
   return (
     <div
-      className="fixed inset-0 z-[80] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm"
+      className="fixed inset-0 z-[80] flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm"
       onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
-      <div className="w-full max-w-lg rounded-2xl bg-white p-6 dark:bg-surface-container shadow-2xl" onMouseDown={(e) => e.stopPropagation()}>
-        <div className="flex items-center justify-between border-b border-separator/40 pb-3">
-          <h3 className="text-base font-bold text-on-surface flex items-center gap-2">
-            <span className="material-symbols-outlined text-emerald-600" style={{ fontSize: 20 }}>task_alt</span>
-            {t("resolveNgTicket") || "Resolve NG Ticket"}
-          </h3>
-          <button type="button" onClick={onClose} className="rounded-lg p-1 text-outline hover:bg-surface-container">
+      <div className="dashboard-section rounded-2xl w-full max-w-lg bg-surface p-6 shadow-2xl" onMouseDown={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between border-b border-separator/40 pb-4">
+          <div className="flex items-center gap-2.5">
+            <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-600 dark:bg-emerald-950/40">
+              <span className="material-symbols-outlined" style={{ fontSize: 20 }}>task_alt</span>
+            </span>
+            <div>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Ticket Resolution</p>
+              <h3 className="text-base font-semibold text-on-surface">
+                {t("resolveNgTicket") || "Resolve Ticket"}
+              </h3>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="p-2 rounded-xl text-outline hover:bg-surface-container hover:text-on-surface transition-all duration-150 active:scale-95"
+          >
             <span className="material-symbols-outlined" style={{ fontSize: 18 }}>close</span>
           </button>
         </div>
 
-        <p className="mt-2 text-xs text-outline font-medium">
+        <p className="mt-3 text-xs text-outline font-medium">
           {activeFieldLabel || "NG Item"} • {ticket?.machineName || ticket?.加工設備 || "Equipment"} ({ticket?.factory || ""})
         </p>
 
         <form onSubmit={handleSubmit} className="mt-4 flex flex-col gap-4">
           <div>
-            <label className="block text-xs font-semibold text-on-surface mb-1">
-              {t("resolutionDetailsLabel") || "How did you fix it?"} <span className="text-red-500">*</span>
+            <label className="block text-xs font-semibold text-on-surface mb-1.5">
+              {t("resolutionDetailsLabel") || "How did you fix it / Resolution Details"} <span className="text-error">*</span>
             </label>
             <textarea
               required
@@ -1382,12 +1453,12 @@ function ResolveTicketModal({ ticket, onClose, onConfirm, busy }) {
               value={fixReason}
               onChange={(e) => { setFixReason(e.target.value); setErr(""); }}
               placeholder={t("resolutionDetailsPlaceholder") || "e.g. Cleaned and adjusted the valve..."}
-              className="w-full rounded-xl border border-separator/50 bg-surface-container-low p-3 text-sm text-on-surface outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+              className="w-full rounded-xl border border-separator/40 bg-surface-container-low p-3 text-xs text-on-surface outline-none transition focus:border-primary focus:ring-1 focus:ring-primary"
             />
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-on-surface mb-1">
+            <label className="block text-xs font-semibold text-on-surface mb-1.5">
               {t("fixPhotoEvidenceLabel") || "Fix Photo / Evidence"}
             </label>
             <input
@@ -1397,34 +1468,34 @@ function ResolveTicketModal({ ticket, onClose, onConfirm, busy }) {
               className="block w-full text-xs text-outline file:mr-3 file:rounded-xl file:border-0 file:bg-primary/10 file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-primary hover:file:bg-primary/20"
             />
             {fixPhotoPreview && (
-              <div className="mt-2 relative w-24 h-24 rounded-xl overflow-hidden border border-separator">
+              <div className="mt-3 relative w-24 h-24 rounded-xl overflow-hidden border border-separator/40 shadow-2xs">
                 <img src={fixPhotoPreview} alt="Fix evidence" className="w-full h-full object-cover" />
                 <button
                   type="button"
                   onClick={() => { setFixPhotoBase64(""); setFixPhotoPreview(""); }}
-                  className="absolute top-1 right-1 rounded-full bg-black/60 p-0.5 text-white hover:bg-black"
+                  className="absolute top-1 right-1 rounded-full bg-black/60 p-1 text-white hover:bg-black transition active:scale-95"
                 >
-                  <span className="material-symbols-outlined" style={{ fontSize: 14 }}>close</span>
+                  <span className="material-symbols-outlined" style={{ fontSize: 12 }}>close</span>
                 </button>
               </div>
             )}
           </div>
 
-          {err && <p className="text-xs font-semibold text-red-600">{err}</p>}
+          {err && <p className="text-xs font-semibold text-error">{err}</p>}
 
-          <div className="mt-2 flex items-center justify-end gap-3 pt-2 border-t border-separator/40">
+          <div className="mt-2 flex items-center justify-end gap-3 pt-4 border-t border-separator/40">
             <button
               type="button"
               onClick={onClose}
               disabled={isSubmitting}
-              className="rounded-xl border border-separator px-4 py-2 text-xs font-semibold text-outline hover:bg-surface-container"
+              className="rounded-xl border border-separator/40 bg-surface px-4 py-2 text-xs font-semibold text-on-surface hover:bg-surface-container transition active:scale-95"
             >
               {t("cancel") || "Cancel"}
             </button>
             <button
               type="submit"
               disabled={isSubmitting}
-              className="rounded-xl bg-emerald-600 px-4 py-2 text-xs font-semibold text-white transition hover:bg-emerald-700 disabled:opacity-50 flex items-center gap-1.5"
+              className="rounded-xl bg-emerald-600 px-4 py-2 text-xs font-semibold text-white shadow-xs transition hover:bg-emerald-700 active:scale-95 disabled:opacity-50 flex items-center gap-1.5"
             >
               <span className="material-symbols-outlined" style={{ fontSize: 16 }}>check_circle</span>
               {isSubmitting ? (t("resolvingBtn") || "Resolving...") : (t("confirmCloseTicketBtn") || "Confirm & Close Ticket")}
