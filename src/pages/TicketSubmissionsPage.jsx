@@ -595,6 +595,70 @@ function SummaryCard({ accent, icon, label, subtitle, value }) {
   );
 }
 
+function isOptionalTicket(ticket) {
+  if (!ticket) return false;
+  const rawType = String(ticket.ticketType ?? ticket.type ?? ticket.ticket_type ?? ticket.ticketCategory ?? "").trim().toLowerCase();
+  if (rawType === "optional") return true;
+  if (rawType === "defect") return false;
+  if (ticket.isOptional === true || ticket.optional === true) return true;
+  if (ticket.isDefect === true) return false;
+  if (ticket.required === false) return true;
+  if (ticket.required === true) return false;
+
+  // If answer value in ticket is OK / normal / pass / none -> surely optional
+  const answer = String(ticket.answerValue ?? ticket.value ?? "").trim().toLowerCase();
+  if (answer === "ok" || answer === "合格" || answer === "正常" || answer === "適用" || answer === "なし") {
+    return true;
+  }
+  if (answer === "ng" || answer === "不合格" || answer === "異常" || answer === "あり") {
+    return false;
+  }
+
+  // If numeric answer is within allowed range -> optional; outside -> defect
+  if (ticket.min !== null && ticket.min !== undefined && ticket.max !== null && ticket.max !== undefined && answer !== "") {
+    const num = Number(answer);
+    if (!Number.isNaN(num)) {
+      if (num >= Number(ticket.min) && num <= Number(ticket.max)) {
+        return true;
+      }
+      return false;
+    }
+  }
+
+  const reason = String(ticket.reason || "").trim().toLowerCase();
+  if (
+    reason === "optional" ||
+    reason.startsWith("optional ticket:") ||
+    reason.startsWith("optional:") ||
+    reason.startsWith("任意チケット") ||
+    reason.startsWith("連絡事項") ||
+    reason.startsWith("申し送り")
+  ) {
+    return true;
+  }
+
+  return false;
+}
+
+function TicketTypePill({ ticket, language = "en" }) {
+  const isOptional = isOptionalTicket(ticket);
+  const isJa = language === "ja";
+
+  if (isOptional) {
+    return (
+      <span className="inline-flex items-center gap-1 rounded-full bg-blue-500/15 text-blue-700 dark:text-blue-400 border border-blue-200/60 dark:border-blue-800/60 px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wide">
+        💬 {isJa ? "連絡・申し送り" : "Optional"}
+      </span>
+    );
+  }
+
+  return (
+    <span className="inline-flex items-center gap-1 rounded-full bg-error/15 text-error dark:text-red-400 border border-red-200/60 dark:border-red-800/60 px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wide">
+      ⚠️ {isJa ? "異常・不具合" : "Defect"}
+    </span>
+  );
+}
+
 function TicketStatusPill({ status }) {
   const meta = getTicketStatusMeta(status);
 
@@ -825,6 +889,7 @@ function TicketDetailModal({ actionBusy = false, onClose, onCloseTicket = null, 
   const { language, t } = useLanguage();
   const [previewImage, setPreviewImage] = useState(null);
   const [peekTemplateId, setPeekTemplateId] = useState(null);
+  const isTicketOptional = isOptionalTicket(ticket);
   const statusMeta = getTicketStatusMeta(ticket?.status);
   const expectedRange = formatTicketRange(ticket);
   const normalizedStatus = normalizeTicketStatusValue(ticket?.status);
@@ -852,9 +917,9 @@ function TicketDetailModal({ actionBusy = false, onClose, onCloseTicket = null, 
       .filter(Boolean)
       .map((url, index) => ({
         url,
-        label: `${activeFieldLabel || "Defect Photo"} #${index + 1}`,
+        label: `${activeFieldLabel || (isTicketOptional ? "Note Photo" : "Defect Photo")} #${index + 1}`,
       }));
-  }, [activeFieldLabel, ticket?.imageURLs]);
+  }, [activeFieldLabel, isTicketOptional, ticket?.imageURLs]);
 
   useEffect(() => {
     function handleKeyDown(event) {
@@ -907,7 +972,9 @@ function TicketDetailModal({ actionBusy = false, onClose, onCloseTicket = null, 
             "relative px-6 py-5 border-b flex flex-wrap items-center justify-between gap-4 transition-colors",
             normalizedStatus === "closed"
               ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-950 dark:bg-emerald-950/30 dark:border-emerald-500/30 dark:text-emerald-200"
-              : "bg-red-500/10 border-red-500/20 text-red-950 dark:bg-red-950/30 dark:border-red-500/30 dark:text-red-200"
+              : isTicketOptional
+                ? "bg-blue-500/10 border-blue-500/20 text-blue-950 dark:bg-blue-950/30 dark:border-blue-500/30 dark:text-blue-200"
+                : "bg-red-500/10 border-red-500/20 text-red-950 dark:bg-red-950/30 dark:border-red-500/30 dark:text-red-200"
           )}>
             <div className="min-w-0 flex-1">
               <div className="flex flex-wrap items-center gap-2">
@@ -915,13 +982,20 @@ function TicketDetailModal({ actionBusy = false, onClose, onCloseTicket = null, 
                   "inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold uppercase tracking-wider shadow-sm",
                   normalizedStatus === "closed"
                     ? "bg-emerald-600 text-white"
-                    : "bg-red-600 text-white animate-pulse"
+                    : isTicketOptional
+                      ? "bg-blue-600 text-white"
+                      : "bg-red-600 text-white animate-pulse"
                 )}>
                   <span className="material-symbols-outlined" style={{ fontSize: 16 }}>
-                    {normalizedStatus === "closed" ? "check_circle" : "warning"}
+                    {normalizedStatus === "closed" ? "check_circle" : isTicketOptional ? "chat_bubble" : "warning"}
                   </span>
-                  {normalizedStatus === "closed" ? (t("ticketResolvedClosed") || "Resolved & Closed") : (t("openActionRequired") || "Action Required • Open Ticket")}
+                  {normalizedStatus === "closed"
+                    ? (t("ticketResolvedClosed") || "Resolved & Closed")
+                    : isTicketOptional
+                      ? (language === "ja" ? "連絡・申し送り" : "Optional Note")
+                      : (t("openActionRequired") || "Action Required • Open Ticket")}
                 </span>
+                <TicketTypePill ticket={ticket} language={language} />
                 {ticket.ticketNo != null && (
                   <span className="text-xs font-bold opacity-75">#{ticket.ticketNo}</span>
                 )}
@@ -1572,6 +1646,14 @@ export default function TicketSubmissionsPage() {
       disableCellWrapper: true,
     },
     {
+      key: "type",
+      label: language === "ja" ? "種別" : "Type",
+      width: 120,
+      align: "center",
+      renderCell: (row) => <TicketTypePill ticket={row} language={language} />,
+      disableCellWrapper: true,
+    },
+    {
       key: "status",
       label: "Status",
       width: 130,
@@ -1636,7 +1718,14 @@ export default function TicketSubmissionsPage() {
       key: "answerValue",
       label: "Submitted Value",
       width: 140,
-      renderCell: (row) => <span className="font-bold text-red-600 dark:text-red-400">{row.answerValue || "NG"}</span>,
+      renderCell: (row) => {
+        const isOpt = isOptionalTicket(row);
+        return (
+          <span className={isOpt ? "font-bold text-emerald-600 dark:text-emerald-400" : "font-bold text-red-600 dark:text-red-400"}>
+            {row.answerValue || (isOpt ? "OK" : "NG")}
+          </span>
+        );
+      },
       disableCellWrapper: true,
     },
     {
