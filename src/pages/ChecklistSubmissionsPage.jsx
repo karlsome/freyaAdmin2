@@ -511,13 +511,39 @@ function getTicketKey(ticket) {
   return `${ticket.recordId}-${ticket.fieldId || ticket.fieldLabel || "ticket"}-${ticket.createdAt || ""}`;
 }
 
-function isOptionalTicket(ticket) {
+function isOptionalTicket(ticket, fields = []) {
   if (!ticket) return false;
-  if (ticket.ticketType === "optional" || ticket.type === "optional" || ticket.isOptional === true) return true;
-  if (ticket.ticketType === "defect" || ticket.type === "defect" || ticket.isDefect === true || ticket.required === true) return false;
+  const rawType = String(ticket.ticketType ?? ticket.type ?? ticket.ticket_type ?? ticket.ticketCategory ?? "").trim().toLowerCase();
+  if (rawType === "optional") return true;
+  if (rawType === "defect") return false;
+  if (ticket.isOptional === true || ticket.optional === true) return true;
+  if (ticket.isDefect === true) return false;
   if (ticket.required === false) return true;
+  if (ticket.required === true) return false;
+
+  // If answer value in ticket is OK / normal / pass / none -> surely optional
+  const answer = String(ticket.answerValue ?? ticket.value ?? "").trim().toLowerCase();
+  if (answer === "ok" || answer === "合格" || answer === "正常" || answer === "適用" || answer === "なし") {
+    return true;
+  }
+  if (answer === "ng" || answer === "不合格" || answer === "異常" || answer === "あり") {
+    return false;
+  }
+
+  // If numeric answer is within allowed range -> optional; outside -> defect
+  if (ticket.min !== null && ticket.min !== undefined && ticket.max !== null && ticket.max !== undefined && answer !== "") {
+    const num = Number(answer);
+    if (!Number.isNaN(num)) {
+      if (num >= Number(ticket.min) && num <= Number(ticket.max)) {
+        return true;
+      }
+      return false;
+    }
+  }
+
   const reason = String(ticket.reason || "").trim().toLowerCase();
   if (
+    reason === "optional" ||
     reason.startsWith("optional ticket:") ||
     reason.startsWith("optional:") ||
     reason.startsWith("任意チケット") ||
@@ -526,6 +552,18 @@ function isOptionalTicket(ticket) {
   ) {
     return true;
   }
+
+  // If matched to a submission field that is OK (not NG / not out-of-range)
+  if (Array.isArray(fields) && fields.length > 0) {
+    const matchedField = fields.find((f) => doesTicketMatchField(ticket, getFieldTicketHint(f)));
+    if (matchedField) {
+      const fieldStatus = getFieldStatus(matchedField);
+      if (fieldStatus !== "ng" && fieldStatus !== "out-of-range") {
+        return true;
+      }
+    }
+  }
+
   return false;
 }
 
@@ -833,10 +871,12 @@ function RecordDetailModal({ defaultTab = "submission", form, initialTicketFocus
       }];
     }
 
-    const openTicketsCount = tickets.filter(
+    const openTickets = tickets.filter(
       (t) => normalizeTicketStatusValue(t.status) !== "closed" && normalizeTicketStatusValue(t.status) !== "fixed"
-    ).length;
-    const allClosed = tickets.length > 0 && openTicketsCount === 0;
+    );
+    const allClosed = tickets.length > 0 && openTickets.length === 0;
+    const defectCount = openTickets.filter((t) => !isOptionalTicket(t, fields)).length;
+    const optionalCount = openTickets.filter((t) => isOptionalTicket(t, fields)).length;
 
     return [
       {
@@ -854,24 +894,39 @@ function RecordDetailModal({ defaultTab = "submission", form, initialTicketFocus
           <span className="inline-flex items-center gap-2">
             <span className="material-symbols-outlined" style={{ fontSize: 14 }}>confirmation_number</span>
             <span>{isJa ? "NG理由・処置" : "NG Reasons"}</span>
-            <span
-              className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
-                activeTab === "tickets"
-                  ? "bg-white/20 text-on-primary"
-                  : openTicketsCount > 0
-                    ? "bg-error/15 text-error font-bold"
-                    : allClosed
-                      ? "bg-emerald-500/15 text-emerald-700 font-bold"
-                      : "bg-outline/10 text-outline"
-              }`}
-            >
-              {allClosed ? (isJa ? "解決済" : "Fixed") : tickets.length}
-            </span>
+            {allClosed ? (
+              <span className="rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 px-2 py-0.5 text-[10px] font-bold">
+                {isJa ? "解決済" : "Fixed"}
+              </span>
+            ) : defectCount > 0 || optionalCount > 0 ? (
+              <span className="inline-flex items-center gap-1">
+                {defectCount > 0 && (
+                  <span
+                    className="rounded-full bg-error/15 text-error px-2 py-0.5 text-[10px] font-bold"
+                    title={isJa ? `異常・不具合: ${defectCount}件` : `Defect tickets: ${defectCount}`}
+                  >
+                    {defectCount}
+                  </span>
+                )}
+                {optionalCount > 0 && (
+                  <span
+                    className="rounded-full bg-blue-500/15 text-blue-600 dark:text-blue-400 px-2 py-0.5 text-[10px] font-bold"
+                    title={isJa ? `連絡・申し送り: ${optionalCount}件` : `Optional tickets: ${optionalCount}`}
+                  >
+                    {optionalCount}
+                  </span>
+                )}
+              </span>
+            ) : (
+              <span className="rounded-full bg-outline/10 text-outline px-2 py-0.5 text-[10px] font-semibold">
+                0
+              </span>
+            )}
           </span>
         ),
       },
     ];
-  }, [activeTab, isJa, isMissedRecord, isReferenceRecord, tickets]);
+  }, [activeTab, fields, isJa, isMissedRecord, isReferenceRecord, tickets]);
 
   useEffect(() => {
     setActiveTab(normalizedDefaultTab);
@@ -1194,7 +1249,7 @@ function RecordDetailModal({ defaultTab = "submission", form, initialTicketFocus
                 const isProblemField = fieldStatus === "ng" || fieldStatus === "out-of-range";
                 const problemFieldHint = getFieldTicketHint(field);
                 const matchingTicket = tickets.find((ticket) => doesTicketMatchField(ticket, problemFieldHint));
-                const isOptional = isOptionalTicket(matchingTicket);
+                const isOptional = isOptionalTicket(matchingTicket, fields);
                 const isDefect = isProblemField && !isOptional;
                 const ticketStatus = normalizeTicketStatusValue(matchingTicket?.status);
                 const isFixed = isDefect && (ticketStatus === "closed" || ticketStatus === "fixed" || ticketStatus === "resolved");
@@ -1392,7 +1447,7 @@ function RecordDetailModal({ defaultTab = "submission", form, initialTicketFocus
                 const expectedRange = formatTicketRange(ticket);
                 const ticketKey = getTicketKey(ticket);
                 const isHighlightedTicket = tickets.length > 1 && highlightedTicketKey === ticketKey;
-                const isTicketOptional = isOptionalTicket(ticket);
+                const isTicketOptional = isOptionalTicket(ticket, fields);
                 const statusMeta = getTicketStatusMeta(ticket.status);
                 return (
                   <article
@@ -1435,7 +1490,12 @@ function RecordDetailModal({ defaultTab = "submission", form, initialTicketFocus
                         <div className="mt-2 flex flex-wrap gap-2 text-xs text-outline">
                           {ticket.answerValue && (
                             <span className="inline-flex items-center gap-1 rounded-full bg-surface px-2.5 py-1 font-semibold text-on-surface">
-                              <span className="material-symbols-outlined text-error" style={{ fontSize: 12 }}>warning</span>
+                              <span
+                                className={`material-symbols-outlined ${isTicketOptional ? "text-emerald-600 dark:text-emerald-400" : "text-error"}`}
+                                style={{ fontSize: 12 }}
+                              >
+                                {isTicketOptional ? "check_circle" : "warning"}
+                              </span>
                               Submitted: {ticket.answerValue}
                             </span>
                           )}
@@ -1463,9 +1523,11 @@ function RecordDetailModal({ defaultTab = "submission", form, initialTicketFocus
                       </div>
                     </div>
 
-                    {/* NG Reason */}
+                    {/* NG Reason / Note */}
                     <div className="mt-3 rounded-2xl bg-surface px-4 py-3">
-                      <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">NG Reason</p>
+                      <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">
+                        {isTicketOptional ? (isJa ? "連絡・申し送り事項" : "Optional Note") : (isJa ? "NG理由" : "NG Reason")}
+                      </p>
                       <p className="mt-1 text-sm leading-6 text-on-surface">{ticket.reason || "No reason provided."}</p>
                       <div className="mt-2 flex flex-wrap gap-3 text-xs text-outline">
                         <span className="inline-flex items-center gap-1">
