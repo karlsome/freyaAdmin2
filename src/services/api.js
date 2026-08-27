@@ -2283,6 +2283,18 @@ export async function fetchCheckFormRecords(formIds = []) {
   return Array.isArray(records) ? records.map(normalizeCheckFormRecord) : [];
 }
 
+export async function fetchTodayChecklistOverview({ factory = "", date = "" } = {}) {
+  const query = new URLSearchParams();
+  if (factory) query.set("factory", factory);
+  if (date) query.set("date", date);
+
+  const endpoint = query.toString()
+    ? `api/check-forms/today-overview?${query.toString()}`
+    : "api/check-forms/today-overview";
+
+  return _getJson(endpoint);
+}
+
 export async function fetchCheckFormRecordById(recordId) {
   const normalizedRecordId = normalizeId(recordId);
   if (!normalizedRecordId) return null;
