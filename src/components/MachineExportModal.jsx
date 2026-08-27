@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { useLanguage } from "../contexts/LanguageContext";
+import { fetchNgReportsByRecordIds } from "../services/api";
 import {
   buildMachineChecklistMatrix,
   openTraditionalChecklistPrintWindow,
@@ -23,6 +24,27 @@ export default function MachineExportModal({
   const [styleMode, setStyleMode] = useState("traditional"); // "traditional" | "digital"
   const [fileType, setFileType] = useState("pdf"); // "pdf" | "csv"
   const [scopeMode, setScopeMode] = useState("month"); // "month" | "current"
+  const [exportLanguage, setExportLanguage] = useState("ja"); // "ja" (default) | "en"
+  const [tickets, setTickets] = useState([]);
+
+  useEffect(() => {
+    if (!machine) return;
+    const machineId = String(machine.id || machine._id || "");
+    const machineName = String(machine.name || machine.設備名 || "").trim();
+    const machineRecords = records.filter((rec) => {
+      const recMId = String(rec.machineId || rec.equipmentId || "");
+      const recMName = String(rec.machineName || "").trim();
+      return (recMId && recMId === machineId) || (recMName && recMName === machineName);
+    });
+    const recordIds = machineRecords.map((r) => String(r._id || r.recordId || "")).filter(Boolean);
+    if (recordIds.length > 0) {
+      fetchNgReportsByRecordIds(recordIds)
+        .then((data) => setTickets(Array.isArray(data) ? data : []))
+        .catch(() => setTickets([]));
+    } else {
+      setTickets([]);
+    }
+  }, [machine, records]);
 
   if (!machine) return null;
 
@@ -43,18 +65,20 @@ export default function MachineExportModal({
     return monthDates;
   }
 
-  function getPeriodLabel() {
+  function getPeriodLabel(targetLang = exportLanguage) {
     const dates = getTargetDates();
     if (!dates.length) return "";
     const first = dates[0];
     const last = dates[dates.length - 1];
+    const isTargetJa = targetLang === "ja";
+
     if (scopeMode === "month" || (first.getMonth() === last.getMonth() && first.getDate() === 1)) {
-      if (isJa) {
+      if (isTargetJa) {
         return `${first.getFullYear()}年${first.getMonth() + 1}月`;
       }
       return `${first.toLocaleString("en-US", { month: "long", year: "numeric" })}`;
     }
-    if (isJa) {
+    if (isTargetJa) {
       return `${first.getMonth() + 1}月${first.getDate()}日 ～ ${last.getMonth() + 1}月${last.getDate()}日`;
     }
     return `${first.toLocaleString("en-US", { month: "short", day: "numeric" })} – ${last.toLocaleString("en-US", { month: "short", day: "numeric", year: "numeric" })}`;
@@ -62,7 +86,7 @@ export default function MachineExportModal({
 
   function handleExport() {
     const targetDates = getTargetDates();
-    const periodLabel = getPeriodLabel();
+    const periodLabel = getPeriodLabel(exportLanguage);
 
     const matrixData = buildMachineChecklistMatrix({
       machine,
@@ -70,7 +94,8 @@ export default function MachineExportModal({
       records,
       dates: targetDates,
       equipmentMap,
-      language,
+      language: exportLanguage,
+      tickets,
     });
 
     if (fileType === "csv") {
@@ -237,6 +262,40 @@ export default function MachineExportModal({
                 }`}
               >
                 {isJa ? "月間一括 (1日～末日)" : "Full Month (1st – End of Month)"}
+              </button>
+            </div>
+          </div>
+
+          {/* Step 4: Output Language */}
+          <div>
+            <label className="block text-xs font-semibold uppercase tracking-wider text-outline mb-2">
+              {isJa ? "4. 帳票出力言語 (Report Language)" : "4. Report Output Language"}
+            </label>
+            <div className="grid grid-cols-2 gap-3">
+              <button
+                type="button"
+                onClick={() => setExportLanguage("ja")}
+                className={`flex items-center justify-center gap-2 rounded-xl border py-2.5 px-4 text-xs font-bold transition-all ${
+                  exportLanguage === "ja"
+                    ? "border-primary bg-primary text-on-primary shadow-sm"
+                    : "border-outline-variant/30 bg-surface-container text-on-surface hover:bg-surface-container-high"
+                }`}
+              >
+                <span className="text-sm">🇯🇵</span>
+                日本語 (Japanese)
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setExportLanguage("en")}
+                className={`flex items-center justify-center gap-2 rounded-xl border py-2.5 px-4 text-xs font-bold transition-all ${
+                  exportLanguage === "en"
+                    ? "border-primary bg-primary text-on-primary shadow-sm"
+                    : "border-outline-variant/30 bg-surface-container text-on-surface hover:bg-surface-container-high"
+                }`}
+              >
+                <span className="text-sm">🇺🇸</span>
+                English (英語)
               </button>
             </div>
           </div>
