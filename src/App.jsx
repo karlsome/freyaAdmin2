@@ -55,7 +55,7 @@ function App() {
   const [isDark, setIsDark] = useState(() => {
     const saved = localStorage.getItem("theme");
     if (saved) return saved === "dark";
-    return true;
+    return false;
   });
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [badges, setBadges] = useState({ approvals: 12 });
