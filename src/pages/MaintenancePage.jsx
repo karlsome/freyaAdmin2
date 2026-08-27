@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from "react";
+import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
 import {
   fetchCheckFormTemplates,
@@ -209,7 +210,7 @@ function FormCard({ form, machineNames, onOpen, onToggleStatus, onClone, languag
               title={isActive ? (isJa ? "クリックして無効化" : "Click to deactivate") : (isJa ? "クリックして有効化" : "Click to activate")}
               onClick={(e) => {
                 e.stopPropagation();
-                onToggleStatus(form);
+                onToggleStatus(form, machineNames);
               }}
               className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 ${
                 isActive ? "bg-emerald-500 shadow-sm" : "bg-surface-container-high border border-outline-variant/40"
@@ -341,9 +342,20 @@ export default function MaintenancePage() {
     setBuilderPresetSchedule("");
   }
 
-  async function handleToggleStatus(form) {
+  const [deactivatingTarget, setDeactivatingTarget] = useState(null); // { form, machineNames }
+
+  function handleRequestToggleStatus(form, machineNames) {
     const isCurrentlyActive = form.status === "active";
-    const nextStatus = isCurrentlyActive ? "draft" : "active";
+    if (isCurrentlyActive) {
+      // Prompt warning before deactivating with affected machines list
+      setDeactivatingTarget({ form, machineNames: machineNames || [] });
+    } else {
+      // Turning on (active): activate immediately as is currently
+      executeToggleStatus(form, "active");
+    }
+  }
+
+  async function executeToggleStatus(form, nextStatus) {
     const authUser = getAuthUser();
     const username = authUser?.username || "admin";
 
@@ -870,7 +882,7 @@ export default function MaintenancePage() {
                 form={form}
                 machineNames={getFormMachineNames(form, equipmentMap)}
                 onOpen={() => setDetailTarget(form)}
-                onToggleStatus={handleToggleStatus}
+                onToggleStatus={handleRequestToggleStatus}
                 onClone={openCloner}
                 language={language}
               />
@@ -908,6 +920,118 @@ export default function MaintenancePage() {
           }}
         />
       )}
+
+      {/* Deactivation Confirmation Warning Modal */}
+      {deactivatingTarget && (
+        <DeactivateConfirmModal
+          form={deactivatingTarget.form}
+          machineNames={deactivatingTarget.machineNames}
+          onClose={() => setDeactivatingTarget(null)}
+          onConfirm={() => {
+            const target = deactivatingTarget.form;
+            setDeactivatingTarget(null);
+            executeToggleStatus(target, "draft");
+          }}
+          language={language}
+        />
+      )}
     </section>
+  );
+}
+
+function DeactivateConfirmModal({ form, machineNames = [], onClose, onConfirm, language }) {
+  const isJa = language === "ja";
+  const formName = isJa
+    ? (form.name_ja || form.name || form.name_en)
+    : (form.name_en || form.name || form.name_ja);
+
+  const machineCount = machineNames.length;
+
+  return createPortal(
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm animate-in fade-in duration-150">
+      <div className="dashboard-section w-full max-w-md overflow-hidden rounded-2xl border border-separator/50 bg-surface shadow-2xl animate-in zoom-in-95 duration-150">
+        {/* Header */}
+        <div className="flex items-start gap-3.5 border-b border-separator/40 px-6 py-5">
+          <span className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-2xl bg-amber-500/10 text-amber-600 dark:text-amber-400">
+            <span className="material-symbols-outlined" style={{ fontSize: 24 }}>warning</span>
+          </span>
+          <div className="min-w-0 flex-1">
+            <h3 className="text-base font-bold text-on-surface">
+              {isJa ? "点検フォームの無効化確認" : "Deactivate Checklist Form?"}
+            </h3>
+            <p className="mt-0.5 truncate text-xs font-semibold text-primary">
+              {formName}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="p-1.5 rounded-xl text-outline hover:bg-surface-container hover:text-on-surface transition"
+          >
+            <span className="material-symbols-outlined" style={{ fontSize: 18 }}>close</span>
+          </button>
+        </div>
+
+        {/* Body */}
+        <div className="p-6">
+          <div className="rounded-xl border border-amber-500/20 bg-amber-500/10 p-3.5 text-xs leading-relaxed text-amber-800 dark:text-amber-300">
+            <p className="font-semibold">
+              {isJa
+                ? `このフォームを無効化すると、対象の ${machineCount} 台の設備で現場の日常点検・提出ができなくなります。`
+                : `Deactivating this form will disable inspections and submissions on ${machineCount} assigned machine${machineCount === 1 ? "" : "s"}.`}
+            </p>
+            <p className="mt-1 text-[11px] opacity-90">
+              {isJa
+                ? "本当に無効化（停止）してもよろしいですか？"
+                : "Are you sure you want to continue?"}
+            </p>
+          </div>
+
+          {/* List of Affected Machines */}
+          <div className="mt-4">
+            <label className="block text-[11px] font-bold uppercase tracking-wider text-outline mb-2">
+              {isJa ? `影響を受ける対象設備 (${machineCount}台)` : `Affected Machines (${machineCount})`}
+            </label>
+            {machineCount > 0 ? (
+              <div className="max-h-44 overflow-y-auto rounded-xl border border-outline-variant/30 bg-surface-container/50 p-2 space-y-1 scrollbar-thin">
+                {machineNames.map((name) => (
+                  <div
+                    key={name}
+                    className="flex items-center gap-2 rounded-lg bg-surface px-3 py-1.5 text-xs font-semibold text-on-surface shadow-2xs"
+                  >
+                    <span className="material-symbols-outlined text-primary" style={{ fontSize: 16 }}>precision_manufacturing</span>
+                    <span>{name}</span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-xs text-outline italic py-2">
+                {isJa ? "割り当てられている設備はありません。" : "No machines currently assigned."}
+              </p>
+            )}
+          </div>
+        </div>
+
+        {/* Footer Actions */}
+        <div className="flex items-center justify-end gap-2.5 border-t border-separator/40 bg-surface-container/30 px-6 py-4">
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-xl border border-outline-variant/30 bg-surface px-4 py-2 text-xs font-semibold text-outline hover:text-on-surface transition-colors"
+          >
+            {isJa ? "キャンセル" : "Cancel"}
+          </button>
+          <button
+            type="button"
+            onClick={onConfirm}
+            className="inline-flex items-center gap-1.5 rounded-xl bg-error px-4 py-2 text-xs font-bold text-on-error shadow-md hover:bg-error/90 transition-all active:scale-95"
+          >
+            <span className="material-symbols-outlined" style={{ fontSize: 16 }}>power_settings_new</span>
+            {isJa ? "無効化する" : "Deactivate"}
+          </button>
+        </div>
+      </div>
+    </div>,
+    document.body
   );
 }
