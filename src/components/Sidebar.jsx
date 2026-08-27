@@ -54,8 +54,16 @@ function matchesNavPage(page, activePage) {
 
 function getActiveChildPage(item, activePage) {
   if (!item.children?.length) return "";
+  if (activePage === item.page) return "";
 
-  const matchingChildren = item.children.filter((child) => matchesNavPage(child.page, activePage));
+  const matchingChildren = item.children.filter((child) => {
+    if (activePage === child.page) return true;
+    if (activePage.startsWith(`${child.page}/`)) {
+      return !item.children.some((sibling) => sibling.page !== child.page && (activePage === sibling.page || activePage.startsWith(`${sibling.page}/`)));
+    }
+    return false;
+  });
+
   if (matchingChildren.length === 0) return "";
 
   return matchingChildren.reduce((bestMatch, child) => (
