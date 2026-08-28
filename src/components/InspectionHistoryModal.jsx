@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import { createPortal } from "react-dom";
 import { fetchCheckFormTemplates, fetchSetsubiDBRecords, fetchCheckFormRecords } from "../services/api";
+import { useLanguage } from "../contexts/LanguageContext";
 
 function normalizeId(id) {
   if (!id) return "";
@@ -131,8 +132,14 @@ function Cell({ status, onClick, hasNG }) {
 }
 
 function RecordDetailModal({ record, form, onClose }) {
+  const { language } = useLanguage();
+  const isJa = language === "ja";
   const fields = (form?.fields ?? []).filter(f => f.type !== "name");
   const responses = record?.responses ?? {};
+
+  const formName = isJa
+    ? (form?.name_ja || form?.name || form?.name_en)
+    : (form?.name_en || form?.name || form?.name_ja);
 
   function formatValue(field) {
     const val = responses[field.id];
@@ -153,8 +160,10 @@ function RecordDetailModal({ record, form, onClose }) {
         {/* Header */}
         <div className="flex flex-shrink-0 items-start justify-between border-b border-separator/40 px-6 py-5">
           <div className="min-w-0 flex-1 pr-4">
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-outline">Inspection Record</p>
-            <h3 className="mt-0.5 truncate text-lg font-semibold text-on-surface">{form?.name}</h3>
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-outline">
+              {isJa ? "点検記録" : "Inspection Record"}
+            </p>
+            <h3 className="mt-0.5 truncate text-lg font-semibold text-on-surface">{formName}</h3>
             <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-outline">
               {form?.工場 && <span>{form.工場}</span>}
               {form?.schedule && <span className="capitalize">{form.schedule}</span>}
@@ -175,7 +184,7 @@ function RecordDetailModal({ record, form, onClose }) {
             <span className="material-symbols-outlined text-primary" style={{ fontSize: 18 }}>schedule</span>
             <span className="text-on-surface">
               {record?.completedAt
-                ? new Date(record.completedAt).toLocaleString("ja-JP", { year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })
+                ? new Date(record.completedAt).toLocaleString(isJa ? "ja-JP" : "en-US", { year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })
                 : "—"}
             </span>
           </div>
@@ -198,18 +207,25 @@ function RecordDetailModal({ record, form, onClose }) {
 
         {/* Field responses */}
         <div className="flex-1 overflow-y-auto px-6 py-5 flex flex-col gap-3">
-          {fields.length === 0 && <p className="text-sm text-outline">No fields recorded.</p>}
+          {fields.length === 0 && <p className="text-sm text-outline">{isJa ? "記録された項目はありません。" : "No fields recorded."}</p>}
           {fields.map(field => {
             const photo = responses[`${field.id}_photo`];
             const value = formatValue(field);
             const isOK = field.type === "toggle" && responses[field.id] === "ok";
             const isNG = field.type === "toggle" && responses[field.id] === "ng";
+            const fieldLabel = isJa
+              ? (field.label_ja || field.label || field.label_en)
+              : (field.label_en || field.label || field.label_ja);
+            const fieldDescription = isJa
+              ? (field.description_ja || field.description || field.description_en)
+              : (field.description_en || field.description || field.description_ja);
+
             return (
               <div key={field.id} className="rounded-2xl border border-separator/40 bg-surface-container px-4 py-3">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0 flex-1">
-                    <p className="font-semibold text-sm text-on-surface truncate">{field.label || <span className="italic text-outline">Untitled</span>}</p>
-                    {field.description && <p className="mt-0.5 text-xs text-outline">{field.description}</p>}
+                    <p className="font-semibold text-sm text-on-surface truncate">{fieldLabel || <span className="italic text-outline">{isJa ? "無題" : "Untitled"}</span>}</p>
+                    {fieldDescription && <p className="mt-0.5 text-xs text-outline whitespace-pre-line">{fieldDescription}</p>}
                   </div>
                   <span className={`flex-shrink-0 text-sm font-semibold ${isOK ? "text-emerald-500" : isNG ? "text-error" : "text-on-surface"}`}>
                     {value}
@@ -217,7 +233,7 @@ function RecordDetailModal({ record, form, onClose }) {
                 </div>
                 {photo && (
                   <div className="mt-2">
-                    <img src={photo} alt="添付画像" className="h-32 rounded-xl object-cover border border-separator/40" />
+                    <img src={photo} alt={isJa ? "添付画像" : "Attached photo"} className="h-32 rounded-xl object-cover border border-separator/40" />
                   </div>
                 )}
               </div>
