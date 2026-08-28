@@ -219,6 +219,728 @@ function SearchableDropdown({
   );
 }
 
+// ============================================================================
+// PITCH & MULTI-MACHINE CONFIG BUILDER
+// Handles both Standard (Numeric) and Special (Multi-Machine / OZNC rule) modes
+// automatically syncing `送りピッチ` and `machineConfig` with setsubiDB equipment.
+// ============================================================================
+function PitchConfigBuilder({ draft, setDraft, setsubis = [], isJa = true }) {
+  const currentFactory = draft["工場"]?.trim();
+
+  // 1. Available single-unit machines from setsubiDB for current factory
+  const availableMachines = useMemo(() => {
+    const list = currentFactory
+      ? setsubis.filter((s) => s["工場"] === currentFactory)
+      : setsubis;
+
+    const singles = list
+      .map((s) => s.name?.trim())
+      .filter((name) => name && !name.includes(",") && !name.includes("+"));
+
+    const unique = Array.from(new Set(singles));
+    unique.sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: "base" }));
+    return unique;
+  }, [setsubis, currentFactory]);
+
+  // Extract machine items { name, prefix, num }
+  const machineItems = useMemo(() => {
+    return availableMachines.map((m) => {
+      const match = m.match(/^([A-Za-z_-]+)(\d+)$/);
+      if (match) {
+        return { name: m, prefix: match[1], num: match[2].padStart(2, "0") };
+      }
+      return { name: m, prefix: "OZNC", num: m };
+    });
+  }, [availableMachines]);
+
+  // Default prefix derived from available machines or fallback
+  const defaultPrefix = useMemo(() => {
+    if (machineItems.length > 0 && machineItems[0].prefix) {
+      return machineItems[0].prefix;
+    }
+    return "OZNC";
+  }, [machineItems]);
+
+  const [mode, setMode] = useState("numeric"); // "numeric" | "special"
+  const [groups, setGroups] = useState([]);
+  const [showRawString, setShowRawString] = useState(false);
+  const [customInput, setCustomInput] = useState("");
+
+  // Helper: parse raw string or machineConfig into group state
+  const parseToGroups = (pitchVal, mConfig, basePc) => {
+    const pitchStr = typeof pitchVal === "string" ? pitchVal.trim() : (pitchVal != null ? String(pitchVal) : "");
+    const groupRegex = /([A-Za-z]+)\(([^)]+)\):(\d+)/g;
+    let match;
+    const parsed = [];
+    let gIdx = 1;
+
+    while ((match = groupRegex.exec(pitchStr)) !== null) {
+      const prefix = match[1];
+      const machineNums = match[2]
+        .split(",")
+        .map((s) => s.trim().padStart(2, "0"))
+        .filter(Boolean);
+      const pitch = parseInt(match[3], 10);
+
+      // pcPerCycle lookup from machineConfig or default
+      let pc = basePc || 4;
+      if (mConfig && typeof mConfig === "object") {
+        const firstKey = `${prefix}${machineNums[0]}`;
+        if (mConfig[firstKey]?.pcPerCycle != null) {
+          pc = mConfig[firstKey].pcPerCycle;
+        }
+      }
+
+      parsed.push({
+        id: `group_${gIdx++}`,
+        prefix,
+        machineNums,
+        pitch,
+        pcPerCycle: pc,
+      });
+    }
+
+    // Fallback: parse from machineConfig if string wasn't encoded but config exists
+    if (parsed.length === 0 && mConfig && typeof mConfig === "object" && Object.keys(mConfig).length > 0) {
+      const map = new Map();
+      for (const [mKey, val] of Object.entries(mConfig)) {
+        const mMatch = mKey.match(/^([A-Za-z]+)(\d+)$/);
+        const prefix = mMatch ? mMatch[1] : defaultPrefix;
+        const num = mMatch ? mMatch[2].padStart(2, "0") : mKey;
+        const pitch = val?.["送りピッチ"] ?? "";
+        const pc = val?.pcPerCycle ?? basePc ?? 4;
+        const key = `${prefix}__${pitch}__${pc}`;
+        if (!map.has(key)) {
+          map.set(key, { prefix, pitch, pcPerCycle: pc, machineNums: [] });
+        }
+        map.get(key).machineNums.push(num);
+      }
+      for (const item of map.values()) {
+        parsed.push({
+          id: `group_${gIdx++}`,
+          prefix: item.prefix,
+          machineNums: item.machineNums,
+          pitch: item.pitch,
+          pcPerCycle: item.pcPerCycle,
+        });
+      }
+    }
+
+    if (parsed.length === 0) {
+      parsed.push({
+        id: "group_1",
+        prefix: defaultPrefix,
+        machineNums: [],
+        pitch: pitchStr && !isNaN(Number(pitchStr)) ? Number(pitchStr) : "",
+        pcPerCycle: basePc || 4,
+      });
+    }
+
+    return parsed;
+  };
+
+  // Sync groups changes into draft
+  const syncGroupsToDraft = (newGroups) => {
+    setGroups(newGroups);
+
+    const validGroups = newGroups.filter((g) => g.machineNums.length > 0 && g.pitch);
+    if (validGroups.length === 0) {
+      setDraft((prev) => ({
+        ...prev,
+        送りピッチ: "",
+        machineConfig: {},
+      }));
+      return;
+    }
+
+    const pitchString = validGroups
+      .map((g) => `${g.prefix || defaultPrefix}(${g.machineNums.join(",")}):${g.pitch}`)
+      .join(" ");
+
+    const machineConfig = {};
+    for (const g of validGroups) {
+      const prefix = g.prefix || defaultPrefix;
+      const pitchVal = Number(g.pitch) || g.pitch;
+      const pcVal = g.pcPerCycle !== "" && g.pcPerCycle != null ? Number(g.pcPerCycle) : null;
+      for (const num of g.machineNums) {
+        const mKey = `${prefix}${num}`;
+        machineConfig[mKey] = {
+          送りピッチ: pitchVal,
+          ...(pcVal != null && !isNaN(pcVal) ? { pcPerCycle: pcVal } : {}),
+        };
+      }
+    }
+
+    setDraft((prev) => ({
+      ...prev,
+      送りピッチ: pitchString,
+      machineConfig,
+    }));
+  };
+
+  // Initial load / detection
+  useEffect(() => {
+    const rawPitch = draft["送りピッチ"];
+    const mConfig = draft["machineConfig"];
+    const basePc = draft["pcPerCycle"] || 4;
+
+    const hasSpecialPattern = typeof rawPitch === "string" && /([A-Za-z]+)\(([^)]+)\):(\d+)/.test(rawPitch);
+    const hasMConfig = mConfig && typeof mConfig === "object" && Object.keys(mConfig).length > 0;
+
+    if (hasSpecialPattern || hasMConfig) {
+      setMode("special");
+      const parsed = parseToGroups(rawPitch, mConfig, basePc);
+      setGroups(parsed);
+    } else {
+      setMode("numeric");
+      setGroups([
+        {
+          id: "group_1",
+          prefix: defaultPrefix,
+          machineNums: [],
+          pitch: rawPitch ? String(rawPitch) : "",
+          pcPerCycle: basePc || 4,
+        },
+      ]);
+    }
+  }, [draft["_id"]]);
+
+  // Mode switcher handler
+  const handleModeSwitch = (newMode) => {
+    if (newMode === mode) return;
+    setMode(newMode);
+
+    if (newMode === "numeric") {
+      const fallbackPitch = groups[0]?.pitch || "";
+      setDraft((prev) => ({
+        ...prev,
+        送りピッチ: fallbackPitch ? Number(fallbackPitch) || fallbackPitch : "",
+        machineConfig: null,
+      }));
+    } else {
+      // Special mode
+      let newGroups = groups;
+      if (newGroups.length === 0 || (!newGroups[0]?.pitch && draft["送りピッチ"])) {
+        newGroups = [
+          {
+            id: "group_1",
+            prefix: defaultPrefix,
+            machineNums: [],
+            pitch: draft["送りピッチ"] || "",
+            pcPerCycle: draft["pcPerCycle"] || 4,
+          },
+        ];
+      }
+      syncGroupsToDraft(newGroups);
+    }
+  };
+
+  // Group mutations
+  const updateGroup = (groupId, field, value) => {
+    const updated = groups.map((g) => (g.id === groupId ? { ...g, [field]: value } : g));
+    syncGroupsToDraft(updated);
+  };
+
+  const addGroup = () => {
+    const nextIdx = groups.length + 1;
+    // Calculate suggested pitch / pc ratio based on group 1 if present
+    const basePitch = groups[0]?.pitch ? Number(groups[0].pitch) : 0;
+    const basePc = groups[0]?.pcPerCycle ? Number(groups[0].pcPerCycle) : Number(draft["pcPerCycle"]) || 4;
+
+    const newGroup = {
+      id: `group_${Date.now()}_${nextIdx}`,
+      prefix: defaultPrefix,
+      machineNums: [],
+      pitch: basePitch ? basePitch * 2 : "",
+      pcPerCycle: basePc ? basePc * 2 : 8,
+    };
+    syncGroupsToDraft([...groups, newGroup]);
+  };
+
+  const removeGroup = (groupId) => {
+    if (groups.length <= 1) return;
+    const updated = groups.filter((g) => g.id !== groupId);
+    syncGroupsToDraft(updated);
+  };
+
+  // Toggle a machine num in a specific group
+  const toggleMachineInGroup = (groupId, machineNum) => {
+    const updated = groups.map((g) => {
+      if (g.id === groupId) {
+        const exists = g.machineNums.includes(machineNum);
+        return {
+          ...g,
+          machineNums: exists ? g.machineNums.filter((n) => n !== machineNum) : [...g.machineNums, machineNum],
+        };
+      }
+      // If adding to this group, remove it from other groups to prevent duplicates
+      return {
+        ...g,
+        machineNums: g.machineNums.filter((n) => n !== machineNum),
+      };
+    });
+    syncGroupsToDraft(updated);
+  };
+
+  // Quick Action: Add all unassigned machines to group
+  const addAllUnassignedToGroup = (groupId) => {
+    const assignedNums = new Set(groups.flatMap((g) => g.machineNums));
+    const unassigned = machineItems.filter((m) => !assignedNums.has(m.num)).map((m) => m.num);
+
+    const updated = groups.map((g) => {
+      if (g.id === groupId) {
+        return {
+          ...g,
+          machineNums: Array.from(new Set([...g.machineNums, ...unassigned])),
+        };
+      }
+      return g;
+    });
+    syncGroupsToDraft(updated);
+  };
+
+  // Quick Action: Add Even / Odd machines
+  const addFilteredMachinesToGroup = (groupId, parity) => {
+    const targetNums = machineItems
+      .filter((m) => {
+        const n = parseInt(m.num, 10);
+        return !isNaN(n) && (parity === "even" ? n % 2 === 0 : n % 2 !== 0);
+      })
+      .map((m) => m.num);
+
+    const updated = groups.map((g) => {
+      if (g.id === groupId) {
+        return {
+          ...g,
+          machineNums: Array.from(new Set([...g.machineNums, ...targetNums])),
+        };
+      }
+      // Remove from other groups
+      return {
+        ...g,
+        machineNums: g.machineNums.filter((n) => !targetNums.includes(n)),
+      };
+    });
+    syncGroupsToDraft(updated);
+  };
+
+  const clearGroupMachines = (groupId) => {
+    const updated = groups.map((g) => (g.id === groupId ? { ...g, machineNums: [] } : g));
+    syncGroupsToDraft(updated);
+  };
+
+  // Custom machine number addition
+  const handleAddCustomMachine = (groupId) => {
+    if (!customInput.trim()) return;
+    const cleanNum = customInput.trim().replace(/^0+/, "").padStart(2, "0");
+    toggleMachineInGroup(groupId, cleanNum);
+    setCustomInput("");
+  };
+
+  // Global assigned machine lookup for styling
+  const assignedMap = useMemo(() => {
+    const map = new Map();
+    groups.forEach((g, gIdx) => {
+      g.machineNums.forEach((num) => {
+        map.set(num, { groupId: g.id, groupIndex: gIdx + 1, pitch: g.pitch });
+      });
+    });
+    return map;
+  }, [groups]);
+
+  const totalConfiguredMachines = useMemo(() => {
+    return groups.reduce((sum, g) => sum + g.machineNums.length, 0);
+  }, [groups]);
+
+  return (
+    <div className="col-span-full bg-surface border border-outline-variant/30 rounded-2xl p-4.5 flex flex-col gap-4 shadow-xs">
+      {/* Header & Mode Switcher */}
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-outline-variant/20 pb-3">
+        <div className="flex items-center gap-2">
+          <span className="material-symbols-outlined text-primary" style={{ fontSize: 20 }}>
+            tune
+          </span>
+          <div>
+            <div className="text-xs font-bold text-on-surface">
+              {isJa ? "送りピッチ・設備個別設定 (Pitch & Machine Config)" : "Feed Pitch & Machine Config"}
+            </div>
+            <div className="text-[10px] text-outline">
+              {currentFactory
+                ? isJa
+                  ? `setsubiDB 連動中 (${currentFactory})`
+                  : `Linked with setsubiDB (${currentFactory})`
+                : isJa
+                ? "setsubiDB 全設備"
+                : "setsubiDB (All Equipment)"}
+            </div>
+          </div>
+        </div>
+
+        {/* Segmented Control */}
+        <div className="flex items-center bg-surface-variant/30 p-1 rounded-xl border border-outline-variant/30 text-xs">
+          <button
+            type="button"
+            onClick={() => handleModeSwitch("numeric")}
+            className={`px-3 py-1.5 rounded-lg font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+              mode === "numeric"
+                ? "bg-surface text-primary shadow-xs border border-outline-variant/20"
+                : "text-outline hover:text-on-surface"
+            }`}
+          >
+            <span className="material-symbols-outlined" style={{ fontSize: 16 }}>
+              pin
+            </span>
+            <span>{isJa ? "通常 (単一数値)" : "Standard (Numeric)"}</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => handleModeSwitch("special")}
+            className={`px-3 py-1.5 rounded-lg font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+              mode === "special"
+                ? "bg-primary text-on-primary shadow-xs"
+                : "text-outline hover:text-on-surface"
+            }`}
+          >
+            <span className="material-symbols-outlined" style={{ fontSize: 16 }}>
+              settings_suggest
+            </span>
+            <span>{isJa ? "特殊 (設備個別・OZNC)" : "Special (Multi-Machine)"}</span>
+          </button>
+        </div>
+      </div>
+
+      {/* MODE 1: Standard Numeric */}
+      {mode === "numeric" && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-center animate-[fadeIn_0.15s_ease-out]">
+          <div>
+            <label className="block text-[11px] font-bold text-on-surface mb-1 flex items-center justify-between">
+              <span>{isJa ? "送りピッチ (mm)" : "Feed Pitch (mm)"}</span>
+              <span className="text-[10px] text-outline font-normal">単一数値入力</span>
+            </label>
+            <input
+              type="number"
+              value={draft["送りピッチ"] ?? ""}
+              onChange={(e) => {
+                const val = e.target.value;
+                setDraft((prev) => ({
+                  ...prev,
+                  送りピッチ: val !== "" ? Number(val) || val : "",
+                  machineConfig: null,
+                }));
+              }}
+              placeholder="e.g. 820 / 765"
+              className="w-full rounded-xl border border-outline-variant/40 bg-surface px-3.5 py-2.5 text-xs font-bold text-on-surface outline-none focus:border-primary focus:ring-1 focus:ring-primary text-base sm:text-xs"
+            />
+          </div>
+          <div className="bg-surface-variant/20 rounded-xl p-3 border border-outline-variant/20 text-xs text-outline leading-relaxed flex items-start gap-2">
+            <span className="material-symbols-outlined text-primary shrink-0 mt-0.5" style={{ fontSize: 18 }}>
+              info
+            </span>
+            <div>
+              {isJa
+                ? "すべての設備で同一の送りピッチを使用する場合は、数値を入力してください。設備ごとに送りピッチや取数が異なる場合は「特殊」モードに切り替えてください。"
+                : "Enter a single numeric pitch for all equipment. If different machines require distinct pitches or piece counts (e.g. OZNC pairs), switch to Special mode."}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODE 2: Special Multi-Machine Builder */}
+      {mode === "special" && (
+        <div className="flex flex-col gap-4 animate-[fadeIn_0.15s_ease-out]">
+          {/* Groups List */}
+          <div className="flex flex-col gap-3.5">
+            {groups.map((group, gIdx) => {
+              return (
+                <div
+                  key={group.id}
+                  className="rounded-xl border border-outline-variant/40 bg-surface-variant/10 p-4 flex flex-col gap-3 transition-all hover:border-primary/40 shadow-2xs"
+                >
+                  {/* Group Header */}
+                  <div className="flex items-center justify-between border-b border-outline-variant/20 pb-2.5">
+                    <div className="flex items-center gap-2">
+                      <span className="w-5 h-5 rounded-full bg-primary/10 text-primary text-[11px] font-black flex items-center justify-center">
+                        {gIdx + 1}
+                      </span>
+                      <span className="text-xs font-bold text-on-surface">
+                        {isJa ? `グループ ${gIdx + 1}` : `Group ${gIdx + 1}`}
+                      </span>
+                      <span className="text-[10px] px-2 py-0.5 rounded-md bg-surface font-semibold text-primary border border-outline-variant/30">
+                        {group.machineNums.length} {isJa ? "台設定済" : "machines"}
+                      </span>
+                    </div>
+
+                    {groups.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => removeGroup(group.id)}
+                        className="text-outline hover:text-error text-xs font-semibold flex items-center gap-1 p-1 rounded-md transition-colors cursor-pointer"
+                        title={isJa ? "このグループを削除" : "Remove group"}
+                      >
+                        <span className="material-symbols-outlined" style={{ fontSize: 16 }}>
+                          delete
+                        </span>
+                        <span className="text-[11px]">{isJa ? "削除" : "Remove"}</span>
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Group Specs Inputs */}
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div>
+                      <label className="block text-[10px] font-bold text-outline mb-1">
+                        {isJa ? "設備プレフィックス" : "Machine Prefix"}
+                      </label>
+                      <input
+                        type="text"
+                        value={group.prefix ?? defaultPrefix}
+                        onChange={(e) => updateGroup(group.id, "prefix", e.target.value.toUpperCase())}
+                        placeholder="e.g. OZNC"
+                        className="w-full rounded-lg border border-outline-variant/40 bg-surface px-2.5 py-1.5 text-xs font-bold text-on-surface outline-none focus:border-primary"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-bold text-on-surface mb-1 flex items-center justify-between">
+                        <span>{isJa ? "送りピッチ (mm)" : "Pitch (mm)"}</span>
+                        <span className="text-primary font-black">*必須</span>
+                      </label>
+                      <input
+                        type="number"
+                        value={group.pitch ?? ""}
+                        onChange={(e) => updateGroup(group.id, "pitch", e.target.value)}
+                        placeholder="e.g. 765 / 1530"
+                        className="w-full rounded-lg border border-primary/40 bg-surface px-2.5 py-1.5 text-xs font-bold text-primary outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-bold text-outline mb-1">
+                        {isJa ? "取数 (pcPerCycle)" : "Pcs / Cycle"}
+                      </label>
+                      <input
+                        type="number"
+                        value={group.pcPerCycle ?? ""}
+                        onChange={(e) => updateGroup(group.id, "pcPerCycle", e.target.value)}
+                        placeholder="e.g. 4 / 8"
+                        className="w-full rounded-lg border border-outline-variant/40 bg-surface px-2.5 py-1.5 text-xs font-bold text-on-surface outline-none focus:border-primary"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Machine Pills Selection */}
+                  <div className="flex flex-col gap-2 pt-1">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <span className="text-[11px] font-bold text-on-surface flex items-center gap-1">
+                        <span className="material-symbols-outlined text-outline" style={{ fontSize: 15 }}>
+                          precision_manufacturing
+                        </span>
+                        <span>{isJa ? "対象設備を選択 (クリックでON/OFF)" : "Select Machines (Click to toggle)"}</span>
+                      </span>
+
+                      {/* Quick Select Buttons */}
+                      <div className="flex items-center gap-1.5 text-[10px]">
+                        <button
+                          type="button"
+                          onClick={() => addAllUnassignedToGroup(group.id)}
+                          className="px-2 py-0.5 rounded bg-surface border border-outline-variant/40 text-on-surface hover:border-primary font-medium transition-colors cursor-pointer"
+                        >
+                          {isJa ? "+ 未設定を全て追加" : "+ Add Unassigned"}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => addFilteredMachinesToGroup(group.id, "even")}
+                          className="px-2 py-0.5 rounded bg-surface border border-outline-variant/40 text-on-surface hover:border-primary font-medium transition-colors cursor-pointer"
+                        >
+                          {isJa ? "偶数 (02,04..)" : "Even"}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => addFilteredMachinesToGroup(group.id, "odd")}
+                          className="px-2 py-0.5 rounded bg-surface border border-outline-variant/40 text-on-surface hover:border-primary font-medium transition-colors cursor-pointer"
+                        >
+                          {isJa ? "奇数 (01,03..)" : "Odd"}
+                        </button>
+                        {group.machineNums.length > 0 && (
+                          <button
+                            type="button"
+                            onClick={() => clearGroupMachines(group.id)}
+                            className="px-2 py-0.5 rounded bg-surface border border-outline-variant/40 text-outline hover:text-error font-medium transition-colors cursor-pointer"
+                          >
+                            {isJa ? "クリア" : "Clear"}
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Machine Chips Grid */}
+                    <div className="flex flex-wrap gap-1.5 p-2 rounded-xl bg-surface border border-outline-variant/25 min-h-[46px] items-center">
+                      {machineItems.map((item) => {
+                        const isSelectedInThisGroup = group.machineNums.includes(item.num);
+                        const assignedInfo = assignedMap.get(item.num);
+                        const isAssignedToOtherGroup = assignedInfo && assignedInfo.groupId !== group.id;
+
+                        if (isSelectedInThisGroup) {
+                          return (
+                            <button
+                              key={item.name}
+                              type="button"
+                              onClick={() => toggleMachineInGroup(group.id, item.num)}
+                              className="px-2.5 py-1 rounded-lg text-xs font-bold bg-primary text-on-primary shadow-xs flex items-center gap-1 transition-transform active:scale-95 cursor-pointer"
+                              title={isJa ? "クリックで解除" : "Click to deselect"}
+                            >
+                              <span>{item.name}</span>
+                              <span className="material-symbols-outlined" style={{ fontSize: 13 }}>
+                                check
+                              </span>
+                            </button>
+                          );
+                        }
+
+                        if (isAssignedToOtherGroup) {
+                          return (
+                            <button
+                              key={item.name}
+                              type="button"
+                              onClick={() => toggleMachineInGroup(group.id, item.num)}
+                              className="px-2.5 py-1 rounded-lg text-xs font-medium bg-surface-variant/30 text-outline border border-dashed border-outline-variant/40 hover:border-primary hover:text-on-surface flex items-center gap-1 transition-all cursor-pointer"
+                              title={
+                                isJa
+                                  ? `現在 グループ ${assignedInfo.groupIndex} (${assignedInfo.pitch}mm) に設定中。クリックでこのグループに移動`
+                                  : `In Group ${assignedInfo.groupIndex} (${assignedInfo.pitch}mm). Click to move here`
+                              }
+                            >
+                              <span>{item.name}</span>
+                              <span className="text-[9px] opacity-70">(G{assignedInfo.groupIndex})</span>
+                            </button>
+                          );
+                        }
+
+                        return (
+                          <button
+                            key={item.name}
+                            type="button"
+                            onClick={() => toggleMachineInGroup(group.id, item.num)}
+                            className="px-2.5 py-1 rounded-lg text-xs font-medium bg-surface text-on-surface border border-outline-variant/40 hover:border-primary hover:bg-primary/5 transition-all cursor-pointer"
+                          >
+                            {item.name}
+                          </button>
+                        );
+                      })}
+
+                      {machineItems.length === 0 && (
+                        <span className="text-xs text-outline py-1">
+                          {isJa ? "setsubiDB に登録された設備がありません" : "No machines found in setsubiDB"}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Add Group & Custom Machine Input */}
+          <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
+            <button
+              type="button"
+              onClick={addGroup}
+              className="px-3.5 py-2 rounded-xl bg-primary/10 text-primary hover:bg-primary/20 font-bold text-xs flex items-center gap-1.5 transition-colors cursor-pointer"
+            >
+              <span className="material-symbols-outlined" style={{ fontSize: 18 }}>
+                add_circle
+              </span>
+              <span>{isJa ? "+ 新しい設備グループを追加" : "+ Add Machine Group"}</span>
+            </button>
+
+            {/* Custom machine number quick add */}
+            <div className="flex items-center gap-1.5">
+              <input
+                type="text"
+                value={customInput}
+                onChange={(e) => setCustomInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    if (groups.length > 0) handleAddCustomMachine(groups[0].id);
+                  }
+                }}
+                placeholder="01, 19..."
+                className="w-20 rounded-lg border border-outline-variant/40 bg-surface px-2 py-1 text-xs text-on-surface outline-none focus:border-primary text-center"
+              />
+              <button
+                type="button"
+                onClick={() => {
+                  if (groups.length > 0) handleAddCustomMachine(groups[0].id);
+                }}
+                className="px-2.5 py-1 rounded-lg bg-surface border border-outline-variant/40 text-on-surface hover:border-primary text-xs font-semibold transition-colors cursor-pointer"
+              >
+                {isJa ? "番号追加" : "Add No."}
+              </button>
+            </div>
+          </div>
+
+          {/* Live Generated Summary & Preview */}
+          <div className="bg-surface-variant/20 rounded-xl p-3.5 border border-outline-variant/25 flex flex-col gap-2">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="material-symbols-outlined text-primary" style={{ fontSize: 16 }}>
+                  check_circle
+                </span>
+                <span className="text-xs font-bold text-on-surface">
+                  {isJa ? "自動生成プレビュー (Live Auto-Sync)" : "Live Generated Preview"}
+                </span>
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-primary/10 text-primary font-bold">
+                  {totalConfiguredMachines} {isJa ? "台設定" : "machines"}
+                </span>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setShowRawString(!showRawString)}
+                className="text-[11px] text-primary hover:underline font-semibold cursor-pointer"
+              >
+                {showRawString ? (isJa ? "閉じる" : "Hide Raw") : isJa ? "文字列・JSON表示" : "Show Raw"}
+              </button>
+            </div>
+
+            {/* Generated pitch string preview */}
+            <div className="font-mono text-xs text-on-surface bg-surface p-2.5 rounded-lg border border-outline-variant/30 break-all select-all">
+              {draft["送りピッチ"] || (
+                <span className="text-outline italic">
+                  {isJa ? "設備と送りピッチを設定してください…" : "Set equipment and pitch to preview..."}
+                </span>
+              )}
+            </div>
+
+            {/* Detailed Raw string / JSON viewer */}
+            {showRawString && (
+              <div className="flex flex-col gap-2 pt-2 border-t border-outline-variant/20 animate-[fadeIn_0.15s_ease-out]">
+                <div>
+                  <div className="text-[10px] font-bold text-outline mb-0.5">送りピッチ (String):</div>
+                  <textarea
+                    rows={2}
+                    value={draft["送りピッチ"] ?? ""}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setDraft((prev) => ({ ...prev, 送りピッチ: val }));
+                    }}
+                    className="w-full rounded-lg border border-outline-variant/40 bg-surface p-2 text-xs font-mono text-on-surface outline-none focus:border-primary"
+                  />
+                </div>
+                <div>
+                  <div className="text-[10px] font-bold text-outline mb-0.5">machineConfig (Object):</div>
+                  <pre className="text-[11px] font-mono bg-surface p-2.5 rounded-lg border border-outline-variant/30 max-h-36 overflow-y-auto text-on-surface">
+                    {JSON.stringify(draft["machineConfig"], null, 2)}
+                  </pre>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function MasterProductEditModal({
   open,
   record,
@@ -740,20 +1462,6 @@ export default function MasterProductEditModal({
                 />
               </div>
 
-              <div>
-                <label className="block text-[11px] font-bold text-on-surface mb-1 flex items-center justify-between">
-                  <span>{isJa ? "送りピッチ" : "Pitch (送りピッチ)"}</span>
-                  <span className="text-[10px] text-outline font-normal">複数行・カンマ区切り可</span>
-                </label>
-                <textarea
-                  rows={2}
-                  value={draft["送りピッチ"] ?? ""}
-                  onChange={(e) => handleChange("送りピッチ", e.target.value)}
-                  placeholder="e.g. 820 or OZNC(04,06,08,10):820 OZNC(03..."
-                  className="w-full rounded-xl border border-outline-variant/40 bg-surface p-2.5 text-xs text-on-surface outline-none focus:border-primary focus:ring-1 focus:ring-primary resize-y min-h-[42px] leading-relaxed"
-                />
-              </div>
-
               {/* Blade / Tooling Dropdown (from NCBladeDB) */}
               <SearchableDropdown
                 label={isJa ? "刃物" : "Cutter / Blade (刃物)"}
@@ -798,7 +1506,7 @@ export default function MasterProductEditModal({
 
               <div>
                 <label className="block text-[11px] font-bold text-on-surface mb-1">
-                  {isJa ? "取数 (pcPerCycle)" : "Pcs / Cycle"}
+                  {isJa ? "基本取数 (pcPerCycle)" : "Default Pcs / Cycle"}
                 </label>
                 <input
                   type="number"
@@ -837,6 +1545,14 @@ export default function MasterProductEditModal({
                 </select>
               </div>
             </div>
+
+            {/* DEDICATED PITCH & MULTI-MACHINE CONFIG BUILDER */}
+            <PitchConfigBuilder
+              draft={draft}
+              setDraft={setDraft}
+              setsubis={setsubis}
+              isJa={isJa}
+            />
           </div>
 
           {/* 3. Material Specifications with Bidirectional Auto-Lookup */}
