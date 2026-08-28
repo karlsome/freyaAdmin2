@@ -168,6 +168,8 @@ function formatAnsweredAt(value) {
     day: "numeric",
     hour: "2-digit",
     minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
   });
 }
 
@@ -398,6 +400,40 @@ function sortSubmissionEntries(submissions = []) {
     const rightFormName = String(right?.form?.name ?? right?.record?.formName ?? "").trim();
     return leftFormName.localeCompare(rightFormName, "ja");
   });
+}
+
+function getMachineTodayStatusPriority(machine, today, visibleTemplates, recordsByFormId, equipmentMap) {
+  const entries = getScheduleEntries(machine, today, visibleTemplates, recordsByFormId, { equipmentMap });
+  const submissions = entries.flatMap((e) => e.submissions || []);
+
+  if (submissions.length === 0) {
+    return 3; // Pending check
+  }
+
+  let hasNG = false;
+  let hasOptional = false;
+
+  for (const sub of submissions) {
+    if (sub.record?.hasNG) {
+      hasNG = true;
+      break;
+    }
+    const answers = sub.record?.answers || [];
+    for (const ans of answers) {
+      if (ans.hasNG || ans.isDefect || String(ans.ticketType).toLowerCase() === "defect" || String(ans.value).toUpperCase() === "NG") {
+        hasNG = true;
+        break;
+      }
+      if (ans.ticketType === "optional" || ans.isOptional || (ans.ticketCreated && !ans.hasNG)) {
+        hasOptional = true;
+      }
+    }
+    if (hasNG) break;
+  }
+
+  if (hasNG) return 1; // Defect (Highest priority, shown first)
+  if (hasOptional) return 2; // Optional note
+  return 4; // Completed (OK)
 }
 
 function buildRecordSelection(submission, defaultTab = "submission", returnToPicker = null) {
@@ -2799,8 +2835,62 @@ export default function ChecklistSubmissionsPage() {
     setAppliedAdvancedFilters([]);
   }
 
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
+  const today = useMemo(() => {
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    return d;
+  }, []);
+
+  const todayFactoryGroups = useMemo(() => {
+    const map = new Map();
+
+    for (const machine of filteredMachines) {
+      const factory = String(machine.factory || "—").trim();
+      if (!map.has(factory)) {
+        map.set(factory, []);
+      }
+      map.get(factory).push(machine);
+    }
+
+    const result = [];
+    for (const [factory, macList] of map.entries()) {
+      const sortedMachines = [...macList].sort((a, b) => {
+        const priorityA = getMachineTodayStatusPriority(a, today, visibleTemplates, recordsByFormId, equipmentMap);
+        const priorityB = getMachineTodayStatusPriority(b, today, visibleTemplates, recordsByFormId, equipmentMap);
+        if (priorityA !== priorityB) {
+          return priorityA - priorityB; // Defect (1) -> Optional (2) -> Pending (3) -> OK (4)
+        }
+        return (a.name || "").localeCompare(b.name || "", undefined, { numeric: true });
+      });
+
+      const stats = {
+        total: sortedMachines.length,
+        defectCount: sortedMachines.filter((m) => getMachineTodayStatusPriority(m, today, visibleTemplates, recordsByFormId, equipmentMap) === 1).length,
+        optionalCount: sortedMachines.filter((m) => getMachineTodayStatusPriority(m, today, visibleTemplates, recordsByFormId, equipmentMap) === 2).length,
+        pendingCount: sortedMachines.filter((m) => getMachineTodayStatusPriority(m, today, visibleTemplates, recordsByFormId, equipmentMap) === 3).length,
+        completedCount: sortedMachines.filter((m) => getMachineTodayStatusPriority(m, today, visibleTemplates, recordsByFormId, equipmentMap) === 4).length,
+      };
+
+      result.push({
+        factory,
+        machines: sortedMachines,
+        stats,
+      });
+    }
+
+    // Sort factory groups: Factories with defects first!
+    result.sort((a, b) => {
+      if (a.stats.defectCount !== b.stats.defectCount) {
+        return b.stats.defectCount - a.stats.defectCount;
+      }
+      if (a.stats.optionalCount !== b.stats.optionalCount) {
+        return b.stats.optionalCount - a.stats.optionalCount;
+      }
+      return (a.factory || "").localeCompare(b.factory || "");
+    });
+
+    return result;
+  }, [filteredMachines, today, visibleTemplates, recordsByFormId, equipmentMap]);
 
   function jumpToToday() {
     if (!scrollRef.current) return;
@@ -3148,31 +3238,81 @@ export default function ChecklistSubmissionsPage() {
               </div>
             </div>
 
-            {/* Today Machine Cards Grid */}
+            {/* Today Machine Cards Grid Categorized by Factory */}
             {loading || loadingToday ? (
               <div className="flex items-center justify-center gap-3 py-24 text-outline">
                 <span className="material-symbols-outlined animate-spin text-primary">progress_activity</span>
                 <span className="text-sm font-semibold">{isJa ? "本日の点検状況を読み込み中…" : "Loading today's inspection status…"}</span>
               </div>
-            ) : filteredMachines.length === 0 ? (
+            ) : todayFactoryGroups.length === 0 ? (
               <div className="flex flex-col items-center gap-3 py-20 text-outline border border-dashed border-outline-variant/30 rounded-2xl">
                 <span className="material-symbols-outlined" style={{ fontSize: 40 }}>precision_manufacturing</span>
                 <p className="text-sm font-semibold">{isJa ? "フィルターに一致する設備はありません。" : "No machines match the current filter."}</p>
               </div>
             ) : (
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                {filteredMachines.map((machine) => (
-                  <TodayMachineCard
-                    key={machine.id}
-                    machine={machine}
-                    templates={visibleTemplates}
-                    recordsByFormId={recordsByFormId}
-                    equipmentMap={equipmentMap}
-                    onSelectRecord={setSelectedCell}
-                    onExportMachine={setExportingMachine}
-                    onOpenQuickPeek={handleOpenQuickPeek}
-                    language={language}
-                  />
+              <div className="space-y-8">
+                {todayFactoryGroups.map((group) => (
+                  <div key={group.factory} className="space-y-3.5">
+                    {/* Factory Group Header */}
+                    <div className="flex flex-wrap items-center justify-between gap-3 border-b border-separator/40 pb-2.5">
+                      <div className="flex items-center gap-2.5">
+                        <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                          <span className="material-symbols-outlined" style={{ fontSize: 18 }}>factory</span>
+                        </div>
+                        <div>
+                          <h3 className="text-base font-bold text-on-surface">
+                            {group.factory && group.factory !== "—" ? `${group.factory}${isJa ? "工場" : " Factory"}` : (isJa ? "工場未設定" : "Unassigned Factory")}
+                          </h3>
+                        </div>
+                        <span className="rounded-full bg-surface-container px-2.5 py-0.5 text-xs font-semibold text-outline">
+                          {group.stats.total} {isJa ? "台" : "machines"}
+                        </span>
+                      </div>
+
+                      {/* Factory Mini Status Pills */}
+                      <div className="flex flex-wrap items-center gap-2 text-xs font-semibold">
+                        {group.stats.defectCount > 0 && (
+                          <span className="inline-flex items-center gap-1 rounded-lg bg-rose-500/15 border border-rose-500/30 px-2.5 py-1 text-rose-700 dark:text-rose-300 font-bold">
+                            <span className="material-symbols-outlined" style={{ fontSize: 13 }}>warning</span>
+                            <span>{isJa ? `異常・NG: ${group.stats.defectCount}台` : `${group.stats.defectCount} Defect${group.stats.defectCount > 1 ? "s" : ""}`}</span>
+                          </span>
+                        )}
+                        {group.stats.optionalCount > 0 && (
+                          <span className="inline-flex items-center gap-1 rounded-lg bg-blue-500/15 border border-blue-500/30 px-2.5 py-1 text-blue-700 dark:text-blue-300 font-bold">
+                            <span className="material-symbols-outlined" style={{ fontSize: 13 }}>chat</span>
+                            <span>{isJa ? `申し送り: ${group.stats.optionalCount}台` : `${group.stats.optionalCount} Notes`}</span>
+                          </span>
+                        )}
+                        <span className="inline-flex items-center gap-1 rounded-lg bg-emerald-500/10 border border-emerald-500/25 px-2.5 py-1 text-emerald-700 dark:text-emerald-300">
+                          <span className="material-symbols-outlined" style={{ fontSize: 13 }}>check_circle</span>
+                          <span>{isJa ? `完了: ${group.stats.completedCount}台` : `${group.stats.completedCount} OK`}</span>
+                        </span>
+                        {group.stats.pendingCount > 0 && (
+                          <span className="inline-flex items-center gap-1 rounded-lg bg-amber-500/10 border border-amber-500/25 px-2.5 py-1 text-amber-700 dark:text-amber-300">
+                            <span className="material-symbols-outlined" style={{ fontSize: 13 }}>schedule</span>
+                            <span>{isJa ? `未提出: ${group.stats.pendingCount}台` : `${group.stats.pendingCount} Pending`}</span>
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Machine Cards Grid for this Factory */}
+                    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                      {group.machines.map((machine) => (
+                        <TodayMachineCard
+                          key={machine.id}
+                          machine={machine}
+                          templates={visibleTemplates}
+                          recordsByFormId={recordsByFormId}
+                          equipmentMap={equipmentMap}
+                          onSelectRecord={setSelectedCell}
+                          onExportMachine={setExportingMachine}
+                          onOpenQuickPeek={handleOpenQuickPeek}
+                          language={language}
+                        />
+                      ))}
+                    </div>
+                  </div>
                 ))}
               </div>
             )}
