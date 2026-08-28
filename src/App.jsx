@@ -26,6 +26,7 @@ import PrototypePage from "./pages/PrototypePage";
 import PrototypeRequestPage from "./pages/PrototypeRequestPage";
 import FirstFactoryPage from "./pages/FirstFactoryPage";
 import StopCallPage from "./pages/StopCallPage";
+import AnalyticsPage from "./pages/AnalyticsPage";
 import LoginPage from "./pages/LoginPage";
 import {
   clearStoredAuthUser,
@@ -36,7 +37,6 @@ import {
 
 const placeholderPages = [
   "notifications",
-  "analytics",
   "financials",
   "userManagement",
   "customerManagement",
@@ -240,6 +240,7 @@ function App() {
               <Route path="/factoryStatus" element={<FactoryStatusPage />} />
               <Route path="/factoryStatus/:tab" element={<FactoryStatusPage />} />
               <Route path="/factoryStatus/logs" element={<FactoryStatusLogsPage />} />
+              <Route path="/analytics" element={<AnalyticsPage />} />
               {placeholderPages.map((page) => (
                 <Route key={page} path={`/${page}`} element={<PlaceholderPage page={page} />} />
               ))}

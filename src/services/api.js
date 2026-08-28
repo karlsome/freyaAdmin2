@@ -2675,3 +2675,15 @@ export async function saveExportTemplate(templateData) {
     insertData: templateData
   });
 }
+
+// ─── Material Lots Analytics ────────────────────────────────────────────────
+export async function fetchMaterialLotAnalytics(params = {}) {
+  const queryParams = new URLSearchParams();
+  Object.entries(params).forEach(([key, val]) => {
+    if (val !== undefined && val !== null && val !== "") {
+      queryParams.append(key, val);
+    }
+  });
+  const endpoint = `api/analytics/material-lots${queryParams.toString() ? `?${queryParams.toString()}` : ""}`;
+  return _getJson(endpoint);
+}
