@@ -340,27 +340,44 @@ export default function MasterProductDetailModal({
                   <span>{isJa ? "製造・設備仕様" : "Manufacturing & Equipment"}</span>
                 </div>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                  <div className="flex flex-col bg-surface-variant/15 border border-outline-variant/25 rounded-xl p-3">
+                  <div className="flex flex-col bg-surface-variant/15 border border-outline-variant/25 rounded-xl p-3 min-w-0">
                     <span className="text-[10px] font-semibold text-outline uppercase">{isJa ? "工場" : "Factory"}</span>
-                    <span className="font-semibold text-sm text-on-surface mt-0.5">{renderValue(record["工場"])}</span>
+                    <span className="font-semibold text-sm text-on-surface mt-0.5 truncate">{renderValue(record["工場"])}</span>
                   </div>
-                  <div className="flex flex-col bg-surface-variant/15 border border-outline-variant/25 rounded-xl p-3">
+                  <div className="flex flex-col bg-surface-variant/15 border border-outline-variant/25 rounded-xl p-3 min-w-0">
                     <span className="text-[10px] font-semibold text-outline uppercase">{isJa ? "加工設備" : "Equipment"}</span>
-                    <span className="font-semibold text-sm text-primary mt-0.5">{renderValue(record["加工設備"])}</span>
+                    <span className="font-semibold text-sm text-primary mt-0.5 truncate">{renderValue(record["加工設備"])}</span>
                   </div>
-                  <div className="flex flex-col bg-surface-variant/15 border border-outline-variant/25 rounded-xl p-3">
+                  <div className="flex flex-col bg-surface-variant/15 border border-outline-variant/25 rounded-xl p-3 min-w-0">
                     <span className="text-[10px] font-semibold text-outline uppercase">{isJa ? "型番" : "Model No."}</span>
-                    <span className="font-semibold text-sm text-on-surface mt-0.5">{renderValue(record["型番"])}</span>
+                    <span className="font-semibold text-sm text-on-surface mt-0.5 truncate">{renderValue(record["型番"])}</span>
                   </div>
-                  <div className="flex flex-col bg-surface-variant/15 border border-outline-variant/25 rounded-xl p-3">
+                  <div className="flex flex-col bg-surface-variant/15 border border-outline-variant/25 rounded-xl p-3 min-w-0">
                     <span className="text-[10px] font-semibold text-outline uppercase">{isJa ? "収容数" : "Pack Qty"}</span>
-                    <span className="font-bold text-sm text-on-surface mt-0.5">{renderValue(record["収容数"])}</span>
+                    <span className="font-bold text-sm text-on-surface mt-0.5 truncate">{renderValue(record["収容数"])}</span>
                   </div>
-                  <div className="flex flex-col bg-surface-variant/15 border border-outline-variant/25 rounded-xl p-3">
-                    <span className="text-[10px] font-semibold text-outline uppercase">{isJa ? "送りピッチ" : "Feed Pitch"}</span>
-                    <span className="font-medium text-sm text-on-surface mt-0.5">{renderValue(record["送りピッチ"])}</span>
-                  </div>
-                  <div className="flex flex-col bg-surface-variant/15 border border-outline-variant/25 rounded-xl p-3">
+
+                  {/* Feed Pitch (Standard numeric single-slot if not special) */}
+                  {(() => {
+                    const rawPitch = record["送りピッチ"];
+                    const mConfig = record["machineConfig"];
+                    const pitchStr = typeof rawPitch === "string" ? rawPitch.trim() : (rawPitch != null ? String(rawPitch) : "");
+                    const isSpecial = /([A-Za-z]+)\(([^)]+)\):(\d+)/.test(pitchStr) || (mConfig && typeof mConfig === "object" && Object.keys(mConfig).length > 0);
+
+                    if (!isSpecial) {
+                      return (
+                        <div className="flex flex-col bg-surface-variant/15 border border-outline-variant/25 rounded-xl p-3 min-w-0">
+                          <span className="text-[10px] font-semibold text-outline uppercase">{isJa ? "送りピッチ" : "Feed Pitch"}</span>
+                          <span className="font-medium text-sm text-on-surface mt-0.5 break-words">
+                            {pitchStr ? `${pitchStr} mm` : "—"}
+                          </span>
+                        </div>
+                      );
+                    }
+                    return null;
+                  })()}
+
+                  <div className="flex flex-col bg-surface-variant/15 border border-outline-variant/25 rounded-xl p-3 min-w-0">
                     <span className="text-[10px] font-semibold text-outline uppercase">{isJa ? "刃物" : "Cutter / Tooling"}</span>
                     <div className="flex items-center gap-2 mt-0.5 min-w-0">
                       {bladeInfo?.imageURL && (
@@ -373,27 +390,126 @@ export default function MasterProductDetailModal({
                       <span className="font-medium text-sm text-on-surface truncate">{renderValue(record["刃物"])}</span>
                     </div>
                   </div>
-                  <div className="flex flex-col bg-surface-variant/15 border border-outline-variant/25 rounded-xl p-3">
+                  <div className="flex flex-col bg-surface-variant/15 border border-outline-variant/25 rounded-xl p-3 min-w-0">
                     <span className="text-[10px] font-semibold text-outline uppercase">{isJa ? "離型紙上/下" : "Release Paper"}</span>
-                    <span className="font-medium text-sm text-on-surface mt-0.5">{renderValue(record["離型紙上/下"])}</span>
+                    <span className="font-medium text-sm text-on-surface mt-0.5 truncate">{renderValue(record["離型紙上/下"])}</span>
                   </div>
-                  <div className="flex flex-col bg-surface-variant/15 border border-outline-variant/25 rounded-xl p-3">
+                  <div className="flex flex-col bg-surface-variant/15 border border-outline-variant/25 rounded-xl p-3 min-w-0">
                     <span className="text-[10px] font-semibold text-outline uppercase">{isJa ? "秒数 (1pcs何秒)" : "Cycle Sec/pc"}</span>
-                    <span className="font-medium text-sm text-on-surface mt-0.5">{renderValue(record["秒数(1pcs何秒)"])}</span>
+                    <span className="font-medium text-sm text-on-surface mt-0.5 truncate">{renderValue(record["秒数(1pcs何秒)"])}</span>
                   </div>
-                  <div className="flex flex-col bg-surface-variant/15 border border-outline-variant/25 rounded-xl p-3">
+                  <div className="flex flex-col bg-surface-variant/15 border border-outline-variant/25 rounded-xl p-3 min-w-0">
                     <span className="text-[10px] font-semibold text-outline uppercase">{isJa ? "取数 (pcPerCycle)" : "Pcs / Cycle"}</span>
-                    <span className="font-bold text-sm text-on-surface mt-0.5">{renderValue(record["pcPerCycle"])}</span>
+                    <span className="font-bold text-sm text-on-surface mt-0.5 truncate">{renderValue(record["pcPerCycle"])}</span>
                   </div>
-                  <div className="flex flex-col bg-surface-variant/15 border border-outline-variant/25 rounded-xl p-3">
+                  <div className="flex flex-col bg-surface-variant/15 border border-outline-variant/25 rounded-xl p-3 min-w-0">
                     <span className="text-[10px] font-semibold text-outline uppercase">SRS</span>
-                    <span className="font-medium text-sm text-on-surface mt-0.5">{renderValue(record["SRS"])}</span>
+                    <span className="font-medium text-sm text-on-surface mt-0.5 truncate">{renderValue(record["SRS"])}</span>
                   </div>
-                  <div className="flex flex-col bg-surface-variant/15 border border-outline-variant/25 rounded-xl p-3">
+                  <div className="flex flex-col bg-surface-variant/15 border border-outline-variant/25 rounded-xl p-3 min-w-0">
                     <span className="text-[10px] font-semibold text-outline uppercase">SLIT</span>
-                    <span className="font-medium text-sm text-on-surface mt-0.5">{renderValue(record["SLIT"])}</span>
+                    <span className="font-medium text-sm text-on-surface mt-0.5 truncate">{renderValue(record["SLIT"])}</span>
                   </div>
                 </div>
+
+                {/* Special Multi-Machine Feed Pitch Breakdown Card */}
+                {(() => {
+                  const rawPitch = record["送りピッチ"];
+                  const mConfig = record["machineConfig"];
+                  const pitchStr = typeof rawPitch === "string" ? rawPitch.trim() : (rawPitch != null ? String(rawPitch) : "");
+                  const isSpecial = /([A-Za-z]+)\(([^)]+)\):(\d+)/.test(pitchStr) || (mConfig && typeof mConfig === "object" && Object.keys(mConfig).length > 0);
+
+                  if (!isSpecial) return null;
+
+                  // Parse groups from string or machineConfig
+                  const groupRegex = /([A-Za-z]+)\(([^)]+)\):(\d+)/g;
+                  let match;
+                  const groups = [];
+                  while ((match = groupRegex.exec(pitchStr)) !== null) {
+                    const prefix = match[1];
+                    const nums = match[2].split(",").map((s) => s.trim().padStart(2, "0")).filter(Boolean);
+                    const pitch = parseInt(match[3], 10);
+                    const firstKey = `${prefix}${nums[0]}`;
+                    const pc = mConfig?.[firstKey]?.pcPerCycle ?? record["pcPerCycle"] ?? null;
+                    groups.push({ prefix, nums, pitch, pc });
+                  }
+
+                  if (groups.length === 0 && mConfig && typeof mConfig === "object") {
+                    const map = new Map();
+                    for (const [mKey, val] of Object.entries(mConfig)) {
+                      const mMatch = mKey.match(/^([A-Za-z]+)(\d+)$/);
+                      const prefix = mMatch ? mMatch[1] : "OZNC";
+                      const num = mMatch ? mMatch[2].padStart(2, "0") : mKey;
+                      const pitch = val?.["送りピッチ"] ?? "";
+                      const pc = val?.pcPerCycle ?? record["pcPerCycle"] ?? null;
+                      const key = `${prefix}__${pitch}__${pc}`;
+                      if (!map.has(key)) map.set(key, { prefix, pitch, pc, nums: [] });
+                      map.get(key).nums.push(num);
+                    }
+                    for (const item of map.values()) groups.push(item);
+                  }
+
+                  const totalMachines = groups.reduce((acc, g) => acc + g.nums.length, 0);
+
+                  return (
+                    <div className="mt-3 bg-surface-variant/15 border border-outline-variant/30 rounded-2xl p-3.5 flex flex-col gap-2.5">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <span className="material-symbols-outlined text-primary" style={{ fontSize: 16 }}>
+                            tune
+                          </span>
+                          <span className="text-xs font-bold text-on-surface">
+                            {isJa ? "送りピッチ・設備個別設定 (Multi-Machine Feed Pitch)" : "Feed Pitch & Equipment Allocation"}
+                          </span>
+                        </div>
+                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-primary/10 text-primary font-bold">
+                          {totalMachines} {isJa ? "台設定済" : "machines configured"}
+                        </span>
+                      </div>
+
+                      {/* Groups list */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+                        {groups.map((g, gIdx) => (
+                          <div
+                            key={gIdx}
+                            className="bg-surface border border-outline-variant/30 rounded-xl p-3 flex flex-col gap-2 shadow-2xs"
+                          >
+                            <div className="flex items-center justify-between border-b border-outline-variant/15 pb-1.5">
+                              <div className="flex items-center gap-1.5">
+                                <span className="w-4 h-4 rounded-full bg-primary/10 text-primary text-[10px] font-black flex items-center justify-center">
+                                  {gIdx + 1}
+                                </span>
+                                <span className="text-xs font-bold text-on-surface">
+                                  {g.prefix} ({g.nums.length} {isJa ? "台" : "units"})
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-1.5">
+                                <span className="text-xs font-extrabold text-primary font-mono bg-primary/5 px-2 py-0.5 rounded border border-primary/20">
+                                  {g.pitch} mm
+                                </span>
+                                {g.pc != null && (
+                                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-surface-variant/30 text-outline font-semibold">
+                                    {g.pc} pcs/cyc
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                            <div className="flex flex-wrap gap-1">
+                              {g.nums.map((num) => (
+                                <span
+                                  key={num}
+                                  className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-primary/10 text-primary"
+                                >
+                                  {g.prefix}{num}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })()}
               </div>
 
               {/* 3. Material Specifications with LINK to 材料DB */}
