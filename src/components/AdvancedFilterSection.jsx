@@ -686,6 +686,8 @@ export default function AdvancedFilterSection({
   framed = true,
   enableTextSuggestions = false,
   inputIdPrefix = "advanced-filter-options",
+  selectFieldLabel = "Select field",
+  selectOperatorLabel = "Select operator",
   footer,
   onCustomFieldClick,
 }) {
@@ -802,7 +804,7 @@ export default function AdvancedFilterSection({
                     }}
                     className={`${styles.controlBase} ${styles.fieldControl}`}
                   >
-                    <option value="">Select field</option>
+                    <option value="">{selectFieldLabel}</option>
                     {fieldGroups.map((group) => (
                       <optgroup key={group} label={group}>
                         {fieldDefinitions.filter((field) => field.group === group).map((field) => (
@@ -828,7 +830,7 @@ export default function AdvancedFilterSection({
                     disabled={!fieldDefinition}
                     className={`${styles.controlBase} ${styles.operatorControl}`}
                   >
-                    <option value="">Select operator</option>
+                    <option value="">{selectOperatorLabel}</option>
                     {operators.map((operator) => (
                       <option key={operator} value={operator}>
                         {useOperatorLabelsInSelect ? (operatorLabels[operator] || operator) : operator}

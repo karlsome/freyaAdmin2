@@ -1,6 +1,6 @@
 import AdvancedFilterSection from "./AdvancedFilterSection";
 import FormField from "./FormField";
-import { TICKET_SUBMISSION_OPERATOR_LABELS } from "../utils/ticketSubmissions";
+import { getTicketSubmissionOperatorLabels } from "../utils/ticketSubmissions";
 import { useLanguage } from "../contexts/LanguageContext";
 
 export default function TicketSubmissionsFilterPanel({
@@ -151,8 +151,10 @@ export default function TicketSubmissionsFilterPanel({
           onAddRow={onAddAdvancedRow}
           onRemoveRow={onRemoveAdvancedRow}
           onClearRows={onClearAdvancedFilters}
-          operatorLabels={TICKET_SUBMISSION_OPERATOR_LABELS}
+          operatorLabels={getTicketSubmissionOperatorLabels(isJa)}
           useOperatorLabelsInSelect
+          selectFieldLabel={isJa ? "項目を選択" : "Select field"}
+          selectOperatorLabel={isJa ? "条件を選択" : "Select operator"}
           title={isJa ? "詳細フィルター" : "Advanced Filters"}
           addRowLabel={isJa ? "フィルター条件を追加" : "Add Filter Row"}
           activeSummaryTitle={isJa ? "適用中のフィルター" : "Active Filters"}

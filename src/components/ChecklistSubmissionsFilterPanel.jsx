@@ -1,6 +1,6 @@
 import AdvancedFilterSection from "./AdvancedFilterSection";
 import FormField from "./FormField";
-import { CHECKLIST_SUBMISSION_OPERATOR_LABELS } from "../utils/checklistSubmissions";
+import { getChecklistSubmissionOperatorLabels } from "../utils/checklistSubmissions";
 import { useLanguage } from "../contexts/LanguageContext";
 
 export default function ChecklistSubmissionsFilterPanel({
@@ -117,8 +117,10 @@ export default function ChecklistSubmissionsFilterPanel({
         onAddRow={onAddAdvancedRow}
         onRemoveRow={onRemoveAdvancedRow}
         onClearRows={onClearAdvancedFilters}
-        operatorLabels={CHECKLIST_SUBMISSION_OPERATOR_LABELS}
+        operatorLabels={getChecklistSubmissionOperatorLabels(isJa)}
         useOperatorLabelsInSelect
+        selectFieldLabel={isJa ? "項目を選択" : "Select field"}
+        selectOperatorLabel={isJa ? "条件を選択" : "Select operator"}
         title={isJa ? "詳細フィルター" : "Advanced Filters"}
         addRowLabel={isJa ? "フィルター条件を追加" : "Add Filter Row"}
         activeSummaryTitle={isJa ? "適用中のフィルター" : "Active Filters"}

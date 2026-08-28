@@ -20,6 +20,7 @@ import {
 } from "../services/api";
 import {
   CHECKLIST_SUBMISSION_ADVANCED_FILTER_FIELDS,
+  getChecklistSubmissionAdvancedFilterFields,
   buildChecklistSubmissionAdvancedFilterClauses,
   createChecklistSubmissionFilterRow,
   matchesChecklistSubmissionAdvancedFilters,
@@ -2604,6 +2605,7 @@ export default function ChecklistSubmissionsPage() {
   }, [machineAssignments, recordsByFormId, resolvedDateRange.endDate, resolvedDateRange.startDate]);
 
   const advancedFieldDefinitions = useMemo(() => {
+    const isJa = language === "ja";
     const optionMap = {
       factory: [...new Set(assignmentFilterItems.map((assignment) => assignment.factory).filter(Boolean))]
         .sort((left, right) => left.localeCompare(right, "ja")),
@@ -2619,11 +2621,11 @@ export default function ChecklistSubmissionsPage() {
       submissionActivity: [...new Set(assignmentFilterItems.map((assignment) => assignment.submissionActivity).filter(Boolean))],
     };
 
-    return CHECKLIST_SUBMISSION_ADVANCED_FILTER_FIELDS.map((field) => ({
+    return getChecklistSubmissionAdvancedFilterFields(isJa).map((field) => ({
       ...field,
       options: optionMap[field.field] ?? field.options ?? [],
     }));
-  }, [assignmentFilterItems, templates]);
+  }, [assignmentFilterItems, templates, language]);
 
   const filteredAssignments = useMemo(() => {
     if (!appliedAdvancedFilters.length) return assignmentFilterItems;

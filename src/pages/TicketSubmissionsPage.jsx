@@ -23,6 +23,7 @@ import {
   formatTicketRange,
   formatTicketStatusLabel,
   TICKET_SUBMISSION_ADVANCED_FILTER_FIELDS,
+  getTicketSubmissionAdvancedFilterFields,
   TICKET_SUBMISSION_IMAGE_OPTIONS,
   TICKET_SUBMISSION_PAGE_SIZE_OPTIONS,
 } from "../utils/ticketSubmissions";
@@ -1401,14 +1402,14 @@ export default function TicketSubmissionsPage() {
       status: normalizedTicketStatuses.map(formatTicketStatusLabel),
       fieldLabel: filterOptions.fieldLabels,
       fieldType: filterOptions.fieldTypes,
-      hasImages: TICKET_SUBMISSION_IMAGE_OPTIONS,
+      hasImages: isJa ? ["写真あり (With Images)", "写真なし (Without Images)"] : TICKET_SUBMISSION_IMAGE_OPTIONS,
     };
 
-    return TICKET_SUBMISSION_ADVANCED_FILTER_FIELDS.map((field) => ({
+    return getTicketSubmissionAdvancedFilterFields(isJa).map((field) => ({
       ...field,
       options: optionMap[field.field] ?? field.options ?? [],
     }));
-  }, [filterOptions.completedBy, filterOptions.factories, filterOptions.fieldLabels, filterOptions.fieldTypes, filterOptions.formNames, filterOptions.machineNames, normalizedTicketStatuses]);
+  }, [filterOptions.completedBy, filterOptions.factories, filterOptions.fieldLabels, filterOptions.fieldTypes, filterOptions.formNames, filterOptions.machineNames, isJa, normalizedTicketStatuses]);
 
   const statusOptions = useMemo(() => {
     return normalizedTicketStatuses.map((status) => ({
