@@ -1,31 +1,52 @@
-export const CHECKLIST_SUBMISSION_OPERATOR_LABELS = {
-  equals: "equals",
-  not_equals: "is not",
-  contains: "contains",
-  in: "in",
-  exists: "exists",
-  not_exists: "does not exist",
-  greater: "greater than",
-  less: "less than",
-  range: "range",
-};
+export function getChecklistSubmissionOperatorLabels(isJa = false) {
+  if (isJa) {
+    return {
+      equals: "一致する (=)",
+      not_equals: "一致しない (≠)",
+      contains: "含む",
+      in: "いずれかを含む (複数選択)",
+      exists: "値が存在する",
+      not_exists: "値が存在しない (未入力)",
+      greater: "より大きい (>)",
+      less: "より小さい (<)",
+      range: "範囲内 (From - To)",
+    };
+  }
+  return {
+    equals: "equals",
+    not_equals: "is not",
+    contains: "contains",
+    in: "in",
+    exists: "exists",
+    not_exists: "does not exist",
+    greater: "greater than",
+    less: "less than",
+    range: "range",
+  };
+}
+
+export const CHECKLIST_SUBMISSION_OPERATOR_LABELS = getChecklistSubmissionOperatorLabels(false);
 
 export const CHECKLIST_SUBMISSION_SCHEDULE_OPTIONS = ["Daily", "Weekly", "Monthly"];
 export const CHECKLIST_SUBMISSION_NG_OPTIONS = ["With NG", "Without NG"];
 export const CHECKLIST_SUBMISSION_ACTIVITY_OPTIONS = ["Has submissions", "No submissions"];
 
-export const CHECKLIST_SUBMISSION_ADVANCED_FILTER_FIELDS = [
-  { field: "keyword", label: "Keyword", group: "Search", type: "text", operators: ["contains"] },
-  { field: "factory", label: "Factory", group: "Scope", type: "select", operators: ["equals", "not_equals", "contains", "in", "exists", "not_exists"] },
-  { field: "machineLabel", label: "Machine", group: "Machine", type: "select", operators: ["equals", "not_equals", "contains", "in", "exists", "not_exists"] },
-  { field: "formName", label: "Checklist Form", group: "Form", type: "select", operators: ["equals", "not_equals", "contains", "in", "exists", "not_exists"] },
-  { field: "schedule", label: "Schedule", group: "Form", type: "select", operators: ["equals", "not_equals", "in", "exists", "not_exists"], options: CHECKLIST_SUBMISSION_SCHEDULE_OPTIONS },
-  { field: "completedBy", label: "Submitted By", group: "Submission", type: "select", operators: ["equals", "not_equals", "contains", "in", "exists", "not_exists"] },
-  { field: "hasNGStatus", label: "NG Status", group: "Submission", type: "select", operators: ["equals", "not_equals", "in"], options: CHECKLIST_SUBMISSION_NG_OPTIONS },
-  { field: "submissionActivity", label: "Submission Activity", group: "Submission", type: "select", operators: ["equals", "not_equals", "in"], options: CHECKLIST_SUBMISSION_ACTIVITY_OPTIONS },
-  { field: "recordCount", label: "Submission Count", group: "Submission", type: "number", operators: ["equals", "not_equals", "greater", "less", "range", "exists", "not_exists"] },
-  { field: "lastCompletedAt", label: "Last Submission Date", group: "Submission", type: "date", operators: ["equals", "not_equals", "greater", "less", "range", "exists", "not_exists"] },
-];
+export function getChecklistSubmissionAdvancedFilterFields(isJa = false) {
+  return [
+    { field: "keyword", label: isJa ? "キーワード" : "Keyword", group: isJa ? "検索" : "Search", type: "text", operators: ["contains"] },
+    { field: "factory", label: isJa ? "工場" : "Factory", group: isJa ? "対象範囲" : "Scope", type: "select", operators: ["equals", "not_equals", "contains", "in", "exists", "not_exists"] },
+    { field: "machineLabel", label: isJa ? "設備" : "Machine", group: isJa ? "設備" : "Machine", type: "select", operators: ["equals", "not_equals", "contains", "in", "exists", "not_exists"] },
+    { field: "formName", label: isJa ? "点検フォーム" : "Checklist Form", group: isJa ? "フォーム" : "Form", type: "select", operators: ["equals", "not_equals", "contains", "in", "exists", "not_exists"] },
+    { field: "schedule", label: isJa ? "周期" : "Schedule", group: isJa ? "フォーム" : "Form", type: "select", operators: ["equals", "not_equals", "in", "exists", "not_exists"], options: CHECKLIST_SUBMISSION_SCHEDULE_OPTIONS },
+    { field: "completedBy", label: isJa ? "作業者 (提出者)" : "Submitted By", group: isJa ? "提出記録" : "Submission", type: "select", operators: ["equals", "not_equals", "contains", "in", "exists", "not_exists"] },
+    { field: "hasNGStatus", label: isJa ? "NG状態 (判定)" : "NG Status", group: isJa ? "提出記録" : "Submission", type: "select", operators: ["equals", "not_equals", "in"], options: CHECKLIST_SUBMISSION_NG_OPTIONS },
+    { field: "submissionActivity", label: isJa ? "提出状況" : "Submission Activity", group: isJa ? "提出記録" : "Submission", type: "select", operators: ["equals", "not_equals", "in"], options: CHECKLIST_SUBMISSION_ACTIVITY_OPTIONS },
+    { field: "recordCount", label: isJa ? "提出件数" : "Submission Count", group: isJa ? "提出記録" : "Submission", type: "number", operators: ["equals", "not_equals", "greater", "less", "range", "exists", "not_exists"] },
+    { field: "lastCompletedAt", label: isJa ? "最終提出日" : "Last Submission Date", group: isJa ? "提出記録" : "Submission", type: "date", operators: ["equals", "not_equals", "greater", "less", "range", "exists", "not_exists"] },
+  ];
+}
+
+export const CHECKLIST_SUBMISSION_ADVANCED_FILTER_FIELDS = getChecklistSubmissionAdvancedFilterFields(false);
 
 let checklistSubmissionFilterRowCount = 0;
 

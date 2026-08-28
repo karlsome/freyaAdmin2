@@ -1819,7 +1819,57 @@ function normalizeNgStatusHistoryEntry(entry) {
   };
 }
 
+function isAnswerValueOkOrInRange(report) {
+  const ansStr = String(report.answerValue ?? report.value ?? "").trim();
+  const lower = ansStr.toLowerCase();
+  if (lower === "ok" || lower === "合格" || lower === "正常" || lower === "なし" || lower === "適用") {
+    return true;
+  }
+  if (lower === "ng" || lower === "不合格" || lower === "異常" || lower === "あり") {
+    return false;
+  }
+  // Check numeric min/max if defined
+  const min = report.min !== null && report.min !== undefined && report.min !== "" ? Number(report.min) : null;
+  const max = report.max !== null && report.max !== undefined && report.max !== "" ? Number(report.max) : null;
+  if ((min !== null || max !== null) && ansStr !== "") {
+    const num = Number(ansStr);
+    if (!Number.isNaN(num)) {
+      const isOutOfRange = (min !== null && !Number.isNaN(min) && num < min) || (max !== null && !Number.isNaN(max) && num > max);
+      return !isOutOfRange;
+    }
+  }
+  return false;
+}
+
 function normalizeNgReport(report) {
+  const rawType = String(report.ticketType ?? report.type ?? report.ticket_type ?? report.ticketCategory ?? "").trim().toLowerCase();
+  let ticketType = "";
+  let isOpt = false;
+
+  if (rawType === "optional") {
+    ticketType = "optional";
+    isOpt = true;
+  } else if (rawType === "defect") {
+    ticketType = "defect";
+    isOpt = false;
+  } else if (report.isOptional === true || report.optional === true || report.required === false) {
+    ticketType = "optional";
+    isOpt = true;
+  } else if (report.isDefect === true || report.required === true) {
+    ticketType = "defect";
+    isOpt = false;
+  } else {
+    // When no explicit ticketType is set in ngReportsDB, answerValue "OK" (or in-range) indicates an optional ticket
+    const isOkAnswer = isAnswerValueOkOrInRange(report);
+    if (isOkAnswer) {
+      ticketType = "optional";
+      isOpt = true;
+    } else {
+      ticketType = "defect";
+      isOpt = false;
+    }
+  }
+
   return {
     ...report,
     ticketId: normalizeId(report._id ?? report.ticketId),
@@ -1831,6 +1881,10 @@ function normalizeNgReport(report) {
     machineName: report.machineName ?? report["加工設備"] ?? "",
     completedBy: report.completedBy ?? report.workerName ?? "",
     factory: report.factory ?? report.工場 ?? "",
+    ticketType,
+    isOptional: isOpt,
+    isDefect: !isOpt,
+    required: report.required ?? !isOpt,
     createdAt: normalizeMongoDate(
       report.createdAt
       ?? report.completedAt
@@ -2227,6 +2281,18 @@ export async function fetchCheckFormRecords(formIds = []) {
   );
 
   return Array.isArray(records) ? records.map(normalizeCheckFormRecord) : [];
+}
+
+export async function fetchTodayChecklistOverview({ factory = "", date = "" } = {}) {
+  const query = new URLSearchParams();
+  if (factory) query.set("factory", factory);
+  if (date) query.set("date", date);
+
+  const endpoint = query.toString()
+    ? `api/check-forms/today-overview?${query.toString()}`
+    : "api/check-forms/today-overview";
+
+  return _getJson(endpoint);
 }
 
 export async function fetchCheckFormRecordById(recordId) {

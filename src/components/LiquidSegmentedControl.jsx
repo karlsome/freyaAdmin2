@@ -59,12 +59,24 @@ export default function LiquidSegmentedControl({
 
     window.addEventListener("resize", syncIndicator);
 
+    let observer;
+    if (typeof ResizeObserver !== "undefined" && containerRef.current) {
+      observer = new ResizeObserver(() => {
+        syncIndicator();
+      });
+      observer.observe(containerRef.current);
+      buttonRefs.current.forEach((btn) => {
+        if (btn) observer.observe(btn);
+      });
+    }
+
     return () => {
       window.cancelAnimationFrame(frame);
       window.removeEventListener("resize", syncIndicator);
       window.clearTimeout(moveTimeoutRef.current);
+      if (observer) observer.disconnect();
     };
-  }, [activeKey, itemSignature]);
+  }, [activeKey, items, itemSignature]);
 
   if (!normalizedItems.length) return null;
 

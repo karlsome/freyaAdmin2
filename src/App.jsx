@@ -4,7 +4,6 @@ import { Navigate, Route, Routes, useLocation, useNavigate } from "react-router-
 import Sidebar from "./components/Sidebar";
 import { fetchNgInspectionCount } from "./services/api";
 import TopNav from "./components/TopNav";
-import SettingsModal from "./components/SettingsModal";
 import DashboardPage from "./pages/DashboardPage";
 import FactoriesPage from "./pages/FactoriesPage";
 import FactoryDetailPage from "./pages/FactoryDetailPage";
@@ -56,10 +55,9 @@ function App() {
   const [isDark, setIsDark] = useState(() => {
     const saved = localStorage.getItem("theme");
     if (saved) return saved === "dark";
-    return true;
+    return false;
   });
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
-  const [settingsOpen, setSettingsOpen] = useState(false);
   const [badges, setBadges] = useState({ approvals: 12 });
   const [shellIntro, setShellIntro] = useState(false);
   const location = useLocation();
@@ -218,7 +216,6 @@ function App() {
             onClose={() => setMobileNavOpen(false)}
             onLogout={handleLogout}
             onNavigate={(page) => navigate(`/${page}`)}
-            onOpenSettings={() => setSettingsOpen(true)}
           />
           <main
             className={`app-main-shell ml-0 min-h-screen bg-background dark:bg-transparent relative md:ml-16 ${shellIntro && !canUseViewTransitions ? "app-main-shell--enter" : ""} ${justLoggedIn && canUseViewTransitions ? "app-main-shell--handoff-target" : ""}`}
@@ -229,10 +226,8 @@ function App() {
               isDark={isDark}
               onLogout={handleLogout}
               onOpenMobileNav={() => setMobileNavOpen(true)}
-              onOpenSettings={() => setSettingsOpen(true)}
               onToggleTheme={() => setIsDark((darkMode) => !darkMode)}
             />
-            <SettingsModal isOpen={settingsOpen} onClose={() => setSettingsOpen(false)} />
             <Routes>
               <Route path="/" element={<Navigate to="/dashboard" replace />} />
               <Route path="/dashboard" element={<DashboardPage />} />

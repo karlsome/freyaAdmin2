@@ -1,14 +1,31 @@
-export const TICKET_SUBMISSION_OPERATOR_LABELS = {
-  equals: "equals",
-  not_equals: "is not",
-  contains: "contains",
-  in: "in",
-  exists: "exists",
-  not_exists: "does not exist",
-  greater: "greater than",
-  less: "less than",
-  range: "range",
-};
+export function getTicketSubmissionOperatorLabels(isJa = false) {
+  if (isJa) {
+    return {
+      equals: "一致する (=)",
+      not_equals: "一致しない (≠)",
+      contains: "含む",
+      in: "いずれかを含む (複数選択)",
+      exists: "値が存在する",
+      not_exists: "値が存在しない (未入力)",
+      greater: "より大きい (>)",
+      less: "より小さい (<)",
+      range: "範囲内 (From - To)",
+    };
+  }
+  return {
+    equals: "equals",
+    not_equals: "is not",
+    contains: "contains",
+    in: "in",
+    exists: "exists",
+    not_exists: "does not exist",
+    greater: "greater than",
+    less: "less than",
+    range: "range",
+  };
+}
+
+export const TICKET_SUBMISSION_OPERATOR_LABELS = getTicketSubmissionOperatorLabels(false);
 
 export const TICKET_SUBMISSION_IMAGE_OPTIONS = ["With Images", "Without Images"];
 export const TICKET_SUBMISSION_PAGE_SIZE_OPTIONS = [10, 50, 100];
@@ -21,20 +38,24 @@ export const EMPTY_TICKET_SUMMARY = {
   operatorCount: 0,
 };
 
-export const TICKET_SUBMISSION_ADVANCED_FILTER_FIELDS = [
-  { field: "keyword", label: "Keyword", group: "Search", type: "text", operators: ["contains"] },
-  { field: "factory", label: "Factory", group: "Scope", type: "select", operators: ["equals", "not_equals", "contains", "in", "exists", "not_exists"] },
-  { field: "machineName", label: "Machine", group: "Scope", type: "select", operators: ["equals", "not_equals", "contains", "in", "exists", "not_exists"] },
-  { field: "formName", label: "Checklist Form", group: "Submission", type: "select", operators: ["equals", "not_equals", "contains", "in", "exists", "not_exists"] },
-  { field: "completedBy", label: "Submitted By", group: "Submission", type: "select", operators: ["equals", "not_equals", "contains", "in", "exists", "not_exists"] },
-  { field: "status", label: "Ticket Status", group: "Ticket", type: "select", operators: ["equals", "not_equals", "in", "exists", "not_exists"] },
-  { field: "fieldLabel", label: "Check Item", group: "Ticket", type: "select", operators: ["equals", "not_equals", "contains", "in", "exists", "not_exists"] },
-  { field: "fieldType", label: "Field Type", group: "Ticket", type: "select", operators: ["equals", "not_equals", "contains", "in", "exists", "not_exists"] },
-  { field: "answerValue", label: "Submitted Value", group: "Ticket", type: "text", operators: ["equals", "not_equals", "contains", "exists", "not_exists"] },
-  { field: "hasImages", label: "Image Evidence", group: "Ticket", type: "select", operators: ["equals", "not_equals", "in"], options: TICKET_SUBMISSION_IMAGE_OPTIONS },
-  { field: "imageCount", label: "Image Count", group: "Ticket", type: "number", operators: ["equals", "not_equals", "greater", "less", "range", "exists", "not_exists"] },
-  { field: "createdAt", label: "Ticket Date", group: "Ticket", type: "date", operators: ["equals", "not_equals", "greater", "less", "range", "exists", "not_exists"] },
-];
+export function getTicketSubmissionAdvancedFilterFields(isJa = false) {
+  return [
+    { field: "keyword", label: isJa ? "キーワード" : "Keyword", group: isJa ? "検索" : "Search", type: "text", operators: ["contains"] },
+    { field: "factory", label: isJa ? "工場" : "Factory", group: isJa ? "対象範囲" : "Scope", type: "select", operators: ["equals", "not_equals", "contains", "in", "exists", "not_exists"] },
+    { field: "machineName", label: isJa ? "設備" : "Machine", group: isJa ? "対象範囲" : "Scope", type: "select", operators: ["equals", "not_equals", "contains", "in", "exists", "not_exists"] },
+    { field: "formName", label: isJa ? "点検フォーム" : "Checklist Form", group: isJa ? "提出記録" : "Submission", type: "select", operators: ["equals", "not_equals", "contains", "in", "exists", "not_exists"] },
+    { field: "completedBy", label: isJa ? "作業者 (提出者)" : "Submitted By", group: isJa ? "提出記録" : "Submission", type: "select", operators: ["equals", "not_equals", "contains", "in", "exists", "not_exists"] },
+    { field: "status", label: isJa ? "対応ステータス" : "Ticket Status", group: isJa ? "チケット" : "Ticket", type: "select", operators: ["equals", "not_equals", "in", "exists", "not_exists"] },
+    { field: "fieldLabel", label: isJa ? "点検項目" : "Check Item", group: isJa ? "チケット" : "Ticket", type: "select", operators: ["equals", "not_equals", "contains", "in", "exists", "not_exists"] },
+    { field: "fieldType", label: isJa ? "項目タイプ" : "Field Type", group: isJa ? "チケット" : "Ticket", type: "select", operators: ["equals", "not_equals", "contains", "in", "exists", "not_exists"] },
+    { field: "answerValue", label: isJa ? "回答値" : "Submitted Value", group: isJa ? "チケット" : "Ticket", type: "text", operators: ["equals", "not_equals", "contains", "exists", "not_exists"] },
+    { field: "hasImages", label: isJa ? "写真添付" : "Image Evidence", group: isJa ? "チケット" : "Ticket", type: "select", operators: ["equals", "not_equals", "in"], options: isJa ? ["写真あり (With Images)", "写真なし (Without Images)"] : TICKET_SUBMISSION_IMAGE_OPTIONS },
+    { field: "imageCount", label: isJa ? "写真枚数" : "Image Count", group: isJa ? "チケット" : "Ticket", type: "number", operators: ["equals", "not_equals", "greater", "less", "range", "exists", "not_exists"] },
+    { field: "createdAt", label: isJa ? "発生日時" : "Ticket Date", group: isJa ? "チケット" : "Ticket", type: "date", operators: ["equals", "not_equals", "greater", "less", "range", "exists", "not_exists"] },
+  ];
+}
+
+export const TICKET_SUBMISSION_ADVANCED_FILTER_FIELDS = getTicketSubmissionAdvancedFilterFields(false);
 
 let ticketSubmissionFilterRowCount = 0;
 
