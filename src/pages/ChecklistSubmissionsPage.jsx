@@ -2960,11 +2960,6 @@ export default function ChecklistSubmissionsPage() {
         eyebrowClassName="text-xs tracking-[0.18em]"
         title={t("checklistSubmissions")}
         className="mb-6"
-<<<<<<< HEAD
-<<<<<<< Updated upstream
-=======
-=======
->>>>>>> 52fa69a847340cf078b9531a8d025bc30a9e91d9
         actionsClassName="flex-wrap items-center gap-2.5"
         actions={(
           <>
@@ -2981,20 +2976,11 @@ export default function ChecklistSubmissionsPage() {
               onClick={() => navigate("/maintenance")}
               className="inline-flex items-center gap-2 rounded-xl border border-outline-variant/30 bg-surface-container px-4 py-2.5 text-sm font-semibold text-on-surface transition-all duration-150 hover:border-primary/30 hover:bg-surface-container-high active:scale-95"
             >
-<<<<<<< HEAD
               <span className="material-symbols-outlined" style={{ fontSize: 18 }}>add_task</span>
               {isJa ? "点検フォーム作成" : "Create Checklist Form"}
             </button>
           </>
         )}
->>>>>>> Stashed changes
-=======
-              <span className="material-symbols-outlined" style={{ fontSize: 18 }}>checklist</span>
-              {isJa ? "点検フォーム管理" : "Checklist Forms"}
-            </button>
-          </>
-        )}
->>>>>>> 52fa69a847340cf078b9531a8d025bc30a9e91d9
       />
 
       <div className="mb-6 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
