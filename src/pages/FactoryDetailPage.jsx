@@ -383,8 +383,8 @@ export default function FactoryDetailPage({ combined = false }) {
   return (
     <section className="w-full h-screen overflow-y-auto space-y-6 pt-20 px-4 sm:px-6 md:px-8 pb-16">
       {/* ── Page Header ── */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6 pb-4 border-b border-[var(--border)]">
-        <div className="flex items-start gap-3">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-6 pb-4 border-b border-[var(--border)]">
+        <div className="flex items-start gap-3 flex-shrink-0">
           <button
             onClick={() => navigate(combined ? "/factories" : "/dashboard")}
             aria-label="Back"
@@ -413,7 +413,81 @@ export default function FactoryDetailPage({ combined = false }) {
           </div>
         </div>
 
-        <div className="flex items-center gap-3 flex-wrap">
+        <div className="flex items-center gap-3 flex-wrap justify-start lg:justify-end">
+          {/* ── Facility Environmental Telemetry Strip ── */}
+          {(env || sensor?.hasData) && !loading && (
+            <div
+              onClick={() => navigate(combined ? "/sensors" : `/sensors/${encoded}`)}
+              title="View Sensor Telemetry"
+              className="flex items-center gap-3 sm:gap-4 px-3 py-1.5 rounded-[6px] bg-[var(--surface-hover)] border border-[var(--border)] hover:border-[var(--border-strong)] cursor-pointer transition-colors shadow-2xs"
+            >
+              <div className="flex items-center gap-1.5 text-[var(--freya-blue)] pr-2 border-r border-[var(--border)] flex-shrink-0">
+                <span className="material-symbols-outlined" style={{ fontSize: 18 }}>thermostat</span>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--text-muted)] hidden xl:inline">
+                  Telemetry
+                </span>
+              </div>
+
+              <div className="flex items-center gap-3 sm:gap-4 flex-wrap">
+                {env?.temperature != null && (
+                  <div className="flex flex-col">
+                    <span className="text-[9px] font-semibold uppercase tracking-wider text-[var(--text-muted)] leading-tight">
+                      Ambient Temp
+                    </span>
+                    <span className="text-xs sm:text-sm font-semibold text-[var(--text-primary)] freya-tabular leading-tight">
+                      {env.temperature}°C
+                    </span>
+                  </div>
+                )}
+                {env?.humidity != null && (
+                  <div className="flex flex-col">
+                    <span className="text-[9px] font-semibold uppercase tracking-wider text-[var(--text-muted)] leading-tight">
+                      Humidity
+                    </span>
+                    <span className="text-xs sm:text-sm font-semibold text-[var(--text-primary)] freya-tabular leading-tight">
+                      {env.humidity}%
+                    </span>
+                  </div>
+                )}
+                {sensor?.highestTemp != null && (
+                  <div className="flex flex-col">
+                    <span className="text-[9px] font-semibold uppercase tracking-wider text-[var(--text-muted)] leading-tight">
+                      Peak Sensor
+                    </span>
+                    <span className="text-xs sm:text-sm font-semibold text-[var(--text-primary)] freya-tabular leading-tight">
+                      {sensor.highestTemp}°C
+                    </span>
+                  </div>
+                )}
+                {sensor?.averageHumidity != null && (
+                  <div className="flex flex-col">
+                    <span className="text-[9px] font-semibold uppercase tracking-wider text-[var(--text-muted)] leading-tight">
+                      Avg Humidity
+                    </span>
+                    <span className="text-xs sm:text-sm font-semibold text-[var(--text-primary)] freya-tabular leading-tight">
+                      {sensor.averageHumidity}%
+                    </span>
+                  </div>
+                )}
+                {sensor?.wbgt != null && (
+                  <div className="flex flex-col">
+                    <span className="text-[9px] font-semibold uppercase tracking-wider text-[var(--text-muted)] leading-tight">
+                      WBGT Heat Index
+                    </span>
+                    <span className="text-xs sm:text-sm font-semibold text-[var(--text-primary)] freya-tabular leading-tight">
+                      {sensor.wbgt}°C
+                    </span>
+                  </div>
+                )}
+                {env?.isDefault && (
+                  <span className="text-[9px] font-medium text-[var(--text-muted)] px-1.5 py-0.5 rounded-[4px] bg-slate-200/70 dark:bg-slate-800 self-center">
+                    Simulated
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
+
           {!combined && (factoryName === "小瀬" || factoryName === "倉知") && (
             <button
               onClick={() => setCameraModalOpen(true)}
@@ -496,56 +570,7 @@ export default function FactoryDetailPage({ combined = false }) {
         </div>
       </div>
 
-      {/* ── Env / sensor telemetry widget ── */}
-      {(env || sensor?.hasData) && !loading && (
-        <div className="freya-card p-4 sm:p-5 mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <span className="material-symbols-outlined text-[var(--freya-blue)]" style={{ fontSize: 22 }}>thermostat</span>
-            <div>
-              <span className="freya-label">Facility Environmental Telemetry</span>
-              <p className="text-xs text-[var(--text-muted)] mt-0.5">Real-time ambient & sensor diagnostics</p>
-            </div>
-          </div>
 
-          <div className="flex items-center gap-6 sm:gap-8 flex-wrap">
-            {env?.temperature != null && (
-              <div className="flex flex-col">
-                <span className="text-[11px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">Ambient Temp</span>
-                <span className="text-base font-semibold text-[var(--text-primary)] freya-tabular">{env.temperature}°C</span>
-              </div>
-            )}
-            {env?.humidity != null && (
-              <div className="flex flex-col">
-                <span className="text-[11px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">Humidity</span>
-                <span className="text-base font-semibold text-[var(--text-primary)] freya-tabular">{env.humidity}%</span>
-              </div>
-            )}
-            {sensor?.highestTemp != null && (
-              <div className="flex flex-col">
-                <span className="text-[11px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">Peak Sensor</span>
-                <span className="text-base font-semibold text-[var(--text-primary)] freya-tabular">{sensor.highestTemp}°C</span>
-              </div>
-            )}
-            {sensor?.averageHumidity != null && (
-              <div className="flex flex-col">
-                <span className="text-[11px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">Avg Humidity</span>
-                <span className="text-base font-semibold text-[var(--text-primary)] freya-tabular">{sensor.averageHumidity}%</span>
-              </div>
-            )}
-            {sensor?.wbgt != null && (
-              <div className="flex flex-col">
-                <span className="text-[11px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">WBGT Heat Index</span>
-                <span className="text-base font-semibold text-[var(--text-primary)] freya-tabular">{sensor.wbgt}°C</span>
-              </div>
-            )}
-            {env?.isDefault && (
-              <span className="text-[11px] font-medium text-[var(--text-muted)] px-2 py-0.5 rounded-[4px] bg-slate-100 dark:bg-slate-800">
-                Simulated
-              </span>
-            )}
-          </div>
-        </div>
-      )}
 
       {/* ── Filter bar ── */}
       <ProductionFilterBar
