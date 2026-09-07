@@ -14,6 +14,7 @@ import MachineTelemetryCard from "../components/dashboard/MachineTelemetryCard";
 import QualityDefectsCard from "../components/dashboard/QualityDefectsCard";
 import IssuesApprovalsCard from "../components/dashboard/IssuesApprovalsCard";
 import AICopilotPanel from "../components/dashboard/AICopilotPanel";
+import AISpotlightCard from "../components/dashboard/AISpotlightCard";
 
 const PERSONA_PRESETS = {
   plant_operations: {
@@ -84,15 +85,40 @@ export default function DashboardPage() {
     }, 2500);
   };
 
+  const [aiMetadata, setAiMetadata] = useState(null);
+  const [aiSpotlight, setAiSpotlight] = useState(null);
+
   // Reorder cards dynamically (triggered by AI or user prompt)
-  const handleReorderCards = (newOrder, highlightId) => {
+  const handleReorderCards = (newOrder, highlightId, extraMetadata = null) => {
     setActiveCardOrder(newOrder);
+    if (extraMetadata) {
+      setAiMetadata(extraMetadata);
+      if (extraMetadata.spotlight) {
+        setAiSpotlight(extraMetadata.spotlight);
+      } else if (extraMetadata.activeWorkers && extraMetadata.activeWorkers.length > 0) {
+        setAiSpotlight({
+          type: "workers",
+          title: `Active Personnel Shift Overview — ${extraMetadata.factory || "小瀬"} Factory`,
+          summary: `Zero-noise breakdown of ${extraMetadata.activeWorkers.length} active operators and their machine assignments today.`,
+          factory: extraMetadata.factory || "小瀬",
+          workers: extraMetadata.activeWorkers
+        });
+      }
+    }
     if (highlightId) {
       setHighlightedCard(highlightId);
       if (highlightTimeoutRef.current) clearTimeout(highlightTimeoutRef.current);
       highlightTimeoutRef.current = setTimeout(() => {
         setHighlightedCard(null);
-      }, 3000);
+      }, 6000);
+
+      // Smoothly scroll the highlighted card or spotlight into view
+      setTimeout(() => {
+        const el = document.getElementById(extraMetadata?.spotlight ? "ai-spotlight-section" : `card-wrapper-${highlightId}`);
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+      }, 100);
     }
   };
 
@@ -100,6 +126,8 @@ export default function DashboardPage() {
     const defaultCards = PERSONA_PRESETS[currentPersona]?.cards || PERSONA_PRESETS.plant_operations.cards;
     setActiveCardOrder(defaultCards);
     setHighlightedCard(null);
+    setAiMetadata(null);
+    setAiSpotlight(null);
   };
 
   // Component Map
@@ -142,6 +170,7 @@ export default function DashboardPage() {
             byProcess={byProcess}
             loading={loading}
             isHighlighted={isHighlighted}
+            aiMetadata={aiMetadata}
             onAskAI={(prompt) => {
               setCopilotOpen(true);
               handleReorderCards(["production", "defects", "camera", "telemetry", "issues", "finance"], "production");
@@ -284,9 +313,40 @@ export default function DashboardPage() {
             {PERSONA_PRESETS[currentPersona]?.description} · <em>AI prompts or presets dynamically reconfigure the cards below.</em>
           </p>
 
+          {/* ── AI Spotlight View: Big, upfront, noise-free ── */}
+          {aiSpotlight && (
+            <div id="ai-spotlight-section" className="w-full mb-6 transition-all duration-300">
+              <AISpotlightCard
+                spotlight={aiSpotlight}
+                onClose={() => setAiSpotlight(null)}
+                onAskAI={(prompt) => {
+                  setCopilotOpen(true);
+                }}
+              />
+
+              {/* Separator indicating standard background cards below */}
+              <div className="flex items-center justify-between pt-4 pb-1 text-xs text-[var(--text-muted)] border-t border-[var(--border)] mt-4">
+                <div className="flex items-center gap-1.5 font-semibold uppercase tracking-[0.04em]">
+                  <span className="material-symbols-outlined" style={{ fontSize: 15 }}>layers</span>
+                  <span>Standard Facility Overview (Secondary)</span>
+                </div>
+                <button
+                  onClick={() => setAiSpotlight(null)}
+                  className="hover:text-[var(--text-primary)] underline transition-colors cursor-pointer text-[11px]"
+                >
+                  Dismiss Focus View
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* Dynamic Cards Grid */}
-          <div className={`grid grid-cols-1 ${copilotOpen ? "xl:grid-cols-2" : "md:grid-cols-2 xl:grid-cols-3"} gap-4 sm:gap-5`}>
-            {activeCardOrder.map((cardId) => renderCard(cardId))}
+          <div className={`grid grid-cols-1 ${copilotOpen ? "xl:grid-cols-2" : "md:grid-cols-2 xl:grid-cols-3"} gap-4 sm:gap-5 transition-all duration-300`}>
+            {activeCardOrder.map((cardId) => (
+              <div key={cardId} id={`card-wrapper-${cardId}`}>
+                {renderCard(cardId)}
+              </div>
+            ))}
           </div>
         </div>
 

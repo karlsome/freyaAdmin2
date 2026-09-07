@@ -70,7 +70,7 @@ export default function AICopilotPanel({ onReorderCards, onReset, onClose, curre
       });
 
       if (data.uiAction?.cardOrder) {
-        onReorderCards(data.uiAction.cardOrder, data.uiAction.highlightCard);
+        onReorderCards(data.uiAction.cardOrder, data.uiAction.highlightCard, data.uiAction);
       }
 
       setMessages((prev) => [

@@ -1,12 +1,12 @@
 import { useNavigate } from "react-router-dom";
 
-export default function FactoryProductionCard({ kpis, byFactory = [], byProcess = [], loading, onAskAI, isHighlighted }) {
+export default function FactoryProductionCard({ kpis, byFactory = [], byProcess = [], loading, onAskAI, isHighlighted, aiMetadata }) {
   const navigate = useNavigate();
   const dailyTarget = 35000;
   const total = kpis?.total || 0;
   const progressPct = Math.min(100, Math.round((total / dailyTarget) * 100));
 
-  const totalWorkersEstimate = Math.max(1, Math.round((kpis?.workHours || 0) / 7.5));
+  const totalWorkersEstimate = aiMetadata?.activeWorkers?.length || Math.max(1, Math.round((kpis?.workHours || 0) / 7.5));
   const unitsPerLaborHour = kpis?.workHours > 0 ? Math.round(total / kpis.workHours) : 0;
 
   return (
@@ -54,7 +54,13 @@ export default function FactoryProductionCard({ kpis, byFactory = [], byProcess 
           />
         </div>
         <div className="flex items-center justify-between text-xs text-[var(--text-muted)] mt-2">
-          <span>Active Personnel: ~{totalWorkersEstimate} operators</span>
+          <span>
+            Active Personnel: {aiMetadata?.activeWorkers?.length ? (
+              <strong className="text-[var(--freya-blue)]">{aiMetadata.activeWorkers.length} verified operators ({aiMetadata.factory})</strong>
+            ) : (
+              `~${totalWorkersEstimate} operators`
+            )}
+          </span>
           <span>Efficiency: <strong className="text-[var(--text-primary)] freya-tabular">{unitsPerLaborHour}</strong> units/worker-hr</span>
         </div>
       </div>
