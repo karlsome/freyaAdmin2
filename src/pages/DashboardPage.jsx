@@ -14,7 +14,7 @@ import MachineTelemetryCard from "../components/dashboard/MachineTelemetryCard";
 import QualityDefectsCard from "../components/dashboard/QualityDefectsCard";
 import IssuesApprovalsCard from "../components/dashboard/IssuesApprovalsCard";
 import AICopilotPanel from "../components/dashboard/AICopilotPanel";
-import AISpotlightCard from "../components/dashboard/AISpotlightCard";
+import AIShapeRenderer from "../components/dashboard/AIShapeRenderer";
 
 const PERSONA_PRESETS = {
   plant_operations: {
@@ -316,7 +316,7 @@ export default function DashboardPage() {
           {/* ── AI Spotlight View: Big, upfront, noise-free ── */}
           {aiSpotlight && (
             <div id="ai-spotlight-section" className="w-full mb-6 transition-all duration-300">
-              <AISpotlightCard
+              <AIShapeRenderer
                 spotlight={aiSpotlight}
                 onClose={() => setAiSpotlight(null)}
                 onAskAI={(prompt) => {
