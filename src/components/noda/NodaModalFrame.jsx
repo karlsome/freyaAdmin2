@@ -40,15 +40,15 @@ export default function NodaModalFrame({
   if (!open) return null;
 
   const modal = (
-    <div className="fixed inset-0 z-[70] bg-black/40 backdrop-blur-sm">
+    <div className="fixed inset-0 z-[70] bg-black/60 backdrop-blur-sm">
       <div className="flex min-h-full items-center justify-center p-4 lg:p-6">
-        <div className={joinClasses("glass-card flex max-h-[92vh] w-full flex-col overflow-hidden rounded-2xl", maxWidthClassName)}>
-          <div className="border-b border-separator/40 px-5 py-4 lg:px-6">
+        <div className={joinClasses("freya-card flex max-h-[92vh] w-full flex-col overflow-hidden rounded-[12px] border border-[var(--border)] bg-[var(--surface-raised)] shadow-2xl", maxWidthClassName)}>
+          <div className="border-b border-[var(--border)] px-5 py-4 bg-[var(--surface)]">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-              <div className={joinClasses("min-w-0", showIcon ? "flex items-start gap-4" : "") }>
+              <div className={joinClasses("min-w-0", showIcon ? "flex items-start gap-3.5" : "") }>
                 {showIcon ? (
-                  <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-2xl border border-separator/40 bg-white/80 text-primary dark:bg-surface-container">
-                    <span className="material-symbols-outlined" style={{ fontVariationSettings: "'FILL' 1" }}>
+                  <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] text-[var(--freya-blue)]">
+                    <span className="material-symbols-outlined" style={{ fontSize: 20, fontVariationSettings: "'FILL' 1" }}>
                       {icon}
                     </span>
                   </div>
@@ -56,17 +56,17 @@ export default function NodaModalFrame({
 
                 <div className="min-w-0">
                   {eyebrow ? (
-                    <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">{eyebrow}</div>
+                    <div className="text-xs font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">{eyebrow}</div>
                   ) : null}
-                  <h2 className="mt-1 break-words text-xl font-semibold text-on-surface [overflow-wrap:anywhere]">{title}</h2>
-                  {subtitle ? <p className="mt-1 break-words text-sm text-on-surface-variant [overflow-wrap:anywhere]">{subtitle}</p> : null}
+                  <h2 className="mt-0.5 break-words text-base font-semibold text-[var(--text-primary)] [overflow-wrap:anywhere]">{title}</h2>
+                  {subtitle ? <p className="mt-0.5 break-words text-xs text-[var(--text-muted)] [overflow-wrap:anywhere]">{subtitle}</p> : null}
                 </div>
               </div>
 
               <button
                 type="button"
                 onClick={() => onClose?.()}
-                className="p-2 rounded-xl flex-shrink-0 text-outline hover:bg-surface-container hover:text-on-surface transition-all duration-150 active:scale-95"
+                className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-[6px] text-[var(--text-muted)] hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)] transition-colors"
                 aria-label="Close dialog"
               >
                 <span className="material-symbols-outlined" style={{ fontSize: 18 }}>close</span>
@@ -77,7 +77,7 @@ export default function NodaModalFrame({
           <div className="min-h-0 flex-1 overflow-y-auto px-5 py-5 lg:px-6">{children}</div>
 
           {footer ? (
-            <div className="border-t border-outline-variant/15 px-5 py-4 lg:px-6">
+            <div className="border-t border-[var(--border)] px-5 py-3.5 bg-[var(--surface)]">
               {footer}
             </div>
           ) : null}

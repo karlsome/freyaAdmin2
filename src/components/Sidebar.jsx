@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useLanguage } from "../contexts/LanguageContext";
 import IconButton from "./IconButton";
+import freyaLogo from "../assets/freya-systems-logo.png";
 
 const navItems = [
   { icon: "dashboard",                labelKey: "dashboard",           page: "dashboard" },
@@ -113,14 +114,17 @@ export default function Sidebar({ activePage, badges = {}, mobileOpen = false, o
       <>
         <div className="mb-10 flex items-center justify-between px-3">
           <div className={`flex items-center gap-3 ${isMobile ? "" : "min-w-[256px]"}`}>
-            <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl kinetic-gradient shadow-lg shadow-primary/20">
-              <span className="material-symbols-outlined text-white" style={{ fontVariationSettings: "'FILL' 1" }}>
+            <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-[8px] bg-slate-100 dark:bg-slate-850 border border-[var(--border)]">
+              <span className="material-symbols-outlined text-[var(--freya-blue)]" style={{ fontSize: 20 }}>
                 precision_manufacturing
               </span>
             </div>
             <div className={`overflow-hidden transition-opacity duration-200 ${isMobile ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`}>
-              <h1 className="whitespace-nowrap text-lg font-semibold leading-none text-on-surface">Freya Admin</h1>
-              <p className="mt-0.5 whitespace-nowrap text-[10px] font-semibold uppercase tracking-[0.18em] text-primary">Detailed Data</p>
+              <img
+                src={freyaLogo}
+                alt="FREYA SYSTEMS"
+                className="h-6 w-auto max-w-[145px] object-contain dark:invert"
+              />
             </div>
           </div>
 

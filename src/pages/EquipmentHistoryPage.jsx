@@ -26,7 +26,7 @@ import DataTable from "../components/DataTable";
 const PAGE_SIZE_OPTIONS = [25, 50, 100];
 
 const inputCls =
-  "w-full rounded-xl border border-outline-variant/30 bg-surface px-3 py-3 text-sm text-on-surface outline-none transition-all duration-150 focus:border-primary/40 disabled:opacity-50 font-body";
+  "w-full rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-xs text-[var(--text-primary)] outline-none transition-all duration-150 focus:border-[var(--freya-blue)] focus:ring-1 focus:ring-[var(--freya-blue)] disabled:opacity-50 font-body placeholder:text-[var(--text-muted)]";
 
 function compressImage(file) {
   return new Promise((resolve, reject) => {
@@ -194,7 +194,7 @@ function SearchableSelect({ value, options, onChange, placeholder, className, di
           updatePosition();
           setIsOpen(!isOpen);
         }}
-        className={`${className} flex items-center justify-between text-left px-3 ${disabled ? 'opacity-50 cursor-not-allowed' : ''} ${isMulti && Array.isArray(value) && value.length > 0 ? 'py-1.5' : ''}`}
+        className={`${className} flex items-center justify-between text-left px-3 ${disabled ? 'opacity-50 cursor-not-allowed' : ''} ${isMulti && Array.isArray(value) && value.length > 0 ? 'py-1' : ''}`}
       >
         <div className="flex-1 flex flex-wrap gap-1.5 items-center overflow-hidden pr-2">
           {isMulti && Array.isArray(value) && value.length > 0 ? (
@@ -202,12 +202,12 @@ function SearchableSelect({ value, options, onChange, placeholder, className, di
               const opt = normalizedOptions.find((o) => o.value === v);
               const label = opt ? opt.label : v;
               return (
-                <span key={v} className="inline-flex items-center gap-1 bg-surface-container-high border border-outline-variant/30 px-2 py-1 rounded-md text-[11px] font-medium text-on-surface">
+                <span key={v} className="inline-flex items-center gap-1 bg-[var(--surface-subtle)] border border-[var(--border)] px-1.5 py-0.5 rounded-[4px] text-[11px] font-medium text-[var(--text-primary)]">
                   <span className="truncate max-w-[120px]">{label}</span>
                   <div 
                     role="button"
                     tabIndex={0}
-                    className="hover:text-error hover:bg-error/10 rounded-full p-0.5 -mr-1 transition-colors flex items-center justify-center cursor-pointer"
+                    className="hover:text-error hover:bg-error/10 rounded-[2px] p-0.5 -mr-0.5 transition-colors flex items-center justify-center cursor-pointer"
                     onClick={(e) => {
                       e.stopPropagation();
                       onChange(value.filter((item) => item !== v));
@@ -228,19 +228,19 @@ function SearchableSelect({ value, options, onChange, placeholder, className, di
             <span className="truncate">{displayText}</span>
           )}
         </div>
-        <span className="material-symbols-outlined shrink-0 opacity-50" style={{ fontSize: 18 }}>expand_more</span>
+        <span className="material-symbols-outlined shrink-0 opacity-50" style={{ fontSize: 16 }}>expand_more</span>
       </button>
 
       {isOpen && !disabled && createPortal(
         <div 
-          className="searchable-select-dropdown max-h-72 overflow-y-auto rounded-xl border border-separator/40 bg-white shadow-xl dark:bg-surface-container py-1 flex flex-col font-body"
+          className="searchable-select-dropdown max-h-72 overflow-y-auto rounded-[8px] border border-[var(--border)] bg-[var(--surface-raised)] shadow-xl py-1 flex flex-col font-body z-[90]"
           style={dropdownStyles}
         >
-          <div className="px-2 pb-1 sticky top-0 bg-white dark:bg-surface-container z-10 pt-1">
+          <div className="px-2 pb-1 sticky top-0 bg-[var(--surface-raised)] z-10 pt-1">
             <input
               type="text"
               autoFocus
-              className="w-full h-8 px-3 rounded-lg border border-separator/40 bg-surface-container-low text-xs outline-none focus:border-primary/40 font-body"
+              className="w-full h-7 px-2.5 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] text-xs text-[var(--text-primary)] outline-none focus:border-[var(--freya-blue)] font-body placeholder:text-[var(--text-muted)]"
               placeholder={t("searchPlaceholder")}
               value={query}
               onChange={(e) => setQuery(e.target.value)}
@@ -251,12 +251,12 @@ function SearchableSelect({ value, options, onChange, placeholder, className, di
           <button
             type="button"
             onClick={(e) => toggleOption({ value: "", label: placeholder }, e)}
-            className={`flex w-full items-center px-4 py-2 text-sm text-left transition-colors ${!value ? "bg-primary/10 text-primary font-medium" : "text-on-surface hover:bg-surface-container-highest"}`}
+            className={`flex w-full items-center px-3 py-1.5 text-xs text-left transition-colors ${!value ? "bg-[var(--freya-blue)]/10 text-[var(--freya-blue)] font-medium" : "text-[var(--text-primary)] hover:bg-[var(--surface-hover)]"}`}
           >
             <span className="truncate italic opacity-70">{placeholder}</span>
           </button>
           {filteredOptions.length === 0 ? (
-            <div className="px-4 py-2 text-xs text-on-surface-variant text-center">{t("noResultsFound")}</div>
+            <div className="px-3 py-2 text-xs text-[var(--text-muted)] text-center">{t("noResultsFound")}</div>
           ) : (
             filteredOptions.map((option) => {
               const isSelected = isMulti 
@@ -267,12 +267,12 @@ function SearchableSelect({ value, options, onChange, placeholder, className, di
                   key={option.value}
                   type="button"
                   onClick={(e) => toggleOption(option, e)}
-                  className={`flex w-full items-center px-4 py-2 text-sm text-left transition-colors
-                    ${isSelected ? "bg-primary/10 text-primary font-medium" : "text-on-surface hover:bg-surface-container-highest"}`}
+                  className={`flex w-full items-center px-3 py-1.5 text-xs text-left transition-colors
+                    ${isSelected ? "bg-[var(--freya-blue)]/10 text-[var(--freya-blue)] font-medium" : "text-[var(--text-primary)] hover:bg-[var(--surface-hover)]"}`}
                 >
                   <span className="truncate flex-1">{option.label}</span>
                   {isSelected && isMulti && (
-                    <span className="material-symbols-outlined text-primary ml-2" style={{ fontSize: 16 }}>check</span>
+                    <span className="material-symbols-outlined text-[var(--freya-blue)] ml-2" style={{ fontSize: 14 }}>check</span>
                   )}
                 </button>
               );
@@ -939,27 +939,27 @@ function EventModal({ event, history, factories, allEquipment, workerNames, user
   const canSubmit = Boolean(factory && equipmentId && date) && !submitting && !uploading;
 
   return createPortal(
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
       <div
-        className="dashboard-section rounded-2xl w-full max-w-6xl max-h-[92vh] flex flex-col overflow-hidden shadow-2xl font-body"
+        className="w-full max-w-6xl max-h-[92vh] flex flex-col overflow-hidden shadow-2xl rounded-[12px] border border-[var(--border)] bg-[var(--surface-raised)] font-body"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="sticky top-0 z-20 px-6 py-4 flex items-center justify-between border-b border-separator/40 bg-surface/90 backdrop-blur-md">
+        <div className="sticky top-0 z-20 px-6 py-4 flex items-center justify-between border-b border-[var(--border)] bg-[var(--surface-raised)]/95 backdrop-blur-md">
           <div>
-            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--text-muted)]">
               {isEdit ? t("editRecordEyebrow") : t("addRecordEyebrow")}
             </p>
-            <h2 className="mt-1 text-xl font-semibold text-on-surface">
+            <h2 className="mt-0.5 text-lg font-semibold text-[var(--text-primary)]">
               {isEdit ? (event.title || t("equipmentEventFallback")) : t("reportEquipmentEvent")}
             </h2>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="p-2 rounded-xl hover:bg-surface-container text-outline hover:text-on-surface transition-all duration-150"
+            className="p-1.5 rounded-[6px] hover:bg-[var(--surface-hover)] text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors"
           >
-            <span className="material-symbols-outlined" style={{ fontSize: 20 }}>close</span>
+            <span className="material-symbols-outlined" style={{ fontSize: 18 }}>close</span>
           </button>
         </div>
 
@@ -1465,23 +1465,23 @@ function EventModal({ event, history, factories, allEquipment, workerNames, user
         </div>
 
         {/* Footer */}
-        <div className="border-t border-outline-variant/20 px-6 py-4 bg-surface flex items-center justify-between gap-3 z-20">
+        <div className="border-t border-[var(--border)] px-6 py-4 bg-[var(--surface-subtle)] flex items-center justify-between gap-3 z-20">
           {!isEdit ? (
             <button
               type="button"
               onClick={discardDraft}
-              className="rounded-xl border border-error/20 text-error hover:bg-error/10 px-5 py-2.5 text-sm font-semibold active:scale-95 transition-all"
+              className="rounded-[6px] border border-error/30 text-error hover:bg-error/10 px-3 py-1.5 text-xs font-semibold active:scale-95 transition-all"
             >
               {t("discardDraft")}
             </button>
           ) : (
             <div />
           )}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2.5">
             <button
               type="button"
               onClick={onClose}
-              className="rounded-xl border border-separator/40 px-5 py-2.5 text-sm font-semibold text-on-surface-variant hover:bg-surface-container hover:text-primary hover:border-primary/30 active:scale-95 transition-all"
+              className="rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-hover)] active:scale-95 transition-all"
             >
               {t("cancel")}
             </button>
@@ -1489,7 +1489,7 @@ function EventModal({ event, history, factories, allEquipment, workerNames, user
               type="submit"
               form="event-form"
               disabled={!canSubmit}
-              className="rounded-xl bg-primary px-6 py-2.5 text-sm font-semibold text-on-primary hover:opacity-90 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              className="rounded-[6px] bg-[var(--freya-blue)] px-4 py-1.5 text-xs font-semibold text-white hover:bg-[var(--freya-blue-hover)] active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-xs"
             >
               {submitting ? t("savingEllipsis") : isEdit ? t("saveChanges") : t("submitReport")}
             </button>
@@ -1929,7 +1929,7 @@ export default function EquipmentHistoryPage() {
     : t("equipmentHistoryTitle");
 
   return (
-    <section className="pt-24 pb-16 px-8 overflow-y-auto h-screen scrollbar-hide font-body">
+    <div className="min-h-screen max-w-[1600px] mx-auto space-y-6 pt-20 px-6 pb-12 font-body">
       <PageHeader
         eyebrow={t("equipmentHistoryTitle")}
         title={t("equipmentHistoryTitle")}
@@ -1937,16 +1937,16 @@ export default function EquipmentHistoryPage() {
       />
 
       {/* Filter bar */}
-      <div className="dashboard-section mb-6 rounded-2xl p-5 relative z-20">
+      <div className="freya-card mb-6 rounded-[8px] border border-[var(--border)] bg-[var(--surface)] p-4 shadow-sm relative z-20">
         {dataError && (
-          <div className="mb-4 rounded-2xl border border-error/20 bg-error/10 px-4 py-4 flex gap-3">
+          <div className="mb-4 rounded-[6px] border border-error/20 bg-error/10 px-4 py-3 flex gap-3">
             <span className="material-symbols-outlined text-error flex-shrink-0" style={{ fontSize: 18 }}>report</span>
-            <p className="text-sm font-semibold text-on-surface">{dataError}</p>
+            <p className="text-xs font-semibold text-on-surface">{dataError}</p>
           </div>
         )}
         <div className="flex flex-wrap items-end gap-4">
           <div className="flex-1 min-w-[200px]">
-            <div className="mb-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">{t("factory")}</div>
+            <div className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--text-muted)]">{t("factory")}</div>
             <SearchableSelect
               value={filterFactories}
               onChange={handleFilterFactoriesChange}
@@ -1958,7 +1958,7 @@ export default function EquipmentHistoryPage() {
             />
           </div>
           <div className="flex-1 min-w-[200px]">
-            <div className="mb-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">{t("machine")}</div>
+            <div className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--text-muted)]">{t("machine")}</div>
             <SearchableSelect
               value={filterEquipmentId}
               onChange={(val) => setFilterEquipmentId(val)}
@@ -1969,7 +1969,7 @@ export default function EquipmentHistoryPage() {
             />
           </div>
           <div className="flex-[2] min-w-[250px]">
-            <div className="mb-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">{t("searchAndFilter")}</div>
+            <div className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--text-muted)]">{t("searchAndFilter")}</div>
             <div className="flex items-center gap-2">
               <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} className={inputCls}>
                 <option value="">{t("allStatuses")}</option>
@@ -1990,9 +1990,9 @@ export default function EquipmentHistoryPage() {
             <button
               type="button"
               onClick={openCreate}
-              className="inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-on-primary hover:opacity-90 active:scale-95 transition-all shadow-md"
+              className="inline-flex items-center gap-1.5 rounded-[6px] bg-[var(--freya-blue)] px-3.5 py-2 text-xs font-semibold text-white hover:bg-[var(--freya-blue-hover)] active:scale-95 transition-all shadow-xs"
             >
-              <span className="material-symbols-outlined" style={{ fontSize: 18 }}>add</span>
+              <span className="material-symbols-outlined" style={{ fontSize: 16 }}>add</span>
               {t("reportIssue")}
             </button>
           </div>
@@ -2024,17 +2024,17 @@ export default function EquipmentHistoryPage() {
           }}
         />
       ) : (
-        <div className="dashboard-section rounded-2xl overflow-hidden shadow-sm">
+        <div className="freya-card rounded-[8px] border border-[var(--border)] bg-[var(--surface)] overflow-hidden shadow-sm">
           {/* Section header */}
-          <div className="px-5 py-4 border-b border-separator/40 flex items-center justify-between">
+          <div className="px-5 py-3.5 border-b border-[var(--border)] flex items-center justify-between bg-[var(--surface)]">
             <div className="flex items-center gap-3">
-              <span className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
-                <span className="material-symbols-outlined text-primary" style={{ fontSize: 20 }}>build_circle</span>
+              <span className="w-8 h-8 rounded-[6px] bg-[var(--freya-blue)]/10 flex items-center justify-center flex-shrink-0">
+                <span className="material-symbols-outlined text-[var(--freya-blue)]" style={{ fontSize: 18 }}>build_circle</span>
               </span>
               <div>
-                <h3 className="text-base font-semibold text-on-surface">{tableTitle}</h3>
+                <h3 className="text-sm font-semibold text-[var(--text-primary)]">{tableTitle}</h3>
                 {!historyLoading && totalCount > 0 && (
-                  <p className="text-xs text-outline mt-0.5">
+                  <p className="text-xs text-[var(--text-muted)] mt-0.5">
                     {fillTemplate(t("totalRecordsTemplate"), { count: totalCount })}
                   </p>
                 )}
@@ -2090,6 +2090,6 @@ export default function EquipmentHistoryPage() {
           onSubmit={handleModalSubmit}
         />
       )}
-    </section>
+    </div>
   );
 }

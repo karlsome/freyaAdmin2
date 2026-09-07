@@ -591,20 +591,20 @@ export default function MaterialPDFsWorkspace({ refreshToken = 0, onFlash }) {
   }
 
   const stats = [
-    { label: "Total Files", value: totalCount, icon: "description", accent: "bg-primary/12 text-primary" },
-    { label: "Visible Page", value: items.length, icon: "grid_view", accent: "bg-secondary/12 text-secondary" },
-    { label: "Selected", value: selectedIds.size, icon: "task_alt", accent: "bg-emerald-500/12 text-emerald-600 dark:text-emerald-300" },
-    { label: "Linked Materials", value: currentLinkedMaterials, icon: "sell", accent: "bg-amber-500/12 text-amber-600 dark:text-amber-300" },
+    { label: "Total Files", value: totalCount, icon: "description", accent: "bg-[var(--freya-blue)]/10 text-[var(--freya-blue)]" },
+    { label: "Visible Page", value: items.length, icon: "grid_view", accent: "bg-[var(--text-primary)]/10 text-[var(--text-primary)]" },
+    { label: "Selected", value: selectedIds.size, icon: "task_alt", accent: "bg-[var(--status-success)]/10 text-[var(--status-success)]" },
+    { label: "Linked Materials", value: currentLinkedMaterials, icon: "sell", accent: "bg-amber-500/10 text-amber-600 dark:text-amber-400" },
   ];
 
   return (
     <div>
-      <div className="glass-card rounded-3xl px-5 py-5 mb-6">
+      <div className="freya-card mb-6 rounded-[8px] border border-[var(--border)] bg-[var(--surface)] p-6 shadow-sm">
         <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-outline">Document Library</div>
-            <h3 className="mt-1 text-2xl font-semibold text-on-surface">作業条件表 (PSA) / その他1 / その他2</h3>
-            <p className="mt-2 max-w-2xl text-sm text-on-surface-variant">
+            <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--text-muted)]">Document Library</div>
+            <h3 className="mt-0.5 text-2xl font-bold tracking-tight text-[var(--text-primary)]">作業条件表 (PSA) / その他1 / その他2</h3>
+            <p className="mt-1 max-w-2xl text-xs text-[var(--text-secondary)]">
               Manage material-linked PDFs by document type. Uploads preserve the legacy conflict checks, bulk filename matching, and trash/recovery workflow.
             </p>
           </div>
@@ -615,7 +615,7 @@ export default function MaterialPDFsWorkspace({ refreshToken = 0, onFlash }) {
               setTrashPage(1);
               setTrashOpen(true);
             }}
-            className="inline-flex items-center gap-2 rounded-2xl border border-separator/40 bg-surface-container px-4 py-2 text-xs font-semibold text-on-surface transition hover:bg-surface-container-high"
+            className="inline-flex items-center gap-2 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3.5 py-1.5 text-xs font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-hover)] transition-colors shadow-2xs"
           >
             <span className="material-symbols-outlined" style={{ fontSize: 16 }}>delete</span>
             Open Trash
@@ -632,25 +632,25 @@ export default function MaterialPDFsWorkspace({ refreshToken = 0, onFlash }) {
       </div>
 
       {activeTypeMeta.comingSoon ? (
-        <div className="glass-card rounded-3xl px-6 py-16 text-center mb-8">
-          <span className="material-symbols-outlined text-outline" style={{ fontSize: 56 }}>video_library</span>
-          <h4 className="mt-4 text-xl font-semibold text-on-surface">{activeTypeMeta.label}</h4>
-          <p className="mt-2 text-sm text-on-surface-variant">This legacy section is still marked as coming soon. The sub-tab is live in navigation, but uploads and browsing are not enabled yet.</p>
+        <div className="freya-card mb-6 rounded-[8px] border border-[var(--border)] bg-[var(--surface)] p-12 text-center">
+          <span className="material-symbols-outlined text-[var(--text-muted)]" style={{ fontSize: 48 }}>video_library</span>
+          <h4 className="mt-3 text-lg font-bold text-[var(--text-primary)]">{activeTypeMeta.label}</h4>
+          <p className="mt-1.5 text-xs text-[var(--text-secondary)]">This legacy section is still marked as coming soon. The sub-tab is live in navigation, but uploads and browsing are not enabled yet.</p>
         </div>
       ) : (
         <>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4 mb-6">
             {stats.map((card) => (
-              <div key={card.label} className="glass-card rounded-2xl p-5">
-                <div className="flex items-center gap-4">
-                  <div className={`flex h-12 w-12 items-center justify-center rounded-2xl ${card.accent}`}>
-                    <span className="material-symbols-outlined" style={{ fontSize: 24, fontVariationSettings: "'FILL' 1" }}>
+              <div key={card.label} className="freya-card rounded-[8px] border border-[var(--border)] bg-[var(--surface)] p-4 shadow-sm">
+                <div className="flex items-center gap-3.5">
+                  <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-[6px] ${card.accent}`}>
+                    <span className="material-symbols-outlined" style={{ fontSize: 20, fontVariationSettings: "'FILL' 1" }}>
                       {card.icon}
                     </span>
                   </div>
                   <div>
-                    <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-outline">{card.label}</div>
-                    <div className="mt-1 text-2xl font-semibold text-on-surface">{card.value}</div>
+                    <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--text-muted)]">{card.label}</div>
+                    <div className="mt-0.5 text-xl font-bold tracking-tight text-[var(--text-primary)]">{card.value}</div>
                   </div>
                 </div>
               </div>

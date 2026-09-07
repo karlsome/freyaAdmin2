@@ -422,11 +422,11 @@ export default function RecordEditModal({
       );
     }
 
-    const inputClassName = "planner-data-text w-full rounded-2xl border border-separator/40 bg-white px-3 py-2.5 text-on-surface outline-none transition focus:border-primary/40 dark:bg-surface-container";
+    const inputClassName = "w-full rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm text-[var(--text-primary)] outline-none transition focus:border-[var(--freya-blue)]";
 
     return (
       <div>
-        {options.hideLabel ? null : <div className="mb-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">{label}</div>}
+        {options.hideLabel ? null : <div className="mb-1 text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">{label}</div>}
         {imagePreview ? (
           <div className="mb-2 w-full max-w-sm overflow-hidden rounded-2xl border border-outline-variant/15 bg-surface-container-low transition-colors hover:bg-surface-container-high/50 cursor-pointer" onClick={() => setPhotoPreview({
             eyebrow: "Record Photos",
@@ -717,17 +717,17 @@ export default function RecordEditModal({
             { label: item.partNumberLabel, value: partNumberValue, focusField: "品番" },
             { label: item.serialNumberLabel, value: serialNumberValue, focusField: "背番号" },
           ].map((field) => (
-            <div key={field.focusField} className="rounded-2xl border border-outline-variant/15 bg-surface-container-low px-4 py-3">
-              <div className="mb-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">{field.label}</div>
+            <div key={field.focusField} className="rounded-[6px] border border-[var(--border)] bg-[var(--surface-raised)] px-3.5 py-2.5">
+              <div className="mb-1 text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">{field.label}</div>
               <div className="flex items-center gap-2">
-                <div className="planner-data-text min-h-[42px] flex-1 rounded-2xl border border-separator/40 bg-white px-3 py-2.5 font-medium text-on-surface dark:bg-surface-container">
+                <div className="min-h-[38px] flex-1 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm font-medium text-[var(--text-primary)]">
                   {formatDisplayValue(field.value)}
                 </div>
                 <button
                   type="button"
                   onClick={() => openLinkedPicker(field.focusField)}
                   disabled={busy || !linkedProductPaths || typeof loadLinkedProductOptions !== "function"}
-                  className="rounded-xl bg-primary px-3 py-2 text-xs font-semibold text-on-primary hover:opacity-90 active:scale-95 transition-all duration-150 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="rounded-[6px] bg-[var(--freya-blue)] px-3 py-2 text-xs font-semibold text-white hover:opacity-90 active:scale-95 transition-all disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   Change
                 </button>
@@ -742,16 +742,16 @@ export default function RecordEditModal({
       const value = getPathValue(draft, item.path);
       return (
         <div key={item.path} className={item.span === "full" ? "md:col-span-2" : ""}>
-          <div className="mb-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">{item.label}</div>
-          <div className="flex items-center gap-2 rounded-2xl border border-outline-variant/15 bg-surface-container-low px-4 py-3">
-            <div className="planner-data-text min-h-[42px] flex-1 rounded-2xl border border-separator/40 bg-white px-3 py-2.5 font-medium text-on-surface dark:bg-surface-container">
+          <div className="mb-1 text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">{item.label}</div>
+          <div className="flex items-center gap-2 rounded-[6px] border border-[var(--border)] bg-[var(--surface-raised)] px-3.5 py-2.5">
+            <div className="min-h-[38px] flex-1 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm font-medium text-[var(--text-primary)]">
               {formatDisplayValue(value)}
             </div>
             <button
               type="button"
               onClick={() => openFieldPicker(item)}
               disabled={busy || typeof loadFieldPickerOptions !== "function"}
-              className="rounded-xl bg-primary px-3 py-2 text-xs font-semibold text-on-primary hover:opacity-90 active:scale-95 transition-all duration-150 disabled:cursor-not-allowed disabled:opacity-50"
+              className="rounded-[6px] bg-[var(--freya-blue)] px-3 py-2 text-xs font-semibold text-white hover:opacity-90 active:scale-95 transition-all disabled:cursor-not-allowed disabled:opacity-50"
             >
               Change
             </button>
@@ -793,35 +793,37 @@ export default function RecordEditModal({
           }}
         >
           <div
-            className="dashboard-section flex max-h-[92vh] w-full max-w-6xl flex-col overflow-hidden rounded-2xl"
+            className="freya-card flex max-h-[92vh] w-full max-w-6xl flex-col overflow-hidden rounded-[12px] border border-[var(--border)] bg-[var(--surface-raised)] shadow-2xl"
             onMouseDown={(event) => event.stopPropagation()}
           >
-            <div className="border-b border-separator/40 px-6 py-5">
+            <div className="border-b border-[var(--border)] px-6 py-4 bg-[var(--surface-raised)]">
               <div className="flex items-start justify-between gap-4">
                 <div>
-                  <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Edit Record</div>
-                  <h2 className="mt-1 text-xl font-semibold text-on-surface">{title}</h2>
-                  {subtitle ? <p className="mt-1 text-sm text-on-surface-variant">{subtitle}</p> : null}
+                  <div className="text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">Edit Record</div>
+                  <h2 className="mt-1 text-lg font-semibold text-[var(--text-primary)] leading-tight">{title}</h2>
+                  {subtitle ? <p className="mt-0.5 text-xs text-[var(--text-muted)] font-normal">{subtitle}</p> : null}
                 </div>
 
-                <IconButton
-                  icon="close"
+                <button
+                  type="button"
                   onClick={() => onClose?.()}
-                  variant="outlined"
-                  ariaLabel="Close dialog"
-                />
+                  aria-label="Close dialog"
+                  className="w-8 h-8 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:border-[var(--border-strong)] flex items-center justify-center transition-colors flex-shrink-0"
+                >
+                  <span className="material-symbols-outlined" style={{ fontSize: 16 }}>close</span>
+                </button>
               </div>
             </div>
 
             <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5">
-              <div className="space-y-5">
+              <div className="space-y-4">
                 {sections.map((section) => (
-                  <div key={section.key} className="rounded-2xl border border-outline-variant/15 bg-white/80 px-4 py-4 dark:bg-surface-container">
-                    <div className="mb-4 flex items-center gap-2">
-                      <span className="material-symbols-outlined text-primary" style={{ fontSize: 20 }}>{section.icon || "edit_square"}</span>
+                  <div key={section.key} className="rounded-[8px] border border-[var(--border)] bg-[var(--surface)] p-4">
+                    <div className="mb-3.5 flex items-center gap-2">
+                      <span className="material-symbols-outlined text-[var(--text-muted)]" style={{ fontSize: 18 }}>{section.icon || "edit_square"}</span>
                       <div>
-                        <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Section</div>
-                        <h3 className="text-base font-semibold text-on-surface">{section.title}</h3>
+                        <div className="text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">Section</div>
+                        <h3 className="text-sm font-semibold text-[var(--text-primary)]">{section.title}</h3>
                       </div>
                     </div>
 
@@ -833,16 +835,16 @@ export default function RecordEditModal({
               </div>
             </div>
 
-            <div className="border-t border-outline-variant/20 bg-surface-container-low/50 px-6 py-4">
-              <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_auto_auto_auto] xl:items-end">
+            <div className="border-t border-[var(--border)] bg-[var(--surface-raised)] px-6 py-3.5">
+              <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_auto_auto_auto] xl:items-end">
                 <div>
-                  <div className="mb-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">{noteLabel}</div>
+                  <div className="mb-1 text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">{noteLabel}</div>
                   <input
                     type="text"
                     value={note}
                     onChange={(event) => setNote(event.target.value)}
                     placeholder={notePlaceholder}
-                    className="planner-data-text h-11 w-full rounded-2xl border border-separator/40 bg-white px-4 text-on-surface outline-none transition focus:border-primary/40 dark:bg-surface-container"
+                    className="h-9 w-full rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 text-sm text-[var(--text-primary)] outline-none transition focus:border-[var(--freya-blue)]"
                   />
                 </div>
 
@@ -851,7 +853,7 @@ export default function RecordEditModal({
                     type="button"
                     disabled={busy}
                     onClick={() => onSoftDelete?.({ draft, note })}
-                    className="rounded-2xl border border-error/20 bg-error/10 px-4 py-2.5 text-xs font-semibold text-error transition hover:bg-error/15 disabled:cursor-not-allowed disabled:opacity-50"
+                    className="h-9 rounded-[6px] border border-[var(--semantic-error)]/30 bg-[var(--semantic-error)]/10 px-4 text-xs font-semibold text-[var(--semantic-error)] transition hover:bg-[var(--semantic-error)]/20 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     {softDeleteLabel}
                   </button>
@@ -861,7 +863,7 @@ export default function RecordEditModal({
                   type="button"
                   disabled={busy}
                   onClick={() => onClose?.()}
-                  className="rounded-2xl border border-separator/40 bg-white px-4 py-2.5 text-xs font-semibold text-on-surface transition hover:bg-surface-container disabled:cursor-not-allowed disabled:opacity-50 dark:bg-surface-container"
+                  className="h-9 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-4 text-xs font-semibold text-[var(--text-primary)] transition hover:bg-[var(--surface-raised)] hover:border-[var(--border-strong)] disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   Cancel
                 </button>
@@ -870,7 +872,7 @@ export default function RecordEditModal({
                   type="button"
                   disabled={busy || !note || note.trim() === ""}
                   onClick={() => onSave?.({ draft, note })}
-                  className="rounded-xl bg-primary px-4 py-2.5 text-xs font-semibold text-on-primary hover:opacity-90 active:scale-95 transition-all duration-150 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="h-9 rounded-[6px] bg-[var(--freya-blue)] px-4 text-xs font-semibold text-white hover:opacity-90 active:scale-95 transition-all disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {saveLabel}
                 </button>

@@ -699,7 +699,7 @@ export default function NodaDetailModal({ open, requestId, mode = "view", authUs
 
         {!loading && request ? (
           <>
-            <div className="glass-card rounded-2xl p-5">
+            <div className="freya-card rounded-[8px] border border-[var(--border)] bg-[var(--surface-subtle)] p-5">
               <div className="flex flex-wrap items-start justify-between gap-4">
                 <div>
                   <div className="flex flex-wrap items-center gap-3">
@@ -768,7 +768,7 @@ export default function NodaDetailModal({ open, requestId, mode = "view", authUs
             </div>
 
             {!isBulkRequest ? (
-              <div className="glass-card rounded-2xl p-5">
+              <div className="freya-card rounded-[8px] border border-[var(--border)] bg-[var(--surface-subtle)] p-5">
                 <div className="grid gap-4 md:grid-cols-2">
                   <label className="block">
                     <span className="block text-xs font-semibold uppercase tracking-[0.18em] text-outline">Status</span>
@@ -858,7 +858,7 @@ export default function NodaDetailModal({ open, requestId, mode = "view", authUs
             ) : (
               <div className="space-y-6">
                 {canManageRequest && viewMode === "edit" ? (
-                  <div className="glass-card rounded-2xl p-5">
+                  <div className="freya-card rounded-[8px] border border-[var(--border)] bg-[var(--surface-subtle)] p-5">
                     <div className="flex flex-wrap items-end justify-between gap-4">
                       <label className="block max-w-xs flex-1">
                         <span className="block text-xs font-semibold uppercase tracking-[0.18em] text-outline">Pickup Date</span>
@@ -911,7 +911,7 @@ export default function NodaDetailModal({ open, requestId, mode = "view", authUs
                 ) : null}
 
                 {bulkTab === "existing" || !canEditBulkItems ? (
-                  <div className="glass-card rounded-2xl p-5">
+                  <div className="freya-card rounded-[8px] border border-[var(--border)] bg-[var(--surface-subtle)] p-5">
                     <DataTable
                       columns={lineItemColumns}
                       rows={sortedSummaryItems}
@@ -940,7 +940,7 @@ export default function NodaDetailModal({ open, requestId, mode = "view", authUs
 
                 {bulkTab === "add" && canEditBulkItems ? (
                   <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_340px]">
-                    <div className="glass-card rounded-2xl p-5">
+                    <div className="freya-card rounded-[8px] border border-[var(--border)] bg-[var(--surface-subtle)] p-5">
                       <div className="flex flex-wrap items-center justify-between gap-3">
                         <h3 className="text-base font-semibold text-on-surface">Add Items</h3>
                         <label className="inline-flex cursor-pointer items-center gap-2 rounded-2xl border border-dashed border-outline-variant/30 px-4 py-2.5 text-sm font-semibold text-on-surface transition hover:border-primary/40 hover:bg-primary/5">
@@ -1000,7 +1000,7 @@ export default function NodaDetailModal({ open, requestId, mode = "view", authUs
                       </div>
                     </div>
 
-                    <div className="glass-card rounded-2xl p-5">
+                    <div className="freya-card rounded-[8px] border border-[var(--border)] bg-[var(--surface-subtle)] p-5">
                       <div className="flex items-center justify-between gap-3">
                         <h3 className="text-base font-semibold text-on-surface">Items To Add</h3>
                         {addCart.length ? (

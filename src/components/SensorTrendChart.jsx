@@ -179,7 +179,7 @@ export default function SensorTrendChart({ readings = [], type = "temp", height 
       {/* Tooltip */}
       {hoveredIndex !== null && (
         <div
-          className="absolute z-10 glass-card p-3 rounded-xl shadow-[0_12px_24px_rgba(0,0,0,0.15)] border border-outline-variant/30 pointer-events-none min-w-[150px]"
+          className="absolute z-10 freya-card p-3 rounded-[6px] shadow-lg border border-[var(--border)] bg-[var(--surface-raised)] pointer-events-none min-w-[150px]"
           style={{
             top: P.top,
             ...(hoveredIndex > allDates.length / 2 

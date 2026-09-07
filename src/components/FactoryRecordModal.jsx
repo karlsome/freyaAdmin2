@@ -68,7 +68,7 @@ export default function FactoryRecordModal({
                   type="text"
                   value={draft["工場"]}
                   onChange={(event) => setDraft((current) => ({ ...current, 工場: event.target.value }))}
-                  className="w-full rounded-2xl border border-outline-variant/30 bg-surface px-3 py-3 text-sm text-on-surface outline-none transition focus:border-primary/40"
+                  className="w-full rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-xs font-medium text-[var(--text-primary)] placeholder-[var(--text-muted)] outline-none transition focus:border-[var(--freya-blue)] focus:ring-1 focus:ring-[var(--freya-blue)]"
                 />
               </FormField>
 
@@ -77,7 +77,7 @@ export default function FactoryRecordModal({
                   type="text"
                   value={draft.location}
                   onChange={(event) => setDraft((current) => ({ ...current, location: event.target.value }))}
-                  className="w-full rounded-2xl border border-outline-variant/30 bg-surface px-3 py-3 text-sm text-on-surface outline-none transition focus:border-primary/40"
+                  className="w-full rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-xs font-medium text-[var(--text-primary)] placeholder-[var(--text-muted)] outline-none transition focus:border-[var(--freya-blue)] focus:ring-1 focus:ring-[var(--freya-blue)]"
                 />
               </FormField>
 
@@ -86,7 +86,7 @@ export default function FactoryRecordModal({
                   type="text"
                   value={draft.geotag}
                   onChange={(event) => setDraft((current) => ({ ...current, geotag: event.target.value }))}
-                  className="w-full rounded-2xl border border-outline-variant/30 bg-surface px-3 py-3 text-sm text-on-surface outline-none transition focus:border-primary/40"
+                  className="w-full rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-xs font-medium text-[var(--text-primary)] placeholder-[var(--text-muted)] outline-none transition focus:border-[var(--freya-blue)] focus:ring-1 focus:ring-[var(--freya-blue)]"
                 />
               </FormField>
 
@@ -95,7 +95,7 @@ export default function FactoryRecordModal({
                   type="text"
                   value={draft.phone}
                   onChange={(event) => setDraft((current) => ({ ...current, phone: event.target.value }))}
-                  className="w-full rounded-2xl border border-outline-variant/30 bg-surface px-3 py-3 text-sm text-on-surface outline-none transition focus:border-primary/40"
+                  className="w-full rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-xs font-medium text-[var(--text-primary)] placeholder-[var(--text-muted)] outline-none transition focus:border-[var(--freya-blue)] focus:ring-1 focus:ring-[var(--freya-blue)]"
                 />
               </FormField>
 
@@ -104,7 +104,7 @@ export default function FactoryRecordModal({
                   type="text"
                   value={draft.latitude}
                   onChange={(event) => setDraft((current) => ({ ...current, latitude: event.target.value }))}
-                  className="w-full rounded-2xl border border-outline-variant/30 bg-surface px-3 py-3 text-sm text-on-surface outline-none transition focus:border-primary/40"
+                  className="w-full rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-xs font-medium text-[var(--text-primary)] placeholder-[var(--text-muted)] outline-none transition focus:border-[var(--freya-blue)] focus:ring-1 focus:ring-[var(--freya-blue)]"
                 />
               </FormField>
 
@@ -113,25 +113,25 @@ export default function FactoryRecordModal({
                   type="text"
                   value={draft.longitude}
                   onChange={(event) => setDraft((current) => ({ ...current, longitude: event.target.value }))}
-                  className="w-full rounded-2xl border border-outline-variant/30 bg-surface px-3 py-3 text-sm text-on-surface outline-none transition focus:border-primary/40"
+                  className="w-full rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-xs font-medium text-[var(--text-primary)] placeholder-[var(--text-muted)] outline-none transition focus:border-[var(--freya-blue)] focus:ring-1 focus:ring-[var(--freya-blue)]"
                 />
               </FormField>
             </div>
 
-            <div className="mt-6 flex items-center justify-between gap-4 border-t border-outline-variant/20 pt-5">
-              <p className="text-sm text-on-surface-variant">At least one field must be filled before saving.</p>
+            <div className="mt-6 flex items-center justify-between gap-4 border-t border-[var(--border)] pt-4">
+              <p className="text-xs text-[var(--text-muted)]">At least one field must be filled before saving.</p>
               <div className="flex items-center gap-3">
                 <button
                   type="button"
                   onClick={onClose}
-                  className="rounded-2xl border border-separator/40 px-4 py-2 text-xs font-semibold text-on-surface transition hover:bg-surface-container"
+                  className="rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3.5 py-2 text-xs font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-hover)] transition-colors shadow-2xs"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={!hasData || submitting}
-                  className="rounded-xl bg-primary px-4 py-2 text-xs font-semibold text-on-primary hover:opacity-90 active:scale-95 transition-all duration-150 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="rounded-[6px] bg-[var(--freya-blue)] px-4 py-2 text-xs font-semibold text-white hover:bg-[var(--freya-blue-hover)] active:scale-[0.98] transition-all shadow-xs disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {submitting ? "Saving…" : record ? "Save Changes" : "Create Factory"}
                 </button>

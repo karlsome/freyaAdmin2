@@ -55,48 +55,48 @@ export default function PlannerTimelineView({
 
   if (!equipment.length) {
     return (
-      <div className="rounded-3xl border border-dashed border-outline-variant/20 bg-surface-container-low px-6 py-14 text-center text-on-surface-variant">
-        <span className="material-symbols-outlined text-4xl text-primary/60">calendar_month</span>
-        <p className="mt-3 text-lg font-semibold text-on-surface">No equipment loaded</p>
-        <p className="mt-1 text-sm">Choose a factory to build the planning timeline.</p>
+      <div className="rounded-[8px] border border-dashed border-[var(--border)] bg-[var(--surface-subtle)] px-6 py-14 text-center text-[var(--text-muted)]">
+        <span className="material-symbols-outlined text-3xl text-[var(--text-muted)]">calendar_month</span>
+        <p className="mt-2 text-sm font-semibold text-[var(--text-primary)]">No equipment loaded</p>
+        <p className="mt-1 text-xs text-[var(--text-muted)]">Choose a factory to build the planning timeline.</p>
       </div>
     );
   }
 
   return (
-    <div className="glass-card rounded-3xl p-5">
+    <div className="freya-card rounded-[8px] border border-[var(--border)] bg-[var(--surface)] p-5 shadow-sm">
       <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div>
-          <h3 className="text-lg font-semibold text-on-surface">Timeline View</h3>
-          <p className="mt-1 text-sm text-on-surface-variant">Place products on equipment rows and compare planned output against actual production.</p>
+          <h3 className="text-base font-semibold text-[var(--text-primary)]">Timeline View</h3>
+          <p className="mt-0.5 text-xs text-[var(--text-muted)]">Place products on equipment rows and compare planned output against actual production.</p>
         </div>
 
         <button
           type="button"
           onClick={onToggleHideUnavailable}
-          className={`rounded-2xl border px-4 py-2 text-xs font-semibold transition ${hideUnavailableEquipment ? "border-primary/25 bg-primary/10 text-primary" : "border-outline-variant/20 bg-surface-container text-on-surface"}`}
+          className={`rounded-[6px] border px-3 py-1.5 text-xs font-semibold transition ${hideUnavailableEquipment ? "border-[var(--freya-blue)]/30 bg-[var(--freya-blue)]/10 text-[var(--freya-blue)]" : "border-[var(--border)] bg-[var(--surface-subtle)] text-[var(--text-primary)] hover:bg-[var(--surface-hover)]"}`}
         >
           {hideUnavailableEquipment ? "Show unavailable equipment" : "Hide unavailable equipment"}
         </button>
       </div>
 
-      <div className="overflow-auto rounded-3xl border border-outline-variant/15 bg-surface-container-low">
+      <div className="overflow-auto rounded-[8px] border border-[var(--border)] bg-[var(--surface)]">
         <div className="relative min-w-max">
           {currentMarkerPosition != null ? (
             <div
-              className="pointer-events-none absolute bottom-0 top-0 z-20 w-px bg-error"
+              className="pointer-events-none absolute bottom-0 top-0 z-20 w-px bg-[var(--status-danger)]"
               style={{ left: `${currentMarkerPosition}px` }}
             >
-              <span className="absolute -left-1.5 top-0 h-3 w-3 rounded-full bg-error" />
+              <span className="absolute -left-1.5 top-0 h-3 w-3 rounded-full bg-[var(--status-danger)]" />
             </div>
           ) : null}
 
-          <div className="sticky top-0 z-10 flex border-b border-outline-variant/15 bg-surface-container-high/95 backdrop-blur-md">
-            <div className="planner-data-label sticky left-0 z-10 flex h-12 items-center border-r border-outline-variant/15 bg-surface-container-high/95 px-4 text-outline" style={{ width: LABEL_WIDTH }}>
+          <div className="sticky top-0 z-10 flex border-b border-[var(--border)] bg-[var(--surface-subtle)]">
+            <div className="sticky left-0 z-10 flex h-10 items-center border-r border-[var(--border)] bg-[var(--surface-subtle)] px-4 text-xs font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]" style={{ width: LABEL_WIDTH }}>
               Equipment
             </div>
             {timeSlots.map((slot) => (
-              <div key={slot} className="planner-data-text flex h-12 items-center justify-center border-r border-outline-variant/10 font-semibold text-on-surface-variant" style={{ width: SLOT_WIDTH }}>
+              <div key={slot} className="flex h-10 items-center justify-center border-r border-[var(--border)] text-xs font-semibold text-[var(--text-muted)]" style={{ width: SLOT_WIDTH }}>
                 {slot}
               </div>
             ))}
@@ -111,11 +111,11 @@ export default function PlannerTimelineView({
             if (hideUnavailableEquipment && plannedUnavailable && actualUnavailable) return null;
 
             return (
-              <div key={equipmentName} className="border-b border-outline-variant/10 last:border-b-0">
-                <div className={`flex min-h-[58px] ${plannedUnavailable ? "opacity-50" : ""}`}>
-                  <div className="sticky left-0 z-[5] flex flex-col justify-center border-r border-outline-variant/15 bg-surface px-4" style={{ width: LABEL_WIDTH }}>
-                    <div className="planner-data-text font-semibold text-on-surface">{equipmentName}</div>
-                    <div className="planner-data-label text-outline">
+              <div key={equipmentName} className="border-b border-[var(--border)] last:border-b-0">
+                <div className={`flex min-h-[52px] ${plannedUnavailable ? "opacity-50" : ""}`}>
+                  <div className="sticky left-0 z-[5] flex flex-col justify-center border-r border-[var(--border)] bg-[var(--surface)] px-4" style={{ width: LABEL_WIDTH }}>
+                    <div className="text-xs font-semibold text-[var(--text-primary)]">{equipmentName}</div>
+                    <div className="text-[10px] text-[var(--text-muted)] uppercase tracking-[0.02em]">
                       Planned{isGroupEquipment(equipmentName) ? " group" : " lane"}
                     </div>
                   </div>
@@ -131,7 +131,7 @@ export default function PlannerTimelineView({
                         return (
                           <div
                             key={`${equipmentName}-planned-${slot}`}
-                            className="border-r border-outline-variant/10 bg-surface-container-high"
+                            className="border-r border-[var(--border)] bg-[var(--surface-subtle)]"
                             style={{ width: SLOT_WIDTH }}
                             title={breakBlock.name || "Break"}
                           />
@@ -157,19 +157,19 @@ export default function PlannerTimelineView({
                                 onMoveScheduledItem(payload.scheduleId, equipmentName, slot);
                               }
                             }}
-                            className={`group relative border-r border-outline-variant/10 ${showLabel ? "cursor-move" : "cursor-default"}`}
+                            className={`group relative border-r border-[var(--border)] ${showLabel ? "cursor-move" : "cursor-default"}`}
                             style={{ width: SLOT_WIDTH, backgroundColor: `${product.color}22` }}
                             title={`${product.背番号} · ${product.quantity} pcs`}
                           >
                             {showLabel ? (
                               <>
-                                <div className="planner-data-text absolute inset-0 flex items-center justify-center px-1 font-semibold" style={{ color: product.color }}>
+                                <div className="absolute inset-0 flex items-center justify-center px-1 text-xs font-bold" style={{ color: product.color }}>
                                   {product.背番号}
                                 </div>
                                 <button
                                   type="button"
                                   onClick={() => onRemoveScheduledItem(product)}
-                                  className="absolute -right-2 -top-2 flex h-5 w-5 items-center justify-center rounded-full bg-error text-[10px] text-white opacity-0 shadow-md transition group-hover:opacity-100"
+                                  className="absolute -right-1.5 -top-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-[var(--status-danger)] text-[9px] text-white opacity-0 shadow-sm transition group-hover:opacity-100"
                                   aria-label={`Remove ${product.背番号}`}
                                 >
                                   ×
@@ -193,11 +193,11 @@ export default function PlannerTimelineView({
                               onMoveScheduledItem(payload.scheduleId, equipmentName, slot);
                             }
                           }}
-                          className="group relative border-r border-outline-variant/10 transition hover:bg-primary/5"
+                          className="group relative border-r border-[var(--border)] transition hover:bg-[var(--freya-blue)]/5"
                           style={{ width: SLOT_WIDTH }}
                           title={`Add products at ${equipmentName} ${slot}`}
                         >
-                          <span className="material-symbols-outlined absolute inset-0 flex items-center justify-center text-primary/0 transition group-hover:text-primary/70" style={{ fontSize: 16 }}>
+                          <span className="material-symbols-outlined absolute inset-0 flex items-center justify-center text-[var(--freya-blue)]/0 transition group-hover:text-[var(--freya-blue)]/70" style={{ fontSize: 16 }}>
                             add_circle
                           </span>
                         </button>
@@ -206,10 +206,10 @@ export default function PlannerTimelineView({
                   </div>
                 </div>
 
-                <div className={`flex min-h-[50px] bg-surface-container-lowest/30 ${actualUnavailable ? "opacity-50" : ""}`}>
-                  <div className="sticky left-0 z-[5] flex flex-col justify-center border-r border-outline-variant/15 bg-surface-container-low px-4" style={{ width: LABEL_WIDTH }}>
-                    <div className="planner-data-text font-semibold text-on-surface">{equipmentName}</div>
-                    <div className="planner-data-label text-outline">Actual</div>
+                <div className={`flex min-h-[46px] bg-[var(--surface-subtle)]/40 ${actualUnavailable ? "opacity-50" : ""}`}>
+                  <div className="sticky left-0 z-[5] flex flex-col justify-center border-r border-[var(--border)] bg-[var(--surface-subtle)] px-4" style={{ width: LABEL_WIDTH }}>
+                    <div className="text-xs font-semibold text-[var(--text-primary)]">{equipmentName}</div>
+                    <div className="text-[10px] text-[var(--text-muted)] uppercase tracking-[0.02em]">Actual</div>
                   </div>
 
                   <div className="flex">
@@ -224,12 +224,12 @@ export default function PlannerTimelineView({
                         return (
                           <div
                             key={`${equipmentName}-actual-${slot}`}
-                            className="relative border-r border-outline-variant/10"
+                            className="relative border-r border-[var(--border)]"
                             style={{ width: SLOT_WIDTH, backgroundColor: `${color}30` }}
                             title={`${block.背番号} · ${block.totalQuantity} pcs actual`}
                           >
                             {showLabel ? (
-                              <div className="planner-data-text absolute inset-0 flex items-center justify-center px-1 font-semibold text-sky-900 dark:text-sky-200">
+                              <div className="absolute inset-0 flex items-center justify-center px-1 text-xs font-semibold text-sky-900 dark:text-sky-200">
                                 {block.背番号}
                               </div>
                             ) : null}
@@ -241,11 +241,11 @@ export default function PlannerTimelineView({
                         return (
                           <div
                             key={`${equipmentName}-actual-${slot}`}
-                            className="relative border-r border-amber-300/50 bg-amber-300/20"
+                            className="relative border-r border-amber-400/40 bg-amber-400/15"
                             style={{ width: SLOT_WIDTH }}
                             title={`${inProgress.背番号 || inProgress.品番} in progress`}
                           >
-                            <div className="planner-data-text absolute inset-0 flex items-center justify-center gap-1 px-1 font-semibold text-amber-700 dark:text-amber-300">
+                            <div className="absolute inset-0 flex items-center justify-center gap-1 px-1 text-xs font-semibold text-amber-700 dark:text-amber-300">
                               <span className="material-symbols-outlined animate-spin" style={{ fontSize: 10 }}>progress_activity</span>
                               {inProgress.背番号 || "Run"}
                             </div>
@@ -255,13 +255,13 @@ export default function PlannerTimelineView({
 
                       if (slotMinutes <= currentMinutes) {
                         return (
-                          <div key={`${equipmentName}-actual-${slot}`} className="border-r border-outline-variant/10 bg-[#16181e]" style={{ width: SLOT_WIDTH }}>
-                            {slotMinutes % 60 === 0 ? <div className="planner-data-text mt-4 text-center font-semibold text-white/40">IDLE</div> : null}
+                          <div key={`${equipmentName}-actual-${slot}`} className="border-r border-[var(--border)] bg-[var(--surface-subtle)]/20" style={{ width: SLOT_WIDTH }}>
+                            {slotMinutes % 60 === 0 ? <div className="mt-3.5 text-center text-[10px] font-semibold text-[var(--text-muted)]/50">IDLE</div> : null}
                           </div>
                         );
                       }
 
-                      return <div key={`${equipmentName}-actual-${slot}`} className="border-r border-outline-variant/10" style={{ width: SLOT_WIDTH }} />;
+                      return <div key={`${equipmentName}-actual-${slot}`} className="border-r border-[var(--border)]" style={{ width: SLOT_WIDTH }} />;
                     })}
                   </div>
                 </div>
@@ -271,17 +271,17 @@ export default function PlannerTimelineView({
         </div>
       </div>
 
-      <div className="mt-4 flex flex-wrap gap-3 text-xs text-on-surface-variant">
-        <span className="inline-flex items-center gap-2 rounded-full bg-surface-container px-3 py-1.5">
-          <span className="h-2.5 w-2.5 rounded-full bg-surface-container-highest" />
+      <div className="mt-4 flex flex-wrap gap-2 text-xs text-[var(--text-muted)]">
+        <span className="inline-flex items-center gap-2 rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] px-2.5 py-1 text-xs text-[var(--text-secondary)]">
+          <span className="h-2 w-2 rounded-full bg-[var(--border-strong)]" />
           Break time
         </span>
-        <span className="inline-flex items-center gap-2 rounded-full bg-surface-container px-3 py-1.5">
-          <span className="h-2.5 w-2.5 rounded-full bg-amber-400" />
+        <span className="inline-flex items-center gap-2 rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] px-2.5 py-1 text-xs text-[var(--text-secondary)]">
+          <span className="h-2 w-2 rounded-full bg-amber-400" />
           In progress from tablet logs
         </span>
-        <span className="inline-flex items-center gap-2 rounded-full bg-surface-container px-3 py-1.5">
-          <span className="h-2.5 w-2.5 rounded-full bg-sky-700" />
+        <span className="inline-flex items-center gap-2 rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] px-2.5 py-1 text-xs text-[var(--text-secondary)]">
+          <span className="h-2 w-2 rounded-full bg-[var(--freya-blue)]" />
           Actual press production
         </span>
       </div>

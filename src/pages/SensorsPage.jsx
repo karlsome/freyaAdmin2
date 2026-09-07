@@ -15,50 +15,50 @@ function FactorySensorCard({ factory, onClick }) {
     <button
       type="button"
       onClick={onClick}
-      className="glass-card cursor-pointer rounded-2xl p-5 text-left transition-[box-shadow,border-color,background-color] duration-300 hover:border-primary/20 hover:shadow-[0_14px_32px_rgba(15,23,42,0.08)] focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/35"
+      className="freya-card cursor-pointer rounded-[8px] border border-[var(--border)] bg-[var(--surface)] p-5 text-left transition-all hover:border-[var(--freya-blue)]/40 hover:shadow-md focus:outline-none focus-visible:ring-1 focus-visible:ring-[var(--freya-blue)]"
     >
       {/* Header */}
-      <div className="flex items-start justify-between mb-4">
+      <div className="flex items-start justify-between mb-3.5">
         <div>
-          <p className="text-[10px] font-semibold text-outline uppercase tracking-[0.18em]">Factory</p>
-          <p className="text-lg font-semibold text-on-surface">{name}</p>
+          <p className="text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-[0.04em]">Factory</p>
+          <p className="text-base font-bold text-[var(--text-primary)] mt-0.5">{name}</p>
         </div>
-        <span className={`text-[10px] font-semibold px-2.5 py-1 rounded-full ${wbgtStatus.bg} ${wbgtStatus.color}`}>
+        <span className={`text-[10px] font-mono font-semibold px-2 py-0.5 rounded-[4px] border ${wbgtStatus.bg} ${wbgtStatus.color}`}>
           {sensor.wbgt !== null ? `WBGT ${sensor.wbgt}°C` : "No Data"}
         </span>
       </div>
 
       {/* Temp + Humidity tiles */}
-      <div className="grid grid-cols-2 gap-3 mb-4">
-        <div className={`p-3 rounded-xl ${tempStatus.bg}`}>
-          <p className={`text-xl font-semibold ${tempStatus.color}`}>
+      <div className="grid grid-cols-2 gap-2.5 mb-3.5">
+        <div className={`p-3 rounded-[6px] border border-[var(--border)] ${tempStatus.bg}`}>
+          <p className={`text-xl font-bold font-mono ${tempStatus.color}`}>
             {sensor.highestTemp !== null ? `${sensor.highestTemp}°C` : "—"}
           </p>
-          <p className="text-[10px] text-on-surface-variant mt-0.5">Peak Temp</p>
+          <p className="text-[10px] text-[var(--text-secondary)] mt-0.5">Peak Temp</p>
         </div>
-        <div className={`p-3 rounded-xl ${humidStatus.bg}`}>
-          <p className={`text-xl font-semibold ${humidStatus.color}`}>
+        <div className={`p-3 rounded-[6px] border border-[var(--border)] ${humidStatus.bg}`}>
+          <p className={`text-xl font-bold font-mono ${humidStatus.color}`}>
             {sensor.averageHumidity !== null ? `${sensor.averageHumidity}%` : "—"}
           </p>
-          <p className="text-[10px] text-on-surface-variant mt-0.5">Avg Humidity</p>
+          <p className="text-[10px] text-[var(--text-secondary)] mt-0.5">Avg Humidity</p>
         </div>
       </div>
 
       {/* Footer */}
-      <div className="flex items-center justify-between text-xs text-outline">
+      <div className="flex items-center justify-between text-xs text-[var(--text-secondary)] font-mono pt-3 border-t border-[var(--border)]">
         <div className="flex items-center gap-1.5 flex-wrap">
           <span className="material-symbols-outlined" style={{ fontSize: 14 }}>sensors</span>
           <span>{sensor.sensorCount} device{sensor.sensorCount !== 1 ? "s" : ""}</span>
           {sensor.offlineCount > 0 ? (
             <>
-              <span className="text-outline/60">|</span>
-              <span className="font-semibold text-error">
-                {sensor.offlineCount} device{sensor.offlineCount !== 1 ? "s" : ""} offline
+              <span className="text-[var(--text-muted)]">|</span>
+              <span className="font-semibold text-[var(--status-danger)]">
+                {sensor.offlineCount} offline
               </span>
             </>
           ) : null}
         </div>
-        <div className="flex items-center gap-1 text-primary font-semibold text-[11px]">
+        <div className="flex items-center gap-1 text-[var(--freya-blue)] font-semibold text-xs">
           <span>Details</span>
           <span className="material-symbols-outlined" style={{ fontSize: 14 }}>arrow_forward</span>
         </div>
@@ -78,21 +78,21 @@ function SummaryStrip({ factories }) {
   ).length;
 
   const tiles = [
-    { label: "Factories Online", value: `${active.length} / ${factories.length}`, icon: "factory", color: "text-primary" },
-    { label: "Total Devices",    value: totalDev,                                  icon: "sensors",  color: "text-tertiary" },
+    { label: "Factories Online", value: `${active.length} / ${factories.length}`, icon: "factory", color: "text-[var(--freya-blue)]" },
+    { label: "Total Devices",    value: totalDev,                                  icon: "sensors",  color: "text-[var(--text-secondary)]" },
     { label: "Global Peak Temp", value: globalPeak !== null ? `${globalPeak}°C` : "—", icon: "thermostat", color: getTempStatus(globalPeak).color },
-    { label: "Heat Stress Alerts", value: alerts, icon: "warning",                color: alerts > 0 ? "text-error" : "text-outline" },
+    { label: "Heat Stress Alerts", value: alerts, icon: "warning",                color: alerts > 0 ? "text-[var(--status-danger)]" : "text-[var(--text-muted)]" },
   ];
 
   return (
     <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
       {tiles.map(({ label, value, icon, color }) => (
-        <div key={label} className="glass-card rounded-2xl p-5">
-          <div className="flex items-center gap-2 mb-2">
+        <div key={label} className="freya-card rounded-[8px] border border-[var(--border)] bg-[var(--surface)] p-4 shadow-sm">
+          <div className="flex items-center gap-2 mb-1.5">
             <span className={`material-symbols-outlined ${color}`} style={{ fontSize: 16 }}>{icon}</span>
-            <p className="text-[10px] text-outline font-semibold uppercase tracking-wider">{label}</p>
+            <p className="text-[11px] text-[var(--text-muted)] font-semibold uppercase tracking-[0.04em]">{label}</p>
           </div>
-          <p className={`text-2xl font-semibold ${color}`}>{value}</p>
+          <p className={`text-2xl font-bold font-mono ${color}`}>{value}</p>
         </div>
       ))}
     </div>
@@ -131,22 +131,22 @@ export default function SensorsPage() {
   const withoutData = factories.filter((f) => !f.sensor.hasData);
 
   return (
-    <section className="pt-24 pb-16 px-8 overflow-y-auto h-screen scrollbar-hide">
+    <div className="min-h-screen max-w-[1600px] mx-auto space-y-6 pt-20 px-6 pb-12">
       <PageHeader
         title={(
           <>
-            <span className="material-symbols-outlined text-tertiary" style={{ fontVariationSettings: "'FILL' 1" }}>sensors</span>
+            <span className="material-symbols-outlined text-[var(--freya-blue)]" style={{ fontVariationSettings: "'FILL' 1" }}>sensors</span>
             Factory Sensors
           </>
         )}
-        titleClassName="flex items-center gap-3"
+        titleClassName="flex items-center gap-2.5"
         subtitle="Live temperature & humidity monitoring across all facilities"
         className="mb-6 md:flex-row md:items-center md:justify-between"
         actions={(
           <button
             onClick={refresh}
             disabled={loading}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-primary/10 text-primary text-xs font-semibold hover:bg-primary/15 transition-colors disabled:opacity-50"
+            className="flex items-center gap-1.5 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-hover)] transition-colors shadow-2xs disabled:opacity-50"
           >
             <span
               className={`material-symbols-outlined ${loading ? "animate-spin" : ""}`}
@@ -162,7 +162,7 @@ export default function SensorsPage() {
       {loading ? (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
           {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="glass-card rounded-2xl h-20 animate-pulse" />
+            <div key={i} className="freya-card rounded-[8px] border border-[var(--border)] bg-[var(--surface-subtle)] h-20 animate-pulse" />
           ))}
         </div>
       ) : (
@@ -170,15 +170,15 @@ export default function SensorsPage() {
       )}
 
       {!loading && error ? (
-        <div className="mb-6 rounded-2xl border border-error/20 bg-error/5 p-4 text-sm text-error">
+        <div className="mb-6 rounded-[8px] border border-[var(--status-danger)]/30 bg-[var(--status-danger)]/10 p-4 text-xs font-medium text-[var(--status-danger)]">
           {error}
         </div>
       ) : null}
 
       {loading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} className="glass-card rounded-2xl h-52 animate-pulse" />
+            <div key={i} className="freya-card rounded-[8px] border border-[var(--border)] bg-[var(--surface-subtle)] h-52 animate-pulse" />
           ))}
         </div>
       ) : (
@@ -186,10 +186,10 @@ export default function SensorsPage() {
           {/* ── Active factories ── */}
           {withData.length > 0 && (
             <div className="mb-6">
-              <p className="text-[10px] text-outline font-semibold uppercase tracking-[0.18em] mb-4">
-                {withData.length} Active Sensor{withData.length !== 1 ? "s" : ""}
+              <p className="text-[11px] text-[var(--text-muted)] font-semibold uppercase tracking-[0.04em] mb-3">
+                {withData.length} Active Facility Sensor{withData.length !== 1 ? "s" : ""}
               </p>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                 {withData.map((f) => (
                   <FactorySensorCard
                     key={f.name}
@@ -204,23 +204,23 @@ export default function SensorsPage() {
           {/* ── No data ── */}
           {withoutData.length > 0 && (
             <div>
-              <p className="text-[10px] text-outline font-semibold uppercase tracking-[0.18em] mb-4">
-                {withoutData.length} No Recent Data
+              <p className="text-[11px] text-[var(--text-muted)] font-semibold uppercase tracking-[0.04em] mb-3">
+                {withoutData.length} Facilities Without Recent Data
               </p>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                 {withoutData.map((f) => (
                   <div
                     key={f.name}
                     onClick={() => navigate(`/sensors/${encodeURIComponent(f.name)}`)}
-                    className="glass-card rounded-2xl p-5 opacity-50 cursor-pointer hover:opacity-75 transition-opacity"
+                    className="freya-card rounded-[8px] border border-[var(--border)] bg-[var(--surface-subtle)] p-5 opacity-60 cursor-pointer hover:opacity-100 transition-opacity"
                   >
-                    <div className="flex items-center gap-3 mb-2">
-                      <span className="material-symbols-outlined text-outline">sensors_off</span>
-                      <p className="font-semibold text-on-surface">{f.name}</p>
+                    <div className="flex items-center gap-2.5 mb-2">
+                      <span className="material-symbols-outlined text-[var(--text-muted)]">sensors_off</span>
+                      <p className="font-bold text-sm text-[var(--text-primary)]">{f.name}</p>
                     </div>
-                    <p className="text-xs text-outline">No sensor data today</p>
-                    <p className="text-[10px] text-outline mt-1 flex items-center gap-1">
-                      <span className="material-symbols-outlined" style={{ fontSize: 12 }}>arrow_forward</span>
+                    <p className="text-xs text-[var(--text-secondary)]">No sensor data today</p>
+                    <p className="text-[11px] text-[var(--freya-blue)] font-medium mt-2 flex items-center gap-1">
+                      <span className="material-symbols-outlined" style={{ fontSize: 13 }}>arrow_forward</span>
                       View historical data
                     </p>
                   </div>
@@ -230,13 +230,13 @@ export default function SensorsPage() {
           )}
 
           {factories.length === 0 && (
-            <div className="flex flex-col items-center justify-center h-48 gap-3 text-outline">
+            <div className="flex flex-col items-center justify-center h-48 gap-3 text-[var(--text-muted)]">
               <span className="material-symbols-outlined text-4xl">sensors_off</span>
-              <p className="text-sm">No factories found</p>
+              <p className="text-xs">No factories found</p>
             </div>
           )}
         </>
       )}
-    </section>
+    </div>
   );
 }

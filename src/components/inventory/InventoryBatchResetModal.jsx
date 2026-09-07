@@ -20,17 +20,17 @@ function InlineBanner({ flash, onClose }) {
   if (!flash) return null;
 
   const tone = flash.type === "error"
-    ? "border-error/20 bg-error/10 text-error"
+    ? "border-[var(--status-danger)]/30 bg-[var(--status-danger)]/10 text-[var(--status-danger)]"
     : flash.type === "warning"
-      ? "border-amber-500/20 bg-amber-500/10 text-amber-700 dark:text-amber-300"
-      : "border-emerald-500/20 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300";
+      ? "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300"
+      : "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300";
 
   return (
-    <div className={`rounded-2xl border px-4 py-3 ${tone}`.trim()}>
+    <div className={`rounded-[6px] border px-3.5 py-2.5 text-xs ${tone}`.trim()}>
       <div className="flex items-start justify-between gap-3">
-        <p className="text-sm font-medium">{flash.message}</p>
-        <button type="button" onClick={onClose} className="text-current/70 transition hover:text-current">
-          <span className="material-symbols-outlined">close</span>
+        <p className="font-medium">{flash.message}</p>
+        <button type="button" onClick={onClose} className="flex h-5 w-5 items-center justify-center rounded-[4px] text-current/70 transition hover:bg-[var(--surface-hover)] hover:text-current">
+          <span className="material-symbols-outlined" style={{ fontSize: 14 }}>close</span>
         </button>
       </div>
     </div>
@@ -218,14 +218,14 @@ export default function InventoryBatchResetModal({
       maxWidthClassName="max-w-7xl"
       footer={(
         <div className="flex items-center justify-between gap-3">
-          <div className="text-sm text-on-surface-variant">
+          <div className="text-xs text-[var(--text-muted)]">
             {selectedItems.length} item{selectedItems.length === 1 ? "" : "s"} selected
           </div>
-          <div className="flex gap-3">
+          <div className="flex gap-2.5">
             <button
               type="button"
               onClick={onClose}
-              className="rounded-2xl border border-separator/40 px-4 py-2 text-sm font-semibold text-on-surface transition hover:bg-surface-container"
+              className="rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs font-semibold text-[var(--text-primary)] transition hover:bg-[var(--surface-hover)]"
             >
               Close
             </button>
@@ -233,7 +233,7 @@ export default function InventoryBatchResetModal({
               type="button"
               disabled={executing || selectedItems.length === 0}
               onClick={handleBatchReset}
-              className="rounded-2xl bg-error px-4 py-2 text-sm font-semibold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+              className="rounded-[6px] bg-[var(--status-danger)] px-3 py-1.5 text-xs font-semibold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {executing ? "Resetting..." : "Reset Selected"}
             </button>
@@ -241,7 +241,7 @@ export default function InventoryBatchResetModal({
         </div>
       )}
     >
-      <div className="space-y-5">
+      <div className="space-y-4">
         <InlineBanner flash={flash} onClose={() => setFlash(null)} />
 
         <AdvancedFilterSection
@@ -264,13 +264,13 @@ export default function InventoryBatchResetModal({
           enableTextSuggestions
           inputIdPrefix="inventory-batch-reset"
           footer={(
-            <div className="ml-auto flex gap-3">
+            <div className="ml-auto flex gap-2.5">
               <button
                 type="button"
                 onClick={() => {
                   void handleClearFilters();
                 }}
-                className="rounded-2xl border border-separator/40 px-4 py-2 text-sm font-semibold text-on-surface transition hover:bg-surface-container"
+                className="rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs font-semibold text-[var(--text-primary)] transition hover:bg-[var(--surface-hover)]"
               >
                 Clear Filters
               </button>
@@ -280,7 +280,7 @@ export default function InventoryBatchResetModal({
                 onClick={() => {
                   void handleApplyFilters();
                 }}
-                className="rounded-2xl bg-primary px-4 py-2 text-sm font-semibold text-on-primary transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+                className="rounded-[6px] bg-[var(--freya-blue)] px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-[var(--freya-blue-hover)] disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {loading ? "Finding Items..." : "Find Items"}
               </button>
@@ -288,32 +288,32 @@ export default function InventoryBatchResetModal({
           )}
         />
 
-        <div className="glass-card rounded-2xl p-5">
+        <div className="freya-card rounded-[8px] border border-[var(--border)] bg-[var(--surface)] p-4 shadow-sm">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Results</div>
-              <h3 className="mt-1 text-base font-semibold text-on-surface">Inventory Items</h3>
+              <div className="text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">Results</div>
+              <h3 className="mt-0.5 text-base font-semibold text-[var(--text-primary)]">Inventory Items</h3>
             </div>
-            <label className="inline-flex items-center gap-2 text-sm text-on-surface-variant">
+            <label className="inline-flex cursor-pointer items-center gap-2 text-xs text-[var(--text-muted)]">
               <input
                 type="checkbox"
                 checked={allSelected}
                 disabled={selectableResults.length === 0}
                 onChange={(event) => handleToggleAll(event.target.checked)}
-                className="h-4 w-4 rounded border-outline-variant/30 text-primary"
+                className="h-4 w-4 rounded-[4px] border-[var(--border)] text-[var(--freya-blue)]"
               />
               Select all non-zero items
             </label>
           </div>
 
           {loading ? (
-            <EmptyState variant="filled" className="mt-4">Loading inventory items...</EmptyState>
+            <EmptyState variant="filled" className="mt-4 rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] py-8 text-xs text-[var(--text-muted)]">Loading inventory items...</EmptyState>
           ) : results.length === 0 ? (
-            <EmptyState variant="filled" className="mt-4">No inventory items matched the current filters.</EmptyState>
+            <EmptyState variant="filled" className="mt-4 rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] py-8 text-xs text-[var(--text-muted)]">No inventory items matched the current filters.</EmptyState>
           ) : (
-            <div className="mt-4 overflow-x-auto rounded-2xl border border-outline-variant/15">
-              <table className="ui-table-data min-w-full">
-                <thead className="border-b border-outline-variant/15 bg-surface-container-low">
+            <div className="mt-3 overflow-x-auto rounded-[6px] border border-[var(--border)]">
+              <table className="min-w-full">
+                <thead className="border-b border-[var(--border)] bg-[var(--surface-subtle)]">
                   <tr>
                     {[
                       "Select",
@@ -324,7 +324,7 @@ export default function InventoryBatchResetModal({
                       "Available",
                       "Factory",
                     ].map((label) => (
-                      <th key={label} className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.18em] text-outline">
+                      <th key={label} className="px-3.5 py-2.5 text-left text-xs font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">
                         {label}
                       </th>
                     ))}
@@ -339,23 +339,23 @@ export default function InventoryBatchResetModal({
                     return (
                       <tr
                         key={itemId}
-                        className={`border-b border-outline-variant/10 ${disabled ? "bg-surface-container-low/30 text-outline" : "hover:bg-primary/5"}`.trim()}
+                        className={`border-b border-[var(--border)] transition hover:bg-[var(--surface-hover)] ${disabled ? "bg-[var(--surface-subtle)]/50 text-[var(--text-muted)] opacity-60" : ""}`.trim()}
                       >
-                        <td className="px-4 py-3">
+                        <td className="px-3.5 py-2.5">
                           <input
                             type="checkbox"
                             checked={checked}
                             disabled={disabled}
                             onChange={() => toggleSelected(itemId)}
-                            className="h-4 w-4 rounded border-outline-variant/30 text-primary"
+                            className="h-4 w-4 rounded-[4px] border-[var(--border)] text-[var(--freya-blue)]"
                           />
                         </td>
-                        <td className="px-4 py-3 text-sm font-semibold text-on-surface">{item.品番 || "—"}</td>
-                        <td className="px-4 py-3 text-sm text-on-surface">{item.背番号 || "—"}</td>
-                        <td className="px-4 py-3 text-sm font-semibold text-emerald-700 dark:text-emerald-300">{formatInventoryNumber(item.physicalQuantity)}</td>
-                        <td className="px-4 py-3 text-sm font-semibold text-amber-700 dark:text-amber-300">{formatInventoryNumber(item.reservedQuantity)}</td>
-                        <td className="px-4 py-3 text-sm font-semibold text-sky-700 dark:text-sky-300">{formatInventoryNumber(item.availableQuantity)}</td>
-                        <td className="px-4 py-3 text-sm text-on-surface-variant">{item.工場 || "—"}</td>
+                        <td className="px-3.5 py-2.5 text-xs font-semibold text-[var(--text-primary)]">{item.品番 || "—"}</td>
+                        <td className="px-3.5 py-2.5 text-xs text-[var(--text-primary)]">{item.背番号 || "—"}</td>
+                        <td className="px-3.5 py-2.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400">{formatInventoryNumber(item.physicalQuantity)}</td>
+                        <td className="px-3.5 py-2.5 text-xs font-semibold text-amber-600 dark:text-amber-400">{formatInventoryNumber(item.reservedQuantity)}</td>
+                        <td className="px-3.5 py-2.5 text-xs font-semibold text-sky-600 dark:text-sky-400">{formatInventoryNumber(item.availableQuantity)}</td>
+                        <td className="px-3.5 py-2.5 text-xs text-[var(--text-muted)]">{item.工場 || "—"}</td>
                       </tr>
                     );
                   })}

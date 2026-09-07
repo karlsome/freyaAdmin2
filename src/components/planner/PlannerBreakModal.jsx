@@ -45,7 +45,7 @@ export default function PlannerBreakModal({
           <button
             type="button"
             onClick={onClose}
-            className="rounded-2xl border border-separator/40 px-4 py-2 text-sm font-semibold text-on-surface transition hover:bg-surface-container"
+            className="rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs font-semibold text-[var(--text-primary)] transition hover:bg-[var(--surface-hover)]"
           >
             Cancel
           </button>
@@ -53,39 +53,39 @@ export default function PlannerBreakModal({
             type="button"
             disabled={saving}
             onClick={() => onSave(draftBreaks)}
-            className="rounded-2xl bg-primary px-4 py-2 text-sm font-semibold text-on-primary transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+            className="rounded-[6px] bg-[var(--freya-blue)] px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-[var(--freya-blue-hover)] disabled:cursor-not-allowed disabled:opacity-50"
           >
             {saving ? "Saving…" : "Save Breaks"}
           </button>
         </div>
       )}
     >
-      <div className="planner-data-text space-y-3">
+      <div className="space-y-2.5">
         {draftBreaks.map((item) => (
-          <div key={item.id} className="grid gap-3 rounded-2xl border border-outline-variant/15 bg-surface-container-low p-4 lg:grid-cols-[minmax(180px,1.2fr)_140px_140px_minmax(180px,1fr)_auto] lg:items-center">
+          <div key={item.id} className="grid gap-2.5 rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] p-3 lg:grid-cols-[minmax(180px,1.2fr)_130px_130px_minmax(180px,1fr)_auto] lg:items-center">
             <input
               type="text"
               value={item.name || ""}
               onChange={(event) => updateBreak(item.id, { name: event.target.value })}
               placeholder="Break name"
-              className="planner-data-text h-11 rounded-2xl border border-separator/40 px-4 outline-none transition focus:border-primary/40"
+              className="h-9 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 text-xs text-[var(--text-primary)] outline-none transition focus:border-[var(--freya-blue)] focus:ring-1 focus:ring-[var(--freya-blue)]"
             />
             <input
               type="time"
               value={item.start || ""}
               onChange={(event) => updateBreak(item.id, { start: event.target.value })}
-              className="planner-data-text h-11 rounded-2xl border border-separator/40 px-4 outline-none transition focus:border-primary/40"
+              className="h-9 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 text-xs text-[var(--text-primary)] outline-none transition focus:border-[var(--freya-blue)] focus:ring-1 focus:ring-[var(--freya-blue)]"
             />
             <input
               type="time"
               value={item.end || ""}
               onChange={(event) => updateBreak(item.id, { end: event.target.value })}
-              className="planner-data-text h-11 rounded-2xl border border-separator/40 px-4 outline-none transition focus:border-primary/40"
+              className="h-9 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 text-xs text-[var(--text-primary)] outline-none transition focus:border-[var(--freya-blue)] focus:ring-1 focus:ring-[var(--freya-blue)]"
             />
             <select
               value={item.equipment || ""}
               onChange={(event) => updateBreak(item.id, { equipment: event.target.value || null })}
-              className="planner-data-text h-11 rounded-2xl border border-separator/40 px-4 outline-none transition focus:border-primary/40"
+              className="h-9 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 text-xs text-[var(--text-primary)] outline-none transition focus:border-[var(--freya-blue)] focus:ring-1 focus:ring-[var(--freya-blue)]"
             >
               <option value="">All equipment</option>
               {equipmentOptions.map((equipment) => (
@@ -95,7 +95,7 @@ export default function PlannerBreakModal({
             <button
               type="button"
               onClick={() => setDraftBreaks((items) => items.filter((entry) => entry.id !== item.id))}
-              className="rounded-2xl border border-error/20 bg-error/5 px-4 py-2 text-sm font-semibold text-error transition hover:bg-error/10"
+              className="rounded-[6px] border border-[var(--status-danger)]/30 bg-[var(--status-danger)]/5 px-2.5 py-1 text-xs font-semibold text-[var(--status-danger)] transition hover:bg-[var(--status-danger)]/10"
             >
               Remove
             </button>
@@ -105,9 +105,9 @@ export default function PlannerBreakModal({
         <button
           type="button"
           onClick={() => setDraftBreaks((items) => [...items, createDraftBreak()])}
-          className="w-full rounded-2xl border border-dashed border-outline-variant/20 bg-surface-container-low px-5 py-4 text-sm font-semibold text-on-surface transition hover:border-primary/35 hover:text-primary"
+          className="w-full rounded-[6px] border border-dashed border-[var(--border)] bg-[var(--surface-subtle)] px-4 py-3 text-xs font-semibold text-[var(--text-primary)] transition hover:border-[var(--border-strong)] hover:text-[var(--freya-blue)]"
         >
-          Add Break Row
+          + Add Break Row
         </button>
       </div>
     </PlannerModalShell>

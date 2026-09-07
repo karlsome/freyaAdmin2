@@ -64,16 +64,13 @@ function joinClasses(...classes) {
 function SummaryCard({ icon, label, value, subtitle, accent, loading = false }) {
   return (
     <StatSummaryCard
+      variant="freya"
       icon={icon}
       label={label}
       value={value}
       subtitle={subtitle}
       accent={accent}
       loading={loading}
-      valueClassName="planner-data-text text-2xl font-semibold tabular-nums"
-      labelClassName="planner-data-text text-[11px] font-semibold text-on-surface-variant"
-      subtitleClassName="planner-data-text text-[10px] text-outline"
-      iconClassName="shadow-none"
     />
   );
 }
@@ -288,7 +285,7 @@ export default function FactoryStatusPage() {
       key: "equipment",
       label: "Equipment",
       width: 150,
-      renderCell: (row) => <span className="planner-data-text text-sm font-semibold text-on-surface">{row.equipment || "—"}</span>,
+      renderCell: (row) => <span className="text-xs font-semibold text-[var(--text-primary)]">{row.equipment || "—"}</span>,
       disableCellWrapper: true,
     },
     {
@@ -297,7 +294,7 @@ export default function FactoryStatusPage() {
       width: 120,
       renderCell: (row) => {
         const meta = getFactoryStatusBadgeMeta(row.statusKey);
-        return <StatusChip icon={meta.icon} label={meta.label} className={`planner-data-text ${meta.badgeClassName}`} />;
+        return <StatusChip icon={meta.icon} label={meta.label} className={`text-xs ${meta.badgeClassName}`} />;
       },
       disableCellWrapper: true,
     },
@@ -305,35 +302,35 @@ export default function FactoryStatusPage() {
       key: "workerName",
       label: "Operator",
       width: 160,
-      renderCell: (row) => <span className="planner-data-text text-sm font-semibold text-on-surface">{getFactoryStatusOperatorName(row) || "—"}</span>,
+      renderCell: (row) => <span className="text-xs font-medium text-[var(--text-primary)]">{getFactoryStatusOperatorName(row) || "—"}</span>,
       disableCellWrapper: true,
     },
     {
       key: "latestAction",
       label: "Latest Action",
       width: 260,
-      renderCell: (row) => <div className="planner-data-text whitespace-normal text-sm text-on-surface-variant">{row.latestAction || "—"}</div>,
+      renderCell: (row) => <div className="whitespace-normal text-xs text-[var(--text-secondary)]">{row.latestAction || "—"}</div>,
       disableCellWrapper: true,
     },
     {
       key: "partNumber",
       label: "Part Number",
       width: 180,
-      renderCell: (row) => <span className="planner-data-text text-sm font-semibold text-on-surface">{row.partNumber || "—"}</span>,
+      renderCell: (row) => <span className="text-xs font-mono font-medium text-[var(--text-primary)]">{row.partNumber || "—"}</span>,
       disableCellWrapper: true,
     },
     {
       key: "backNumber",
       label: "Serial Number",
       width: 150,
-      renderCell: (row) => <span className="planner-data-text text-sm font-semibold text-on-surface">{row.backNumber || "—"}</span>,
+      renderCell: (row) => <span className="text-xs font-mono text-[var(--text-primary)]">{row.backNumber || "—"}</span>,
       disableCellWrapper: true,
     },
     {
       key: "elapsedMinutes",
       label: "Elapsed",
       width: 120,
-      renderCell: (row) => <span className="planner-data-text text-sm font-semibold tabular-nums text-on-surface">{formatFactoryStatusDuration(row.elapsedMinutes)}</span>,
+      renderCell: (row) => <span className="font-mono freya-tabular text-xs font-semibold text-[var(--text-primary)]">{formatFactoryStatusDuration(row.elapsedMinutes)}</span>,
       disableCellWrapper: true,
     },
     {
@@ -341,9 +338,9 @@ export default function FactoryStatusPage() {
       label: "Last Update",
       width: 220,
       renderCell: (row) => (
-        <div className="planner-data-text min-w-0">
-          <div className="text-sm font-semibold text-on-surface">{formatFactoryStatusDateTime(row.lastUpdatedAt)}</div>
-          <div className="mt-1 text-xs text-on-surface-variant">
+        <div className="min-w-0">
+          <div className="text-xs font-mono font-semibold text-[var(--text-primary)]">{formatFactoryStatusDateTime(row.lastUpdatedAt)}</div>
+          <div className="mt-0.5 text-[11px] text-[var(--text-muted)]">
             {row.lastUpdatedMinutes != null ? `${formatFactoryStatusNumber(row.lastUpdatedMinutes)} min ago` : "—"}
           </div>
         </div>
@@ -354,38 +351,37 @@ export default function FactoryStatusPage() {
       key: "todayActualQuantity",
       label: "Today Actual",
       width: 130,
-      renderCell: (row) => <span className="planner-data-text text-sm font-semibold tabular-nums text-primary">{formatFactoryStatusNumber(row.todayActualQuantity)}</span>,
+      renderCell: (row) => <span className="font-mono freya-tabular text-xs font-bold text-[var(--freya-blue)]">{formatFactoryStatusNumber(row.todayActualQuantity)}</span>,
       disableCellWrapper: true,
     },
   ]), []);
 
   return (
-    <section className="h-screen overflow-y-auto scrollbar-hide px-8 pb-16 pt-24">
+    <div className="min-h-screen px-6 py-6 max-w-[1600px] mx-auto space-y-6 pt-20">
       <div className="w-full">
         <PageHeader
           eyebrow="Live Operations"
-          eyebrowClassName="tracking-[0.18em] text-primary"
+          badge="LIVE"
           title="Factory Status"
           subtitle="Track live machine activity from tablet logs, compare goals versus actual production, and review the current machine state by factory."
-          subtitleClassName="max-w-4xl"
           className="md:flex-row md:items-start md:justify-between"
           actions={(
             <>
               <button
                 type="button"
                 onClick={() => openLogsPage()}
-                className="rounded-2xl border border-outline-variant/25 px-4 py-2.5 text-sm font-semibold text-on-surface transition hover:bg-surface-container"
+                className="rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-hover)] transition-colors shadow-none"
               >
                 Logs Page
               </button>
-              <div className="planner-data-text rounded-2xl border border-outline-variant/20 bg-surface-container-low/40 px-4 py-2.5 text-sm text-on-surface-variant">
+              <div className="rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] px-3 py-1.5 text-xs font-mono text-[var(--text-secondary)]">
                 {generatedAt ? `Updated ${formatFactoryStatusDateTime(generatedAt)}` : "Waiting for first load..."}
               </div>
               <button
                 type="button"
                 onClick={() => setRefreshNonce((current) => current + 1)}
                 disabled={loadingSnapshot || loadingFactories}
-                className="rounded-2xl border border-outline-variant/25 px-4 py-2.5 text-sm font-semibold text-on-surface transition hover:bg-surface-container disabled:cursor-not-allowed disabled:opacity-60"
+                className="rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-hover)] disabled:cursor-not-allowed disabled:opacity-50 transition-colors shadow-none"
               >
                 {loadingSnapshot ? "Refreshing..." : "Refresh"}
               </button>
@@ -394,24 +390,24 @@ export default function FactoryStatusPage() {
         />
 
         {error ? (
-          <div className="planner-data-text mb-6 rounded-2xl border border-error/20 bg-error/10 px-5 py-4 text-sm text-error">
+          <div className="mb-4 rounded-[6px] border border-red-500/20 bg-red-500/10 px-4 py-3 text-xs text-red-600 dark:text-red-400">
             {error}
           </div>
         ) : null}
 
-        <div className="dashboard-section mb-6 rounded-2xl p-5">
+        <div className="freya-card rounded-[8px] border border-[var(--border)] bg-[var(--surface)] p-4 shadow-sm mb-6">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
-              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Filters</p>
-              <h2 className="mt-1 text-lg font-semibold text-on-surface">Factory Scope</h2>
-              <p className="planner-data-text mt-2 text-sm text-on-surface-variant">{selectionSummary.countLabel} · {selectionSummary.selectedText}</p>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">Filters</p>
+              <h2 className="mt-0.5 text-sm font-semibold text-[var(--text-primary)]">Factory Scope</h2>
+              <p className="mt-1 text-xs text-[var(--text-secondary)]">{selectionSummary.countLabel} · {selectionSummary.selectedText}</p>
             </div>
             <div className="flex flex-wrap gap-2">
               <button
                 type="button"
                 onClick={handleSelectAllFactories}
                 disabled={!factoryOptions.length}
-                className="rounded-2xl border border-outline-variant/20 px-3 py-2 text-xs font-semibold text-on-surface transition hover:bg-surface-container disabled:cursor-not-allowed disabled:opacity-60"
+                className="rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1 text-xs font-medium text-[var(--text-primary)] hover:bg-[var(--surface-hover)] disabled:cursor-not-allowed disabled:opacity-50 transition-colors"
               >
                 Select All
               </button>
@@ -419,17 +415,17 @@ export default function FactoryStatusPage() {
                 type="button"
                 onClick={handleClearFactories}
                 disabled={!selectedFactories.length}
-                className="rounded-2xl border border-outline-variant/20 px-3 py-2 text-xs font-semibold text-on-surface transition hover:bg-surface-container disabled:cursor-not-allowed disabled:opacity-60"
+                className="rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1 text-xs font-medium text-[var(--text-primary)] hover:bg-[var(--surface-hover)] disabled:cursor-not-allowed disabled:opacity-50 transition-colors"
               >
                 Clear
               </button>
             </div>
           </div>
 
-          <div className="mt-4 grid gap-4 xl:grid-cols-[minmax(0,1.7fr)_260px]">
+          <div className="mt-3 grid gap-4 xl:grid-cols-[minmax(0,1.7fr)_260px]">
             <div>
-              <span className="block text-xs font-semibold uppercase tracking-[0.18em] text-outline">Factories</span>
-              <div className="mt-2 flex flex-wrap gap-2">
+              <span className="block text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">Factories</span>
+              <div className="mt-1.5 flex flex-wrap gap-1.5">
                 {factoryOptions.map((factory) => {
                   const active = selectedFactories.includes(factory);
 
@@ -439,10 +435,10 @@ export default function FactoryStatusPage() {
                       type="button"
                       onClick={() => toggleFactory(factory)}
                       className={joinClasses(
-                        "planner-data-text rounded-full border px-3 py-2 text-sm font-semibold transition",
+                        "rounded-[6px] border px-3 py-1.5 text-xs font-medium transition-colors",
                         active
-                          ? "border-primary/30 bg-primary/10 text-primary"
-                          : "border-outline-variant/20 bg-white text-on-surface hover:bg-surface-container dark:bg-surface-container"
+                          ? "border-[var(--freya-blue)] bg-[var(--freya-blue)]/10 text-[var(--freya-blue)] font-semibold"
+                          : "border-[var(--border)] bg-[var(--surface)] text-[var(--text-primary)] hover:bg-[var(--surface-hover)]"
                       )}
                     >
                       {factory}
@@ -450,7 +446,7 @@ export default function FactoryStatusPage() {
                   );
                 })}
                 {!factoryOptions.length && !loadingFactories ? (
-                  <div className="planner-data-text rounded-2xl border border-outline-variant/20 bg-surface-container-low/35 px-4 py-3 text-sm text-on-surface-variant">
+                  <div className="rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] px-3 py-2 text-xs text-[var(--text-muted)]">
                     No accessible factories found.
                   </div>
                 ) : null}
@@ -458,7 +454,7 @@ export default function FactoryStatusPage() {
             </div>
 
             <label className="block">
-              <span className="block text-xs font-semibold uppercase tracking-[0.18em] text-outline">Date</span>
+              <span className="block text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">Date</span>
               <input
                 type="date"
                 value={date}
@@ -466,49 +462,51 @@ export default function FactoryStatusPage() {
                   setDate(event.target.value);
                   setPagesByFactory({});
                 }}
-                className="planner-data-text mt-2 h-11 w-full rounded-2xl border border-outline-variant/30 bg-white px-4 text-sm text-on-surface outline-none transition focus:border-primary/40 dark:bg-surface-container"
+                className="mt-1.5 h-8 w-full rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-2.5 text-xs text-[var(--text-primary)] outline-none focus:border-[var(--freya-blue)] transition-colors"
               />
-              <p className="planner-data-text mt-2 text-xs text-on-surface-variant">Defaults to today and auto-refreshes every 60 seconds.</p>
+              <p className="mt-1 text-[11px] text-[var(--text-muted)]">Defaults to today and auto-refreshes every 60 seconds.</p>
             </label>
           </div>
 
-          <AdvancedFilterSection
-            rows={advancedRows}
-            fieldDefinitions={advancedFieldDefinitions}
-            onUpdateRow={handleUpdateAdvancedRow}
-            onAddRow={() => setAdvancedRows((current) => [...current, createFactoryStatusAdvancedFilterRow()])}
-            onRemoveRow={handleRemoveAdvancedRow}
-            onClearRows={handleClearAdvancedFilters}
-            operatorLabels={FACTORY_STATUS_OPERATOR_LABELS}
-            useOperatorLabelsInSelect
-            title="Advanced Filters"
-            activeSummaryDescription="Filter the grouped machine tables without changing the top-level factory and date scope."
-            variant="compact"
-            framed
-            enableTextSuggestions
-            inputIdPrefix="factory-status-filter-options"
-            footer={(
-              <>
-                <button
-                  type="button"
-                  onClick={handleApplyAdvancedFilters}
-                  className="flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-on-primary transition-opacity hover:opacity-90"
-                >
-                  <span className="material-symbols-outlined" style={{ fontSize: 16 }}>filter_alt</span>
-                  Apply Advanced Filters
-                </button>
+          <div className="mt-3 border-t border-[var(--border)] pt-3">
+            <AdvancedFilterSection
+              rows={advancedRows}
+              fieldDefinitions={advancedFieldDefinitions}
+              onUpdateRow={handleUpdateAdvancedRow}
+              onAddRow={() => setAdvancedRows((current) => [...current, createFactoryStatusAdvancedFilterRow()])}
+              onRemoveRow={handleRemoveAdvancedRow}
+              onClearRows={handleClearAdvancedFilters}
+              operatorLabels={FACTORY_STATUS_OPERATOR_LABELS}
+              useOperatorLabelsInSelect
+              title="Advanced Filters"
+              activeSummaryDescription="Filter the grouped machine tables without changing the top-level factory and date scope."
+              variant="compact"
+              framed
+              enableTextSuggestions
+              inputIdPrefix="factory-status-filter-options"
+              footer={(
+                <>
+                  <button
+                    type="button"
+                    onClick={handleApplyAdvancedFilters}
+                    className="flex items-center gap-1.5 rounded-[6px] bg-[var(--freya-blue)] px-3 py-1.5 text-xs font-semibold text-white hover:bg-[var(--freya-blue-hover)] transition-colors shadow-none"
+                  >
+                    <span className="material-symbols-outlined" style={{ fontSize: 15 }}>filter_alt</span>
+                    Apply Filters
+                  </button>
 
-                <button
-                  type="button"
-                  onClick={handleClearAdvancedFilters}
-                  className="flex items-center gap-2 rounded-xl border border-outline-variant/20 px-5 py-2.5 text-sm font-semibold text-on-surface transition hover:bg-surface-container"
-                >
-                  <span className="material-symbols-outlined" style={{ fontSize: 16 }}>refresh</span>
-                  Reset Advanced Filters
-                </button>
-              </>
-            )}
-          />
+                  <button
+                    type="button"
+                    onClick={handleClearAdvancedFilters}
+                    className="flex items-center gap-1.5 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-hover)] transition-colors shadow-none"
+                  >
+                    <span className="material-symbols-outlined" style={{ fontSize: 15 }}>refresh</span>
+                    Reset Filters
+                  </button>
+                </>
+              )}
+            />
+          </div>
         </div>
 
         <MasterTabNav
@@ -521,150 +519,146 @@ export default function FactoryStatusPage() {
         />
 
         {activeTab === "live-status" && (
-          <>
-            <div className="mb-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-6">
-          <SummaryCard
-            icon="flag"
-            label="Goal"
-            value={formatFactoryStatusNumber(summary.totalGoalQuantity)}
-            subtitle="Selected factories"
-            accent="bg-primary/10 text-primary"
-            loading={loadingSnapshot && !generatedAt}
-          />
-          <SummaryCard
-            icon="precision_manufacturing"
-            label="Actual"
-            value={formatFactoryStatusNumber(summary.totalActualQuantity)}
-            subtitle="Today from pressDB"
-            accent="bg-sky-500/10 text-sky-600 dark:text-sky-300"
-            loading={loadingSnapshot && !generatedAt}
-          />
-          <SummaryCard
-            icon="trending_up"
-            label="Achievement"
-            value={`${summary.achievementRate.toLocaleString()}%`}
-            subtitle="Goal vs actual"
-            accent="bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
-            loading={loadingSnapshot && !generatedAt}
-          />
-          <SummaryCard
-            icon="play_circle"
-            label="Active Machines"
-            value={formatFactoryStatusNumber(summary.activeMachines)}
-            subtitle="Live sessions in progress"
-            accent="bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
-            loading={loadingSnapshot && !generatedAt}
-          />
-          <SummaryCard
-            icon="schedule"
-            label="Stale Machines"
-            value={formatFactoryStatusNumber(summary.staleMachines)}
-            subtitle="Active but not recently updated"
-            accent="bg-amber-500/10 text-amber-700 dark:text-amber-300"
-            loading={loadingSnapshot && !generatedAt}
-          />
-          <SummaryCard
-            icon="pause_circle"
-            label="Idle Machines"
-            value={formatFactoryStatusNumber(summary.idleMachines)}
-            subtitle={`${formatFactoryStatusNumber(summary.activeSessions)} active sessions`}
-            accent="bg-surface-container text-on-surface-variant"
-            loading={loadingSnapshot && !generatedAt}
-          />
-        </div>
-
-        {!selectedFactories.length && !loadingFactories ? (
-          <div className="glass-card rounded-2xl px-6 py-12 text-center">
-            <h2 className="text-xl font-semibold text-on-surface">Choose at least one factory</h2>
-            <p className="planner-data-text mt-2 text-sm text-on-surface-variant">The grouped machine tables appear after you select one or more factories.</p>
-          </div>
-        ) : null}
-
-        {groups.map((group) => (
-          <div key={group.factory} className="mb-6">
-            <div className="mb-4 rounded-2xl border border-outline-variant/15 bg-surface-container-low/35 px-5 py-4">
-              <div className="flex flex-wrap items-start justify-between gap-4">
-                <div>
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Factory</p>
-                  <h2 className="mt-1 text-2xl font-semibold text-on-surface">{group.factory}</h2>
-                  <p className="planner-data-text mt-2 text-sm text-on-surface-variant">
-                    {formatFactoryStatusNumber(group.overview.filteredMachineCount)} of {formatFactoryStatusNumber(group.overview.machineCount)} machines match the current table filters.
-                  </p>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={() => openLogsPage({ factory: group.factory })}
-                  className="planner-data-text rounded-2xl border border-outline-variant/20 px-4 py-2 text-sm font-semibold text-on-surface transition hover:bg-surface-container"
-                >
-                  Logs Page
-                </button>
-              </div>
-
-              <div className="planner-data-text mt-4 flex flex-wrap gap-4 text-sm text-on-surface-variant">
-                <span><span className="font-semibold text-on-surface">Goal</span> {formatFactoryStatusNumber(group.goal.totalTargetQuantity)}</span>
-                <span><span className="font-semibold text-on-surface">Actual</span> {formatFactoryStatusNumber(group.overview.actualQuantity)}</span>
-                <span><span className="font-semibold text-on-surface">Good</span> {formatFactoryStatusNumber(group.overview.goodQuantity)}</span>
-                <span><span className="font-semibold text-on-surface">NG</span> {formatFactoryStatusNumber(group.overview.ngQuantity)}</span>
-                <span><span className="font-semibold text-on-surface">Progress</span> {group.overview.achievementRate.toLocaleString()}%</span>
-              </div>
-
-              <div className="mt-3 h-2 overflow-hidden rounded-full bg-surface-container-high">
-                <div
-                  className="h-full rounded-full bg-primary"
-                  style={{ width: `${Math.min(group.overview.achievementRate, 100)}%` }}
-                />
-              </div>
-
-              <div className="planner-data-text mt-4 flex flex-wrap gap-4 text-sm text-on-surface-variant">
-                <span><span className="font-semibold text-on-surface">Running</span> {formatFactoryStatusNumber(group.overview.activeMachines)}</span>
-                <span><span className="font-semibold text-on-surface">Stale</span> {formatFactoryStatusNumber(group.overview.staleMachines)}</span>
-                <span><span className="font-semibold text-on-surface">Idle</span> {formatFactoryStatusNumber(group.overview.idleMachines)}</span>
-                <span><span className="font-semibold text-on-surface">Sessions</span> {formatFactoryStatusNumber(group.overview.activeSessions)}</span>
-                <span><span className="font-semibold text-on-surface">Records</span> {formatFactoryStatusNumber(group.overview.recordCount)}</span>
-              </div>
+          <div className="mt-4 space-y-6">
+            <div className="grid gap-3 grid-cols-2 md:grid-cols-3 xl:grid-cols-6">
+              <SummaryCard
+                icon="flag"
+                label="Goal"
+                value={formatFactoryStatusNumber(summary.totalGoalQuantity)}
+                subtitle="Selected factories"
+                loading={loadingSnapshot && !generatedAt}
+              />
+              <SummaryCard
+                icon="precision_manufacturing"
+                label="Actual"
+                value={formatFactoryStatusNumber(summary.totalActualQuantity)}
+                subtitle="Today from pressDB"
+                loading={loadingSnapshot && !generatedAt}
+              />
+              <SummaryCard
+                icon="trending_up"
+                label="Achievement"
+                value={`${summary.achievementRate.toLocaleString()}%`}
+                subtitle="Goal vs actual"
+                loading={loadingSnapshot && !generatedAt}
+              />
+              <SummaryCard
+                icon="play_circle"
+                label="Active Machines"
+                value={formatFactoryStatusNumber(summary.activeMachines)}
+                subtitle="Live sessions in progress"
+                loading={loadingSnapshot && !generatedAt}
+              />
+              <SummaryCard
+                icon="schedule"
+                label="Stale Machines"
+                value={formatFactoryStatusNumber(summary.staleMachines)}
+                subtitle="Active but not recently updated"
+                loading={loadingSnapshot && !generatedAt}
+              />
+              <SummaryCard
+                icon="pause_circle"
+                label="Idle Machines"
+                value={formatFactoryStatusNumber(summary.idleMachines)}
+                subtitle={`${formatFactoryStatusNumber(summary.activeSessions)} active sessions`}
+                loading={loadingSnapshot && !generatedAt}
+              />
             </div>
 
-            <DataTable
-              columns={columns}
-              rows={group.rows}
-              loading={false}
-              error=""
-              sort={sort}
-              page={group.pagination.currentPage}
-              pageSize={FACTORY_STATUS_PAGE_SIZE}
-              filteredCount={group.pagination.totalItems}
-              totalPages={group.pagination.totalPages}
-              onSort={handleSort}
-              onPageChange={(nextPage) => {
-                setPagesByFactory((current) => ({ ...current, [group.factory]: nextPage }));
-              }}
-              onRowClick={(row) => openLogsForEquipment(group.factory, row?.equipment)}
-              rowKey={(row) => `${group.factory}-${row.equipment}`}
-              getRowClassName={(row) => getFactoryStatusRowToneClass(row)}
-              renderPageInfo={({ filteredCount, page, pageSize }) => (
-                <span className="planner-data-text">{buildFactoryStatusPageInfo({ filteredCount, page, pageSize })}</span>
-              )}
-              emptyTitle="No matching machines"
-              emptyMessage="Adjust the advanced filters or refresh the live factory data."
-              layoutStorageKey="factory-status-table-layout"
-              enableColumnResize
-              enableColumnReorder
-              tableClassName="ui-table-data min-w-full border-separate border-spacing-0"
-              className="glass-card overflow-hidden rounded-[28px]"
-              topBarClassName="flex flex-col gap-4 border-b border-outline-variant/15 px-5 py-4 md:flex-row md:items-center md:justify-between"
-              bottomBarClassName="flex flex-col gap-4 border-t border-outline-variant/15 px-5 py-4 md:flex-row md:items-center md:justify-between"
-            />
+            {!selectedFactories.length && !loadingFactories ? (
+              <div className="freya-card rounded-[8px] border border-[var(--border)] bg-[var(--surface)] p-8 text-center">
+                <h2 className="text-base font-semibold text-[var(--text-primary)]">Choose at least one factory</h2>
+                <p className="mt-1 text-xs text-[var(--text-muted)]">The grouped machine tables appear after you select one or more factories.</p>
+              </div>
+            ) : null}
+
+            {groups.map((group) => (
+              <div key={group.factory} className="space-y-3">
+                <div className="rounded-[8px] border border-[var(--border)] bg-[var(--surface)] p-4 shadow-sm">
+                  <div className="flex flex-wrap items-start justify-between gap-4">
+                    <div>
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">Factory</p>
+                      <h2 className="mt-0.5 text-xl font-semibold text-[var(--text-primary)]">{group.factory}</h2>
+                      <p className="mt-1 text-xs text-[var(--text-secondary)]">
+                        <span className="font-semibold text-[var(--text-primary)] font-mono freya-tabular">{formatFactoryStatusNumber(group.overview.filteredMachineCount)}</span> of <span className="font-semibold text-[var(--text-primary)] font-mono freya-tabular">{formatFactoryStatusNumber(group.overview.machineCount)}</span> machines match current filters.
+                      </p>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => openLogsPage({ factory: group.factory })}
+                      className="rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-hover)] transition-colors shadow-none"
+                    >
+                      Logs Page
+                    </button>
+                  </div>
+
+                  <div className="mt-3 flex flex-wrap gap-2 text-xs text-[var(--text-secondary)]">
+                    <span className="rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] px-2.5 py-1"><span className="font-semibold text-[var(--text-primary)]">Goal</span> <span className="font-mono freya-tabular font-medium">{formatFactoryStatusNumber(group.goal.totalTargetQuantity)}</span></span>
+                    <span className="rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] px-2.5 py-1"><span className="font-semibold text-[var(--text-primary)]">Actual</span> <span className="font-mono freya-tabular font-medium">{formatFactoryStatusNumber(group.overview.actualQuantity)}</span></span>
+                    <span className="rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] px-2.5 py-1"><span className="font-semibold text-[var(--text-primary)]">Good</span> <span className="font-mono freya-tabular font-medium">{formatFactoryStatusNumber(group.overview.goodQuantity)}</span></span>
+                    <span className="rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] px-2.5 py-1"><span className="font-semibold text-[var(--text-primary)]">NG</span> <span className="font-mono freya-tabular font-medium">{formatFactoryStatusNumber(group.overview.ngQuantity)}</span></span>
+                    <span className="rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] px-2.5 py-1"><span className="font-semibold text-[var(--text-primary)]">Progress</span> <span className="font-mono freya-tabular font-semibold text-[var(--freya-blue)]">{group.overview.achievementRate.toLocaleString()}%</span></span>
+                  </div>
+
+                  <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-[var(--surface-subtle)]">
+                    <div
+                      className="h-full rounded-full bg-[var(--freya-blue)] transition-all duration-300"
+                      style={{ width: `${Math.min(group.overview.achievementRate, 100)}%` }}
+                    />
+                  </div>
+
+                  <div className="mt-3 flex flex-wrap gap-2 text-xs text-[var(--text-secondary)]">
+                    <span className="rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] px-2.5 py-1"><span className="font-semibold text-[var(--text-primary)]">Running</span> <span className="font-mono freya-tabular font-medium">{formatFactoryStatusNumber(group.overview.activeMachines)}</span></span>
+                    <span className="rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] px-2.5 py-1"><span className="font-semibold text-[var(--text-primary)]">Stale</span> <span className="font-mono freya-tabular font-medium">{formatFactoryStatusNumber(group.overview.staleMachines)}</span></span>
+                    <span className="rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] px-2.5 py-1"><span className="font-semibold text-[var(--text-primary)]">Idle</span> <span className="font-mono freya-tabular font-medium">{formatFactoryStatusNumber(group.overview.idleMachines)}</span></span>
+                    <span className="rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] px-2.5 py-1"><span className="font-semibold text-[var(--text-primary)]">Sessions</span> <span className="font-mono freya-tabular font-medium">{formatFactoryStatusNumber(group.overview.activeSessions)}</span></span>
+                    <span className="rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] px-2.5 py-1"><span className="font-semibold text-[var(--text-primary)]">Records</span> <span className="font-mono freya-tabular font-medium">{formatFactoryStatusNumber(group.overview.recordCount)}</span></span>
+                  </div>
+                </div>
+
+                <DataTable
+                  columns={columns}
+                  rows={group.rows}
+                  loading={false}
+                  error=""
+                  sort={sort}
+                  page={group.pagination.currentPage}
+                  pageSize={FACTORY_STATUS_PAGE_SIZE}
+                  filteredCount={group.pagination.totalItems}
+                  totalPages={group.pagination.totalPages}
+                  onSort={handleSort}
+                  onPageChange={(nextPage) => {
+                    setPagesByFactory((current) => ({ ...current, [group.factory]: nextPage }));
+                  }}
+                  onRowClick={(row) => openLogsForEquipment(group.factory, row?.equipment)}
+                  rowKey={(row) => `${group.factory}-${row.equipment}`}
+                  getRowClassName={(row) => getFactoryStatusRowToneClass(row)}
+                  renderPageInfo={({ filteredCount, page, pageSize }) => (
+                    <span className="text-xs text-[var(--text-secondary)] font-mono">{buildFactoryStatusPageInfo({ filteredCount, page, pageSize })}</span>
+                  )}
+                  emptyTitle="No matching machines"
+                  emptyMessage="Adjust the advanced filters or refresh the live factory data."
+                  layoutStorageKey="factory-status-table-layout"
+                  enableColumnResize
+                  enableColumnReorder
+                  tableClassName="ui-table-data min-w-full border-separate border-spacing-0 text-xs"
+                  className="rounded-[8px] border border-[var(--border)] bg-[var(--surface)] overflow-hidden shadow-sm"
+                  topBarClassName="flex flex-col gap-3 border-b border-[var(--border)] px-4 py-3 md:flex-row md:items-center md:justify-between"
+                  bottomBarClassName="flex flex-col gap-3 border-t border-[var(--border)] px-4 py-3 md:flex-row md:items-center md:justify-between"
+                />
+              </div>
+            ))}
           </div>
-        ))}
-          </>
         )}
 
         {activeTab === "live-monitor" && (
-          <FactoryLiveMonitor 
-            factories={selectedFactories} 
-            onMachineClick={(factory, equipment) => setLogsModalState({ open: true, factory, equipment })}
-          />
+          <div className="mt-4">
+            <FactoryLiveMonitor 
+              factories={selectedFactories} 
+              onMachineClick={(factory, equipment) => setLogsModalState({ open: true, factory, equipment })}
+            />
+          </div>
         )}
 
         <FactoryStatusLogsModal
@@ -679,6 +673,6 @@ export default function FactoryStatusPage() {
           }}
         />
       </div>
-    </section>
+    </div>
   );
 }

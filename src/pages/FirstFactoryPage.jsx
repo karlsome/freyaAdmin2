@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useLanguage } from '../contexts/LanguageContext';
 import MasterTabNav from '../components/MasterTabNav';
+import PageHeader from '../components/PageHeader';
 import MaterialDetailModal from '../components/MaterialDetailModal';
 import DataTable from '../components/DataTable';
 import { BASE_URL } from '../services/api';
@@ -1859,33 +1860,34 @@ export default function FirstFactoryPage() {
   };
 
   return (
-    <div className="p-6 pt-24 pb-24 overflow-y-auto h-screen">
-      <div className="mb-6 flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-on-surface">{t('ff_title')}</h1>
-          <p className="mt-1 text-sm text-outline">{t('ff_subtitle')}</p>
-        </div>
-        <div className="flex items-center gap-4">
-          {lastSynced && (
-            <div className="text-xs text-outline text-right">
-              <span className="block font-medium">{language === 'ja' ? '最終同期:' : 'Last Synced:'}</span>
-              <span>{lastSynced}</span>
-            </div>
-          )}
-          <button 
-            onClick={() => {
-              setSyncTargetMonth(selectedMonth);
-              setIsSyncModalOpen(true);
-            }}
-            disabled={syncing}
-            className="flex items-center gap-2 rounded-xl border border-primary/30 px-4 py-2 text-sm font-semibold text-primary transition-all hover:bg-primary/5 disabled:opacity-50 cursor-pointer"
-            title={t('ff_syncFromExcel')}
-          >
-            <span className={`material-symbols-outlined ${syncing ? 'animate-spin' : ''}`} style={{ fontSize: 20 }}>sync</span>
-            {syncing ? t('ff_syncing') : t('ff_syncFromExcel')}
-          </button>
-        </div>
-      </div>
+    <div className="freya-page-container p-6 pt-24 pb-24 overflow-y-auto h-screen">
+      <PageHeader
+        eyebrow="First Factory"
+        title={t('ff_title')}
+        subtitle={t('ff_subtitle')}
+        actions={
+          <div className="flex items-center gap-3">
+            {lastSynced && (
+              <div className="text-xs text-[var(--text-muted)] text-right freya-tabular">
+                <span className="block font-medium">{language === 'ja' ? '最終同期:' : 'Last Synced:'}</span>
+                <span>{lastSynced}</span>
+              </div>
+            )}
+            <button 
+              onClick={() => {
+                setSyncTargetMonth(selectedMonth);
+                setIsSyncModalOpen(true);
+              }}
+              disabled={syncing}
+              className="flex items-center gap-2 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3.5 py-2 text-xs font-semibold text-[var(--text-primary)] transition-colors hover:bg-[var(--surface-raised)] hover:border-[var(--border-strong)] disabled:opacity-50 cursor-pointer"
+              title={t('ff_syncFromExcel')}
+            >
+              <span className={`material-symbols-outlined ${syncing ? 'animate-spin' : ''}`} style={{ fontSize: 16 }}>sync</span>
+              {syncing ? t('ff_syncing') : t('ff_syncFromExcel')}
+            </button>
+          </div>
+        }
+      />
 
       {/* Tabs */}
       <MasterTabNav 
@@ -1901,55 +1903,55 @@ export default function FirstFactoryPage() {
 
       {activeTab === 'fetching' && (
         <>
-          <div className="mb-6 rounded-2xl border border-outline-variant/30 bg-surface/50 p-4 backdrop-blur-xl">
-            <div className="flex flex-col gap-4 md:flex-row md:items-center">
+          <div className="freya-card p-4 mb-6">
+            <div className="flex flex-col gap-3 md:flex-row md:items-center">
               <div className="flex items-center gap-2">
-                <span className="material-symbols-outlined text-outline" style={{ fontSize: 20 }}>calendar_month</span>
+                <span className="material-symbols-outlined text-[var(--text-muted)]" style={{ fontSize: 18 }}>calendar_month</span>
                 <input
                   type="month"
                   value={selectedMonth}
                   onChange={handleMonthChange}
-                  className="rounded-xl border border-outline-variant/50 bg-background/50 px-3 py-2.5 text-sm text-on-surface focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary font-medium"
+                  className="h-9 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 text-xs text-[var(--text-primary)] font-medium outline-none focus:border-[var(--freya-blue)]"
                   title={language === 'ja' ? '表示する月を選択' : 'Select month to view'}
                 />
               </div>
               <div className="relative flex-1">
-                <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline">search</span>
+                <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" style={{ fontSize: 18 }}>search</span>
                 <input
                   type="text"
                   placeholder={t('ff_searchPlaceholder')}
-                  className="w-full rounded-xl border border-outline-variant/50 bg-background/50 py-2.5 pl-10 pr-4 text-sm text-on-surface placeholder:text-outline focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                  className="h-9 w-full rounded-[6px] border border-[var(--border)] bg-[var(--surface)] py-2 pl-9 pr-4 text-xs text-[var(--text-primary)] placeholder:text-[var(--text-muted)] outline-none focus:border-[var(--freya-blue)]"
                   value={filter}
                   onChange={handleFilterChange}
                 />
               </div>
-              <button className="flex items-center gap-2 rounded-xl border border-outline-variant/50 px-4 py-2.5 text-sm font-medium text-on-surface transition-colors hover:bg-surface-variant/50">
-                <span className="material-symbols-outlined" style={{ fontSize: 20 }}>filter_list</span>
+              <button className="flex h-9 items-center gap-2 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3.5 text-xs font-semibold text-[var(--text-primary)] transition-colors hover:bg-[var(--surface-raised)] hover:border-[var(--border-strong)]">
+                <span className="material-symbols-outlined" style={{ fontSize: 16 }}>filter_list</span>
                 {t('filter')}
               </button>
             </div>
           </div>
 
-          <div className="overflow-hidden rounded-2xl border border-outline-variant/30 bg-surface shadow-sm">
+          <div className="freya-card overflow-hidden mb-6">
             <div className="overflow-x-auto">
-              <table className="w-full text-left text-sm text-on-surface">
-                <thead className="bg-surface-variant/30 text-xs uppercase text-outline">
-                  <tr>
-                    <th className="sticky left-0 z-10 bg-surface px-4 py-3 min-w-[200px]">{language === 'ja' ? '品番' : 'Hinban'}</th>
-                    <th className="sticky left-[200px] z-10 bg-surface px-4 py-3 min-w-[80px]">{language === 'ja' ? '区分' : 'Type'}</th>
+              <table className="ui-table-data w-full text-left text-sm text-[var(--text-primary)]">
+                <thead className="bg-[var(--surface-raised)] border-b border-[var(--border)] text-[12px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">
+                  <tr className="h-9">
+                    <th className="sticky left-0 z-10 bg-[var(--surface-raised)] px-4 py-2 min-w-[200px] border-b border-[var(--border)]">{language === 'ja' ? '品番' : 'Hinban'}</th>
+                    <th className="sticky left-[200px] z-10 bg-[var(--surface-raised)] px-4 py-2 min-w-[80px] border-b border-[var(--border)]">{language === 'ja' ? '区分' : 'Type'}</th>
                     {days.map(day => (
-                      <th key={day} className="px-2 py-3 text-center min-w-[40px]">{day}</th>
+                      <th key={day} className="px-2 py-2 text-center min-w-[40px] freya-tabular">{day}</th>
                     ))}
                   </tr>
                 </thead>
-                <tbody>
+                <tbody className="divide-y divide-[var(--border)]">
                   {loading ? (
                     <tr>
-                      <td colSpan={33} className="px-4 py-8 text-center text-outline">{t('loading')}</td>
+                      <td colSpan={33} className="px-4 py-8 text-center text-[var(--text-muted)] text-xs">{t('loading')}</td>
                     </tr>
                   ) : filteredData.length === 0 ? (
                     <tr>
-                      <td colSpan={33} className="px-4 py-8 text-center text-outline">
+                      <td colSpan={33} className="px-4 py-8 text-center text-[var(--text-muted)] text-xs">
                         {filter ? t('noData') : (language === 'ja' ? `${selectedMonth} のデータはまだ同期されていません。Excelから同期してください。` : `No data fetched yet for ${selectedMonth}. Please sync from Excel.`)}
                       </td>
                     </tr>
@@ -1957,29 +1959,29 @@ export default function FirstFactoryPage() {
                     currentData.map((item) => (
                       <React.Fragment key={item.id}>
                         {/* Orders Row */}
-                        <tr className="border-t border-outline-variant/20 hover:bg-surface-variant/20">
-                          <td className="sticky left-0 bg-surface px-4 py-2 font-medium" rowSpan={2}>
+                        <tr className="hover:bg-[var(--surface-raised)] transition-colors">
+                          <td className="sticky left-0 bg-[var(--surface)] px-4 py-2 font-medium text-xs border-r border-[var(--border)]" rowSpan={2}>
                             <span 
-                              className="cursor-pointer hover:text-primary transition-colors"
+                              className="cursor-pointer text-[var(--freya-blue)] hover:underline font-semibold"
                               onClick={() => handleCardClick(item.hinban)}
                             >
                               {item.hinban}
                             </span>
                           </td>
-                          <td className="sticky left-[200px] bg-surface px-4 py-2 text-primary font-semibold text-xs border-r border-outline-variant/20">
+                          <td className="sticky left-[200px] bg-[var(--surface)] px-4 py-2 text-[var(--freya-blue)] font-semibold text-xs border-r border-[var(--border)]">
                             {language === 'ja' ? '受注' : 'Orders'}
                           </td>
                           {item.orders.map((val, i) => (
-                            <td key={i} className="px-2 py-2 text-center text-xs border-r border-outline-variant/20">{val}</td>
+                            <td key={i} className="px-2 py-2 text-center text-xs freya-tabular border-r border-[var(--border)] text-[var(--text-primary)]">{val}</td>
                           ))}
                         </tr>
                         {/* Production Row */}
-                        <tr className="border-b border-outline-variant/20 hover:bg-surface-variant/20">
-                          <td className="sticky left-[200px] bg-surface px-4 py-2 text-[#006064] dark:text-[#4dd0e1] font-semibold text-xs border-r border-outline-variant/20">
+                        <tr className="hover:bg-[var(--surface-raised)] transition-colors">
+                          <td className="sticky left-[200px] bg-[var(--surface)] px-4 py-2 text-[var(--semantic-success)] font-semibold text-xs border-r border-[var(--border)]">
                             {language === 'ja' ? '生産' : 'Prod'}
                           </td>
                           {item.production.map((val, i) => (
-                            <td key={i} className="px-2 py-2 text-center text-xs border-r border-outline-variant/20">{val}</td>
+                            <td key={i} className="px-2 py-2 text-center text-xs freya-tabular border-r border-[var(--border)] text-[var(--text-primary)]">{val}</td>
                           ))}
                         </tr>
                       </React.Fragment>
@@ -1992,7 +1994,7 @@ export default function FirstFactoryPage() {
 
           {totalPages > 1 && (
             <div className="mt-4 flex items-center justify-between px-2">
-              <div className="text-sm text-outline">
+              <div className="text-xs text-[var(--text-muted)] freya-tabular">
                 {language === 'ja' 
                   ? `${filteredData.length} 件中 ${((currentPage - 1) * ITEMS_PER_PAGE) + 1} ～ ${Math.min(currentPage * ITEMS_PER_PAGE, filteredData.length)} 件を表示`
                   : `Showing ${((currentPage - 1) * ITEMS_PER_PAGE) + 1} to ${Math.min(currentPage * ITEMS_PER_PAGE, filteredData.length)} of ${filteredData.length} entries`}
@@ -2001,19 +2003,19 @@ export default function FirstFactoryPage() {
                 <button 
                   onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                   disabled={currentPage === 1}
-                  className="flex items-center justify-center rounded-lg border border-outline-variant/50 p-2 text-on-surface hover:bg-surface-variant/50 disabled:opacity-50 cursor-pointer"
+                  className="flex h-8 w-8 items-center justify-center rounded-[6px] border border-[var(--border)] bg-[var(--surface)] text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:border-[var(--border-strong)] disabled:opacity-50 cursor-pointer transition-colors"
                 >
-                  <span className="material-symbols-outlined" style={{ fontSize: 20 }}>chevron_left</span>
+                  <span className="material-symbols-outlined" style={{ fontSize: 16 }}>chevron_left</span>
                 </button>
-                <span className="text-sm font-medium text-on-surface px-2">
+                <span className="text-xs font-semibold text-[var(--text-primary)] px-2 freya-tabular">
                   {language === 'ja' ? `ページ ${currentPage} / ${totalPages}` : `Page ${currentPage} of ${totalPages}`}
                 </span>
                 <button 
                   onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
                   disabled={currentPage === totalPages}
-                  className="flex items-center justify-center rounded-lg border border-outline-variant/50 p-2 text-on-surface hover:bg-surface-variant/50 disabled:opacity-50 cursor-pointer"
+                  className="flex h-8 w-8 items-center justify-center rounded-[6px] border border-[var(--border)] bg-[var(--surface)] text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:border-[var(--border-strong)] disabled:opacity-50 cursor-pointer transition-colors"
                 >
-                  <span className="material-symbols-outlined" style={{ fontSize: 20 }}>chevron_right</span>
+                  <span className="material-symbols-outlined" style={{ fontSize: 16 }}>chevron_right</span>
                 </button>
               </div>
             </div>
@@ -2025,19 +2027,17 @@ export default function FirstFactoryPage() {
         <div className="flex flex-col gap-6">
           {/* Discrepancy Notice Banner for the Current Date */}
           {currentDayDiscrepancies.count > 0 && (
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 rounded-2xl border border-amber-500/40 bg-amber-500/10 p-4 backdrop-blur-xl shadow-sm">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 rounded-[8px] border border-[var(--semantic-warning)]/30 bg-[var(--semantic-warning)]/10 p-4">
               <div className="flex items-center gap-3">
-                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-500/20 text-amber-600">
-                  <span className="material-symbols-outlined" style={{ fontSize: 24 }}>sync_problem</span>
-                </span>
+                <span className="material-symbols-outlined text-[var(--semantic-warning)]" style={{ fontSize: 22 }}>sync_problem</span>
                 <div>
-                  <h4 className="text-sm font-bold text-on-surface flex items-center gap-2">
+                  <h4 className="text-sm font-semibold text-[var(--text-primary)] flex items-center gap-2">
                     {language === 'ja' ? `${parseInt(selectedMonth.split('-')[1], 10)}/${selectedDay} にExcelとの差異を検知` : `Excel Discrepancy on ${parseInt(selectedMonth.split('-')[1], 10)}/${selectedDay}`}
-                    <span className="rounded-full bg-amber-500/20 px-2 py-0.5 text-xs font-bold text-amber-700">
+                    <span className="rounded-[4px] bg-[var(--semantic-warning)]/20 border border-[var(--semantic-warning)]/30 px-2 py-0.5 text-xs font-semibold text-[var(--semantic-warning)] freya-tabular">
                       {language === 'ja' ? `${currentDayDiscrepancies.count} 件の差異品番` : `${currentDayDiscrepancies.count} affected hinban${currentDayDiscrepancies.count === 1 ? '' : 's'}`}
                     </span>
                   </h4>
-                  <p className="text-xs text-outline mt-0.5">
+                  <p className="text-xs text-[var(--text-muted)] mt-0.5">
                     {language === 'ja' 
                       ? `一部の設定済品番が最新Excelで0mまたは数量変更されています。「自動反映」を実行するとこの日付 (${selectedDateStr}) のみ更新されます。` 
                       : `Some scheduled hinbans have 0m in Excel or changed quantities. Auto-aligning will only update this specific date (${selectedDateStr}) without affecting other dates.`}
@@ -2048,14 +2048,14 @@ export default function FirstFactoryPage() {
                 <button
                   type="button"
                   onClick={() => setIsDiscrepancyModalOpen(true)}
-                  className="rounded-xl border border-amber-500/40 bg-surface/80 px-3 py-2 text-xs font-bold text-amber-700 hover:bg-surface transition-colors shadow-xs cursor-pointer"
+                  className="rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-raised)] hover:border-[var(--border-strong)] transition-colors cursor-pointer"
                 >
                   {language === 'ja' ? '詳細を確認' : 'Review Details'}
                 </button>
                 <button
                   type="button"
                   onClick={handleAutoAlignCurrentDate}
-                  className="flex items-center gap-1.5 rounded-xl bg-amber-600 px-3.5 py-2 text-xs font-bold text-white shadow-sm hover:bg-amber-700 transition-colors cursor-pointer"
+                  className="flex items-center gap-1.5 rounded-[6px] bg-[var(--semantic-warning)] px-3.5 py-1.5 text-xs font-semibold text-white hover:opacity-90 transition-opacity cursor-pointer"
                 >
                   <span className="material-symbols-outlined" style={{ fontSize: 16 }}>auto_fix_high</span>
                   {language === 'ja' ? `${parseInt(selectedMonth.split('-')[1], 10)}/${selectedDay} をExcelに自動反映` : `Auto-Align ${parseInt(selectedMonth.split('-')[1], 10)}/${selectedDay} with Excel`}
@@ -2064,40 +2064,40 @@ export default function FirstFactoryPage() {
             </div>
           )}
 
-          <div className="flex items-center justify-between rounded-2xl border border-outline-variant/30 bg-surface/50 p-4 backdrop-blur-xl">
+          <div className="flex items-center justify-between rounded-[8px] border border-[var(--border)] bg-[var(--surface-raised)] p-4">
             <div className="flex flex-wrap items-center gap-3">
-              <span className="text-sm font-medium text-on-surface">{t('ff_targetDate')}</span>
-              <div className="flex items-center gap-1 rounded-xl border border-outline-variant/50 bg-background/50 p-1 shrink-0">
+              <span className="text-xs font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">{t('ff_targetDate')}</span>
+              <div className="flex items-center gap-1 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] p-1 shrink-0">
                 <button
                   type="button"
                   onClick={() => handleStepDate(-1)}
-                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg hover:bg-surface-variant/50 text-on-surface transition-colors active:scale-95 cursor-pointer"
+                  className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[4px] text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-raised)] transition-colors cursor-pointer"
                   title={t('ff_prevDay')}
                 >
-                  <span className="material-symbols-outlined" style={{ fontSize: 20 }}>chevron_left</span>
+                  <span className="material-symbols-outlined" style={{ fontSize: 18 }}>chevron_left</span>
                 </button>
                 <input 
                   type="date" 
                   value={selectedDateStr}
                   onChange={handleDateChange}
-                  className="w-[135px] shrink-0 rounded-lg border-0 bg-transparent px-2 py-1 text-sm font-bold font-mono tabular-nums text-on-surface focus:outline-none cursor-pointer"
+                  className="w-[135px] shrink-0 border-0 bg-transparent px-2 py-0.5 text-xs font-semibold font-mono freya-tabular text-[var(--text-primary)] focus:outline-none cursor-pointer"
                 />
-                <span className={`inline-flex items-center justify-center rounded-lg w-[58px] py-1 text-xs font-black shrink-0 text-center ${
+                <span className={`inline-flex items-center justify-center rounded-[4px] w-[58px] py-0.5 text-[11px] font-semibold shrink-0 text-center ${
                   selectedDayOfWeekInfo.isSunday 
                     ? 'bg-red-500/15 text-red-600 dark:text-red-400 border border-red-500/30' 
                     : selectedDayOfWeekInfo.isSaturday 
                       ? 'bg-blue-500/15 text-blue-600 dark:text-blue-400 border border-blue-500/30' 
-                      : 'bg-surface-variant/70 text-on-surface border border-outline-variant/40'
+                      : 'bg-[var(--surface-raised)] text-[var(--text-secondary)] border border-[var(--border)]'
                 }`}>
                   <span>{language === 'ja' ? `${selectedDayOfWeekInfo.ja}曜日` : selectedDayOfWeekInfo.en}</span>
                 </span>
                 <button
                   type="button"
                   onClick={() => handleStepDate(1)}
-                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg hover:bg-surface-variant/50 text-on-surface transition-colors active:scale-95 cursor-pointer"
+                  className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[4px] text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-raised)] transition-colors cursor-pointer"
                   title={t('ff_nextDay')}
                 >
-                  <span className="material-symbols-outlined" style={{ fontSize: 20 }}>chevron_right</span>
+                  <span className="material-symbols-outlined" style={{ fontSize: 18 }}>chevron_right</span>
                 </button>
               </div>
 
@@ -2106,7 +2106,7 @@ export default function FirstFactoryPage() {
                 <button
                   type="button"
                   onClick={handleGoToToday}
-                  className="inline-flex items-center gap-1 rounded-xl border border-primary/40 bg-primary/10 px-3 py-1.5 text-xs font-bold text-primary hover:bg-primary hover:text-on-primary transition-all active:scale-95 cursor-pointer shadow-xs"
+                  className="inline-flex items-center gap-1 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1 text-xs font-medium text-[var(--text-primary)] hover:bg-[var(--surface-raised)] hover:border-[var(--border-strong)] transition-colors cursor-pointer"
                   title={language === 'ja' ? '今日の日付に戻る' : 'Go to today'}
                 >
                   <span className="material-symbols-outlined" style={{ fontSize: 16 }}>today</span>
@@ -2116,9 +2116,9 @@ export default function FirstFactoryPage() {
             </div>
             <button 
               onClick={handleSaveSchedule}
-              className="flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-on-primary shadow-lg shadow-primary/20 transition-all hover:bg-primary/90 cursor-pointer"
+              className="flex items-center gap-2 rounded-[6px] bg-[var(--freya-blue)] px-4 py-2 text-xs font-semibold text-white hover:opacity-90 active:scale-95 transition-all cursor-pointer"
             >
-              <span className="material-symbols-outlined" style={{ fontSize: 20 }}>save</span>
+              <span className="material-symbols-outlined" style={{ fontSize: 16 }}>save</span>
               {t('ff_saveDailySchedule')}
             </button>
           </div>
@@ -2126,22 +2126,22 @@ export default function FirstFactoryPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Pool Column */}
             <div 
-              className="flex flex-col rounded-2xl border border-outline-variant/30 bg-surface p-4 min-h-[500px]"
+              className="flex flex-col rounded-[8px] border border-[var(--border)] bg-[var(--surface)] p-4 min-h-[500px]"
               onDragOver={(e) => e.preventDefault()}
               onDrop={onDropPool}
             >
               <div className="mb-4 flex flex-col gap-3">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-bold text-on-surface">
+                  <h3 className="text-sm font-semibold text-[var(--text-primary)]">
                     {t('ff_availableToSchedule')}
                   </h3>
                   <div className="flex items-center gap-2">
-                    <span className="rounded bg-primary/10 px-2 py-1 text-xs font-bold text-primary shadow-sm border border-primary/20" title={t('ff_totalEstimatedFilteredTime')}>
+                    <span className="rounded-[4px] bg-[var(--surface-raised)] px-2 py-0.5 text-xs font-semibold text-[var(--text-primary)] border border-[var(--border)] freya-tabular" title={t('ff_totalEstimatedFilteredTime')}>
                       {formatTime(poolTotalMins)}
                     </span>
                     <button 
                       onClick={() => setShowNoAdhesive(!showNoAdhesive)}
-                      className={`flex items-center gap-1 text-xs px-2 py-1 rounded-lg border transition-colors cursor-pointer ${showNoAdhesive ? 'border-primary bg-primary/10 text-primary' : 'border-outline-variant/50 text-outline hover:bg-surface-variant/50'}`}
+                      className={`flex items-center gap-1 text-xs px-2 py-0.5 rounded-[4px] border transition-colors cursor-pointer ${showNoAdhesive ? 'border-[var(--freya-blue)] bg-[var(--freya-blue)]/10 text-[var(--freya-blue)]' : 'border-[var(--border)] text-[var(--text-muted)] hover:bg-[var(--surface-raised)]'}`}
                       title={showNoAdhesive ? t('ff_hideNoAdhesive') : t('ff_showNoAdhesive')}
                     >
                       <span className="material-symbols-outlined" style={{fontSize: 16}}>
@@ -2149,7 +2149,7 @@ export default function FirstFactoryPage() {
                       </span>
                       {showNoAdhesive ? t('ff_hideNoAdhesive') : t('ff_showNoAdhesive')}
                     </button>
-                    <span className="text-xs font-semibold text-outline">
+                    <span className="text-xs font-medium text-[var(--text-muted)] freya-tabular">
                       {processedPoolItems.length !== poolItems.length 
                         ? (language === 'ja' ? `${processedPoolItems.length} / ${poolItems.length} 件` : `${processedPoolItems.length} / ${poolItems.length} items`)
                         : (language === 'ja' ? `${poolItems.length} 件` : `${poolItems.length} items`)}
@@ -2159,11 +2159,11 @@ export default function FirstFactoryPage() {
 
                 {/* Search Bar */}
                 <div className="relative">
-                  <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline" style={{ fontSize: 18 }}>search</span>
+                  <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" style={{ fontSize: 16 }}>search</span>
                   <input
                     type="text"
                     placeholder={t('ff_searchHinban')}
-                    className="w-full rounded-xl border border-outline-variant/50 bg-background/50 py-2 pl-9 pr-3 text-sm text-on-surface placeholder:text-outline focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                    className="h-9 w-full rounded-[6px] border border-[var(--border)] bg-[var(--surface)] py-2 pl-9 pr-8 text-xs text-[var(--text-primary)] placeholder:text-[var(--text-muted)] outline-none focus:border-[var(--freya-blue)]"
                     value={poolSearch}
                     onChange={(e) => setPoolSearch(e.target.value)}
                   />
@@ -2171,7 +2171,7 @@ export default function FirstFactoryPage() {
                     <button
                       type="button"
                       onClick={() => setPoolSearch('')}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-outline hover:text-on-surface cursor-pointer"
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)] hover:text-[var(--text-primary)] cursor-pointer"
                     >
                       <span className="material-symbols-outlined" style={{ fontSize: 16 }}>close</span>
                     </button>
@@ -2179,14 +2179,14 @@ export default function FirstFactoryPage() {
                 </div>
 
                 {/* Sorting & Filter Controls Toolbar */}
-                <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-outline-variant/20">
+                <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-[var(--border)]">
                   {/* Sort Selector */}
-                  <div className="flex items-center gap-1.5 rounded-lg border border-outline-variant/40 bg-surface-variant/20 px-2 py-1 text-xs">
-                    <span className="material-symbols-outlined text-outline" style={{ fontSize: 16 }}>sort</span>
+                  <div className="flex items-center gap-1.5 rounded-[6px] border border-[var(--border)] bg-[var(--surface-raised)] px-2 py-1 text-xs">
+                    <span className="material-symbols-outlined text-[var(--text-muted)]" style={{ fontSize: 16 }}>sort</span>
                     <select
                       value={poolSortBy}
                       onChange={(e) => setPoolSortBy(e.target.value)}
-                      className="bg-transparent font-bold text-on-surface focus:outline-none cursor-pointer"
+                      className="bg-transparent font-semibold text-[var(--text-primary)] focus:outline-none cursor-pointer"
                     >
                       <option value="timeOption-asc">{t('ff_sort_timeOptionAsc')}</option>
                       <option value="timeOption-desc">{t('ff_sort_timeOptionDesc')}</option>
@@ -2203,18 +2203,18 @@ export default function FirstFactoryPage() {
                   </div>
 
                   {/* Batch Size Quick Filters */}
-                  <div className="flex items-center rounded-lg border border-outline-variant/40 bg-surface-variant/20 p-0.5 text-xs font-semibold">
+                  <div className="flex items-center rounded-[6px] border border-[var(--border)] bg-[var(--surface-raised)] p-0.5 text-xs font-semibold">
                     <button
                       type="button"
                       onClick={() => setPoolBatchFilter('all')}
-                      className={`px-2 py-1 rounded-md transition-colors cursor-pointer ${poolBatchFilter === 'all' ? 'bg-primary text-on-primary shadow-2xs' : 'text-outline hover:text-on-surface'}`}
+                      className={`px-2 py-0.5 rounded-[4px] transition-colors cursor-pointer ${poolBatchFilter === 'all' ? 'bg-[var(--surface)] text-[var(--text-primary)] border border-[var(--border)] shadow-2xs' : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'}`}
                     >
                       {t('ff_allSizes')}
                     </button>
                     <button
                       type="button"
                       onClick={() => setPoolBatchFilter('large')}
-                      className={`flex items-center gap-1 px-2 py-1 rounded-md transition-colors cursor-pointer ${poolBatchFilter === 'large' ? 'bg-primary text-on-primary shadow-2xs' : 'text-outline hover:text-on-surface'}`}
+                      className={`flex items-center gap-1 px-2 py-0.5 rounded-[4px] transition-colors cursor-pointer ${poolBatchFilter === 'large' ? 'bg-[var(--surface)] text-[var(--text-primary)] border border-[var(--border)] shadow-2xs' : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'}`}
                       title={language === 'ja' ? '500m以上または5巻以上の大ロット' : 'Items >= 500m or >= 5 rolls'}
                     >
                       <span>{t('ff_largeBatch')}</span>
@@ -2222,7 +2222,7 @@ export default function FirstFactoryPage() {
                     <button
                       type="button"
                       onClick={() => setPoolBatchFilter('small')}
-                      className={`flex items-center gap-1 px-2 py-1 rounded-md transition-colors cursor-pointer ${poolBatchFilter === 'small' ? 'bg-primary text-on-primary shadow-2xs' : 'text-outline hover:text-on-surface'}`}
+                      className={`flex items-center gap-1 px-2 py-0.5 rounded-[4px] transition-colors cursor-pointer ${poolBatchFilter === 'small' ? 'bg-[var(--surface)] text-[var(--text-primary)] border border-[var(--border)] shadow-2xs' : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'}`}
                       title={language === 'ja' ? '200m未満の小ロット' : 'Items < 200m'}
                     >
                       <span>{t('ff_smallBatch')}</span>
@@ -2231,12 +2231,12 @@ export default function FirstFactoryPage() {
 
                   {/* Width Filter (if multiple widths present) */}
                   {availableWidths.length > 1 && (
-                    <div className="flex items-center gap-1 rounded-lg border border-outline-variant/40 bg-surface-variant/20 px-2 py-1 text-xs">
-                      <span className="text-outline font-medium">{t('ff_width')}</span>
+                    <div className="flex items-center gap-1 rounded-[6px] border border-[var(--border)] bg-[var(--surface-raised)] px-2 py-1 text-xs">
+                      <span className="text-[var(--text-muted)] font-medium">{t('ff_width')}</span>
                       <select
                         value={poolWidthFilter}
                         onChange={(e) => setPoolWidthFilter(e.target.value)}
-                        className="bg-transparent font-bold text-on-surface focus:outline-none cursor-pointer"
+                        className="bg-transparent font-semibold text-[var(--text-primary)] focus:outline-none cursor-pointer"
                       >
                         <option value="all">{language === 'ja' ? `全幅 (${availableWidths.length})` : `All Widths (${availableWidths.length})`}</option>
                         {availableWidths.map(w => (
@@ -2256,7 +2256,7 @@ export default function FirstFactoryPage() {
                         setPoolSortBy('timeOption-asc');
                         setPoolSearch('');
                       }}
-                      className="ml-auto text-[11px] font-bold text-primary hover:underline cursor-pointer"
+                      className="ml-auto text-[11px] font-semibold text-[var(--freya-blue)] hover:underline cursor-pointer"
                     >
                       {t('ff_resetFilters')}
                     </button>
@@ -2265,7 +2265,7 @@ export default function FirstFactoryPage() {
               </div>
               <div className="flex flex-col gap-2 flex-1 overflow-y-auto">
                 {/* Setup & Task Items */}
-                <div className="flex flex-col gap-2 mb-4 pb-4 border-b border-outline-variant/30">
+                <div className="flex flex-col gap-2 mb-4 pb-4 border-b border-[var(--border)]">
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
                     {PRESET_SETUP_ITEMS.map(preset => {
                       const duration = setupTimes[preset.name] !== undefined ? setupTimes[preset.name] : preset.defaultTime;
@@ -2282,11 +2282,11 @@ export default function FirstFactoryPage() {
                             }
                             onDragStartSchedule(e, { type: 'setup', name: preset.name, comment, duration }, 'pool');
                           }}
-                          className="cursor-grab rounded-xl border border-dashed border-primary/50 bg-primary/5 p-2.5 flex flex-col justify-between hover:border-primary transition-colors text-primary font-bold text-xs"
+                          className="cursor-grab rounded-[6px] border border-[var(--border)] bg-[var(--surface-raised)] p-2 flex flex-col justify-between hover:border-[var(--freya-blue)] transition-colors text-xs font-medium text-[var(--text-primary)]"
                         >
                           <div className="flex items-center justify-between gap-1 w-full">
-                            <div className="flex items-center gap-1 min-w-0 flex-1">
-                              <span className="truncate font-bold" title={comment ? `${presetDisplayName} ${comment}` : presetDisplayName}>
+                            <div className="flex items-center gap-1.5 min-w-0 flex-1">
+                              <span className="truncate font-semibold text-[var(--text-primary)]" title={comment ? `${presetDisplayName} ${comment}` : presetDisplayName}>
                                 {comment ? `${presetDisplayName} ${comment}` : presetDisplayName}
                               </span>
                               <button
@@ -2296,10 +2296,10 @@ export default function FirstFactoryPage() {
                                   setCommentModalItem({ name: preset.name, displayName: presetDisplayName, isPreset: true, comment });
                                   setTempCommentText(comment);
                                 }}
-                                className={`p-0.5 rounded hover:bg-primary/20 transition-colors shrink-0 cursor-pointer ${comment ? 'text-primary font-bold' : 'text-primary/40 hover:text-primary'}`}
+                                className={`p-0.5 rounded-[4px] hover:bg-[var(--surface)] transition-colors shrink-0 cursor-pointer ${comment ? 'text-[var(--freya-blue)] font-semibold' : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'}`}
                                 title={comment ? `Title: ${presetDisplayName} ${comment}` : t('ff_editTitleNote')}
                               >
-                                <span className="material-symbols-outlined" style={{ fontSize: 16 }}>
+                                <span className="material-symbols-outlined" style={{ fontSize: 15 }}>
                                   edit_note
                                 </span>
                               </button>
@@ -2309,17 +2309,17 @@ export default function FirstFactoryPage() {
                                 type="number" 
                                 value={duration} 
                                 onChange={e => handleUpdateSetupTime(preset.name, e.target.value)}
-                                className="w-11 rounded bg-background/80 border border-primary/30 px-1 py-0.5 text-center text-xs focus:outline-none focus:border-primary font-normal"
+                                className="w-11 rounded-[4px] bg-[var(--surface)] border border-[var(--border)] px-1 py-0.5 text-center text-xs font-mono freya-tabular text-[var(--text-primary)] focus:outline-none focus:border-[var(--freya-blue)]"
                                 min="0"
                               />
-                              <span className="text-[11px] font-medium">{t('ff_minutesShort')}</span>
+                              <span className="text-[11px] text-[var(--text-muted)] font-medium">{t('ff_minutesShort')}</span>
                               <button 
                                 type="button"
                                 onClick={() => handleAddToSchedule({ type: 'setup', name: preset.name, comment, duration })}
-                                className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full hover:bg-primary/20 text-primary transition-colors ml-0.5 cursor-pointer"
+                                className="flex h-6 w-6 shrink-0 items-center justify-center rounded-[4px] border border-[var(--border)] bg-[var(--surface)] hover:bg-[var(--surface-raised)] hover:text-[var(--freya-blue)] text-[var(--text-muted)] transition-colors ml-0.5 cursor-pointer"
                                 title={t('ff_addToSchedule')}
                               >
-                                <span className="material-symbols-outlined" style={{fontSize: 16}}>arrow_forward</span>
+                                <span className="material-symbols-outlined" style={{fontSize: 15}}>arrow_forward</span>
                               </button>
                             </div>
                           </div>
@@ -2342,7 +2342,7 @@ export default function FirstFactoryPage() {
                           duration: Number(customSetupDuration) || 0 
                         }, 'pool');
                       }}
-                      className="cursor-grab rounded-xl border border-dashed border-amber-500/50 bg-amber-500/5 p-2.5 flex flex-col justify-between hover:border-amber-500 transition-colors text-amber-700 font-bold text-xs"
+                      className="cursor-grab rounded-[6px] border border-dashed border-[var(--border)] bg-[var(--surface-raised)] p-2 flex flex-col justify-between hover:border-[var(--freya-blue)] transition-colors text-xs font-medium text-[var(--text-primary)]"
                     >
                       <div className="flex items-center gap-1 min-w-0 flex-1">
                         <input 
@@ -2350,7 +2350,7 @@ export default function FirstFactoryPage() {
                           value={customSetupName} 
                           placeholder={t('ff_enterCustomName')}
                           onChange={e => handleUpdateCustomName(e.target.value)}
-                          className="w-full min-w-0 rounded bg-background/80 border border-amber-500/30 px-1.5 py-0.5 text-xs text-on-surface placeholder:text-outline focus:outline-none focus:border-amber-500 font-normal"
+                          className="w-full min-w-0 rounded-[4px] bg-[var(--surface)] border border-[var(--border)] px-2 py-0.5 text-xs text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:outline-none focus:border-[var(--freya-blue)]"
                         />
                         <button
                           type="button"
@@ -2359,10 +2359,10 @@ export default function FirstFactoryPage() {
                             setCommentModalItem({ name: customSetupName.trim() || t('ff_customSetup'), isPreset: true, isCustom: true, comment: setupComments['custom'] || '' });
                             setTempCommentText(setupComments['custom'] || '');
                           }}
-                          className={`p-0.5 rounded hover:bg-amber-500/20 transition-colors shrink-0 cursor-pointer ${setupComments['custom'] ? 'text-amber-700 font-bold' : 'text-amber-600/40 hover:text-amber-700'}`}
+                          className={`p-0.5 rounded-[4px] hover:bg-[var(--surface)] transition-colors shrink-0 cursor-pointer ${setupComments['custom'] ? 'text-[var(--freya-blue)] font-semibold' : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'}`}
                           title={setupComments['custom'] ? `Note: ${setupComments['custom']}` : t('ff_editTitleNote')}
                         >
-                          <span className="material-symbols-outlined" style={{ fontSize: 16 }}>
+                          <span className="material-symbols-outlined" style={{ fontSize: 15 }}>
                             {setupComments['custom'] ? 'chat' : 'add_comment'}
                           </span>
                         </button>
@@ -2371,10 +2371,10 @@ export default function FirstFactoryPage() {
                           value={customSetupDuration} 
                           placeholder={t('ff_minutesShort')}
                           onChange={e => handleUpdateCustomDuration(e.target.value)}
-                          className="w-11 rounded bg-background/80 border border-amber-500/30 px-1 py-0.5 text-center text-xs focus:outline-none focus:border-amber-500 shrink-0 font-normal"
+                          className="w-11 rounded-[4px] bg-[var(--surface)] border border-[var(--border)] px-1 py-0.5 text-center text-xs font-mono freya-tabular text-[var(--text-primary)] focus:outline-none focus:border-[var(--freya-blue)] shrink-0"
                           min="0"
                         />
-                        <span className="text-[11px] font-medium shrink-0">{t('ff_minutesShort')}</span>
+                        <span className="text-[11px] text-[var(--text-muted)] font-medium shrink-0">{t('ff_minutesShort')}</span>
                         <button 
                           type="button"
                           onClick={() => handleAddToSchedule({ 
@@ -2383,15 +2383,15 @@ export default function FirstFactoryPage() {
                             comment: setupComments['custom'] || '',
                             duration: Number(customSetupDuration) || 0 
                           })}
-                          className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full hover:bg-amber-500/20 text-amber-600 transition-colors ml-0.5 cursor-pointer"
+                          className="flex h-6 w-6 shrink-0 items-center justify-center rounded-[4px] border border-[var(--border)] bg-[var(--surface)] hover:bg-[var(--surface-raised)] hover:text-[var(--freya-blue)] text-[var(--text-muted)] transition-colors ml-0.5 cursor-pointer"
                           title={t('ff_addToSchedule')}
                         >
-                          <span className="material-symbols-outlined" style={{fontSize: 16}}>arrow_forward</span>
+                          <span className="material-symbols-outlined" style={{fontSize: 15}}>arrow_forward</span>
                         </button>
                       </div>
                       {setupComments['custom'] && (
-                        <div className="text-[10px] text-amber-800/80 font-normal italic truncate mt-1 pt-1 border-t border-amber-500/20 flex items-center gap-1">
-                          <span>💬</span>
+                        <div className="text-[10px] text-[var(--text-muted)] font-normal truncate mt-1 pt-1 border-t border-[var(--border)] flex items-center gap-1">
+                          <span className="text-[var(--freya-blue)]">💬</span>
                           <span className="truncate">{setupComments['custom']}</span>
                         </div>
                       )}
@@ -2400,7 +2400,7 @@ export default function FirstFactoryPage() {
                 </div>
                 {/* Column Headers for Available Hinbans */}
                 {processedPoolItems.length > 0 && (
-                  <div className="flex items-center gap-3 px-3 py-1 text-[11px] font-bold text-outline select-none border-b border-outline-variant/20 mb-1">
+                  <div className="flex items-center gap-3 px-3 py-1.5 text-[12px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)] select-none border-b border-[var(--border)] mb-1">
                     <div className="flex-1 flex items-center gap-4 min-w-0 pr-1">
                       <div className="w-[230px] shrink-0 text-left">
                         {language === 'ja' ? '品番' : 'Hinban'}
@@ -2434,21 +2434,21 @@ export default function FirstFactoryPage() {
                       key={item.id}
                       draggable
                       onDragStart={(e) => onDragStartSchedule(e, { type: 'pool-hinban', hinban: item.hinban, id: item.id }, 'pool')}
-                      className={`cursor-grab active:cursor-grabbing rounded-xl border p-3 flex items-center gap-3 transition-colors ${
+                      className={`cursor-grab active:cursor-grabbing rounded-[6px] border p-3 flex items-center gap-3 transition-colors ${
                         isRawMaterial 
-                          ? 'border-amber-500/30 bg-amber-500/5 hover:border-amber-500/60' 
-                          : 'border-outline-variant/30 bg-background hover:border-primary/50'
+                          ? 'border-amber-500/40 bg-amber-500/5 hover:border-amber-500/60' 
+                          : 'border-[var(--border)] bg-[var(--surface)] hover:bg-[var(--surface-raised)] hover:border-[var(--border-strong)]'
                       }`}
                     >
                       <div className="flex-1 flex flex-col cursor-pointer min-w-0 pr-1" onClick={() => handleCardClick(item.hinban)}>
                         <div className="flex items-center gap-4 w-full">
                           {/* Column 1: Hinban */}
                           <div className="w-[230px] shrink-0 flex items-center gap-1.5 min-w-0">
-                            <span className="font-semibold text-sm text-on-surface truncate" title={item.hinban}>
+                            <span className="font-semibold text-xs text-[var(--text-primary)] truncate" title={item.hinban}>
                               {item.hinban}
                             </span>
                             {isRawMaterial && (
-                              <span className="shrink-0 rounded bg-amber-500/10 px-1.5 py-0.5 text-[9px] font-bold text-amber-600 uppercase tracking-wider">
+                              <span className="shrink-0 rounded-[4px] bg-amber-500/10 px-1.5 py-0.5 text-[9px] font-semibold text-amber-600 uppercase tracking-wider border border-amber-500/20">
                                 {language === 'ja' ? '原材料 (粘着無)' : 'Raw Material'}
                               </span>
                             )}
@@ -2457,28 +2457,28 @@ export default function FirstFactoryPage() {
                           {/* Column 2: Kataban */}
                           <div className="w-[90px] shrink-0 text-left">
                             {item._kataban ? (
-                              <span className="font-semibold text-xs text-on-surface/90 truncate block" title={`型番: ${item._kataban}`}>
+                              <span className="font-medium text-xs text-[var(--text-secondary)] truncate block" title={`型番: ${item._kataban}`}>
                                 {item._kataban}
                               </span>
                             ) : (
-                              <span className="text-outline/30 text-xs">—</span>
+                              <span className="text-[var(--text-muted)]/40 text-xs">—</span>
                             )}
                           </div>
 
                           {/* Column 3: Time Option */}
                           <div className="w-[70px] shrink-0 text-left">
                             {item._timeOption ? (
-                              <span className="font-mono font-bold text-xs text-primary truncate block" title={`時間オプション: ${item._timeOption}`}>
+                              <span className="font-mono font-semibold text-xs text-[var(--freya-blue)] truncate block freya-tabular" title={`時間オプション: ${item._timeOption}`}>
                                 {item._timeOption}
                               </span>
                             ) : (
-                              <span className="text-outline/30 text-xs">—</span>
+                              <span className="text-[var(--text-muted)]/40 text-xs">—</span>
                             )}
                           </div>
                         </div>
 
-                        <div className="flex items-center gap-2 mt-1.5 text-xs text-outline flex-wrap">
-                          <span className="rounded bg-primary/10 px-1.5 py-0.5 font-bold text-primary">
+                        <div className="flex items-center gap-2 mt-1.5 text-xs text-[var(--text-muted)] freya-tabular flex-wrap">
+                          <span className="rounded-[4px] bg-[var(--surface-raised)] border border-[var(--border)] px-1.5 py-0.5 font-semibold text-[var(--text-primary)]">
                             {language === 'ja' ? `数量: ${qty}${item._unit}` : `Qty: ${qty}${item._unit}`}
                           </span>
                           <span>{numRolls} {item._unit === '枚' ? (language === 'ja' ? '束' : 'packs') : (language === 'ja' ? '巻' : 'rolls')}</span>
@@ -2487,10 +2487,10 @@ export default function FirstFactoryPage() {
                       </div>
                       <button 
                         onClick={() => handleAddToSchedule({ type: 'pool-hinban', hinban: item.hinban, id: item.id })}
-                        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full hover:bg-primary/10 text-primary transition-colors cursor-pointer ml-1"
+                        className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[4px] border border-[var(--border)] bg-[var(--surface)] hover:bg-[var(--surface-raised)] hover:text-[var(--freya-blue)] text-[var(--text-muted)] transition-colors cursor-pointer ml-1"
                         title={t('ff_addToSchedule')}
                       >
-                        <span className="material-symbols-outlined" style={{fontSize: 20}}>arrow_forward</span>
+                        <span className="material-symbols-outlined" style={{fontSize: 16}}>arrow_forward</span>
                       </button>
                     </div>
                   )})
@@ -2500,33 +2500,33 @@ export default function FirstFactoryPage() {
 
             {/* Scheduled Column */}
             <div 
-              className="flex flex-col rounded-2xl border border-primary/30 bg-primary/5 p-4 min-h-[500px]"
+              className="flex flex-col rounded-[8px] border border-[var(--border)] bg-[var(--surface)] p-4 min-h-[500px]"
               onDragOver={(e) => e.preventDefault()}
               onDrop={(e) => onDropScheduled(e)}
             >
-              <h3 className="mb-4 text-lg font-bold text-primary flex items-center justify-between">
+              <h3 className="mb-4 text-sm font-semibold text-[var(--text-primary)] flex items-center justify-between">
                 <div className="flex items-center gap-4">
                   {t('ff_priorityOrder')}
-                  <div className="flex items-center gap-2 text-sm font-normal text-on-surface">
-                    <span className="material-symbols-outlined text-outline" style={{fontSize:18}}>schedule</span>
+                  <div className="flex items-center gap-2 text-xs font-normal text-[var(--text-muted)]">
+                    <span className="material-symbols-outlined" style={{fontSize:16}}>schedule</span>
                     {t('ff_start')} 
                     <input 
                       type="time" 
                       value={startTime}
                       onChange={e => setStartTime(e.target.value)}
-                      className="rounded bg-background/50 border border-outline-variant/50 px-2 py-0.5 text-xs focus:outline-none focus:border-primary font-bold"
+                      className="rounded-[4px] bg-[var(--surface-raised)] border border-[var(--border)] px-2 py-0.5 text-xs font-mono freya-tabular text-[var(--text-primary)] focus:outline-none focus:border-[var(--freya-blue)]"
                     />
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="rounded bg-primary/10 px-2 py-1 text-xs font-bold text-primary shadow-sm border border-primary/20">
+                  <span className="rounded-[4px] bg-[var(--surface-raised)] px-2 py-0.5 text-xs font-semibold text-[var(--text-primary)] border border-[var(--border)] freya-tabular">
                     {formatTime(scheduledTotalMins)}
                   </span>
                   <button
                     type="button"
                     onClick={handlePrintSchedulePDF}
                     disabled={scheduledItems.length === 0}
-                    className="flex items-center gap-1.5 rounded-lg border border-primary/40 bg-primary/10 px-2.5 py-1 text-xs font-bold text-primary shadow-xs hover:bg-primary hover:text-on-primary active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                    className="flex items-center gap-1.5 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1 text-xs font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-raised)] hover:border-[var(--border-strong)] active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
                     title={language === 'ja' ? '優先順位スケジュール表 (A3) を印刷' : 'Print A3 Priority Production Schedule'}
                   >
                     <span className="material-symbols-outlined" style={{ fontSize: 16 }}>print</span>
@@ -2539,7 +2539,7 @@ export default function FirstFactoryPage() {
                         setScheduleOrder([]);
                       }
                     }}
-                    className="flex items-center gap-1 rounded-lg border border-outline-variant/50 px-2 py-1 text-xs text-outline hover:bg-surface-variant/50 hover:text-on-surface transition-colors cursor-pointer"
+                    className="flex items-center gap-1 rounded-[6px] border border-[var(--border)] px-2 py-1 text-xs text-[var(--text-muted)] hover:bg-[var(--surface-raised)] hover:text-[var(--text-primary)] transition-colors cursor-pointer"
                   >
                     <span className="material-symbols-outlined" style={{fontSize: 16}}>restart_alt</span>
                     {t('ff_reset')}
@@ -2548,7 +2548,7 @@ export default function FirstFactoryPage() {
               </h3>
               <div className="flex flex-col gap-2 flex-1 overflow-y-auto">
                 {scheduleWithTimes.length === 0 ? (
-                  <div className="text-center text-sm text-primary/50 mt-10 border-2 border-dashed border-primary/20 rounded-xl p-8">
+                  <div className="text-center text-sm text-[var(--text-muted)] mt-10 border border-dashed border-[var(--border)] rounded-[8px] p-8">
                     {t('ff_dragToSetPriority')}
                   </div>
                 ) : (
@@ -2557,13 +2557,13 @@ export default function FirstFactoryPage() {
                     const isZeroOrMissing = disc && (disc.type === 'moved_or_zero' || disc.type === 'missing_in_excel');
                     const isQtyMismatch = disc && disc.type === 'qty_mismatch';
 
-                    let cardBorderClass = 'border-primary/20 bg-surface hover:border-primary/60';
+                    let cardBorderClass = 'border-[var(--border)] bg-[var(--surface-raised)] hover:border-[var(--border-strong)]';
                     if (item.type === 'setup') {
-                      cardBorderClass = 'border-amber-500/30 bg-amber-500/5 hover:border-amber-500/60';
+                      cardBorderClass = 'border-amber-500/30 bg-amber-500/5 hover:border-amber-500/50';
                     } else if (isZeroOrMissing) {
-                      cardBorderClass = 'border-red-500/40 bg-red-500/5 hover:border-red-500/70';
+                      cardBorderClass = 'border-red-500/40 bg-red-500/5 hover:border-red-500/60';
                     } else if (isQtyMismatch) {
-                      cardBorderClass = 'border-amber-500/40 bg-amber-500/5 hover:border-amber-500/70';
+                      cardBorderClass = 'border-amber-500/40 bg-amber-500/5 hover:border-amber-500/60';
                     }
 
                     const setupDisplayName = item.type === 'setup' 
@@ -2584,22 +2584,26 @@ export default function FirstFactoryPage() {
                           e.stopPropagation(); // Prevent column drop
                           onDropScheduled(e, index);
                         }}
-                        className={`cursor-grab active:cursor-grabbing rounded-xl border p-3 flex items-center gap-3 shadow-sm transition-colors ${cardBorderClass}`}
+                        className={`cursor-grab active:cursor-grabbing rounded-[6px] border p-2.5 flex items-center gap-3 transition-colors ${cardBorderClass}`}
                       >
-                        <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
-                          isZeroOrMissing ? 'bg-red-500/20 text-red-600' : (isQtyMismatch ? 'bg-amber-500/20 text-amber-700' : 'bg-primary/10 text-primary')
+                        <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-[4px] border text-xs font-mono font-semibold ${
+                          isZeroOrMissing 
+                            ? 'border-red-500/40 bg-red-500/15 text-red-600' 
+                            : isQtyMismatch 
+                            ? 'border-amber-500/40 bg-amber-500/15 text-amber-600' 
+                            : 'border-[var(--border)] bg-[var(--surface)] text-[var(--text-primary)]'
                         }`}>
                           {index + 1}
                         </span>
-                        <span className="flex flex-col items-center justify-center rounded bg-surface-variant/30 px-2 py-1 text-xs font-medium text-outline min-w-[50px]">
+                        <span className="flex flex-col items-center justify-center rounded-[4px] bg-[var(--surface)] border border-[var(--border)] px-2 py-0.5 text-xs font-mono freya-tabular text-[var(--text-secondary)] min-w-[50px]">
                           <span>{item.startTime}</span>
-                          <span className="text-[10px] opacity-70">to {item.endTime}</span>
+                          <span className="text-[10px] text-[var(--text-muted)]">to {item.endTime}</span>
                         </span>
                         
                         {item.type === 'setup' ? (
                           <div className="flex-1 flex items-center justify-between min-w-0 pr-2">
                             <div className="flex items-center gap-2 min-w-0 flex-1">
-                              <span className="font-bold text-sm text-amber-700 truncate" title={item.comment ? `${setupDisplayName} ${item.comment}` : setupDisplayName}>
+                              <span className="font-semibold text-sm text-amber-700 dark:text-amber-400 truncate" title={item.comment ? `${setupDisplayName} ${item.comment}` : setupDisplayName}>
                                 {item.comment ? `${setupDisplayName} ${item.comment}` : setupDisplayName}
                               </span>
                               <button
@@ -2609,7 +2613,7 @@ export default function FirstFactoryPage() {
                                   setCommentModalItem(item);
                                   setTempCommentText(item.comment || '');
                                 }}
-                                className={`p-1 rounded-md hover:bg-amber-500/20 transition-colors shrink-0 cursor-pointer ${item.comment ? 'text-amber-800 font-bold' : 'text-amber-600/40 hover:text-amber-700'}`}
+                                className={`p-1 rounded-[4px] hover:bg-[var(--surface)] transition-colors shrink-0 cursor-pointer ${item.comment ? 'text-amber-800 dark:text-amber-300 font-semibold' : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'}`}
                                 title={t('ff_editTitleNote')}
                               >
                                 <span className="material-symbols-outlined" style={{ fontSize: 16 }}>
@@ -2617,7 +2621,7 @@ export default function FirstFactoryPage() {
                                 </span>
                               </button>
                             </div>
-                            <span className="text-xs font-bold text-amber-700 whitespace-nowrap ml-2">{item.duration} {t('ff_minutesShort')}</span>
+                            <span className="text-xs font-mono freya-tabular font-semibold text-amber-700 dark:text-amber-400 whitespace-nowrap ml-2">{item.duration} {t('ff_minutesShort')}</span>
                           </div>
                         ) : (
                           <>
@@ -2625,17 +2629,17 @@ export default function FirstFactoryPage() {
                               <div className="flex items-center gap-4 w-full">
                                 {/* Column 1: Hinban + Discrepancy Warnings */}
                                 <div className="w-[220px] shrink-0 flex items-center gap-1.5 min-w-0">
-                                  <span className="font-semibold text-sm text-on-surface hover:text-primary transition-colors truncate" title={item.hinban}>
+                                  <span className="font-semibold text-sm text-[var(--text-primary)] hover:text-[var(--freya-blue)] transition-colors truncate" title={item.hinban}>
                                     {item.hinban}
                                   </span>
                                   {isZeroOrMissing && (
-                                    <span className="shrink-0 inline-flex items-center gap-0.5 rounded bg-red-500/15 px-1 py-0.5 text-[9px] font-bold text-red-600 border border-red-500/30">
+                                    <span className="shrink-0 inline-flex items-center gap-0.5 rounded-[4px] bg-red-500/10 px-1 py-0.5 text-[10px] font-semibold text-red-600 border border-red-500/20">
                                       <span className="material-symbols-outlined" style={{ fontSize: 11 }}>warning</span>
                                       <span className="truncate max-w-[65px]">{disc.type === 'missing_in_excel' ? t('ff_notInExcel') : (disc.movedText || t('ff_zeroMetersToday'))}</span>
                                     </span>
                                   )}
                                   {isQtyMismatch && (
-                                    <span className="shrink-0 inline-flex items-center gap-0.5 rounded bg-amber-500/15 px-1 py-0.5 text-[9px] font-bold text-amber-700 border border-amber-500/30">
+                                    <span className="shrink-0 inline-flex items-center gap-0.5 rounded-[4px] bg-amber-500/10 px-1 py-0.5 text-[10px] font-semibold text-amber-700 dark:text-amber-400 border border-amber-500/20">
                                       <span className="material-symbols-outlined" style={{ fontSize: 11 }}>difference</span>
                                       <span>{disc.excelQty}{item.unit || 'm'}</span>
                                     </span>
@@ -2645,34 +2649,34 @@ export default function FirstFactoryPage() {
                                 {/* Column 2: Kataban */}
                                 <div className="w-[90px] shrink-0 text-left">
                                   {itemKataban ? (
-                                    <span className="font-semibold text-xs text-on-surface/90 truncate block" title={`型番: ${itemKataban}`}>
+                                    <span className="font-medium text-xs text-[var(--text-secondary)] truncate block" title={`型番: ${itemKataban}`}>
                                       {itemKataban}
                                     </span>
                                   ) : (
-                                    <span className="text-outline/30 text-xs">—</span>
+                                    <span className="text-[var(--text-muted)] text-xs">—</span>
                                   )}
                                 </div>
 
                                 {/* Column 3: Time Option */}
                                 <div className="w-[70px] shrink-0 text-left">
                                   {itemTimeOption ? (
-                                    <span className="font-mono font-bold text-xs text-primary truncate block" title={`時間オプション: ${itemTimeOption}`}>
+                                    <span className="font-mono freya-tabular font-medium text-xs text-[var(--freya-blue)] truncate block" title={`時間オプション: ${itemTimeOption}`}>
                                       {itemTimeOption}
                                     </span>
                                   ) : (
-                                    <span className="text-outline/30 text-xs">—</span>
+                                    <span className="text-[var(--text-muted)] text-xs">—</span>
                                   )}
                                 </div>
                               </div>
 
-                              <div className="flex items-center gap-2 mt-1.5 text-xs text-outline flex-wrap">
-                                <span className="bg-primary/10 text-primary px-1.5 rounded-sm">
+                              <div className="flex items-center gap-2 mt-1.5 text-xs text-[var(--text-muted)] flex-wrap">
+                                <span className="rounded-[4px] bg-[var(--surface)] border border-[var(--border)] px-1.5 py-0.5 text-[11px] font-medium text-[var(--text-secondary)]">
                                   {item.unit === '枚'
                                     ? (language === 'ja' ? `束 ${item.rollIndex}/${item.totalRolls}` : `Pack ${item.rollIndex}/${item.totalRolls}`)
                                     : (language === 'ja' ? `巻 ${item.rollIndex}/${item.totalRolls}` : `Roll ${item.rollIndex}/${item.totalRolls}`)
                                   }
                                 </span>
-                                <span>{item.meters}{item.unit || 'm'}</span>
+                                <span className="font-mono freya-tabular">{item.meters}{item.unit || 'm'}</span>
                                 {isQtyMismatch && item.rollIndex === 1 && (
                                   <button
                                     type="button"
@@ -2680,7 +2684,7 @@ export default function FirstFactoryPage() {
                                       e.stopPropagation();
                                       handleUpdateHinbanQty(item.hinban);
                                     }}
-                                    className="inline-flex items-center gap-1 rounded bg-amber-500/20 px-2 py-0.5 text-[11px] font-bold text-amber-800 hover:bg-amber-500/30 transition-colors ml-1 cursor-pointer"
+                                    className="inline-flex items-center gap-1 rounded-[4px] border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-[11px] font-semibold text-amber-700 dark:text-amber-400 hover:bg-amber-500/20 transition-colors ml-1 cursor-pointer"
                                     title={language === 'ja' ? '最新Excelデータに合わせて巻数・所要時間を更新' : 'Update rolls and duration to match Excel'}
                                   >
                                     <span className="material-symbols-outlined" style={{ fontSize: 12 }}>sync</span>
@@ -2689,15 +2693,15 @@ export default function FirstFactoryPage() {
                                 )}
                               </div>
                             </div>
-                            <span className="text-xs font-bold text-primary whitespace-nowrap">{item.duration} {t('ff_minutesShort')}</span>
+                            <span className="text-xs font-mono freya-tabular font-semibold text-[var(--text-primary)] whitespace-nowrap">{item.duration} {t('ff_minutesShort')}</span>
                           </>
                         )}
                         <button 
                           onClick={() => handleRemoveFromSchedule(item)}
-                          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full hover:bg-red-500/10 text-red-500 transition-colors ml-2 cursor-pointer"
+                          className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[4px] border border-[var(--border)] bg-[var(--surface)] hover:bg-red-500/10 hover:border-red-500/30 text-[var(--text-muted)] hover:text-red-500 transition-colors ml-2 cursor-pointer"
                           title={t('ff_removeFromSchedule')}
                         >
-                          <span className="material-symbols-outlined" style={{fontSize: 20}}>arrow_back</span>
+                          <span className="material-symbols-outlined" style={{fontSize: 16}}>arrow_back</span>
                         </button>
                       </div>
                     );
@@ -2713,30 +2717,30 @@ export default function FirstFactoryPage() {
       {activeTab === 'summary' && (
         <div className="flex flex-col gap-6">
           {/* Header Controls, Month Selector & View Mode Switcher */}
-          <div className="rounded-2xl border border-outline-variant/30 bg-surface/50 p-4 backdrop-blur-xl flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="rounded-[8px] border border-[var(--border)] bg-[var(--surface)] p-3 flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div className="flex flex-wrap items-center gap-4">
               <div className="flex items-center gap-3">
-                <span className="material-symbols-outlined text-outline" style={{ fontSize: 22 }}>calendar_month</span>
+                <span className="material-symbols-outlined text-[var(--text-muted)]" style={{ fontSize: 20 }}>calendar_month</span>
                 <div className="flex items-center gap-2">
-                  <span className="text-sm font-semibold text-on-surface">{t('ff_targetMonth')}</span>
+                  <span className="text-xs font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">{t('ff_targetMonth')}</span>
                   <input
                     type="month"
                     value={selectedMonth}
                     onChange={handleMonthChange}
-                    className="rounded-xl border border-outline-variant/50 bg-background/50 px-3 py-2 text-sm text-on-surface focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary font-bold"
+                    className="rounded-[6px] border border-[var(--border)] bg-[var(--surface-raised)] px-2.5 py-1.5 text-xs font-mono font-semibold text-[var(--text-primary)] focus:border-[var(--freya-blue)] focus:outline-none"
                     title={language === 'ja' ? '表示する月を選択' : 'Select month for summary'}
                   />
                 </div>
               </div>
 
               {/* View Mode Switcher */}
-              <div className="flex items-center gap-2 rounded-xl border border-outline-variant/40 bg-surface-variant/20 px-3 py-1.5 text-xs">
-                <span className="material-symbols-outlined text-outline" style={{ fontSize: 18 }}>view_list</span>
-                <span className="text-outline font-semibold">{t('ff_dataSource')}</span>
+              <div className="flex items-center gap-2 rounded-[6px] border border-[var(--border)] bg-[var(--surface-raised)] px-2.5 py-1 text-xs">
+                <span className="material-symbols-outlined text-[var(--text-muted)]" style={{ fontSize: 16 }}>view_list</span>
+                <span className="text-[var(--text-muted)] font-medium">{t('ff_dataSource')}</span>
                 <select
                   value={summaryViewMode}
                   onChange={(e) => handleSummaryViewModeChange(e.target.value)}
-                  className="bg-transparent font-bold text-on-surface focus:outline-none cursor-pointer"
+                  className="bg-transparent font-semibold text-xs text-[var(--text-primary)] focus:outline-none cursor-pointer"
                 >
                   <option value="priority">{t('ff_dataSourcePriority')}</option>
                   <option value="raw">{t('ff_dataSourceRaw')}</option>
@@ -2744,7 +2748,7 @@ export default function FirstFactoryPage() {
               </div>
             </div>
 
-            <div className="flex items-center gap-2 text-xs text-outline">
+            <div className="flex items-center gap-2 text-xs text-[var(--text-muted)]">
               <span className="material-symbols-outlined" style={{ fontSize: 16 }}>info</span>
               <span>
                 {summaryViewMode === 'priority' 
@@ -2758,12 +2762,12 @@ export default function FirstFactoryPage() {
           <div className="flex flex-col gap-3">
             <div className="flex items-center justify-between px-1">
               <div className="flex items-center gap-2">
-                <span className="material-symbols-outlined text-primary" style={{ fontSize: 22 }}>calendar_view_month</span>
-                <h3 className="text-lg font-bold text-on-surface">
+                <span className="material-symbols-outlined text-[var(--freya-blue)]" style={{ fontSize: 20 }}>calendar_view_month</span>
+                <h3 className="text-sm font-semibold text-[var(--text-primary)]">
                   {summaryViewMode === 'priority' ? t('ff_dailyScheduleTableTitlePriority') : t('ff_dailyScheduleTableTitleRaw')}
                 </h3>
               </div>
-              <span className="text-xs text-outline font-medium">
+              <span className="text-xs font-mono freya-tabular text-[var(--text-muted)]">
                 {language === 'ja' ? `${selectedMonth} 1日 ～ ${daysInSelectedMonth}日` : `1st ～ ${daysInSelectedMonth}th of ${selectedMonth}`}
               </span>
             </div>
@@ -2781,9 +2785,9 @@ export default function FirstFactoryPage() {
               totalPages={1}
               stickyHeader={true}
               stickyHeaderOffset={0}
-              stickyHeaderCellClassName="bg-surface/95 backdrop-blur-md shadow-[inset_0_-1px_0_rgba(148,163,184,0.18)]"
+              stickyHeaderCellClassName="bg-[var(--surface-raised)] border-b border-[var(--border)]"
               tableViewportClassName="overflow-x-auto"
-              className="glass-card rounded-2xl shadow-sm border border-outline-variant/30"
+              className="freya-card overflow-hidden"
               rowKey={(row) => row.dateKey}
               emptyTitle={t('ff_noScheduleData')}
               emptyMessage={t('ff_noSchedulesFoundMonth')}
@@ -2796,81 +2800,81 @@ export default function FirstFactoryPage() {
       {activeTab === 'production' && (
         <div className="flex flex-col gap-6">
           {/* Header Controls & Date Navigation */}
-          <div className="rounded-2xl border border-outline-variant/30 bg-surface/50 p-4 backdrop-blur-xl flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-sm">
+          <div className="rounded-[8px] border border-[var(--border)] bg-[var(--surface)] p-3 flex flex-col md:flex-row md:items-center justify-between gap-3">
             <div className="flex flex-wrap items-center gap-3">
               <div className="flex items-center gap-2">
-                <span className="material-symbols-outlined text-outline" style={{ fontSize: 22 }}>event</span>
+                <span className="material-symbols-outlined text-[var(--text-muted)]" style={{ fontSize: 20 }}>event</span>
                 <input
                   type="date"
                   value={productionDateStr}
                   onChange={(e) => {
                     if (e.target.value) setProductionDateStr(e.target.value);
                   }}
-                  className="rounded-xl border border-outline-variant/50 bg-background/50 px-3 py-2 text-sm font-bold text-on-surface focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary shadow-sm cursor-pointer"
+                  className="rounded-[6px] border border-[var(--border)] bg-[var(--surface-raised)] px-2.5 py-1.5 text-xs font-mono font-semibold text-[var(--text-primary)] focus:border-[var(--freya-blue)] focus:outline-none cursor-pointer"
                   title={language === 'ja' ? '生産実績日を選択' : 'Select production date'}
                 />
               </div>
 
               {/* Quick Date Switchers */}
-              <div className="flex items-center rounded-xl border border-outline-variant/40 bg-surface-variant/20 p-1">
+              <div className="flex items-center rounded-[6px] border border-[var(--border)] bg-[var(--surface-raised)] p-0.5">
                 <button
                   type="button"
                   onClick={() => stepProductionDate(-1)}
-                  className="flex h-7 w-7 items-center justify-center rounded-lg hover:bg-surface-variant/50 text-outline transition-colors cursor-pointer"
+                  className="flex h-6 w-6 items-center justify-center rounded-[4px] hover:bg-[var(--surface)] text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors cursor-pointer"
                   title={t('ff_prevDay')}
                 >
-                  <span className="material-symbols-outlined" style={{ fontSize: 18 }}>chevron_left</span>
+                  <span className="material-symbols-outlined" style={{ fontSize: 16 }}>chevron_left</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => setProductionDateStr(getLocalYYYYMMDD())}
-                  className={`px-2.5 py-1 text-xs font-bold rounded-lg transition-colors cursor-pointer ${productionDateStr === getLocalYYYYMMDD() ? 'bg-primary text-on-primary shadow-xs' : 'text-outline hover:text-on-surface'}`}
+                  className={`px-2.5 py-0.5 text-xs font-medium rounded-[4px] transition-colors cursor-pointer ${productionDateStr === getLocalYYYYMMDD() ? 'bg-[var(--surface)] text-[var(--text-primary)] border border-[var(--border)] shadow-xs' : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'}`}
                 >
                   {t('ff_today')}
                 </button>
                 <button
                   type="button"
                   onClick={() => stepProductionDate(1)}
-                  className="flex h-7 w-7 items-center justify-center rounded-lg hover:bg-surface-variant/50 text-outline transition-colors cursor-pointer"
+                  className="flex h-6 w-6 items-center justify-center rounded-[4px] hover:bg-[var(--surface)] text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors cursor-pointer"
                   title={t('ff_nextDay')}
                 >
-                  <span className="material-symbols-outlined" style={{ fontSize: 18 }}>chevron_right</span>
+                  <span className="material-symbols-outlined" style={{ fontSize: 16 }}>chevron_right</span>
                 </button>
               </div>
 
               {/* Machine Badge */}
-              <span className="inline-flex items-center gap-1.5 rounded-xl bg-surface-variant/40 px-3 py-1.5 text-xs font-bold text-on-surface border border-outline-variant/30">
-                <span className="material-symbols-outlined text-outline" style={{ fontSize: 16 }}>precision_manufacturing</span>
+              <span className="inline-flex items-center gap-1.5 rounded-[6px] bg-[var(--surface-raised)] px-2.5 py-1 text-xs font-semibold text-[var(--text-secondary)] border border-[var(--border)]">
+                <span className="material-symbols-outlined text-[var(--text-muted)]" style={{ fontSize: 15 }}>precision_manufacturing</span>
                 <span>{t('ff_machine')}</span>
               </span>
 
               {/* Realtime Live Connection Indicator */}
               <span 
-                className={`inline-flex items-center gap-1.5 rounded-xl px-2.5 py-1 text-xs font-bold transition-colors ${
+                className={`inline-flex items-center gap-1.5 rounded-[6px] px-2.5 py-1 text-xs font-medium transition-colors ${
                   isLiveConnected 
                     ? 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/20' 
-                    : 'bg-surface-variant/40 text-outline border border-outline-variant/30'
+                    : 'bg-[var(--surface-raised)] text-[var(--text-muted)] border border-[var(--border)]'
                 }`}
                 title={isLiveConnected ? t('ff_liveTooltipConnected') : t('ff_liveTooltipConnecting')}
               >
-                <span className={`h-2 w-2 rounded-full ${isLiveConnected ? 'bg-emerald-500 animate-pulse' : 'bg-outline'}`}></span>
+                <span className={`h-2 w-2 rounded-full ${isLiveConnected ? 'bg-emerald-500 animate-pulse' : 'bg-[var(--text-muted)]'}`}></span>
                 <span>{isLiveConnected ? t('ff_liveRealtime') : t('ff_liveSyncing')}</span>
               </span>
             </div>
 
             {/* Refresh Button */}
             <div className="flex items-center gap-3">
-              <span className="text-xs text-outline font-medium hidden sm:inline">
+              <span className="text-xs text-[var(--text-muted)] font-mono freya-tabular hidden sm:inline">
                 {t('ff_processesScheduled').replace('{count}', productionGroups.length)}
               </span>
               <button
                 type="button"
                 onClick={() => fetchProductionData(productionDateStr)}
                 disabled={loadingProduction}
-                className="flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-bold text-on-primary shadow-sm hover:bg-primary/90 active:scale-95 transition-all disabled:opacity-50 cursor-pointer"
+                className="flex items-center gap-1.5 rounded-[6px] bg-[var(--freya-blue)] px-3 py-1.5 text-xs font-semibold text-white hover:bg-[var(--freya-blue-hover)] transition-colors disabled:opacity-50 cursor-pointer"
                 title={language === 'ja' ? 'リアルタイム生産状況を更新' : 'Refresh live production tracking data'}
               >
-                <span className={`material-symbols-outlined ${loadingProduction ? 'animate-spin' : ''}`} style={{ fontSize: 18 }}>
+                <span className={`material-symbols-outlined ${loadingProduction ? 'animate-spin' : ''}`} style={{ fontSize: 16 }}>
                   refresh
                 </span>
                 <span>{loadingProduction ? t('ff_refreshing') : t('ff_refresh')}</span>
@@ -2880,13 +2884,13 @@ export default function FirstFactoryPage() {
 
           {/* Progress Overview Bar */}
           {productionGroups.length > 0 && (
-            <div className="glass-card rounded-2xl border border-outline-variant/30 p-4 shadow-sm flex flex-col gap-3">
+            <div className="rounded-[8px] border border-[var(--border)] bg-[var(--surface)] p-4 flex flex-col gap-2.5">
               <div className="flex items-center justify-between text-xs">
                 <div className="flex items-center gap-2">
-                  <span className="font-bold text-on-surface text-sm">
+                  <span className="font-semibold text-[var(--text-primary)] text-sm">
                     {parseInt(productionDateStr.split('-')[1], 10)}/{parseInt(productionDateStr.split('-')[2], 10)} {t('ff_productionProgress')}
                   </span>
-                  <span className="rounded bg-primary/10 px-2 py-0.5 font-bold text-primary">
+                  <span className="rounded-[4px] bg-[var(--surface-raised)] border border-[var(--border)] px-2 py-0.5 font-mono freya-tabular text-xs font-semibold text-[var(--text-primary)]">
                     {t('ff_completedCount')
                       .replace('{completed}', productionStats.completed)
                       .replace('{total}', productionStats.total)
@@ -2894,15 +2898,15 @@ export default function FirstFactoryPage() {
                   </span>
                 </div>
                 {productionStats.inProgress > 0 && (
-                  <span className="inline-flex items-center gap-1.5 font-bold text-purple-600 animate-pulse">
-                    <span className="h-2 w-2 rounded-full bg-purple-600"></span>
+                  <span className="inline-flex items-center gap-1.5 font-medium text-purple-600 dark:text-purple-400">
+                    <span className="h-2 w-2 rounded-full bg-purple-600 animate-pulse"></span>
                     {t('ff_inProgressNow').replace('{count}', productionStats.inProgress)}
                   </span>
                 )}
               </div>
 
               {/* Progress bar visual */}
-              <div className="h-2.5 w-full overflow-hidden rounded-full bg-surface-variant/40 flex">
+              <div className="h-2 w-full overflow-hidden rounded-full bg-[var(--surface-raised)] border border-[var(--border)] flex">
                 <div 
                   className="h-full bg-emerald-500 transition-all duration-500" 
                   style={{ width: `${(productionStats.completed / productionStats.total) * 100}%` }}
@@ -2922,10 +2926,10 @@ export default function FirstFactoryPage() {
             <button
               type="button"
               onClick={() => setProductionFilter('all')}
-              className={`flex items-center gap-1.5 rounded-xl px-3.5 py-1.5 text-xs font-bold transition-all cursor-pointer ${productionFilter === 'all' ? 'bg-on-surface text-surface shadow-sm' : 'bg-surface border border-outline-variant/40 text-outline hover:text-on-surface'}`}
+              className={`flex items-center gap-1.5 rounded-[6px] px-3 py-1.5 text-xs font-semibold transition-all cursor-pointer ${productionFilter === 'all' ? 'bg-[var(--text-primary)] text-[var(--surface)]' : 'bg-[var(--surface)] border border-[var(--border)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]'}`}
             >
               <span>{t('ff_filterAll')}</span>
-              <span className="rounded-full bg-surface-variant/60 px-1.5 py-0.2 text-[10px] font-black">
+              <span className="rounded-[4px] bg-[var(--surface-raised)] px-1.5 py-0.2 text-[11px] font-mono freya-tabular">
                 {productionStats.total}
               </span>
             </button>
@@ -2933,11 +2937,11 @@ export default function FirstFactoryPage() {
             <button
               type="button"
               onClick={() => setProductionFilter('in-progress')}
-              className={`flex items-center gap-1.5 rounded-xl px-3.5 py-1.5 text-xs font-bold transition-all cursor-pointer ${productionFilter === 'in-progress' ? 'bg-purple-600 text-white shadow-sm ring-2 ring-purple-500/30' : 'bg-surface border border-purple-500/30 text-purple-600 hover:bg-purple-500/5'}`}
+              className={`flex items-center gap-1.5 rounded-[6px] px-3 py-1.5 text-xs font-semibold transition-all cursor-pointer ${productionFilter === 'in-progress' ? 'bg-purple-600 text-white' : 'bg-[var(--surface)] border border-purple-500/30 text-purple-600 dark:text-purple-400 hover:bg-purple-500/10'}`}
             >
-              <span className={`h-2 w-2 rounded-full bg-purple-500 ${productionStats.inProgress > 0 ? 'animate-ping' : ''}`}></span>
+              <span className={`h-1.5 w-1.5 rounded-full bg-purple-500 ${productionStats.inProgress > 0 ? 'animate-ping' : ''}`}></span>
               <span>{t('ff_filterInProgress')}</span>
-              <span className="rounded-full bg-purple-500/20 px-1.5 py-0.2 text-[10px] font-black">
+              <span className="rounded-[4px] bg-purple-500/20 px-1.5 py-0.2 text-[11px] font-mono freya-tabular">
                 {productionStats.inProgress}
               </span>
             </button>
@@ -2945,10 +2949,10 @@ export default function FirstFactoryPage() {
             <button
               type="button"
               onClick={() => setProductionFilter('completed')}
-              className={`flex items-center gap-1.5 rounded-xl px-3.5 py-1.5 text-xs font-bold transition-all cursor-pointer ${productionFilter === 'completed' ? 'bg-emerald-600 text-white shadow-sm' : 'bg-surface border border-emerald-500/30 text-emerald-600 hover:bg-emerald-500/5'}`}
+              className={`flex items-center gap-1.5 rounded-[6px] px-3 py-1.5 text-xs font-semibold transition-all cursor-pointer ${productionFilter === 'completed' ? 'bg-emerald-600 text-white' : 'bg-[var(--surface)] border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10'}`}
             >
               <span>{t('ff_filterCompleted')}</span>
-              <span className="rounded-full bg-emerald-500/20 px-1.5 py-0.2 text-[10px] font-black">
+              <span className="rounded-[4px] bg-emerald-500/20 px-1.5 py-0.2 text-[11px] font-mono freya-tabular">
                 {productionStats.completed}
               </span>
             </button>
@@ -2956,10 +2960,10 @@ export default function FirstFactoryPage() {
             <button
               type="button"
               onClick={() => setProductionFilter('pending')}
-              className={`flex items-center gap-1.5 rounded-xl px-3.5 py-1.5 text-xs font-bold transition-all cursor-pointer ${productionFilter === 'pending' ? 'bg-slate-700 text-white shadow-sm' : 'bg-surface border border-outline-variant/40 text-outline hover:text-on-surface'}`}
+              className={`flex items-center gap-1.5 rounded-[6px] px-3 py-1.5 text-xs font-semibold transition-all cursor-pointer ${productionFilter === 'pending' ? 'bg-[var(--text-secondary)] text-[var(--surface)]' : 'bg-[var(--surface)] border border-[var(--border)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]'}`}
             >
               <span>{t('ff_filterPending')}</span>
-              <span className="rounded-full bg-surface-variant/60 px-1.5 py-0.2 text-[10px] font-black">
+              <span className="rounded-[4px] bg-[var(--surface-raised)] px-1.5 py-0.2 text-[11px] font-mono freya-tabular">
                 {productionStats.pending}
               </span>
             </button>
@@ -2968,10 +2972,10 @@ export default function FirstFactoryPage() {
               <button
                 type="button"
                 onClick={() => setProductionFilter('canceled')}
-                className={`flex items-center gap-1.5 rounded-xl px-3.5 py-1.5 text-xs font-bold transition-all cursor-pointer ${productionFilter === 'canceled' ? 'bg-rose-600 text-white shadow-sm' : 'bg-surface border border-rose-500/30 text-rose-600 hover:bg-rose-500/5'}`}
+                className={`flex items-center gap-1.5 rounded-[6px] px-3 py-1.5 text-xs font-semibold transition-all cursor-pointer ${productionFilter === 'canceled' ? 'bg-rose-600 text-white' : 'bg-[var(--surface)] border border-rose-500/30 text-rose-600 hover:bg-rose-500/10'}`}
               >
                 <span>{t('ff_filterCanceled')}</span>
-                <span className="rounded-full bg-rose-500/20 px-1.5 py-0.2 text-[10px] font-black">
+                <span className="rounded-[4px] bg-rose-500/20 px-1.5 py-0.2 text-[11px] font-mono freya-tabular">
                   {productionStats.canceled}
                 </span>
               </button>
@@ -2980,19 +2984,19 @@ export default function FirstFactoryPage() {
 
           {/* Processes List */}
           {loadingProduction ? (
-            <div className="flex flex-col items-center justify-center p-12 glass-card rounded-2xl border border-outline-variant/30">
-              <span className="material-symbols-outlined text-primary animate-spin" style={{ fontSize: 36 }}>sync</span>
-              <p className="mt-3 text-sm font-semibold text-outline">{t('ff_loadingProductionStatus')}</p>
+            <div className="flex flex-col items-center justify-center p-12 rounded-[8px] border border-[var(--border)] bg-[var(--surface)]">
+              <span className="material-symbols-outlined text-[var(--freya-blue)] animate-spin" style={{ fontSize: 32 }}>sync</span>
+              <p className="mt-3 text-xs font-medium text-[var(--text-muted)]">{t('ff_loadingProductionStatus')}</p>
             </div>
           ) : filteredProductionGroups.length === 0 ? (
-            <div className="flex flex-col items-center justify-center p-12 glass-card rounded-2xl border border-outline-variant/30 text-center">
-              <span className="material-symbols-outlined text-outline mb-2" style={{ fontSize: 44 }}>event_busy</span>
-              <h3 className="text-base font-bold text-on-surface">
+            <div className="flex flex-col items-center justify-center p-12 rounded-[8px] border border-[var(--border)] bg-[var(--surface)] text-center">
+              <span className="material-symbols-outlined text-[var(--text-muted)] mb-2" style={{ fontSize: 40 }}>event_busy</span>
+              <h3 className="text-sm font-semibold text-[var(--text-primary)]">
                 {productionGroups.length === 0 
                   ? t('ff_noScheduleFoundDate').replace('{date}', productionDateStr)
                   : t('ff_noProcessesMatchFilter').replace('{filter}', productionFilter)}
               </h3>
-              <p className="text-xs text-outline mt-1 max-w-md">
+              <p className="text-xs text-[var(--text-muted)] mt-1 max-w-md">
                 {productionGroups.length === 0 
                   ? t('ff_noScheduleHint')
                   : t('ff_tryDifferentFilterHint')}
@@ -3004,7 +3008,7 @@ export default function FirstFactoryPage() {
                     updateSelectedDate(productionDateStr);
                     navigate(`/firstFactory/scheduling?date=${productionDateStr}`);
                   }}
-                  className="mt-4 inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-xs font-bold text-on-primary hover:bg-primary/90 transition-colors shadow-sm cursor-pointer"
+                  className="mt-4 inline-flex items-center gap-1.5 rounded-[6px] bg-[var(--freya-blue)] px-3 py-1.5 text-xs font-semibold text-white hover:bg-[var(--freya-blue-hover)] transition-colors cursor-pointer"
                 >
                   <span className="material-symbols-outlined" style={{ fontSize: 16 }}>edit_calendar</span>
                   {t('ff_createScheduleForDate')}
@@ -3012,7 +3016,7 @@ export default function FirstFactoryPage() {
               )}
             </div>
           ) : (
-            <div className="flex flex-col gap-4">
+            <div className="flex flex-col gap-3">
               {filteredProductionGroups.map((group) => {
                 const isInProgress = group.status === 'in-progress';
                 const isCompleted = group.status === 'completed';
@@ -3024,29 +3028,29 @@ export default function FirstFactoryPage() {
                   return (
                     <div 
                       key={group.groupId}
-                      className="rounded-2xl border border-amber-500/30 bg-amber-500/5 p-4 flex flex-col md:flex-row md:items-center justify-between gap-3 shadow-xs"
+                      className="rounded-[8px] border border-amber-500/30 bg-amber-500/5 p-3.5 flex flex-col md:flex-row md:items-center justify-between gap-3"
                     >
                       <div className="flex items-center gap-3">
-                        <span className="inline-flex min-h-[36px] min-w-[54px] px-3 py-1.5 shrink-0 items-center justify-center rounded-xl bg-amber-500/20 text-xs font-black text-amber-700 whitespace-nowrap shadow-xs">
+                        <span className="inline-flex min-h-[30px] min-w-[48px] px-2.5 py-1 shrink-0 items-center justify-center rounded-[4px] bg-amber-500/20 text-xs font-mono font-bold text-amber-700 dark:text-amber-300 whitespace-nowrap">
                           {group.orderRange}
                         </span>
                         <div>
                           <div className="flex items-center gap-2">
-                            <span className="rounded bg-amber-500/20 px-2 py-0.5 text-[11px] font-extrabold text-amber-800">
+                            <span className="rounded-[4px] bg-amber-500/20 px-1.5 py-0.5 text-[10px] font-semibold text-amber-800 dark:text-amber-300">
                               {t('ff_setupBadge')}
                             </span>
-                            <h4 className="font-bold text-sm text-on-surface">
+                            <h4 className="font-semibold text-sm text-[var(--text-primary)]">
                               {setupItem?.comment ? `${group.name} ${setupItem.comment}` : group.name}
                             </h4>
                           </div>
-                          <p className="text-xs text-outline mt-0.5">
+                          <p className="text-xs text-[var(--text-muted)] font-mono freya-tabular mt-0.5">
                             🕒 {t('ff_scheduledTime')}: {group.startTime} ～ {group.endTime} ({group.totalDuration} {t('ff_minutesShort')})
                           </p>
                         </div>
                       </div>
 
                       <div className="flex items-center gap-2">
-                        <span className="rounded-full bg-amber-500/10 px-3 py-1 text-xs font-bold text-amber-700 border border-amber-500/20">
+                        <span className="rounded-[4px] bg-amber-500/10 px-2.5 py-1 text-xs font-mono font-semibold text-amber-700 dark:text-amber-400 border border-amber-500/20">
                           ⚙️ {group.totalDuration} {t('ff_minutesShort')}
                         </span>
                       </div>
@@ -3058,25 +3062,25 @@ export default function FirstFactoryPage() {
                 return (
                   <div
                     key={group.groupId}
-                    className={`glass-card rounded-2xl border p-5 flex flex-col gap-4 transition-all shadow-xs ${
+                    className={`rounded-[8px] border p-4 flex flex-col gap-3 transition-colors ${
                       isInProgress
-                        ? 'border-purple-500/60 bg-purple-500/[0.04] ring-2 ring-purple-500/20 dark:bg-purple-950/20'
+                        ? 'border-purple-500/50 bg-purple-500/5 dark:bg-purple-950/20'
                         : isCompleted
-                        ? 'border-emerald-500/40 bg-emerald-500/[0.03] dark:bg-emerald-950/10'
+                        ? 'border-emerald-500/30 bg-emerald-500/5 dark:bg-emerald-950/10'
                         : isCanceled
-                        ? 'border-rose-500/40 bg-rose-500/[0.03]'
-                        : 'border-outline-variant/30 hover:border-primary/40'
+                        ? 'border-rose-500/30 bg-rose-500/5'
+                        : 'border-[var(--border)] bg-[var(--surface)] hover:border-[var(--border-strong)]'
                     }`}
                   >
                     {/* Card Top Row */}
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-outline-variant/20">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2.5 border-b border-[var(--border)]">
                       <div className="flex items-center gap-3">
-                        <span className={`inline-flex min-h-[36px] min-w-[54px] px-3 py-1.5 shrink-0 items-center justify-center rounded-xl text-xs font-black whitespace-nowrap shadow-xs ${
+                        <span className={`inline-flex min-h-[30px] min-w-[48px] px-2.5 py-1 shrink-0 items-center justify-center rounded-[4px] text-xs font-mono font-bold whitespace-nowrap ${
                           isInProgress
                             ? 'bg-purple-600 text-white animate-pulse'
                             : isCompleted
                             ? 'bg-emerald-600 text-white'
-                            : 'bg-primary/10 text-primary'
+                            : 'bg-[var(--surface-raised)] border border-[var(--border)] text-[var(--text-primary)]'
                         }`}>
                           {group.orderRange}
                         </span>
@@ -3086,21 +3090,21 @@ export default function FirstFactoryPage() {
                             <button 
                               type="button"
                               onClick={() => handleCardClick(group.hinban)}
-                              className="text-lg font-black text-on-surface hover:text-primary transition-colors cursor-pointer tracking-tight inline-flex items-center gap-1.5 group text-left"
+                              className="text-base font-semibold text-[var(--text-primary)] hover:text-[var(--freya-blue)] transition-colors cursor-pointer inline-flex items-center gap-1.5 group text-left"
                               title={t('ff_viewDetails')}
                             >
-                              <span className="group-hover:underline underline-offset-4 decoration-primary decoration-2">{group.hinban}</span>
-                              <span className="material-symbols-outlined text-outline group-hover:text-primary transition-colors opacity-60 group-hover:opacity-100" style={{ fontSize: 18 }}>
+                              <span>{group.hinban}</span>
+                              <span className="material-symbols-outlined text-[var(--text-muted)] group-hover:text-[var(--freya-blue)] transition-colors" style={{ fontSize: 16 }}>
                                 open_in_new
                               </span>
                             </button>
                             {group.labelHinban && group.labelHinban !== group.hinban && (
-                              <span className="rounded bg-surface-variant/60 px-2 py-0.5 text-xs font-mono font-medium text-outline">
+                              <span className="rounded-[4px] bg-[var(--surface-raised)] border border-[var(--border)] px-1.5 py-0.5 text-[11px] font-mono text-[var(--text-muted)]">
                                 Label: {group.labelHinban}
                               </span>
                             )}
                           </div>
-                          <p className="text-xs text-outline font-medium mt-0.5">
+                          <p className="text-xs text-[var(--text-muted)] font-normal mt-0.5">
                             {group.hinmei || '—'}
                           </p>
                         </div>
@@ -3109,9 +3113,9 @@ export default function FirstFactoryPage() {
                       {/* Status Badge */}
                       <div className="flex items-center gap-2">
                         {isInProgress && (
-                          <div className="inline-flex items-center gap-2 rounded-xl bg-purple-600 px-3.5 py-1.5 text-xs font-bold text-white shadow-sm animate-pulse">
-                            <span className="h-2 w-2 rounded-full bg-white animate-ping"></span>
-                            <span>{language === 'ja' ? '🟣 生産中' : '🟣 In-Progress'}</span>
+                          <div className="inline-flex items-center gap-1.5 rounded-[4px] bg-purple-600 px-2.5 py-1 text-xs font-semibold text-white">
+                            <span className="h-1.5 w-1.5 rounded-full bg-white animate-ping"></span>
+                            <span>{language === 'ja' ? '生産中' : 'In-Progress'}</span>
                             {group.actualStartTime && (
                               <span className="font-mono opacity-90">({group.actualStartTime}〜)</span>
                             )}
@@ -3119,25 +3123,25 @@ export default function FirstFactoryPage() {
                         )}
 
                         {isCompleted && (
-                          <div className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-500/10 px-3 py-1.5 text-xs font-bold text-emerald-600 border border-emerald-500/20">
-                            <span className="material-symbols-outlined" style={{ fontSize: 16 }}>check_circle</span>
+                          <div className="inline-flex items-center gap-1.5 rounded-[4px] bg-emerald-500/10 px-2.5 py-1 text-xs font-semibold text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                            <span className="material-symbols-outlined" style={{ fontSize: 15 }}>check_circle</span>
                             <span>{language === 'ja' ? '完了' : 'Completed'}</span>
                             {group.actualDurationMins && (
-                              <span className="font-mono font-semibold">({group.actualDurationMins}{t('ff_minutesShort')})</span>
+                              <span className="font-mono">({group.actualDurationMins}{t('ff_minutesShort')})</span>
                             )}
                           </div>
                         )}
 
                         {isPending && (
-                          <div className="inline-flex items-center gap-1.5 rounded-xl bg-surface-variant/40 px-3 py-1.5 text-xs font-semibold text-outline border border-outline-variant/30">
-                            <span className="material-symbols-outlined" style={{ fontSize: 16 }}>hourglass_empty</span>
+                          <div className="inline-flex items-center gap-1.5 rounded-[4px] bg-[var(--surface-raised)] px-2.5 py-1 text-xs font-medium text-[var(--text-muted)] border border-[var(--border)]">
+                            <span className="material-symbols-outlined" style={{ fontSize: 15 }}>hourglass_empty</span>
                             <span>{language === 'ja' ? '待機中' : 'Pending'}</span>
                           </div>
                         )}
 
                         {isCanceled && (
-                          <div className="inline-flex items-center gap-1.5 rounded-xl bg-rose-500/10 px-3 py-1.5 text-xs font-bold text-rose-600 border border-rose-500/20">
-                            <span className="material-symbols-outlined" style={{ fontSize: 16 }}>cancel</span>
+                          <div className="inline-flex items-center gap-1.5 rounded-[4px] bg-rose-500/10 px-2.5 py-1 text-xs font-semibold text-rose-600 border border-rose-500/20">
+                            <span className="material-symbols-outlined" style={{ fontSize: 15 }}>cancel</span>
                             <span>{language === 'ja' ? '中止' : 'Canceled'}</span>
                           </div>
                         )}
@@ -3145,17 +3149,17 @@ export default function FirstFactoryPage() {
                     </div>
 
                     {/* Metadata Specs Strip */}
-                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-3 text-xs">
-                      <div className="rounded-xl bg-surface-variant/20 p-2.5">
-                        <span className="text-[10px] font-semibold uppercase text-outline block">{t('ff_scheduledTime')}</span>
-                        <span className="font-mono font-bold text-on-surface mt-0.5 block">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-2 text-xs">
+                      <div className="rounded-[6px] bg-[var(--surface-raised)] border border-[var(--border)] p-2">
+                        <span className="text-[10px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)] block">{t('ff_scheduledTime')}</span>
+                        <span className="font-mono freya-tabular font-medium text-[var(--text-primary)] mt-0.5 block truncate">
                           🕒 {group.startTime} ～ {group.endTime}
                         </span>
                       </div>
 
-                      <div className="rounded-xl bg-surface-variant/20 p-2.5">
-                        <span className="text-[10px] font-semibold uppercase text-outline block">{t('ff_actualTime')}</span>
-                        <span className="font-mono font-bold mt-0.5 block truncate">
+                      <div className="rounded-[6px] bg-[var(--surface-raised)] border border-[var(--border)] p-2">
+                        <span className="text-[10px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)] block">{t('ff_actualTime')}</span>
+                        <span className="font-mono freya-tabular font-medium mt-0.5 block truncate">
                           {isCompleted && group.actualStartTime ? (
                             <span className="text-emerald-600 dark:text-emerald-400">
                               ⏱️ {group.actualStartTime} ～ {group.actualEndTime || ''}
@@ -3165,42 +3169,42 @@ export default function FirstFactoryPage() {
                               ⏱️ {group.actualStartTime || group.startTime}〜
                             </span>
                           ) : (
-                            <span className="text-outline">—</span>
+                            <span className="text-[var(--text-muted)]">—</span>
                           )}
                         </span>
                       </div>
 
-                      <div className="rounded-xl bg-surface-variant/20 p-2.5">
-                        <span className="text-[10px] font-semibold uppercase text-outline block">{t('ff_totalVolume')}</span>
-                        <span className="font-bold text-primary mt-0.5 block">
+                      <div className="rounded-[6px] bg-[var(--surface-raised)] border border-[var(--border)] p-2">
+                        <span className="text-[10px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)] block">{t('ff_totalVolume')}</span>
+                        <span className="font-mono freya-tabular font-semibold text-[var(--text-primary)] mt-0.5 block">
                           {group.items.length} {language === 'ja' ? '巻' : 'rolls'} ({group.totalMeters}m)
                         </span>
                       </div>
 
-                      <div className="rounded-xl bg-surface-variant/20 p-2.5">
-                        <span className="text-[10px] font-semibold uppercase text-outline block">{t('ff_kizaiColor')}</span>
-                        <span className="font-medium text-on-surface mt-0.5 block truncate">
+                      <div className="rounded-[6px] bg-[var(--surface-raised)] border border-[var(--border)] p-2">
+                        <span className="text-[10px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)] block">{t('ff_kizaiColor')}</span>
+                        <span className="font-medium text-[var(--text-secondary)] mt-0.5 block truncate">
                           {group.kizai || '—'} {group.color ? `• ${group.color}` : ''}
                         </span>
                       </div>
 
-                      <div className="rounded-xl bg-surface-variant/20 p-2.5">
-                        <span className="text-[10px] font-semibold uppercase text-outline block">{t('ff_destination')}</span>
-                        <span className="font-medium text-on-surface mt-0.5 block truncate">
+                      <div className="rounded-[6px] bg-[var(--surface-raised)] border border-[var(--border)] p-2">
+                        <span className="text-[10px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)] block">{t('ff_destination')}</span>
+                        <span className="font-medium text-[var(--text-secondary)] mt-0.5 block truncate">
                           {group.shippingDest || '—'}
                         </span>
                       </div>
 
-                      <div className="rounded-xl bg-surface-variant/20 p-2.5">
-                        <span className="text-[10px] font-semibold uppercase text-outline block">{t('ff_operator')}</span>
-                        <span className="font-semibold text-on-surface mt-0.5 block truncate">
+                      <div className="rounded-[6px] bg-[var(--surface-raised)] border border-[var(--border)] p-2">
+                        <span className="text-[10px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)] block">{t('ff_operator')}</span>
+                        <span className="font-medium text-[var(--text-primary)] mt-0.5 block truncate">
                           👤 {group.worker || '—'}
                         </span>
                       </div>
 
-                      <div className="rounded-xl bg-surface-variant/20 p-2.5">
-                        <span className="text-[10px] font-semibold uppercase text-outline block">{t('ff_machineLabel')}</span>
-                        <span className="font-mono font-bold text-on-surface mt-0.5 block truncate">
+                      <div className="rounded-[6px] bg-[var(--surface-raised)] border border-[var(--border)] p-2">
+                        <span className="text-[10px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)] block">{t('ff_machineLabel')}</span>
+                        <span className="font-mono freya-tabular font-medium text-[var(--text-primary)] mt-0.5 block truncate">
                           🏭 {group.machine || 'PSA-2'}
                         </span>
                       </div>
@@ -3218,11 +3222,11 @@ export default function FirstFactoryPage() {
                       const allDone = totalRolls > 0 && printedCount >= totalRolls;
 
                       return (
-                        <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-outline-variant/15 mt-1">
+                        <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-[var(--border)] mt-1">
                           <div className="flex items-center gap-1.5 mr-1">
-                            <span className="material-symbols-outlined text-outline" style={{ fontSize: 16 }}>print</span>
-                            <span className="text-[11px] font-bold text-outline uppercase">{t('ff_printStatus')}</span>
-                            <span className={`rounded px-1.5 py-0.2 text-[10px] font-black ${allDone ? 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-300' : 'bg-surface-variant/60 text-outline'}`}>
+                            <span className="material-symbols-outlined text-[var(--text-muted)]" style={{ fontSize: 16 }}>print</span>
+                            <span className="text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">{t('ff_printStatus')}</span>
+                            <span className={`rounded-[4px] px-1.5 py-0.2 text-[10px] font-mono freya-tabular font-semibold ${allDone ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20' : 'bg-[var(--surface-raised)] border border-[var(--border)] text-[var(--text-muted)]'}`}>
                               {language === 'ja' ? `${printedCount} / ${totalRolls} 枚 印刷済` : `${printedCount} / ${totalRolls} Printed`}
                             </span>
                           </div>
@@ -3234,20 +3238,20 @@ export default function FirstFactoryPage() {
                             return (
                               <div
                                 key={roll.id || rIdx}
-                                className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs transition-colors ${
+                                className={`inline-flex items-center gap-1.5 rounded-[4px] px-2 py-0.5 text-xs transition-colors ${
                                   isPrinted
-                                    ? 'border border-emerald-500/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 font-bold shadow-xs'
-                                    : 'border border-outline-variant/30 bg-surface-variant/20 text-outline font-medium'
+                                    ? 'border border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 font-semibold'
+                                    : 'border border-[var(--border)] bg-[var(--surface-raised)] text-[var(--text-muted)]'
                                 }`}
                                 title={isPrinted ? t('ff_rollPrintedTooltip').replace('{roll}', rollNum).replace('{total}', totalRolls) : t('ff_rollWaitingPrintTooltip').replace('{roll}', rollNum).replace('{total}', totalRolls)}
                               >
-                                <span className={`material-symbols-outlined ${isPrinted ? 'text-emerald-600 dark:text-emerald-400' : 'text-outline/60'}`} style={{ fontSize: 14 }}>
+                                <span className={`material-symbols-outlined ${isPrinted ? 'text-emerald-600 dark:text-emerald-400' : 'text-[var(--text-muted)]'}`} style={{ fontSize: 14 }}>
                                   {isPrinted ? 'check_circle' : 'radio_button_unchecked'}
                                 </span>
-                                <span>
+                                <span className="font-mono freya-tabular">
                                   {rollNum}/{totalRolls}
                                 </span>
-                                <span className="opacity-75 font-mono text-[11px]">({roll.meters}m)</span>
+                                <span className="opacity-75 font-mono freya-tabular text-[11px]">({roll.meters}m)</span>
                               </div>
                             );
                           })}
@@ -3268,41 +3272,41 @@ export default function FirstFactoryPage() {
       {/* Sync Excel Modal */}
       {isSyncModalOpen && createPortal(
         <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-          <div className="bg-surface border border-outline-variant/30 rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden flex flex-col animate-[fadeIn_0.15s_ease-out]">
-            <div className="flex items-center justify-between p-5 border-b border-outline-variant/30 bg-surface-variant/20">
-              <h2 className="text-lg font-bold text-on-surface">{t('ff_modalSyncTitle')}</h2>
+          <div className="bg-[var(--surface-raised)] border border-[var(--border)] rounded-[12px] shadow-2xl w-full max-w-sm overflow-hidden flex flex-col animate-[fadeIn_0.15s_ease-out]">
+            <div className="flex items-center justify-between p-4 border-b border-[var(--border)] bg-[var(--surface)]">
+              <h2 className="text-sm font-semibold text-[var(--text-primary)]">{t('ff_modalSyncTitle')}</h2>
               <button 
                 onClick={() => setIsSyncModalOpen(false)}
-                className="flex h-8 w-8 items-center justify-center rounded-full hover:bg-surface-variant/50 text-outline transition-colors cursor-pointer"
+                className="flex h-7 w-7 items-center justify-center rounded-[6px] hover:bg-[var(--surface-raised)] text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors cursor-pointer"
                 title={t('ff_close')}
               >
-                <span className="material-symbols-outlined" style={{fontSize: 20}}>close</span>
+                <span className="material-symbols-outlined" style={{fontSize: 18}}>close</span>
               </button>
             </div>
-            <div className="p-6">
-              <label className="block text-sm font-medium text-on-surface mb-2">{t('ff_modalSelectYearMonth')}</label>
+            <div className="p-5">
+              <label className="block text-xs font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)] mb-1.5">{t('ff_modalSelectYearMonth')}</label>
               <input
                 type="month"
                 value={syncTargetMonth}
                 onChange={(e) => setSyncTargetMonth(e.target.value)}
-                className="w-full rounded-xl border border-outline-variant/50 bg-background/50 px-4 py-3 text-sm text-on-surface focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary font-bold"
+                className="w-full rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-xs font-mono font-semibold text-[var(--text-primary)] focus:border-[var(--freya-blue)] focus:outline-none"
               />
-              <p className="text-xs text-outline mt-3">
+              <p className="text-xs text-[var(--text-muted)] mt-2.5 leading-relaxed">
                 {language === 'ja' 
                   ? `Googleスプレッドシートの ${syncTargetMonth ? `${syncTargetMonth.split('-')[0]}年${parseInt(syncTargetMonth.split('-')[1], 10)}月` : '...'} タブからデータを取得します。`
                   : `This will fetch data from the ${syncTargetMonth ? `${syncTargetMonth.split('-')[0]}年${parseInt(syncTargetMonth.split('-')[1], 10)}月` : '...'} tab in the Google Sheet.`}
               </p>
             </div>
-            <div className="flex items-center justify-end gap-3 p-5 border-t border-outline-variant/30 bg-surface-variant/10">
+            <div className="flex items-center justify-end gap-2 p-3 border-t border-[var(--border)] bg-[var(--surface)]">
               <button 
                 onClick={() => setIsSyncModalOpen(false)}
-                className="rounded-lg px-4 py-2 text-sm font-medium text-outline hover:bg-surface-variant/50 transition-colors cursor-pointer"
+                className="rounded-[6px] border border-[var(--border)] px-3 py-1.5 text-xs font-semibold text-[var(--text-secondary)] hover:bg-[var(--surface-raised)] transition-colors cursor-pointer"
               >
                 {t('ff_cancel')}
               </button>
               <button 
                 onClick={() => handleSyncExcel(syncTargetMonth)}
-                className="rounded-lg bg-primary px-5 py-2 text-sm font-medium text-on-primary hover:bg-primary/90 transition-colors cursor-pointer"
+                className="rounded-[6px] bg-[var(--freya-blue)] px-3.5 py-1.5 text-xs font-semibold text-white hover:bg-[var(--freya-blue-hover)] transition-colors cursor-pointer"
               >
                 {t('ff_fetchData')}
               </button>
@@ -3315,30 +3319,30 @@ export default function FirstFactoryPage() {
       {/* Discrepancy Review Modal for Selected Date */}
       {isDiscrepancyModalOpen && createPortal(
         <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-          <div className="bg-surface border border-outline-variant/30 rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[85vh] animate-[fadeIn_0.15s_ease-out]">
-            <div className="flex items-center justify-between p-5 border-b border-outline-variant/30 bg-amber-500/10">
+          <div className="bg-[var(--surface-raised)] border border-[var(--border)] rounded-[12px] shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[85vh] animate-[fadeIn_0.15s_ease-out]">
+            <div className="flex items-center justify-between p-4 border-b border-[var(--border)] bg-[var(--surface)]">
               <div className="flex items-center gap-2.5">
-                <span className="material-symbols-outlined text-amber-600" style={{ fontSize: 24 }}>sync_problem</span>
+                <span className="material-symbols-outlined text-amber-600" style={{ fontSize: 22 }}>sync_problem</span>
                 <div>
-                  <h2 className="text-base font-bold text-on-surface">
+                  <h2 className="text-sm font-semibold text-[var(--text-primary)]">
                     {language === 'ja' ? `${selectedDateStr} のExcel同期差異` : `Excel Discrepancies on ${selectedDateStr}`}
                   </h2>
-                  <p className="text-xs text-outline">
+                  <p className="text-xs text-[var(--text-muted)] font-mono freya-tabular">
                     {language === 'ja' ? `${currentDayDiscrepancies.count} 件の差異品番を検知` : `${currentDayDiscrepancies.count} affected hinban(s) detected`}
                   </p>
                 </div>
               </div>
               <button 
                 onClick={() => setIsDiscrepancyModalOpen(false)}
-                className="flex h-8 w-8 items-center justify-center rounded-full hover:bg-surface-variant/50 text-outline transition-colors cursor-pointer"
+                className="flex h-7 w-7 items-center justify-center rounded-[6px] hover:bg-[var(--surface-raised)] text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors cursor-pointer"
                 title={t('ff_close')}
               >
-                <span className="material-symbols-outlined" style={{fontSize: 20}}>close</span>
+                <span className="material-symbols-outlined" style={{fontSize: 18}}>close</span>
               </button>
             </div>
 
-            <div className="p-5 flex-1 overflow-y-auto flex flex-col gap-3">
-              <p className="text-xs text-outline leading-relaxed">
+            <div className="p-4 flex-1 overflow-y-auto flex flex-col gap-2.5">
+              <p className="text-xs text-[var(--text-muted)] leading-relaxed">
                 {language === 'ja'
                   ? `以下の項目は作成済スケジュールと最新のExcelデータで差異があります。個別に反映するか、「すべて自動反映」をクリックして更新できます (${selectedDateStr})。`
                   : `The items below are currently in this date's priority schedule, but differ from the latest synced Excel data. You can resolve them individually or click Auto-Align All to update this date (${selectedDateStr}).`}
@@ -3349,13 +3353,13 @@ export default function FirstFactoryPage() {
                 return (
                   <div 
                     key={disc.hinban} 
-                    className={`rounded-xl border p-3 flex flex-col gap-2 ${
+                    className={`rounded-[6px] border p-3 flex flex-col gap-2 ${
                       isZeroOrMissing ? 'border-red-500/30 bg-red-500/5' : 'border-amber-500/30 bg-amber-500/5'
                     }`}
                   >
                     <div className="flex items-center justify-between gap-2">
-                      <span className="font-bold text-sm text-on-surface">{disc.hinban}</span>
-                      <span className="text-xs text-outline font-mono">
+                      <span className="font-semibold text-sm text-[var(--text-primary)]">{disc.hinban}</span>
+                      <span className="text-xs text-[var(--text-muted)] font-mono freya-tabular">
                         {language === 'ja' 
                           ? `設定済: ${disc.scheduledMeters}m (${disc.rollsCount} 巻)` 
                           : `Scheduled: ${disc.scheduledMeters}m (${disc.rollsCount} roll${disc.rollsCount === 1 ? '' : 's'})`}
@@ -3365,13 +3369,13 @@ export default function FirstFactoryPage() {
                     <div className="text-xs">
                       {isZeroOrMissing ? (
                         <div className="flex items-center gap-1.5 text-red-600 font-medium">
-                          <span className="material-symbols-outlined" style={{ fontSize: 16 }}>cancel</span>
+                          <span className="material-symbols-outlined" style={{ fontSize: 15 }}>cancel</span>
                           <span>{disc.type === 'missing_in_excel' ? t('ff_notInExcelThisMonth') : (disc.movedText || t('ff_zeroMetersToday'))}</span>
                         </div>
                       ) : (
-                        <div className="flex items-center gap-1.5 text-amber-700 font-medium">
-                          <span className="material-symbols-outlined" style={{ fontSize: 16 }}>difference</span>
-                          <span>{language === 'ja' ? `Excel数量: ${disc.excelQty}m (差分: ${(disc.excelQty - disc.scheduledMeters).toFixed(1)}m)` : `Excel Quantity: ${disc.excelQty}m (Difference: ${(disc.excelQty - disc.scheduledMeters).toFixed(1)}m)`}</span>
+                        <div className="flex items-center gap-1.5 text-amber-700 dark:text-amber-400 font-medium">
+                          <span className="material-symbols-outlined" style={{ fontSize: 15 }}>difference</span>
+                          <span className="font-mono freya-tabular">{language === 'ja' ? `Excel数量: ${disc.excelQty}m (差分: ${(disc.excelQty - disc.scheduledMeters).toFixed(1)}m)` : `Excel Quantity: ${disc.excelQty}m (Difference: ${(disc.excelQty - disc.scheduledMeters).toFixed(1)}m)`}</span>
                         </div>
                       )}
                     </div>
@@ -3383,7 +3387,7 @@ export default function FirstFactoryPage() {
                           onClick={() => {
                             setScheduleOrder(prev => prev.filter(i => i.hinban !== disc.hinban));
                           }}
-                          className="inline-flex items-center gap-1 rounded-lg bg-red-500/10 px-2.5 py-1 text-xs font-bold text-red-600 hover:bg-red-500/20 transition-colors cursor-pointer"
+                          className="inline-flex items-center gap-1 rounded-[6px] border border-red-500/30 bg-red-500/10 px-2.5 py-1 text-xs font-semibold text-red-600 hover:bg-red-500/20 transition-colors cursor-pointer"
                         >
                           <span className="material-symbols-outlined" style={{ fontSize: 14 }}>delete</span>
                           {language === 'ja' ? `${parseInt(selectedMonth.split('-')[1], 10)}/${selectedDay} から削除` : `Remove from ${parseInt(selectedMonth.split('-')[1], 10)}/${selectedDay}`}
@@ -3392,7 +3396,7 @@ export default function FirstFactoryPage() {
                         <button
                           type="button"
                           onClick={() => handleUpdateHinbanQty(disc.hinban)}
-                          className="inline-flex items-center gap-1 rounded-lg bg-amber-500/20 px-2.5 py-1 text-xs font-bold text-amber-800 hover:bg-amber-500/30 transition-colors cursor-pointer"
+                          className="inline-flex items-center gap-1 rounded-[6px] border border-amber-500/30 bg-amber-500/10 px-2.5 py-1 text-xs font-semibold text-amber-700 dark:text-amber-400 hover:bg-amber-500/20 transition-colors cursor-pointer"
                         >
                           <span className="material-symbols-outlined" style={{ fontSize: 14 }}>sync</span>
                           {language === 'ja' ? `数量・巻数を ${disc.excelQty}m に更新` : `Update Qty & Rolls to ${disc.excelQty}m`}
@@ -3404,18 +3408,18 @@ export default function FirstFactoryPage() {
               })}
             </div>
 
-            <div className="flex items-center justify-between p-4 border-t border-outline-variant/30 bg-surface-variant/10">
+            <div className="flex items-center justify-between p-3 border-t border-[var(--border)] bg-[var(--surface)]">
               <button 
                 onClick={() => setIsDiscrepancyModalOpen(false)}
-                className="rounded-lg px-4 py-2 text-xs font-semibold text-outline hover:bg-surface-variant/50 transition-colors cursor-pointer"
+                className="rounded-[6px] border border-[var(--border)] px-3 py-1.5 text-xs font-semibold text-[var(--text-secondary)] hover:bg-[var(--surface-raised)] transition-colors cursor-pointer"
               >
                 {t('ff_close')}
               </button>
               <button 
                 onClick={handleAutoAlignCurrentDate}
-                className="flex items-center gap-1.5 rounded-xl bg-amber-600 px-4 py-2 text-xs font-bold text-white hover:bg-amber-700 transition-colors shadow-sm cursor-pointer"
+                className="flex items-center gap-1.5 rounded-[6px] bg-[var(--freya-blue)] px-3.5 py-1.5 text-xs font-semibold text-white hover:bg-[var(--freya-blue-hover)] transition-colors cursor-pointer"
               >
-                <span className="material-symbols-outlined" style={{ fontSize: 16 }}>auto_fix_high</span>
+                <span className="material-symbols-outlined" style={{ fontSize: 15 }}>auto_fix_high</span>
                 {language === 'ja' ? `${parseInt(selectedMonth.split('-')[1], 10)}/${selectedDay} の差異をすべて自動反映` : `Auto-Align All on ${parseInt(selectedMonth.split('-')[1], 10)}/${selectedDay}`}
               </button>
             </div>
@@ -3427,39 +3431,39 @@ export default function FirstFactoryPage() {
       {/* Post-Sync Schedule Impact Summary Modal */}
       {isImpactModalOpen && createPortal(
         <div className="fixed inset-0 z-[115] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-          <div className="bg-surface border border-outline-variant/30 rounded-2xl shadow-2xl w-full max-w-xl overflow-hidden flex flex-col max-h-[85vh] animate-[fadeIn_0.15s_ease-out]">
-            <div className="flex items-center justify-between p-5 border-b border-outline-variant/30 bg-primary/10">
+          <div className="bg-[var(--surface-raised)] border border-[var(--border)] rounded-[12px] shadow-2xl w-full max-w-xl overflow-hidden flex flex-col max-h-[85vh] animate-[fadeIn_0.15s_ease-out]">
+            <div className="flex items-center justify-between p-4 border-b border-[var(--border)] bg-[var(--surface)]">
               <div className="flex items-center gap-2.5">
-                <span className="material-symbols-outlined text-primary" style={{ fontSize: 24 }}>assessment</span>
+                <span className="material-symbols-outlined text-[var(--freya-blue)]" style={{ fontSize: 22 }}>assessment</span>
                 <div>
-                  <h2 className="text-base font-bold text-on-surface">{t('ff_syncImpactTitle')}</h2>
-                  <p className="text-xs text-outline">
+                  <h2 className="text-sm font-semibold text-[var(--text-primary)]">{t('ff_syncImpactTitle')}</h2>
+                  <p className="text-xs text-[var(--text-muted)] font-mono freya-tabular">
                     {language === 'ja' ? `${selectedMonth} の既存優先順位スケジュールに差異が検出されました` : `New Excel data affects existing priority schedules in ${selectedMonth}`}
                   </p>
                 </div>
               </div>
               <button 
                 onClick={() => setIsImpactModalOpen(false)}
-                className="flex h-8 w-8 items-center justify-center rounded-full hover:bg-surface-variant/50 text-outline transition-colors cursor-pointer"
+                className="flex h-7 w-7 items-center justify-center rounded-[6px] hover:bg-[var(--surface-raised)] text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors cursor-pointer"
                 title={t('ff_close')}
               >
-                <span className="material-symbols-outlined" style={{fontSize: 20}}>close</span>
+                <span className="material-symbols-outlined" style={{fontSize: 18}}>close</span>
               </button>
             </div>
 
-            <div className="p-5 flex-1 overflow-y-auto flex flex-col gap-4">
-              <div className="rounded-xl border border-primary/20 bg-primary/5 p-3 text-xs text-on-surface leading-relaxed">
+            <div className="p-4 flex-1 overflow-y-auto flex flex-col gap-3">
+              <div className="rounded-[6px] border border-[var(--border)] bg-[var(--surface)] p-3 text-xs text-[var(--text-secondary)] leading-relaxed">
                 {t('ff_syncImpactDesc')}
               </div>
 
-              <div className="flex flex-col gap-3">
+              <div className="flex flex-col gap-2.5">
                 {syncImpactReport.map(report => (
-                  <div key={report.dateKey} className="rounded-xl border border-outline-variant/30 bg-surface-variant/10 p-3 flex flex-col gap-2">
+                  <div key={report.dateKey} className="rounded-[6px] border border-[var(--border)] bg-[var(--surface)] p-3 flex flex-col gap-2">
                     <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2 font-bold text-sm text-on-surface">
-                        <span className="material-symbols-outlined text-outline" style={{ fontSize: 16 }}>calendar_today</span>
-                        <span>{parseInt(selectedMonth.split('-')[1], 10)}/{report.date}</span>
-                        <span className="rounded-full bg-amber-500/20 px-2 py-0.5 text-[11px] font-bold text-amber-700">
+                      <div className="flex items-center gap-2 font-semibold text-xs text-[var(--text-primary)]">
+                        <span className="material-symbols-outlined text-[var(--text-muted)]" style={{ fontSize: 16 }}>calendar_today</span>
+                        <span className="font-mono freya-tabular">{parseInt(selectedMonth.split('-')[1], 10)}/{report.date}</span>
+                        <span className="rounded-[4px] bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 text-[10px] font-semibold text-amber-700 dark:text-amber-400">
                           {language === 'ja' ? `${report.issues.length} 件の変更` : `${report.issues.length} issue${report.issues.length === 1 ? '' : 's'}`}
                         </span>
                       </div>
@@ -3473,18 +3477,18 @@ export default function FirstFactoryPage() {
                             navigate(`/firstFactory/scheduling?date=${report.dateKey}`);
                           }
                         }}
-                        className="inline-flex items-center gap-1 rounded-lg border border-primary/40 bg-primary/10 px-2.5 py-1 text-xs font-bold text-primary hover:bg-primary hover:text-on-primary transition-colors cursor-pointer"
+                        className="inline-flex items-center gap-1 rounded-[6px] border border-[var(--border)] bg-[var(--surface-raised)] px-2.5 py-1 text-xs font-semibold text-[var(--text-primary)] hover:border-[var(--freya-blue)] hover:text-[var(--freya-blue)] transition-colors cursor-pointer"
                       >
                         <span className="material-symbols-outlined" style={{ fontSize: 14 }}>arrow_forward</span>
                         {t('ff_openScheduleBtn')}
                       </button>
                     </div>
 
-                    <div className="flex flex-col gap-1.5 pl-6 border-l-2 border-outline-variant/30">
+                    <div className="flex flex-col gap-1.5 pl-5 border-l-2 border-[var(--border)]">
                       {report.issues.map((iss, i) => (
                         <div key={i} className="text-xs flex items-start gap-1.5">
-                          <span className="font-semibold text-on-surface shrink-0">{iss.hinban}:</span>
-                          <span className={iss.type === 'moved_or_zero' || iss.type === 'missing' ? 'text-red-600 font-medium' : 'text-amber-700 font-medium'}>
+                          <span className="font-semibold text-[var(--text-primary)] shrink-0">{iss.hinban}:</span>
+                          <span className={iss.type === 'moved_or_zero' || iss.type === 'missing' ? 'text-red-600 font-medium' : 'text-amber-700 dark:text-amber-400 font-medium'}>
                             {iss.text}
                           </span>
                         </div>
@@ -3495,10 +3499,10 @@ export default function FirstFactoryPage() {
               </div>
             </div>
 
-            <div className="flex items-center justify-end p-4 border-t border-outline-variant/30 bg-surface-variant/10">
+            <div className="flex items-center justify-end p-3 border-t border-[var(--border)] bg-[var(--surface)]">
               <button 
                 onClick={() => setIsImpactModalOpen(false)}
-                className="rounded-lg bg-primary px-5 py-2 text-xs font-bold text-on-primary hover:bg-primary/90 transition-colors shadow-sm cursor-pointer"
+                className="rounded-[6px] bg-[var(--freya-blue)] px-4 py-1.5 text-xs font-semibold text-white hover:bg-[var(--freya-blue-hover)] transition-colors cursor-pointer"
               >
                 {t('ff_closeAndReview')}
               </button>
@@ -3511,11 +3515,11 @@ export default function FirstFactoryPage() {
       {/* Setup Comment / Custom Title Modal */}
       {commentModalItem && createPortal(
         <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-[fadeIn_0.15s_ease-out]">
-          <div className="w-full max-w-md rounded-2xl border border-outline-variant/30 bg-surface p-6 shadow-2xl flex flex-col gap-4">
-            <div className="flex items-center justify-between pb-3 border-b border-outline-variant/20">
+          <div className="w-full max-w-md rounded-[12px] border border-[var(--border)] bg-[var(--surface-raised)] p-5 shadow-2xl flex flex-col gap-3.5">
+            <div className="flex items-center justify-between pb-3 border-b border-[var(--border)]">
               <div className="flex items-center gap-2">
-                <span className="material-symbols-outlined text-amber-600" style={{ fontSize: 22 }}>edit_note</span>
-                <h3 className="text-base font-bold text-on-surface">
+                <span className="material-symbols-outlined text-amber-600" style={{ fontSize: 20 }}>edit_note</span>
+                <h3 className="text-sm font-semibold text-[var(--text-primary)]">
                   {language === 'ja' 
                     ? `${commentModalItem.displayName || commentModalItem.name} の追加タイトル・指示` 
                     : `Custom Title for ${commentModalItem.displayName || commentModalItem.name}`}
@@ -3524,20 +3528,20 @@ export default function FirstFactoryPage() {
               <button
                 type="button"
                 onClick={() => setCommentModalItem(null)}
-                className="rounded-lg p-1 text-outline hover:bg-surface-variant/50 hover:text-on-surface transition-colors cursor-pointer"
+                className="rounded-[6px] p-1 text-[var(--text-muted)] hover:bg-[var(--surface)] hover:text-[var(--text-primary)] transition-colors cursor-pointer"
                 title={t('ff_close')}
               >
-                <span className="material-symbols-outlined" style={{ fontSize: 20 }}>close</span>
+                <span className="material-symbols-outlined" style={{ fontSize: 18 }}>close</span>
               </button>
             </div>
 
-            <p className="text-xs text-outline leading-relaxed">
+            <p className="text-xs text-[var(--text-muted)] leading-relaxed">
               {t('ff_setupCardDesc')}
             </p>
 
-            <div className="rounded-xl bg-amber-500/10 border border-amber-500/20 p-3 text-xs text-amber-900 font-bold flex items-center gap-2">
-              <span className="text-outline text-[11px] font-normal shrink-0">{t('ff_titlePreview')}</span>
-              <span className="font-extrabold text-amber-800">{commentModalItem.displayName || commentModalItem.name} {tempCommentText.trim()}</span>
+            <div className="rounded-[6px] bg-[var(--surface)] border border-[var(--border)] p-2.5 text-xs text-[var(--text-primary)] font-semibold flex items-center gap-2">
+              <span className="text-[var(--text-muted)] text-[11px] font-normal shrink-0">{t('ff_titlePreview')}</span>
+              <span className="font-semibold text-[var(--freya-blue)]">{commentModalItem.displayName || commentModalItem.name} {tempCommentText.trim()}</span>
             </div>
 
             <input
@@ -3545,7 +3549,7 @@ export default function FirstFactoryPage() {
               value={tempCommentText}
               onChange={(e) => setTempCommentText(e.target.value)}
               placeholder={t('ff_placeholderCustomText')}
-              className="w-full rounded-xl border border-outline-variant/50 bg-background/50 p-3 text-sm text-on-surface placeholder:text-outline focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary font-medium"
+              className="w-full rounded-[6px] border border-[var(--border)] bg-[var(--surface)] p-2.5 text-xs text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:border-[var(--freya-blue)] focus:outline-none"
               autoFocus
               onKeyDown={(e) => {
                 if (e.key === 'Enter') {
@@ -3567,12 +3571,12 @@ export default function FirstFactoryPage() {
               }}
             />
 
-            <div className="flex items-center justify-between gap-3 pt-2">
+            <div className="flex items-center justify-between gap-3 pt-2 border-t border-[var(--border)]">
               {tempCommentText ? (
                 <button
                   type="button"
                   onClick={() => setTempCommentText('')}
-                  className="text-xs font-bold text-red-500 hover:underline cursor-pointer"
+                  className="text-xs font-medium text-red-500 hover:underline cursor-pointer"
                 >
                   {t('ff_clearSuffix')}
                 </button>
@@ -3582,7 +3586,7 @@ export default function FirstFactoryPage() {
                 <button
                   type="button"
                   onClick={() => setCommentModalItem(null)}
-                  className="rounded-xl border border-outline-variant/50 px-4 py-2 text-xs font-bold text-outline hover:bg-surface-variant/50 transition-colors cursor-pointer"
+                  className="rounded-[6px] border border-[var(--border)] px-3 py-1.5 text-xs font-semibold text-[var(--text-secondary)] hover:bg-[var(--surface)] transition-colors cursor-pointer"
                 >
                   {t('ff_cancel')}
                 </button>
@@ -3604,7 +3608,7 @@ export default function FirstFactoryPage() {
                     }
                     setCommentModalItem(null);
                   }}
-                  className="rounded-xl bg-primary px-4 py-2 text-xs font-bold text-on-primary shadow-sm hover:bg-primary/90 transition-colors cursor-pointer"
+                  className="rounded-[6px] bg-[var(--freya-blue)] px-3.5 py-1.5 text-xs font-semibold text-white hover:bg-[var(--freya-blue-hover)] transition-colors cursor-pointer"
                 >
                   {t('ff_saveTitle')}
                 </button>

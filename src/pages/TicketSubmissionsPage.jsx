@@ -302,35 +302,35 @@ function ActionNoticeBanner({ notice, onClose }) {
 
 function SavedPresetManagerCard({ activePresetId, draftName, editingPresetId, onApply, onCancelEdit, onDelete, onDraftNameChange, onRename, onSave, presets }) {
   return (
-    <div className="glass-card rounded-2xl p-5">
+    <div className="freya-card rounded-[8px] p-5 border border-[var(--border)] bg-[var(--surface)] shadow-sm">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Saved Views</p>
-          <h3 className="mt-1 text-lg font-semibold text-on-surface">Supervisor Presets</h3>
-          <p className="mt-2 text-sm leading-6 text-outline">
+          <p className="text-xs font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">Saved Views</p>
+          <h3 className="mt-0.5 text-base font-semibold text-[var(--text-primary)]">Supervisor Presets</h3>
+          <p className="mt-1 text-xs text-[var(--text-muted)]">
             Save repeated ticket review filters in this browser, then reapply them in one click.
           </p>
         </div>
         {activePresetId && (
-          <span className="inline-flex items-center rounded-full bg-primary/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-primary">
+          <span className="inline-flex items-center rounded-[4px] border border-[var(--freya-blue)]/30 bg-[var(--freya-blue)]/10 px-2 py-0.5 text-[10px] font-mono font-medium uppercase tracking-wider text-[var(--freya-blue)]">
             Active preset
           </span>
         )}
       </div>
 
-      <div className="mt-4 flex flex-col gap-3 sm:flex-row">
+      <div className="mt-4 flex flex-col gap-2.5 sm:flex-row">
         <input
           type="text"
           value={draftName}
           onChange={(event) => onDraftNameChange(event.target.value)}
           placeholder={editingPresetId ? "Rename this preset" : "Name this filter view"}
-          className="h-11 flex-1 rounded-xl border border-separator/40 bg-white px-3 text-sm text-on-surface outline-none transition-colors focus:border-primary/40"
+          className="h-8 flex-1 rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] px-2.5 text-xs text-[var(--text-primary)] outline-none transition-colors focus:border-[var(--freya-blue)]"
         />
         <button
           type="button"
           onClick={onSave}
           disabled={!draftName.trim()}
-          className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-on-primary transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
+          className="inline-flex items-center justify-center gap-1.5 rounded-[6px] bg-[var(--freya-blue)] px-3.5 py-1.5 text-xs font-semibold text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40 shadow-2xs"
         >
           <span className="material-symbols-outlined" style={{ fontSize: 16 }}>{editingPresetId ? "drive_file_rename_outline" : "bookmark_added"}</span>
           {editingPresetId ? "Rename Preset" : "Save Current View"}
@@ -339,7 +339,7 @@ function SavedPresetManagerCard({ activePresetId, draftName, editingPresetId, on
           <button
             type="button"
             onClick={onCancelEdit}
-            className="inline-flex items-center justify-center gap-2 rounded-xl border border-separator/40 bg-white px-4 py-2.5 text-sm font-semibold text-on-surface transition hover:border-primary/30 hover:text-primary"
+            className="inline-flex items-center justify-center gap-1.5 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3.5 py-1.5 text-xs font-semibold text-[var(--text-primary)] transition hover:bg-[var(--surface-hover)] shadow-2xs"
           >
             <span className="material-symbols-outlined" style={{ fontSize: 16 }}>close</span>
             Cancel
@@ -409,22 +409,22 @@ function SavedPresetManagerCard({ activePresetId, draftName, editingPresetId, on
 
 function ExportTicketResultsCard({ disabled, exporting, filteredCount, onCopyShareLink, onExport, shareButtonLabel }) {
   return (
-    <div className="glass-card rounded-2xl p-5">
-      <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Export</p>
-      <h3 className="mt-1 text-lg font-semibold text-on-surface">Filtered Ticket CSV</h3>
-      <p className="mt-3 text-sm leading-6 text-outline">
+    <div className="freya-card rounded-[8px] p-5 border border-[var(--border)] bg-[var(--surface)] shadow-sm">
+      <p className="text-xs font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">Export</p>
+      <h3 className="mt-0.5 text-base font-semibold text-[var(--text-primary)]">Filtered Ticket CSV</h3>
+      <p className="mt-1 text-xs text-[var(--text-muted)]">
         Export the current ticket view or the full submitted-ticket history. Large all-data exports may take longer than filtered exports.
       </p>
-      <div className="mt-4 flex items-center justify-between gap-3 rounded-2xl border border-separator/40 bg-surface px-4 py-3">
+      <div className="mt-4 flex items-center justify-between gap-3 rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] px-3.5 py-2.5">
         <div>
-          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Current Export Scope</p>
-          <p className="mt-1 text-sm font-semibold text-on-surface">{formatTicketNumber(filteredCount)} matching tickets</p>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">Current Export Scope</p>
+          <p className="mt-0.5 text-xs font-mono font-semibold text-[var(--text-primary)]">{formatTicketNumber(filteredCount)} matching tickets</p>
         </div>
         <div className="flex items-center gap-2">
           <button
             type="button"
             onClick={onCopyShareLink}
-            className="inline-flex items-center justify-center gap-2 rounded-xl border border-separator/40 bg-white px-4 py-2.5 text-sm font-semibold text-on-surface transition hover:border-primary/30 hover:text-primary"
+            className="inline-flex items-center justify-center gap-1.5 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs font-semibold text-[var(--text-primary)] transition hover:bg-[var(--surface-hover)] shadow-2xs"
           >
             <span className="material-symbols-outlined" style={{ fontSize: 16 }}>link</span>
             {shareButtonLabel}
@@ -433,14 +433,14 @@ function ExportTicketResultsCard({ disabled, exporting, filteredCount, onCopySha
             type="button"
             onClick={onExport}
             disabled={disabled || exporting}
-            className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-on-primary transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
+            className="inline-flex items-center justify-center gap-1.5 rounded-[6px] bg-[var(--freya-blue)] px-3 py-1.5 text-xs font-semibold text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40 shadow-2xs"
           >
             <span className="material-symbols-outlined" style={{ fontSize: 16 }}>download</span>
             {exporting ? "Preparing CSV..." : "Export CSV"}
           </button>
         </div>
       </div>
-      <p className="mt-3 text-xs leading-5 text-outline">
+      <p className="mt-2 text-[11px] text-[var(--text-muted)]">
         Share link copies the current filters, advanced filters, sort, page size, and page into URL query params.
       </p>
     </div>
@@ -460,37 +460,37 @@ function ExportChoiceModal({ filteredCount, onClose, onExportAll, onExportFilter
   }, [onClose]);
 
   return (
-    <div className="fixed inset-0 z-[75] flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm" onClick={onClose}>
+    <div className="fixed inset-0 z-[75] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm animate-in fade-in duration-150" onClick={onClose}>
       <div
-        className="dashboard-section flex w-full max-w-xl flex-col overflow-hidden rounded-2xl"
+        className="flex w-full max-w-xl flex-col overflow-hidden rounded-[12px] border border-[var(--border)] bg-[var(--surface-raised)] shadow-2xl animate-in zoom-in-95 duration-150"
         onClick={(event) => event.stopPropagation()}
       >
-        <div className="flex items-start justify-between gap-4 border-b border-separator/40 px-6 py-5">
+        <div className="flex items-start justify-between gap-4 border-b border-[var(--border)] px-6 py-4">
           <div className="min-w-0 flex-1">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Export Choice</p>
-            <h3 className="mt-1 text-lg font-semibold text-on-surface">Choose what to export</h3>
-            <p className="mt-2 text-sm leading-6 text-outline">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">Export Choice</p>
+            <h3 className="mt-0.5 text-base font-bold text-[var(--text-primary)]">Choose what to export</h3>
+            <p className="mt-1 text-xs leading-relaxed text-[var(--text-muted)]">
               The current view may already be narrowed by date range, quick filters, advanced filters, or sort. Choose whether to export that filtered view or the full ticket history.
             </p>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="p-2 rounded-xl flex-shrink-0 text-outline hover:bg-surface-container hover:text-on-surface transition-all duration-150 active:scale-95"
+            className="p-1 rounded-[6px] text-[var(--text-muted)] hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)] transition"
           >
-            <span className="material-symbols-outlined" style={{ fontSize: 18 }}>close</span>
+            <span className="material-symbols-outlined" style={{ fontSize: 16 }}>close</span>
           </button>
         </div>
 
-        <div className="grid gap-3 px-6 py-5 sm:grid-cols-2">
+        <div className="grid gap-3 p-6 sm:grid-cols-2">
           <button
             type="button"
             onClick={onExportFiltered}
-            className="rounded-2xl border border-primary/20 bg-primary/5 px-4 py-4 text-left transition hover:border-primary/35 hover:bg-primary/10"
+            className="rounded-[8px] border border-[var(--freya-blue)]/30 bg-[var(--freya-blue)]/5 p-4 text-left transition hover:border-[var(--freya-blue)] hover:bg-[var(--freya-blue)]/10"
           >
-            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-primary">Current View</p>
-            <p className="mt-2 text-base font-semibold text-on-surface">Export filtered data</p>
-            <p className="mt-2 text-sm leading-6 text-outline">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.04em] text-[var(--freya-blue)]">Current View</p>
+            <p className="mt-1 text-sm font-semibold text-[var(--text-primary)]">Export filtered data</p>
+            <p className="mt-1 text-xs leading-relaxed text-[var(--text-muted)]">
               Exports the same filtered ticket set currently shown in the table. Matching tickets: {formatTicketNumber(filteredCount)}.
             </p>
           </button>
@@ -498,11 +498,11 @@ function ExportChoiceModal({ filteredCount, onClose, onExportAll, onExportFilter
           <button
             type="button"
             onClick={onExportAll}
-            className="rounded-2xl border border-separator/40 bg-surface-container px-4 py-4 text-left transition hover:border-primary/30 hover:bg-surface-container-high"
+            className="rounded-[8px] border border-[var(--border)] bg-[var(--surface)] p-4 text-left transition hover:border-[var(--border-strong)] hover:bg-[var(--surface-hover)]"
           >
-            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Full History</p>
-            <p className="mt-2 text-base font-semibold text-on-surface">Export all data</p>
-            <p className="mt-2 text-sm leading-6 text-outline">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">Full History</p>
+            <p className="mt-1 text-sm font-semibold text-[var(--text-primary)]">Export all data</p>
+            <p className="mt-1 text-xs leading-relaxed text-[var(--text-muted)]">
               Ignores the current filters and exports every submitted ticket. This may take longer for larger datasets.
             </p>
           </button>
@@ -584,15 +584,12 @@ function sortTicketHistoryEntries(entries = []) {
 function SummaryCard({ accent, icon, label, subtitle, value }) {
   return (
     <StatSummaryCard
+      variant="freya"
       icon={icon}
       label={label}
       value={value}
       subtitle={subtitle}
       accent={accent}
-      valueClassName="text-2xl font-semibold tabular-nums"
-      labelClassName="text-[11px] font-semibold text-on-surface-variant"
-      subtitleClassName="text-[10px] text-outline"
-      iconClassName="shadow-none"
     />
   );
 }
@@ -648,14 +645,14 @@ function TicketTypePill({ ticket, language = "en" }) {
 
   if (isOptional) {
     return (
-      <span className="inline-flex items-center gap-1 rounded-full bg-blue-500/15 text-blue-700 dark:text-blue-400 border border-blue-200/60 dark:border-blue-800/60 px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wide">
+      <span className="inline-flex items-center gap-1 rounded-[6px] bg-blue-500/10 text-blue-700 dark:text-blue-400 border border-blue-500/20 px-2 py-0.5 text-[11px] font-semibold tracking-wide">
         💬 {isJa ? "連絡・申し送り" : "Optional"}
       </span>
     );
   }
 
   return (
-    <span className="inline-flex items-center gap-1 rounded-full bg-error/15 text-error dark:text-red-400 border border-red-200/60 dark:border-red-800/60 px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wide">
+    <span className="inline-flex items-center gap-1 rounded-[6px] bg-error/10 text-error dark:text-red-400 border border-red-500/20 px-2 py-0.5 text-[11px] font-semibold tracking-wide">
       ⚠️ {isJa ? "異常・不具合" : "Defect"}
     </span>
   );
@@ -665,7 +662,7 @@ function TicketStatusPill({ status }) {
   const meta = getTicketStatusMeta(status);
 
   return (
-    <span className={joinClasses("inline-flex rounded-full px-2.5 py-1 text-[11px] font-semibold", meta.badgeClassName)}>
+    <span className={joinClasses("inline-flex rounded-[6px] px-2.5 py-0.5 text-[11px] font-semibold", meta.badgeClassName)}>
       {meta.label}
     </span>
   );
@@ -752,18 +749,18 @@ function TicketDetailModal({ actionBusy = false, onClose, onCloseTicket = null, 
   return (
     <>
       <div
-        className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm"
+        className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm animate-in fade-in duration-150"
         onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}
       >
         <div
-          className="dashboard-section rounded-2xl w-full max-w-4xl max-h-[92vh] flex flex-col overflow-hidden bg-surface shadow-2xl"
+          className="w-full max-w-4xl max-h-[92vh] flex flex-col overflow-hidden rounded-[12px] border border-[var(--border)] bg-[var(--surface-raised)] shadow-2xl animate-in zoom-in-95 duration-150"
           onMouseDown={(event) => event.stopPropagation()}
         >
           {/* Sticky Modal Header */}
-          <div className="sticky top-0 z-10 rounded-t-2xl px-6 py-5 flex items-start justify-between border-b border-separator/40 bg-surface/90 backdrop-blur-md">
+          <div className="sticky top-0 z-10 rounded-t-[12px] px-6 py-4 flex items-start justify-between border-b border-[var(--border)] bg-[var(--surface-raised)]">
             <div className="min-w-0 flex-1 pr-4">
               <div className="flex flex-wrap items-center gap-2">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">
                   {isTicketOptional
                     ? (isJa ? "申し送りチケット" : "Optional Note Ticket")
                     : (isJa ? "不具合・NGチケット" : "Defect Ticket")}
@@ -771,34 +768,34 @@ function TicketDetailModal({ actionBusy = false, onClose, onCloseTicket = null, 
                 </p>
               </div>
 
-              <h2 className="mt-1 text-xl font-semibold text-on-surface truncate">
+              <h2 className="mt-0.5 text-lg font-bold text-[var(--text-primary)] truncate">
                 {activeFieldLabel || "Untitled Check Item"}
               </h2>
 
-              <div className="mt-2.5 flex flex-wrap items-center gap-2">
+              <div className="mt-2 flex flex-wrap items-center gap-1.5">
                 <TicketTypePill ticket={ticket} language={language} />
                 <TicketStatusPill status={ticket?.status} />
                 {ticket.factory && (
-                  <span className="inline-flex items-center gap-1 rounded-lg bg-surface-container px-2.5 py-1 text-xs font-semibold text-on-surface">
-                    <span className="material-symbols-outlined text-outline" style={{ fontSize: 14 }}>factory</span>
+                  <span className="inline-flex items-center gap-1 rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] px-2 py-0.5 text-xs font-semibold text-[var(--text-primary)]">
+                    <span className="material-symbols-outlined text-[var(--text-muted)]" style={{ fontSize: 13 }}>factory</span>
                     {ticket.factory}
                   </span>
                 )}
                 {(ticket.machineName || ticket.加工設備) && (
-                  <span className="inline-flex items-center gap-1 rounded-lg bg-surface-container px-2.5 py-1 text-xs font-semibold text-on-surface">
-                    <span className="material-symbols-outlined text-primary" style={{ fontSize: 14 }}>precision_manufacturing</span>
+                  <span className="inline-flex items-center gap-1 rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] px-2 py-0.5 text-xs font-semibold text-[var(--text-primary)]">
+                    <span className="material-symbols-outlined text-[var(--freya-blue)]" style={{ fontSize: 13 }}>precision_manufacturing</span>
                     {ticket.machineName || ticket.加工設備}
                   </span>
                 )}
                 {activeFormName && (
-                  <span className="inline-flex items-center gap-1 rounded-lg bg-surface-container px-2.5 py-1 text-xs font-semibold text-on-surface">
-                    <span className="material-symbols-outlined text-outline" style={{ fontSize: 14 }}>assignment</span>
+                  <span className="inline-flex items-center gap-1 rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] px-2 py-0.5 text-xs font-semibold text-[var(--text-primary)]">
+                    <span className="material-symbols-outlined text-[var(--text-muted)]" style={{ fontSize: 13 }}>assignment</span>
                     {activeFormName}
                   </span>
                 )}
                 {(ticket.timing || ticket.timing_en || ticket.timing_ja) && (
-                  <span className="inline-flex items-center gap-1 rounded-lg bg-surface-container px-2.5 py-1 text-xs font-semibold text-on-surface">
-                    <span className="material-symbols-outlined text-outline" style={{ fontSize: 14 }}>schedule</span>
+                  <span className="inline-flex items-center gap-1 rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] px-2 py-0.5 text-xs font-semibold text-[var(--text-primary)]">
+                    <span className="material-symbols-outlined text-[var(--text-muted)]" style={{ fontSize: 13 }}>schedule</span>
                     {language === "en" ? (ticket.timing_en || ticket.timing || "Pre-Production Check") : (ticket.timing_ja || "作業前点検")}
                   </span>
                 )}
@@ -808,14 +805,14 @@ function TicketDetailModal({ actionBusy = false, onClose, onCloseTicket = null, 
             <button
               type="button"
               onClick={onClose}
-              className="p-2 rounded-xl flex-shrink-0 text-outline hover:bg-surface-container hover:text-on-surface transition-all duration-150 active:scale-95"
+              className="p-1 rounded-[6px] text-[var(--text-muted)] hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)] transition"
             >
-              <span className="material-symbols-outlined" style={{ fontSize: 18 }}>close</span>
+              <span className="material-symbols-outlined" style={{ fontSize: 16 }}>close</span>
             </button>
           </div>
 
           {/* Subheader info bar */}
-          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-separator/40 bg-surface-container-low/50 px-6 py-3 text-xs text-outline">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--border)] bg-[var(--surface-subtle)] px-6 py-2.5 text-xs text-[var(--text-muted)]">
             <div className="flex flex-wrap items-center gap-4">
               <span className="inline-flex items-center gap-1.5 font-medium">
                 <span className="material-symbols-outlined text-outline/70" style={{ fontSize: 16 }}>schedule</span>
@@ -838,9 +835,9 @@ function TicketDetailModal({ actionBusy = false, onClose, onCloseTicket = null, 
                 <button
                   type="button"
                   onClick={() => setPeekTemplateId(ticket.templateId || ticket.formId)}
-                  className="inline-flex items-center gap-1.5 rounded-lg border border-separator/40 bg-surface px-3 py-1.5 text-xs font-semibold text-on-surface shadow-2xs hover:border-primary/40 hover:text-primary transition active:scale-95"
+                  className="inline-flex items-center gap-1.5 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-hover)] transition-colors"
                 >
-                  <span className="material-symbols-outlined" style={{ fontSize: 15 }}>visibility</span>
+                  <span className="material-symbols-outlined text-[var(--text-muted)]" style={{ fontSize: 15 }}>visibility</span>
                   {t("quickPeekTemplate") || "Quick Peek Template"}
                 </button>
               )}
@@ -849,9 +846,9 @@ function TicketDetailModal({ actionBusy = false, onClose, onCloseTicket = null, 
                 <button
                   type="button"
                   onClick={onOpenChecklistSubmission}
-                  className="inline-flex items-center gap-1.5 rounded-lg border border-separator/40 bg-surface px-3 py-1.5 text-xs font-semibold text-on-surface shadow-2xs hover:border-primary/40 hover:text-primary transition active:scale-95"
+                  className="inline-flex items-center gap-1.5 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-hover)] transition-colors"
                 >
-                  <span className="material-symbols-outlined" style={{ fontSize: 15 }}>open_in_new</span>
+                  <span className="material-symbols-outlined text-[var(--text-muted)]" style={{ fontSize: 15 }}>open_in_new</span>
                   {t("viewFullChecklist") || "View Full Checklist"}
                 </button>
               )}
@@ -864,11 +861,11 @@ function TicketDetailModal({ actionBusy = false, onClose, onCloseTicket = null, 
               
               {/* Left Column: Operator Input & Submission Details */}
               <div className="flex flex-col gap-4">
-                <div className="flex items-center gap-2 border-b border-separator/40 pb-2">
+                <div className="flex items-center gap-2 border-b border-[var(--border)] pb-2">
                   <span className={`material-symbols-outlined ${isTicketOptional ? "text-blue-600" : "text-error"}`} style={{ fontSize: 18 }}>
                     {isTicketOptional ? "chat_bubble" : "report_problem"}
                   </span>
-                  <h4 className="text-xs font-semibold uppercase tracking-[0.18em] text-outline">
+                  <h4 className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--text-muted)]">
                     {isTicketOptional
                       ? (isJa ? "申し送り・連絡事項" : "Operator Note & Submission")
                       : (isJa ? "指摘内容・NG理由" : "Defect & Operator Reason")}
@@ -876,7 +873,7 @@ function TicketDetailModal({ actionBusy = false, onClose, onCloseTicket = null, 
                 </div>
 
                 {/* Note / Reason Box */}
-                <div className={`rounded-2xl border p-4 ${
+                <div className={`rounded-[8px] border p-4 ${
                   isTicketOptional
                     ? "border-blue-500/20 bg-blue-500/5 dark:bg-blue-950/20"
                     : "border-error/20 bg-error/5 dark:bg-red-950/20"
@@ -886,40 +883,40 @@ function TicketDetailModal({ actionBusy = false, onClose, onCloseTicket = null, 
                   }`}>
                     {isTicketOptional ? (isJa ? "申し送り内容" : "Operator Note") : (isJa ? "NG理由" : "Operator NG Reason")}
                   </p>
-                  <p className="text-sm font-medium leading-relaxed text-on-surface">
+                  <p className="text-sm font-medium leading-relaxed text-[var(--text-primary)]">
                     {activeReason ? `"${activeReason}"` : (isJa ? "理由の入力はありません" : "No specific reason text provided.")}
                   </p>
                 </div>
 
                 {/* Value & Range Card */}
                 <div className="grid grid-cols-2 gap-3">
-                  <div className="rounded-2xl border border-separator/40 bg-surface-container px-4 py-3">
-                    <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">
+                  <div className="rounded-[8px] border border-[var(--border)] bg-[var(--surface-subtle)] px-4 py-3">
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--text-muted)]">
                       {t("submittedValue") || "Submitted Value"}
                     </p>
                     <p className={`mt-1 text-sm font-semibold ${isTicketOptional ? "text-emerald-600 dark:text-emerald-400" : "text-error dark:text-red-400"}`}>
                       {ticket.answerValue || (isTicketOptional ? "OK" : "NG")}
                     </p>
                   </div>
-                  <div className="rounded-2xl border border-separator/40 bg-surface-container px-4 py-3">
-                    <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">
+                  <div className="rounded-[8px] border border-[var(--border)] bg-[var(--surface-subtle)] px-4 py-3">
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--text-muted)]">
                       {ticket.min != null || ticket.max != null ? (t("allowedRange") || "Allowed Range") : (t("expectedValue") || "Expected Value")}
                     </p>
-                    <p className="mt-1 text-sm font-semibold text-on-surface">
+                    <p className="mt-1 text-sm font-semibold text-[var(--text-primary)]">
                       {expectedRange || "OK"}
                     </p>
                   </div>
                 </div>
 
                 {/* Evidence / Attached Photos */}
-                <div className="rounded-2xl border border-separator/40 bg-surface-container p-4">
-                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-outline mb-3 flex items-center gap-2">
-                    <span className="material-symbols-outlined text-outline/70" style={{ fontSize: 16 }}>photo_library</span>
+                <div className="rounded-[8px] border border-[var(--border)] bg-[var(--surface-subtle)] p-4">
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--text-muted)] mb-3 flex items-center gap-2">
+                    <span className="material-symbols-outlined text-[var(--text-muted)]" style={{ fontSize: 16 }}>photo_library</span>
                     {isTicketOptional ? (isJa ? "添付画像" : "Attached Photos") : (isJa ? "不具合写真" : "Evidence Photos")} ({previewImages.length})
                   </p>
 
                   {previewImages.length === 0 ? (
-                    <div className="rounded-xl border border-dashed border-separator/50 bg-surface-container-low px-4 py-6 text-center text-xs text-outline">
+                    <div className="rounded-[6px] border border-dashed border-[var(--border)] bg-[var(--surface)] px-4 py-6 text-center text-xs text-[var(--text-muted)]">
                       {isJa ? "添付画像はありません" : "No photos attached."}
                     </div>
                   ) : (
@@ -928,7 +925,7 @@ function TicketDetailModal({ actionBusy = false, onClose, onCloseTicket = null, 
                         <div
                           key={imgObj.url || idx}
                           onClick={() => openPreviewImage(idx)}
-                          className="group relative aspect-video cursor-pointer overflow-hidden rounded-xl border border-separator/40 bg-black/5 shadow-xs transition hover:border-primary/60 hover:shadow-md"
+                          className="group relative aspect-video cursor-pointer overflow-hidden rounded-[6px] border border-[var(--border)] bg-black/5 shadow-xs transition hover:border-[var(--freya-blue)] hover:shadow-md"
                         >
                           <img src={imgObj.url} alt={`Photo ${idx + 1}`} className="h-full w-full object-cover transition duration-300 group-hover:scale-105" />
                           <div className="absolute inset-0 flex items-center justify-center bg-black/30 opacity-0 group-hover:opacity-100 transition">
@@ -943,33 +940,33 @@ function TicketDetailModal({ actionBusy = false, onClose, onCloseTicket = null, 
 
               {/* Right Column: Resolution & Maintenance Status */}
               <div className="flex flex-col gap-4">
-                <div className="flex items-center gap-2 border-b border-separator/40 pb-2">
+                <div className="flex items-center gap-2 border-b border-[var(--border)] pb-2">
                   <span className={`material-symbols-outlined ${isClosed ? "text-emerald-600" : "text-amber-500"}`} style={{ fontSize: 18 }}>
                     {isClosed ? "verified" : "build"}
                   </span>
-                  <h4 className="text-xs font-semibold uppercase tracking-[0.18em] text-outline">
+                  <h4 className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--text-muted)]">
                     {isJa ? "対応状況・履歴" : "Status & Resolution"}
                   </h4>
                 </div>
 
                 {/* Resolution Details Card */}
                 {isClosed ? (
-                  <div className="rounded-2xl border border-emerald-500/25 bg-emerald-500/5 p-4 dark:bg-emerald-950/20">
+                  <div className="rounded-[8px] border border-emerald-500/25 bg-emerald-500/5 p-4 dark:bg-emerald-950/20">
                     <div className="flex items-center justify-between gap-2 border-b border-emerald-500/20 pb-2 mb-2">
                       <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-emerald-700 dark:text-emerald-300 flex items-center gap-1.5">
                         <span className="material-symbols-outlined" style={{ fontSize: 14 }}>check_circle</span>
                         Resolved by {ticket.closedBy || ticket.closedByUsername || "Maintenance"}
                       </span>
-                      <span className="text-[10px] text-outline">{formatTicketDateTime(ticket.closedAt)}</span>
+                      <span className="text-[10px] text-[var(--text-muted)]">{formatTicketDateTime(ticket.closedAt)}</span>
                     </div>
 
                     {activeFixReason ? (
-                      <p className="text-sm font-medium leading-relaxed text-on-surface flex items-start gap-2 mt-2">
+                      <p className="text-sm font-medium leading-relaxed text-[var(--text-primary)] flex items-start gap-2 mt-2">
                         <span className="material-symbols-outlined text-emerald-600 mt-0.5 shrink-0" style={{ fontSize: 16 }}>build</span>
                         <span>{activeFixReason}</span>
                       </p>
                     ) : (
-                      <p className="text-xs text-outline">{t("noResolutionProvided") || "No resolution notes recorded."}</p>
+                      <p className="text-xs text-[var(--text-muted)]">{t("noResolutionProvided") || "No resolution notes recorded."}</p>
                     )}
 
                     {/* Resolution Photo if attached */}
@@ -980,7 +977,7 @@ function TicketDetailModal({ actionBusy = false, onClose, onCloseTicket = null, 
                         </p>
                         <div className="grid grid-cols-2 gap-2">
                           {ticket.fixImageURLs.map((fixUrl, fIdx) => (
-                            <a key={fixUrl || fIdx} href={fixUrl} target="_blank" rel="noreferrer" className="block overflow-hidden rounded-xl border border-emerald-500/30 aspect-video hover:opacity-90">
+                            <a key={fixUrl || fIdx} href={fixUrl} target="_blank" rel="noreferrer" className="block overflow-hidden rounded-[6px] border border-emerald-500/30 aspect-video hover:opacity-90">
                               <img src={fixUrl} alt={`Fix evidence ${fIdx + 1}`} className="w-full h-full object-cover" />
                             </a>
                           ))}
@@ -989,7 +986,7 @@ function TicketDetailModal({ actionBusy = false, onClose, onCloseTicket = null, 
                     )}
                   </div>
                 ) : isTicketOptional ? (
-                  <div className="rounded-2xl border border-blue-500/25 bg-blue-500/5 p-4 text-xs text-blue-800 dark:text-blue-300">
+                  <div className="rounded-[8px] border border-blue-500/25 bg-blue-500/5 p-4 text-xs text-blue-800 dark:text-blue-300">
                     <p className="font-semibold flex items-center gap-1.5 text-sm mb-1 text-blue-700 dark:text-blue-400">
                       <span className="material-symbols-outlined" style={{ fontSize: 18 }}>info</span>
                       {isJa ? "申し送り事項が登録されています" : "Optional Note Recorded"}
@@ -999,7 +996,7 @@ function TicketDetailModal({ actionBusy = false, onClose, onCloseTicket = null, 
                     </p>
                   </div>
                 ) : (
-                  <div className="rounded-2xl border border-amber-500/25 bg-amber-500/5 p-4 text-xs text-amber-800 dark:text-amber-300">
+                  <div className="rounded-[8px] border border-amber-500/25 bg-amber-500/5 p-4 text-xs text-amber-800 dark:text-amber-300">
                     <p className="font-semibold flex items-center gap-1.5 text-sm mb-1 text-amber-700 dark:text-amber-400">
                       <span className="material-symbols-outlined" style={{ fontSize: 18 }}>hourglass_empty</span>
                       {t("awaitingMaintenanceResolution") || "Awaiting Maintenance Action"}
@@ -1011,15 +1008,15 @@ function TicketDetailModal({ actionBusy = false, onClose, onCloseTicket = null, 
                 )}
 
                 {/* Audit Trail Timeline */}
-                <div className="rounded-2xl border border-separator/40 bg-surface-container p-4">
-                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-outline mb-3 flex items-center gap-2">
-                    <span className="material-symbols-outlined text-outline/70" style={{ fontSize: 16 }}>history</span>
+                <div className="rounded-[8px] border border-[var(--border)] bg-[var(--surface-subtle)] p-4">
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--text-muted)] mb-3 flex items-center gap-2">
+                    <span className="material-symbols-outlined text-[var(--text-muted)]" style={{ fontSize: 16 }}>history</span>
                     {t("auditHistory") || "Audit History"} ({historyEntries.length})
                   </p>
 
                   <div className="space-y-2.5 max-h-52 overflow-y-auto pr-1">
                     {historyEntries.length === 0 ? (
-                      <p className="text-xs text-outline">{isJa ? "ステータス変更履歴はありません" : "No history events recorded yet."}</p>
+                      <p className="text-xs text-[var(--text-muted)]">{isJa ? "ステータス変更履歴はありません" : "No history events recorded yet."}</p>
                     ) : historyEntries.map((entry, index) => {
                       const isClosure = normalizeTicketStatusValue(entry.toStatus) === "closed";
                       const entryNote = isClosure
@@ -1027,7 +1024,7 @@ function TicketDetailModal({ actionBusy = false, onClose, onCloseTicket = null, 
                         : (language === "en" ? (entry.reason_en || entry.reason || entry.comment) : (entry.reason_ja || entry.reason || entry.comment));
 
                       return (
-                        <div key={entry.timestamp || index} className="rounded-xl border border-separator/30 bg-surface p-2.5 text-xs">
+                        <div key={entry.timestamp || index} className="rounded-[6px] border border-[var(--border)] bg-[var(--surface)] p-2.5 text-xs">
                           <div className="flex items-center justify-between font-semibold">
                             <span className={isClosure ? "text-emerald-600 dark:text-emerald-400 flex items-center gap-1" : "text-error dark:text-red-400 flex items-center gap-1"}>
                               <span className="material-symbols-outlined" style={{ fontSize: 14 }}>
@@ -1035,10 +1032,10 @@ function TicketDetailModal({ actionBusy = false, onClose, onCloseTicket = null, 
                               </span>
                               {formatTicketHistoryAction(entry, t)}
                             </span>
-                            <span className="text-[10px] text-outline">{formatTicketDateTime(entry.timestamp)}</span>
+                            <span className="text-[10px] text-[var(--text-muted)]">{formatTicketDateTime(entry.timestamp)}</span>
                           </div>
-                          <p className="mt-1 text-[11px] text-outline">By: {entry.user || entry.username || "System"}</p>
-                          {entryNote && <p className="mt-1 text-xs text-on-surface/80 italic">"{entryNote}"</p>}
+                          <p className="mt-1 text-[11px] text-[var(--text-muted)]">By: {entry.user || entry.username || "System"}</p>
+                          {entryNote && <p className="mt-1 text-xs text-[var(--text-primary)]/80 italic">"{entryNote}"</p>}
                         </div>
                       );
                     })}
@@ -1049,10 +1046,10 @@ function TicketDetailModal({ actionBusy = false, onClose, onCloseTicket = null, 
           </div>
 
           {/* Sticky Modal Footer Actions */}
-          <div className="border-t border-separator/40 px-6 py-4 bg-surface-container-low/50 flex items-center justify-between">
-            <div className="text-xs text-outline font-medium">
+          <div className="border-t border-[var(--border)] px-6 py-4 bg-[var(--surface-subtle)] flex items-center justify-between">
+            <div className="text-xs text-[var(--text-muted)] font-medium">
               {ticket.fieldType && (
-                <span className="rounded-md bg-surface-container px-2 py-1 text-[11px] uppercase font-semibold">
+                <span className="rounded-[4px] bg-[var(--surface-raised)] border border-[var(--border)] px-2 py-0.5 text-[11px] uppercase font-semibold">
                   {ticket.fieldType}
                 </span>
               )}
@@ -1062,7 +1059,7 @@ function TicketDetailModal({ actionBusy = false, onClose, onCloseTicket = null, 
               <button
                 type="button"
                 onClick={onClose}
-                className="rounded-xl border border-separator/40 bg-surface px-4 py-2 text-xs font-semibold text-on-surface hover:bg-surface-container transition active:scale-95"
+                className="rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-hover)] transition-colors"
               >
                 {isJa ? "閉じる" : "Close"}
               </button>
@@ -1073,7 +1070,7 @@ function TicketDetailModal({ actionBusy = false, onClose, onCloseTicket = null, 
                     type="button"
                     onClick={onReopenTicket}
                     disabled={actionBusy}
-                    className="inline-flex items-center gap-1.5 rounded-xl bg-amber-600 px-4 py-2 text-xs font-semibold text-white shadow-xs hover:bg-amber-700 active:scale-95 transition disabled:opacity-50"
+                    className="inline-flex items-center gap-1.5 rounded-[6px] bg-amber-600 px-3 py-1.5 text-xs font-semibold text-white shadow-xs hover:bg-amber-700 transition disabled:opacity-50"
                   >
                     <span className="material-symbols-outlined" style={{ fontSize: 16 }}>published_with_changes</span>
                     {actionBusy ? "Reopening..." : (t("reopenTicketBtn") || "Reopen Ticket")}
@@ -1085,7 +1082,7 @@ function TicketDetailModal({ actionBusy = false, onClose, onCloseTicket = null, 
                     type="button"
                     onClick={onCloseTicket}
                     disabled={actionBusy}
-                    className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 px-4 py-2 text-xs font-semibold text-white shadow-xs hover:bg-emerald-700 active:scale-95 transition disabled:opacity-50"
+                    className="inline-flex items-center gap-1.5 rounded-[6px] bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white shadow-xs hover:bg-emerald-700 transition disabled:opacity-50"
                   >
                     <span className="material-symbols-outlined" style={{ fontSize: 16 }}>task_alt</span>
                     {actionBusy ? "Closing..." : (t("closeAndResolveTicketBtn") || "Close & Resolve Ticket")}
@@ -1179,18 +1176,18 @@ function ResolveTicketModal({ ticket, onClose, onConfirm, busy }) {
 
   return (
     <div
-      className="fixed inset-0 z-[80] flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm"
+      className="fixed inset-0 z-[80] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm"
       onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
-      <div className="dashboard-section rounded-2xl w-full max-w-lg bg-surface p-6 shadow-2xl" onMouseDown={(e) => e.stopPropagation()}>
-        <div className="flex items-center justify-between border-b border-separator/40 pb-4">
+      <div className="w-full max-w-lg rounded-[12px] border border-[var(--border)] bg-[var(--surface-raised)] p-6 shadow-2xl" onMouseDown={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between border-b border-[var(--border)] pb-4">
           <div className="flex items-center gap-2.5">
-            <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-600 dark:bg-emerald-950/40">
+            <span className="flex h-8 w-8 items-center justify-center rounded-[6px] bg-emerald-500/10 text-emerald-600 dark:bg-emerald-950/40">
               <span className="material-symbols-outlined" style={{ fontSize: 20 }}>task_alt</span>
             </span>
             <div>
-              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Ticket Resolution</p>
-              <h3 className="text-base font-semibold text-on-surface">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--text-muted)]">Ticket Resolution</p>
+              <h3 className="text-base font-semibold text-[var(--text-primary)]">
                 {t("resolveNgTicket") || "Resolve Ticket"}
               </h3>
             </div>
@@ -1198,19 +1195,19 @@ function ResolveTicketModal({ ticket, onClose, onConfirm, busy }) {
           <button
             type="button"
             onClick={onClose}
-            className="p-2 rounded-xl text-outline hover:bg-surface-container hover:text-on-surface transition-all duration-150 active:scale-95"
+            className="p-1.5 rounded-[6px] text-[var(--text-muted)] hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)] transition-colors"
           >
             <span className="material-symbols-outlined" style={{ fontSize: 18 }}>close</span>
           </button>
         </div>
 
-        <p className="mt-3 text-xs text-outline font-medium">
+        <p className="mt-3 text-xs text-[var(--text-muted)] font-medium">
           {activeFieldLabel || "NG Item"} • {ticket?.machineName || ticket?.加工設備 || "Equipment"} ({ticket?.factory || ""})
         </p>
 
         <form onSubmit={handleSubmit} className="mt-4 flex flex-col gap-4">
           <div>
-            <label className="block text-xs font-semibold text-on-surface mb-1.5">
+            <label className="block text-xs font-semibold text-[var(--text-primary)] mb-1.5">
               {t("resolutionDetailsLabel") || "How did you fix it / Resolution Details"} <span className="text-error">*</span>
             </label>
             <textarea
@@ -1219,22 +1216,22 @@ function ResolveTicketModal({ ticket, onClose, onConfirm, busy }) {
               value={fixReason}
               onChange={(e) => { setFixReason(e.target.value); setErr(""); }}
               placeholder={t("resolutionDetailsPlaceholder") || "e.g. Cleaned and adjusted the valve..."}
-              className="w-full rounded-xl border border-separator/40 bg-surface-container-low p-3 text-xs text-on-surface outline-none transition focus:border-primary focus:ring-1 focus:ring-primary"
+              className="w-full rounded-[6px] border border-[var(--border)] bg-[var(--surface)] p-3 text-xs text-[var(--text-primary)] outline-none transition focus:border-[var(--freya-blue)] focus:ring-1 focus:ring-[var(--freya-blue)] placeholder:text-[var(--text-muted)]"
             />
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-on-surface mb-1.5">
+            <label className="block text-xs font-semibold text-[var(--text-primary)] mb-1.5">
               {t("fixPhotoEvidenceLabel") || "Fix Photo / Evidence"}
             </label>
             <input
               type="file"
               accept="image/*"
               onChange={handleFileChange}
-              className="block w-full text-xs text-outline file:mr-3 file:rounded-xl file:border-0 file:bg-primary/10 file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-primary hover:file:bg-primary/20"
+              className="block w-full text-xs text-[var(--text-muted)] file:mr-3 file:rounded-[6px] file:border-0 file:bg-[var(--freya-blue)]/10 file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-[var(--freya-blue)] hover:file:bg-[var(--freya-blue)]/20"
             />
             {fixPhotoPreview && (
-              <div className="mt-3 relative w-24 h-24 rounded-xl overflow-hidden border border-separator/40 shadow-2xs">
+              <div className="mt-3 relative w-24 h-24 rounded-[8px] overflow-hidden border border-[var(--border)] shadow-xs">
                 <img src={fixPhotoPreview} alt="Fix evidence" className="w-full h-full object-cover" />
                 <button
                   type="button"
@@ -1249,19 +1246,19 @@ function ResolveTicketModal({ ticket, onClose, onConfirm, busy }) {
 
           {err && <p className="text-xs font-semibold text-error">{err}</p>}
 
-          <div className="mt-2 flex items-center justify-end gap-3 pt-4 border-t border-separator/40">
+          <div className="mt-2 flex items-center justify-end gap-3 pt-4 border-t border-[var(--border)]">
             <button
               type="button"
               onClick={onClose}
               disabled={isSubmitting}
-              className="rounded-xl border border-separator/40 bg-surface px-4 py-2 text-xs font-semibold text-on-surface hover:bg-surface-container transition active:scale-95"
+              className="rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-hover)] transition-colors"
             >
               {t("cancel") || "Cancel"}
             </button>
             <button
               type="submit"
               disabled={isSubmitting}
-              className="rounded-xl bg-emerald-600 px-4 py-2 text-xs font-semibold text-white shadow-xs transition hover:bg-emerald-700 active:scale-95 disabled:opacity-50 flex items-center gap-1.5"
+              className="inline-flex items-center gap-1.5 rounded-[6px] bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white shadow-xs hover:bg-emerald-700 transition disabled:opacity-50"
             >
               <span className="material-symbols-outlined" style={{ fontSize: 16 }}>check_circle</span>
               {isSubmitting ? (t("resolvingBtn") || "Resolving...") : (t("confirmCloseTicketBtn") || "Confirm & Close Ticket")}
@@ -1989,48 +1986,48 @@ export default function TicketSubmissionsPage() {
   }
 
   return (
-    <section className="h-screen overflow-y-auto px-6 pb-16 pt-24 scrollbar-hide md:px-8">
+    <div className="min-h-screen max-w-[1600px] mx-auto space-y-6 pt-20 px-6 pb-12">
       <PageHeader
         eyebrow={t("maintenanceEyebrow") || (isJa ? "点検" : "Maintenance")}
         eyebrowClassName="text-xs tracking-[0.18em]"
         title={t("submittedTickets")}
         subtitle={isJa ? "設備点検で発生したNGチケット・申し送り事項の確認と対応管理を行います。" : "Review and manage equipment inspection NG tickets."}
-        subtitleClassName="max-w-3xl leading-6 text-outline"
+        subtitleClassName="max-w-3xl leading-6 text-[var(--text-muted)]"
         className="mb-6"
         actions={(
-          <>
+          <div className="flex flex-wrap items-center gap-2">
             <button
               type="button"
               onClick={() => navigate("/maintenance/submissions")}
-              className="inline-flex items-center gap-2 rounded-xl border border-outline-variant/30 bg-surface-container px-4 py-2.5 text-sm font-semibold text-on-surface transition-all duration-150 hover:border-primary/30 hover:bg-surface-container-high active:scale-95"
+              className="inline-flex items-center gap-1.5 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-hover)] transition-colors shadow-2xs"
             >
-              <span className="material-symbols-outlined text-primary" style={{ fontSize: 18 }}>table_chart</span>
+              <span className="material-symbols-outlined text-[var(--freya-blue)]" style={{ fontSize: 16 }}>table_chart</span>
               {isJa ? "点検提出履歴" : "Checklist Submissions"}
             </button>
             <button
               type="button"
               onClick={() => navigate("/maintenance")}
-              className="inline-flex items-center gap-2 rounded-xl border border-outline-variant/30 bg-surface-container px-4 py-2.5 text-sm font-semibold text-on-surface transition-all duration-150 hover:border-primary/30 hover:bg-surface-container-high active:scale-95"
+              className="inline-flex items-center gap-1.5 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-hover)] transition-colors shadow-2xs"
             >
-              <span className="material-symbols-outlined" style={{ fontSize: 18 }}>checklist</span>
+              <span className="material-symbols-outlined text-[var(--freya-blue)]" style={{ fontSize: 16 }}>checklist</span>
               {isJa ? "点検フォーム管理" : "Checklist Forms"}
             </button>
             <button
               type="button"
               onClick={() => runTicketExport("filtered")}
               disabled={loading || exporting}
-              className="inline-flex items-center gap-2 rounded-xl border border-separator/40 bg-white px-4 py-2.5 text-sm font-semibold text-on-surface shadow-xs hover:border-primary/40 hover:text-primary transition active:scale-95 disabled:opacity-50 dark:bg-surface-container"
+              className="inline-flex items-center gap-1.5 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-hover)] transition-colors shadow-2xs disabled:opacity-50"
             >
-              <span className="material-symbols-outlined text-primary" style={{ fontSize: 18 }}>download</span>
+              <span className="material-symbols-outlined text-[var(--text-muted)]" style={{ fontSize: 16 }}>download</span>
               {exporting ? (isJa ? "出力中…" : "Exporting...") : (t("exportCsv") || "Export CSV")}
             </button>
-          </>
+          </div>
         )}
       />
 
       <ActionNoticeBanner notice={actionNotice} onClose={() => setActionNotice(null)} />
 
-      <div className="mb-6 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+      <div className="mb-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <SummaryCard
           label={isJa ? "点検不具合・NG総数" : "Total Defects / Tickets"}
           value={formatTicketNumber(summary.totalTickets)}
@@ -2126,11 +2123,11 @@ export default function TicketSubmissionsPage() {
         stickyHeader
         stickyHeaderOffset={0}
         tableClassName="ui-table-data min-w-full border-separate border-spacing-0"
-        className="glass-card mb-6 overflow-hidden rounded-[28px]"
-        topBarClassName="flex flex-col gap-4 border-b border-outline-variant/15 px-5 py-4 md:flex-row md:items-center md:justify-between"
-        bottomBarClassName="flex flex-col gap-4 border-t border-outline-variant/15 px-5 py-4 md:flex-row md:items-center md:justify-between"
-        rowClassName="border-b border-outline-variant/10 transition hover:bg-primary/5"
-        rowsSelectClassName="h-10 rounded-2xl border border-separator/40 bg-white px-3 text-sm text-on-surface outline-none transition focus:border-primary/40 dark:bg-surface-container"
+        className="freya-card overflow-hidden rounded-[8px] border border-[var(--border)] bg-[var(--surface)] mb-6 shadow-sm"
+        topBarClassName="flex flex-col gap-4 border-b border-[var(--border)] px-5 py-4 md:flex-row md:items-center md:justify-between bg-[var(--surface)]"
+        bottomBarClassName="flex flex-col gap-4 border-t border-[var(--border)] px-5 py-4 md:flex-row md:items-center md:justify-between bg-[var(--surface)]"
+        rowClassName="border-b border-[var(--border)] transition hover:bg-[var(--surface-hover)]"
+        rowsSelectClassName="h-8 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-2.5 text-xs text-[var(--text-primary)] outline-none transition focus:border-[var(--freya-blue)]"
       />
 
       {selectedTicket && createPortal(
@@ -2164,6 +2161,6 @@ export default function TicketSubmissionsPage() {
         />,
         document.body
       )}
-    </section>
+    </div>
   );
 }

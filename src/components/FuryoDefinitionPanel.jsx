@@ -27,12 +27,12 @@ function FieldRow({
   onChangeEN,
 }) {
   const baseClassName = editable
-    ? "w-full rounded-2xl border border-separator/40 bg-surface px-4 py-3 text-sm text-on-surface outline-none transition focus:border-primary/40"
-    : "w-full rounded-2xl border border-outline-variant/15 bg-surface-container px-4 py-3 text-sm text-on-surface";
+    ? "w-full rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs text-[var(--text-primary)] outline-none transition focus:border-[var(--freya-blue)] placeholder:text-[var(--text-muted)]"
+    : "w-full rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] px-3 py-1.5 text-xs text-[var(--text-secondary)]";
 
   return (
-    <div className="grid gap-3 lg:grid-cols-[7rem_minmax(0,1fr)_minmax(0,1fr)] lg:items-center">
-      <div className="text-sm font-semibold text-on-surface-variant">Counter {index}</div>
+    <div className="grid gap-3 lg:grid-cols-[6.5rem_minmax(0,1fr)_minmax(0,1fr)] lg:items-center">
+      <div className="text-xs font-mono font-semibold text-[var(--text-secondary)]">Counter {index}</div>
 
       <input
         type="text"
@@ -53,10 +53,10 @@ function FieldRow({
           disabled={!editable}
           onChange={(event) => onChangeEN(counterKey, event.target.value)}
           placeholder={editable ? "English..." : "No permission"}
-          className={`${baseClassName} pr-10`}
+          className={`${baseClassName} pr-8`}
         />
         {translating && (
-          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-primary">
+          <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[var(--freya-blue)]">
             <span className="material-symbols-outlined animate-spin" style={{ fontSize: 16 }}>progress_activity</span>
           </span>
         )}
@@ -85,11 +85,11 @@ export default function FuryoDefinitionPanel({
 }) {
   if (!selectedModel) {
     return (
-      <div className="glass-card flex h-[min(74vh,820px)] items-center justify-center rounded-3xl px-6 py-10 text-center">
+      <div className="freya-card flex h-[min(74vh,820px)] items-center justify-center rounded-[8px] border border-[var(--border)] bg-[var(--surface)] px-6 py-10 text-center shadow-sm">
         <div>
-          <span className="material-symbols-outlined text-outline" style={{ fontSize: 56 }}>arrow_back</span>
-          <h3 className="mt-4 text-xl font-semibold text-on-surface">Select a model</h3>
-          <p className="mt-2 text-sm text-on-surface-variant">Choose a model from the left panel to review or edit its 12 defect counters.</p>
+          <span className="material-symbols-outlined text-[var(--text-muted)]" style={{ fontSize: 48 }}>arrow_back</span>
+          <h3 className="mt-3 text-base font-bold text-[var(--text-primary)]">Select a model</h3>
+          <p className="mt-1 text-xs text-[var(--text-secondary)]">Choose a model from the left panel to review or edit its 12 defect counters.</p>
         </div>
       </div>
     );
@@ -98,44 +98,44 @@ export default function FuryoDefinitionPanel({
   const definedCount = countDefinedCounters(definition?.counters);
   const badgeTone = definedCount
     ? definedCount === 12
-      ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
-      : "bg-amber-500/10 text-amber-700 dark:text-amber-300"
-    : "bg-surface-container text-on-surface-variant";
+      ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+      : "border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400"
+    : "border-[var(--border)] bg-[var(--surface-subtle)] text-[var(--text-muted)]";
 
   return (
-    <div className="glass-card flex h-[min(74vh,820px)] flex-col overflow-hidden rounded-3xl">
-      <div className="border-b border-separator/40 px-6 py-5">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+    <div className="freya-card flex h-[min(74vh,820px)] flex-col overflow-hidden rounded-[8px] border border-[var(--border)] bg-[var(--surface)] shadow-sm">
+      <div className="border-b border-[var(--border)] px-5 py-4 bg-[var(--surface-subtle)]">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
           <div>
-            <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-outline">Defect Definition</div>
-            <h3 className="mt-1 text-2xl font-semibold text-on-surface">{selectedModel}</h3>
-            <p className="mt-1 text-sm text-on-surface-variant">Define Japanese and English labels for counters 1 through 12.</p>
+            <div className="text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">Defect Definition</div>
+            <h3 className="mt-0.5 text-xl font-bold font-mono text-[var(--text-primary)]">{selectedModel}</h3>
+            <p className="mt-0.5 text-xs text-[var(--text-secondary)]">Define Japanese and English labels for counters 1 through 12.</p>
             {(definition?.updatedAt || definition?.updatedBy) && (
-              <div className="mt-2 text-xs text-outline">
+              <div className="mt-1.5 text-[11px] font-mono text-[var(--text-muted)]">
                 Last updated {formatDateTime(definition?.updatedAt)}{definition?.updatedBy ? ` by ${definition.updatedBy}` : ""}
               </div>
             )}
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
-            <span className={`rounded-full px-3 py-1.5 text-xs font-semibold ${badgeTone}`}>
+            <span className={`rounded-[4px] border px-2.5 py-0.5 text-xs font-mono font-medium ${badgeTone}`}>
               {definedCount ? `${definedCount}/12 defined` : "未定義"}
             </span>
-            <span className="rounded-full bg-surface-container px-3 py-1.5 text-xs font-semibold text-on-surface-variant">
+            <span className="rounded-[4px] border border-[var(--border)] bg-[var(--surface)] px-2.5 py-0.5 text-xs font-mono font-medium text-[var(--text-secondary)]">
               {canEdit ? (editMode ? "Editing" : "Editable") : "View only"}
             </span>
           </div>
         </div>
 
-        <div className="mt-5 grid gap-3 text-[11px] font-semibold uppercase tracking-[0.18em] text-outline lg:grid-cols-[7rem_minmax(0,1fr)_minmax(0,1fr)]">
+        <div className="mt-4 grid gap-3 text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)] lg:grid-cols-[6.5rem_minmax(0,1fr)_minmax(0,1fr)]">
           <div />
           <div>Japanese</div>
           <div>English</div>
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto px-6 py-5 scrollbar-hide">
-        <div className="space-y-3">
+      <div className="flex-1 overflow-y-auto px-5 py-4 scrollbar-hide">
+        <div className="space-y-2.5">
           {FURYO_COUNTER_KEYS.map((counterKey, index) => (
             <FieldRow
               key={counterKey}
@@ -153,8 +153,8 @@ export default function FuryoDefinitionPanel({
         </div>
       </div>
 
-      <div className="flex flex-col gap-4 border-t border-separator/40 px-6 py-4 md:flex-row md:items-center md:justify-between">
-        <div className="text-sm text-on-surface-variant">
+      <div className="flex flex-col gap-3 border-t border-[var(--border)] px-5 py-3 bg-[var(--surface-subtle)] md:flex-row md:items-center md:justify-between">
+        <div className="text-xs text-[var(--text-muted)]">
           {canEdit
             ? editMode
               ? "English suggestions are auto-filled when a Japanese field loses focus and the English field is still empty."
@@ -169,14 +169,14 @@ export default function FuryoDefinitionPanel({
                 <button
                   type="button"
                   onClick={onClear}
-                  className="rounded-xl border border-separator/40 px-4 py-2 text-xs font-semibold text-on-surface transition hover:bg-surface-container"
+                  className="rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-hover)] transition-colors shadow-2xs"
                 >
                   Clear
                 </button>
                 <button
                   type="button"
                   onClick={onCancelEdit}
-                  className="rounded-xl border border-separator/40 px-4 py-2 text-xs font-semibold text-on-surface transition hover:bg-surface-container"
+                  className="rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-hover)] transition-colors shadow-2xs"
                 >
                   Cancel
                 </button>
@@ -184,7 +184,7 @@ export default function FuryoDefinitionPanel({
                   type="button"
                   onClick={onSave}
                   disabled={!hasChanges || saving}
-                  className="rounded-xl bg-primary px-5 py-2 text-xs font-semibold text-on-primary hover:opacity-90 active:scale-95 transition-all duration-150 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="rounded-[6px] bg-[var(--freya-blue)] px-4 py-1.5 text-xs font-semibold text-white hover:bg-[var(--freya-blue-hover)] transition-colors shadow-xs disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {saving ? "Saving…" : "Save"}
                 </button>
@@ -193,7 +193,7 @@ export default function FuryoDefinitionPanel({
               <button
                 type="button"
                 onClick={onStartEdit}
-                className="rounded-xl border border-primary/20 bg-primary/10 px-4 py-2 text-xs font-semibold text-primary transition hover:bg-primary/15"
+                className="rounded-[6px] bg-[var(--freya-blue)] px-4 py-1.5 text-xs font-semibold text-white hover:bg-[var(--freya-blue-hover)] transition-colors shadow-xs"
               >
                 Edit
               </button>

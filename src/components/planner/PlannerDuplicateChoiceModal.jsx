@@ -16,42 +16,42 @@ export default function PlannerDuplicateChoiceModal({
       onClose={onClose}
       maxWidthClassName="max-w-xl"
     >
-      <div className="planner-data-text space-y-4">
-        <div className="rounded-2xl border border-outline-variant/15 bg-surface-container-low p-4 text-on-surface-variant">
-          <div className="font-semibold text-on-surface">{pendingGoal?.背番号 || pendingGoal?.品番}</div>
+      <div className="space-y-3">
+        <div className="rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] p-3 text-xs text-[var(--text-muted)]">
+          <div className="text-xs font-semibold text-[var(--text-primary)]">{pendingGoal?.背番号 || pendingGoal?.品番}</div>
           <div className="mt-1">Existing: {Number(existingGoal?.targetQuantity || 0)} pcs</div>
-          <div className="mt-1">Incoming: {Number(pendingGoal?.targetQuantity || 0)} pcs</div>
+          <div className="mt-0.5">Incoming: {Number(pendingGoal?.targetQuantity || 0)} pcs</div>
         </div>
 
-        <div className="grid gap-3">
+        <div className="grid gap-2.5">
           <button
             type="button"
             disabled={busy}
             onClick={() => onResolve("overwrite")}
-            className="rounded-2xl border border-amber-500/20 bg-amber-500/10 px-5 py-4 text-left transition hover:bg-amber-500/15 disabled:cursor-not-allowed disabled:opacity-50"
+            className="rounded-[6px] border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-left transition hover:bg-amber-500/15 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            <div className="font-semibold text-on-surface">Overwrite</div>
-            <div className="mt-1 text-on-surface-variant">Replace the existing goal with the new quantity.</div>
+            <div className="text-xs font-semibold text-[var(--text-primary)]">Overwrite</div>
+            <div className="mt-0.5 text-xs text-[var(--text-muted)]">Replace the existing goal with the new quantity.</div>
           </button>
 
           <button
             type="button"
             disabled={busy}
             onClick={() => onResolve("add")}
-            className="rounded-2xl border border-emerald-500/20 bg-emerald-500/10 px-5 py-4 text-left transition hover:bg-emerald-500/15 disabled:cursor-not-allowed disabled:opacity-50"
+            className="rounded-[6px] border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-left transition hover:bg-emerald-500/15 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            <div className="font-semibold text-on-surface">Add</div>
-            <div className="mt-1 text-on-surface-variant">Increase the existing goal by the incoming quantity.</div>
+            <div className="text-xs font-semibold text-[var(--text-primary)]">Add</div>
+            <div className="mt-0.5 text-xs text-[var(--text-muted)]">Increase the existing goal by the incoming quantity.</div>
           </button>
 
           <button
             type="button"
             disabled={busy}
             onClick={() => onResolve("cancel")}
-            className="rounded-2xl border border-separator/40 px-5 py-4 text-left transition hover:bg-surface-container disabled:cursor-not-allowed disabled:opacity-50"
+            className="rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] px-4 py-3 text-left transition hover:bg-[var(--surface-hover)] disabled:cursor-not-allowed disabled:opacity-50"
           >
-            <div className="font-semibold text-on-surface">Cancel</div>
-            <div className="mt-1 text-on-surface-variant">Keep the existing goal unchanged.</div>
+            <div className="text-xs font-semibold text-[var(--text-primary)]">Cancel</div>
+            <div className="mt-0.5 text-xs text-[var(--text-muted)]">Keep the existing goal unchanged.</div>
           </button>
         </div>
       </div>

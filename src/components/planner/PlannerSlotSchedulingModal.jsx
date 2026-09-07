@@ -4,30 +4,30 @@ import EmptyState from "../EmptyState";
 
 function QueueRow({ item, index, total, onMove, onQuantityChange, onRemove }) {
   return (
-    <div className="planner-data-text rounded-2xl border border-outline-variant/15 bg-surface-container-low p-4">
+    <div className="rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] p-3">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <div className="font-semibold text-on-surface">{item.背番号 || item.品番}</div>
-          <div className="mt-1 text-on-surface-variant">{item.品番}</div>
-          <div className="mt-1 text-on-surface-variant">Remaining {item.remainingQuantity} pcs</div>
+          <div className="text-xs font-semibold text-[var(--text-primary)]">{item.背番号 || item.品番}</div>
+          <div className="mt-0.5 text-xs text-[var(--text-muted)]">{item.品番}</div>
+          <div className="mt-0.5 text-xs text-[var(--text-muted)]">Remaining {item.remainingQuantity} pcs</div>
         </div>
 
-        <div className="flex items-center gap-2">
-          <button type="button" onClick={() => onMove(index, -1)} disabled={index === 0} className="rounded-2xl border border-separator/40 px-2 py-1 text-xs font-semibold text-on-surface transition hover:bg-surface-container disabled:opacity-40">↑</button>
-          <button type="button" onClick={() => onMove(index, 1)} disabled={index === total - 1} className="rounded-2xl border border-separator/40 px-2 py-1 text-xs font-semibold text-on-surface transition hover:bg-surface-container disabled:opacity-40">↓</button>
-          <button type="button" onClick={() => onRemove(item._id)} className="rounded-2xl border border-error/20 px-2 py-1 text-xs font-semibold text-error transition hover:bg-error/10">Remove</button>
+        <div className="flex items-center gap-1.5">
+          <button type="button" onClick={() => onMove(index, -1)} disabled={index === 0} className="rounded-[4px] border border-[var(--border)] bg-[var(--surface)] px-2 py-0.5 text-xs font-semibold text-[var(--text-primary)] transition hover:bg-[var(--surface-hover)] disabled:opacity-40">↑</button>
+          <button type="button" onClick={() => onMove(index, 1)} disabled={index === total - 1} className="rounded-[4px] border border-[var(--border)] bg-[var(--surface)] px-2 py-0.5 text-xs font-semibold text-[var(--text-primary)] transition hover:bg-[var(--surface-hover)] disabled:opacity-40">↓</button>
+          <button type="button" onClick={() => onRemove(item._id)} className="rounded-[4px] border border-[var(--status-danger)]/30 bg-[var(--status-danger)]/5 px-2 py-0.5 text-xs font-semibold text-[var(--status-danger)] transition hover:bg-[var(--status-danger)]/10">Remove</button>
         </div>
       </div>
 
-      <div className="mt-3">
-        <label className="planner-data-label text-outline">Schedule Quantity</label>
+      <div className="mt-2.5">
+        <label className="text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">Schedule Quantity</label>
         <input
           type="number"
           min="1"
           max={item.remainingQuantity}
           value={item.quantity}
           onChange={(event) => onQuantityChange(item._id, Number(event.target.value || 0))}
-          className="planner-data-text mt-2 h-11 w-full rounded-2xl border border-separator/40 px-4 outline-none transition focus:border-primary/40"
+          className="mt-1.5 h-8 w-full rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-2.5 text-xs text-[var(--text-primary)] outline-none transition focus:border-[var(--freya-blue)] focus:ring-1 focus:ring-[var(--freya-blue)]"
         />
       </div>
     </div>
@@ -94,7 +94,7 @@ export default function PlannerSlotSchedulingModal({
           <button
             type="button"
             onClick={onClose}
-            className="rounded-2xl border border-separator/40 px-4 py-2 text-sm font-semibold text-on-surface transition hover:bg-surface-container"
+            className="rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs font-semibold text-[var(--text-primary)] transition hover:bg-[var(--surface-hover)]"
           >
             Cancel
           </button>
@@ -102,27 +102,27 @@ export default function PlannerSlotSchedulingModal({
             type="button"
             disabled={submitting || !queue.length}
             onClick={() => onConfirm(queue)}
-            className="rounded-2xl bg-primary px-4 py-2 text-sm font-semibold text-on-primary transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+            className="rounded-[6px] bg-[var(--freya-blue)] px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-[var(--freya-blue-hover)] disabled:cursor-not-allowed disabled:opacity-50"
           >
             {submitting ? "Scheduling…" : `Schedule ${queue.length} item${queue.length === 1 ? "" : "s"}`}
           </button>
         </div>
       )}
     >
-      <div className="planner-data-text grid gap-5 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)]">
-        <div className="rounded-2xl border border-outline-variant/15 bg-surface-container-low p-4">
-          <div className="ui-control-surface flex h-11 items-center gap-3 rounded-2xl border border-separator/40 px-4">
-            <span className="material-symbols-outlined text-outline" style={{ fontSize: 18 }}>search</span>
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)]">
+        <div className="rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] p-3">
+          <div className="flex h-9 items-center gap-2 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 focus-within:border-[var(--freya-blue)] focus-within:ring-1 focus-within:ring-[var(--freya-blue)]">
+            <span className="material-symbols-outlined text-[var(--text-muted)]" style={{ fontSize: 16 }}>search</span>
             <input
               type="text"
               value={search}
               onChange={(event) => setSearch(event.target.value)}
               placeholder="Search goals for this date…"
-              className="planner-data-text h-full flex-1 bg-transparent outline-none"
+              className="h-full flex-1 bg-transparent text-xs text-[var(--text-primary)] placeholder:text-[var(--text-muted)] outline-none"
             />
           </div>
 
-          <div className="mt-4 max-h-[58vh] space-y-3 overflow-y-auto">
+          <div className="mt-3 max-h-[58vh] space-y-2 overflow-y-auto">
             {availableGoals.map((goal) => {
               const queued = queue.some((item) => item._id === goal._id);
               return (
@@ -131,15 +131,15 @@ export default function PlannerSlotSchedulingModal({
                   type="button"
                   onClick={() => addGoal(goal)}
                   disabled={queued}
-                  className="w-full rounded-2xl border border-outline-variant/15 bg-surface px-4 py-4 text-left transition hover:bg-surface-container disabled:cursor-not-allowed disabled:opacity-50"
+                  className="w-full rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-2.5 text-left transition hover:bg-[var(--surface-hover)] disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div>
-                      <div className="font-semibold text-on-surface">{goal.背番号 || goal.品番}</div>
-                      <div className="mt-1 text-on-surface-variant">{goal.品番}</div>
-                      <div className="mt-1 text-on-surface-variant">{goal.品名 || "Unnamed product"}</div>
+                      <div className="text-xs font-semibold text-[var(--text-primary)]">{goal.背番号 || goal.品番}</div>
+                      <div className="mt-0.5 text-xs text-[var(--text-muted)]">{goal.品番}</div>
+                      <div className="mt-0.5 text-xs text-[var(--text-muted)]">{goal.品名 || "Unnamed product"}</div>
                     </div>
-                    <span className="rounded-full bg-primary/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-primary">
+                    <span className="rounded-[4px] bg-[var(--freya-blue)]/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.04em] text-[var(--freya-blue)]">
                       {goal.remainingQuantity} pcs
                     </span>
                   </div>
@@ -148,23 +148,23 @@ export default function PlannerSlotSchedulingModal({
             })}
 
             {!availableGoals.length ? (
-              <EmptyState className="bg-surface px-4 py-10">No goals with remaining quantity are available for the selected date.</EmptyState>
+              <EmptyState className="rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-4 py-10 text-xs text-[var(--text-muted)]">No goals with remaining quantity are available for the selected date.</EmptyState>
             ) : null}
           </div>
         </div>
 
-        <div className="rounded-2xl border border-outline-variant/15 bg-surface-container-low p-4">
-          <div className="mb-4 flex items-center justify-between gap-3">
+        <div className="rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] p-3">
+          <div className="mb-3 flex items-center justify-between gap-3">
             <div>
-              <div className="planner-data-label text-outline">Queue</div>
-              <div className="mt-1 text-on-surface-variant">Items run in the order shown here.</div>
+              <div className="text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">Queue</div>
+              <div className="mt-0.5 text-xs text-[var(--text-muted)]">Items run in the order shown here.</div>
             </div>
-            <div className="rounded-full bg-surface px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-on-surface-variant">
+            <div className="rounded-[4px] border border-[var(--border)] bg-[var(--surface)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">
               {queue.length} selected
             </div>
           </div>
 
-          <div className="max-h-[58vh] space-y-3 overflow-y-auto">
+          <div className="max-h-[58vh] space-y-2 overflow-y-auto">
             {queue.map((item, index) => (
               <QueueRow
                 key={item._id}
@@ -183,7 +183,7 @@ export default function PlannerSlotSchedulingModal({
             ))}
 
             {!queue.length ? (
-              <EmptyState className="bg-surface px-4 py-10">Add goals from the left panel to build a scheduling queue.</EmptyState>
+              <EmptyState className="rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-4 py-10 text-xs text-[var(--text-muted)]">Add goals from the left panel to build a scheduling queue.</EmptyState>
             ) : null}
           </div>
         </div>

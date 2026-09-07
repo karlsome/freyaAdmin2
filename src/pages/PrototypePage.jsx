@@ -46,20 +46,20 @@ function FlashBanner({ flash, onClose }) {
   if (!flash) return null;
 
   const tone = flash.type === "error"
-    ? "bg-error/10 text-error border-error/20"
+    ? "bg-[var(--status-danger)]/10 text-[var(--status-danger)] border-[var(--status-danger)]/20"
     : flash.type === "success"
-      ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/20"
-      : "bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/20";
+      ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20"
+      : "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20";
 
   return (
-    <div className={`mb-6 rounded-3xl border px-5 py-4 ${tone}`}>
+    <div className={`mb-6 rounded-[8px] border px-4 py-3 ${tone}`}>
       <div className="flex items-start justify-between gap-4">
         <div>
-          <div className="text-[11px] font-semibold uppercase tracking-[0.18em]">Status</div>
-          <p className="mt-1 text-sm font-medium">{flash.message}</p>
+          <div className="text-[11px] font-semibold uppercase tracking-[0.04em]">Status</div>
+          <p className="mt-0.5 text-xs font-medium">{flash.message}</p>
         </div>
         <button type="button" onClick={onClose} className="text-current/70 transition hover:text-current">
-          <span className="material-symbols-outlined">close</span>
+          <span className="material-symbols-outlined" style={{ fontSize: 16 }}>close</span>
         </button>
       </div>
     </div>
@@ -69,20 +69,20 @@ function FlashBanner({ flash, onClose }) {
 function Field({ label, children }) {
   return (
     <label className="flex flex-col gap-1.5">
-      <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-on-surface-variant">{label}</span>
+      <span className="text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">{label}</span>
       {children}
     </label>
   );
 }
 
-const inputClassName = "rounded-xl border border-outline-variant/30 bg-surface px-3 py-2 text-sm text-on-surface placeholder:text-on-surface-variant/60 focus:border-primary focus:outline-none";
+const inputClassName = "rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:border-[var(--freya-blue)] focus:outline-none transition-colors";
 
 function FileUploadList({ label, accept, files, onAdd, onRemove, onRename, disabled }) {
   return (
-    <div className="flex flex-col gap-2 rounded-xl border border-outline-variant/20 bg-surface-container px-3 py-3">
+    <div className="flex flex-col gap-2 rounded-[8px] border border-[var(--border)] bg-[var(--surface-subtle)] p-3">
       <div className="flex items-center justify-between gap-2">
-        <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-on-surface-variant">{label}</span>
-        <label className={`inline-flex items-center gap-1.5 rounded-lg border border-outline-variant/30 bg-surface px-3 py-1.5 text-xs font-semibold text-on-surface transition hover:bg-surface-container-high ${disabled ? "cursor-not-allowed opacity-40" : "cursor-pointer"}`}>
+        <span className="text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">{label}</span>
+        <label className={`inline-flex items-center gap-1.5 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1 text-xs font-semibold text-[var(--text-primary)] transition hover:bg-[var(--surface-hover)] shadow-2xs ${disabled ? "cursor-not-allowed opacity-40" : "cursor-pointer"}`}>
           <span className="material-symbols-outlined" style={{ fontSize: 14 }}>upload_file</span>
           {files.length ? "Add more" : "Upload"}
           <input
@@ -100,7 +100,7 @@ function FileUploadList({ label, accept, files, onAdd, onRemove, onRename, disab
       </div>
 
       {files.length === 0 ? (
-        <p className="text-[11px] text-on-surface-variant">{disabled ? "Enter 試作番号 first" : "No files selected"}</p>
+        <p className="text-[11px] text-[var(--text-muted)]">{disabled ? "Enter 試作番号 first" : "No files selected"}</p>
       ) : (
         <div className="flex flex-col gap-2">
           {files.map((entry) => (
@@ -115,7 +115,7 @@ function FileUploadList({ label, accept, files, onAdd, onRemove, onRename, disab
                 type="button"
                 onClick={() => onRemove(entry.id)}
                 title="Remove"
-                className="flex-shrink-0 rounded-lg border border-outline-variant/30 bg-surface p-1.5 text-on-surface-variant transition hover:bg-error/10 hover:text-error"
+                className="flex-shrink-0 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] p-1 text-[var(--text-muted)] transition hover:border-[var(--status-danger)]/30 hover:bg-[var(--status-danger)]/10 hover:text-[var(--status-danger)] shadow-2xs"
               >
                 <span className="material-symbols-outlined" style={{ fontSize: 14 }}>close</span>
               </button>
@@ -454,10 +454,10 @@ export default function PrototypePage() {
   }
 
   const columns = useMemo(() => [
-    { key: "shisakuNo", label: t("prototypeNo"), width: 120, renderCell: (r) => r.shisakuNo || "—" },
-    { key: "deadline", label: t("deadline"), width: 130, renderCell: (r) => r.deadline || "—" },
+    { key: "shisakuNo", label: t("prototypeNo"), width: 120, renderCell: (r) => <span className="font-mono">{r.shisakuNo || "—"}</span> },
+    { key: "deadline", label: t("deadline"), width: 130, renderCell: (r) => <span className="font-mono">{r.deadline || "—"}</span> },
     { key: "eventName", label: t("eventName"), width: 160, renderCell: (r) => r.eventName || "—" },
-    { key: "modelName", label: t("modelName"), width: 160, renderCell: (r) => r.modelName || "—" },
+    { key: "modelName", label: t("modelName"), width: 160, renderCell: (r) => <span className="font-mono font-medium">{r.modelName || "—"}</span> },
     { key: "customerName", label: t("customerName"), width: 160, renderCell: (r) => r.customerName || "—" },
     {
       key: "status",
@@ -465,17 +465,17 @@ export default function PrototypePage() {
       width: 120,
       renderCell: (r) => {
         const status = r.status || "pending";
-        let colorClass = "bg-amber-500/10 text-amber-600 border-amber-500/20";
-        if (status === "completed") colorClass = "bg-emerald-500/10 text-emerald-600 border-emerald-500/20";
-        if (status === "in-progress") colorClass = "bg-blue-500/10 text-blue-600 border-blue-500/20";
+        let colorClass = "border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400";
+        if (status === "completed") colorClass = "border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400";
+        if (status === "in-progress") colorClass = "border-[var(--freya-blue)]/30 bg-[var(--freya-blue)]/10 text-[var(--freya-blue)]";
         return (
-          <span className={`inline-flex items-center justify-center rounded-lg border px-2.5 py-1 text-[11px] font-semibold uppercase ${colorClass}`}>
+          <span className={`inline-flex items-center justify-center rounded-[4px] border px-2 py-0.5 text-[10px] font-mono font-medium uppercase tracking-wider ${colorClass}`}>
             {status}
           </span>
         );
       },
     },
-    { key: "totalRequests", label: t("totalRequests"), sortable: true, width: 150, align: "center", renderCell: (r) => r.totalRequests ?? 0 },
+    { key: "totalRequests", label: t("totalRequests"), sortable: true, width: 150, align: "center", renderCell: (r) => <span className="font-mono">{r.totalRequests ?? 0}</span> },
     {
       key: "cybozuLink",
       label: t("cybozuLink"),
@@ -492,9 +492,9 @@ export default function PrototypePage() {
               rel="noopener noreferrer"
               title="Open in Cybozu"
               onClick={(e) => e.stopPropagation()}
-              className="inline-flex items-center justify-center rounded-lg border border-primary/20 bg-primary/10 p-1.5 text-primary transition hover:bg-primary/20"
+              className="inline-flex items-center justify-center rounded-[6px] border border-[var(--border)] bg-[var(--surface)] p-1 text-[var(--text-secondary)] hover:text-[var(--freya-blue)] hover:border-[var(--freya-blue)]/30 transition-colors shadow-2xs"
             >
-              <span className="material-symbols-outlined" style={{ fontSize: 16 }}>open_in_new</span>
+              <span className="material-symbols-outlined" style={{ fontSize: 15 }}>open_in_new</span>
             </a>
           </div>
         ) : "—"
@@ -508,14 +508,14 @@ export default function PrototypePage() {
       width: 150,
       renderCell: (r) => {
         const d = r.createdAt ? new Date(r.createdAt.$date || r.createdAt) : null;
-        return d ? d.toLocaleString() : "—";
+        return d ? <span className="font-mono text-xs">{d.toLocaleString()}</span> : "—";
       },
     },
 
   ], [deletingId, t]);
 
   return (
-    <section className="pt-24 pb-16 px-4 md:px-8 overflow-y-auto h-screen scrollbar-hide">
+    <div className="min-h-screen max-w-[1600px] mx-auto space-y-6 pt-20 px-6 pb-12">
       <PageHeader
         title={t("prototypeManagement")}
         subtitle="Register new 試作 entries and manage their DXF, PDF, and PCE files."
@@ -526,9 +526,9 @@ export default function PrototypePage() {
               setFormOpen(true);
               resetForm();
             }}
-            className="flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-bold text-on-primary shadow-sm transition-all hover:-translate-y-0.5 hover:bg-primary/90 hover:shadow"
+            className="flex items-center gap-1.5 rounded-[6px] bg-[var(--freya-blue)] px-3.5 py-1.5 text-xs font-semibold text-white hover:bg-[var(--freya-blue-hover)] transition-colors shadow-xs"
           >
-            <span className="material-symbols-outlined" style={{ fontSize: 18 }}>add_circle</span>
+            <span className="material-symbols-outlined" style={{ fontSize: 16 }}>add_circle</span>
             {t("registerPrototype")}
           </button>
         )}
@@ -625,7 +625,7 @@ export default function PrototypePage() {
           </div>
 
           {!shisakuNoEntered && (
-            <div className="flex items-start gap-2 rounded-lg border border-amber-500/20 bg-amber-500/5 px-3 py-2">
+            <div className="flex items-start gap-2 rounded-[6px] border border-amber-500/20 bg-amber-500/5 px-3 py-2">
               <span className="material-symbols-outlined text-amber-500 flex-shrink-0" style={{ fontSize: 14 }}>warning</span>
               <p className="text-[11px] text-amber-700 dark:text-amber-300 leading-snug">
                 Enter a 試作番号 first — uploaded file names are generated from it (試作{"{number}"}_filename).
@@ -661,11 +661,11 @@ export default function PrototypePage() {
           />
         </div>
         
-        <div className="border-t border-separator/40 bg-surface-container/30 px-6 py-4 flex items-center justify-end gap-3 rounded-b-2xl">
+        <div className="border-t border-[var(--border)] bg-[var(--surface-subtle)] px-6 py-3.5 flex items-center justify-end gap-2.5 rounded-b-[12px]">
           <button
             type="button"
             onClick={() => { resetForm(); setFormOpen(false); }}
-            className="rounded-xl border border-outline-variant/20 bg-surface-container px-4 py-2 text-xs font-semibold text-on-surface transition-all hover:bg-surface-container-high"
+            className="rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-hover)] transition-colors shadow-2xs"
           >
             Cancel
           </button>
@@ -673,7 +673,7 @@ export default function PrototypePage() {
             type="button"
             onClick={handleRegister}
             disabled={!canRegister}
-            className="flex items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-xs font-semibold text-on-primary transition-all hover:opacity-90 active:scale-95 disabled:opacity-40"
+            className="flex items-center justify-center gap-1.5 rounded-[6px] bg-[var(--freya-blue)] px-3.5 py-1.5 text-xs font-semibold text-white hover:bg-[var(--freya-blue-hover)] transition-colors shadow-xs disabled:opacity-40"
           >
             {submitting
               ? <span className="material-symbols-outlined animate-spin" style={{ fontSize: 16 }}>progress_activity</span>
@@ -694,58 +694,58 @@ export default function PrototypePage() {
           const hasAnyFile = (selectedRecord.dxfLinks?.length > 0) || (selectedRecord.pdfLinks?.length > 0) || (selectedRecord.pcelinks?.length > 0) || selectedRecord.dxflink || selectedRecord.pdflink;
           
           return (
-            <div className="px-6 py-4 flex flex-col gap-6 overflow-y-auto max-h-[70vh]">
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+            <div className="px-6 py-4 flex flex-col gap-5 overflow-y-auto max-h-[70vh]">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
                 <div>
-                  <h3 className="text-sm font-medium text-on-surface-variant mb-1">
+                  <h3 className="text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)] mb-1">
                     {t("deadline")}
                   </h3>
-                  <p className="text-base text-on-surface">{selectedRecord.deadline || "—"}</p>
+                  <p className="text-xs font-mono text-[var(--text-primary)]">{selectedRecord.deadline || "—"}</p>
                 </div>
                 <div>
-                  <h3 className="text-sm font-medium text-on-surface-variant mb-1">
+                  <h3 className="text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)] mb-1">
                     {t("eventName")}
                   </h3>
-                  <p className="text-base text-on-surface">{selectedRecord.eventName || "—"}</p>
+                  <p className="text-xs text-[var(--text-primary)]">{selectedRecord.eventName || "—"}</p>
                 </div>
                 <div>
-                  <h3 className="text-sm font-medium text-on-surface-variant mb-1">
+                  <h3 className="text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)] mb-1">
                     {t("modelName")}
                   </h3>
-                  <p className="text-base text-on-surface">{selectedRecord.modelName || "—"}</p>
+                  <p className="text-xs font-mono font-medium text-[var(--text-primary)]">{selectedRecord.modelName || "—"}</p>
                 </div>
                 <div>
-                  <h3 className="text-sm font-medium text-on-surface-variant mb-1">
+                  <h3 className="text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)] mb-1">
                     {t("customerName")}
                   </h3>
-                  <p className="text-base text-on-surface">{selectedRecord.customerName || "—"}</p>
+                  <p className="text-xs text-[var(--text-primary)]">{selectedRecord.customerName || "—"}</p>
                 </div>
                 <div>
-                  <h3 className="text-sm font-medium text-on-surface-variant mb-1">
+                  <h3 className="text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)] mb-1">
                     {t("registeredBy")}
                   </h3>
-                  <p className="text-base text-on-surface">{selectedRecord.registeredBy || "—"}</p>
+                  <p className="text-xs text-[var(--text-primary)]">{selectedRecord.registeredBy || "—"}</p>
                 </div>
                 <div>
-                  <h3 className="text-sm font-medium text-on-surface-variant mb-1">
+                  <h3 className="text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)] mb-1">
                     {t("registeredAt")}
                   </h3>
-                  <p className="text-base text-on-surface">
+                  <p className="text-xs font-mono text-[var(--text-primary)]">
                     {selectedRecord.createdAt ? new Date(selectedRecord.createdAt).toLocaleDateString() : "—"}
                   </p>
                 </div>
                 <div>
-                  <h3 className="text-sm font-medium text-on-surface-variant mb-1">
+                  <h3 className="text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)] mb-1">
                     {t("status")}
                   </h3>
                   <div>
                     {(() => {
                       const status = selectedRecord.status || "pending";
-                      let colorClass = "bg-amber-500/10 text-amber-600 border-amber-500/20";
-                      if (status === "completed") colorClass = "bg-emerald-500/10 text-emerald-600 border-emerald-500/20";
-                      if (status === "in-progress") colorClass = "bg-blue-500/10 text-blue-600 border-blue-500/20";
+                      let colorClass = "border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400";
+                      if (status === "completed") colorClass = "border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400";
+                      if (status === "in-progress") colorClass = "border-[var(--freya-blue)]/30 bg-[var(--freya-blue)]/10 text-[var(--freya-blue)]";
                       return (
-                        <span className={`inline-flex items-center justify-center rounded-lg border px-2.5 py-1 text-[11px] font-semibold uppercase ${colorClass}`}>
+                        <span className={`inline-flex items-center justify-center rounded-[4px] border px-2 py-0.5 text-[10px] font-mono font-medium uppercase tracking-wider ${colorClass}`}>
                           {status}
                         </span>
                       );
@@ -754,7 +754,7 @@ export default function PrototypePage() {
                 </div>
                 
                 <div className="col-span-1 sm:col-span-3">
-                  <h3 className="text-sm font-medium text-on-surface-variant mb-1">
+                  <h3 className="text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)] mb-1">
                     {t("cybozuLink")}
                   </h3>
                   {selectedRecord.cybozuLink ? (
@@ -762,31 +762,31 @@ export default function PrototypePage() {
                       href={selectedRecord.cybozuLink}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1.5 text-base text-primary transition hover:text-primary/80"
+                      className="inline-flex items-center gap-1.5 text-xs text-[var(--freya-blue)] font-mono transition hover:underline"
                     >
-                      <span className="material-symbols-outlined" style={{ fontSize: 16 }}>link</span>
+                      <span className="material-symbols-outlined" style={{ fontSize: 15 }}>link</span>
                       {t("openCybozuLink")}
                     </a>
                   ) : (
-                    <p className="text-base text-on-surface-variant/50">{t("noLinkProvided")}</p>
+                    <p className="text-xs text-[var(--text-muted)]">{t("noLinkProvided")}</p>
                   )}
                 </div>
               </div>
 
               {hasAnyFile && (
                 <div className="flex flex-col gap-3">
-                  <h3 className="text-sm font-medium text-on-surface-variant mb-1">{t("files")}</h3>
-                  <div className="flex flex-col gap-4">
+                  <h3 className="text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">{t("files")}</h3>
+                  <div className="flex flex-col gap-3">
                     {/* Legacy format rendering */}
                     {(selectedRecord.dxflink || selectedRecord.pdflink) && (
-                      <div className="flex flex-col gap-2 items-start">
+                      <div className="flex flex-wrap gap-2 items-center">
                         {[
                           ["DXF", selectedRecord.dxflink],
                           ["PDF", selectedRecord.pdflink]
                         ].map(([label, link]) => (
                           link ? (
-                            <a key={label} href={link} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 rounded-lg border border-outline-variant/30 bg-surface px-3 py-1.5 text-xs font-semibold text-primary transition hover:bg-surface-container-high">
-                              <span className="material-symbols-outlined" style={{ fontSize: 16 }}>description</span>
+                            <a key={label} href={link} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1 text-xs font-mono font-semibold text-[var(--freya-blue)] transition hover:bg-[var(--surface-hover)] shadow-2xs">
+                              <span className="material-symbols-outlined" style={{ fontSize: 15 }}>description</span>
                               {label}
                             </a>
                           ) : null
@@ -797,11 +797,11 @@ export default function PrototypePage() {
                     {/* Arrays format rendering */}
                     {(selectedRecord.dxfLinks?.length > 0) && (
                       <div>
-                        <div className="text-[10px] font-bold uppercase tracking-wider text-on-surface-variant/70 mb-1.5">{t("dxfFiles")}</div>
-                        <div className="flex flex-col gap-2 items-start">
+                        <div className="text-[10px] font-mono font-semibold uppercase tracking-wider text-[var(--text-muted)] mb-1.5">{t("dxfFiles")}</div>
+                        <div className="flex flex-wrap gap-2 items-center">
                           {selectedRecord.dxfLinks.map((entry, idx) => (
-                            <a key={idx} href={entry.link} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 rounded-lg border border-outline-variant/30 bg-surface px-3 py-1.5 text-xs font-semibold text-primary transition hover:bg-surface-container-high">
-                              <span className="text-[11px] font-bold opacity-60">{idx + 1}.</span>
+                            <a key={idx} href={entry.link} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1 text-xs font-mono font-medium text-[var(--text-primary)] hover:border-[var(--freya-blue)]/40 hover:text-[var(--freya-blue)] transition shadow-2xs">
+                              <span className="text-[10px] opacity-60 font-mono">{idx + 1}.</span>
                               {entry.name}
                             </a>
                           ))}
@@ -811,11 +811,11 @@ export default function PrototypePage() {
 
                     {(selectedRecord.pdfLinks?.length > 0) && (
                       <div>
-                        <div className="text-[10px] font-bold uppercase tracking-wider text-on-surface-variant/70 mb-1.5">{t("pdfFiles")}</div>
-                        <div className="flex flex-col gap-2 items-start">
+                        <div className="text-[10px] font-mono font-semibold uppercase tracking-wider text-[var(--text-muted)] mb-1.5">{t("pdfFiles")}</div>
+                        <div className="flex flex-wrap gap-2 items-center">
                           {selectedRecord.pdfLinks.map((entry, idx) => (
-                            <a key={idx} href={entry.link} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 rounded-lg border border-outline-variant/30 bg-surface px-3 py-1.5 text-xs font-semibold text-primary transition hover:bg-surface-container-high">
-                              <span className="text-[11px] font-bold opacity-60">{idx + 1}.</span>
+                            <a key={idx} href={entry.link} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1 text-xs font-mono font-medium text-[var(--text-primary)] hover:border-[var(--freya-blue)]/40 hover:text-[var(--freya-blue)] transition shadow-2xs">
+                              <span className="text-[10px] opacity-60 font-mono">{idx + 1}.</span>
                               {entry.name}
                             </a>
                           ))}
@@ -825,11 +825,11 @@ export default function PrototypePage() {
 
                     {selectedRecord.pcelinks?.length > 0 && (
                       <div>
-                        <div className="text-[10px] font-bold uppercase tracking-wider text-on-surface-variant/70 mb-1.5">{t("pceFiles")}</div>
-                        <div className="flex flex-col gap-2 items-start">
+                        <div className="text-[10px] font-mono font-semibold uppercase tracking-wider text-[var(--text-muted)] mb-1.5">{t("pceFiles")}</div>
+                        <div className="flex flex-wrap gap-2 items-center">
                           {selectedRecord.pcelinks.map((entry, idx) => (
-                            <a key={idx} href={entry.link} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 rounded-lg border border-outline-variant/30 bg-surface px-3 py-1.5 text-xs font-semibold text-primary transition hover:bg-surface-container-high">
-                              <span className="text-[11px] font-bold opacity-60">{idx + 1}.</span>
+                            <a key={idx} href={entry.link} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1 text-xs font-mono font-medium text-[var(--text-primary)] hover:border-[var(--freya-blue)]/40 hover:text-[var(--freya-blue)] transition shadow-2xs">
+                              <span className="text-[10px] opacity-60 font-mono">{idx + 1}.</span>
                               {entry.name}
                             </a>
                           ))}
@@ -838,33 +838,33 @@ export default function PrototypePage() {
                     )}
                     
                     {(selectedRecord.colors?.length > 0 || selectedRecord.materials?.length > 0 || selectedRecord.boxTypes?.length > 0) && (
-                      <div className="mt-2 pt-4 border-t border-outline-variant/10 grid grid-cols-1 sm:grid-cols-3 gap-4">
+                      <div className="mt-1 pt-3 border-t border-[var(--border)] grid grid-cols-1 sm:grid-cols-3 gap-4">
                         {selectedRecord.colors?.length > 0 && (
                           <div>
-                            <div className="text-[10px] font-bold uppercase tracking-wider text-on-surface-variant/70 mb-2">{t("colors")}</div>
+                            <div className="text-[10px] font-mono font-semibold uppercase tracking-wider text-[var(--text-muted)] mb-1.5">{t("colors")}</div>
                             <div className="flex flex-wrap gap-1.5">
                               {selectedRecord.colors.map((c, i) => (
-                                <span key={i} className="rounded-md bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">{c}</span>
+                                <span key={i} className="rounded-[4px] border border-[var(--border)] bg-[var(--surface-subtle)] px-2 py-0.5 text-[11px] font-mono font-medium text-[var(--text-secondary)]">{c}</span>
                               ))}
                             </div>
                           </div>
                         )}
                         {selectedRecord.materials?.length > 0 && (
                           <div>
-                            <div className="text-[10px] font-bold uppercase tracking-wider text-on-surface-variant/70 mb-2">{t("materials")}</div>
+                            <div className="text-[10px] font-mono font-semibold uppercase tracking-wider text-[var(--text-muted)] mb-1.5">{t("materials")}</div>
                             <div className="flex flex-wrap gap-1.5">
                               {selectedRecord.materials.map((c, i) => (
-                                <span key={i} className="rounded-md bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">{c}</span>
+                                <span key={i} className="rounded-[4px] border border-[var(--border)] bg-[var(--surface-subtle)] px-2 py-0.5 text-[11px] font-mono font-medium text-[var(--text-secondary)]">{c}</span>
                               ))}
                             </div>
                           </div>
                         )}
                         {selectedRecord.boxTypes?.length > 0 && (
                           <div>
-                            <div className="text-[10px] font-bold uppercase tracking-wider text-on-surface-variant/70 mb-2">{t("boxTypes")}</div>
+                            <div className="text-[10px] font-mono font-semibold uppercase tracking-wider text-[var(--text-muted)] mb-1.5">{t("boxTypes")}</div>
                             <div className="flex flex-wrap gap-1.5">
                               {selectedRecord.boxTypes.map((c, i) => (
-                                <span key={i} className="rounded-md bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">{c}</span>
+                                <span key={i} className="rounded-[4px] border border-[var(--border)] bg-[var(--surface-subtle)] px-2 py-0.5 text-[11px] font-mono font-medium text-[var(--text-secondary)]">{c}</span>
                               ))}
                             </div>
                           </div>
@@ -878,11 +878,11 @@ export default function PrototypePage() {
           );
         })()}
         
-        <div className="border-t border-separator/40 bg-surface-container/30 px-6 py-4 flex items-center justify-end gap-3 rounded-b-2xl">
+        <div className="border-t border-[var(--border)] bg-[var(--surface-subtle)] px-6 py-3.5 flex items-center justify-end gap-2.5 rounded-b-[12px]">
           <button
             type="button"
             onClick={() => setSelectedRecord(null)}
-            className="rounded-xl border border-outline-variant/20 bg-surface-container px-4 py-2 text-xs font-semibold text-on-surface transition-all hover:bg-surface-container-high"
+            className="rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-hover)] transition-colors shadow-2xs"
           >
             {t("close")}
           </button>
@@ -892,14 +892,14 @@ export default function PrototypePage() {
               const id = selectedRecord._id?.$oid || selectedRecord._id;
               if (id) navigate(`/prototype/request/${id}`);
             }}
-            className="rounded-xl border border-outline-variant/20 bg-surface-container px-4 py-2 text-xs font-semibold text-on-surface transition-all hover:bg-surface-container-high"
+            className="rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-hover)] transition-colors shadow-2xs"
           >
             {t("addPrototypeRequest")}
           </button>
           <button
             type="button"
             onClick={() => handleOpenEditModal(selectedRecord)}
-            className="flex items-center justify-center gap-1.5 rounded-xl bg-primary px-4 py-2 text-xs font-semibold text-on-primary transition hover:opacity-90 active:scale-95"
+            className="flex items-center justify-center gap-1.5 rounded-[6px] bg-[var(--freya-blue)] px-3.5 py-1.5 text-xs font-semibold text-white hover:bg-[var(--freya-blue-hover)] transition-colors shadow-xs"
           >
             <span className="material-symbols-outlined" style={{ fontSize: 16 }}>edit</span>
             {t("edit")}
@@ -913,7 +913,7 @@ export default function PrototypePage() {
         subtitle="Update details and manage files"
         maxWidth="max-w-2xl"
       >
-        <div className="px-6 py-4 flex flex-col gap-6 overflow-y-auto max-h-[70vh]">
+        <div className="px-6 py-4 flex flex-col gap-5 overflow-y-auto max-h-[70vh]">
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
             <Field label="試作番号">
               <input
@@ -957,7 +957,7 @@ export default function PrototypePage() {
               />
             </Field>
             <div>
-              <label className="mb-1.5 block text-xs font-semibold text-on-surface-variant">Status</label>
+              <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">Status</label>
               <select
                 value={editForm.status || "pending"}
                 onChange={(e) => setEditForm({ ...editForm, status: e.target.value })}
@@ -988,7 +988,7 @@ export default function PrototypePage() {
             />
           </Field>
 
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3 border-t border-outline-variant/20 pt-4 mt-2">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3 border-t border-[var(--border)] pt-4 mt-2">
             <TagInput
               label="Colors"
               tags={editForm.colors || []}
@@ -1035,20 +1035,20 @@ export default function PrototypePage() {
           />
         </div>
         
-        <div className="border-t border-separator/40 bg-surface-container/30 px-6 py-4 flex items-center justify-between rounded-b-2xl">
+        <div className="border-t border-[var(--border)] bg-[var(--surface-subtle)] px-6 py-3.5 flex items-center justify-between rounded-b-[12px]">
           <button
             type="button"
             onClick={() => handleDelete(editForm)}
-            className="rounded-xl border border-error/20 bg-error/5 px-4 py-2 text-xs font-semibold text-error transition-all hover:bg-error/10"
+            className="rounded-[6px] border border-[var(--status-danger)]/30 bg-[var(--status-danger)]/10 px-3 py-1.5 text-xs font-semibold text-[var(--status-danger)] hover:bg-[var(--status-danger)]/20 transition-colors shadow-2xs"
           >
             Delete 試作
           </button>
           
-          <div className="flex gap-3">
+          <div className="flex items-center gap-2.5">
             <button
               type="button"
               onClick={() => setEditFormOpen(false)}
-              className="rounded-xl border border-outline-variant/20 bg-surface-container px-4 py-2 text-xs font-semibold text-on-surface transition-all hover:bg-surface-container-high"
+              className="rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-hover)] transition-colors shadow-2xs"
             >
               Cancel
             </button>
@@ -1056,7 +1056,7 @@ export default function PrototypePage() {
               type="button"
               onClick={handleEditSubmit}
               disabled={editSubmitting}
-              className="flex items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-xs font-semibold text-on-primary transition-all hover:opacity-90 active:scale-95 disabled:opacity-40"
+              className="flex items-center justify-center gap-1.5 rounded-[6px] bg-[var(--freya-blue)] px-3.5 py-1.5 text-xs font-semibold text-white hover:bg-[var(--freya-blue-hover)] transition-colors shadow-xs disabled:opacity-40"
             >
               {editSubmitting
                 ? <span className="material-symbols-outlined animate-spin" style={{ fontSize: 16 }}>progress_activity</span>
@@ -1067,34 +1067,35 @@ export default function PrototypePage() {
         </div>
       </ModalShell>
 
-
-      <DataTable
-        columns={columns}
-        rows={records}
-        loading={loading}
-        error={error}
-        sort={sort}
-        onSort={handleSort}
-        page={page}
-        pageSize={pageSize}
-        filteredCount={filteredCount}
-        totalPages={totalPages}
-        onPageChange={setPage}
-        onPageSizeChange={(newSize) => {
-          setPageSize(newSize);
-          setPage(1);
-        }}
-        pageSizeOptions={[30, 50, 100]}
-        stickyHeader
-        enableColumnResize
-        enableColumnReorder
-        layoutStorageKey="prototype-management-table"
-        onRowClick={(row) => setSelectedRecord(row)}
-        className="overflow-hidden cursor-pointer"
-        emptyTitle="No prototypes registered"
-        emptyMessage="Use “register new 試作” to add the first entry."
-        rowKey={(row, rowIndex) => row?._id?.$oid || row?._id || rowIndex}
-      />
-    </section>
+      <div className="freya-card rounded-[8px] border border-[var(--border)] bg-[var(--surface)] shadow-sm overflow-hidden">
+        <DataTable
+          columns={columns}
+          rows={records}
+          loading={loading}
+          error={error}
+          sort={sort}
+          onSort={handleSort}
+          page={page}
+          pageSize={pageSize}
+          filteredCount={filteredCount}
+          totalPages={totalPages}
+          onPageChange={setPage}
+          onPageSizeChange={(newSize) => {
+            setPageSize(newSize);
+            setPage(1);
+          }}
+          pageSizeOptions={[30, 50, 100]}
+          stickyHeader
+          enableColumnResize
+          enableColumnReorder
+          layoutStorageKey="prototype-management-table"
+          onRowClick={(row) => setSelectedRecord(row)}
+          className="overflow-hidden cursor-pointer"
+          emptyTitle="No prototypes registered"
+          emptyMessage="Use “register new 試作” to add the first entry."
+          rowKey={(row, rowIndex) => row?._id?.$oid || row?._id || rowIndex}
+        />
+      </div>
+    </div>
   );
 }

@@ -21,13 +21,13 @@ export default function ApprovalsFilterPanel({
   loadDistinctOptions,
 }) {
   return (
-    <div className="glass-card mb-6 rounded-[28px] p-5 relative z-20">
+    <div className="freya-card rounded-[8px] border border-[var(--border)] bg-[var(--surface)] p-5 relative z-20 shadow-sm">
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 xl:grid-cols-[180px_180px_180px_minmax(0,1fr)_auto]">
         <FormField label="Factory">
           <select
             value={filters.factory}
             onChange={(event) => onFilterChange("factory", event.target.value)}
-            className="h-11 rounded-2xl border border-separator/40 bg-white px-4 text-sm text-on-surface outline-none transition focus:border-primary/40 dark:bg-surface-container"
+            className="h-9 rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] px-3 text-xs text-[var(--text-primary)] outline-none transition-colors focus:border-[var(--freya-blue)]"
           >
             <option value="">All Factories</option>
             {factories.map((factory) => (
@@ -40,7 +40,7 @@ export default function ApprovalsFilterPanel({
           <select
             value={filters.status}
             onChange={(event) => onFilterChange("status", event.target.value)}
-            className="h-11 rounded-2xl border border-separator/40 bg-white px-4 text-sm text-on-surface outline-none transition focus:border-primary/40 dark:bg-surface-container"
+            className="h-9 rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] px-3 text-xs text-[var(--text-primary)] outline-none transition-colors focus:border-[var(--freya-blue)]"
           >
             {APPROVAL_STATUS_OPTIONS.map((option) => (
               <option key={option.value || "all"} value={option.value}>{option.label}</option>
@@ -53,7 +53,7 @@ export default function ApprovalsFilterPanel({
             type="date"
             value={filters.date}
             onChange={(event) => onFilterChange("date", event.target.value)}
-            className="h-11 rounded-2xl border border-separator/40 bg-white px-4 text-sm text-on-surface outline-none transition focus:border-primary/40 dark:bg-surface-container"
+            className="h-9 rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] px-3 text-xs text-[var(--text-primary)] outline-none transition-colors focus:border-[var(--freya-blue)] font-mono"
           />
         </FormField>
 
@@ -63,7 +63,7 @@ export default function ApprovalsFilterPanel({
             value={searchInput}
             onChange={(event) => onSearchChange(event.target.value)}
             placeholder="Part no., serial no., worker..."
-            className="h-11 rounded-2xl border border-separator/40 bg-white px-4 text-sm text-on-surface outline-none transition focus:border-primary/40 dark:bg-surface-container"
+            className="h-9 rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] px-3 text-xs text-[var(--text-primary)] placeholder:text-[var(--text-muted)] outline-none transition-colors focus:border-[var(--freya-blue)]"
           />
         </FormField>
 
@@ -71,7 +71,7 @@ export default function ApprovalsFilterPanel({
           <button
             type="button"
             onClick={onClearFilters}
-            className="h-11 rounded-2xl border border-separator/40 bg-white px-4 text-sm font-semibold text-on-surface transition hover:bg-surface-container dark:bg-surface-container"
+            className="h-9 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3.5 text-xs font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-hover)] transition-colors shadow-2xs"
           >
             Reset Filters
           </button>
@@ -106,7 +106,7 @@ export default function ApprovalsFilterPanel({
               type="button"
               onClick={onApplyAdvancedFilters}
               disabled={advancedApplying}
-              className="flex items-center gap-2 rounded-2xl bg-primary px-5 py-2.5 text-sm font-semibold text-on-primary transition hover:opacity-90"
+              className="flex items-center gap-2 rounded-[6px] bg-[var(--freya-blue)] px-3.5 py-1.5 text-xs font-semibold text-white hover:bg-[var(--freya-blue-hover)] transition-colors shadow-xs"
             >
               <span className="material-symbols-outlined" style={{ fontSize: 16 }}>filter_alt</span>
               {advancedApplying ? "Applying..." : "Apply Advanced Filters"}
@@ -115,7 +115,7 @@ export default function ApprovalsFilterPanel({
             <button
               type="button"
               onClick={onClearAdvancedFilters}
-              className="flex items-center gap-2 rounded-2xl border border-separator/40 bg-white px-5 py-2.5 text-sm font-semibold text-on-surface transition hover:bg-surface-container dark:bg-surface-container"
+              className="flex items-center gap-2 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3.5 py-1.5 text-xs font-semibold text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-hover)] transition-colors shadow-2xs"
             >
               <span className="material-symbols-outlined" style={{ fontSize: 16 }}>refresh</span>
               Reset Advanced Filters

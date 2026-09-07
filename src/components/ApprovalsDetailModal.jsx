@@ -74,10 +74,10 @@ function formatPrimitiveValue(value) {
 
 function ActionButton({ tone = "primary", onClick, disabled, children }) {
   const tones = {
-    primary: "bg-primary text-on-primary hover:opacity-90",
-    danger: "bg-error text-on-error hover:opacity-90",
-    warning: "bg-amber-500 text-black hover:opacity-90",
-    neutral: "border border-separator/40 bg-white text-on-surface hover:bg-surface-container dark:bg-surface-container",
+    primary: "bg-[var(--freya-blue)] text-white hover:bg-[var(--freya-blue-hover)] shadow-xs",
+    danger: "border border-[var(--status-danger)]/30 bg-[var(--status-danger)]/10 text-[var(--status-danger)] hover:bg-[var(--status-danger)]/20 shadow-2xs",
+    warning: "border border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300 hover:bg-amber-500/20 shadow-2xs",
+    neutral: "border border-[var(--border)] bg-[var(--surface)] text-[var(--text-primary)] hover:bg-[var(--surface-hover)] shadow-2xs",
   };
 
   return (
@@ -86,7 +86,7 @@ function ActionButton({ tone = "primary", onClick, disabled, children }) {
       disabled={disabled}
       onClick={onClick}
       className={joinClasses(
-        "rounded-2xl px-4 py-2 text-xs font-semibold transition disabled:cursor-not-allowed disabled:opacity-50",
+        "rounded-[6px] px-3.5 py-1.5 text-xs font-semibold transition disabled:cursor-not-allowed disabled:opacity-40",
         tones[tone] || tones.primary
       )}
     >
@@ -110,12 +110,12 @@ function PrimitiveFieldValue({ value, align = "right" }) {
             images: [{ url: value, label: "Record image" }],
             activeIndex: 0,
           })}
-          className="overflow-hidden rounded-2xl border border-separator/40 bg-surface transition hover:-translate-y-0.5"
+          className="overflow-hidden rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] transition hover:border-[var(--freya-blue)]"
         >
           <img
             src={value}
             alt="Record field"
-            className="max-h-28 rounded-2xl border border-separator/40 bg-surface object-contain"
+            className="max-h-24 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] object-contain"
           />
         </button>
       </div>
@@ -124,7 +124,7 @@ function PrimitiveFieldValue({ value, align = "right" }) {
 
   return (
     <span
-      className={`block min-w-0 whitespace-pre-wrap break-all text-xs font-mono text-on-surface-variant ${
+      className={`block min-w-0 whitespace-pre-wrap break-all text-xs font-mono text-[var(--text-secondary)] ${
         align === "right" ? "text-right" : "text-left"
       }`}
     >
@@ -145,37 +145,37 @@ function StructuredValueCard({ value, depth = 0 }) {
 
     if (items.length === 0) {
       return (
-        <div className="rounded-2xl border border-separator/40 bg-surface-container/40 px-3 py-2 text-[11px] text-outline">
+        <div className="rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] px-3 py-1.5 text-[11px] font-mono text-[var(--text-muted)]">
           Empty array
         </div>
       );
     }
 
     return (
-      <div className="space-y-2 rounded-2xl border border-separator/40 bg-surface-container/40 p-3">
+      <div className="space-y-2 rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)]/50 p-2.5">
         <div className="flex items-center justify-between gap-2">
-          <span className="text-[10px] font-semibold uppercase tracking-wider text-outline">Array</span>
-          <span className="rounded-full bg-surface px-2 py-0.5 text-[10px] font-semibold text-on-surface-variant">
+          <span className="text-[10px] font-mono font-semibold uppercase tracking-wider text-[var(--text-muted)]">Array</span>
+          <span className="rounded-[4px] bg-[var(--surface)] border border-[var(--border)] px-2 py-0.5 text-[10px] font-mono font-semibold text-[var(--text-secondary)]">
             {items.length} item{items.length === 1 ? "" : "s"}
           </span>
         </div>
-        <div className="space-y-2">
+        <div className="space-y-1.5">
           {items.map((item, index) => {
             const nestedValue = parseStructuredValue(item);
             const nestedStructured = isStructuredValue(nestedValue);
 
             return (
-              <div key={index} className="rounded-2xl border border-outline-variant/15 bg-surface px-3 py-2.5">
+              <div key={index} className="rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-2">
                 {nestedStructured ? (
                   <div className="space-y-2">
-                    <span className="block text-[10px] font-semibold uppercase tracking-wider text-outline">
+                    <span className="block text-[10px] font-mono font-semibold uppercase tracking-wider text-[var(--text-muted)]">
                       Item {index + 1}
                     </span>
                     <StructuredValueCard value={nestedValue} depth={depth + 1} />
                   </div>
                 ) : (
                   <div className="flex items-start justify-between gap-3">
-                    <span className="text-[10px] font-semibold uppercase tracking-wider text-outline">
+                    <span className="text-[10px] font-mono font-semibold uppercase tracking-wider text-[var(--text-muted)]">
                       Item {index + 1}
                     </span>
                     <div className="min-w-0 flex-1">
@@ -195,37 +195,37 @@ function StructuredValueCard({ value, depth = 0 }) {
 
   if (objectEntries.length === 0) {
     return (
-      <div className="rounded-2xl border border-separator/40 bg-surface-container/40 px-3 py-2 text-[11px] text-outline">
+      <div className="rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] px-3 py-1.5 text-[11px] font-mono text-[var(--text-muted)]">
         Empty object
       </div>
     );
   }
 
   return (
-    <div className="space-y-2 rounded-2xl border border-separator/40 bg-surface-container/40 p-3">
+    <div className="space-y-2 rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)]/50 p-2.5">
       <div className="flex items-center justify-between gap-2">
-        <span className="text-[10px] font-semibold uppercase tracking-wider text-outline">Object</span>
-        <span className="rounded-full bg-surface px-2 py-0.5 text-[10px] font-semibold text-on-surface-variant">
+        <span className="text-[10px] font-mono font-semibold uppercase tracking-wider text-[var(--text-muted)]">Object</span>
+        <span className="rounded-[4px] bg-[var(--surface)] border border-[var(--border)] px-2 py-0.5 text-[10px] font-mono font-semibold text-[var(--text-secondary)]">
           {objectEntries.length} field{objectEntries.length === 1 ? "" : "s"}
         </span>
       </div>
-      <div className="space-y-2">
+      <div className="space-y-1.5">
         {objectEntries.map(([nestedKey, nestedValue]) => {
           const normalizedNestedValue = parseStructuredValue(nestedValue);
           const nestedStructured = isStructuredValue(normalizedNestedValue);
 
           return (
-            <div key={nestedKey} className="rounded-2xl border border-outline-variant/15 bg-surface px-3 py-2.5">
+            <div key={nestedKey} className="rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-2">
               {nestedStructured ? (
                 <div className="space-y-2">
-                  <span className="block break-all text-[10px] font-semibold uppercase tracking-wider text-outline">
+                  <span className="block break-all text-[10px] font-mono font-semibold uppercase tracking-wider text-[var(--text-muted)]">
                     {nestedKey}
                   </span>
                   <StructuredValueCard value={normalizedNestedValue} depth={depth + 1} />
                 </div>
               ) : (
                 <div className="flex items-start justify-between gap-3">
-                  <span className="break-all text-[11px] font-semibold text-outline">{nestedKey}</span>
+                  <span className="break-all text-[11px] font-mono font-semibold text-[var(--text-muted)]">{nestedKey}</span>
                   <div className="min-w-0 flex-1">
                     <PrimitiveFieldValue value={normalizedNestedValue} align="right" />
                   </div>
@@ -342,21 +342,21 @@ export default function ApprovalsDetailModal({
 
   const modal = (
     <PhotoPreviewContext.Provider value={setPhotoPreview}>
-    <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm">
+    <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm">
       <div className="flex min-h-full items-center justify-center p-4 lg:p-6">
-        <div ref={modalRef} className="dashboard-section flex max-h-[92vh] w-full max-w-7xl flex-col overflow-hidden rounded-2xl">
+        <div ref={modalRef} className="freya-card flex max-h-[92vh] w-full max-w-7xl flex-col overflow-hidden rounded-[12px] border border-[var(--border)] bg-[var(--surface-raised)] shadow-2xl">
 
-          <div className="border-b border-separator/40 px-6 py-5">
+          <div className="border-b border-[var(--border)] bg-[var(--surface-subtle)] px-6 py-4">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
               <div>
-                <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Approval Record</div>
-                <h2 className="mt-1 break-words text-xl font-semibold text-on-surface [overflow-wrap:anywhere]">{title}</h2>
-                <p className="mt-1 break-words text-sm text-on-surface-variant [overflow-wrap:anywhere]">{subtitle || "Approval workflow details"}</p>
+                <div className="text-[10px] font-mono font-semibold uppercase tracking-[0.18em] text-[var(--text-muted)]">Approval Record</div>
+                <h2 className="mt-1 break-words text-lg font-bold text-[var(--text-primary)] font-mono [overflow-wrap:anywhere]">{title}</h2>
+                <p className="mt-1 break-words text-xs text-[var(--text-muted)] [overflow-wrap:anywhere]">{subtitle || "Approval workflow details"}</p>
               </div>
 
               <div className="flex items-center gap-3">
-                <span className={joinClasses("inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold", statusMeta.badgeClassName)}>
-                  <span className="material-symbols-outlined" style={{ fontSize: 16, fontVariationSettings: "'FILL' 1" }}>
+                <span className={joinClasses("inline-flex items-center gap-1.5 rounded-[4px] px-2.5 py-0.5 text-xs font-mono font-bold uppercase tracking-wider", statusMeta.badgeClassName)}>
+                  <span className="material-symbols-outlined" style={{ fontSize: 14, fontVariationSettings: "'FILL' 1" }}>
                     {statusMeta.icon}
                   </span>
                   {statusMeta.label}
@@ -373,33 +373,33 @@ export default function ApprovalsDetailModal({
           </div>
 
           <div className="grid min-h-0 flex-1 grid-cols-1 overflow-hidden lg:grid-cols-[minmax(0,1.2fr)_360px]">
-            <div className="min-h-0 overflow-y-auto px-6 py-5">
-              <div className="mb-5 grid grid-cols-1 gap-4 md:grid-cols-3">
+            <div className="min-h-0 overflow-y-auto px-6 py-5 space-y-4">
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
                 {[
-                  { label: "Quantity", value: quantity.toLocaleString(), tone: "text-on-surface" },
-                  { label: "NG", value: ngCount.toLocaleString(), tone: ngCount > 0 ? "text-error" : "text-on-surface" },
+                  { label: "Quantity", value: quantity.toLocaleString(), tone: "text-[var(--text-primary)]" },
+                  { label: "NG", value: ngCount.toLocaleString(), tone: ngCount > 0 ? "text-[var(--status-danger)]" : "text-[var(--text-primary)]" },
                   {
                     label: "Defect Rate",
                     value: `${defectRate.toFixed(2)}%`,
-                    tone: defectRate > 0 ? "text-error" : "text-emerald-600 dark:text-emerald-300",
+                    tone: defectRate > 0 ? "text-[var(--status-danger)]" : "text-emerald-600 dark:text-emerald-400",
                   },
                 ].map((card) => (
-                  <div key={card.label} className="glass-card rounded-2xl px-4 py-4">
-                    <div className={joinClasses("planner-data-text text-3xl font-semibold tabular-nums", card.tone)}>{card.value}</div>
-                    <div className="mt-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">{card.label}</div>
+                  <div key={card.label} className="freya-card rounded-[8px] border border-[var(--border)] bg-[var(--surface)] p-3.5 shadow-2xs">
+                    <div className={joinClasses("text-2xl font-bold font-mono tabular-nums", card.tone)}>{card.value}</div>
+                    <div className="mt-1 text-[10px] font-mono font-semibold uppercase tracking-wider text-[var(--text-muted)]">{card.label}</div>
                   </div>
                 ))}
               </div>
 
               {mismatch.hasMismatch ? (
-                <div className="mb-5 space-y-3">
+                <div className="space-y-3">
                   {mismatch.dateMismatch ? (
-                    <div className="rounded-2xl border border-error/20 bg-error/10 px-4 py-4 text-error">
+                    <div className="rounded-[8px] border border-error/30 bg-error/10 px-4 py-3 text-error">
                       <div className="flex items-start gap-3">
-                        <span className="material-symbols-outlined" style={{ fontSize: 28 }}>error</span>
+                        <span className="material-symbols-outlined" style={{ fontSize: 24 }}>error</span>
                         <div>
-                          <div className="text-sm font-semibold">Date Error Detected</div>
-                          <p className="planner-data-text mt-1 text-sm font-semibold">
+                          <div className="text-xs font-bold uppercase tracking-wider">Date Error Detected</div>
+                          <p className="mt-1 text-xs font-mono font-semibold">
                             Input date: {sourceRecord?.Date || "—"} - Actual submission: {mismatch.objectIdDate || "—"}
                           </p>
                         </div>
@@ -408,12 +408,12 @@ export default function ApprovalsDetailModal({
                   ) : null}
 
                   {mismatch.timeMismatch ? (
-                    <div className="rounded-2xl border border-amber-500/20 bg-amber-500/10 px-4 py-4 text-amber-700 dark:text-amber-300">
+                    <div className="rounded-[8px] border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-amber-700 dark:text-amber-300">
                       <div className="flex items-start gap-3">
-                        <span className="material-symbols-outlined" style={{ fontSize: 28 }}>schedule</span>
+                        <span className="material-symbols-outlined" style={{ fontSize: 24 }}>schedule</span>
                         <div>
-                          <div className="text-sm font-semibold">Time Drift Detected</div>
-                          <p className="planner-data-text mt-1 text-sm font-semibold text-on-surface dark:text-on-surface">
+                          <div className="text-xs font-bold uppercase tracking-wider">Time Drift Detected</div>
+                          <p className="mt-1 text-xs font-mono font-semibold text-[var(--text-primary)]">
                             End time: {sourceRecord?.Time_end || "—"} - Actual submission: {mismatch.objectIdTime || "—"}
                           </p>
                         </div>
@@ -423,21 +423,21 @@ export default function ApprovalsDetailModal({
                 </div>
               ) : null}
 
-              <div className="mb-5 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+              <div className="grid grid-cols-1 gap-2.5 md:grid-cols-2 xl:grid-cols-4">
                 {[
                   { label: "Factory", value: sourceRecord?.工場 },
                   { label: "Worker", value: sourceRecord?.Worker_Name },
                   {
                     label: "Date",
                     value: sourceRecord?.Date,
-                    tone: mismatch.dateMismatch ? "text-error" : "text-on-surface",
+                    tone: mismatch.dateMismatch ? "text-error" : "text-[var(--text-primary)]",
                     icon: mismatch.dateMismatch ? "warning" : "",
                     iconTitle: mismatch.dateMismatch ? `Actual submission date: ${mismatch.objectIdDate || "unknown"}` : "",
                   },
                   {
                     label: "Time",
                     value: [sourceRecord?.Time_start, sourceRecord?.Time_end].filter(Boolean).join(" - ") || "—",
-                    tone: mismatch.timeMismatch ? "text-amber-700 dark:text-amber-300" : "text-on-surface",
+                    tone: mismatch.timeMismatch ? "text-amber-700 dark:text-amber-300" : "text-[var(--text-primary)]",
                     icon: mismatch.timeMismatch ? "schedule" : "",
                     iconTitle: mismatch.timeMismatch ? `Actual submission time: ${mismatch.objectIdTime || "unknown"}` : "",
                   },
@@ -446,12 +446,12 @@ export default function ApprovalsDetailModal({
                   { label: "Equipment", value: sourceRecord?.設備 },
                   { label: "Approver", value: latestApprover || "—" },
                 ].map((item) => (
-                  <div key={item.label} className="rounded-2xl border border-outline-variant/15 bg-surface-container-low px-4 py-3">
-                    <div className="planner-data-label text-outline">{item.label}</div>
-                    <div className={joinClasses("planner-data-text mt-1 flex min-w-0 items-center gap-1 text-sm font-semibold", item.tone || "text-on-surface")}>
+                  <div key={item.label} className="rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] px-3 py-2">
+                    <div className="text-[10px] font-mono font-semibold uppercase tracking-wider text-[var(--text-muted)]">{item.label}</div>
+                    <div className={joinClasses("mt-0.5 flex min-w-0 items-center gap-1 text-xs font-semibold font-mono", item.tone || "text-[var(--text-primary)]")}>
                       <span className="min-w-0 break-words [overflow-wrap:anywhere]">{formatApprovalValue(item.value)}</span>
                       {item.icon ? (
-                        <span className="material-symbols-outlined" style={{ fontSize: 16 }} title={item.iconTitle || undefined}>
+                        <span className="material-symbols-outlined" style={{ fontSize: 14 }} title={item.iconTitle || undefined}>
                           {item.icon}
                         </span>
                       ) : null}
@@ -461,56 +461,56 @@ export default function ApprovalsDetailModal({
               </div>
 
               {(sourceRecord?.correctionComment || sourceRecord?.deleteRequestReason) ? (
-                <div className="mb-5 grid gap-4 md:grid-cols-2">
+                <div className="grid gap-3 md:grid-cols-2">
                   {sourceRecord?.correctionComment ? (
-                    <div className="rounded-2xl border border-amber-500/20 bg-amber-500/10 px-4 py-4">
-                      <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-amber-700 dark:text-amber-300">Correction Note</div>
-                      <p className="planner-data-text mt-2 whitespace-pre-wrap text-sm font-medium text-on-surface">{sourceRecord.correctionComment}</p>
+                    <div className="rounded-[8px] border border-amber-500/30 bg-amber-500/10 px-3.5 py-3">
+                      <div className="text-[10px] font-mono font-bold uppercase tracking-[0.18em] text-amber-700 dark:text-amber-300">Correction Note</div>
+                      <p className="mt-1 whitespace-pre-wrap text-xs font-medium text-[var(--text-primary)]">{sourceRecord.correctionComment}</p>
                     </div>
                   ) : null}
 
                   {sourceRecord?.deleteRequestReason ? (
-                    <div className="rounded-2xl border border-error/20 bg-error/10 px-4 py-4">
-                      <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-error">Delete Reason</div>
-                      <p className="planner-data-text mt-2 whitespace-pre-wrap text-sm font-medium text-on-surface">{sourceRecord.deleteRequestReason}</p>
+                    <div className="rounded-[8px] border border-error/30 bg-error/10 px-3.5 py-3">
+                      <div className="text-[10px] font-mono font-bold uppercase tracking-[0.18em] text-error">Delete Reason</div>
+                      <p className="mt-1 whitespace-pre-wrap text-xs font-medium text-[var(--text-primary)]">{sourceRecord.deleteRequestReason}</p>
                     </div>
                   ) : null}
                 </div>
               ) : null}
 
-              <div className="mb-5 rounded-2xl border border-outline-variant/15 bg-surface-container-low px-4 py-4">
-                <div className="mb-3 flex items-center justify-between gap-4">
+              <div className="rounded-[8px] border border-[var(--border)] bg-[var(--surface)] p-4 shadow-2xs">
+                <div className="mb-2.5 flex items-center justify-between gap-4">
                   <div>
-                    <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Quality Details</div>
-                    <h3 className="mt-1 text-base font-semibold text-on-surface">Counter Breakdown</h3>
+                    <div className="text-[10px] font-mono font-semibold uppercase tracking-[0.18em] text-[var(--text-muted)]">Quality Details</div>
+                    <h3 className="mt-0.5 text-sm font-bold text-[var(--text-primary)]">Counter Breakdown</h3>
                   </div>
                 </div>
 
                 {counters.length ? (
-                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                  <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 xl:grid-cols-3">
                     {counters.map((counter) => (
-                      <div key={counter.label} className="rounded-2xl border border-error/15 bg-error/5 px-4 py-3">
-                        <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">{counter.label}</div>
-                        <div className="planner-data-text mt-2 text-2xl font-semibold text-error tabular-nums">{counter.value}</div>
+                      <div key={counter.label} className="rounded-[6px] border border-error/20 bg-error/5 px-3 py-2">
+                        <div className="text-[10px] font-mono font-semibold uppercase tracking-wider text-[var(--text-muted)]">{counter.label}</div>
+                        <div className="mt-1 text-xl font-bold font-mono text-error tabular-nums">{counter.value}</div>
                       </div>
                     ))}
                   </div>
                 ) : (
-                  <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-4 text-sm font-semibold text-emerald-700 dark:text-emerald-300">
+                  <div className="rounded-[6px] border border-emerald-500/20 bg-emerald-500/10 px-3.5 py-2.5 text-xs font-semibold text-emerald-700 dark:text-emerald-300">
                     No recorded NG details for this record.
                   </div>
                 )}
               </div>
 
-              <div className="mb-5 rounded-2xl border border-outline-variant/15 bg-surface-container-low px-4 py-4">
-                <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">All Fields</div>
-                <div className="mt-3 space-y-0">
+              <div className="rounded-[8px] border border-[var(--border)] bg-[var(--surface)] p-4 shadow-2xs">
+                <div className="text-[10px] font-mono font-semibold uppercase tracking-[0.18em] text-[var(--text-muted)]">All Fields</div>
+                <div className="mt-2.5 space-y-0">
                   {detailEntries.map(([field, value]) => (
                     <div
                       key={field}
-                      className="grid grid-cols-1 gap-2 border-b border-outline-variant/10 py-3 last:border-0 md:grid-cols-[minmax(120px,160px)_1fr] md:gap-4"
+                      className="grid grid-cols-1 gap-1 border-b border-[var(--border)] py-2 last:border-0 md:grid-cols-[minmax(120px,160px)_1fr] md:gap-4"
                     >
-                      <span className="break-all text-[11px] font-semibold text-outline md:pt-1">{field}</span>
+                      <span className="break-all text-[11px] font-semibold text-[var(--text-muted)] font-mono md:pt-0.5">{field}</span>
                       {isStructuredValue(parseStructuredValue(value)) ? (
                         <StructuredValueCard value={value} />
                       ) : (
@@ -521,37 +521,37 @@ export default function ApprovalsDetailModal({
                 </div>
               </div>
 
-              <div className="rounded-2xl border border-outline-variant/15 bg-surface-container-low px-4 py-4">
-                <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Approval History</div>
+              <div className="rounded-[8px] border border-[var(--border)] bg-[var(--surface)] p-4 shadow-2xs">
+                <div className="text-[10px] font-mono font-semibold uppercase tracking-[0.18em] text-[var(--text-muted)]">Approval History</div>
                 {approvalHistory.length ? (
-                  <div className="mt-3 space-y-3">
+                  <div className="mt-2.5 space-y-2">
                     {approvalHistory.map((entry, index) => (
-                      <div key={`${entry.timestamp || index}-${entry.action || index}`} className="rounded-2xl border border-outline-variant/15 bg-white/80 px-4 py-3 dark:bg-surface-container">
+                      <div key={`${entry.timestamp || index}-${entry.action || index}`} className="rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] px-3.5 py-2">
                         <div className="flex flex-wrap items-center justify-between gap-3">
-                          <div className="text-sm font-semibold text-on-surface">{entry.action || "Update"}</div>
-                          <div className="planner-data-text text-xs text-on-surface-variant">{entry.timestamp ? new Date(entry.timestamp).toLocaleString("ja-JP") : "—"}</div>
+                          <div className="text-xs font-bold text-[var(--text-primary)]">{entry.action || "Update"}</div>
+                          <div className="text-[11px] font-mono text-[var(--text-muted)]">{entry.timestamp ? new Date(entry.timestamp).toLocaleString("ja-JP") : "—"}</div>
                         </div>
-                        <div className="mt-1 text-xs text-on-surface-variant">{entry.user || "Unknown user"}</div>
+                        <div className="mt-0.5 text-[11px] text-[var(--text-secondary)] font-medium">{entry.user || "Unknown user"}</div>
                         {entry.comment ? (
-                          <p className="planner-data-text mt-2 whitespace-pre-wrap text-sm text-on-surface">{entry.comment}</p>
+                          <p className="mt-1 whitespace-pre-wrap text-xs text-[var(--text-primary)]">{entry.comment}</p>
                         ) : null}
                       </div>
                     ))}
                   </div>
                 ) : (
-                  <div className="mt-3 rounded-2xl border border-outline-variant/15 bg-white/80 px-4 py-3 text-sm text-on-surface-variant dark:bg-surface-container">
+                  <div className="mt-2.5 rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] px-3 py-2 text-xs text-[var(--text-muted)]">
                     No approval history has been logged yet.
                   </div>
                 )}
               </div>
             </div>
 
-            <aside className="min-h-0 overflow-y-auto border-t border-outline-variant/20 bg-surface-container-lowest/60 px-6 py-5 lg:border-l lg:border-t-0">
-              <div className="mt-5 rounded-2xl border border-outline-variant/15 bg-white/80 p-4 dark:bg-surface-container">
-                <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Submitted Images</div>
+            <aside className="min-h-0 overflow-y-auto border-t border-[var(--border)] bg-[var(--surface-subtle)]/30 px-5 py-5 lg:border-l lg:border-t-0 space-y-4">
+              <div className="freya-card rounded-[8px] border border-[var(--border)] bg-[var(--surface)] p-4 shadow-2xs">
+                <div className="text-[10px] font-mono font-semibold uppercase tracking-[0.18em] text-[var(--text-muted)]">Submitted Images</div>
 
                 {images.length ? (
-                  <div className="mt-4 grid grid-cols-1 gap-3">
+                  <div className="mt-3 grid grid-cols-1 gap-2.5">
                     {images.map((image, index) => (
                       <button
                         key={`${image.sourceKey}-${image.url}`}
@@ -563,29 +563,29 @@ export default function ApprovalsDetailModal({
                           images: images.map((img) => ({ url: img.url, label: img.label })),
                           activeIndex: index,
                         })}
-                        className="overflow-hidden rounded-2xl border border-outline-variant/15 bg-surface-container-low text-left transition hover:-translate-y-0.5"
+                        className="overflow-hidden rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] text-left transition hover:border-[var(--freya-blue)]"
                       >
-                        <img src={image.url} alt={image.label} className="h-40 w-full object-cover" />
-                        <div className="px-3 py-3">
-                          <div className="text-xs font-semibold text-on-surface">{image.label}</div>
-                          <div className="text-[11px] text-on-surface-variant">Open full size</div>
+                        <img src={image.url} alt={image.label} className="h-36 w-full object-cover" />
+                        <div className="px-3 py-2 bg-[var(--surface)] border-t border-[var(--border)]">
+                          <div className="text-xs font-semibold text-[var(--text-primary)]">{image.label}</div>
+                          <div className="text-[10px] text-[var(--text-muted)]">Open full size</div>
                         </div>
                       </button>
                     ))}
                   </div>
                 ) : (
-                  <div className="mt-4 rounded-2xl border border-outline-variant/15 bg-surface-container-low px-4 py-3 text-sm text-on-surface-variant">
+                  <div className="mt-3 rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] px-3 py-2 text-xs text-[var(--text-muted)]">
                     No uploaded images are attached to this record.
                   </div>
                 )}
               </div>
 
-              <div className="mt-5 rounded-2xl border border-outline-variant/15 bg-white/80 p-4 dark:bg-surface-container">
-                <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Master Reference</div>
+              <div className="freya-card rounded-[8px] border border-[var(--border)] bg-[var(--surface)] p-4 shadow-2xs">
+                <div className="text-[10px] font-mono font-semibold uppercase tracking-[0.18em] text-[var(--text-muted)]">Master Reference</div>
 
-                <div className="mt-4 overflow-hidden rounded-2xl border border-outline-variant/15 bg-surface-container-low">
+                <div className="mt-3 overflow-hidden rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)]">
                   {masterImageLoading ? (
-                    <div className="flex h-52 items-center justify-center text-sm font-semibold text-on-surface-variant">
+                    <div className="flex h-44 items-center justify-center text-xs font-semibold text-[var(--text-muted)]">
                       Loading reference image...
                     </div>
                   ) : masterImageUrl ? (
@@ -600,20 +600,20 @@ export default function ApprovalsDetailModal({
                       })}
                       className="block w-full"
                     >
-                      <img src={masterImageUrl} alt="Master reference" className="h-52 w-full object-contain bg-black/5" />
+                      <img src={masterImageUrl} alt="Master reference" className="h-44 w-full object-contain bg-black/5" />
                     </button>
                   ) : (
-                    <div className="flex h-52 items-center justify-center px-4 text-center text-sm font-semibold text-on-surface-variant">
+                    <div className="flex h-44 items-center justify-center px-4 text-center text-xs font-semibold text-[var(--text-muted)]">
                       No master reference image was found for this record.
                     </div>
                   )}
                 </div>
               </div>
 
-              <div className="mt-5 rounded-2xl border border-outline-variant/15 bg-white/80 p-4 dark:bg-surface-container">
-                <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Actions</div>
+              <div className="freya-card rounded-[8px] border border-[var(--border)] bg-[var(--surface)] p-4 shadow-2xs">
+                <div className="text-[10px] font-mono font-semibold uppercase tracking-[0.18em] text-[var(--text-muted)]">Actions</div>
 
-                <div className="mt-4 flex flex-wrap gap-2">
+                <div className="mt-3 flex flex-wrap gap-2">
                   {mode === "recycle" ? (
                     <>
                       {canRestoreRecycleBin(authUser) ? (

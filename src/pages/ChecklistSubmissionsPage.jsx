@@ -794,16 +794,16 @@ function SubmissionPickerModal({ dateLabel, factory, machineName, onClose, onSel
   const scheduleLabel = SCHEDULE_META[schedule]?.label ?? formatScheduleLabel(schedule);
 
   return (
-    <div className="fixed inset-0 z-[65] flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm" onClick={onClose}>
+    <div className="fixed inset-0 z-[65] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm" onClick={onClose}>
       <div
-        className="glass-card flex max-h-[78vh] w-full max-w-lg flex-col overflow-hidden rounded-2xl border border-outline-variant/20"
+        className="freya-card flex max-h-[78vh] w-full max-w-lg flex-col overflow-hidden rounded-[12px] border border-[var(--border)] bg-[var(--surface-raised)] shadow-2xl"
         onClick={(event) => event.stopPropagation()}
       >
-        <div className="flex items-start justify-between gap-4 border-b border-separator/40 px-6 py-5">
+        <div className="flex items-start justify-between gap-4 border-b border-[var(--border)] px-5 py-4 bg-[var(--surface)]">
           <div className="min-w-0 flex-1">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Multiple Submissions</p>
-            <h3 className="mt-1 text-lg font-semibold text-on-surface">Choose a checklist record</h3>
-            <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-outline">
+            <p className="text-xs font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">Multiple Submissions</p>
+            <h3 className="mt-0.5 text-base font-semibold text-[var(--text-primary)]">Choose a checklist record</h3>
+            <div className="mt-1 flex flex-wrap gap-x-2.5 gap-y-1 text-xs text-[var(--text-muted)] font-mono">
               {machineName && <span>{machineName}</span>}
               {factory && factory !== "—" && <span>{factory}</span>}
               {scheduleLabel && <span>{scheduleLabel}</span>}
@@ -813,7 +813,7 @@ function SubmissionPickerModal({ dateLabel, factory, machineName, onClose, onSel
           <button
             type="button"
             onClick={onClose}
-            className="p-2 rounded-xl flex-shrink-0 text-outline hover:bg-surface-container hover:text-on-surface transition-all duration-150 active:scale-95"
+            className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-[6px] text-[var(--text-muted)] hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)] transition-colors"
           >
             <span className="material-symbols-outlined" style={{ fontSize: 18 }}>close</span>
           </button>
@@ -2276,15 +2276,15 @@ const TIMELINE_FOCUS_FIELD_LABELS = {
 
 function SummaryCard({ detail, icon, iconClassName, label, value }) {
   return (
-    <div className="glass-card rounded-2xl p-5">
+    <div className="freya-card rounded-[8px] border border-[var(--border)] bg-[var(--surface)] p-4 shadow-sm">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">{label}</p>
-          <p className="mt-3 text-3xl font-semibold text-on-surface">{value}</p>
-          <p className="mt-2 text-sm text-outline">{detail}</p>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">{label}</p>
+          <p className="mt-2 text-2xl font-bold tracking-tight text-[var(--text-primary)]">{value}</p>
+          <p className="mt-1 text-xs text-[var(--text-muted)]">{detail}</p>
         </div>
-        <span className={`flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-2xl ${iconClassName}`}>
-          <span className="material-symbols-outlined" style={{ fontSize: 20 }}>{icon}</span>
+        <span className={`flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-[6px] ${iconClassName}`}>
+          <span className="material-symbols-outlined" style={{ fontSize: 18 }}>{icon}</span>
         </span>
       </div>
     </div>
@@ -2293,10 +2293,10 @@ function SummaryCard({ detail, icon, iconClassName, label, value }) {
 
 function LegendPill({ label, tone, withNg = false }) {
   return (
-    <span className="inline-flex items-center gap-2 rounded-full border border-separator/40 bg-surface px-3 py-1.5 text-xs font-semibold text-on-surface">
-      <span className="relative h-3 w-3 flex-shrink-0">
+    <span className="inline-flex items-center gap-1.5 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1 text-xs font-semibold text-[var(--text-primary)]">
+      <span className="relative h-2.5 w-2.5 flex-shrink-0">
         <span className={`absolute inset-0 rounded-full ${tone}`} />
-        {withNg && <span className="absolute right-0 top-0 h-1.5 w-1.5 rounded-full bg-error ring-1 ring-surface" />}
+        {withNg && <span className="absolute -right-0.5 -top-0.5 h-1.5 w-1.5 rounded-full bg-[var(--status-danger)] ring-1 ring-[var(--surface)]" />}
       </span>
       {label}
     </span>
@@ -2954,29 +2954,28 @@ export default function ChecklistSubmissionsPage() {
   }
 
   return (
-    <section className="h-screen overflow-y-auto px-6 pb-16 pt-24 scrollbar-hide md:px-8">
+    <div className="min-h-screen max-w-[1600px] mx-auto space-y-6 pt-20 px-6 pb-12">
       <PageHeader
         eyebrow={isJa ? "点検" : "Checklist"}
         eyebrowClassName="text-xs tracking-[0.18em]"
         title={t("checklistSubmissions")}
-        className="mb-6"
-        actionsClassName="flex-wrap items-center gap-2.5"
+        actionsClassName="flex-wrap items-center gap-2"
         actions={(
           <>
             <button
               type="button"
               onClick={() => navigate("/maintenance/submissions/tickets")}
-              className="inline-flex items-center gap-2 rounded-xl border border-outline-variant/30 bg-surface-container px-4 py-2.5 text-sm font-semibold text-on-surface transition-all duration-150 hover:border-primary/30 hover:bg-surface-container-high active:scale-95"
+              className="inline-flex items-center gap-1.5 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-hover)] transition-colors"
             >
-              <span className="material-symbols-outlined text-amber-500" style={{ fontSize: 18 }}>report_problem</span>
+              <span className="material-symbols-outlined text-[var(--status-warning)]" style={{ fontSize: 16 }}>report_problem</span>
               {isJa ? "点検不具合一覧" : "Checklist Defects"}
             </button>
             <button
               type="button"
               onClick={() => navigate("/maintenance")}
-              className="inline-flex items-center gap-2 rounded-xl border border-outline-variant/30 bg-surface-container px-4 py-2.5 text-sm font-semibold text-on-surface transition-all duration-150 hover:border-primary/30 hover:bg-surface-container-high active:scale-95"
+              className="inline-flex items-center gap-1.5 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-hover)] transition-colors"
             >
-              <span className="material-symbols-outlined" style={{ fontSize: 18 }}>add_task</span>
+              <span className="material-symbols-outlined text-[var(--freya-blue)]" style={{ fontSize: 16 }}>add_task</span>
               {isJa ? "点検フォーム作成" : "Create Checklist Form"}
             </button>
           </>
@@ -3031,39 +3030,39 @@ export default function ChecklistSubmissionsPage() {
         />
       </div>
 
-      <div className="dashboard-section relative z-20 overflow-hidden rounded-2xl">
-        <div className="flex flex-col gap-4 border-b border-separator/40 px-6 py-5 lg:flex-row lg:items-center lg:justify-between">
+      <div className="freya-card relative z-20 overflow-hidden rounded-[8px] border border-[var(--border)] bg-[var(--surface)] shadow-sm">
+        <div className="flex flex-col gap-4 border-b border-[var(--border)] px-6 py-4 lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">{isJa ? "タイムライン" : "Timeline"}</p>
-            <h3 className="mt-1 text-lg font-semibold text-on-surface">{isJa ? "チェックリスト提出タイムライン" : "Checklist Submission Timeline"}</h3>
-            <p className="mt-1 text-sm leading-6 text-outline">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">{isJa ? "タイムライン" : "Timeline"}</p>
+            <h3 className="mt-0.5 text-base font-bold text-[var(--text-primary)]">{isJa ? "チェックリスト提出タイムライン" : "Checklist Submission Timeline"}</h3>
+            <p className="mt-1 text-xs leading-relaxed text-[var(--text-muted)]">
               {isJa
                 ? `フィルター対象の${filteredMachines.length.toLocaleString()}台の設備と${visibleTemplates.length.toLocaleString()}件の有効チェックリストの提出状況を確認します。`
                 : `Review completed, due, and missed checks across ${filteredMachines.length.toLocaleString()} filtered machines and ${visibleTemplates.length.toLocaleString()} active checklist forms.`}
             </p>
             {timelineFocusActive && (
-              <p className="mt-2 text-xs font-semibold uppercase tracking-[0.18em] text-primary">
+              <p className="mt-1 text-xs font-semibold uppercase tracking-[0.04em] text-[var(--freya-blue)]">
                 Focus mode active: only matching submissions stay highlighted.
               </p>
             )}
           </div>
-          <div className="flex flex-wrap items-center gap-3">
+          <div className="flex flex-wrap items-center gap-2">
             {/* Factory Quick Multi-Select Filter */}
             {availableTimelineFactories.length > 0 && (
               <div className="relative z-30 flex items-center gap-1.5" ref={factoryDropdownRef}>
                 <button
                   type="button"
                   onClick={() => setFactoryDropdownOpen((prev) => !prev)}
-                  className={`inline-flex items-center gap-1.5 rounded-xl border px-3 py-1.5 text-xs font-semibold transition active:scale-95 ${
+                  className={`inline-flex items-center gap-1.5 rounded-[6px] border px-2.5 py-1 text-xs font-semibold transition ${
                     selectedTimelineFactories.length > 0
-                      ? "border-primary/40 bg-primary/10 text-primary"
-                      : "border-outline-variant/30 bg-surface-container text-on-surface hover:bg-surface-container-high"
+                      ? "border-[var(--freya-blue)]/40 bg-[var(--freya-blue)]/10 text-[var(--freya-blue)]"
+                      : "border-[var(--border)] bg-[var(--surface-raised)] text-[var(--text-primary)] hover:bg-[var(--surface-hover)]"
                   }`}
                 >
-                  <span className="material-symbols-outlined" style={{ fontSize: 14 }}>factory</span>
+                  <span className="material-symbols-outlined text-[var(--freya-blue)]" style={{ fontSize: 14 }}>factory</span>
                   <span>{timelineFactoryButtonLabel}</span>
                   {selectedTimelineFactories.length > 0 && (
-                    <span className="flex h-4 w-4 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-on-primary">
+                    <span className="flex h-4 w-4 items-center justify-center rounded-full bg-[var(--freya-blue)] text-[10px] font-bold text-white">
                       {selectedTimelineFactories.length}
                     </span>
                   )}
@@ -3073,31 +3072,31 @@ export default function ChecklistSubmissionsPage() {
                 </button>
 
                 {factoryDropdownOpen && (
-                  <div className="absolute right-0 top-full z-50 mt-1.5 min-w-[210px] rounded-2xl border border-separator/60 bg-surface p-2 shadow-2xl backdrop-blur-xl">
-                    <div className="flex items-center justify-between border-b border-separator/40 px-2 py-1.5 text-[11px] font-semibold">
+                  <div className="absolute right-0 top-full z-50 mt-1.5 min-w-[210px] rounded-[8px] border border-[var(--border)] bg-[var(--surface-raised)] p-2 shadow-xl">
+                    <div className="flex items-center justify-between border-b border-[var(--border)] pb-1.5 mb-1 px-1 text-[11px] font-semibold">
                       <button
                         type="button"
                         onClick={() => setSelectedTimelineFactories(availableTimelineFactories)}
-                        className="text-primary hover:underline"
+                        className="text-[var(--freya-blue)] hover:underline"
                       >
                         {isJa ? "すべて選択" : "Select All"}
                       </button>
                       <button
                         type="button"
                         onClick={() => setSelectedTimelineFactories([])}
-                        className="text-outline hover:text-on-surface"
+                        className="text-[var(--text-muted)] hover:text-[var(--text-primary)]"
                       >
                         {isJa ? "クリア" : "Clear"}
                       </button>
                     </div>
-                    <div className="mt-1.5 max-h-56 space-y-0.5 overflow-y-auto">
+                    <div className="max-h-56 space-y-0.5 overflow-y-auto">
                       {availableTimelineFactories.map((factoryName) => {
                         const isSelected = selectedTimelineFactories.includes(factoryName);
                         const count = timelineFactoryCounts[factoryName] || 0;
                         return (
                           <label
                             key={factoryName}
-                            className="flex cursor-pointer items-center justify-between gap-2 rounded-xl px-2.5 py-1.5 text-xs font-medium text-on-surface hover:bg-surface-container transition-colors"
+                            className="flex cursor-pointer items-center justify-between gap-2 rounded-[6px] px-2 py-1 text-xs font-medium text-[var(--text-primary)] hover:bg-[var(--surface-hover)] transition-colors"
                           >
                             <div className="flex items-center gap-2">
                               <input
@@ -3110,11 +3109,11 @@ export default function ChecklistSubmissionsPage() {
                                       : [...current, factoryName]
                                   );
                                 }}
-                                className="h-3.5 w-3.5 rounded border-outline-variant/40 text-primary accent-primary focus:ring-primary/30"
+                                className="h-3.5 w-3.5 rounded-[4px] border-[var(--border)] accent-[var(--freya-blue)]"
                               />
                               <span>{factoryName}</span>
                             </div>
-                            <span className="rounded-full bg-surface-container px-2 py-0.5 text-[10px] font-semibold text-outline">
+                            <span className="rounded-[4px] bg-[var(--surface-subtle)] px-1.5 py-0.5 text-[10px] font-semibold text-[var(--text-muted)]">
                               {count} {isJa ? "台" : "m"}
                             </span>
                           </label>
@@ -3127,41 +3126,41 @@ export default function ChecklistSubmissionsPage() {
             )}
 
             {/* View Mode Switcher: Today (Default), Standard (Timeline), Compact */}
-            <div className="flex items-center rounded-xl border border-outline-variant/30 bg-surface-container p-0.5">
+            <div className="flex items-center rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] p-0.5">
               <button
                 type="button"
                 onClick={() => setViewMode("today")}
-                className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold transition ${
+                className={`flex items-center gap-1.5 rounded-[4px] px-2.5 py-1 text-xs font-semibold transition ${
                   viewMode === "today"
-                    ? "bg-surface text-primary shadow-sm ring-1 ring-primary/25"
-                    : "text-outline hover:text-on-surface"
+                    ? "bg-[var(--surface)] text-[var(--freya-blue)] shadow-xs"
+                    : "text-[var(--text-muted)] hover:text-[var(--text-primary)]"
                 }`}
               >
-                <span className="material-symbols-outlined text-primary" style={{ fontSize: 15 }}>today</span>
+                <span className="material-symbols-outlined" style={{ fontSize: 14 }}>today</span>
                 <span>{isJa ? "今日の点検状況" : "Today"}</span>
               </button>
               <button
                 type="button"
                 onClick={() => setViewMode("standard")}
-                className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold transition ${
+                className={`flex items-center gap-1.5 rounded-[4px] px-2.5 py-1 text-xs font-semibold transition ${
                   viewMode === "standard"
-                    ? "bg-surface text-primary shadow-sm ring-1 ring-primary/25"
-                    : "text-outline hover:text-on-surface"
+                    ? "bg-[var(--surface)] text-[var(--freya-blue)] shadow-xs"
+                    : "text-[var(--text-muted)] hover:text-[var(--text-primary)]"
                 }`}
               >
-                <span className="material-symbols-outlined" style={{ fontSize: 15 }}>calendar_view_month</span>
+                <span className="material-symbols-outlined" style={{ fontSize: 14 }}>calendar_view_month</span>
                 <span>{isJa ? "全期間" : "Timeline"}</span>
               </button>
               <button
                 type="button"
                 onClick={() => setViewMode("compact")}
-                className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold transition ${
+                className={`flex items-center gap-1.5 rounded-[4px] px-2.5 py-1 text-xs font-semibold transition ${
                   viewMode === "compact"
-                    ? "bg-surface text-primary shadow-sm ring-1 ring-primary/25"
-                    : "text-outline hover:text-on-surface"
+                    ? "bg-[var(--surface)] text-[var(--freya-blue)] shadow-xs"
+                    : "text-[var(--text-muted)] hover:text-[var(--text-primary)]"
                 }`}
               >
-                <span className="material-symbols-outlined" style={{ fontSize: 15 }}>density_medium</span>
+                <span className="material-symbols-outlined" style={{ fontSize: 14 }}>density_medium</span>
                 <span>{isJa ? "コンパクト" : "Compact"}</span>
               </button>
             </div>
@@ -3171,13 +3170,13 @@ export default function ChecklistSubmissionsPage() {
               type="button"
               onClick={viewMode === "today" ? () => {} : jumpToToday}
               title={isJa ? "今日の状況へ移動" : "Go to today"}
-              className={`inline-flex items-center gap-1.5 rounded-xl border border-outline-variant/30 px-3 py-1.5 text-xs font-semibold transition active:scale-95 ${
+              className={`inline-flex items-center gap-1.5 rounded-[6px] border px-2.5 py-1 text-xs font-semibold transition ${
                 viewMode === "today"
-                  ? "bg-primary/10 text-primary border-primary/40 font-bold"
-                  : "bg-surface-container text-on-surface hover:border-primary/40 hover:bg-surface-container-high"
+                  ? "border-[var(--freya-blue)]/40 bg-[var(--freya-blue)]/10 text-[var(--freya-blue)]"
+                  : "border-[var(--border)] bg-[var(--surface)] text-[var(--text-primary)] hover:bg-[var(--surface-hover)]"
               }`}
             >
-              <span className="material-symbols-outlined text-primary" style={{ fontSize: 15 }}>my_location</span>
+              <span className="material-symbols-outlined text-[var(--freya-blue)]" style={{ fontSize: 14 }}>my_location</span>
               <span>{isJa ? "今日" : "Today"}</span>
             </button>
 
@@ -3186,9 +3185,9 @@ export default function ChecklistSubmissionsPage() {
               type="button"
               onClick={exportToCSV}
               title={isJa ? "選択期間の点検記録をCSV出力" : "Export submission records to CSV"}
-              className="inline-flex items-center gap-1.5 rounded-xl border border-outline-variant/30 bg-surface-container px-3 py-1.5 text-xs font-semibold text-on-surface hover:border-primary/40 hover:bg-surface-container-high transition active:scale-95"
+              className="inline-flex items-center gap-1.5 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1 text-xs font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-hover)] transition-colors"
             >
-              <span className="material-symbols-outlined text-primary" style={{ fontSize: 15 }}>download</span>
+              <span className="material-symbols-outlined text-[var(--freya-blue)]" style={{ fontSize: 14 }}>download</span>
               <span>{isJa ? "CSV" : "Export"}</span>
             </button>
           </div>
@@ -3198,33 +3197,33 @@ export default function ChecklistSubmissionsPage() {
         {viewMode === "today" ? (
           <div className="p-6">
             {/* Today Overview Header Sub-bar */}
-            <div className="mb-6 flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-separator/40 bg-surface-container/30 p-4">
+            <div className="mb-6 flex flex-wrap items-center justify-between gap-4 rounded-[8px] border border-[var(--border)] bg-[var(--surface-subtle)] p-3.5">
               <div className="flex items-center gap-3">
-                <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-primary/10 text-primary">
-                  <span className="material-symbols-outlined" style={{ fontSize: 24 }}>event_available</span>
+                <span className="flex h-9 w-9 items-center justify-center rounded-[6px] bg-[var(--freya-blue)]/10 text-[var(--freya-blue)]">
+                  <span className="material-symbols-outlined" style={{ fontSize: 20 }}>event_available</span>
                 </span>
                 <div>
-                  <h4 className="text-base font-bold text-on-surface">
+                  <h4 className="text-sm font-bold text-[var(--text-primary)]">
                     {today.toLocaleDateString(isJa ? "ja-JP" : "en-US", { year: "numeric", month: "long", day: "numeric", weekday: "long" })}
                   </h4>
-                  <p className="text-xs text-outline">
+                  <p className="text-xs text-[var(--text-muted)]">
                     {isJa ? `対象設備: ${filteredMachines.length}台の点検状況` : `Monitoring ${filteredMachines.length} machines today`}
                   </p>
                 </div>
               </div>
 
               {/* Status summary badges */}
-              <div className="flex flex-wrap items-center gap-2.5 text-xs">
-                <div className="inline-flex items-center gap-1.5 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-3.5 py-1.5 font-bold text-emerald-700 dark:text-emerald-300">
-                  <span className="material-symbols-outlined" style={{ fontSize: 16 }}>check_circle</span>
+              <div className="flex flex-wrap items-center gap-2 text-xs">
+                <div className="inline-flex items-center gap-1.5 rounded-[6px] border border-[var(--status-success)]/30 bg-[var(--status-success)]/10 px-2.5 py-1 font-semibold text-[var(--status-success)]">
+                  <span className="material-symbols-outlined" style={{ fontSize: 15 }}>check_circle</span>
                   <span>{isJa ? `点検完了: ${todayOverview?.summary?.completedCount ?? (filteredMachines.filter(m => {
                     const entries = getScheduleEntries(m, today, visibleTemplates, recordsByFormId, { equipmentMap });
                     const subs = entries.flatMap(e => e.submissions || []);
                     return subs.length > 0 && !subs.some(s => s.record?.hasNG);
                   }).length)}台` : `Completed: ${todayOverview?.summary?.completedCount ?? 0}`}</span>
                 </div>
-                <div className="inline-flex items-center gap-1.5 rounded-xl border border-rose-500/30 bg-rose-500/10 px-3.5 py-1.5 font-bold text-rose-700 dark:text-rose-300">
-                  <span className="material-symbols-outlined" style={{ fontSize: 16 }}>warning</span>
+                <div className="inline-flex items-center gap-1.5 rounded-[6px] border border-[var(--status-danger)]/30 bg-[var(--status-danger)]/10 px-2.5 py-1 font-semibold text-[var(--status-danger)]">
+                  <span className="material-symbols-outlined" style={{ fontSize: 15 }}>warning</span>
                   <span>{isJa ? `NG・要対応: ${todayOverview?.summary?.defectCount ?? (filteredMachines.filter(m => {
                     const entries = getScheduleEntries(m, today, visibleTemplates, recordsByFormId, { equipmentMap });
                     return entries.flatMap(e => e.submissions || []).some(s => s.record?.hasNG);
@@ -3399,14 +3398,14 @@ export default function ChecklistSubmissionsPage() {
                 <tr>
                   <th
                     rowSpan={2}
-                    className="sticky left-0 z-20 border-b border-r border-outline-variant/20 bg-surface px-4 py-2 text-left text-xs font-semibold uppercase tracking-[0.18em] text-outline"
+                    className="sticky left-0 z-20 border-b border-r border-[var(--border)] bg-[var(--surface-subtle)] px-4 py-2 text-left text-xs font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]"
                     style={{ width: MACHINE_COLUMN_WIDTH, minWidth: MACHINE_COLUMN_WIDTH, maxWidth: MACHINE_COLUMN_WIDTH }}
                   >
                     Machine
                   </th>
                   <th
                     rowSpan={2}
-                    className="sticky z-20 border-b border-r border-outline-variant/20 bg-surface px-3 py-2 text-left text-xs font-semibold uppercase tracking-[0.18em] text-outline"
+                    className="sticky z-20 border-b border-r border-[var(--border)] bg-[var(--surface-subtle)] px-3 py-2 text-left text-xs font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]"
                     style={{ left: MACHINE_COLUMN_WIDTH, width: CADENCE_COLUMN_WIDTH, minWidth: CADENCE_COLUMN_WIDTH, maxWidth: CADENCE_COLUMN_WIDTH }}
                   >
                     Cadence
@@ -3415,7 +3414,7 @@ export default function ChecklistSubmissionsPage() {
                     <th
                       key={`${label}-${index}`}
                       colSpan={count}
-                      className="border-b border-r border-outline-variant/10 bg-surface px-0 py-1 text-center text-[10px] font-semibold uppercase tracking-[0.18em] text-outline"
+                      className="border-b border-r border-[var(--border)] bg-[var(--surface-subtle)] px-0 py-1 text-center text-[10px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]"
                     >
                       {label}
                     </th>
@@ -3427,10 +3426,10 @@ export default function ChecklistSubmissionsPage() {
                     return (
                       <th
                         key={date.toISOString()}
-                        className={`w-16 border-b border-r border-outline-variant/10 px-1 py-2 text-center text-xs font-semibold ${isToday ? "bg-primary/10 text-primary" : "bg-surface text-outline"}`}
+                        className={`w-16 border-b border-r border-[var(--border)] px-1 py-1.5 text-center text-xs font-semibold ${isToday ? "bg-[var(--freya-blue)]/10 text-[var(--freya-blue)]" : "bg-[var(--surface-subtle)] text-[var(--text-muted)]"}`}
                       >
                         <span className="block">{date.getDate()}</span>
-                        <span className="mt-0.5 block text-[9px] font-medium uppercase tracking-[0.18em] opacity-70">
+                        <span className="mt-0.5 block text-[9px] font-medium uppercase tracking-[0.04em] opacity-70">
                           {date.toLocaleDateString("en", { weekday: "short" }).slice(0, 1)}
                         </span>
                       </th>
@@ -3440,16 +3439,16 @@ export default function ChecklistSubmissionsPage() {
               </thead>
               <tbody>
                 {filteredMachines.map((machine, index) => (
-                  <tr key={machine.id} className={index % 2 === 0 ? "bg-surface" : "bg-surface-container/30"}>
+                  <tr key={machine.id} className={index % 2 === 0 ? "bg-[var(--surface)]" : "bg-[var(--surface-subtle)]/30"}>
                     <td
-                      className={`sticky left-0 z-10 border-b border-r border-outline-variant/20 px-3 ${viewMode === "compact" ? "py-1.5" : "py-2"} ${index % 2 === 0 ? "bg-surface" : "bg-surface-container"}`}
+                      className={`sticky left-0 z-10 border-b border-r border-[var(--border)] px-3 ${viewMode === "compact" ? "py-1.5" : "py-2"} ${index % 2 === 0 ? "bg-[var(--surface)]" : "bg-[var(--surface-subtle)]"}`}
                       style={{ width: MACHINE_COLUMN_WIDTH, minWidth: MACHINE_COLUMN_WIDTH, maxWidth: MACHINE_COLUMN_WIDTH }}
                     >
                       <div className="flex items-center justify-between gap-1.5">
                         <div className="min-w-0 flex-1">
-                          <p className="truncate text-sm font-semibold text-on-surface" title={machine.name}>{machine.name}</p>
+                          <p className="truncate text-xs font-semibold text-[var(--text-primary)]" title={machine.name}>{machine.name}</p>
                           {machine.factory && machine.factory !== "—" && (
-                            <p className="truncate text-[10px] text-outline">{machine.factory}</p>
+                            <p className="truncate text-[10px] text-[var(--text-muted)]">{machine.factory}</p>
                           )}
                         </div>
                         <button
@@ -3459,14 +3458,14 @@ export default function ChecklistSubmissionsPage() {
                             setExportingMachine(machine);
                           }}
                           title={isJa ? `${machine.name} の点検表を出力 (PDF / CSV)` : `Export checklist for ${machine.name}`}
-                          className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg border border-outline-variant/30 bg-surface-container text-outline hover:border-primary/40 hover:bg-primary/10 hover:text-primary transition-all active:scale-90"
+                          className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-[4px] border border-[var(--border)] bg-[var(--surface)] text-[var(--text-muted)] hover:border-[var(--freya-blue)]/40 hover:bg-[var(--freya-blue)]/10 hover:text-[var(--freya-blue)] transition-colors"
                         >
-                          <span className="material-symbols-outlined" style={{ fontSize: 15 }}>file_export</span>
+                          <span className="material-symbols-outlined" style={{ fontSize: 14 }}>file_export</span>
                         </button>
                       </div>
                     </td>
                     <td
-                      className={`sticky z-10 border-b border-r border-outline-variant/20 px-3 ${viewMode === "compact" ? "py-1" : "py-2"} ${viewMode === "compact" ? "align-middle" : "align-top"} ${index % 2 === 0 ? "bg-surface" : "bg-surface-container"}`}
+                      className={`sticky z-10 border-b border-r border-[var(--border)] px-3 ${viewMode === "compact" ? "py-1" : "py-2"} ${viewMode === "compact" ? "align-middle" : "align-top"} ${index % 2 === 0 ? "bg-[var(--surface)]" : "bg-[var(--surface-subtle)]"}`}
                       style={{ left: MACHINE_COLUMN_WIDTH, width: CADENCE_COLUMN_WIDTH, minWidth: CADENCE_COLUMN_WIDTH, maxWidth: CADENCE_COLUMN_WIDTH }}
                     >
                       <ScheduleLaneLegendCell schedules={activeSchedules} compact={viewMode === "compact"} />
@@ -3482,7 +3481,7 @@ export default function ChecklistSubmissionsPage() {
                       return (
                         <td
                           key={date.toISOString()}
-                          className={`border-b border-r border-outline-variant/10 px-1 ${viewMode === "compact" ? "py-1" : "py-1.5"} ${viewMode === "compact" ? "align-middle" : "align-top"} ${isToday ? "bg-primary/5" : ""}`}
+                          className={`border-b border-r border-[var(--border)]/50 px-1 ${viewMode === "compact" ? "py-1" : "py-1.5"} ${viewMode === "compact" ? "align-middle" : "align-top"} ${isToday ? "bg-[var(--freya-blue)]/5" : ""}`}
                         >
                           <ScheduleStackCell
                             entries={entries}
@@ -3551,6 +3550,6 @@ export default function ChecklistSubmissionsPage() {
           onClose={() => setExportingMachine(null)}
         />
       )}
-    </section>
+    </div>
   );
 }

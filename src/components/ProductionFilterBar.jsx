@@ -164,7 +164,7 @@ export default function ProductionFilterBar({
     filterRows.some(hasFilterValue);
 
   return (
-    <div className="bg-surface-container-lowest rounded-xl p-4 shadow-sm border border-separator/30 mb-6">
+    <div className="freya-card p-5 mb-6">
       {/* Core filters grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 mb-4">
         <FormField label="From">
@@ -172,7 +172,7 @@ export default function ProductionFilterBar({
             type="date"
             value={dateFrom}
             onChange={(e) => setDateFrom(e.target.value)}
-            className="h-10 px-3 rounded-xl bg-white border border-separator/40 text-sm text-on-surface outline-none focus:border-primary/40 transition-colors"
+            className="freya-input w-full text-sm text-[var(--text-primary)]"
           />
         </FormField>
         <FormField label="To">
@@ -180,7 +180,7 @@ export default function ProductionFilterBar({
             type="date"
             value={dateTo}
             onChange={(e) => setDateTo(e.target.value)}
-            className="h-10 px-3 rounded-xl bg-white border border-separator/40 text-sm text-on-surface outline-none focus:border-primary/40 transition-colors"
+            className="freya-input w-full text-sm text-[var(--text-primary)]"
           />
         </FormField>
         <FormField label="品番 (Part No.)">
@@ -205,7 +205,7 @@ export default function ProductionFilterBar({
         {children}
       </div>
 
-      <div className="mt-4 pt-4 border-t border-separator/30">
+      <div className="mt-4 pt-4 border-t border-[var(--border)]">
         <AdvancedFilterSection
           rows={filterRows}
           fieldDefinitions={[...FILTER_SCHEMA, ...customFields]}
@@ -228,12 +228,11 @@ export default function ProductionFilterBar({
       </div>
 
       {/* Action buttons */}
-      <div className="flex items-center gap-3 flex-wrap">
+      <div className="flex items-center gap-3 flex-wrap mt-2">
         <button
           disabled={loading}
           onClick={handleApply}
-          className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-primary text-on-primary text-sm font-semibold
-                     hover:opacity-90 disabled:opacity-50 transition-opacity"
+          className="freya-btn-primary"
         >
           <span className="material-symbols-outlined" style={{ fontSize: 16 }}>filter_alt</span>
           {loading ? "Loading…" : "Apply Filters"}
@@ -250,8 +249,7 @@ export default function ProductionFilterBar({
               setFilterRows([newRow()]);
               onReset?.();
             }}
-            className="flex items-center gap-2 px-5 py-2.5 rounded-xl border border-error/20 bg-error/10 text-error text-sm font-semibold
-                       hover:bg-error/15 disabled:opacity-50 transition-colors"
+            className="flex items-center gap-2 h-10 px-4 rounded-[6px] border border-rose-200 dark:border-rose-900 bg-rose-50 dark:bg-rose-950/30 text-rose-600 dark:text-rose-400 text-sm font-semibold hover:bg-rose-100 dark:hover:bg-rose-900/40 disabled:opacity-50 transition-colors"
           >
             <span className="material-symbols-outlined" style={{ fontSize: 16 }}>filter_alt_off</span>
             Reset Filters
@@ -261,8 +259,7 @@ export default function ProductionFilterBar({
         {onLotFinderOpen && (
           <button
             onClick={onLotFinderOpen}
-            className="flex items-center gap-2 px-5 py-2.5 rounded-xl glass-card border border-separator/40 text-sm font-semibold
-                       text-on-surface hover:border-primary/30 hover:scale-[1.02] transition-all duration-150"
+            className="freya-btn-secondary"
           >
             <span className="material-symbols-outlined" style={{ fontSize: 16 }}>manage_search</span>
             Manufacturing Lot Finder

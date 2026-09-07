@@ -214,7 +214,7 @@ function PhotosSection({ checkImages, labelImages, totalCount, onPreview }) {
                   <button
                     type="button"
                     onClick={() => onPreview?.("check", index)}
-                    className="block w-full rounded-2xl overflow-hidden border border-separator/40 hover:border-primary/45 transition-all duration-150 cursor-zoom-in active:scale-95"
+                    className="block w-full rounded-[6px] overflow-hidden border border-[var(--border)] hover:border-[var(--border-strong)] transition-colors duration-150 cursor-zoom-in"
                   >
                     <img src={url} alt={label} className="w-full object-cover max-h-36 bg-black/20" />
                   </button>
@@ -224,21 +224,21 @@ function PhotosSection({ checkImages, labelImages, totalCount, onPreview }) {
           )}
           {labelImages.length > 0 && (
             <div>
-              <p className="text-[10px] font-semibold text-outline mb-2">材料ラベル ({labelImages.length})</p>
+              <p className="text-[11px] font-semibold text-[var(--text-muted)] mb-2 uppercase tracking-[0.04em]">材料ラベル ({labelImages.length})</p>
               <div className="grid grid-cols-4 gap-2">
                 {labelImages.map((url, i) => (
                   <button
                     key={i}
                     type="button"
                     onClick={() => onPreview?.("label", i)}
-                    className="block w-full rounded-2xl overflow-hidden border border-separator/40 hover:border-primary/45 transition-all duration-150 cursor-zoom-in active:scale-95"
+                    className="block w-full rounded-[6px] overflow-hidden border border-[var(--border)] hover:border-[var(--border-strong)] transition-colors duration-150 cursor-zoom-in"
                   >
                     <img
                       src={url}
                       alt={`材料ラベル ${i + 1}`}
                       className="w-full aspect-square object-cover bg-black/20"
                     />
-                    <p className="text-[9px] text-outline text-center py-1">材料ラベル {i + 1}</p>
+                    <p className="text-[10px] text-[var(--text-muted)] text-center py-1">材料ラベル {i + 1}</p>
                   </button>
                 ))}
               </div>
@@ -251,7 +251,6 @@ function PhotosSection({ checkImages, labelImages, totalCount, onPreview }) {
 
 // ─── BreakTimeSection ─────────────────────────────────────────────────────────
 function BreakTimeSection({ record }) {
-
   const data = record.Break_Time_Data ?? {};
   const breaks = Object.entries(data)
     .filter(([, v]) => v?.start && v?.end)
@@ -265,36 +264,36 @@ function BreakTimeSection({ record }) {
     <CollapsibleSection
       icon="coffee"
       label="Break Times"
-      badge={<span className="px-1.5 py-0.5 rounded-full bg-surface-container text-[9px] font-semibold normal-case tracking-normal">{totalMin} min</span>}
+      badge={<span className="px-2 py-0.5 rounded-[4px] bg-[var(--surface)] border border-[var(--border)] text-[11px] font-medium text-[var(--text-secondary)] normal-case freya-tabular">{totalMin} min</span>}
     >
       <div className="pb-5">
-        <div className="rounded-xl overflow-hidden border border-separator/40">
+        <div className="rounded-[8px] overflow-hidden border border-[var(--border)]">
           <table className="ui-table-data w-full">
-            <thead className="bg-surface-container-high/40">
+            <thead className="bg-[var(--surface-raised)] border-b border-[var(--border)]">
               <tr>
                 {["Break", "Start", "End", "Duration"].map((h) => (
-                  <th key={h} className="ui-table-heading px-3 py-3 text-left uppercase tracking-wider text-outline">{h}</th>
+                  <th key={h} className="ui-table-heading px-3.5 py-2 text-left uppercase tracking-[0.04em] text-[var(--text-muted)] text-[12px]">{h}</th>
                 ))}
               </tr>
             </thead>
-            <tbody className="divide-y divide-separator/20">
+            <tbody className="divide-y divide-[var(--border)] bg-[var(--surface)]">
               {breaks.map(({ key, start, end }) => {
                 const s = new Date(`2000-01-01T${start}`);
                 const e = new Date(`2000-01-01T${end}`);
                 const mins = e > s ? Math.round((e - s) / 60000) : null;
                 return (
-                  <tr key={key} className="hover:bg-surface-container/40 transition-colors">
-                    <td className="px-3 py-3 font-semibold text-on-surface capitalize">{key.replace(/([0-9]+)/, " $1")}</td>
-                    <td className="px-3 py-3 font-mono text-on-surface-variant">{start}</td>
-                    <td className="px-3 py-3 font-mono text-on-surface-variant">{end}</td>
-                    <td className="px-3 py-3 text-outline">{mins != null ? `${mins} min` : "—"}</td>
+                  <tr key={key} className="hover:bg-[var(--surface-raised)] transition-colors">
+                    <td className="px-3.5 py-2.5 font-medium text-[var(--text-primary)] capitalize">{key.replace(/([0-9]+)/, " $1")}</td>
+                    <td className="px-3.5 py-2.5 font-mono text-[var(--text-secondary)] freya-tabular">{start}</td>
+                    <td className="px-3.5 py-2.5 font-mono text-[var(--text-secondary)] freya-tabular">{end}</td>
+                    <td className="px-3.5 py-2.5 text-[var(--text-muted)] freya-tabular">{mins != null ? `${mins} min` : "—"}</td>
                   </tr>
                 );
               })}
             </tbody>
           </table>
         </div>
-        <p className="text-[10px] text-outline mt-2 text-right">Total: {totalMin} min ({record.Total_Break_Hours ?? 0} hrs)</p>
+        <p className="text-[11px] text-[var(--text-muted)] mt-2 text-right freya-tabular">Total: {totalMin} min ({record.Total_Break_Hours ?? 0} hrs)</p>
       </div>
     </CollapsibleSection>
   );
@@ -313,32 +312,32 @@ function MaintenanceSection({ record, onPreview }) {
     <CollapsibleSection
       icon="build"
       label="Maintenance / Trouble"
-      badge={<span className="px-1.5 py-0.5 rounded-full bg-amber-400/15 text-amber-400 text-[9px] font-semibold normal-case tracking-normal">{records.length} record{records.length > 1 ? "s" : ""}</span>}
+      badge={<span className="px-2 py-0.5 rounded-[4px] bg-[var(--surface)] border border-[var(--border)] text-[var(--semantic-warning)] text-[11px] font-medium normal-case freya-tabular">{records.length} record{records.length > 1 ? "s" : ""}</span>}
     >
-      <div className="pb-5 space-y-4">
+      <div className="pb-5 space-y-3">
         {records.map((rec) => {
           const photos = Array.isArray(rec.photos) ? rec.photos.filter(Boolean) : [];
           const s = rec.startTime ? new Date(`2000-01-01T${rec.startTime}`) : null;
           const e = rec.endTime   ? new Date(`2000-01-01T${rec.endTime}`)   : null;
           const mins = (s && e && e > s) ? Math.round((e - s) / 60000) : null;
           return (
-            <div key={rec.id ?? rec.timestamp} className="glass-card rounded-2xl p-5 space-y-2">
+            <div key={rec.id ?? rec.timestamp} className="rounded-[6px] border border-[var(--border)] bg-[var(--surface)] p-4 space-y-2.5">
               <div className="flex items-start justify-between gap-3">
                 <div className="flex-1 space-y-1.5">
                   <div className="flex items-center gap-3 flex-wrap">
                     {rec.startTime && (
-                      <span className="text-xs font-mono font-semibold text-on-surface">
+                      <span className="text-xs font-mono font-medium text-[var(--text-primary)] freya-tabular">
                         {rec.startTime}{rec.endTime ? ` → ${rec.endTime}` : ""}
                       </span>
                     )}
                     {mins != null && (
-                      <span className="px-2 py-0.5 rounded-full bg-amber-400/15 text-amber-400 text-[10px] font-semibold">
+                      <span className="px-2 py-0.5 rounded-[4px] bg-[var(--surface-raised)] border border-[var(--border)] text-[var(--semantic-warning)] text-[11px] font-semibold freya-tabular">
                         {mins} min
                       </span>
                     )}
                   </div>
                   {rec.comment && (
-                    <p className="text-xs text-on-surface-variant">{rec.comment}</p>
+                    <p className="text-xs text-[var(--text-secondary)]">{rec.comment}</p>
                   )}
                 </div>
               </div>
@@ -349,7 +348,7 @@ function MaintenanceSection({ record, onPreview }) {
                       key={i}
                       type="button"
                       onClick={() => onPreview?.(rec, i)}
-                      className="block w-full rounded-2xl overflow-hidden border border-separator/40 hover:border-amber-400/45 transition-all duration-150 cursor-zoom-in active:scale-95"
+                      className="block w-full rounded-[6px] overflow-hidden border border-[var(--border)] hover:border-[var(--border-strong)] transition-colors duration-150 cursor-zoom-in"
                     >
                       <img src={url} alt={`Maintenance photo ${i + 1}`} className="w-full aspect-square object-cover bg-black/20" />
                     </button>
@@ -359,7 +358,7 @@ function MaintenanceSection({ record, onPreview }) {
             </div>
           );
         })}
-        <p className="text-[10px] text-outline text-right">Total trouble: {totalMin} min ({maint.totalHours ?? record.Total_Trouble_Hours ?? 0} hrs)</p>
+        <p className="text-[11px] text-[var(--text-muted)] text-right freya-tabular">Total trouble: {totalMin} min ({maint.totalHours ?? record.Total_Trouble_Hours ?? 0} hrs)</p>
       </div>
     </CollapsibleSection>
   );
@@ -526,35 +525,34 @@ export default function RecordDetailModal({ record, processName, onClose, onLotC
 
   const modal = (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-3 sm:p-4 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-3 sm:p-4 backdrop-blur-sm"
       onMouseDown={(event) => {
         if (event.target === event.currentTarget) onClose();
       }}
     >
       <div
-        className="dashboard-section rounded-2xl w-full max-w-2xl max-h-[92vh] overflow-y-auto
-                   shadow-[0_0_80px_rgba(99,102,241,0.18),0_24px_48px_rgba(0,0,0,0.22)] scrollbar-hide"
-        style={{ border: processAccent ? undefined : undefined }}
+        className="freya-card rounded-[12px] w-full max-w-2xl max-h-[92vh] overflow-y-auto
+                   border border-[var(--border)] bg-[var(--surface-raised)] shadow-2xl scrollbar-hide"
         onMouseDown={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="sticky top-0 z-10 rounded-t-2xl px-6 py-5 flex items-center justify-between
-                        border-b border-separator/40 bg-surface/90 backdrop-blur-md">
+        <div className="sticky top-0 z-10 rounded-t-[12px] px-6 py-4 flex items-center justify-between
+                        border-b border-[var(--border)] bg-[var(--surface-raised)] backdrop-blur-md">
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2.5">
-              <span className={`w-3 h-3 rounded-full flex-shrink-0 shadow-sm ${processAccent?.dot ?? "bg-primary"}`} />
-              <h3 className="text-sm sm:text-base font-semibold text-on-surface truncate">
+            <div className="flex items-center gap-2">
+              <span className={`w-2 h-2 rounded-full flex-shrink-0 ${processAccent?.dot ?? "bg-[var(--freya-blue)]"}`} />
+              <h3 className="text-base font-semibold text-[var(--text-primary)] truncate leading-tight">
                 {processName} Process — Record Details
               </h3>
             </div>
-            <p className="text-[11px] text-outline mt-0.5 font-mono ml-5.5">{record["品番"]} / {record["背番号"]}</p>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)] mt-1 font-mono">{record["品番"]} / {record["背番号"]}</p>
           </div>
           <div className="flex items-center gap-2">
             {canEdit && (
               <button
                 type="button"
                 onClick={handleEditClick}
-                className="px-4 py-1.5 rounded-xl bg-primary/10 text-primary font-semibold hover:bg-primary/20 text-xs active:scale-95 transition-all"
+                className="px-3 py-1.5 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] text-[var(--text-primary)] font-semibold hover:border-[var(--border-strong)] hover:bg-[var(--surface-raised)] text-xs transition-colors"
               >
                 Edit
               </button>
@@ -562,17 +560,17 @@ export default function RecordDetailModal({ record, processName, onClose, onLotC
             <button
               onClick={copyLink}
               title="Copy shareable link"
-              className="p-2 rounded-xl hover:bg-surface-container text-outline hover:text-primary transition-all duration-150"
+              className="w-8 h-8 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:border-[var(--border-strong)] flex items-center justify-center transition-colors"
             >
-              <span className="material-symbols-outlined" style={{ fontSize: 18 }}>
+              <span className="material-symbols-outlined" style={{ fontSize: 16 }}>
                 {copied ? "check" : "link"}
               </span>
             </button>
             <button
               onClick={onClose}
-              className="p-2 rounded-xl hover:bg-surface-container text-outline hover:text-on-surface transition-all duration-150"
+              className="w-8 h-8 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:border-[var(--border-strong)] flex items-center justify-center transition-colors"
             >
-              <span className="material-symbols-outlined" style={{ fontSize: 18 }}>close</span>
+              <span className="material-symbols-outlined" style={{ fontSize: 16 }}>close</span>
             </button>
           </div>
         </div>
@@ -580,7 +578,7 @@ export default function RecordDetailModal({ record, processName, onClose, onLotC
         {/* Product image */}
         <div className="px-6 pt-5 pb-2">
           {imageLoading ? (
-            <div className="w-full h-40 rounded-xl bg-surface-container/70 animate-pulse" />
+            <div className="w-full h-40 rounded-[6px] bg-[var(--surface)] border border-[var(--border)] animate-pulse" />
           ) : imageData?.imageURL ? (
             <button
               type="button"
@@ -591,19 +589,19 @@ export default function RecordDetailModal({ record, processName, onClose, onLotC
                 images: [{ url: imageData.imageURL, label: imageData["品名"] ?? record["品番"] ?? "Master image" }],
                 activeIndex: 0,
               })}
-              className="block w-full overflow-hidden rounded-xl border border-separator/40
-                         hover:border-primary/40 hover:shadow-md transition-all duration-150 cursor-zoom-in"
+              className="block w-full overflow-hidden rounded-[6px] border border-[var(--border)]
+                         hover:border-[var(--border-strong)] transition-colors duration-150 cursor-zoom-in"
             >
               <img
                 src={imageData.imageURL}
                 alt={imageData["品名"] ?? record["品番"]}
-                className="w-full max-h-52 object-contain bg-black/20"
+                className="w-full max-h-52 object-contain bg-black/10"
                 onError={(e) => { e.currentTarget.closest("button").classList.add("hidden"); }}
               />
             </button>
           ) : (
-            <div className="w-full h-10 flex items-center justify-center rounded-xl bg-surface-container/40
-                            border border-separator/40 text-[11px] text-outline gap-1.5">
+            <div className="w-full h-10 flex items-center justify-center rounded-[6px] bg-[var(--surface)]
+                            border border-[var(--border)] text-xs text-[var(--text-muted)] gap-1.5">
               <span className="material-symbols-outlined" style={{ fontSize: 14 }}>image_not_supported</span>
               No image available
             </div>
@@ -611,42 +609,42 @@ export default function RecordDetailModal({ record, processName, onClose, onLotC
         </div>
 
         {/* Stats strip */}
-        <div className="grid grid-cols-3 gap-2.5 px-6 py-4 border-b border-separator/40">
+        <div className="grid grid-cols-3 gap-3 px-6 py-4 border-b border-[var(--border)]">
           {[
-            { label: "Total",    value: qty.toLocaleString(), color: "text-on-surface",  bg: "bg-surface-container/60" },
-            { label: "Total NG", value: ng,                   color: ng > 0 ? "text-error" : "text-on-surface", bg: ng > 0 ? "bg-error/8" : "bg-surface-container/60" },
-            { label: "不良率",   value: `${defRate}%`,        color: defColor, bg: "bg-surface-container/60" },
+            { label: "Total",    value: qty.toLocaleString(), color: "text-[var(--text-primary)]",  bg: "bg-[var(--surface)]" },
+            { label: "Total NG", value: ng.toLocaleString(),  color: ng > 0 ? "text-[var(--semantic-error)]" : "text-[var(--text-primary)]", bg: "bg-[var(--surface)]" },
+            { label: "不良率",   value: `${defRate}%`,        color: defColor, bg: "bg-[var(--surface)]" },
           ].map(({ label, value, color, bg }) => (
-            <div key={label} className={`rounded-xl px-3 py-3 text-center border border-separator/40 ${bg}`}>
-              <p className={`text-xl sm:text-2xl font-semibold leading-none ${color}`}>{value}</p>
-              <p className="text-[10px] font-semibold text-outline uppercase tracking-wider mt-1.5">{label}</p>
+            <div key={label} className={`rounded-[6px] px-3.5 py-3 text-center border border-[var(--border)] ${bg}`}>
+              <p className={`text-xl sm:text-2xl font-semibold leading-none freya-tabular ${color}`}>{value}</p>
+              <p className="text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-[0.04em] mt-1.5">{label}</p>
             </div>
           ))}
         </div>
 
         {/* Key metrics */}
-        <div className="px-6 py-4 grid grid-cols-2 gap-x-4 gap-y-3 border-b border-separator/40">
+        <div className="px-6 py-4 grid grid-cols-2 gap-x-4 gap-y-3 border-b border-[var(--border)]">
           {keyFields.map(([label, value, isDefectForce]) => {
             const isDefect = isDefectForce || label.includes("不良");
             const hasDefect = isDefect && Number(value) > 0;
             return (
               <div key={label} className="flex flex-col gap-0.5">
-                <span className={`text-[10px] font-semibold uppercase tracking-wider ${hasDefect ? 'text-error/80' : 'text-outline'}`}>{label}</span>
-                <span className={`text-sm font-semibold ${hasDefect ? 'text-error' : 'text-on-surface'}`}>{value}</span>
+                <span className={`text-[11px] font-semibold uppercase tracking-[0.04em] ${hasDefect ? 'text-[var(--semantic-error)]' : 'text-[var(--text-muted)]'}`}>{label}</span>
+                <span className={`text-sm font-medium freya-tabular ${hasDefect ? 'text-[var(--semantic-error)] font-semibold' : 'text-[var(--text-primary)]'}`}>{value}</span>
               </div>
             );
           })}
           {materialLots.length > 0 ? (
             <div className="flex flex-col gap-1.5 col-span-2">
-              <span className="text-[10px] font-semibold uppercase tracking-wider text-outline">材料ロット</span>
+              <span className="text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">材料ロット</span>
               <div className="flex flex-wrap gap-1.5">
                 {materialLots.map((lot) => (
                   <button
                     key={lot}
                     onClick={() => onLotClick?.(lot)}
-                    className="px-2.5 py-1 rounded-full bg-primary/10 text-primary text-[11px] font-mono font-semibold
-                               hover:bg-primary/22 hover:shadow-sm active:scale-95 transition-all duration-150
-                               border border-primary/25"
+                    className="px-2.5 py-1 rounded-[4px] bg-[var(--surface)] text-[var(--text-primary)] text-xs font-mono font-medium
+                               hover:bg-[var(--surface-raised)] hover:border-[var(--border-strong)] transition-colors duration-150
+                               border border-[var(--border)]"
                   >
                     {lot}
                   </button>
@@ -655,8 +653,8 @@ export default function RecordDetailModal({ record, processName, onClose, onLotC
             </div>
           ) : record["材料ロット"] != null && (
             <div className="flex flex-col gap-0.5">
-              <span className="text-[10px] font-semibold uppercase tracking-wider text-outline">材料ロット</span>
-              <span className="text-sm font-semibold text-on-surface">{record["材料ロット"]}</span>
+              <span className="text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">材料ロット</span>
+              <span className="text-sm font-medium text-[var(--text-primary)] font-mono">{record["材料ロット"]}</span>
             </div>
           )}
         </div>

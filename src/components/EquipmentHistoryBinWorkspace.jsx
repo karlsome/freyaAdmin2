@@ -10,22 +10,24 @@ import SetsubiArchiveWorkspace from "./SetsubiArchiveWorkspace";
 
 function ConfirmModal({ message, onConfirm, onCancel }) {
   return createPortal(
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-black/50 backdrop-blur-md">
-      <div className="flex min-h-full items-start justify-center px-4 pb-4 pt-10">
-        <div className="dashboard-section w-full max-w-sm rounded-2xl overflow-hidden">
-          <div className="px-6 py-6">
-            <p className="text-sm text-on-surface">{message}</p>
-            <div className="mt-6 flex justify-end gap-3">
-              <button type="button" onClick={onCancel}
-                className="rounded-2xl border border-separator/40 px-4 py-2 text-xs font-semibold text-on-surface transition hover:bg-surface-container">
-                Cancel
-              </button>
-              <button type="button" onClick={onConfirm}
-                className="rounded-2xl bg-error px-4 py-2 text-xs font-semibold text-white transition hover:opacity-90">
-                Confirm
-              </button>
-            </div>
-          </div>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
+      <div className="w-full max-w-sm rounded-[12px] border border-[var(--border)] bg-[var(--surface-raised)] p-6 shadow-2xl">
+        <p className="text-sm font-medium text-[var(--text-primary)]">{message}</p>
+        <div className="mt-6 flex justify-end gap-2.5">
+          <button
+            type="button"
+            onClick={onCancel}
+            className="rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs font-semibold text-[var(--text-primary)] transition hover:bg-[var(--surface-hover)]"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={onConfirm}
+            className="rounded-[6px] bg-[var(--status-danger)] px-3 py-1.5 text-xs font-semibold text-white transition hover:opacity-90 shadow-xs"
+          >
+            Confirm
+          </button>
         </div>
       </div>
     </div>,
@@ -100,20 +102,23 @@ export default function EquipmentHistoryBinWorkspace({ refreshToken, onFlash }) 
   }
 
   return (
-    <section className="glass-card rounded-3xl p-6">
+    <div className="freya-card rounded-[8px] border border-[var(--border)] bg-[var(--surface)] p-6 shadow-sm">
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-outline">設備</p>
-          <h3 className="mt-1 text-2xl font-semibold text-on-surface">Maintenance Record Recycle Bin</h3>
-          <p className="mt-1 text-sm text-on-surface-variant">Soft-deleted 事案 records. Restore or permanently delete.</p>
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--text-muted)]">設備</p>
+          <h3 className="mt-1 text-2xl font-semibold text-[var(--text-primary)]">Maintenance Record Recycle Bin</h3>
+          <p className="mt-1 text-sm text-[var(--text-muted)]">Soft-deleted 事案 records. Restore or permanently delete.</p>
         </div>
         <div className="flex items-center gap-3">
           {!loading && (
-            <span className="text-sm text-on-surface-variant">{records.length} records in bin</span>
+            <span className="text-xs text-[var(--text-muted)]">{records.length} records in bin</span>
           )}
-          <button type="button" onClick={() => setArchiveOpen(true)}
-            className="inline-flex items-center gap-1.5 rounded-2xl border border-amber-500/30 bg-amber-500/10 px-4 py-2 text-xs font-semibold text-amber-600 transition hover:bg-amber-500/20">
-            <span className="material-symbols-outlined" style={{ fontSize: 14 }}>inventory_2</span>
+          <button
+            type="button"
+            onClick={() => setArchiveOpen(true)}
+            className="inline-flex items-center gap-1.5 rounded-[6px] border border-amber-500/30 bg-amber-500/10 px-3 py-1.5 text-xs font-semibold text-amber-600 transition hover:bg-amber-500/20"
+          >
+            <span className="material-symbols-outlined" style={{ fontSize: 16 }}>inventory_2</span>
             View Archive
           </button>
         </div>
@@ -126,34 +131,34 @@ export default function EquipmentHistoryBinWorkspace({ refreshToken, onFlash }) 
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Search by 発生事案, 工場, equipment, deleted by, reason…"
-          className="w-full max-w-lg rounded-2xl border border-outline-variant/30 bg-surface px-4 py-2.5 text-sm text-on-surface outline-none transition focus:border-primary/40"
+          className="w-full max-w-lg rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-xs text-[var(--text-primary)] outline-none transition focus:border-[var(--freya-blue)] placeholder:text-[var(--text-muted)]"
         />
       </div>
 
       {loading && (
-        <div className="flex items-center gap-2 py-12 text-sm text-on-surface-variant">
+        <div className="flex items-center gap-2 py-12 text-sm text-[var(--text-muted)]">
           <span className="material-symbols-outlined animate-spin" style={{ fontSize: 18 }}>progress_activity</span>
           読み込み中…
         </div>
       )}
 
       {!loading && error && (
-        <div className="rounded-2xl bg-error/10 px-5 py-4 text-sm font-medium text-error">{error}</div>
+        <div className="rounded-[8px] bg-error/10 border border-error/20 px-4 py-3 text-sm font-medium text-error">{error}</div>
       )}
 
       {!loading && !error && filtered.length === 0 && (
-        <div className="rounded-2xl border border-separator/40 bg-surface px-5 py-10 text-center text-sm text-on-surface-variant">
+        <div className="rounded-[8px] border border-[var(--border)] bg-[var(--surface-subtle)] px-5 py-10 text-center text-sm text-[var(--text-muted)]">
           {records.length === 0 ? "リサイクルビンは空です。" : "No records matched the search."}
         </div>
       )}
 
       {!loading && !error && filtered.length > 0 && (
-        <div className="overflow-hidden rounded-2xl border border-separator/40">
+        <div className="overflow-hidden rounded-[8px] border border-[var(--border)] bg-[var(--surface)]">
           <table className="w-full border-collapse text-sm">
             <thead>
-              <tr className="border-b border-outline-variant/20 bg-surface-container">
+              <tr className="border-b border-[var(--border)] bg-[var(--surface-subtle)]">
                 {["発生事案", "工場 / 設備", "削除日時", "削除者", "理由", ""].map((h) => (
-                  <th key={h} className="px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">
+                  <th key={h} className="px-4 py-3 text-left text-[12px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">
                     {h}
                   </th>
                 ))}
@@ -169,35 +174,43 @@ export default function EquipmentHistoryBinWorkspace({ refreshToken, onFlash }) 
                 const tags = Array.isArray(record.tags) ? record.tags : [];
 
                 return (
-                  <tr key={recordId} className="border-b border-outline-variant/10 bg-surface transition hover:bg-surface-container/50">
+                  <tr key={recordId} className="border-b border-[var(--border)] bg-[var(--surface)] transition hover:bg-[var(--surface-hover)]">
                     <td className="px-4 py-3">
-                      <p className="font-semibold text-on-surface">{record["発生事案"] || "—"}</p>
+                      <p className="font-semibold text-[var(--text-primary)]">{record["発生事案"] || "—"}</p>
                       {tags.length > 0 && (
                         <div className="mt-1 flex flex-wrap gap-1">
                           {tags.map((tag) => (
-                            <span key={tag} className="rounded-full bg-surface-container px-2 py-0.5 text-[10px] font-semibold text-on-surface-variant">
+                            <span key={tag} className="rounded-[4px] bg-[var(--surface-subtle)] border border-[var(--border)] px-2 py-0.5 text-[10px] font-semibold text-[var(--text-muted)]">
                               {tag}
                             </span>
                           ))}
                         </div>
                       )}
                     </td>
-                    <td className="px-4 py-3 text-on-surface-variant">
-                      <div>{record["工場"] || "—"}</div>
+                    <td className="px-4 py-3 text-[var(--text-muted)]">
+                      <div className="text-[var(--text-primary)]">{record["工場"] || "—"}</div>
                       <div className="text-[11px]">{record.equipmentName || ""}</div>
                     </td>
-                    <td className="px-4 py-3 text-on-surface-variant">{deletedAt}</td>
-                    <td className="px-4 py-3 text-on-surface-variant">{record._deletedBy || "—"}</td>
-                    <td className="px-4 py-3 text-on-surface-variant">{record._deleteReason || "—"}</td>
+                    <td className="px-4 py-3 text-[var(--text-muted)]">{deletedAt}</td>
+                    <td className="px-4 py-3 text-[var(--text-muted)]">{record._deletedBy || "—"}</td>
+                    <td className="px-4 py-3 text-[var(--text-muted)]">{record._deleteReason || "—"}</td>
                     <td className="px-4 py-3">
                       <div className="flex items-center justify-end gap-2">
-                        <button type="button" onClick={() => handleRestore(record)} disabled={isBusy}
-                          className="rounded-xl border border-primary/30 bg-primary/10 px-3 py-1.5 text-[11px] font-semibold text-primary transition hover:bg-primary/20 disabled:opacity-50">
+                        <button
+                          type="button"
+                          onClick={() => handleRestore(record)}
+                          disabled={isBusy}
+                          className="rounded-[6px] border border-[var(--freya-blue)]/30 bg-[var(--freya-blue)]/10 px-2.5 py-1 text-xs font-semibold text-[var(--freya-blue)] transition hover:bg-[var(--freya-blue)]/20 disabled:opacity-50"
+                        >
                           {isBusy ? "…" : "Restore"}
                         </button>
                         {canAdmin && (
-                          <button type="button" onClick={() => promptPermanentDelete(record)} disabled={isBusy}
-                            className="rounded-xl border border-error/20 bg-error/10 px-3 py-1.5 text-[11px] font-semibold text-error transition hover:bg-error/20 disabled:opacity-50">
+                          <button
+                            type="button"
+                            onClick={() => promptPermanentDelete(record)}
+                            disabled={isBusy}
+                            className="rounded-[6px] border border-error/20 bg-error/10 px-2.5 py-1 text-xs font-semibold text-error transition hover:bg-error/20 disabled:opacity-50"
+                          >
                             Delete
                           </button>
                         )}
@@ -225,6 +238,6 @@ export default function EquipmentHistoryBinWorkspace({ refreshToken, onFlash }) 
           onClose={() => setArchiveOpen(false)}
         />
       )}
-    </section>
+    </div>
   );
 }

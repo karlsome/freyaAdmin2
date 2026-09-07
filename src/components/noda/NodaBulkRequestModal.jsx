@@ -858,8 +858,8 @@ export default function NodaBulkRequestModal({ open, authUser, onClose, onSubmit
         {step === 1 ? (
           <div className="grid gap-6 xl:grid-cols-[minmax(0,1.1fr)_minmax(360px,0.9fr)]">
             <div className="space-y-6">
-              <div className="glass-card rounded-[28px] p-5">
-                <h3 className="text-base font-semibold text-on-surface">Request Details</h3>
+              <div className="freya-card rounded-[8px] border border-[var(--border)] bg-[var(--surface-subtle)] p-5">
+                <h3 className="text-base font-semibold text-[var(--text-primary)]">Request Details</h3>
                 <div className="mt-4 grid gap-4 md:grid-cols-2">
                   <label className="block">
                     <span className="block text-xs font-semibold uppercase tracking-[0.18em] text-outline">Pickup Date</span>
@@ -900,11 +900,11 @@ export default function NodaBulkRequestModal({ open, authUser, onClose, onSubmit
                 </div>
               </div>
 
-              <div className="glass-card rounded-[28px] p-5">
+              <div className="freya-card rounded-[8px] border border-[var(--border)] bg-[var(--surface-subtle)] p-5">
                 <div className="flex flex-wrap items-center justify-between gap-3">
-                  <h3 className="text-base font-semibold text-on-surface">Add Item</h3>
-                  <label className="inline-flex cursor-pointer items-center gap-2 rounded-2xl border border-dashed border-outline-variant/30 px-4 py-2.5 text-sm font-semibold text-on-surface transition hover:border-primary/40 hover:bg-primary/5">
-                    <span className="material-symbols-outlined" style={{ fontSize: 18 }}>upload_file</span>
+                  <h3 className="text-base font-semibold text-[var(--text-primary)]">Add Item</h3>
+                  <label className="inline-flex cursor-pointer items-center gap-2 rounded-[6px] border border-dashed border-[var(--border-strong)] bg-[var(--surface)] px-3.5 py-1.5 text-xs font-semibold text-[var(--text-primary)] transition hover:border-[var(--freya-blue)]">
+                    <span className="material-symbols-outlined" style={{ fontSize: 16 }}>upload_file</span>
                     {csvBusy ? "Reading CSV…" : "Import CSV"}
                     <input type="file" accept=".csv" className="hidden" onChange={handleCsvUpload} disabled={csvBusy} />
                   </label>
@@ -969,11 +969,11 @@ export default function NodaBulkRequestModal({ open, authUser, onClose, onSubmit
               </div>
             </div>
 
-            <div className="glass-card rounded-[28px] p-5">
+            <div className="freya-card rounded-[8px] border border-[var(--border)] bg-[var(--surface-subtle)] p-5">
               <div className="flex items-center justify-between gap-3">
                 <div>
-                  <h3 className="text-base font-semibold text-on-surface">Cart</h3>
-                  <p className="mt-1 text-sm text-on-surface-variant">{cartCount} item{cartCount === 1 ? "" : "s"} ready for review</p>
+                  <h3 className="text-base font-semibold text-[var(--text-primary)]">Cart</h3>
+                  <p className="mt-0.5 text-xs text-[var(--text-muted)]">{cartCount} item{cartCount === 1 ? "" : "s"} ready for review</p>
                 </div>
                 {draft.cart.length ? (
                   <button
@@ -1026,11 +1026,11 @@ export default function NodaBulkRequestModal({ open, authUser, onClose, onSubmit
         ) : null}
 
         {step === 2 ? (
-          <div className="glass-card rounded-[28px] p-5">
+          <div className="freya-card rounded-[8px] border border-[var(--border)] bg-[var(--surface-subtle)] p-5">
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
-                <h3 className="text-base font-semibold text-on-surface">Inventory Review</h3>
-                <p className="mt-1 text-sm text-on-surface-variant">
+                <h3 className="text-base font-semibold text-[var(--text-primary)]">Inventory Review</h3>
+                <p className="mt-0.5 text-xs text-[var(--text-muted)]">
                   Pickup date {draft.pickupDate} • Deadline {draft.deadlineDate}
                 </p>
               </div>
@@ -1082,8 +1082,8 @@ export default function NodaBulkRequestModal({ open, authUser, onClose, onSubmit
 
         {step === 3 ? (
           <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
-            <div className="glass-card rounded-[28px] p-5">
-              <h3 className="text-base font-semibold text-on-surface">Submission Summary</h3>
+            <div className="freya-card rounded-[8px] border border-[var(--border)] bg-[var(--surface-subtle)] p-5">
+              <h3 className="text-base font-semibold text-[var(--text-primary)]">Submission Summary</h3>
               <div className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
                 <div className="rounded-[24px] border border-outline-variant/15 bg-surface-container-low/35 p-4">
                   <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Pickup Date</p>
@@ -1129,8 +1129,8 @@ export default function NodaBulkRequestModal({ open, authUser, onClose, onSubmit
               </div>
             </div>
 
-            <div className="glass-card rounded-[28px] p-5">
-              <h3 className="text-base font-semibold text-on-surface">Final Check</h3>
+            <div className="freya-card rounded-[8px] border border-[var(--border)] bg-[var(--surface-subtle)] p-5">
+              <h3 className="text-base font-semibold text-[var(--text-primary)]">Final Check</h3>
               <div className="mt-4 space-y-4 text-sm text-on-surface-variant">
                 <p>
                   The request will be created as a bulk Noda picking request. Items with shortfall remain attached to the request and will be filled when inventory becomes available.

@@ -232,7 +232,7 @@ export default function FactoryDBWorkspace({ refreshToken, onFlash }) {
               type="button"
               onClick={() => openEditModal(record)}
               disabled={!canEdit}
-              className="inline-flex items-center justify-center rounded-2xl border border-outline-variant/30 bg-surface px-3 py-2 text-xs font-semibold text-on-surface transition hover:bg-surface-container disabled:cursor-not-allowed disabled:opacity-40"
+              className="inline-flex items-center justify-center rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1 text-xs font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-hover)] transition-colors shadow-2xs disabled:cursor-not-allowed disabled:opacity-40"
             >
               Edit
             </button>
@@ -240,7 +240,7 @@ export default function FactoryDBWorkspace({ refreshToken, onFlash }) {
               type="button"
               onClick={() => handleDeleteFactory(record)}
               disabled={!canEdit || deleteBusyId === recordId}
-              className="inline-flex items-center justify-center rounded-2xl border border-destructive/20 bg-destructive/10 px-3 py-2 text-xs font-semibold text-destructive transition hover:bg-destructive/20 disabled:cursor-not-allowed disabled:opacity-40"
+              className="inline-flex items-center justify-center rounded-[6px] border border-[var(--status-danger)]/30 bg-[var(--status-danger)]/10 px-2.5 py-1 text-xs font-semibold text-[var(--status-danger)] hover:bg-[var(--status-danger)]/20 transition-colors shadow-2xs disabled:cursor-not-allowed disabled:opacity-40"
             >
               {deleteBusyId === recordId ? "Deleting…" : "Delete"}
             </button>
@@ -251,21 +251,21 @@ export default function FactoryDBWorkspace({ refreshToken, onFlash }) {
   ];
 
   return (
-    <section className="dashboard-section rounded-2xl p-6">
+    <div className="freya-card rounded-[8px] border border-[var(--border)] bg-[var(--surface)] p-6 shadow-sm">
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-outline">工場</p>
-          <h3 className="mt-1 text-2xl font-semibold text-on-surface">Factory Master List</h3>
+          <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--text-muted)]">工場</p>
+          <h3 className="mt-1 text-xl font-bold tracking-tight text-[var(--text-primary)]">Factory Master List</h3>
         </div>
         <div className="flex flex-col gap-3 sm:items-end sm:flex-row sm:gap-4">
-          <div className="text-sm text-on-surface-variant">
+          <div className="text-xs font-medium text-[var(--text-muted)]">
             {records.length ? `${records.length} factories loaded` : "No factory records available."}
           </div>
           {canEdit ? (
             <button
               type="button"
               onClick={openCreateModal}
-              className="inline-flex items-center justify-center rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-on-primary hover:opacity-90 active:scale-95 transition-all duration-150"
+              className="inline-flex items-center justify-center rounded-[6px] bg-[var(--freya-blue)] px-3.5 py-2 text-xs font-semibold text-white hover:bg-[var(--freya-blue-hover)] active:scale-[0.98] transition-all shadow-xs"
             >
               Add Factory
             </button>
@@ -292,8 +292,8 @@ export default function FactoryDBWorkspace({ refreshToken, onFlash }) {
         layoutStorageKey="freyaAdmin2.factoryDBTableLayout"
         stickyHeader
         className="overflow-hidden"
-        topBarClassName="flex flex-col gap-4 border-b border-outline-variant/15 px-5 py-4 md:flex-row md:items-center md:justify-between"
-        bottomBarClassName="flex flex-col gap-4 border-t border-outline-variant/15 px-5 py-4 md:flex-row md:items-center md:justify-between"
+        topBarClassName="flex flex-col gap-4 border-b border-[var(--border)] px-5 py-4 md:flex-row md:items-center md:justify-between"
+        bottomBarClassName="flex flex-col gap-4 border-t border-[var(--border)] px-5 py-4 md:flex-row md:items-center md:justify-between"
         rowKey={(row, rowIndex) => {
           if (row?._id) {
             if (typeof row._id === "string") return row._id;
@@ -312,27 +312,26 @@ export default function FactoryDBWorkspace({ refreshToken, onFlash }) {
       />
 
       {successModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-md">
-          <div className="flex min-h-full items-center justify-center p-4">
-            <div className="dashboard-section w-full max-w-md rounded-2xl overflow-hidden">
-              <div className="border-b border-separator/40 px-6 py-5">
-                <h3 className="text-2xl font-semibold text-on-surface">Success</h3>
-              </div>
-              <div className="px-6 py-6">
-                <p className="text-sm text-on-surface-variant">{successMessage}</p>
-                <div className="mt-6 flex justify-end">
-                  <button
-                    onClick={() => setSuccessModalOpen(false)}
-                    className="rounded-xl bg-primary px-4 py-2 text-xs font-semibold text-on-primary hover:opacity-90 active:scale-95 transition-all duration-150"
-                  >
-                    OK
-                  </button>
-                </div>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
+          <div className="w-full max-w-md rounded-[12px] border border-[var(--border)] bg-[var(--surface-raised)] shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+            <div className="border-b border-[var(--border)] px-5 py-4">
+              <h3 className="text-base font-bold text-[var(--text-primary)]">Success</h3>
+            </div>
+            <div className="p-5">
+              <p className="text-xs text-[var(--text-secondary)]">{successMessage}</p>
+              <div className="mt-5 flex justify-end">
+                <button
+                  type="button"
+                  onClick={() => setSuccessModalOpen(false)}
+                  className="rounded-[6px] bg-[var(--freya-blue)] px-4 py-1.5 text-xs font-semibold text-white hover:bg-[var(--freya-blue-hover)] active:scale-[0.98] transition-all shadow-xs"
+                >
+                  OK
+                </button>
               </div>
             </div>
           </div>
         </div>
       )}
-    </section>
+    </div>
   );
 }

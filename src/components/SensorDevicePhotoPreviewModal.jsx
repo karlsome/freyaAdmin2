@@ -119,7 +119,7 @@ export default function SensorDevicePhotoPreviewModal({ preview, onClose, onNavi
 
   return createPortal(
     <div
-      className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 p-4 backdrop-blur-md animate-[fadeIn_0.15s_ease-out]"
+      className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm animate-[fadeIn_0.15s_ease-out]"
       onMouseDown={(event) => {
         if (event.target === event.currentTarget) onClose();
       }}
@@ -129,41 +129,41 @@ export default function SensorDevicePhotoPreviewModal({ preview, onClose, onNavi
         aria-modal="true"
         aria-label={`Photos for ${title}`}
         onMouseDown={(event) => event.stopPropagation()}
-        className="dashboard-section flex max-h-[92vh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl"
+        className="freya-card flex max-h-[92vh] w-full max-w-5xl flex-col overflow-hidden rounded-[12px] border border-[var(--border)] bg-[var(--surface-raised)] shadow-2xl"
       >
-        <div className="sticky top-0 z-10 flex items-start justify-between gap-4 rounded-t-2xl border-b border-separator/40 bg-surface/90 px-6 py-5 backdrop-blur-md">
+        <div className="sticky top-0 z-10 flex items-start justify-between gap-4 border-b border-[var(--border)] bg-[var(--surface-raised)] px-6 py-4">
           <div className="min-w-0 flex-1">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">{eyebrow}</p>
-            <h2 className="mt-1 truncate text-xl font-semibold text-on-surface">{title}</h2>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">{eyebrow}</p>
+            <h2 className="mt-0.5 truncate text-base font-semibold text-[var(--text-primary)]">{title}</h2>
             {subtitleParts.length > 0 ? (
-              <p className="mt-1 text-sm text-on-surface-variant">{subtitleParts.join(" • ")}</p>
+              <p className="mt-0.5 text-xs text-[var(--text-muted)]">{subtitleParts.join(" • ")}</p>
             ) : null}
           </div>
 
           <button
             type="button"
             onClick={onClose}
-            className="rounded-xl p-2 text-outline transition-all duration-150 hover:bg-surface-container hover:text-on-surface"
+            className="w-8 h-8 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:border-[var(--border-strong)] flex items-center justify-center transition-colors flex-shrink-0"
             aria-label="Close photo preview"
           >
-            <span className="material-symbols-outlined" style={{ fontSize: 18 }}>close</span>
+            <span className="material-symbols-outlined" style={{ fontSize: 16 }}>close</span>
           </button>
         </div>
 
-        <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5 space-y-4">
-          <div className="relative overflow-hidden rounded-2xl border border-separator/40 bg-surface-container">
-            <div className="flex min-h-[52vh] items-center justify-center bg-surface-container px-4 py-4 w-full h-full overflow-hidden">
+        <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5 space-y-3.5">
+          <div className="relative overflow-hidden rounded-[8px] border border-[var(--border)] bg-[var(--surface-subtle)]">
+            <div className="flex min-h-[52vh] items-center justify-center bg-[var(--surface-subtle)] px-4 py-4 w-full h-full overflow-hidden">
               {isVideoUrl(activeImage.url) ? (
                 <video
                   src={activeImage.url}
                   controls
                   autoPlay
-                  className="max-h-[70vh] max-w-full rounded-[24px] object-contain shadow-2xl"
+                  className="max-h-[70vh] max-w-full rounded-[8px] object-contain shadow-md"
                 />
               ) : isPdfUrl(activeImage.url) ? (
                 <iframe 
                   src={activeImage.url} 
-                  className="w-full h-[70vh] rounded-[24px] shadow-2xl bg-white" 
+                  className="w-full h-[70vh] rounded-[8px] shadow-md bg-white" 
                   title={activeImage.label || title || "PDF Preview"} 
                 />
               ) : (
@@ -182,7 +182,7 @@ export default function SensorDevicePhotoPreviewModal({ preview, onClose, onNavi
                   onClick={() => onNavigate(-1)}
                   disabled={!canGoPrevious}
                   aria-label="Show previous image"
-                  className="absolute left-4 top-1/2 z-10 -translate-y-1/2 rounded-xl border border-separator/40 bg-surface/90 p-2 text-on-surface transition-all duration-150 hover:border-primary/30 hover:bg-surface-container hover:text-primary disabled:cursor-not-allowed disabled:opacity-40"
+                  className="absolute left-3 top-1/2 z-10 -translate-y-1/2 rounded-[6px] border border-[var(--border)] bg-[var(--surface)]/90 p-1.5 text-[var(--text-primary)] shadow-xs transition-colors hover:bg-[var(--surface-hover)] disabled:cursor-not-allowed disabled:opacity-40"
                 >
                   <span className="material-symbols-outlined" style={{ fontSize: 18 }}>chevron_left</span>
                 </button>
@@ -192,7 +192,7 @@ export default function SensorDevicePhotoPreviewModal({ preview, onClose, onNavi
                   onClick={() => onNavigate(1)}
                   disabled={!canGoNext}
                   aria-label="Show next image"
-                  className="absolute right-4 top-1/2 z-10 -translate-y-1/2 rounded-xl border border-separator/40 bg-surface/90 p-2 text-on-surface transition-all duration-150 hover:border-primary/30 hover:bg-surface-container hover:text-primary disabled:cursor-not-allowed disabled:opacity-40"
+                  className="absolute right-3 top-1/2 z-10 -translate-y-1/2 rounded-[6px] border border-[var(--border)] bg-[var(--surface)]/90 p-1.5 text-[var(--text-primary)] shadow-xs transition-colors hover:bg-[var(--surface-hover)] disabled:cursor-not-allowed disabled:opacity-40"
                 >
                   <span className="material-symbols-outlined" style={{ fontSize: 18 }}>chevron_right</span>
                 </button>
@@ -200,13 +200,13 @@ export default function SensorDevicePhotoPreviewModal({ preview, onClose, onNavi
             ) : null}
           </div>
 
-          <div className="rounded-2xl border border-outline-variant/15 bg-surface-container-low px-4 py-4">
+          <div className="rounded-[8px] border border-[var(--border)] bg-[var(--surface)] px-4 py-3">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
-                <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Current File</p>
-                <p className="mt-1 text-sm font-semibold text-on-surface">{activeImage.label || `File ${activeIndex + 1}`}</p>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">Current File</p>
+                <p className="mt-0.5 text-xs font-semibold text-[var(--text-primary)]">{activeImage.label || `File ${activeIndex + 1}`}</p>
               </div>
-              <p className="text-[11px] text-outline">
+              <p className="text-[11px] text-[var(--text-muted)]">
                 {hasMultipleImages
                   ? `Use the left and right arrow keys to browse all ${images.length} files.`
                   : "Press Escape to close this preview."}
@@ -215,20 +215,20 @@ export default function SensorDevicePhotoPreviewModal({ preview, onClose, onNavi
           </div>
         </div>
 
-        <div className="flex flex-col gap-3 border-t border-outline-variant/20 bg-surface-container-low/50 px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-[11px] text-outline">
+        <div className="flex flex-col gap-3 border-t border-[var(--border)] bg-[var(--surface-raised)] px-6 py-3.5 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-[11px] font-mono text-[var(--text-muted)]">
             {hasMultipleImages
               ? `File ${activeIndex + 1} of ${images.length}`
               : "Single file attached"}
           </p>
 
-          <div className="flex flex-wrap items-center justify-end gap-3">
+          <div className="flex flex-wrap items-center justify-end gap-2.5">
             {hasMultipleImages ? (
               <button
                 type="button"
                 onClick={() => onNavigate(-1)}
                 disabled={!canGoPrevious}
-                className="rounded-xl border border-separator/40 px-4 py-2 text-xs font-semibold text-on-surface-variant transition-all duration-150 hover:border-primary/30 hover:bg-surface-container hover:text-primary active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
+                className="rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-hover)] shadow-2xs transition-colors disabled:cursor-not-allowed disabled:opacity-40"
               >
                 Previous
               </button>
@@ -239,7 +239,7 @@ export default function SensorDevicePhotoPreviewModal({ preview, onClose, onNavi
                 type="button"
                 onClick={() => onNavigate(1)}
                 disabled={!canGoNext}
-                className="rounded-xl border border-separator/40 px-4 py-2 text-xs font-semibold text-on-surface-variant transition-all duration-150 hover:border-primary/30 hover:bg-surface-container hover:text-primary active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
+                className="rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-hover)] shadow-2xs transition-colors disabled:cursor-not-allowed disabled:opacity-40"
               >
                 Next
               </button>
@@ -249,7 +249,7 @@ export default function SensorDevicePhotoPreviewModal({ preview, onClose, onNavi
               href={activeImage.url}
               target="_blank"
               rel="noreferrer"
-              className="rounded-xl border border-separator/40 px-4 py-2 text-xs font-semibold text-on-surface-variant transition-all duration-150 hover:border-primary/30 hover:bg-surface-container hover:text-primary active:scale-95"
+              className="rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-hover)] shadow-2xs transition-colors"
             >
               Open File
             </a>
@@ -258,7 +258,7 @@ export default function SensorDevicePhotoPreviewModal({ preview, onClose, onNavi
               type="button"
               onClick={handleDownload}
               disabled={isDownloading}
-              className="inline-flex items-center gap-1.5 rounded-xl bg-primary px-4 py-2 text-xs font-semibold text-on-primary transition-all duration-150 hover:opacity-90 active:scale-95 cursor-pointer disabled:opacity-50"
+              className="inline-flex items-center gap-1.5 rounded-[6px] bg-[var(--freya-blue)] px-3.5 py-1.5 text-xs font-semibold text-white hover:bg-[var(--freya-blue-hover)] shadow-xs transition-colors disabled:opacity-50"
             >
               {isDownloading && (
                 <span className="material-symbols-outlined animate-spin" style={{ fontSize: 14 }}>

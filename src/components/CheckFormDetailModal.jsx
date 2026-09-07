@@ -74,24 +74,24 @@ async function resolveActorName(username) {
 
 function SummaryCard({ icon, label, value }) {
   return (
-    <div className="rounded-2xl border border-separator/40 bg-surface px-4 py-3">
-      <div className="flex items-center gap-2 text-outline">
-        <span className="material-symbols-outlined text-primary" style={{ fontSize: 16 }}>{icon}</span>
-        <span className="text-[10px] font-semibold uppercase tracking-[0.18em]">{label}</span>
+    <div className="rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-4 py-3">
+      <div className="flex items-center gap-1.5 text-[var(--text-muted)]">
+        <span className="material-symbols-outlined text-[var(--freya-blue)]" style={{ fontSize: 16 }}>{icon}</span>
+        <span className="text-[10px] font-semibold uppercase tracking-[0.04em]">{label}</span>
       </div>
-      <p className="mt-2 text-sm font-semibold text-on-surface">{value}</p>
+      <p className="mt-1 text-xs font-semibold text-[var(--text-primary)]">{value}</p>
     </div>
   );
 }
 
 function ActivityItem({ icon, label, value }) {
   return (
-    <div className="rounded-2xl border border-separator/40 bg-surface px-4 py-3">
-      <div className="flex items-center gap-2 text-outline">
-        <span className="material-symbols-outlined text-primary" style={{ fontSize: 16 }}>{icon}</span>
-        <span className="text-[10px] font-semibold uppercase tracking-[0.18em]">{label}</span>
+    <div className="rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-4 py-3">
+      <div className="flex items-center gap-1.5 text-[var(--text-muted)]">
+        <span className="material-symbols-outlined text-[var(--freya-blue)]" style={{ fontSize: 16 }}>{icon}</span>
+        <span className="text-[10px] font-semibold uppercase tracking-[0.04em]">{label}</span>
       </div>
-      <p className="mt-2 text-sm font-semibold text-on-surface">{value}</p>
+      <p className="mt-1 text-xs font-semibold text-[var(--text-primary)]">{value}</p>
     </div>
   );
 }
@@ -111,21 +111,21 @@ function FieldRow({ field, order, onPreviewImage, language }) {
     : (field.description_en || field.description || field.description_ja);
 
   return (
-    <div className="rounded-2xl border border-separator/40 bg-surface px-4 py-3">
+    <div className="rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3.5 py-3">
       <div className="flex items-start gap-3">
         <div className="flex min-w-0 flex-1 items-start gap-3">
-          <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-2xl bg-surface-container text-sm font-semibold text-on-surface">
+          <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] text-xs font-semibold text-[var(--text-primary)]">
             {orderLabel}
           </span>
-          <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary">
-            {renderFieldTypeGlyph(typeMeta, 18)}
+          <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-[6px] bg-[var(--freya-blue)]/10 text-[var(--freya-blue)]">
+            {renderFieldTypeGlyph(typeMeta, 16)}
           </span>
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2">
-              <p className="truncate text-sm font-semibold text-on-surface">{fieldLabel}</p>
+              <p className="truncate text-xs font-semibold text-[var(--text-primary)]">{fieldLabel}</p>
             </div>
             {fieldDescription ? (
-              <p className="mt-1 text-xs leading-5 text-outline whitespace-pre-line">{fieldDescription}</p>
+              <p className="mt-0.5 text-xs leading-relaxed text-[var(--text-muted)] whitespace-pre-line">{fieldDescription}</p>
             ) : null}
           </div>
         </div>
@@ -140,23 +140,23 @@ function FieldRow({ field, order, onPreviewImage, language }) {
                 images: [{ url: field.imageURL, label: fieldLabel }],
                 activeIndex: 0,
               })}
-              className="flex h-12 w-12 overflow-hidden rounded-2xl border border-separator/40 bg-surface-container transition hover:border-primary/35 hover:shadow-[0_8px_20px_rgba(67,97,238,0.14)]"
+              className="flex h-10 w-10 overflow-hidden rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] transition hover:border-[var(--freya-blue)] hover:shadow-sm"
               aria-label={`Preview reference image for ${fieldLabel}`}
             >
               <img src={field.imageURL} alt={fieldLabel} className="h-full w-full object-cover" />
             </button>
           ) : (
-            <span className="h-12 w-12" aria-hidden="true" />
+            <span className="h-10 w-10" aria-hidden="true" />
           )}
 
-          <span className="inline-flex rounded-full bg-primary/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-primary">
+          <span className="inline-flex rounded-[6px] bg-[var(--freya-blue)]/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[var(--freya-blue)]">
             {isJa ? (typeMeta.label_ja || typeMeta.label) : typeMeta.label}
           </span>
         </div>
       </div>
-      <div className="mt-3 flex flex-wrap gap-2 text-[11px] font-semibold">
+      <div className="mt-2.5 flex flex-wrap gap-1.5 text-[11px] font-semibold">
         {field.type !== "name" ? (
-          <span className={`rounded-full px-2.5 py-1 ${
+          <span className={`rounded-[6px] px-2 py-0.5 ${
             field.timing === "post"
               ? "bg-amber-500/10 text-amber-700 dark:text-amber-400"
               : "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400"
@@ -165,27 +165,27 @@ function FieldRow({ field, order, onPreviewImage, language }) {
           </span>
         ) : null}
         {field.required ? (
-          <span className="rounded-full bg-error/10 px-2.5 py-1 text-error">
+          <span className="rounded-[6px] bg-[var(--status-danger)]/10 px-2 py-0.5 text-[var(--status-danger)]">
             {isJa ? "必須" : "Required"}
           </span>
         ) : null}
         {field.photoRequired ? (
-          <span className="rounded-full bg-surface-container px-2.5 py-1 text-on-surface">
+          <span className="rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] px-2 py-0.5 text-[var(--text-secondary)]">
             {isJa ? "写真必須" : "Photo required"}
           </span>
         ) : null}
         {field.unit ? (
-          <span className="rounded-full bg-surface-container px-2.5 py-1 text-on-surface">
+          <span className="rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] px-2 py-0.5 text-[var(--text-secondary)]">
             {isJa ? `単位: ${field.unit}` : `Unit: ${field.unit}`}
           </span>
         ) : null}
         {hasRange ? (
-          <span className="rounded-full bg-surface-container px-2.5 py-1 text-on-surface">
+          <span className="rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] px-2 py-0.5 text-[var(--text-secondary)]">
             {isJa ? `範囲: ${field.min != null ? field.min : "—"} - ${field.max != null ? field.max : "—"}` : `Range: ${field.min != null ? field.min : "—"} - ${field.max != null ? field.max : "—"}`}
           </span>
         ) : null}
         {field.type === "select" && Array.isArray(field.options) && field.options.length > 0 ? (
-          <span className="rounded-full bg-surface-container px-2.5 py-1 text-on-surface">
+          <span className="rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] px-2 py-0.5 text-[var(--text-secondary)]">
             {isJa ? `${field.options.length} 個の選択肢` : `${field.options.length} options`}
           </span>
         ) : null}
@@ -255,61 +255,61 @@ export default function CheckFormDetailModal({
 
   const modal = (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-md"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm"
       onMouseDown={(event) => {
         if (event.target === event.currentTarget) onClose();
       }}
     >
-      <div className="relative flex max-h-[90vh] w-full max-w-4xl flex-col overflow-hidden rounded-2xl dashboard-section">
-        <div className="flex items-start justify-between border-b border-separator/40 px-6 py-5">
+      <div className="relative flex max-h-[90vh] w-full max-w-4xl flex-col overflow-hidden rounded-[12px] border border-[var(--border)] bg-[var(--surface-raised)] shadow-2xl">
+        <div className="flex items-start justify-between border-b border-[var(--border)] px-6 py-4">
           <div className="min-w-0 flex-1 pr-4">
-            <div className="mb-2 flex flex-wrap items-center gap-2">
-              <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-primary">
+            <div className="mb-1.5 flex flex-wrap items-center gap-1.5">
+              <span className="inline-flex items-center gap-1 rounded-[6px] border border-[var(--freya-blue)]/30 bg-[var(--freya-blue)]/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[var(--freya-blue)]">
                 <span className="material-symbols-outlined" style={{ fontSize: 12 }}>{scheduleMeta?.icon || "event_busy"}</span>
                 {scheduleMeta?.label || form.schedule || (isJa ? "未スケジュール" : "Unscheduled")}
               </span>
-              <span className={`inline-flex rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide ${STATUS_STYLES[form.status] ?? STATUS_STYLES.draft}`}>
+              <span className={`inline-flex rounded-[6px] border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${STATUS_STYLES[form.status] ?? STATUS_STYLES.draft}`}>
                 {statusLabel}
               </span>
             </div>
-            <h2 className="text-xl font-semibold text-on-surface">{formName}</h2>
-            <p className="mt-2 max-w-3xl text-sm leading-6 text-outline whitespace-pre-line">
+            <h2 className="text-lg font-bold text-[var(--text-primary)]">{formName}</h2>
+            <p className="mt-1 max-w-3xl text-xs leading-relaxed text-[var(--text-muted)] whitespace-pre-line">
               {formDescription || (isJa ? "この点検フォームの説明はまだ追加されていません。" : "No description has been added for this checklist form yet.")}
             </p>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="p-2 rounded-xl flex-shrink-0 text-outline hover:bg-surface-container hover:text-on-surface transition-all duration-150 active:scale-95"
+            className="flex h-7 w-7 items-center justify-center rounded-[6px] text-[var(--text-muted)] transition-colors hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)]"
           >
             <span className="material-symbols-outlined" style={{ fontSize: 18 }}>close</span>
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto px-6 py-5">
-          <div className="grid gap-3 md:grid-cols-3">
+        <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
+          <div className="grid gap-2.5 md:grid-cols-3">
             <SummaryCard icon="factory" label={isJa ? "工場" : "Factory"} value={form.工場 || (isJa ? "未設定" : "Unassigned")} />
             <SummaryCard icon="event" label={isJa ? "開始日" : "Start Date"} value={formatDate(form.startDate, language)} />
             <SummaryCard icon="list" label={isJa ? "点検項目数" : "Fields"} value={isJa ? `${form.fields?.length ?? 0} 項目` : `${form.fields?.length ?? 0} checks`} />
           </div>
 
-          <section className="mt-5 rounded-2xl border border-separator/40 bg-surface-container/40 p-4">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">{isJa ? "対象設備" : "Applies To"}</p>
-            <div className="mt-3">
-              <p className="text-sm font-semibold text-on-surface">{isJa ? "設備一覧" : "Machines"}</p>
-              <div className="mt-2 flex flex-wrap gap-2">
+          <section className="rounded-[8px] border border-[var(--border)] bg-[var(--surface-subtle)] p-4">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">{isJa ? "対象設備" : "Applies To"}</p>
+            <div className="mt-2">
+              <p className="text-xs font-semibold text-[var(--text-primary)]">{isJa ? "設備一覧" : "Machines"}</p>
+              <div className="mt-1.5 flex flex-wrap gap-1.5">
                 {machineNames.length > 0 ? (
                   machineNames.map((machineName) => (
                     <span
                       key={machineName}
-                      className="inline-flex items-center gap-1 rounded-full border border-separator/40 bg-surface px-3 py-1.5 text-xs font-semibold text-on-surface"
+                      className="inline-flex items-center gap-1 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1 text-xs font-semibold text-[var(--text-primary)]"
                     >
-                      <span className="material-symbols-outlined text-primary" style={{ fontSize: 14 }}>precision_manufacturing</span>
+                      <span className="material-symbols-outlined text-[var(--freya-blue)]" style={{ fontSize: 14 }}>precision_manufacturing</span>
                       {machineName}
                     </span>
                   ))
                 ) : (
-                  <span className="inline-flex items-center gap-1 rounded-full border border-dashed border-separator/40 bg-surface px-3 py-1.5 text-xs font-semibold text-outline">
+                  <span className="inline-flex items-center gap-1 rounded-[6px] border border-dashed border-[var(--border)] bg-[var(--surface)] px-2.5 py-1 text-xs font-semibold text-[var(--text-muted)]">
                     <span className="material-symbols-outlined" style={{ fontSize: 14 }}>precision_manufacturing</span>
                     {isJa ? "設備が割り当てられていません" : "No machines assigned"}
                   </span>
@@ -318,9 +318,9 @@ export default function CheckFormDetailModal({
             </div>
           </section>
 
-          <section className="mt-5 rounded-2xl border border-separator/40 bg-surface-container/40 p-4">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">{isJa ? "アクティビティ" : "Activity"}</p>
-            <div className="mt-3 grid gap-3 md:grid-cols-2">
+          <section className="rounded-[8px] border border-[var(--border)] bg-[var(--surface-subtle)] p-4">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">{isJa ? "アクティビティ" : "Activity"}</p>
+            <div className="mt-2 grid gap-2.5 md:grid-cols-2">
               <ActivityItem icon="person" label={isJa ? "作成者" : "Created By"} value={createdByName || form.createdBy || (isJa ? "不明なユーザー" : "Unknown user")} />
               <ActivityItem icon="schedule" label={isJa ? "作成日時" : "Created At"} value={formatDateTime(form.createdAt, language)} />
               <ActivityItem icon="edit" label={isJa ? "最終編集者" : "Last Edited By"} value={hasEdits ? (updatedByName || form.updatedBy || (isJa ? "不明なユーザー" : "Unknown user")) : (isJa ? "未編集" : "Not edited yet")} />
@@ -328,19 +328,19 @@ export default function CheckFormDetailModal({
             </div>
           </section>
 
-          <section className="mt-5 rounded-2xl border border-separator/40 bg-surface-container/40 p-4">
+          <section className="rounded-[8px] border border-[var(--border)] bg-[var(--surface-subtle)] p-4">
             <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
               <div>
-                <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">{isJa ? "点検項目" : "Checks"}</p>
-                <p className="mt-1 text-sm text-outline">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">{isJa ? "点検項目" : "Checks"}</p>
+                <p className="mt-0.5 text-xs text-[var(--text-muted)]">
                   {isJa ? "編集前にこのフォームに含まれる項目を確認してください。" : "Review the fields included in this form before editing."}
                 </p>
               </div>
-              <p className="text-xs font-semibold text-primary">
+              <p className="text-xs font-semibold text-[var(--freya-blue)]">
                 {isJa ? `合計 ${form.fields?.length ?? 0} 項目` : `${form.fields?.length ?? 0} checks total`}
               </p>
             </div>
-            <div className="mt-4 space-y-2">
+            <div className="mt-3 space-y-2">
               {(form.fields ?? []).map((field, index) => (
                 <FieldRow
                   key={field.id || field.label}
@@ -354,8 +354,8 @@ export default function CheckFormDetailModal({
           </section>
         </div>
 
-        <div className="flex flex-col gap-3 border-t border-separator/40 px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-xs leading-5 text-outline">
+        <div className="flex flex-col gap-3 border-t border-[var(--border)] bg-[var(--surface)] px-6 py-3 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-xs text-[var(--text-muted)]">
             {isJa ? "このフォームを編集・複製して、適用設備、周期、メタデータ、または点検項目を更新します。" : "Edit or clone this form to update machine scope, cadence, metadata, or checklist fields."}
           </p>
           <div className="flex items-center gap-2">
@@ -363,18 +363,18 @@ export default function CheckFormDetailModal({
               <button
                 type="button"
                 onClick={() => onClone(form)}
-                className="inline-flex items-center justify-center gap-2 rounded-xl border border-outline-variant/30 bg-surface-container px-4 py-2.5 text-sm font-semibold text-on-surface hover:bg-surface-container-high transition-all duration-150 active:scale-95"
+                className="inline-flex items-center justify-center gap-1.5 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-hover)] transition-colors"
               >
-                <span className="material-symbols-outlined" style={{ fontSize: 18 }}>copy_all</span>
+                <span className="material-symbols-outlined" style={{ fontSize: 16 }}>copy_all</span>
                 {isJa ? "複製" : "Clone"}
               </button>
             )}
             <button
               type="button"
               onClick={onEdit}
-              className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-on-primary hover:opacity-90 active:scale-95 transition-all duration-150"
+              className="inline-flex items-center justify-center gap-1.5 rounded-[6px] bg-[var(--freya-blue)] px-3 py-1.5 text-xs font-semibold text-white hover:bg-[var(--freya-blue-hover)] transition-colors"
             >
-              <span className="material-symbols-outlined" style={{ fontSize: 18 }}>edit</span>
+              <span className="material-symbols-outlined" style={{ fontSize: 16 }}>edit</span>
               {isJa ? "フォームを編集" : "Edit Form"}
             </button>
           </div>

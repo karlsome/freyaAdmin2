@@ -62,7 +62,7 @@ export default function MaterialPDFList({
               type="checkbox"
               checked={selectedIds.has(documentId)}
               onChange={() => onToggleItemSelection(documentId)}
-              className="h-4 w-4 rounded border-outline-variant/40"
+              className="h-4 w-4 rounded-[4px] border-[var(--border)] text-[var(--freya-blue)] focus:ring-0"
             />
           </div>
         );
@@ -73,7 +73,7 @@ export default function MaterialPDFList({
       label: "図番",
       sortKey: "zuban",
       width: 260,
-      renderCell: (row) => <span className="font-semibold text-on-surface">{formatMaterialPDFTitle(row, 6)}</span>,
+      renderCell: (row) => <span className="font-semibold text-[var(--text-primary)]">{formatMaterialPDFTitle(row, 6)}</span>,
       getCellTitle: (row) => formatMaterialPDFTitle(row, 20),
     },
     {
@@ -121,12 +121,12 @@ export default function MaterialPDFList({
       width: 172,
       align: "right",
       renderCell: (row) => (
-        <div className="flex items-center justify-end gap-2">
+        <div className="flex items-center justify-end gap-1.5">
           <button
             type="button"
             onClick={() => onPreviewItem(row)}
             disabled={!row?.imageURL}
-            className="rounded-xl border border-outline-variant/20 px-3 py-1.5 text-xs font-semibold text-on-surface transition hover:bg-surface-container disabled:cursor-not-allowed disabled:opacity-50"
+            className="rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1 text-xs font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-hover)] transition-colors shadow-2xs disabled:cursor-not-allowed disabled:opacity-50"
           >
             Preview
           </button>
@@ -135,7 +135,7 @@ export default function MaterialPDFList({
               href={row.pdfURL}
               target="_blank"
               rel="noreferrer"
-              className="rounded-xl border border-outline-variant/20 px-3 py-1.5 text-xs font-semibold text-on-surface transition hover:bg-surface-container"
+              className="rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1 text-xs font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-hover)] transition-colors shadow-2xs"
             >
               PDF
             </a>
@@ -143,7 +143,7 @@ export default function MaterialPDFList({
           <button
             type="button"
             onClick={() => onDeleteItem(row)}
-            className="rounded-xl bg-error/10 px-3 py-1.5 text-xs font-semibold text-error transition hover:bg-error/15"
+            className="rounded-[6px] border border-[var(--status-danger)]/30 bg-[var(--status-danger)]/10 px-2.5 py-1 text-xs font-semibold text-[var(--status-danger)] hover:bg-[var(--status-danger)]/20 transition-colors shadow-2xs"
           >
             Delete
           </button>
@@ -154,12 +154,12 @@ export default function MaterialPDFList({
 
   return (
     <>
-      <div className="glass-card rounded-3xl p-5 mb-6">
+      <div className="freya-card mb-6 rounded-[8px] border border-[var(--border)] bg-[var(--surface)] p-5 shadow-sm">
         <div className="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
           <div>
-            <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-outline">Library</div>
-            <h3 className="mt-1 text-xl font-semibold text-on-surface">{typeMeta.label} files</h3>
-            <p className="mt-1 text-sm text-on-surface-variant">Search by 図番, 品番, or 工程コード and switch between card and table browsing.</p>
+            <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--text-muted)]">Library</div>
+            <h3 className="mt-0.5 text-xl font-bold tracking-tight text-[var(--text-primary)]">{typeMeta.label} files</h3>
+            <p className="mt-0.5 text-xs text-[var(--text-secondary)]">Search by 図番, 品番, or 工程コード and switch between card and table browsing.</p>
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
@@ -172,7 +172,7 @@ export default function MaterialPDFList({
               type="button"
               onClick={() => onToggleSelectAll(!allSelected)}
               disabled={!items.length}
-              className="rounded-2xl border border-outline-variant/20 px-3 py-2 text-xs font-semibold text-on-surface transition hover:bg-surface-container disabled:cursor-not-allowed disabled:opacity-50"
+              className="rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-hover)] transition-colors shadow-2xs disabled:cursor-not-allowed disabled:opacity-50"
             >
               {allSelected ? "Clear Page" : "Select Page"}
             </button>
@@ -180,24 +180,24 @@ export default function MaterialPDFList({
               type="button"
               onClick={onDeleteSelected}
               disabled={!selectedCount}
-              className="rounded-2xl bg-error/10 px-3 py-2 text-xs font-semibold text-error transition hover:bg-error/15 disabled:cursor-not-allowed disabled:opacity-50"
+              className="rounded-[6px] border border-[var(--status-danger)]/30 bg-[var(--status-danger)]/10 px-3 py-1.5 text-xs font-semibold text-[var(--status-danger)] hover:bg-[var(--status-danger)]/20 transition-colors shadow-2xs disabled:cursor-not-allowed disabled:opacity-50"
             >
               Delete Selected ({selectedCount})
             </button>
           </div>
         </div>
 
-        <div className="mt-5 flex flex-col gap-4 lg:flex-row">
-          <div className="ui-control-surface flex min-h-[52px] flex-1 flex-wrap items-center gap-2 rounded-3xl border border-outline-variant/20 px-4 py-3">
+        <div className="mt-4 flex flex-col gap-3 lg:flex-row">
+          <div className="flex min-h-[40px] flex-1 flex-wrap items-center gap-2 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 focus-within:border-[var(--freya-blue)] transition">
             {searchTokens.map((token) => (
-              <span key={token} className="inline-flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
+              <span key={token} className="inline-flex items-center gap-1.5 rounded-[4px] border border-[var(--freya-blue)]/30 bg-[var(--freya-blue)]/10 px-2 py-0.5 text-xs font-semibold text-[var(--freya-blue)]">
                 <span>{token}</span>
                 <button
                   type="button"
                   onClick={() => onRemoveSearchToken(token)}
-                  className="flex h-4 w-4 items-center justify-center rounded-full bg-primary/10 transition hover:bg-primary/20"
+                  className="flex h-3.5 w-3.5 items-center justify-center rounded-[3px] bg-[var(--freya-blue)]/10 transition hover:bg-[var(--freya-blue)]/20"
                 >
-                  <span className="material-symbols-outlined" style={{ fontSize: 12 }}>close</span>
+                  <span className="material-symbols-outlined" style={{ fontSize: 10 }}>close</span>
                 </button>
               </span>
             ))}
@@ -207,16 +207,16 @@ export default function MaterialPDFList({
               onChange={(event) => onSearchInputChange(event.target.value)}
               onKeyDown={onSearchKeyDown}
               placeholder="Type and press Enter to add search terms…"
-              className="min-w-[14rem] flex-1 bg-transparent text-sm text-on-surface outline-none"
+              className="min-w-[14rem] flex-1 bg-transparent text-xs text-[var(--text-primary)] outline-none placeholder:text-[var(--text-muted)]"
             />
           </div>
 
           <select
             value={processFilter}
             onChange={(event) => onProcessFilterChange(event.target.value)}
-            className="h-[52px] rounded-3xl border border-outline-variant/20 bg-white px-4 text-sm text-on-surface outline-none transition focus:border-primary/40 lg:w-72"
+            className="h-10 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 text-xs text-[var(--text-primary)] outline-none transition focus:border-[var(--freya-blue)] lg:w-72"
           >
-            <option value="">All processs</option>
+            <option value="">All processes</option>
             {processOptions.map((process) => (
               <option key={process} value={process}>{process}</option>
             ))}
@@ -256,16 +256,16 @@ export default function MaterialPDFList({
           className="mb-8"
         />
       ) : (
-        <div className="glass-card overflow-hidden rounded-3xl mb-8">
-          <div className="flex flex-col gap-4 border-b border-separator/40 px-5 py-4 md:flex-row md:items-center md:justify-between">
-            <div className="text-sm font-medium text-on-surface-variant">{renderPageInfoText(totalCount, page, pageSize)}</div>
+        <div className="freya-card mb-8 overflow-hidden rounded-[8px] border border-[var(--border)] bg-[var(--surface)] shadow-sm">
+          <div className="flex flex-col gap-4 border-b border-[var(--border)] bg-[var(--surface-subtle)] px-5 py-3 md:flex-row md:items-center md:justify-between">
+            <div className="text-xs font-semibold text-[var(--text-secondary)]">{renderPageInfoText(totalCount, page, pageSize)}</div>
 
-            <div className="flex items-center gap-3">
-              <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-outline">Per page</span>
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--text-muted)]">Per page</span>
               <select
                 value={pageSize}
                 onChange={(event) => onPageSizeChange(Number(event.target.value))}
-                className="h-10 rounded-2xl border border-outline-variant/20 bg-white px-3 text-sm text-on-surface outline-none transition focus:border-primary/40"
+                className="h-8 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-2.5 text-xs text-[var(--text-primary)] outline-none transition focus:border-[var(--freya-blue)]"
               >
                 {MATERIAL_PDF_PAGE_SIZE_OPTIONS.map((option) => (
                   <option key={option} value={option}>{option}</option>
@@ -276,22 +276,22 @@ export default function MaterialPDFList({
 
           <div className="relative">
             {loading && items.length > 0 && (
-              <div className="absolute inset-0 z-10 flex items-center justify-center bg-surface/70 backdrop-blur-sm">
-                <div className="flex items-center gap-3 rounded-full bg-surface px-4 py-3 text-sm font-semibold text-on-surface shadow-lg">
-                  <span className="material-symbols-outlined animate-spin" style={{ fontSize: 18 }}>progress_activity</span>
+              <div className="absolute inset-0 z-10 flex items-center justify-center bg-[var(--surface)]/70 backdrop-blur-sm">
+                <div className="flex items-center gap-2 rounded-[8px] border border-[var(--border)] bg-[var(--surface-raised)] px-4 py-2.5 text-xs font-semibold text-[var(--text-primary)] shadow-lg">
+                  <span className="material-symbols-outlined animate-spin" style={{ fontSize: 16 }}>progress_activity</span>
                   Loading material PDFs…
                 </div>
               </div>
             )}
 
             {loading && !items.length ? (
-              <div className="px-5 py-12 text-center text-sm font-medium text-on-surface-variant">Loading material PDFs…</div>
+              <div className="px-5 py-12 text-center text-xs font-medium text-[var(--text-muted)]">Loading material PDFs…</div>
             ) : error ? (
-              <div className="px-5 py-12 text-center text-sm font-medium text-error">{error}</div>
+              <div className="px-5 py-12 text-center text-xs font-medium text-[var(--status-danger)]">{error}</div>
             ) : !items.length ? (
-              <div className="px-5 py-12 text-center text-sm text-on-surface-variant">No files found for this view.</div>
+              <div className="px-5 py-12 text-center text-xs text-[var(--text-muted)]">No files found for this view.</div>
             ) : (
-              <div className="grid gap-4 px-5 py-5 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-6" aria-busy={loading}>
+              <div className="grid gap-3.5 px-5 py-5 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-6" aria-busy={loading}>
                 {items.map((item) => {
                   const documentId = getMaterialPDFItemId(item);
                   const checked = selectedIds.has(documentId);
@@ -299,14 +299,14 @@ export default function MaterialPDFList({
                   return (
                     <article
                       key={documentId}
-                      className="group relative rounded-3xl border border-outline-variant/15 bg-surface-container-low p-4 transition hover:-translate-y-0.5 hover:shadow-xl"
+                      className="group relative rounded-[8px] border border-[var(--border)] bg-[var(--surface)] p-3.5 transition hover:shadow-md hover:border-[var(--border-strong)]"
                     >
-                      <div className="absolute left-4 top-4 z-10">
+                      <div className="absolute left-3.5 top-3.5 z-10">
                         <input
                           type="checkbox"
                           checked={checked}
                           onChange={() => onToggleItemSelection(documentId)}
-                          className="h-4 w-4 rounded border-outline-variant/40"
+                          className="h-4 w-4 rounded-[4px] border-[var(--border)] text-[var(--freya-blue)] focus:ring-0"
                         />
                       </div>
 
@@ -315,28 +315,28 @@ export default function MaterialPDFList({
                         onClick={() => item?.imageURL && onPreviewItem(item)}
                         className="block w-full text-left"
                       >
-                        <div className="flex h-44 items-center justify-center overflow-hidden rounded-2xl bg-surface px-4 py-4">
+                        <div className="flex h-40 items-center justify-center overflow-hidden rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] px-3 py-3">
                           {item?.imageURL ? (
-                            <img src={item.imageURL} alt={item.fileName} className="h-full w-full object-contain transition duration-300 group-hover:scale-[1.02]" />
+                            <img src={item.imageURL} alt={item.fileName} className="h-full w-full object-contain transition duration-200 group-hover:scale-[1.02]" />
                           ) : (
-                            <span className="material-symbols-outlined text-5xl text-outline">picture_as_pdf</span>
+                            <span className="material-symbols-outlined text-4xl text-[var(--text-muted)]">picture_as_pdf</span>
                           )}
                         </div>
                       </button>
 
-                      <div className="mt-4">
-                        <div className="text-sm font-semibold text-on-surface">{formatMaterialPDFTitle(item, 6)}</div>
-                        <div className="mt-1 text-xs text-on-surface-variant">{formatMaterialPDFHinban(item)}</div>
-                        <div className="mt-2 truncate text-xs text-outline">{item?.fileName || "Untitled file"}</div>
-                        <div className="mt-1 text-xs text-outline">{item?.uploadedBy || "—"} · {formatMaterialPDFDateTime(item?.uploadedAt)}</div>
+                      <div className="mt-3">
+                        <div className="truncate text-xs font-bold text-[var(--text-primary)]">{formatMaterialPDFTitle(item, 6)}</div>
+                        <div className="mt-0.5 truncate text-[11px] text-[var(--text-secondary)]">{formatMaterialPDFHinban(item)}</div>
+                        <div className="mt-1.5 truncate text-[11px] text-[var(--text-muted)]">{item?.fileName || "Untitled file"}</div>
+                        <div className="mt-0.5 truncate text-[10px] text-[var(--text-muted)]">{item?.uploadedBy || "—"} · {formatMaterialPDFDateTime(item?.uploadedAt)}</div>
                       </div>
 
-                      <div className="mt-4 flex flex-wrap items-center gap-2">
+                      <div className="mt-3 flex flex-wrap items-center gap-1.5 border-t border-[var(--border)] pt-3">
                         <button
                           type="button"
                           onClick={() => onPreviewItem(item)}
                           disabled={!item?.imageURL}
-                          className="rounded-xl border border-outline-variant/20 px-3 py-2 text-xs font-semibold text-on-surface transition hover:bg-surface-container disabled:cursor-not-allowed disabled:opacity-50"
+                          className="rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-2 py-1 text-[11px] font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-hover)] transition-colors shadow-2xs disabled:cursor-not-allowed disabled:opacity-50"
                         >
                           Preview
                         </button>
@@ -345,15 +345,15 @@ export default function MaterialPDFList({
                             href={item.pdfURL}
                             target="_blank"
                             rel="noreferrer"
-                            className="rounded-xl border border-outline-variant/20 px-3 py-2 text-xs font-semibold text-on-surface transition hover:bg-surface-container"
+                            className="rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-2 py-1 text-[11px] font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-hover)] transition-colors shadow-2xs"
                           >
-                            Open PDF
+                            PDF
                           </a>
                         )}
                         <button
                           type="button"
                           onClick={() => onDeleteItem(item)}
-                          className="rounded-xl bg-error/10 px-3 py-2 text-xs font-semibold text-error transition hover:bg-error/15"
+                          className="rounded-[6px] border border-[var(--status-danger)]/30 bg-[var(--status-danger)]/10 px-2 py-1 text-[11px] font-semibold text-[var(--status-danger)] hover:bg-[var(--status-danger)]/20 transition-colors shadow-2xs"
                         >
                           Delete
                         </button>
@@ -365,8 +365,8 @@ export default function MaterialPDFList({
             )}
           </div>
 
-          <div className="flex flex-col gap-4 border-t border-separator/40 px-5 py-4 md:flex-row md:items-center md:justify-between">
-            <div className="text-sm text-on-surface-variant">{selectedCount} selected</div>
+          <div className="flex flex-col gap-4 border-t border-[var(--border)] bg-[var(--surface-subtle)] px-5 py-3 md:flex-row md:items-center md:justify-between">
+            <div className="text-xs text-[var(--text-secondary)]">{selectedCount} selected</div>
 
             {totalPages > 1 && (
               <PaginationControls

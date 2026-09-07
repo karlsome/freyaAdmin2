@@ -10,22 +10,22 @@ function fmtWait(seconds) {
 
 function InfoRow({ label, value, accent }) {
   return (
-    <div className="flex items-baseline justify-between gap-4 py-1.5">
-      <span className="text-xs text-on-surface-variant flex-shrink-0">{label}</span>
-      <span className={`text-sm font-medium text-right ${accent || "text-on-surface"}`}>{value ?? "—"}</span>
+    <div className="flex items-baseline justify-between gap-4 py-1.5 border-b border-[var(--border)]/40 last:border-0">
+      <span className="text-xs text-[var(--text-muted)] flex-shrink-0">{label}</span>
+      <span className={`text-xs font-semibold text-right ${accent || "text-[var(--text-primary)]"}`}>{value ?? "—"}</span>
     </div>
   );
 }
 
 function RoleBadge({ role }) {
   const color = role === "admin"
-    ? "bg-primary/15 text-primary"
+    ? "border-[var(--freya-blue)]/30 bg-[var(--freya-blue)]/10 text-[var(--freya-blue)]"
     : role === "班長"
-      ? "bg-amber-400/15 text-amber-500"
-      : "bg-emerald-400/15 text-emerald-400";
+      ? "border-amber-400/30 bg-amber-400/10 text-amber-500"
+      : "border-emerald-400/30 bg-emerald-400/10 text-emerald-500";
 
   return (
-    <span className={`inline-block rounded-full px-2 py-0.5 text-[10px] font-semibold ${color}`}>
+    <span className={`inline-block rounded-[4px] border px-1.5 py-0.5 text-[10px] font-mono font-medium ${color}`}>
       {role}
     </span>
   );
@@ -63,15 +63,15 @@ export default function StopCallDetailModal({ open, onClose, record, stopCallEnt
       maxWidth="max-w-2xl"
       align="start"
     >
-      <div className="max-h-[70vh] overflow-y-auto px-6 py-5 space-y-6">
+      <div className="max-h-[70vh] overflow-y-auto px-6 py-5 space-y-4">
         {/* Selected Stop Call */}
         {stopCallEntry && (
-          <div className="glass-card rounded-2xl p-5">
-            <div className="mb-3 flex items-center gap-2">
-              <span className="material-symbols-outlined text-primary" style={{ fontSize: 18 }}>phone_missed</span>
-              <h4 className="text-sm font-semibold text-on-surface">{t("stopCallDetails")}</h4>
+          <div className="rounded-[8px] border border-[var(--border)] bg-[var(--surface-subtle)] p-4">
+            <div className="mb-2.5 flex items-center gap-2">
+              <span className="material-symbols-outlined text-[var(--freya-blue)]" style={{ fontSize: 18 }}>phone_missed</span>
+              <h4 className="text-xs font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">{t("stopCallDetails")}</h4>
             </div>
-            <div className="divide-y divide-separator/20">
+            <div>
               <InfoRow label={t("leaderName")} value={stopCallEntry.leaderName} />
               <InfoRow
                 label={t("role")}
@@ -82,19 +82,19 @@ export default function StopCallDetailModal({ open, onClose, record, stopCallEnt
               <InfoRow
                 label={t("waitTime")}
                 value={fmtWait(stopCallEntry.waitSeconds)}
-                accent={stopCallEntry.waitSeconds > 300 ? "text-error" : stopCallEntry.waitSeconds > 120 ? "text-amber-400" : "text-emerald-400"}
+                accent={stopCallEntry.waitSeconds > 300 ? "text-[var(--status-danger)]" : stopCallEntry.waitSeconds > 120 ? "text-amber-500" : "text-emerald-500"}
               />
             </div>
           </div>
         )}
 
         {/* Equipment & Product Info */}
-        <div className="glass-card rounded-2xl p-5">
-          <div className="mb-3 flex items-center gap-2">
-            <span className="material-symbols-outlined text-on-surface-variant" style={{ fontSize: 18 }}>precision_manufacturing</span>
-            <h4 className="text-sm font-semibold text-on-surface">設備情報</h4>
+        <div className="rounded-[8px] border border-[var(--border)] bg-[var(--surface-subtle)] p-4">
+          <div className="mb-2.5 flex items-center gap-2">
+            <span className="material-symbols-outlined text-[var(--freya-blue)]" style={{ fontSize: 18 }}>precision_manufacturing</span>
+            <h4 className="text-xs font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">設備情報</h4>
           </div>
-          <div className="divide-y divide-separator/20">
+          <div>
             <InfoRow label="設備" value={record["設備"]} />
             <InfoRow label="背番号" value={record["背番号"]} />
             <InfoRow label="品番" value={record["品番"]} />
@@ -104,12 +104,12 @@ export default function StopCallDetailModal({ open, onClose, record, stopCallEnt
         </div>
 
         {/* Production Context */}
-        <div className="glass-card rounded-2xl p-5">
-          <div className="mb-3 flex items-center gap-2">
-            <span className="material-symbols-outlined text-on-surface-variant" style={{ fontSize: 18 }}>analytics</span>
-            <h4 className="text-sm font-semibold text-on-surface">{t("productionContext")}</h4>
+        <div className="rounded-[8px] border border-[var(--border)] bg-[var(--surface-subtle)] p-4">
+          <div className="mb-2.5 flex items-center gap-2">
+            <span className="material-symbols-outlined text-[var(--freya-blue)]" style={{ fontSize: 18 }}>analytics</span>
+            <h4 className="text-xs font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">{t("productionContext")}</h4>
           </div>
-          <div className="divide-y divide-separator/20">
+          <div>
             <InfoRow label={t("date")} value={record.Date} />
             <InfoRow label={t("timeStart")} value={record.Time_start} />
             <InfoRow label={t("timeEnd")} value={record.Time_end} />
@@ -119,17 +119,18 @@ export default function StopCallDetailModal({ open, onClose, record, stopCallEnt
             <InfoRow
               label={t("defectRate")}
               value={`${defectRate}%`}
-              accent={parseFloat(defectRate) > 2 ? "text-error" : parseFloat(defectRate) > 1 ? "text-amber-400" : "text-emerald-400"}
+              accent={parseFloat(defectRate) > 2 ? "text-[var(--status-danger)]" : parseFloat(defectRate) > 1 ? "text-amber-500" : "text-emerald-500"}
             />
             <InfoRow label={t("cycleTime")} value={record.Cycle_Time ? `${record.Cycle_Time}s` : "—"} />
           </div>
 
-          <div className="mt-4 pt-4 border-t border-separator/20">
+          <div className="mt-3 pt-3 border-t border-[var(--border)]">
             <button
+              type="button"
               onClick={handleViewInFactory}
-              className="w-full py-2.5 rounded-xl bg-primary text-on-primary text-sm font-semibold hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
+              className="w-full py-2 rounded-[6px] bg-[var(--freya-blue)] text-white text-xs font-semibold hover:bg-[var(--freya-blue-hover)] shadow-xs transition-colors flex items-center justify-center gap-1.5"
             >
-              <span className="material-symbols-outlined" style={{ fontSize: 18 }}>open_in_new</span>
+              <span className="material-symbols-outlined" style={{ fontSize: 16 }}>open_in_new</span>
               View in Factory Overview
             </button>
           </div>
@@ -137,10 +138,10 @@ export default function StopCallDetailModal({ open, onClose, record, stopCallEnt
 
         {/* Other Stop Calls in same session */}
         {allStopCalls && allStopCalls.length > 1 && (
-          <div className="glass-card rounded-2xl p-5">
-            <div className="mb-3 flex items-center gap-2">
-              <span className="material-symbols-outlined text-on-surface-variant" style={{ fontSize: 18 }}>list</span>
-              <h4 className="text-sm font-semibold text-on-surface">{t("otherStopCalls")}</h4>
+          <div className="rounded-[8px] border border-[var(--border)] bg-[var(--surface-subtle)] p-4">
+            <div className="mb-2.5 flex items-center gap-2">
+              <span className="material-symbols-outlined text-[var(--freya-blue)]" style={{ fontSize: 18 }}>list</span>
+              <h4 className="text-xs font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">{t("otherStopCalls")}</h4>
             </div>
             <div className="space-y-2">
               {allStopCalls.map((sc, idx) => {
@@ -148,19 +149,19 @@ export default function StopCallDetailModal({ open, onClose, record, stopCallEnt
                 return (
                   <div
                     key={idx}
-                    className={`rounded-xl p-3 text-xs transition-all ${
+                    className={`rounded-[6px] p-2.5 text-xs transition-all border ${
                       isSelected
-                        ? "bg-primary/10 border border-primary/20"
-                        : "bg-surface-container-low/40 border border-transparent"
+                        ? "bg-[var(--surface-subtle)] border-[var(--freya-blue)] ring-1 ring-[var(--freya-blue)]/30"
+                        : "bg-[var(--surface)] border-[var(--border)]"
                     }`}
                   >
                     <div className="flex items-center justify-between">
-                      <span className="font-semibold text-on-surface">{sc.leaderName}</span>
+                      <span className="font-semibold text-[var(--text-primary)]">{sc.leaderName}</span>
                       <RoleBadge role={sc.leaderRole} />
                     </div>
-                    <div className="mt-1.5 flex items-center gap-4 text-on-surface-variant">
+                    <div className="mt-1.5 flex items-center gap-4 text-[var(--text-secondary)] font-mono">
                       <span>{sc.calledAt} → {sc.arrivedAt}</span>
-                      <span className={`font-semibold ${sc.waitSeconds > 300 ? "text-error" : sc.waitSeconds > 120 ? "text-amber-400" : "text-emerald-400"}`}>
+                      <span className={`font-bold ${sc.waitSeconds > 300 ? "text-[var(--status-danger)]" : sc.waitSeconds > 120 ? "text-amber-500" : "text-emerald-500"}`}>
                         {fmtWait(sc.waitSeconds)}
                       </span>
                     </div>

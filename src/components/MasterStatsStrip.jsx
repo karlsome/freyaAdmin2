@@ -37,6 +37,7 @@ export default function MasterStatsStrip({ stats }) {
       {STAT_CARDS.map((card) => (
         <StatSummaryCard
           key={card.key}
+          variant="freya"
           icon={card.icon}
           label={card.label}
           value={Number(stats[card.key] ?? 0).toLocaleString()}

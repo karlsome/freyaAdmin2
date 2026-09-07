@@ -82,20 +82,20 @@ function FlashBanner({ flash, onClose }) {
   if (!flash) return null;
 
   const tone = flash.type === "error"
-    ? "border-error/20 bg-error/10 text-error"
+    ? "border-[var(--status-danger)]/30 bg-[var(--status-danger)]/10 text-[var(--status-danger)]"
     : flash.type === "warning"
-      ? "border-amber-500/20 bg-amber-500/10 text-amber-700 dark:text-amber-300"
-      : "border-emerald-500/20 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300";
+      ? "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300"
+      : "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300";
 
   return (
-    <div className={joinClasses("mb-6 rounded-3xl border px-5 py-4", tone)}>
+    <div className={joinClasses("rounded-[8px] border px-4 py-3 shadow-2xs", tone)}>
       <div className="flex items-start justify-between gap-4">
         <div>
-          <div className="text-[10px] font-semibold uppercase tracking-[0.18em]">Status</div>
-          <p className="mt-1 text-sm font-medium">{flash.message}</p>
+          <div className="text-[10px] font-mono font-bold uppercase tracking-[0.18em]">Status</div>
+          <p className="mt-0.5 text-xs font-medium">{flash.message}</p>
         </div>
         <button type="button" onClick={onClose} className="text-current/70 transition hover:text-current">
-          <span className="material-symbols-outlined">close</span>
+          <span className="material-symbols-outlined" style={{ fontSize: 16 }}>close</span>
         </button>
       </div>
     </div>
@@ -926,7 +926,7 @@ export default function ApprovalsPage() {
       renderCell: (row) => {
         const meta = getApprovalStatusMeta(row);
         return (
-          <span className={joinClasses("inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold", meta.badgeClassName)}>
+          <span className={joinClasses("inline-flex items-center gap-1.5 rounded-[4px] px-2.5 py-0.5 text-xs font-mono font-bold uppercase tracking-wider", meta.badgeClassName)}>
             <span className="material-symbols-outlined" style={{ fontSize: 14, fontVariationSettings: "'FILL' 1" }}>{meta.icon}</span>
             {meta.label}
           </span>
@@ -943,7 +943,7 @@ export default function ApprovalsPage() {
 
         return (
           <div>
-            <div className={joinClasses("planner-data-text flex items-center gap-1 text-sm font-semibold", mismatch.dateMismatch ? "text-error" : "text-on-surface")}>
+            <div className={joinClasses("planner-data-text flex items-center gap-1 text-sm font-semibold", mismatch.dateMismatch ? "text-error" : "text-[var(--text-primary)]")}>
               <span>{row.Date || "—"}</span>
               {mismatch.dateMismatch ? (
                 <span
@@ -955,7 +955,7 @@ export default function ApprovalsPage() {
                 </span>
               ) : null}
             </div>
-            <div className={joinClasses("planner-data-text flex items-center gap-1 text-xs", mismatch.timeMismatch ? "font-semibold text-amber-700 dark:text-amber-300" : "text-on-surface-variant")}>
+            <div className={joinClasses("planner-data-text flex items-center gap-1 text-xs font-mono", mismatch.timeMismatch ? "font-semibold text-amber-700 dark:text-amber-300" : "text-[var(--text-muted)]")}>
               <span>{[row.Time_start, row.Time_end].filter(Boolean).join(" - ") || "—"}</span>
               {mismatch.timeMismatch ? (
                 <span
@@ -981,13 +981,13 @@ export default function ApprovalsPage() {
       key: "品番",
       label: "Part No.",
       width: 176,
-      contentClassName: "planner-data-text text-sm font-semibold",
+      contentClassName: "planner-data-text text-sm font-semibold font-mono",
     },
     {
       key: "背番号",
       label: "Serial No.",
       width: 142,
-      contentClassName: "planner-data-text text-sm font-semibold",
+      contentClassName: "planner-data-text text-sm font-semibold font-mono",
     },
     {
       key: "Worker_Name",
@@ -1002,7 +1002,7 @@ export default function ApprovalsPage() {
       align: "right",
       disableCellWrapper: true,
       renderCell: (row) => (
-        <span className="planner-data-text text-sm font-semibold tabular-nums text-on-surface">
+        <span className="planner-data-text text-sm font-semibold tabular-nums text-[var(--text-primary)] font-mono">
           {getApprovalQuantityValue(row, activeTab).toLocaleString()}
         </span>
       ),
@@ -1016,7 +1016,7 @@ export default function ApprovalsPage() {
       renderCell: (row) => {
         const ngValue = getApprovalNGValue(row, activeTab);
         return (
-          <span className={joinClasses("planner-data-text text-sm font-semibold tabular-nums", ngValue > 0 ? "text-error" : "text-on-surface")}>{ngValue.toLocaleString()}</span>
+          <span className={joinClasses("planner-data-text text-sm font-semibold tabular-nums font-mono", ngValue > 0 ? "text-error" : "text-[var(--text-primary)]")}>{ngValue.toLocaleString()}</span>
         );
       },
     },
@@ -1029,7 +1029,7 @@ export default function ApprovalsPage() {
       renderCell: (row) => {
         const defectRate = getApprovalDefectRate(row, activeTab);
         return (
-          <span className={joinClasses("planner-data-text text-sm font-semibold tabular-nums", defectRate > 0 ? "text-error" : "text-emerald-600 dark:text-emerald-300")}>
+          <span className={joinClasses("planner-data-text text-sm font-semibold tabular-nums font-mono", defectRate > 0 ? "text-error" : "text-emerald-600 dark:text-emerald-300")}>
             {defectRate.toFixed(2)}%
           </span>
         );
@@ -1041,7 +1041,7 @@ export default function ApprovalsPage() {
       width: 160,
       disableCellWrapper: true,
       renderCell: (row) => (
-        <span className="planner-data-text text-sm font-semibold text-on-surface">{getApprovalPrimaryApprover(row) || "—"}</span>
+        <span className="planner-data-text text-sm font-semibold text-[var(--text-primary)]">{getApprovalPrimaryApprover(row) || "—"}</span>
       ),
     },
     {
@@ -1058,7 +1058,7 @@ export default function ApprovalsPage() {
             event.stopPropagation();
             openDetail(row, "live");
           }}
-          className="rounded-2xl border border-outline-variant/20 bg-white px-3 py-1.5 text-xs font-semibold text-on-surface transition hover:bg-surface-container dark:bg-surface-container"
+          className="rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1 text-xs font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-hover)] transition-colors shadow-2xs"
         >
           Review
         </button>
@@ -1074,8 +1074,8 @@ export default function ApprovalsPage() {
       disableCellWrapper: true,
       renderCell: (row) => (
         <div>
-          <div className="planner-data-text text-sm font-semibold text-on-surface">{row.deletedAt ? new Date(row.deletedAt).toLocaleDateString("ja-JP") : "—"}</div>
-          <div className="planner-data-text text-xs text-on-surface-variant">{row.deletedAt ? new Date(row.deletedAt).toLocaleTimeString("ja-JP") : "—"}</div>
+          <div className="planner-data-text text-sm font-semibold text-[var(--text-primary)]">{row.deletedAt ? new Date(row.deletedAt).toLocaleDateString("ja-JP") : "—"}</div>
+          <div className="planner-data-text text-xs text-[var(--text-muted)] font-mono">{row.deletedAt ? new Date(row.deletedAt).toLocaleTimeString("ja-JP") : "—"}</div>
         </div>
       ),
     },
@@ -1085,7 +1085,7 @@ export default function ApprovalsPage() {
       width: 128,
       disableCellWrapper: true,
       renderCell: (row) => (
-        <span className="planner-data-text text-sm font-semibold text-on-surface">{row.originalCollection || "—"}</span>
+        <span className="planner-data-text text-sm font-semibold text-[var(--text-primary)] font-mono">{row.originalCollection || "—"}</span>
       ),
     },
     {
@@ -1093,21 +1093,21 @@ export default function ApprovalsPage() {
       label: "Factory",
       width: 126,
       disableCellWrapper: true,
-      renderCell: (row) => <span className="planner-data-text text-sm font-semibold text-on-surface">{row.originalDoc?.工場 || "—"}</span>,
+      renderCell: (row) => <span className="planner-data-text text-sm font-semibold text-[var(--text-primary)]">{row.originalDoc?.工場 || "—"}</span>,
     },
     {
       key: "品番",
       label: "Part No.",
       width: 176,
       disableCellWrapper: true,
-      renderCell: (row) => <span className="planner-data-text text-sm font-semibold text-on-surface">{row.originalDoc?.品番 || "—"}</span>,
+      renderCell: (row) => <span className="planner-data-text text-sm font-semibold text-[var(--text-primary)] font-mono">{row.originalDoc?.品番 || "—"}</span>,
     },
     {
       key: "背番号",
       label: "Serial No.",
       width: 140,
       disableCellWrapper: true,
-      renderCell: (row) => <span className="planner-data-text text-sm font-semibold text-on-surface">{row.originalDoc?.背番号 || "—"}</span>,
+      renderCell: (row) => <span className="planner-data-text text-sm font-semibold text-[var(--text-primary)] font-mono">{row.originalDoc?.背番号 || "—"}</span>,
     },
     {
       key: "deletedBy",
@@ -1136,7 +1136,7 @@ export default function ApprovalsPage() {
             event.stopPropagation();
             openDetail(row, "recycle");
           }}
-          className="rounded-2xl border border-outline-variant/20 bg-white px-3 py-1.5 text-xs font-semibold text-on-surface transition hover:bg-surface-container dark:bg-surface-container"
+          className="rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1 text-xs font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-hover)] transition-colors shadow-2xs"
         >
           Inspect
         </button>
@@ -1146,11 +1146,11 @@ export default function ApprovalsPage() {
 
   if (!hasAccess) {
     return (
-      <section className="h-screen overflow-y-auto px-4 pb-24 pt-20 scrollbar-hide sm:px-6 sm:pb-16 sm:pt-24 md:px-8">
-        <div className="glass-card rounded-[28px] px-6 py-8">
-          <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Approvals</div>
-          <h1 className="mt-2 text-2xl font-semibold text-on-surface">Access Required</h1>
-          <p className="mt-3 max-w-2xl text-sm text-on-surface-variant">
+      <section className="min-h-screen max-w-[1600px] mx-auto space-y-6 pt-20 px-6 pb-12">
+        <div className="freya-card rounded-[8px] border border-[var(--border)] bg-[var(--surface)] p-6 shadow-sm">
+          <div className="text-[10px] font-mono font-bold uppercase tracking-[0.18em] text-[var(--text-muted)]">Approvals</div>
+          <h1 className="mt-2 text-xl font-bold text-[var(--text-primary)]">Access Required</h1>
+          <p className="mt-2 max-w-2xl text-xs text-[var(--text-muted)]">
             The approval workflow is available only to admin, 部長, 課長, 係長, and 班長 roles.
           </p>
         </div>
@@ -1165,7 +1165,7 @@ export default function ApprovalsPage() {
   const currentPage = activeTab === "recycleBin" ? effectiveBinPage : pagination.currentPage || page;
 
   return (
-    <section className="h-screen overflow-y-auto px-4 pb-24 pt-20 scrollbar-hide sm:px-6 sm:pb-16 sm:pt-24 md:px-8">
+    <section className="min-h-screen max-w-[1600px] mx-auto space-y-6 pt-20 px-6 pb-12">
       <FlashBanner flash={flash} onClose={() => setFlash(null)} />
       <PageHeader
         eyebrow="Approvals"
@@ -1179,16 +1179,16 @@ export default function ApprovalsPage() {
             <button
               type="button"
               onClick={() => setRefreshNonce((current) => current + 1)}
-              className="flex h-11 items-center gap-2 rounded-2xl border border-outline-variant/20 bg-white px-4 text-sm font-semibold text-on-surface transition hover:bg-surface-container dark:bg-surface-container"
+              className="inline-flex items-center gap-2 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3.5 py-2 text-xs font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-hover)] transition-colors shadow-2xs"
             >
-              <span className="material-symbols-outlined" style={{ fontSize: 18 }}>refresh</span>
+              <span className="material-symbols-outlined text-[var(--text-muted)]" style={{ fontSize: 16 }}>refresh</span>
               Refresh
             </button>
           </>
         )}
       />
 
-      <div className="mb-6 flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+      <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
         <div className="max-w-full overflow-x-auto scrollbar-hide">
           <LiquidSegmentedControl items={tableTabs} activeKey={activeTab} onChange={handleTabChange} className="min-w-max" />
         </div>
@@ -1213,32 +1213,32 @@ export default function ApprovalsPage() {
       {activeTab !== "recycleBin" ? (
         <ApprovalsStatsStrip stats={stats} authUser={authUser} activeKey={activeStatsKey} onSelect={handleStatSelect} />
       ) : (
-        <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-3">
-          <div className="dashboard-section rounded-2xl p-5">
-            <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Recycle Bin</div>
-            <div className="planner-data-text mt-2 text-3xl font-semibold text-on-surface tabular-nums">{binRows.length.toLocaleString()}</div>
-            <p className="mt-1 text-xs text-on-surface-variant">Soft-deleted approval records</p>
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+          <div className="freya-card rounded-[8px] border border-[var(--border)] bg-[var(--surface)] p-4 shadow-sm">
+            <div className="text-[10px] font-mono font-semibold uppercase tracking-[0.18em] text-[var(--text-muted)]">Recycle Bin</div>
+            <div className="mt-1 text-2xl font-bold text-[var(--text-primary)] font-mono tabular-nums">{binRows.length.toLocaleString()}</div>
+            <p className="mt-1 text-xs text-[var(--text-muted)]">Soft-deleted approval records</p>
           </div>
-          <div className="dashboard-section rounded-2xl p-5">
-            <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Restorable</div>
-            <div className="planner-data-text mt-2 text-3xl font-semibold text-on-surface tabular-nums">
+          <div className="freya-card rounded-[8px] border border-[var(--border)] bg-[var(--surface)] p-4 shadow-sm">
+            <div className="text-[10px] font-mono font-semibold uppercase tracking-[0.18em] text-[var(--text-muted)]">Restorable</div>
+            <div className="mt-1 text-2xl font-bold text-[var(--text-primary)] font-mono tabular-nums">
               {binRows.length.toLocaleString()}
             </div>
-            <p className="mt-1 text-xs text-on-surface-variant">Available for restore using original collection metadata</p>
+            <p className="mt-1 text-xs text-[var(--text-muted)]">Available for restore using original collection metadata</p>
           </div>
-          <div className="dashboard-section rounded-2xl p-5">
-            <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Role</div>
-            <div className="planner-data-text mt-2 text-lg font-semibold text-on-surface">{authUser?.role || "Unknown"}</div>
-            <p className="mt-1 text-xs text-on-surface-variant">Recycle bin tools follow original role restrictions</p>
+          <div className="freya-card rounded-[8px] border border-[var(--border)] bg-[var(--surface)] p-4 shadow-sm">
+            <div className="text-[10px] font-mono font-semibold uppercase tracking-[0.18em] text-[var(--text-muted)]">Role</div>
+            <div className="mt-1 text-base font-bold text-[var(--text-primary)]">{authUser?.role || "Unknown"}</div>
+            <p className="mt-1 text-xs text-[var(--text-muted)]">Recycle bin tools follow original role restrictions</p>
           </div>
         </div>
       )}
 
       {activeTab === "recycleBin" ? (
-        <div className="dashboard-section mb-6 rounded-2xl p-5">
+        <div className="freya-card rounded-[8px] border border-[var(--border)] bg-[var(--surface)] p-4 shadow-sm">
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_auto]">
             <div className="flex flex-col gap-1.5">
-              <label className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Search Recycle Bin</label>
+              <label className="text-[10px] font-mono font-semibold uppercase tracking-[0.18em] text-[var(--text-muted)]">Search Recycle Bin</label>
               <input
                 type="text"
                 value={binSearchInput}
@@ -1247,7 +1247,7 @@ export default function ApprovalsPage() {
                   setBinSearchInput(event.target.value);
                 }}
                 placeholder="Factory, part no., serial no., deleted by, reason..."
-                className="h-11 rounded-2xl border border-outline-variant/20 bg-white px-4 text-sm text-on-surface outline-none transition focus:border-primary/40 dark:bg-surface-container"
+                className="h-9 rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] px-3 text-xs text-[var(--text-primary)] placeholder:text-[var(--text-muted)] outline-none transition-colors focus:border-[var(--freya-blue)]"
               />
             </div>
             <div className="flex items-end">
@@ -1257,7 +1257,7 @@ export default function ApprovalsPage() {
                   setPage(1);
                   setBinSearchInput("");
                 }}
-                className="h-11 rounded-2xl border border-outline-variant/20 bg-white px-4 text-sm font-semibold text-on-surface transition hover:bg-surface-container dark:bg-surface-container"
+                className="h-9 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3.5 text-xs font-semibold text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-hover)] transition-colors shadow-2xs"
               >
                 Clear Search
               </button>
@@ -1289,11 +1289,11 @@ export default function ApprovalsPage() {
       )}
 
       {activeTab !== "recycleBin" && viewMode === "batch" ? (
-        <div className="dashboard-section mb-6 rounded-2xl p-5">
+        <div className="freya-card rounded-[8px] border border-[var(--border)] bg-[var(--surface)] p-4 shadow-sm">
           <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
             <div>
-              <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Batch Mode</div>
-              <p className="mt-1 text-sm text-on-surface-variant">
+              <div className="text-[10px] font-mono font-bold uppercase tracking-[0.18em] text-[var(--text-muted)]">Batch Mode</div>
+              <p className="mt-0.5 text-xs text-[var(--text-muted)]">
                 Select actionable rows on the current page and run the same approval or correction workflow in one pass.
               </p>
             </div>
@@ -1303,7 +1303,7 @@ export default function ApprovalsPage() {
                 type="button"
                 onClick={selectVisibleRows}
                 disabled={actionBusy || !liveRows.some((record) => isBatchSelectable(record, authUser))}
-                className="rounded-2xl border border-outline-variant/20 bg-white px-4 py-2 text-xs font-semibold text-on-surface transition hover:bg-surface-container disabled:cursor-not-allowed disabled:opacity-50 dark:bg-surface-container"
+                className="rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-hover)] transition-colors shadow-2xs disabled:cursor-not-allowed disabled:opacity-40"
               >
                 Select Visible
               </button>
@@ -1311,7 +1311,7 @@ export default function ApprovalsPage() {
                 type="button"
                 onClick={() => setSelectedIds([])}
                 disabled={actionBusy || !batchSelectedCount}
-                className="rounded-2xl border border-outline-variant/20 bg-white px-4 py-2 text-xs font-semibold text-on-surface transition hover:bg-surface-container disabled:cursor-not-allowed disabled:opacity-50 dark:bg-surface-container"
+                className="rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs font-semibold text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-hover)] transition-colors shadow-2xs disabled:cursor-not-allowed disabled:opacity-40"
               >
                 Clear Selection
               </button>
@@ -1319,7 +1319,7 @@ export default function ApprovalsPage() {
                 type="button"
                 onClick={handleBatchApprove}
                 disabled={actionBusy || !batchSelectedCount}
-                className="rounded-xl bg-primary px-4 py-2 text-xs font-semibold text-on-primary hover:opacity-90 active:scale-95 transition-all duration-150 disabled:cursor-not-allowed disabled:opacity-50"
+                className="rounded-[6px] bg-[var(--freya-blue)] px-3.5 py-1.5 text-xs font-semibold text-white hover:bg-[var(--freya-blue-hover)] transition-colors shadow-xs disabled:cursor-not-allowed disabled:opacity-40"
               >
                 Approve Selected ({batchSelectedCount})
               </button>
@@ -1327,7 +1327,7 @@ export default function ApprovalsPage() {
                 type="button"
                 onClick={handleBatchCorrection}
                 disabled={actionBusy || !batchSelectedCount}
-                className="rounded-2xl bg-amber-500 px-4 py-2 text-xs font-semibold text-black transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+                className="rounded-[6px] border border-amber-500/30 bg-amber-500/10 px-3.5 py-1.5 text-xs font-semibold text-amber-700 dark:text-amber-300 hover:bg-amber-500/20 transition-colors shadow-2xs disabled:cursor-not-allowed disabled:opacity-40"
               >
                 Request Correction ({batchSelectedCount})
               </button>
@@ -1386,11 +1386,11 @@ export default function ApprovalsPage() {
         enableColumnReorder
         stickyHeader
         stickyHeaderOffset={0}
-        stickyHeaderCellClassName="bg-surface-container-high shadow-[inset_0_-1px_0_rgba(148,163,184,0.18)]"
+        stickyHeaderCellClassName="bg-[var(--surface-subtle)] border-b border-[var(--border)] text-[var(--text-muted)] font-semibold text-xs tracking-[0.04em] uppercase"
         layoutStorageKey={activeTab === "recycleBin" ? "approvals_bin_table" : `approvals_${activeTab}_${viewMode}`}
-        className="dashboard-section mb-6 overflow-hidden rounded-2xl"
-        topBarClassName="flex flex-col gap-4 border-b border-separator/40 px-5 py-4 md:flex-row md:items-center md:justify-between"
-        bottomBarClassName="flex flex-col gap-4 border-t border-separator/40 px-5 py-4 md:flex-row md:items-center md:justify-between"
+        className="freya-card overflow-hidden rounded-[8px] border border-[var(--border)] bg-[var(--surface)] shadow-sm"
+        topBarClassName="flex flex-col gap-4 border-b border-[var(--border)] bg-[var(--surface-subtle)] px-5 py-3 md:flex-row md:items-center md:justify-between"
+        bottomBarClassName="flex flex-col gap-4 border-t border-[var(--border)] bg-[var(--surface-subtle)] px-5 py-3 md:flex-row md:items-center md:justify-between"
         tableClassName="ui-table-data w-full border-separate border-spacing-0"
         tableViewportClassName="max-h-[68vh] overflow-auto"
       />

@@ -3,7 +3,7 @@ import { getEquipmentUtilization, sortScheduledProducts } from "../../utils/plan
 export default function PlannerKanbanView({ equipment = [], scheduledProducts = [], breaks = [], onMoveItem, onRemoveItem }) {
   if (!equipment.length) {
     return (
-      <div className="rounded-3xl border border-dashed border-outline-variant/20 bg-surface-container-low px-6 py-14 text-center text-on-surface-variant">
+      <div className="rounded-[8px] border border-dashed border-[var(--border)] bg-[var(--surface-subtle)] px-6 py-14 text-center text-xs text-[var(--text-muted)]">
         Choose a factory to open the equipment board.
       </div>
     );
@@ -18,25 +18,25 @@ export default function PlannerKanbanView({ equipment = [], scheduledProducts = 
         const utilization = getEquipmentUtilization(scheduledProducts, equipmentName, breaks);
 
         return (
-          <section key={equipmentName} className="glass-card planner-data-text flex w-80 flex-shrink-0 flex-col rounded-3xl">
-            <div className="border-b border-outline-variant/15 px-5 py-4">
+          <section key={equipmentName} className="freya-card flex w-80 flex-shrink-0 flex-col rounded-[8px] border border-[var(--border)] bg-[var(--surface)] shadow-sm">
+            <div className="border-b border-[var(--border)] px-4 py-3.5">
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <h3 className="font-semibold text-on-surface">{equipmentName}</h3>
-                  <p className="mt-1 text-on-surface-variant">{items.length} scheduled item{items.length === 1 ? "" : "s"}</p>
+                  <h3 className="text-xs font-semibold text-[var(--text-primary)]">{equipmentName}</h3>
+                  <p className="mt-0.5 text-xs text-[var(--text-muted)]">{items.length} scheduled item{items.length === 1 ? "" : "s"}</p>
                 </div>
-                <span className={`rounded-full px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] ${utilization.utilization > 100 ? "bg-error/10 text-error" : "bg-primary/10 text-primary"}`}>
+                <span className={`rounded-[6px] border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.04em] ${utilization.utilization > 100 ? "border-[var(--status-danger)]/30 bg-[var(--status-danger)]/10 text-[var(--status-danger)]" : "border-[var(--freya-blue)]/30 bg-[var(--freya-blue)]/10 text-[var(--freya-blue)]"}`}>
                   {utilization.formattedTime}
                 </span>
               </div>
-              <div className="mt-3 h-2 overflow-hidden rounded-full bg-surface-container-high">
-                <div className={`h-full rounded-full ${utilization.utilization > 100 ? "bg-error" : "bg-primary"}`} style={{ width: `${Math.min(utilization.utilization, 100)}%` }} />
+              <div className="mt-2.5 h-1.5 overflow-hidden rounded-full bg-[var(--surface-subtle)]">
+                <div className={`h-full rounded-full ${utilization.utilization > 100 ? "bg-[var(--status-danger)]" : "bg-[var(--freya-blue)]"}`} style={{ width: `${Math.min(utilization.utilization, 100)}%` }} />
               </div>
-              <div className="mt-1 text-[11px] text-on-surface-variant">{utilization.utilization}% utilization</div>
+              <div className="mt-1 text-[10px] text-[var(--text-muted)]">{utilization.utilization}% utilization</div>
             </div>
 
             <div
-              className="min-h-[260px] flex-1 space-y-3 overflow-y-auto px-4 py-4"
+              className="min-h-[260px] flex-1 space-y-2.5 overflow-y-auto p-3"
               onDragOver={(event) => event.preventDefault()}
               onDrop={(event) => {
                 event.preventDefault();
@@ -45,7 +45,7 @@ export default function PlannerKanbanView({ equipment = [], scheduledProducts = 
               }}
             >
               {!items.length ? (
-                <div className="rounded-3xl border border-dashed border-outline-variant/20 bg-surface-container-low px-4 py-10 text-center text-sm text-on-surface-variant">
+                <div className="rounded-[6px] border border-dashed border-[var(--border)] bg-[var(--surface-subtle)] px-4 py-10 text-center text-xs text-[var(--text-muted)]">
                   Drop products here.
                 </div>
               ) : items.map((item) => (
@@ -56,38 +56,38 @@ export default function PlannerKanbanView({ equipment = [], scheduledProducts = 
                     event.dataTransfer.setData("text/planner-item", item._scheduleId);
                     event.dataTransfer.effectAllowed = "move";
                   }}
-                  className="rounded-3xl border border-outline-variant/15 bg-surface-container-low px-4 py-4 shadow-sm"
+                  className="rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] p-3 shadow-sm hover:border-[var(--border-strong)] transition-all"
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
                       <div className="flex items-center gap-2">
-                        <span className="h-3 w-3 rounded-full" style={{ backgroundColor: item.color }} />
-                        <h4 className="truncate font-semibold text-on-surface">{item.背番号 || item.品番}</h4>
+                        <span className="h-2.5 w-2.5 flex-shrink-0 rounded-full" style={{ backgroundColor: item.color }} />
+                        <h4 className="truncate text-xs font-semibold text-[var(--text-primary)]">{item.背番号 || item.品番}</h4>
                       </div>
-                      <p className="mt-1 truncate text-on-surface-variant">{item.品名 || item.品番}</p>
+                      <p className="mt-0.5 truncate text-xs text-[var(--text-muted)]">{item.品名 || item.品番}</p>
                     </div>
                     <button
                       type="button"
                       onClick={() => onRemoveItem(item)}
-                      className="flex h-8 w-8 items-center justify-center rounded-xl bg-error/10 text-error transition hover:bg-error/15"
+                      className="flex h-6 w-6 items-center justify-center rounded-[4px] border border-[var(--border)] bg-[var(--surface)] text-[var(--text-muted)] hover:text-[var(--status-danger)] hover:bg-[var(--status-danger)]/10 transition-colors"
                       aria-label={`Remove ${item.背番号}`}
                     >
-                      <span className="material-symbols-outlined" style={{ fontSize: 16 }}>delete</span>
+                      <span className="material-symbols-outlined" style={{ fontSize: 14 }}>delete</span>
                     </button>
                   </div>
 
-                  <div className="mt-4 grid grid-cols-3 gap-2 text-on-surface-variant">
-                    <div className="rounded-2xl bg-surface px-3 py-2">
-                      <div className="font-semibold text-on-surface">{item.quantity}</div>
-                      <div>pcs</div>
+                  <div className="mt-2.5 grid grid-cols-3 gap-1.5 text-xs text-[var(--text-muted)]">
+                    <div className="rounded-[4px] border border-[var(--border)] bg-[var(--surface)] px-2 py-1.5 text-center">
+                      <div className="font-semibold text-xs text-[var(--text-primary)]">{item.quantity}</div>
+                      <div className="text-[10px]">pcs</div>
                     </div>
-                    <div className="rounded-2xl bg-surface px-3 py-2">
-                      <div className="font-semibold text-on-surface">{item.boxes}</div>
-                      <div>boxes</div>
+                    <div className="rounded-[4px] border border-[var(--border)] bg-[var(--surface)] px-2 py-1.5 text-center">
+                      <div className="font-semibold text-xs text-[var(--text-primary)]">{item.boxes}</div>
+                      <div className="text-[10px]">boxes</div>
                     </div>
-                    <div className="rounded-2xl bg-surface px-3 py-2">
-                      <div className="font-semibold text-on-surface">{item.startTime}</div>
-                      <div>{item.estimatedTime?.formattedTime}</div>
+                    <div className="rounded-[4px] border border-[var(--border)] bg-[var(--surface)] px-2 py-1.5 text-center">
+                      <div className="font-semibold text-xs text-[var(--text-primary)]">{item.startTime}</div>
+                      <div className="text-[10px]">{item.estimatedTime?.formattedTime}</div>
                     </div>
                   </div>
                 </article>

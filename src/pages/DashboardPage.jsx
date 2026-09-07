@@ -24,7 +24,7 @@ export default function DashboardPage() {
     : null;
 
   return (
-    <section className="pt-20 sm:pt-24 pb-24 sm:pb-16 px-4 sm:px-6 md:px-8 overflow-y-auto h-screen scrollbar-hide">
+    <section className="min-h-screen max-w-[1600px] mx-auto space-y-6 pt-20 px-6 pb-12">
       <PageHeader
         title={t("dashboard")}
         subtitle={today}
@@ -34,10 +34,7 @@ export default function DashboardPage() {
           <button
             onClick={refresh}
             disabled={loading}
-            className="flex w-full sm:w-auto items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs font-semibold
-                       bg-surface-container border border-separator/40 text-on-surface-variant
-                       hover:bg-surface-container-high hover:text-primary hover:border-primary/30
-                       active:scale-95 transition-all duration-150 disabled:opacity-50 shadow-sm"
+            className="freya-btn-secondary w-full sm:w-auto h-10 px-4 text-xs font-semibold"
           >
             <span className={`material-symbols-outlined ${loading ? "animate-spin" : ""}`} style={{ fontSize: 16 }}>refresh</span>
             {refreshLabel ? `${t("refresh")} · ${refreshLabel}` : t("refresh")}
@@ -47,8 +44,7 @@ export default function DashboardPage() {
 
       {/* ── Error banner ── */}
       {error && (
-        <div className="rounded-2xl p-4 mb-6 flex items-center gap-3 text-error
-                        bg-error/8 border border-error/25 shadow-sm">
+        <div className="freya-card border-rose-200 dark:border-rose-900 bg-rose-50/50 dark:bg-rose-950/20 p-4 mb-6 flex items-center gap-3 text-rose-600 dark:text-rose-400">
           <span className="material-symbols-outlined flex-shrink-0" style={{ fontSize: 20 }}>error</span>
           <p className="text-sm font-semibold">Backend unreachable — data may be stale. ({error})</p>
         </div>

@@ -41,7 +41,7 @@ function buildInitialDraft(record) {
 const FORM_ID = "setsubi-record-form";
 
 const inputCls =
-  "w-full rounded-xl border border-outline-variant/30 bg-surface px-3 py-3 text-sm text-on-surface outline-none transition-all duration-150 focus:border-primary/40";
+  "w-full rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-xs font-medium text-[var(--text-primary)] placeholder-[var(--text-muted)] outline-none transition focus:border-[var(--freya-blue)] focus:ring-1 focus:ring-[var(--freya-blue)]";
 
 export default function SetsubiRecordModal({
   open,
@@ -110,19 +110,19 @@ export default function SetsubiRecordModal({
             type="button"
             onClick={onArchive}
             disabled={submitting}
-            className="rounded-xl border border-amber-500/25 bg-amber-500/10 px-4 py-2 text-xs font-semibold text-amber-500 hover:bg-amber-500/20 active:scale-95 transition-all duration-150 disabled:cursor-not-allowed disabled:opacity-50"
+            className="rounded-[6px] border border-[var(--status-warning)]/30 bg-[var(--status-warning)]/10 px-3.5 py-2 text-xs font-semibold text-[var(--status-warning)] hover:bg-[var(--status-warning)]/20 active:scale-[0.98] transition-all shadow-2xs disabled:cursor-not-allowed disabled:opacity-50"
           >
             Archive
           </button>
         ) : (
-          <p className="text-sm text-on-surface-variant">設備名 is required before saving.</p>
+          <p className="text-xs text-[var(--text-muted)]">設備名 is required before saving.</p>
         )}
       </div>
       <div className="flex items-center gap-3">
         <button
           type="button"
           onClick={onClose}
-          className="rounded-xl border border-separator/40 px-4 py-2 text-xs font-semibold text-on-surface-variant hover:bg-surface-container hover:text-primary hover:border-primary/30 active:scale-95 transition-all duration-150"
+          className="rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3.5 py-2 text-xs font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-hover)] transition-colors shadow-2xs"
         >
           Cancel
         </button>
@@ -130,7 +130,7 @@ export default function SetsubiRecordModal({
           type="submit"
           form={FORM_ID}
           disabled={!hasData || submitting}
-          className="rounded-xl bg-primary px-4 py-2 text-xs font-semibold text-on-primary hover:opacity-90 active:scale-95 transition-all duration-150 disabled:cursor-not-allowed disabled:opacity-50"
+          className="rounded-[6px] bg-[var(--freya-blue)] px-4 py-2 text-xs font-semibold text-white hover:bg-[var(--freya-blue-hover)] active:scale-[0.98] transition-all shadow-xs disabled:cursor-not-allowed disabled:opacity-50"
         >
           {submitting ? "Saving…" : isEdit ? "Save Changes" : "Add Equipment"}
         </button>
@@ -148,7 +148,7 @@ export default function SetsubiRecordModal({
       maxWidth="max-w-3xl"
       align="start"
       footer={footer}
-      footerClassName="border-t border-outline-variant/20 bg-surface-container-low/50 px-6 py-4"
+      footerClassName="border-t border-[var(--border)] bg-[var(--surface)] px-6 py-4"
     >
       <form
         id={FORM_ID}
@@ -315,7 +315,7 @@ export default function SetsubiRecordModal({
               type="button"
               onClick={() => fileInputRef.current?.click()}
               disabled={uploading}
-              className="inline-flex items-center gap-2 rounded-xl border border-outline-variant/30 bg-surface px-4 py-2 text-xs font-semibold text-on-surface hover:bg-surface-container active:scale-95 transition-all duration-150 disabled:cursor-not-allowed disabled:opacity-50"
+              className="inline-flex items-center gap-2 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3.5 py-2 text-xs font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-hover)] active:scale-[0.98] transition-all shadow-2xs disabled:cursor-not-allowed disabled:opacity-50"
             >
               {uploading ? (
                 <>
@@ -331,7 +331,7 @@ export default function SetsubiRecordModal({
             </button>
 
             {uploadError && (
-              <p className="mt-2 text-xs text-error">{uploadError}</p>
+              <p className="mt-2 text-xs text-[var(--status-danger)]">{uploadError}</p>
             )}
 
             {draft.imageURL && (
@@ -339,12 +339,12 @@ export default function SetsubiRecordModal({
                 <img
                   src={draft.imageURL}
                   alt="equipment"
-                  className="h-16 w-16 rounded-xl object-cover border border-separator/40"
+                  className="h-16 w-16 rounded-[8px] object-cover border border-[var(--border)]"
                 />
                 <button
                   type="button"
                   onClick={() => set("imageURL", "")}
-                  className="absolute -right-2 -top-2 hidden h-5 w-5 items-center justify-center rounded-full bg-error text-white group-hover:flex"
+                  className="absolute -right-2 -top-2 hidden h-5 w-5 items-center justify-center rounded-full bg-[var(--status-danger)] text-white group-hover:flex"
                 >
                   <span className="material-symbols-outlined" style={{ fontSize: 11 }}>close</span>
                 </button>

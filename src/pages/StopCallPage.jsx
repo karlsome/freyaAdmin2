@@ -236,16 +236,22 @@ export default function StopCallPage() {
   }, [rangePreset, t]);
 
   return (
-    <section className="h-screen overflow-y-auto px-4 pb-24 pt-20 scrollbar-hide sm:px-6 sm:pb-16 sm:pt-24 md:px-8">
+    <section className="min-h-screen max-w-[1600px] mx-auto space-y-6 pt-20 px-6 pb-12">
       <PageHeader
         eyebrow={t("factories")}
-        title={t("stopCallAnalytics")}
+        title={(
+          <div className="flex items-center gap-2.5">
+            <span className="material-symbols-outlined text-[var(--freya-blue)]">call_end</span>
+            <span>{t("stopCallAnalytics")}</span>
+          </div>
+        )}
         subtitle={`${dateRange.from} — ${dateRange.to}`}
+        className="mb-6 md:flex-row md:items-center md:justify-between"
         actions={
           <button
             type="button"
             onClick={() => { loadSummary(); loadPagedRecords(); }}
-            className="flex items-center gap-2 rounded-xl border border-outline-variant/30 px-4 py-2 text-sm font-semibold text-on-surface transition hover:bg-surface-container active:scale-95"
+            className="rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-hover)] transition-colors shadow-2xs flex items-center gap-1.5"
           >
             <span className="material-symbols-outlined" style={{ fontSize: 16 }}>refresh</span>
             {t("refresh")}
@@ -254,14 +260,14 @@ export default function StopCallPage() {
       />
 
       {/* ── Filter Bar ──────────────────────────────────────────────────────── */}
-      <div className="mb-6 flex flex-wrap items-end gap-3">
+      <div className="freya-card rounded-[8px] border border-[var(--border)] bg-[var(--surface)] p-4 shadow-sm flex flex-wrap items-end gap-3">
         {/* Range preset dropdown */}
         <div>
-          <label className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.18em] text-on-surface-variant">{t("date")}</label>
+          <label className="mb-1 block text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">{t("date")}</label>
           <select
             value={rangePreset}
             onChange={(e) => setRangePreset(e.target.value)}
-            className="rounded-xl border border-outline-variant/30 bg-surface-container px-3 py-2 text-sm font-medium text-on-surface transition focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/30"
+            className="rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] px-2.5 py-1.5 text-xs font-semibold text-[var(--text-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--freya-blue)]"
           >
             {RANGE_PRESETS.map((p) => (
               <option key={p} value={p}>
@@ -276,21 +282,21 @@ export default function StopCallPage() {
         {rangePreset === "custom" && (
           <>
             <div>
-              <label className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.18em] text-on-surface-variant">From</label>
+              <label className="mb-1 block text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">From</label>
               <input
                 type="date"
                 value={customFrom}
                 onChange={(e) => setCustomFrom(e.target.value)}
-                className="rounded-xl border border-outline-variant/30 bg-surface-container px-3 py-2 text-sm text-on-surface focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/30"
+                className="rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] px-2.5 py-1.5 text-xs text-[var(--text-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--freya-blue)]"
               />
             </div>
             <div>
-              <label className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.18em] text-on-surface-variant">To</label>
+              <label className="mb-1 block text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">To</label>
               <input
                 type="date"
                 value={customTo}
                 onChange={(e) => setCustomTo(e.target.value)}
-                className="rounded-xl border border-outline-variant/30 bg-surface-container px-3 py-2 text-sm text-on-surface focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/30"
+                className="rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] px-2.5 py-1.5 text-xs text-[var(--text-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--freya-blue)]"
               />
             </div>
           </>
@@ -298,11 +304,11 @@ export default function StopCallPage() {
 
         {/* Factory filter */}
         <div>
-          <label className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.18em] text-on-surface-variant">{t("factory")}</label>
+          <label className="mb-1 block text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">{t("factory")}</label>
           <select
             value={factory}
             onChange={(e) => setFactory(e.target.value)}
-            className="rounded-xl border border-outline-variant/30 bg-surface-container px-3 py-2 text-sm font-medium text-on-surface transition focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/30"
+            className="rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] px-2.5 py-1.5 text-xs font-semibold text-[var(--text-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--freya-blue)]"
           >
             <option value="">{t("all")}</option>
             {factories.map((f) => <option key={f} value={f}>{f}</option>)}
@@ -310,14 +316,14 @@ export default function StopCallPage() {
         </div>
 
         {/* Leader search */}
-        <div>
-          <label className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.18em] text-on-surface-variant">{t("leaderName")}</label>
+        <div className="flex-1 min-w-[200px]">
+          <label className="mb-1 block text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">{t("leaderName")}</label>
           <input
             type="text"
             value={leaderSearch}
             onChange={(e) => setLeaderSearch(e.target.value)}
             placeholder={t("searchPlaceholder")}
-            className="rounded-xl border border-outline-variant/30 bg-surface-container px-3 py-2 text-sm text-on-surface placeholder:text-outline focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/30"
+            className="w-full rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] px-2.5 py-1.5 text-xs text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:outline-none focus:ring-1 focus:ring-[var(--freya-blue)]"
           />
         </div>
 
@@ -325,20 +331,20 @@ export default function StopCallPage() {
         <button
           type="button"
           onClick={() => { setRangePreset("today"); setFactory(""); setLeaderSearch(""); setCustomFrom(""); setCustomTo(""); }}
-          className="rounded-xl border border-outline-variant/30 px-3 py-2 text-sm font-medium text-on-surface-variant transition hover:bg-surface-container hover:text-on-surface active:scale-95"
+          className="rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-hover)] shadow-2xs transition-colors"
         >
           {t("reset")}
         </button>
       </div>
 
       {/* ── KPI Strip ───────────────────────────────────────────────────────── */}
-      <div className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <StatSummaryCard
           icon="phone_missed"
           label={t("totalCalls")}
           value={kpis.total}
           subtitle={`${kpis.todayEvents} ${t("todayLabel").toLowerCase()}`}
-          accent="bg-primary/15 text-primary"
+          accent="bg-[var(--freya-blue)]/10 text-[var(--freya-blue)]"
           loading={summaryLoading}
         />
         <StatSummaryCard
@@ -346,7 +352,7 @@ export default function StopCallPage() {
           label={t("avgResponseTime")}
           value={fmtWait(Math.round(kpis.avgWait))}
           subtitle={rangeLabel}
-          accent="bg-amber-400/15 text-amber-400"
+          accent="bg-amber-400/10 text-amber-500"
           loading={summaryLoading}
         />
         <StatSummaryCard
@@ -354,7 +360,7 @@ export default function StopCallPage() {
           label={t("longestWait")}
           value={fmtWait(kpis.maxWait)}
           subtitle={rangeLabel}
-          accent="bg-error/15 text-error"
+          accent="bg-[var(--status-danger)]/10 text-[var(--status-danger)]"
           loading={summaryLoading}
         />
         <StatSummaryCard
@@ -362,13 +368,13 @@ export default function StopCallPage() {
           label={t("leadersInvolved")}
           value={kpis.uniqueLeaders}
           subtitle={`${leaders.length} ranked`}
-          accent="bg-emerald-400/15 text-emerald-400"
+          accent="bg-emerald-400/10 text-emerald-500"
           loading={summaryLoading}
         />
       </div>
 
       {/* ── View Switcher ───────────────────────────────────────────────────── */}
-      <div className="mb-6">
+      <div>
         <LiquidSegmentedControl items={viewItems} activeKey={activeView} onChange={setActiveView} />
       </div>
 
@@ -414,9 +420,9 @@ function TimelineView({ events, onClickEvent, t, loading }) {
     return (
       <div className="space-y-3">
         {Array.from({ length: 5 }).map((_, i) => (
-          <div key={i} className="glass-card rounded-2xl p-5 animate-pulse">
-            <div className="h-4 w-48 rounded bg-surface-container-high" />
-            <div className="mt-2 h-3 w-32 rounded bg-surface-container-high" />
+          <div key={i} className="freya-card rounded-[8px] border border-[var(--border)] bg-[var(--surface)] p-4 animate-pulse">
+            <div className="h-4 w-48 rounded-[4px] bg-[var(--surface-subtle)]" />
+            <div className="mt-2 h-3 w-32 rounded-[4px] bg-[var(--surface-subtle)]" />
           </div>
         ))}
       </div>
@@ -439,41 +445,41 @@ function TimelineView({ events, onClickEvent, t, loading }) {
     <div className="space-y-6">
       {sortedDates.map((date) => (
         <div key={date}>
-          <h3 className="mb-3 text-sm font-semibold text-on-surface">{date}</h3>
+          <h3 className="mb-2.5 text-xs font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">{date}</h3>
           <div className="space-y-2">
             {grouped.get(date).map((ev, idx) => (
               <button
                 key={idx}
                 type="button"
-                className="glass-card w-full rounded-2xl p-4 text-left transition-all hover:ring-1 hover:ring-primary/20 active:scale-[0.995]"
+                className="freya-card w-full rounded-[8px] border border-[var(--border)] bg-[var(--surface)] p-3.5 text-left shadow-sm transition-all hover:border-[var(--freya-blue)]/50"
                 onClick={() => onClickEvent(ev)}
               >
                 <div className="flex items-center justify-between gap-4">
                   <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2 text-sm">
-                      <span className="font-semibold text-on-surface">{ev["設備"]}</span>
-                      <span className="text-primary font-medium">{ev["背番号"]}</span>
-                      <span className="text-on-surface-variant">{ev["品番"]}</span>
+                    <div className="flex items-center gap-2 text-xs">
+                      <span className="font-semibold text-[var(--text-primary)]">{ev["設備"]}</span>
+                      <span className="text-[var(--freya-blue)] font-mono font-medium">{ev["背番号"]}</span>
+                      <span className="text-[var(--text-secondary)]">{ev["品番"]}</span>
                     </div>
-                    <div className="mt-1 flex items-center gap-3 text-xs text-on-surface-variant">
+                    <div className="mt-1 flex items-center gap-2 text-xs text-[var(--text-muted)]">
                       <span>{ev.Worker_Name}</span>
                       <span>→</span>
-                      <span className="font-medium text-on-surface">{ev.leaderName}</span>
-                      <span className={`inline-block rounded-full px-2 py-0.5 text-[10px] font-semibold ${
-                        ev.leaderRole === "admin" ? "bg-primary/15 text-primary"
-                          : ev.leaderRole === "班長" ? "bg-amber-400/15 text-amber-500"
-                            : "bg-emerald-400/15 text-emerald-400"
+                      <span className="font-medium text-[var(--text-primary)]">{ev.leaderName}</span>
+                      <span className={`inline-block rounded-[4px] border px-1.5 py-0.5 text-[10px] font-mono font-medium ${
+                        ev.leaderRole === "admin" ? "border-[var(--freya-blue)]/30 bg-[var(--freya-blue)]/10 text-[var(--freya-blue)]"
+                          : ev.leaderRole === "班長" ? "border-amber-400/30 bg-amber-400/10 text-amber-500"
+                            : "border-emerald-400/30 bg-emerald-400/10 text-emerald-500"
                       }`}>{ev.leaderRole}</span>
                     </div>
                   </div>
                   <div className="flex-shrink-0 text-right">
-                    <div className="flex items-center gap-2 text-xs text-on-surface-variant">
+                    <div className="flex items-center gap-1.5 text-xs font-mono text-[var(--text-muted)]">
                       <span>{ev.calledAt}</span>
-                      <span className="material-symbols-outlined" style={{ fontSize: 14 }}>arrow_forward</span>
+                      <span className="material-symbols-outlined" style={{ fontSize: 13 }}>arrow_forward</span>
                       <span>{ev.arrivedAt}</span>
                     </div>
-                    <p className={`mt-1 text-sm font-bold ${
-                      (ev.waitSeconds || 0) > 300 ? "text-error" : (ev.waitSeconds || 0) > 120 ? "text-amber-400" : "text-emerald-400"
+                    <p className={`mt-0.5 text-sm font-bold font-mono ${
+                      (ev.waitSeconds || 0) > 300 ? "text-[var(--status-danger)]" : (ev.waitSeconds || 0) > 120 ? "text-amber-500" : "text-emerald-500"
                     }`}>
                       {fmtWait(ev.waitSeconds)}
                     </p>
@@ -496,13 +502,13 @@ function AllRecordsView({ pagedResult, page, pageSize, sort, onSort, loading, on
   const events = useMemo(() => flattenStopCalls(data), [data]);
 
   return (
-    <div>
+    <div className="freya-card rounded-[8px] border border-[var(--border)] bg-[var(--surface)] p-4 shadow-sm">
       {/* Table */}
       {loading ? (
         <div className="space-y-2">
           {Array.from({ length: 5 }).map((_, i) => (
-            <div key={i} className="glass-card rounded-xl p-4 animate-pulse">
-              <div className="h-4 w-64 rounded bg-surface-container-high" />
+            <div key={i} className="rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] p-3 animate-pulse">
+              <div className="h-4 w-64 rounded bg-[var(--surface)]" />
             </div>
           ))}
         </div>
@@ -511,37 +517,40 @@ function AllRecordsView({ pagedResult, page, pageSize, sort, onSort, loading, on
       ) : (
         <DataTable
           columns={[
-            { key: "date", label: t("date"), sortable: true },
-            { key: "工場", label: "工場", sortable: true, cellClassName: "text-on-surface-variant" },
-            { key: "設備", label: "設備", sortable: true },
-            { key: "背番号", label: "背番号", sortable: true, cellClassName: "font-medium text-primary" },
-            { key: "品番", label: "品番", sortable: true },
-            { key: "Worker_Name", label: t("worker"), sortable: true, cellClassName: "text-on-surface-variant" },
+            { key: "date", label: t("date"), sortable: true, renderCell: (ev) => <span className="font-mono text-xs text-[var(--text-secondary)]">{ev.date}</span> },
+            { key: "工場", label: "工場", sortable: true, renderCell: (ev) => <span className="text-xs text-[var(--text-secondary)]">{ev["工場"]}</span> },
+            { key: "設備", label: "設備", sortable: true, renderCell: (ev) => <span className="text-xs font-semibold text-[var(--text-primary)]">{ev["設備"]}</span> },
+            { key: "背番号", label: "背番号", sortable: true, renderCell: (ev) => <span className="font-mono text-xs font-medium text-[var(--freya-blue)]">{ev["背番号"]}</span> },
+            { key: "品番", label: "品番", sortable: true, renderCell: (ev) => <span className="text-xs text-[var(--text-secondary)]">{ev["品番"]}</span> },
+            { key: "Worker_Name", label: t("worker"), sortable: true, renderCell: (ev) => <span className="text-xs text-[var(--text-secondary)]">{ev.Worker_Name}</span> },
             { 
               key: "leaderName", 
               label: t("leaderName"), 
               sortable: true,
               renderCell: (ev) => (
-                <>
-                  <span className="text-on-surface">{ev.leaderName}</span>
-                  <span className={`ml-1.5 inline-block rounded-full px-1.5 py-0.5 text-[9px] font-semibold ${
-                    ev.leaderRole === "admin" ? "bg-primary/15 text-primary"
-                      : ev.leaderRole === "班長" ? "bg-amber-400/15 text-amber-500"
-                        : "bg-emerald-400/15 text-emerald-400"
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs font-semibold text-[var(--text-primary)]">{ev.leaderName}</span>
+                  <span className={`inline-block rounded-[4px] border px-1.5 py-0.5 text-[9px] font-mono font-medium ${
+                    ev.leaderRole === "admin" ? "border-[var(--freya-blue)]/30 bg-[var(--freya-blue)]/10 text-[var(--freya-blue)]"
+                      : ev.leaderRole === "班長" ? "border-amber-400/30 bg-amber-400/10 text-amber-500"
+                        : "border-emerald-400/30 bg-emerald-400/10 text-emerald-500"
                   }`}>{ev.leaderRole}</span>
-                </>
+                </div>
               )
             },
-            { key: "calledAt", label: t("calledAt"), sortable: true, cellClassName: "text-on-surface-variant" },
-            { key: "arrivedAt", label: t("arrivedAt"), sortable: true, cellClassName: "text-on-surface-variant" },
+            { key: "calledAt", label: t("calledAt"), sortable: true, renderCell: (ev) => <span className="font-mono text-xs text-[var(--text-muted)]">{ev.calledAt}</span> },
+            { key: "arrivedAt", label: t("arrivedAt"), sortable: true, renderCell: (ev) => <span className="font-mono text-xs text-[var(--text-muted)]">{ev.arrivedAt}</span> },
             { 
               key: "waitSeconds", 
               label: t("waitTime"), 
               sortable: true,
-              cellClassName: (ev) => `font-semibold ${
-                (ev.waitSeconds || 0) > 300 ? "text-error" : (ev.waitSeconds || 0) > 120 ? "text-amber-400" : "text-emerald-400"
-              }`,
-              renderCell: (ev) => fmtWait(ev.waitSeconds)
+              renderCell: (ev) => (
+                <span className={`font-mono text-xs font-bold ${
+                  (ev.waitSeconds || 0) > 300 ? "text-[var(--status-danger)]" : (ev.waitSeconds || 0) > 120 ? "text-amber-500" : "text-emerald-500"
+                }`}>
+                  {fmtWait(ev.waitSeconds)}
+                </span>
+              )
             },
           ]}
           rows={events}
@@ -563,12 +572,11 @@ function AllRecordsView({ pagedResult, page, pageSize, sort, onSort, loading, on
           onRowClick={(ev) => onClickRecord(ev)}
           enableColumnReorder={true}
           layoutStorageKey="StopCallAllRecordsLayout"
-          className=""
-          tableClassName="w-full text-sm"
-          headClassName="border-b border-separator/20"
-          headerButtonClassName="ui-table-heading inline-flex items-center gap-2 uppercase tracking-wider text-[10px] text-on-surface-variant transition hover:text-on-surface"
-          headerCellClassName="pb-3 pr-4 text-left whitespace-nowrap"
-          cellClassName="py-3 pr-4 align-top"
+          className="overflow-hidden rounded-[8px] border border-[var(--border)]"
+          topBarClassName="mb-3 flex flex-wrap items-center justify-end gap-3 px-1"
+          bottomBarClassName="flex flex-col gap-3 border-t border-[var(--border)] px-2 pt-3 md:flex-row md:items-center md:justify-between text-xs text-[var(--text-muted)]"
+          rowClassName="border-b border-[var(--border)] transition hover:bg-[var(--surface-hover)] cursor-pointer"
+          rowsSelectClassName="h-8 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-2 text-xs text-[var(--text-primary)] outline-none focus:border-[var(--freya-blue)]"
         />
       )}
     </div>

@@ -300,7 +300,7 @@ function normalizeReferenceLibraryImages(images = []) {
 }
 
 const inputClass =
-  "w-full rounded-2xl border border-separator/40 bg-surface px-3 py-3 text-sm text-on-surface outline-none transition focus:border-primary/40";
+  "w-full rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-xs text-[var(--text-primary)] outline-none transition focus:border-[var(--freya-blue)] placeholder:text-[var(--text-muted)]";
 
 function getBuilderViewportSize() {
   if (typeof window === "undefined") {
@@ -315,25 +315,30 @@ function getBuilderViewportSize() {
 
 function ToggleRow({ checked, onToggle, label, description }) {
   return (
-    <div className="flex items-start justify-between gap-4 rounded-2xl border border-separator/40 bg-surface px-4 py-3">
+    <div className="flex items-start justify-between gap-4 rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] px-3.5 py-2.5">
       <div>
-        <p className="text-sm font-semibold text-on-surface">{label}</p>
-        <p className="mt-1 text-xs leading-5 text-outline">{description}</p>
+        <p className="text-xs font-semibold text-[var(--text-primary)]">{label}</p>
+        {description ? <p className="mt-0.5 text-xs text-[var(--text-muted)] leading-relaxed">{description}</p> : null}
       </div>
       <button
         type="button"
         role="switch"
         aria-checked={checked}
         onClick={onToggle}
-        className={`relative inline-flex h-6 w-11 flex-shrink-0 rounded-full border-2 border-transparent transition-colors ${
-          checked ? "bg-primary" : "bg-outline/30"
+        className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus-visible:ring-1 focus-visible:ring-[var(--freya-blue)] ${
+          checked ? "bg-[var(--freya-blue)] shadow-xs" : "bg-[var(--surface-subtle)] border border-[var(--border)]"
         }`}
       >
-        <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${checked ? "translate-x-5" : "translate-x-0"}`} />
+        <span
+          className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-xs ring-0 transition duration-200 ease-in-out ${
+            checked ? "translate-x-4" : "translate-x-0"
+          }`}
+        />
       </button>
     </div>
   );
 }
+
 
 export default function CheckFormBuilderModal({
   initial,
@@ -601,20 +606,20 @@ export default function CheckFormBuilderModal({
   }
 
   const modal = (
-    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto overscroll-contain bg-black/50 px-3 py-3 backdrop-blur-md sm:px-4 sm:py-4">
+    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto overscroll-contain bg-black/60 px-3 py-3 backdrop-blur-sm sm:px-4 sm:py-4">
       <div
-        className="relative flex min-h-0 w-full max-w-4xl flex-col overflow-hidden rounded-2xl border border-separator/40 glass-card"
+        className="relative flex min-h-0 w-full max-w-4xl flex-col overflow-hidden rounded-[12px] border border-[var(--border)] bg-[var(--surface-raised)] shadow-2xl"
         style={{ height: `${modalHeight}px`, maxHeight: `${modalHeight}px` }}
       >
-        <div className="flex items-start justify-between border-b border-separator/40 px-6 py-5">
+        <div className="flex items-start justify-between border-b border-[var(--border)] px-6 py-4">
           <div className="min-w-0 flex-1 pr-4">
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-outline">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.04em] text-[var(--freya-blue)]">
               {isClone ? "Clone Template" : initial ? "Edit Form" : "New Form"}
             </p>
-            <h2 className="mt-1 text-xl font-semibold text-on-surface">
+            <h2 className="mt-0.5 text-lg font-bold text-[var(--text-primary)]">
               {isClone ? "Clone Checklist Form" : "Checklist Form Builder"}
             </h2>
-            <p className="mt-2 max-w-3xl text-sm leading-6 text-outline">
+            <p className="mt-1 max-w-3xl text-xs leading-relaxed text-[var(--text-muted)]">
               {isClone
                 ? "Review and customize the copied checks and scope, then deploy as a new checklist form."
                 : "Keep the setup simple, then shape each check inline so the form reads clearly before you save it."}
@@ -623,17 +628,17 @@ export default function CheckFormBuilderModal({
           <button
             type="button"
             onClick={onClose}
-            className="p-2 rounded-xl flex-shrink-0 text-outline hover:bg-surface-container hover:text-on-surface transition-all duration-150 active:scale-95"
+            className="p-1 rounded-[6px] text-[var(--text-muted)] hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)] transition"
           >
-            <span className="material-symbols-outlined" style={{ fontSize: 18 }}>close</span>
+            <span className="material-symbols-outlined" style={{ fontSize: 16 }}>close</span>
           </button>
         </div>
 
-        <div className="min-h-0 flex-1 overflow-y-auto px-4 py-5 sm:px-6 space-y-5">
-          <section className="rounded-2xl border border-separator/40 bg-surface-container/40 p-5">
-            <div className="mb-4">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Form Setup</p>
-              <p className="mt-1 text-sm text-outline">Define the name, description, factory, cadence, and activation date before editing the checks.</p>
+        <div className="min-h-0 flex-1 overflow-y-auto px-4 py-5 sm:px-6 space-y-4">
+          <section className="rounded-[8px] border border-[var(--border)] bg-[var(--surface)] p-4">
+            <div className="mb-3">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">Form Setup</p>
+              <p className="mt-0.5 text-xs text-[var(--text-muted)]">Define the name, description, factory, cadence, and activation date before editing the checks.</p>
             </div>
 
             <div className="grid gap-4 lg:grid-cols-2">
@@ -804,10 +809,10 @@ export default function CheckFormBuilderModal({
               <button
                 type="button"
                 onClick={() => addField()}
-                className="flex w-full items-center justify-center gap-3 rounded-2xl border border-dashed border-outline-variant/30 bg-surface px-5 py-4 text-sm font-semibold text-on-surface transition hover:border-primary/35 hover:bg-surface-container hover:text-primary active:scale-[0.99]"
+                className="flex w-full items-center justify-center gap-2 rounded-[6px] border border-dashed border-[var(--border)] bg-[var(--surface)] px-4 py-3 text-xs font-semibold text-[var(--text-primary)] transition hover:border-[var(--freya-blue)]/50 hover:bg-[var(--surface-hover)] hover:text-[var(--freya-blue)]"
               >
-                <span className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-primary">
-                  <span className="material-symbols-outlined" style={{ fontSize: 20 }}>add</span>
+                <span className="flex h-6 w-6 items-center justify-center rounded-[4px] bg-[var(--freya-blue)]/10 text-[var(--freya-blue)]">
+                  <span className="material-symbols-outlined" style={{ fontSize: 16 }}>add</span>
                 </span>
                 Add checklist item
               </button>
@@ -815,27 +820,27 @@ export default function CheckFormBuilderModal({
           </section>
         </div>
 
-        <div className="flex shrink-0 flex-col gap-3 border-t border-outline-variant/20 px-6 py-4 lg:flex-row lg:items-center lg:justify-between">
+        <div className="flex shrink-0 flex-col gap-2.5 border-t border-[var(--border)] bg-[var(--surface)] px-6 py-3 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex flex-1 flex-col gap-2 lg:flex-row lg:items-center">
-            {error ? <p className="text-xs text-error">{error}</p> : null}
+            {error ? <p className="text-xs text-[var(--status-danger)]">{error}</p> : null}
             {initial && !isClone && !error && !confirmingDelete ? (
               <button
                 type="button"
                 onClick={() => setConfirmingDelete(true)}
                 disabled={busy}
-                className="w-fit rounded-2xl border border-error/30 px-3 py-2 text-xs font-semibold text-error transition hover:bg-error/10 disabled:opacity-50"
+                className="w-fit rounded-[6px] border border-[var(--status-danger)]/30 px-3 py-1.5 text-xs font-semibold text-[var(--status-danger)] transition hover:bg-[var(--status-danger)]/10 disabled:opacity-50"
               >
                 Delete Form
               </button>
             ) : null}
             {initial && !isClone && confirmingDelete ? (
               <div className="flex flex-wrap items-center gap-2">
-                <p className="text-xs font-semibold text-error">Delete this form?</p>
+                <p className="text-xs font-semibold text-[var(--status-danger)]">Delete this form?</p>
                 <button
                   type="button"
                   onClick={deleteForm}
                   disabled={busy}
-                  className="rounded-2xl bg-error px-3 py-1.5 text-xs font-semibold text-white transition hover:opacity-90 disabled:opacity-50"
+                  className="rounded-[6px] bg-[var(--status-danger)] px-3 py-1.5 text-xs font-semibold text-white transition hover:opacity-90 disabled:opacity-50"
                 >
                   Yes, delete
                 </button>
@@ -843,7 +848,7 @@ export default function CheckFormBuilderModal({
                   type="button"
                   onClick={() => setConfirmingDelete(false)}
                   disabled={busy}
-                  className="rounded-2xl border border-separator/40 px-3 py-1.5 text-xs font-semibold text-on-surface transition hover:bg-surface-container"
+                  className="rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs font-semibold text-[var(--text-primary)] transition hover:bg-[var(--surface-hover)]"
                 >
                   Cancel
                 </button>
@@ -855,7 +860,7 @@ export default function CheckFormBuilderModal({
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 rounded-2xl border border-separator/40 bg-surface-container px-4 py-2 text-sm font-semibold text-on-surface transition hover:bg-surface-container-high sm:flex-none"
+              className="rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs font-semibold text-[var(--text-primary)] transition hover:bg-[var(--surface-hover)]"
             >
               Cancel
             </button>
@@ -863,7 +868,7 @@ export default function CheckFormBuilderModal({
               type="button"
               disabled={busy || nameConflict}
               onClick={() => save("draft")}
-              className="flex-1 rounded-2xl border border-separator/40 bg-surface-container px-4 py-2 text-sm font-semibold text-on-surface transition hover:bg-surface-container-high disabled:opacity-50 sm:flex-none"
+              className="rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs font-semibold text-[var(--text-primary)] transition hover:bg-[var(--surface-hover)] disabled:opacity-50"
             >
               {busy ? "Saving..." : "Save Draft"}
             </button>
@@ -871,7 +876,7 @@ export default function CheckFormBuilderModal({
               type="button"
               disabled={busy || nameConflict}
               onClick={() => save("active")}
-              className="flex-1 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-on-primary hover:opacity-90 active:scale-95 transition-all duration-150 disabled:opacity-50 sm:flex-none"
+              className="rounded-[6px] bg-[var(--freya-blue)] px-3.5 py-1.5 text-xs font-semibold text-white hover:bg-[var(--freya-blue-hover)] transition-colors disabled:opacity-50 shadow-xs"
             >
               {busy ? "Saving..." : isClone ? "Clone & Deploy" : initial ? "Save Changes" : "Deploy"}
             </button>

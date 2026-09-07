@@ -35,11 +35,11 @@
   --c-form-control-bg-hover:    248 249 250;
   --c-form-control-text:        27 27 31;
   --c-form-control-placeholder: 118 118 128;
-  --table-data-font-size:       0.75rem;
-  --table-data-line-height:     1rem;
-  --table-heading-font-size:    10px;
-  --table-heading-line-height:  0.875rem;
-  --table-heading-letter-space: 0.08em;
+  --table-data-font-size:       0.8125rem;
+  --table-data-line-height:     1.125rem;
+  --table-heading-font-size:    12px;
+  --table-heading-line-height:  1rem;
+  --table-heading-letter-space: 0.04em;
 }
 
 /* ─── Dark mode ─────────────────────────────────────────────────────────────── */
@@ -738,6 +738,8 @@ select:-webkit-autofill:focus {
   line-height: var(--table-heading-line-height);
   font-weight: 600;
   letter-spacing: var(--table-heading-letter-space);
+  text-transform: uppercase;
+  color: var(--text-muted, #64748B);
 }
 
 .planner-data-text {

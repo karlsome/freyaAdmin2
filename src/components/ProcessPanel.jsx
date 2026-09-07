@@ -220,13 +220,13 @@ export default function ProcessPanel({ processName, rows, onRowClick, showFactor
   }, [showFactoryColumn]);
 
   return (
-    <div className="glass-card rounded-2xl overflow-hidden flex flex-col">
+    <div className="freya-card overflow-hidden flex flex-col">
       {/* Panel header */}
-      <div className="px-5 py-4 flex items-center justify-between gap-3 border-b border-separator/40">
+      <div className="px-5 py-3.5 flex items-center justify-between gap-3 border-b border-[var(--border)] bg-[var(--surface)]">
         <div className="flex items-center gap-2.5 min-w-0">
           <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${accent.dot}`} />
-          <h4 className="text-sm font-semibold text-on-surface truncate">{processName} Process</h4>
-          <span className="px-2 py-0.5 rounded-full bg-surface-container text-[10px] font-semibold text-outline flex-shrink-0">
+          <h4 className="text-sm font-semibold text-[var(--text-primary)] truncate">{processName} Process</h4>
+          <span className="px-2 py-0.5 rounded-[4px] bg-slate-100 dark:bg-slate-800 text-[11px] font-semibold text-[var(--text-muted)] flex-shrink-0 tabular-nums">
             {totalItems}
           </span>
         </div>
@@ -237,7 +237,7 @@ export default function ProcessPanel({ processName, rows, onRowClick, showFactor
                 setShowSummary(true);
                 setTimeout(() => summaryRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 50);
               }}
-              className="px-3 py-1.5 rounded-lg border border-separator/40 bg-surface text-[11px] font-medium text-on-surface hover:bg-surface-container transition-colors flex items-center gap-1.5"
+              className="px-3 py-1.5 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] text-[11px] font-medium text-[var(--text-secondary)] hover:bg-[var(--surface-hover)] transition-colors flex items-center gap-1.5"
             >
               <span className="material-symbols-outlined" style={{ fontSize: 14 }}>expand_more</span>
               Summary
@@ -249,8 +249,8 @@ export default function ProcessPanel({ processName, rows, onRowClick, showFactor
             placeholder="Search…"
             value={search}
             onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-            className="h-7 px-2.5 rounded-lg bg-surface-container border border-separator/40 text-[11px]
-                       text-on-surface placeholder:text-outline outline-none focus:border-primary/40 w-28 transition-colors"
+            className="h-8 px-3 rounded-[6px] bg-[var(--surface)] border border-[var(--border)] text-xs
+                       text-[var(--text-primary)] placeholder:text-[var(--text-muted)] outline-none focus:border-[var(--freya-blue)] w-32 transition-colors"
           />
         </div>
       </div>
@@ -272,10 +272,10 @@ export default function ProcessPanel({ processName, rows, onRowClick, showFactor
         onRowClick={onRowClick ? (row) => onRowClick(row, processName) : undefined}
         renderPageInfo={() => (
           <div className="flex items-center justify-between w-full">
-            <span className="text-sm text-on-surface-variant">{totalItems} records, showing {pageStart}-{pageEnd}</span>
+            <span className="text-xs text-[var(--text-muted)] tabular-nums">{totalItems} records · showing {pageStart}-{pageEnd}</span>
             <button
               onClick={() => setShowExport(true)}
-              className="px-3 py-1.5 rounded-lg border border-separator/40 bg-surface text-[11px] font-medium text-on-surface hover:text-primary hover:border-primary/30 hover:bg-primary/5 transition-colors flex items-center gap-1.5"
+              className="px-3 py-1.5 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] text-[11px] font-medium text-[var(--text-secondary)] hover:text-[var(--freya-blue)] hover:border-[var(--freya-blue)] transition-colors flex items-center gap-1.5"
             >
               <span className="material-symbols-outlined" style={{ fontSize: 14 }}>download</span>
               Export
@@ -290,15 +290,15 @@ export default function ProcessPanel({ processName, rows, onRowClick, showFactor
         stickyHeader
         stickyHeaderOffset={0}
         className="flex min-h-0 flex-1 flex-col overflow-hidden"
-        topBarClassName="flex justify-end px-1 pb-4"
-        bottomBarClassName="flex flex-col gap-4 border-t border-separator/40 px-1 pt-4 md:flex-row md:items-center md:justify-between"
+        topBarClassName="flex justify-end px-1 pb-3"
+        bottomBarClassName="flex flex-col gap-4 border-t border-[var(--border)] px-4 py-3 md:flex-row md:items-center md:justify-between bg-[var(--surface)]"
         bottomInfoClassName="flex-1 w-full flex"
         tableClassName="ui-table-data min-w-[720px]"
         tableViewportClassName="min-h-0 overflow-auto"
-        headClassName="bg-surface-container-high/40 border-b border-outline-variant/20"
-        headerCellClassName="px-4 py-2.5 text-left whitespace-nowrap"
-        cellClassName="px-4 py-2.5 align-top"
-        rowClassName="border-b border-outline-variant/10 transition hover:bg-primary/10"
+        headClassName="bg-slate-50 dark:bg-slate-900/60 border-b border-[var(--border)]"
+        headerCellClassName="px-4 py-2.5 text-left whitespace-nowrap text-[12px] font-semibold text-[var(--text-muted)] uppercase tracking-[0.04em]"
+        cellClassName="px-4 py-2.5 align-top text-sm font-medium tabular-nums"
+        rowClassName="border-b border-[var(--border)] transition hover:bg-slate-50/75 dark:hover:bg-slate-800/40"
         previousLabel="前へ"
         nextLabel="次へ"
       />

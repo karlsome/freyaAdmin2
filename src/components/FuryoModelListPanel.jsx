@@ -11,26 +11,26 @@ export default function FuryoModelListPanel({
   onOpenModelInfo,
 }) {
   return (
-    <div className="glass-card flex h-[min(74vh,820px)] flex-col overflow-hidden rounded-3xl">
-      <div className="border-b border-separator/40 px-5 py-4">
-        <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-outline">Models</div>
-        <h3 className="mt-1 text-lg font-semibold text-on-surface">モデル一覧</h3>
+    <div className="freya-card flex h-[min(74vh,820px)] flex-col overflow-hidden rounded-[8px] border border-[var(--border)] bg-[var(--surface)] shadow-sm">
+      <div className="border-b border-[var(--border)] px-4 py-3.5 bg-[var(--surface-subtle)]">
+        <div className="text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">Models</div>
+        <h3 className="mt-0.5 text-sm font-bold text-[var(--text-primary)]">モデル一覧</h3>
         <input
           type="text"
           value={searchValue}
           onChange={(event) => onSearchChange(event.target.value)}
           placeholder="モデルを検索..."
-          className="mt-4 w-full rounded-2xl border border-separator/40 bg-surface-container px-4 py-3 text-sm text-on-surface outline-none transition focus:border-primary/40"
+          className="mt-2.5 w-full rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs text-[var(--text-primary)] placeholder:text-[var(--text-muted)] outline-none transition focus:border-[var(--freya-blue)]"
         />
       </div>
 
       <div className="flex-1 overflow-y-auto scrollbar-hide">
         {loading ? (
-          <div className="px-5 py-10 text-center text-sm font-medium text-on-surface-variant">Loading models…</div>
+          <div className="px-5 py-10 text-center text-xs font-medium text-[var(--text-muted)]">Loading models…</div>
         ) : !models.length ? (
-          <div className="px-5 py-10 text-center text-sm text-on-surface-variant">No matching models.</div>
+          <div className="px-5 py-10 text-center text-xs text-[var(--text-muted)]">No matching models.</div>
         ) : (
-          <ul className="divide-y divide-outline-variant/10">
+          <ul className="divide-y divide-[var(--border)]">
             {models.map((model) => {
               const definedCount = countDefinedCounters(definitionsByModel[model]?.counters);
               const selected = selectedModel === model;
@@ -39,30 +39,30 @@ export default function FuryoModelListPanel({
                 <li key={model}>
                   <div
                     className={[
-                      "flex items-center gap-3 px-4 py-3 transition",
+                      "flex items-center gap-2.5 px-3.5 py-2.5 transition",
                       selected
-                        ? "bg-primary/10 text-on-surface"
-                        : "text-on-surface hover:bg-surface-container-low",
+                        ? "bg-[var(--freya-blue)]/10 text-[var(--text-primary)]"
+                        : "text-[var(--text-primary)] hover:bg-[var(--surface-hover)]",
                     ].join(" ")}
                   >
                     <button
                       type="button"
                       onClick={() => onSelectModel(model)}
-                      className="flex min-w-0 flex-1 items-center gap-3 text-left"
+                      className="flex min-w-0 flex-1 items-center gap-2.5 text-left"
                     >
-                      <span className={`h-full w-1.5 self-stretch rounded-full ${selected ? "bg-primary" : "bg-transparent"}`} />
+                      <span className={`h-4 w-1 rounded-full ${selected ? "bg-[var(--freya-blue)]" : "bg-transparent"}`} />
 
                       <div className="min-w-0 flex-1">
-                        <div className="truncate text-sm font-semibold">{model}</div>
+                        <div className="truncate text-xs font-mono font-semibold">{model}</div>
                       </div>
 
                       <span className={[
-                        "shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold",
+                        "shrink-0 rounded-[4px] px-2 py-0.5 text-[10px] font-mono font-medium border",
                         definedCount
                           ? definedCount === 12
-                            ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
-                            : "bg-amber-500/10 text-amber-700 dark:text-amber-300"
-                          : "bg-surface-container text-on-surface-variant",
+                            ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+                            : "border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400"
+                          : "border-[var(--border)] bg-[var(--surface-subtle)] text-[var(--text-muted)]",
                       ].join(" ")}>
                         {definedCount ? `${definedCount}/12` : "未定義"}
                       </span>
@@ -71,11 +71,11 @@ export default function FuryoModelListPanel({
                     <button
                       type="button"
                       onClick={() => onOpenModelInfo(model)}
-                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-on-surface-variant transition hover:bg-surface-container hover:text-primary"
+                      className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[6px] text-[var(--text-secondary)] hover:bg-[var(--surface-subtle)] hover:text-[var(--freya-blue)] transition"
                       aria-label={`Show model info for ${model}`}
                       title="製品一覧を見る"
                     >
-                      <span className="material-symbols-outlined" style={{ fontSize: 18 }}>info</span>
+                      <span className="material-symbols-outlined" style={{ fontSize: 16 }}>info</span>
                     </button>
                   </div>
                 </li>
@@ -85,7 +85,7 @@ export default function FuryoModelListPanel({
         )}
       </div>
 
-      <div className="border-t border-outline-variant/10 px-4 py-3 text-center text-xs font-medium text-on-surface-variant">
+      <div className="border-t border-[var(--border)] px-4 py-2.5 text-center text-xs font-mono text-[var(--text-muted)] bg-[var(--surface-subtle)]">
         {models.length} model{models.length === 1 ? "" : "s"}
       </div>
     </div>

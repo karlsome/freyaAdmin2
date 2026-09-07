@@ -78,22 +78,21 @@ function FlashBanner({ flash, onClose }) {
   if (!flash) return null;
 
   const tone = flash.type === "error"
-    ? "border-error/20 bg-error/10 text-error"
+    ? "border-red-500/20 bg-red-500/10 text-red-600 dark:text-red-400"
     : flash.type === "success"
       ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
       : flash.type === "warning"
         ? "border-amber-500/20 bg-amber-500/10 text-amber-700 dark:text-amber-300"
-        : "border-primary/20 bg-primary/10 text-primary";
+        : "border-[var(--freya-blue)]/20 bg-[var(--freya-blue)]/10 text-[var(--freya-blue)]";
 
   return (
-    <div className={`mb-6 rounded-3xl border px-5 py-4 ${tone}`}>
-      <div className="flex items-start justify-between gap-4">
+    <div className={`mb-4 rounded-[6px] border px-4 py-3 text-xs ${tone}`}>
+      <div className="flex items-center justify-between gap-4">
         <div>
-          <div className="text-[10px] font-semibold uppercase tracking-[0.18em]">Status</div>
-          <p className="mt-1 text-sm font-medium">{flash.message}</p>
+          <span className="font-semibold">{flash.message}</span>
         </div>
         <button type="button" onClick={onClose} className="text-current/70 transition hover:text-current">
-          <span className="material-symbols-outlined">close</span>
+          <span className="material-symbols-outlined" style={{ fontSize: 16 }}>close</span>
         </button>
       </div>
     </div>
@@ -889,9 +888,10 @@ export default function PlannerPage() {
   }
 
   return (
-    <section className="h-screen overflow-y-auto px-4 pb-24 pt-20 scrollbar-hide sm:px-6 sm:pb-16 sm:pt-24 md:px-8">
+    <div className="min-h-screen px-6 py-6 max-w-[1600px] mx-auto space-y-6 pt-20">
       <FlashBanner flash={flash} onClose={() => setFlash(null)} />
       <PageHeader
+        eyebrow="Operations"
         title="Production Planning"
         subtitle="Goal-based production planning migrated from the original Freya Admin workflow."
         className="sm:flex-row sm:items-end sm:justify-between"
@@ -901,18 +901,18 @@ export default function PlannerPage() {
             <button
               type="button"
               onClick={() => setBreakModalOpen(true)}
-              className="flex items-center gap-2 rounded-2xl border border-outline-variant/20 bg-surface-container px-4 py-2 text-xs font-semibold text-on-surface transition hover:bg-surface-container-high"
+              className="flex items-center gap-1.5 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-hover)] transition-colors shadow-none"
             >
-              <span className="material-symbols-outlined" style={{ fontSize: 16 }}>schedule</span>
+              <span className="material-symbols-outlined" style={{ fontSize: 15 }}>schedule</span>
               Break Times
             </button>
             <button
               type="button"
               onClick={() => loadPlannerData()}
               disabled={loadingFactories || dataLoading}
-              className="flex items-center gap-2 rounded-2xl border border-outline-variant/20 bg-surface-container px-4 py-2 text-xs font-semibold text-on-surface transition hover:bg-surface-container-high disabled:cursor-not-allowed disabled:opacity-50"
+              className="flex items-center gap-1.5 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-hover)] disabled:cursor-not-allowed disabled:opacity-50 transition-colors shadow-none"
             >
-              <span className={`material-symbols-outlined ${dataLoading ? "animate-spin" : ""}`} style={{ fontSize: 16 }}>refresh</span>
+              <span className={`material-symbols-outlined ${dataLoading ? "animate-spin" : ""}`} style={{ fontSize: 15 }}>refresh</span>
               Refresh
             </button>
           </>
@@ -934,8 +934,8 @@ export default function PlannerPage() {
         onEndDateChange={setEndDate}
       />
 
-      <div className="mt-6 rounded-3xl border border-outline-variant/15 bg-transparent">
-        <div className="mb-4">
+      <div className="space-y-4">
+        <div>
           <LiquidSegmentedControl items={MAIN_TABS} activeKey={mainTab} onChange={setMainTab} className="inline-flex" />
         </div>
 
@@ -981,18 +981,18 @@ export default function PlannerPage() {
                   type="button"
                   onClick={handleOpenCalendar}
                   disabled={!scheduledProducts.length}
-                  className="flex items-center gap-2 rounded-2xl border border-outline-variant/20 bg-surface-container px-4 py-2 text-xs font-semibold text-on-surface transition hover:bg-surface-container-high disabled:cursor-not-allowed disabled:opacity-40"
+                  className="flex items-center gap-1.5 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-hover)] disabled:cursor-not-allowed disabled:opacity-40 transition-colors shadow-none"
                 >
-                  <span className="material-symbols-outlined" style={{ fontSize: 16 }}>calendar_month</span>
+                  <span className="material-symbols-outlined" style={{ fontSize: 15 }}>calendar_month</span>
                   Calendar View
                 </button>
                 <button
                   type="button"
                   onClick={() => setPrintModalOpen(true)}
                   disabled={!scheduledProducts.length}
-                  className="flex items-center gap-2 rounded-2xl bg-primary px-4 py-2 text-xs font-semibold text-on-primary transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
+                  className="flex items-center gap-1.5 rounded-[6px] bg-[var(--freya-blue)] px-3 py-1.5 text-xs font-semibold text-white hover:bg-[var(--freya-blue-hover)] disabled:cursor-not-allowed disabled:opacity-40 transition-colors shadow-none"
                 >
-                  <span className="material-symbols-outlined" style={{ fontSize: 16 }}>print</span>
+                  <span className="material-symbols-outlined" style={{ fontSize: 15 }}>print</span>
                   Print
                 </button>
               </div>
@@ -1109,6 +1109,6 @@ export default function PlannerPage() {
         }}
         onConfirm={handleApplySmartScheduling}
       />
-    </section>
+    </div>
   );
 }

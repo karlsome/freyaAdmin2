@@ -95,20 +95,20 @@ function MfgLotModal({ onClose, initialLot = "", initialHinban = "" }) {
 
   const modal = (
     <div
-      className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/75"
+      className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm"
       onClick={onClose}
     >
       <div
-        className="dashboard-section rounded-2xl w-full max-w-3xl max-h-[85vh] overflow-y-auto scrollbar-hide"
+        className="freya-card rounded-[12px] border border-[var(--border)] bg-[var(--surface-raised)] w-full max-w-3xl max-h-[85vh] overflow-y-auto scrollbar-hide shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="px-6 py-5 flex items-center justify-between border-b border-separator/40">
+        <div className="px-6 py-4 flex items-center justify-between border-b border-[var(--border)] bg-[var(--surface-subtle)]">
           <div className="flex items-center gap-2">
-            <span className="material-symbols-outlined text-primary" style={{ fontSize: 20 }}>manage_search</span>
-            <h3 className="text-base font-semibold text-on-surface">材料ロット詳細 (Material Lot Finder)</h3>
+            <span className="material-symbols-outlined text-[var(--freya-blue)]" style={{ fontSize: 20 }}>manage_search</span>
+            <h3 className="text-sm font-bold text-[var(--text-primary)]">材料ロット詳細 (Material Lot Finder)</h3>
           </div>
-          <button onClick={onClose} className="p-2 rounded-xl hover:bg-surface-container text-outline hover:text-on-surface transition-colors">
-            <span className="material-symbols-outlined" style={{ fontSize: 18 }}>close</span>
+          <button onClick={onClose} className="h-8 w-8 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-hover)] flex items-center justify-center transition-colors">
+            <span className="material-symbols-outlined" style={{ fontSize: 16 }}>close</span>
           </button>
         </div>
 
@@ -119,7 +119,7 @@ function MfgLotModal({ onClose, initialLot = "", initialHinban = "" }) {
               value={hinbanInput}
               onChange={(e) => setHinbanInput(e.target.value)}
               placeholder="品番 (例: 12345-6789)"
-              className="flex-1 h-10 px-3 rounded-xl bg-surface-container border border-separator/40 text-sm text-on-surface placeholder:text-outline outline-none focus:border-primary/40 transition-colors"
+              className="flex-1 h-9 px-3 rounded-[6px] bg-[var(--surface-subtle)] border border-[var(--border)] text-xs text-[var(--text-primary)] placeholder:text-[var(--text-muted)] outline-none focus:border-[var(--freya-blue)] transition-colors font-mono"
             />
             <input
               type="text"
@@ -127,12 +127,12 @@ function MfgLotModal({ onClose, initialLot = "", initialHinban = "" }) {
               onChange={(e) => setLotInput(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleSearch()}
               placeholder="材料ロット番号 (例: 260709-1)"
-              className="flex-1 h-10 px-3 rounded-xl bg-surface-container border border-separator/40 text-sm text-on-surface placeholder:text-outline outline-none focus:border-primary/40 transition-colors"
+              className="flex-1 h-9 px-3 rounded-[6px] bg-[var(--surface-subtle)] border border-[var(--border)] text-xs text-[var(--text-primary)] placeholder:text-[var(--text-muted)] outline-none focus:border-[var(--freya-blue)] transition-colors font-mono"
             />
             <button
               onClick={handleSearch}
               disabled={loading || lotInput.trim().length < 3 || !hinbanInput.trim()}
-              className="px-4 h-10 rounded-xl bg-primary text-on-primary text-sm font-semibold disabled:opacity-40 hover:opacity-90 transition-opacity"
+              className="px-4 h-9 rounded-[6px] bg-[var(--freya-blue)] text-white text-xs font-semibold disabled:opacity-40 hover:bg-[var(--freya-blue-hover)] transition-colors shadow-xs"
             >
               {loading ? "…" : "Search"}
             </button>
@@ -140,10 +140,10 @@ function MfgLotModal({ onClose, initialLot = "", initialHinban = "" }) {
 
           {step === "selecting" && (
             <div>
-              <p className="text-xs text-on-surface-variant mb-3">Multiple matches — select a 材料背番号 (Sebanggo):</p>
+              <p className="text-xs text-[var(--text-muted)] mb-3">Multiple matches — select a 材料背番号 (Sebanggo):</p>
               <div className="space-y-2">
                 {sebanggoOptions.map((s) => (
-                  <button key={s} onClick={() => handleSelectSebanggo(s)} className="w-full px-4 py-3 rounded-xl glass-card text-left text-sm font-semibold text-on-surface hover:border-primary/30 hover:scale-[1.01] transition-all">
+                  <button key={s} onClick={() => handleSelectSebanggo(s)} className="w-full px-4 py-2.5 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] text-left text-xs font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-hover)] transition-colors font-mono">
                     {s}
                   </button>
                 ))}
@@ -153,71 +153,71 @@ function MfgLotModal({ onClose, initialLot = "", initialHinban = "" }) {
 
           {step === "results" && (
             <div className="space-y-4">
-              <div className="rounded-xl bg-primary/10 px-4 py-3 border border-primary/20 text-sm text-primary font-semibold">
+              <div className="rounded-[6px] bg-[var(--freya-blue)]/10 px-4 py-2.5 border border-[var(--freya-blue)]/20 text-xs text-[var(--freya-blue)] font-bold font-mono">
                 検索結果: {records.length}件 &nbsp;&nbsp;&nbsp; 材料背番号: {results?.材料背番号 ?? "—"}
               </div>
               
               {records.length > 0 ? (
                 <div className="space-y-4">
                   {records.map((rec, i) => (
-                    <div key={i} className="glass-card rounded-2xl overflow-hidden border border-separator/40">
-                      <div className="px-5 py-3 bg-surface-container-high/40 border-b border-separator/40 flex items-center justify-between">
-                        <span className="font-semibold text-sm">記録 #{i + 1}</span>
+                    <div key={i} className="freya-card rounded-[8px] overflow-hidden border border-[var(--border)] bg-[var(--surface)] shadow-2xs">
+                      <div className="px-4 py-2.5 bg-[var(--surface-subtle)] border-b border-[var(--border)] flex items-center justify-between">
+                        <span className="font-bold text-xs text-[var(--text-primary)]">記録 #{i + 1}</span>
                         {rec.Status === "Completed" && (
-                          <span className="px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-500 text-[10px] font-semibold">Completed</span>
+                          <span className="px-2 py-0.5 rounded-[4px] bg-emerald-500/15 border border-emerald-500/25 text-emerald-600 dark:text-emerald-400 text-[10px] font-mono font-bold">Completed</span>
                         )}
                       </div>
                       
-                      <div className="p-5 grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3 text-sm">
-                        <div className="flex justify-between border-b border-separator/20 pb-2"><span className="text-outline">品番:</span><span className="font-semibold">{rec["品番"] ?? "—"}</span></div>
-                        <div className="flex justify-between border-b border-separator/20 pb-2"><span className="text-outline">生産数:</span><span className="font-semibold">{rec["生産数"] ?? "—"}</span></div>
-                        <div className="flex justify-between border-b border-separator/20 pb-2"><span className="text-outline">材料品番:</span><span className="font-semibold">{rec["材料品番"] ?? "—"}</span></div>
-                        <div className="flex justify-between border-b border-separator/20 pb-2"><span className="text-outline">生産順番:</span><span className="font-semibold">{rec["生産順番"] ?? "—"}</span></div>
-                        <div className="flex justify-between border-b border-separator/20 pb-2"><span className="text-outline">材料背番号:</span><span className="font-semibold">{rec["材料背番号"] ?? "—"}</span></div>
-                        <div className="flex justify-between border-b border-separator/20 pb-2"><span className="text-outline">作業時間:</span><span className="font-semibold">{rec["作業時間"] ? `${rec["作業時間"]} 時間` : "—"}</span></div>
-                        <div className="flex justify-between border-b border-separator/20 pb-2"><span className="text-outline">作業日:</span><span className="font-semibold">{rec["作業日"] ?? "—"}</span></div>
-                        <div className="flex justify-between border-b border-separator/20 pb-2"><span className="text-outline">人員数:</span><span className="font-semibold">{rec["人員数"] != null ? `${rec["人員数"]} 人` : "—"}</span></div>
-                        <div className="flex justify-between border-b border-separator/20 pb-2"><span className="text-outline">納期:</span><span className="font-semibold">{rec["納期"] ?? "—"}</span></div>
-                        <div className="flex justify-between border-b border-separator/20 pb-2"><span className="text-outline">幅:</span><span className="font-semibold">{rec["幅"] ?? "—"}</span></div>
-                        <div className="flex justify-between border-b border-separator/20 pb-2"><span className="text-outline">工場:</span><span className="font-semibold">{rec["工場"] ?? "—"}</span></div>
-                        <div className="flex justify-between border-b border-separator/20 pb-2"><span className="text-outline">型番:</span><span className="font-semibold">{rec["型番"] ?? "—"}</span></div>
+                      <div className="p-4 grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2 text-xs">
+                        <div className="flex justify-between border-b border-[var(--border)] pb-1.5"><span className="text-[var(--text-muted)] font-mono">品番:</span><span className="font-bold text-[var(--text-primary)] font-mono">{rec["品番"] ?? "—"}</span></div>
+                        <div className="flex justify-between border-b border-[var(--border)] pb-1.5"><span className="text-[var(--text-muted)] font-mono">生産数:</span><span className="font-bold text-[var(--text-primary)] font-mono">{rec["生産数"] ?? "—"}</span></div>
+                        <div className="flex justify-between border-b border-[var(--border)] pb-1.5"><span className="text-[var(--text-muted)] font-mono">材料品番:</span><span className="font-bold text-[var(--text-primary)] font-mono">{rec["材料品番"] ?? "—"}</span></div>
+                        <div className="flex justify-between border-b border-[var(--border)] pb-1.5"><span className="text-[var(--text-muted)] font-mono">生産順番:</span><span className="font-bold text-[var(--text-primary)] font-mono">{rec["生産順番"] ?? "—"}</span></div>
+                        <div className="flex justify-between border-b border-[var(--border)] pb-1.5"><span className="text-[var(--text-muted)] font-mono">材料背番号:</span><span className="font-bold text-[var(--text-primary)] font-mono">{rec["材料背番号"] ?? "—"}</span></div>
+                        <div className="flex justify-between border-b border-[var(--border)] pb-1.5"><span className="text-[var(--text-muted)] font-mono">作業時間:</span><span className="font-bold text-[var(--text-primary)] font-mono">{rec["作業時間"] ? `${rec["作業時間"]} 時間` : "—"}</span></div>
+                        <div className="flex justify-between border-b border-[var(--border)] pb-1.5"><span className="text-[var(--text-muted)] font-mono">作業日:</span><span className="font-bold text-[var(--text-primary)] font-mono">{rec["作業日"] ?? "—"}</span></div>
+                        <div className="flex justify-between border-b border-[var(--border)] pb-1.5"><span className="text-[var(--text-muted)] font-mono">人員数:</span><span className="font-bold text-[var(--text-primary)] font-mono">{rec["人員数"] != null ? `${rec["人員数"]} 人` : "—"}</span></div>
+                        <div className="flex justify-between border-b border-[var(--border)] pb-1.5"><span className="text-[var(--text-muted)] font-mono">納期:</span><span className="font-bold text-[var(--text-primary)] font-mono">{rec["納期"] ?? "—"}</span></div>
+                        <div className="flex justify-between border-b border-[var(--border)] pb-1.5"><span className="text-[var(--text-muted)] font-mono">幅:</span><span className="font-bold text-[var(--text-primary)] font-mono">{rec["幅"] ?? "—"}</span></div>
+                        <div className="flex justify-between border-b border-[var(--border)] pb-1.5"><span className="text-[var(--text-muted)] font-mono">工場:</span><span className="font-bold text-[var(--text-primary)]">{rec["工場"] ?? "—"}</span></div>
+                        <div className="flex justify-between border-b border-[var(--border)] pb-1.5"><span className="text-[var(--text-muted)] font-mono">型番:</span><span className="font-bold text-[var(--text-primary)] font-mono">{rec["型番"] ?? "—"}</span></div>
                       </div>
                       
                       {rec.PrintLog && rec.PrintLog.length > 0 && (
-                        <div className="p-5 pt-0">
-                          <h4 className="text-[11px] font-semibold text-on-surface-variant flex items-center gap-1.5 mb-3 uppercase tracking-wider">
-                            <span className="w-1.5 h-1.5 rounded-sm bg-primary" /> ロット情報
+                        <div className="p-4 pt-0">
+                          <h4 className="text-[10px] font-bold text-[var(--text-muted)] flex items-center gap-1.5 mb-2.5 uppercase tracking-wider font-mono">
+                            <span className="w-1.5 h-1.5 rounded-sm bg-[var(--freya-blue)]" /> ロット情報
                           </h4>
                           <div className="space-y-2">
                             {rec.PrintLog.map((log, idx) => (
-                              <div key={idx} className="bg-surface-container/30 rounded-xl p-3 grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2 text-xs">
-                                <div className="flex justify-between"><span className="text-outline">ロット番号:</span><span className="font-semibold break-all text-right max-w-[60%]">{log.lotNumbers?.join(", ") || "—"}</span></div>
-                                <div className="flex justify-between"><span className="text-outline">印刷枚数:</span><span className="font-semibold">{log.quantity ? `${log.quantity}枚` : "—"}</span></div>
-                                <div className="flex justify-between"><span className="text-outline">総印刷枚数:</span><span className="font-semibold">{log.totalPrintedSoFar ? `${log.totalPrintedSoFar}枚` : "—"}</span></div>
-                                <div className="flex justify-between"><span className="text-outline">印刷者:</span><span className="font-semibold">{log.user ?? "—"}</span></div>
-                                <div className="flex justify-between"><span className="text-outline">印刷日時:</span><span className="font-semibold">{log.timestamp ? new Date(log.timestamp).toLocaleString() : "—"}</span></div>
+                              <div key={idx} className="bg-[var(--surface-subtle)] border border-[var(--border)] rounded-[6px] p-3 grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1.5 text-xs font-mono">
+                                <div className="flex justify-between"><span className="text-[var(--text-muted)]">ロット番号:</span><span className="font-bold text-[var(--text-primary)] break-all text-right max-w-[60%]">{log.lotNumbers?.join(", ") || "—"}</span></div>
+                                <div className="flex justify-between"><span className="text-[var(--text-muted)]">印刷枚数:</span><span className="font-bold text-[var(--text-primary)]">{log.quantity ? `${log.quantity}枚` : "—"}</span></div>
+                                <div className="flex justify-between"><span className="text-[var(--text-muted)]">総印刷枚数:</span><span className="font-bold text-[var(--text-primary)]">{log.totalPrintedSoFar ? `${log.totalPrintedSoFar}枚` : "—"}</span></div>
+                                <div className="flex justify-between"><span className="text-[var(--text-muted)]">印刷者:</span><span className="font-bold text-[var(--text-primary)]">{log.user ?? "—"}</span></div>
+                                <div className="flex justify-between"><span className="text-[var(--text-muted)]">印刷日時:</span><span className="font-bold text-[var(--text-primary)]">{log.timestamp ? new Date(log.timestamp).toLocaleString() : "—"}</span></div>
                               </div>
                             ))}
                           </div>
                         </div>
                       )}
                       
-                      <div className="p-5 pt-4 border-t border-separator/20 grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3 text-sm">
-                        <div className="flex justify-between"><span className="text-outline">加工条件管理番号:</span><span className="font-semibold">{rec["加工条件管理番号"] ?? "—"}</span></div>
-                        <div className="flex justify-between"><span className="text-outline">印刷日時:</span><span className="font-semibold">{rec.LastPrintTimestamp ? new Date(rec.LastPrintTimestamp).toLocaleString() : (rec["印刷日時"] ?? "—")}</span></div>
-                        <div className="flex justify-between"><span className="text-outline">完了日時:</span><span className="font-semibold">{rec["完了日時"] ?? "—"}</span></div>
+                      <div className="p-4 pt-3 border-t border-[var(--border)] grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2 text-xs">
+                        <div className="flex justify-between"><span className="text-[var(--text-muted)] font-mono">加工条件管理番号:</span><span className="font-bold text-[var(--text-primary)] font-mono">{rec["加工条件管理番号"] ?? "—"}</span></div>
+                        <div className="flex justify-between"><span className="text-[var(--text-muted)] font-mono">印刷日時:</span><span className="font-bold text-[var(--text-primary)] font-mono">{rec.LastPrintTimestamp ? new Date(rec.LastPrintTimestamp).toLocaleString() : (rec["印刷日時"] ?? "—")}</span></div>
+                        <div className="flex justify-between"><span className="text-[var(--text-muted)] font-mono">完了日時:</span><span className="font-bold text-[var(--text-primary)] font-mono">{rec["完了日時"] ?? "—"}</span></div>
                       </div>
                     </div>
                   ))}
                 </div>
               ) : (
-                <p className="text-sm text-outline text-center py-4">No records found for this lot.</p>
+                <p className="text-xs text-[var(--text-muted)] text-center py-4">No records found for this lot.</p>
               )}
             </div>
           )}
 
           {step === "error" && (
-            <p className="text-sm text-error text-center py-2">{errMsg}</p>
+            <p className="text-xs text-error text-center py-2">{errMsg}</p>
           )}
         </div>
       </div>
@@ -381,128 +381,169 @@ export default function FactoryDetailPage({ combined = false }) {
   ];
 
   return (
-    <section className="pt-24 pb-20 px-4 md:px-8 overflow-y-auto h-screen scrollbar-hide">
-      <PageHeader
-        leading={(
+    <section className="min-h-screen max-w-[1600px] mx-auto space-y-6 pt-20 px-6 pb-12">
+      {/* ── Page Header ── */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6 pb-4 border-b border-[var(--border)]">
+        <div className="flex items-start gap-3">
           <button
             onClick={() => navigate(combined ? "/factories" : "/dashboard")}
-            className="mt-1 p-2 rounded-xl hover:bg-surface-container text-outline hover:text-primary transition-colors"
+            aria-label="Back"
+            className="mt-1 w-8 h-8 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:border-[var(--border-strong)] flex items-center justify-center transition-colors shadow-2xs"
           >
-            <span className="material-symbols-outlined">arrow_back</span>
+            <span className="material-symbols-outlined" style={{ fontSize: 18 }}>arrow_back</span>
           </button>
-        )}
-        bodyClassName="items-start"
-        title={pageTitle}
-        titleMeta={!loading ? (
-          <span className={`flex items-center gap-1.5 text-[10px] font-semibold px-3 py-1 rounded-full ${defStatus.bg} ${defStatus.color}`}>
-            <span className={`w-1.5 h-1.5 rounded-full ${defStatus.dot}`} />
-            {defStatus.label}
-          </span>
-        ) : null}
-        subtitle={`${combined ? "All Factories Combined -" : "Factory Overview -"} ${dateFrom === dateTo ? dateFrom : `${dateFrom} → ${dateTo}`}`}
-        className="mb-6 md:flex-row md:items-start md:justify-between"
-        actions={(
-          <>
-            {!combined && (factoryName === "小瀬" || factoryName === "倉知") && (
-              <button
-                onClick={() => setCameraModalOpen(true)}
-                className="flex-shrink-0 flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold border border-separator/40 bg-surface text-on-surface hover:bg-surface-container hover:border-primary/30 hover:text-primary active:scale-95 transition-all duration-150"
-              >
-                <span className="material-symbols-outlined" style={{ fontSize: 16 }}>videocam</span>
-                View Live Feed
-              </button>
-            )}
+          <div>
+            <div className="flex items-center gap-3 flex-wrap">
+              <h1 className="freya-title">{pageTitle}</h1>
+              {!loading && (
+                <span className={`freya-badge ${
+                  defStatus.level === "normal" ? "freya-badge-normal" :
+                  defStatus.level === "warning" ? "freya-badge-warning" : "freya-badge-defect"
+                }`}>
+                  <span className="freya-badge-dot" />
+                  {defStatus.label}
+                </span>
+              )}
+            </div>
+            <p className="text-sm font-normal text-[var(--text-muted)] mt-1">
+              {combined ? "All Facilities Consolidated" : "Facility Production & Telemetry"}
+              {" · "}
+              <span className="freya-tabular">{dateFrom === dateTo ? dateFrom : `${dateFrom} → ${dateTo}`}</span>
+            </p>
+          </div>
+        </div>
 
+        <div className="flex items-center gap-3 flex-wrap">
+          {!combined && (factoryName === "小瀬" || factoryName === "倉知") && (
             <button
-              onClick={() => navigate(combined ? "/sensors" : `/sensors/${encoded}`)}
-              className="flex-shrink-0 flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold
-                         bg-primary text-on-primary hover:opacity-90 transition-opacity"
+              onClick={() => setCameraModalOpen(true)}
+              className="inline-flex items-center gap-2 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3.5 py-2 text-xs font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-hover)] transition-colors shadow-2xs"
             >
-              <span className="material-symbols-outlined" style={{ fontSize: 16 }}>sensors</span>
-              {combined ? "Sensor Overview" : "Sensor History"}
+              <span className="material-symbols-outlined text-[var(--text-muted)]" style={{ fontSize: 16 }}>videocam</span>
+              View Live Feed
             </button>
-          </>
-        )}
-      />
+          )}
+
+          <button
+            onClick={() => navigate(combined ? "/sensors" : `/sensors/${encoded}`)}
+            className="inline-flex items-center gap-2 rounded-[6px] bg-[var(--freya-blue)] px-3.5 py-2 text-xs font-semibold text-white hover:bg-[var(--freya-blue-hover)] transition-colors shadow-2xs"
+          >
+            <span className="material-symbols-outlined" style={{ fontSize: 16 }}>sensors</span>
+            {combined ? "Sensor Fleet" : "Sensor Telemetry"}
+          </button>
+        </div>
+      </div>
 
       {/* ── Summary strip ── */}
-      <div className="space-y-3 mb-6">
-        {/* Row 1: overall */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {overviewSummaryCards.map((card) => (
+      <div className="space-y-4 mb-6">
+        {/* Row 1: overall metrics */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <StatSummaryCard
+            variant="freya"
+            label="Total Processed"
+            value={stripTotal.toLocaleString()}
+            subtitle="Units produced across all lines"
+            icon="output"
+            loading={loading}
+          />
+          <StatSummaryCard
+            variant="freya"
+            label="Defect Units (NG)"
+            value={stripNG.toLocaleString()}
+            subtitle={stripNG > 0 ? "Requires quality review" : "Zero defects detected"}
+            statusDot={stripNG > 0 ? "defect" : "complete"}
+            icon="report"
+            loading={loading}
+          />
+          <StatSummaryCard
+            variant="freya"
+            label="Defect Rate"
+            value={`${stripRate.toFixed(2)}%`}
+            subtitle={`${defStatus.label} threshold`}
+            statusDot={stripRate >= 2 ? "defect" : stripRate >= 1 ? "warning" : "complete"}
+            icon="percent"
+            loading={loading}
+          />
+          <StatSummaryCard
+            variant="freya"
+            label={combined ? "Connected Sensors" : "Sensors Online"}
+            value={String(sensor?.sensorCount ?? 0)}
+            subtitle={sensor?.hasData ? "Live telemetry streaming" : "Active monitoring nodes"}
+            statusDot={sensor?.hasData ? "complete" : undefined}
+            icon="sensors"
+            loading={loading}
+          />
+        </div>
+
+        {/* Row 2: per-process telemetry */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {perProcess.map(({ proc, total, ng, rate }) => (
             <StatSummaryCard
-              key={card.key}
-              icon={card.icon}
-              label={card.label}
-              value={card.value}
-              subtitle={card.subtitle}
-              accent={card.accent}
+              key={proc}
+              variant="freya"
+              label={`${proc} Process`}
+              value={total > 0 ? total.toLocaleString() : "—"}
+              subtitle={
+                total > 0
+                  ? `${rate.toFixed(2)}% Defect · ${ng.toLocaleString()} NG`
+                  : "No active production"
+              }
+              statusDot={total > 0 ? (rate >= 2 ? "defect" : rate >= 1 ? "warning" : "complete") : undefined}
+              icon="precision_manufacturing"
               loading={loading}
             />
           ))}
         </div>
-        {/* Row 2: per-process */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {perProcess.map(({ proc, total, ng, rate, accent }) => {
-            const ds = getDefectStatus(rate);
-            return (
-              <StatSummaryCard
-                key={proc}
-                icon="precision_manufacturing"
-                label={`${proc} Process`}
-                labelClassName={accent.color}
-                value={total > 0 ? total.toLocaleString() : "—"}
-                subtitle={
-                  total > 0
-                    ? <><span className={ds.valueColor}>{rate.toFixed(2)}%</span>{" · "}{ng.toLocaleString()} NG</>
-                    : "No data"
-                }
-                subtitleClassName={total > 0 ? "text-on-surface-variant" : ""}
-                accent={`${accent.color} ${accent.bg}`}
-                loading={loading}
-              />
-            );
-          })}
-        </div>
       </div>
 
-      {/* ── Env / sensor strip ── */}
+      {/* ── Env / sensor telemetry widget ── */}
       {(env || sensor?.hasData) && !loading && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-6">
-          {env && (
-            <div className="glass-card rounded-2xl px-5 py-4 flex items-center gap-5">
-              <span className="material-symbols-outlined text-primary flex-shrink-0" style={{ fontSize: 24 }}>cloud</span>
-              <div className="flex gap-6 flex-wrap flex-1">
-                {[
-                  { label: "Temp",     value: `${env.temperature ?? "—"}°C`, status: getTempStatus(env.temperature) },
-                  { label: "Humidity", value: `${env.humidity ?? "—"}%`,     status: getHumidityStatus(env.humidity) },
-                ].map(({ label, value, status }) => (
-                  <div key={label} className="flex flex-col gap-0.5">
-                    <span className="text-[10px] font-semibold uppercase tracking-wider text-outline">{label}</span>
-                    <span className={`text-base font-semibold ${status.color}`}>{value}</span>
-                  </div>
-                ))}
-              </div>
-              {env.isDefault && <span className="text-[10px] text-outline">Simulated</span>}
+        <div className="freya-card p-4 sm:p-5 mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <span className="material-symbols-outlined text-[var(--freya-blue)]" style={{ fontSize: 22 }}>thermostat</span>
+            <div>
+              <span className="freya-label">Facility Environmental Telemetry</span>
+              <p className="text-xs text-[var(--text-muted)] mt-0.5">Real-time ambient & sensor diagnostics</p>
             </div>
-          )}
-          {sensor?.hasData && (
-            <div className="glass-card rounded-2xl px-5 py-4 flex items-center gap-5">
-              <span className="material-symbols-outlined text-tertiary flex-shrink-0" style={{ fontSize: 24 }}>sensors</span>
-              <div className="flex gap-6 flex-wrap">
-                {[
-                  { label: "Peak Temp",    value: `${sensor.highestTemp}°C`,      status: getTempStatus(sensor.highestTemp) },
-                  { label: "Avg Humidity", value: `${sensor.averageHumidity}%`,   status: getHumidityStatus(sensor.averageHumidity) },
-                  ...(sensor.wbgt != null ? [{ label: "WBGT", value: `${sensor.wbgt}°C`, status: getWBGTStatus(sensor.wbgt) }] : []),
-                ].map(({ label, value, status }) => (
-                  <div key={label} className="flex flex-col gap-0.5">
-                    <span className="text-[10px] font-semibold uppercase tracking-wider text-outline">{label}</span>
-                    <span className={`text-base font-semibold ${status.color}`}>{value}</span>
-                  </div>
-                ))}
+          </div>
+
+          <div className="flex items-center gap-6 sm:gap-8 flex-wrap">
+            {env?.temperature != null && (
+              <div className="flex flex-col">
+                <span className="text-[11px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">Ambient Temp</span>
+                <span className="text-base font-semibold text-[var(--text-primary)] freya-tabular">{env.temperature}°C</span>
               </div>
-            </div>
-          )}
+            )}
+            {env?.humidity != null && (
+              <div className="flex flex-col">
+                <span className="text-[11px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">Humidity</span>
+                <span className="text-base font-semibold text-[var(--text-primary)] freya-tabular">{env.humidity}%</span>
+              </div>
+            )}
+            {sensor?.highestTemp != null && (
+              <div className="flex flex-col">
+                <span className="text-[11px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">Peak Sensor</span>
+                <span className="text-base font-semibold text-[var(--text-primary)] freya-tabular">{sensor.highestTemp}°C</span>
+              </div>
+            )}
+            {sensor?.averageHumidity != null && (
+              <div className="flex flex-col">
+                <span className="text-[11px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">Avg Humidity</span>
+                <span className="text-base font-semibold text-[var(--text-primary)] freya-tabular">{sensor.averageHumidity}%</span>
+              </div>
+            )}
+            {sensor?.wbgt != null && (
+              <div className="flex flex-col">
+                <span className="text-[11px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">WBGT Heat Index</span>
+                <span className="text-base font-semibold text-[var(--text-primary)] freya-tabular">{sensor.wbgt}°C</span>
+              </div>
+            )}
+            {env?.isDefault && (
+              <span className="text-[11px] font-medium text-[var(--text-muted)] px-2 py-0.5 rounded-[4px] bg-slate-100 dark:bg-slate-800">
+                Simulated
+              </span>
+            )}
+          </div>
         </div>
       )}
 
@@ -532,27 +573,38 @@ export default function FactoryDetailPage({ combined = false }) {
         }}
       />
 
-      {/* ── Daily Production ── */}
-      <div className="glass-card rounded-2xl overflow-hidden">
-        <div className="px-6 py-4 border-b border-separator/40 flex items-center justify-between flex-wrap gap-3">
-          <h3 className="text-base font-semibold text-on-surface flex items-center gap-2">
-            <span className="material-symbols-outlined text-primary" style={{ fontSize: 18 }}>factory</span>
-            Daily Production
-          </h3>
+      {/* ── Production Runs ── */}
+      <div className="freya-card overflow-hidden">
+        <div className="px-5 py-4 border-b border-[var(--border)] bg-[var(--surface)] flex items-center justify-between flex-wrap gap-4">
+          <div className="flex items-center gap-2.5">
+            <span className="material-symbols-outlined text-[var(--freya-blue)]" style={{ fontSize: 20 }}>table_chart</span>
+            <div>
+              <h3 className="text-base font-semibold text-[var(--text-primary)] leading-none">Production Runs</h3>
+              <p className="text-xs text-[var(--text-muted)] mt-1">Detailed process logs and inspection outputs</p>
+            </div>
+          </div>
+
           {sectionNames.length > 1 && (
-            <LiquidSegmentedControl
-              items={sectionNames}
-              activeKey={activeSection}
-              onChange={setActiveSection}
-            />
+            <div className="freya-segmented">
+              {sectionNames.map((sec) => (
+                <button
+                  key={sec}
+                  type="button"
+                  onClick={() => setActiveSection(sec)}
+                  className={`freya-segmented-item ${activeSection === sec ? "active" : ""}`}
+                >
+                  {sec}
+                </button>
+              ))}
+            </div>
           )}
         </div>
 
-        <div className="p-5">
+        <div className="p-4 sm:p-5">
           {loading ? (
             <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
               {Array.from({ length: 4 }).map((_, i) => (
-                <div key={i} className="glass-card rounded-2xl h-72 animate-pulse" />
+                <div key={i} className="freya-card h-72 animate-pulse bg-slate-100 dark:bg-slate-800" />
               ))}
             </div>
           ) : (

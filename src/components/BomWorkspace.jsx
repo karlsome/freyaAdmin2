@@ -112,14 +112,14 @@ export default function BomWorkspace({ initialSearch = "", initialCreateHinban =
   }
 
   return (
-    <div className="dashboard-section rounded-2xl px-6 py-6 h-full flex flex-col gap-6 animate-[fadeIn_0.15s_ease-out]">
+    <div className="freya-card rounded-[8px] border border-[var(--border)] bg-[var(--surface)] p-6 shadow-sm flex flex-col gap-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-xl font-bold text-on-surface">BOM Management</h2>
+        <h2 className="text-xl font-bold tracking-tight text-[var(--text-primary)]">BOM Management</h2>
         <button 
           onClick={() => { setSelectedBom(null); setEditModalOpen(true); }}
-          className="flex items-center gap-2 rounded-full bg-primary px-4 py-2 text-sm font-bold text-on-primary shadow-sm hover:bg-primary/90 transition-colors"
+          className="inline-flex items-center gap-1.5 rounded-[6px] bg-[var(--freya-blue)] px-3.5 py-2 text-xs font-semibold text-white hover:bg-[var(--freya-blue-hover)] active:scale-[0.98] transition-all shadow-xs"
         >
-          <span className="material-symbols-outlined" style={{ fontSize: 20 }}>add</span>
+          <span className="material-symbols-outlined" style={{ fontSize: 18 }}>add</span>
           Create New BOM
         </button>
       </div>
@@ -127,20 +127,20 @@ export default function BomWorkspace({ initialSearch = "", initialCreateHinban =
       <div className="flex-1 flex gap-4 min-h-0">
         
         {/* Left Pane: BOM List */}
-        <div className="w-1/3 bg-surface-variant/10 border border-outline-variant/30 rounded-xl flex flex-col overflow-hidden">
-          <div className="p-4 border-b border-outline-variant/30 bg-surface-variant/20 flex flex-col gap-3">
-            <div className="flex items-center justify-between font-bold text-on-surface text-sm">
-              <span>BOM List</span>
-              {loading && <span className="material-symbols-outlined animate-spin text-outline" style={{ fontSize: 16 }}>progress_activity</span>}
+        <div className="w-1/3 rounded-[8px] border border-[var(--border)] bg-[var(--surface)] flex flex-col overflow-hidden shadow-2xs">
+          <div className="p-3.5 border-b border-[var(--border)] bg-[var(--surface-subtle)] flex flex-col gap-2.5">
+            <div className="flex items-center justify-between font-bold text-[var(--text-primary)] text-xs">
+              <span className="uppercase tracking-[0.04em] text-[var(--text-muted)]">BOM List</span>
+              {loading && <span className="material-symbols-outlined animate-spin text-[var(--text-muted)]" style={{ fontSize: 16 }}>progress_activity</span>}
             </div>
             <div className="relative w-full">
-              <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline" style={{ fontSize: 18 }}>search</span>
+              <span className="material-symbols-outlined absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" style={{ fontSize: 16 }}>search</span>
               <input 
                 type="text" 
                 placeholder="Search 品番..." 
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
-                className="w-full bg-surface-variant/30 border border-outline-variant/50 rounded-lg pl-9 pr-3 py-1.5 text-sm focus:border-primary focus:outline-none transition-colors"
+                className="w-full rounded-[6px] border border-[var(--border)] bg-[var(--surface)] pl-8 pr-3 py-1.5 text-xs text-[var(--text-primary)] placeholder-[var(--text-muted)] outline-none focus:border-[var(--freya-blue)] transition-colors"
               />
             </div>
           </div>
@@ -151,34 +151,34 @@ export default function BomWorkspace({ initialSearch = "", initialCreateHinban =
                 <button
                   key={bom._id?.$oid || idx}
                   onClick={() => setSelectedBom(bom)}
-                  className={`w-full text-left px-3 py-3 rounded-lg text-sm font-medium transition-colors border ${
+                  className={`w-full text-left px-3 py-2 rounded-[6px] text-xs font-medium transition-colors border ${
                     isSelected 
-                      ? 'bg-primary/10 border-primary/30 text-primary' 
-                      : 'bg-surface border-transparent hover:bg-surface-variant/30 text-on-surface hover:border-outline-variant/30'
+                      ? 'border-[var(--freya-blue)]/40 bg-[var(--freya-blue)]/10 text-[var(--freya-blue)]' 
+                      : 'border-transparent bg-[var(--surface)] hover:bg-[var(--surface-hover)] text-[var(--text-primary)] hover:border-[var(--border)]'
                   }`}
                 >
-                  <div className="truncate">{bom['品番']}</div>
-                  <div className="text-[10px] text-outline mt-1 font-normal">
+                  <div className="truncate font-semibold">{bom['品番']}</div>
+                  <div className="text-[10px] text-[var(--text-muted)] mt-0.5 font-normal">
                     {bom.BOM?.length || 0} process steps
                   </div>
                 </button>
               );
             })}
             {!loading && boms.length === 0 && (
-              <div className="text-center p-4 text-xs text-outline">No BOMs found.</div>
+              <div className="text-center p-4 text-xs text-[var(--text-muted)]">No BOMs found.</div>
             )}
           </div>
           
           {/* Pagination Controls */}
           {totalPages > 0 && (
-            <div className="p-4 border-t border-outline-variant/30 flex flex-col gap-4 bg-surface-variant/10">
+            <div className="p-3 border-t border-[var(--border)] flex flex-col gap-2 bg-[var(--surface-subtle)]">
               <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-3">
                 <div className="flex items-center gap-2">
-                  <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-outline whitespace-nowrap">Rows per page</span>
+                  <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--text-muted)] whitespace-nowrap">Rows</span>
                   <select
                     value={pageSize}
                     onChange={(e) => setPageSize(Number(e.target.value))}
-                    className="bg-surface border border-outline-variant/50 rounded text-xs px-2 py-1 focus:outline-none"
+                    className="rounded-[4px] border border-[var(--border)] bg-[var(--surface)] text-xs px-2 py-1 text-[var(--text-primary)] focus:outline-none focus:border-[var(--freya-blue)]"
                   >
                     {[30, 50, 100].map(size => <option key={size} value={size}>{size}</option>)}
                   </select>
@@ -196,28 +196,28 @@ export default function BomWorkspace({ initialSearch = "", initialCreateHinban =
         </div>
 
         {/* Right Pane: BOM Details */}
-        <div className="flex-1 bg-surface-variant/10 border border-outline-variant/30 rounded-xl flex flex-col overflow-hidden relative">
+        <div className="flex-1 rounded-[8px] border border-[var(--border)] bg-[var(--surface)] flex flex-col overflow-hidden shadow-2xs relative">
           {selectedBom ? (
             <>
-              <div className="p-6 border-b border-outline-variant/30 bg-surface-variant/20 flex items-start justify-between">
+              <div className="p-5 border-b border-[var(--border)] bg-[var(--surface-subtle)] flex items-start justify-between">
                 <div>
-                  <div className="text-xs font-bold text-outline uppercase tracking-wider mb-1">Target Material (Parent)</div>
-                  <h3 className="text-2xl font-bold text-on-surface">{selectedBom['品番']}</h3>
+                  <div className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-[0.14em] mb-1">Target Material (Parent)</div>
+                  <h3 className="text-xl font-bold tracking-tight text-[var(--text-primary)]">{selectedBom['品番']}</h3>
                 </div>
                 <button 
                   onClick={() => setEditModalOpen(true)}
-                  className="flex items-center gap-1 text-primary hover:bg-primary/10 px-3 py-1.5 rounded-lg transition-colors text-sm font-bold"
+                  className="inline-flex items-center gap-1 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-hover)] transition-colors shadow-2xs"
                 >
-                  <span className="material-symbols-outlined" style={{ fontSize: 18 }}>edit</span>
+                  <span className="material-symbols-outlined" style={{ fontSize: 16 }}>edit</span>
                   Edit
                 </button>
               </div>
               
-              <div className="flex-1 overflow-y-auto p-6">
-                <div className="text-sm font-bold text-outline uppercase tracking-wider mb-4">Ingredients & Processes</div>
-                <div className="space-y-4">
+              <div className="flex-1 overflow-y-auto p-5">
+                <div className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-[0.14em] mb-3">Ingredients & Processes</div>
+                <div className="space-y-3">
                   {(!selectedBom.BOM || selectedBom.BOM.length === 0) ? (
-                    <div className="text-center p-8 border border-dashed border-outline-variant/50 rounded-xl text-outline text-sm">
+                    <div className="text-center p-8 border border-dashed border-[var(--border)] rounded-[8px] text-[var(--text-muted)] text-xs">
                       No processes defined for this BOM.
                     </div>
                   ) : (
@@ -239,58 +239,58 @@ export default function BomWorkspace({ initialSearch = "", initialCreateHinban =
                       const kataban = step['型番'];
 
                       return (
-                        <div key={sIdx} className="bg-surface border border-outline-variant/30 rounded-xl shadow-sm p-4 flex flex-col md:flex-row md:items-center justify-between gap-4 relative overflow-hidden">
-                          <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary/40"></div>
+                        <div key={sIdx} className="rounded-[8px] border border-[var(--border)] bg-[var(--surface)] shadow-2xs p-4 flex flex-col md:flex-row md:items-center justify-between gap-4 relative overflow-hidden">
+                          <div className="absolute left-0 top-0 bottom-0 w-1 bg-[var(--freya-blue)]"></div>
                           <div className="flex-1 pl-2">
                             <div className="flex flex-wrap items-center gap-2 mb-1">
-                              <span className="text-[10px] font-bold text-primary bg-primary/10 px-2 py-0.5 rounded-full">
+                              <span className="text-[10px] font-bold text-[var(--freya-blue)] bg-[var(--freya-blue)]/10 px-2 py-0.5 rounded-[4px] border border-[var(--freya-blue)]/20">
                                 Step {step['工程番号'] || sIdx + 1}
                               </span>
-                              <span className="font-bold text-on-surface text-sm md:text-base">
+                              <span className="font-bold text-[var(--text-primary)] text-xs md:text-sm">
                                 {processDisplay}
                               </span>
                               {timeOption && (
-                                <span className="font-mono text-xs font-bold text-primary bg-primary/10 px-2 py-0.5 rounded border border-primary/20" title={`時間オプション: ${timeOption}`}>
+                                <span className="font-mono text-xs font-bold text-[var(--freya-blue)] bg-[var(--freya-blue)]/10 px-2 py-0.5 rounded-[4px] border border-[var(--freya-blue)]/20" title={`時間オプション: ${timeOption}`}>
                                   {timeOption}
                                 </span>
                               )}
                               {kataban && kataban !== '*' && (
-                                <span className="text-xs font-semibold text-on-surface/80 bg-surface-variant/40 px-2 py-0.5 rounded" title={`型番: ${kataban}`}>
+                                <span className="text-xs font-semibold text-[var(--text-secondary)] bg-[var(--surface-subtle)] border border-[var(--border)] px-2 py-0.5 rounded-[4px]" title={`型番: ${kataban}`}>
                                   {kataban}
                                 </span>
                               )}
                             </div>
-                            <div className="text-xs text-outline flex items-center flex-wrap gap-x-4 gap-y-1.5 mt-2">
-                              <span><strong className="text-on-surface-variant">Lead Time:</strong> {step['作業リード日'] || 0}d</span>
-                              <span><strong className="text-on-surface-variant">Setup:</strong> {step['段取時間'] || 0}m</span>
+                            <div className="text-xs text-[var(--text-muted)] flex items-center flex-wrap gap-x-4 gap-y-1.5 mt-2">
+                              <span><strong className="text-[var(--text-secondary)] font-semibold">Lead Time:</strong> {step['作業リード日'] || 0}d</span>
+                              <span><strong className="text-[var(--text-secondary)] font-semibold">Setup:</strong> {step['段取時間'] || 0}m</span>
                               <span>
-                                <strong className="text-on-surface-variant">Work:</strong> {step['作業時間'] || 0}s/{prodUnitName || 'unit'}
+                                <strong className="text-[var(--text-secondary)] font-semibold">Work:</strong> {step['作業時間'] || 0}s/{prodUnitName || 'unit'}
                               </span>
                               {prodUnitName && (
                                 <span>
-                                  <strong className="text-on-surface-variant">生産単位:</strong> {prodUnitName}
+                                  <strong className="text-[var(--text-secondary)] font-semibold">生産単位:</strong> {prodUnitName}
                                 </span>
                               )}
                               {timeOption && (
                                 <span>
-                                  <strong className="text-on-surface-variant">時間オプション:</strong> {timeOption}
+                                  <strong className="text-[var(--text-secondary)] font-semibold">時間オプション:</strong> {timeOption}
                                 </span>
                               )}
                             </div>
                           </div>
                           
-                          <div className="flex-1 border-t md:border-t-0 md:border-l border-outline-variant/30 pt-3 md:pt-0 md:pl-4">
-                            <div className="text-[10px] font-bold uppercase text-outline mb-1">Material Used (構成品番)</div>
+                          <div className="flex-1 border-t md:border-t-0 md:border-l border-[var(--border)] pt-3 md:pt-0 md:pl-4">
+                            <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--text-muted)] mb-1">Material Used (構成品番)</div>
                             {isClickable ? (
                               <button 
                                 onClick={() => handleIngredientClick(hinban)}
-                                className="text-sm font-bold text-primary hover:underline flex items-center gap-1 text-left cursor-pointer"
+                                className="text-xs font-bold text-[var(--freya-blue)] hover:underline flex items-center gap-1 text-left cursor-pointer"
                               >
                                 {hinban}
                                 <span className="material-symbols-outlined" style={{ fontSize: 16 }}>open_in_new</span>
                               </button>
                             ) : (
-                              <span className="text-sm text-outline italic">No material specified</span>
+                              <span className="text-xs text-[var(--text-muted)] italic">No material specified</span>
                             )}
                           </div>
                         </div>
@@ -301,9 +301,9 @@ export default function BomWorkspace({ initialSearch = "", initialCreateHinban =
               </div>
             </>
           ) : (
-            <div className="flex-1 flex flex-col items-center justify-center text-outline">
-              <span className="material-symbols-outlined mb-2 opacity-50" style={{ fontSize: 48 }}>account_tree</span>
-              <p className="text-sm font-medium">Select a BOM from the left to view details</p>
+            <div className="flex-1 flex flex-col items-center justify-center text-[var(--text-muted)]">
+              <span className="material-symbols-outlined mb-2 opacity-50" style={{ fontSize: 44 }}>account_tree</span>
+              <p className="text-xs font-medium">Select a BOM from the left to view details</p>
             </div>
           )}
         </div>

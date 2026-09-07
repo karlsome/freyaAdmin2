@@ -60,23 +60,23 @@ export default function CameraModal({ onClose, factory = '小瀬', stream }) {
 
   const modal = (
     <div
-      className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4"
+      className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4"
       onClick={onClose}
     >
       <div
-        className="dashboard-section rounded-2xl w-full max-w-5xl flex flex-col overflow-hidden shadow-2xl"
+        className="freya-card rounded-[12px] border border-[var(--border)] bg-[var(--surface-raised)] w-full max-w-5xl flex flex-col overflow-hidden shadow-2xl"
         style={{ maxHeight: "92vh" }}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between gap-4 border-b border-separator/40 px-6 py-5 bg-surface">
+        <div className="flex items-center justify-between gap-4 border-b border-[var(--border)] px-5 py-4 bg-[var(--surface)]">
           <div>
-            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">{factory} — Live Camera</p>
-            <h2 className="mt-1 text-xl font-semibold text-on-surface">Live Feed — {activeLabel}</h2>
+            <p className="text-xs font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">{factory} — Live Camera</p>
+            <h2 className="mt-0.5 text-base font-semibold text-[var(--text-primary)]">Live Feed — {activeLabel}</h2>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="p-2 rounded-xl text-outline hover:bg-surface-container hover:text-on-surface transition-all duration-150 active:scale-95"
+            className="flex h-7 w-7 items-center justify-center rounded-[6px] text-[var(--text-muted)] hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)] transition-colors"
           >
             <span className="material-symbols-outlined" style={{ fontSize: 18 }}>close</span>
           </button>
@@ -95,7 +95,7 @@ export default function CameraModal({ onClose, factory = '小瀬', stream }) {
               <button
                 key={c.id}
                 onClick={() => setActiveStream(c.id)}
-                className="px-3 py-1.5 rounded-lg bg-black/60 backdrop-blur-sm text-white text-xs font-semibold hover:bg-black/80 transition-all border border-white/20 active:scale-95"
+                className="px-2.5 py-1 rounded-[6px] bg-black/60 backdrop-blur-sm text-white text-xs font-medium hover:bg-black/80 transition-colors border border-white/20 active:scale-95"
               >
                 {c.label}
               </button>

@@ -58,7 +58,7 @@ export default function ApprovalsStatsStrip({ stats, authUser, activeKey = "", o
   }
 
   return (
-    <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-5 2xl:grid-cols-6">
+    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-5 2xl:grid-cols-6">
       {cards.map((card) => {
         const value = stats?.[card.statKey] ?? 0;
         const active = activeKey && activeKey === card.key;
@@ -66,11 +66,11 @@ export default function ApprovalsStatsStrip({ stats, authUser, activeKey = "", o
         return (
           <StatSummaryCard
             key={card.key}
+            variant="freya"
             icon={card.icon}
             label={card.label}
             value={Number(value).toLocaleString()}
             subtitle={card.subtitle}
-            accent={card.accent}
             active={active}
             onClick={() => onSelect?.(card.key)}
           />

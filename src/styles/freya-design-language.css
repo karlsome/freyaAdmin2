@@ -1,0 +1,322 @@
+/* ==========================================================================
+   FREYA Systems Design Language v1.0
+   Brand direction: Industrial · Powerful · Precise · Minimal
+   Inspired by Apple & Tesla design simplicity and precision.
+   ========================================================================== */
+
+:root {
+  /* ── 1. Color System ── */
+  --freya-blue: #2563EB;
+  --freya-blue-hover: #1D4ED8;
+  --freya-blue-subtle: rgba(37, 99, 235, 0.08);
+
+  --text-primary: #0F172A;
+  --text-secondary: #334155;
+  --text-muted: #64748B;
+  --text-tertiary: #64748B;
+
+  --page-bg: #F8FAFC;
+  --surface: #FFFFFF;
+  --surface-raised: #FFFFFF;
+  --surface-hover: #F1F5F9;
+
+  --border: #E5E7EB;
+  --border-strong: #CBD5E1;
+
+  /* ── Semantic status colors ── */
+  --status-complete: #16A34A;
+  --status-complete-bg: rgba(22, 163, 74, 0.08);
+  --status-complete-border: rgba(22, 163, 74, 0.2);
+
+  --status-warning: #D97706;
+  --status-warning-bg: rgba(217, 119, 6, 0.08);
+  --status-warning-border: rgba(217, 119, 6, 0.2);
+
+  --status-defect: #DC2626;
+  --status-defect-bg: rgba(220, 38, 38, 0.08);
+  --status-defect-border: rgba(220, 38, 38, 0.2);
+
+  --status-critical: #B91C1C;
+  --status-info: #2563EB;
+  --status-disabled: #94A3B8;
+  --status-unknown: #64748B;
+
+  /* ── 35. Radius System ── */
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-card: 8px;
+  --radius-modal: 12px;
+  --radius-pill: 999px;
+
+  /* ── 37. Shadow System ── */
+  --shadow-0: none;
+  --shadow-1: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-2: 0 8px 24px 0 rgba(0, 0, 0, 0.10);
+
+  /* ── 8. Spacing ── */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+}
+
+/* ── Dark Mode ── */
+.dark,
+[data-theme="dark"] {
+  --freya-blue: #3B82F6;
+  --freya-blue-hover: #60A5FA;
+  --freya-blue-subtle: rgba(59, 130, 246, 0.12);
+
+  --text-primary: #F8FAFC;
+  --text-secondary: #CBD5E1;
+  --text-muted: #94A3B8;
+  --text-tertiary: #94A3B8;
+
+  --page-bg: #07090D;
+  --surface: #0F172A;
+  --surface-raised: #111827;
+  --surface-hover: #1E293B;
+
+  --border: #1E293B;
+  --border-strong: #334155;
+
+  --status-complete: #22C55E;
+  --status-complete-bg: rgba(34, 197, 94, 0.12);
+  --status-complete-border: rgba(34, 197, 94, 0.25);
+
+  --status-warning: #F59E0B;
+  --status-warning-bg: rgba(245, 158, 11, 0.12);
+  --status-warning-border: rgba(245, 158, 11, 0.25);
+
+  --status-defect: #EF4444;
+  --status-defect-bg: rgba(239, 68, 68, 0.12);
+  --status-defect-border: rgba(239, 68, 68, 0.25);
+
+  --status-critical: #DC2626;
+  --status-info: #3B82F6;
+  --status-disabled: #64748B;
+  --status-unknown: #94A3B8;
+
+  --shadow-1: 0 1px 3px 0 rgba(0, 0, 0, 0.35);
+  --shadow-2: 0 8px 24px 0 rgba(0, 0, 0, 0.50);
+}
+
+/* ── Utility Classes for FREYA Systems v1.0 ── */
+
+.freya-page-container {
+  position: relative;
+  z-index: 2;
+  background-color: var(--page-bg);
+  color: var(--text-primary);
+  min-height: 100vh;
+  padding-inline: clamp(16px, 2vw, 32px);
+  padding-top: 5.5rem;
+  padding-bottom: 4rem;
+  font-family: Inter, "Noto Sans JP", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── Precise Card ── */
+.freya-card {
+  background-color: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-1);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.freya-card:hover {
+  border-color: var(--border-strong);
+}
+
+/* ── Typography & Tabular Numerals ── */
+.freya-tabular {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
+}
+
+.freya-title {
+  font-size: clamp(26px, 2vw, 32px);
+  font-weight: 600;
+  line-height: 1.25;
+  letter-spacing: -0.025em;
+  color: var(--text-primary);
+}
+
+.freya-section-title {
+  font-size: clamp(18px, 1.5vw, 20px);
+  font-weight: 600;
+  line-height: 1.35;
+  letter-spacing: -0.015em;
+  color: var(--text-primary);
+}
+
+.freya-label {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+}
+
+.freya-kpi-value {
+  font-size: clamp(28px, 2.2vw, 32px);
+  font-weight: 700;
+  line-height: 1.15;
+  letter-spacing: -0.03em;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
+}
+
+/* ── Minimal Precise Buttons ── */
+.freya-btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 40px;
+  padding: 0 16px;
+  background-color: var(--freya-blue);
+  color: #FFFFFF;
+  font-size: 14px;
+  font-weight: 600;
+  border-radius: var(--radius-md);
+  border: 1px solid transparent;
+  box-shadow: var(--shadow-1);
+  cursor: pointer;
+  transition: background-color 0.15s ease, transform 0.1s ease;
+  user-select: none;
+}
+
+.freya-btn-primary:hover {
+  background-color: var(--freya-blue-hover);
+}
+
+.freya-btn-primary:active {
+  transform: scale(0.98);
+}
+
+.freya-btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 40px;
+  padding: 0 16px;
+  background-color: var(--surface);
+  color: var(--text-secondary);
+  font-size: 14px;
+  font-weight: 600;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-1);
+  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+  user-select: none;
+}
+
+.freya-btn-secondary:hover {
+  background-color: var(--surface-hover);
+  border-color: var(--border-strong);
+  color: var(--text-primary);
+}
+
+.freya-btn-secondary:active {
+  transform: scale(0.98);
+}
+
+/* ── Minimal Segmented Switch ── */
+.freya-segmented {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px;
+  background-color: var(--page-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  gap: 2px;
+}
+
+.freya-segmented-item {
+  padding: 6px 14px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-muted);
+  border-radius: var(--radius-md);
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.freya-segmented-item.active {
+  background-color: var(--surface);
+  color: var(--text-primary);
+  font-weight: 600;
+  box-shadow: var(--shadow-1);
+}
+
+/* ── Status Pill Badges (pair icon/dot with text) ── */
+.freya-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 24px;
+  padding: 0 10px;
+  border-radius: var(--radius-pill);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.freya-badge-normal {
+  background-color: var(--status-complete-bg);
+  color: var(--status-complete);
+  border: 1px solid var(--status-complete-border);
+}
+
+.freya-badge-warning {
+  background-color: var(--status-warning-bg);
+  color: var(--status-warning);
+  border: 1px solid var(--status-warning-border);
+}
+
+.freya-badge-defect {
+  background-color: var(--status-defect-bg);
+  color: var(--status-defect);
+  border: 1px solid var(--status-defect-border);
+}
+
+.freya-badge-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: var(--radius-pill);
+  background-color: currentColor;
+}
+
+/* ── Inputs ── */
+.freya-input {
+  height: 40px;
+  padding: 0 12px;
+  background-color: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  font-size: 14px;
+  color: var(--text-primary);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.freya-input:focus {
+  outline: 2px solid var(--freya-blue);
+  outline-offset: 1px;
+  border-color: var(--freya-blue);
+}
+
+.freya-input::placeholder {
+  color: var(--text-muted);
+}

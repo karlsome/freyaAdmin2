@@ -19,7 +19,7 @@ export default function FactoriesPage() {
   const critical = factories.filter((f) => getDefectStatus(f.defectRate).level === "high").length;
 
   return (
-    <section className="pt-24 pb-16 px-8 overflow-y-auto h-screen scrollbar-hide">
+    <section className="min-h-screen max-w-[1600px] mx-auto space-y-6 pt-20 px-6 pb-12">
       <PageHeader
         title={t("factoryListTitle")}
         subtitle={(
@@ -32,9 +32,9 @@ export default function FactoriesPage() {
         actions={(
           <button
             onClick={refresh}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold bg-surface-container border border-outline-variant/20 text-on-surface-variant hover:bg-surface-container-high hover:text-primary transition-all duration-150"
+            className="inline-flex items-center gap-2 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3.5 py-2 text-xs font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-hover)] transition-colors shadow-2xs"
           >
-            <span className="material-symbols-outlined" style={{ fontSize: 16 }}>refresh</span>
+            <span className="material-symbols-outlined text-[var(--text-muted)]" style={{ fontSize: 16 }}>refresh</span>
             {t("refresh")}
           </button>
         )}
@@ -42,9 +42,9 @@ export default function FactoriesPage() {
 
       {/* ── Error banner ── */}
       {error && (
-        <div className="glass-card rounded-2xl p-6 mb-6 flex items-center gap-4 text-error">
-          <span className="material-symbols-outlined">error</span>
-          <p className="text-sm font-semibold">Backend unreachable — showing last cached data. ({error})</p>
+        <div className="freya-card rounded-[8px] border border-[var(--status-danger)]/30 bg-[var(--status-danger)]/10 p-4 mb-6 flex items-center gap-3 text-[var(--status-danger)]">
+          <span className="material-symbols-outlined" style={{ fontSize: 20 }}>error</span>
+          <p className="text-xs font-semibold">Backend unreachable — showing last cached data. ({error})</p>
         </div>
       )}
 
@@ -52,7 +52,7 @@ export default function FactoriesPage() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5 pb-8">
         {loading && factories.length === 0
           ? Array.from({ length: 7 }).map((_, i) => (
-              <div key={i} className="glass-card rounded-2xl p-5 h-64 animate-pulse bg-surface-container" />
+              <div key={i} className="freya-card rounded-[8px] border border-[var(--border)] bg-[var(--surface-subtle)] p-5 h-64 animate-pulse" />
             ))
           : factories.map((factory) => (
               <FactoryCard

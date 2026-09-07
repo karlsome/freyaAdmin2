@@ -22,11 +22,11 @@ export default function PlannerGoalsPanel({
 
   return (
     <div className="space-y-4">
-      <div className="glass-card rounded-3xl p-5">
+      <div className="freya-card rounded-[8px] border border-[var(--border)] bg-[var(--surface)] p-4 shadow-sm">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <h3 className="text-lg font-semibold text-on-surface">Production Goals</h3>
-            <p className="mt-1 text-sm text-on-surface-variant">Set goal quantities first, then place them onto equipment schedules.</p>
+            <h3 className="text-sm font-semibold text-[var(--text-primary)]">Production Goals</h3>
+            <p className="mt-0.5 text-xs text-[var(--text-secondary)]">Set goal quantities first, then place them onto equipment schedules.</p>
           </div>
 
           <div className="flex flex-wrap gap-2">
@@ -34,26 +34,26 @@ export default function PlannerGoalsPanel({
               type="button"
               onClick={() => fileInputRef.current?.click()}
               disabled={importing}
-              className="flex items-center gap-2 rounded-2xl border border-separator/40 bg-surface-container px-4 py-2 text-xs font-semibold text-on-surface transition hover:bg-surface-container-high disabled:cursor-not-allowed disabled:opacity-50"
+              className="flex items-center gap-1.5 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-hover)] disabled:cursor-not-allowed disabled:opacity-50 transition-colors shadow-none"
             >
-              <span className="material-symbols-outlined" style={{ fontSize: 16 }}>upload</span>
+              <span className="material-symbols-outlined" style={{ fontSize: 15 }}>upload</span>
               {importing ? "Reading CSV…" : "Upload CSV"}
             </button>
             <button
               type="button"
               onClick={onOpenManualGoal}
-              className="flex items-center gap-2 rounded-2xl bg-primary px-4 py-2 text-xs font-semibold text-on-primary transition hover:opacity-90"
+              className="flex items-center gap-1.5 rounded-[6px] bg-[var(--freya-blue)] px-3 py-1.5 text-xs font-semibold text-white hover:bg-[var(--freya-blue-hover)] transition-colors shadow-none"
             >
-              <span className="material-symbols-outlined" style={{ fontSize: 16 }}>add_circle</span>
+              <span className="material-symbols-outlined" style={{ fontSize: 15 }}>add_circle</span>
               Manual Input
             </button>
             <button
               type="button"
               onClick={onOpenSmartScheduling}
               disabled={smartSchedulingBusy || !goals.length}
-              className="flex items-center gap-2 rounded-2xl border border-primary/25 bg-primary/10 px-4 py-2 text-xs font-semibold text-primary transition hover:bg-primary/15 disabled:cursor-not-allowed disabled:opacity-40"
+              className="flex items-center gap-1.5 rounded-[6px] border border-[var(--freya-blue)]/30 bg-[var(--freya-blue)]/10 px-3 py-1.5 text-xs font-semibold text-[var(--freya-blue)] hover:bg-[var(--freya-blue)]/20 disabled:cursor-not-allowed disabled:opacity-40 transition-colors shadow-none"
             >
-              <span className={`material-symbols-outlined ${smartSchedulingBusy ? "animate-spin" : ""}`} style={{ fontSize: 16 }}>
+              <span className={`material-symbols-outlined ${smartSchedulingBusy ? "animate-spin" : ""}`} style={{ fontSize: 15 }}>
                 auto_awesome
               </span>
               {smartSchedulingBusy ? "Scheduling…" : "Smart Scheduling"}
@@ -61,23 +61,23 @@ export default function PlannerGoalsPanel({
           </div>
         </div>
 
-        <div className="mt-4 flex flex-col gap-3 lg:flex-row lg:items-center">
+        <div className="mt-3 flex flex-col gap-3 lg:flex-row lg:items-center">
           <div className="flex-1">
             <label htmlFor={inputId} className="sr-only">Search goals</label>
-            <div className="ui-control-surface flex h-11 items-center gap-3 rounded-2xl border border-separator/40 px-4">
-              <span className="material-symbols-outlined text-outline" style={{ fontSize: 18 }}>search</span>
+            <div className="flex h-8 items-center gap-2 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-2.5 text-xs text-[var(--text-primary)] focus-within:border-[var(--freya-blue)] transition-colors">
+              <span className="material-symbols-outlined text-[var(--text-muted)]" style={{ fontSize: 16 }}>search</span>
               <input
                 id={inputId}
                 type="text"
                 value={goalSearch}
                 onChange={(event) => onGoalSearchChange(event.target.value)}
                 placeholder="Search by 背番号, 品番, or 品名…"
-                className="planner-data-text h-full flex-1 bg-transparent outline-none"
+                className="h-full flex-1 bg-transparent text-xs text-[var(--text-primary)] outline-none placeholder:text-[var(--text-muted)]"
               />
             </div>
           </div>
 
-          <div className="planner-data-text rounded-2xl bg-surface-container-low px-4 py-3 font-semibold text-on-surface-variant">
+          <div className="rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] px-2.5 py-1 text-xs font-mono text-[var(--text-secondary)]">
             {goals.length} goal{goals.length === 1 ? "" : "s"} in view
           </div>
         </div>

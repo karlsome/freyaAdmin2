@@ -42,7 +42,7 @@ export default function PlannerPrintModal({
           <button
             type="button"
             onClick={onClose}
-            className="rounded-2xl border border-separator/40 px-4 py-2 text-sm font-semibold text-on-surface transition hover:bg-surface-container"
+            className="rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs font-semibold text-[var(--text-primary)] transition hover:bg-[var(--surface-hover)]"
           >
             Cancel
           </button>
@@ -50,24 +50,24 @@ export default function PlannerPrintModal({
             type="button"
             disabled={!selectedEquipment.length}
             onClick={() => onConfirm(selectedEquipment)}
-            className="rounded-2xl bg-primary px-4 py-2 text-sm font-semibold text-on-primary transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+            className="rounded-[6px] bg-[var(--freya-blue)] px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-[var(--freya-blue-hover)] disabled:cursor-not-allowed disabled:opacity-50"
           >
             Print
           </button>
         </div>
       )}
     >
-      <div className="planner-data-text space-y-4">
+      <div className="space-y-3">
         {!normalizedOptions.length ? (
-          <EmptyState className="bg-surface-container-low px-5 py-8">No scheduled equipment is available for printing.</EmptyState>
+          <EmptyState className="rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] px-5 py-8 text-xs text-[var(--text-muted)]">No scheduled equipment is available for printing.</EmptyState>
         ) : (
           <>
-            <label className="flex items-center gap-3 rounded-2xl border border-outline-variant/15 bg-surface-container-low px-4 py-3 text-on-surface">
+            <label className="flex cursor-pointer items-center gap-2.5 rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] px-3.5 py-2.5 text-xs text-[var(--text-primary)]">
               <input
                 type="checkbox"
                 checked={allSelected}
                 onChange={(event) => setSelectedEquipment(event.target.checked ? normalizedOptions : [])}
-                className="h-4 w-4 rounded border-outline-variant/40"
+                className="h-4 w-4 rounded-[4px] border-[var(--border)] text-[var(--freya-blue)] focus:ring-0"
               />
               <span className="font-semibold">Select All</span>
             </label>
@@ -78,15 +78,15 @@ export default function PlannerPrintModal({
                 return (
                   <label
                     key={equipmentName}
-                    className={`flex items-center gap-3 rounded-2xl border px-4 py-3 transition ${checked ? "border-primary/25 bg-primary/10" : "border-outline-variant/15 bg-surface-container-low hover:bg-surface-container"}`}
+                    className={`flex cursor-pointer items-center gap-2.5 rounded-[6px] border px-3.5 py-2.5 text-xs transition ${checked ? "border-[var(--freya-blue)]/40 bg-[var(--freya-blue)]/5 text-[var(--text-primary)]" : "border-[var(--border)] bg-[var(--surface)] hover:bg-[var(--surface-hover)] text-[var(--text-primary)]"}`}
                   >
                     <input
                       type="checkbox"
                       checked={checked}
                       onChange={() => handleToggleEquipment(equipmentName)}
-                      className="h-4 w-4 rounded border-outline-variant/40"
+                      className="h-4 w-4 rounded-[4px] border-[var(--border)] text-[var(--freya-blue)] focus:ring-0"
                     />
-                    <span className="font-medium text-on-surface">{equipmentName}</span>
+                    <span className="font-medium">{equipmentName}</span>
                   </label>
                 );
               })}

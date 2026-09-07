@@ -38,20 +38,20 @@ function FlashBanner({ flash, onClose }) {
   if (!flash) return null;
 
   const tone = flash.type === "error"
-    ? "bg-error/10 text-error border-error/20"
+    ? "bg-[var(--status-danger)]/10 text-[var(--status-danger)] border-[var(--status-danger)]/20"
     : flash.type === "success"
-      ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/20"
-      : "bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/20";
+      ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20"
+      : "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20";
 
   return (
-    <div className={`mb-6 rounded-3xl border px-5 py-4 ${tone}`}>
+    <div className={`mb-6 rounded-[8px] border px-4 py-3 ${tone}`}>
       <div className="flex items-start justify-between gap-4">
         <div>
-          <div className="text-[11px] font-semibold uppercase tracking-[0.18em]">Status</div>
-          <p className="mt-1 text-sm font-medium">{flash.message}</p>
+          <div className="text-[11px] font-semibold uppercase tracking-[0.04em]">Status</div>
+          <p className="mt-0.5 text-xs font-medium">{flash.message}</p>
         </div>
         <button type="button" onClick={onClose} className="text-current/70 transition hover:text-current">
-          <span className="material-symbols-outlined">close</span>
+          <span className="material-symbols-outlined" style={{ fontSize: 16 }}>close</span>
         </button>
       </div>
     </div>
@@ -61,7 +61,7 @@ function FlashBanner({ flash, onClose }) {
 function Field({ label, children }) {
   return (
     <label className="flex flex-col gap-1.5">
-      <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-on-surface-variant">{label}</span>
+      <span className="text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">{label}</span>
       {children}
     </label>
   );
@@ -99,7 +99,7 @@ function SuggestInput({ type = "text", value, options, onChange, className }) {
         className={`w-full ${className}`}
       />
       {open && filteredOptions.length > 0 && (
-        <ul className="absolute left-0 right-0 top-full z-20 mt-1 max-h-48 overflow-auto rounded-xl border border-outline-variant/30 bg-surface py-1 shadow-lg">
+        <ul className="absolute left-0 right-0 top-full z-20 mt-1 max-h-48 overflow-auto rounded-[8px] border border-[var(--border)] bg-[var(--surface-raised)] py-1 shadow-lg">
           {filteredOptions.map((option) => (
             <li key={option}>
               <button
@@ -109,7 +109,7 @@ function SuggestInput({ type = "text", value, options, onChange, className }) {
                   onChange({ target: { value: option } });
                   setOpen(false);
                 }}
-                className="block w-full truncate px-3 py-1.5 text-left text-sm text-on-surface transition hover:bg-surface-container-high"
+                className="block w-full truncate px-3 py-1.5 text-left text-xs font-mono text-[var(--text-primary)] transition hover:bg-[var(--surface-hover)]"
               >
                 {option}
               </button>
@@ -121,7 +121,7 @@ function SuggestInput({ type = "text", value, options, onChange, className }) {
   );
 }
 
-const inputClassName = "rounded-xl border border-outline-variant/30 bg-surface px-3 py-2 text-sm text-on-surface placeholder:text-on-surface-variant/60 focus:border-primary focus:outline-none";
+const inputClassName = "rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs font-mono text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:border-[var(--freya-blue)] focus:outline-none transition-colors";
 
 export default function PrototypeRequestPage() {
   const { shisakuId } = useParams();
@@ -550,7 +550,7 @@ export default function PrototypeRequestPage() {
   const groupedPrototypes = records;
 
   const groupedColumns = useMemo(() => [
-    { key: "shisakuNo", label: t("prototypeNo"), sortable: true, width: 200, renderCell: (r) => `試作${r.shisakuNo}` },
+    { key: "shisakuNo", label: t("prototypeNo"), sortable: true, width: 200, renderCell: (r) => <span className="font-mono font-medium">試作{r.shisakuNo}</span> },
     {
       key: "status",
       label: t("status"),
@@ -558,37 +558,37 @@ export default function PrototypeRequestPage() {
       width: 120,
       renderCell: (r) => {
         const status = r.parentStatus || "pending";
-        let colorClass = "bg-amber-500/10 text-amber-600 border-amber-500/20";
-        if (status === "completed") colorClass = "bg-emerald-500/10 text-emerald-600 border-emerald-500/20";
-        if (status === "in-progress") colorClass = "bg-blue-500/10 text-blue-600 border-blue-500/20";
+        let colorClass = "border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400";
+        if (status === "completed") colorClass = "border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400";
+        if (status === "in-progress") colorClass = "border-[var(--freya-blue)]/30 bg-[var(--freya-blue)]/10 text-[var(--freya-blue)]";
         return (
-          <span className={`inline-flex items-center justify-center rounded-lg border px-2.5 py-1 text-[11px] font-semibold uppercase ${colorClass}`}>
+          <span className={`inline-flex items-center justify-center rounded-[4px] border px-2 py-0.5 text-[10px] font-mono font-medium uppercase tracking-wider ${colorClass}`}>
             {status}
           </span>
         );
       },
     },
-    { key: "totalRequests", label: t("totalRequests"), sortable: true, width: 150, align: "center" },
+    { key: "totalRequests", label: t("totalRequests"), sortable: true, width: 150, align: "center", renderCell: (r) => <span className="font-mono">{r.totalRequests ?? 0}</span> },
     { 
       key: "latestDate", 
       label: t("latestRequest"), 
       sortable: true, 
       width: 200,
-      renderCell: (r) => r.latestDate ? r.latestDate.toLocaleString() : "—"
+      renderCell: (r) => r.latestDate ? <span className="font-mono text-xs">{r.latestDate.toLocaleString()}</span> : "—"
     },
   ], []);
 
   const columns = useMemo(() => {
     const baseCols = [
-      { key: "index", label: "#", sortable: false, width: 60, align: "center", renderCell: (r, i) => r.orderNumber ?? (i + 1) },
-      { key: "shisakuNo", label: t("prototypeNo"), sortable: true, width: 120, renderCell: (r) => r.shisakuNo || "—" },
-      { key: "name", label: t("partName"), sortable: true, width: 140, renderCell: (r) => r.name || "—" },
-      { key: "okuriPitch", label: t("okuriPitch"), sortable: true, width: 110, align: "center", renderCell: (r) => r.okuriPitch ?? "—" },
-      { key: "pcPerCycle", label: t("pcPerCycle"), sortable: true, width: 110, align: "center", renderCell: (r) => r.pcPerCycle ?? "—" },
+      { key: "index", label: "#", sortable: false, width: 60, align: "center", renderCell: (r, i) => <span className="font-mono text-[var(--text-muted)]">{r.orderNumber ?? (i + 1)}</span> },
+      { key: "shisakuNo", label: t("prototypeNo"), sortable: true, width: 120, renderCell: (r) => <span className="font-mono">{r.shisakuNo || "—"}</span> },
+      { key: "name", label: t("partName"), sortable: true, width: 140, renderCell: (r) => <span className="font-mono font-medium">{r.name || "—"}</span> },
+      { key: "okuriPitch", label: t("okuriPitch"), sortable: true, width: 110, align: "center", renderCell: (r) => <span className="font-mono">{r.okuriPitch ?? "—"}</span> },
+      { key: "pcPerCycle", label: t("pcPerCycle"), sortable: true, width: 110, align: "center", renderCell: (r) => <span className="font-mono">{r.pcPerCycle ?? "—"}</span> },
       { key: "color", label: t("color"), sortable: true, width: 120, renderCell: (r) => r.color || "—" },
       { key: "material", label: t("material"), sortable: true, width: 120, renderCell: (r) => r.material || "—" },
       { key: "boxType", label: t("boxType"), sortable: true, width: 120, renderCell: (r) => r.boxType || "—" },
-      { key: "quantity", label: t("quantityReq"), sortable: true, width: 100, align: "center", renderCell: (r) => r.quantity ?? "—" },
+      { key: "quantity", label: t("quantityReq"), sortable: true, width: 100, align: "center", renderCell: (r) => <span className="font-mono font-semibold">{r.quantity ?? "—"}</span> },
       {
         key: "dxf",
         label: t("dxf"),
@@ -598,9 +598,9 @@ export default function PrototypeRequestPage() {
         disableCellWrapper: true,
         renderCell: (r) => (
           r.dxf && r.dxf.link ? (
-            <a href={r.dxf.link} target="_blank" rel="noopener noreferrer" className="inline-flex items-center justify-center rounded-lg border border-outline-variant/30 bg-surface px-2.5 py-1 text-[11px] font-semibold uppercase text-primary transition hover:bg-surface-container-high">DXF</a>
+            <a href={r.dxf.link} target="_blank" rel="noopener noreferrer" className="inline-flex items-center justify-center rounded-[4px] border border-[var(--border)] bg-[var(--surface)] px-2 py-0.5 text-[10px] font-mono font-semibold text-[var(--freya-blue)] transition hover:bg-[var(--surface-hover)] shadow-2xs">DXF</a>
           ) : (
-            <span className="inline-flex items-center justify-center rounded-lg border border-outline-variant/15 bg-surface-container px-2.5 py-1 text-[11px] font-semibold uppercase text-on-surface-variant/40">—</span>
+            <span className="inline-flex items-center justify-center rounded-[4px] border border-[var(--border)] bg-[var(--surface-subtle)] px-2 py-0.5 text-[10px] font-mono text-[var(--text-muted)]">—</span>
           )
         ),
       },
@@ -613,9 +613,9 @@ export default function PrototypeRequestPage() {
         disableCellWrapper: true,
         renderCell: (r) => (
           r.pdf && r.pdf.link ? (
-            <a href={r.pdf.link} target="_blank" rel="noopener noreferrer" className="inline-flex items-center justify-center rounded-lg border border-outline-variant/30 bg-surface px-2.5 py-1 text-[11px] font-semibold uppercase text-primary transition hover:bg-surface-container-high">PDF</a>
+            <a href={r.pdf.link} target="_blank" rel="noopener noreferrer" className="inline-flex items-center justify-center rounded-[4px] border border-[var(--border)] bg-[var(--surface)] px-2 py-0.5 text-[10px] font-mono font-semibold text-[var(--freya-blue)] transition hover:bg-[var(--surface-hover)] shadow-2xs">PDF</a>
           ) : (
-            <span className="inline-flex items-center justify-center rounded-lg border border-outline-variant/15 bg-surface-container px-2.5 py-1 text-[11px] font-semibold uppercase text-on-surface-variant/40">—</span>
+            <span className="inline-flex items-center justify-center rounded-[4px] border border-[var(--border)] bg-[var(--surface-subtle)] px-2 py-0.5 text-[10px] font-mono text-[var(--text-muted)]">—</span>
           )
         ),
       },
@@ -628,9 +628,9 @@ export default function PrototypeRequestPage() {
         disableCellWrapper: true,
         renderCell: (r) => (
           r.pce && r.pce.link ? (
-            <a href={r.pce.link} target="_blank" rel="noopener noreferrer" className="inline-flex items-center justify-center rounded-lg border border-outline-variant/30 bg-surface px-2.5 py-1 text-[11px] font-semibold uppercase text-primary transition hover:bg-surface-container-high">PCE</a>
+            <a href={r.pce.link} target="_blank" rel="noopener noreferrer" className="inline-flex items-center justify-center rounded-[4px] border border-[var(--border)] bg-[var(--surface)] px-2 py-0.5 text-[10px] font-mono font-semibold text-[var(--freya-blue)] transition hover:bg-[var(--surface-hover)] shadow-2xs">PCE</a>
           ) : (
-            <span className="inline-flex items-center justify-center rounded-lg border border-outline-variant/15 bg-surface-container px-2.5 py-1 text-[11px] font-semibold uppercase text-on-surface-variant/40">—</span>
+            <span className="inline-flex items-center justify-center rounded-[4px] border border-[var(--border)] bg-[var(--surface-subtle)] px-2 py-0.5 text-[10px] font-mono text-[var(--text-muted)]">—</span>
           )
         ),
       },
@@ -641,11 +641,11 @@ export default function PrototypeRequestPage() {
         width: 120,
         renderCell: (r) => {
           const status = r.status || "pending";
-          let colorClass = "bg-amber-500/10 text-amber-600 border-amber-500/20";
-          if (status === "completed") colorClass = "bg-emerald-500/10 text-emerald-600 border-emerald-500/20";
-          if (status === "in-progress") colorClass = "bg-blue-500/10 text-blue-600 border-blue-500/20";
+          let colorClass = "border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400";
+          if (status === "completed") colorClass = "border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400";
+          if (status === "in-progress") colorClass = "border-[var(--freya-blue)]/30 bg-[var(--freya-blue)]/10 text-[var(--freya-blue)]";
           return (
-            <span className={`inline-flex items-center justify-center rounded-lg border px-2.5 py-1 text-[11px] font-semibold uppercase ${colorClass}`}>
+            <span className={`inline-flex items-center justify-center rounded-[4px] border px-2 py-0.5 text-[10px] font-mono font-medium uppercase tracking-wider ${colorClass}`}>
               {status}
             </span>
           );
@@ -659,7 +659,7 @@ export default function PrototypeRequestPage() {
         width: 150,
         renderCell: (r) => {
           const d = r.createdAt ? new Date(r.createdAt.$date || r.createdAt) : null;
-          return d ? d.toLocaleString() : "—";
+          return d ? <span className="font-mono text-xs">{d.toLocaleString()}</span> : "—";
         },
       },
     ];
@@ -707,23 +707,23 @@ export default function PrototypeRequestPage() {
 
   if (loading) {
     return (
-      <div className="flex h-full min-h-[400px] flex-col items-center justify-center gap-4">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary/30 border-t-primary" />
-        <p className="text-sm font-medium text-on-surface-variant">Loading requests...</p>
+      <div className="flex h-full min-h-[400px] flex-col items-center justify-center gap-3">
+        <div className="h-7 w-7 animate-spin rounded-full border-2 border-[var(--freya-blue)]/30 border-t-[var(--freya-blue)]" />
+        <p className="text-xs font-medium text-[var(--text-muted)]">Loading requests...</p>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="flex h-full min-h-[400px] flex-col items-center justify-center gap-4 px-6">
-        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-error/10 text-error">
-          <span className="material-symbols-outlined text-2xl">error</span>
+      <div className="flex h-full min-h-[400px] flex-col items-center justify-center gap-3 px-6">
+        <div className="flex h-10 w-10 items-center justify-center rounded-[6px] bg-[var(--status-danger)]/10 text-[var(--status-danger)]">
+          <span className="material-symbols-outlined text-xl">error</span>
         </div>
-        <p className="text-sm font-medium text-error">{error}</p>
+        <p className="text-xs font-medium text-[var(--status-danger)]">{error}</p>
         <button
           onClick={() => navigate("/prototype")}
-          className="rounded-xl border border-outline-variant/30 bg-surface px-4 py-2 text-sm font-semibold text-on-surface transition hover:bg-surface-container-high"
+          className="rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-hover)] transition-colors shadow-2xs"
         >
           Return to Prototypes
         </button>
@@ -732,18 +732,18 @@ export default function PrototypeRequestPage() {
   }
 
   return (
-    <div className="pt-24 pb-16 px-4 md:px-8 overflow-y-auto h-screen scrollbar-hide">
-      <div className="mb-8 flex items-center justify-between">
+    <div className="min-h-screen max-w-[1600px] mx-auto space-y-6 pt-20 px-6 pb-12">
+      <div className="flex items-center justify-between">
         <PageHeader
           icon="assignment"
           title={shisakuId ? `Prototype Request: ${shisakuRecord?.shisakuNo || shisakuId}` : "All Prototype Requests"}
           description={shisakuId ? "Manage manufacturing requests for this prototype." : "View all prototype manufacturing requests."}
         />
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2.5">
           {!shisakuId && (
             <button
               onClick={handleOpenCreateModal}
-              className="flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-on-primary shadow-sm transition hover:opacity-90 active:scale-95"
+              className="flex items-center gap-1.5 rounded-[6px] bg-[var(--freya-blue)] px-3.5 py-1.5 text-xs font-semibold text-white hover:bg-[var(--freya-blue-hover)] transition-colors shadow-xs"
             >
               {t("registerRequest")}
             </button>
@@ -751,9 +751,9 @@ export default function PrototypeRequestPage() {
           {shisakuId && (
             <button
               onClick={() => navigate("/prototype")}
-              className="flex items-center gap-2 rounded-xl border border-outline-variant/30 bg-surface px-4 py-2 text-sm font-semibold text-on-surface transition hover:bg-surface-container-high"
+              className="flex items-center gap-1.5 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-hover)] transition-colors shadow-2xs"
             >
-              <span className="material-symbols-outlined text-[18px]">arrow_back</span>
+              <span className="material-symbols-outlined text-[16px]">arrow_back</span>
               Back
             </button>
           )}
@@ -762,14 +762,14 @@ export default function PrototypeRequestPage() {
 
       <FlashBanner flash={flash} onClose={() => setFlash(null)} />
 
-      <div className="flex flex-col gap-8">
+      <div className="flex flex-col gap-6">
         {shisakuId && shisakuRecord && (
-        <section className="rounded-3xl border border-outline-variant/30 bg-surface px-6 py-6 shadow-sm">
-          <div className="mb-6 flex items-center justify-between">
-            <h3 className="text-xs font-semibold text-on-surface">New Request Entries</h3>
+        <section className="freya-card rounded-[8px] border border-[var(--border)] bg-[var(--surface)] p-5 shadow-sm">
+          <div className="mb-4 flex items-center justify-between">
+            <h3 className="text-sm font-bold text-[var(--text-primary)]">New Request Entries</h3>
           </div>
 
-          <div className="flex flex-col gap-2 pb-4">
+          <div className="flex flex-col gap-3 pb-2">
             {entries.map((item, index) => (
               <div 
                 key={index} 
@@ -778,14 +778,14 @@ export default function PrototypeRequestPage() {
                 onDragOver={handleDragOver}
                 onDrop={handleDrop}
                 onDragEnd={handleDragEnd}
-                className="request-card relative rounded-2xl border border-outline-variant/60 bg-surface-container p-3 shadow transition-shadow hover:shadow-md"
+                className="request-card relative rounded-[8px] border border-[var(--border)] bg-[var(--surface-subtle)] p-3.5 shadow-2xs transition-shadow hover:shadow-xs"
               >
                 {/* Header / Remove Button */}
-                <div className="mb-2 flex items-center justify-between border-b border-outline-variant/10 pb-2">
-                  <h4 className="text-sm font-semibold text-on-surface flex items-center gap-1">
+                <div className="mb-2.5 flex items-center justify-between border-b border-[var(--border)] pb-2">
+                  <h4 className="text-xs font-bold font-mono text-[var(--text-primary)] flex items-center gap-1">
                     <span 
-                      className="material-symbols-outlined text-on-surface-variant/40 hover:text-on-surface cursor-grab active:cursor-grabbing p-0.5 rounded transition" 
-                      style={{ fontSize: 18 }}
+                      className="material-symbols-outlined text-[var(--text-muted)] hover:text-[var(--text-primary)] cursor-grab active:cursor-grabbing p-0.5 rounded transition" 
+                      style={{ fontSize: 16 }}
                       onMouseEnter={(e) => { e.currentTarget.closest('.request-card').draggable = true; }}
                       onMouseLeave={(e) => { e.currentTarget.closest('.request-card').draggable = false; }}
                     >
@@ -797,22 +797,22 @@ export default function PrototypeRequestPage() {
                     type="button"
                     onClick={() => removeEntryRow(index)}
                     disabled={entries.length <= 1}
-                    className="flex h-6 w-6 items-center justify-center rounded-full text-on-surface-variant transition hover:bg-error/10 hover:text-error disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-on-surface-variant"
+                    className="flex h-6 w-6 items-center justify-center rounded-[6px] text-[var(--text-muted)] transition hover:bg-[var(--status-danger)]/10 hover:text-[var(--status-danger)] disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-[var(--text-muted)]"
                     title="Remove Request"
                   >
-                    <span className="material-symbols-outlined" style={{ fontSize: 16 }}>close</span>
+                    <span className="material-symbols-outlined" style={{ fontSize: 15 }}>close</span>
                   </button>
                 </div>
                 
                 {/* Grid Layout for Fields */}
-                <div className="grid grid-cols-1 gap-2 md:grid-cols-4">
+                <div className="grid grid-cols-1 gap-2.5 md:grid-cols-4">
                   {/* Top Row Fields */}
                   <div className="md:col-span-1">
-                    <label className="mb-0.5 block text-[11px] font-semibold text-on-surface-variant uppercase tracking-wider">Product Name</label>
+                    <label className="mb-1 block text-[10px] font-mono font-semibold text-[var(--text-muted)] uppercase tracking-wider">Product Name</label>
                     <SuggestInput value={item.name} options={fieldSuggestions.name} onChange={(e) => handleEntryChange(index, "name", e.target.value)} className={inputClassName + " w-full"} />
                   </div>
                   <div className="md:col-span-1">
-                    <label className="mb-0.5 block text-[11px] font-semibold text-on-surface-variant uppercase tracking-wider">DXF</label>
+                    <label className="mb-1 block text-[10px] font-mono font-semibold text-[var(--text-muted)] uppercase tracking-wider">DXF</label>
                     <select
                       value={item.dxfIndex}
                       onChange={(e) => handleEntryChange(index, "dxfIndex", e.target.value)}
@@ -825,7 +825,7 @@ export default function PrototypeRequestPage() {
                     </select>
                   </div>
                   <div className="md:col-span-1">
-                    <label className="mb-0.5 block text-[11px] font-semibold text-on-surface-variant uppercase tracking-wider">PDF</label>
+                    <label className="mb-1 block text-[10px] font-mono font-semibold text-[var(--text-muted)] uppercase tracking-wider">PDF</label>
                     <select
                       value={item.pdfIndex}
                       onChange={(e) => handleEntryChange(index, "pdfIndex", e.target.value)}
@@ -838,7 +838,7 @@ export default function PrototypeRequestPage() {
                     </select>
                   </div>
                   <div className="md:col-span-1">
-                    <label className="mb-0.5 block text-[11px] font-semibold text-error uppercase tracking-wider flex items-center gap-1">PCE <span className="text-[10px]">*</span></label>
+                    <label className="mb-1 block text-[10px] font-mono font-semibold text-[var(--status-danger)] uppercase tracking-wider flex items-center gap-1">PCE <span className="text-[10px]">*</span></label>
                     <select
                       value={item.pceIndex}
                       onChange={(e) => handleEntryChange(index, "pceIndex", e.target.value)}
@@ -852,29 +852,29 @@ export default function PrototypeRequestPage() {
                   </div>
                   
                   {/* Bottom Row Fields */}
-                  <div className="md:col-span-4 mt-1 grid grid-cols-2 gap-2 md:grid-cols-6 border-t border-outline-variant/10 pt-2">
+                  <div className="md:col-span-4 mt-1 grid grid-cols-2 gap-2.5 md:grid-cols-6 border-t border-[var(--border)] pt-2.5">
                     <div>
-                      <label className="mb-0.5 block text-[11px] font-semibold text-on-surface-variant uppercase tracking-wider">Pitch</label>
+                      <label className="mb-1 block text-[10px] font-mono font-semibold text-[var(--text-muted)] uppercase tracking-wider">Pitch</label>
                       <SuggestInput type="number" value={item.okuriPitch} options={fieldSuggestions.okuriPitch} onChange={(e) => handleEntryChange(index, "okuriPitch", e.target.value)} className={inputClassName + " w-full"} />
                     </div>
                     <div>
-                      <label className="mb-0.5 block text-[11px] font-semibold text-on-surface-variant uppercase tracking-wider">Pc/Cycle</label>
+                      <label className="mb-1 block text-[10px] font-mono font-semibold text-[var(--text-muted)] uppercase tracking-wider">Pc/Cycle</label>
                       <SuggestInput type="number" value={item.pcPerCycle} options={fieldSuggestions.pcPerCycle || []} onChange={(e) => handleEntryChange(index, "pcPerCycle", e.target.value)} className={inputClassName + " w-full"} />
                     </div>
                     <div>
-                      <label className="mb-0.5 block text-[11px] font-semibold text-on-surface-variant uppercase tracking-wider">Color</label>
+                      <label className="mb-1 block text-[10px] font-mono font-semibold text-[var(--text-muted)] uppercase tracking-wider">Color</label>
                       <SuggestInput value={item.color} options={fieldSuggestions.color} onChange={(e) => handleEntryChange(index, "color", e.target.value)} className={inputClassName + " w-full"} />
                     </div>
                     <div>
-                      <label className="mb-0.5 block text-[11px] font-semibold text-on-surface-variant uppercase tracking-wider">Material</label>
+                      <label className="mb-1 block text-[10px] font-mono font-semibold text-[var(--text-muted)] uppercase tracking-wider">Material</label>
                       <SuggestInput value={item.material} options={fieldSuggestions.material} onChange={(e) => handleEntryChange(index, "material", e.target.value)} className={inputClassName + " w-full"} />
                     </div>
                     <div>
-                      <label className="mb-0.5 block text-[11px] font-semibold text-on-surface-variant uppercase tracking-wider">Box Type</label>
+                      <label className="mb-1 block text-[10px] font-mono font-semibold text-[var(--text-muted)] uppercase tracking-wider">Box Type</label>
                       <SuggestInput value={item.boxType} options={fieldSuggestions.boxType} onChange={(e) => handleEntryChange(index, "boxType", e.target.value)} className={inputClassName + " w-full"} />
                     </div>
                     <div>
-                      <label className="mb-0.5 block text-[11px] font-semibold text-on-surface-variant uppercase tracking-wider">Quantity</label>
+                      <label className="mb-1 block text-[10px] font-mono font-semibold text-[var(--text-muted)] uppercase tracking-wider">Quantity</label>
                       <SuggestInput type="number" value={item.quantity} options={fieldSuggestions.quantity} onChange={(e) => handleEntryChange(index, "quantity", e.target.value)} className={inputClassName + " w-full"} />
                     </div>
                   </div>
@@ -885,20 +885,20 @@ export default function PrototypeRequestPage() {
               <button
                 type="button"
                 onClick={addEntryRow}
-                className="flex items-center justify-center gap-2 rounded-xl border border-primary/20 bg-primary/5 px-6 py-2.5 text-sm font-semibold text-primary shadow-sm transition hover:bg-primary/10 active:scale-95"
+                className="flex items-center justify-center gap-1.5 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-4 py-2 text-xs font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-hover)] transition-colors shadow-2xs active:scale-95"
               >
-                <span className="material-symbols-outlined" style={{ fontSize: 18 }}>add</span>
+                <span className="material-symbols-outlined" style={{ fontSize: 16 }}>add</span>
                 Add Another Request Row
               </button>
             </div>
           </div>
 
-          <div className="mt-4 flex items-center justify-end gap-3 border-t border-outline-variant/10 pt-4">
+          <div className="mt-4 flex items-center justify-end gap-2.5 border-t border-[var(--border)] pt-4">
             <button
               type="button"
               onClick={resetEntry}
               disabled={submitting}
-              className="rounded-xl px-4 py-2 text-sm font-semibold text-on-surface-variant transition hover:bg-surface-container-high hover:text-on-surface"
+              className="rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-hover)] transition-colors shadow-2xs"
             >
               Reset
             </button>
@@ -906,16 +906,16 @@ export default function PrototypeRequestPage() {
               type="button"
               onClick={handleRegister}
               disabled={!canRegister}
-              className="flex items-center justify-center gap-2 rounded-xl bg-primary px-6 py-2 text-sm font-semibold text-on-primary shadow-sm transition hover:bg-primary/90 hover:shadow disabled:opacity-50"
+              className="flex items-center justify-center gap-1.5 rounded-[6px] bg-[var(--freya-blue)] px-4 py-1.5 text-xs font-semibold text-white hover:bg-[var(--freya-blue-hover)] transition-colors shadow-xs disabled:opacity-50"
             >
               {submitting ? (
                 <>
-                  <span className="material-symbols-outlined animate-spin" style={{ fontSize: 18 }}>progress_activity</span>
+                  <span className="material-symbols-outlined animate-spin" style={{ fontSize: 16 }}>progress_activity</span>
                   Registering...
                 </>
               ) : (
                 <>
-                  <span className="material-symbols-outlined" style={{ fontSize: 18 }}>assignment_turned_in</span>
+                  <span className="material-symbols-outlined" style={{ fontSize: 16 }}>assignment_turned_in</span>
                   Register Request
                 </>
               )}
@@ -925,21 +925,21 @@ export default function PrototypeRequestPage() {
         )}
 
         <section>
-          <div className="mb-4 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div className="mb-3.5 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
             <div>
-              <h3 className="text-sm font-semibold text-on-surface">{shisakuId ? t("prototypeRequests") : t("prototypesWithRequests")}</h3>
-              <p className="text-xs text-on-surface-variant mt-1">{shisakuId ? "Prototype requests created for this prototype." : "Select a prototype to view its requests."}</p>
+              <h3 className="text-sm font-bold text-[var(--text-primary)]">{shisakuId ? t("prototypeRequests") : t("prototypesWithRequests")}</h3>
+              <p className="text-xs text-[var(--text-secondary)] mt-0.5">{shisakuId ? "Prototype requests created for this prototype." : "Select a prototype to view its requests."}</p>
             </div>
             
             {/* Controls */}
-            <div className="flex flex-wrap items-center gap-3">
+            <div className="flex flex-wrap items-center gap-2.5">
               {shisakuId && editMode && selectedRequestIds.size > 0 && (
                 <button
                   type="button"
                   onClick={handleBulkDelete}
-                  className="flex items-center gap-2 rounded-xl bg-error/10 px-4 py-2 text-sm font-semibold text-error transition hover:bg-error/20"
+                  className="flex items-center gap-1.5 rounded-[6px] border border-[var(--status-danger)]/30 bg-[var(--status-danger)]/10 px-3 py-1.5 text-xs font-semibold text-[var(--status-danger)] hover:bg-[var(--status-danger)]/20 transition-colors shadow-2xs"
                 >
-                  <span className="material-symbols-outlined" style={{ fontSize: 18 }}>delete</span>
+                  <span className="material-symbols-outlined" style={{ fontSize: 16 }}>delete</span>
                   {t("deleteSelected")} ({selectedRequestIds.size})
                 </button>
               )}
@@ -950,67 +950,69 @@ export default function PrototypeRequestPage() {
                     setEditMode(!editMode);
                     if (editMode) setSelectedRequestIds(new Set());
                   }}
-                  className={`flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold transition ${editMode ? 'bg-primary text-on-primary shadow-sm hover:bg-primary/90' : 'bg-surface-container border border-outline-variant/30 text-on-surface hover:bg-surface-container-high'}`}
+                  className={`flex items-center gap-1.5 rounded-[6px] px-3 py-1.5 text-xs font-semibold transition ${editMode ? 'bg-[var(--freya-blue)] text-white shadow-xs' : 'border border-[var(--border)] bg-[var(--surface)] text-[var(--text-primary)] hover:bg-[var(--surface-hover)] shadow-2xs'}`}
                 >
-                  <span className="material-symbols-outlined" style={{ fontSize: 18 }}>{editMode ? 'done' : 'edit'}</span>
+                  <span className="material-symbols-outlined" style={{ fontSize: 16 }}>{editMode ? 'done' : 'edit'}</span>
                   {editMode ? 'Done' : t("editList")}
                 </button>
               )}
               <div className="relative">
-                <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant/60" style={{ fontSize: 18 }}>search</span>
+                <span className="material-symbols-outlined absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" style={{ fontSize: 16 }}>search</span>
                 <input
                   type="text"
                   placeholder={shisakuId ? t("searchRequests") : t("searchPrototypes")}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full md:w-64 rounded-xl border border-outline-variant/30 bg-surface py-2 pl-9 pr-3 text-sm text-on-surface placeholder:text-on-surface-variant/60 transition focus:border-primary/40 focus:outline-none"
+                  className="w-full md:w-64 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] py-1.5 pl-8 pr-3 text-xs text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:border-[var(--freya-blue)] focus:outline-none transition-colors"
                 />
               </div>
             </div>
           </div>
-          {shisakuId ? (
-            <DataTable
-              rows={filteredRecords}
-              columns={columns}
-              enableRowReorder={editMode && !searchQuery}
-              onRowReorder={handleRowReorder}
-              defaultSort={{ column: "orderNumber", direction: 1 }}
-              sort={sort}
-              onSort={setSort}
-              page={page}
-              pageSize={pageSize}
-              filteredCount={filteredCount}
-              totalPages={totalPages}
-              onPageChange={setPage}
-              onPageSizeChange={(newSize) => { setPageSize(newSize); setPage(1); }}
-              pageSizeOptions={[30, 50, 100]}
-              onRowClick={(r) => setDetailModalRecord(r)}
-              enableColumnResize
-              enableColumnReorder
-              layoutStorageKey="prototype-requests-table-v2"
-              stickyHeader
-            />
-          ) : (
-            <DataTable
-              rows={groupedPrototypes}
-              columns={groupedColumns}
-              defaultSort={{ column: "latestDate", direction: -1 }}
-              sort={sort}
-              onSort={setSort}
-              page={page}
-              pageSize={pageSize}
-              filteredCount={filteredCount}
-              totalPages={totalPages}
-              onPageChange={setPage}
-              onPageSizeChange={(newSize) => { setPageSize(newSize); setPage(1); }}
-              pageSizeOptions={[30, 50, 100]}
-              onRowClick={(r) => navigate(`/prototype/request/${r.shisakudb_id}`)}
-              enableColumnResize
-              enableColumnReorder
-              layoutStorageKey="prototype-requests-grouped-table"
-              stickyHeader
-            />
-          )}
+          <div className="freya-card rounded-[8px] border border-[var(--border)] bg-[var(--surface)] shadow-sm overflow-hidden">
+            {shisakuId ? (
+              <DataTable
+                rows={filteredRecords}
+                columns={columns}
+                enableRowReorder={editMode && !searchQuery}
+                onRowReorder={handleRowReorder}
+                defaultSort={{ column: "orderNumber", direction: 1 }}
+                sort={sort}
+                onSort={setSort}
+                page={page}
+                pageSize={pageSize}
+                filteredCount={filteredCount}
+                totalPages={totalPages}
+                onPageChange={setPage}
+                onPageSizeChange={(newSize) => { setPageSize(newSize); setPage(1); }}
+                pageSizeOptions={[30, 50, 100]}
+                onRowClick={(r) => setDetailModalRecord(r)}
+                enableColumnResize
+                enableColumnReorder
+                layoutStorageKey="prototype-requests-table-v2"
+                stickyHeader
+              />
+            ) : (
+              <DataTable
+                rows={groupedPrototypes}
+                columns={groupedColumns}
+                defaultSort={{ column: "latestDate", direction: -1 }}
+                sort={sort}
+                onSort={setSort}
+                page={page}
+                pageSize={pageSize}
+                filteredCount={filteredCount}
+                totalPages={totalPages}
+                onPageChange={setPage}
+                onPageSizeChange={(newSize) => { setPageSize(newSize); setPage(1); }}
+                pageSizeOptions={[30, 50, 100]}
+                onRowClick={(r) => navigate(`/prototype/request/${r.shisakudb_id}`)}
+                enableColumnResize
+                enableColumnReorder
+                layoutStorageKey="prototype-requests-grouped-table"
+                stickyHeader
+              />
+            )}
+          </div>
         </section>
       </div>
 
@@ -1024,47 +1026,47 @@ export default function PrototypeRequestPage() {
           <div className="px-6 py-4 flex flex-col gap-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <span className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider block mb-1">{t("prototypeNo")}</span>
-                <p className="text-sm font-medium text-on-surface">{detailModalRecord.shisakuNo || "—"}</p>
+                <span className="text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)] block mb-1">{t("prototypeNo")}</span>
+                <p className="text-xs font-mono font-medium text-[var(--text-primary)]">{detailModalRecord.shisakuNo || "—"}</p>
               </div>
               <div>
-                <span className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider block mb-1">{t("name")}</span>
-                <p className="text-sm font-medium text-on-surface">{detailModalRecord.name || "—"}</p>
+                <span className="text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)] block mb-1">{t("name")}</span>
+                <p className="text-xs font-mono font-medium text-[var(--text-primary)]">{detailModalRecord.name || "—"}</p>
               </div>
               <div>
-                <span className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider block mb-1">{t("okuriPitch")}</span>
-                <p className="text-sm font-medium text-on-surface">{detailModalRecord.okuriPitch ?? "—"}</p>
+                <span className="text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)] block mb-1">{t("okuriPitch")}</span>
+                <p className="text-xs font-mono text-[var(--text-primary)]">{detailModalRecord.okuriPitch ?? "—"}</p>
               </div>
               <div>
-                <span className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider block mb-1">{t("pcPerCycle")}</span>
-                <p className="text-sm font-medium text-on-surface">{detailModalRecord.pcPerCycle ?? "—"}</p>
+                <span className="text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)] block mb-1">{t("pcPerCycle")}</span>
+                <p className="text-xs font-mono text-[var(--text-primary)]">{detailModalRecord.pcPerCycle ?? "—"}</p>
               </div>
               <div>
-                <span className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider block mb-1">{t("color")}</span>
-                <p className="text-sm font-medium text-on-surface">{detailModalRecord.color || "—"}</p>
+                <span className="text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)] block mb-1">{t("color")}</span>
+                <p className="text-xs text-[var(--text-primary)]">{detailModalRecord.color || "—"}</p>
               </div>
               <div>
-                <span className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider block mb-1">{t("material")}</span>
-                <p className="text-sm font-medium text-on-surface">{detailModalRecord.material || "—"}</p>
+                <span className="text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)] block mb-1">{t("material")}</span>
+                <p className="text-xs text-[var(--text-primary)]">{detailModalRecord.material || "—"}</p>
               </div>
               <div>
-                <span className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider block mb-1">{t("boxType")}</span>
-                <p className="text-sm font-medium text-on-surface">{detailModalRecord.boxType || "—"}</p>
+                <span className="text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)] block mb-1">{t("boxType")}</span>
+                <p className="text-xs text-[var(--text-primary)]">{detailModalRecord.boxType || "—"}</p>
               </div>
               <div>
-                <span className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider block mb-1">{t("quantityReq")}</span>
-                <p className="text-sm font-medium text-on-surface">{detailModalRecord.quantity ?? "—"}</p>
+                <span className="text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)] block mb-1">{t("quantityReq")}</span>
+                <p className="text-xs font-mono font-bold text-[var(--text-primary)]">{detailModalRecord.quantity ?? "—"}</p>
               </div>
               <div>
-                <span className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider block mb-1">{t("status")}</span>
+                <span className="text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)] block mb-1">{t("status")}</span>
                 <div>
                   {(() => {
                     const status = detailModalRecord.status || "pending";
-                    let colorClass = "bg-amber-500/10 text-amber-600 border-amber-500/20";
-                    if (status === "completed") colorClass = "bg-emerald-500/10 text-emerald-600 border-emerald-500/20";
-                    if (status === "in-progress") colorClass = "bg-blue-500/10 text-blue-600 border-blue-500/20";
+                    let colorClass = "border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400";
+                    if (status === "completed") colorClass = "border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400";
+                    if (status === "in-progress") colorClass = "border-[var(--freya-blue)]/30 bg-[var(--freya-blue)]/10 text-[var(--freya-blue)]";
                     return (
-                      <span className={`inline-flex items-center justify-center rounded-lg border px-2.5 py-1 text-[11px] font-semibold uppercase ${colorClass}`}>
+                      <span className={`inline-flex items-center justify-center rounded-[4px] border px-2 py-0.5 text-[10px] font-mono font-medium uppercase tracking-wider ${colorClass}`}>
                         {status}
                       </span>
                     );
@@ -1072,8 +1074,8 @@ export default function PrototypeRequestPage() {
                 </div>
               </div>
               <div>
-                <span className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider block mb-1">{t("registered")}</span>
-                <p className="text-sm font-medium text-on-surface">
+                <span className="text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)] block mb-1">{t("registered")}</span>
+                <p className="text-xs font-mono text-[var(--text-primary)]">
                   {detailModalRecord.createdAt 
                     ? new Date(detailModalRecord.createdAt.$date || detailModalRecord.createdAt).toLocaleDateString()
                     : "—"}
@@ -1083,44 +1085,44 @@ export default function PrototypeRequestPage() {
             </div>
 
             {submittedLoading && (
-              <div className="border-t border-separator/40 pt-4 mt-2">
-                <span className="text-sm text-on-surface-variant">{t("loadingSubmittedDetails")}</span>
+              <div className="border-t border-[var(--border)] pt-3.5 mt-2">
+                <span className="text-xs text-[var(--text-muted)]">{t("loadingSubmittedDetails")}</span>
               </div>
             )}
             
             {!submittedLoading && submittedDetails && submittedDetails.requests && submittedDetails.requests[detailModalRecord.name] && (
-              <div className="border-t border-separator/40 pt-4 mt-2">
-                <span className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider block mb-3">{t("submittedDetails")}</span>
-                <div className="grid grid-cols-2 gap-4 mb-4">
+              <div className="border-t border-[var(--border)] pt-3.5 mt-2">
+                <span className="text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)] block mb-2.5">{t("submittedDetails")}</span>
+                <div className="grid grid-cols-2 gap-3 mb-3">
                   <div>
-                    <span className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider block mb-1">{t("timeStart")}</span>
-                    <p className="text-sm font-medium text-on-surface">{submittedDetails.requests[detailModalRecord.name].Time_start || "—"}</p>
+                    <span className="text-[10px] font-mono font-semibold text-[var(--text-muted)] uppercase tracking-wider block mb-0.5">{t("timeStart")}</span>
+                    <p className="text-xs font-mono text-[var(--text-primary)]">{submittedDetails.requests[detailModalRecord.name].Time_start || "—"}</p>
                   </div>
                   <div>
-                    <span className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider block mb-1">{t("timeEnd")}</span>
-                    <p className="text-sm font-medium text-on-surface">{submittedDetails.requests[detailModalRecord.name].Time_end || "—"}</p>
+                    <span className="text-[10px] font-mono font-semibold text-[var(--text-muted)] uppercase tracking-wider block mb-0.5">{t("timeEnd")}</span>
+                    <p className="text-xs font-mono text-[var(--text-primary)]">{submittedDetails.requests[detailModalRecord.name].Time_end || "—"}</p>
                   </div>
                   <div>
-                    <span className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider block mb-1">{t("cycleTime")}</span>
-                    <p className="text-sm font-medium text-on-surface">{submittedDetails.requests[detailModalRecord.name].cycleTime || "—"}</p>
+                    <span className="text-[10px] font-mono font-semibold text-[var(--text-muted)] uppercase tracking-wider block mb-0.5">{t("cycleTime")}</span>
+                    <p className="text-xs font-mono text-[var(--text-primary)]">{submittedDetails.requests[detailModalRecord.name].cycleTime || "—"}</p>
                   </div>
                   <div>
-                    <span className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider block mb-1">{t("completedQty")}</span>
-                    <p className="text-sm font-medium text-on-surface">{submittedDetails.requests[detailModalRecord.name].quantity || "—"}</p>
+                    <span className="text-[10px] font-mono font-semibold text-[var(--text-muted)] uppercase tracking-wider block mb-0.5">{t("completedQty")}</span>
+                    <p className="text-xs font-mono text-[var(--text-primary)]">{submittedDetails.requests[detailModalRecord.name].quantity || "—"}</p>
                   </div>
                   <div>
-                    <span className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider block mb-1">{t("completedByField")}</span>
-                    <p className="text-sm font-medium text-on-surface">{submittedDetails.createdBy || "—"}</p>
+                    <span className="text-[10px] font-mono font-semibold text-[var(--text-muted)] uppercase tracking-wider block mb-0.5">{t("completedByField")}</span>
+                    <p className="text-xs text-[var(--text-primary)]">{submittedDetails.createdBy || "—"}</p>
                   </div>
                   <div>
-                    <span className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider block mb-1">{t("comment")}</span>
-                    <p className="text-sm font-medium text-on-surface whitespace-pre-wrap">{submittedDetails.requests[detailModalRecord.name].Comment || "—"}</p>
+                    <span className="text-[10px] font-mono font-semibold text-[var(--text-muted)] uppercase tracking-wider block mb-0.5">{t("comment")}</span>
+                    <p className="text-xs text-[var(--text-primary)] whitespace-pre-wrap">{submittedDetails.requests[detailModalRecord.name].Comment || "—"}</p>
                   </div>
                 </div>
 
-                <div className="flex flex-col gap-3">
-                  <span className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider block">{t("photos")}</span>
-                  <div className="flex flex-wrap gap-4">
+                <div className="flex flex-col gap-2.5">
+                  <span className="text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)] block">{t("photos")}</span>
+                  <div className="flex flex-wrap gap-3">
                     {(() => {
                       const sDetails = submittedDetails.requests[detailModalRecord.name];
                       const images = [];
@@ -1132,12 +1134,12 @@ export default function PrototypeRequestPage() {
                       }
 
                       if (images.length === 0) {
-                        return <span className="text-sm text-on-surface-variant italic">{t("noPhotosAttached")}</span>;
+                        return <span className="text-xs text-[var(--text-muted)] italic">{t("noPhotosAttached")}</span>;
                       }
 
                       return images.map((img, idx) => (
                         <div key={idx}>
-                          <span className="text-[11px] font-semibold text-on-surface-variant block mb-1">{img.label}</span>
+                          <span className="text-[10px] font-mono text-[var(--text-muted)] block mb-1">{img.label}</span>
                           <button
                             type="button"
                             onClick={() => setPhotoPreview({
@@ -1147,9 +1149,9 @@ export default function PrototypeRequestPage() {
                               images,
                               activeIndex: idx
                             })}
-                            className="block cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary rounded"
+                            className="block cursor-pointer focus:outline-none focus:ring-1 focus:ring-[var(--freya-blue)] rounded-[6px]"
                           >
-                            <img src={img.url} alt={img.label} className="h-20 w-auto rounded border border-outline-variant/20 object-cover hover:opacity-80 transition" />
+                            <img src={img.url} alt={img.label} className="h-20 w-auto rounded-[6px] border border-[var(--border)] object-cover hover:opacity-80 transition" />
                           </button>
                         </div>
                       ));
@@ -1159,51 +1161,43 @@ export default function PrototypeRequestPage() {
               </div>
             )}
             
-            <div className="border-t border-separator/40 pt-4 mt-2">
-              <span className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider block mb-3">{t("linkedFiles")}</span>
-              <div className="flex flex-col gap-2 text-sm">
+            <div className="border-t border-[var(--border)] pt-3.5 mt-2">
+              <span className="text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)] block mb-2">{t("linkedFiles")}</span>
+              <div className="flex flex-wrap gap-2 text-xs">
                 {detailModalRecord.dxf && detailModalRecord.dxf.link ? (
-                  <div>
-                    <span className="font-semibold text-on-surface-variant w-12 inline-block">DXF:</span>
-                    <a href={detailModalRecord.dxf.link} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
-                      {detailModalRecord.dxf.name || "DXF File"}
-                    </a>
-                  </div>
+                  <a href={detailModalRecord.dxf.link} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1 text-xs font-mono font-semibold text-[var(--freya-blue)] transition hover:bg-[var(--surface-hover)] shadow-2xs">
+                    <span className="material-symbols-outlined" style={{ fontSize: 14 }}>description</span>
+                    DXF: {detailModalRecord.dxf.name || "File"}
+                  </a>
                 ) : null}
                 
                 {detailModalRecord.pdf && detailModalRecord.pdf.link ? (
-                  <div>
-                    <span className="font-semibold text-on-surface-variant w-12 inline-block">PDF:</span>
-                    <a href={detailModalRecord.pdf.link} target="_blank" rel="noopener noreferrer" className="text-[#FF3B30] hover:underline">
-                      {detailModalRecord.pdf.name || "PDF File"}
-                    </a>
-                  </div>
+                  <a href={detailModalRecord.pdf.link} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1 text-xs font-mono font-semibold text-rose-500 transition hover:bg-[var(--surface-hover)] shadow-2xs">
+                    <span className="material-symbols-outlined" style={{ fontSize: 14 }}>picture_as_pdf</span>
+                    PDF: {detailModalRecord.pdf.name || "File"}
+                  </a>
                 ) : null}
 
                 {detailModalRecord.pdf && detailModalRecord.pdf.jpgLink ? (
-                  <div>
-                    <span className="font-semibold text-on-surface-variant w-12 inline-block">JPG:</span>
-                    <a href={detailModalRecord.pdf.jpgLink} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">
-                      {detailModalRecord.pdf.name ? detailModalRecord.pdf.name.replace(/\.pdf$/i, '.jpg') : "Preview Image"}
-                    </a>
-                  </div>
+                  <a href={detailModalRecord.pdf.jpgLink} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1 text-xs font-mono font-semibold text-[var(--freya-blue)] transition hover:bg-[var(--surface-hover)] shadow-2xs">
+                    <span className="material-symbols-outlined" style={{ fontSize: 14 }}>image</span>
+                    JPG: {detailModalRecord.pdf.name ? detailModalRecord.pdf.name.replace(/\.pdf$/i, '.jpg') : "Preview"}
+                  </a>
                 ) : null}
                 
                 {detailModalRecord.pce && detailModalRecord.pce.link ? (
-                  <div>
-                    <span className="font-semibold text-on-surface-variant w-12 inline-block">PCE:</span>
-                    <a href={detailModalRecord.pce.link} target="_blank" rel="noopener noreferrer" className="text-[#34C759] hover:underline">
-                      {detailModalRecord.pce.name || "PCE File"}
-                    </a>
-                  </div>
+                  <a href={detailModalRecord.pce.link} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1 text-xs font-mono font-semibold text-emerald-600 dark:text-emerald-400 transition hover:bg-[var(--surface-hover)] shadow-2xs">
+                    <span className="material-symbols-outlined" style={{ fontSize: 14 }}>data_object</span>
+                    PCE: {detailModalRecord.pce.name || "File"}
+                  </a>
                 ) : null}
               </div>
             </div>
           </div>
-          <div className="border-t border-separator/40 bg-surface-container/30 px-6 py-4 flex items-center justify-between">
+          <div className="border-t border-[var(--border)] bg-[var(--surface-subtle)] px-6 py-3.5 flex items-center justify-between rounded-b-[12px]">
             <button
               onClick={() => setDetailModalRecord(null)}
-              className="rounded-xl border border-outline-variant/20 bg-surface-container px-4 py-2 text-sm font-semibold text-on-surface transition-all hover:bg-surface-container-high"
+              className="rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-hover)] transition-colors shadow-2xs"
             >
               {t("close")}
             </button>
@@ -1217,9 +1211,9 @@ export default function PrototypeRequestPage() {
                 });
                 setDetailModalRecord(null);
               }}
-              className="flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-on-primary transition-all hover:opacity-90 active:scale-95"
+              className="flex items-center gap-1.5 rounded-[6px] bg-[var(--freya-blue)] px-3.5 py-1.5 text-xs font-semibold text-white hover:bg-[var(--freya-blue-hover)] transition-colors shadow-xs"
             >
-              <span className="material-symbols-outlined" style={{ fontSize: 18 }}>edit</span>
+              <span className="material-symbols-outlined" style={{ fontSize: 16 }}>edit</span>
               {t("edit")}
             </button>
           </div>
@@ -1236,7 +1230,7 @@ export default function PrototypeRequestPage() {
           <form onSubmit={handleEditSubmit}>
             <div className="px-6 py-4 grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="mb-1 block text-xs font-semibold text-on-surface-variant">{t("name")}</label>
+                <label className="mb-1 block text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">{t("name")}</label>
                 <input
                   type="text"
                   required
@@ -1246,7 +1240,7 @@ export default function PrototypeRequestPage() {
                 />
               </div>
               <div>
-                <label className="mb-1 block text-xs font-semibold text-on-surface-variant">{t("okuriPitch")}</label>
+                <label className="mb-1 block text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">{t("okuriPitch")}</label>
                 <input
                   type="number"
                   required
@@ -1256,7 +1250,7 @@ export default function PrototypeRequestPage() {
                 />
               </div>
               <div>
-                <label className="mb-1 block text-xs font-semibold text-on-surface-variant">{t("pcPerCycle")}</label>
+                <label className="mb-1 block text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">{t("pcPerCycle")}</label>
                 <input
                   type="number"
                   required
@@ -1266,7 +1260,7 @@ export default function PrototypeRequestPage() {
                 />
               </div>
               <div>
-                <label className="mb-1 block text-xs font-semibold text-on-surface-variant">{t("color")}</label>
+                <label className="mb-1 block text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">{t("color")}</label>
                 <input
                   type="text"
                   required
@@ -1276,7 +1270,7 @@ export default function PrototypeRequestPage() {
                 />
               </div>
               <div>
-                <label className="mb-1 block text-xs font-semibold text-on-surface-variant">{t("material")}</label>
+                <label className="mb-1 block text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">{t("material")}</label>
                 <input
                   type="text"
                   required
@@ -1286,7 +1280,7 @@ export default function PrototypeRequestPage() {
                 />
               </div>
               <div>
-                <label className="mb-1 block text-xs font-semibold text-on-surface-variant">{t("boxType")}</label>
+                <label className="mb-1 block text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">{t("boxType")}</label>
                 <input
                   type="text"
                   required
@@ -1296,7 +1290,7 @@ export default function PrototypeRequestPage() {
                 />
               </div>
               <div>
-                <label className="mb-1 block text-xs font-semibold text-on-surface-variant">{t("quantityReq")}</label>
+                <label className="mb-1 block text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">{t("quantityReq")}</label>
                 <input
                   type="number"
                   required
@@ -1306,7 +1300,7 @@ export default function PrototypeRequestPage() {
                 />
               </div>
               <div>
-                <label className="mb-1 block text-xs font-semibold text-on-surface-variant">{t("status")}</label>
+                <label className="mb-1 block text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">{t("status")}</label>
                 <select
                   value={editModalRecord.status || "pending"}
                   onChange={(e) => setEditModalRecord({ ...editModalRecord, status: e.target.value })}
@@ -1318,9 +1312,9 @@ export default function PrototypeRequestPage() {
                 </select>
               </div>
               
-              <div className="md:col-span-2 grid grid-cols-1 gap-4 border-t border-separator/40 pt-4 mt-2">
+              <div className="md:col-span-2 grid grid-cols-1 gap-4 border-t border-[var(--border)] pt-4 mt-2">
                 <div>
-                  <label className="mb-1 block text-xs font-semibold text-on-surface-variant">DXF File</label>
+                  <label className="mb-1 block text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">DXF File</label>
                   <select
                     value={editModalRecord.dxfIndex}
                     onChange={(e) => setEditModalRecord({ ...editModalRecord, dxfIndex: e.target.value })}
@@ -1333,7 +1327,7 @@ export default function PrototypeRequestPage() {
                   </select>
                 </div>
                 <div>
-                  <label className="mb-1 block text-xs font-semibold text-on-surface-variant">PDF File</label>
+                  <label className="mb-1 block text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">PDF File</label>
                   <select
                     value={editModalRecord.pdfIndex}
                     onChange={(e) => setEditModalRecord({ ...editModalRecord, pdfIndex: e.target.value })}
@@ -1346,7 +1340,7 @@ export default function PrototypeRequestPage() {
                   </select>
                 </div>
                 <div>
-                  <label className="mb-1 block text-xs font-semibold text-on-surface-variant">PCE File</label>
+                  <label className="mb-1 block text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">PCE File</label>
                   <select
                     value={editModalRecord.pceIndex}
                     onChange={(e) => setEditModalRecord({ ...editModalRecord, pceIndex: e.target.value })}
@@ -1361,7 +1355,7 @@ export default function PrototypeRequestPage() {
               </div>
             </div>
 
-            <div className="border-t border-separator/40 bg-surface-container/30 px-6 py-4 flex items-center justify-between">
+            <div className="border-t border-[var(--border)] bg-[var(--surface-subtle)] px-6 py-3.5 flex items-center justify-between rounded-b-[12px]">
               <button
                 type="button"
                 onClick={() => {
@@ -1370,27 +1364,27 @@ export default function PrototypeRequestPage() {
                     handleDelete(editModalRecord);
                   }
                 }}
-                className="flex items-center gap-2 rounded-xl border border-error/20 bg-error/5 px-4 py-2 text-sm font-semibold text-error transition-all hover:bg-error/10 active:scale-95"
+                className="flex items-center gap-1.5 rounded-[6px] border border-[var(--status-danger)]/30 bg-[var(--status-danger)]/10 px-3 py-1.5 text-xs font-semibold text-[var(--status-danger)] hover:bg-[var(--status-danger)]/20 transition-colors shadow-2xs"
               >
                 {t("delete")}
               </button>
-              <div className="flex gap-2">
+              <div className="flex items-center gap-2.5">
                 <button
                   type="button"
                   onClick={() => setEditModalRecord(null)}
-                  className="rounded-xl border border-outline-variant/20 bg-surface-container px-4 py-2 text-sm font-semibold text-on-surface transition-all hover:bg-surface-container-high"
+                  className="rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-hover)] transition-colors shadow-2xs"
                 >
                   {t("cancel")}
                 </button>
                 <button
                   type="submit"
                   disabled={editSubmitting}
-                  className="flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-on-primary transition-all hover:opacity-90 active:scale-95 disabled:opacity-50"
+                  className="flex items-center gap-1.5 rounded-[6px] bg-[var(--freya-blue)] px-3.5 py-1.5 text-xs font-semibold text-white hover:bg-[var(--freya-blue-hover)] transition-colors shadow-xs disabled:opacity-50"
                 >
                   {editSubmitting ? (
-                    <span className="material-symbols-outlined animate-spin" style={{ fontSize: 18 }}>progress_activity</span>
+                    <span className="material-symbols-outlined animate-spin" style={{ fontSize: 16 }}>progress_activity</span>
                   ) : (
-                    <span className="material-symbols-outlined" style={{ fontSize: 18 }}>save</span>
+                    <span className="material-symbols-outlined" style={{ fontSize: 16 }}>save</span>
                   )}
                   {t("save")}
                 </button>
@@ -1408,7 +1402,7 @@ export default function PrototypeRequestPage() {
       >
         <div className="px-6 py-5 flex flex-col gap-4 min-h-[300px]">
           <div className="relative">
-            <label className="mb-2 block text-sm font-semibold text-on-surface-variant">
+            <label className="mb-1.5 block text-xs font-semibold text-[var(--text-primary)]">
               Choose a prototype number to create requests for
             </label>
             <div className="relative">
@@ -1423,35 +1417,35 @@ export default function PrototypeRequestPage() {
                 }}
                 onFocus={() => setShowShisakuSuggestions(true)}
                 onBlur={() => setTimeout(() => setShowShisakuSuggestions(false), 200)}
-                className="w-full rounded-xl border border-outline-variant/50 bg-surface px-4 py-3 text-sm text-on-surface shadow-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                className="w-full rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-xs font-mono text-[var(--text-primary)] placeholder:text-[var(--text-muted)] shadow-2xs focus:border-[var(--freya-blue)] focus:outline-none"
               />
-              <span className="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant pointer-events-none">
+              <span className="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)] pointer-events-none" style={{ fontSize: 16 }}>
                 search
               </span>
             </div>
 
             {showShisakuSuggestions && availableShisakus.length > 0 && (
-              <div className="absolute z-10 mt-1 w-full overflow-hidden rounded-xl border border-outline-variant/30 bg-surface shadow-lg">
+              <div className="absolute z-10 mt-1 w-full overflow-hidden rounded-[8px] border border-[var(--border)] bg-[var(--surface-raised)] shadow-lg">
                 <ul className="max-h-60 overflow-y-auto py-1">
                   {filteredAvailableShisakus.length > 0 ? (
                     filteredAvailableShisakus.map(s => (
                       <li
                         key={s._id}
-                        className="cursor-pointer px-4 py-2.5 text-sm text-on-surface hover:bg-primary/10 hover:text-primary transition-colors flex items-center gap-2"
+                        className="cursor-pointer px-3.5 py-2 text-xs font-mono text-[var(--text-primary)] hover:bg-[var(--surface-hover)] transition-colors flex items-center gap-2"
                         onClick={() => {
                           setSelectedShisaku(s._id);
                           setShisakuSearchTerm(s.shisakuNo);
                           setShowShisakuSuggestions(false);
                         }}
                       >
-                        <span className="material-symbols-outlined text-[16px] text-primary/50">
+                        <span className="material-symbols-outlined text-[15px] text-[var(--freya-blue)]">
                           {selectedShisaku === s._id ? 'radio_button_checked' : 'radio_button_unchecked'}
                         </span>
                         <span className="font-medium">試作{s.shisakuNo}</span>
                       </li>
                     ))
                   ) : (
-                    <li className="px-4 py-3 text-sm text-on-surface-variant italic text-center">
+                    <li className="px-4 py-3 text-xs text-[var(--text-muted)] italic text-center">
                       No matching prototypes found
                     </li>
                   )}
@@ -1461,16 +1455,16 @@ export default function PrototypeRequestPage() {
           </div>
 
           {availableShisakus.length === 0 && (
-            <p className="text-xs text-amber-600 bg-amber-50 p-3 rounded-xl border border-amber-200">
+            <p className="text-xs font-mono text-amber-600 dark:text-amber-400 bg-amber-500/10 p-3 rounded-[6px] border border-amber-500/20">
               There are no available prototypes without requests. Please register a new prototype first.
             </p>
           )}
         </div>
 
-        <div className="border-t border-separator/40 bg-surface-container/30 px-6 py-4 flex justify-end gap-2">
+        <div className="border-t border-[var(--border)] bg-[var(--surface-subtle)] px-6 py-3.5 flex justify-end gap-2.5 rounded-b-[12px]">
           <button
             onClick={() => setCreateModalOpen(false)}
-            className="rounded-xl border border-outline-variant/20 bg-surface-container px-4 py-2 text-sm font-semibold text-on-surface transition-all hover:bg-surface-container-high"
+            className="rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-hover)] transition-colors shadow-2xs"
           >
             Cancel
           </button>
@@ -1482,7 +1476,7 @@ export default function PrototypeRequestPage() {
               }
             }}
             disabled={!selectedShisaku}
-            className="flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-on-primary transition-all hover:opacity-90 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex items-center gap-1.5 rounded-[6px] bg-[var(--freya-blue)] px-3.5 py-1.5 text-xs font-semibold text-white hover:bg-[var(--freya-blue-hover)] transition-colors shadow-xs disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Proceed
           </button>

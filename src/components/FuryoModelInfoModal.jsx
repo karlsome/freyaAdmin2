@@ -12,36 +12,35 @@ export default function FuryoModelInfoModal({ model = "", loading, error, produc
       title={model}
       subtitle={loading ? "Loading products…" : `${products.length} product${products.length === 1 ? "" : "s"}`}
       maxWidth="max-w-5xl"
-      overlayOpacity="50"
     >
-          <div className="max-h-[70vh] overflow-y-auto px-6 py-5 scrollbar-hide">
-            {loading ? (
-              <div className="py-16 text-center text-sm font-medium text-on-surface-variant">Loading products…</div>
-            ) : error ? (
-              <div className="rounded-2xl border border-error/20 bg-error/10 px-6 py-10 text-center text-sm font-medium text-error">{error}</div>
-            ) : !products.length ? (
-              <EmptyState className="bg-surface-container-low py-10">No products were found for this model.</EmptyState>
-            ) : (
-              <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-                {products.map((product, index) => (
-                  <article key={`${product?.背番号 || "product"}-${index}`} className="overflow-hidden rounded-2xl border border-outline-variant/15 bg-surface-container-low">
-                    <div className="flex h-40 items-center justify-center overflow-hidden bg-surface px-4 py-4">
-                      {product?.imageURL ? (
-                        <img src={product.imageURL} alt={product?.品番 || product?.背番号 || "Product"} className="h-full w-full object-cover" />
-                      ) : (
-                        <span className="material-symbols-outlined text-5xl text-outline">image_not_supported</span>
-                      )}
-                    </div>
-                    <div className="space-y-1 px-4 py-4 text-sm">
-                      <div className="truncate font-semibold text-on-surface">背番号: {product?.背番号 || "—"}</div>
-                      <div className="truncate text-on-surface-variant">品番: {product?.品番 || "—"}</div>
-                      {product?.品名 && <div className="truncate text-outline">{product.品名}</div>}
-                    </div>
-                  </article>
-                ))}
-              </div>
-            )}
+      <div className="max-h-[70vh] overflow-y-auto p-5 scrollbar-hide">
+        {loading ? (
+          <div className="py-16 text-center text-xs font-medium text-[var(--text-muted)]">Loading products…</div>
+        ) : error ? (
+          <div className="rounded-[8px] border border-[var(--status-danger)]/30 bg-[var(--status-danger)]/10 px-5 py-8 text-center text-xs font-medium text-[var(--status-danger)]">{error}</div>
+        ) : !products.length ? (
+          <EmptyState className="rounded-[8px] border border-[var(--border)] bg-[var(--surface-subtle)] py-10">No products were found for this model.</EmptyState>
+        ) : (
+          <div className="grid gap-3.5 sm:grid-cols-2 xl:grid-cols-4">
+            {products.map((product, index) => (
+              <article key={`${product?.背番号 || "product"}-${index}`} className="overflow-hidden rounded-[8px] border border-[var(--border)] bg-[var(--surface)] shadow-2xs">
+                <div className="flex h-36 items-center justify-center overflow-hidden bg-[var(--surface-subtle)] p-3 border-b border-[var(--border)]">
+                  {product?.imageURL ? (
+                    <img src={product.imageURL} alt={product?.品番 || product?.背番号 || "Product"} className="h-full w-full object-cover rounded-[4px]" />
+                  ) : (
+                    <span className="material-symbols-outlined text-4xl text-[var(--text-muted)]">image_not_supported</span>
+                  )}
+                </div>
+                <div className="space-y-1 p-3.5 text-xs">
+                  <div className="truncate font-mono font-bold text-[var(--text-primary)]">背番号: {product?.背番号 || "—"}</div>
+                  <div className="truncate font-mono text-[var(--text-secondary)]">品番: {product?.品番 || "—"}</div>
+                  {product?.品名 && <div className="truncate text-[11px] text-[var(--text-muted)]">{product.品名}</div>}
+                </div>
+              </article>
+            ))}
           </div>
+        )}
+      </div>
     </ModalShell>
   );
 }

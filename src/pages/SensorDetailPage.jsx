@@ -160,11 +160,11 @@ function SensorCard({
   const isOffline = Boolean(device?.isOffline);
   const lastSeenLabel = formatSensorLastSeen(device?.minutesSinceLastReading);
   const cardStateClassName = isOffline
-    ? `sensor-device-card--offline border-error/35 hover:border-error/45 ${isActive ? "ring-1 ring-inset ring-error/15" : ""}`
+    ? `border-[var(--status-danger)]/40 hover:border-[var(--status-danger)]/60 ${isActive ? "ring-1 ring-[var(--status-danger)]/30" : ""}`
     : isActive
-      ? "bg-primary/[0.06] shadow-[0_16px_36px_rgba(99,102,241,0.14)]"
-      : "";
-  const titleClassName = isOffline ? "text-error" : isActive ? "text-primary" : "text-on-surface";
+      ? "border-[var(--freya-blue)] ring-1 ring-[var(--freya-blue)]/30 bg-[var(--surface-subtle)]"
+      : "hover:border-[var(--border-strong)]";
+  const titleClassName = isOffline ? "text-[var(--status-danger)]" : isActive ? "text-[var(--freya-blue)]" : "text-[var(--text-primary)]";
 
   function handleCardKeyDown(event) {
     if (event.target !== event.currentTarget) return;
@@ -180,71 +180,71 @@ function SensorCard({
       onClick={() => onSelect?.(device?.deviceId || "all")}
       onKeyDown={handleCardKeyDown}
       aria-pressed={isActive}
-      className={`glass-card relative flex w-full cursor-pointer flex-col gap-4 overflow-hidden rounded-2xl p-5 text-left transition-all duration-150 hover:border-primary/30 hover:shadow-[0_14px_32px_rgba(15,23,42,0.08)] focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/35 ${cardStateClassName}`}
+      className={`freya-card relative flex w-full cursor-pointer flex-col gap-3 overflow-hidden rounded-[8px] border border-[var(--border)] bg-[var(--surface)] p-4 text-left shadow-sm transition-all duration-150 focus:outline-none focus-visible:ring-1 focus-visible:ring-[var(--freya-blue)] ${cardStateClassName}`}
     >
       {isActive ? (
         <span
           aria-hidden="true"
-          className="pointer-events-none absolute left-2 top-3 bottom-3 w-1 rounded-full bg-primary shadow-[0_0_12px_rgba(99,102,241,0.35)]"
+          className="pointer-events-none absolute left-0 top-2 bottom-2 w-1 rounded-r bg-[var(--freya-blue)]"
         />
       ) : null}
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Device</p>
-          <div className="mt-1 flex flex-wrap items-center gap-2">
-            <p className={`text-base font-semibold truncate ${titleClassName}`}>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">Device</p>
+          <div className="mt-1 flex flex-wrap items-center gap-1.5">
+            <p className={`text-sm font-semibold truncate ${titleClassName}`}>
               {displayName || device?.deviceId || "Unknown"}
             </p>
             {isActive ? (
-              <span className="inline-flex items-center gap-1 rounded-full border border-primary/20 bg-primary/10 px-2.5 py-1 text-[10px] font-semibold text-primary">
+              <span className="inline-flex items-center gap-1 rounded-[4px] border border-[var(--freya-blue)]/30 bg-[var(--freya-blue)]/10 px-2 py-0.5 text-[10px] font-mono font-medium text-[var(--freya-blue)]">
                 <span className="material-symbols-outlined" style={{ fontSize: 11 }}>check</span>
                 Selected
               </span>
             ) : null}
             {isOffline ? (
-              <span className="inline-flex items-center gap-1 rounded-full border border-error/20 bg-error/10 px-2.5 py-1 text-[10px] font-semibold text-error">
-                <span className="h-2 w-2 rounded-full bg-error" aria-hidden="true" />
+              <span className="inline-flex items-center gap-1 rounded-[4px] border border-[var(--status-danger)]/30 bg-[var(--status-danger)]/10 px-2 py-0.5 text-[10px] font-mono font-medium text-[var(--status-danger)]">
+                <span className="h-1.5 w-1.5 rounded-full bg-[var(--status-danger)]" aria-hidden="true" />
                 Offline
               </span>
             ) : null}
           </div>
           {displayName && (
-            <p className="mt-0.5 font-mono text-[10px] text-outline truncate">{device?.deviceId}</p>
+            <p className="mt-0.5 font-mono text-[10px] text-[var(--text-muted)] truncate">{device?.deviceId}</p>
           )}
         </div>
-        <div className="flex flex-col items-end gap-2 flex-shrink-0">
-          <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-[10px] font-semibold ${wbgtStatus.bg} ${wbgtStatus.color}`}>
+        <div className="flex flex-col items-end gap-1.5 flex-shrink-0">
+          <span className={`inline-flex items-center rounded-[4px] border px-2 py-0.5 text-[10px] font-mono font-medium ${wbgtStatus.bg} ${wbgtStatus.color}`}>
             WBGT {wbgt ?? "—"}°C
           </span>
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
-        <div className={`p-3 rounded-xl ${tempStatus.bg}`}>
-          <div className="flex items-center gap-2">
-            <p className={`text-lg font-semibold ${tempStatus.color}`}>{Number.isNaN(latestTemp) ? "—" : `${latestTemp}°C`}</p>
+      <div className="grid grid-cols-2 gap-2.5">
+        <div className={`p-2.5 rounded-[6px] border border-[var(--border)] ${tempStatus.bg}`}>
+          <div className="flex items-center gap-1.5">
+            <p className={`text-base font-bold font-mono ${tempStatus.color}`}>{Number.isNaN(latestTemp) ? "—" : `${latestTemp}°C`}</p>
             {offset ? (
-              <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-surface/50 text-on-surface-variant border border-outline-variant/30 whitespace-nowrap" title="Temperature Offset">
+              <span className="text-[9px] font-mono font-semibold px-1 py-0.5 rounded-[3px] bg-[var(--surface)] text-[var(--text-secondary)] border border-[var(--border)] whitespace-nowrap" title="Temperature Offset">
                 {offset > 0 ? "+" : ""}{offset}°C
               </span>
             ) : null}
           </div>
-          <p className="text-[10px] text-on-surface-variant">Temperature</p>
-          <Sparkline values={tempTrend} color={latestTemp >= 30 ? "#f87171" : "#6366f1"} />
+          <p className="text-[10px] font-medium text-[var(--text-muted)] mt-0.5">Temperature</p>
+          <Sparkline values={tempTrend} color={latestTemp >= 30 ? "#f87171" : "var(--freya-blue)"} />
         </div>
-        <div className={`p-3 rounded-xl ${humidityStatus.bg}`}>
-          <p className={`text-lg font-semibold ${humidityStatus.color}`}>{Number.isNaN(latestHumid) ? "—" : `${latestHumid}%`}</p>
-          <p className="text-[10px] text-on-surface-variant">Humidity</p>
+        <div className={`p-2.5 rounded-[6px] border border-[var(--border)] ${humidityStatus.bg}`}>
+          <p className={`text-base font-bold font-mono ${humidityStatus.color}`}>{Number.isNaN(latestHumid) ? "—" : `${latestHumid}%`}</p>
+          <p className="text-[10px] font-medium text-[var(--text-muted)] mt-0.5">Humidity</p>
           <Sparkline values={humidityTrend} color="#22d3ee" />
         </div>
       </div>
 
-      <div className="flex items-center justify-between gap-3 text-[10px] text-outline">
+      <div className="flex items-center justify-between gap-2 text-[11px] text-[var(--text-muted)] pt-1 border-t border-[var(--border)]">
         <div className="min-w-0 flex-1 truncate">
-          <span className={isOffline ? "font-semibold text-error" : undefined}>
+          <span className={isOffline ? "font-semibold text-[var(--status-danger)]" : undefined}>
             {isOffline ? `Offline · ${lastSeenLabel}` : `Last: ${latest?.Date || "—"} ${latest?.Time || ""}`}
           </span>
-          <span> · {Number(device?.readingCount) || 0} readings</span>
+          <span className="font-mono"> · {Number(device?.readingCount) || 0} readings</span>
         </div>
         <div className="flex flex-shrink-0 items-center gap-1">
           {photoCount > 0 && onPreviewPhotos ? (
@@ -254,7 +254,7 @@ function SensorCard({
                 event.stopPropagation();
                 onPreviewPhotos(device);
               }}
-              className="inline-flex items-center gap-1 rounded-xl border border-separator/40 bg-surface px-2.5 py-1 text-[10px] font-semibold text-on-surface-variant transition-all duration-150 hover:border-primary/30 hover:bg-surface-container hover:text-primary active:scale-95"
+              className="inline-flex items-center gap-1 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-2 py-0.5 text-[10px] font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-hover)] shadow-2xs transition-colors"
               title={`View ${photoCount} device photo${photoCount === 1 ? "" : "s"}`}
             >
               <span className="material-symbols-outlined" style={{ fontSize: 11 }}>photo_library</span>
@@ -269,10 +269,10 @@ function SensorCard({
                 event.stopPropagation();
                 onEdit(device);
               }}
-              className="rounded-xl p-2 text-outline transition-all duration-150 hover:bg-surface-container hover:text-primary active:scale-95"
+              className="rounded-[6px] border border-[var(--border)] bg-[var(--surface)] p-1 text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-hover)] shadow-2xs transition-colors"
               title="Rename device"
             >
-              <span className="material-symbols-outlined" style={{ fontSize: 16 }}>edit</span>
+              <span className="material-symbols-outlined" style={{ fontSize: 14 }}>edit</span>
             </button>
           ) : null}
         </div>
@@ -300,45 +300,47 @@ function YearSelectionModal({ isOpen, onClose, onApply, initialSelectedYears }) 
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-      <div className="glass-card w-full max-w-sm rounded-2xl overflow-hidden shadow-2xl border border-outline-variant/30 animate-in fade-in zoom-in-95 duration-200">
-        <div className="px-6 py-5 border-b border-outline-variant/20 flex items-center gap-3">
-          <span className="material-symbols-outlined text-primary">calendar_month</span>
-          <h2 className="text-lg font-semibold text-on-surface">Select Years</h2>
+      <div className="freya-card w-full max-w-sm rounded-[12px] overflow-hidden shadow-2xl border border-[var(--border)] bg-[var(--surface-raised)] animate-in fade-in zoom-in-95 duration-150">
+        <div className="px-5 py-4 border-b border-[var(--border)] flex items-center gap-2.5">
+          <span className="material-symbols-outlined text-[var(--freya-blue)]">calendar_month</span>
+          <h2 className="text-sm font-semibold text-[var(--text-primary)]">Select Years</h2>
         </div>
         
-        <div className="p-6">
-          <div className="grid grid-cols-2 gap-3">
+        <div className="p-5">
+          <div className="grid grid-cols-2 gap-2.5">
             {yearOptions.map(year => (
-              <label key={year} className={`flex items-center gap-3 p-3 rounded-xl border transition-all cursor-pointer ${selected.includes(year) ? 'bg-primary/10 border-primary/40' : 'bg-surface-container-lowest border-outline-variant/20 hover:border-outline-variant/40'}`}>
+              <label key={year} className={`flex items-center gap-2.5 p-2.5 rounded-[6px] border transition-colors cursor-pointer ${selected.includes(year) ? 'bg-[var(--surface-subtle)] border-[var(--freya-blue)]/50' : 'bg-[var(--surface)] border-[var(--border)] hover:border-[var(--border-strong)]'}`}>
                 <input 
                   type="checkbox" 
                   checked={selected.includes(year)}
                   onChange={() => toggleYear(year)}
-                  className="w-4 h-4 text-primary rounded border-outline-variant focus:ring-primary/30"
+                  className="w-4 h-4 text-[var(--freya-blue)] rounded border-[var(--border)] focus:ring-[var(--freya-blue)]"
                 />
-                <span className={`text-sm font-semibold ${selected.includes(year) ? 'text-primary' : 'text-on-surface'}`}>{year}</span>
+                <span className={`text-xs font-semibold ${selected.includes(year) ? 'text-[var(--freya-blue)]' : 'text-[var(--text-primary)]'}`}>{year}</span>
               </label>
             ))}
           </div>
           {selected.length === 0 && (
-            <p className="text-xs text-error mt-4 font-medium flex items-center gap-1.5">
+            <p className="text-xs text-[var(--status-danger)] mt-3 font-medium flex items-center gap-1.5">
               <span className="material-symbols-outlined" style={{ fontSize: 14 }}>warning</span>
               Please select at least one year.
             </p>
           )}
         </div>
 
-        <div className="px-6 py-4 bg-surface-container/50 border-t border-outline-variant/20 flex items-center justify-end gap-3">
+        <div className="px-5 py-3 bg-[var(--surface-subtle)] border-t border-[var(--border)] flex items-center justify-end gap-2">
           <button
+            type="button"
             onClick={onClose}
-            className="px-4 py-2 rounded-xl text-sm font-semibold text-on-surface-variant hover:bg-surface-container-high transition-colors"
+            className="rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-hover)] transition-colors shadow-2xs"
           >
             Cancel
           </button>
           <button
+            type="button"
             onClick={() => onApply(selected)}
             disabled={selected.length === 0}
-            className="px-6 py-2 rounded-xl text-sm font-semibold bg-primary text-on-primary hover:bg-primary/90 transition-all disabled:opacity-50 shadow-md shadow-primary/20"
+            className="rounded-[6px] bg-[var(--freya-blue)] px-4 py-1.5 text-xs font-semibold text-white hover:bg-[var(--freya-blue-hover)] transition-colors shadow-xs disabled:opacity-50"
           >
             Apply
           </button>
@@ -777,14 +779,14 @@ export default function SensorDetailPage() {
       label: "Date",
       sortKey: "date",
       width: 128,
-      renderCell: (row) => <span className="text-on-surface-variant">{row.Date || "—"}</span>,
+      renderCell: (row) => <span className="font-mono text-xs text-[var(--text-secondary)]">{row.Date || "—"}</span>,
       disableCellWrapper: true,
     },
     {
       key: "Time",
       label: "Time",
       width: 116,
-      renderCell: (row) => <span className="text-on-surface-variant">{row.Time || "—"}</span>,
+      renderCell: (row) => <span className="font-mono text-xs text-[var(--text-secondary)]">{row.Time || "—"}</span>,
       disableCellWrapper: true,
     },
     {
@@ -795,11 +797,11 @@ export default function SensorDetailPage() {
         const friendlyName = getDisplayName(row.device);
         return friendlyName ? (
           <div>
-            <span className="text-sm font-semibold text-on-surface">{friendlyName}</span>
-            <p className="font-mono text-[10px] text-outline">{row.device || "—"}</p>
+            <span className="text-xs font-semibold text-[var(--text-primary)]">{friendlyName}</span>
+            <p className="font-mono text-[10px] text-[var(--text-muted)]">{row.device || "—"}</p>
           </div>
         ) : (
-          <span className="font-mono text-on-surface">{row.device || "—"}</span>
+          <span className="font-mono text-xs text-[var(--text-primary)]">{row.device || "—"}</span>
         );
       },
       disableCellWrapper: true,
@@ -812,7 +814,7 @@ export default function SensorDetailPage() {
       renderCell: (row) => {
         const temperature = parseTemp(row.Temperature);
         const meta = getTempStatus(temperature);
-        return <span className={`font-semibold ${meta.color}`}>{Number.isNaN(temperature) ? "—" : `${temperature}°C`}</span>;
+        return <span className={`font-mono text-xs font-semibold ${meta.color}`}>{Number.isNaN(temperature) ? "—" : `${temperature}°C`}</span>;
       },
       disableCellWrapper: true,
     },
@@ -824,7 +826,7 @@ export default function SensorDetailPage() {
       renderCell: (row) => {
         const humidity = parseHumid(row.Humidity);
         const meta = getHumidityStatus(humidity);
-        return <span className={`font-semibold ${meta.color}`}>{Number.isNaN(humidity) ? "—" : `${humidity}%`}</span>;
+        return <span className={`font-mono text-xs font-semibold ${meta.color}`}>{Number.isNaN(humidity) ? "—" : `${humidity}%`}</span>;
       },
       disableCellWrapper: true,
     },
@@ -838,7 +840,7 @@ export default function SensorDetailPage() {
         const humidity = parseHumid(row.Humidity);
         const wbgt = calcWBGT(temperature, humidity);
         const meta = getWBGTStatus(wbgt);
-        return <span className={`font-semibold ${meta.color}`}>{wbgt ?? "—"}°C</span>;
+        return <span className={`font-mono text-xs font-semibold ${meta.color}`}>{wbgt ?? "—"}°C</span>;
       },
       disableCellWrapper: true,
     },
@@ -853,7 +855,7 @@ export default function SensorDetailPage() {
         const wbgt = calcWBGT(temperature, humidity);
         const meta = getWBGTStatus(wbgt);
         return (
-          <span className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-semibold ${meta.bg} ${meta.color}`}>
+          <span className={`inline-flex rounded-[4px] border px-2 py-0.5 text-[10px] font-mono font-medium ${meta.bg} ${meta.color}`}>
             {row.sensorStatus ?? "OK"}
           </span>
         );
@@ -863,31 +865,33 @@ export default function SensorDetailPage() {
   ]), [iotNamesMap]);
 
   return (
-    <section className="pt-24 pb-16 px-8 overflow-y-auto h-screen scrollbar-hide">
+    <section className="min-h-screen max-w-[1600px] mx-auto space-y-6 pt-20 px-6 pb-12">
       <PageHeader
         leading={(
           <button
+            type="button"
             onClick={() => navigate(-1)}
-            className="p-2 rounded-xl hover:bg-surface-container text-outline hover:text-primary transition-colors"
+            className="w-8 h-8 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:border-[var(--border-strong)] flex items-center justify-center transition-colors shadow-2xs"
+            title="Go back"
           >
-            <span className="material-symbols-outlined">arrow_back</span>
+            <span className="material-symbols-outlined" style={{ fontSize: 18 }}>arrow_back</span>
           </button>
         )}
         bodyClassName="items-start"
         title={(
-          <>
-            <span className="material-symbols-outlined text-tertiary">sensors</span>
-            {factoryName} - Sensor Data
-          </>
+          <div className="flex items-center gap-2.5">
+            <span className="material-symbols-outlined text-[var(--freya-blue)]">sensors</span>
+            <span>{factoryName} - Sensor Data</span>
+          </div>
         )}
-        titleClassName="flex items-center gap-3"
         subtitle={`${rangeMode === 'date' ? `${range.start} → ${range.end}` : `Years: ${selectedYears.join(', ')}`} · ${overview.totalReadings.toLocaleString()} readings`}
         className="mb-6 md:flex-row md:items-center md:justify-between"
         actions={(
           <button
+            type="button"
             onClick={handleExport}
             disabled={overview.totalReadings === 0 || exporting}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold bg-surface-container border border-outline-variant/20 text-on-surface-variant hover:bg-surface-container-high hover:text-primary transition-all disabled:opacity-40"
+            className="rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-hover)] transition-colors shadow-2xs flex items-center gap-1.5 disabled:opacity-40"
           >
             <span className="material-symbols-outlined" style={{ fontSize: 16 }}>download</span>
             {exporting ? "Exporting..." : "Export CSV"}
@@ -896,17 +900,19 @@ export default function SensorDetailPage() {
       />
 
       {/* ── Filter bar ── */}
-      <div className="glass-card rounded-2xl p-5 flex flex-wrap items-center gap-4 mb-6">
-        <div className="flex items-center p-1 bg-surface-container-lowest rounded-xl border border-outline-variant/20">
+      <div className="freya-card rounded-[8px] border border-[var(--border)] bg-[var(--surface)] p-4 shadow-sm flex flex-wrap items-center gap-4">
+        <div className="flex items-center p-0.5 bg-[var(--surface-subtle)] rounded-[6px] border border-[var(--border)]">
           <button
+            type="button"
             onClick={() => setRangeMode("date")}
-            className={`px-4 py-1.5 text-xs font-semibold rounded-lg transition-all ${rangeMode === "date" ? "bg-primary text-on-primary shadow-sm" : "text-on-surface-variant hover:text-on-surface"}`}
+            className={`px-3 py-1 text-xs font-semibold rounded-[4px] transition-all ${rangeMode === "date" ? "bg-[var(--freya-blue)] text-white shadow-xs" : "text-[var(--text-muted)] hover:text-[var(--text-primary)]"}`}
           >
             Date Range
           </button>
           <button
+            type="button"
             onClick={() => setIsYearModalOpen(true)}
-            className={`px-4 py-1.5 text-xs font-semibold rounded-lg transition-all ${rangeMode === "years" ? "bg-primary text-on-primary shadow-sm" : "text-on-surface-variant hover:text-on-surface"}`}
+            className={`px-3 py-1 text-xs font-semibold rounded-[4px] transition-all ${rangeMode === "years" ? "bg-[var(--freya-blue)] text-white shadow-xs" : "text-[var(--text-muted)] hover:text-[var(--text-primary)]"}`}
           >
             All Reading
           </button>
@@ -915,54 +921,54 @@ export default function SensorDetailPage() {
         {rangeMode === "date" ? (
           <>
             <div className="flex items-center gap-2">
-              <span className="text-[10px] text-outline font-semibold uppercase tracking-wider">From</span>
+              <span className="text-[11px] text-[var(--text-muted)] font-semibold uppercase tracking-[0.04em]">From</span>
               <input
                 type="date"
                 value={range.start}
                 max={range.end}
                 onChange={(e) => setRange((r) => ({ ...r, start: e.target.value }))}
-                className="bg-surface-container-lowest border border-outline-variant/20 rounded-lg px-3 py-1.5 text-xs text-on-surface focus:ring-2 focus:ring-primary/20 focus:border-primary/30 outline-none transition-all duration-150"
+                className="rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1 text-xs text-[var(--text-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--freya-blue)]"
               />
             </div>
             <div className="flex items-center gap-2">
-              <span className="text-[10px] text-outline font-semibold uppercase tracking-wider">To</span>
+              <span className="text-[11px] text-[var(--text-muted)] font-semibold uppercase tracking-[0.04em]">To</span>
               <input
                 type="date"
                 value={range.end}
                 min={range.start}
                 max={toISO(new Date())}
                 onChange={(e) => setRange((r) => ({ ...r, end: e.target.value }))}
-                className="bg-surface-container-lowest border border-outline-variant/20 rounded-lg px-3 py-1.5 text-xs text-on-surface focus:ring-2 focus:ring-primary/20 focus:border-primary/30 outline-none transition-all duration-150"
+                className="rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1 text-xs text-[var(--text-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--freya-blue)]"
               />
             </div>
           </>
         ) : (
-          <div className="flex items-center gap-3 bg-surface-container/30 px-4 py-1.5 rounded-lg border border-outline-variant/20">
-            <span className="text-[10px] text-outline font-semibold uppercase tracking-wider">Selected Years</span>
-            <span className="text-xs font-bold text-primary">{selectedYears.join(", ")}</span>
-            <button onClick={() => setIsYearModalOpen(true)} className="text-[10px] text-on-surface-variant hover:text-primary transition-colors flex items-center gap-1 ml-2 border-l border-outline-variant/20 pl-3">
-              <span className="material-symbols-outlined" style={{ fontSize: 14 }}>edit</span> Edit
+          <div className="flex items-center gap-2.5 bg-[var(--surface-subtle)] px-3 py-1 rounded-[6px] border border-[var(--border)]">
+            <span className="text-[11px] text-[var(--text-muted)] font-semibold uppercase tracking-[0.04em]">Selected Years</span>
+            <span className="text-xs font-bold text-[var(--freya-blue)]">{selectedYears.join(", ")}</span>
+            <button type="button" onClick={() => setIsYearModalOpen(true)} className="text-[11px] text-[var(--freya-blue)] hover:underline flex items-center gap-1 ml-2 border-l border-[var(--border)] pl-2 font-medium">
+              <span className="material-symbols-outlined" style={{ fontSize: 13 }}>edit</span> Edit
             </button>
           </div>
         )}
 
         <div className="flex items-center gap-2">
-          <span className="text-[10px] text-outline font-semibold uppercase tracking-wider">Device</span>
+          <span className="text-[11px] text-[var(--text-muted)] font-semibold uppercase tracking-[0.04em]">Device</span>
           <select
             value={deviceFilter}
             onChange={(e) => setDeviceFilter(normalizeDeviceId(e.target.value) || "all")}
-            className="bg-surface-container-lowest border border-outline-variant/20 rounded-lg px-3 py-1.5 text-xs text-on-surface focus:ring-2 focus:ring-primary/20 outline-none transition-all duration-150"
+            className="rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1 text-xs text-[var(--text-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--freya-blue)]"
           >
             <option value="all">All Devices</option>
             {devices.map((d) => <option key={d} value={d}>{d}</option>)}
           </select>
         </div>
         <div className="flex items-center gap-2">
-          <span className="text-[10px] text-outline font-semibold uppercase tracking-wider">Sort</span>
+          <span className="text-[11px] text-[var(--text-muted)] font-semibold uppercase tracking-[0.04em]">Sort</span>
           <select
             value={sortKey}
             onChange={(e) => setSortKey(e.target.value)}
-            className="bg-surface-container-lowest border border-outline-variant/20 rounded-lg px-3 py-1.5 text-xs text-on-surface focus:ring-2 focus:ring-primary/20 outline-none transition-all duration-150"
+            className="rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1 text-xs text-[var(--text-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--freya-blue)]"
           >
             <option value="date_desc">Latest First</option>
             <option value="date_asc">Oldest First</option>
@@ -974,24 +980,25 @@ export default function SensorDetailPage() {
           <button
             type="button"
             onClick={handleResetFilters}
-            className="inline-flex items-center gap-2 rounded-lg border border-error/20 bg-error/10 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-error transition hover:bg-error/15"
+            className="inline-flex items-center gap-1.5 rounded-[6px] border border-[var(--status-danger)]/30 bg-[var(--status-danger)]/10 px-2.5 py-1 text-xs font-semibold text-[var(--status-danger)] hover:bg-[var(--status-danger)]/20 transition-colors shadow-2xs"
           >
             <span className="material-symbols-outlined" style={{ fontSize: 14 }}>restart_alt</span>
             Reset Filters
           </button>
         ) : null}
-        <div className="ml-auto flex gap-2">
+        <div className="ml-auto flex gap-1.5">
           {["7d", "14d", "30d"].map((preset) => {
             const days = parseInt(preset);
             const s = new Date(); s.setDate(s.getDate() - (days - 1));
             return (
               <button
                 key={preset}
+                type="button"
                 onClick={() => {
                   setRange({ start: toISO(s), end: toISO(new Date()) });
                   setRangeMode("date");
                 }}
-                className="px-3 py-1.5 text-[10px] font-semibold rounded-lg bg-surface-container hover:bg-primary/10 hover:text-primary text-outline transition-colors"
+                className="px-2.5 py-1 text-xs font-semibold rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)] text-[var(--text-muted)] transition-colors shadow-2xs"
               >
                 {preset}
               </button>
@@ -1000,15 +1007,15 @@ export default function SensorDetailPage() {
         </div>
       </div>
       {loading && overview === EMPTY_SENSOR_OVERVIEW ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="glass-card rounded-2xl h-44 animate-pulse" />
+            <div key={i} className="freya-card rounded-[8px] border border-[var(--border)] bg-[var(--surface)] h-40 animate-pulse" />
           ))}
         </div>
       ) : (
         <>
           {/* ── KPI strip ── */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {[
               {
                 label: `Avg Temperature${deviceFilter !== "all" && iotNamesMap.get(normalizeDeviceId(deviceFilter))?.offset ? ` (Offset: ${iotNamesMap.get(normalizeDeviceId(deviceFilter)).offset > 0 ? "+" : ""}${iotNamesMap.get(normalizeDeviceId(deviceFilter)).offset}°C)` : ""}`,
@@ -1039,36 +1046,38 @@ export default function SensorDetailPage() {
                 value: sensorKPIs.heatAlerts,
                 sub: sensorKPIs.heatAlerts > 0 ? "WBGT > 28°C" : "All clear",
                 icon: "warning",
-                color: sensorKPIs.heatAlerts > 0 ? "text-error" : "text-outline",
-                bg: sensorKPIs.heatAlerts > 0 ? "bg-error/10" : "bg-surface-container",
+                color: sensorKPIs.heatAlerts > 0 ? "text-[var(--status-danger)]" : "text-[var(--text-muted)]",
+                bg: sensorKPIs.heatAlerts > 0 ? "bg-[var(--status-danger)]/10 border-[var(--status-danger)]/20" : "bg-[var(--surface)]",
               },
             ].map(({ label, value, sub, icon, color, bg }) => (
-              <div key={label} className={`rounded-2xl p-5 border border-outline-variant/10 ${bg}`}>
-                <div className="flex items-center gap-2 mb-2">
-                  <span className={`material-symbols-outlined ${color}`} style={{ fontSize: 16 }}>{icon}</span>
-                  <p className="text-[10px] text-outline font-semibold uppercase tracking-wider">{label}</p>
+              <div key={label} className={`freya-card rounded-[8px] p-4 border border-[var(--border)] bg-[var(--surface)] shadow-sm flex flex-col justify-between ${bg}`}>
+                <div>
+                  <div className="flex items-center gap-1.5 mb-1">
+                    <span className={`material-symbols-outlined ${color}`} style={{ fontSize: 16 }}>{icon}</span>
+                    <p className="text-[11px] text-[var(--text-muted)] font-semibold uppercase tracking-[0.04em]">{label}</p>
+                  </div>
+                  <p className={`text-2xl font-mono font-bold ${color}`}>{value}</p>
                 </div>
-                <p className={`text-2xl font-semibold ${color}`}>{value}</p>
-                {sub && <p className="text-[10px] text-outline mt-1">{sub}</p>}
+                {sub && <p className="text-[11px] text-[var(--text-muted)] mt-1.5 font-medium">{sub}</p>}
               </div>
             ))}
           </div>
 
           {/* ── Trend charts ── */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-6">
-            <div className="glass-card rounded-2xl p-5">
-              <div className="flex items-center gap-2 mb-4">
-                <span className="material-symbols-outlined text-tertiary" style={{ fontSize: 16 }}>thermostat</span>
-                <p className="text-[10px] text-outline font-semibold uppercase tracking-[0.15em]">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <div className="freya-card rounded-[8px] border border-[var(--border)] bg-[var(--surface)] p-4 shadow-sm">
+              <div className="flex items-center gap-2 mb-3">
+                <span className="material-symbols-outlined text-[var(--freya-blue)]" style={{ fontSize: 16 }}>thermostat</span>
+                <p className="text-xs font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">
                   Temperature Trend ({rangeMode === 'date' && range.start === range.end ? "hourly" : "daily"} avg)
                 </p>
               </div>
               <SensorTrendChart readings={overview.trends} type="temp" height={180} deviceNamesMap={iotNamesMap} />
             </div>
-            <div className="glass-card rounded-2xl p-5">
-              <div className="flex items-center gap-2 mb-4">
+            <div className="freya-card rounded-[8px] border border-[var(--border)] bg-[var(--surface)] p-4 shadow-sm">
+              <div className="flex items-center gap-2 mb-3">
                 <span className="material-symbols-outlined text-cyan-400" style={{ fontSize: 16 }}>water_drop</span>
-                <p className="text-[10px] text-outline font-semibold uppercase tracking-[0.15em]">
+                <p className="text-xs font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">
                   Humidity Trend ({rangeMode === 'date' && range.start === range.end ? "hourly" : "daily"} avg)
                 </p>
               </div>
@@ -1078,11 +1087,11 @@ export default function SensorDetailPage() {
 
           {/* ── Device summary cards ── */}
           {!cardLoading && deviceCards.length > 0 && (
-            <div className="mb-6">
-              <p className="text-[10px] text-outline font-semibold uppercase tracking-[0.18em] mb-4">
+            <div className="space-y-3">
+              <p className="text-[11px] text-[var(--text-muted)] font-semibold uppercase tracking-[0.04em]">
                 {deviceCards.length} Device{deviceCards.length !== 1 ? "s" : ""} — Latest Readings
               </p>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                 {deviceCards.map((device) => (
                   <SensorCard
                     key={device.deviceId}
@@ -1099,15 +1108,15 @@ export default function SensorDetailPage() {
           )}
 
           {/* ── Records table ── */}
-          <div className="glass-card rounded-2xl p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-base font-semibold text-on-surface flex items-center gap-2">
+          <div className="freya-card rounded-[8px] border border-[var(--border)] bg-[var(--surface)] p-4 shadow-sm">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-semibold text-[var(--text-primary)] flex items-center gap-2">
                 All Readings
-                <span className="text-primary bg-primary/10 px-2 py-0.5 rounded text-sm font-medium">
+                <span className="rounded-[4px] border border-[var(--freya-blue)]/30 bg-[var(--freya-blue)]/10 px-2 py-0.5 text-xs font-mono font-medium text-[var(--freya-blue)]">
                   {selectedDeviceName}
                 </span>
               </h3>
-              <span className="text-[10px] text-outline font-semibold uppercase tracking-wider">
+              <span className="text-[11px] text-[var(--text-muted)] font-mono font-medium">
                 {(pagination.totalItems || tableRows.length).toLocaleString()} rows
               </span>
             </div>
@@ -1140,12 +1149,12 @@ export default function SensorDetailPage() {
               enableColumnReorder
               stickyHeader
               stickyHeaderOffset={0}
-              className="overflow-hidden rounded-2xl"
-              topBarClassName="mb-4 flex flex-wrap items-center justify-end gap-3 px-1"
+              className="overflow-hidden rounded-[8px] border border-[var(--border)]"
+              topBarClassName="mb-3 flex flex-wrap items-center justify-end gap-3 px-1"
               topInfoClassName="hidden"
-              bottomBarClassName="flex flex-col gap-4 border-t border-outline-variant/15 px-1 pt-4 md:flex-row md:items-center md:justify-between"
-              rowClassName="border-b border-outline-variant/10 transition hover:bg-surface-container"
-              rowsSelectClassName="h-10 rounded-2xl border border-outline-variant/30 bg-white px-3 text-sm text-on-surface outline-none transition focus:border-primary/40 dark:bg-surface-container"
+              bottomBarClassName="flex flex-col gap-3 border-t border-[var(--border)] px-2 pt-3 md:flex-row md:items-center md:justify-between text-xs text-[var(--text-muted)]"
+              rowClassName="border-b border-[var(--border)] transition hover:bg-[var(--surface-hover)]"
+              rowsSelectClassName="h-8 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-2 text-xs text-[var(--text-primary)] outline-none focus:border-[var(--freya-blue)]"
             />
           </div>
         </>

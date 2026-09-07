@@ -11,13 +11,13 @@ function fmtWait(seconds) {
 
 function RoleBadge({ role }) {
   const color = role === "admin"
-    ? "bg-primary/15 text-primary"
+    ? "border-[var(--freya-blue)]/30 bg-[var(--freya-blue)]/10 text-[var(--freya-blue)]"
     : role === "班長"
-      ? "bg-amber-400/15 text-amber-500"
-      : "bg-emerald-400/15 text-emerald-400";
+      ? "border-amber-400/30 bg-amber-400/10 text-amber-500"
+      : "border-emerald-400/30 bg-emerald-400/10 text-emerald-500";
 
   return (
-    <span className={`inline-block rounded-full px-2 py-0.5 text-[10px] font-semibold ${color}`}>
+    <span className={`inline-block rounded-[4px] border px-1.5 py-0.5 text-[10px] font-mono font-medium ${color}`}>
       {role}
     </span>
   );
@@ -30,7 +30,7 @@ function RankBadge({ rank }) {
     return <span className="text-lg leading-none">{RANK_MEDALS[rank - 1]}</span>;
   }
   return (
-    <span className="flex h-7 w-7 items-center justify-center rounded-full bg-surface-container text-xs font-bold text-on-surface-variant">
+    <span className="flex h-6 w-6 items-center justify-center rounded-[4px] bg-[var(--surface-subtle)] border border-[var(--border)] font-mono text-xs font-semibold text-[var(--text-muted)]">
       {rank}
     </span>
   );
@@ -94,7 +94,7 @@ function DailyBar({ dailyCounts }) {
         <div
           key={day}
           title={`${day}: ${count}`}
-          className="w-2 rounded-sm bg-primary/60 transition-all hover:bg-primary"
+          className="w-2 rounded-sm bg-[var(--freya-blue)]/60 transition-all hover:bg-[var(--freya-blue)]"
           style={{ height: `${Math.max((count / max) * 100, 15)}%` }}
         />
       ))}
@@ -108,7 +108,6 @@ function LeaderCard({ leader, rank, onClickRecord }) {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [sort, setSort] = useState(null);
-  const isTop3 = rank <= 3;
 
   const sortedRecords = useMemo(() => {
     if (!sort || !sort.column) return leader.records;
@@ -134,73 +133,73 @@ function LeaderCard({ leader, rank, onClickRecord }) {
   const paginatedRecords = sortedRecords.slice((page - 1) * pageSize, page * pageSize);
 
   const accentBorder = rank === 1
-    ? "border-amber-400/40 shadow-[0_0_20px_rgba(251,191,36,0.08)]"
+    ? "border-amber-400/40 shadow-xs"
     : rank === 2
-      ? "border-slate-300/30 dark:border-slate-400/20"
+      ? "border-slate-300/40"
       : rank === 3
-        ? "border-orange-400/25"
-        : "border-transparent";
+        ? "border-orange-400/30"
+        : "border-[var(--border)]";
 
   return (
-    <div className={`glass-card rounded-2xl border transition-all duration-300 ${accentBorder} ${isTop3 ? "ring-1 ring-primary/10" : ""}`}>
+    <div className={`freya-card rounded-[8px] border bg-[var(--surface)] shadow-sm transition-all overflow-hidden ${accentBorder}`}>
       <button
         type="button"
-        className="w-full text-left p-5"
+        className="w-full text-left p-4"
         onClick={() => setExpanded((prev) => !prev)}
       >
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3.5">
           <RankBadge rank={rank} />
 
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2">
-              <span className="text-sm font-semibold text-on-surface truncate">{leader.leaderName}</span>
+              <span className="text-xs font-semibold text-[var(--text-primary)] truncate">{leader.leaderName}</span>
               <RoleBadge role={leader.leaderRole} />
             </div>
-            <p className="mt-0.5 text-[11px] text-on-surface-variant">@{leader.leaderUsername}</p>
+            <p className="mt-0.5 font-mono text-[10px] text-[var(--text-muted)]">@{leader.leaderUsername}</p>
           </div>
 
-          <div className="flex items-center gap-5 flex-shrink-0">
+          <div className="flex items-center gap-4 flex-shrink-0">
             {/* Stats */}
-            <div className="hidden sm:flex items-center gap-5">
+            <div className="hidden sm:flex items-center gap-4">
               <div className="text-center">
-                <p className="text-lg font-bold text-on-surface leading-none">{leader.totalResponses}</p>
-                <p className="mt-1 text-[10px] text-on-surface-variant">{t("totalResponses")}</p>
+                <p className="text-base font-bold font-mono text-[var(--text-primary)] leading-none">{leader.totalResponses}</p>
+                <p className="mt-1 text-[10px] uppercase tracking-[0.04em] text-[var(--text-muted)]">{t("totalResponses")}</p>
               </div>
               <div className="text-center">
-                <p className="text-lg font-bold text-on-surface leading-none">{fmtWait(Math.round(leader.avgWaitSeconds))}</p>
-                <p className="mt-1 text-[10px] text-on-surface-variant">{t("avgResponseTime")}</p>
+                <p className="text-base font-bold font-mono text-[var(--text-primary)] leading-none">{fmtWait(Math.round(leader.avgWaitSeconds))}</p>
+                <p className="mt-1 text-[10px] uppercase tracking-[0.04em] text-[var(--text-muted)]">{t("avgResponseTime")}</p>
               </div>
               <div className="text-center">
-                <p className="text-lg font-bold text-emerald-400 leading-none">{fmtWait(leader.minWait)}</p>
-                <p className="mt-1 text-[10px] text-on-surface-variant">{t("fastest")}</p>
+                <p className="text-base font-bold font-mono text-emerald-500 leading-none">{fmtWait(leader.minWait)}</p>
+                <p className="mt-1 text-[10px] uppercase tracking-[0.04em] text-[var(--text-muted)]">{t("fastest")}</p>
               </div>
               <div className="text-center">
-                <p className={`text-lg font-bold leading-none ${leader.maxWait > 300 ? "text-error" : "text-amber-400"}`}>{fmtWait(leader.maxWait)}</p>
-                <p className="mt-1 text-[10px] text-on-surface-variant">{t("slowest")}</p>
+                <p className={`text-base font-bold font-mono leading-none ${leader.maxWait > 300 ? "text-[var(--status-danger)]" : "text-amber-500"}`}>{fmtWait(leader.maxWait)}</p>
+                <p className="mt-1 text-[10px] uppercase tracking-[0.04em] text-[var(--text-muted)]">{t("slowest")}</p>
               </div>
             </div>
 
             {/* Effectiveness score */}
             <div className="text-center">
-              <div className={`flex h-11 w-11 items-center justify-center rounded-xl text-sm font-bold ${
-                leader.effectivenessScore >= 50 ? "bg-emerald-400/15 text-emerald-400"
-                  : leader.effectivenessScore >= 20 ? "bg-amber-400/15 text-amber-400"
-                    : "bg-error/15 text-error"
+              <div className={`flex h-9 w-9 items-center justify-center rounded-[6px] border font-mono text-xs font-bold ${
+                leader.effectivenessScore >= 50 ? "border-emerald-400/30 bg-emerald-400/10 text-emerald-500"
+                  : leader.effectivenessScore >= 20 ? "border-amber-400/30 bg-amber-400/10 text-amber-500"
+                    : "border-[var(--status-danger)]/30 bg-[var(--status-danger)]/10 text-[var(--status-danger)]"
               }`}>
                 {leader.effectivenessScore}
               </div>
-              <p className="mt-1 text-[9px] text-on-surface-variant">{t("effectivenessScore")}</p>
+              <p className="mt-1 text-[9px] uppercase tracking-[0.04em] text-[var(--text-muted)]">{t("effectivenessScore")}</p>
             </div>
 
             {/* Daily bar */}
             <div className="hidden lg:block">
               <DailyBar dailyCounts={leader.dailyCounts} />
-              <p className="mt-1 text-[9px] text-on-surface-variant text-center">{t("responsesPerDay")}</p>
+              <p className="mt-1 text-[9px] uppercase tracking-[0.04em] text-[var(--text-muted)] text-center">{t("responsesPerDay")}</p>
             </div>
 
             {/* Expand icon */}
             <span
-              className={`material-symbols-outlined text-outline transition-transform duration-300 ${expanded ? "rotate-180" : ""}`}
+              className={`material-symbols-outlined text-[var(--text-muted)] transition-transform duration-200 ${expanded ? "rotate-180" : ""}`}
               style={{ fontSize: 18 }}
             >
               expand_more
@@ -209,32 +208,35 @@ function LeaderCard({ leader, rank, onClickRecord }) {
         </div>
 
         {/* Mobile stats row */}
-        <div className="sm:hidden mt-3 flex items-center gap-4 text-xs">
-          <span className="text-on-surface-variant">{t("totalResponses")}: <strong className="text-on-surface">{leader.totalResponses}</strong></span>
-          <span className="text-on-surface-variant">Avg: <strong className="text-on-surface">{fmtWait(Math.round(leader.avgWaitSeconds))}</strong></span>
-          <span className="text-emerald-400 font-medium">{fmtWait(leader.minWait)}</span>
-          <span className={`font-medium ${leader.maxWait > 300 ? "text-error" : "text-amber-400"}`}>{fmtWait(leader.maxWait)}</span>
+        <div className="sm:hidden mt-2.5 flex items-center gap-3 text-xs">
+          <span className="text-[var(--text-muted)]">{t("totalResponses")}: <strong className="text-[var(--text-primary)] font-mono">{leader.totalResponses}</strong></span>
+          <span className="text-[var(--text-muted)]">Avg: <strong className="text-[var(--text-primary)] font-mono">{fmtWait(Math.round(leader.avgWaitSeconds))}</strong></span>
+          <span className="text-emerald-500 font-mono font-medium">{fmtWait(leader.minWait)}</span>
+          <span className={`font-mono font-medium ${leader.maxWait > 300 ? "text-[var(--status-danger)]" : "text-amber-500"}`}>{fmtWait(leader.maxWait)}</span>
         </div>
       </button>
 
       {/* Expanded detail table */}
       <div className={`overflow-hidden transition-[max-height,opacity] duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] ${expanded ? "max-h-[8000px] opacity-100" : "max-h-0 opacity-0"}`}>
-        <div className="border-t border-separator/20 px-5 pb-4 pt-3">
+        <div className="border-t border-[var(--border)] px-4 pb-3 pt-3 bg-[var(--surface-subtle)]">
           <DataTable
             columns={[
-              { key: "date", label: t("date"), sortable: true },
-              { key: "設備", label: "設備", sortable: true },
-              { key: "背番号", label: "背番号", sortable: true, cellClassName: "font-medium text-primary" },
-              { key: "品番", label: "品番", sortable: true },
-              { key: "Worker_Name", label: t("worker"), sortable: true, cellClassName: "text-on-surface-variant" },
-              { key: "calledAt", label: t("calledAt"), sortable: true, cellClassName: "text-on-surface-variant" },
-              { key: "arrivedAt", label: t("arrivedAt"), sortable: true, cellClassName: "text-on-surface-variant" },
+              { key: "date", label: t("date"), sortable: true, renderCell: (r) => <span className="font-mono text-xs text-[var(--text-secondary)]">{r.date}</span> },
+              { key: "設備", label: "設備", sortable: true, renderCell: (r) => <span className="text-xs font-semibold text-[var(--text-primary)]">{r["設備"]}</span> },
+              { key: "背番号", label: "背番号", sortable: true, renderCell: (r) => <span className="font-mono text-xs font-medium text-[var(--freya-blue)]">{r["背番号"]}</span> },
+              { key: "品番", label: "品番", sortable: true, renderCell: (r) => <span className="text-xs text-[var(--text-secondary)]">{r["品番"]}</span> },
+              { key: "Worker_Name", label: t("worker"), sortable: true, renderCell: (r) => <span className="text-xs text-[var(--text-secondary)]">{r.Worker_Name}</span> },
+              { key: "calledAt", label: t("calledAt"), sortable: true, renderCell: (r) => <span className="font-mono text-xs text-[var(--text-muted)]">{r.calledAt}</span> },
+              { key: "arrivedAt", label: t("arrivedAt"), sortable: true, renderCell: (r) => <span className="font-mono text-xs text-[var(--text-muted)]">{r.arrivedAt}</span> },
               { 
                 key: "waitSeconds", 
                 label: t("waitTime"), 
                 sortable: true, 
-                cellClassName: (r) => `font-semibold ${r.waitSeconds > 300 ? "text-error" : r.waitSeconds > 120 ? "text-amber-400" : "text-emerald-400"}`,
-                renderCell: (r) => fmtWait(r.waitSeconds) 
+                renderCell: (r) => (
+                  <span className={`font-mono text-xs font-bold ${r.waitSeconds > 300 ? "text-[var(--status-danger)]" : r.waitSeconds > 120 ? "text-amber-500" : "text-emerald-500"}`}>
+                    {fmtWait(r.waitSeconds)}
+                  </span>
+                ) 
               },
             ]}
             rows={paginatedRecords}
@@ -259,12 +261,11 @@ function LeaderCard({ leader, rank, onClickRecord }) {
             onRowClick={onClickRecord}
             enableColumnReorder={true}
             layoutStorageKey="LeaderboardTableLayout"
-            className="w-full"
-            tableClassName="w-full text-xs"
-            headClassName="border-b border-separator/20"
-            headerButtonClassName="ui-table-heading inline-flex items-center gap-2 uppercase tracking-wider text-[10px] text-on-surface-variant transition hover:text-on-surface"
-            headerCellClassName="pb-2 pr-3 text-left whitespace-nowrap"
-            cellClassName="py-2 pr-3 align-top"
+            className="w-full overflow-hidden rounded-[6px] border border-[var(--border)] bg-[var(--surface)]"
+            topBarClassName="mb-2 flex flex-wrap items-center justify-end gap-2 px-1"
+            bottomBarClassName="flex flex-col gap-2 border-t border-[var(--border)] px-2 pt-2 md:flex-row md:items-center md:justify-between text-xs text-[var(--text-muted)]"
+            rowClassName="border-b border-[var(--border)] transition hover:bg-[var(--surface-hover)] cursor-pointer"
+            rowsSelectClassName="h-7 rounded-[4px] border border-[var(--border)] bg-[var(--surface)] px-1.5 text-xs text-[var(--text-primary)] outline-none focus:border-[var(--freya-blue)]"
           />
         </div>
       </div>
@@ -277,9 +278,9 @@ export default function StopCallLeaderboard({ leaders, onClickRecord }) {
 
   if (!leaders || leaders.length === 0) {
     return (
-      <div className="rounded-2xl border border-dashed border-outline-variant/20 px-6 py-12 text-center text-sm text-on-surface-variant">
-        <span className="material-symbols-outlined mb-2 block text-outline" style={{ fontSize: 36 }}>leaderboard</span>
-        <p className="font-semibold text-on-surface">{t("noStopCalls")}</p>
+      <div className="freya-card rounded-[8px] border border-dashed border-[var(--border)] px-6 py-12 text-center text-sm text-[var(--text-muted)] bg-[var(--surface)]">
+        <span className="material-symbols-outlined mb-2 block text-[var(--text-muted)]" style={{ fontSize: 36 }}>leaderboard</span>
+        <p className="font-semibold text-[var(--text-primary)]">{t("noStopCalls")}</p>
       </div>
     );
   }

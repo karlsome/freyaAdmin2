@@ -270,17 +270,17 @@ export default function FuryoKanriWorkspace({ refreshToken = 0, onFlash }) {
 
   return (
     <div>
-      <div className="glass-card rounded-3xl px-5 py-5 mb-6">
+      <div className="freya-card rounded-[8px] border border-[var(--border)] bg-[var(--surface)] p-5 mb-6 shadow-sm">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div>
-            <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-outline">Quality Setup</div>
-            <h3 className="mt-1 text-2xl font-semibold text-on-surface">不良管理</h3>
-            <p className="mt-2 max-w-3xl text-sm text-on-surface-variant">
+            <div className="text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">Quality Setup</div>
+            <h3 className="mt-1 text-xl font-bold text-[var(--text-primary)]">不良管理</h3>
+            <p className="mt-1.5 max-w-3xl text-xs text-[var(--text-secondary)] leading-relaxed">
               Manage model-specific defect labels for counters 1 through 12. This ports the legacy definition workflow, including bilingual fields, edit-role gating, and model product lookup.
             </p>
           </div>
 
-          <div className="rounded-2xl bg-surface-container px-4 py-3 text-sm text-on-surface-variant">
+          <div className="rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] px-3 py-1.5 text-xs font-mono text-[var(--text-secondary)]">
             {authUser?.username || "Unknown user"}
             {authUser?.role ? ` · ${authUser.role}` : ""}
           </div>
@@ -289,16 +289,16 @@ export default function FuryoKanriWorkspace({ refreshToken = 0, onFlash }) {
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4 mb-6">
         {stats.map((card) => (
-          <div key={card.label} className="glass-card rounded-2xl p-5">
-            <div className="flex items-center gap-4">
-              <div className={`flex h-12 w-12 items-center justify-center rounded-2xl ${card.accent}`}>
-                <span className="material-symbols-outlined" style={{ fontSize: 24, fontVariationSettings: "'FILL' 1" }}>
+          <div key={card.label} className="freya-card rounded-[8px] border border-[var(--border)] bg-[var(--surface)] p-4 shadow-sm">
+            <div className="flex items-center gap-3.5">
+              <div className={`flex h-10 w-10 items-center justify-center rounded-[6px] ${card.accent}`}>
+                <span className="material-symbols-outlined" style={{ fontSize: 20, fontVariationSettings: "'FILL' 1" }}>
                   {card.icon}
                 </span>
               </div>
               <div>
-                <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-outline">{card.label}</div>
-                <div className="mt-1 text-2xl font-semibold text-on-surface">{card.value}</div>
+                <div className="text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">{card.label}</div>
+                <div className="mt-0.5 text-2xl font-bold font-mono text-[var(--text-primary)]">{card.value}</div>
               </div>
             </div>
           </div>
@@ -306,7 +306,7 @@ export default function FuryoKanriWorkspace({ refreshToken = 0, onFlash }) {
       </div>
 
       {error && (
-        <div className="mb-6 rounded-3xl border border-error/20 bg-error/10 px-5 py-4 text-sm font-medium text-error">
+        <div className="mb-6 rounded-[8px] border border-[var(--status-danger)]/30 bg-[var(--status-danger)]/10 px-4 py-3 text-xs font-medium text-[var(--status-danger)]">
           {error}
         </div>
       )}

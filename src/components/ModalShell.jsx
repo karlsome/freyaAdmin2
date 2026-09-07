@@ -56,27 +56,27 @@ export default function ModalShell({
         }}
       >
         <div
-          className={["dashboard-section flex w-full flex-col overflow-hidden rounded-2xl", maxWidth, cardClassName].filter(Boolean).join(" ")}
+          className={["freya-card flex w-full flex-col overflow-hidden rounded-[12px] bg-[var(--surface-raised)] shadow-2xl border border-[var(--border)]", maxWidth, cardClassName].filter(Boolean).join(" ")}
           onMouseDown={(e) => e.stopPropagation()}
         >
-          <div className="border-b border-separator/40 px-6 py-5">
+          <div className="border-b border-[var(--border)] px-6 py-4 bg-[var(--surface-raised)]">
             <div className="flex items-start justify-between gap-4">
               <div>
                 {eyebrow ? (
-                  <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-outline">{eyebrow}</div>
+                  <div className="text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">{eyebrow}</div>
                 ) : null}
-                <h3 className={`${eyebrow ? "mt-2" : ""} text-2xl font-semibold text-on-surface`}>{title}</h3>
+                <h3 className={`${eyebrow ? "mt-1" : ""} text-lg font-semibold text-[var(--text-primary)] leading-tight`}>{title}</h3>
                 {subtitle ? (
-                  <p className="mt-1 text-sm text-on-surface-variant">{subtitle}</p>
+                  <p className="mt-0.5 text-xs text-[var(--text-muted)] font-normal">{subtitle}</p>
                 ) : null}
               </div>
               <button
                 type="button"
                 onClick={onClose}
                 aria-label="Close dialog"
-                className="p-2 rounded-xl flex-shrink-0 text-outline hover:bg-surface-container hover:text-on-surface transition-all duration-150 active:scale-95"
+                className="w-8 h-8 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:border-[var(--border-strong)] flex items-center justify-center transition-colors flex-shrink-0"
               >
-                <span className="material-symbols-outlined" style={{ fontSize: 18 }}>close</span>
+                <span className="material-symbols-outlined" style={{ fontSize: 16 }}>close</span>
               </button>
             </div>
           </div>
@@ -84,7 +84,7 @@ export default function ModalShell({
           {children}
 
           {footer ? (
-            <div className={footerClassName ?? "border-t border-separator/40 px-6 py-4"}>
+            <div className={footerClassName ?? "border-t border-[var(--border)] px-6 py-3.5 bg-[var(--surface-raised)] flex items-center justify-end gap-3"}>
               {footer}
             </div>
           ) : null}

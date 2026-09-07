@@ -31,19 +31,19 @@ function toBase64(file) {
 }
 
 function StepBadge({ n, active, done }) {
-  const base = "flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full text-xs font-semibold";
-  if (done) return <span className={`${base} bg-emerald-500 text-white`}><span className="material-symbols-outlined" style={{ fontSize: 14 }}>check</span></span>;
-  if (active) return <span className={`${base} bg-primary text-on-primary`}>{n}</span>;
-  return <span className={`${base} bg-surface-container text-on-surface-variant`}>{n}</span>;
+  const base = "flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-[6px] text-xs font-bold";
+  if (done) return <span className={`${base} bg-[var(--status-success)] text-white`}><span className="material-symbols-outlined" style={{ fontSize: 14 }}>check</span></span>;
+  if (active) return <span className={`${base} bg-[var(--freya-blue)] text-white`}>{n}</span>;
+  return <span className={`${base} border border-[var(--border)] bg-[var(--surface-subtle)] text-[var(--text-muted)]`}>{n}</span>;
 }
 
 function PanelHeader({ step, active, done, title, sub }) {
   return (
-    <div className="border-b border-separator/40 px-4 py-4 flex items-center gap-2.5">
+    <div className="border-b border-[var(--border)] bg-[var(--surface-subtle)] px-4 py-3 flex items-center gap-2.5">
       <StepBadge n={step} active={active} done={done} />
       <div>
-        <h3 className="text-xs font-semibold text-on-surface">{title}</h3>
-        {sub && <p className="text-[11px] text-on-surface-variant mt-0.5 leading-tight">{sub}</p>}
+        <h3 className="text-xs font-bold text-[var(--text-primary)]">{title}</h3>
+        {sub && <p className="text-[11px] text-[var(--text-secondary)] mt-0.5 leading-tight">{sub}</p>}
       </div>
     </div>
   );
@@ -456,7 +456,7 @@ export default function PceFilesWorkspace({ onFlash }) {
       <div className="flex flex-col gap-4 lg:flex-row lg:items-stretch">
 
         {/* Panel 1 — File upload */}
-        <div className="dashboard-section rounded-2xl overflow-hidden flex flex-col w-full lg:w-64 lg:flex-shrink-0">
+        <div className="freya-card overflow-hidden rounded-[8px] border border-[var(--border)] bg-[var(--surface)] shadow-sm flex flex-col w-full lg:w-64 lg:flex-shrink-0">
           <PanelHeader step={1} active={!step1Done} done={step1Done} title="Upload File" sub={file ? file.name : "Drop or click to browse"} />
           <div className="px-3 py-4 flex flex-col gap-3 flex-1">
             <div
@@ -465,28 +465,28 @@ export default function PceFilesWorkspace({ onFlash }) {
               onDrop={(e) => { e.preventDefault(); setDragging(false); const f = e.dataTransfer.files?.[0]; if (f) handleFileAccept(f); }}
               onClick={() => fileInputRef.current?.click()}
               className={[
-                "h-24 flex flex-col items-center justify-center gap-1.5 rounded-xl border-2 border-dashed cursor-pointer text-center transition-all duration-200 px-3",
-                dragging ? "border-primary bg-primary/10"
-                  : file ? "border-emerald-500/40 bg-emerald-500/5"
-                  : "border-outline-variant/30 hover:border-primary/40 hover:bg-primary/5",
+                "h-24 flex flex-col items-center justify-center gap-1.5 rounded-[6px] border-2 border-dashed cursor-pointer text-center transition-all duration-200 px-3",
+                dragging ? "border-[var(--freya-blue)] bg-[var(--freya-blue)]/10"
+                  : file ? "border-[var(--status-success)]/40 bg-[var(--status-success)]/5"
+                  : "border-[var(--border)] hover:border-[var(--freya-blue)]/40 hover:bg-[var(--surface-hover)]",
               ].join(" ")}
             >
-              <span className={`material-symbols-outlined ${file ? "text-emerald-500" : "text-on-surface-variant/50"}`} style={{ fontSize: 24 }}>
+              <span className={`material-symbols-outlined ${file ? "text-[var(--status-success)]" : "text-[var(--text-muted)]"}`} style={{ fontSize: 24 }}>
                 {file ? "check_circle" : "upload_file"}
               </span>
               {file ? (
                 <>
-                  <p className="text-xs font-semibold text-on-surface break-all leading-tight">{file.name}</p>
-                  <p className="text-[11px] text-on-surface-variant">{(file.size / 1024).toFixed(1)} KB · <span className="text-primary">replace</span></p>
+                  <p className="text-xs font-bold text-[var(--text-primary)] break-all leading-tight">{file.name}</p>
+                  <p className="text-[11px] text-[var(--text-secondary)]">{(file.size / 1024).toFixed(1)} KB · <span className="text-[var(--freya-blue)] font-semibold">replace</span></p>
                 </>
               ) : (
-                <p className="text-xs text-on-surface-variant">.pce files only</p>
+                <p className="text-xs text-[var(--text-muted)]">.pce files only</p>
               )}
             </div>
             <input ref={fileInputRef} type="file" accept=".pce" className="hidden"
               onChange={(e) => { if (e.target.files?.[0]) handleFileAccept(e.target.files[0]); }} />
             {file && (
-              <div className="flex items-start gap-2 rounded-lg border border-amber-500/20 bg-amber-500/5 px-3 py-2">
+              <div className="flex items-start gap-2 rounded-[6px] border border-amber-500/20 bg-amber-500/10 px-3 py-2">
                 <span className="material-symbols-outlined text-amber-500 flex-shrink-0" style={{ fontSize: 14 }}>warning</span>
                 <p className="text-[11px] text-amber-700 dark:text-amber-300 leading-snug">Filename will be replaced</p>
               </div>
@@ -518,7 +518,7 @@ export default function PceFilesWorkspace({ onFlash }) {
       </div>
 
       {/* Step 2 — 背番号 results: same table information as 内装品 DB */}
-      <div className="dashboard-section rounded-2xl overflow-hidden flex flex-col">
+      <div className="freya-card overflow-hidden rounded-[8px] border border-[var(--border)] bg-[var(--surface)] shadow-sm flex flex-col">
         <PanelHeader
           step={2}
           active={step1Done && !step2Done}
@@ -573,33 +573,33 @@ export default function PceFilesWorkspace({ onFlash }) {
             layoutStorageKey="freyaAdmin2.pceMasterTableLayout"
             stickyHeader
             stickyHeaderOffset={0}
-            stickyHeaderCellClassName="bg-surface-container-high shadow-[inset_0_-1px_0_rgba(148,163,184,0.18)]"
+            stickyHeaderCellClassName="bg-[var(--surface-subtle)] text-[var(--text-muted)] uppercase tracking-[0.04em] font-semibold text-xs border-b border-[var(--border)]"
             defaultColumnWidth={168}
             defaultMinColumnWidth={120}
             tableClassName="ui-table-data w-full border-separate border-spacing-0"
             tableViewportClassName="max-h-[60vh] overflow-auto"
-            headClassName="bg-surface-container-high/40 border-b border-outline-variant/20"
-            rowClassName="border-b border-outline-variant/10 transition hover:bg-primary/5"
+            headClassName="bg-[var(--surface-subtle)] border-b border-[var(--border)]"
+            rowClassName="border-b border-[var(--border)] transition hover:bg-[var(--surface-hover)]"
           />
         </div>
       </div>
 
       {/* Step 3 — Preview */}
-      <div className="dashboard-section rounded-2xl overflow-hidden flex flex-col">
+      <div className="freya-card overflow-hidden rounded-[8px] border border-[var(--border)] bg-[var(--surface)] shadow-sm flex flex-col">
         <PanelHeader step={3} active={step2Done && !uploadResults} done={!!uploadResults} title="Preview" sub={uploadResults ? "Upload complete" : fileCount ? `${fileCount} file${fileCount === 1 ? "" : "s"} to create` : "Waiting for selections"} />
         <div className="px-4 py-4 flex flex-col gap-2">
           {uploadResults ? (
             <>
               <ul className="grid grid-flow-col grid-rows-5 auto-cols-[minmax(180px,1fr)] gap-1.5 overflow-x-auto pb-1">
                 {uploadResults.map((f) => (
-                  <li key={f.id} className="flex items-center gap-2 rounded-lg border border-emerald-500/20 bg-emerald-500/5 px-3 py-2 min-w-0">
-                    <span className="material-symbols-outlined text-emerald-500 flex-shrink-0" style={{ fontSize: 16 }}>check_circle</span>
-                    <span className="font-mono text-xs font-semibold text-on-surface truncate">{f.name}</span>
+                  <li key={f.id} className="flex items-center gap-2 rounded-[6px] border border-[var(--status-success)]/30 bg-[var(--status-success)]/10 px-3 py-2 min-w-0">
+                    <span className="material-symbols-outlined text-[var(--status-success)] flex-shrink-0" style={{ fontSize: 16 }}>check_circle</span>
+                    <span className="font-mono text-xs font-semibold text-[var(--text-primary)] truncate">{f.name}</span>
                   </li>
                 ))}
               </ul>
               <button type="button" onClick={handleReset}
-                className="mt-2 self-start flex items-center justify-center gap-1.5 rounded-xl border border-outline-variant/20 bg-surface-container px-4 py-2 text-xs font-semibold text-on-surface hover:bg-surface-container-high transition-all">
+                className="mt-2 self-start flex items-center justify-center gap-1.5 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3.5 py-1.5 text-xs font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-hover)] transition-colors shadow-2xs">
                 <span className="material-symbols-outlined" style={{ fontSize: 16 }}>add</span>
                 New upload
               </button>
@@ -608,14 +608,14 @@ export default function PceFilesWorkspace({ onFlash }) {
             <>
               <ul className="grid grid-flow-col grid-rows-5 auto-cols-[minmax(180px,1fr)] gap-1.5 overflow-x-auto pb-1 mb-2">
                 {previewFiles.map((name) => (
-                  <li key={name} className="flex items-center gap-2 rounded-lg border border-outline-variant/15 bg-surface-container px-3 py-2 min-w-0">
-                    <span className="material-symbols-outlined text-primary flex-shrink-0" style={{ fontSize: 16 }}>description</span>
-                    <span className="font-mono text-xs font-semibold text-on-surface truncate">{name}</span>
+                  <li key={name} className="flex items-center gap-2 rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] px-3 py-2 min-w-0">
+                    <span className="material-symbols-outlined text-[var(--freya-blue)] flex-shrink-0" style={{ fontSize: 16 }}>description</span>
+                    <span className="font-mono text-xs font-semibold text-[var(--text-primary)] truncate">{name}</span>
                   </li>
                 ))}
               </ul>
               {invalidPreviewEntries.length > 0 && (
-                <div className="flex items-start gap-2 rounded-lg border border-amber-500/20 bg-amber-500/5 px-3 py-2">
+                <div className="flex items-start gap-2 rounded-[6px] border border-amber-500/20 bg-amber-500/10 px-3 py-2">
                   <span className="material-symbols-outlined text-amber-500 flex-shrink-0" style={{ fontSize: 14 }}>warning</span>
                   <p className="text-[11px] text-amber-700 dark:text-amber-300 leading-snug">
                     {invalidPreviewEntries.length} configuration{invalidPreviewEntries.length === 1 ? "" : "s"} skipped — could not resolve head/length data
@@ -626,7 +626,7 @@ export default function PceFilesWorkspace({ onFlash }) {
                 type="button"
                 onClick={() => handleUpload()}
                 disabled={!canUpload}
-                className="self-start flex items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-xs font-semibold text-on-primary transition-all hover:opacity-90 active:scale-95 disabled:opacity-40"
+                className="self-start flex items-center justify-center gap-2 rounded-[6px] bg-[var(--freya-blue)] px-4 py-2 text-xs font-semibold text-white transition hover:bg-[var(--freya-blue-hover)] shadow-xs disabled:opacity-40"
               >
                 {uploading
                   ? <span className="material-symbols-outlined animate-spin" style={{ fontSize: 16 }}>progress_activity</span>
@@ -635,7 +635,7 @@ export default function PceFilesWorkspace({ onFlash }) {
               </button>
             </>
           ) : (
-            <p className="text-xs text-on-surface-variant text-center leading-relaxed py-4">
+            <p className="text-xs text-[var(--text-secondary)] text-center leading-relaxed py-4">
               Complete steps 1–2 to see a preview
             </p>
           )}
