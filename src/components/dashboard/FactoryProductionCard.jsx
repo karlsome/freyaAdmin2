@@ -1,7 +1,11 @@
 import { useNavigate } from "react-router-dom";
+import { useLanguage } from "../../contexts/LanguageContext";
 
 export default function FactoryProductionCard({ kpis, byFactory = [], byProcess = [], loading, onAskAI, isHighlighted, aiMetadata }) {
   const navigate = useNavigate();
+  const { language } = useLanguage();
+  const isJa = language === "ja";
+
   const dailyTarget = 35000;
   const total = kpis?.total || 0;
   const progressPct = Math.min(100, Math.round((total / dailyTarget) * 100));
@@ -22,19 +26,23 @@ export default function FactoryProductionCard({ kpis, byFactory = [], byProcess 
             <span className="material-symbols-outlined" style={{ fontSize: 18 }}>precision_manufacturing</span>
           </div>
           <div>
-            <h3 className="text-sm sm:text-base font-semibold text-[var(--text-primary)]">Factory Operations & Attainment</h3>
-            <p className="text-xs text-[var(--text-muted)] mt-0.5">Live run quantities, lines & worker efficiency</p>
+            <h3 className="text-sm sm:text-base font-semibold text-[var(--text-primary)]">
+              {isJa ? "工場稼働・目標達成状況" : "Factory Operations & Attainment"}
+            </h3>
+            <p className="text-xs text-[var(--text-muted)] mt-0.5">
+              {isJa ? "リアルタイム生産実績、ライン稼働、作業員効率" : "Live run quantities, lines & worker efficiency"}
+            </p>
           </div>
         </div>
 
         {onAskAI && (
           <button
-            onClick={() => onAskAI("Analyze current production progress, bottlenecks and worker efficiency")}
-            title="Ask AI to analyze production efficiency"
+            onClick={() => onAskAI(isJa ? "現在の生産進捗、ボトルネック、作業員効率を分析して" : "Analyze current production progress, bottlenecks and worker efficiency")}
+            title={isJa ? "AIに生産効率の分析を依頼" : "Ask AI to analyze production efficiency"}
             className="flex items-center gap-1.5 text-xs font-semibold text-[var(--freya-blue)] hover:bg-[var(--freya-blue-subtle)] px-2.5 py-1 rounded-[6px] transition-colors"
           >
             <span className="material-symbols-outlined" style={{ fontSize: 16 }}>auto_awesome</span>
-            <span>Ask AI</span>
+            <span>{isJa ? "AIに質問" : "Ask AI"}</span>
           </button>
         )}
       </div>
@@ -43,7 +51,8 @@ export default function FactoryProductionCard({ kpis, byFactory = [], byProcess 
       <div className="p-3.5 rounded-[6px] bg-[var(--surface-hover)] border border-[var(--border)] mb-4">
         <div className="flex items-center justify-between text-xs mb-2">
           <span className="font-semibold text-[var(--text-primary)]">
-            Daily Production Target: <span className="freya-tabular">{total.toLocaleString()}</span> / {dailyTarget.toLocaleString()} units
+            {isJa ? "日次生産目標:" : "Daily Production Target:"}{" "}
+            <span className="freya-tabular">{total.toLocaleString()}</span> / {dailyTarget.toLocaleString()} {isJa ? "個" : "units"}
           </span>
           <span className="font-bold text-[var(--freya-blue)] freya-tabular">{progressPct}%</span>
         </div>
@@ -55,20 +64,26 @@ export default function FactoryProductionCard({ kpis, byFactory = [], byProcess 
         </div>
         <div className="flex items-center justify-between text-xs text-[var(--text-muted)] mt-2">
           <span>
-            Active Personnel: {aiMetadata?.activeWorkers?.length ? (
-              <strong className="text-[var(--freya-blue)]">{aiMetadata.activeWorkers.length} verified operators ({aiMetadata.factory})</strong>
+            {isJa ? "稼働人員:" : "Active Personnel:"}{" "}
+            {aiMetadata?.activeWorkers?.length ? (
+              <strong className="text-[var(--freya-blue)]">
+                {aiMetadata.activeWorkers.length}{isJa ? `名 (${aiMetadata.factory})` : ` verified operators (${aiMetadata.factory})`}
+              </strong>
             ) : (
-              `~${totalWorkersEstimate} operators`
+              isJa ? `約 ${totalWorkersEstimate} 名` : `~${totalWorkersEstimate} operators`
             )}
           </span>
-          <span>Efficiency: <strong className="text-[var(--text-primary)] freya-tabular">{unitsPerLaborHour}</strong> units/worker-hr</span>
+          <span>
+            {isJa ? "作業効率:" : "Efficiency:"}{" "}
+            <strong className="text-[var(--text-primary)] freya-tabular">{unitsPerLaborHour}</strong> {isJa ? "個/人・時" : "units/worker-hr"}
+          </span>
         </div>
       </div>
 
       {/* ── Per-Factory Quick Status ── */}
       <div className="mb-4">
         <span className="text-xs font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)] block mb-2">
-          Facility Breakdown
+          {isJa ? "拠点別実績" : "Facility Breakdown"}
         </span>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
           {byFactory.map((f) => {
@@ -82,10 +97,12 @@ export default function FactoryProductionCard({ kpis, byFactory = [], byProcess 
                 <div>
                   <div className="flex items-center gap-1.5">
                     <span className="text-xs font-semibold text-[var(--text-primary)]">{f.name}</span>
-                    <span className="text-[10px] text-[var(--text-muted)] font-mono">({f.submissionCount || 0} batches)</span>
+                    <span className="text-[10px] text-[var(--text-muted)] font-mono">
+                      ({f.submissionCount || 0} {isJa ? "バッチ" : "batches"})
+                    </span>
                   </div>
                   <div className="text-sm font-semibold text-[var(--text-primary)] freya-tabular mt-0.5">
-                    {(f.total || 0).toLocaleString()} <span className="text-xs text-[var(--text-muted)] font-normal">units</span>
+                    {(f.total || 0).toLocaleString()} <span className="text-xs text-[var(--text-muted)] font-normal">{isJa ? "個" : "units"}</span>
                   </div>
                 </div>
 
@@ -104,7 +121,7 @@ export default function FactoryProductionCard({ kpis, byFactory = [], byProcess 
                   </span>
                   {hasTrouble && (
                     <span className="text-xs text-amber-600 dark:text-amber-400 block mt-0.5 font-medium">
-                      ▲ {f.troubleHours.toFixed(1)}h stoppage
+                      ▲ {f.troubleHours.toFixed(1)}{isJa ? "時間 停止" : "h stoppage"}
                     </span>
                   )}
                 </div>
@@ -117,8 +134,8 @@ export default function FactoryProductionCard({ kpis, byFactory = [], byProcess 
       {/* ── Per-Process Attainment Strip ── */}
       <div className="pt-3 border-t border-[var(--border)]">
         <div className="flex items-center justify-between text-xs mb-2">
-          <span className="font-semibold text-[var(--text-primary)]">Process Flow Rates</span>
-          <span className="text-[var(--text-muted)] text-[11px]">Today</span>
+          <span className="font-semibold text-[var(--text-primary)]">{isJa ? "工程別スループット" : "Process Flow Rates"}</span>
+          <span className="text-[var(--text-muted)] text-[11px]">{isJa ? "本日" : "Today"}</span>
         </div>
         <div className="grid grid-cols-4 gap-2">
           {byProcess.map((proc) => (

@@ -20,29 +20,37 @@ const PERSONA_PRESETS = {
   plant_operations: {
     id: "plant_operations",
     label: "Plant Operations",
+    labelJa: "製造・現場オペレーション",
     icon: "factory",
     description: "Focus on output volume, line bottlenecks, and worker efficiency",
+    descriptionJa: "生産量、ラインのボトルネック、作業効率にフォーカス",
     cards: ["production", "defects", "camera", "telemetry", "issues", "finance"],
   },
   executive: {
     id: "executive",
     label: "Executive & Financials",
+    labelJa: "経営・財務サマリー",
     icon: "payments",
     description: "Focus on gross production value, defect scrap cost, and margins",
+    descriptionJa: "生産総額、不良廃棄コスト、歩留まりにフォーカス",
     cards: ["finance", "defects", "production", "issues", "camera", "telemetry"],
   },
   maintenance: {
     id: "maintenance",
     label: "Maintenance & Facilities",
+    labelJa: "保全・設備管理",
     icon: "build",
     description: "Focus on machine idle times, sensor diagnostics, and live cameras",
+    descriptionJa: "設備の停止・稼働状況、センサー診断、ライブカメラにフォーカス",
     cards: ["telemetry", "camera", "issues", "production", "defects", "finance"],
   },
   all: {
     id: "all",
     label: "All Cards Overview",
+    labelJa: "全体概要 (全カード)",
     icon: "grid_view",
     description: "Full modular overview across all operational metrics",
+    descriptionJa: "すべての運用指標をモジュール形式で俯瞰",
     cards: ["production", "finance", "defects", "camera", "telemetry", "issues"],
   },
 };
@@ -244,7 +252,7 @@ export default function DashboardPage() {
               }`}
             >
               <span className="material-symbols-outlined" style={{ fontSize: 18 }}>smart_toy</span>
-              <span>{copilotOpen ? "Hide Copilot" : "AI Copilot"}</span>
+              <span>{copilotOpen ? (language === "ja" ? "Copilotを隠す" : "Hide Copilot") : (language === "ja" ? "AI Copilot" : "AI Copilot")}</span>
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
             </button>
 
@@ -264,7 +272,9 @@ export default function DashboardPage() {
       {error && (
         <div className="freya-card border-rose-200 dark:border-rose-900 bg-rose-50/50 dark:bg-rose-950/20 p-4 mb-4 flex items-center gap-3 text-rose-600 dark:text-rose-400">
           <span className="material-symbols-outlined flex-shrink-0" style={{ fontSize: 20 }}>error</span>
-          <p className="text-sm font-semibold">Backend unreachable — data may be stale. ({error})</p>
+          <p className="text-sm font-semibold">
+            {language === "ja" ? `サーバーに接続できません — 表示中のデータは古い可能性があります。(${error})` : `Backend unreachable — data may be stale. (${error})`}
+          </p>
         </div>
       )}
 
@@ -276,7 +286,7 @@ export default function DashboardPage() {
           <div className="p-2 sm:p-2.5 rounded-[8px] bg-[var(--surface)] border border-[var(--border)] shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
             <div className="flex items-center gap-2">
               <span className="text-xs font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)] px-1 hidden md:inline">
-                Role View:
+                {language === "ja" ? "表示ロール:" : "Role View:"}
               </span>
               <div className="inline-flex p-0.5 rounded-[6px] bg-[var(--surface-hover)] border border-[var(--border)] flex-wrap gap-0.5">
                 {Object.values(PERSONA_PRESETS).map((preset) => (
@@ -290,7 +300,7 @@ export default function DashboardPage() {
                     }`}
                   >
                     <span className="material-symbols-outlined" style={{ fontSize: 16 }}>{preset.icon}</span>
-                    <span>{preset.label}</span>
+                    <span>{language === "ja" ? preset.labelJa : preset.label}</span>
                   </button>
                 ))}
               </div>
@@ -299,18 +309,18 @@ export default function DashboardPage() {
             <div className="flex items-center gap-2 self-end sm:self-center">
               <button
                 onClick={handleResetToDefault}
-                title="Reset layout order"
+                title={language === "ja" ? "配置を初期状態に戻す" : "Reset layout order"}
                 className="h-8 px-2.5 text-xs font-semibold text-[var(--text-muted)] hover:text-[var(--text-primary)] rounded-[4px] hover:bg-[var(--surface-hover)] transition-colors flex items-center gap-1"
               >
                 <span className="material-symbols-outlined" style={{ fontSize: 14 }}>restart_alt</span>
-                <span>Reset Grid</span>
+                <span>{language === "ja" ? "初期配置に戻す" : "Reset Grid"}</span>
               </button>
             </div>
           </div>
 
           {/* Description hint */}
           <p className="text-xs text-[var(--text-muted)] px-1">
-            {PERSONA_PRESETS[currentPersona]?.description} · <em>AI prompts or presets dynamically reconfigure the cards below.</em>
+            {language === "ja" ? PERSONA_PRESETS[currentPersona]?.descriptionJa : PERSONA_PRESETS[currentPersona]?.description} · <em>{language === "ja" ? "AIプロンプトやロール選択で下のカードが動的に再配置されます。" : "AI prompts or presets dynamically reconfigure the cards below."}</em>
           </p>
 
           {/* ── AI Spotlight View: Big, upfront, noise-free ── */}
@@ -328,13 +338,13 @@ export default function DashboardPage() {
               <div className="flex items-center justify-between pt-4 pb-1 text-xs text-[var(--text-muted)] border-t border-[var(--border)] mt-4">
                 <div className="flex items-center gap-1.5 font-semibold uppercase tracking-[0.04em]">
                   <span className="material-symbols-outlined" style={{ fontSize: 15 }}>layers</span>
-                  <span>Standard Facility Overview (Secondary)</span>
+                  <span>{language === "ja" ? "通常工場概要（全カード）" : "Standard Facility Overview (Secondary)"}</span>
                 </div>
                 <button
                   onClick={() => setAiSpotlight(null)}
                   className="hover:text-[var(--text-primary)] underline transition-colors cursor-pointer text-[11px]"
                 >
-                  Dismiss Focus View
+                  {language === "ja" ? "フォーカス解除" : "Dismiss Focus View"}
                 </button>
               </div>
             </div>

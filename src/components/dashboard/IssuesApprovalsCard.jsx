@@ -1,6 +1,9 @@
 import { useState } from "react";
+import { useLanguage } from "../../contexts/LanguageContext";
 
 export default function IssuesApprovalsCard({ issues = [], recent = [], onRecordClick, onAskAI, isHighlighted }) {
+  const { language } = useLanguage();
+  const isJa = language === "ja";
   const [activeTab, setActiveTab] = useState("issues");
 
   return (
@@ -16,19 +19,23 @@ export default function IssuesApprovalsCard({ issues = [], recent = [], onRecord
             <span className="material-symbols-outlined" style={{ fontSize: 18 }}>task_alt</span>
           </div>
           <div>
-            <h3 className="text-sm sm:text-base font-semibold text-[var(--text-primary)]">Issues & Submissions</h3>
-            <p className="text-xs text-[var(--text-muted)] mt-0.5">Live trouble tickets, bottlenecks & approvals</p>
+            <h3 className="text-sm sm:text-base font-semibold text-[var(--text-primary)]">
+              {isJa ? "異常・報告承認" : "Issues & Submissions"}
+            </h3>
+            <p className="text-xs text-[var(--text-muted)] mt-0.5">
+              {isJa ? "現場トラブル、ボトルネックおよび最新提出" : "Live trouble tickets, bottlenecks & approvals"}
+            </p>
           </div>
         </div>
 
         {onAskAI && (
           <button
-            onClick={() => onAskAI("Summarize open maintenance tickets and line stoppages")}
-            title="Ask AI to summarize issues"
+            onClick={() => onAskAI(isJa ? "未解決の保全チケットとライン停止の要約を作成して" : "Summarize open maintenance tickets and line stoppages")}
+            title={isJa ? "AIに異常の要約を依頼" : "Ask AI to summarize issues"}
             className="flex items-center gap-1.5 text-xs font-semibold text-[var(--freya-blue)] hover:bg-[var(--freya-blue-subtle)] px-2.5 py-1 rounded-[6px] transition-colors"
           >
             <span className="material-symbols-outlined" style={{ fontSize: 16 }}>auto_awesome</span>
-            <span>Ask AI</span>
+            <span>{isJa ? "AIに質問" : "Ask AI"}</span>
           </button>
         )}
       </div>
@@ -43,7 +50,7 @@ export default function IssuesApprovalsCard({ issues = [], recent = [], onRecord
               : "text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--surface)]/70"
           }`}
         >
-          <span>Troubles & Stoppages</span>
+          <span>{isJa ? "トラブル・ライン停止" : "Troubles & Stoppages"}</span>
           <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-mono ${activeTab === "issues" ? "bg-white/20 text-white" : "bg-[var(--surface)] text-[var(--text-muted)]"}`}>
             {issues.length}
           </span>
@@ -57,7 +64,7 @@ export default function IssuesApprovalsCard({ issues = [], recent = [], onRecord
               : "text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--surface)]/70"
           }`}
         >
-          <span>Recent Submissions</span>
+          <span>{isJa ? "最新の送信履歴" : "Recent Submissions"}</span>
           <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-mono ${activeTab === "recent" ? "bg-white/20 text-white" : "bg-[var(--surface)] text-[var(--text-muted)]"}`}>
             {recent.length}
           </span>
@@ -69,7 +76,7 @@ export default function IssuesApprovalsCard({ issues = [], recent = [], onRecord
         {activeTab === "issues" ? (
           issues.length === 0 ? (
             <div className="p-4 rounded-[6px] bg-[var(--surface-hover)] text-center text-xs text-[var(--text-muted)]">
-              ● Zero open trouble tickets or line interruptions.
+              ● {isJa ? "未解決のトラブルや停止チケットはありません。" : "Zero open trouble tickets or line interruptions."}
             </div>
           ) : (
             issues.slice(0, 5).map((r, i) => {
@@ -98,7 +105,7 @@ export default function IssuesApprovalsCard({ issues = [], recent = [], onRecord
                   <div className="text-right flex-shrink-0">
                     {hasTrouble && (
                       <span className="inline-block text-xs font-semibold text-amber-600 dark:text-amber-400">
-                        ▲ {Number(r.Total_Trouble_Hours).toFixed(1)}h stoppage
+                        ▲ {Number(r.Total_Trouble_Hours).toFixed(1)}h {isJa ? "停止" : "stoppage"}
                       </span>
                     )}
                     {ng > 0 && (
@@ -128,12 +135,15 @@ export default function IssuesApprovalsCard({ issues = [], recent = [], onRecord
                   </span>
                 </div>
                 <div className="text-xs text-[var(--text-muted)] mt-0.5">
-                  Quantity: <span className="font-semibold text-[var(--text-primary)] freya-tabular">{Number(r.Process_Quantity || r.Total || 0).toLocaleString()}</span>
+                  {isJa ? "生産数:" : "Quantity:"}{" "}
+                  <span className="font-semibold text-[var(--text-primary)] freya-tabular">
+                    {Number(r.Process_Quantity || r.Total || 0).toLocaleString()}
+                  </span>
                 </div>
               </div>
 
               <span className="text-xs text-[var(--text-muted)] font-mono freya-tabular flex-shrink-0">
-                {r.createdAt ? new Date(r.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "Just now"}
+                {r.createdAt ? new Date(r.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : (isJa ? "たった今" : "Just now")}
               </span>
             </div>
           ))
@@ -141,8 +151,8 @@ export default function IssuesApprovalsCard({ issues = [], recent = [], onRecord
       </div>
 
       <div className="pt-3 border-t border-[var(--border)] mt-3 flex items-center justify-between text-[11px] text-[var(--text-muted)]">
-        <span>Click any row to view full batch details</span>
-        <span className="font-semibold text-[var(--freya-blue)]">All Synced</span>
+        <span>{isJa ? "行をクリックしてバッチ詳細を表示" : "Click any row to view full batch details"}</span>
+        <span className="font-semibold text-[var(--freya-blue)]">{isJa ? "同期完了" : "All Synced"}</span>
       </div>
     </div>
   );

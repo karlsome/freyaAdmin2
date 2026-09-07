@@ -1,6 +1,10 @@
 import { useMemo } from "react";
+import { useLanguage } from "../../contexts/LanguageContext";
 
 export default function FinanceOverviewCard({ kpis, byProcess = [], loading, onAskAI, isHighlighted }) {
+  const { language } = useLanguage();
+  const isJa = language === "ja";
+
   // Estimated financial computations based on industrial benchmarks
   // Unit value avg ~¥1,200, Scrap/Defect cost avg ~¥2,800 (material + wasted machine time)
   const stats = useMemo(() => {
@@ -30,19 +34,23 @@ export default function FinanceOverviewCard({ kpis, byProcess = [], loading, onA
             <span className="material-symbols-outlined" style={{ fontSize: 18 }}>payments</span>
           </div>
           <div>
-            <h3 className="text-sm sm:text-base font-semibold text-[var(--text-primary)]">Financials & Scrap Loss</h3>
-            <p className="text-xs text-[var(--text-muted)] mt-0.5">Real-time production value & waste cost</p>
+            <h3 className="text-sm sm:text-base font-semibold text-[var(--text-primary)]">
+              {isJa ? "財務インパクト・廃棄損益" : "Financials & Scrap Loss"}
+            </h3>
+            <p className="text-xs text-[var(--text-muted)] mt-0.5">
+              {isJa ? "生産額および不良廃棄コストのリアルタイム試算" : "Real-time production value & waste cost"}
+            </p>
           </div>
         </div>
 
         {onAskAI && (
           <button
-            onClick={() => onAskAI("Analyze today's scrap cost and cost optimization opportunities")}
-            title="Ask AI to analyze scrap costs"
+            onClick={() => onAskAI(isJa ? "本日の廃棄損コストとコスト最適化の機会を分析して" : "Analyze today's scrap cost and cost optimization opportunities")}
+            title={isJa ? "AIに廃棄コスト分析を依頼" : "Ask AI to analyze scrap costs"}
             className="flex items-center gap-1.5 text-xs font-semibold text-[var(--freya-blue)] hover:bg-[var(--freya-blue-subtle)] px-2.5 py-1 rounded-[6px] transition-colors"
           >
             <span className="material-symbols-outlined" style={{ fontSize: 16 }}>auto_awesome</span>
-            <span>Ask AI</span>
+            <span>{isJa ? "AIに質問" : "Ask AI"}</span>
           </button>
         )}
       </div>
@@ -51,54 +59,58 @@ export default function FinanceOverviewCard({ kpis, byProcess = [], loading, onA
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
         <div className="p-3 rounded-[6px] bg-[var(--surface-hover)] border border-[var(--border)]">
           <span className="text-xs font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)] block mb-1">
-            Gross Value
+            {isJa ? "生産総額" : "Gross Value"}
           </span>
           <span className="text-lg sm:text-xl font-bold text-emerald-600 dark:text-emerald-400 freya-tabular block">
             {fmtYen(stats.grossValue)}
           </span>
-          <span className="text-xs text-[var(--text-muted)] mt-0.5 block">Est. output total</span>
+          <span className="text-xs text-[var(--text-muted)] mt-0.5 block">{isJa ? "本日出来高推定" : "Est. output total"}</span>
         </div>
 
         <div className="p-3 rounded-[6px] bg-[var(--surface-hover)] border border-[var(--border)]">
           <span className="text-xs font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)] block mb-1">
-            Scrap Cost
+            {isJa ? "廃棄損失" : "Scrap Cost"}
           </span>
           <span className="text-lg sm:text-xl font-bold text-rose-600 dark:text-rose-400 freya-tabular block">
             {fmtYen(stats.scrapLoss)}
           </span>
           <span className="text-xs text-rose-600 dark:text-rose-400 mt-0.5 block font-medium">
-            ▲ {(kpis?.defectRate || 0).toFixed(2)}% scrap rate
+            ▲ {(kpis?.defectRate || 0).toFixed(2)}% {isJa ? "廃棄率" : "scrap rate"}
           </span>
         </div>
 
         <div className="p-3 rounded-[6px] bg-[var(--surface-hover)] border border-[var(--border)]">
           <span className="text-xs font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)] block mb-1">
-            Material Yield
+            {isJa ? "歩留まり率" : "Material Yield"}
           </span>
           <span className="text-lg sm:text-xl font-bold text-[var(--text-primary)] freya-tabular block">
             {loading ? "—" : `${stats.materialEfficiency.toFixed(1)}%`}
           </span>
           <span className="text-xs text-emerald-600 dark:text-emerald-400 mt-0.5 block font-medium">
-            ● Target ≥ 98.0%
+            ● {isJa ? "目標 ≥ 98.0%" : "Target ≥ 98.0%"}
           </span>
         </div>
 
         <div className="p-3 rounded-[6px] bg-[var(--surface-hover)] border border-[var(--border)]">
           <span className="text-xs font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)] block mb-1">
-            Yield / Labor Hr
+            {isJa ? "労働生産性/時" : "Yield / Labor Hr"}
           </span>
           <span className="text-lg sm:text-xl font-bold text-[var(--text-primary)] freya-tabular block">
             {fmtYen(stats.valuePerHour)}
           </span>
-          <span className="text-xs text-[var(--text-muted)] mt-0.5 block">Per active worker hr</span>
+          <span className="text-xs text-[var(--text-muted)] mt-0.5 block">{isJa ? "稼働作業員時あたり" : "Per active worker hr"}</span>
         </div>
       </div>
 
       {/* ── Scrap breakdown by process ── */}
       <div className="pt-3 border-t border-[var(--border)]">
         <div className="flex items-center justify-between text-xs mb-2">
-          <span className="font-semibold text-[var(--text-primary)]">Scrap Cost Allocation by Process</span>
-          <span className="text-[var(--text-muted)] text-[11px] freya-tabular">{(kpis?.totalNG || 0).toLocaleString()} NG units</span>
+          <span className="font-semibold text-[var(--text-primary)]">
+            {isJa ? "工程別廃棄コスト配分" : "Scrap Cost Allocation by Process"}
+          </span>
+          <span className="text-[var(--text-muted)] text-[11px] freya-tabular">
+            {(kpis?.totalNG || 0).toLocaleString()} {isJa ? "個 NG" : "NG units"}
+          </span>
         </div>
         <div className="grid grid-cols-4 gap-2">
           {byProcess.map((p) => {

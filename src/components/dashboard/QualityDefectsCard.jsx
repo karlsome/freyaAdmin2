@@ -1,6 +1,10 @@
 import { getDefectStatus } from "../../utils/statusHelpers";
+import { useLanguage } from "../../contexts/LanguageContext";
 
 export default function QualityDefectsCard({ kpis, issues = [], byProcess = [], onRecordClick, onAskAI, isHighlighted }) {
+  const { language } = useLanguage();
+  const isJa = language === "ja";
+
   const defectRate = kpis?.defectRate || 0;
   const defStatus = getDefectStatus(defectRate);
   const totalNG = kpis?.totalNG || 0;
@@ -24,7 +28,9 @@ export default function QualityDefectsCard({ kpis, issues = [], byProcess = [], 
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h3 className="text-sm sm:text-base font-semibold text-[var(--text-primary)]">Quality & Defect Diagnostics</h3>
+              <h3 className="text-sm sm:text-base font-semibold text-[var(--text-primary)]">
+                {isJa ? "品質・不良診断" : "Quality & Defect Diagnostics"}
+              </h3>
               <span
                 className={`freya-badge ${
                   defStatus.level === "normal"
@@ -38,18 +44,20 @@ export default function QualityDefectsCard({ kpis, issues = [], byProcess = [], 
                 {defStatus.label}
               </span>
             </div>
-            <p className="text-xs text-[var(--text-muted)] mt-0.5">Real-time scrap rate and non-conformance</p>
+            <p className="text-xs text-[var(--text-muted)] mt-0.5">
+              {isJa ? "リアルタイム不良率および規格外監視" : "Real-time scrap rate and non-conformance"}
+            </p>
           </div>
         </div>
 
         {onAskAI && (
           <button
-            onClick={() => onAskAI("Investigate defect spikes, root causes, and inspection anomalies")}
-            title="Ask AI to analyze defects"
+            onClick={() => onAskAI(isJa ? "不良急増、原因、検査異常を調査して" : "Investigate defect spikes, root causes, and inspection anomalies")}
+            title={isJa ? "AIに不良分析を依頼" : "Ask AI to analyze defects"}
             className="flex items-center gap-1.5 text-xs font-semibold text-[var(--freya-blue)] hover:bg-[var(--freya-blue-subtle)] px-2.5 py-1 rounded-[6px] transition-colors"
           >
             <span className="material-symbols-outlined" style={{ fontSize: 16 }}>auto_awesome</span>
-            <span>Ask AI</span>
+            <span>{isJa ? "AIに質問" : "Ask AI"}</span>
           </button>
         )}
       </div>
@@ -58,7 +66,7 @@ export default function QualityDefectsCard({ kpis, issues = [], byProcess = [], 
       <div className="grid grid-cols-2 gap-3 mb-4">
         <div className="p-3.5 rounded-[6px] bg-[var(--surface-hover)] border border-[var(--border)]">
           <span className="text-xs font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)] block mb-1">
-            Overall Defect Rate
+            {isJa ? "総合不良率" : "Overall Defect Rate"}
           </span>
           <div className="flex items-baseline gap-2">
             <span className={`text-xl sm:text-2xl font-bold freya-tabular ${
@@ -66,19 +74,19 @@ export default function QualityDefectsCard({ kpis, issues = [], byProcess = [], 
             }`}>
               {defectRate.toFixed(2)}%
             </span>
-            <span className="text-xs text-[var(--text-muted)] font-normal">threshold 1.50%</span>
+            <span className="text-xs text-[var(--text-muted)] font-normal">{isJa ? "基準 1.50%" : "threshold 1.50%"}</span>
           </div>
         </div>
 
         <div className="p-3.5 rounded-[6px] bg-[var(--surface-hover)] border border-[var(--border)]">
           <span className="text-xs font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)] block mb-1">
-            Total NG Units
+            {isJa ? "総不良数 (NG)" : "Total NG Units"}
           </span>
           <div className="flex items-baseline gap-2">
             <span className="text-xl sm:text-2xl font-bold text-rose-600 dark:text-rose-400 freya-tabular">
               {totalNG.toLocaleString()}
             </span>
-            <span className="text-xs text-[var(--text-muted)] font-normal">units rejected</span>
+            <span className="text-xs text-[var(--text-muted)] font-normal">{isJa ? "個 破棄" : "units rejected"}</span>
           </div>
         </div>
       </div>
@@ -86,11 +94,11 @@ export default function QualityDefectsCard({ kpis, issues = [], byProcess = [], 
       {/* ── Defect Alerts List ── */}
       <div className="mb-4">
         <span className="text-xs font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)] block mb-2">
-          Prioritized Defect Issues
+          {isJa ? "重点不良アラート" : "Prioritized Defect Issues"}
         </span>
         {defectIssues.length === 0 ? (
           <div className="p-3 rounded-[6px] bg-[var(--surface-hover)] text-center text-xs text-[var(--text-muted)]">
-            ● Zero critical defect anomalies detected today.
+            ● {isJa ? "本日重大な不良異常は検出されていません。" : "Zero critical defect anomalies detected today."}
           </div>
         ) : (
           <div className="space-y-1.5">
@@ -122,8 +130,8 @@ export default function QualityDefectsCard({ kpis, issues = [], byProcess = [], 
       {/* ── Process Defect Distribution ── */}
       <div className="pt-3 border-t border-[var(--border)]">
         <div className="flex items-center justify-between text-xs mb-2">
-          <span className="font-semibold text-[var(--text-primary)]">Defects by Process</span>
-          <span className="text-[var(--text-muted)] text-[11px]">Today</span>
+          <span className="font-semibold text-[var(--text-primary)]">{isJa ? "工程別不良分布" : "Defects by Process"}</span>
+          <span className="text-[var(--text-muted)] text-[11px]">{isJa ? "本日" : "Today"}</span>
         </div>
         <div className="grid grid-cols-4 gap-2">
           {byProcess.map((p) => {
