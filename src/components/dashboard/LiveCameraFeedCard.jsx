@@ -31,7 +31,8 @@ export default function LiveCameraFeedCard({ onOpenModal, onAskAI, isHighlighted
     if (!video) return;
     setStreamError(false);
 
-    const src = `${BASE_URL}api/cam?stream=${activeStream}`;
+    const camBase = import.meta.env.VITE_CAM_URL || BASE_URL;
+    const src = `${camBase}api/cam?stream=${activeStream}`;
     const camUser = import.meta.env.VITE_CAM_USER || '';
     const camPass = import.meta.env.VITE_CAM_PASS || '';
     const basicAuth = camUser ? 'Basic ' + btoa(`${camUser}:${camPass}`) : '';
