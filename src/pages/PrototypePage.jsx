@@ -515,7 +515,7 @@ export default function PrototypePage() {
   ], [deletingId, t]);
 
   return (
-    <div className="min-h-screen max-w-[1600px] mx-auto space-y-6 pt-20 px-6 pb-12">
+    <div className="w-full h-screen overflow-y-auto space-y-6 pt-20 px-4 sm:px-6 md:px-8 pb-16">
       <PageHeader
         title={t("prototypeManagement")}
         subtitle="Register new 試作 entries and manage their DXF, PDF, and PCE files."

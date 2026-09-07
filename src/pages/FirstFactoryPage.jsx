@@ -1860,7 +1860,7 @@ export default function FirstFactoryPage() {
   };
 
   return (
-    <div className="freya-page-container p-6 pt-24 pb-24 overflow-y-auto h-screen">
+    <div className="w-full h-screen overflow-y-auto space-y-6 pt-20 px-4 sm:px-6 md:px-8 pb-16">
       <PageHeader
         eyebrow="First Factory"
         title={t('ff_title')}

@@ -12,6 +12,7 @@ import { useLanguage } from "../contexts/LanguageContext";
 import CheckFormBuilderModal from "../components/CheckFormBuilderModal";
 import CheckFormDetailModal from "../components/CheckFormDetailModal";
 import PageHeader from "../components/PageHeader";
+import LiquidSegmentedControl from "../components/LiquidSegmentedControl";
 
 const STATUS_CONFIG = {
   active: {
@@ -493,7 +494,7 @@ export default function MaintenancePage() {
   }
 
   return (
-    <div className="min-h-screen max-w-[1600px] mx-auto space-y-6 pt-20 px-6 pb-12">
+    <div className="w-full h-screen overflow-y-auto space-y-6 pt-20 px-4 sm:px-6 md:px-8 pb-16">
       {/* Page Header */}
       <PageHeader
         eyebrow={isJa ? "点検" : "Checklist"}
@@ -636,31 +637,11 @@ export default function MaintenancePage() {
       <div className="freya-card relative z-20 rounded-[8px] border border-[var(--border)] bg-[var(--surface)] p-4 shadow-sm space-y-3">
         {/* Top Row: Cadence Tabs & Search */}
         <div className="flex flex-col gap-3 border-b border-[var(--border)] pb-3 lg:flex-row lg:items-center lg:justify-between">
-          <div className="flex flex-wrap gap-1.5">
-            {tabs.map((tab) => {
-              const isActive = activeTab === tab.key;
-              return (
-                <button
-                  key={tab.key}
-                  type="button"
-                  onClick={() => setActiveTab(tab.key)}
-                  className={`inline-flex items-center gap-1.5 rounded-[6px] px-3 py-1.5 text-xs font-semibold transition-colors ${
-                    isActive
-                      ? "bg-[var(--freya-blue)] text-white shadow-xs"
-                      : "border border-[var(--border)] bg-[var(--surface)] text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-hover)]"
-                  }`}
-                >
-                  <span className="material-symbols-outlined" style={{ fontSize: 15 }}>{tab.icon}</span>
-                  <span>{tab.label}</span>
-                  <span className={`rounded-[4px] px-1.5 py-0.5 text-[10px] font-bold ${
-                    isActive ? "bg-white/20 text-white" : "bg-[var(--surface-subtle)] text-[var(--text-muted)]"
-                  }`}>
-                    {tab.count}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
+          <LiquidSegmentedControl
+            items={tabs}
+            activeKey={activeTab}
+            onChange={setActiveTab}
+          />
 
           {/* Quick search input */}
           <div className="relative min-w-[240px] flex-1 max-w-md">

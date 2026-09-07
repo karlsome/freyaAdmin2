@@ -646,7 +646,7 @@ export default function MasterDBPage() {
   }
 
   return (
-    <div className="min-h-screen max-w-[1600px] mx-auto space-y-6 pt-20 px-6 pb-12">
+    <div className="w-full h-screen overflow-y-auto space-y-6 pt-20 px-4 sm:px-6 md:px-8 pb-16">
       <PageHeader
         title="Master Product Management"
         className="mb-6 md:flex-row md:items-end md:justify-between"

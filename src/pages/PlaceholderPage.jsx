@@ -20,7 +20,7 @@ export default function PlaceholderPage({ page }) {
   const meta = pageLabels[page] || { icon: "web", label: page };
 
   return (
-    <section className="min-h-screen max-w-[1600px] mx-auto space-y-6 pt-20 px-6 pb-12 flex items-center justify-center">
+    <section className="w-full h-screen overflow-y-auto space-y-6 pt-20 px-4 sm:px-6 md:px-8 pb-16 flex items-center justify-center">
       <div className="freya-card rounded-[8px] p-10 text-center max-w-sm border border-[var(--border)] bg-[var(--surface)] shadow-sm">
         <div className="w-12 h-12 rounded-[6px] border border-[var(--freya-blue)]/30 bg-[var(--freya-blue)]/10 text-[var(--freya-blue)] flex items-center justify-center mx-auto mb-4 shadow-2xs">
           <span className="material-symbols-outlined" style={{ fontSize: 24, fontVariationSettings: "'FILL' 1" }}>

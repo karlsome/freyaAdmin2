@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import PageHeader from "../components/PageHeader";
 import FormField from "../components/FormField";
 import StatSummaryCard from "../components/StatSummaryCard";
+import LiquidSegmentedControl from "../components/LiquidSegmentedControl";
 import { useLanguage } from "../contexts/LanguageContext";
 import { fetchMaterialLotAnalytics } from "../services/api";
 
@@ -261,7 +262,7 @@ export default function AnalyticsPage() {
   }, [filteredRuns, runsPage, runsPerPage]);
 
   return (
-    <section className="min-h-screen max-w-[1600px] mx-auto space-y-6 pt-20 px-6 pb-12">
+    <section className="w-full h-screen overflow-y-auto space-y-6 pt-20 px-4 sm:px-6 md:px-8 pb-16">
       {/* Header */}
       <PageHeader
         eyebrow={isJa ? "材料分析・トレーサビリティ" : "Material Analytics & Traceability"}
@@ -454,32 +455,24 @@ export default function AnalyticsPage() {
 
       {/* View Switcher & Action Bar */}
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--border)] pb-3">
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => setActiveTab("cards")}
-            className={`flex items-center gap-2 rounded-[6px] px-3.5 py-1.5 text-xs font-semibold transition-all ${
-              activeTab === "cards"
-                ? "bg-[var(--freya-blue)] text-white shadow-xs"
-                : "border border-[var(--border)] bg-[var(--surface)] text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-hover)]"
-            }`}
-          >
-            <span className="material-symbols-outlined" style={{ fontSize: 16 }}>dashboard</span>
-            <span>{isJa ? `材料ロット別カード (${filteredLots.length})` : `By Material Lot Cards (${filteredLots.length})`}</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab("table")}
-            className={`flex items-center gap-2 rounded-[6px] px-3.5 py-1.5 text-xs font-semibold transition-all ${
-              activeTab === "table"
-                ? "bg-[var(--freya-blue)] text-white shadow-xs"
-                : "border border-[var(--border)] bg-[var(--surface)] text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-hover)]"
-            }`}
-          >
-            <span className="material-symbols-outlined" style={{ fontSize: 16 }}>table_rows</span>
-            <span>{isJa ? `実績明細一覧 (${filteredRuns.length})` : `Detailed Runs Table (${filteredRuns.length})`}</span>
-          </button>
-        </div>
+        <LiquidSegmentedControl
+          items={[
+            {
+              key: "cards",
+              label: isJa ? "材料ロット別カード" : "By Material Lot Cards",
+              icon: "dashboard",
+              badge: filteredLots.length,
+            },
+            {
+              key: "table",
+              label: isJa ? "実績明細一覧" : "Detailed Runs Table",
+              icon: "table_rows",
+              badge: filteredRuns.length,
+            },
+          ]}
+          activeKey={activeTab}
+          onChange={setActiveTab}
+        />
 
         {activeTab === "cards" && filteredLots.length > 0 && (
           <div className="flex items-center gap-2">

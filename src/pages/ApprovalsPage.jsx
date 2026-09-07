@@ -1146,7 +1146,7 @@ export default function ApprovalsPage() {
 
   if (!hasAccess) {
     return (
-      <section className="min-h-screen max-w-[1600px] mx-auto space-y-6 pt-20 px-6 pb-12">
+      <section className="w-full h-screen overflow-y-auto space-y-6 pt-20 px-4 sm:px-6 md:px-8 pb-16">
         <div className="freya-card rounded-[8px] border border-[var(--border)] bg-[var(--surface)] p-6 shadow-sm">
           <div className="text-[10px] font-mono font-bold uppercase tracking-[0.18em] text-[var(--text-muted)]">Approvals</div>
           <h1 className="mt-2 text-xl font-bold text-[var(--text-primary)]">Access Required</h1>
@@ -1165,7 +1165,7 @@ export default function ApprovalsPage() {
   const currentPage = activeTab === "recycleBin" ? effectiveBinPage : pagination.currentPage || page;
 
   return (
-    <section className="min-h-screen max-w-[1600px] mx-auto space-y-6 pt-20 px-6 pb-12">
+    <section className="w-full h-screen overflow-y-auto space-y-6 pt-20 px-4 sm:px-6 md:px-8 pb-16">
       <FlashBanner flash={flash} onClose={() => setFlash(null)} />
       <PageHeader
         eyebrow="Approvals"

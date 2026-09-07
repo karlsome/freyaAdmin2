@@ -324,7 +324,7 @@ export default function FactoryStatusLogsPage() {
   ]), []);
 
   return (
-    <div className="min-h-screen px-6 py-6 max-w-[1600px] mx-auto space-y-6 pt-20">
+    <div className="w-full h-screen overflow-y-auto space-y-6 pt-20 px-4 sm:px-6 md:px-8 pb-16">
       <div className="w-full">
         <PageHeader
           eyebrow="Live Operations"

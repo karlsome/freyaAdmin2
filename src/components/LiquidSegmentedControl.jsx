@@ -1,5 +1,3 @@
-import { useLayoutEffect, useRef, useState } from "react";
-
 function normalizeItems(items = []) {
   return items.map((item) => {
     if (typeof item === "string") {
@@ -10,6 +8,8 @@ function normalizeItems(items = []) {
       key: item.key,
       label: item.label ?? item.key,
       disabled: Boolean(item.disabled),
+      icon: item.icon,
+      badge: item.badge ?? item.count,
     };
   });
 }
@@ -21,106 +21,55 @@ export default function LiquidSegmentedControl({
   className = "",
 }) {
   const normalizedItems = normalizeItems(items);
-  const containerRef = useRef(null);
-  const buttonRefs = useRef(new Map());
-  const moveTimeoutRef = useRef(null);
-  const [indicatorStyle, setIndicatorStyle] = useState(null);
-  const [isMoving, setIsMoving] = useState(false);
-
-  const itemSignature = normalizedItems.map((item) => `${item.key}:${item.label}`).join("|");
-
-  useLayoutEffect(() => {
-    function syncIndicator() {
-      const container = containerRef.current;
-      const activeButton = buttonRefs.current.get(activeKey);
-
-      if (!container || !activeButton) {
-        setIndicatorStyle(null);
-        return;
-      }
-
-      const containerRect = container.getBoundingClientRect();
-      const activeRect = activeButton.getBoundingClientRect();
-
-      setIndicatorStyle({
-        left: activeRect.left - containerRect.left,
-        top: activeRect.top - containerRect.top,
-        width: activeRect.width,
-        height: activeRect.height,
-      });
-    }
-
-    const frame = window.requestAnimationFrame(() => {
-      syncIndicator();
-      setIsMoving(true);
-      window.clearTimeout(moveTimeoutRef.current);
-      moveTimeoutRef.current = window.setTimeout(() => setIsMoving(false), 460);
-    });
-
-    window.addEventListener("resize", syncIndicator);
-
-    let observer;
-    if (typeof ResizeObserver !== "undefined" && containerRef.current) {
-      observer = new ResizeObserver(() => {
-        syncIndicator();
-      });
-      observer.observe(containerRef.current);
-      buttonRefs.current.forEach((btn) => {
-        if (btn) observer.observe(btn);
-      });
-    }
-
-    return () => {
-      window.cancelAnimationFrame(frame);
-      window.removeEventListener("resize", syncIndicator);
-      window.clearTimeout(moveTimeoutRef.current);
-      if (observer) observer.disconnect();
-    };
-  }, [activeKey, items, itemSignature]);
 
   if (!normalizedItems.length) return null;
 
   return (
-    <div ref={containerRef} className={`relative flex flex-wrap gap-1 rounded-xl bg-surface-container p-1 ${className}`.trim()}>
-      {indicatorStyle && (
-        <span
-          aria-hidden="true"
-          className="pagination-liquid-shell rounded-lg"
-          style={{
-            width: `${indicatorStyle.width}px`,
-            height: `${indicatorStyle.height}px`,
-            transform: `translate(${indicatorStyle.left}px, ${indicatorStyle.top}px)`,
-          }}
-        >
-          <span className="pagination-liquid-glow" />
-          <span className={`pagination-liquid-blob is-segmented ${isMoving ? "is-moving" : ""}`} />
-        </span>
-      )}
-
+    <div
+      role="tablist"
+      className={`inline-flex flex-wrap items-center p-1 rounded-[6px] bg-[var(--surface-hover)] border border-[var(--border)] gap-1 ${className}`.trim()}
+    >
       {normalizedItems.map((item) => {
         const active = item.key === activeKey;
 
         return (
           <button
             key={item.key}
-            ref={(node) => {
-              if (node) buttonRefs.current.set(item.key, node);
-              else buttonRefs.current.delete(item.key);
-            }}
+            role="tab"
+            aria-selected={active}
             type="button"
             disabled={item.disabled}
             onClick={() => {
-              if (!item.disabled) onChange(item.key);
+              if (!item.disabled && onChange) {
+                onChange(item.key);
+              }
             }}
             className={[
-              "relative z-10 rounded-lg px-4 py-1.5 text-xs font-semibold transition-colors duration-300",
+              "whitespace-nowrap rounded-[4px] px-3.5 py-1.5 text-xs font-semibold tracking-normal transition-all duration-150 inline-flex items-center gap-1.5 select-none",
               active
-                ? "border border-transparent bg-transparent text-primary"
-                : "text-on-surface-variant hover:text-on-surface",
-              item.disabled ? "cursor-not-allowed opacity-50" : "",
+                ? "bg-[var(--freya-blue)] text-white shadow-xs"
+                : !item.disabled
+                  ? "text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--surface)]/70 border border-transparent"
+                  : "text-[var(--text-muted)]/50 border border-transparent cursor-not-allowed opacity-50",
             ].join(" ")}
           >
-            {item.label}
+            {item.icon && (
+              <span className="material-symbols-outlined" style={{ fontSize: 16 }}>
+                {item.icon}
+              </span>
+            )}
+            <span>{item.label}</span>
+            {item.badge !== undefined && (
+              <span
+                className={`rounded-[4px] px-1.5 py-0.5 text-[10px] font-bold transition-colors ${
+                  active
+                    ? "bg-white/20 text-white"
+                    : "bg-[var(--surface)] text-[var(--text-muted)]"
+                }`}
+              >
+                {item.badge}
+              </span>
+            )}
           </button>
         );
       })}
