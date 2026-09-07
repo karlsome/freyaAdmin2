@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Papa from "papaparse";
 import LiquidSegmentedControl from "../components/LiquidSegmentedControl";
+import MasterTabNav from "../components/MasterTabNav";
 import PageHeader from "../components/PageHeader";
 import PlannerFilters from "../components/planner/PlannerFilters";
 import PlannerGoalsPanel from "../components/planner/PlannerGoalsPanel";
@@ -58,8 +59,8 @@ import {
 import { openPlannerCalendarWindow, openPlannerPrintWindow } from "../utils/plannerExports";
 
 const MAIN_TABS = [
-  { key: "goals", label: "Production Goals" },
-  { key: "planning", label: "Planning" },
+  { key: "goals", label: "Production Goals", icon: "flag" },
+  { key: "planning", label: "Planning", icon: "event_note" },
 ];
 
 const VIEW_TABS = [
@@ -935,9 +936,7 @@ export default function PlannerPage() {
       />
 
       <div className="space-y-4">
-        <div>
-          <LiquidSegmentedControl items={MAIN_TABS} activeKey={mainTab} onChange={setMainTab} className="inline-flex" />
-        </div>
+        <MasterTabNav tabs={MAIN_TABS} activeTab={mainTab} onChange={setMainTab} className="mb-4" />
 
         {mainTab === "goals" ? (
           <PlannerGoalsPanel

@@ -235,28 +235,38 @@
 .freya-segmented {
   display: inline-flex;
   align-items: center;
-  padding: 3px;
-  background-color: var(--page-bg);
+  padding: 4px;
+  background-color: var(--surface-hover);
   border: 1px solid var(--border);
-  border-radius: var(--radius-card);
-  gap: 2px;
+  border-radius: var(--radius-md);
+  gap: 4px;
 }
 
 .freya-segmented-item {
   padding: 6px 14px;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 500;
   color: var(--text-muted);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-sm);
   border: none;
   background: transparent;
   cursor: pointer;
   transition: all 0.15s ease;
+  user-select: none;
+}
+
+.freya-segmented-item:hover {
+  color: var(--text-primary);
+  background-color: rgba(255, 255, 255, 0.6);
+}
+
+.dark .freya-segmented-item:hover {
+  background-color: rgba(255, 255, 255, 0.08);
 }
 
 .freya-segmented-item.active {
-  background-color: var(--surface);
-  color: var(--text-primary);
+  background-color: var(--freya-blue);
+  color: #FFFFFF;
   font-weight: 600;
   box-shadow: var(--shadow-1);
 }

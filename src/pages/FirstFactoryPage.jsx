@@ -1892,10 +1892,10 @@ export default function FirstFactoryPage() {
       {/* Tabs */}
       <MasterTabNav 
         tabs={[
-          { key: 'fetching', label: t('ff_tab_fetching'), ready: true },
-          { key: 'scheduling', label: t('ff_tab_scheduling'), ready: true },
-          { key: 'summary', label: t('ff_tab_summary'), ready: true },
-          { key: 'production', label: t('ff_tab_production'), ready: true }
+          { key: 'fetching', label: t('ff_tab_fetching'), icon: 'cloud_download', ready: true },
+          { key: 'scheduling', label: t('ff_tab_scheduling'), icon: 'calendar_month', ready: true },
+          { key: 'summary', label: t('ff_tab_summary'), icon: 'analytics', ready: true },
+          { key: 'production', label: t('ff_tab_production'), icon: 'precision_manufacturing', ready: true }
         ]}
         activeTab={activeTab}
         onSelect={(tab) => handleTabChange(tab.key)}

@@ -585,18 +585,11 @@ export default function FactoryDetailPage({ combined = false }) {
           </div>
 
           {sectionNames.length > 1 && (
-            <div className="freya-segmented">
-              {sectionNames.map((sec) => (
-                <button
-                  key={sec}
-                  type="button"
-                  onClick={() => setActiveSection(sec)}
-                  className={`freya-segmented-item ${activeSection === sec ? "active" : ""}`}
-                >
-                  {sec}
-                </button>
-              ))}
-            </div>
+            <LiquidSegmentedControl
+              items={sectionNames}
+              activeKey={activeSection}
+              onChange={setActiveSection}
+            />
           )}
         </div>
 

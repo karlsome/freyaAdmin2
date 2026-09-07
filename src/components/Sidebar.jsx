@@ -113,17 +113,17 @@ export default function Sidebar({ activePage, badges = {}, mobileOpen = false, o
     return (
       <>
         <div className="mb-10 flex items-center justify-between px-3">
-          <div className={`flex items-center gap-3 ${isMobile ? "" : "min-w-[256px]"}`}>
-            <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-[8px] bg-slate-100 dark:bg-slate-850 border border-[var(--border)]">
+          <div className={`flex items-center gap-3 ${isMobile ? "min-w-0 flex-1 mr-2" : "min-w-[264px]"}`}>
+            <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-[6px] bg-[var(--surface-hover)] border border-[var(--border)]">
               <span className="material-symbols-outlined text-[var(--freya-blue)]" style={{ fontSize: 20 }}>
                 precision_manufacturing
               </span>
             </div>
-            <div className={`overflow-hidden transition-opacity duration-200 ${isMobile ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`}>
+            <div className={`overflow-hidden transition-opacity duration-200 flex-1 flex items-center ${isMobile ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`}>
               <img
                 src={freyaLogo}
                 alt="FREYA SYSTEMS"
-                className="h-6 w-auto max-w-[145px] object-contain dark:invert"
+                className="h-9 sm:h-[42px] w-auto max-w-[155px] sm:max-w-[205px] object-contain object-left dark:invert select-none"
               />
             </div>
           </div>
@@ -157,14 +157,14 @@ export default function Sidebar({ activePage, badges = {}, mobileOpen = false, o
                       if (isMobile) onClose?.();
                     }}
                     title={label}
-                    className={`min-w-0 flex-1 flex items-center gap-3 rounded-xl text-left transition-all duration-200 ease-in-out ${
+                    className={`min-w-0 flex-1 flex items-center gap-3 rounded-[6px] text-left transition-all duration-200 ease-in-out ${
                       isMobile
                         ? "px-3 py-2.5"
                         : "px-0 py-2.5"
                     } ${
                       isActive
-                        ? "bg-primary/5 text-primary dark:bg-transparent dark:shadow-[0_0_15px_rgba(192,193,255,0.2)]"
-                        : "text-outline hover:bg-primary/5 hover:text-primary dark:hover:bg-white/5 dark:hover:text-on-surface"
+                        ? "bg-[var(--freya-blue-subtle)] text-[var(--freya-blue)] font-semibold shadow-xs"
+                        : "text-[var(--text-muted)] hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)]"
                     }`}
                   >
                     <span
@@ -195,10 +195,10 @@ export default function Sidebar({ activePage, badges = {}, mobileOpen = false, o
                       onClick={() => toggleOpen(item.page)}
                       aria-label={`${isOpen ? "Collapse" : "Expand"} ${label} submenu`}
                       title={`${isOpen ? "Collapse" : "Expand"} ${label}`}
-                      className={`mr-1.5 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg transition-all duration-300 hover:bg-primary/5 ${
+                      className={`mr-1.5 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-[6px] transition-all duration-200 hover:bg-[var(--surface-hover)] ${
                         isOpen ? "rotate-180" : "rotate-0"
                       } ${
-                        isActive ? "text-primary" : "text-outline"
+                        isActive ? "text-[var(--freya-blue)]" : "text-[var(--text-muted)]"
                       } ${
                         isMobile ? "opacity-100" : "opacity-0 group-hover:opacity-100"
                       }`}
@@ -238,12 +238,12 @@ export default function Sidebar({ activePage, badges = {}, mobileOpen = false, o
                                 if (isMobile) onClose?.();
                               }}
                               title={childLabel}
-                              className={`min-w-0 flex-1 rounded-xl py-1.5 pr-2 text-left transition-all duration-200 ${
+                              className={`min-w-0 flex-1 rounded-[6px] py-1.5 pr-2 text-left transition-all duration-200 ${
                                 isMobile ? "pl-2.5" : "pl-1"
                               } ${
                                 childActive
-                                  ? "bg-primary/5 text-primary"
-                                  : "text-outline hover:bg-primary/5 hover:text-primary dark:hover:bg-white/5 dark:hover:text-on-surface"
+                                  ? "bg-[var(--freya-blue-subtle)] text-[var(--freya-blue)] font-semibold"
+                                  : "text-[var(--text-muted)] hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)]"
                               }`}
                             >
                               <div className="flex items-center gap-2.5">
