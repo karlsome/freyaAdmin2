@@ -1,9 +1,23 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 
 export default function AISpotlightCard({ spotlight, onClose, onAskAI }) {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedFactory, setSelectedFactory] = useState(spotlight?.factory || "All");
-  const [viewMode, setViewMode] = useState("table"); // 'table' | 'grid'
+  const [viewMode, setViewMode] = useState(spotlight?.defaultView || "table"); // 'table' | 'machines' | 'grid'
+
+  // Sync state whenever spotlight prop updates
+  useEffect(() => {
+    console.log("[AISpotlightCard] Spotlight prop received:", spotlight);
+    if (spotlight?.defaultView) {
+      setViewMode(spotlight.defaultView);
+    }
+    const fact = spotlight?.factory;
+    if (!fact || fact === "All" || fact.includes("All")) {
+      setSelectedFactory("All");
+    } else {
+      setSelectedFactory(fact);
+    }
+  }, [spotlight]);
 
   if (!spotlight) return null;
 
@@ -11,6 +25,8 @@ export default function AISpotlightCard({ spotlight, onClose, onAskAI }) {
   const workers = spotlight.workers || spotlight.activeWorkers || [];
   const parts = spotlight.parts || [];
   const defects = spotlight.defects || [];
+
+  const isAllFactory = !selectedFactory || selectedFactory === "All" || selectedFactory.includes("All");
 
   // Filtered workers list
   const filteredWorkers = useMemo(() => {
@@ -21,13 +37,13 @@ export default function AISpotlightCard({ spotlight, onClose, onAskAI }) {
         (w.name && w.name.toLowerCase().includes(searchTerm.toLowerCase())) ||
         (w.machine && w.machine.toLowerCase().includes(searchTerm.toLowerCase()));
       const matchesFactory =
-        selectedFactory === "All" ||
+        isAllFactory ||
         w.factory === selectedFactory ||
-        (selectedFactory === "小瀬" && (!w.factory || w.factory.includes("小瀬") || w.factory.includes("Oze"))) ||
-        (selectedFactory === "倉知" && w.factory?.includes("倉知"));
+        (selectedFactory.includes("小瀬") && (!w.factory || w.factory.includes("小瀬") || w.factory.includes("Oze"))) ||
+        (selectedFactory.includes("倉知") && w.factory?.includes("倉知"));
       return matchesSearch && matchesFactory;
     });
-  }, [workers, searchTerm, selectedFactory, type]);
+  }, [workers, searchTerm, selectedFactory, isAllFactory, type]);
 
   // Filtered parts / sebanggo list
   const filteredParts = useMemo(() => {
@@ -41,13 +57,27 @@ export default function AISpotlightCard({ spotlight, onClose, onAskAI }) {
         (Array.isArray(p.machines) && p.machines.some((m) => m.toLowerCase().includes(term))) ||
         (Array.isArray(p.workers) && p.workers.some((w) => w.toLowerCase().includes(term)));
       const matchesFactory =
-        selectedFactory === "All" ||
+        isAllFactory ||
         p.factory === selectedFactory ||
-        (selectedFactory === "小瀬" && (!p.factory || p.factory.includes("小瀬") || p.factory.includes("Oze"))) ||
-        (selectedFactory === "倉知" && p.factory?.includes("倉知"));
+        (selectedFactory.includes("小瀬") && (!p.factory || p.factory.includes("小瀬") || p.factory.includes("Oze"))) ||
+        (selectedFactory.includes("倉知") && p.factory?.includes("倉知"));
       return matchesSearch && matchesFactory;
     });
-  }, [parts, searchTerm, selectedFactory, type]);
+  }, [parts, searchTerm, selectedFactory, isAllFactory, type]);
+
+  // Console debug log for user diagnostics
+  console.log("[AISpotlightCard] Current State:", {
+    spotlightTitle: spotlight?.title,
+    spotlightType: type,
+    spotlightFactory: spotlight?.factory,
+    selectedFactory,
+    isAllFactory,
+    totalRawParts: parts.length,
+    filteredPartsCount: filteredParts.length,
+    viewMode,
+    searchTerm,
+    sampleParts: parts.slice(0, 3)
+  });
 
   // Unique factories available in dataset
   const availableFactories = useMemo(() => {
@@ -90,6 +120,40 @@ export default function AISpotlightCard({ spotlight, onClose, onAskAI }) {
     return mSet.size;
   }, [filteredParts]);
 
+  // Group by Equipment / Machine Station for the "Machines View"
+  const activeMachinesList = useMemo(() => {
+    const map = new Map();
+    filteredParts.forEach((p) => {
+      const machList = Array.isArray(p.machines) && p.machines.length > 0 ? p.machines : ["General Station"];
+      machList.forEach((m) => {
+        if (!map.has(m)) {
+          map.set(m, {
+            machine: m,
+            factory: p.factory || "小瀬",
+            parts: new Set(),
+            hinbans: new Set(),
+            workers: new Set(),
+            batches: 0
+          });
+        }
+        const item = map.get(m);
+        if (p.sebanggo) item.parts.add(p.sebanggo);
+        if (p.hinban) item.hinbans.add(p.hinban);
+        if (Array.isArray(p.workers)) p.workers.forEach((w) => item.workers.add(w));
+        item.batches += (p.batches || 0);
+      });
+    });
+
+    return Array.from(map.values())
+      .map((item) => ({
+        ...item,
+        partsList: Array.from(item.parts),
+        hinbansList: Array.from(item.hinbans),
+        workersList: Array.from(item.workers)
+      }))
+      .sort((a, b) => b.batches - a.batches);
+  }, [filteredParts]);
+
   const isPartsMode = type === "sebanggo" || type === "parts";
 
   return (
@@ -102,7 +166,7 @@ export default function AISpotlightCard({ spotlight, onClose, onAskAI }) {
         <div className="flex items-start gap-3.5">
           <div className="w-10 h-10 rounded-[8px] bg-[var(--freya-blue-subtle)] border border-[var(--freya-blue)]/30 text-[var(--freya-blue)] flex items-center justify-center flex-shrink-0 mt-0.5 shadow-xs">
             <span className="material-symbols-outlined" style={{ fontSize: 24 }}>
-              {isPartsMode ? "category" : type === "workers" ? "badge" : type === "defects" ? "warning" : "auto_awesome"}
+              {isPartsMode ? (viewMode === "machines" ? "precision_manufacturing" : "category") : type === "workers" ? "badge" : type === "defects" ? "warning" : "auto_awesome"}
             </span>
           </div>
           <div>
@@ -117,17 +181,51 @@ export default function AISpotlightCard({ spotlight, onClose, onAskAI }) {
               </span>
             </div>
             <h2 className="text-lg sm:text-xl font-bold text-[var(--text-primary)] mt-1 tracking-tight">
-              {spotlight.title || (isPartsMode ? "Active 背番号 (Sebanggo) & Parts Processing" : type === "workers" ? "Active Floor Personnel & Shift Assignments" : "AI Inspection Report")}
+              {spotlight.title || (isPartsMode ? "Active Equipment & 背番号 (Sebanggo) Processing" : type === "workers" ? "Active Floor Personnel & Shift Assignments" : "AI Inspection Report")}
             </h2>
             <p className="text-xs sm:text-sm text-[var(--text-muted)] mt-0.5">
-              {spotlight.summary || (isPartsMode ? "Zero-noise breakdown of active parts and their assigned production stations today." : type === "workers" ? "Zero-noise breakdown of active operators and their assigned machines today." : "Focused diagnostics based on your query.")}
+              {spotlight.summary || (isPartsMode ? "Zero-noise breakdown of active equipment, parts, and assigned stations today." : type === "workers" ? "Zero-noise breakdown of active operators and their assigned machines today." : "Focused diagnostics based on your query.")}
             </p>
           </div>
         </div>
 
         {/* Action Controls */}
         <div className="flex items-center gap-2">
-          {(type === "workers" || isPartsMode) && (
+          {isPartsMode && (
+            <div className="inline-flex p-0.5 rounded-[6px] bg-[var(--surface-hover)] border border-[var(--border)]">
+              <button
+                onClick={() => setViewMode("table")}
+                title="Table View (by 背番号 / Parts)"
+                className={`px-2.5 h-7 rounded-[4px] flex items-center gap-1.5 text-xs transition-colors ${
+                  viewMode === "table" ? "bg-[var(--surface)] text-[var(--freya-blue)] shadow-2xs font-semibold" : "text-[var(--text-muted)] hover:text-[var(--text-primary)]"
+                }`}
+              >
+                <span className="material-symbols-outlined" style={{ fontSize: 15 }}>table_rows</span>
+                <span className="hidden sm:inline">Parts View</span>
+              </button>
+              <button
+                onClick={() => setViewMode("machines")}
+                title="Machines View (by Station & Equipment)"
+                className={`px-2.5 h-7 rounded-[4px] flex items-center gap-1.5 text-xs transition-colors ${
+                  viewMode === "machines" ? "bg-[var(--surface)] text-[var(--freya-blue)] shadow-2xs font-semibold" : "text-[var(--text-muted)] hover:text-[var(--text-primary)]"
+                }`}
+              >
+                <span className="material-symbols-outlined" style={{ fontSize: 15 }}>precision_manufacturing</span>
+                <span className="hidden sm:inline">Machines View</span>
+              </button>
+              <button
+                onClick={() => setViewMode("grid")}
+                title="Card Grid View"
+                className={`w-7 h-7 rounded-[4px] flex items-center justify-center transition-colors ${
+                  viewMode === "grid" ? "bg-[var(--surface)] text-[var(--freya-blue)] shadow-2xs font-semibold" : "text-[var(--text-muted)] hover:text-[var(--text-primary)]"
+                }`}
+              >
+                <span className="material-symbols-outlined" style={{ fontSize: 16 }}>grid_view</span>
+              </button>
+            </div>
+          )}
+
+          {type === "workers" && (
             <div className="inline-flex p-0.5 rounded-[6px] bg-[var(--surface-hover)] border border-[var(--border)]">
               <button
                 onClick={() => setViewMode("table")}
@@ -161,26 +259,26 @@ export default function AISpotlightCard({ spotlight, onClose, onAskAI }) {
         </div>
       </div>
 
-      {/* ── Spotlight Specific View: SEBANGGO / PARTS ── */}
+      {/* ── Spotlight Specific View: SEBANGGO / PARTS / MACHINES ── */}
       {isPartsMode && (
         <div className="space-y-4">
           {/* Key Metrics Strip */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <div className="p-3 rounded-[6px] bg-[var(--surface-hover)] border border-[var(--border)]">
               <span className="text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)] block">
-                Active 背番号 (Models)
+                Active Equipment (Machines)
               </span>
-              <div className="text-xl sm:text-2xl font-bold text-[var(--text-primary)] freya-tabular mt-0.5">
-                {uniqueSebanggoCount} <span className="text-xs font-normal text-[var(--text-muted)]">models</span>
+              <div className="text-xl sm:text-2xl font-bold text-[var(--freya-blue)] freya-tabular mt-0.5">
+                {allActiveMachinesForParts} <span className="text-xs font-normal text-[var(--text-muted)]">stations</span>
               </div>
             </div>
 
             <div className="p-3 rounded-[6px] bg-[var(--surface-hover)] border border-[var(--border)]">
               <span className="text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)] block">
-                Active Processing Lines
+                Active 背番号 (Models)
               </span>
-              <div className="text-xl sm:text-2xl font-bold text-[var(--freya-blue)] freya-tabular mt-0.5">
-                {allActiveMachinesForParts} <span className="text-xs font-normal text-[var(--text-muted)]">stations</span>
+              <div className="text-xl sm:text-2xl font-bold text-[var(--text-primary)] freya-tabular mt-0.5">
+                {uniqueSebanggoCount} <span className="text-xs font-normal text-[var(--text-muted)]">models</span>
               </div>
             </div>
 
@@ -195,13 +293,13 @@ export default function AISpotlightCard({ spotlight, onClose, onAskAI }) {
 
             <div className="p-3 rounded-[6px] bg-[var(--surface-hover)] border border-[var(--border)]">
               <span className="text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)] block">
-                Top Volume 背番号
+                Top Volume Station
               </span>
               <div className="text-sm sm:text-base font-bold text-[var(--text-primary)] truncate mt-1">
-                {filteredParts[0]?.sebanggo ? (
+                {activeMachinesList[0]?.machine ? (
                   <>
-                    <span className="text-[var(--freya-blue)]">{filteredParts[0].sebanggo}</span>
-                    <span className="ml-1 text-xs font-normal text-[var(--text-muted)]">({filteredParts[0].batches}b)</span>
+                    <span className="font-mono text-[var(--freya-blue)]">{activeMachinesList[0].machine}</span>
+                    <span className="ml-1 text-xs font-normal text-[var(--text-muted)]">({activeMachinesList[0].batches}b)</span>
                   </>
                 ) : (
                   "—"
@@ -213,22 +311,25 @@ export default function AISpotlightCard({ spotlight, onClose, onAskAI }) {
           {/* Search & Factory Filter Bar */}
           <div className="flex flex-wrap items-center justify-between gap-2.5 pt-1">
             <div className="flex items-center gap-1.5 overflow-x-auto">
-              {availableFactories.map((f) => (
-                <button
-                  key={f}
-                  onClick={() => setSelectedFactory(f)}
-                  className={`h-7 px-3 text-xs font-semibold rounded-[4px] border transition-all ${
-                    selectedFactory === f
-                      ? "bg-[var(--freya-blue)] text-white border-[var(--freya-blue)] shadow-2xs"
-                      : "bg-[var(--surface)] text-[var(--text-muted)] border-[var(--border)] hover:text-[var(--text-primary)]"
-                  }`}
-                >
-                  {f === "All" ? "All Factories" : f}
-                </button>
-              ))}
+              {availableFactories.map((f) => {
+                const isSelected = (f === "All" && isAllFactory) || selectedFactory === f;
+                return (
+                  <button
+                    key={f}
+                    onClick={() => setSelectedFactory(f)}
+                    className={`h-7 px-3 text-xs font-semibold rounded-[4px] border transition-all ${
+                      isSelected
+                        ? "bg-[var(--freya-blue)] text-white border-[var(--freya-blue)] shadow-2xs"
+                        : "bg-[var(--surface)] text-[var(--text-muted)] border-[var(--border)] hover:text-[var(--text-primary)]"
+                    }`}
+                  >
+                    {f === "All" ? "All Factories" : f}
+                  </button>
+                );
+              })}
             </div>
 
-            <div className="relative w-full sm:w-64">
+            <div className="relative w-full sm:w-72">
               <span className="material-symbols-outlined absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" style={{ fontSize: 16 }}>
                 search
               </span>
@@ -236,7 +337,7 @@ export default function AISpotlightCard({ spotlight, onClose, onAskAI }) {
                 type="text"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder="Search 背番号, 品番, or machine..."
+                placeholder="Search machine, 背番号, 品番, operator..."
                 className="w-full h-8 pl-8 pr-3 text-xs rounded-[6px] bg-[var(--surface)] border border-[var(--border)] focus:outline-none focus:border-[var(--freya-blue)] text-[var(--text-primary)] placeholder-[var(--text-muted)] transition-colors"
               />
               {searchTerm && (
@@ -250,8 +351,80 @@ export default function AISpotlightCard({ spotlight, onClose, onAskAI }) {
             </div>
           </div>
 
-          {/* ── View Mode: TABLE ── */}
-          {viewMode === "table" ? (
+          {/* ── View Mode: MACHINES VIEW (Grouped by Machine / Station) ── */}
+          {viewMode === "machines" ? (
+            <div className="rounded-[6px] border border-[var(--border)] overflow-hidden bg-[var(--surface)] shadow-2xs">
+              <div className="overflow-x-auto max-h-[420px] overflow-y-auto">
+                <table className="w-full text-left text-xs border-collapse">
+                  <thead className="bg-[var(--surface-hover)] border-b border-[var(--border)] sticky top-0 z-10">
+                    <tr className="text-[var(--text-muted)] text-[11px] font-semibold uppercase tracking-[0.04em]">
+                      <th className="py-2.5 px-4">Machine / Station (設備)</th>
+                      <th className="py-2.5 px-4">Assigned 背番号 (Sebanggo)</th>
+                      <th className="py-2.5 px-4">品番 (Part Numbers)</th>
+                      <th className="py-2.5 px-4">Operator on Shift</th>
+                      <th className="py-2.5 px-4">Facility</th>
+                      <th className="py-2.5 px-4 text-right">Batches Run</th>
+                      <th className="py-2.5 px-4 text-center">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-[var(--border)]">
+                    {activeMachinesList.length === 0 ? (
+                      <tr>
+                        <td colSpan={7} className="py-8 text-center text-xs text-[var(--text-muted)]">
+                          No active equipment records match the search criteria.
+                        </td>
+                      </tr>
+                    ) : (
+                      activeMachinesList.map((mItem, idx) => (
+                        <tr key={idx} className="hover:bg-[var(--surface-hover)]/70 transition-colors">
+                          <td className="py-2.5 px-4 font-semibold text-[var(--text-primary)]">
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-[4px] font-mono font-bold text-xs bg-[var(--surface-hover)] text-[var(--freya-blue)] border border-[var(--border)] shadow-2xs">
+                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                              {mItem.machine}
+                            </span>
+                          </td>
+                          <td className="py-2.5 px-4">
+                            <div className="flex flex-wrap gap-1">
+                              {mItem.partsList.map((pCode, pIdx) => (
+                                <span
+                                  key={pIdx}
+                                  className="inline-flex items-center px-2 py-0.5 rounded-[4px] font-mono font-bold text-[11px] bg-[var(--freya-blue-subtle)] text-[var(--freya-blue)] border border-[var(--freya-blue)]/30"
+                                >
+                                  {pCode}
+                                </span>
+                              ))}
+                            </div>
+                          </td>
+                          <td className="py-2.5 px-4 font-mono text-[11px] text-[var(--text-muted)]">
+                            {mItem.hinbansList.slice(0, 3).join(", ") || "—"}
+                            {mItem.hinbansList.length > 3 && ` +${mItem.hinbansList.length - 3}`}
+                          </td>
+                          <td className="py-2.5 px-4 text-[var(--text-primary)] font-medium">
+                            {mItem.workersList.join(", ") || "—"}
+                          </td>
+                          <td className="py-2.5 px-4 text-[var(--text-muted)] font-medium">
+                            {mItem.factory || "小瀬"}
+                          </td>
+                          <td className="py-2.5 px-4 text-right font-semibold freya-tabular text-[var(--text-primary)]">
+                            <span className="text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-[4px]">
+                              {mItem.batches} batches
+                            </span>
+                          </td>
+                          <td className="py-2.5 px-4 text-center">
+                            <span className="inline-flex items-center gap-1 text-[11px] font-medium text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-full">
+                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                              Operating
+                            </span>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          ) : viewMode === "table" ? (
+            /* ── View Mode: PARTS TABLE ── */
             <div className="rounded-[6px] border border-[var(--border)] overflow-hidden bg-[var(--surface)] shadow-2xs">
               <div className="overflow-x-auto max-h-[400px] overflow-y-auto">
                 <table className="w-full text-left text-xs border-collapse">
@@ -371,14 +544,14 @@ export default function AISpotlightCard({ spotlight, onClose, onAskAI }) {
               <span className="text-xs text-[var(--text-muted)] font-medium">Ask Copilot next:</span>
               <button
                 onClick={() => onAskAI("Show quality defects and scrap volume for these 背番号 today")}
-                className="text-xs px-2.5 py-1 rounded-[6px] bg-[var(--surface-hover)] hover:bg-[var(--surface)] text-[var(--freya-blue)] border border-[var(--border)] transition-colors flex items-center gap-1 shadow-2xs"
+                className="text-xs px-2.5 py-1 rounded-[6px] bg-[var(--surface-hover)] hover:bg-[var(--surface)] text-[var(--freya-blue)] border border-[var(--border)] transition-colors flex items-center gap-1 shadow-2xs cursor-pointer"
               >
                 <span className="material-symbols-outlined" style={{ fontSize: 14 }}>warning</span>
                 <span>Check defects for these parts</span>
               </button>
               <button
                 onClick={() => onAskAI("Show active workers and line balance across these stations")}
-                className="text-xs px-2.5 py-1 rounded-[6px] bg-[var(--surface-hover)] hover:bg-[var(--surface)] text-[var(--freya-blue)] border border-[var(--border)] transition-colors flex items-center gap-1 shadow-2xs"
+                className="text-xs px-2.5 py-1 rounded-[6px] bg-[var(--surface-hover)] hover:bg-[var(--surface)] text-[var(--freya-blue)] border border-[var(--border)] transition-colors flex items-center gap-1 shadow-2xs cursor-pointer"
               >
                 <span className="material-symbols-outlined" style={{ fontSize: 14 }}>badge</span>
                 <span>View assigned workers</span>
@@ -436,19 +609,22 @@ export default function AISpotlightCard({ spotlight, onClose, onAskAI }) {
           {/* Search & Factory Filter Bar */}
           <div className="flex flex-wrap items-center justify-between gap-2.5 pt-1">
             <div className="flex items-center gap-1.5 overflow-x-auto">
-              {availableFactories.map((f) => (
-                <button
-                  key={f}
-                  onClick={() => setSelectedFactory(f)}
-                  className={`h-7 px-3 text-xs font-semibold rounded-[4px] border transition-all ${
-                    selectedFactory === f
-                      ? "bg-[var(--freya-blue)] text-white border-[var(--freya-blue)] shadow-2xs"
-                      : "bg-[var(--surface)] text-[var(--text-muted)] border-[var(--border)] hover:text-[var(--text-primary)]"
-                  }`}
-                >
-                  {f === "All" ? "All Factories" : f}
-                </button>
-              ))}
+              {availableFactories.map((f) => {
+                const isSelected = (f === "All" && isAllFactory) || selectedFactory === f;
+                return (
+                  <button
+                    key={f}
+                    onClick={() => setSelectedFactory(f)}
+                    className={`h-7 px-3 text-xs font-semibold rounded-[4px] border transition-all ${
+                      isSelected
+                        ? "bg-[var(--freya-blue)] text-white border-[var(--freya-blue)] shadow-2xs"
+                        : "bg-[var(--surface)] text-[var(--text-muted)] border-[var(--border)] hover:text-[var(--text-primary)]"
+                    }`}
+                  >
+                    {f === "All" ? "All Factories" : f}
+                  </button>
+                );
+              })}
             </div>
 
             <div className="relative w-full sm:w-64">
@@ -582,14 +758,14 @@ export default function AISpotlightCard({ spotlight, onClose, onAskAI }) {
               <span className="text-xs text-[var(--text-muted)] font-medium">Ask Copilot next:</span>
               <button
                 onClick={() => onAskAI("Analyze operator efficiency and machine balance at 小瀬 today")}
-                className="text-xs px-2.5 py-1 rounded-[6px] bg-[var(--surface-hover)] hover:bg-[var(--surface)] text-[var(--freya-blue)] border border-[var(--border)] transition-colors flex items-center gap-1 shadow-2xs"
+                className="text-xs px-2.5 py-1 rounded-[6px] bg-[var(--surface-hover)] hover:bg-[var(--surface)] text-[var(--freya-blue)] border border-[var(--border)] transition-colors flex items-center gap-1 shadow-2xs cursor-pointer"
               >
                 <span className="material-symbols-outlined" style={{ fontSize: 14 }}>analytics</span>
                 <span>Check operator efficiency</span>
               </button>
               <button
                 onClick={() => onAskAI("Show top defect issues across these machines today")}
-                className="text-xs px-2.5 py-1 rounded-[6px] bg-[var(--surface-hover)] hover:bg-[var(--surface)] text-[var(--freya-blue)] border border-[var(--border)] transition-colors flex items-center gap-1 shadow-2xs"
+                className="text-xs px-2.5 py-1 rounded-[6px] bg-[var(--surface-hover)] hover:bg-[var(--surface)] text-[var(--freya-blue)] border border-[var(--border)] transition-colors flex items-center gap-1 shadow-2xs cursor-pointer"
               >
                 <span className="material-symbols-outlined" style={{ fontSize: 14 }}>warning</span>
                 <span>Check machine defects</span>

@@ -62,12 +62,19 @@ export default function AICopilotPanel({ onReorderCards, onReset, onClose, curre
           text: m.text,
         }));
 
+      console.log("[AICopilotPanel] Prompt submitted:", query);
+      console.log("[AICopilotPanel] History sent:", sessionHistory);
+
       const data = await askAICopilot({
         prompt: query,
         currentPersona,
         kpiContext,
         history: sessionHistory
       });
+
+      console.log("[AICopilotPanel] Full response received from server:", data);
+      console.log("[AICopilotPanel] uiAction payload:", data.uiAction);
+      console.log("[AICopilotPanel] spotlight data:", data.uiAction?.spotlight);
 
       if (data.uiAction?.cardOrder) {
         onReorderCards(data.uiAction.cardOrder, data.uiAction.highlightCard, data.uiAction);
