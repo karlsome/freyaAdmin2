@@ -292,9 +292,10 @@ export default function DashboardPage() {
 
         {/* ── AI Copilot Panel (Right) ── */}
         {copilotOpen && (
-          <div className="w-full lg:w-80 xl:w-96 lg:sticky lg:top-24 h-[640px] lg:h-[calc(100vh-7.5rem)] flex-shrink-0">
+          <div className="w-full lg:w-80 xl:w-96 lg:sticky lg:top-20 h-[560px] lg:h-[calc(100vh-10.5rem)] flex-shrink-0">
             <AICopilotPanel
               currentPersona={currentPersona}
+              kpiContext={kpis}
               onReorderCards={handleReorderCards}
               onReset={handleResetToDefault}
               onClose={() => setCopilotOpen(false)}

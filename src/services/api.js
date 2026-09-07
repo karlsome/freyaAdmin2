@@ -2687,3 +2687,16 @@ export async function fetchMaterialLotAnalytics(params = {}) {
   const endpoint = `api/analytics/material-lots${queryParams.toString() ? `?${queryParams.toString()}` : ""}`;
   return _getJson(endpoint);
 }
+
+// ─── FREYA Industrial AI Copilot ────────────────────────────────────────────
+export async function askAICopilot({ prompt, currentPersona, kpiContext, history = [] }) {
+  const res = await fetch(`${BASE_URL}api/ai/copilot`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ prompt, currentPersona, kpiContext, history })
+  });
+  const data = await _readJson(res);
+  if (!res.ok) throw new Error(data?.error || `AI Copilot request failed (${res.status})`);
+  return data;
+}
+
