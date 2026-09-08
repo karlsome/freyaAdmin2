@@ -522,6 +522,11 @@ const translations = {
     ff_updateQtyPrompt: "Update Qty ({qty}m)",
     ff_notInExcel: "Not in Excel",
     ff_zeroMetersToday: "0m in Excel today",
+    ff_expand: "Expand",
+    ff_collapse: "Collapse",
+    ff_expandAll: "Expand All",
+    ff_collapseAll: "Collapse All",
+    ff_collapsedRolls: "Collapsed ({count} rolls)",
 
     // Summary Tab
     ff_dataSource: "Data Source:",
@@ -1183,6 +1188,11 @@ const translations = {
     ff_updateQtyPrompt: "数量を反映 ({qty}m)",
     ff_notInExcel: "Excelに記載なし",
     ff_zeroMetersToday: "当日のExcel数量 0m",
+    ff_expand: "展開",
+    ff_collapse: "折りたたむ",
+    ff_expandAll: "すべて展開",
+    ff_collapseAll: "すべて折りたたむ",
+    ff_collapsedRolls: "折りたたみ中 ({count}巻)",
 
     // サマリータブ
     ff_dataSource: "データソース:",

@@ -496,6 +496,7 @@ export default function FirstFactoryPage() {
   ];
 
   const [scheduleOrder, setScheduleOrder] = useState([]);
+  const [collapsedGroups, setCollapsedGroups] = useState({});
   const [startTime, setStartTime] = useState('09:00');
   
   const [setupTimes, setSetupTimes] = useState(() => {
@@ -1737,7 +1738,7 @@ export default function FirstFactoryPage() {
       const dragData = JSON.parse(e.dataTransfer.getData('dragData'));
       // Remove from scheduled
       setScheduleOrder(prev => {
-        if (dragData.type === 'hinban') {
+        if (dragData.type === 'hinban' || dragData.type === 'hinban-group') {
            // Remove all rolls for this hinban
            return prev.filter(i => i.hinban !== dragData.hinban);
         } else {
@@ -1759,15 +1760,29 @@ export default function FirstFactoryPage() {
       const newOrder = [...prev];
       
       if (source === 'scheduled') {
-        const currentIndex = newOrder.findIndex(i => i.id === dragData.id);
-        if (currentIndex !== -1) {
-          const [removed] = newOrder.splice(currentIndex, 1);
-          if (targetIndex === -1) {
-            newOrder.push(removed);
+        if (dragData.type === 'hinban-group') {
+          const groupIds = new Set(dragData.ids || []);
+          const movedItems = newOrder.filter(i => groupIds.has(i.id));
+          const remaining = newOrder.filter(i => !groupIds.has(i.id));
+          
+          if (targetIndex === -1 || targetIndex >= remaining.length) {
+            return [...remaining, ...movedItems];
           } else {
-            // Adjust target index if we removed from earlier in the array
-            const adjustedTarget = targetIndex > currentIndex ? targetIndex - 1 : targetIndex;
-            newOrder.splice(adjustedTarget, 0, removed);
+            const result = [...remaining];
+            result.splice(targetIndex, 0, ...movedItems);
+            return result;
+          }
+        } else {
+          const currentIndex = newOrder.findIndex(i => i.id === dragData.id);
+          if (currentIndex !== -1) {
+            const [removed] = newOrder.splice(currentIndex, 1);
+            if (targetIndex === -1) {
+              newOrder.push(removed);
+            } else {
+              // Adjust target index if we removed from earlier in the array
+              const adjustedTarget = targetIndex > currentIndex ? targetIndex - 1 : targetIndex;
+              newOrder.splice(adjustedTarget, 0, removed);
+            }
           }
         }
       } else if (source === 'pool') {
@@ -1825,7 +1840,7 @@ export default function FirstFactoryPage() {
 
   const handleRemoveFromSchedule = (dragData) => {
       setScheduleOrder(prev => {
-        if (dragData.type === 'hinban') {
+        if (dragData.type === 'hinban' || dragData.type === 'hinban-group') {
            return prev.filter(i => i.hinban !== dragData.hinban);
         } else {
            return prev.filter(i => i.id !== dragData.id);
@@ -1846,6 +1861,91 @@ export default function FirstFactoryPage() {
   };
   
   const scheduleWithTimes = computeTimeSchedule(scheduledItems, startTime);
+
+  // Group consecutive items in scheduleWithTimes by Hinban for collapse/expand
+  const scheduledGroups = useMemo(() => {
+    if (!scheduleWithTimes || scheduleWithTimes.length === 0) return [];
+
+    const groups = [];
+    let currentGroup = null;
+
+    scheduleWithTimes.forEach((item, index) => {
+      if (item.type === 'setup') {
+        if (currentGroup) {
+          groups.push(currentGroup);
+          currentGroup = null;
+        }
+        groups.push({
+          type: 'setup',
+          id: item.id,
+          item,
+          index,
+        });
+      } else {
+        // Hinban item
+        if (currentGroup && currentGroup.hinban === item.hinban) {
+          // Append to current group
+          currentGroup.items.push({ item, index });
+          currentGroup.endIndex = index;
+          currentGroup.endTime = item.endTime;
+          currentGroup.totalDuration += (item.duration || 0);
+          currentGroup.totalMeters += (Number(item.meters) || 0);
+        } else {
+          if (currentGroup) {
+            groups.push(currentGroup);
+          }
+          currentGroup = {
+            type: 'hinban',
+            id: `group_${item.hinban}_${index}`,
+            hinban: item.hinban,
+            unit: item.unit || 'm',
+            totalRolls: item.totalRolls || 1,
+            startIndex: index,
+            endIndex: index,
+            startTime: item.startTime,
+            endTime: item.endTime,
+            totalDuration: item.duration || 0,
+            totalMeters: Number(item.meters) || 0,
+            items: [{ item, index }],
+            representativeItem: item,
+          };
+        }
+      }
+    });
+
+    if (currentGroup) {
+      groups.push(currentGroup);
+    }
+
+    return groups;
+  }, [scheduleWithTimes]);
+
+  const multiRollGroups = useMemo(() => {
+    return scheduledGroups.filter(g => g.type === 'hinban' && g.items.length > 1);
+  }, [scheduledGroups]);
+
+  const allMultiRollGroupsCollapsed = useMemo(() => {
+    if (multiRollGroups.length === 0) return false;
+    return multiRollGroups.every(g => (collapsedGroups[g.id] ?? true) === true);
+  }, [multiRollGroups, collapsedGroups]);
+
+  const toggleGroupCollapse = (groupId) => {
+    setCollapsedGroups(prev => {
+      const current = prev[groupId] ?? true;
+      return { ...prev, [groupId]: !current };
+    });
+  };
+
+  const handleToggleAllGroups = () => {
+    const shouldCollapse = !allMultiRollGroupsCollapsed;
+    setCollapsedGroups(prev => {
+      const next = { ...prev };
+      multiRollGroups.forEach(g => {
+        next[g.id] = shouldCollapse;
+      });
+      return next;
+    });
+  };
 
   const scheduledEndTime = useMemo(() => {
     if (!scheduleWithTimes || scheduleWithTimes.length === 0) return null;
@@ -2536,6 +2636,19 @@ export default function FirstFactoryPage() {
                   </div>
 
                   <div className="flex items-center gap-2 flex-wrap">
+                    {multiRollGroups.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={handleToggleAllGroups}
+                        className="flex items-center gap-1.5 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] hover:bg-[var(--surface-hover)] hover:border-[var(--border-strong)] px-2.5 py-1 text-xs font-semibold text-[var(--text-primary)] active:scale-95 transition-all cursor-pointer shadow-2xs"
+                        title={allMultiRollGroupsCollapsed ? (language === 'ja' ? 'すべての品番を展開' : 'Expand all hinbans') : (language === 'ja' ? 'すべての品番を折りたたむ' : 'Collapse all hinbans')}
+                      >
+                        <span className="material-symbols-outlined text-[var(--freya-blue)]" style={{ fontSize: 16 }}>
+                          {allMultiRollGroupsCollapsed ? 'unfold_more' : 'unfold_less'}
+                        </span>
+                        <span>{allMultiRollGroupsCollapsed ? t('ff_expandAll') : t('ff_collapseAll')}</span>
+                      </button>
+                    )}
                     <button
                       type="button"
                       onClick={handlePrintSchedulePDF}
@@ -2551,6 +2664,7 @@ export default function FirstFactoryPage() {
                       onClick={() => {
                         if (window.confirm(t('ff_resetScheduleConfirm'))) {
                           setScheduleOrder([]);
+                          setCollapsedGroups({});
                         }
                       }}
                       className="flex items-center gap-1 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-2 py-1 text-xs font-medium text-[var(--text-secondary)] hover:text-red-600 hover:border-red-500/30 hover:bg-red-500/10 transition-colors shadow-2xs cursor-pointer"
@@ -2601,7 +2715,7 @@ export default function FirstFactoryPage() {
               </div>
 
               {/* Column Headers for Priority Order Schedule */}
-              {scheduleWithTimes.length > 0 && (
+              {scheduledGroups.length > 0 && (
                 <div className="flex items-center gap-3 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-[var(--text-muted)] border-b border-[var(--border)] mb-1 select-none">
                   <div className="w-7 shrink-0 text-center font-mono">#</div>
                   <div className="w-[62px] shrink-0 text-center font-mono">{language === 'ja' ? '時間帯' : 'Time'}</div>
@@ -2622,187 +2736,389 @@ export default function FirstFactoryPage() {
                     <p className="font-medium">{t('ff_dragToSetPriority')}</p>
                   </div>
                 ) : (
-                  scheduleWithTimes.map((item, index) => {
-                    const disc = item.type === 'hinban' ? currentDayDiscrepancies.map[item.hinban] : null;
-                    const isZeroOrMissing = disc && (disc.type === 'moved_or_zero' || disc.type === 'missing_in_excel');
-                    const isQtyMismatch = disc && disc.type === 'qty_mismatch';
-
-                    const setupDisplayName = item.type === 'setup' 
-                      ? (item.name === '段取り' ? t('ff_dandori') : (item.name === '試作' ? t('ff_trial') : item.name))
-                      : item.name;
-
-                    const matchedPool = data.find(d => d.hinban === item.hinban);
-                    const itemKataban = item._kataban || extractKataban(matchedPool || item);
-                    const itemTimeOption = item._timeOption || extractTimeOption(matchedPool || item);
-
-                    return item.type === 'setup' ? (
-                      <div 
-                        key={item.id}
-                        draggable
-                        onDragStart={(e) => onDragStartSchedule(e, item, 'scheduled')}
-                        onDragOver={(e) => e.preventDefault()}
-                        onDrop={(e) => {
-                          e.stopPropagation(); // Prevent column drop
-                          onDropScheduled(e, index);
-                        }}
-                        className="cursor-grab active:cursor-grabbing rounded-[6px] border border-amber-500/30 bg-amber-500/5 hover:border-amber-500/50 p-2.5 flex items-center gap-3 transition-all shadow-2xs"
-                      >
-                        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[4px] bg-amber-500 text-white font-mono font-bold text-xs shadow-2xs">
-                          {index + 1}
-                        </span>
-                        <span className="flex flex-col items-center justify-center rounded-[4px] bg-[var(--surface)] border border-amber-500/30 px-2 py-0.5 text-xs font-mono freya-tabular min-w-[62px] shadow-2xs">
-                          <span className="font-bold text-[var(--text-primary)]">{item.startTime}</span>
-                          <span className="text-[10px] text-[var(--text-muted)] font-medium">～ {item.endTime}</span>
-                        </span>
-                        
-                        <div className="flex-1 flex items-center justify-between min-w-0 pr-2">
-                          <div className="flex items-center gap-2 min-w-0 flex-1">
-                            <span className="shrink-0 rounded-[4px] bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-bold text-amber-700 dark:text-amber-400 border border-amber-500/30">
-                              {item.name === '段取り' ? 'SETUP' : (item.name === '試作' ? 'TRIAL' : 'TASK')}
-                            </span>
-                            <span className="font-bold text-xs text-[var(--text-primary)] truncate" title={item.comment ? `${setupDisplayName} ${item.comment}` : setupDisplayName}>
-                              {item.comment ? `${setupDisplayName} ${item.comment}` : setupDisplayName}
-                            </span>
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setCommentModalItem(item);
-                                setTempCommentText(item.comment || '');
-                              }}
-                              className={`p-1 rounded-[4px] hover:bg-[var(--surface-hover)] transition-colors shrink-0 cursor-pointer ${item.comment ? 'text-[var(--freya-blue)] font-semibold' : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'}`}
-                              title={t('ff_editTitleNote')}
-                            >
-                              <span className="material-symbols-outlined" style={{ fontSize: 16 }}>
-                                edit_note
-                              </span>
-                            </button>
-                          </div>
-                          <span className="text-xs font-mono font-bold freya-tabular text-amber-700 dark:text-amber-400 whitespace-nowrap ml-2 bg-amber-500/10 border border-amber-500/20 rounded-[4px] px-2 py-0.5">
-                            {item.duration} {t('ff_minutesShort')}
-                          </span>
-                        </div>
-                        <button 
-                          onClick={() => handleRemoveFromSchedule(item)}
-                          className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[4px] border border-[var(--border)] bg-[var(--surface)] hover:bg-[var(--surface-hover)] hover:border-red-500/30 hover:text-red-600 text-[var(--text-muted)] transition-all shadow-2xs ml-1 cursor-pointer"
-                          title={t('ff_removeFromSchedule')}
+                  scheduledGroups.map((group) => {
+                    if (group.type === 'setup') {
+                      const item = group.item;
+                      const setupDisplayName = item.name === '段取り' ? t('ff_dandori') : (item.name === '試作' ? t('ff_trial') : item.name);
+                      return (
+                        <div 
+                          key={item.id}
+                          draggable
+                          onDragStart={(e) => onDragStartSchedule(e, item, 'scheduled')}
+                          onDragOver={(e) => e.preventDefault()}
+                          onDrop={(e) => {
+                            e.stopPropagation(); // Prevent column drop
+                            onDropScheduled(e, group.index);
+                          }}
+                          className="cursor-grab active:cursor-grabbing rounded-[6px] border border-amber-500/30 bg-amber-500/5 hover:border-amber-500/50 p-2.5 flex items-center gap-3 transition-all shadow-2xs"
                         >
-                          <span className="material-symbols-outlined" style={{fontSize: 16}}>arrow_back</span>
-                        </button>
-                      </div>
-                    ) : (
-                      <div 
-                        key={item.id}
-                        draggable
-                        onDragStart={(e) => onDragStartSchedule(e, item, 'scheduled')}
-                        onDragOver={(e) => e.preventDefault()}
-                        onDrop={(e) => {
-                          e.stopPropagation(); // Prevent column drop
-                          onDropScheduled(e, index);
-                        }}
-                        className={`group cursor-grab active:cursor-grabbing rounded-[6px] border p-2.5 flex items-center gap-3 transition-all shadow-2xs hover:border-[var(--border-strong)] hover:bg-[var(--surface-hover)] ${
-                          isZeroOrMissing 
-                            ? 'border-red-500/40 bg-red-500/5' 
-                            : isQtyMismatch 
-                            ? 'border-amber-500/40 bg-amber-500/5' 
-                            : 'border-[var(--border)] bg-[var(--surface)]'
-                        }`}
-                      >
-                        <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-[4px] text-xs font-mono font-bold shadow-2xs ${
-                          isZeroOrMissing 
-                            ? 'bg-red-600 text-white' 
-                            : isQtyMismatch 
-                            ? 'bg-amber-600 text-white' 
-                            : 'bg-[var(--surface)] border border-[var(--border)] text-[var(--text-primary)]'
-                        }`}>
-                          {index + 1}
-                        </span>
-                        <span className="flex flex-col items-center justify-center rounded-[4px] bg-[var(--surface)] border border-[var(--border)] px-2 py-0.5 text-xs font-mono freya-tabular text-[var(--text-primary)] min-w-[62px] shadow-2xs">
-                          <span className="font-bold text-[var(--text-primary)]">{item.startTime}</span>
-                          <span className="text-[10px] text-[var(--text-muted)] font-medium">～ {item.endTime}</span>
-                        </span>
-
-                        <div className="flex-1 flex flex-col cursor-pointer min-w-0 pr-1" onClick={() => handleCardClick(item.hinban)}>
-                          <div className="flex items-center gap-4 w-full">
-                            {/* Column 1: Hinban + Discrepancy Warnings */}
-                            <div className="w-[210px] shrink-0 flex items-center gap-1.5 min-w-0">
-                              <span className="font-mono font-bold text-xs text-[var(--text-primary)] group-hover:text-[var(--freya-blue)] transition-colors truncate" title={item.hinban}>
-                                {item.hinban}
+                          <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[4px] bg-amber-500 text-white font-mono font-bold text-xs shadow-2xs">
+                            {group.index + 1}
+                          </span>
+                          <span className="flex flex-col items-center justify-center rounded-[4px] bg-[var(--surface)] border border-amber-500/30 px-2 py-0.5 text-xs font-mono freya-tabular min-w-[62px] shadow-2xs">
+                            <span className="font-bold text-[var(--text-primary)]">{item.startTime}</span>
+                            <span className="text-[10px] text-[var(--text-muted)] font-medium">～ {item.endTime}</span>
+                          </span>
+                          
+                          <div className="flex-1 flex items-center justify-between min-w-0 pr-2">
+                            <div className="flex items-center gap-2 min-w-0 flex-1">
+                              <span className="shrink-0 rounded-[4px] bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-bold text-amber-700 dark:text-amber-400 border border-amber-500/30">
+                                {item.name === '段取り' ? 'SETUP' : (item.name === '試作' ? 'TRIAL' : 'TASK')}
                               </span>
-                              {isZeroOrMissing && (
-                                <span className="shrink-0 inline-flex items-center gap-0.5 rounded-[4px] bg-red-500/10 px-1.5 py-0.5 text-[9px] font-bold text-red-600 dark:text-red-400 border border-red-500/30">
-                                  <span className="material-symbols-outlined" style={{ fontSize: 11 }}>warning</span>
-                                  <span className="truncate max-w-[65px]">{disc.type === 'missing_in_excel' ? t('ff_notInExcel') : (disc.movedText || t('ff_zeroMetersToday'))}</span>
-                                </span>
-                              )}
-                              {isQtyMismatch && (
-                                <span className="shrink-0 inline-flex items-center gap-0.5 rounded-[4px] bg-amber-500/10 px-1.5 py-0.5 text-[9px] font-bold text-amber-700 dark:text-amber-400 border border-amber-500/30">
-                                  <span className="material-symbols-outlined" style={{ fontSize: 11 }}>difference</span>
-                                  <span>{disc.excelQty}{item.unit || 'm'}</span>
-                                </span>
-                              )}
-                            </div>
-
-                            {/* Column 2: Kataban */}
-                            <div className="w-[85px] shrink-0 text-left">
-                              {itemKataban ? (
-                                <span className="inline-block truncate text-xs font-mono font-medium text-[var(--text-secondary)]" title={`型番: ${itemKataban}`}>
-                                  {itemKataban}
-                                </span>
-                              ) : (
-                                <span className="text-[var(--text-muted)] text-xs font-mono">—</span>
-                              )}
-                            </div>
-
-                            {/* Column 3: Time Option */}
-                            <div className="w-[80px] shrink-0 text-left">
-                              {itemTimeOption ? (
-                                <span className="inline-flex items-center px-1.5 py-0.5 rounded-[4px] bg-[var(--freya-blue-subtle)] border border-[var(--freya-blue)]/20 text-[11px] font-semibold font-mono freya-tabular text-[var(--freya-blue)] shadow-2xs" title={`時間オプション: ${itemTimeOption}`}>
-                                  {itemTimeOption}
-                                </span>
-                              ) : (
-                                <span className="text-[var(--text-muted)] text-xs font-mono">—</span>
-                              )}
-                            </div>
-                          </div>
-
-                          <div className="flex items-center gap-2 mt-1.5 text-xs text-[var(--text-secondary)] flex-wrap">
-                            <span className="rounded-[4px] bg-[var(--surface)] border border-[var(--border)] px-1.5 py-0.5 text-[11px] font-mono text-[var(--text-secondary)]">
-                              {item.unit === '枚'
-                                ? (language === 'ja' ? `束 ${item.rollIndex}/${item.totalRolls}` : `Pack ${item.rollIndex}/${item.totalRolls}`)
-                                : (language === 'ja' ? `巻 ${item.rollIndex}/${item.totalRolls}` : `Roll ${item.rollIndex}/${item.totalRolls}`)
-                              }
-                            </span>
-                            <span className="rounded-[4px] bg-[var(--surface)] border border-[var(--border)] px-1.5 py-0.5 text-[11px] font-mono font-bold text-[var(--text-primary)] freya-tabular">
-                              {item.meters}{item.unit || 'm'}
-                            </span>
-                            {isQtyMismatch && item.rollIndex === 1 && (
+                              <span className="font-bold text-xs text-[var(--text-primary)] truncate" title={item.comment ? `${setupDisplayName} ${item.comment}` : setupDisplayName}>
+                                {item.comment ? `${setupDisplayName} ${item.comment}` : setupDisplayName}
+                              </span>
                               <button
                                 type="button"
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  handleUpdateHinbanQty(item.hinban);
+                                  setCommentModalItem(item);
+                                  setTempCommentText(item.comment || '');
                                 }}
-                                className="inline-flex items-center gap-1 rounded-[4px] border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-[11px] font-bold text-amber-700 dark:text-amber-400 hover:bg-amber-500/20 transition-colors ml-1 cursor-pointer shadow-2xs"
-                                title={language === 'ja' ? '最新Excelデータに合わせて巻数・所要時間を更新' : 'Update rolls and duration to match Excel'}
+                                className={`p-1 rounded-[4px] hover:bg-[var(--surface-hover)] transition-colors shrink-0 cursor-pointer ${item.comment ? 'text-[var(--freya-blue)] font-semibold' : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'}`}
+                                title={t('ff_editTitleNote')}
                               >
-                                <span className="material-symbols-outlined" style={{ fontSize: 12 }}>sync</span>
-                                {t('ff_updateQtyPrompt').replace('{qty}', `${disc.excelQty}${item.unit || 'm'}`)}
+                                <span className="material-symbols-outlined" style={{ fontSize: 16 }}>
+                                  edit_note
+                                </span>
                               </button>
-                            )}
+                            </div>
+                            <span className="text-xs font-mono font-bold freya-tabular text-amber-700 dark:text-amber-400 whitespace-nowrap ml-2 bg-amber-500/10 border border-amber-500/20 rounded-[4px] px-2 py-0.5">
+                              {item.duration} {t('ff_minutesShort')}
+                            </span>
                           </div>
+                          <button 
+                            onClick={() => handleRemoveFromSchedule(item)}
+                            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[4px] border border-[var(--border)] bg-[var(--surface)] hover:bg-[var(--surface-hover)] hover:border-red-500/30 hover:text-red-600 text-[var(--text-muted)] transition-all shadow-2xs ml-1 cursor-pointer"
+                            title={t('ff_removeFromSchedule')}
+                          >
+                            <span className="material-symbols-outlined" style={{fontSize: 16}}>arrow_back</span>
+                          </button>
+                        </div>
+                      );
+                    }
+
+                    // Helper to render an individual roll card
+                    const renderRollCard = (item, rollItemIndex) => {
+                      const disc = currentDayDiscrepancies.map[item.hinban];
+                      const isZeroOrMissing = disc && (disc.type === 'moved_or_zero' || disc.type === 'missing_in_excel');
+                      const isQtyMismatch = disc && disc.type === 'qty_mismatch';
+
+                      const matchedPool = data.find(d => d.hinban === item.hinban);
+                      const itemKataban = item._kataban || extractKataban(matchedPool || item);
+                      const itemTimeOption = item._timeOption || extractTimeOption(matchedPool || item);
+
+                      return (
+                        <div 
+                          key={item.id}
+                          draggable
+                          onDragStart={(e) => onDragStartSchedule(e, item, 'scheduled')}
+                          onDragOver={(e) => e.preventDefault()}
+                          onDrop={(e) => {
+                            e.stopPropagation(); // Prevent column drop
+                            onDropScheduled(e, rollItemIndex);
+                          }}
+                          className={`group cursor-grab active:cursor-grabbing rounded-[6px] border p-2.5 flex items-center gap-3 transition-all shadow-2xs hover:border-[var(--border-strong)] hover:bg-[var(--surface-hover)] ${
+                            isZeroOrMissing 
+                              ? 'border-red-500/40 bg-red-500/5' 
+                              : isQtyMismatch 
+                              ? 'border-amber-500/40 bg-amber-500/5' 
+                              : 'border-[var(--border)] bg-[var(--surface)]'
+                          }`}
+                        >
+                          <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-[4px] text-xs font-mono font-bold shadow-2xs ${
+                            isZeroOrMissing 
+                              ? 'bg-red-600 text-white' 
+                              : isQtyMismatch 
+                              ? 'bg-amber-600 text-white' 
+                              : 'bg-[var(--surface)] border border-[var(--border)] text-[var(--text-primary)]'
+                          }`}>
+                            {rollItemIndex + 1}
+                          </span>
+                          <span className="flex flex-col items-center justify-center rounded-[4px] bg-[var(--surface)] border border-[var(--border)] px-2 py-0.5 text-xs font-mono freya-tabular text-[var(--text-primary)] min-w-[62px] shadow-2xs">
+                            <span className="font-bold text-[var(--text-primary)]">{item.startTime}</span>
+                            <span className="text-[10px] text-[var(--text-muted)] font-medium">～ {item.endTime}</span>
+                          </span>
+
+                          <div className="flex-1 flex flex-col cursor-pointer min-w-0 pr-1" onClick={() => handleCardClick(item.hinban)}>
+                            <div className="flex items-center gap-4 w-full">
+                              {/* Column 1: Hinban + Discrepancy Warnings */}
+                              <div className="w-[210px] shrink-0 flex items-center gap-1.5 min-w-0">
+                                <span className="font-mono font-bold text-xs text-[var(--text-primary)] group-hover:text-[var(--freya-blue)] transition-colors truncate" title={item.hinban}>
+                                  {item.hinban}
+                                </span>
+                                {isZeroOrMissing && (
+                                  <span className="shrink-0 inline-flex items-center gap-0.5 rounded-[4px] bg-red-500/10 px-1.5 py-0.5 text-[9px] font-bold text-red-600 dark:text-red-400 border border-red-500/30">
+                                    <span className="material-symbols-outlined" style={{ fontSize: 11 }}>warning</span>
+                                    <span className="truncate max-w-[65px]">{disc.type === 'missing_in_excel' ? t('ff_notInExcel') : (disc.movedText || t('ff_zeroMetersToday'))}</span>
+                                  </span>
+                                )}
+                                {isQtyMismatch && (
+                                  <span className="shrink-0 inline-flex items-center gap-0.5 rounded-[4px] bg-amber-500/10 px-1.5 py-0.5 text-[9px] font-bold text-amber-700 dark:text-amber-400 border border-amber-500/30">
+                                    <span className="material-symbols-outlined" style={{ fontSize: 11 }}>difference</span>
+                                    <span>{disc.excelQty}{item.unit || 'm'}</span>
+                                  </span>
+                                )}
+                              </div>
+
+                              {/* Column 2: Kataban */}
+                              <div className="w-[85px] shrink-0 text-left">
+                                {itemKataban ? (
+                                  <span className="inline-block truncate text-xs font-mono font-medium text-[var(--text-secondary)]" title={`型番: ${itemKataban}`}>
+                                    {itemKataban}
+                                  </span>
+                                ) : (
+                                  <span className="text-[var(--text-muted)] text-xs font-mono">—</span>
+                                )}
+                              </div>
+
+                              {/* Column 3: Time Option */}
+                              <div className="w-[80px] shrink-0 text-left">
+                                {itemTimeOption ? (
+                                  <span className="inline-flex items-center px-1.5 py-0.5 rounded-[4px] bg-[var(--freya-blue-subtle)] border border-[var(--freya-blue)]/20 text-[11px] font-semibold font-mono freya-tabular text-[var(--freya-blue)] shadow-2xs" title={`時間オプション: ${itemTimeOption}`}>
+                                    {itemTimeOption}
+                                  </span>
+                                ) : (
+                                  <span className="text-[var(--text-muted)] text-xs font-mono">—</span>
+                                )}
+                              </div>
+                            </div>
+
+                            <div className="flex items-center gap-2 mt-1.5 text-xs text-[var(--text-secondary)] flex-wrap">
+                              <span className="rounded-[4px] bg-[var(--surface)] border border-[var(--border)] px-1.5 py-0.5 text-[11px] font-mono text-[var(--text-secondary)]">
+                                {item.unit === '枚'
+                                  ? (language === 'ja' ? `束 ${item.rollIndex}/${item.totalRolls}` : `Pack ${item.rollIndex}/${item.totalRolls}`)
+                                  : (language === 'ja' ? `巻 ${item.rollIndex}/${item.totalRolls}` : `Roll ${item.rollIndex}/${item.totalRolls}`)
+                                }
+                              </span>
+                              <span className="rounded-[4px] bg-[var(--surface)] border border-[var(--border)] px-1.5 py-0.5 text-[11px] font-mono font-bold text-[var(--text-primary)] freya-tabular">
+                                {item.meters}{item.unit || 'm'}
+                              </span>
+                              {isQtyMismatch && item.rollIndex === 1 && (
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleUpdateHinbanQty(item.hinban);
+                                  }}
+                                  className="inline-flex items-center gap-1 rounded-[4px] border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-[11px] font-bold text-amber-700 dark:text-amber-400 hover:bg-amber-500/20 transition-colors ml-1 cursor-pointer shadow-2xs"
+                                  title={language === 'ja' ? '最新Excelデータに合わせて巻数・所要時間を更新' : 'Update rolls and duration to match Excel'}
+                                >
+                                  <span className="material-symbols-outlined" style={{ fontSize: 12 }}>sync</span>
+                                  {t('ff_updateQtyPrompt').replace('{qty}', `${disc.excelQty}${item.unit || 'm'}`)}
+                                </button>
+                              )}
+                            </div>
+                          </div>
+
+                          <span className="text-xs font-mono font-bold freya-tabular text-[var(--text-primary)] whitespace-nowrap bg-[var(--surface)] border border-[var(--border)] rounded-[4px] px-2 py-0.5">
+                            {item.duration} {t('ff_minutesShort')}
+                          </span>
+                          <button 
+                            onClick={() => handleRemoveFromSchedule(item)}
+                            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[4px] border border-[var(--border)] bg-[var(--surface)] hover:bg-[var(--surface-hover)] hover:border-red-500/30 hover:text-red-600 text-[var(--text-muted)] transition-all shadow-2xs ml-1 cursor-pointer"
+                            title={t('ff_removeFromSchedule')}
+                          >
+                            <span className="material-symbols-outlined" style={{fontSize: 16}}>arrow_back</span>
+                          </button>
+                        </div>
+                      );
+                    };
+
+                    // Single roll Hinban
+                    if (group.items.length === 1) {
+                      return renderRollCard(group.items[0].item, group.items[0].index);
+                    }
+
+                    // Multi-roll Hinban group
+                    const isCollapsed = collapsedGroups[group.id] ?? true;
+
+                    // If Collapsed: Render obvious stacked card with full start-to-end time
+                    if (isCollapsed) {
+                      const disc = currentDayDiscrepancies.map[group.hinban];
+                      const groupIsZeroOrMissing = disc && (disc.type === 'moved_or_zero' || disc.type === 'missing_in_excel');
+                      const groupIsQtyMismatch = disc && disc.type === 'qty_mismatch';
+                      const matchedPool = data.find(d => d.hinban === group.hinban);
+                      const itemKataban = group.representativeItem?._kataban || extractKataban(matchedPool || group.representativeItem);
+                      const itemTimeOption = group.representativeItem?._timeOption || extractTimeOption(matchedPool || group.representativeItem);
+
+                      return (
+                        <div
+                          key={group.id}
+                          draggable
+                          onDragStart={(e) => onDragStartSchedule(e, {
+                            type: 'hinban-group',
+                            hinban: group.hinban,
+                            ids: group.items.map(i => i.item.id)
+                          }, 'scheduled')}
+                          onDragOver={(e) => e.preventDefault()}
+                          onDrop={(e) => {
+                            e.stopPropagation();
+                            onDropScheduled(e, group.startIndex);
+                          }}
+                          className={`group relative cursor-grab active:cursor-grabbing rounded-[6px] border border-l-4 border-l-[var(--freya-blue)] p-2.5 flex items-center gap-3 transition-all shadow-xs hover:border-[var(--border-strong)] hover:border-l-[var(--freya-blue)] hover:bg-[var(--surface-hover)] before:absolute before:-bottom-1.5 before:left-3 before:right-3 before:h-1.5 before:rounded-b-[4px] before:border-b before:border-x before:border-[var(--border)] before:bg-[var(--surface-hover)] mb-2 ${
+                            groupIsZeroOrMissing
+                              ? 'border-red-500/40 bg-red-500/5'
+                              : groupIsQtyMismatch
+                              ? 'border-amber-500/40 bg-amber-500/5'
+                              : 'border-[var(--border)] bg-[var(--surface)]'
+                          }`}
+                        >
+                          {/* Sequence Range Badge */}
+                          <span 
+                            className={`flex h-7 px-2 shrink-0 items-center justify-center rounded-[4px] text-xs font-mono font-bold shadow-2xs ${
+                              groupIsZeroOrMissing
+                                ? 'bg-red-600 text-white'
+                                : groupIsQtyMismatch
+                                ? 'bg-amber-600 text-white'
+                                : 'bg-[var(--surface-hover)] border border-[var(--border)] text-[var(--text-primary)]'
+                            }`}
+                            title={language === 'ja' ? `工程順: #${group.startIndex + 1} ～ #${group.endIndex + 1}` : `Order: #${group.startIndex + 1} ～ #${group.endIndex + 1}`}
+                          >
+                            #{group.startIndex + 1}～#{group.endIndex + 1}
+                          </span>
+
+                          {/* Group Start to End Time Badge */}
+                          <span className="flex flex-col items-center justify-center rounded-[4px] bg-[var(--surface)] border border-[var(--border)] px-2 py-0.5 text-xs font-mono freya-tabular text-[var(--text-primary)] min-w-[62px] shadow-2xs">
+                            <span className="font-bold text-[var(--text-primary)]">{group.startTime}</span>
+                            <span className="text-[10px] text-[var(--text-muted)] font-medium">～ {group.endTime}</span>
+                          </span>
+
+                          {/* Main Group Info */}
+                          <div className="flex-1 flex flex-col cursor-pointer min-w-0 pr-1" onClick={() => handleCardClick(group.hinban)}>
+                            <div className="flex items-center gap-4 w-full">
+                              {/* Column 1: Hinban + Discrepancy Warnings */}
+                              <div className="w-[210px] shrink-0 flex items-center gap-1.5 min-w-0">
+                                <span className="font-mono font-bold text-xs text-[var(--text-primary)] group-hover:text-[var(--freya-blue)] transition-colors truncate" title={group.hinban}>
+                                  {group.hinban}
+                                </span>
+                                {groupIsZeroOrMissing && (
+                                  <span className="shrink-0 inline-flex items-center gap-0.5 rounded-[4px] bg-red-500/10 px-1.5 py-0.5 text-[9px] font-bold text-red-600 dark:text-red-400 border border-red-500/30">
+                                    <span className="material-symbols-outlined" style={{ fontSize: 11 }}>warning</span>
+                                    <span className="truncate max-w-[65px]">{disc.type === 'missing_in_excel' ? t('ff_notInExcel') : (disc.movedText || t('ff_zeroMetersToday'))}</span>
+                                  </span>
+                                )}
+                                {groupIsQtyMismatch && (
+                                  <span className="shrink-0 inline-flex items-center gap-0.5 rounded-[4px] bg-amber-500/10 px-1.5 py-0.5 text-[9px] font-bold text-amber-700 dark:text-amber-400 border border-amber-500/30">
+                                    <span className="material-symbols-outlined" style={{ fontSize: 11 }}>difference</span>
+                                    <span>{disc.excelQty}{group.unit || 'm'}</span>
+                                  </span>
+                                )}
+                              </div>
+
+                              {/* Column 2: Kataban */}
+                              <div className="w-[85px] shrink-0 text-left">
+                                {itemKataban ? (
+                                  <span className="inline-block truncate text-xs font-mono font-medium text-[var(--text-secondary)]" title={`型番: ${itemKataban}`}>
+                                    {itemKataban}
+                                  </span>
+                                ) : (
+                                  <span className="text-[var(--text-muted)] text-xs font-mono">—</span>
+                                )}
+                              </div>
+
+                              {/* Column 3: Time Option */}
+                              <div className="w-[80px] shrink-0 text-left">
+                                {itemTimeOption ? (
+                                  <span className="inline-flex items-center px-1.5 py-0.5 rounded-[4px] bg-[var(--freya-blue-subtle)] border border-[var(--freya-blue)]/20 text-[11px] font-semibold font-mono freya-tabular text-[var(--freya-blue)] shadow-2xs" title={`時間オプション: ${itemTimeOption}`}>
+                                    {itemTimeOption}
+                                  </span>
+                                ) : (
+                                  <span className="text-[var(--text-muted)] text-xs font-mono">—</span>
+                                )}
+                              </div>
+                            </div>
+
+                            {/* Row 2: Obvious Collapsed Badges and Expand Trigger */}
+                            <div className="flex items-center gap-2 mt-1.5 text-xs text-[var(--text-secondary)] flex-wrap">
+                              {/* Obvious Collapsed Indicator Badge */}
+                              <span className="inline-flex items-center gap-1 rounded-[4px] bg-[var(--freya-blue-subtle)] border border-[var(--freya-blue)]/30 px-2 py-0.5 text-[11px] font-bold text-[var(--freya-blue)] shadow-2xs">
+                                <span className="material-symbols-outlined" style={{ fontSize: 13 }}>layers</span>
+                                <span>{t('ff_collapsedRolls').replace('{count}', group.items.length)}</span>
+                              </span>
+
+                              {/* Total Quantity */}
+                              <span className="rounded-[4px] bg-[var(--surface)] border border-[var(--border)] px-1.5 py-0.5 text-[11px] font-mono font-bold text-[var(--text-primary)] freya-tabular">
+                                {language === 'ja'
+                                  ? `全${group.items.length}${group.unit === '枚' ? '束' : '巻'} • ${group.totalMeters.toLocaleString()}${group.unit || 'm'}`
+                                  : `All ${group.items.length} ${group.unit === '枚' ? 'packs' : 'rolls'} • ${group.totalMeters.toLocaleString()}${group.unit || 'm'}`}
+                              </span>
+
+                              {/* Expand Button */}
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  toggleGroupCollapse(group.id);
+                                }}
+                                className="inline-flex items-center gap-1 rounded-[4px] border border-[var(--border)] bg-[var(--surface)] hover:bg-[var(--surface-hover)] hover:border-[var(--freya-blue)] hover:text-[var(--freya-blue)] px-2 py-0.5 text-[11px] font-semibold text-[var(--text-secondary)] transition-all cursor-pointer shadow-2xs"
+                                title={language === 'ja' ? '展開して各巻を表示' : 'Expand to view individual rolls'}
+                              >
+                                <span className="material-symbols-outlined" style={{ fontSize: 13 }}>unfold_more</span>
+                                <span>{t('ff_expand')}</span>
+                              </button>
+
+                              {groupIsQtyMismatch && (
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleUpdateHinbanQty(group.hinban);
+                                  }}
+                                  className="inline-flex items-center gap-1 rounded-[4px] border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-[11px] font-bold text-amber-700 dark:text-amber-400 hover:bg-amber-500/20 transition-colors ml-1 cursor-pointer shadow-2xs"
+                                  title={language === 'ja' ? '最新Excelデータに合わせて巻数・所要時間を更新' : 'Update rolls and duration to match Excel'}
+                                >
+                                  <span className="material-symbols-outlined" style={{ fontSize: 12 }}>sync</span>
+                                  {t('ff_updateQtyPrompt').replace('{qty}', `${disc.excelQty}${group.unit || 'm'}`)}
+                                </button>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Total Duration of Group */}
+                          <span className="text-xs font-mono font-bold freya-tabular text-[var(--text-primary)] whitespace-nowrap bg-[var(--surface)] border border-[var(--border)] rounded-[4px] px-2 py-0.5" title={language === 'ja' ? `合計所要時間: ${formatTime(group.totalDuration)}` : `Total duration: ${formatTime(group.totalDuration)}`}>
+                            {formatTime(group.totalDuration)}
+                          </span>
+
+                          {/* Remove all rolls from schedule */}
+                          <button 
+                            onClick={() => handleRemoveFromSchedule({ type: 'hinban', hinban: group.hinban })}
+                            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[4px] border border-[var(--border)] bg-[var(--surface)] hover:bg-[var(--surface-hover)] hover:border-red-500/30 hover:text-red-600 text-[var(--text-muted)] transition-all shadow-2xs ml-1 cursor-pointer"
+                            title={t('ff_removeFromSchedule')}
+                          >
+                            <span className="material-symbols-outlined" style={{fontSize: 16}}>arrow_back</span>
+                          </button>
+                        </div>
+                      );
+                    }
+
+                    // If Expanded: Render group header bar with collapse toggle followed by each roll
+                    return (
+                      <div key={group.id} className="flex flex-col gap-2 rounded-[6px] border border-[var(--freya-blue)]/30 bg-[var(--surface)] p-2 shadow-2xs">
+                        {/* Expanded Group Header Bar */}
+                        <div className="flex items-center justify-between px-2.5 py-1.5 rounded-[4px] bg-[var(--surface-hover)] border border-[var(--border)] text-xs">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <span className="material-symbols-outlined text-[var(--freya-blue)]" style={{ fontSize: 16 }}>layers</span>
+                            <span className="font-mono font-bold text-[var(--text-primary)] truncate">{group.hinban}</span>
+                            <span className="text-[11px] font-mono text-[var(--text-muted)]">
+                              (#{group.startIndex + 1}～#{group.endIndex + 1} • {group.startTime}～{group.endTime} • {formatTime(group.totalDuration)})
+                            </span>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => toggleGroupCollapse(group.id)}
+                            className="inline-flex items-center gap-1 rounded-[4px] border border-[var(--border)] bg-[var(--surface)] hover:bg-[var(--surface-hover)] hover:border-[var(--freya-blue)] hover:text-[var(--freya-blue)] px-2 py-0.5 text-[11px] font-semibold text-[var(--text-secondary)] transition-all cursor-pointer shadow-2xs shrink-0"
+                            title={language === 'ja' ? 'この品番の巻を折りたたむ' : 'Collapse rolls for this hinban'}
+                          >
+                            <span className="material-symbols-outlined" style={{ fontSize: 14 }}>unfold_less</span>
+                            <span>{t('ff_collapse')}</span>
+                          </button>
                         </div>
 
-                        <span className="text-xs font-mono font-bold freya-tabular text-[var(--text-primary)] whitespace-nowrap bg-[var(--surface)] border border-[var(--border)] rounded-[4px] px-2 py-0.5">
-                          {item.duration} {t('ff_minutesShort')}
-                        </span>
-                        <button 
-                          onClick={() => handleRemoveFromSchedule(item)}
-                          className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[4px] border border-[var(--border)] bg-[var(--surface)] hover:bg-[var(--surface-hover)] hover:border-red-500/30 hover:text-red-600 text-[var(--text-muted)] transition-all shadow-2xs ml-1 cursor-pointer"
-                          title={t('ff_removeFromSchedule')}
-                        >
-                          <span className="material-symbols-outlined" style={{fontSize: 16}}>arrow_back</span>
-                        </button>
+                        {/* Individual Rolls in Group */}
+                        <div className="flex flex-col gap-2">
+                          {group.items.map(({ item, index }) => renderRollCard(item, index))}
+                        </div>
                       </div>
                     );
                   })
