@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import Hls from "hls.js";
 import { BASE_URL } from "../services/api";
+import { useLanguage } from "../contexts/LanguageContext";
 
 const FACTORY_CAMS = {
   '小瀬': [
@@ -16,6 +17,8 @@ const FACTORY_CAMS = {
 };
 
 export default function CameraModal({ onClose, factory = '小瀬', stream }) {
+  const { language } = useLanguage();
+  const isJa = language === "ja";
   const camLabels = FACTORY_CAMS[factory] ?? FACTORY_CAMS['小瀬'];
   const videoRef = useRef(null);
   const [activeStream, setActiveStream] = useState(stream || camLabels[0].id);
@@ -71,8 +74,12 @@ export default function CameraModal({ onClose, factory = '小瀬', stream }) {
       >
         <div className="flex items-center justify-between gap-4 border-b border-[var(--border)] px-5 py-4 bg-[var(--surface)]">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">{factory} — Live Camera</p>
-            <h2 className="mt-0.5 text-base font-semibold text-[var(--text-primary)]">Live Feed — {activeLabel}</h2>
+            <p className="text-xs font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">
+              {factory} — {isJa ? "ライブカメラ" : "Live Camera"}
+            </p>
+            <h2 className="mt-0.5 text-base font-semibold text-[var(--text-primary)]">
+              {isJa ? `ライブ映像 — ${activeLabel}` : `Live Feed — ${activeLabel}`}
+            </h2>
           </div>
           <button
             type="button"

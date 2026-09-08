@@ -6,6 +6,7 @@ import RecordEditModal from "../components/RecordEditModal";
 import ApprovalsStatsStrip from "../components/ApprovalsStatsStrip";
 import ApprovalsFilterPanel from "../components/ApprovalsFilterPanel";
 import PageHeader from "../components/PageHeader";
+import { useLanguage } from "../contexts/LanguageContext";
 import { fetchDistinctValues } from "../services/api";
 import {
   approveApprovalDeleteRequest,
@@ -118,6 +119,8 @@ function buildInitialRangeMode() {
 }
 
 export default function ApprovalsPage() {
+  const { language } = useLanguage();
+  const isJa = language === "ja";
   const authUser = getAuthUser();
   const requestIdRef = useRef(0);
   const actorNameRef = useRef("");
@@ -165,7 +168,7 @@ export default function ApprovalsPage() {
   const advancedFieldDefinitions = getApprovalAdvancedFieldDefinitions(activeTab);
 
   const tableTabs = canUseRecycleBin
-    ? [...APPROVAL_TABS, { key: "recycleBin", label: "Recycle Bin" }]
+    ? [...APPROVAL_TABS, { key: "recycleBin", label: "Recycle Bin", labelJa: "ゴミ箱" }]
     : APPROVAL_TABS;
 
   useEffect(() => {
@@ -896,7 +899,7 @@ export default function ApprovalsPage() {
     ...(viewMode === "batch"
       ? [{
           key: "select",
-          label: "Sel",
+          label: isJa ? "選択" : "Sel",
           sortable: false,
           width: 66,
           disableCellWrapper: true,
@@ -920,11 +923,11 @@ export default function ApprovalsPage() {
       : []),
     {
       key: "approvalStatus",
-      label: "Status",
+      label: isJa ? "ステータス" : "Status",
       width: 148,
       disableCellWrapper: true,
       renderCell: (row) => {
-        const meta = getApprovalStatusMeta(row);
+        const meta = getApprovalStatusMeta(row, isJa);
         return (
           <span className={joinClasses("inline-flex items-center gap-1.5 rounded-[4px] px-2.5 py-0.5 text-xs font-mono font-bold uppercase tracking-wider", meta.badgeClassName)}>
             <span className="material-symbols-outlined" style={{ fontSize: 14, fontVariationSettings: "'FILL' 1" }}>{meta.icon}</span>
@@ -935,7 +938,7 @@ export default function ApprovalsPage() {
     },
     {
       key: "Date",
-      label: "Submitted",
+      label: isJa ? "提出日時" : "Submitted",
       width: 158,
       disableCellWrapper: true,
       renderCell: (row) => {
@@ -949,7 +952,7 @@ export default function ApprovalsPage() {
                 <span
                   className="material-symbols-outlined text-error"
                   style={{ fontSize: 16 }}
-                  title={`Date mismatch. Actual submission date: ${mismatch.objectIdDate || "unknown"}`}
+                  title={isJa ? `日付不一致。実際の提出日: ${mismatch.objectIdDate || "不明"}` : `Date mismatch. Actual submission date: ${mismatch.objectIdDate || "unknown"}`}
                 >
                   warning
                 </span>
@@ -961,7 +964,7 @@ export default function ApprovalsPage() {
                 <span
                   className="material-symbols-outlined text-amber-600 dark:text-amber-300"
                   style={{ fontSize: 16 }}
-                  title={`Time mismatch. Actual submission time: ${mismatch.objectIdTime || "unknown"}`}
+                  title={isJa ? `時間乖離。実際の提出時間: ${mismatch.objectIdTime || "不明"}` : `Time mismatch. Actual submission time: ${mismatch.objectIdTime || "unknown"}`}
                 >
                   schedule
                 </span>
@@ -973,31 +976,31 @@ export default function ApprovalsPage() {
     },
     {
       key: "工場",
-      label: "Factory",
+      label: isJa ? "工場" : "Factory",
       width: 130,
       contentClassName: "planner-data-text text-sm font-semibold",
     },
     {
       key: "品番",
-      label: "Part No.",
+      label: isJa ? "品番" : "Part No.",
       width: 176,
       contentClassName: "planner-data-text text-sm font-semibold font-mono",
     },
     {
       key: "背番号",
-      label: "Serial No.",
+      label: isJa ? "背番号" : "Serial No.",
       width: 142,
       contentClassName: "planner-data-text text-sm font-semibold font-mono",
     },
     {
       key: "Worker_Name",
-      label: "Worker",
+      label: isJa ? "作業者" : "Worker",
       width: 144,
       contentClassName: "planner-data-text text-sm font-semibold",
     },
     {
       key: "quantity",
-      label: "Qty",
+      label: isJa ? "数量" : "Qty",
       width: 112,
       align: "right",
       disableCellWrapper: true,
@@ -1022,7 +1025,7 @@ export default function ApprovalsPage() {
     },
     {
       key: "defectRate",
-      label: "Defect",
+      label: isJa ? "不良率" : "Defect",
       width: 112,
       align: "right",
       disableCellWrapper: true,
@@ -1037,7 +1040,7 @@ export default function ApprovalsPage() {
     },
     {
       key: "approvedBy",
-      label: "Approver",
+      label: isJa ? "承認者" : "Approver",
       width: 160,
       disableCellWrapper: true,
       renderCell: (row) => (
@@ -1046,7 +1049,7 @@ export default function ApprovalsPage() {
     },
     {
       key: "actions",
-      label: "Action",
+      label: isJa ? "操作" : "Action",
       sortable: false,
       width: 112,
       disableCellWrapper: true,
@@ -1060,7 +1063,7 @@ export default function ApprovalsPage() {
           }}
           className="rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1 text-xs font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-hover)] transition-colors shadow-2xs"
         >
-          Review
+          {isJa ? "確認" : "Review"}
         </button>
       ),
     },
@@ -1069,7 +1072,7 @@ export default function ApprovalsPage() {
   const recycleColumns = [
     {
       key: "deletedAt",
-      label: "Deleted",
+      label: isJa ? "削除日時" : "Deleted",
       width: 168,
       disableCellWrapper: true,
       renderCell: (row) => (
@@ -1081,7 +1084,7 @@ export default function ApprovalsPage() {
     },
     {
       key: "collection",
-      label: "Collection",
+      label: isJa ? "コレクション" : "Collection",
       width: 128,
       disableCellWrapper: true,
       renderCell: (row) => (
@@ -1090,41 +1093,41 @@ export default function ApprovalsPage() {
     },
     {
       key: "工場",
-      label: "Factory",
+      label: isJa ? "工場" : "Factory",
       width: 126,
       disableCellWrapper: true,
       renderCell: (row) => <span className="planner-data-text text-sm font-semibold text-[var(--text-primary)]">{row.originalDoc?.工場 || "—"}</span>,
     },
     {
       key: "品番",
-      label: "Part No.",
+      label: isJa ? "品番" : "Part No.",
       width: 176,
       disableCellWrapper: true,
       renderCell: (row) => <span className="planner-data-text text-sm font-semibold text-[var(--text-primary)] font-mono">{row.originalDoc?.品番 || "—"}</span>,
     },
     {
       key: "背番号",
-      label: "Serial No.",
+      label: isJa ? "背番号" : "Serial No.",
       width: 140,
       disableCellWrapper: true,
       renderCell: (row) => <span className="planner-data-text text-sm font-semibold text-[var(--text-primary)] font-mono">{row.originalDoc?.背番号 || "—"}</span>,
     },
     {
       key: "deletedBy",
-      label: "Deleted By",
+      label: isJa ? "削除者" : "Deleted By",
       width: 160,
       contentClassName: "planner-data-text text-sm font-semibold",
     },
     {
       key: "deleteReason",
-      label: "Reason",
+      label: isJa ? "理由" : "Reason",
       width: 240,
       wrap: true,
       contentClassName: "planner-data-text text-sm",
     },
     {
       key: "actions",
-      label: "Action",
+      label: isJa ? "操作" : "Action",
       sortable: false,
       width: 110,
       disableCellWrapper: true,
@@ -1138,7 +1141,7 @@ export default function ApprovalsPage() {
           }}
           className="rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1 text-xs font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-hover)] transition-colors shadow-2xs"
         >
-          Inspect
+          {isJa ? "詳細" : "Inspect"}
         </button>
       ),
     },
@@ -1148,10 +1151,16 @@ export default function ApprovalsPage() {
     return (
       <section className="w-full h-screen overflow-y-auto space-y-6 pt-20 px-4 sm:px-6 md:px-8 pb-16">
         <div className="freya-card rounded-[8px] border border-[var(--border)] bg-[var(--surface)] p-6 shadow-sm">
-          <div className="text-[10px] font-mono font-bold uppercase tracking-[0.18em] text-[var(--text-muted)]">Approvals</div>
-          <h1 className="mt-2 text-xl font-bold text-[var(--text-primary)]">Access Required</h1>
+          <div className="text-[10px] font-mono font-bold uppercase tracking-[0.18em] text-[var(--text-muted)]">
+            {isJa ? "承認管理" : "Approvals"}
+          </div>
+          <h1 className="mt-2 text-xl font-bold text-[var(--text-primary)]">
+            {isJa ? "アクセス権限がありません" : "Access Required"}
+          </h1>
           <p className="mt-2 max-w-2xl text-xs text-[var(--text-muted)]">
-            The approval workflow is available only to admin, 部長, 課長, 係長, and 班長 roles.
+            {isJa
+              ? "承認ワークフローは、管理者、部長、課長、係長、班長のみ利用可能です。"
+              : "The approval workflow is available only to admin, 部長, 課長, 係長, and 班長 roles."}
           </p>
         </div>
       </section>
@@ -1168,9 +1177,9 @@ export default function ApprovalsPage() {
     <section className="w-full h-screen overflow-y-auto space-y-6 pt-20 px-4 sm:px-6 md:px-8 pb-16">
       <FlashBanner flash={flash} onClose={() => setFlash(null)} />
       <PageHeader
-        eyebrow="Approvals"
+        eyebrow={isJa ? "承認管理" : "Approvals"}
         eyebrowClassName="text-[10px]"
-        title="Production Approval Desk"
+        title={isJa ? "製造実績承認デスク" : "Production Approval Desk"}
         actions={(
           <>
             {activeTab !== "recycleBin" ? (
@@ -1182,7 +1191,7 @@ export default function ApprovalsPage() {
               className="inline-flex items-center gap-2 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3.5 py-2 text-xs font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-hover)] transition-colors shadow-2xs"
             >
               <span className="material-symbols-outlined text-[var(--text-muted)]" style={{ fontSize: 16 }}>refresh</span>
-              Refresh
+              {isJa ? "更新" : "Refresh"}
             </button>
           </>
         )}
@@ -1215,21 +1224,33 @@ export default function ApprovalsPage() {
       ) : (
         <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
           <div className="freya-card rounded-[8px] border border-[var(--border)] bg-[var(--surface)] p-4 shadow-sm">
-            <div className="text-[10px] font-mono font-semibold uppercase tracking-[0.18em] text-[var(--text-muted)]">Recycle Bin</div>
+            <div className="text-[10px] font-mono font-semibold uppercase tracking-[0.18em] text-[var(--text-muted)]">
+              {isJa ? "ゴミ箱" : "Recycle Bin"}
+            </div>
             <div className="mt-1 text-2xl font-bold text-[var(--text-primary)] font-mono tabular-nums">{binRows.length.toLocaleString()}</div>
-            <p className="mt-1 text-xs text-[var(--text-muted)]">Soft-deleted approval records</p>
+            <p className="mt-1 text-xs text-[var(--text-muted)]">
+              {isJa ? "削除された承認データ" : "Soft-deleted approval records"}
+            </p>
           </div>
           <div className="freya-card rounded-[8px] border border-[var(--border)] bg-[var(--surface)] p-4 shadow-sm">
-            <div className="text-[10px] font-mono font-semibold uppercase tracking-[0.18em] text-[var(--text-muted)]">Restorable</div>
+            <div className="text-[10px] font-mono font-semibold uppercase tracking-[0.18em] text-[var(--text-muted)]">
+              {isJa ? "復元可能" : "Restorable"}
+            </div>
             <div className="mt-1 text-2xl font-bold text-[var(--text-primary)] font-mono tabular-nums">
               {binRows.length.toLocaleString()}
             </div>
-            <p className="mt-1 text-xs text-[var(--text-muted)]">Available for restore using original collection metadata</p>
+            <p className="mt-1 text-xs text-[var(--text-muted)]">
+              {isJa ? "元のコレクションへ復元可能" : "Available for restore using original collection metadata"}
+            </p>
           </div>
           <div className="freya-card rounded-[8px] border border-[var(--border)] bg-[var(--surface)] p-4 shadow-sm">
-            <div className="text-[10px] font-mono font-semibold uppercase tracking-[0.18em] text-[var(--text-muted)]">Role</div>
+            <div className="text-[10px] font-mono font-semibold uppercase tracking-[0.18em] text-[var(--text-muted)]">
+              {isJa ? "権限" : "Role"}
+            </div>
             <div className="mt-1 text-base font-bold text-[var(--text-primary)]">{authUser?.role || "Unknown"}</div>
-            <p className="mt-1 text-xs text-[var(--text-muted)]">Recycle bin tools follow original role restrictions</p>
+            <p className="mt-1 text-xs text-[var(--text-muted)]">
+              {isJa ? "役職ごとの制限に準拠します" : "Recycle bin tools follow original role restrictions"}
+            </p>
           </div>
         </div>
       )}
@@ -1238,7 +1259,9 @@ export default function ApprovalsPage() {
         <div className="freya-card rounded-[8px] border border-[var(--border)] bg-[var(--surface)] p-4 shadow-sm">
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_auto]">
             <div className="flex flex-col gap-1.5">
-              <label className="text-[10px] font-mono font-semibold uppercase tracking-[0.18em] text-[var(--text-muted)]">Search Recycle Bin</label>
+              <label className="text-[10px] font-mono font-semibold uppercase tracking-[0.18em] text-[var(--text-muted)]">
+                {isJa ? "ゴミ箱内を検索" : "Search Recycle Bin"}
+              </label>
               <input
                 type="text"
                 value={binSearchInput}
@@ -1246,7 +1269,7 @@ export default function ApprovalsPage() {
                   setPage(1);
                   setBinSearchInput(event.target.value);
                 }}
-                placeholder="Factory, part no., serial no., deleted by, reason..."
+                placeholder={isJa ? "工場、品番、背番号、削除者、理由..." : "Factory, part no., serial no., deleted by, reason..."}
                 className="h-9 rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] px-3 text-xs text-[var(--text-primary)] placeholder:text-[var(--text-muted)] outline-none transition-colors focus:border-[var(--freya-blue)]"
               />
             </div>
@@ -1259,7 +1282,7 @@ export default function ApprovalsPage() {
                 }}
                 className="h-9 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3.5 text-xs font-semibold text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-hover)] transition-colors shadow-2xs"
               >
-                Clear Search
+                {isJa ? "検索クリア" : "Clear Search"}
               </button>
             </div>
           </div>
@@ -1292,9 +1315,13 @@ export default function ApprovalsPage() {
         <div className="freya-card rounded-[8px] border border-[var(--border)] bg-[var(--surface)] p-4 shadow-sm">
           <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
             <div>
-              <div className="text-[10px] font-mono font-bold uppercase tracking-[0.18em] text-[var(--text-muted)]">Batch Mode</div>
+              <div className="text-[10px] font-mono font-bold uppercase tracking-[0.18em] text-[var(--text-muted)]">
+                {isJa ? "一括承認モード" : "Batch Mode"}
+              </div>
               <p className="mt-0.5 text-xs text-[var(--text-muted)]">
-                Select actionable rows on the current page and run the same approval or correction workflow in one pass.
+                {isJa
+                  ? "現在のページで処理可能な行を選択し、一括で承認または修正依頼を実行します。"
+                  : "Select actionable rows on the current page and run the same approval or correction workflow in one pass."}
               </p>
             </div>
 
@@ -1305,7 +1332,7 @@ export default function ApprovalsPage() {
                 disabled={actionBusy || !liveRows.some((record) => isBatchSelectable(record, authUser))}
                 className="rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-hover)] transition-colors shadow-2xs disabled:cursor-not-allowed disabled:opacity-40"
               >
-                Select Visible
+                {isJa ? "表示中を全選択" : "Select Visible"}
               </button>
               <button
                 type="button"
@@ -1313,7 +1340,7 @@ export default function ApprovalsPage() {
                 disabled={actionBusy || !batchSelectedCount}
                 className="rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs font-semibold text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-hover)] transition-colors shadow-2xs disabled:cursor-not-allowed disabled:opacity-40"
               >
-                Clear Selection
+                {isJa ? "選択解除" : "Clear Selection"}
               </button>
               <button
                 type="button"
@@ -1321,7 +1348,7 @@ export default function ApprovalsPage() {
                 disabled={actionBusy || !batchSelectedCount}
                 className="rounded-[6px] bg-[var(--freya-blue)] px-3.5 py-1.5 text-xs font-semibold text-white hover:bg-[var(--freya-blue-hover)] transition-colors shadow-xs disabled:cursor-not-allowed disabled:opacity-40"
               >
-                Approve Selected ({batchSelectedCount})
+                {isJa ? `選択項目を承認 (${batchSelectedCount})` : `Approve Selected (${batchSelectedCount})`}
               </button>
               <button
                 type="button"
@@ -1329,7 +1356,7 @@ export default function ApprovalsPage() {
                 disabled={actionBusy || !batchSelectedCount}
                 className="rounded-[6px] border border-amber-500/30 bg-amber-500/10 px-3.5 py-1.5 text-xs font-semibold text-amber-700 dark:text-amber-300 hover:bg-amber-500/20 transition-colors shadow-2xs disabled:cursor-not-allowed disabled:opacity-40"
               >
-                Request Correction ({batchSelectedCount})
+                {isJa ? `修正依頼 (${batchSelectedCount})` : `Request Correction (${batchSelectedCount})`}
               </button>
             </div>
           </div>
@@ -1366,22 +1393,28 @@ export default function ApprovalsPage() {
           const mismatch = getApprovalDateTimeMismatch(row);
 
           return joinClasses(
-            getApprovalStatusMeta(row).rowClassName,
+            getApprovalStatusMeta(row, isJa).rowClassName,
             mismatch.dateMismatch ? "bg-error/5 shadow-[inset_4px_0_0_rgba(239,68,68,0.65)]" : "",
             selected ? "bg-primary/5" : ""
           );
         }}
         renderPageInfo={({ filteredCount, page: current, pageSize: currentPageSize }) => {
-          if (!filteredCount) return <span>0 records shown</span>;
+          if (!filteredCount) return <span>{isJa ? "0 件のレコード" : "0 records shown"}</span>;
           const start = (current - 1) * currentPageSize + 1;
           const end = Math.min(current * currentPageSize, filteredCount);
           const totalPages = activeTab === "recycleBin" ? binTotalPages : (pagination.totalPages || 1);
-          return <span>{filteredCount.toLocaleString()} records, showing {start}-{end} · page {current}/{totalPages}</span>;
+          return (
+            <span>
+              {isJa
+                ? `${filteredCount.toLocaleString()} 件中 ${start}-${end} 件を表示 · ${current}/${totalPages} ページ`
+                : `${filteredCount.toLocaleString()} records, showing ${start}-${end} · page ${current}/${totalPages}`}
+            </span>
+          );
         }}
-        loadingMessage={activeTab === "recycleBin" ? "Loading recycle bin…" : "Loading approvals…"}
-        errorTitle={activeTab === "recycleBin" ? "Could not load recycle bin" : "Could not load approvals"}
-        emptyTitle={activeTab === "recycleBin" ? "Recycle bin is empty" : "No matching approvals"}
-        emptyMessage={activeTab === "recycleBin" ? "No deleted approval records matched the current search." : "Adjust the filters and try again."}
+        loadingMessage={activeTab === "recycleBin" ? (isJa ? "ゴミ箱を読み込み中…" : "Loading recycle bin…") : (isJa ? "承認データを読み込み中…" : "Loading approvals…")}
+        errorTitle={activeTab === "recycleBin" ? (isJa ? "ゴミ箱の読み込みに失敗しました" : "Could not load recycle bin") : (isJa ? "承認データの読み込みに失敗しました" : "Could not load approvals")}
+        emptyTitle={activeTab === "recycleBin" ? (isJa ? "ゴミ箱は空です" : "Recycle bin is empty") : (isJa ? "該当する承認データがありません" : "No matching approvals")}
+        emptyMessage={activeTab === "recycleBin" ? (isJa ? "検索条件に一致する削除レコードはありません。" : "No deleted approval records matched the current search.") : (isJa ? "フィルター条件を変更してお試しください。" : "Adjust the filters and try again.")}
         enableColumnResize
         enableColumnReorder
         stickyHeader
@@ -1424,8 +1457,8 @@ export default function ApprovalsPage() {
         onSave={handleSaveEdit}
         onSoftDelete={handleSoftDeleteFromEdit}
         canSoftDelete={canSoftDeleteApproval(editState.record || {}, authUser)}
-        saveLabel="Save Changes"
-        softDeleteLabel="Move To Recycle Bin"
+        saveLabel={isJa ? "変更を保存" : "Save Changes"}
+        softDeleteLabel={isJa ? "ゴミ箱へ移動" : "Move To Recycle Bin"}
         notePlaceholder="変更理由または削除理由を入力..."
         buildSections={buildApprovalEditSections}
         resolveFieldKind={resolveApprovalEditFieldKind}

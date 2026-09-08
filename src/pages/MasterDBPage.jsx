@@ -1,6 +1,7 @@
 import { Suspense, lazy, useCallback, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import Papa from "papaparse";
+import { useLanguage } from "../contexts/LanguageContext";
 import MasterBatchEditModal from "../components/MasterBatchEditModal";
 import MasterCsvImportCard from "../components/MasterCsvImportCard";
 import MasterDetailDrawer from "../components/MasterDetailDrawer";
@@ -49,7 +50,7 @@ const SetsubiDBWorkspace = lazy(() => import("../components/SetsubiDBWorkspace")
 const PceFilesWorkspace = lazy(() => import("../components/PceFilesWorkspace"));
 const BomWorkspace = lazy(() => import("../components/BomWorkspace"));
 
-function FlashBanner({ flash, onClose }) {
+function FlashBanner({ flash, onClose, isJa }) {
   if (!flash) return null;
 
   const tone = flash.type === "error"
@@ -62,7 +63,9 @@ function FlashBanner({ flash, onClose }) {
     <div className={`mb-6 rounded-[8px] border px-4 py-3 ${tone}`}>
       <div className="flex items-start justify-between gap-4">
         <div>
-          <div className="text-[10px] font-semibold uppercase tracking-[0.18em]">Status</div>
+          <div className="text-[10px] font-semibold uppercase tracking-[0.18em]">
+            {isJa ? "ステータス" : "Status"}
+          </div>
           <p className="mt-0.5 text-xs font-medium">{flash.message}</p>
         </div>
         <button type="button" onClick={onClose} className="text-current/70 transition hover:text-current">
@@ -86,6 +89,9 @@ function toBase64(file) {
 }
 
 export default function MasterDBPage() {
+  const { language } = useLanguage();
+  const isJa = language === "ja";
+
   const [searchParams, setSearchParams] = useSearchParams();
   const tabFromUrl = searchParams.get("tab");
   const searchFromUrl = searchParams.get("search");
@@ -339,8 +345,16 @@ export default function MasterDBPage() {
 
   function handleTabSelect(tab) {
     if (!tab.ready) {
-      const liveTabs = MASTER_TABS.filter((item) => item.ready).map((item) => item.label).join(" / ");
-      setFlash({ type: "warning", message: `${tab.label} is queued for the next migration pass. Live tabs: ${liveTabs}.` });
+      const tabTitle = isJa ? (tab.labelJa || tab.label) : tab.label;
+      const liveTabs = MASTER_TABS.filter((item) => item.ready)
+        .map((item) => (isJa ? item.labelJa || item.label : item.label))
+        .join(" / ");
+      setFlash({
+        type: "warning",
+        message: isJa
+          ? `${tabTitle} は次期移行フェーズで対応予定です。利用可能なタブ: ${liveTabs}`
+          : `${tab.label} is queued for the next migration pass. Live tabs: ${liveTabs}.`,
+      });
       return;
     }
 
@@ -444,14 +458,20 @@ export default function MasterDBPage() {
       const parsedRows = cleanMasterRecords(Array.isArray(parsed.data) ? parsed.data : []);
 
       if (!parsedRows.length) {
-        throw new Error("The selected CSV did not produce any rows.");
+        throw new Error(isJa ? "選択したCSVにデータ行が含まれていません。" : "The selected CSV did not produce any rows.");
       }
 
       setCsvRows(parsedRows);
-      setFlash({ type: "success", message: `${parsedRows.length} CSV rows parsed successfully.` });
+      setFlash({
+        type: "success",
+        message: isJa ? `${parsedRows.length} 件のCSV行を正常に読み込みました。` : `${parsedRows.length} CSV rows parsed successfully.`,
+      });
     } catch (parseError) {
       setCsvRows([]);
-      setFlash({ type: "error", message: parseError.message || "Failed to parse the selected CSV file." });
+      setFlash({
+        type: "error",
+        message: parseError.message || (isJa ? "CSVファイルの読み込みに失敗しました。" : "Failed to parse the selected CSV file."),
+      });
     } finally {
       setCsvParsing(false);
     }
@@ -459,7 +479,8 @@ export default function MasterDBPage() {
 
   async function handleCsvImport() {
     if (!csvRows.length) return;
-    if (!window.confirm(`Insert ${csvRows.length} CSV records into ${activeTabMeta.label}?`)) return;
+    const tabTitle = isJa ? (activeTabMeta.labelJa || activeTabMeta.label) : activeTabMeta.label;
+    if (!window.confirm(isJa ? `${csvRows.length} 件のCSVレコードを ${tabTitle} に登録しますか？` : `Insert ${csvRows.length} CSV records into ${activeTabMeta.label}?`)) return;
 
     setCsvImporting(true);
     const authUser = getAuthUser();
@@ -485,7 +506,9 @@ export default function MasterDBPage() {
     setCsvImporting(false);
     setFlash({
       type: failCount ? "warning" : "success",
-      message: `CSV import finished. Inserted ${successCount} record${successCount === 1 ? "" : "s"}, failed ${failCount}.`,
+      message: isJa
+        ? `CSVインポートが完了しました。成功: ${successCount} 件、失敗: ${failCount} 件。`
+        : `CSV import finished. Inserted ${successCount} record${successCount === 1 ? "" : "s"}, failed ${failCount}.`,
     });
     setCsvFileName("");
     setCsvRows([]);
@@ -505,7 +528,7 @@ export default function MasterDBPage() {
       });
 
       if (!result?.insertedId) {
-        throw new Error("Record creation did not return a new ID.");
+        throw new Error(isJa ? "レコード作成で新しいIDが返されませんでした。" : "Record creation did not return a new ID.");
       }
 
       if (imageFile) {
@@ -519,10 +542,10 @@ export default function MasterDBPage() {
       }
 
       setAddModalOpen(false);
-      setFlash({ type: "success", message: "New master record created successfully." });
+      setFlash({ type: "success", message: isJa ? "新規マスターレコードを作成しました。" : "New master record created successfully." });
       setRefreshNonce((current) => current + 1);
     } catch (createError) {
-      setFlash({ type: "error", message: createError.message || "Failed to create the new master record." });
+      setFlash({ type: "error", message: createError.message || (isJa ? "新規マスターレコードの作成に失敗しました。" : "Failed to create the new master record.") });
     } finally {
       setAddSubmitting(false);
     }
@@ -532,7 +555,7 @@ export default function MasterDBPage() {
     if (!selectedRecord) return;
     const recordId = extractRecordId(selectedRecord);
     if (!recordId) {
-      setFlash({ type: "error", message: "This record is missing an ID and cannot be updated." });
+      setFlash({ type: "error", message: isJa ? "レコードIDが見つからないため更新できません。" : "This record is missing an ID and cannot be updated." });
       return;
     }
 
@@ -549,10 +572,10 @@ export default function MasterDBPage() {
       });
 
       handleCloseDetailModal();
-      setFlash({ type: "success", message: "Master record updated successfully." });
+      setFlash({ type: "success", message: isJa ? "マスターレコードを更新しました。" : "Master record updated successfully." });
       setRefreshNonce((current) => current + 1);
     } catch (saveError) {
-      setFlash({ type: "error", message: saveError.message || "Failed to update the selected record." });
+      setFlash({ type: "error", message: saveError.message || (isJa ? "レコードの更新に失敗しました。" : "Failed to update the selected record.") });
     } finally {
       setDrawerSaving(false);
     }
@@ -562,7 +585,7 @@ export default function MasterDBPage() {
     if (!selectedRecord) return;
     const recordId = extractRecordId(selectedRecord);
     if (!recordId) {
-      setFlash({ type: "error", message: "This record is missing an ID and cannot accept an image upload." });
+      setFlash({ type: "error", message: isJa ? "レコードIDが見つからないため画像をアップロードできません。" : "This record is missing an ID and cannot accept an image upload." });
       return;
     }
 
@@ -579,11 +602,11 @@ export default function MasterDBPage() {
       });
 
       setSelectedRecord((current) => current ? { ...current, imageURL: result.imageURL } : current);
-      setFlash({ type: "success", message: "Master image uploaded successfully." });
+      setFlash({ type: "success", message: isJa ? "画像をアップロードしました。" : "Master image uploaded successfully." });
       setRefreshNonce((current) => current + 1);
       return result;
     } catch (uploadError) {
-      setFlash({ type: "error", message: uploadError.message || "Failed to upload the master image." });
+      setFlash({ type: "error", message: uploadError.message || (isJa ? "画像のアップロードに失敗しました。" : "Failed to upload the master image.") });
     } finally {
       setDrawerUploading(false);
     }
@@ -591,7 +614,7 @@ export default function MasterDBPage() {
 
   async function handleOpenBatchEdit() {
     if (!batchEditEnabled) {
-      setFlash({ type: "warning", message: "Apply at least one advanced filter before using batch edit." });
+      setFlash({ type: "warning", message: isJa ? "一括編集を行う前に詳細フィルターを1つ以上適用してください。" : "Apply at least one advanced filter before using batch edit." });
       return;
     }
 
@@ -604,7 +627,7 @@ export default function MasterDBPage() {
       setBatchRecordIds(ids);
       setBatchModalOpen(true);
     } catch (batchError) {
-      setFlash({ type: "error", message: batchError.message || "Failed to prepare the batch edit session." });
+      setFlash({ type: "error", message: batchError.message || (isJa ? "一括編集セッションの準備に失敗しました。" : "Failed to prepare the batch edit session.") });
     } finally {
       setBatchPreparing(false);
     }
@@ -614,7 +637,9 @@ export default function MasterDBPage() {
     const entries = Object.entries(changes);
     if (!entries.length) return;
 
-    if (!window.confirm(`Apply ${entries.length} change${entries.length === 1 ? "" : "s"} to ${stats.filteredCount} records?`)) {
+    if (!window.confirm(isJa
+      ? `${stats.filteredCount} 件のレコードに ${entries.length} 件の変更を適用しますか？`
+      : `Apply ${entries.length} change${entries.length === 1 ? "" : "s"} to ${stats.filteredCount} records?`)) {
       return;
     }
 
@@ -635,11 +660,13 @@ export default function MasterDBPage() {
       setBatchRecordIds([]);
       setFlash({
         type: "success",
-        message: `Batch edit completed. Updated ${result?.modifiedCount ?? recordIds.length} record${recordIds.length === 1 ? "" : "s"}.`,
+        message: isJa
+          ? `一括編集が完了しました。${result?.modifiedCount ?? recordIds.length} 件のレコードを更新しました。`
+          : `Batch edit completed. Updated ${result?.modifiedCount ?? recordIds.length} record${recordIds.length === 1 ? "" : "s"}.`,
       });
       setRefreshNonce((current) => current + 1);
     } catch (batchError) {
-      setFlash({ type: "error", message: batchError.message || "Failed to update the filtered records." });
+      setFlash({ type: "error", message: batchError.message || (isJa ? "対象レコードの一括更新に失敗しました。" : "Failed to update the filtered records.") });
     } finally {
       setBatchSubmitting(false);
     }
@@ -648,7 +675,7 @@ export default function MasterDBPage() {
   return (
     <div className="w-full h-screen overflow-y-auto space-y-6 pt-20 px-4 sm:px-6 md:px-8 pb-16">
       <PageHeader
-        title="Master Product Management"
+        title={isJa ? "マスター製品管理" : "Master Product Management"}
         className="mb-6 md:flex-row md:items-end md:justify-between"
         actionsClassName="self-start md:self-auto md:justify-end"
         actions={(
@@ -659,7 +686,7 @@ export default function MasterDBPage() {
               className="inline-flex items-center justify-center gap-1.5 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs font-semibold text-[var(--text-primary)] transition-colors hover:bg-[var(--surface-hover)] shadow-2xs"
             >
               <span className="material-symbols-outlined text-[var(--text-muted)]" style={{ fontSize: 16 }}>refresh</span>
-              Refresh
+              {isJa ? "更新" : "Refresh"}
             </button>
 
             {!isSpecialTab && (
@@ -669,21 +696,21 @@ export default function MasterDBPage() {
                 className="inline-flex items-center justify-center gap-1.5 rounded-[6px] bg-[var(--freya-blue)] px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-[var(--freya-blue-hover)] shadow-xs"
               >
                 <span className="material-symbols-outlined" style={{ fontSize: 16 }}>add</span>
-                Add New Record
+                {isJa ? "新規レコード追加" : "Add New Record"}
               </button>
             )}
           </div>
         )}
       />
 
-      <FlashBanner flash={flash} onClose={() => setFlash(null)} />
+      <FlashBanner flash={flash} onClose={() => setFlash(null)} isJa={isJa} />
 
       <MasterTabNav tabs={MASTER_TABS} activeTab={activeTab} onSelect={handleTabSelect} />
 
       {!isSpecialTab && batchPreparing && (
         <div className="mb-4 inline-flex items-center gap-2 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs font-semibold text-[var(--text-primary)] shadow-xs">
           <span className="material-symbols-outlined animate-spin" style={{ fontSize: 16 }}>progress_activity</span>
-          Preparing batch edit…
+          {isJa ? "一括編集を準備中…" : "Preparing batch edit…"}
         </div>
       )}
 
@@ -691,7 +718,7 @@ export default function MasterDBPage() {
         <Suspense
           fallback={(
             <div className="freya-card rounded-[8px] border border-[var(--border)] bg-[var(--surface)] px-6 py-10 text-sm font-medium text-[var(--text-muted)]">
-              Loading workspace…
+              {isJa ? "ワークスペースを読み込み中…" : "Loading workspace…"}
             </div>
           )}
         >
@@ -812,8 +839,8 @@ export default function MasterDBPage() {
           <MasterRecordModal
             open={addModalOpen}
             fieldDefinitions={fieldDefinitions}
-            tabLabel={activeTabMeta.label}
-            recordLabel={activeTabUI.recordLabel}
+            tabLabel={isJa ? (activeTabMeta.labelJa || activeTabMeta.label) : activeTabMeta.label}
+            recordLabel={isJa ? (activeTabUI.recordLabelJa || activeTabUI.recordLabel) : activeTabUI.recordLabel}
             submitting={addSubmitting}
             onClose={() => setAddModalOpen(false)}
             onSubmit={handleCreateRecord}

@@ -109,10 +109,10 @@ export default function MaterialDetailModal({ modalData, onClose }) {
                 <div 
                   onClick={() =>
                     setPreviewImage({
-                      displayName: modalData['品番'] || 'Material Image',
-                      eyebrow: 'Material Reference Image',
+                      displayName: modalData['品番'] || (language === 'ja' ? '材料画像' : 'Material Image'),
+                      eyebrow: language === 'ja' ? '材料参考画像' : 'Material Reference Image',
                       subtitle: `${modalData['ラベル品番'] ? modalData['ラベル品番'] + ' • ' : ''}${modalData['品目マスタ']?.['品名'] || modalData['品名'] || ''}`,
-                      images: [{ url: mainImageUrl, label: modalData['品番'] || 'Material Image' }],
+                      images: [{ url: mainImageUrl, label: modalData['品番'] || (language === 'ja' ? '材料画像' : 'Material Image') }],
                       activeIndex: 0,
                     })
                   }
@@ -393,10 +393,10 @@ export default function MaterialDetailModal({ modalData, onClose }) {
                     <div 
                       onClick={() =>
                         setPreviewImage({
-                          displayName: materialDetail['品番'] || 'Material Image',
-                          eyebrow: 'Material Sub-Component Image',
+                          displayName: materialDetail['品番'] || (language === 'ja' ? '材料画像' : 'Material Image'),
+                          eyebrow: language === 'ja' ? '材料サブコンポーネント画像' : 'Material Sub-Component Image',
                           subtitle: `${materialDetail['ラベル品番'] ? materialDetail['ラベル品番'] + ' • ' : ''}${materialDetail['品目マスタ']?.['品名'] || materialDetail['品名'] || ''}`,
-                          images: [{ url: nestedImageUrl, label: materialDetail['品番'] || 'Material Image' }],
+                          images: [{ url: nestedImageUrl, label: materialDetail['品番'] || (language === 'ja' ? '材料画像' : 'Material Image') }],
                           activeIndex: 0,
                         })
                       }

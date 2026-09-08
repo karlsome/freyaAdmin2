@@ -1,8 +1,11 @@
 import { useEffect, useState } from "react";
+import { useLanguage } from "../contexts/LanguageContext";
 import { formatMaterialPDFDateTime } from "../utils/materialPDFs";
 import ModalShell from "./ModalShell";
 
 export default function MaterialPDFConflictModal({ open, conflicts, onClose, onConfirm }) {
+  const { language } = useLanguage();
+  const isJa = language === "ja";
   const [resolutions, setResolutions] = useState({});
 
   useEffect(() => {
@@ -24,9 +27,13 @@ export default function MaterialPDFConflictModal({ open, conflicts, onClose, onC
     <ModalShell
       open={!!open}
       onClose={onClose}
-      eyebrow="Conflict Check"
-      title="Existing PDFs Detected"
-      subtitle={`${existing.length} material(s) already have ${conflicts.pdfType || "this type of"} files. Choose how each one should be handled.`}
+      eyebrow={isJa ? "重複確認" : "Conflict Check"}
+      title={isJa ? "既存のPDFが検出されました" : "Existing PDFs Detected"}
+      subtitle={
+        isJa
+          ? `${existing.length} 件の材料に既に${conflicts.pdfType ? `「${conflicts.pdfType}」` : ""}ファイルが存在します。処理方法を選択してください。`
+          : `${existing.length} material(s) already have ${conflicts.pdfType || "this type of"} files. Choose how each one should be handled.`
+      }
       maxWidth="max-w-3xl"
       overlayOpacity="50"
       footer={
@@ -36,14 +43,14 @@ export default function MaterialPDFConflictModal({ open, conflicts, onClose, onC
             onClick={onClose}
             className="rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3.5 py-1.5 text-xs font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-hover)] transition-colors shadow-2xs"
           >
-            Cancel
+            {isJa ? "キャンセル" : "Cancel"}
           </button>
           <button
             type="button"
             onClick={() => onConfirm(resolutions)}
             className="rounded-[6px] bg-[var(--freya-blue)] px-4 py-1.5 text-xs font-semibold text-white hover:bg-[var(--freya-blue-hover)] transition-colors shadow-xs"
           >
-            Continue Upload
+            {isJa ? "アップロードを続行" : "Continue Upload"}
           </button>
         </div>
       }
@@ -60,10 +67,10 @@ export default function MaterialPDFConflictModal({ open, conflicts, onClose, onC
                   <div>
                     <div className="text-xs font-bold text-[var(--text-primary)]">{item.図番}</div>
                     <div className="mt-0.5 text-xs text-[var(--text-secondary)]">
-                      {pdfCount} existing file{pdfCount === 1 ? "" : "s"}
+                      {isJa ? `既存ファイル: ${pdfCount} 件` : `${pdfCount} existing file${pdfCount === 1 ? "" : "s"}`}
                     </div>
                     <div className="mt-1 text-[11px] text-[var(--text-muted)]">
-                      {(item.pdfs || []).map((pdf) => formatMaterialPDFDateTime(pdf?.uploadedAt)).join(" / ") || "Unknown upload dates"}
+                      {(item.pdfs || []).map((pdf) => formatMaterialPDFDateTime(pdf?.uploadedAt)).join(" / ") || (isJa ? "アップロード日時不明" : "Unknown upload dates")}
                     </div>
                   </div>
 
@@ -77,14 +84,14 @@ export default function MaterialPDFConflictModal({ open, conflicts, onClose, onC
                   >
                     {pdfCount > 1 ? (
                       <>
-                        <option value="all">Overwrite all</option>
-                        <option value="newest">Overwrite newest only</option>
-                        <option value="skip">Skip this material</option>
+                        <option value="all">{isJa ? "すべて上書き" : "Overwrite all"}</option>
+                        <option value="newest">{isJa ? "最新のみ上書き" : "Overwrite newest only"}</option>
+                        <option value="skip">{isJa ? "この材料をスキップ" : "Skip this material"}</option>
                       </>
                     ) : (
                       <>
-                        <option value="overwrite">Overwrite</option>
-                        <option value="skip">Skip this material</option>
+                        <option value="overwrite">{isJa ? "上書き" : "Overwrite"}</option>
+                        <option value="skip">{isJa ? "この材料をスキップ" : "Skip this material"}</option>
                       </>
                     )}
                   </select>
@@ -96,7 +103,9 @@ export default function MaterialPDFConflictModal({ open, conflicts, onClose, onC
 
         {newMaterials.length > 0 && (
           <div className="rounded-[8px] border border-[var(--freya-blue)]/30 bg-[var(--freya-blue)]/10 p-3.5">
-            <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--freya-blue)]">No Conflict</div>
+            <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--freya-blue)]">
+              {isJa ? "重複なし" : "No Conflict"}
+            </div>
             <div className="mt-1 text-xs text-[var(--text-primary)]">
               {newMaterials.join(", ")}
             </div>

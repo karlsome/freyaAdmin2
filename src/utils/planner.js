@@ -528,6 +528,7 @@ export function getPlannerGoalState(goal) {
       textClassName: "text-emerald-600 dark:text-emerald-300",
       dotClassName: "bg-emerald-500",
       label: "Completed",
+      labelJa: "完了",
     };
   }
 
@@ -541,6 +542,7 @@ export function getPlannerGoalState(goal) {
       textClassName: "text-amber-600 dark:text-amber-300",
       dotClassName: "bg-amber-500",
       label: "In Progress",
+      labelJa: "進行中",
     };
   }
 
@@ -553,6 +555,7 @@ export function getPlannerGoalState(goal) {
     textClassName: "text-rose-600 dark:text-rose-300",
     dotClassName: "bg-rose-500",
     label: "Pending",
+    labelJa: "未着手",
   };
 }
 

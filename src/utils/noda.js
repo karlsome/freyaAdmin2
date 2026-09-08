@@ -22,14 +22,24 @@ export const NODA_STATUS_OPTIONS = [
   { value: "cancelled", label: "Cancelled" },
 ];
 
+export const NODA_STATUS_OPTIONS_JA = [
+  { value: "", label: "すべてのステータス" },
+  { value: "pending", label: "保留中" },
+  { value: "in-progress", label: "進行中" },
+  { value: "completed", label: "完了" },
+  { value: "past-deadline", label: "期限超過" },
+  { value: "partial-inventory", label: "一部引当" },
+  { value: "cancelled", label: "キャンセル" },
+];
+
 export const NODA_STATUS_CARDS = [
-  { key: "all", label: "All", icon: "list_alt", accent: "bg-slate-100 text-slate-700 dark:bg-slate-800/80 dark:text-slate-200" },
-  { key: "pending", label: "Pending", icon: "schedule", accent: "bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300" },
-  { key: "in-progress", label: "In Progress", icon: "play_circle", accent: "bg-sky-100 text-sky-700 dark:bg-sky-500/15 dark:text-sky-300" },
-  { key: "completed", label: "Completed", icon: "task_alt", accent: "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300" },
-  { key: "past-deadline", label: "Deadline Passed", icon: "event_busy", accent: "bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-200" },
-  { key: "partial-inventory", label: "Partial Inventory", icon: "error", accent: "bg-orange-100 text-orange-700 dark:bg-orange-500/15 dark:text-orange-300" },
-  { key: "cancelled", label: "Cancelled", icon: "cancel", accent: "bg-rose-100 text-rose-700 dark:bg-rose-500/15 dark:text-rose-300" },
+  { key: "all", label: "All", labelJa: "すべて", icon: "list_alt", accent: "bg-slate-100 text-slate-700 dark:bg-slate-800/80 dark:text-slate-200" },
+  { key: "pending", label: "Pending", labelJa: "保留中", icon: "schedule", accent: "bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300" },
+  { key: "in-progress", label: "In Progress", labelJa: "進行中", icon: "play_circle", accent: "bg-sky-100 text-sky-700 dark:bg-sky-500/15 dark:text-sky-300" },
+  { key: "completed", label: "Completed", labelJa: "完了", icon: "task_alt", accent: "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300" },
+  { key: "past-deadline", label: "Deadline Passed", labelJa: "期限超過", icon: "event_busy", accent: "bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-200" },
+  { key: "partial-inventory", label: "Partial Inventory", labelJa: "一部引当", icon: "error", accent: "bg-orange-100 text-orange-700 dark:bg-orange-500/15 dark:text-orange-300" },
+  { key: "cancelled", label: "Cancelled", labelJa: "キャンセル", icon: "cancel", accent: "bg-rose-100 text-rose-700 dark:bg-rose-500/15 dark:text-rose-300" },
 ];
 
 export const NODA_LINE_STATUS_OPTIONS = [
@@ -158,61 +168,62 @@ export function buildNodaQueryFilters({
   return filters;
 }
 
-export function getNodaStatusMeta(status) {
+export function getNodaStatusMeta(status, language = "en") {
+  const isJa = language === "ja";
   switch (status) {
     case "pending":
       return {
-        label: "Pending",
+        label: isJa ? "保留中" : "Pending",
         icon: "schedule",
         badgeClassName: "bg-amber-100 text-amber-800 dark:bg-amber-500/15 dark:text-amber-300",
       };
     case "waiting-for-inventory":
       return {
-        label: "Waiting for Inventory",
+        label: isJa ? "在庫待ち" : "Waiting for Inventory",
         icon: "error",
         badgeClassName: "bg-rose-100 text-rose-800 dark:bg-rose-500/15 dark:text-rose-300",
       };
     case "partial-inventory":
       return {
-        label: "Partial Inventory",
+        label: isJa ? "一部引当" : "Partial Inventory",
         icon: "error",
         badgeClassName: "bg-orange-100 text-orange-800 dark:bg-orange-500/15 dark:text-orange-300",
       };
     case "past-deadline":
       return {
-        label: "Deadline Passed",
+        label: isJa ? "期限超過" : "Deadline Passed",
         icon: "event_busy",
         badgeClassName: "bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-200",
       };
     case "in-progress":
     case "active":
       return {
-        label: "In Progress",
+        label: isJa ? "進行中" : "In Progress",
         icon: "play_circle",
         badgeClassName: "bg-sky-100 text-sky-800 dark:bg-sky-500/15 dark:text-sky-300",
       };
     case "completed":
     case "complete":
       return {
-        label: "Completed",
+        label: isJa ? "完了" : "Completed",
         icon: "task_alt",
         badgeClassName: "bg-emerald-100 text-emerald-800 dark:bg-emerald-500/15 dark:text-emerald-300",
       };
     case "failed":
       return {
-        label: "Failed",
+        label: isJa ? "失敗" : "Failed",
         icon: "cancel",
         badgeClassName: "bg-rose-100 text-rose-800 dark:bg-rose-500/15 dark:text-rose-300",
       };
     case "cancelled":
       return {
-        label: "Cancelled",
+        label: isJa ? "キャンセル" : "Cancelled",
         icon: "block",
         badgeClassName: "bg-rose-100 text-rose-800 dark:bg-rose-500/15 dark:text-rose-300",
       };
     default:
       return {
-        label: "Unknown",
+        label: isJa ? "不明" : "Unknown",
         icon: "help",
         badgeClassName: "bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-200",
       };
@@ -264,11 +275,12 @@ export function getNodaRowToneClass(request = {}) {
   return "";
 }
 
-export function getNodaItemsSummary(request = {}) {
+export function getNodaItemsSummary(request = {}, language = "en") {
+  const isJa = language === "ja";
   if (!isBulkNodaRequest(request)) {
     return {
       title: request?.品番 || "—",
-      subtitle: `${request?.背番号 || "—"} (Qty: ${safeParseNumber(request?.quantity)})`,
+      subtitle: `${request?.背番号 || "—"} (${isJa ? "数量" : "Qty"}: ${safeParseNumber(request?.quantity)})`,
       warnings: [],
     };
   }
@@ -294,24 +306,27 @@ export function getNodaItemsSummary(request = {}) {
 
   const warnings = [];
   if (request?.isPastDeadline || request?.dynamicInventoryStatus === "past-deadline") {
-    warnings.push({ tone: "muted", label: "Deadline passed" });
+    warnings.push({ tone: "muted", label: isJa ? "期限超過" : "Deadline passed" });
   } else {
-    if (waitingCount > 0) warnings.push({ tone: "danger", label: `${waitingCount} waiting` });
-    if (partialCount > 0) warnings.push({ tone: "warning", label: `${partialCount} partial` });
+    if (waitingCount > 0) warnings.push({ tone: "danger", label: isJa ? `${waitingCount} 件待機中` : `${waitingCount} waiting` });
+    if (partialCount > 0) warnings.push({ tone: "warning", label: isJa ? `${partialCount} 件一部引当` : `${partialCount} partial` });
   }
 
   return {
-    title: `${totalItems} items`,
-    subtitle: `${completedItems} done, ${pendingItems} pending`,
+    title: isJa ? `${totalItems} 件の品目` : `${totalItems} items`,
+    subtitle: isJa ? `${completedItems} 完了, ${pendingItems} 保留中` : `${completedItems} done, ${pendingItems} pending`,
     warnings,
   };
 }
 
-export function buildNodaPageInfo({ filteredCount, page, pageSize }) {
-  if (!filteredCount) return "No requests to display";
+export function buildNodaPageInfo({ filteredCount, page, pageSize }, language = "en") {
+  const isJa = language === "ja";
+  if (!filteredCount) return isJa ? "表示するリクエストがありません" : "No requests to display";
   const start = (page - 1) * pageSize + 1;
   const end = Math.min(page * pageSize, filteredCount);
-  return `${filteredCount} requests, showing ${start}-${end}`;
+  return isJa
+    ? `${filteredCount} 件中 ${start}-${end} 件を表示`
+    : `${filteredCount} requests, showing ${start}-${end}`;
 }
 
 export function normalizeQuotedCsvValue(value) {

@@ -12,6 +12,7 @@ import {
 import CollapsibleSection from "./CollapsibleSection";
 import SensorDevicePhotoPreviewModal from "./SensorDevicePhotoPreviewModal";
 import RecordEditModal from "./RecordEditModal";
+import { useLanguage } from "../contexts/LanguageContext";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 export const PROCESS_ACCENT = {
@@ -199,10 +200,13 @@ function StructuredValueCard({ value, depth = 0 }) {
 
 // ─── PhotosSection ────────────────────────────────────────────────────────────
 function PhotosSection({ checkImages, labelImages, totalCount, onPreview }) {
+  const { language } = useLanguage();
+  const isJa = language === "ja";
+
   return (
     <CollapsibleSection
       icon="photo_library"
-      label="Uploaded Photos"
+      label={isJa ? "写真一覧" : "Uploaded Photos"}
       badge={<span className="px-1.5 py-0.5 rounded-full bg-surface-container text-[9px] font-semibold normal-case tracking-normal">{totalCount}</span>}
     >
       <div className="pb-5 space-y-4">
@@ -224,7 +228,9 @@ function PhotosSection({ checkImages, labelImages, totalCount, onPreview }) {
           )}
           {labelImages.length > 0 && (
             <div>
-              <p className="text-[11px] font-semibold text-[var(--text-muted)] mb-2 uppercase tracking-[0.04em]">材料ラベル ({labelImages.length})</p>
+              <p className="text-[11px] font-semibold text-[var(--text-muted)] mb-2 uppercase tracking-[0.04em]">
+                {isJa ? `材料ラベル (${labelImages.length})` : `Material Labels (${labelImages.length})`}
+              </p>
               <div className="grid grid-cols-4 gap-2">
                 {labelImages.map((url, i) => (
                   <button
@@ -235,10 +241,12 @@ function PhotosSection({ checkImages, labelImages, totalCount, onPreview }) {
                   >
                     <img
                       src={url}
-                      alt={`材料ラベル ${i + 1}`}
+                      alt={isJa ? `材料ラベル ${i + 1}` : `Material Label ${i + 1}`}
                       className="w-full aspect-square object-cover bg-black/20"
                     />
-                    <p className="text-[10px] text-[var(--text-muted)] text-center py-1">材料ラベル {i + 1}</p>
+                    <p className="text-[10px] text-[var(--text-muted)] text-center py-1">
+                      {isJa ? `材料ラベル ${i + 1}` : `Material Label ${i + 1}`}
+                    </p>
                   </button>
                 ))}
               </div>
@@ -251,6 +259,9 @@ function PhotosSection({ checkImages, labelImages, totalCount, onPreview }) {
 
 // ─── BreakTimeSection ─────────────────────────────────────────────────────────
 function BreakTimeSection({ record }) {
+  const { language } = useLanguage();
+  const isJa = language === "ja";
+
   const data = record.Break_Time_Data ?? {};
   const breaks = Object.entries(data)
     .filter(([, v]) => v?.start && v?.end)
@@ -259,19 +270,20 @@ function BreakTimeSection({ record }) {
   if (breaks.length === 0) return null;
 
   const totalMin = record.Total_Break_Minutes ?? 0;
+  const breakHeadings = isJa ? ["休憩", "開始", "終了", "所要時間"] : ["Break", "Start", "End", "Duration"];
 
   return (
     <CollapsibleSection
       icon="coffee"
-      label="Break Times"
-      badge={<span className="px-2 py-0.5 rounded-[4px] bg-[var(--surface)] border border-[var(--border)] text-[11px] font-medium text-[var(--text-secondary)] normal-case freya-tabular">{totalMin} min</span>}
+      label={isJa ? "休憩時間" : "Break Times"}
+      badge={<span className="px-2 py-0.5 rounded-[4px] bg-[var(--surface)] border border-[var(--border)] text-[11px] font-medium text-[var(--text-secondary)] normal-case freya-tabular">{totalMin} {isJa ? "分" : "min"}</span>}
     >
       <div className="pb-5">
         <div className="rounded-[8px] overflow-hidden border border-[var(--border)]">
           <table className="ui-table-data w-full">
             <thead className="bg-[var(--surface-raised)] border-b border-[var(--border)]">
               <tr>
-                {["Break", "Start", "End", "Duration"].map((h) => (
+                {breakHeadings.map((h) => (
                   <th key={h} className="ui-table-heading px-3.5 py-2 text-left uppercase tracking-[0.04em] text-[var(--text-muted)] text-[12px]">{h}</th>
                 ))}
               </tr>
@@ -281,19 +293,26 @@ function BreakTimeSection({ record }) {
                 const s = new Date(`2000-01-01T${start}`);
                 const e = new Date(`2000-01-01T${end}`);
                 const mins = e > s ? Math.round((e - s) / 60000) : null;
+                const formattedKey = isJa
+                  ? key.replace(/^break/i, "休憩 ").replace(/([0-9]+)/, " $1").trim()
+                  : key.replace(/([0-9]+)/, " $1");
                 return (
                   <tr key={key} className="hover:bg-[var(--surface-raised)] transition-colors">
-                    <td className="px-3.5 py-2.5 font-medium text-[var(--text-primary)] capitalize">{key.replace(/([0-9]+)/, " $1")}</td>
+                    <td className="px-3.5 py-2.5 font-medium text-[var(--text-primary)] capitalize">{formattedKey}</td>
                     <td className="px-3.5 py-2.5 font-mono text-[var(--text-secondary)] freya-tabular">{start}</td>
                     <td className="px-3.5 py-2.5 font-mono text-[var(--text-secondary)] freya-tabular">{end}</td>
-                    <td className="px-3.5 py-2.5 text-[var(--text-muted)] freya-tabular">{mins != null ? `${mins} min` : "—"}</td>
+                    <td className="px-3.5 py-2.5 text-[var(--text-muted)] freya-tabular">{mins != null ? `${mins} ${isJa ? "分" : "min"}` : "—"}</td>
                   </tr>
                 );
               })}
             </tbody>
           </table>
         </div>
-        <p className="text-[11px] text-[var(--text-muted)] mt-2 text-right freya-tabular">Total: {totalMin} min ({record.Total_Break_Hours ?? 0} hrs)</p>
+        <p className="text-[11px] text-[var(--text-muted)] mt-2 text-right freya-tabular">
+          {isJa
+            ? `合計: ${totalMin}分 (${record.Total_Break_Hours ?? 0}時間)`
+            : `Total: ${totalMin} min (${record.Total_Break_Hours ?? 0} hrs)`}
+        </p>
       </div>
     </CollapsibleSection>
   );
@@ -301,6 +320,9 @@ function BreakTimeSection({ record }) {
 
 // ─── MaintenanceSection ───────────────────────────────────────────────────────
 function MaintenanceSection({ record, onPreview }) {
+  const { language } = useLanguage();
+  const isJa = language === "ja";
+
   const maint = record.Maintenance_Data ?? {};
   const records = Array.isArray(maint.records) ? maint.records.filter((r) => r.startTime || r.comment) : [];
 
@@ -311,8 +333,8 @@ function MaintenanceSection({ record, onPreview }) {
   return (
     <CollapsibleSection
       icon="build"
-      label="Maintenance / Trouble"
-      badge={<span className="px-2 py-0.5 rounded-[4px] bg-[var(--surface)] border border-[var(--border)] text-[var(--semantic-warning)] text-[11px] font-medium normal-case freya-tabular">{records.length} record{records.length > 1 ? "s" : ""}</span>}
+      label={isJa ? "メンテナンス / トラブル" : "Maintenance / Trouble"}
+      badge={<span className="px-2 py-0.5 rounded-[4px] bg-[var(--surface)] border border-[var(--border)] text-[var(--semantic-warning)] text-[11px] font-medium normal-case freya-tabular">{records.length} {isJa ? "件" : (records.length > 1 ? "records" : "record")}</span>}
     >
       <div className="pb-5 space-y-3">
         {records.map((rec) => {
@@ -332,7 +354,7 @@ function MaintenanceSection({ record, onPreview }) {
                     )}
                     {mins != null && (
                       <span className="px-2 py-0.5 rounded-[4px] bg-[var(--surface-raised)] border border-[var(--border)] text-[var(--semantic-warning)] text-[11px] font-semibold freya-tabular">
-                        {mins} min
+                        {mins} {isJa ? "分" : "min"}
                       </span>
                     )}
                   </div>
@@ -350,7 +372,11 @@ function MaintenanceSection({ record, onPreview }) {
                       onClick={() => onPreview?.(rec, i)}
                       className="block w-full rounded-[6px] overflow-hidden border border-[var(--border)] hover:border-[var(--border-strong)] transition-colors duration-150 cursor-zoom-in"
                     >
-                      <img src={url} alt={`Maintenance photo ${i + 1}`} className="w-full aspect-square object-cover bg-black/20" />
+                      <img
+                        src={url}
+                        alt={isJa ? `トラブル写真 ${i + 1}` : `Maintenance photo ${i + 1}`}
+                        className="w-full aspect-square object-cover bg-black/20"
+                      />
                     </button>
                   ))}
                 </div>
@@ -358,7 +384,11 @@ function MaintenanceSection({ record, onPreview }) {
             </div>
           );
         })}
-        <p className="text-[11px] text-[var(--text-muted)] text-right freya-tabular">Total trouble: {totalMin} min ({maint.totalHours ?? record.Total_Trouble_Hours ?? 0} hrs)</p>
+        <p className="text-[11px] text-[var(--text-muted)] text-right freya-tabular">
+          {isJa
+            ? `トラブル合計: ${totalMin}分 (${maint.totalHours ?? record.Total_Trouble_Hours ?? 0}時間)`
+            : `Total trouble: ${totalMin} min (${maint.totalHours ?? record.Total_Trouble_Hours ?? 0} hrs)`}
+        </p>
       </div>
     </CollapsibleSection>
   );
@@ -372,6 +402,9 @@ function MaintenanceSection({ record, onPreview }) {
 //   onLotClick  — optional callback(lot: string) when a 材料ロット chip is clicked
 //   onUpdated   — optional callback triggered after successful edit
 export default function RecordDetailModal({ record, processName, onClose, onLotClick, onUpdated }) {
+  const { language } = useLanguage();
+  const isJa = language === "ja";
+
   const [imageData,    setImageData]    = useState(null);
   const [imageLoading, setImageLoading] = useState(true);
   const [copied,       setCopied]       = useState(false);
@@ -387,7 +420,7 @@ export default function RecordDetailModal({ record, processName, onClose, onLotC
 
   function handleEditClick() {
     if (!canEdit) {
-      alert("You are not permitted to use the edit mode.");
+      alert(isJa ? "編集モードを使用する権限がありません。" : "You are not permitted to use the edit mode.");
       return;
     }
     setIsEditing(true);
@@ -446,7 +479,7 @@ export default function RecordDetailModal({ record, processName, onClose, onLotC
 
   async function handleSaveEdit({ draft, note }) {
     if (!canEdit) {
-      alert("You are not permitted to use the edit mode.");
+      alert(isJa ? "編集モードを使用する権限がありません。" : "You are not permitted to use the edit mode.");
       setIsEditing(false);
       return;
     }
@@ -464,14 +497,14 @@ export default function RecordDetailModal({ record, processName, onClose, onLotC
         editNote: note,
         pendingImageOps: draft._pendingImageOps || []
       });
-      alert("Record updated successfully!");
+      alert(isJa ? "実績を更新しました。" : "Record updated successfully!");
       setIsEditing(false);
       if (typeof onUpdated === "function") {
         onUpdated();
       }
       onClose();
     } catch (err) {
-      alert("Failed to save changes: " + err.message);
+      alert(isJa ? `変更の保存に失敗しました: ${err.message}` : `Failed to save changes: ${err.message}`);
     } finally {
       setEditBusy(false);
     }
@@ -497,16 +530,16 @@ export default function RecordDetailModal({ record, processName, onClose, onLotC
     .map(([k, v]) => [k, v, true]);
 
   const keyFields = [
-    ["工場",      record["工場"]],
-    ["Date",      record.Date],
-    ["作業者",    record.Worker_Name],
-    ["設備",      record["設備"]],
-    ["開始時刻",  record.Time_start],
-    ["終了時刻",  record.Time_end],
-    ["稼働時間",  hrs != null ? `${hrs.toFixed(2)} hrs` : null],
-    ["数量 (Qty)", record.Process_Quantity],
-    ["サイクルタイム", record.Cycle_Time ? `${record.Cycle_Time}s` : null],
-    ["ショット数", record["ショット数"]],
+    [isJa ? "工場" : "Factory",         record["工場"]],
+    [isJa ? "日付" : "Date",            record.Date],
+    [isJa ? "作業者" : "Operator",       record.Worker_Name],
+    [isJa ? "設備" : "Equipment",       record["設備"]],
+    [isJa ? "開始時刻" : "Start Time",   record.Time_start],
+    [isJa ? "終了時刻" : "End Time",     record.Time_end],
+    [isJa ? "稼働時間" : "Work Hours",   hrs != null ? (isJa ? `${hrs.toFixed(2)} 時間` : `${hrs.toFixed(2)} hrs`) : null],
+    [isJa ? "数量" : "Quantity (Qty)",   record.Process_Quantity],
+    [isJa ? "サイクルタイム" : "Cycle Time", record.Cycle_Time ? (isJa ? `${record.Cycle_Time}秒` : `${record.Cycle_Time}s`) : null],
+    [isJa ? "ショット数" : "Shot Count",  record["ショット数"]],
     ...kensaCounters,
     ["疵引不良",  record["疵引不良"], true],
     ["加工不良",  record["加工不良"], true],
@@ -516,9 +549,9 @@ export default function RecordDetailModal({ record, processName, onClose, onLotC
     ["転写不良",  record["転写不良"], true],
     ["文字欠け",  record["文字欠け"], true],
     ["その他不良", record["その他"], true],
-    ["Spare",     record.Spare],
-    ["コメント",  record.Comment],
-    ["製造ロット", record["製造ロット"]],
+    [isJa ? "予備 (Spare)" : "Spare",     record.Spare],
+    [isJa ? "コメント" : "Comment",      record.Comment],
+    [isJa ? "製造ロット" : "Production Lot", record["製造ロット"]],
   ].filter(([, v]) => v != null && v !== "");
 
   const processAccent = PROCESS_ACCENT[processName];
@@ -542,7 +575,7 @@ export default function RecordDetailModal({ record, processName, onClose, onLotC
             <div className="flex items-center gap-2">
               <span className={`w-2 h-2 rounded-full flex-shrink-0 ${processAccent?.dot ?? "bg-[var(--freya-blue)]"}`} />
               <h3 className="text-base font-semibold text-[var(--text-primary)] truncate leading-tight">
-                {processName} Process — Record Details
+                {isJa ? `${processName}工程 — 実績詳細` : `${processName} Process — Record Details`}
               </h3>
             </div>
             <p className="text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)] mt-1 font-mono">{record["品番"]} / {record["背番号"]}</p>
@@ -554,12 +587,12 @@ export default function RecordDetailModal({ record, processName, onClose, onLotC
                 onClick={handleEditClick}
                 className="px-3 py-1.5 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] text-[var(--text-primary)] font-semibold hover:border-[var(--border-strong)] hover:bg-[var(--surface-raised)] text-xs transition-colors"
               >
-                Edit
+                {isJa ? "編集" : "Edit"}
               </button>
             )}
             <button
               onClick={copyLink}
-              title="Copy shareable link"
+              title={isJa ? "共有リンクをコピー" : "Copy shareable link"}
               className="w-8 h-8 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:border-[var(--border-strong)] flex items-center justify-center transition-colors"
             >
               <span className="material-symbols-outlined" style={{ fontSize: 16 }}>
@@ -583,10 +616,10 @@ export default function RecordDetailModal({ record, processName, onClose, onLotC
             <button
               type="button"
               onClick={() => setPhotoPreview({
-                eyebrow: "Master Image",
-                displayName: imageData["品名"] ?? record["品番"] ?? "Master image",
+                eyebrow: isJa ? "マスター画像" : "Master Image",
+                displayName: imageData["品名"] ?? record["品番"] ?? (isJa ? "マスター画像" : "Master image"),
                 subtitle: `${record["品番"] ?? ""}${record["背番号"] ? ` / ${record["背番号"]}` : ""}`.trim() || undefined,
-                images: [{ url: imageData.imageURL, label: imageData["品名"] ?? record["品番"] ?? "Master image" }],
+                images: [{ url: imageData.imageURL, label: imageData["品名"] ?? record["品番"] ?? (isJa ? "マスター画像" : "Master image") }],
                 activeIndex: 0,
               })}
               className="block w-full overflow-hidden rounded-[6px] border border-[var(--border)]
@@ -603,7 +636,7 @@ export default function RecordDetailModal({ record, processName, onClose, onLotC
             <div className="w-full h-10 flex items-center justify-center rounded-[6px] bg-[var(--surface)]
                             border border-[var(--border)] text-xs text-[var(--text-muted)] gap-1.5">
               <span className="material-symbols-outlined" style={{ fontSize: 14 }}>image_not_supported</span>
-              No image available
+              {isJa ? "画像がありません" : "No image available"}
             </div>
           )}
         </div>
@@ -611,9 +644,9 @@ export default function RecordDetailModal({ record, processName, onClose, onLotC
         {/* Stats strip */}
         <div className="grid grid-cols-3 gap-3 px-6 py-4 border-b border-[var(--border)]">
           {[
-            { label: "Total",    value: qty.toLocaleString(), color: "text-[var(--text-primary)]",  bg: "bg-[var(--surface)]" },
-            { label: "Total NG", value: ng.toLocaleString(),  color: ng > 0 ? "text-[var(--semantic-error)]" : "text-[var(--text-primary)]", bg: "bg-[var(--surface)]" },
-            { label: "不良率",   value: `${defRate}%`,        color: defColor, bg: "bg-[var(--surface)]" },
+            { label: isJa ? "総数" : "Total",         value: qty.toLocaleString(), color: "text-[var(--text-primary)]",  bg: "bg-[var(--surface)]" },
+            { label: isJa ? "不良数" : "Total NG",     value: ng.toLocaleString(),  color: ng > 0 ? "text-[var(--semantic-error)]" : "text-[var(--text-primary)]", bg: "bg-[var(--surface)]" },
+            { label: isJa ? "不良率" : "Defect Rate",  value: `${defRate}%`,        color: defColor, bg: "bg-[var(--surface)]" },
           ].map(({ label, value, color, bg }) => (
             <div key={label} className={`rounded-[6px] px-3.5 py-3 text-center border border-[var(--border)] ${bg}`}>
               <p className={`text-xl sm:text-2xl font-semibold leading-none freya-tabular ${color}`}>{value}</p>
@@ -636,7 +669,9 @@ export default function RecordDetailModal({ record, processName, onClose, onLotC
           })}
           {materialLots.length > 0 ? (
             <div className="flex flex-col gap-1.5 col-span-2">
-              <span className="text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">材料ロット</span>
+              <span className="text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">
+                {isJa ? "材料ロット" : "Material Lots"}
+              </span>
               <div className="flex flex-wrap gap-1.5">
                 {materialLots.map((lot) => (
                   <button
@@ -653,7 +688,9 @@ export default function RecordDetailModal({ record, processName, onClose, onLotC
             </div>
           ) : record["材料ロット"] != null && (
             <div className="flex flex-col gap-0.5">
-              <span className="text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">材料ロット</span>
+              <span className="text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">
+                {isJa ? "材料ロット" : "Material Lots"}
+              </span>
               <span className="text-sm font-medium text-[var(--text-primary)] font-mono">{record["材料ロット"]}</span>
             </div>
           )}
@@ -662,8 +699,8 @@ export default function RecordDetailModal({ record, processName, onClose, onLotC
         {/* Uploaded photos — collapsible */}
         {(() => {
           const checkImages = [
-            { label: "初物チェック画像", url: record["初物チェック画像"] },
-            { label: "終物チェック画像", url: record["終物チェック画像"] },
+            { label: isJa ? "初物チェック画像" : "Initial Check Image", url: record["初物チェック画像"] },
+            { label: isJa ? "終物チェック画像" : "Final Check Image", url: record["終物チェック画像"] },
           ].filter((i) => i.url);
           const labelImages = Array.isArray(record.materialLabelImages)
             ? record.materialLabelImages.filter(Boolean)
@@ -674,12 +711,12 @@ export default function RecordDetailModal({ record, processName, onClose, onLotC
           function handleOpenPreview(group, index) {
             const combined = [
               ...checkImages.map((image) => ({ url: image.url, label: image.label })),
-              ...labelImages.map((url, i) => ({ url, label: `材料ラベル ${i + 1}` })),
+              ...labelImages.map((url, i) => ({ url, label: isJa ? `材料ラベル ${i + 1}` : `Material Label ${i + 1}` })),
             ];
             const activeIndex = group === "label" ? checkImages.length + index : index;
             setPhotoPreview({
-              eyebrow: "Record Photos",
-              displayName: `${processName ?? "Record"} Photos`,
+              eyebrow: isJa ? "実績写真" : "Record Photos",
+              displayName: isJa ? `${processName ?? "実績"}写真` : `${processName ?? "Record"} Photos`,
               subtitle: `${record["品番"] ?? ""} / ${record["背番号"] ?? ""}`.trim() || undefined,
               images: combined,
               activeIndex,
@@ -699,17 +736,17 @@ export default function RecordDetailModal({ record, processName, onClose, onLotC
             const photos = Array.isArray(rec?.photos) ? rec.photos.filter(Boolean) : [];
             if (!photos.length) return;
             setPhotoPreview({
-              eyebrow: "Maintenance Photos",
-              displayName: "Maintenance / Trouble",
+              eyebrow: isJa ? "メンテナンス写真" : "Maintenance Photos",
+              displayName: isJa ? "メンテナンス / トラブル" : "Maintenance / Trouble",
               subtitle: rec?.comment || (rec?.startTime ? `${rec.startTime}${rec?.endTime ? ` → ${rec.endTime}` : ""}` : undefined),
-              images: photos.map((url, i) => ({ url, label: `Maintenance photo ${i + 1}` })),
+              images: photos.map((url, i) => ({ url, label: isJa ? `トラブル写真 ${i + 1}` : `Maintenance photo ${i + 1}` })),
               activeIndex: index,
             });
           }}
         />
 
         {/* All fields — collapsible */}
-        <CollapsibleSection label="All Fields" wrapperClassName="px-6 py-4">
+        <CollapsibleSection label={isJa ? "全項目" : "All Fields"} wrapperClassName="px-6 py-4">
           <div className="space-y-0 mt-3">
             {entries.map(([k, v]) => {
               const normalizedValue = parseStructuredValue(v);
@@ -744,14 +781,14 @@ export default function RecordDetailModal({ record, processName, onClose, onLotC
       />
       <RecordEditModal
         open={isEditing}
-        title={`Edit ${processName} Record`}
+        title={isJa ? `${processName} 実績編集` : `Edit ${processName} Record`}
         subtitle={`${record?.品番 || ""} / ${record?.背番号 || ""}`}
         record={record}
         busy={editBusy}
         onClose={() => setIsEditing(false)}
         onSave={handleSaveEdit}
-        saveLabel="Save Changes"
-        notePlaceholder="変更理由を入力... (必須)"
+        saveLabel={isJa ? "変更を保存" : "Save Changes"}
+        notePlaceholder={isJa ? "変更理由を入力... (必須)" : "Enter reason for edit... (Required)"}
         buildSections={buildApprovalEditSections}
         resolveFieldKind={resolveApprovalEditFieldKind}
         computeDraft={computeApprovalDerivedFields}

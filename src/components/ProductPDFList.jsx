@@ -1,3 +1,4 @@
+import { useLanguage } from "../contexts/LanguageContext";
 import DataTable from "./DataTable";
 import LiquidSegmentedControl from "./LiquidSegmentedControl";
 import PaginationControls from "./PaginationControls";
@@ -9,10 +10,10 @@ import {
   getProductPDFItemId,
 } from "../utils/productPDFs";
 
-function renderPageInfoText(totalCount, page, pageSize) {
+function renderPageInfoText(totalCount, page, pageSize, isJa) {
   const start = totalCount === 0 ? 0 : (page - 1) * pageSize + 1;
   const end = Math.min(page * pageSize, totalCount);
-  return `Showing ${start}-${end} of ${totalCount}`;
+  return isJa ? `${totalCount} 件中 ${start}〜${end} 件を表示` : `Showing ${start}-${end} of ${totalCount}`;
 }
 
 export default function ProductPDFList({
@@ -45,12 +46,15 @@ export default function ProductPDFList({
   sort,
   onSort,
 }) {
+  const { language } = useLanguage();
+  const isJa = language === "ja";
+
   const selectedCount = selectedIds.size;
   const allSelected = items.length > 0 && items.every((item) => selectedIds.has(getProductPDFItemId(item)));
   const columns = [
     {
       key: "selection",
-      label: "Select",
+      label: isJa ? "選択" : "Select",
       sortable: false,
       width: 84,
       align: "center",
@@ -86,21 +90,21 @@ export default function ProductPDFList({
     },
     {
       key: "fileName",
-      label: "File",
+      label: isJa ? "ファイル名" : "File",
       sortKey: "fileName",
       width: 260,
       getCellTitle: (row) => row?.fileName || "—",
     },
     {
       key: "uploadedBy",
-      label: "Uploader",
+      label: isJa ? "登録者" : "Uploader",
       sortKey: "uploader",
       width: 160,
       renderCell: (row) => row?.uploadedBy || "—",
     },
     {
       key: "uploadedAt",
-      label: "Uploaded",
+      label: isJa ? "登録日時" : "Uploaded",
       sortKey: "uploadedAt",
       width: 180,
       renderCell: (row) => formatProductPDFDateTime(row?.uploadedAt),
@@ -108,7 +112,7 @@ export default function ProductPDFList({
     },
     {
       key: "updatedAt",
-      label: "Updated",
+      label: isJa ? "更新日時" : "Updated",
       sortKey: "updatedAt",
       width: 180,
       renderCell: (row) => formatProductPDFDateTime(row?.updatedAt || row?.uploadedAt),
@@ -116,7 +120,7 @@ export default function ProductPDFList({
     },
     {
       key: "actions",
-      label: "Actions",
+      label: isJa ? "操作" : "Actions",
       sortable: false,
       width: 172,
       align: "right",
@@ -128,7 +132,7 @@ export default function ProductPDFList({
             disabled={!row?.imageURL}
             className="rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1 text-xs font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-hover)] transition-colors shadow-2xs disabled:cursor-not-allowed disabled:opacity-50"
           >
-            Preview
+            {isJa ? "プレビュー" : "Preview"}
           </button>
           {row?.pdfURL && (
             <a
@@ -145,7 +149,7 @@ export default function ProductPDFList({
             onClick={() => onDeleteItem(row)}
             className="rounded-[6px] border border-[var(--status-danger)]/30 bg-[var(--status-danger)]/10 px-2.5 py-1 text-xs font-semibold text-[var(--status-danger)] hover:bg-[var(--status-danger)]/20 transition-colors shadow-2xs"
           >
-            Delete
+            {isJa ? "削除" : "Delete"}
           </button>
         </div>
       ),
@@ -157,14 +161,22 @@ export default function ProductPDFList({
       <div className="freya-card mb-6 rounded-[8px] border border-[var(--border)] bg-[var(--surface)] p-5 shadow-sm">
         <div className="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
           <div>
-            <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--text-muted)]">Library</div>
-            <h3 className="mt-0.5 text-xl font-bold tracking-tight text-[var(--text-primary)]">{typeMeta.label} files</h3>
-            <p className="mt-0.5 text-xs text-[var(--text-secondary)]">Search by 背番号, 品番, or モデル and switch between card and table browsing.</p>
+            <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--text-muted)]">
+              {isJa ? "ライブラリ" : "Library"}
+            </div>
+            <h3 className="mt-0.5 text-xl font-bold tracking-tight text-[var(--text-primary)]">
+              {typeMeta.label} {isJa ? "ファイル一覧" : "files"}
+            </h3>
+            <p className="mt-0.5 text-xs text-[var(--text-secondary)]">
+              {isJa
+                ? "背番号・品番・モデルで検索し、グリッド表示またはリスト表示を切り替えられます。"
+                : "Search by 背番号, 品番, or モデル and switch between card and table browsing."}
+            </p>
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
             <LiquidSegmentedControl
-              items={[{ key: "grid", label: "Grid" }, { key: "list", label: "List" }]}
+              items={[{ key: "grid", label: isJa ? "グリッド" : "Grid" }, { key: "list", label: isJa ? "リスト" : "List" }]}
               activeKey={viewMode}
               onChange={onViewModeChange}
             />
@@ -174,7 +186,7 @@ export default function ProductPDFList({
               disabled={!items.length}
               className="rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-hover)] transition-colors shadow-2xs disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {allSelected ? "Clear Page" : "Select Page"}
+              {allSelected ? (isJa ? "ページの選択解除" : "Clear Page") : (isJa ? "ページ全選択" : "Select Page")}
             </button>
             <button
               type="button"
@@ -182,7 +194,7 @@ export default function ProductPDFList({
               disabled={!selectedCount}
               className="rounded-[6px] border border-[var(--status-danger)]/30 bg-[var(--status-danger)]/10 px-3 py-1.5 text-xs font-semibold text-[var(--status-danger)] hover:bg-[var(--status-danger)]/20 transition-colors shadow-2xs disabled:cursor-not-allowed disabled:opacity-50"
             >
-              Delete Selected ({selectedCount})
+              {isJa ? "選択項目を削除" : "Delete Selected"} ({selectedCount})
             </button>
           </div>
         </div>
@@ -206,7 +218,7 @@ export default function ProductPDFList({
               value={searchInput}
               onChange={(event) => onSearchInputChange(event.target.value)}
               onKeyDown={onSearchKeyDown}
-              placeholder="Type and press Enter to add search terms…"
+              placeholder={isJa ? "入力後にEnterキーを押して検索条件を追加…" : "Type and press Enter to add search terms…"}
               className="min-w-[14rem] flex-1 bg-transparent text-xs text-[var(--text-primary)] outline-none placeholder:text-[var(--text-muted)]"
             />
           </div>
@@ -216,7 +228,7 @@ export default function ProductPDFList({
             onChange={(event) => onModelFilterChange(event.target.value)}
             className="h-10 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 text-xs text-[var(--text-primary)] outline-none transition focus:border-[var(--freya-blue)] lg:w-72"
           >
-            <option value="">All models</option>
+            <option value="">{isJa ? "全モデル" : "All models"}</option>
             {modelOptions.map((model) => (
               <option key={model} value={model}>{model}</option>
             ))}
@@ -239,13 +251,13 @@ export default function ProductPDFList({
           onPageChange={onPageChange}
           onPageSizeChange={onPageSizeChange}
           pageSizeOptions={PRODUCT_PDF_PAGE_SIZE_OPTIONS}
-          pageSizeLabel="Per page"
+          pageSizeLabel={isJa ? "表示件数" : "Per page"}
           rowKey={(row) => getProductPDFItemId(row)}
-          renderPageInfo={() => renderPageInfoText(totalCount, page, pageSize)}
-          emptyTitle="No files found"
-          emptyMessage="Adjust the search terms or upload a new PDF for this type."
-          errorTitle="Could not load files"
-          loadingMessage="Loading product PDFs…"
+          renderPageInfo={() => renderPageInfoText(totalCount, page, pageSize, isJa)}
+          emptyTitle={isJa ? "ファイルが見つかりません" : "No files found"}
+          emptyMessage={isJa ? "検索条件を変更するか、この種別のPDFをアップロードしてください。" : "Adjust the search terms or upload a new PDF for this type."}
+          errorTitle={isJa ? "ファイルを読み込めませんでした" : "Could not load files"}
+          loadingMessage={isJa ? "製品PDFを読み込み中…" : "Loading product PDFs…"}
           enableColumnResize
           enableColumnReorder
           layoutStorageKey="freyaAdmin2.productPDFListLayout"
@@ -258,10 +270,12 @@ export default function ProductPDFList({
       ) : (
         <div className="freya-card mb-8 overflow-hidden rounded-[8px] border border-[var(--border)] bg-[var(--surface)] shadow-sm">
           <div className="flex flex-col gap-4 border-b border-[var(--border)] bg-[var(--surface-subtle)] px-5 py-3 md:flex-row md:items-center md:justify-between">
-            <div className="text-xs font-semibold text-[var(--text-secondary)]">{renderPageInfoText(totalCount, page, pageSize)}</div>
+            <div className="text-xs font-semibold text-[var(--text-secondary)]">{renderPageInfoText(totalCount, page, pageSize, isJa)}</div>
 
             <div className="flex items-center gap-2">
-              <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--text-muted)]">Per page</span>
+              <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--text-muted)]">
+                {isJa ? "表示件数" : "Per page"}
+              </span>
               <select
                 value={pageSize}
                 onChange={(event) => onPageSizeChange(Number(event.target.value))}
@@ -279,17 +293,21 @@ export default function ProductPDFList({
               <div className="absolute inset-0 z-10 flex items-center justify-center bg-[var(--surface)]/70 backdrop-blur-sm">
                 <div className="flex items-center gap-2 rounded-[8px] border border-[var(--border)] bg-[var(--surface-raised)] px-4 py-2.5 text-xs font-semibold text-[var(--text-primary)] shadow-lg">
                   <span className="material-symbols-outlined animate-spin" style={{ fontSize: 16 }}>progress_activity</span>
-                  Loading product PDFs…
+                  {isJa ? "製品PDFを読み込み中…" : "Loading product PDFs…"}
                 </div>
               </div>
             )}
 
             {loading && !items.length ? (
-              <div className="px-5 py-12 text-center text-xs font-medium text-[var(--text-muted)]">Loading product PDFs…</div>
+              <div className="px-5 py-12 text-center text-xs font-medium text-[var(--text-muted)]">
+                {isJa ? "製品PDFを読み込み中…" : "Loading product PDFs…"}
+              </div>
             ) : error ? (
               <div className="px-5 py-12 text-center text-xs font-medium text-[var(--status-danger)]">{error}</div>
             ) : !items.length ? (
-              <div className="px-5 py-12 text-center text-xs text-[var(--text-muted)]">No files found for this view.</div>
+              <div className="px-5 py-12 text-center text-xs text-[var(--text-muted)]">
+                {isJa ? "表示するファイルが見つかりません。" : "No files found for this view."}
+              </div>
             ) : (
               <div className="grid gap-3.5 px-5 py-5 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-6" aria-busy={loading}>
                 {items.map((item) => {
@@ -327,7 +345,7 @@ export default function ProductPDFList({
                       <div className="mt-3">
                         <div className="truncate text-xs font-bold text-[var(--text-primary)]">{formatProductPDFTitle(item, 6)}</div>
                         <div className="mt-0.5 truncate text-[11px] text-[var(--text-secondary)]">{formatProductPDFHinban(item)}</div>
-                        <div className="mt-1.5 truncate text-[11px] text-[var(--text-muted)]">{item?.fileName || "Untitled file"}</div>
+                        <div className="mt-1.5 truncate text-[11px] text-[var(--text-muted)]">{item?.fileName || (isJa ? "無題のファイル" : "Untitled file")}</div>
                         <div className="mt-0.5 truncate text-[10px] text-[var(--text-muted)]">{item?.uploadedBy || "—"} · {formatProductPDFDateTime(item?.uploadedAt)}</div>
                       </div>
 
@@ -338,7 +356,7 @@ export default function ProductPDFList({
                           disabled={!item?.imageURL}
                           className="rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-2 py-1 text-[11px] font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-hover)] transition-colors shadow-2xs disabled:cursor-not-allowed disabled:opacity-50"
                         >
-                          Preview
+                          {isJa ? "プレビュー" : "Preview"}
                         </button>
                         {item?.pdfURL && (
                           <a
@@ -355,7 +373,7 @@ export default function ProductPDFList({
                           onClick={() => onDeleteItem(item)}
                           className="rounded-[6px] border border-[var(--status-danger)]/30 bg-[var(--status-danger)]/10 px-2 py-1 text-[11px] font-semibold text-[var(--status-danger)] hover:bg-[var(--status-danger)]/20 transition-colors shadow-2xs"
                         >
-                          Delete
+                          {isJa ? "削除" : "Delete"}
                         </button>
                       </div>
                     </article>
@@ -366,7 +384,9 @@ export default function ProductPDFList({
           </div>
 
           <div className="flex flex-col gap-4 border-t border-[var(--border)] bg-[var(--surface-subtle)] px-5 py-3 md:flex-row md:items-center md:justify-between">
-            <div className="text-xs text-[var(--text-secondary)]">{selectedCount} selected</div>
+            <div className="text-xs text-[var(--text-secondary)]">
+              {selectedCount} {isJa ? "件選択中" : "selected"}
+            </div>
 
             {totalPages > 1 && (
               <PaginationControls

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useLanguage } from "../contexts/LanguageContext";
 import {
   fetchMasterDistinctField,
   fetchMasterFilterOptions,
@@ -50,6 +51,8 @@ function PanelHeader({ step, active, done, title, sub }) {
 }
 
 export default function PceFilesWorkspace({ onFlash }) {
+  const { language } = useLanguage();
+  const isJa = language === "ja";
   // ── Step 1: file upload ─────────────────────────────────────────────────────
   const [file, setFile] = useState(null);
   const [dragging, setDragging] = useState(false);
@@ -282,7 +285,7 @@ export default function PceFilesWorkspace({ onFlash }) {
           if (!groups.has(key)) {
             groups.set(key, {
               key,
-              heading: `${heads} head${heads === "1" ? "" : "s"} ${length}mm`,
+              heading: isJa ? `${heads}ヘッド ${length}mm` : `${heads} head${heads === "1" ? "" : "s"} ${length}mm`,
               heads: Number(heads) || 0,
               length: Number(length) || 0,
               names: new Set(),
@@ -387,7 +390,7 @@ export default function PceFilesWorkspace({ onFlash }) {
 
   function handleFileAccept(f) {
     if (!f.name.toLowerCase().endsWith(".pce")) {
-      onFlash?.({ type: "error", message: "Only .pce files are accepted." });
+      onFlash?.({ type: "error", message: isJa ? ".pce ファイルのみ受け付け可能です。" : "Only .pce files are accepted." });
       return;
     }
     setFile(f);
@@ -418,12 +421,17 @@ export default function PceFilesWorkspace({ onFlash }) {
         overwrite: overwriteFiles,
       });
       setUploadResults(result.files);
-      onFlash?.({ type: "success", message: `${result.files.length} file${result.files.length === 1 ? "" : "s"} created successfully and saved to Google Drive > freyaAdmin pce` });
+      onFlash?.({
+        type: "success",
+        message: isJa
+          ? `${result.files.length} 件のファイルを正常に作成し、Google Drive > freyaAdmin pce に保存しました。`
+          : `${result.files.length} file${result.files.length === 1 ? "" : "s"} created successfully and saved to Google Drive > freyaAdmin pce`,
+      });
     } catch (err) {
       if (err.isConflict) {
         setConflictState({ fileBase64: base64, conflicts: err.conflicts });
       } else {
-        onFlash?.({ type: "error", message: err.message || "Upload failed." });
+        onFlash?.({ type: "error", message: err.message || (isJa ? "アップロードに失敗しました。" : "Upload failed.") });
       }
     } finally {
       setUploading(false);
@@ -457,7 +465,13 @@ export default function PceFilesWorkspace({ onFlash }) {
 
         {/* Panel 1 — File upload */}
         <div className="freya-card overflow-hidden rounded-[8px] border border-[var(--border)] bg-[var(--surface)] shadow-sm flex flex-col w-full lg:w-64 lg:flex-shrink-0">
-          <PanelHeader step={1} active={!step1Done} done={step1Done} title="Upload File" sub={file ? file.name : "Drop or click to browse"} />
+          <PanelHeader
+            step={1}
+            active={!step1Done}
+            done={step1Done}
+            title={isJa ? "ファイルのアップロード" : "Upload File"}
+            sub={file ? file.name : (isJa ? "ドラッグ＆ドロップまたはクリックして参照" : "Drop or click to browse")}
+          />
           <div className="px-3 py-4 flex flex-col gap-3 flex-1">
             <div
               onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
@@ -477,10 +491,10 @@ export default function PceFilesWorkspace({ onFlash }) {
               {file ? (
                 <>
                   <p className="text-xs font-bold text-[var(--text-primary)] break-all leading-tight">{file.name}</p>
-                  <p className="text-[11px] text-[var(--text-secondary)]">{(file.size / 1024).toFixed(1)} KB · <span className="text-[var(--freya-blue)] font-semibold">replace</span></p>
+                  <p className="text-[11px] text-[var(--text-secondary)]">{(file.size / 1024).toFixed(1)} KB · <span className="text-[var(--freya-blue)] font-semibold">{isJa ? "変更" : "replace"}</span></p>
                 </>
               ) : (
-                <p className="text-xs text-[var(--text-muted)]">.pce files only</p>
+                <p className="text-xs text-[var(--text-muted)]">{isJa ? ".pce ファイルのみ" : ".pce files only"}</p>
               )}
             </div>
             <input ref={fileInputRef} type="file" accept=".pce" className="hidden"
@@ -488,7 +502,9 @@ export default function PceFilesWorkspace({ onFlash }) {
             {file && (
               <div className="flex items-start gap-2 rounded-[6px] border border-amber-500/20 bg-amber-500/10 px-3 py-2">
                 <span className="material-symbols-outlined text-amber-500 flex-shrink-0" style={{ fontSize: 14 }}>warning</span>
-                <p className="text-[11px] text-amber-700 dark:text-amber-300 leading-snug">Filename will be replaced</p>
+                <p className="text-[11px] text-amber-700 dark:text-amber-300 leading-snug">
+                  {isJa ? "ファイル名は置換されます" : "Filename will be replaced"}
+                </p>
               </div>
             )}
           </div>
@@ -524,7 +540,7 @@ export default function PceFilesWorkspace({ onFlash }) {
           active={step1Done && !step2Done}
           done={step2Done}
           title="背番号"
-          sub={step2Done ? `${selectedRows.size} row${selectedRows.size === 1 ? "" : "s"} selected` : "Filter the list and select 背番号 rows"}
+          sub={step2Done ? (isJa ? `${selectedRows.size} 行を選択中` : `${selectedRows.size} row${selectedRows.size === 1 ? "" : "s"} selected`) : (isJa ? "リストを絞り込んで背番号行を選択してください" : "Filter the list and select 背番号 rows")}
         />
         <div className="px-4 py-4 flex flex-col gap-4">
           <MasterFilterPanel
@@ -564,10 +580,10 @@ export default function PceFilesWorkspace({ onFlash }) {
             onPageSizeChange={(nextPageSize) => { setPage(1); setPageSize(nextPageSize); }}
             pageSizeOptions={MASTER_PAGE_SIZE_OPTIONS}
             rowKey={(record, index) => `${record._id?.$oid || record._id || index}`}
-            loadingMessage="Loading master records…"
-            errorTitle="Could not load master records"
-            emptyTitle="No matching records"
-            emptyMessage="Adjust the filters, search tags, or advanced query and try again."
+            loadingMessage={isJa ? "マスタレコードを読み込み中…" : "Loading master records…"}
+            errorTitle={isJa ? "マスタレコードを読み込めませんでした" : "Could not load master records"}
+            emptyTitle={isJa ? "一致するレコードがありません" : "No matching records"}
+            emptyMessage={isJa ? "フィルター、検索タグ、または詳細クエリを調整してやり直してください。" : "Adjust the filters, search tags, or advanced query and try again."}
             enableColumnResize
             enableColumnReorder
             layoutStorageKey="freyaAdmin2.pceMasterTableLayout"
@@ -586,7 +602,13 @@ export default function PceFilesWorkspace({ onFlash }) {
 
       {/* Step 3 — Preview */}
       <div className="freya-card overflow-hidden rounded-[8px] border border-[var(--border)] bg-[var(--surface)] shadow-sm flex flex-col">
-        <PanelHeader step={3} active={step2Done && !uploadResults} done={!!uploadResults} title="Preview" sub={uploadResults ? "Upload complete" : fileCount ? `${fileCount} file${fileCount === 1 ? "" : "s"} to create` : "Waiting for selections"} />
+        <PanelHeader
+          step={3}
+          active={step2Done && !uploadResults}
+          done={!!uploadResults}
+          title={isJa ? "プレビュー" : "Preview"}
+          sub={uploadResults ? (isJa ? "アップロード完了" : "Upload complete") : fileCount ? (isJa ? `作成対象: ${fileCount} 件` : `${fileCount} file${fileCount === 1 ? "" : "s"} to create`) : (isJa ? "選択を待機中" : "Waiting for selections")}
+        />
         <div className="px-4 py-4 flex flex-col gap-2">
           {uploadResults ? (
             <>
@@ -601,7 +623,7 @@ export default function PceFilesWorkspace({ onFlash }) {
               <button type="button" onClick={handleReset}
                 className="mt-2 self-start flex items-center justify-center gap-1.5 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3.5 py-1.5 text-xs font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-hover)] transition-colors shadow-2xs">
                 <span className="material-symbols-outlined" style={{ fontSize: 16 }}>add</span>
-                New upload
+                {isJa ? "新規アップロード" : "New upload"}
               </button>
             </>
           ) : step2Done ? (
@@ -618,7 +640,9 @@ export default function PceFilesWorkspace({ onFlash }) {
                 <div className="flex items-start gap-2 rounded-[6px] border border-amber-500/20 bg-amber-500/10 px-3 py-2">
                   <span className="material-symbols-outlined text-amber-500 flex-shrink-0" style={{ fontSize: 14 }}>warning</span>
                   <p className="text-[11px] text-amber-700 dark:text-amber-300 leading-snug">
-                    {invalidPreviewEntries.length} configuration{invalidPreviewEntries.length === 1 ? "" : "s"} skipped — could not resolve head/length data
+                    {isJa
+                      ? `${invalidPreviewEntries.length} 件の設定をスキップしました — ヘッド/長さのデータを取得できませんでした`
+                      : `${invalidPreviewEntries.length} configuration${invalidPreviewEntries.length === 1 ? "" : "s"} skipped — could not resolve head/length data`}
                   </p>
                 </div>
               )}
@@ -631,12 +655,12 @@ export default function PceFilesWorkspace({ onFlash }) {
                 {uploading
                   ? <span className="material-symbols-outlined animate-spin" style={{ fontSize: 16 }}>progress_activity</span>
                   : <span className="material-symbols-outlined" style={{ fontSize: 16 }}>cloud_upload</span>}
-                {uploading ? "Creating…" : `Create ${fileCount} file${fileCount === 1 ? "" : "s"}`}
+                {uploading ? (isJa ? "作成中…" : "Creating…") : (isJa ? `${fileCount} 件のファイルを作成` : `Create ${fileCount} file${fileCount === 1 ? "" : "s"}`)}
               </button>
             </>
           ) : (
             <p className="text-xs text-[var(--text-secondary)] text-center leading-relaxed py-4">
-              Complete steps 1–2 to see a preview
+              {isJa ? "ステップ1と2を完了するとプレビューが表示されます" : "Complete steps 1–2 to see a preview"}
             </p>
           )}
         </div>

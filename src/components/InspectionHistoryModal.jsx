@@ -166,10 +166,14 @@ function RecordDetailModal({ record, form, onClose }) {
             <h3 className="mt-0.5 truncate text-lg font-semibold text-on-surface">{formName}</h3>
             <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-outline">
               {form?.工場 && <span>{form.工場}</span>}
-              {form?.schedule && <span className="capitalize">{form.schedule}</span>}
+              {form?.schedule && (
+                <span className="capitalize">
+                  {form.schedule === "daily" ? (isJa ? "日次" : "daily") : form.schedule === "weekly" ? (isJa ? "週次" : "weekly") : form.schedule === "monthly" ? (isJa ? "月次" : "monthly") : form.schedule}
+                </span>
+              )}
             </div>
           </div>
-          <button type="button" onClick={onClose} className="p-2 rounded-xl flex-shrink-0 text-outline hover:bg-surface-container hover:text-on-surface transition-all duration-150 active:scale-95">
+          <button type="button" onClick={onClose} aria-label={isJa ? "閉じる" : "Close"} className="p-2 rounded-xl flex-shrink-0 text-outline hover:bg-surface-container hover:text-on-surface transition-all duration-150 active:scale-95">
             <span className="material-symbols-outlined" style={{ fontSize: 18 }}>close</span>
           </button>
         </div>
@@ -249,6 +253,8 @@ function RecordDetailModal({ record, form, onClose }) {
 const RANGES = [30, 60];
 
 export default function InspectionHistoryModal({ onClose }) {
+  const { language } = useLanguage();
+  const isJa = language === "ja";
   const [templates, setTemplates] = useState([]);
   const [allEquipment, setAllEquipment] = useState([]);
   const [records, setRecords] = useState([]);
@@ -339,7 +345,7 @@ export default function InspectionHistoryModal({ onClose }) {
   const monthGroups = useMemo(() => {
     const groups = [];
     for (const d of dates) {
-      const label = d.toLocaleDateString("en", { month: "short" });
+      const label = isJa ? `${d.getMonth() + 1}月` : d.toLocaleDateString("en", { month: "short" });
       if (!groups.length || groups[groups.length - 1].label !== label) {
         groups.push({ label, count: 1 });
       } else {
@@ -347,7 +353,7 @@ export default function InspectionHistoryModal({ onClose }) {
       }
     }
     return groups;
-  }, [dates]);
+  }, [dates, isJa]);
 
   const today = new Date(); today.setHours(0, 0, 0, 0);
 
@@ -356,20 +362,20 @@ export default function InspectionHistoryModal({ onClose }) {
       {/* Header */}
       <div className="flex flex-shrink-0 items-center justify-between border-b border-separator/40 px-6 py-4">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-outline">メンテナンス</p>
-          <h2 className="mt-0.5 text-xl font-semibold text-on-surface">Inspection History</h2>
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-outline">{isJa ? "メンテナンス" : "Maintenance"}</p>
+          <h2 className="mt-0.5 text-xl font-semibold text-on-surface">{isJa ? "点検履歴" : "Inspection History"}</h2>
         </div>
         <div className="flex items-center gap-3">
           {/* Legend */}
           <div className="hidden items-center gap-4 text-xs text-outline sm:flex">
             <span className="flex items-center gap-1.5">
-              <span className="h-3 w-3 rounded-full bg-emerald-500" />Completed
+              <span className="h-3 w-3 rounded-full bg-emerald-500" />{isJa ? "完了" : "Completed"}
             </span>
             <span className="flex items-center gap-1.5">
-              <span className="h-3 w-3 rounded-full bg-error" />Missed
+              <span className="h-3 w-3 rounded-full bg-error" />{isJa ? "未実施" : "Missed"}
             </span>
             <span className="flex items-center gap-1.5">
-              <span className="h-3 w-3 rounded-full bg-amber-500" />Due
+              <span className="h-3 w-3 rounded-full bg-amber-500" />{isJa ? "期日" : "Due"}
             </span>
             <span className="flex items-center gap-1.5">
               <span className="relative h-3 w-3 flex-shrink-0">
@@ -386,7 +392,7 @@ export default function InspectionHistoryModal({ onClose }) {
               onChange={e => setFactoryFilter(e.target.value)}
               className="rounded-2xl border border-outline-variant/30 bg-surface px-3 py-2 text-sm text-on-surface outline-none focus:border-primary/40"
             >
-              <option value="all">All factories</option>
+              <option value="all">{isJa ? "すべての工場" : "All factories"}</option>
               {factories.map(f => <option key={f} value={f}>{f}</option>)}
             </select>
           )}
@@ -403,13 +409,14 @@ export default function InspectionHistoryModal({ onClose }) {
                     : "bg-surface text-outline hover:bg-surface-container"
                 }`}
               >
-                {r}d
+                {r}{isJa ? "日" : "d"}
               </button>
             ))}
           </div>
           <button
             type="button"
             onClick={onClose}
+            aria-label={isJa ? "閉じる" : "Close"}
             className="p-2 rounded-xl flex-shrink-0 text-outline hover:bg-surface-container hover:text-on-surface transition-all duration-150 active:scale-95"
           >
             <span className="material-symbols-outlined" style={{ fontSize: 18 }}>close</span>
@@ -422,14 +429,14 @@ export default function InspectionHistoryModal({ onClose }) {
         {loading && (
           <div className="flex items-center justify-center gap-3 py-24 text-outline">
             <span className="material-symbols-outlined animate-spin">progress_activity</span>
-            Loading…
+            {isJa ? "読み込み中..." : "Loading…"}
           </div>
         )}
 
         {!loading && filteredMachines.length === 0 && (
           <div className="flex flex-col items-center gap-3 py-24 text-outline">
             <span className="material-symbols-outlined" style={{ fontSize: 40 }}>precision_manufacturing</span>
-            <p className="text-sm">No machines found on active forms.</p>
+            <p className="text-sm">{isJa ? "有効なフォームに設備が見つかりません。" : "No machines found on active forms."}</p>
           </div>
         )}
 
@@ -452,7 +459,7 @@ export default function InspectionHistoryModal({ onClose }) {
               {/* Day row */}
               <tr>
                 <th className="sticky left-0 z-20 border-b border-r border-outline-variant/20 bg-surface px-4 py-2 text-left text-xs font-semibold uppercase tracking-[0.18em] text-outline">
-                  Machine
+                  {isJa ? "設備" : "Machine"}
                 </th>
                 {dates.map(date => {
                   const isToday = date.getTime() === today.getTime();

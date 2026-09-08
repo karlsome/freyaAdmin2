@@ -5,6 +5,7 @@
 //   height    — SVG height in px (default 180)
 
 import { useState } from "react";
+import { useLanguage } from "../contexts/LanguageContext";
 
 function parseTemp(v)  { return parseFloat(String(v ?? "").replace("°C", "").trim()); }
 function parseHumid(v) { return parseFloat(String(v ?? "").replace("%",  "").trim()); }
@@ -17,6 +18,8 @@ const THRESHOLDS = {
 };
 
 export default function SensorTrendChart({ readings = [], type = "temp", height = 180, deviceNamesMap = new Map() }) {
+  const { language } = useLanguage();
+  const isJa = language === "ja";
   const [hoveredIndex, setHoveredIndex] = useState(null);
   const { warning, danger, unit } = THRESHOLDS[type];
   const getVal = (r) => type === "temp" ? parseTemp(r.Temperature) : parseHumid(r.Humidity);
@@ -37,7 +40,7 @@ export default function SensorTrendChart({ readings = [], type = "temp", height 
   if (!allDates.length || !deviceMap.size) {
     return (
       <div className="flex items-center justify-center h-24 text-outline text-xs">
-        No data for this range
+        {isJa ? "この期間のデータはありません" : "No data for this range"}
       </div>
     );
   }
@@ -188,7 +191,9 @@ export default function SensorTrendChart({ readings = [], type = "temp", height 
           }}
         >
           <p className="text-[10px] font-semibold text-outline uppercase tracking-[0.1em] mb-2.5">
-            {allDates[hoveredIndex].includes(" ") ? `Time: ${allDates[hoveredIndex]}` : `Date: ${allDates[hoveredIndex]}`}
+            {allDates[hoveredIndex].includes(" ")
+              ? (isJa ? `時刻: ${allDates[hoveredIndex]}` : `Time: ${allDates[hoveredIndex]}`)
+              : (isJa ? `日付: ${allDates[hoveredIndex]}` : `Date: ${allDates[hoveredIndex]}`)}
           </p>
           <div className="flex flex-col gap-1.5">
             {series.map(({ id, values }, si) => {
@@ -225,7 +230,7 @@ export default function SensorTrendChart({ readings = [], type = "temp", height 
             const offset = mapped?.offset || 0;
             const offsetStr = offset ? ` (${offset > 0 ? "+" : ""}${offset}°C)` : "";
             return (
-              <div key={id} className="flex items-center gap-1.5" title={offset ? `Offset: ${offset > 0 ? "+" : ""}${offset}°C` : ""}>
+              <div key={id} className="flex items-center gap-1.5" title={offset ? (isJa ? `オフセット: ${offset > 0 ? "+" : ""}${offset}°C` : `Offset: ${offset > 0 ? "+" : ""}${offset}°C`) : ""}>
                 <div className="w-4 h-0.5 rounded-full" style={{ backgroundColor: LINE_COLORS[si % LINE_COLORS.length] }} />
                 <span className="text-[10px] text-outline font-mono">{friendly}{offsetStr}</span>
               </div>

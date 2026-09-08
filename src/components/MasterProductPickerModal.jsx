@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import ModalShell from "./ModalShell";
+import { useLanguage } from "../contexts/LanguageContext";
 
 function joinClasses(...classes) {
   return classes.filter(Boolean).join(" ");
@@ -14,6 +15,8 @@ export default function MasterProductPickerModal({
   onClose,
   onSelect,
 }) {
+  const { language } = useLanguage();
+  const isJa = language === "ja";
   const [query, setQuery] = useState(initialQuery);
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -41,7 +44,7 @@ export default function MasterProductPickerModal({
       } catch (loadError) {
         if (!cancelled) {
           setRows([]);
-          setError(loadError.message || "Failed to load products.");
+          setError(loadError.message || (isJa ? "製品の読み込みに失敗しました。" : "Failed to load products."));
         }
       } finally {
         if (!cancelled) {
@@ -54,17 +57,19 @@ export default function MasterProductPickerModal({
       cancelled = true;
       window.clearTimeout(timer);
     };
-  }, [loadOptions, open, query]);
+  }, [loadOptions, open, query, isJa]);
 
   if (!open) return null;
 
-  const title = focusField === "背番号" ? "背番号検索" : "品番検索";
+  const title = focusField === "背番号"
+    ? (isJa ? "背番号検索" : "Search Control No.")
+    : (isJa ? "品番検索" : "Search Part No.");
 
   return (
     <ModalShell
       open={open}
       onClose={onClose}
-      eyebrow="Master Picker"
+      eyebrow={isJa ? "マスター選択" : "Master Picker"}
       title={title}
       maxWidth="max-w-5xl"
       zIndex="z-[90]"
@@ -76,12 +81,14 @@ export default function MasterProductPickerModal({
               type="text"
               value={query}
               onChange={(event) => setQuery(event.target.value)}
-              placeholder="品番または背番号で検索..."
+              placeholder={isJa ? "品番または背番号で検索..." : "Search by Part No. or Control No...."}
               className="h-14 w-full rounded-2xl border border-separator/40 bg-white px-4 text-base text-on-surface outline-none transition focus:border-primary/40 dark:bg-surface-container"
               autoFocus
             />
             <div className="mt-2 text-sm text-on-surface-variant">
-              {loading ? "Searching..." : `${rows.length}件表示`}
+              {loading
+                ? (isJa ? "検索中..." : "Searching...")
+                : (isJa ? `${rows.length} 件表示` : `${rows.length} items shown`)}
             </div>
           </div>
 
@@ -89,15 +96,23 @@ export default function MasterProductPickerModal({
             {error ? (
               <div className="px-5 py-8 text-sm font-semibold text-error">{error}</div>
             ) : loading ? (
-              <div className="px-5 py-8 text-sm font-semibold text-on-surface-variant">Searching master DB...</div>
+              <div className="px-5 py-8 text-sm font-semibold text-on-surface-variant">
+                {isJa ? "マスターDBを検索中..." : "Searching master DB..."}
+              </div>
             ) : !rows.length ? (
-              <div className="px-5 py-8 text-sm font-semibold text-on-surface-variant">該当なし</div>
+              <div className="px-5 py-8 text-sm font-semibold text-on-surface-variant">
+                {isJa ? "該当なし" : "No match found"}
+              </div>
             ) : (
               <table className="ui-table-data w-full">
                 <thead className="sticky top-0 bg-surface-container-high/95 backdrop-blur-md">
                   <tr>
-                    <th className="ui-table-heading px-4 py-3 text-left text-on-surface-variant">背番号</th>
-                    <th className="ui-table-heading px-4 py-3 text-left text-on-surface-variant">品番</th>
+                    <th className="ui-table-heading px-4 py-3 text-left text-on-surface-variant">
+                      {isJa ? "背番号" : "Control No."}
+                    </th>
+                    <th className="ui-table-heading px-4 py-3 text-left text-on-surface-variant">
+                      {isJa ? "品番" : "Part No."}
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
@@ -125,7 +140,7 @@ export default function MasterProductPickerModal({
           </div>
 
           <div className="border-t border-outline-variant/15 bg-surface-container-low/60 px-5 py-3 text-xs text-on-surface-variant">
-            行をクリックすると品番と背番号が同時に更新されます
+            {isJa ? "行をクリックすると品番と背番号が同時に反映されます" : "Click a row to select both Part No. and Control No."}
           </div>
     </ModalShell>
   );

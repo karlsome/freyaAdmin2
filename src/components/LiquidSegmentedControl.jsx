@@ -1,12 +1,16 @@
-function normalizeItems(items = []) {
+import { useLanguage } from "../contexts/LanguageContext";
+
+function normalizeItems(items = [], isJa = false) {
   return items.map((item) => {
     if (typeof item === "string") {
       return { key: item, label: item, disabled: false };
     }
 
+    const resolvedLabel = (isJa && item.labelJa) ? item.labelJa : (item.label ?? item.key);
+
     return {
       key: item.key,
-      label: item.label ?? item.key,
+      label: resolvedLabel,
       disabled: Boolean(item.disabled),
       icon: item.icon,
       badge: item.badge ?? item.count,
@@ -20,7 +24,9 @@ export default function LiquidSegmentedControl({
   onChange,
   className = "",
 }) {
-  const normalizedItems = normalizeItems(items);
+  const { language } = useLanguage();
+  const isJa = language === "ja";
+  const normalizedItems = normalizeItems(items, isJa);
 
   if (!normalizedItems.length) return null;
 

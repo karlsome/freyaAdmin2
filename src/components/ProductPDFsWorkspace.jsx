@@ -1,4 +1,5 @@
 import { useDeferredValue, useEffect, useState } from "react";
+import { useLanguage } from "../contexts/LanguageContext";
 import {
   batchDeleteProductPDFs,
   checkExistingProductPDFs,
@@ -49,6 +50,9 @@ function getReturnedDocumentId(result) {
 }
 
 export default function ProductPDFsWorkspace({ refreshToken = 0, onFlash }) {
+  const { language } = useLanguage();
+  const isJa = language === "ja";
+
   const [activeType, setActiveType] = useState(DEFAULT_PRODUCT_PDF_TYPE);
   const [products, setProducts] = useState([]);
   const [items, setItems] = useState([]);
@@ -119,17 +123,17 @@ export default function ProductPDFsWorkspace({ refreshToken = 0, onFlash }) {
         uploadedBy: authUser.username || "admin",
         resolutions,
       }),
-      "Upload failed."
+      isJa ? "アップロードに失敗しました。" : "Upload failed."
     );
     const documentId = getReturnedDocumentId(uploadResult);
 
     if (!documentId) {
-      throw new Error("Upload completed but no document ID was returned.");
+      throw new Error(isJa ? "アップロードは完了しましたがドキュメントIDが返されませんでした。" : "Upload completed but no document ID was returned.");
     }
 
     assertApiSuccess(
       await uploadProductPDFImage({ documentId, imageBase64, pdfType: activeType }),
-      "Preview image upload failed."
+      isJa ? "プレビュー画像のアップロードに失敗しました。" : "Preview image upload failed."
     );
   }
 
@@ -143,7 +147,7 @@ export default function ProductPDFsWorkspace({ refreshToken = 0, onFlash }) {
         setProducts(sortProductRecords(nextProducts));
       } catch (loadError) {
         if (cancelled) return;
-        publishFlash("error", loadError.message || "Failed to load product metadata for PDF linking.");
+        publishFlash("error", loadError.message || (isJa ? "PDF紐付け用製品メタデータの読み込みに失敗しました。" : "Failed to load product metadata for PDF linking."));
       }
     }
 
@@ -151,7 +155,7 @@ export default function ProductPDFsWorkspace({ refreshToken = 0, onFlash }) {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [isJa]);
 
   useEffect(() => {
     if (activeTypeMeta.comingSoon) {
@@ -190,7 +194,7 @@ export default function ProductPDFsWorkspace({ refreshToken = 0, onFlash }) {
         setItems([]);
         setTotalCount(0);
         setTotalPages(1);
-        setError(loadError.message || "Failed to load product PDFs.");
+        setError(loadError.message || (isJa ? "製品PDFの読み込みに失敗しました。" : "Failed to load product PDFs."));
       } finally {
         if (!cancelled) {
           setLoading(false);
@@ -214,6 +218,7 @@ export default function ProductPDFsWorkspace({ refreshToken = 0, onFlash }) {
     searchTokens,
     sort.column,
     sort.direction,
+    isJa,
   ]);
 
   useEffect(() => {
@@ -240,7 +245,7 @@ export default function ProductPDFsWorkspace({ refreshToken = 0, onFlash }) {
         setTrashItems([]);
         setTrashTotalCount(0);
         setTrashTotalPages(1);
-        setTrashError(loadError.message || "Failed to load deleted PDFs.");
+        setTrashError(loadError.message || (isJa ? "ゴミ箱のPDFの読み込みに失敗しました。" : "Failed to load deleted PDFs."));
       } finally {
         if (!cancelled) {
           setTrashLoading(false);
@@ -252,7 +257,7 @@ export default function ProductPDFsWorkspace({ refreshToken = 0, onFlash }) {
     return () => {
       cancelled = true;
     };
-  }, [trashOpen, trashPage, trashPageSize, refreshNonce]);
+  }, [trashOpen, trashPage, trashPageSize, refreshNonce, isJa]);
 
   function handleTypeChange(nextType) {
     setActiveType(nextType);
@@ -343,32 +348,36 @@ export default function ProductPDFsWorkspace({ refreshToken = 0, onFlash }) {
   async function handleDeleteItem(item) {
     const documentId = getProductPDFItemId(item);
     if (!documentId) {
-      publishFlash("error", "This file is missing an ID and cannot be deleted.");
+      publishFlash("error", isJa ? "このファイルにはIDがないため削除できません。" : "This file is missing an ID and cannot be deleted.");
       return;
     }
-    if (!window.confirm(`Delete ${item?.fileName || "this PDF"}?`)) return;
+    const promptText = isJa ? `「${item?.fileName || "このPDF"}」を削除しますか？` : `Delete ${item?.fileName || "this PDF"}?`;
+    if (!window.confirm(promptText)) return;
 
     try {
-      assertApiSuccess(await deleteProductPDF(documentId), "Failed to delete PDF.");
-      publishFlash("success", "PDF moved to trash.");
+      assertApiSuccess(await deleteProductPDF(documentId), isJa ? "PDFの削除に失敗しました。" : "Failed to delete PDF.");
+      publishFlash("success", isJa ? "PDFをゴミ箱に移動しました。" : "PDF moved to trash.");
       refreshLists();
     } catch (deleteError) {
-      publishFlash("error", deleteError.message || "Failed to delete the selected PDF.");
+      publishFlash("error", deleteError.message || (isJa ? "選択したPDFの削除に失敗しました。" : "Failed to delete the selected PDF."));
     }
   }
 
   async function handleDeleteSelected() {
     const documentIds = [...selectedIds].filter(Boolean);
     if (!documentIds.length) return;
-    if (!window.confirm(`Delete ${documentIds.length} selected PDF file(s)?`)) return;
+    const promptText = isJa
+      ? `選択した ${documentIds.length} 件のPDFファイルを削除しますか？`
+      : `Delete ${documentIds.length} selected PDF file(s)?`;
+    if (!window.confirm(promptText)) return;
 
     try {
-      assertApiSuccess(await batchDeleteProductPDFs(documentIds), "Batch delete failed.");
-      publishFlash("success", `${documentIds.length} file(s) moved to trash.`);
+      assertApiSuccess(await batchDeleteProductPDFs(documentIds), isJa ? "一括削除に失敗しました。" : "Batch delete failed.");
+      publishFlash("success", isJa ? `${documentIds.length} 件のファイルをゴミ箱に移動しました。` : `${documentIds.length} file(s) moved to trash.`);
       setSelectedIds(new Set());
       refreshLists();
     } catch (deleteError) {
-      publishFlash("error", deleteError.message || "Failed to delete the selected files.");
+      publishFlash("error", deleteError.message || (isJa ? "選択したファイルの削除に失敗しました。" : "Failed to delete the selected files."));
     }
   }
 
@@ -380,10 +389,10 @@ export default function ProductPDFsWorkspace({ refreshToken = 0, onFlash }) {
       setSingleFile(null);
       setSelectedModel("");
       setSelectedSerialNumbers([]);
-      publishFlash("success", `${activeTypeMeta.label} PDF uploaded successfully.`);
+      publishFlash("success", isJa ? `${activeTypeMeta.label} PDFを正常にアップロードしました。` : `${activeTypeMeta.label} PDF uploaded successfully.`);
       refreshLists();
     } catch (uploadError) {
-      publishFlash("error", uploadError.message || "Failed to upload the PDF.");
+      publishFlash("error", uploadError.message || (isJa ? "PDFのアップロードに失敗しました。" : "Failed to upload the PDF."));
     } finally {
       setSingleUploading(false);
     }
@@ -413,11 +422,11 @@ export default function ProductPDFsWorkspace({ refreshToken = 0, onFlash }) {
 
       setBulkFiles([]);
       if (!successCount && !failureCount) {
-        publishFlash("warning", "Every matched product was skipped, so nothing was uploaded.");
+        publishFlash("warning", isJa ? "一致したすべての製品がスキップされたため、何もアップロードされませんでした。" : "Every matched product was skipped, so nothing was uploaded.");
       } else if (failureCount) {
-        publishFlash("warning", `Bulk upload finished. Uploaded ${successCount}, failed ${failureCount}.`);
+        publishFlash("warning", isJa ? `一括アップロード完了: 成功 ${successCount} 件、失敗 ${failureCount} 件` : `Bulk upload finished. Uploaded ${successCount}, failed ${failureCount}.`);
       } else {
-        publishFlash("success", `Bulk upload finished. Uploaded ${successCount} file${successCount === 1 ? "" : "s"}.`);
+        publishFlash("success", isJa ? `一括アップロード完了: ${successCount} 件のファイルをアップロードしました。` : `Bulk upload finished. Uploaded ${successCount} file${successCount === 1 ? "" : "s"}.`);
       }
       refreshLists();
     } finally {
@@ -427,11 +436,11 @@ export default function ProductPDFsWorkspace({ refreshToken = 0, onFlash }) {
 
   async function handleUploadSingle() {
     if (!singleFile) {
-      publishFlash("warning", "Select a PDF file before uploading.");
+      publishFlash("warning", isJa ? "アップロードするPDFファイルを選択してください。" : "Select a PDF file before uploading.");
       return;
     }
     if (!selectedSerialNumbers.length) {
-      publishFlash("warning", "Select at least one product before uploading.");
+      publishFlash("warning", isJa ? "アップロード前に対象製品を1つ以上選択してください。" : "Select at least one product before uploading.");
       return;
     }
 
@@ -448,17 +457,17 @@ export default function ProductPDFsWorkspace({ refreshToken = 0, onFlash }) {
 
       await executeSingleUpload(singleFile, selectedSerialNumbers);
     } catch (checkError) {
-      publishFlash("error", checkError.message || "Failed to validate existing PDFs before upload.");
+      publishFlash("error", checkError.message || (isJa ? "アップロード前の既存PDF検証に失敗しました。" : "Failed to validate existing PDFs before upload."));
     }
   }
 
   function handleReviewBulkUpload() {
     if (!bulkFiles.length) {
-      publishFlash("warning", "Select one or more PDF files for bulk upload.");
+      publishFlash("warning", isJa ? "一括アップロード用のPDFファイルを1つ以上選択してください。" : "Select one or more PDF files for bulk upload.");
       return;
     }
     if (!selectedSerialNumbers.length) {
-      publishFlash("warning", "Select at least one product before bulk upload.");
+      publishFlash("warning", isJa ? "一括アップロード前に対象製品を1つ以上選択してください。" : "Select at least one product before bulk upload.");
       return;
     }
 
@@ -469,7 +478,7 @@ export default function ProductPDFsWorkspace({ refreshToken = 0, onFlash }) {
     setBulkMatchState(null);
 
     if (!assignments.length) {
-      publishFlash("warning", "No files were assigned to products.");
+      publishFlash("warning", isJa ? "製品に割り当てられたファイルがありません。" : "No files were assigned to products.");
       return;
     }
 
@@ -490,7 +499,7 @@ export default function ProductPDFsWorkspace({ refreshToken = 0, onFlash }) {
 
       await executeBulkUpload(assignments);
     } catch (checkError) {
-      publishFlash("error", checkError.message || "Failed to validate existing PDFs for the bulk upload.");
+      publishFlash("error", checkError.message || (isJa ? "一括アップロード前の既存PDF検証に失敗しました。" : "Failed to validate existing PDFs for the bulk upload."));
     }
   }
 
@@ -509,15 +518,16 @@ export default function ProductPDFsWorkspace({ refreshToken = 0, onFlash }) {
 
   async function handleRecoverTrashItem(item) {
     const documentId = getProductPDFItemId(item);
-    if (!documentId || !window.confirm(`Recover ${item?.fileName || "this PDF"}?`)) return;
+    const promptText = isJa ? `「${item?.fileName || "このPDF"}」を復元しますか？` : `Recover ${item?.fileName || "this PDF"}?`;
+    if (!documentId || !window.confirm(promptText)) return;
 
     setTrashBusy(true);
     try {
-      assertApiSuccess(await recoverProductPDF(documentId), "Failed to recover PDF.");
-      publishFlash("success", "PDF recovered successfully.");
+      assertApiSuccess(await recoverProductPDF(documentId), isJa ? "PDFの復元に失敗しました。" : "Failed to recover PDF.");
+      publishFlash("success", isJa ? "PDFを復元しました。" : "PDF recovered successfully.");
       refreshLists();
     } catch (recoverError) {
-      publishFlash("error", recoverError.message || "Failed to recover the PDF.");
+      publishFlash("error", recoverError.message || (isJa ? "PDFの復元に失敗しました。" : "Failed to recover the PDF."));
     } finally {
       setTrashBusy(false);
     }
@@ -526,16 +536,18 @@ export default function ProductPDFsWorkspace({ refreshToken = 0, onFlash }) {
   async function handleDeleteTrashItem(item) {
     const documentId = getProductPDFItemId(item);
     if (!documentId) return;
-    if (!window.confirm(`Permanently delete ${item?.fileName || "this PDF"}? This cannot be undone.`)) return;
-    if (!window.confirm("Final confirmation: delete permanently?")) return;
+    const promptText1 = isJa ? `「${item?.fileName || "このPDF"}」を完全に削除しますか？ この操作は取り消せません。` : `Permanently delete ${item?.fileName || "this PDF"}? This cannot be undone.`;
+    if (!window.confirm(promptText1)) return;
+    const promptText2 = isJa ? "最終確認: 完全に削除しますか？" : "Final confirmation: delete permanently?";
+    if (!window.confirm(promptText2)) return;
 
     setTrashBusy(true);
     try {
-      assertApiSuccess(await permanentlyDeleteProductPDF(documentId), "Permanent delete failed.");
-      publishFlash("success", "PDF permanently deleted.");
+      assertApiSuccess(await permanentlyDeleteProductPDF(documentId), isJa ? "完全削除に失敗しました。" : "Permanent delete failed.");
+      publishFlash("success", isJa ? "PDFを完全に削除しました。" : "PDF permanently deleted.");
       refreshLists();
     } catch (deleteError) {
-      publishFlash("error", deleteError.message || "Failed to permanently delete the PDF.");
+      publishFlash("error", deleteError.message || (isJa ? "PDFの完全削除に失敗しました。" : "Failed to permanently delete the PDF."));
     } finally {
       setTrashBusy(false);
     }
@@ -543,19 +555,20 @@ export default function ProductPDFsWorkspace({ refreshToken = 0, onFlash }) {
 
   async function handleRecoverAllTrash() {
     if (!trashItems.length) return;
-    if (!window.confirm(`Recover all ${trashItems.length} deleted file(s)?`)) return;
+    const promptText = isJa ? `ゴミ箱の ${trashItems.length} 件のファイルをすべて復元しますか？` : `Recover all ${trashItems.length} deleted file(s)?`;
+    if (!window.confirm(promptText)) return;
 
     setTrashBusy(true);
     try {
       for (const item of trashItems) {
         const documentId = getProductPDFItemId(item);
         if (!documentId) continue;
-        assertApiSuccess(await recoverProductPDF(documentId), "Failed to recover one or more PDFs.");
+        assertApiSuccess(await recoverProductPDF(documentId), isJa ? "一部のPDFの復元に失敗しました。" : "Failed to recover one or more PDFs.");
       }
-      publishFlash("success", `Recovered ${trashItems.length} file(s) from trash.`);
+      publishFlash("success", isJa ? `ゴミ箱から ${trashItems.length} 件のファイルを復元しました。` : `Recovered ${trashItems.length} file(s) from trash.`);
       refreshLists();
     } catch (recoverError) {
-      publishFlash("error", recoverError.message || "Failed while recovering deleted PDFs.");
+      publishFlash("error", recoverError.message || (isJa ? "削除済みPDFの復元中にエラーが発生しました。" : "Failed while recovering deleted PDFs."));
     } finally {
       setTrashBusy(false);
     }
@@ -563,30 +576,32 @@ export default function ProductPDFsWorkspace({ refreshToken = 0, onFlash }) {
 
   async function handleDeleteAllTrash() {
     if (!trashItems.length) return;
-    if (!window.confirm(`Permanently delete all ${trashItems.length} item(s) in trash?`)) return;
-    if (!window.confirm("Final confirmation: delete everything permanently?")) return;
+    const promptText1 = isJa ? `ゴミ箱の ${trashItems.length} 件のファイルをすべて完全に削除しますか？` : `Permanently delete all ${trashItems.length} item(s) in trash?`;
+    if (!window.confirm(promptText1)) return;
+    const promptText2 = isJa ? "最終確認: ゴミ箱の全ファイルを完全に削除しますか？" : "Final confirmation: delete everything permanently?";
+    if (!window.confirm(promptText2)) return;
 
     setTrashBusy(true);
     try {
       for (const item of trashItems) {
         const documentId = getProductPDFItemId(item);
         if (!documentId) continue;
-        assertApiSuccess(await permanentlyDeleteProductPDF(documentId), "Failed to permanently delete one or more PDFs.");
+        assertApiSuccess(await permanentlyDeleteProductPDF(documentId), isJa ? "一部のPDFの完全削除に失敗しました。" : "Failed to permanently delete one or more PDFs.");
       }
-      publishFlash("success", `Permanently deleted ${trashItems.length} file(s) from trash.`);
+      publishFlash("success", isJa ? `ゴミ箱から ${trashItems.length} 件のファイルを完全に削除しました。` : `Permanently deleted ${trashItems.length} file(s) from trash.`);
       refreshLists();
     } catch (deleteError) {
-      publishFlash("error", deleteError.message || "Failed while permanently deleting trashed PDFs.");
+      publishFlash("error", deleteError.message || (isJa ? "ゴミ箱のPDFの完全削除中にエラーが発生しました。" : "Failed while permanently deleting trashed PDFs."));
     } finally {
       setTrashBusy(false);
     }
   }
 
   const stats = [
-    { label: "Total Files", value: totalCount, icon: "description", accent: "bg-[var(--freya-blue)]/10 text-[var(--freya-blue)]" },
-    { label: "Visible Page", value: items.length, icon: "grid_view", accent: "bg-[var(--surface-hover)] text-[var(--text-secondary)]" },
-    { label: "Selected", value: selectedIds.size, icon: "task_alt", accent: "bg-[var(--status-success)]/10 text-[var(--status-success)]" },
-    { label: "Linked Products", value: currentLinkedProducts, icon: "sell", accent: "bg-[var(--status-warning)]/10 text-[var(--status-warning)]" },
+    { label: isJa ? "総ファイル数" : "Total Files", value: totalCount, icon: "description", accent: "bg-[var(--freya-blue)]/10 text-[var(--freya-blue)]" },
+    { label: isJa ? "表示件数" : "Visible Page", value: items.length, icon: "grid_view", accent: "bg-[var(--surface-hover)] text-[var(--text-secondary)]" },
+    { label: isJa ? "選択中" : "Selected", value: selectedIds.size, icon: "task_alt", accent: "bg-[var(--status-success)]/10 text-[var(--status-success)]" },
+    { label: isJa ? "紐付き製品" : "Linked Products", value: currentLinkedProducts, icon: "sell", accent: "bg-[var(--status-warning)]/10 text-[var(--status-warning)]" },
   ];
 
   return (
@@ -594,10 +609,14 @@ export default function ProductPDFsWorkspace({ refreshToken = 0, onFlash }) {
       <div className="freya-card rounded-[8px] border border-[var(--border)] bg-[var(--surface)] p-6 shadow-sm mb-6">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--text-muted)]">Document Library</div>
+            <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--text-muted)]">
+              {isJa ? "文書ライブラリ" : "Document Library"}
+            </div>
             <h3 className="mt-1 text-xl font-bold tracking-tight text-[var(--text-primary)]">梱包 / 検査基準 / 3点照合</h3>
             <p className="mt-1 text-xs text-[var(--text-secondary)] max-w-2xl">
-              Manage product-linked PDFs by document type. Uploads preserve the legacy conflict checks, bulk filename matching, and trash/recovery workflow.
+              {isJa
+                ? "文書種別ごとに製品紐付きPDFを管理します。重複チェック、ファイル名の一括自動マッチング、ゴミ箱・復元機能に対応しています。"
+                : "Manage product-linked PDFs by document type. Uploads preserve the legacy conflict checks, bulk filename matching, and trash/recovery workflow."}
             </p>
           </div>
 
@@ -610,7 +629,7 @@ export default function ProductPDFsWorkspace({ refreshToken = 0, onFlash }) {
             className="inline-flex items-center gap-1.5 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-hover)] transition-colors shadow-2xs"
           >
             <span className="material-symbols-outlined" style={{ fontSize: 16 }}>delete</span>
-            Open Trash
+            {isJa ? "ゴミ箱を開く" : "Open Trash"}
           </button>
         </div>
 
@@ -627,7 +646,11 @@ export default function ProductPDFsWorkspace({ refreshToken = 0, onFlash }) {
         <div className="freya-card rounded-[8px] border border-[var(--border)] bg-[var(--surface)] p-12 text-center mb-6">
           <span className="material-symbols-outlined text-[var(--text-muted)]" style={{ fontSize: 48 }}>video_library</span>
           <h4 className="mt-3 text-lg font-bold text-[var(--text-primary)]">{activeTypeMeta.label}</h4>
-          <p className="mt-1.5 text-xs text-[var(--text-secondary)]">This legacy section is still marked as coming soon. The sub-tab is live in navigation, but uploads and browsing are not enabled yet.</p>
+          <p className="mt-1.5 text-xs text-[var(--text-secondary)]">
+            {isJa
+              ? "このセクションは準備中です。タブの切り替えは可能ですが、アップロードや閲覧はまだ有効化されていません。"
+              : "This legacy section is still marked as coming soon. The sub-tab is live in navigation, but uploads and browsing are not enabled yet."}
+          </p>
         </div>
       ) : (
         <>

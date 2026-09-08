@@ -1,26 +1,33 @@
 import { useEffect, useState } from "react";
 import PlannerModalShell from "./PlannerModalShell";
 import EmptyState from "../EmptyState";
+import { useLanguage } from "../../contexts/LanguageContext";
 
-function QueueRow({ item, index, total, onMove, onQuantityChange, onRemove }) {
+function QueueRow({ item, index, total, onMove, onQuantityChange, onRemove, isJa }) {
   return (
     <div className="rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] p-3">
       <div className="flex items-start justify-between gap-3">
         <div>
           <div className="text-xs font-semibold text-[var(--text-primary)]">{item.背番号 || item.品番}</div>
           <div className="mt-0.5 text-xs text-[var(--text-muted)]">{item.品番}</div>
-          <div className="mt-0.5 text-xs text-[var(--text-muted)]">Remaining {item.remainingQuantity} pcs</div>
+          <div className="mt-0.5 text-xs text-[var(--text-muted)]">
+            {isJa ? `残 ${item.remainingQuantity} 個` : `Remaining ${item.remainingQuantity} pcs`}
+          </div>
         </div>
 
         <div className="flex items-center gap-1.5">
           <button type="button" onClick={() => onMove(index, -1)} disabled={index === 0} className="rounded-[4px] border border-[var(--border)] bg-[var(--surface)] px-2 py-0.5 text-xs font-semibold text-[var(--text-primary)] transition hover:bg-[var(--surface-hover)] disabled:opacity-40">↑</button>
           <button type="button" onClick={() => onMove(index, 1)} disabled={index === total - 1} className="rounded-[4px] border border-[var(--border)] bg-[var(--surface)] px-2 py-0.5 text-xs font-semibold text-[var(--text-primary)] transition hover:bg-[var(--surface-hover)] disabled:opacity-40">↓</button>
-          <button type="button" onClick={() => onRemove(item._id)} className="rounded-[4px] border border-[var(--status-danger)]/30 bg-[var(--status-danger)]/5 px-2 py-0.5 text-xs font-semibold text-[var(--status-danger)] transition hover:bg-[var(--status-danger)]/10">Remove</button>
+          <button type="button" onClick={() => onRemove(item._id)} className="rounded-[4px] border border-[var(--status-danger)]/30 bg-[var(--status-danger)]/5 px-2 py-0.5 text-xs font-semibold text-[var(--status-danger)] transition hover:bg-[var(--status-danger)]/10">
+            {isJa ? "削除" : "Remove"}
+          </button>
         </div>
       </div>
 
       <div className="mt-2.5">
-        <label className="text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">Schedule Quantity</label>
+        <label className="text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">
+          {isJa ? "計画数量" : "Schedule Quantity"}
+        </label>
         <input
           type="number"
           min="1"
@@ -44,6 +51,8 @@ export default function PlannerSlotSchedulingModal({
   onClose,
   onConfirm,
 }) {
+  const { language } = useLanguage();
+  const isJa = language === "ja";
   const [search, setSearch] = useState("");
   const [queue, setQueue] = useState([]);
 
@@ -85,8 +94,8 @@ export default function PlannerSlotSchedulingModal({
   return (
     <PlannerModalShell
       open={open}
-      title={`Schedule at ${equipment || "Equipment"}`}
-      subtitle={`Start queue at ${startTime}. Add one or more goals and they will be placed sequentially from this slot.`}
+      title={isJa ? `${equipment || "設備"} にスケジュール追加` : `Schedule at ${equipment || "Equipment"}`}
+      subtitle={isJa ? `開始時刻: ${startTime}。1つ以上の目標を追加すると、この枠から順次配置されます。` : `Start queue at ${startTime}. Add one or more goals and they will be placed sequentially from this slot.`}
       onClose={onClose}
       maxWidthClassName="max-w-6xl"
       footer={(
@@ -96,7 +105,7 @@ export default function PlannerSlotSchedulingModal({
             onClick={onClose}
             className="rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs font-semibold text-[var(--text-primary)] transition hover:bg-[var(--surface-hover)]"
           >
-            Cancel
+            {isJa ? "キャンセル" : "Cancel"}
           </button>
           <button
             type="button"
@@ -104,7 +113,9 @@ export default function PlannerSlotSchedulingModal({
             onClick={() => onConfirm(queue)}
             className="rounded-[6px] bg-[var(--freya-blue)] px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-[var(--freya-blue-hover)] disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {submitting ? "Scheduling…" : `Schedule ${queue.length} item${queue.length === 1 ? "" : "s"}`}
+            {submitting
+              ? (isJa ? "スケジュール中…" : "Scheduling…")
+              : (isJa ? `${queue.length} 件をスケジュール` : `Schedule ${queue.length} item${queue.length === 1 ? "" : "s"}`)}
           </button>
         </div>
       )}
@@ -117,7 +128,7 @@ export default function PlannerSlotSchedulingModal({
               type="text"
               value={search}
               onChange={(event) => setSearch(event.target.value)}
-              placeholder="Search goals for this date…"
+              placeholder={isJa ? "この日付の目標を検索…" : "Search goals for this date…"}
               className="h-full flex-1 bg-transparent text-xs text-[var(--text-primary)] placeholder:text-[var(--text-muted)] outline-none"
             />
           </div>
@@ -137,10 +148,10 @@ export default function PlannerSlotSchedulingModal({
                     <div>
                       <div className="text-xs font-semibold text-[var(--text-primary)]">{goal.背番号 || goal.品番}</div>
                       <div className="mt-0.5 text-xs text-[var(--text-muted)]">{goal.品番}</div>
-                      <div className="mt-0.5 text-xs text-[var(--text-muted)]">{goal.品名 || "Unnamed product"}</div>
+                      <div className="mt-0.5 text-xs text-[var(--text-muted)]">{goal.品名 || (isJa ? "品名未設定" : "Unnamed product")}</div>
                     </div>
                     <span className="rounded-[4px] bg-[var(--freya-blue)]/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.04em] text-[var(--freya-blue)]">
-                      {goal.remainingQuantity} pcs
+                      {goal.remainingQuantity} {isJa ? "個" : "pcs"}
                     </span>
                   </div>
                 </button>
@@ -148,7 +159,9 @@ export default function PlannerSlotSchedulingModal({
             })}
 
             {!availableGoals.length ? (
-              <EmptyState className="rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-4 py-10 text-xs text-[var(--text-muted)]">No goals with remaining quantity are available for the selected date.</EmptyState>
+              <EmptyState className="rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-4 py-10 text-xs text-[var(--text-muted)]">
+                {isJa ? "選択された日付に未完了の目標はありません。" : "No goals with remaining quantity are available for the selected date."}
+              </EmptyState>
             ) : null}
           </div>
         </div>
@@ -156,11 +169,15 @@ export default function PlannerSlotSchedulingModal({
         <div className="rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] p-3">
           <div className="mb-3 flex items-center justify-between gap-3">
             <div>
-              <div className="text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">Queue</div>
-              <div className="mt-0.5 text-xs text-[var(--text-muted)]">Items run in the order shown here.</div>
+              <div className="text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">
+                {isJa ? "投入キュー" : "Queue"}
+              </div>
+              <div className="mt-0.5 text-xs text-[var(--text-muted)]">
+                {isJa ? "ここに表示されている順序で実行されます。" : "Items run in the order shown here."}
+              </div>
             </div>
             <div className="rounded-[4px] border border-[var(--border)] bg-[var(--surface)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">
-              {queue.length} selected
+              {isJa ? `${queue.length} 件選択中` : `${queue.length} selected`}
             </div>
           </div>
 
@@ -179,11 +196,14 @@ export default function PlannerSlotSchedulingModal({
                   }));
                 }}
                 onRemove={(id) => setQueue((items) => items.filter((entry) => entry._id !== id))}
+                isJa={isJa}
               />
             ))}
 
             {!queue.length ? (
-              <EmptyState className="rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-4 py-10 text-xs text-[var(--text-muted)]">Add goals from the left panel to build a scheduling queue.</EmptyState>
+              <EmptyState className="rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-4 py-10 text-xs text-[var(--text-muted)]">
+                {isJa ? "左側のパネルから目標を追加してスケジュールキューを作成してください。" : "Add goals from the left panel to build a scheduling queue."}
+              </EmptyState>
             ) : null}
           </div>
         </div>

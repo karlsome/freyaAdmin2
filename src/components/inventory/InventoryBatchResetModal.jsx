@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useLanguage } from "../../contexts/LanguageContext";
 import AdvancedFilterSection from "../AdvancedFilterSection";
 import EmptyState from "../EmptyState";
 import PlannerModalShell from "../planner/PlannerModalShell";
@@ -14,6 +15,7 @@ import {
   formatInventoryNumber,
   INVENTORY_BATCH_FILTER_FIELDS,
   INVENTORY_OPERATOR_LABELS,
+  INVENTORY_OPERATOR_LABELS_JA,
 } from "../../utils/inventory";
 
 function InlineBanner({ flash, onClose }) {
@@ -50,6 +52,8 @@ export default function InventoryBatchResetModal({
   onClose,
   onCompleted,
 }) {
+  const { language } = useLanguage();
+  const isJa = language === "ja";
   const [rows, setRows] = useState(() => [createInventoryBatchResetRow()]);
   const [results, setResults] = useState([]);
   const [selectedIds, setSelectedIds] = useState([]);
@@ -65,6 +69,8 @@ export default function InventoryBatchResetModal({
   const fieldDefinitions = useMemo(() => (
     INVENTORY_BATCH_FILTER_FIELDS.map((field) => ({
       ...field,
+      label: isJa ? (field.labelJa || field.label) : field.label,
+      group: isJa ? (field.groupJa || field.group) : field.group,
       options: field.field === "品番"
         ? optionSets.partNumbers
         : field.field === "背番号"
@@ -75,7 +81,7 @@ export default function InventoryBatchResetModal({
               ? factoryOptions
               : [],
     }))
-  ), [factoryOptions, optionSets.backNumbers, optionSets.models, optionSets.partNumbers]);
+  ), [factoryOptions, isJa, optionSets.backNumbers, optionSets.models, optionSets.partNumbers]);
 
   const selectedItems = useMemo(() => (
     results.filter((item) => selectedIds.includes(item.背番号))
@@ -108,7 +114,7 @@ export default function InventoryBatchResetModal({
         });
         setResults(items);
       } catch (loadError) {
-        setFlash({ type: "error", message: loadError.message || "Failed to load batch reset data." });
+        setFlash({ type: "error", message: loadError.message || (isJa ? "一括リセットデータの読み込みに失敗しました。" : "Failed to load batch reset data.") });
         setResults([]);
       } finally {
         setLoading(false);
@@ -116,7 +122,7 @@ export default function InventoryBatchResetModal({
     }
 
     void bootstrap();
-  }, [open]);
+  }, [open, isJa]);
 
   function updateRow(rowId, patch) {
     setRows((current) => current.map((row) => (row.id === rowId ? { ...row, ...patch } : row)));
@@ -139,7 +145,7 @@ export default function InventoryBatchResetModal({
       setResults(items);
     } catch (loadError) {
       setResults([]);
-      setFlash({ type: "error", message: loadError.message || "Failed to load batch reset results." });
+      setFlash({ type: "error", message: loadError.message || (isJa ? "一括リセット結果の取得に失敗しました。" : "Failed to load batch reset results.") });
     } finally {
       setLoading(false);
     }
@@ -172,17 +178,23 @@ export default function InventoryBatchResetModal({
 
     const preview = selectedItems
       .slice(0, 5)
-      .map((item) => `${item.背番号} (${item.品番}) - Physical ${item.physicalQuantity}, Reserved ${item.reservedQuantity}, Available ${item.availableQuantity}`)
+      .map((item) => isJa
+        ? `${item.背番号} (${item.品番}) - 実在庫 ${item.physicalQuantity}、引当 ${item.reservedQuantity}、利用可能 ${item.availableQuantity}`
+        : `${item.背番号} (${item.品番}) - Physical ${item.physicalQuantity}, Reserved ${item.reservedQuantity}, Available ${item.availableQuantity}`)
       .join("\n");
-    const more = selectedItems.length > 5 ? `\n...and ${selectedItems.length - 5} more items` : "";
+    const more = selectedItems.length > 5 ? (isJa ? `\n...他 ${selectedItems.length - 5} 件` : `\n...and ${selectedItems.length - 5} more items`) : "";
 
     const firstConfirm = window.confirm(
-      `Reset ${selectedItems.length} inventory item${selectedItems.length === 1 ? "" : "s"} to zero?\n\n${preview}${more}`
+      isJa
+        ? `${selectedItems.length} 件の在庫アイテムをゼロにリセットしますか？\n\n${preview}${more}`
+        : `Reset ${selectedItems.length} inventory item${selectedItems.length === 1 ? "" : "s"} to zero?\n\n${preview}${more}`
     );
     if (!firstConfirm) return;
 
     const secondConfirm = window.confirm(
-      "This action creates batch reset audit transactions for all selected items. Continue?"
+      isJa
+        ? "この操作により、選択したすべてのアイテムに対して一括リセットの監査トランザクションが作成されます。続行しますか？"
+        : "This action creates batch reset audit transactions for all selected items. Continue?"
     );
     if (!secondConfirm) return;
 
@@ -198,10 +210,12 @@ export default function InventoryBatchResetModal({
 
       onCompleted?.({
         type: "success",
-        message: `Batch reset completed for ${result?.successCount || selectedItems.length} item${(result?.successCount || selectedItems.length) === 1 ? "" : "s"}.`,
+        message: isJa
+          ? `${result?.successCount || selectedItems.length} 件のアイテムの一括リセットが完了しました。`
+          : `Batch reset completed for ${result?.successCount || selectedItems.length} item${(result?.successCount || selectedItems.length) === 1 ? "" : "s"}.`,
       });
     } catch (resetError) {
-      setFlash({ type: "error", message: resetError.message || "Failed to complete batch reset." });
+      setFlash({ type: "error", message: resetError.message || (isJa ? "一括リセットの実行に失敗しました。" : "Failed to complete batch reset.") });
     } finally {
       setExecuting(false);
     }
@@ -212,14 +226,14 @@ export default function InventoryBatchResetModal({
   return (
     <PlannerModalShell
       open={open}
-      title="Batch Reset Inventory"
-      subtitle="Use advanced filters to find inventory rows and reset the selected items to zero with an audit trail."
+      title={isJa ? "在庫一括リセット" : "Batch Reset Inventory"}
+      subtitle={isJa ? "詳細フィルターを使用して対象の在庫を特定し、監査ログを残しながら選択したアイテムをゼロにリセットします。" : "Use advanced filters to find inventory rows and reset the selected items to zero with an audit trail."}
       onClose={onClose}
       maxWidthClassName="max-w-7xl"
       footer={(
         <div className="flex items-center justify-between gap-3">
           <div className="text-xs text-[var(--text-muted)]">
-            {selectedItems.length} item{selectedItems.length === 1 ? "" : "s"} selected
+            {isJa ? `${selectedItems.length} 件選択中` : `${selectedItems.length} item${selectedItems.length === 1 ? "" : "s"} selected`}
           </div>
           <div className="flex gap-2.5">
             <button
@@ -227,7 +241,7 @@ export default function InventoryBatchResetModal({
               onClick={onClose}
               className="rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs font-semibold text-[var(--text-primary)] transition hover:bg-[var(--surface-hover)]"
             >
-              Close
+              {isJa ? "閉じる" : "Close"}
             </button>
             <button
               type="button"
@@ -235,7 +249,7 @@ export default function InventoryBatchResetModal({
               onClick={handleBatchReset}
               className="rounded-[6px] bg-[var(--status-danger)] px-3 py-1.5 text-xs font-semibold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {executing ? "Resetting..." : "Reset Selected"}
+              {executing ? (isJa ? "リセット中..." : "Resetting...") : (isJa ? "選択項目をリセット" : "Reset Selected")}
             </button>
           </div>
         </div>
@@ -253,12 +267,12 @@ export default function InventoryBatchResetModal({
           onClearRows={() => {
             void handleClearFilters();
           }}
-          operatorLabels={INVENTORY_OPERATOR_LABELS}
+          operatorLabels={isJa ? INVENTORY_OPERATOR_LABELS_JA : INVENTORY_OPERATOR_LABELS}
           useOperatorLabelsInSelect
-          title="Batch Reset Filters"
-          addRowLabel="Add Filter"
-          activeSummaryTitle="Active Reset Filters"
-          activeSummaryDescription="Filter by part number, serial number, factory, or model to preview affected inventory items."
+          title={isJa ? "一括リセットフィルター" : "Batch Reset Filters"}
+          addRowLabel={isJa ? "フィルターを追加" : "Add Filter"}
+          activeSummaryTitle={isJa ? "適用中のリセットフィルター" : "Active Reset Filters"}
+          activeSummaryDescription={isJa ? "品番、背番号、工場、モデルで絞り込み、対象となる在庫アイテムを確認します。" : "Filter by part number, serial number, factory, or model to preview affected inventory items."}
           variant="roomy"
           framed
           enableTextSuggestions
@@ -272,7 +286,7 @@ export default function InventoryBatchResetModal({
                 }}
                 className="rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs font-semibold text-[var(--text-primary)] transition hover:bg-[var(--surface-hover)]"
               >
-                Clear Filters
+                {isJa ? "フィルターをクリア" : "Clear Filters"}
               </button>
               <button
                 type="button"
@@ -282,7 +296,7 @@ export default function InventoryBatchResetModal({
                 }}
                 className="rounded-[6px] bg-[var(--freya-blue)] px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-[var(--freya-blue-hover)] disabled:cursor-not-allowed disabled:opacity-50"
               >
-                {loading ? "Finding Items..." : "Find Items"}
+                {loading ? (isJa ? "検索中..." : "Finding Items...") : (isJa ? "アイテムを検索" : "Find Items")}
               </button>
             </div>
           )}
@@ -291,8 +305,8 @@ export default function InventoryBatchResetModal({
         <div className="freya-card rounded-[8px] border border-[var(--border)] bg-[var(--surface)] p-4 shadow-sm">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <div className="text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">Results</div>
-              <h3 className="mt-0.5 text-base font-semibold text-[var(--text-primary)]">Inventory Items</h3>
+              <div className="text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">{isJa ? "検索結果" : "Results"}</div>
+              <h3 className="mt-0.5 text-base font-semibold text-[var(--text-primary)]">{isJa ? "在庫アイテム" : "Inventory Items"}</h3>
             </div>
             <label className="inline-flex cursor-pointer items-center gap-2 text-xs text-[var(--text-muted)]">
               <input
@@ -302,30 +316,34 @@ export default function InventoryBatchResetModal({
                 onChange={(event) => handleToggleAll(event.target.checked)}
                 className="h-4 w-4 rounded-[4px] border-[var(--border)] text-[var(--freya-blue)]"
               />
-              Select all non-zero items
+              {isJa ? "在庫がゼロ以外の全アイテムを選択" : "Select all non-zero items"}
             </label>
           </div>
 
           {loading ? (
-            <EmptyState variant="filled" className="mt-4 rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] py-8 text-xs text-[var(--text-muted)]">Loading inventory items...</EmptyState>
+            <EmptyState variant="filled" className="mt-4 rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] py-8 text-xs text-[var(--text-muted)]">
+              {isJa ? "在庫アイテムを読み込み中..." : "Loading inventory items..."}
+            </EmptyState>
           ) : results.length === 0 ? (
-            <EmptyState variant="filled" className="mt-4 rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] py-8 text-xs text-[var(--text-muted)]">No inventory items matched the current filters.</EmptyState>
+            <EmptyState variant="filled" className="mt-4 rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] py-8 text-xs text-[var(--text-muted)]">
+              {isJa ? "条件に一致する在庫アイテムはありません。" : "No inventory items matched the current filters."}
+            </EmptyState>
           ) : (
             <div className="mt-3 overflow-x-auto rounded-[6px] border border-[var(--border)]">
               <table className="min-w-full">
                 <thead className="border-b border-[var(--border)] bg-[var(--surface-subtle)]">
                   <tr>
                     {[
-                      "Select",
-                      "Part Number",
-                      "Serial Number",
-                      "Physical",
-                      "Reserved",
-                      "Available",
-                      "Factory",
-                    ].map((label) => (
-                      <th key={label} className="px-3.5 py-2.5 text-left text-xs font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">
-                        {label}
+                      { key: "select", label: isJa ? "選択" : "Select" },
+                      { key: "part", label: isJa ? "品番" : "Part Number" },
+                      { key: "serial", label: isJa ? "背番号" : "Serial Number" },
+                      { key: "physical", label: isJa ? "実在庫" : "Physical" },
+                      { key: "reserved", label: isJa ? "引当" : "Reserved" },
+                      { key: "available", label: isJa ? "利用可能" : "Available" },
+                      { key: "factory", label: isJa ? "工場" : "Factory" },
+                    ].map((col) => (
+                      <th key={col.key} className="px-3.5 py-2.5 text-left text-xs font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">
+                        {col.label}
                       </th>
                     ))}
                   </tr>

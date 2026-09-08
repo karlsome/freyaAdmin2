@@ -2,14 +2,15 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Arrow, Circle, Image as KonvaImage, Layer, Line, Rect, Stage, Text as KonvaText, Transformer } from "react-konva";
 import IconButton from "./IconButton";
+import { useLanguage } from "../contexts/LanguageContext";
 
 const TOOL_OPTIONS = [
-  { value: "select", label: "Select", icon: "arrow_selector_tool" },
-  { value: "draw", label: "Draw", icon: "draw" },
-  { value: "rect", label: "Box", icon: "crop_square" },
-  { value: "circle", label: "Circle", icon: "circle" },
-  { value: "arrow", label: "Arrow", icon: "arrow_right_alt" },
-  { value: "text", label: "Text", icon: "title" },
+  { value: "select", label: "Select", label_ja: "選択", icon: "arrow_selector_tool" },
+  { value: "draw", label: "Draw", label_ja: "手書き", icon: "draw" },
+  { value: "rect", label: "Box", label_ja: "四角", icon: "crop_square" },
+  { value: "circle", label: "Circle", label_ja: "円", icon: "circle" },
+  { value: "arrow", label: "Arrow", label_ja: "矢印", icon: "arrow_right_alt" },
+  { value: "text", label: "Text", label_ja: "テキスト", icon: "title" },
 ];
 
 const DEFAULT_COLOR = "#ef4444";
@@ -379,7 +380,7 @@ export default function CheckFormImageOverlayEditorModal({
   open,
   sourceImage,
   mode = "new",
-  eyebrow = "Overlay Editor",
+  eyebrow,
   title,
   description,
   confirmLabel,
@@ -387,6 +388,8 @@ export default function CheckFormImageOverlayEditorModal({
   onSave,
   onSkip,
 }) {
+  const { language } = useLanguage();
+  const isJa = language === "ja";
   const [viewportSize, setViewportSize] = useState(() => getViewportSize());
   const [imageElement, setImageElement] = useState(null);
   const [loadingImage, setLoadingImage] = useState(false);
@@ -444,7 +447,7 @@ export default function CheckFormImageOverlayEditorModal({
       .catch((error) => {
         if (cancelled) return;
         setImageElement(null);
-        setLoadError(error.message || "Unable to load image.");
+        setLoadError(error.message || (isJa ? "画像を読み込めません。" : "Unable to load image."));
       })
       .finally(() => {
         if (!cancelled) {
@@ -584,7 +587,7 @@ export default function CheckFormImageOverlayEditorModal({
 
     if (tool === "text") {
       setSelectedId("");
-      const entered = window.prompt("Enter text to overlay:") || "";
+      const entered = window.prompt(isJa ? "画像に配置するテキストを入力してください:" : "Enter text to overlay:") || "";
       if (entered.trim()) {
         const newText = {
           id: crypto.randomUUID(),
@@ -674,7 +677,7 @@ export default function CheckFormImageOverlayEditorModal({
 
       await onSave(dataURL);
     } catch (error) {
-      setSaveError(error?.message || "Unable to save the annotated image.");
+      setSaveError(error?.message || (isJa ? "注釈付き画像を保存できませんでした。" : "Unable to save the annotated image."));
     } finally {
       setSaving(false);
     }
@@ -693,42 +696,42 @@ export default function CheckFormImageOverlayEditorModal({
         >
           <div className="flex flex-wrap items-start justify-between gap-4 border-b border-separator/40 px-5 py-4 sm:px-6">
             <div className="min-w-0 flex-1">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-primary">{eyebrow}</p>
-              <h3 className="mt-1 text-lg font-semibold text-on-surface">{title || (mode === "edit" ? "Edit reference image" : "Prepare new reference image")}</h3>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-primary">{eyebrow || (isJa ? "注釈エディター" : "Overlay Editor")}</p>
+              <h3 className="mt-1 text-lg font-semibold text-on-surface">{title || (mode === "edit" ? (isJa ? "参考画像の注釈を編集" : "Edit reference image") : (isJa ? "新規参考画像を準備" : "Prepare new reference image"))}</h3>
               <p className="mt-1 text-sm leading-6 text-outline">
-                {description || "Add simple callouts only if you need them. When you save, the image is flattened and uploaded as a new file."}
+                {description || (isJa ? "必要な場合のみシンプルな注釈（枠線や矢印など）を追加してください。保存時に画像が統合され、新しいファイルとして保存されます。" : "Add simple callouts only if you need them. When you save, the image is flattened and uploaded as a new file.")}
               </p>
             </div>
 
-            <IconButton icon="close" onClick={onClose} size="xl" ariaLabel="Close dialog" />
+            <IconButton icon="close" onClick={onClose} size="xl" ariaLabel={isJa ? "ダイアログを閉じる" : "Close dialog"} />
           </div>
 
           <div className="min-h-0 flex-1 overflow-y-auto px-5 py-5 sm:px-6">
             <div className="grid gap-5 xl:grid-cols-[280px_minmax(0,1fr)]">
               <div className="space-y-4">
                 <div className="rounded-3xl border border-separator/40 bg-surface-container/40 p-4">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Tools</p>
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">{isJa ? "ツール" : "Tools"}</p>
                   <div className="mt-3 flex flex-wrap gap-2">
                     {TOOL_OPTIONS.map((option) => (
                       <EditorToolButton
                         key={option.value}
                         active={tool === option.value}
                         icon={option.icon}
-                        label={option.label}
+                        label={isJa ? (option.label_ja || option.label) : option.label}
                         onClick={() => setTool(option.value)}
                       />
                     ))}
                   </div>
                   <p className="mt-3 text-xs leading-5 text-outline">
-                    Pick one shape, draw it once, then the editor returns to select mode automatically.
+                    {isJa ? "図形を選択して1回描画すると、エディターは自動的に選択モードに戻ります。" : "Pick one shape, draw it once, then the editor returns to select mode automatically."}
                   </p>
                 </div>
 
                 <div className="rounded-3xl border border-separator/40 bg-surface-container/40 p-4">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Style</p>
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">{isJa ? "スタイル" : "Style"}</p>
                   <div className="mt-3 space-y-4">
                     <label className="block text-xs font-semibold text-on-surface">
-                      Color
+                      {isJa ? "色" : "Color"}
                       <input
                         type="color"
                         value={strokeColor}
@@ -738,7 +741,7 @@ export default function CheckFormImageOverlayEditorModal({
                     </label>
 
                     <label className="block text-xs font-semibold text-on-surface">
-                      Stroke size
+                      {isJa ? "線の太さ" : "Stroke size"}
                       <input
                         type="range"
                         min="2"
@@ -754,7 +757,7 @@ export default function CheckFormImageOverlayEditorModal({
                 </div>
 
                 <div className="rounded-3xl border border-separator/40 bg-surface-container/40 p-4">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Actions</p>
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">{isJa ? "操作" : "Actions"}</p>
                   <div className="mt-3 flex flex-wrap gap-2">
                     <button
                       type="button"
@@ -768,7 +771,7 @@ export default function CheckFormImageOverlayEditorModal({
                       className="inline-flex items-center gap-2 rounded-2xl border border-separator/40 px-3 py-2 text-xs font-semibold text-on-surface transition hover:bg-surface disabled:opacity-40"
                     >
                       <span className="material-symbols-outlined" style={{ fontSize: 16 }}>undo</span>
-                      Undo
+                      {isJa ? "元に戻す" : "Undo"}
                     </button>
 
                     <button
@@ -783,7 +786,7 @@ export default function CheckFormImageOverlayEditorModal({
                       className="inline-flex items-center gap-2 rounded-2xl border border-separator/40 px-3 py-2 text-xs font-semibold text-on-surface transition hover:bg-surface disabled:opacity-40"
                     >
                       <span className="material-symbols-outlined" style={{ fontSize: 16 }}>redo</span>
-                      Redo
+                      {isJa ? "やり直す" : "Redo"}
                     </button>
 
                     <button
@@ -797,11 +800,11 @@ export default function CheckFormImageOverlayEditorModal({
                       className="inline-flex items-center gap-2 rounded-2xl border border-error/20 px-3 py-2 text-xs font-semibold text-error transition hover:bg-error/5 disabled:opacity-40"
                     >
                       <span className="material-symbols-outlined" style={{ fontSize: 16 }}>delete</span>
-                      Delete selected
+                      {isJa ? "選択項目を削除" : "Delete selected"}
                     </button>
                   </div>
                   <p className="mt-3 text-xs leading-5 text-outline">
-                    Drag shapes to reposition them. Boxes and circles can also be resized after selection.
+                    {isJa ? "図形をドラッグして位置を移動できます。四角や円は選択後にリサイズも可能です。" : "Drag shapes to reposition them. Boxes and circles can also be resized after selection."}
                   </p>
                 </div>
               </div>
@@ -810,18 +813,18 @@ export default function CheckFormImageOverlayEditorModal({
                 <div className="rounded-3xl border border-separator/40 bg-surface-container/30 p-3">
                   <div className="flex flex-wrap items-center justify-between gap-3">
                     <div>
-                      <p className="text-sm font-semibold text-on-surface">{sourceImage?.name || "Reference image"}</p>
-                      <p className="mt-1 text-xs leading-5 text-outline">Draw only what needs emphasis. The saved image becomes the new flat reference image.</p>
+                      <p className="text-sm font-semibold text-on-surface">{sourceImage?.name || (isJa ? "参考画像" : "Reference image")}</p>
+                      <p className="mt-1 text-xs leading-5 text-outline">{isJa ? "強調したい部分のみを描画してください。保存した画像が新しい参考画像になります。" : "Draw only what needs emphasis. The saved image becomes the new flat reference image."}</p>
                     </div>
                     <div className="rounded-full bg-surface px-3 py-1 text-[11px] font-semibold text-outline">
-                      {annotations.length} overlay{annotations.length === 1 ? "" : "s"}
+                      {isJa ? `${annotations.length} 件の注釈` : `${annotations.length} overlay${annotations.length === 1 ? "" : "s"}`}
                     </div>
                   </div>
                 </div>
 
                 <div className="overflow-auto rounded-[28px] border border-separator/40 bg-slate-900/95 p-3">
                   {loadingImage ? (
-                    <div className="flex min-h-[320px] items-center justify-center text-sm text-white/70">Loading image...</div>
+                    <div className="flex min-h-[320px] items-center justify-center text-sm text-white/70">{isJa ? "画像を読み込み中..." : "Loading image..."}</div>
                   ) : null}
 
                   {loadError ? (
@@ -888,8 +891,8 @@ export default function CheckFormImageOverlayEditorModal({
             <div className="flex flex-wrap items-center justify-between gap-3">
               <p className="text-xs leading-5 text-outline">
                 {mode === "edit"
-                  ? "Saving creates a new flattened image file and keeps the original image untouched."
-                  : "If you do not add any overlays, the image is still uploaded exactly as shown."}
+                  ? (isJa ? "保存すると統合された新しい画像ファイルが作成され、元の画像は保持されます。" : "Saving creates a new flattened image file and keeps the original image untouched.")
+                  : (isJa ? "注釈を追加しない場合でも、画像は表示された状態でそのままアップロードされます。" : "If you do not add any overlays, the image is still uploaded exactly as shown.")}
               </p>
 
               <div className="flex flex-wrap items-center gap-3">
@@ -898,7 +901,7 @@ export default function CheckFormImageOverlayEditorModal({
                   onClick={onClose}
                   className="rounded-2xl border border-separator/40 px-4 py-2 text-xs font-semibold text-on-surface transition hover:bg-surface-container"
                 >
-                  Cancel
+                  {isJa ? "キャンセル" : "Cancel"}
                 </button>
                 {onSkip ? (
                   <button
@@ -907,7 +910,7 @@ export default function CheckFormImageOverlayEditorModal({
                     disabled={saving}
                     className="rounded-2xl border border-separator/40 px-4 py-2 text-xs font-semibold text-outline hover:text-on-surface transition hover:bg-surface-container"
                   >
-                    Skip
+                    {isJa ? "スキップ" : "Skip"}
                   </button>
                 ) : null}
                 <button
@@ -916,7 +919,7 @@ export default function CheckFormImageOverlayEditorModal({
                   disabled={saving || loadingImage || !imageElement}
                   className="rounded-xl bg-primary px-4 py-2 text-xs font-semibold text-on-primary hover:opacity-90 active:scale-95 transition-all duration-150 disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  {saving ? "Saving..." : confirmLabel || (mode === "edit" ? "Save as new image" : "Upload image")}
+                  {saving ? (isJa ? "保存中..." : "Saving...") : confirmLabel || (mode === "edit" ? (isJa ? "新しい画像として保存" : "Save as new image") : (isJa ? "画像をアップロード" : "Upload image"))}
                 </button>
               </div>
             </div>

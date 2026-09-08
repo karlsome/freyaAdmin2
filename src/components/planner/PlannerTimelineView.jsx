@@ -8,6 +8,7 @@ import {
   minutesToTime,
   timeToMinutes,
 } from "../../utils/planner";
+import { useLanguage } from "../../contexts/LanguageContext";
 
 const SLOT_WIDTH = 56;
 const LABEL_WIDTH = 132;
@@ -45,6 +46,9 @@ export default function PlannerTimelineView({
   onMoveScheduledItem,
   onRemoveScheduledItem,
 }) {
+  const { language } = useLanguage();
+  const isJa = language === "ja";
+
   const timeSlots = getTimelineSlots(scheduledProducts, actualBlocks, breaks);
   const now = new Date();
   const currentMinutes = (now.getHours() * 60) + now.getMinutes();
@@ -57,8 +61,12 @@ export default function PlannerTimelineView({
     return (
       <div className="rounded-[8px] border border-dashed border-[var(--border)] bg-[var(--surface-subtle)] px-6 py-14 text-center text-[var(--text-muted)]">
         <span className="material-symbols-outlined text-3xl text-[var(--text-muted)]">calendar_month</span>
-        <p className="mt-2 text-sm font-semibold text-[var(--text-primary)]">No equipment loaded</p>
-        <p className="mt-1 text-xs text-[var(--text-muted)]">Choose a factory to build the planning timeline.</p>
+        <p className="mt-2 text-sm font-semibold text-[var(--text-primary)]">
+          {isJa ? "設備が読み込まれていません" : "No equipment loaded"}
+        </p>
+        <p className="mt-1 text-xs text-[var(--text-muted)]">
+          {isJa ? "工場を選択して計画タイムラインを作成してください。" : "Choose a factory to build the planning timeline."}
+        </p>
       </div>
     );
   }
@@ -67,8 +75,12 @@ export default function PlannerTimelineView({
     <div className="freya-card rounded-[8px] border border-[var(--border)] bg-[var(--surface)] p-5 shadow-sm">
       <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div>
-          <h3 className="text-base font-semibold text-[var(--text-primary)]">Timeline View</h3>
-          <p className="mt-0.5 text-xs text-[var(--text-muted)]">Place products on equipment rows and compare planned output against actual production.</p>
+          <h3 className="text-base font-semibold text-[var(--text-primary)]">
+            {isJa ? "タイムライン表示" : "Timeline View"}
+          </h3>
+          <p className="mt-0.5 text-xs text-[var(--text-muted)]">
+            {isJa ? "設備ごとに製品を配置し、計画と実績の比較を行います。" : "Place products on equipment rows and compare planned output against actual production."}
+          </p>
         </div>
 
         <button
@@ -76,7 +88,9 @@ export default function PlannerTimelineView({
           onClick={onToggleHideUnavailable}
           className={`rounded-[6px] border px-3 py-1.5 text-xs font-semibold transition ${hideUnavailableEquipment ? "border-[var(--freya-blue)]/30 bg-[var(--freya-blue)]/10 text-[var(--freya-blue)]" : "border-[var(--border)] bg-[var(--surface-subtle)] text-[var(--text-primary)] hover:bg-[var(--surface-hover)]"}`}
         >
-          {hideUnavailableEquipment ? "Show unavailable equipment" : "Hide unavailable equipment"}
+          {hideUnavailableEquipment
+            ? (isJa ? "利用不可設備を表示" : "Show unavailable equipment")
+            : (isJa ? "利用不可設備を非表示" : "Hide unavailable equipment")}
         </button>
       </div>
 
@@ -93,7 +107,7 @@ export default function PlannerTimelineView({
 
           <div className="sticky top-0 z-10 flex border-b border-[var(--border)] bg-[var(--surface-subtle)]">
             <div className="sticky left-0 z-10 flex h-10 items-center border-r border-[var(--border)] bg-[var(--surface-subtle)] px-4 text-xs font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]" style={{ width: LABEL_WIDTH }}>
-              Equipment
+              {isJa ? "設備" : "Equipment"}
             </div>
             {timeSlots.map((slot) => (
               <div key={slot} className="flex h-10 items-center justify-center border-r border-[var(--border)] text-xs font-semibold text-[var(--text-muted)]" style={{ width: SLOT_WIDTH }}>
@@ -116,7 +130,9 @@ export default function PlannerTimelineView({
                   <div className="sticky left-0 z-[5] flex flex-col justify-center border-r border-[var(--border)] bg-[var(--surface)] px-4" style={{ width: LABEL_WIDTH }}>
                     <div className="text-xs font-semibold text-[var(--text-primary)]">{equipmentName}</div>
                     <div className="text-[10px] text-[var(--text-muted)] uppercase tracking-[0.02em]">
-                      Planned{isGroupEquipment(equipmentName) ? " group" : " lane"}
+                      {isJa
+                        ? (isGroupEquipment(equipmentName) ? "計画 (グループ)" : "計画")
+                        : `Planned${isGroupEquipment(equipmentName) ? " group" : " lane"}`}
                     </div>
                   </div>
 
@@ -209,7 +225,9 @@ export default function PlannerTimelineView({
                 <div className={`flex min-h-[46px] bg-[var(--surface-subtle)]/40 ${actualUnavailable ? "opacity-50" : ""}`}>
                   <div className="sticky left-0 z-[5] flex flex-col justify-center border-r border-[var(--border)] bg-[var(--surface-subtle)] px-4" style={{ width: LABEL_WIDTH }}>
                     <div className="text-xs font-semibold text-[var(--text-primary)]">{equipmentName}</div>
-                    <div className="text-[10px] text-[var(--text-muted)] uppercase tracking-[0.02em]">Actual</div>
+                    <div className="text-[10px] text-[var(--text-muted)] uppercase tracking-[0.02em]">
+                      {isJa ? "実績" : "Actual"}
+                    </div>
                   </div>
 
                   <div className="flex">
@@ -226,7 +244,7 @@ export default function PlannerTimelineView({
                             key={`${equipmentName}-actual-${slot}`}
                             className="relative border-r border-[var(--border)]"
                             style={{ width: SLOT_WIDTH, backgroundColor: `${color}30` }}
-                            title={`${block.背番号} · ${block.totalQuantity} pcs actual`}
+                            title={`${block.背番号} · ${block.totalQuantity} ${isJa ? "個 実績" : "pcs actual"}`}
                           >
                             {showLabel ? (
                               <div className="absolute inset-0 flex items-center justify-center px-1 text-xs font-semibold text-sky-900 dark:text-sky-200">
@@ -243,11 +261,11 @@ export default function PlannerTimelineView({
                             key={`${equipmentName}-actual-${slot}`}
                             className="relative border-r border-amber-400/40 bg-amber-400/15"
                             style={{ width: SLOT_WIDTH }}
-                            title={`${inProgress.背番号 || inProgress.品番} in progress`}
+                            title={`${inProgress.背番号 || inProgress.品番} ${isJa ? "進行中" : "in progress"}`}
                           >
                             <div className="absolute inset-0 flex items-center justify-center gap-1 px-1 text-xs font-semibold text-amber-700 dark:text-amber-300">
                               <span className="material-symbols-outlined animate-spin" style={{ fontSize: 10 }}>progress_activity</span>
-                              {inProgress.背番号 || "Run"}
+                              {inProgress.背番号 || (isJa ? "稼働" : "Run")}
                             </div>
                           </div>
                         );
@@ -256,7 +274,7 @@ export default function PlannerTimelineView({
                       if (slotMinutes <= currentMinutes) {
                         return (
                           <div key={`${equipmentName}-actual-${slot}`} className="border-r border-[var(--border)] bg-[var(--surface-subtle)]/20" style={{ width: SLOT_WIDTH }}>
-                            {slotMinutes % 60 === 0 ? <div className="mt-3.5 text-center text-[10px] font-semibold text-[var(--text-muted)]/50">IDLE</div> : null}
+                            {slotMinutes % 60 === 0 ? <div className="mt-3.5 text-center text-[10px] font-semibold text-[var(--text-muted)]/50">{isJa ? "停止" : "IDLE"}</div> : null}
                           </div>
                         );
                       }
@@ -274,15 +292,15 @@ export default function PlannerTimelineView({
       <div className="mt-4 flex flex-wrap gap-2 text-xs text-[var(--text-muted)]">
         <span className="inline-flex items-center gap-2 rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] px-2.5 py-1 text-xs text-[var(--text-secondary)]">
           <span className="h-2 w-2 rounded-full bg-[var(--border-strong)]" />
-          Break time
+          {isJa ? "休憩時間" : "Break time"}
         </span>
         <span className="inline-flex items-center gap-2 rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] px-2.5 py-1 text-xs text-[var(--text-secondary)]">
           <span className="h-2 w-2 rounded-full bg-amber-400" />
-          In progress from tablet logs
+          {isJa ? "端末ログからの進行中データ" : "In progress from tablet logs"}
         </span>
         <span className="inline-flex items-center gap-2 rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] px-2.5 py-1 text-xs text-[var(--text-secondary)]">
           <span className="h-2 w-2 rounded-full bg-[var(--freya-blue)]" />
-          Actual press production
+          {isJa ? "プレス生産実績" : "Actual press production"}
         </span>
       </div>
     </div>

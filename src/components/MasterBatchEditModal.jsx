@@ -4,8 +4,9 @@ import { query } from "../services/api";
 import IconButton from "./IconButton";
 import ModalShell from "./ModalShell";
 import { SearchableSelect, SearchableHinbanSelect } from "./AdvancedFilterSection";
+import { useLanguage } from "../contexts/LanguageContext";
 
-function PreviewCard({ record, changes, previewFields, tabKey }) {
+function PreviewCard({ record, changes, previewFields, tabKey, isJa }) {
   const identity = getMasterRecordIdentity(record, tabKey);
   const changedFields = Object.entries(changes);
 
@@ -14,10 +15,12 @@ function PreviewCard({ record, changes, previewFields, tabKey }) {
       <div className="flex items-start justify-between gap-4">
         <div>
           <h4 className="text-base font-bold text-on-surface">{identity.title}</h4>
-          <p className="mt-0.5 text-xs text-outline">{identity.subtitle || "No secondary identifier"}</p>
+          <p className="mt-0.5 text-xs text-outline">
+            {identity.subtitle || (isJa ? "副識別情報なし" : "No secondary identifier")}
+          </p>
         </div>
         <span className="rounded-full bg-primary/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.18em] text-primary">
-          Preview
+          {isJa ? "プレビュー" : "Preview"}
         </span>
       </div>
 
@@ -34,7 +37,9 @@ function PreviewCard({ record, changes, previewFields, tabKey }) {
                   <span className="text-[11px] font-mono font-bold text-on-surface bg-surface-variant/40 px-2 py-0.5 rounded-md border border-outline-variant/30">
                     {field}
                   </span>
-                  <span className="text-[10px] text-outline font-medium">Will be replaced</span>
+                  <span className="text-[10px] text-outline font-medium">
+                    {isJa ? "置換されます" : "Will be replaced"}
+                  </span>
                 </div>
 
                 <div className="grid grid-cols-[1fr,auto,1fr] items-center gap-2.5 mt-1">
@@ -42,10 +47,10 @@ function PreviewCard({ record, changes, previewFields, tabKey }) {
                   <div className="rounded-xl bg-error/10 border border-error/25 p-2.5 flex flex-col gap-1 min-w-0">
                     <div className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-error">
                       <span className="material-symbols-outlined" style={{ fontSize: 12 }}>delete</span>
-                      <span>Old</span>
+                      <span>{isJa ? "変更前" : "Old"}</span>
                     </div>
                     <div className="text-xs font-mono font-medium text-error/90 line-through decoration-error decoration-2 break-all truncate" title={oldValue}>
-                      {isUnset ? "— (Empty)" : oldValue}
+                      {isUnset ? (isJa ? "— (未設定)" : "— (Empty)") : oldValue}
                     </div>
                   </div>
 
@@ -60,7 +65,7 @@ function PreviewCard({ record, changes, previewFields, tabKey }) {
                   <div className="rounded-xl bg-emerald-500/10 border border-emerald-500/30 p-2.5 flex flex-col gap-1 min-w-0">
                     <div className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
                       <span className="material-symbols-outlined" style={{ fontSize: 12 }}>check_circle</span>
-                      <span>New</span>
+                      <span>{isJa ? "変更後" : "New"}</span>
                     </div>
                     <div className="text-xs font-mono font-bold text-emerald-700 dark:text-emerald-300 break-all truncate" title={newDisplayValue}>
                       {newDisplayValue}
@@ -94,7 +99,10 @@ export default function MasterBatchEditModal({
   loadDistinctOptions,
   tabKey = "masterDB",
 }) {
+  const { language } = useLanguage();
+  const isJa = language === "ja";
   const tabUI = getMasterTabUI(tabKey);
+  const recordLabel = isJa ? (tabUI.recordLabelJa || tabUI.recordLabel) : tabUI.recordLabel;
   const fields = useMemo(
     () => fieldDefinitions.filter((field) => field.field !== "imageURL"),
     [fieldDefinitions]
@@ -148,16 +156,26 @@ export default function MasterBatchEditModal({
     <ModalShell
       open={!!open}
       onClose={onClose}
-      eyebrow="Batch Edit"
-      title={`Update ${totalCount} filtered ${tabUI.recordLabel.toLowerCase()}s`}
-      subtitle="Choose one field at a time, build a change set, then apply it across every record that matched the current advanced filter query."
+      eyebrow={isJa ? "一括編集" : "Batch Edit"}
+      title={
+        isJa
+          ? `フィルター対象の ${totalCount} 件の${recordLabel}を更新`
+          : `Update ${totalCount} filtered ${recordLabel.toLowerCase()}s`
+      }
+      subtitle={
+        isJa
+          ? "フィールドを選択して変更内容を設定し、現在の詳細フィルター条件に一致するすべてのレコードに一括適用します。"
+          : "Choose one field at a time, build a change set, then apply it across every record that matched the current advanced filter query."
+      }
       maxWidth="max-w-7xl"
       overlayOpacity="45"
       cardClassName="max-h-[88vh]"
       footer={
         <div className="flex items-center justify-between gap-4">
           <p className="text-sm text-on-surface-variant">
-            The update runs against every record currently matched by the advanced filter query.
+            {isJa
+              ? "この更新は、現在の詳細フィルタークエリに一致するすべてのレコードに対して実行されます。"
+              : "The update runs against every record currently matched by the advanced filter query."}
           </p>
 
           <div className="flex items-center gap-3">
@@ -166,7 +184,7 @@ export default function MasterBatchEditModal({
               onClick={onClose}
               className="rounded-2xl border border-separator/40 px-4 py-2 text-xs font-semibold text-on-surface transition hover:bg-surface-container"
             >
-              Cancel
+              {isJa ? "キャンセル" : "Cancel"}
             </button>
             <button
               type="button"
@@ -174,7 +192,9 @@ export default function MasterBatchEditModal({
               disabled={!Object.keys(changes).length || submitting}
               className="rounded-xl bg-primary px-4 py-2 text-xs font-semibold text-on-primary hover:opacity-90 active:scale-95 transition-all duration-150 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {submitting ? "Updating…" : "Apply Updates"}
+              {submitting
+                ? (isJa ? "更新中…" : "Updating…")
+                : (isJa ? "変更を一括適用" : "Apply Updates")}
             </button>
           </div>
         </div>
@@ -183,7 +203,9 @@ export default function MasterBatchEditModal({
           <div className="grid min-h-0 flex-1 gap-0 xl:grid-cols-[360px,minmax(0,1fr)]">
             <div className="border-r border-outline-variant/20 bg-surface-container-low px-6 py-5 overflow-y-auto scrollbar-hide">
               <div className="rounded-2xl bg-surface px-4 py-4 border border-separator/40">
-                <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-outline">Available Fields</div>
+                <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-outline">
+                  {isJa ? "編集可能な項目" : "Available Fields"}
+                </div>
                 <div className="mt-4 flex flex-wrap gap-2">
                   {fields.map((field) => (
                     <button
@@ -206,8 +228,12 @@ export default function MasterBatchEditModal({
               <div className="mt-4 rounded-2xl bg-surface px-4 py-4 border border-separator/40">
                 <div className="flex items-center justify-between gap-4">
                   <div>
-                    <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-outline">Edit Field</div>
-                    <div className="mt-1 text-sm text-on-surface-variant">{activeField ? activeField.label : "Select a field tag above to start editing."}</div>
+                    <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-outline">
+                      {isJa ? "項目の編集" : "Edit Field"}
+                    </div>
+                    <div className="mt-1 text-sm text-on-surface-variant">
+                      {activeField ? activeField.label : (isJa ? "上の項目タグを選択して編集を開始してください。" : "Select a field tag above to start editing.")}
+                    </div>
                   </div>
                 </div>
 
@@ -224,7 +250,7 @@ export default function MasterBatchEditModal({
                       <SearchableHinbanSelect
                         value={draftValue}
                         onChange={({ value }) => setDraftValue(value)}
-                        placeholder="Search or select 品番..."
+                        placeholder={isJa ? "品番を検索または選択..." : "Search or select 品番..."}
                         className="w-full rounded-2xl border border-outline-variant/30 bg-surface-container px-3 py-3 text-sm text-on-surface outline-none transition focus:border-primary/40"
                       />
                     ) : options.length > 0 || loadingOptions || activeField.type === "select" ? (
@@ -232,7 +258,11 @@ export default function MasterBatchEditModal({
                         value={draftValue}
                         options={options}
                         onChange={({ value }) => setDraftValue(value)}
-                        placeholder={loadingOptions ? `Loading ${activeField.label}...` : `Select or search ${activeField.label}...`}
+                        placeholder={
+                          loadingOptions
+                            ? (isJa ? `${activeField.label} を読み込み中...` : `Loading ${activeField.label}...`)
+                            : (isJa ? `${activeField.label} を選択または検索...` : `Select or search ${activeField.label}...`)
+                        }
                         className="w-full rounded-2xl border border-outline-variant/30 bg-surface-container px-3 py-3 text-sm text-on-surface outline-none transition focus:border-primary/40"
                       />
                     ) : (
@@ -241,7 +271,7 @@ export default function MasterBatchEditModal({
                         value={draftValue}
                         onChange={(event) => setDraftValue(event.target.value)}
                         className="w-full rounded-2xl border border-outline-variant/30 bg-surface-container px-3 py-3 text-sm text-on-surface outline-none transition focus:border-primary/40"
-                        placeholder="Enter new value"
+                        placeholder={isJa ? "新しい値を入力" : "Enter new value"}
                       />
                     )}
 
@@ -253,7 +283,7 @@ export default function MasterBatchEditModal({
                       }}
                       className="rounded-xl bg-primary px-4 py-2 text-xs font-semibold text-on-primary hover:opacity-90 active:scale-95 transition-all duration-150"
                     >
-                      Add Change
+                      {isJa ? "変更を追加" : "Add Change"}
                     </button>
                   </div>
                 ) : null}
@@ -262,8 +292,14 @@ export default function MasterBatchEditModal({
               <div className="mt-4 rounded-2xl bg-surface px-4 py-4 border border-separator/40">
                 <div className="flex items-center justify-between gap-3">
                   <div>
-                    <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-outline">Changes To Apply</div>
-                    <div className="mt-1 text-sm text-on-surface-variant">These values will overwrite the selected fields for every matching record.</div>
+                    <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-outline">
+                      {isJa ? "適用する変更内容" : "Changes To Apply"}
+                    </div>
+                    <div className="mt-1 text-sm text-on-surface-variant">
+                      {isJa
+                        ? "これらの値で、一致するすべてのレコードの対象項目が上書きされます。"
+                        : "These values will overwrite the selected fields for every matching record."}
+                    </div>
                   </div>
                   {!!Object.keys(changes).length && (
                     <button
@@ -271,7 +307,7 @@ export default function MasterBatchEditModal({
                       onClick={() => setChanges({})}
                       className="text-xs font-semibold uppercase tracking-[0.18em] text-error"
                     >
-                      Clear
+                      {isJa ? "クリア" : "Clear"}
                     </button>
                   )}
                 </div>
@@ -295,12 +331,12 @@ export default function MasterBatchEditModal({
                         variant="danger"
                         size="md"
                         iconSize={18}
-                        ariaLabel="Remove change"
+                        ariaLabel={isJa ? "変更を削除" : "Remove change"}
                       />
                     </div>
                   )) : (
                     <div className="rounded-2xl border border-dashed border-outline-variant/30 px-4 py-6 text-sm text-on-surface-variant">
-                      No changes queued yet.
+                      {isJa ? "適用予定の変更はありません。" : "No changes queued yet."}
                     </div>
                   )}
                 </div>
@@ -310,11 +346,17 @@ export default function MasterBatchEditModal({
             <div className="min-h-0 overflow-y-auto px-6 py-5 scrollbar-hide bg-surface-container-lowest/60">
               <div className="mb-4 flex items-center justify-between gap-4">
                 <div>
-                  <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-outline">Live Preview</div>
-                  <div className="mt-1 text-sm text-on-surface-variant">Showing {Math.min(5, previewRecords.length)} preview cards from the current page.</div>
+                  <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-outline">
+                    {isJa ? "プレビュー" : "Live Preview"}
+                  </div>
+                  <div className="mt-1 text-sm text-on-surface-variant">
+                    {isJa
+                      ? `現在のページからプレビュー ${Math.min(5, previewRecords.length)} 件を表示中。`
+                      : `Showing ${Math.min(5, previewRecords.length)} preview cards from the current page.`}
+                  </div>
                 </div>
                 <div className="rounded-full bg-surface-container px-3 py-1.5 text-xs font-semibold text-on-surface-variant">
-                  {totalCount} total matches
+                  {isJa ? `全 ${totalCount} 件が対象` : `${totalCount} total matches`}
                 </div>
               </div>
 
@@ -326,6 +368,7 @@ export default function MasterBatchEditModal({
                     changes={changes}
                     previewFields={previewFields}
                     tabKey={tabKey}
+                    isJa={isJa}
                   />
                 ))}
               </div>

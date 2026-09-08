@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Conversion, Input, Output, BlobSource, BufferTarget, Mp4OutputFormat, ALL_FORMATS } from "mediabunny";
 import IconButton from "../IconButton";
+import { useLanguage } from "../../contexts/LanguageContext";
 
 function formatTime(seconds) {
   if (isNaN(seconds) || seconds < 0) return "00:00.0";
@@ -63,14 +64,20 @@ async function trimVideoClientSide(file, startTime, endTime, onProgress) {
 export default function VideoTrimmerEditorModal({
   open,
   videoFile,
-  eyebrow = "Video Trimmer",
+  eyebrow,
   title,
-  description = "Adjust the start and end markers to trim the video before uploading.",
-  confirmLabel = "Save & Continue",
+  description,
+  confirmLabel,
   onClose,
   onSave,
   onSkip,
 }) {
+  const { language } = useLanguage();
+  const isJa = language === "ja";
+
+  const resolvedEyebrow = eyebrow || (isJa ? "動画トリミング" : "Video Trimmer");
+  const resolvedDesc = description || (isJa ? "開始マーカーと終了マーカーを調整して、アップロード前に動画をトリミングします。" : "Adjust the start and end markers to trim the video before uploading.");
+  const resolvedConfirmLabel = confirmLabel || (isJa ? "保存して続行" : "Save & Continue");
   const [videoSrc, setVideoSrc] = useState("");
   const [duration, setDuration] = useState(0);
   const [currentTime, setCurrentTime] = useState(0);
@@ -200,13 +207,13 @@ export default function VideoTrimmerEditorModal({
         {/* Header */}
         <div className="flex items-start justify-between gap-4 border-b border-separator/40 px-6 py-4">
           <div>
-            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-primary">{eyebrow}</p>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-primary">{resolvedEyebrow}</p>
             <h3 className="mt-1 text-lg font-semibold text-on-surface">
-              {title || `Trim: ${videoFile.name}`}
+              {title || (isJa ? `トリミング: ${videoFile.name}` : `Trim: ${videoFile.name}`)}
             </h3>
-            <p className="mt-1 text-sm text-outline">{description}</p>
+            <p className="mt-1 text-sm text-outline">{resolvedDesc}</p>
           </div>
-          <IconButton icon="close" onClick={onClose} size="xl" ariaLabel="Close dialog" />
+          <IconButton icon="close" onClick={onClose} size="xl" ariaLabel={isJa ? "ダイアログを閉じる" : "Close dialog"} />
         </div>
 
         {/* Body */}
@@ -241,20 +248,20 @@ export default function VideoTrimmerEditorModal({
             <div className="flex flex-wrap items-center justify-between text-xs font-semibold gap-2">
               <div className="flex items-center gap-4">
                 <span className="text-primary flex items-center gap-1">
-                  <span className="text-[10px] uppercase tracking-wider text-outline">Start:</span>
+                  <span className="text-[10px] uppercase tracking-wider text-outline">{isJa ? "開始:" : "Start:"}</span>
                   {formatTime(startTime)}
                 </span>
                 <span className="text-primary flex items-center gap-1">
-                  <span className="text-[10px] uppercase tracking-wider text-outline">End:</span>
+                  <span className="text-[10px] uppercase tracking-wider text-outline">{isJa ? "終了:" : "End:"}</span>
                   {formatTime(endTime)}
                 </span>
                 <span className="text-on-surface flex items-center gap-1 bg-primary/10 px-2 py-0.5 rounded-md">
-                  <span className="text-[10px] uppercase tracking-wider text-primary font-bold">Trimmed Length:</span>
+                  <span className="text-[10px] uppercase tracking-wider text-primary font-bold">{isJa ? "トリミング後の長さ:" : "Trimmed Length:"}</span>
                   {formatTime(clipDuration)}
                 </span>
               </div>
               <div className="text-outline">
-                <span className="text-[10px] uppercase tracking-wider">Position:</span> {formatTime(currentTime)} / {formatTime(duration)}
+                <span className="text-[10px] uppercase tracking-wider">{isJa ? "現在位置:" : "Position:"}</span> {formatTime(currentTime)} / {formatTime(duration)}
               </div>
             </div>
 
@@ -263,7 +270,7 @@ export default function VideoTrimmerEditorModal({
               {/* Start Handle */}
               <div>
                 <div className="flex justify-between text-[11px] font-medium text-outline mb-1">
-                  <span>Start Point (In)</span>
+                  <span>{isJa ? "開始位置 (In)" : "Start Point (In)"}</span>
                   <span>{formatTime(startTime)}</span>
                 </div>
                 <input
@@ -284,7 +291,7 @@ export default function VideoTrimmerEditorModal({
               {/* End Handle */}
               <div>
                 <div className="flex justify-between text-[11px] font-medium text-outline mb-1">
-                  <span>End Point (Out)</span>
+                  <span>{isJa ? "終了位置 (Out)" : "End Point (Out)"}</span>
                   <span>{formatTime(endTime)}</span>
                 </div>
                 <input
@@ -314,7 +321,7 @@ export default function VideoTrimmerEditorModal({
                   <span className="material-symbols-outlined" style={{ fontSize: 16 }}>
                     {isPlaying ? "pause" : "play_arrow"}
                   </span>
-                  {isPlaying ? "Pause" : "Play"}
+                  {isJa ? (isPlaying ? "一時停止" : "再生") : (isPlaying ? "Pause" : "Play")}
                 </button>
 
                 <button
@@ -323,7 +330,7 @@ export default function VideoTrimmerEditorModal({
                   className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-primary/30 bg-primary/10 text-xs font-semibold text-primary hover:bg-primary/15 transition-colors"
                 >
                   <span className="material-symbols-outlined" style={{ fontSize: 16 }}>replay</span>
-                  Preview Trim
+                  {isJa ? "トリミングプレビュー" : "Preview Trim"}
                 </button>
               </div>
 
@@ -333,14 +340,14 @@ export default function VideoTrimmerEditorModal({
                   onClick={setStartToCurrent}
                   className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-separator/40 text-[11px] font-medium text-outline hover:text-on-surface hover:bg-surface-container transition-colors"
                 >
-                  Set Start at Playhead
+                  {isJa ? "現在位置を開始点に設定" : "Set Start at Playhead"}
                 </button>
                 <button
                   type="button"
                   onClick={setEndToCurrent}
                   className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-separator/40 text-[11px] font-medium text-outline hover:text-on-surface hover:bg-surface-container transition-colors"
                 >
-                  Set End at Playhead
+                  {isJa ? "現在位置を終了点に設定" : "Set End at Playhead"}
                 </button>
               </div>
             </div>
@@ -350,7 +357,7 @@ export default function VideoTrimmerEditorModal({
           {processing && (
             <div className="rounded-2xl bg-primary/10 border border-primary/20 p-4 space-y-2">
               <div className="flex justify-between text-xs font-semibold text-primary">
-                <span>Trimming video locally in browser...</span>
+                <span>{isJa ? "ブラウザ内で動画をトリミング中..." : "Trimming video locally in browser..."}</span>
                 <span>{progress}%</span>
               </div>
               <div className="h-2 w-full rounded-full bg-primary/20 overflow-hidden">
@@ -371,8 +378,8 @@ export default function VideoTrimmerEditorModal({
         <div className="flex flex-wrap items-center justify-between gap-3 border-t border-separator/40 px-6 py-4 bg-surface">
           <p className="text-xs text-outline">
             {isTrimmed
-              ? `Trimmed clip will be ${formatTime(clipDuration)} long (MP4 export).`
-              : "Full duration selected. Original video file will be uploaded."}
+              ? (isJa ? `トリミング後の動画は ${formatTime(clipDuration)} になります (MP4出力)。` : `Trimmed clip will be ${formatTime(clipDuration)} long (MP4 export).`)
+              : (isJa ? "全期間が選択されています。元の動画ファイルがアップロードされます。" : "Full duration selected. Original video file will be uploaded.")}
           </p>
 
           <div className="flex items-center gap-3">
@@ -382,7 +389,7 @@ export default function VideoTrimmerEditorModal({
               disabled={processing}
               className="rounded-2xl border border-separator/40 px-4 py-2 text-xs font-semibold text-on-surface hover:bg-surface-container transition-colors disabled:opacity-50"
             >
-              Cancel
+              {isJa ? "キャンセル" : "Cancel"}
             </button>
             {onSkip && (
               <button
@@ -391,7 +398,7 @@ export default function VideoTrimmerEditorModal({
                 disabled={processing}
                 className="rounded-2xl border border-separator/40 px-4 py-2 text-xs font-semibold text-outline hover:text-on-surface hover:bg-surface-container transition-colors disabled:opacity-50"
               >
-                Skip / Keep Original
+                {isJa ? "スキップ / 元の動画を保持" : "Skip / Keep Original"}
               </button>
             )}
             <button
@@ -403,10 +410,10 @@ export default function VideoTrimmerEditorModal({
               {processing ? (
                 <>
                   <span className="material-symbols-outlined animate-spin" style={{ fontSize: 16 }}>progress_activity</span>
-                  Trimming...
+                  {isJa ? "トリミング中..." : "Trimming..."}
                 </>
               ) : (
-                confirmLabel
+                resolvedConfirmLabel
               )}
             </button>
           </div>

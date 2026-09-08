@@ -4,6 +4,7 @@ import Papa from "papaparse";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { fetchExportTemplates, saveExportTemplate } from "../services/api";
+import { useLanguage } from "../contexts/LanguageContext";
 
 function flattenObject(obj, prefix = '') {
   const flattened = {};
@@ -35,6 +36,8 @@ function flattenObject(obj, prefix = '') {
 }
 
 export default function ExportOptionsModal({ data, onClose, processName = "Export" }) {
+  const { language } = useLanguage();
+  const isJa = language === "ja";
   const [templates, setTemplates] = useState([]);
   const [selectedTemplateId, setSelectedTemplateId] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
@@ -156,7 +159,7 @@ export default function ExportOptionsModal({ data, onClose, processName = "Expor
   };
 
   const handleSaveTemplate = async () => {
-    const name = window.prompt("Enter template name:");
+    const name = window.prompt(isJa ? "テンプレート名を入力してください:" : "Enter template name:");
     if (!name) return;
 
     const columnsToSave = getOrderedColumns();
@@ -188,7 +191,7 @@ export default function ExportOptionsModal({ data, onClose, processName = "Expor
       }
     } catch (error) {
       console.error("Failed to save template", error);
-      alert("Failed to save template to database.");
+      alert(isJa ? "データベースへのテンプレート保存に失敗しました。" : "Failed to save template to database.");
     }
   };
 
@@ -203,7 +206,7 @@ export default function ExportOptionsModal({ data, onClose, processName = "Expor
 
   const executeExportCSV = () => {
     const cols = getOrderedColumns();
-    if (cols.length === 0) return alert("Please select at least one column.");
+    if (cols.length === 0) return alert(isJa ? "少なくとも1つの列を選択してください。" : "Please select at least one column.");
 
     const flatData = data.map(row => flattenObject(row));
     const csvData = flatData.map(row => {
@@ -258,12 +261,15 @@ export default function ExportOptionsModal({ data, onClose, processName = "Expor
   return createPortal(
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] flex items-center justify-center p-4">
       <div className="bg-surface rounded-2xl shadow-xl w-full max-w-3xl max-h-[90vh] flex flex-col border border-separator/40 animate-in fade-in zoom-in-95 duration-200">
-        
         {/* Header */}
         <div className="px-6 py-4 border-b border-separator/40 flex justify-between items-center">
           <div>
-            <h3 className="text-lg font-semibold text-on-surface">Export Options</h3>
-            <p className="text-sm text-on-surface-variant mt-0.5">Select columns to export and set their order</p>
+            <h3 className="text-lg font-semibold text-on-surface">
+              {isJa ? "エクスポート設定" : "Export Options"}
+            </h3>
+            <p className="text-sm text-on-surface-variant mt-0.5">
+              {isJa ? "エクスポートする列と出力順を選択してください" : "Select columns to export and set their order"}
+            </p>
           </div>
           <button onClick={onClose} className="p-2 text-outline hover:text-on-surface hover:bg-surface-container rounded-full transition-colors">
             <span className="material-symbols-outlined" style={{ fontSize: 20 }}>close</span>
@@ -276,13 +282,15 @@ export default function ExportOptionsModal({ data, onClose, processName = "Expor
           {/* Templates Section */}
           <div className="mb-6 p-4 bg-primary/5 border border-primary/20 rounded-xl">
             <div className="flex flex-wrap items-center gap-4">
-              <label className="text-sm font-semibold text-primary flex-shrink-0">Templates</label>
+              <label className="text-sm font-semibold text-primary flex-shrink-0">
+                {isJa ? "テンプレート" : "Templates"}
+              </label>
               <select
                 value={selectedTemplateId}
                 onChange={handleTemplateChange}
                 className="flex-1 min-w-[200px] h-9 px-3 text-sm bg-white border border-primary/20 rounded-lg outline-none focus:border-primary transition-colors"
               >
-                <option value="">-- Select Template --</option>
+                <option value="">{isJa ? "-- テンプレートを選択 --" : "-- Select Template --"}</option>
                 {templates.map(t => (
                   <option key={t.id} value={t.id}>{t.name}</option>
                 ))}
@@ -292,7 +300,7 @@ export default function ExportOptionsModal({ data, onClose, processName = "Expor
                 className="flex items-center gap-1.5 px-4 h-9 bg-primary text-on-primary text-sm font-semibold rounded-lg hover:opacity-90 transition-opacity"
               >
                 <span className="material-symbols-outlined" style={{ fontSize: 16 }}>save</span>
-                Save Template
+                {isJa ? "テンプレート保存" : "Save Template"}
               </button>
             </div>
           </div>
@@ -302,7 +310,7 @@ export default function ExportOptionsModal({ data, onClose, processName = "Expor
             <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline" style={{ fontSize: 18 }}>search</span>
             <input
               type="text"
-              placeholder="Search headers..."
+              placeholder={isJa ? "列名を検索..." : "Search headers..."}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full h-10 pl-9 pr-4 rounded-xl border border-separator/40 bg-surface-container text-sm text-on-surface outline-none focus:border-primary/40 transition-colors"
@@ -312,17 +320,25 @@ export default function ExportOptionsModal({ data, onClose, processName = "Expor
           {/* Controls */}
           <div className="mb-4 flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <button onClick={selectAll} className="text-sm font-semibold text-primary hover:underline">Select All</button>
+              <button onClick={selectAll} className="text-sm font-semibold text-primary hover:underline">
+                {isJa ? "すべて選択" : "Select All"}
+              </button>
               <span className="text-separator/60">|</span>
-              <button onClick={deselectAll} className="text-sm font-semibold text-primary hover:underline">Deselect All</button>
+              <button onClick={deselectAll} className="text-sm font-semibold text-primary hover:underline">
+                {isJa ? "すべて解除" : "Deselect All"}
+              </button>
               <span className="text-separator/60">|</span>
-              <button onClick={clearOrder} className="text-sm font-semibold text-primary hover:underline">Clear Order</button>
+              <button onClick={clearOrder} className="text-sm font-semibold text-primary hover:underline">
+                {isJa ? "並び順をクリア" : "Clear Order"}
+              </button>
             </div>
             <span className="text-xs text-on-surface-variant font-medium">
-              {selectedCount} / {allUniqueHeaders.length} selected
+              {isJa ? `${allUniqueHeaders.length} 件中 ${selectedCount} 件選択中` : `${selectedCount} / ${allUniqueHeaders.length} selected`}
             </span>
           </div>
-          <p className="text-xs text-outline mb-3">Enter order numbers. Only checked items will be exported.</p>
+          <p className="text-xs text-outline mb-3">
+            {isJa ? "出力順の数値を入力してください。チェックした列のみが出力されます。" : "Enter order numbers. Only checked items will be exported."}
+          </p>
 
           {/* Headers List */}
           <div className="border border-separator/40 rounded-xl overflow-hidden bg-surface-container/50">
@@ -351,7 +367,9 @@ export default function ExportOptionsModal({ data, onClose, processName = "Expor
               );
             })}
             {filteredHeaders.length === 0 && (
-              <div className="p-6 text-center text-sm text-outline">No headers match your search.</div>
+              <div className="p-6 text-center text-sm text-outline">
+                {isJa ? "検索に一致する列が見つかりません。" : "No headers match your search."}
+              </div>
             )}
           </div>
 
@@ -363,21 +381,21 @@ export default function ExportOptionsModal({ data, onClose, processName = "Expor
             onClick={onClose}
             className="px-5 py-2.5 rounded-xl border border-separator/60 text-on-surface text-sm font-semibold hover:bg-surface-container transition-colors"
           >
-            Cancel
+            {isJa ? "キャンセル" : "Cancel"}
           </button>
           <button
             onClick={executeExportCSV}
             className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-primary/10 text-primary border border-primary/20 text-sm font-semibold hover:bg-primary/15 transition-colors"
           >
             <span className="material-symbols-outlined" style={{ fontSize: 16 }}>csv</span>
-            Export CSV
+            {isJa ? "CSVエクスポート" : "Export CSV"}
           </button>
           <button
             onClick={executeExportPDF}
             className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-primary text-on-primary text-sm font-semibold hover:opacity-90 transition-opacity"
           >
             <span className="material-symbols-outlined" style={{ fontSize: 16 }}>picture_as_pdf</span>
-            Export PDF
+            {isJa ? "PDFエクスポート" : "Export PDF"}
           </button>
         </div>
 

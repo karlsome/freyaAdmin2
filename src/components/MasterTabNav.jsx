@@ -1,3 +1,5 @@
+import { useLanguage } from "../contexts/LanguageContext";
+
 export default function MasterTabNav({
   tabs = [],
   activeTab,
@@ -6,6 +8,9 @@ export default function MasterTabNav({
   className = "",
   variant = "folder",
 }) {
+  const { language } = useLanguage();
+  const isJa = language === "ja";
+
   if (variant === "segmented") {
     return (
       <div
@@ -15,6 +20,7 @@ export default function MasterTabNav({
         {tabs.map((tab) => {
           const active = tab.key === activeTab;
           const isDisabled = tab.ready === false || tab.disabled;
+          const label = isJa ? (tab.labelJa || tab.label) : (tab.labelEn || tab.label);
 
           return (
             <button
@@ -43,7 +49,7 @@ export default function MasterTabNav({
                   {tab.icon}
                 </span>
               )}
-              <span>{tab.label}</span>
+              <span>{label}</span>
               {(tab.badge !== undefined || tab.count !== undefined) && (
                 <span
                   className={`rounded-[4px] px-1.5 py-0.5 text-[10px] font-bold transition-colors ${
@@ -72,6 +78,7 @@ export default function MasterTabNav({
         {tabs.map((tab) => {
           const active = tab.key === activeTab;
           const isDisabled = tab.ready === false || tab.disabled;
+          const label = isJa ? (tab.labelJa || tab.label) : (tab.labelEn || tab.label);
 
           return (
             <button
@@ -106,7 +113,7 @@ export default function MasterTabNav({
                   {tab.icon}
                 </span>
               )}
-              <span>{tab.label}</span>
+              <span>{label}</span>
               {(tab.badge !== undefined || tab.count !== undefined) && (
                 <span
                   className={`rounded-[4px] px-1.5 py-0.5 text-[10px] font-bold transition-colors ${

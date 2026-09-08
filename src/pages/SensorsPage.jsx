@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import PageHeader from "../components/PageHeader";
+import { useLanguage } from "../contexts/LanguageContext";
 import { fetchSensorFactoryOverview } from "../services/api";
 import { getTempStatus, getHumidityStatus, getWBGTStatus } from "../utils/statusHelpers";
 
 // ─── Per-factory sensor card ──────────────────────────────────────────────────
-function FactorySensorCard({ factory, onClick }) {
+function FactorySensorCard({ factory, onClick, isJa }) {
   const { sensor, name } = factory;
   const tempStatus  = getTempStatus(sensor.highestTemp);
   const humidStatus = getHumidityStatus(sensor.averageHumidity);
@@ -20,11 +21,13 @@ function FactorySensorCard({ factory, onClick }) {
       {/* Header */}
       <div className="flex items-start justify-between mb-3.5">
         <div>
-          <p className="text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-[0.04em]">Factory</p>
+          <p className="text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-[0.04em]">
+            {isJa ? "工場" : "Factory"}
+          </p>
           <p className="text-base font-bold text-[var(--text-primary)] mt-0.5">{name}</p>
         </div>
         <span className={`text-[10px] font-mono font-semibold px-2 py-0.5 rounded-[4px] border ${wbgtStatus.bg} ${wbgtStatus.color}`}>
-          {sensor.wbgt !== null ? `WBGT ${sensor.wbgt}°C` : "No Data"}
+          {sensor.wbgt !== null ? `WBGT ${sensor.wbgt}°C` : (isJa ? "データなし" : "No Data")}
         </span>
       </div>
 
@@ -34,13 +37,13 @@ function FactorySensorCard({ factory, onClick }) {
           <p className={`text-xl font-bold font-mono ${tempStatus.color}`}>
             {sensor.highestTemp !== null ? `${sensor.highestTemp}°C` : "—"}
           </p>
-          <p className="text-[10px] text-[var(--text-secondary)] mt-0.5">Peak Temp</p>
+          <p className="text-[10px] text-[var(--text-secondary)] mt-0.5">{isJa ? "最高気温" : "Peak Temp"}</p>
         </div>
         <div className={`p-3 rounded-[6px] border border-[var(--border)] ${humidStatus.bg}`}>
           <p className={`text-xl font-bold font-mono ${humidStatus.color}`}>
             {sensor.averageHumidity !== null ? `${sensor.averageHumidity}%` : "—"}
           </p>
-          <p className="text-[10px] text-[var(--text-secondary)] mt-0.5">Avg Humidity</p>
+          <p className="text-[10px] text-[var(--text-secondary)] mt-0.5">{isJa ? "平均湿度" : "Avg Humidity"}</p>
         </div>
       </div>
 
@@ -48,18 +51,18 @@ function FactorySensorCard({ factory, onClick }) {
       <div className="flex items-center justify-between text-xs text-[var(--text-secondary)] font-mono pt-3 border-t border-[var(--border)]">
         <div className="flex items-center gap-1.5 flex-wrap">
           <span className="material-symbols-outlined" style={{ fontSize: 14 }}>sensors</span>
-          <span>{sensor.sensorCount} device{sensor.sensorCount !== 1 ? "s" : ""}</span>
+          <span>{isJa ? `${sensor.sensorCount} 台のデバイス` : `${sensor.sensorCount} device${sensor.sensorCount !== 1 ? "s" : ""}`}</span>
           {sensor.offlineCount > 0 ? (
             <>
               <span className="text-[var(--text-muted)]">|</span>
               <span className="font-semibold text-[var(--status-danger)]">
-                {sensor.offlineCount} offline
+                {isJa ? `${sensor.offlineCount} 台オフライン` : `${sensor.offlineCount} offline`}
               </span>
             </>
           ) : null}
         </div>
         <div className="flex items-center gap-1 text-[var(--freya-blue)] font-semibold text-xs">
-          <span>Details</span>
+          <span>{isJa ? "詳細" : "Details"}</span>
           <span className="material-symbols-outlined" style={{ fontSize: 14 }}>arrow_forward</span>
         </div>
       </div>
@@ -68,7 +71,7 @@ function FactorySensorCard({ factory, onClick }) {
 }
 
 // ─── Global summary strip ─────────────────────────────────────────────────────
-function SummaryStrip({ factories }) {
+function SummaryStrip({ factories, isJa }) {
   const active     = factories.filter((f) => f.sensor.hasData);
   const totalDev   = factories.reduce((s, f) => s + (f.sensor.sensorCount ?? 0), 0);
   const temps      = factories.map((f) => f.sensor.highestTemp).filter((v) => v !== null);
@@ -78,10 +81,10 @@ function SummaryStrip({ factories }) {
   ).length;
 
   const tiles = [
-    { label: "Factories Online", value: `${active.length} / ${factories.length}`, icon: "factory", color: "text-[var(--freya-blue)]" },
-    { label: "Total Devices",    value: totalDev,                                  icon: "sensors",  color: "text-[var(--text-secondary)]" },
-    { label: "Global Peak Temp", value: globalPeak !== null ? `${globalPeak}°C` : "—", icon: "thermostat", color: getTempStatus(globalPeak).color },
-    { label: "Heat Stress Alerts", value: alerts, icon: "warning",                color: alerts > 0 ? "text-[var(--status-danger)]" : "text-[var(--text-muted)]" },
+    { label: isJa ? "オンライン工場" : "Factories Online", value: `${active.length} / ${factories.length}`, icon: "factory", color: "text-[var(--freya-blue)]" },
+    { label: isJa ? "総デバイス数" : "Total Devices",    value: totalDev,                                  icon: "sensors",  color: "text-[var(--text-secondary)]" },
+    { label: isJa ? "全社最高気温" : "Global Peak Temp", value: globalPeak !== null ? `${globalPeak}°C` : "—", icon: "thermostat", color: getTempStatus(globalPeak).color },
+    { label: isJa ? "熱中症アラート" : "Heat Stress Alerts", value: alerts, icon: "warning",                color: alerts > 0 ? "text-[var(--status-danger)]" : "text-[var(--text-muted)]" },
   ];
 
   return (
@@ -101,6 +104,8 @@ function SummaryStrip({ factories }) {
 
 // ─── Page ────────────────────────────────────────────────────────────────────
 export default function SensorsPage() {
+  const { language } = useLanguage();
+  const isJa = language === "ja";
   const navigate  = useNavigate();
   const [factories, setFactories] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -117,11 +122,11 @@ export default function SensorsPage() {
       setFactories(Array.isArray(result) ? result : []);
     } catch (loadError) {
       setFactories([]);
-      setError(loadError.message || "Failed to load factory sensor data.");
+      setError(loadError.message || (isJa ? "工場センサーデータの取得に失敗しました。" : "Failed to load factory sensor data."));
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [isJa]);
 
   useEffect(() => {
     void refresh();
@@ -136,11 +141,11 @@ export default function SensorsPage() {
         title={(
           <>
             <span className="material-symbols-outlined text-[var(--freya-blue)]" style={{ fontVariationSettings: "'FILL' 1" }}>sensors</span>
-            Factory Sensors
+            {isJa ? "工場センサー監視" : "Factory Sensors"}
           </>
         )}
         titleClassName="flex items-center gap-2.5"
-        subtitle="Live temperature & humidity monitoring across all facilities"
+        subtitle={isJa ? "全拠点のリアルタイム温湿度・WBGTモニタリング" : "Live temperature & humidity monitoring across all facilities"}
         className="mb-6 md:flex-row md:items-center md:justify-between"
         actions={(
           <button
@@ -154,7 +159,7 @@ export default function SensorsPage() {
             >
               refresh
             </span>
-            Refresh
+            {isJa ? "更新" : "Refresh"}
           </button>
         )}
       />
@@ -166,7 +171,7 @@ export default function SensorsPage() {
           ))}
         </div>
       ) : (
-        <SummaryStrip factories={factories} />
+        <SummaryStrip factories={factories} isJa={isJa} />
       )}
 
       {!loading && error ? (
@@ -187,7 +192,9 @@ export default function SensorsPage() {
           {withData.length > 0 && (
             <div className="mb-6">
               <p className="text-[11px] text-[var(--text-muted)] font-semibold uppercase tracking-[0.04em] mb-3">
-                {withData.length} Active Facility Sensor{withData.length !== 1 ? "s" : ""}
+                {isJa
+                  ? `${withData.length} 拠点でセンサー稼働中`
+                  : `${withData.length} Active Facility Sensor${withData.length !== 1 ? "s" : ""}`}
               </p>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                 {withData.map((f) => (
@@ -195,6 +202,7 @@ export default function SensorsPage() {
                     key={f.name}
                     factory={f}
                     onClick={() => navigate(`/sensors/${encodeURIComponent(f.name)}`)}
+                    isJa={isJa}
                   />
                 ))}
               </div>
@@ -205,7 +213,9 @@ export default function SensorsPage() {
           {withoutData.length > 0 && (
             <div>
               <p className="text-[11px] text-[var(--text-muted)] font-semibold uppercase tracking-[0.04em] mb-3">
-                {withoutData.length} Facilities Without Recent Data
+                {isJa
+                  ? `${withoutData.length} 拠点で直近データなし`
+                  : `${withoutData.length} Facilities Without Recent Data`}
               </p>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                 {withoutData.map((f) => (
@@ -218,10 +228,10 @@ export default function SensorsPage() {
                       <span className="material-symbols-outlined text-[var(--text-muted)]">sensors_off</span>
                       <p className="font-bold text-sm text-[var(--text-primary)]">{f.name}</p>
                     </div>
-                    <p className="text-xs text-[var(--text-secondary)]">No sensor data today</p>
+                    <p className="text-xs text-[var(--text-secondary)]">{isJa ? "本日のセンサーデータなし" : "No sensor data today"}</p>
                     <p className="text-[11px] text-[var(--freya-blue)] font-medium mt-2 flex items-center gap-1">
                       <span className="material-symbols-outlined" style={{ fontSize: 13 }}>arrow_forward</span>
-                      View historical data
+                      {isJa ? "過去データを確認" : "View historical data"}
                     </p>
                   </div>
                 ))}
@@ -232,7 +242,7 @@ export default function SensorsPage() {
           {factories.length === 0 && (
             <div className="flex flex-col items-center justify-center h-48 gap-3 text-[var(--text-muted)]">
               <span className="material-symbols-outlined text-4xl">sensors_off</span>
-              <p className="text-xs">No factories found</p>
+              <p className="text-xs">{isJa ? "工場が見つかりません" : "No factories found"}</p>
             </div>
           )}
         </>

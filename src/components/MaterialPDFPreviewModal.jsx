@@ -1,8 +1,11 @@
 import { useEffect, useRef } from "react";
+import { useLanguage } from "../contexts/LanguageContext";
 import { formatMaterialPDFTitle } from "../utils/materialPDFs";
 import IconButton from "./IconButton";
 
 export default function MaterialPDFPreviewModal({ item, onClose }) {
+  const { language } = useLanguage();
+  const isJa = language === "ja";
   const modalRef = useRef(null);
 
   useEffect(() => {
@@ -34,12 +37,16 @@ export default function MaterialPDFPreviewModal({ item, onClose }) {
         <div ref={modalRef} className="freya-card flex w-full max-w-5xl flex-col overflow-hidden rounded-[12px] border border-[var(--border)] bg-[var(--surface-raised)] shadow-2xl">
           <div className="flex items-start justify-between gap-4 border-b border-[var(--border)] px-5 py-4">
             <div>
-              <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--text-muted)]">Preview</div>
+              <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--text-muted)]">
+                {isJa ? "プレビュー" : "Preview"}
+              </div>
               <h3 className="mt-0.5 text-base font-bold text-[var(--text-primary)]">{formatMaterialPDFTitle(item)}</h3>
-              <p className="mt-0.5 text-xs text-[var(--text-secondary)]">{item.fileName || "Untitled file"}</p>
+              <p className="mt-0.5 text-xs text-[var(--text-secondary)]">
+                {item.fileName || (isJa ? "名称未設定ファイル" : "Untitled file")}
+              </p>
             </div>
 
-            <IconButton icon="close" onClick={onClose} size="md" ariaLabel="Close dialog" />
+            <IconButton icon="close" onClick={onClose} size="md" ariaLabel={isJa ? "閉じる" : "Close dialog"} />
           </div>
 
           <div className="flex min-h-[50vh] items-center justify-center bg-[var(--surface-subtle)] p-4">
@@ -47,7 +54,7 @@ export default function MaterialPDFPreviewModal({ item, onClose }) {
               <img src={item.imageURL} alt={item.fileName} className="max-h-[68vh] max-w-full rounded-[6px] border border-[var(--border)] object-contain shadow-md" />
             ) : (
               <div className="rounded-[8px] border border-[var(--border)] bg-[var(--surface)] px-6 py-10 text-center text-xs text-[var(--text-muted)]">
-                Preview image not available for this file.
+                {isJa ? "このファイルのプレビュー画像はありません。" : "Preview image not available for this file."}
               </div>
             )}
           </div>
@@ -60,7 +67,7 @@ export default function MaterialPDFPreviewModal({ item, onClose }) {
                 rel="noreferrer"
                 className="rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3.5 py-1.5 text-xs font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-hover)] transition-colors shadow-2xs"
               >
-                Open Preview Image
+                {isJa ? "プレビュー画像を開く" : "Open Preview Image"}
               </a>
             )}
             {item.pdfURL && (
@@ -70,7 +77,7 @@ export default function MaterialPDFPreviewModal({ item, onClose }) {
                 rel="noreferrer"
                 className="rounded-[6px] bg-[var(--freya-blue)] px-4 py-1.5 text-xs font-semibold text-white hover:bg-[var(--freya-blue-hover)] transition-colors shadow-xs"
               >
-                Open Original PDF
+                {isJa ? "PDF原本を開く" : "Open Original PDF"}
               </a>
             )}
           </div>

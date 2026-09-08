@@ -1,4 +1,5 @@
 import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
+import { useLanguage } from "../contexts/LanguageContext";
 import DataTable from "../components/DataTable";
 import IconButton from "../components/IconButton";
 import PageHeader from "../components/PageHeader";
@@ -31,6 +32,7 @@ import {
   NODA_PAGE_SIZE_OPTIONS,
   NODA_STATUS_CARDS,
   NODA_STATUS_OPTIONS,
+  NODA_STATUS_OPTIONS_JA,
   normalizeNodaStatistics,
   resolveNodaDisplayStatus,
 } from "../utils/noda";
@@ -120,6 +122,8 @@ function buildExportMatrix(requests = []) {
 }
 
 export default function NodaPage() {
+  const { language } = useLanguage();
+  const isJa = language === "ja";
   const authUser = readStoredAuthUser();
   const canManage = canManageNodaRequests(authUser);
   const requestIdRef = useRef(0);
@@ -211,7 +215,7 @@ export default function NodaPage() {
         setRows([]);
         setStats(EMPTY_NODA_STATS);
         setPagination(EMPTY_PAGINATION);
-        setError(loadError.message || "Failed to load Noda requests.");
+        setError(loadError.message || (isJa ? "野田リクエストの読み込みに失敗しました。" : "Failed to load Noda requests."));
       } finally {
         if (!cancelled && requestId === requestIdRef.current) {
           setLoading(false);
@@ -224,7 +228,7 @@ export default function NodaPage() {
     return () => {
       cancelled = true;
     };
-  }, [activeStatus, deferredSearchValue, filters.backNumber, filters.dateFrom, filters.dateTo, filters.partNumber, filters.status, page, pageSize, refreshNonce, sort]);
+  }, [activeStatus, deferredSearchValue, filters.backNumber, filters.dateFrom, filters.dateTo, filters.partNumber, filters.status, isJa, page, pageSize, refreshNonce, sort]);
 
   function updateFilter(key, value) {
     setFilters((current) => ({ ...current, [key]: value }));
@@ -282,9 +286,9 @@ export default function NodaPage() {
       });
       const requests = await exportNodaRequests(filtersForExport);
       downloadCsvFile("noda-requests.csv", buildExportMatrix(requests));
-      setFlash({ type: "success", message: `Exported ${requests.length} Noda request${requests.length === 1 ? "" : "s"}.` });
+      setFlash({ type: "success", message: isJa ? `${requests.length} 件の野田リクエストをエクスポートしました。` : `Exported ${requests.length} Noda request${requests.length === 1 ? "" : "s"}.` });
     } catch (exportError) {
-      setFlash({ type: "error", message: exportError.message || "Failed to export Noda requests." });
+      setFlash({ type: "error", message: exportError.message || (isJa ? "野田リクエストのエクスポートに失敗しました。" : "Failed to export Noda requests.") });
     }
   }
 
@@ -300,11 +304,13 @@ export default function NodaPage() {
       const result = await runNodaInventoryReservation(actorName);
       setFlash({
         type: "success",
-        message: `Inventory check complete. ${result.updatedRequests || 0} request${result.updatedRequests === 1 ? " was" : "s were"} updated with ${result.totalReservations || 0} reservation${result.totalReservations === 1 ? "" : "s"}.`,
+        message: isJa
+          ? `在庫確認が完了しました。${result.updatedRequests || 0} 件のリクエストが更新され、${result.totalReservations || 0} 件の引当が行われました。`
+          : `Inventory check complete. ${result.updatedRequests || 0} request${result.updatedRequests === 1 ? " was" : "s were"} updated with ${result.totalReservations || 0} reservation${result.totalReservations === 1 ? "" : "s"}.`,
       });
       setRefreshNonce((current) => current + 1);
     } catch (inventoryError) {
-      setFlash({ type: "error", message: inventoryError.message || "Manual inventory check failed." });
+      setFlash({ type: "error", message: inventoryError.message || (isJa ? "手動在庫確認に失敗しました。" : "Manual inventory check failed.") });
     } finally {
       setCheckingInventory(false);
     }
@@ -313,7 +319,7 @@ export default function NodaPage() {
   const columns = useMemo(() => ([
     {
       key: "requestNumber",
-      label: "Request Number",
+      label: isJa ? "リクエスト番号" : "Request Number",
       width: 180,
       renderCell: (row) => (
         <button
@@ -345,7 +351,7 @@ export default function NodaPage() {
     },
     {
       key: "requestType",
-      label: "Type",
+      label: isJa ? "種別" : "Type",
       width: 130,
       renderCell: (row) => (
         <span className={joinNodaClasses(
@@ -357,28 +363,28 @@ export default function NodaPage() {
           <span className="material-symbols-outlined" style={{ fontSize: 13 }}>
             {row.requestType === "bulk" ? "stacked_email" : "article"}
           </span>
-          {row.requestType === "bulk" ? "Bulk" : "Single"}
+          {row.requestType === "bulk" ? (isJa ? "一括" : "Bulk") : (isJa ? "個別" : "Single")}
         </span>
       ),
       disableCellWrapper: true,
     },
     {
       key: "status",
-      label: "Status",
+      label: isJa ? "ステータス" : "Status",
       width: 170,
       renderCell: (row) => {
-        const meta = getNodaStatusMeta(resolveNodaDisplayStatus(row));
+        const meta = getNodaStatusMeta(resolveNodaDisplayStatus(row), language);
         return <StatusChip icon={meta.icon} label={meta.label} className={meta.badgeClassName} />;
       },
       disableCellWrapper: true,
     },
     {
       key: "itemsSummary",
-      label: "Items",
+      label: isJa ? "品目" : "Items",
       sortable: false,
       width: 240,
       renderCell: (row) => {
-        const summary = getNodaItemsSummary(row);
+        const summary = getNodaItemsSummary(row, language);
         return (
           <div className="min-w-0">
             <div className="font-semibold text-xs text-[var(--text-primary)]">{summary.title}</div>
@@ -409,7 +415,7 @@ export default function NodaPage() {
     },
     {
       key: "pickupDate",
-      label: "Pickup Date",
+      label: isJa ? "引取日" : "Pickup Date",
       sortKey: "pickupDate",
       width: 140,
       renderCell: (row) => <span className="text-[var(--text-primary)] font-mono text-xs">{formatNodaDate(getNodaPickupDateValue(row))}</span>,
@@ -417,7 +423,7 @@ export default function NodaPage() {
     },
     {
       key: "納入指示日",
-      label: "Deadline",
+      label: isJa ? "納入指示日" : "Deadline",
       sortKey: "納入指示日",
       width: 140,
       renderCell: (row) => (
@@ -429,7 +435,7 @@ export default function NodaPage() {
     },
     {
       key: "completedAt",
-      label: "Completed",
+      label: isJa ? "完了日時" : "Completed",
       sortKey: "completedAt",
       width: 150,
       renderCell: (row) => <CompletedAtCell value={row.completedAt} />,
@@ -437,7 +443,7 @@ export default function NodaPage() {
     },
     {
       key: "actions",
-      label: "Actions",
+      label: isJa ? "操作" : "Actions",
       sortable: false,
       width: 150,
       align: "right",
@@ -449,7 +455,7 @@ export default function NodaPage() {
             variant="ghost"
             size="sm"
             iconSize={16}
-            ariaLabel="View request"
+            ariaLabel={isJa ? "リクエストを表示" : "View request"}
             className="rounded-[6px]"
           />
           {canManage ? (
@@ -459,7 +465,7 @@ export default function NodaPage() {
               variant="ghost"
               size="sm"
               iconSize={16}
-              ariaLabel="Edit request"
+              ariaLabel={isJa ? "リクエストを編集" : "Edit request"}
               className="rounded-[6px]"
             />
           ) : null}
@@ -467,7 +473,7 @@ export default function NodaPage() {
       ),
       disableCellWrapper: true,
     },
-  ]), [canManage]);
+  ]), [canManage, isJa, language]);
 
   const statusDotMap = {
     all: undefined,
@@ -483,10 +489,10 @@ export default function NodaPage() {
     <section className="w-full h-screen overflow-y-auto space-y-6 pt-20 px-4 sm:px-6 md:px-8 pb-16">
       <div className="w-full">
         <PageHeader
-          eyebrow="Warehouse Workflow"
+          eyebrow={isJa ? "倉庫ワークフロー" : "Warehouse Workflow"}
           eyebrowClassName="tracking-[0.18em] text-[var(--freya-blue)]"
-          title="Noda"
-          subtitle="Manage Noda warehouse picking requests, inspect FIFO inventory impact, upload bulk CSV orders, and sync remaining work from GEN."
+          title={isJa ? "野田リクエスト" : "Noda"}
+          subtitle={isJa ? "野田倉庫のピッキング依頼の管理、FIFO在庫影響の確認、CSV一括発注のアップロード、GENからの残作業同期を行います。" : "Manage Noda warehouse picking requests, inspect FIFO inventory impact, upload bulk CSV orders, and sync remaining work from GEN."}
           subtitleClassName="max-w-3xl"
           className="md:flex-row md:items-start md:justify-between mb-6"
           actions={(
@@ -497,7 +503,7 @@ export default function NodaPage() {
                 className="inline-flex items-center gap-2 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3.5 py-2 text-xs font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-hover)] transition-colors shadow-2xs"
               >
                 <span className="material-symbols-outlined text-[var(--text-muted)]" style={{ fontSize: 16 }}>refresh</span>
-                Refresh
+                {isJa ? "更新" : "Refresh"}
               </button>
               <button
                 type="button"
@@ -505,7 +511,7 @@ export default function NodaPage() {
                 className="inline-flex items-center gap-2 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3.5 py-2 text-xs font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-hover)] transition-colors shadow-2xs"
               >
                 <span className="material-symbols-outlined text-[var(--text-muted)]" style={{ fontSize: 16 }}>download</span>
-                Export CSV
+                {isJa ? "CSVエクスポート" : "Export CSV"}
               </button>
               {canManage ? (
                 <button
@@ -518,12 +524,12 @@ export default function NodaPage() {
                   {checkingInventory ? (
                     <>
                       <span className="material-symbols-outlined animate-spin text-[var(--freya-blue)]" style={{ fontSize: 16 }}>autorenew</span>
-                      Checking...
+                      {isJa ? "確認中..." : "Checking..."}
                     </>
                   ) : (
                     <>
                       <span className="material-symbols-outlined text-[var(--text-muted)]" style={{ fontSize: 16 }}>inventory</span>
-                      Check Inventory
+                      {isJa ? "在庫確認" : "Check Inventory"}
                     </>
                   )}
                 </button>
@@ -535,7 +541,7 @@ export default function NodaPage() {
                   className="inline-flex items-center gap-2 rounded-[6px] border border-[var(--freya-blue)]/30 bg-[var(--freya-blue)]/10 px-3.5 py-2 text-xs font-semibold text-[var(--freya-blue)] hover:bg-[var(--freya-blue)]/20 transition-colors shadow-2xs"
                 >
                   <span className="material-symbols-outlined" style={{ fontSize: 16 }}>sync</span>
-                  Sync From GEN
+                  {isJa ? "GENから同期" : "Sync From GEN"}
                 </button>
               ) : null}
               {canManage ? (
@@ -545,7 +551,7 @@ export default function NodaPage() {
                   className="inline-flex items-center gap-2 rounded-[6px] bg-[var(--freya-blue)] px-3.5 py-2 text-xs font-semibold text-white hover:bg-[var(--freya-blue-hover)] transition-colors shadow-2xs"
                 >
                   <span className="material-symbols-outlined" style={{ fontSize: 16 }}>add</span>
-                  New Bulk Request
+                  {isJa ? "新規一括リクエスト" : "New Bulk Request"}
                 </button>
               ) : null}
             </div>
@@ -560,9 +566,9 @@ export default function NodaPage() {
               key={card.key}
               variant="freya"
               icon={card.icon}
-              label={card.label}
+              label={isJa ? (card.labelJa || card.label) : card.label}
               value={stats[card.key] ?? 0}
-              subtitle={card.key === "all" ? "All tracked requests" : `Filter by ${card.label.toLowerCase()}`}
+              subtitle={card.key === "all" ? (isJa ? "すべての追跡リクエスト" : "All tracked requests") : (isJa ? `${card.labelJa || card.label} でフィルター` : `Filter by ${card.label.toLowerCase()}`)}
               statusDot={statusDotMap[card.key]}
               active={activeStatus === card.key}
               loading={loading}
@@ -575,8 +581,8 @@ export default function NodaPage() {
         <div className="freya-card rounded-[8px] p-5 mb-6 border border-[var(--border)] bg-[var(--surface)] shadow-sm">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
-              <h2 className="text-sm font-semibold text-[var(--text-primary)]">Filters</h2>
-              <p className="mt-0.5 text-xs text-[var(--text-muted)]">Refine the active request list by status, item, deadline, or search term.</p>
+              <h2 className="text-sm font-semibold text-[var(--text-primary)]">{isJa ? "フィルター" : "Filters"}</h2>
+              <p className="mt-0.5 text-xs text-[var(--text-muted)]">{isJa ? "ステータス、品目、期限、検索キーワードでリクエスト一覧を絞り込みます。" : "Refine the active request list by status, item, deadline, or search term."}</p>
             </div>
             <button
               type="button"
@@ -587,19 +593,19 @@ export default function NodaPage() {
               }}
               className="rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3.5 py-1.5 text-xs font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-hover)] transition-colors shadow-2xs"
             >
-              Reset Filters
+              {isJa ? "フィルターをリセット" : "Reset Filters"}
             </button>
           </div>
 
           <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-6">
             <label className="block xl:col-span-1">
-              <span className="block text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)] mb-1">Status</span>
+              <span className="block text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)] mb-1">{isJa ? "ステータス" : "Status"}</span>
               <select
                 value={filters.status}
                 onChange={(event) => handleStatusSelectChange(event.target.value)}
                 className="w-full h-8 rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] px-2.5 text-xs text-[var(--text-primary)] focus:outline-none focus:border-[var(--freya-blue)] transition-colors"
               >
-                {NODA_STATUS_OPTIONS.map((option) => (
+                {(isJa ? NODA_STATUS_OPTIONS_JA : NODA_STATUS_OPTIONS).map((option) => (
                   <option key={option.value || "all"} value={option.value}>{option.label}</option>
                 ))}
               </select>
@@ -612,7 +618,7 @@ export default function NodaPage() {
                 onChange={(event) => updateFilter("partNumber", event.target.value)}
                 className="w-full h-8 rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] px-2.5 text-xs text-[var(--text-primary)] focus:outline-none focus:border-[var(--freya-blue)] transition-colors"
               >
-                <option value="">All Part Numbers</option>
+                <option value="">{isJa ? "すべての品番" : "All Part Numbers"}</option>
                 {filterOptions.partNumbers.map((value) => (
                   <option key={value} value={value}>{value}</option>
                 ))}
@@ -626,7 +632,7 @@ export default function NodaPage() {
                 onChange={(event) => updateFilter("backNumber", event.target.value)}
                 className="w-full h-8 rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] px-2.5 text-xs text-[var(--text-primary)] focus:outline-none focus:border-[var(--freya-blue)] transition-colors"
               >
-                <option value="">All Serial Numbers</option>
+                <option value="">{isJa ? "すべての背番号" : "All Serial Numbers"}</option>
                 {filterOptions.backNumbers.map((value) => (
                   <option key={value} value={value}>{value}</option>
                 ))}
@@ -634,7 +640,7 @@ export default function NodaPage() {
             </label>
 
             <label className="block xl:col-span-1">
-              <span className="block text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)] mb-1">Deadline From</span>
+              <span className="block text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)] mb-1">{isJa ? "納入指示日（開始）" : "Deadline From"}</span>
               <input
                 type="date"
                 value={filters.dateFrom}
@@ -644,7 +650,7 @@ export default function NodaPage() {
             </label>
 
             <label className="block xl:col-span-1">
-              <span className="block text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)] mb-1">Deadline To</span>
+              <span className="block text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)] mb-1">{isJa ? "納入指示日（終了）" : "Deadline To"}</span>
               <input
                 type="date"
                 value={filters.dateTo}
@@ -654,12 +660,12 @@ export default function NodaPage() {
             </label>
 
             <label className="block xl:col-span-1">
-              <span className="block text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)] mb-1">Search</span>
+              <span className="block text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)] mb-1">{isJa ? "検索" : "Search"}</span>
               <input
                 type="text"
                 value={filters.search}
                 onChange={(event) => updateFilter("search", event.target.value)}
-                placeholder="Request number, item, serial…"
+                placeholder={isJa ? "リクエスト番号、品番、背番号…" : "Request number, item, serial…"}
                 className="w-full h-8 rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] px-2.5 text-xs text-[var(--text-primary)] focus:outline-none focus:border-[var(--freya-blue)] transition-colors"
               />
             </label>
@@ -683,15 +689,15 @@ export default function NodaPage() {
             setPage(1);
           }}
           pageSizeOptions={NODA_PAGE_SIZE_OPTIONS}
-          pageSizeLabel="Rows"
+          pageSizeLabel={isJa ? "件数" : "Rows"}
           rowKey={(row) => row._id}
           onRowClick={(row) => setDetailState({ open: true, requestId: row._id, mode: "view" })}
           getRowClassName={(row) => getNodaRowToneClass(row)}
           renderPageInfo={({ filteredCount, page: currentPage, pageSize: currentPageSize }) => (
-            <span className="font-mono text-xs">{buildNodaPageInfo({ filteredCount, page: currentPage, pageSize: currentPageSize })}</span>
+            <span className="font-mono text-xs">{buildNodaPageInfo({ filteredCount, page: currentPage, pageSize: currentPageSize }, language)}</span>
           )}
-          emptyTitle="No matching Noda requests"
-          emptyMessage="Adjust the filters or create a new bulk request."
+          emptyTitle={isJa ? "該当する野田リクエストがありません" : "No matching Noda requests"}
+          emptyMessage={isJa ? "フィルターを調整するか、新規一括リクエストを作成してください。" : "Adjust the filters or create a new bulk request."}
           layoutStorageKey="noda-table-layout"
           enableColumnResize
           enableColumnReorder

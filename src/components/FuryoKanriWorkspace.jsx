@@ -1,4 +1,5 @@
 import { useDeferredValue, useEffect, useRef, useState } from "react";
+import { useLanguage } from "../contexts/LanguageContext";
 import {
   fetchDefectDefinitions,
   fetchFuryoModelProducts,
@@ -28,6 +29,9 @@ function cloneCounterMap(counterMap = {}) {
 }
 
 export default function FuryoKanriWorkspace({ refreshToken = 0, onFlash }) {
+  const { language } = useLanguage();
+  const isJa = language === "ja";
+
   const authUser = getAuthUser();
   const canEdit = canEditFuryoDefinitions(authUser?.role);
   const [models, setModels] = useState([]);
@@ -123,7 +127,7 @@ export default function FuryoKanriWorkspace({ refreshToken = 0, onFlash }) {
         }
       } catch (loadError) {
         if (cancelled) return;
-        setError(loadError.message || "Failed to load defect definitions.");
+        setError(loadError.message || (isJa ? "不良項目定義の読み込みに失敗しました。" : "Failed to load defect definitions."));
       } finally {
         if (!cancelled) {
           setLoading(false);
@@ -135,7 +139,7 @@ export default function FuryoKanriWorkspace({ refreshToken = 0, onFlash }) {
     return () => {
       cancelled = true;
     };
-  }, [refreshToken]);
+  }, [refreshToken, isJa]);
 
   useEffect(() => {
     if (!infoModel) return undefined;
@@ -152,7 +156,7 @@ export default function FuryoKanriWorkspace({ refreshToken = 0, onFlash }) {
       } catch (loadError) {
         if (cancelled) return;
         setInfoProducts([]);
-        setInfoError(loadError.message || "Failed to load products for the selected model.");
+        setInfoError(loadError.message || (isJa ? "選択したモデルの製品一覧の取得に失敗しました。" : "Failed to load products for the selected model."));
       } finally {
         if (!cancelled) {
           setInfoLoading(false);
@@ -164,10 +168,10 @@ export default function FuryoKanriWorkspace({ refreshToken = 0, onFlash }) {
     return () => {
       cancelled = true;
     };
-  }, [infoModel]);
+  }, [infoModel, isJa]);
 
   function handleSelectModel(model) {
-    if (editMode && hasChanges && !window.confirm("Unsaved changes will be lost. Continue?")) {
+    if (editMode && hasChanges && !window.confirm(isJa ? "保存されていない変更は破棄されます。続行しますか？" : "Unsaved changes will be lost. Continue?")) {
       return;
     }
 
@@ -253,19 +257,19 @@ export default function FuryoKanriWorkspace({ refreshToken = 0, onFlash }) {
       setOriginalCounters(cloneCounterMap(counters));
       setOriginalCountersEn(cloneCounterMap(countersEn));
       setEditMode(false);
-      publishFlash("success", `${selectedModel} defect definition saved successfully.`);
+      publishFlash("success", isJa ? `モデル「${selectedModel}」の不良項目定義を保存しました。` : `${selectedModel} defect definition saved successfully.`);
     } catch (saveError) {
-      publishFlash("error", saveError.message || "Failed to save the defect definition.");
+      publishFlash("error", saveError.message || (isJa ? "不良項目定義の保存に失敗しました。" : "Failed to save the defect definition."));
     } finally {
       setSaving(false);
     }
   }
 
   const stats = [
-    { label: "Total Models", value: models.length, icon: "inventory_2", accent: "bg-primary/12 text-primary" },
-    { label: "Defined", value: definedModels, icon: "rule", accent: "bg-emerald-500/12 text-emerald-600 dark:text-emerald-300" },
-    { label: "Complete", value: completeModels, icon: "task_alt", accent: "bg-secondary/12 text-secondary" },
-    { label: "Access", value: canEdit ? "Edit" : "View", icon: "lock_open", accent: "bg-amber-500/12 text-amber-600 dark:text-amber-300" },
+    { label: isJa ? "総モデル数" : "Total Models", value: models.length, icon: "inventory_2", accent: "bg-primary/12 text-primary" },
+    { label: isJa ? "定義済み" : "Defined", value: definedModels, icon: "rule", accent: "bg-emerald-500/12 text-emerald-600 dark:text-emerald-300" },
+    { label: isJa ? "全項目完了" : "Complete", value: completeModels, icon: "task_alt", accent: "bg-secondary/12 text-secondary" },
+    { label: isJa ? "編集権限" : "Access", value: canEdit ? (isJa ? "編集可能" : "Edit") : (isJa ? "閲覧のみ" : "View"), icon: "lock_open", accent: "bg-amber-500/12 text-amber-600 dark:text-amber-300" },
   ];
 
   return (
@@ -273,15 +277,21 @@ export default function FuryoKanriWorkspace({ refreshToken = 0, onFlash }) {
       <div className="freya-card rounded-[8px] border border-[var(--border)] bg-[var(--surface)] p-5 mb-6 shadow-sm">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div>
-            <div className="text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">Quality Setup</div>
-            <h3 className="mt-1 text-xl font-bold text-[var(--text-primary)]">不良管理</h3>
+            <div className="text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">
+              {isJa ? "品質設定" : "Quality Setup"}
+            </div>
+            <h3 className="mt-1 text-xl font-bold text-[var(--text-primary)]">
+              {isJa ? "不良項目管理 (不良管理)" : "Defect Management (不良管理)"}
+            </h3>
             <p className="mt-1.5 max-w-3xl text-xs text-[var(--text-secondary)] leading-relaxed">
-              Manage model-specific defect labels for counters 1 through 12. This ports the legacy definition workflow, including bilingual fields, edit-role gating, and model product lookup.
+              {isJa
+                ? "カウンター1〜12のモデル別不良項目名を管理します。日英の二重言語入力、ロール制御、モデル該当製品の参照に対応しています。"
+                : "Manage model-specific defect labels for counters 1 through 12. This ports the legacy definition workflow, including bilingual fields, edit-role gating, and model product lookup."}
             </p>
           </div>
 
           <div className="rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] px-3 py-1.5 text-xs font-mono text-[var(--text-secondary)]">
-            {authUser?.username || "Unknown user"}
+            {authUser?.username || (isJa ? "不明なユーザー" : "Unknown user")}
             {authUser?.role ? ` · ${authUser.role}` : ""}
           </div>
         </div>

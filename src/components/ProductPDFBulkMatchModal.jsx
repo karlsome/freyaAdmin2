@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useLanguage } from "../contexts/LanguageContext";
 import ModalShell from "./ModalShell";
 
 export default function ProductPDFBulkMatchModal({
@@ -8,6 +9,8 @@ export default function ProductPDFBulkMatchModal({
   onClose,
   onConfirm,
 }) {
+  const { language } = useLanguage();
+  const isJa = language === "ja";
   const [manualAssignments, setManualAssignments] = useState({});
 
   useEffect(() => {
@@ -38,9 +41,13 @@ export default function ProductPDFBulkMatchModal({
     <ModalShell
       open={open}
       onClose={onClose}
-      eyebrow="Bulk Match Review"
-      title="Review filename matches"
-      subtitle={`${totalFiles} files selected. ${matched.length} matched automatically, ${toAssign.length} need manual assignment.`}
+      eyebrow={isJa ? "一括照合確認" : "Bulk Match Review"}
+      title={isJa ? "ファイル名の一致を確認" : "Review filename matches"}
+      subtitle={
+        isJa
+          ? `${totalFiles} 件のファイルが選択されました。${matched.length} 件が自動照合され、${toAssign.length} 件の手動割り当てが必要です。`
+          : `${totalFiles} files selected. ${matched.length} matched automatically, ${toAssign.length} need manual assignment.`
+      }
       maxWidth="max-w-4xl"
       overlayOpacity="50"
       footer={
@@ -50,21 +57,23 @@ export default function ProductPDFBulkMatchModal({
             onClick={onClose}
             className="rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3.5 py-1.5 text-xs font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-hover)] transition-colors shadow-2xs"
           >
-            Cancel
+            {isJa ? "キャンセル" : "Cancel"}
           </button>
           <button
             type="button"
             onClick={handleConfirm}
             className="rounded-[6px] bg-[var(--freya-blue)] px-4 py-1.5 text-xs font-semibold text-white hover:bg-[var(--freya-blue-hover)] transition-colors shadow-xs"
           >
-            Confirm Upload
+            {isJa ? "アップロードを確定" : "Confirm Upload"}
           </button>
         </div>
       }
     >
       <div className="max-h-[60vh] space-y-3.5 overflow-y-auto px-6 py-4 scrollbar-hide">
         <section className="rounded-[8px] border border-[var(--border)] bg-[var(--surface-subtle)] p-3.5">
-          <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--text-muted)]">Matched Files</div>
+          <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--text-muted)]">
+            {isJa ? "一致したファイル" : "Matched Files"}
+          </div>
           <div className="mt-2.5 space-y-1.5">
             {matched.length ? matched.map((item) => (
               <div key={`${item.file.name}-${item.serialNumber}`} className="flex items-center justify-between gap-3 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-xs">
@@ -72,19 +81,25 @@ export default function ProductPDFBulkMatchModal({
                 <span className="shrink-0 font-bold text-[var(--freya-blue)]">{item.serialNumber}</span>
               </div>
             )) : (
-              <div className="rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-xs text-[var(--text-muted)]">No automatic matches were found.</div>
+              <div className="rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-xs text-[var(--text-muted)]">
+                {isJa ? "自動一致したファイルはありません。" : "No automatic matches were found."}
+              </div>
             )}
           </div>
         </section>
 
         <section className="rounded-[8px] border border-[var(--border)] bg-[var(--surface-subtle)] p-3.5">
-          <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--text-muted)]">Manual Assignment</div>
+          <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--text-muted)]">
+            {isJa ? "手動割り当て" : "Manual Assignment"}
+          </div>
           <div className="mt-2.5 space-y-2.5">
             {toAssign.length ? toAssign.map((item, index) => (
               <div key={`${item.file.name}-${index}`} className="rounded-[6px] border border-[var(--border)] bg-[var(--surface)] p-3">
                 <div className="text-xs font-bold text-[var(--text-primary)]">{item.file.name}</div>
                 <div className="mt-0.5 text-[11px] text-[var(--text-secondary)]">
-                  {item.candidates?.length ? `Candidates: ${item.candidates.join(", ")}` : "No filename match found"}
+                  {item.candidates?.length
+                    ? `${isJa ? "候補: " : "Candidates: "}${item.candidates.join(", ")}`
+                    : (isJa ? "一致するファイル名が見つかりません" : "No filename match found")}
                 </div>
 
                 <select
@@ -95,22 +110,28 @@ export default function ProductPDFBulkMatchModal({
                   }))}
                   className="mt-2 h-8.5 w-full rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 text-xs text-[var(--text-primary)] outline-none transition focus:border-[var(--freya-blue)]"
                 >
-                  <option value="">Skip this file</option>
+                  <option value="">{isJa ? "このファイルをスキップ" : "Skip this file"}</option>
                   {selectedSerialNumbers.map((serialNumber) => (
                     <option key={`${item.file.name}-${serialNumber}`} value={serialNumber}>{serialNumber}</option>
                   ))}
                 </select>
               </div>
             )) : (
-              <div className="rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-xs text-[var(--text-muted)]">Every file was matched automatically.</div>
+              <div className="rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-xs text-[var(--text-muted)]">
+                {isJa ? "すべてのファイルが自動照合されました。" : "Every file was matched automatically."}
+              </div>
             )}
           </div>
         </section>
 
         <section className="rounded-[8px] border border-[var(--border)] bg-[var(--surface-subtle)] p-3.5">
-          <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--text-muted)]">Selected 背番号 Without a File</div>
+          <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--text-muted)]">
+            {isJa ? "ファイルが未割り当ての背番号" : "Selected 背番号 Without a File"}
+          </div>
           <div className="mt-2 text-xs text-[var(--text-secondary)]">
-            {unassignedSerials.length ? unassignedSerials.join(", ") : "All selected products have at least one file match."}
+            {unassignedSerials.length
+              ? unassignedSerials.join(", ")
+              : (isJa ? "選択されたすべての製品にファイルが照合されています。" : "All selected products have at least one file match.")}
           </div>
         </section>
       </div>

@@ -1,7 +1,10 @@
 import { useEffect, useState } from "react";
+import { useLanguage } from "../contexts/LanguageContext";
 import ModalShell from "./ModalShell";
 
 export default function PceFilesConflictModal({ open, conflicts, onResolve, onCancel }) {
+  const { language } = useLanguage();
+  const isJa = language === "ja";
   const [resolutions, setResolutions] = useState({});
 
   useEffect(() => {
@@ -28,8 +31,12 @@ export default function PceFilesConflictModal({ open, conflicts, onResolve, onCa
     <ModalShell
       open={open}
       onClose={onCancel}
-      title="Files Already Exist"
-      subtitle="The following files already exist in Google Drive. Choose an action for each."
+      title={isJa ? "同名ファイルが既に存在します" : "Files Already Exist"}
+      subtitle={
+        isJa
+          ? "以下のファイルは既にGoogle Driveに存在します。各ファイルの処理を選択してください。"
+          : "The following files already exist in Google Drive. Choose an action for each."
+      }
       maxWidth="max-w-xl"
       footer={
         <div className="flex items-center justify-end gap-2.5 w-full">
@@ -38,14 +45,14 @@ export default function PceFilesConflictModal({ open, conflicts, onResolve, onCa
             onClick={onCancel}
             className="rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-hover)] transition-colors shadow-2xs"
           >
-            Cancel
+            {isJa ? "キャンセル" : "Cancel"}
           </button>
           <button
             type="button"
             onClick={handleSubmit}
             className="rounded-[6px] bg-[var(--freya-blue)] px-3.5 py-1.5 text-xs font-semibold text-white hover:bg-[var(--freya-blue-hover)] transition-colors shadow-xs"
           >
-            Submit
+            {isJa ? "確定" : "Submit"}
           </button>
         </div>
       }
@@ -60,8 +67,8 @@ export default function PceFilesConflictModal({ open, conflicts, onResolve, onCa
                 onChange={(e) => handleSelectChange(file, e.target.value)}
                 className="text-xs rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1 text-[var(--text-primary)] outline-none focus:border-[var(--freya-blue)] transition-colors cursor-pointer"
               >
-                <option value="overwrite">Overwrite</option>
-                <option value="skip">Skip</option>
+                <option value="overwrite">{isJa ? "上書き" : "Overwrite"}</option>
+                <option value="skip">{isJa ? "スキップ" : "Skip"}</option>
               </select>
             </div>
           ))}

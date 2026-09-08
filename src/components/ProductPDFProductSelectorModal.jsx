@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useLanguage } from "../contexts/LanguageContext";
 import { filterSelectableProducts } from "../utils/productPDFs";
 import EmptyState from "./EmptyState";
 import IconButton from "./IconButton";
@@ -12,6 +13,8 @@ export default function ProductPDFProductSelectorModal({
   onClose,
   onConfirm,
 }) {
+  const { language } = useLanguage();
+  const isJa = language === "ja";
   const modalRef = useRef(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [draftSelection, setDraftSelection] = useState(() => new Set(selectedSerialNumbers));
@@ -70,28 +73,36 @@ export default function ProductPDFProductSelectorModal({
           <div className="border-b border-[var(--border)] px-5 py-4">
             <div className="flex items-start justify-between gap-4">
               <div>
-                <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--text-muted)]">Product Selector</div>
-                <h3 className="mt-0.5 text-base font-bold text-[var(--text-primary)]">Select Products by 背番号</h3>
+                <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--text-muted)]">
+                  {isJa ? "製品選択" : "Product Selector"}
+                </div>
+                <h3 className="mt-0.5 text-base font-bold text-[var(--text-primary)]">
+                  {isJa ? "背番号で製品を選択" : "Select Products by 背番号"}
+                </h3>
                 <p className="mt-0.5 text-xs text-[var(--text-secondary)]">
-                  {draftSelection.size} selected across {visibleProducts.length} visible products.
+                  {isJa
+                    ? `表示中の ${visibleProducts.length} 件中 ${draftSelection.size} 件を選択`
+                    : `${draftSelection.size} selected across ${visibleProducts.length} visible products.`}
                 </p>
               </div>
 
-              <IconButton icon="close" onClick={onClose} size="md" ariaLabel="Close dialog" />
+              <IconButton icon="close" onClick={onClose} size="md" ariaLabel={isJa ? "閉じる" : "Close dialog"} />
             </div>
 
             <input
               type="text"
               value={searchTerm}
               onChange={(event) => setSearchTerm(event.target.value)}
-              placeholder="Search by 背番号, 品番, or モデル"
+              placeholder={isJa ? "背番号、品番、またはモデルで検索" : "Search by 背番号, 品番, or モデル"}
               className="mt-3 w-full rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-xs text-[var(--text-primary)] outline-none transition focus:border-[var(--freya-blue)]"
             />
           </div>
 
           <div className="flex items-center justify-between gap-3 border-b border-[var(--border)] bg-[var(--surface-subtle)] px-5 py-2.5">
             <div className="text-xs text-[var(--text-secondary)]">
-              {selectedModel && filterType === "model" ? `Filtered to model ${selectedModel}.` : "Showing all matching products."}
+              {selectedModel && filterType === "model"
+                ? (isJa ? `モデル「${selectedModel}」で絞り込み中` : `Filtered to model ${selectedModel}.`)
+                : (isJa ? "一致するすべての製品を表示中" : "Showing all matching products.")}
             </div>
 
             <div className="flex items-center gap-2">
@@ -100,14 +111,14 @@ export default function ProductPDFProductSelectorModal({
                 onClick={() => setDraftSelection(new Set(visibleSerialNumbers))}
                 className="rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1 text-xs font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-hover)] transition-colors shadow-2xs"
               >
-                Check visible
+                {isJa ? "表示分を選択" : "Check visible"}
               </button>
               <button
                 type="button"
                 onClick={() => setDraftSelection(new Set())}
                 className="rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1 text-xs font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-hover)] transition-colors shadow-2xs"
               >
-                Uncheck all
+                {isJa ? "選択を解除" : "Uncheck all"}
               </button>
             </div>
           </div>
@@ -139,19 +150,23 @@ export default function ProductPDFProductSelectorModal({
                       <div className="min-w-0 flex-1">
                         <div className="truncate text-xs font-bold text-[var(--text-primary)]">{serialNumber}</div>
                         <div className="truncate text-[11px] text-[var(--text-secondary)]">{product?.品番 || "—"}</div>
-                        <div className="truncate text-[10px] text-[var(--text-muted)]">{product?.モデル || "No model"}</div>
+                        <div className="truncate text-[10px] text-[var(--text-muted)]">{product?.モデル || (isJa ? "モデル未設定" : "No model")}</div>
                       </div>
                     </label>
                   );
                 })}
               </div>
             ) : (
-              <EmptyState className="bg-[var(--surface-subtle)] py-10">No products matched the current search.</EmptyState>
+              <EmptyState className="bg-[var(--surface-subtle)] py-10">
+                {isJa ? "検索条件に一致する製品が見つかりません。" : "No products matched the current search."}
+              </EmptyState>
             )}
           </div>
 
           <div className="flex items-center justify-between gap-3 border-t border-[var(--border)] bg-[var(--surface-subtle)] px-5 py-3.5">
-            <div className="text-xs text-[var(--text-secondary)]">{draftSelection.size} products selected</div>
+            <div className="text-xs text-[var(--text-secondary)]">
+              {isJa ? `${draftSelection.size} 件選択中` : `${draftSelection.size} products selected`}
+            </div>
 
             <div className="flex items-center gap-2">
               <button
@@ -159,14 +174,14 @@ export default function ProductPDFProductSelectorModal({
                 onClick={onClose}
                 className="rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3.5 py-1.5 text-xs font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-hover)] transition-colors shadow-2xs"
               >
-                Cancel
+                {isJa ? "キャンセル" : "Cancel"}
               </button>
               <button
                 type="button"
                 onClick={() => onConfirm([...draftSelection].sort((left, right) => left.localeCompare(right, "ja")))}
                 className="rounded-[6px] bg-[var(--freya-blue)] px-4 py-1.5 text-xs font-semibold text-white hover:bg-[var(--freya-blue-hover)] transition-colors shadow-xs"
               >
-                Confirm Selection
+                {isJa ? "選択を確定" : "Confirm Selection"}
               </button>
             </div>
           </div>

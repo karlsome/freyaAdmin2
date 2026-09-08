@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import ModalShell from "./ModalShell";
+import { useLanguage } from "../contexts/LanguageContext";
 
 function buildInitialDraft(fieldDefinitions) {
   return fieldDefinitions.reduce((draft, field) => {
@@ -17,6 +18,9 @@ export default function MasterRecordModal({
   tabLabel = "Master DB",
   recordLabel = "Master Record",
 }) {
+  const { language } = useLanguage();
+  const isJa = language === "ja";
+
   const editableFields = useMemo(
     () => fieldDefinitions.filter((field) => field.field !== "imageURL"),
     [fieldDefinitions]
@@ -33,9 +37,13 @@ export default function MasterRecordModal({
     <ModalShell
       open={true}
       onClose={onClose}
-      eyebrow={`Create ${recordLabel}`}
-      title={`Add New ${tabLabel} Record`}
-      subtitle="Build a new entry with the full dynamic field set from the current schema."
+      eyebrow={isJa ? `${recordLabel} の作成` : `Create ${recordLabel}`}
+      title={isJa ? `新規 ${tabLabel} レコードの追加` : `Add New ${tabLabel} Record`}
+      subtitle={
+        isJa
+          ? "現在のスキーマから動的フィールドセットを使用して新規エントリを作成します。"
+          : "Build a new entry with the full dynamic field set from the current schema."
+      }
       maxWidth="max-w-5xl"
     >
           <form
@@ -49,7 +57,9 @@ export default function MasterRecordModal({
             <div className="grid gap-6 xl:grid-cols-[320px,minmax(0,1fr)]">
               <div>
                 <div className="rounded-2xl border border-separator/40 bg-surface-container-low p-4 sticky top-0">
-                  <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-outline">Product Image</div>
+                  <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-outline">
+                    {isJa ? "製品画像" : "Product Image"}
+                  </div>
                   <div className="mt-3 overflow-hidden rounded-2xl border border-separator/40 bg-surface min-h-[280px]">
                     {imagePreview ? (
                       <img src={imagePreview} alt="New record preview" className="h-[280px] w-full object-contain bg-surface-container-lowest" />
@@ -57,7 +67,9 @@ export default function MasterRecordModal({
                       <div className="flex h-[280px] items-center justify-center text-on-surface-variant">
                         <div className="text-center">
                           <span className="material-symbols-outlined" style={{ fontSize: 40 }}>image</span>
-                          <p className="mt-3 text-sm font-medium">No image selected</p>
+                          <p className="mt-3 text-sm font-medium">
+                            {isJa ? "画像が選択されていません" : "No image selected"}
+                          </p>
                         </div>
                       </div>
                     )}
@@ -81,7 +93,9 @@ export default function MasterRecordModal({
                         reader.readAsDataURL(file);
                       }}
                     />
-                    {imageFile ? "Replace Image" : "Upload Image"}
+                    {imageFile
+                      ? (isJa ? "画像を変更" : "Replace Image")
+                      : (isJa ? "画像をアップロード" : "Upload Image")}
                   </label>
                 </div>
               </div>
@@ -119,7 +133,9 @@ export default function MasterRecordModal({
 
             <div className="mt-6 flex items-center justify-between gap-4 border-t border-outline-variant/20 pt-5">
               <p className="text-sm text-on-surface-variant">
-                At least one field must be filled before the record can be inserted.
+                {isJa
+                  ? "レコードを登録するには、少なくとも1つの項目に入力する必要があります。"
+                  : "At least one field must be filled before the record can be inserted."}
               </p>
 
               <div className="flex items-center gap-3">
@@ -128,14 +144,16 @@ export default function MasterRecordModal({
                   onClick={onClose}
                   className="rounded-2xl border border-separator/40 px-4 py-2 text-xs font-semibold text-on-surface transition hover:bg-surface-container"
                 >
-                  Cancel
+                  {isJa ? "キャンセル" : "Cancel"}
                 </button>
                 <button
                   type="submit"
                   disabled={!hasData || submitting}
                   className="rounded-xl bg-primary px-4 py-2 text-xs font-semibold text-on-primary hover:opacity-90 active:scale-95 transition-all duration-150 disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  {submitting ? "Saving…" : "Create Record"}
+                  {submitting
+                    ? (isJa ? "保存中…" : "Saving…")
+                    : (isJa ? "レコードを作成" : "Create Record")}
                 </button>
               </div>
             </div>

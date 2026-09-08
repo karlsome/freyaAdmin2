@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useLanguage } from "../contexts/LanguageContext";
 import { filterSelectableMaterials } from "../utils/materialPDFs";
 import EmptyState from "./EmptyState";
 import IconButton from "./IconButton";
@@ -12,6 +13,8 @@ export default function MaterialPDFMaterialSelectorModal({
   onClose,
   onConfirm,
 }) {
+  const { language } = useLanguage();
+  const isJa = language === "ja";
   const modalRef = useRef(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [draftSelection, setDraftSelection] = useState(() => new Set(selectedSerialNumbers));
@@ -70,28 +73,36 @@ export default function MaterialPDFMaterialSelectorModal({
           <div className="border-b border-[var(--border)] px-5 py-4">
             <div className="flex items-start justify-between gap-4">
               <div>
-                <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--text-muted)]">Material Selector</div>
-                <h3 className="mt-0.5 text-base font-bold text-[var(--text-primary)]">Select Materials by 図番</h3>
+                <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--text-muted)]">
+                  {isJa ? "材料選択" : "Material Selector"}
+                </div>
+                <h3 className="mt-0.5 text-base font-bold text-[var(--text-primary)]">
+                  {isJa ? "図番で材料を選択" : "Select Materials by 図番"}
+                </h3>
                 <p className="mt-0.5 text-xs text-[var(--text-secondary)]">
-                  {draftSelection.size} selected across {visibleMaterials.length} visible materials.
+                  {isJa
+                    ? `表示中の ${visibleMaterials.length} 件中 ${draftSelection.size} 件を選択`
+                    : `${draftSelection.size} selected across ${visibleMaterials.length} visible materials.`}
                 </p>
               </div>
 
-              <IconButton icon="close" onClick={onClose} size="md" ariaLabel="Close dialog" />
+              <IconButton icon="close" onClick={onClose} size="md" ariaLabel={isJa ? "閉じる" : "Close dialog"} />
             </div>
 
             <input
               type="text"
               value={searchTerm}
               onChange={(event) => setSearchTerm(event.target.value)}
-              placeholder="Search by 図番, 品番, or 工程コード"
+              placeholder={isJa ? "図番、品番、または工程コードで検索" : "Search by 図番, 品番, or 工程コード"}
               className="mt-3 w-full rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-xs text-[var(--text-primary)] outline-none transition focus:border-[var(--freya-blue)]"
             />
           </div>
 
           <div className="flex items-center justify-between gap-3 border-b border-[var(--border)] bg-[var(--surface-subtle)] px-5 py-2.5">
             <div className="text-xs text-[var(--text-secondary)]">
-              {selectedProcess && filterType === "process" ? `Filtered to process ${selectedProcess}.` : "Showing all matching materials."}
+              {selectedProcess && filterType === "process"
+                ? (isJa ? `工程「${selectedProcess}」で絞り込み中` : `Filtered to process ${selectedProcess}.`)
+                : (isJa ? "一致するすべての材料を表示中" : "Showing all matching materials.")}
             </div>
 
             <div className="flex items-center gap-2">
@@ -100,14 +111,14 @@ export default function MaterialPDFMaterialSelectorModal({
                 onClick={() => setDraftSelection(new Set(visibleSerialNumbers))}
                 className="rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1 text-xs font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-hover)] transition-colors shadow-2xs"
               >
-                Check visible
+                {isJa ? "表示分を選択" : "Check visible"}
               </button>
               <button
                 type="button"
                 onClick={() => setDraftSelection(new Set())}
                 className="rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1 text-xs font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-hover)] transition-colors shadow-2xs"
               >
-                Uncheck all
+                {isJa ? "選択を解除" : "Uncheck all"}
               </button>
             </div>
           </div>
@@ -139,19 +150,23 @@ export default function MaterialPDFMaterialSelectorModal({
                       <div className="min-w-0 flex-1">
                         <div className="truncate text-xs font-bold text-[var(--text-primary)]">{drawingNumber}</div>
                         <div className="truncate text-[11px] text-[var(--text-secondary)]">{material?.品番 || "—"}</div>
-                        <div className="truncate text-[10px] text-[var(--text-muted)]">{material?.工程コード || "No process"}</div>
+                        <div className="truncate text-[10px] text-[var(--text-muted)]">{material?.工程コード || (isJa ? "工程未設定" : "No process")}</div>
                       </div>
                     </label>
                   );
                 })}
               </div>
             ) : (
-              <EmptyState className="bg-[var(--surface-subtle)] py-10">No materials matched the current search.</EmptyState>
+              <EmptyState className="bg-[var(--surface-subtle)] py-10">
+                {isJa ? "検索条件に一致する材料が見つかりません。" : "No materials matched the current search."}
+              </EmptyState>
             )}
           </div>
 
           <div className="flex items-center justify-between gap-3 border-t border-[var(--border)] bg-[var(--surface-subtle)] px-5 py-3.5">
-            <div className="text-xs text-[var(--text-secondary)]">{draftSelection.size} materials selected</div>
+            <div className="text-xs text-[var(--text-secondary)]">
+              {isJa ? `${draftSelection.size} 件の材料を選択中` : `${draftSelection.size} materials selected`}
+            </div>
 
             <div className="flex items-center gap-2">
               <button
@@ -159,14 +174,14 @@ export default function MaterialPDFMaterialSelectorModal({
                 onClick={onClose}
                 className="rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3.5 py-1.5 text-xs font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-hover)] transition-colors shadow-2xs"
               >
-                Cancel
+                {isJa ? "キャンセル" : "Cancel"}
               </button>
               <button
                 type="button"
                 onClick={() => onConfirm([...draftSelection].sort((left, right) => left.localeCompare(right, "ja")))}
                 className="rounded-[6px] bg-[var(--freya-blue)] px-4 py-1.5 text-xs font-semibold text-white hover:bg-[var(--freya-blue-hover)] transition-colors shadow-xs"
               >
-                Confirm Selection
+                {isJa ? "選択を確定" : "Confirm Selection"}
               </button>
             </div>
           </div>

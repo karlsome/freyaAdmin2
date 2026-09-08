@@ -3,6 +3,7 @@ import { fetchFactoryLiveMachines, BASE_URL } from '../../services/factoryStatus
 import DataTable from '../DataTable';
 import LiquidSegmentedControl from '../LiquidSegmentedControl';
 import CameraModal from '../CameraModal';
+import { useLanguage } from '../../contexts/LanguageContext';
 import './FactoryLiveMonitor.css';
 
 function fmtWait(ms) {
@@ -15,6 +16,8 @@ function fmtWait(ms) {
 }
 
 export default function FactoryLiveCard({ factory, onRowClick }) {
+  const { language } = useLanguage();
+  const isJa = language === "ja";
   const [machineState, setMachineState] = useState(new Map());
   const [activeCalls, setActiveCalls] = useState([]);
   const [masterMachines, setMasterMachines] = useState([]);
@@ -151,36 +154,38 @@ export default function FactoryLiveCard({ factory, onRowClick }) {
       const state = machineState.get(activeMachineForData) || { mode: 'idle', totalNG: 0 };
       const mode = state.mode || 'idle';
       
-      let statusText = "停止 / IDLE";
+      let statusText = isJa ? "停止中" : "停止 / IDLE";
       let statusCellClass = "";
       let elapsedText = "";
       let elapsedMs = 0;
       
       if (isCalling) {
-        statusText = call.leader ? 'LEADER CALL' : (call.box ? 'BOX CALL' : 'MATERIAL CALL');
+        statusText = call.leader
+          ? (isJa ? 'リーダー呼出' : 'LEADER CALL')
+          : (call.box ? (isJa ? '箱呼出' : 'BOX CALL') : (isJa ? '材料呼出' : 'MATERIAL CALL'));
         statusCellClass = call.leader ? "bg-red-500 text-white font-bold animate-pulse" : 
                           (call.box ? "bg-yellow-400 text-black font-bold animate-pulse" : "bg-blue-500 text-white font-bold animate-pulse");
         elapsedMs = now - call.since;
         elapsedText = fmtWait(elapsedMs);
       } else {
         if (mode === 'running') {
-          statusText = "稼働 / RUNNING";
+          statusText = isJa ? "稼働中" : "稼働 / RUNNING";
           statusCellClass = "text-emerald-500 font-semibold";
           const prod = (state.prodAccumMs || 0) + (state.runSince ? (now - state.runSince) : 0);
           elapsedMs = prod;
           elapsedText = fmtWait(prod);
         } else if (mode === 'break') {
-          statusText = "休憩中 / BREAK";
+          statusText = isJa ? "休憩中" : "休憩中 / BREAK";
           statusCellClass = "text-blue-400 font-medium";
           elapsedMs = state.modeSince ? (now - state.modeSince) : 0;
           elapsedText = elapsedMs ? fmtWait(elapsedMs) : '';
         } else if (mode === 'maintenance') {
-          statusText = "整備中 / MAINTENANCE";
+          statusText = isJa ? "整備中" : "整備中 / MAINTENANCE";
           statusCellClass = "text-amber-500 font-medium";
           elapsedMs = state.modeSince ? (now - state.modeSince) : 0;
           elapsedText = elapsedMs ? fmtWait(elapsedMs) : '';
         } else {
-          statusText = "停止 / IDLE";
+          statusText = isJa ? "停止中" : "停止 / IDLE";
           statusCellClass = "text-on-surface-variant";
         }
       }
@@ -198,7 +203,7 @@ export default function FactoryLiveCard({ factory, onRowClick }) {
         hinban: state.hinban
       };
     });
-  }, [machineRoster, activeCalls, machineState, now, viewMode]);
+  }, [machineRoster, activeCalls, machineState, now, viewMode, isJa]);
 
   const sortedRows = useMemo(() => {
     let sorted = [...tableRows];
@@ -230,8 +235,8 @@ export default function FactoryLiveCard({ factory, onRowClick }) {
           </h3>
           <LiquidSegmentedControl
             items={[
-              { label: "Individual", key: "individual" },
-              { label: "Grouped", key: "grouped" }
+              { label: isJa ? "個別" : "Individual", key: "individual" },
+              { label: isJa ? "グループ" : "Grouped", key: "grouped" }
             ]}
             activeKey={viewMode}
             onChange={setViewMode}
@@ -245,7 +250,7 @@ export default function FactoryLiveCard({ factory, onRowClick }) {
               className="flex-shrink-0 flex items-center gap-1.5 px-2.5 py-1 mr-1 rounded-[6px] text-xs font-medium border border-[var(--border)] bg-[var(--surface)] text-[var(--text-primary)] hover:bg-[var(--surface-hover)] active:scale-95 transition-colors"
             >
               <span className="material-symbols-outlined" style={{ fontSize: 15 }}>videocam</span>
-              View Live Feed
+              {isJa ? "ライブ映像" : "View Live Feed"}
             </button>
           )}
           <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-emerald-500' : 'bg-amber-500'}`}></div>
@@ -257,34 +262,34 @@ export default function FactoryLiveCard({ factory, onRowClick }) {
 
       {machineRoster.length === 0 ? (
         <div className="text-xs text-[var(--text-muted)] text-center py-8">
-          Waiting for machine data...
+          {isJa ? "設備データを待機中..." : "Waiting for machine data..."}
         </div>
       ) : (
         <DataTable
           columns={[
-            { key: "machine", label: "Machine Name", sortable: true, cellClassName: "font-semibold text-xs text-[var(--text-primary)]" },
+            { key: "machine", label: isJa ? "設備名" : "Machine Name", sortable: true, cellClassName: "font-semibold text-xs text-[var(--text-primary)]" },
             { 
               key: "status", 
-              label: "Status", 
+              label: isJa ? "ステータス" : "Status", 
               sortable: true,
               cellClassName: (r) => r.statusCellClass,
               renderCell: (r) => r.statusText
             },
             { 
               key: "totalNG", 
-              label: "Defect Count", 
+              label: isJa ? "不良数" : "Defect Count", 
               sortable: true,
               renderCell: (r) => r.totalNG > 0 ? <span className="text-red-500 font-bold font-mono freya-tabular text-xs">{r.totalNG}</span> : <span className="text-[var(--text-muted)] font-mono freya-tabular text-xs">0</span>
             },
             { 
               key: "elapsed", 
-              label: "Running Time", 
+              label: isJa ? "稼働時間" : "Running Time", 
               sortable: true,
               cellClassName: "font-mono freya-tabular text-xs",
               renderCell: (r) => r.elapsedText || "-"
             },
-            { key: "sebanggo", label: "背番号", sortable: true, cellClassName: "font-mono text-xs", renderCell: (r) => r.sebanggo || "-" },
-            { key: "hinban", label: "品番", sortable: true, cellClassName: "font-mono text-xs", renderCell: (r) => r.hinban || "-" }
+            { key: "sebanggo", label: isJa ? "背番号" : "Serial No.", sortable: true, cellClassName: "font-mono text-xs", renderCell: (r) => r.sebanggo || "-" },
+            { key: "hinban", label: isJa ? "品番" : "Part No.", sortable: true, cellClassName: "font-mono text-xs", renderCell: (r) => r.hinban || "-" }
           ]}
           rows={sortedRows}
           sort={sort}

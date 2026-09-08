@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Papa from "papaparse";
 import NodaModalFrame from "./NodaModalFrame";
+import { useLanguage } from "../../contexts/LanguageContext";
 import {
   bulkCreateNodaRequests,
   checkNodaDuplicateRequest,
@@ -128,11 +129,11 @@ function parseCsvText(csvText) {
   };
 }
 
-function StepIndicator({ currentStep }) {
+function StepIndicator({ currentStep, isJa }) {
   const steps = [
-    { step: 1, label: "Add Items" },
-    { step: 2, label: "Review" },
-    { step: 3, label: "Submit" },
+    { step: 1, label: isJa ? "品目追加" : "Add Items" },
+    { step: 2, label: isJa ? "確認" : "Review" },
+    { step: 3, label: isJa ? "送信" : "Submit" },
   ];
 
   return (
@@ -190,6 +191,8 @@ async function readCsvFile(file) {
 }
 
 export default function NodaBulkRequestModal({ open, authUser, onClose, onSubmitted }) {
+  const { language } = useLanguage();
+  const isJa = language === "ja";
   const [step, setStep] = useState(1);
   const [itemForm, setItemForm] = useState({ partNumber: "", backNumber: "", quantity: "" });
   const [draft, setDraft] = useState({
@@ -251,7 +254,7 @@ export default function NodaBulkRequestModal({ open, authUser, onClose, onSubmit
         if (cancelled) return;
 
         if (!result?.success || !result.inventory) {
-          setInventoryPreview({ exists: false, message: "Item not found in Noda inventory." });
+          setInventoryPreview({ exists: false, message: isJa ? "野田在庫に対象品目が見つかりません。" : "Item not found in Noda inventory." });
           return;
         }
 
@@ -269,7 +272,7 @@ export default function NodaBulkRequestModal({ open, authUser, onClose, onSubmit
         });
       } catch (loadError) {
         if (!cancelled) {
-          setInventoryPreview({ exists: false, message: loadError.message || "Could not check inventory." });
+          setInventoryPreview({ exists: false, message: loadError.message || (isJa ? "在庫を確認できませんでした。" : "Could not check inventory.") });
         }
       } finally {
         if (!cancelled) {
@@ -282,7 +285,7 @@ export default function NodaBulkRequestModal({ open, authUser, onClose, onSubmit
       cancelled = true;
       window.clearTimeout(timeoutId);
     };
-  }, [itemForm.backNumber, itemForm.quantity, open]);
+  }, [itemForm.backNumber, itemForm.quantity, open, isJa]);
 
   const cartCount = draft.cart.length;
   const insufficientCount = useMemo(
@@ -332,7 +335,7 @@ export default function NodaBulkRequestModal({ open, authUser, onClose, onSubmit
     const quantity = Number.parseInt(itemForm.quantity, 10) || 0;
 
     if (!partNumber || !backNumber || quantity <= 0 || !draft.pickupDate || !draft.deadlineDate) {
-      setError("Part number, serial number, quantity, pickup date, and deadline date are required.");
+      setError(isJa ? "品番、背番号、数量、引取日、納入指示日は必須です。" : "Part number, serial number, quantity, pickup date, and deadline date are required.");
       return;
     }
 
@@ -347,7 +350,7 @@ export default function NodaBulkRequestModal({ open, authUser, onClose, onSubmit
           reserved: Math.min(available, quantity),
           shortfall: Math.max(0, quantity - available),
           inventory: result?.inventory,
-          message: result?.success ? "" : "Item not found in Noda inventory.",
+          message: result?.success ? "" : (isJa ? "野田在庫に対象品目が見つかりません。" : "Item not found in Noda inventory."),
         };
       } catch (loadError) {
         nextPreview = {
@@ -355,14 +358,16 @@ export default function NodaBulkRequestModal({ open, authUser, onClose, onSubmit
           available: 0,
           reserved: 0,
           shortfall: quantity,
-          message: loadError.message || "Could not check inventory.",
+          message: loadError.message || (isJa ? "在庫を確認できませんでした。" : "Could not check inventory."),
         };
       }
     }
 
     if (nextPreview.shortfall > 0) {
       const proceed = window.confirm(
-        `This item has insufficient inventory. Available: ${nextPreview.available}. Requested: ${quantity}.\n\nThe request will still be created and the shortfall will remain pending. Add it anyway?`
+        isJa
+          ? `この品目は在庫不足です。引当可能数: ${nextPreview.available} / 要求数: ${quantity}。\n\nリクエストは作成され、不足分は保留となります。カートに追加しますか？`
+          : `This item has insufficient inventory. Available: ${nextPreview.available}. Requested: ${quantity}.\n\nThe request will still be created and the shortfall will remain pending. Add it anyway?`
       );
       if (!proceed) return;
     }
@@ -386,7 +391,11 @@ export default function NodaBulkRequestModal({ open, authUser, onClose, onSubmit
         };
       }
 
-      const overwrite = window.confirm(`${backNumber} is already in the cart. Replace its quantity with ${quantity}?`);
+      const overwrite = window.confirm(
+        isJa
+          ? `${backNumber} は既にカートにあります。数量を ${quantity} に上書きしますか？`
+          : `${backNumber} is already in the cart. Replace its quantity with ${quantity}?`
+      );
       if (!overwrite) return current;
 
       const nextCart = [...current.cart];
@@ -421,16 +430,16 @@ export default function NodaBulkRequestModal({ open, authUser, onClose, onSubmit
           currentAvailable: available,
           reviewStatus:
             result?.success && available >= item.quantity
-              ? "Valid"
+              ? (isJa ? "有効" : "Valid")
               : result?.success
-                ? "Insufficient Stock"
-                : "Inventory Check Failed",
+                ? (isJa ? "在庫不足" : "Insufficient Stock")
+                : (isJa ? "在庫確認失敗" : "Inventory Check Failed"),
         });
       } catch (loadError) {
         nextReviewItems.push({
           ...item,
           currentAvailable: 0,
-          reviewStatus: loadError.message || "Inventory Check Failed",
+          reviewStatus: loadError.message || (isJa ? "在庫確認失敗" : "Inventory Check Failed"),
         });
       }
     }
@@ -440,12 +449,12 @@ export default function NodaBulkRequestModal({ open, authUser, onClose, onSubmit
 
   async function handleGoToReview() {
     if (!draft.cart.length) {
-      setError("Add at least one item before continuing.");
+      setError(isJa ? "続けるには最低1つの品目を追加してください。" : "Add at least one item before continuing.");
       return;
     }
 
     if (!draft.pickupDate || !draft.deadlineDate) {
-      setError("Pickup date and deadline date are required.");
+      setError(isJa ? "引取日と納入指示日は必須です。" : "Pickup date and deadline date are required.");
       return;
     }
 
@@ -456,7 +465,7 @@ export default function NodaBulkRequestModal({ open, authUser, onClose, onSubmit
 
   function handleCsvReviewImport() {
     if (!csvReview?.validItems?.length) {
-      setError("No valid CSV items are available to import.");
+      setError(isJa ? "インポート可能な有効なCSV品目がありません。" : "No valid CSV items are available to import.");
       return;
     }
 
@@ -510,7 +519,7 @@ export default function NodaBulkRequestModal({ open, authUser, onClose, onSubmit
               processedItem.品番 = lookup.data.品番;
               processedItem.品名 = lookup.data.品名;
             } else {
-              processedItem.error = "Master data not found";
+              processedItem.error = isJa ? "マスターデータが見つかりません" : "Master data not found";
             }
           } else {
             const lookup = await lookupNodaMasterData({ 品番: row.品番 });
@@ -518,7 +527,7 @@ export default function NodaBulkRequestModal({ open, authUser, onClose, onSubmit
               processedItem.背番号 = lookup.data.背番号;
               processedItem.品名 = lookup.data.品名;
             } else {
-              processedItem.error = "Master data not found";
+              processedItem.error = isJa ? "マスターデータが見つかりません" : "Master data not found";
             }
           }
 
@@ -561,7 +570,7 @@ export default function NodaBulkRequestModal({ open, authUser, onClose, onSubmit
         insufficientItems,
       });
     } catch (loadError) {
-      setError(loadError.message || "Failed to parse the CSV file.");
+      setError(loadError.message || (isJa ? "CSVファイルの解析に失敗しました。" : "Failed to parse the CSV file."));
     } finally {
       setCsvBusy(false);
     }
@@ -598,11 +607,13 @@ export default function NodaBulkRequestModal({ open, authUser, onClose, onSubmit
       clearNodaCartDraftStorage();
       onSubmitted?.({
         type: "success",
-        message: `Created Noda bulk request with ${draft.cart.length} item${draft.cart.length === 1 ? "" : "s"}.`,
+        message: isJa
+          ? `${draft.cart.length}件の品目で野田一括リクエストを作成しました。`
+          : `Created Noda bulk request with ${draft.cart.length} item${draft.cart.length === 1 ? "" : "s"}.`,
       });
       onClose?.();
     } catch (submitError) {
-      setError(submitError.message || "Failed to create the bulk request.");
+      setError(submitError.message || (isJa ? "一括リクエストの作成に失敗しました。" : "Failed to create the bulk request."));
     } finally {
       setSubmitting(false);
       setDuplicateChoice(null);
@@ -611,7 +622,7 @@ export default function NodaBulkRequestModal({ open, authUser, onClose, onSubmit
 
   async function handleSubmitRequest() {
     if (!draft.cart.length) {
-      setError("There are no items to submit.");
+      setError(isJa ? "送信する品目がありません。" : "There are no items to submit.");
       return;
     }
 
@@ -628,7 +639,7 @@ export default function NodaBulkRequestModal({ open, authUser, onClose, onSubmit
           return;
         }
       } catch (loadError) {
-        setError(loadError.message || "Failed to check for duplicate CSV uploads.");
+        setError(loadError.message || (isJa ? "重複CSVの確認に失敗しました。" : "Failed to check for duplicate CSV uploads."));
         return;
       }
     }
@@ -639,8 +650,8 @@ export default function NodaBulkRequestModal({ open, authUser, onClose, onSubmit
   const footer = (
     <div className="flex flex-wrap items-center justify-between gap-3">
       <div className="text-sm text-on-surface-variant">
-        {cartCount} item{cartCount === 1 ? "" : "s"} in cart
-        {insufficientCount ? ` • ${insufficientCount} with inventory shortfall` : ""}
+        {isJa ? `カート内 ${cartCount} 件` : `${cartCount} item${cartCount === 1 ? "" : "s"} in cart`}
+        {insufficientCount ? (isJa ? ` • 在庫不足 ${insufficientCount} 件` : ` • ${insufficientCount} with inventory shortfall`) : ""}
       </div>
       <div className="flex flex-wrap gap-3">
         {step > 1 ? (
@@ -649,7 +660,7 @@ export default function NodaBulkRequestModal({ open, authUser, onClose, onSubmit
             onClick={() => setStep((current) => Math.max(1, current - 1))}
             className="rounded-2xl border border-separator/40 px-4 py-2.5 text-sm font-semibold text-on-surface transition hover:bg-surface-container"
           >
-            Back
+            {isJa ? "戻る" : "Back"}
           </button>
         ) : null}
         <button
@@ -657,7 +668,7 @@ export default function NodaBulkRequestModal({ open, authUser, onClose, onSubmit
           onClick={() => onClose?.()}
           className="rounded-2xl border border-separator/40 px-4 py-2.5 text-sm font-semibold text-on-surface transition hover:bg-surface-container"
         >
-          Close
+          {isJa ? "閉じる" : "Close"}
         </button>
         {step === 1 ? (
           <button
@@ -666,7 +677,7 @@ export default function NodaBulkRequestModal({ open, authUser, onClose, onSubmit
             disabled={!draft.cart.length}
             className="rounded-2xl bg-primary px-5 py-2.5 text-sm font-semibold text-on-primary transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            Review Items
+            {isJa ? "品目を確認" : "Review Items"}
           </button>
         ) : null}
         {step === 2 ? (
@@ -676,7 +687,7 @@ export default function NodaBulkRequestModal({ open, authUser, onClose, onSubmit
             disabled={!draft.cart.length}
             className="rounded-2xl bg-primary px-5 py-2.5 text-sm font-semibold text-on-primary transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            Continue To Submit
+            {isJa ? "送信に進む" : "Continue To Submit"}
           </button>
         ) : null}
         {step === 3 ? (
@@ -686,7 +697,7 @@ export default function NodaBulkRequestModal({ open, authUser, onClose, onSubmit
             disabled={submitting}
             className="rounded-2xl bg-emerald-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {submitting ? "Submitting…" : "Create Bulk Request"}
+            {submitting ? (isJa ? "送信中…" : "Submitting…") : (isJa ? "一括リクエスト作成" : "Create Bulk Request")}
           </button>
         ) : null}
       </div>
@@ -698,12 +709,12 @@ export default function NodaBulkRequestModal({ open, authUser, onClose, onSubmit
       open={open}
       onClose={onClose}
       icon="playlist_add_check_circle"
-      title="Create Noda Bulk Request"
-      subtitle="Add individual items or import a CSV, review the reservation impact, then submit the request."
+      title={isJa ? "野田一括リクエスト作成" : "Create Noda Bulk Request"}
+      subtitle={isJa ? "品目の個別追加またはCSVインポートを行い、引当状況を確認してリクエストを送信します。" : "Add individual items or import a CSV, review the reservation impact, then submit the request."}
       footer={footer}
     >
       <div className="space-y-6">
-        <StepIndicator currentStep={step} />
+        <StepIndicator currentStep={step} isJa={isJa} />
 
         {error ? (
           <div className="rounded-[24px] border border-error/20 bg-error/10 px-5 py-4 text-sm text-error">
@@ -713,15 +724,17 @@ export default function NodaBulkRequestModal({ open, authUser, onClose, onSubmit
 
         {duplicateChoice ? (
           <div className="rounded-[24px] border border-amber-500/20 bg-amber-500/10 p-5">
-            <h3 className="text-base font-semibold text-on-surface">Duplicate request detected</h3>
+            <h3 className="text-base font-semibold text-on-surface">{isJa ? "重複リクエストを検出しました" : "Duplicate request detected"}</h3>
             <p className="mt-2 text-sm text-on-surface-variant">
-              A request already exists for 納品書番号 {duplicateChoice.納品書番号}, 便 {duplicateChoice.便}, and deadline {duplicateChoice.納入指示日}.
+              {isJa
+                ? `納品書番号 ${duplicateChoice.納品書番号}、便 ${duplicateChoice.便}、納入指示日 ${duplicateChoice.納入指示日} のリクエストが既に存在します。`
+                : `A request already exists for 納品書番号 ${duplicateChoice.納品書番号}, 便 ${duplicateChoice.便}, and deadline ${duplicateChoice.納入指示日}.`}
             </p>
             <div className="mt-4 grid gap-3 text-sm text-on-surface-variant md:grid-cols-2">
-              <span>Existing request: <strong className="text-on-surface">{duplicateChoice.requestNumber}</strong></span>
-              <span>Status: <strong className="text-on-surface">{duplicateChoice.status}</strong></span>
-              <span>Total items: <strong className="text-on-surface">{duplicateChoice.totalItems}</strong></span>
-              <span>Created by: <strong className="text-on-surface">{duplicateChoice.createdBy || "Unknown"}</strong></span>
+              <span>{isJa ? "既存リクエスト: " : "Existing request: "}<strong className="text-on-surface">{duplicateChoice.requestNumber}</strong></span>
+              <span>{isJa ? "ステータス: " : "Status: "}<strong className="text-on-surface">{duplicateChoice.status}</strong></span>
+              <span>{isJa ? "合計品目数: " : "Total items: "}<strong className="text-on-surface">{duplicateChoice.totalItems}</strong></span>
+              <span>{isJa ? "作成者: " : "Created by: "}<strong className="text-on-surface">{duplicateChoice.createdBy || (isJa ? "不明" : "Unknown")}</strong></span>
             </div>
             <div className="mt-5 flex flex-wrap gap-3">
               <button
@@ -730,7 +743,7 @@ export default function NodaBulkRequestModal({ open, authUser, onClose, onSubmit
                 disabled={submitting}
                 className="rounded-2xl bg-error px-4 py-2.5 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-60"
               >
-                Overwrite Existing
+                {isJa ? "既存を上書き" : "Overwrite Existing"}
               </button>
               <button
                 type="button"
@@ -738,14 +751,14 @@ export default function NodaBulkRequestModal({ open, authUser, onClose, onSubmit
                 disabled={submitting}
                 className="rounded-2xl bg-primary px-4 py-2.5 text-sm font-semibold text-on-primary transition hover:opacity-90 disabled:opacity-60"
               >
-                Create New With Suffix
+                {isJa ? "接尾辞付きで新規作成" : "Create New With Suffix"}
               </button>
               <button
                 type="button"
                 onClick={() => setDuplicateChoice(null)}
                 className="rounded-2xl border border-separator/40 px-4 py-2.5 text-sm font-semibold text-on-surface transition hover:bg-surface-container"
               >
-                Cancel
+                {isJa ? "キャンセル" : "Cancel"}
               </button>
             </div>
           </div>
@@ -755,12 +768,12 @@ export default function NodaBulkRequestModal({ open, authUser, onClose, onSubmit
           <div className="rounded-[28px] border border-separator/40 bg-surface-container-low/35 p-5">
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
-                <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-primary">CSV Review</p>
+                <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-primary">{isJa ? "CSV確認" : "CSV Review"}</p>
                 <h3 className="mt-1 text-lg font-semibold text-on-surface">
-                  {csvReview.validItems.length} items ready to import into the cart
+                  {isJa ? `${csvReview.validItems.length}件の品目をカートにインポート準備完了` : `${csvReview.validItems.length} items ready to import into the cart`}
                 </h3>
                 <p className="mt-2 text-sm text-on-surface-variant">
-                  Format: {csvReview.formatType}-based CSV • Deadline: {csvReview.deadlineDate}
+                  {isJa ? `形式: ${csvReview.formatType}基準CSV • 納入指示日: ${csvReview.deadlineDate}` : `Format: ${csvReview.formatType}-based CSV • Deadline: ${csvReview.deadlineDate}`}
                 </p>
               </div>
               <div className="flex flex-wrap gap-3">
@@ -770,7 +783,7 @@ export default function NodaBulkRequestModal({ open, authUser, onClose, onSubmit
                     onClick={() => downloadCsvFile(
                       `noda-shortfall-${csvReview.deadlineDate || todayDateString()}.csv`,
                       [
-                        ["Row", "品番", "背番号", "品名", "Requested", "Available", "Shortfall"],
+                        [isJa ? "行" : "Row", "品番", "背番号", "品名", isJa ? "要求数" : "Requested", isJa ? "在庫数" : "Available", isJa ? "不足" : "Shortfall"],
                         ...csvReview.insufficientItems.map((item) => [
                           item.rowIndex,
                           item.品番 || "",
@@ -784,7 +797,7 @@ export default function NodaBulkRequestModal({ open, authUser, onClose, onSubmit
                     )}
                     className="rounded-2xl border border-separator/40 px-4 py-2.5 text-sm font-semibold text-on-surface transition hover:bg-surface-container"
                   >
-                    Export Shortfall CSV
+                    {isJa ? "不足分CSVエクスポート" : "Export Shortfall CSV"}
                   </button>
                 ) : null}
                 <button
@@ -792,14 +805,14 @@ export default function NodaBulkRequestModal({ open, authUser, onClose, onSubmit
                   onClick={() => setCsvReview(null)}
                   className="rounded-2xl border border-separator/40 px-4 py-2.5 text-sm font-semibold text-on-surface transition hover:bg-surface-container"
                 >
-                  Cancel Review
+                  {isJa ? "確認をキャンセル" : "Cancel Review"}
                 </button>
                 <button
                   type="button"
                   onClick={handleCsvReviewImport}
                   className="rounded-2xl bg-primary px-4 py-2.5 text-sm font-semibold text-on-primary transition hover:opacity-90"
                 >
-                  Use Reviewed Items
+                  {isJa ? "確認済み品目を反映" : "Use Reviewed Items"}
                 </button>
               </div>
             </div>
@@ -808,13 +821,13 @@ export default function NodaBulkRequestModal({ open, authUser, onClose, onSubmit
               <table className="min-w-full text-sm">
                 <thead className="bg-surface-container-high/50 text-left text-on-surface-variant">
                   <tr>
-                    <th className="px-4 py-3">Row</th>
+                    <th className="px-4 py-3">{isJa ? "行" : "Row"}</th>
                     <th className="px-4 py-3">品番</th>
                     <th className="px-4 py-3">背番号</th>
                     <th className="px-4 py-3">品名</th>
-                    <th className="px-4 py-3">Requested</th>
-                    <th className="px-4 py-3">Available</th>
-                    <th className="px-4 py-3">Status</th>
+                    <th className="px-4 py-3">{isJa ? "要求数" : "Requested"}</th>
+                    <th className="px-4 py-3">{isJa ? "引当可能" : "Available"}</th>
+                    <th className="px-4 py-3">{isJa ? "ステータス" : "Status"}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -839,7 +852,7 @@ export default function NodaBulkRequestModal({ open, authUser, onClose, onSubmit
                               {item.status}
                             </span>
                             {item.shortfallQuantity ? (
-                              <span className="text-xs text-error">Shortfall: {item.shortfallQuantity}</span>
+                              <span className="text-xs text-error">{isJa ? "不足: " : "Shortfall: "}{item.shortfallQuantity}</span>
                             ) : null}
                             {item.error ? (
                               <span className="text-xs text-error">{item.error}</span>
@@ -859,10 +872,10 @@ export default function NodaBulkRequestModal({ open, authUser, onClose, onSubmit
           <div className="grid gap-6 xl:grid-cols-[minmax(0,1.1fr)_minmax(360px,0.9fr)]">
             <div className="space-y-6">
               <div className="freya-card rounded-[8px] border border-[var(--border)] bg-[var(--surface-subtle)] p-5">
-                <h3 className="text-base font-semibold text-[var(--text-primary)]">Request Details</h3>
+                <h3 className="text-base font-semibold text-[var(--text-primary)]">{isJa ? "リクエスト詳細" : "Request Details"}</h3>
                 <div className="mt-4 grid gap-4 md:grid-cols-2">
                   <label className="block">
-                    <span className="block text-xs font-semibold uppercase tracking-[0.18em] text-outline">Pickup Date</span>
+                    <span className="block text-xs font-semibold uppercase tracking-[0.18em] text-outline">{isJa ? "引取日" : "Pickup Date"}</span>
                     <input
                       type="date"
                       value={draft.pickupDate}
@@ -871,7 +884,7 @@ export default function NodaBulkRequestModal({ open, authUser, onClose, onSubmit
                     />
                   </label>
                   <label className="block">
-                    <span className="block text-xs font-semibold uppercase tracking-[0.18em] text-outline">Deadline Date</span>
+                    <span className="block text-xs font-semibold uppercase tracking-[0.18em] text-outline">{isJa ? "納入指示日" : "Deadline Date"}</span>
                     <input
                       type="date"
                       value={draft.deadlineDate}
@@ -880,7 +893,7 @@ export default function NodaBulkRequestModal({ open, authUser, onClose, onSubmit
                     />
                   </label>
                   <label className="block">
-                    <span className="block text-xs font-semibold uppercase tracking-[0.18em] text-outline">Delivery Order (便)</span>
+                    <span className="block text-xs font-semibold uppercase tracking-[0.18em] text-outline">{isJa ? "便" : "Delivery Order (便)"}</span>
                     <input
                       type="text"
                       value={draft.deliveryOrder}
@@ -889,7 +902,7 @@ export default function NodaBulkRequestModal({ open, authUser, onClose, onSubmit
                     />
                   </label>
                   <label className="block">
-                    <span className="block text-xs font-semibold uppercase tracking-[0.18em] text-outline">Delivery Note (納品書番号)</span>
+                    <span className="block text-xs font-semibold uppercase tracking-[0.18em] text-outline">{isJa ? "納品書番号" : "Delivery Note (納品書番号)"}</span>
                     <input
                       type="text"
                       value={draft.deliveryNote}
@@ -902,10 +915,10 @@ export default function NodaBulkRequestModal({ open, authUser, onClose, onSubmit
 
               <div className="freya-card rounded-[8px] border border-[var(--border)] bg-[var(--surface-subtle)] p-5">
                 <div className="flex flex-wrap items-center justify-between gap-3">
-                  <h3 className="text-base font-semibold text-[var(--text-primary)]">Add Item</h3>
+                  <h3 className="text-base font-semibold text-[var(--text-primary)]">{isJa ? "品目追加" : "Add Item"}</h3>
                   <label className="inline-flex cursor-pointer items-center gap-2 rounded-[6px] border border-dashed border-[var(--border-strong)] bg-[var(--surface)] px-3.5 py-1.5 text-xs font-semibold text-[var(--text-primary)] transition hover:border-[var(--freya-blue)]">
                     <span className="material-symbols-outlined" style={{ fontSize: 16 }}>upload_file</span>
-                    {csvBusy ? "Reading CSV…" : "Import CSV"}
+                    {csvBusy ? (isJa ? "CSV読込中…" : "Reading CSV…") : (isJa ? "CSVインポート" : "Import CSV")}
                     <input type="file" accept=".csv" className="hidden" onChange={handleCsvUpload} disabled={csvBusy} />
                   </label>
                 </div>
@@ -932,7 +945,7 @@ export default function NodaBulkRequestModal({ open, authUser, onClose, onSubmit
                     />
                   </label>
                   <label className="block">
-                    <span className="block text-xs font-semibold uppercase tracking-[0.18em] text-outline">Quantity</span>
+                    <span className="block text-xs font-semibold uppercase tracking-[0.18em] text-outline">{isJa ? "数量" : "Quantity"}</span>
                     <input
                       type="number"
                       min="1"
@@ -945,15 +958,15 @@ export default function NodaBulkRequestModal({ open, authUser, onClose, onSubmit
 
                 <div className={joinClasses("mt-4 rounded-[24px] border px-4 py-3 text-sm", getInventoryTone(inventoryPreview))}>
                   {checkingInventory ? (
-                    <span>Checking inventory…</span>
+                    <span>{isJa ? "在庫確認中…" : "Checking inventory…"}</span>
                   ) : inventoryPreview?.exists ? (
                     <div className="flex flex-wrap gap-4">
-                      <span>Available: <strong>{inventoryPreview.available}</strong></span>
-                      <span>Reserved now: <strong>{inventoryPreview.reserved}</strong></span>
-                      <span>Shortfall: <strong>{inventoryPreview.shortfall}</strong></span>
+                      <span>{isJa ? "引当可能: " : "Available: "}<strong>{inventoryPreview.available}</strong></span>
+                      <span>{isJa ? "即時引当: " : "Reserved now: "}<strong>{inventoryPreview.reserved}</strong></span>
+                      <span>{isJa ? "不足: " : "Shortfall: "}<strong>{inventoryPreview.shortfall}</strong></span>
                     </div>
                   ) : (
-                    <span>{inventoryPreview?.message || "Enter a serial number to preview inventory availability."}</span>
+                    <span>{inventoryPreview?.message || (isJa ? "背番号を入力すると在庫状況が表示されます。" : "Enter a serial number to preview inventory availability.")}</span>
                   )}
                 </div>
 
@@ -963,7 +976,7 @@ export default function NodaBulkRequestModal({ open, authUser, onClose, onSubmit
                     onClick={handleAddItem}
                     className="rounded-2xl bg-primary px-5 py-2.5 text-sm font-semibold text-on-primary transition hover:opacity-90"
                   >
-                    Add To Cart
+                    {isJa ? "カートに追加" : "Add To Cart"}
                   </button>
                 </div>
               </div>
@@ -972,8 +985,10 @@ export default function NodaBulkRequestModal({ open, authUser, onClose, onSubmit
             <div className="freya-card rounded-[8px] border border-[var(--border)] bg-[var(--surface-subtle)] p-5">
               <div className="flex items-center justify-between gap-3">
                 <div>
-                  <h3 className="text-base font-semibold text-[var(--text-primary)]">Cart</h3>
-                  <p className="mt-0.5 text-xs text-[var(--text-muted)]">{cartCount} item{cartCount === 1 ? "" : "s"} ready for review</p>
+                  <h3 className="text-base font-semibold text-[var(--text-primary)]">{isJa ? "カート" : "Cart"}</h3>
+                  <p className="mt-0.5 text-xs text-[var(--text-muted)]">
+                    {isJa ? `${cartCount}件の品目を確認準備完了` : `${cartCount} item${cartCount === 1 ? "" : "s"} ready for review`}
+                  </p>
                 </div>
                 {draft.cart.length ? (
                   <button
@@ -984,7 +999,7 @@ export default function NodaBulkRequestModal({ open, authUser, onClose, onSubmit
                     }}
                     className="rounded-2xl border border-separator/40 px-3 py-2 text-sm font-semibold text-on-surface transition hover:bg-surface-container"
                   >
-                    Clear Draft
+                    {isJa ? "下書きクリア" : "Clear Draft"}
                   </button>
                 ) : null}
               </div>
@@ -999,17 +1014,17 @@ export default function NodaBulkRequestModal({ open, authUser, onClose, onSubmit
                           <span className="text-sm text-on-surface-variant">{item.品番}</span>
                         </div>
                         <div className="mt-2 flex flex-wrap gap-3 text-xs text-on-surface-variant">
-                          <span>Qty {item.quantity}</span>
-                          <span>Available {item.availableQuantity || 0}</span>
-                          <span>Reserved {item.reservedQuantity || 0}</span>
-                          {item.shortfallQuantity ? <span className="text-error">Shortfall {item.shortfallQuantity}</span> : null}
+                          <span>{isJa ? "数量 " : "Qty "}{item.quantity}</span>
+                          <span>{isJa ? "引当可能 " : "Available "}{item.availableQuantity || 0}</span>
+                          <span>{isJa ? "即時引当 " : "Reserved "}{item.reservedQuantity || 0}</span>
+                          {item.shortfallQuantity ? <span className="text-error">{isJa ? "不足 " : "Shortfall "}{item.shortfallQuantity}</span> : null}
                         </div>
                       </div>
                       <button
                         type="button"
                         onClick={() => handleRemoveItem(item.背番号)}
                         className="flex h-10 w-10 items-center justify-center rounded-2xl text-outline transition hover:bg-error/10 hover:text-error"
-                        aria-label={`Remove ${item.背番号}`}
+                        aria-label={isJa ? `${item.背番号}を削除` : `Remove ${item.背番号}`}
                       >
                         <span className="material-symbols-outlined">delete</span>
                       </button>
@@ -1017,7 +1032,7 @@ export default function NodaBulkRequestModal({ open, authUser, onClose, onSubmit
                   </div>
                 )) : (
                   <div className="rounded-[24px] border border-dashed border-outline-variant/25 px-6 py-12 text-center text-sm text-on-surface-variant">
-                    Add items manually or import a CSV to build the request cart.
+                    {isJa ? "品目を手動で追加するか、CSVをインポートしてリクエストカートを作成してください。" : "Add items manually or import a CSV to build the request cart."}
                   </div>
                 )}
               </div>
@@ -1029,9 +1044,9 @@ export default function NodaBulkRequestModal({ open, authUser, onClose, onSubmit
           <div className="freya-card rounded-[8px] border border-[var(--border)] bg-[var(--surface-subtle)] p-5">
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
-                <h3 className="text-base font-semibold text-[var(--text-primary)]">Inventory Review</h3>
+                <h3 className="text-base font-semibold text-[var(--text-primary)]">{isJa ? "在庫引当確認" : "Inventory Review"}</h3>
                 <p className="mt-0.5 text-xs text-[var(--text-muted)]">
-                  Pickup date {draft.pickupDate} • Deadline {draft.deadlineDate}
+                  {isJa ? `引取日 ${draft.pickupDate} • 納入指示日 ${draft.deadlineDate}` : `Pickup date ${draft.pickupDate} • Deadline ${draft.deadlineDate}`}
                 </p>
               </div>
               <button
@@ -1039,7 +1054,7 @@ export default function NodaBulkRequestModal({ open, authUser, onClose, onSubmit
                 onClick={refreshReview}
                 className="rounded-2xl border border-separator/40 px-4 py-2.5 text-sm font-semibold text-on-surface transition hover:bg-surface-container"
               >
-                Refresh Availability
+                {isJa ? "引当可能数を更新" : "Refresh Availability"}
               </button>
             </div>
 
@@ -1049,14 +1064,14 @@ export default function NodaBulkRequestModal({ open, authUser, onClose, onSubmit
                   <tr>
                     <th className="px-4 py-3">品番</th>
                     <th className="px-4 py-3">背番号</th>
-                    <th className="px-4 py-3">Requested</th>
-                    <th className="px-4 py-3">Available Now</th>
-                    <th className="px-4 py-3">Status</th>
+                    <th className="px-4 py-3">{isJa ? "要求数" : "Requested"}</th>
+                    <th className="px-4 py-3">{isJa ? "現在庫数" : "Available Now"}</th>
+                    <th className="px-4 py-3">{isJa ? "ステータス" : "Status"}</th>
                   </tr>
                 </thead>
                 <tbody>
                   {reviewItems.map((item) => {
-                    const tone = item.reviewStatus === "Valid"
+                    const tone = item.reviewStatus === "Valid" || item.reviewStatus === "有効"
                       ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
                       : "bg-amber-500/10 text-amber-700 dark:text-amber-300";
 
@@ -1083,22 +1098,22 @@ export default function NodaBulkRequestModal({ open, authUser, onClose, onSubmit
         {step === 3 ? (
           <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
             <div className="freya-card rounded-[8px] border border-[var(--border)] bg-[var(--surface-subtle)] p-5">
-              <h3 className="text-base font-semibold text-[var(--text-primary)]">Submission Summary</h3>
+              <h3 className="text-base font-semibold text-[var(--text-primary)]">{isJa ? "送信サマリー" : "Submission Summary"}</h3>
               <div className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
                 <div className="rounded-[24px] border border-outline-variant/15 bg-surface-container-low/35 p-4">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Pickup Date</p>
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">{isJa ? "引取日" : "Pickup Date"}</p>
                   <p className="mt-2 text-sm font-semibold text-on-surface">{draft.pickupDate}</p>
                 </div>
                 <div className="rounded-[24px] border border-outline-variant/15 bg-surface-container-low/35 p-4">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Deadline Date</p>
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">{isJa ? "納入指示日" : "Deadline Date"}</p>
                   <p className="mt-2 text-sm font-semibold text-on-surface">{draft.deadlineDate}</p>
                 </div>
                 <div className="rounded-[24px] border border-outline-variant/15 bg-surface-container-low/35 p-4">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Delivery Order</p>
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">{isJa ? "便" : "Delivery Order"}</p>
                   <p className="mt-2 text-sm font-semibold text-on-surface">{draft.deliveryOrder || "—"}</p>
                 </div>
                 <div className="rounded-[24px] border border-outline-variant/15 bg-surface-container-low/35 p-4">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Delivery Note</p>
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">{isJa ? "納品書番号" : "Delivery Note"}</p>
                   <p className="mt-2 text-sm font-semibold text-on-surface">{draft.deliveryNote || "—"}</p>
                 </div>
               </div>
@@ -1109,9 +1124,9 @@ export default function NodaBulkRequestModal({ open, authUser, onClose, onSubmit
                     <tr>
                       <th className="px-4 py-3">品番</th>
                       <th className="px-4 py-3">背番号</th>
-                      <th className="px-4 py-3">Quantity</th>
-                      <th className="px-4 py-3">Reserved</th>
-                      <th className="px-4 py-3">Shortfall</th>
+                      <th className="px-4 py-3">{isJa ? "数量" : "Quantity"}</th>
+                      <th className="px-4 py-3">{isJa ? "即時引当" : "Reserved"}</th>
+                      <th className="px-4 py-3">{isJa ? "不足分" : "Shortfall"}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1130,18 +1145,20 @@ export default function NodaBulkRequestModal({ open, authUser, onClose, onSubmit
             </div>
 
             <div className="freya-card rounded-[8px] border border-[var(--border)] bg-[var(--surface-subtle)] p-5">
-              <h3 className="text-base font-semibold text-[var(--text-primary)]">Final Check</h3>
+              <h3 className="text-base font-semibold text-[var(--text-primary)]">{isJa ? "最終確認" : "Final Check"}</h3>
               <div className="mt-4 space-y-4 text-sm text-on-surface-variant">
                 <p>
-                  The request will be created as a bulk Noda picking request. Items with shortfall remain attached to the request and will be filled when inventory becomes available.
+                  {isJa
+                    ? "このリクエストは野田出庫一括リクエストとして作成されます。在庫不足の品目もリクエストに保持され、在庫が入庫され次第引き当てられます。"
+                    : "The request will be created as a bulk Noda picking request. Items with shortfall remain attached to the request and will be filled when inventory becomes available."}
                 </p>
                 <div className="rounded-[24px] border border-outline-variant/15 bg-surface-container-low/35 p-4">
                   <div className="flex items-center justify-between gap-3">
-                    <span>Total items</span>
+                    <span>{isJa ? "合計品目数" : "Total items"}</span>
                     <strong className="text-on-surface">{draft.cart.length}</strong>
                   </div>
                   <div className="mt-3 flex items-center justify-between gap-3">
-                    <span>Shortfall lines</span>
+                    <span>{isJa ? "在庫不足行数" : "Shortfall lines"}</span>
                     <strong className="text-on-surface">{insufficientCount}</strong>
                   </div>
                 </div>

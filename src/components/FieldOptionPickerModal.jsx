@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import ModalShell from "./ModalShell";
+import { useLanguage } from "../contexts/LanguageContext";
 
 function joinClasses(...classes) {
   return classes.filter(Boolean).join(" ");
@@ -7,7 +8,7 @@ function joinClasses(...classes) {
 
 export default function FieldOptionPickerModal({
   open,
-  title = "Select Value",
+  title,
   helperText = "",
   initialQuery = "",
   currentValue = "",
@@ -15,6 +16,9 @@ export default function FieldOptionPickerModal({
   onClose,
   onSelect,
 }) {
+  const { language } = useLanguage();
+  const isJa = language === "ja";
+  const displayTitle = title || (isJa ? "値を選択" : "Select Value");
   const [query, setQuery] = useState(initialQuery);
   const [options, setOptions] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -49,7 +53,7 @@ export default function FieldOptionPickerModal({
       } catch (loadError) {
         if (cancelled) return;
         setOptions([]);
-        setError(loadError.message || "Failed to load options.");
+        setError(loadError.message || (isJa ? "選択肢の読み込みに失敗しました。" : "Failed to load options."));
       } finally {
         if (!cancelled) {
           setLoading(false);
@@ -61,7 +65,7 @@ export default function FieldOptionPickerModal({
     return () => {
       cancelled = true;
     };
-  }, [loadOptions, open]);
+  }, [loadOptions, open, isJa]);
 
   const filteredOptions = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
@@ -75,63 +79,67 @@ export default function FieldOptionPickerModal({
     <ModalShell
       open={!!open}
       onClose={onClose}
-      eyebrow="Value Picker"
-      title={title}
+      eyebrow={isJa ? "値の選択" : "Value Picker"}
+      title={displayTitle}
       subtitle={helperText || undefined}
       maxWidth="max-w-3xl"
       zIndex="z-[90]"
       overlayOpacity="45"
       closeButtonVariant="outlined"
     >
-          <div className="border-b border-outline-variant/15 px-5 py-4">
-            <input
-              type="text"
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder="Search values..."
-              className="planner-data-text h-12 w-full rounded-2xl border border-separator/40 bg-white px-4 text-on-surface outline-none transition focus:border-primary/40 dark:bg-surface-container"
-              autoFocus
-            />
-            <div className="mt-2 flex flex-wrap items-center justify-between gap-2 text-xs text-on-surface-variant">
-              <span>{loading ? "Loading..." : `${filteredOptions.length} options`}</span>
-              {currentValue ? <span>Current: {currentValue}</span> : null}
-            </div>
-          </div>
+      <div className="border-b border-outline-variant/15 px-5 py-4">
+        <input
+          type="text"
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+          placeholder={isJa ? "値を検索..." : "Search values..."}
+          className="planner-data-text h-12 w-full rounded-2xl border border-separator/40 bg-white px-4 text-on-surface outline-none transition focus:border-primary/40 dark:bg-surface-container"
+          autoFocus
+        />
+        <div className="mt-2 flex flex-wrap items-center justify-between gap-2 text-xs text-on-surface-variant">
+          <span>{loading ? (isJa ? "読み込み中..." : "Loading...") : (isJa ? `${filteredOptions.length} 件の候補` : `${filteredOptions.length} options`)}</span>
+          {currentValue ? <span>{isJa ? `現在値: ${currentValue}` : `Current: ${currentValue}`}</span> : null}
+        </div>
+      </div>
 
-          <div className="max-h-[58vh] overflow-y-auto">
-            {error ? (
-              <div className="planner-data-text px-5 py-8 text-error">{error}</div>
-            ) : loading ? (
-              <div className="planner-data-text px-5 py-8 text-on-surface-variant">Loading options...</div>
-            ) : !filteredOptions.length ? (
-              <div className="planner-data-text px-5 py-8 text-on-surface-variant">No matching values.</div>
-            ) : (
-              <div className="divide-y divide-outline-variant/10">
-                {filteredOptions.map((option) => {
-                  const active = option === currentValue;
-
-                  return (
-                    <button
-                      key={option}
-                      type="button"
-                      onClick={() => onSelect?.(option)}
-                      className={joinClasses(
-                        "planner-data-text flex w-full items-center justify-between gap-4 px-5 py-3 text-left text-on-surface transition hover:bg-primary/5",
-                        active ? "bg-primary/8" : ""
-                      )}
-                    >
-                      <span className="min-w-0 flex-1 break-words [overflow-wrap:anywhere]">{option}</span>
-                      {active ? (
-                        <span className="material-symbols-outlined text-primary" style={{ fontSize: 18 }}>
-                          check_circle
-                        </span>
-                      ) : null}
-                    </button>
-                  );
-                })}
-              </div>
-            )}
+      <div className="max-h-[58vh] overflow-y-auto">
+        {error ? (
+          <div className="planner-data-text px-5 py-8 text-error">{error}</div>
+        ) : loading ? (
+          <div className="planner-data-text px-5 py-8 text-on-surface-variant">
+            {isJa ? "選択肢を読み込み中..." : "Loading options..."}
           </div>
+        ) : !filteredOptions.length ? (
+          <div className="planner-data-text px-5 py-8 text-on-surface-variant">
+            {isJa ? "一致する値がありません。" : "No matching values."}
+          </div>
+        ) : (
+          <div className="divide-y divide-outline-variant/10">
+            {filteredOptions.map((option) => {
+              const active = option === currentValue;
+
+              return (
+                <button
+                  key={option}
+                  type="button"
+                  onClick={() => onSelect?.(option)}
+                  className={joinClasses(
+                    "planner-data-text flex w-full items-center justify-between gap-4 px-5 py-3 text-left text-on-surface transition hover:bg-primary/5",
+                    active ? "bg-primary/8" : ""
+                  )}
+                >
+                  <span className="min-w-0 flex-1 break-words [overflow-wrap:anywhere]">{option}</span>
+                  {active ? (
+                    <span className="material-symbols-outlined text-primary" style={{ fontSize: 18 }}>
+                      check_circle
+                    </span>
+                  ) : null}
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </div>
     </ModalShell>
   );
 }

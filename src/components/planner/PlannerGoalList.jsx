@@ -5,14 +5,19 @@ import {
   groupGoalsByDate,
   sortGoals,
 } from "../../utils/planner";
+import { useLanguage } from "../../contexts/LanguageContext";
 
 function GoalRow({ goal, currentDate, scheduledProducts, products, productColors, onDeleteGoal, onScheduleGoal }) {
+  const { language } = useLanguage();
+  const isJa = language === "ja";
+
   const goalState = getPlannerGoalState(goal);
   const assignedEquipment = getAssignedEquipmentForGoal(goal, scheduledProducts);
   const capacity = calculateBoxesNeeded(goal, goal.targetQuantity, products);
   const scheduledBoxes = calculateBoxesNeeded(goal, goal.scheduledQuantity, products);
   const targetBoxes = capacity;
   const schedulable = goal.date === currentDate && Number(goal.remainingQuantity || 0) > 0;
+  const stateLabel = isJa ? (goalState.labelJa || goalState.label) : goalState.label;
 
   return (
     <article className="freya-card rounded-[8px] border border-[var(--border)] bg-[var(--surface)] p-3 shadow-sm hover:border-slate-300 dark:hover:border-slate-700 transition-colors">
@@ -21,7 +26,7 @@ function GoalRow({ goal, currentDate, scheduledProducts, products, productColors
           <span className={`h-2 w-2 rounded-full ${goalState.dotClassName}`} />
           <div>
             <div className="font-semibold text-[var(--text-primary)] font-mono">{goal.背番号 || "-"}</div>
-            <div className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">{goalState.label}</div>
+            <div className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">{stateLabel}</div>
           </div>
         </div>
 
@@ -29,20 +34,20 @@ function GoalRow({ goal, currentDate, scheduledProducts, products, productColors
           <div className="font-medium text-[var(--text-primary)] font-mono">{goal.品番 || "-"}</div>
           <div className="mt-0.5 inline-flex items-center gap-1.5 rounded-[4px] border border-[var(--border)] bg-[var(--surface-subtle)] px-2 py-0.5 text-[10px] font-medium text-[var(--text-secondary)]">
             <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: productColors[goal.背番号] }} />
-            {goal.date === currentDate ? "Today" : goal.date}
+            {goal.date === currentDate ? (isJa ? "本日" : "Today") : goal.date}
           </div>
         </div>
 
         <div>
-          <div className="truncate font-medium text-[var(--text-primary)]">{goal.品名 || "Unnamed product"}</div>
+          <div className="truncate font-medium text-[var(--text-primary)]">{goal.品名 || (isJa ? "品名未設定" : "Unnamed product")}</div>
           <div className="mt-0.5 text-[11px] text-[var(--text-muted)]">
-            Remaining: <span className="font-mono freya-tabular font-semibold text-[var(--text-secondary)]">{Number(goal.remainingQuantity || 0)}</span> pcs
+            {isJa ? "残数量:" : "Remaining:"} <span className="font-mono freya-tabular font-semibold text-[var(--text-secondary)]">{Number(goal.remainingQuantity || 0)}</span> {isJa ? "個" : "pcs"}
           </div>
         </div>
 
         <div>
           <div className="mb-1 flex items-center justify-between gap-2 text-xs">
-            <span className="text-[var(--text-secondary)] font-mono freya-tabular">{Number(goal.scheduledQuantity || 0)} / {Number(goal.targetQuantity || 0)} pcs</span>
+            <span className="text-[var(--text-secondary)] font-mono freya-tabular">{Number(goal.scheduledQuantity || 0)} / {Number(goal.targetQuantity || 0)} {isJa ? "個" : "pcs"}</span>
             <span className={`font-mono font-semibold ${goalState.textClassName}`}>{goalState.percentage}%</span>
           </div>
           <div className="h-1.5 rounded-full bg-[var(--surface-subtle)] overflow-hidden">
@@ -51,20 +56,26 @@ function GoalRow({ goal, currentDate, scheduledProducts, products, productColors
         </div>
 
         <div>
-          <div className="text-[10px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">Assigned</div>
+          <div className="text-[10px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">
+            {isJa ? "割当設備" : "Assigned"}
+          </div>
           <div className="mt-0.5 font-semibold text-[var(--freya-blue)]">
-            {assignedEquipment.length ? assignedEquipment.join(", ") : "Not scheduled"}
+            {assignedEquipment.length ? assignedEquipment.join(", ") : (isJa ? "未計画" : "Not scheduled")}
           </div>
         </div>
 
         <div className="text-[var(--text-primary)] xl:text-right">
           <div className="font-semibold font-mono freya-tabular">{scheduledBoxes}/{targetBoxes}</div>
-          <div className="text-[10px] uppercase tracking-[0.04em] text-[var(--text-muted)]">Boxes</div>
+          <div className="text-[10px] uppercase tracking-[0.04em] text-[var(--text-muted)]">
+            {isJa ? "箱数" : "Boxes"}
+          </div>
         </div>
 
         <div className="text-[var(--text-primary)] xl:text-right">
-          <div className={`font-semibold text-xs ${goalState.textClassName}`}>{goalState.label}</div>
-          <div className="text-[10px] uppercase tracking-[0.04em] text-[var(--text-muted)]">State</div>
+          <div className={`font-semibold text-xs ${goalState.textClassName}`}>{stateLabel}</div>
+          <div className="text-[10px] uppercase tracking-[0.04em] text-[var(--text-muted)]">
+            {isJa ? "状態" : "State"}
+          </div>
         </div>
 
         <div className="flex items-center justify-end gap-1.5">
@@ -74,14 +85,14 @@ function GoalRow({ goal, currentDate, scheduledProducts, products, productColors
             disabled={!schedulable}
             className="rounded-[6px] bg-[var(--freya-blue)] px-2.5 py-1 text-xs font-semibold text-white hover:bg-[var(--freya-blue-hover)] disabled:cursor-not-allowed disabled:opacity-40 transition-colors shadow-none"
           >
-            Plan
+            {isJa ? "計画" : "Plan"}
           </button>
           <button
             type="button"
             onClick={() => onDeleteGoal(goal)}
             className="rounded-[6px] border border-red-500/20 bg-red-500/10 px-2.5 py-1 text-xs font-semibold text-red-600 dark:text-red-400 hover:bg-red-500/20 transition-colors shadow-none"
           >
-            Delete
+            {isJa ? "削除" : "Delete"}
           </button>
         </div>
       </div>
@@ -98,6 +109,9 @@ export default function PlannerGoalList({
   onDeleteGoal,
   onScheduleGoal,
 }) {
+  const { language } = useLanguage();
+  const isJa = language === "ja";
+
   const sortedGoals = sortGoals(goals);
   const goalsByDate = groupGoalsByDate(sortedGoals);
   const dateGroups = Object.keys(goalsByDate).sort((left, right) => left.localeCompare(right));
@@ -106,8 +120,12 @@ export default function PlannerGoalList({
     return (
       <div className="freya-card rounded-[8px] border border-dashed border-[var(--border)] bg-[var(--surface)] px-6 py-12 text-center text-[var(--text-muted)]">
         <span className="material-symbols-outlined text-3xl text-[var(--freya-blue)] mb-2">target</span>
-        <p className="text-base font-semibold text-[var(--text-primary)]">No goals loaded</p>
-        <p className="mt-1 text-xs text-[var(--text-secondary)]">Upload a CSV or add goals manually to start planning production.</p>
+        <p className="text-base font-semibold text-[var(--text-primary)]">
+          {isJa ? "目標が読み込まれていません" : "No goals loaded"}
+        </p>
+        <p className="mt-1 text-xs text-[var(--text-secondary)]">
+          {isJa ? "CSVをアップロードするか手動入力で生産目標を追加してください。" : "Upload a CSV or add goals manually to start planning production."}
+        </p>
       </div>
     );
   }
@@ -119,7 +137,9 @@ export default function PlannerGoalList({
           <div className="mb-2 flex items-center justify-between gap-3">
             <div className="text-xs font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">{date}</div>
             {date === currentDate ? (
-              <span className="rounded-[4px] border border-[var(--freya-blue)]/30 bg-[var(--freya-blue)]/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-[var(--freya-blue)]">Today</span>
+              <span className="rounded-[4px] border border-[var(--freya-blue)]/30 bg-[var(--freya-blue)]/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-[var(--freya-blue)]">
+                {isJa ? "本日" : "Today"}
+              </span>
             ) : null}
           </div>
           <div className="space-y-2">

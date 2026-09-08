@@ -1,10 +1,14 @@
 import { getEquipmentUtilization, sortScheduledProducts } from "../../utils/planner";
+import { useLanguage } from "../../contexts/LanguageContext";
 
 export default function PlannerKanbanView({ equipment = [], scheduledProducts = [], breaks = [], onMoveItem, onRemoveItem }) {
+  const { language } = useLanguage();
+  const isJa = language === "ja";
+
   if (!equipment.length) {
     return (
       <div className="rounded-[8px] border border-dashed border-[var(--border)] bg-[var(--surface-subtle)] px-6 py-14 text-center text-xs text-[var(--text-muted)]">
-        Choose a factory to open the equipment board.
+        {isJa ? "工場を選択して設備カンバンを開いてください。" : "Choose a factory to open the equipment board."}
       </div>
     );
   }
@@ -23,7 +27,9 @@ export default function PlannerKanbanView({ equipment = [], scheduledProducts = 
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <h3 className="text-xs font-semibold text-[var(--text-primary)]">{equipmentName}</h3>
-                  <p className="mt-0.5 text-xs text-[var(--text-muted)]">{items.length} scheduled item{items.length === 1 ? "" : "s"}</p>
+                  <p className="mt-0.5 text-xs text-[var(--text-muted)]">
+                    {isJa ? `${items.length}件の計画` : `${items.length} scheduled item${items.length === 1 ? "" : "s"}`}
+                  </p>
                 </div>
                 <span className={`rounded-[6px] border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.04em] ${utilization.utilization > 100 ? "border-[var(--status-danger)]/30 bg-[var(--status-danger)]/10 text-[var(--status-danger)]" : "border-[var(--freya-blue)]/30 bg-[var(--freya-blue)]/10 text-[var(--freya-blue)]"}`}>
                   {utilization.formattedTime}
@@ -32,7 +38,9 @@ export default function PlannerKanbanView({ equipment = [], scheduledProducts = 
               <div className="mt-2.5 h-1.5 overflow-hidden rounded-full bg-[var(--surface-subtle)]">
                 <div className={`h-full rounded-full ${utilization.utilization > 100 ? "bg-[var(--status-danger)]" : "bg-[var(--freya-blue)]"}`} style={{ width: `${Math.min(utilization.utilization, 100)}%` }} />
               </div>
-              <div className="mt-1 text-[10px] text-[var(--text-muted)]">{utilization.utilization}% utilization</div>
+              <div className="mt-1 text-[10px] text-[var(--text-muted)]">
+                {isJa ? `稼働率 ${utilization.utilization}%` : `${utilization.utilization}% utilization`}
+              </div>
             </div>
 
             <div
@@ -46,7 +54,7 @@ export default function PlannerKanbanView({ equipment = [], scheduledProducts = 
             >
               {!items.length ? (
                 <div className="rounded-[6px] border border-dashed border-[var(--border)] bg-[var(--surface-subtle)] px-4 py-10 text-center text-xs text-[var(--text-muted)]">
-                  Drop products here.
+                  {isJa ? "ここに製品をドラッグ＆ドロップ" : "Drop products here."}
                 </div>
               ) : items.map((item) => (
                 <article
@@ -70,7 +78,7 @@ export default function PlannerKanbanView({ equipment = [], scheduledProducts = 
                       type="button"
                       onClick={() => onRemoveItem(item)}
                       className="flex h-6 w-6 items-center justify-center rounded-[4px] border border-[var(--border)] bg-[var(--surface)] text-[var(--text-muted)] hover:text-[var(--status-danger)] hover:bg-[var(--status-danger)]/10 transition-colors"
-                      aria-label={`Remove ${item.背番号}`}
+                      aria-label={isJa ? `${item.背番号}を削除` : `Remove ${item.背番号}`}
                     >
                       <span className="material-symbols-outlined" style={{ fontSize: 14 }}>delete</span>
                     </button>
@@ -79,11 +87,11 @@ export default function PlannerKanbanView({ equipment = [], scheduledProducts = 
                   <div className="mt-2.5 grid grid-cols-3 gap-1.5 text-xs text-[var(--text-muted)]">
                     <div className="rounded-[4px] border border-[var(--border)] bg-[var(--surface)] px-2 py-1.5 text-center">
                       <div className="font-semibold text-xs text-[var(--text-primary)]">{item.quantity}</div>
-                      <div className="text-[10px]">pcs</div>
+                      <div className="text-[10px]">{isJa ? "個" : "pcs"}</div>
                     </div>
                     <div className="rounded-[4px] border border-[var(--border)] bg-[var(--surface)] px-2 py-1.5 text-center">
                       <div className="font-semibold text-xs text-[var(--text-primary)]">{item.boxes}</div>
-                      <div className="text-[10px]">boxes</div>
+                      <div className="text-[10px]">{isJa ? "箱" : "boxes"}</div>
                     </div>
                     <div className="rounded-[4px] border border-[var(--border)] bg-[var(--surface)] px-2 py-1.5 text-center">
                       <div className="font-semibold text-xs text-[var(--text-primary)]">{item.startTime}</div>

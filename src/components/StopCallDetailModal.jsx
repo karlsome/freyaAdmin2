@@ -32,7 +32,8 @@ function RoleBadge({ role }) {
 }
 
 export default function StopCallDetailModal({ open, onClose, record, stopCallEntry, allStopCalls }) {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
+  const isJa = language === "ja";
 
   if (!open || !record) return null;
 
@@ -92,7 +93,7 @@ export default function StopCallDetailModal({ open, onClose, record, stopCallEnt
         <div className="rounded-[8px] border border-[var(--border)] bg-[var(--surface-subtle)] p-4">
           <div className="mb-2.5 flex items-center gap-2">
             <span className="material-symbols-outlined text-[var(--freya-blue)]" style={{ fontSize: 18 }}>precision_manufacturing</span>
-            <h4 className="text-xs font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">設備情報</h4>
+            <h4 className="text-xs font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">{isJa ? "設備情報" : "Equipment Info"}</h4>
           </div>
           <div>
             <InfoRow label="設備" value={record["設備"]} />
@@ -131,7 +132,7 @@ export default function StopCallDetailModal({ open, onClose, record, stopCallEnt
               className="w-full py-2 rounded-[6px] bg-[var(--freya-blue)] text-white text-xs font-semibold hover:bg-[var(--freya-blue-hover)] shadow-xs transition-colors flex items-center justify-center gap-1.5"
             >
               <span className="material-symbols-outlined" style={{ fontSize: 16 }}>open_in_new</span>
-              View in Factory Overview
+              {isJa ? "工場概要で表示" : "View in Factory Overview"}
             </button>
           </div>
         </div>

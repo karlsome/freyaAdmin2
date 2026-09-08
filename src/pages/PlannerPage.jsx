@@ -57,16 +57,17 @@ import {
   timeToMinutes,
 } from "../utils/planner";
 import { openPlannerCalendarWindow, openPlannerPrintWindow } from "../utils/plannerExports";
+import { useLanguage } from "../contexts/LanguageContext";
 
 const MAIN_TABS = [
-  { key: "goals", label: "Production Goals", icon: "flag" },
-  { key: "planning", label: "Planning", icon: "event_note" },
+  { key: "goals", label: "Production Goals", labelJa: "生産目標", icon: "flag" },
+  { key: "planning", label: "Planning", labelJa: "計画立案", icon: "event_note" },
 ];
 
 const VIEW_TABS = [
-  { key: "timeline", label: "Timeline" },
-  { key: "kanban", label: "Kanban" },
-  { key: "table", label: "Table" },
+  { key: "timeline", label: "Timeline", labelJa: "タイムライン" },
+  { key: "kanban", label: "Kanban", labelJa: "カンバン" },
+  { key: "table", label: "Table", labelJa: "テーブル" },
 ];
 
 const SMART_SCHEDULING_GRACE_MINUTES = 30;
@@ -140,6 +141,8 @@ function filterGoals(goals, searchValue) {
 }
 
 export default function PlannerPage() {
+  const { language } = useLanguage();
+  const isJa = language === "ja";
   const authUser = getAuthUser();
   const requestIdRef = useRef(0);
   const [factories, setFactories] = useState([]);
@@ -829,16 +832,20 @@ export default function PlannerPage() {
       }
 
       if (!scheduleOperations.length) {
-        showFlash("No products could be scheduled automatically with the current time limit.", "warning");
+        showFlash(isJa ? "現在の制限時間では製品を自動配置できませんでした。" : "No products could be scheduled automatically with the current time limit.", "warning");
         return;
       }
 
       await Promise.all(scheduleOperations);
       await persistPlan(workingProducts, breaks);
       setSmartPreviewOpen(false);
-      await refreshAfterMutation(`Smart scheduling placed ${scheduledCount} goal${scheduledCount === 1 ? "" : "s"}${skippedCount ? `, ${skippedCount} skipped` : ""}.`);
+      await refreshAfterMutation(
+        isJa
+          ? `スマート計画により ${scheduledCount} 件の目標を配置しました${skippedCount ? ` (${skippedCount} 件スキップ)` : ""}。`
+          : `Smart scheduling placed ${scheduledCount} goal${scheduledCount === 1 ? "" : "s"}${skippedCount ? `, ${skippedCount} skipped` : ""}.`
+      );
     } catch (error) {
-      showFlash(error.message || "Failed to apply smart scheduling.", "error");
+      showFlash(error.message || (isJa ? "スマート計画の適用に失敗しました。" : "Failed to apply smart scheduling."), "error");
     } finally {
       setSmartApplying(false);
     }
@@ -846,7 +853,7 @@ export default function PlannerPage() {
 
   function handleOpenCalendar() {
     if (!scheduledProducts.length) {
-      showFlash("No products scheduled for this date.", "warning");
+      showFlash(isJa ? "この日付には計画された製品がありません。" : "No products scheduled for this date.", "warning");
       return;
     }
 
@@ -858,18 +865,18 @@ export default function PlannerPage() {
         breaks,
       });
     } catch (error) {
-      showFlash(error.message || "Failed to open calendar view.", "error");
+      showFlash(error.message || (isJa ? "カレンダー表示を開けませんでした。" : "Failed to open calendar view."), "error");
     }
   }
 
   function handlePrintSelectedEquipment(selectedEquipment) {
     if (!scheduledProducts.length) {
-      showFlash("No products scheduled for this date.", "warning");
+      showFlash(isJa ? "この日付には計画された製品がありません。" : "No products scheduled for this date.", "warning");
       return;
     }
 
     if (!selectedEquipment.length) {
-      showFlash("Select at least one equipment to print.", "warning");
+      showFlash(isJa ? "印刷する設備を1つ以上選択してください。" : "Select at least one equipment to print.", "warning");
       return;
     }
 
@@ -884,7 +891,7 @@ export default function PlannerPage() {
         breaks,
       });
     } catch (error) {
-      showFlash(error.message || "Failed to open print preview.", "error");
+      showFlash(error.message || (isJa ? "印刷プレビューを開けませんでした。" : "Failed to open print preview."), "error");
     }
   }
 
@@ -892,9 +899,9 @@ export default function PlannerPage() {
     <div className="w-full h-screen overflow-y-auto space-y-6 pt-20 px-4 sm:px-6 md:px-8 pb-16">
       <FlashBanner flash={flash} onClose={() => setFlash(null)} />
       <PageHeader
-        eyebrow="Operations"
-        title="Production Planning"
-        subtitle="Goal-based production planning migrated from the original Freya Admin workflow."
+        eyebrow={isJa ? "業務運用" : "Operations"}
+        title={isJa ? "生産計画" : "Production Planning"}
+        subtitle={isJa ? "従来のFreya Adminワークフローを継承した目標ベースの生産計画機能。" : "Goal-based production planning migrated from the original Freya Admin workflow."}
         className="sm:flex-row sm:items-end sm:justify-between"
         actionsClassName="gap-2"
         actions={(
@@ -905,7 +912,7 @@ export default function PlannerPage() {
               className="flex items-center gap-1.5 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-hover)] transition-colors shadow-none"
             >
               <span className="material-symbols-outlined" style={{ fontSize: 15 }}>schedule</span>
-              Break Times
+              {isJa ? "休憩時間" : "Break Times"}
             </button>
             <button
               type="button"
@@ -914,7 +921,7 @@ export default function PlannerPage() {
               className="flex items-center gap-1.5 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-hover)] disabled:cursor-not-allowed disabled:opacity-50 transition-colors shadow-none"
             >
               <span className={`material-symbols-outlined ${dataLoading ? "animate-spin" : ""}`} style={{ fontSize: 15 }}>refresh</span>
-              Refresh
+              {isJa ? "更新" : "Refresh"}
             </button>
           </>
         )}
@@ -952,7 +959,7 @@ export default function PlannerPage() {
             onCsvSelected={handleCsvSelected}
             onOpenManualGoal={() => {
               if (!factoryName) {
-                showFlash("Select a factory before adding goals.", "warning");
+                showFlash(isJa ? "目標を追加する前に工場を選択してください。" : "Select a factory before adding goals.", "warning");
                 return;
               }
               setManualGoalOpen(true);
@@ -983,7 +990,7 @@ export default function PlannerPage() {
                   className="flex items-center gap-1.5 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-hover)] disabled:cursor-not-allowed disabled:opacity-40 transition-colors shadow-none"
                 >
                   <span className="material-symbols-outlined" style={{ fontSize: 15 }}>calendar_month</span>
-                  Calendar View
+                  {isJa ? "カレンダー表示" : "Calendar View"}
                 </button>
                 <button
                   type="button"
@@ -992,7 +999,7 @@ export default function PlannerPage() {
                   className="flex items-center gap-1.5 rounded-[6px] bg-[var(--freya-blue)] px-3 py-1.5 text-xs font-semibold text-white hover:bg-[var(--freya-blue-hover)] disabled:cursor-not-allowed disabled:opacity-40 transition-colors shadow-none"
                 >
                   <span className="material-symbols-outlined" style={{ fontSize: 15 }}>print</span>
-                  Print
+                  {isJa ? "印刷" : "Print"}
                 </button>
               </div>
             </div>
@@ -1008,7 +1015,7 @@ export default function PlannerPage() {
                 onToggleHideUnavailable={() => setHideUnavailableEquipment((value) => !value)}
                 onSlotSelect={(equipmentName, startTime) => {
                   if (!factoryName) {
-                    showFlash("Select a factory before scheduling products.", "warning");
+                    showFlash(isJa ? "製品を計画する前に工場を選択してください。" : "Select a factory before scheduling products.", "warning");
                     return;
                   }
                   setSlotModalState({ open: true, equipment: equipmentName, startTime });

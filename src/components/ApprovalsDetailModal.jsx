@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import { fetchApprovalMasterReference } from "../services/approvalsApi";
 import IconButton from "./IconButton";
 import SensorDevicePhotoPreviewModal from "./SensorDevicePhotoPreviewModal";
+import { useLanguage } from "../contexts/LanguageContext";
 
 const PhotoPreviewContext = createContext(() => {});
 import {
@@ -134,6 +135,8 @@ function PrimitiveFieldValue({ value, align = "right" }) {
 }
 
 function StructuredValueCard({ value, depth = 0 }) {
+  const { language } = useLanguage();
+  const isJa = language === "ja";
   const normalizedValue = parseStructuredValue(value);
 
   if (!isStructuredValue(normalizedValue)) {
@@ -146,7 +149,7 @@ function StructuredValueCard({ value, depth = 0 }) {
     if (items.length === 0) {
       return (
         <div className="rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] px-3 py-1.5 text-[11px] font-mono text-[var(--text-muted)]">
-          Empty array
+          {isJa ? "空の配列" : "Empty array"}
         </div>
       );
     }
@@ -154,9 +157,11 @@ function StructuredValueCard({ value, depth = 0 }) {
     return (
       <div className="space-y-2 rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)]/50 p-2.5">
         <div className="flex items-center justify-between gap-2">
-          <span className="text-[10px] font-mono font-semibold uppercase tracking-wider text-[var(--text-muted)]">Array</span>
+          <span className="text-[10px] font-mono font-semibold uppercase tracking-wider text-[var(--text-muted)]">
+            {isJa ? "配列" : "Array"}
+          </span>
           <span className="rounded-[4px] bg-[var(--surface)] border border-[var(--border)] px-2 py-0.5 text-[10px] font-mono font-semibold text-[var(--text-secondary)]">
-            {items.length} item{items.length === 1 ? "" : "s"}
+            {isJa ? `${items.length} 件` : `${items.length} item${items.length === 1 ? "" : "s"}`}
           </span>
         </div>
         <div className="space-y-1.5">
@@ -169,14 +174,14 @@ function StructuredValueCard({ value, depth = 0 }) {
                 {nestedStructured ? (
                   <div className="space-y-2">
                     <span className="block text-[10px] font-mono font-semibold uppercase tracking-wider text-[var(--text-muted)]">
-                      Item {index + 1}
+                      {isJa ? `項目 ${index + 1}` : `Item ${index + 1}`}
                     </span>
                     <StructuredValueCard value={nestedValue} depth={depth + 1} />
                   </div>
                 ) : (
                   <div className="flex items-start justify-between gap-3">
                     <span className="text-[10px] font-mono font-semibold uppercase tracking-wider text-[var(--text-muted)]">
-                      Item {index + 1}
+                      {isJa ? `項目 ${index + 1}` : `Item ${index + 1}`}
                     </span>
                     <div className="min-w-0 flex-1">
                       <PrimitiveFieldValue value={nestedValue} align="right" />
@@ -196,7 +201,7 @@ function StructuredValueCard({ value, depth = 0 }) {
   if (objectEntries.length === 0) {
     return (
       <div className="rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] px-3 py-1.5 text-[11px] font-mono text-[var(--text-muted)]">
-        Empty object
+        {isJa ? "空のオブジェクト" : "Empty object"}
       </div>
     );
   }
@@ -204,9 +209,11 @@ function StructuredValueCard({ value, depth = 0 }) {
   return (
     <div className="space-y-2 rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)]/50 p-2.5">
       <div className="flex items-center justify-between gap-2">
-        <span className="text-[10px] font-mono font-semibold uppercase tracking-wider text-[var(--text-muted)]">Object</span>
+        <span className="text-[10px] font-mono font-semibold uppercase tracking-wider text-[var(--text-muted)]">
+          {isJa ? "オブジェクト" : "Object"}
+        </span>
         <span className="rounded-[4px] bg-[var(--surface)] border border-[var(--border)] px-2 py-0.5 text-[10px] font-mono font-semibold text-[var(--text-secondary)]">
-          {objectEntries.length} field{objectEntries.length === 1 ? "" : "s"}
+          {isJa ? `${objectEntries.length} 項目` : `${objectEntries.length} field${objectEntries.length === 1 ? "" : "s"}`}
         </span>
       </div>
       <div className="space-y-1.5">
@@ -257,6 +264,8 @@ export default function ApprovalsDetailModal({
   onRestore,
   onPermanentDelete,
 }) {
+  const { language } = useLanguage();
+  const isJa = language === "ja";
   const modalRef = useRef(null);
   const sourceRecord = mode === "recycle" ? record?.originalDoc || {} : record || {};
   const [masterImageUrl, setMasterImageUrl] = useState("");
@@ -324,7 +333,7 @@ export default function ApprovalsDetailModal({
 
   if (!open || !record) return null;
 
-  const statusMeta = getApprovalStatusMeta(sourceRecord);
+  const statusMeta = getApprovalStatusMeta(sourceRecord, isJa);
   const quantity = getApprovalQuantityValue(sourceRecord, tabKey);
   const ngCount = getApprovalNGValue(sourceRecord, tabKey);
   const defectRate = getApprovalDefectRate(sourceRecord, tabKey);
@@ -349,9 +358,13 @@ export default function ApprovalsDetailModal({
           <div className="border-b border-[var(--border)] bg-[var(--surface-subtle)] px-6 py-4">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
               <div>
-                <div className="text-[10px] font-mono font-semibold uppercase tracking-[0.18em] text-[var(--text-muted)]">Approval Record</div>
+                <div className="text-[10px] font-mono font-semibold uppercase tracking-[0.18em] text-[var(--text-muted)]">
+                  {isJa ? "承認レコード詳細" : "Approval Record"}
+                </div>
                 <h2 className="mt-1 break-words text-lg font-bold text-[var(--text-primary)] font-mono [overflow-wrap:anywhere]">{title}</h2>
-                <p className="mt-1 break-words text-xs text-[var(--text-muted)] [overflow-wrap:anywhere]">{subtitle || "Approval workflow details"}</p>
+                <p className="mt-1 break-words text-xs text-[var(--text-muted)] [overflow-wrap:anywhere]">
+                  {subtitle || (isJa ? "承認ワークフロー詳細" : "Approval workflow details")}
+                </p>
               </div>
 
               <div className="flex items-center gap-3">
@@ -376,10 +389,10 @@ export default function ApprovalsDetailModal({
             <div className="min-h-0 overflow-y-auto px-6 py-5 space-y-4">
               <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
                 {[
-                  { label: "Quantity", value: quantity.toLocaleString(), tone: "text-[var(--text-primary)]" },
+                  { label: isJa ? "数量" : "Quantity", value: quantity.toLocaleString(), tone: "text-[var(--text-primary)]" },
                   { label: "NG", value: ngCount.toLocaleString(), tone: ngCount > 0 ? "text-[var(--status-danger)]" : "text-[var(--text-primary)]" },
                   {
-                    label: "Defect Rate",
+                    label: isJa ? "不良率" : "Defect Rate",
                     value: `${defectRate.toFixed(2)}%`,
                     tone: defectRate > 0 ? "text-[var(--status-danger)]" : "text-emerald-600 dark:text-emerald-400",
                   },
@@ -398,9 +411,13 @@ export default function ApprovalsDetailModal({
                       <div className="flex items-start gap-3">
                         <span className="material-symbols-outlined" style={{ fontSize: 24 }}>error</span>
                         <div>
-                          <div className="text-xs font-bold uppercase tracking-wider">Date Error Detected</div>
+                          <div className="text-xs font-bold uppercase tracking-wider">
+                            {isJa ? "日付の不一致を検出" : "Date Error Detected"}
+                          </div>
                           <p className="mt-1 text-xs font-mono font-semibold">
-                            Input date: {sourceRecord?.Date || "—"} - Actual submission: {mismatch.objectIdDate || "—"}
+                            {isJa
+                              ? `入力日: ${sourceRecord?.Date || "—"} - 実際の提出日: ${mismatch.objectIdDate || "—"}`
+                              : `Input date: ${sourceRecord?.Date || "—"} - Actual submission: ${mismatch.objectIdDate || "—"}`}
                           </p>
                         </div>
                       </div>
@@ -412,9 +429,13 @@ export default function ApprovalsDetailModal({
                       <div className="flex items-start gap-3">
                         <span className="material-symbols-outlined" style={{ fontSize: 24 }}>schedule</span>
                         <div>
-                          <div className="text-xs font-bold uppercase tracking-wider">Time Drift Detected</div>
+                          <div className="text-xs font-bold uppercase tracking-wider">
+                            {isJa ? "時間の乖離を検出" : "Time Drift Detected"}
+                          </div>
                           <p className="mt-1 text-xs font-mono font-semibold text-[var(--text-primary)]">
-                            End time: {sourceRecord?.Time_end || "—"} - Actual submission: {mismatch.objectIdTime || "—"}
+                            {isJa
+                              ? `終了時間: ${sourceRecord?.Time_end || "—"} - 実際の提出時間: ${mismatch.objectIdTime || "—"}`
+                              : `End time: ${sourceRecord?.Time_end || "—"} - Actual submission: ${mismatch.objectIdTime || "—"}`}
                           </p>
                         </div>
                       </div>
@@ -425,26 +446,26 @@ export default function ApprovalsDetailModal({
 
               <div className="grid grid-cols-1 gap-2.5 md:grid-cols-2 xl:grid-cols-4">
                 {[
-                  { label: "Factory", value: sourceRecord?.工場 },
-                  { label: "Worker", value: sourceRecord?.Worker_Name },
+                  { label: isJa ? "工場" : "Factory", value: sourceRecord?.工場 },
+                  { label: isJa ? "作業者" : "Worker", value: sourceRecord?.Worker_Name },
                   {
-                    label: "Date",
+                    label: isJa ? "日付" : "Date",
                     value: sourceRecord?.Date,
                     tone: mismatch.dateMismatch ? "text-error" : "text-[var(--text-primary)]",
                     icon: mismatch.dateMismatch ? "warning" : "",
-                    iconTitle: mismatch.dateMismatch ? `Actual submission date: ${mismatch.objectIdDate || "unknown"}` : "",
+                    iconTitle: mismatch.dateMismatch ? (isJa ? `実際の提出日: ${mismatch.objectIdDate || "不明"}` : `Actual submission date: ${mismatch.objectIdDate || "unknown"}`) : "",
                   },
                   {
-                    label: "Time",
+                    label: isJa ? "時間" : "Time",
                     value: [sourceRecord?.Time_start, sourceRecord?.Time_end].filter(Boolean).join(" - ") || "—",
                     tone: mismatch.timeMismatch ? "text-amber-700 dark:text-amber-300" : "text-[var(--text-primary)]",
                     icon: mismatch.timeMismatch ? "schedule" : "",
-                    iconTitle: mismatch.timeMismatch ? `Actual submission time: ${mismatch.objectIdTime || "unknown"}` : "",
+                    iconTitle: mismatch.timeMismatch ? (isJa ? `実際の提出時間: ${mismatch.objectIdTime || "不明"}` : `Actual submission time: ${mismatch.objectIdTime || "unknown"}`) : "",
                   },
-                  { label: "Part No.", value: sourceRecord?.品番 },
-                  { label: "Serial No.", value: sourceRecord?.背番号 },
-                  { label: "Equipment", value: sourceRecord?.設備 },
-                  { label: "Approver", value: latestApprover || "—" },
+                  { label: isJa ? "品番" : "Part No.", value: sourceRecord?.品番 },
+                  { label: isJa ? "背番号" : "Serial No.", value: sourceRecord?.背番号 },
+                  { label: isJa ? "設備" : "Equipment", value: sourceRecord?.設備 },
+                  { label: isJa ? "承認者" : "Approver", value: latestApprover || "—" },
                 ].map((item) => (
                   <div key={item.label} className="rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] px-3 py-2">
                     <div className="text-[10px] font-mono font-semibold uppercase tracking-wider text-[var(--text-muted)]">{item.label}</div>
@@ -464,14 +485,18 @@ export default function ApprovalsDetailModal({
                 <div className="grid gap-3 md:grid-cols-2">
                   {sourceRecord?.correctionComment ? (
                     <div className="rounded-[8px] border border-amber-500/30 bg-amber-500/10 px-3.5 py-3">
-                      <div className="text-[10px] font-mono font-bold uppercase tracking-[0.18em] text-amber-700 dark:text-amber-300">Correction Note</div>
+                      <div className="text-[10px] font-mono font-bold uppercase tracking-[0.18em] text-amber-700 dark:text-amber-300">
+                        {isJa ? "修正依頼コメント" : "Correction Note"}
+                      </div>
                       <p className="mt-1 whitespace-pre-wrap text-xs font-medium text-[var(--text-primary)]">{sourceRecord.correctionComment}</p>
                     </div>
                   ) : null}
 
                   {sourceRecord?.deleteRequestReason ? (
                     <div className="rounded-[8px] border border-error/30 bg-error/10 px-3.5 py-3">
-                      <div className="text-[10px] font-mono font-bold uppercase tracking-[0.18em] text-error">Delete Reason</div>
+                      <div className="text-[10px] font-mono font-bold uppercase tracking-[0.18em] text-error">
+                        {isJa ? "削除理由" : "Delete Reason"}
+                      </div>
                       <p className="mt-1 whitespace-pre-wrap text-xs font-medium text-[var(--text-primary)]">{sourceRecord.deleteRequestReason}</p>
                     </div>
                   ) : null}
@@ -481,8 +506,12 @@ export default function ApprovalsDetailModal({
               <div className="rounded-[8px] border border-[var(--border)] bg-[var(--surface)] p-4 shadow-2xs">
                 <div className="mb-2.5 flex items-center justify-between gap-4">
                   <div>
-                    <div className="text-[10px] font-mono font-semibold uppercase tracking-[0.18em] text-[var(--text-muted)]">Quality Details</div>
-                    <h3 className="mt-0.5 text-sm font-bold text-[var(--text-primary)]">Counter Breakdown</h3>
+                    <div className="text-[10px] font-mono font-semibold uppercase tracking-[0.18em] text-[var(--text-muted)]">
+                      {isJa ? "品質詳細" : "Quality Details"}
+                    </div>
+                    <h3 className="mt-0.5 text-sm font-bold text-[var(--text-primary)]">
+                      {isJa ? "不良内訳カウンター" : "Counter Breakdown"}
+                    </h3>
                   </div>
                 </div>
 
@@ -497,13 +526,15 @@ export default function ApprovalsDetailModal({
                   </div>
                 ) : (
                   <div className="rounded-[6px] border border-emerald-500/20 bg-emerald-500/10 px-3.5 py-2.5 text-xs font-semibold text-emerald-700 dark:text-emerald-300">
-                    No recorded NG details for this record.
+                    {isJa ? "このレコードの不良内訳データはありません。" : "No recorded NG details for this record."}
                   </div>
                 )}
               </div>
 
               <div className="rounded-[8px] border border-[var(--border)] bg-[var(--surface)] p-4 shadow-2xs">
-                <div className="text-[10px] font-mono font-semibold uppercase tracking-[0.18em] text-[var(--text-muted)]">All Fields</div>
+                <div className="text-[10px] font-mono font-semibold uppercase tracking-[0.18em] text-[var(--text-muted)]">
+                  {isJa ? "全項目データ" : "All Fields"}
+                </div>
                 <div className="mt-2.5 space-y-0">
                   {detailEntries.map(([field, value]) => (
                     <div
@@ -522,16 +553,18 @@ export default function ApprovalsDetailModal({
               </div>
 
               <div className="rounded-[8px] border border-[var(--border)] bg-[var(--surface)] p-4 shadow-2xs">
-                <div className="text-[10px] font-mono font-semibold uppercase tracking-[0.18em] text-[var(--text-muted)]">Approval History</div>
+                <div className="text-[10px] font-mono font-semibold uppercase tracking-[0.18em] text-[var(--text-muted)]">
+                  {isJa ? "承認履歴" : "Approval History"}
+                </div>
                 {approvalHistory.length ? (
                   <div className="mt-2.5 space-y-2">
                     {approvalHistory.map((entry, index) => (
                       <div key={`${entry.timestamp || index}-${entry.action || index}`} className="rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] px-3.5 py-2">
                         <div className="flex flex-wrap items-center justify-between gap-3">
-                          <div className="text-xs font-bold text-[var(--text-primary)]">{entry.action || "Update"}</div>
+                          <div className="text-xs font-bold text-[var(--text-primary)]">{entry.action || (isJa ? "更新" : "Update")}</div>
                           <div className="text-[11px] font-mono text-[var(--text-muted)]">{entry.timestamp ? new Date(entry.timestamp).toLocaleString("ja-JP") : "—"}</div>
                         </div>
-                        <div className="mt-0.5 text-[11px] text-[var(--text-secondary)] font-medium">{entry.user || "Unknown user"}</div>
+                        <div className="mt-0.5 text-[11px] text-[var(--text-secondary)] font-medium">{entry.user || (isJa ? "不明なユーザー" : "Unknown user")}</div>
                         {entry.comment ? (
                           <p className="mt-1 whitespace-pre-wrap text-xs text-[var(--text-primary)]">{entry.comment}</p>
                         ) : null}
@@ -540,7 +573,7 @@ export default function ApprovalsDetailModal({
                   </div>
                 ) : (
                   <div className="mt-2.5 rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] px-3 py-2 text-xs text-[var(--text-muted)]">
-                    No approval history has been logged yet.
+                    {isJa ? "承認履歴はまだありません。" : "No approval history has been logged yet."}
                   </div>
                 )}
               </div>
@@ -548,7 +581,9 @@ export default function ApprovalsDetailModal({
 
             <aside className="min-h-0 overflow-y-auto border-t border-[var(--border)] bg-[var(--surface-subtle)]/30 px-5 py-5 lg:border-l lg:border-t-0 space-y-4">
               <div className="freya-card rounded-[8px] border border-[var(--border)] bg-[var(--surface)] p-4 shadow-2xs">
-                <div className="text-[10px] font-mono font-semibold uppercase tracking-[0.18em] text-[var(--text-muted)]">Submitted Images</div>
+                <div className="text-[10px] font-mono font-semibold uppercase tracking-[0.18em] text-[var(--text-muted)]">
+                  {isJa ? "提出画像" : "Submitted Images"}
+                </div>
 
                 {images.length ? (
                   <div className="mt-3 grid grid-cols-1 gap-2.5">
@@ -557,8 +592,8 @@ export default function ApprovalsDetailModal({
                         key={`${image.sourceKey}-${image.url}`}
                         type="button"
                         onClick={() => setPhotoPreview({
-                          eyebrow: "Submitted Images",
-                          displayName: image.label || "Submitted image",
+                          eyebrow: isJa ? "提出画像" : "Submitted Images",
+                          displayName: image.label || (isJa ? "提出画像" : "Submitted image"),
                           subtitle: subtitle || title || undefined,
                           images: images.map((img) => ({ url: img.url, label: img.label })),
                           activeIndex: index,
@@ -568,34 +603,36 @@ export default function ApprovalsDetailModal({
                         <img src={image.url} alt={image.label} className="h-36 w-full object-cover" />
                         <div className="px-3 py-2 bg-[var(--surface)] border-t border-[var(--border)]">
                           <div className="text-xs font-semibold text-[var(--text-primary)]">{image.label}</div>
-                          <div className="text-[10px] text-[var(--text-muted)]">Open full size</div>
+                          <div className="text-[10px] text-[var(--text-muted)]">{isJa ? "拡大表示" : "Open full size"}</div>
                         </div>
                       </button>
                     ))}
                   </div>
                 ) : (
                   <div className="mt-3 rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] px-3 py-2 text-xs text-[var(--text-muted)]">
-                    No uploaded images are attached to this record.
+                    {isJa ? "添付画像はありません。" : "No uploaded images are attached to this record."}
                   </div>
                 )}
               </div>
 
               <div className="freya-card rounded-[8px] border border-[var(--border)] bg-[var(--surface)] p-4 shadow-2xs">
-                <div className="text-[10px] font-mono font-semibold uppercase tracking-[0.18em] text-[var(--text-muted)]">Master Reference</div>
+                <div className="text-[10px] font-mono font-semibold uppercase tracking-[0.18em] text-[var(--text-muted)]">
+                  {isJa ? "マスタ図面・参考画像" : "Master Reference"}
+                </div>
 
                 <div className="mt-3 overflow-hidden rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)]">
                   {masterImageLoading ? (
                     <div className="flex h-44 items-center justify-center text-xs font-semibold text-[var(--text-muted)]">
-                      Loading reference image...
+                      {isJa ? "参考画像を読み込み中..." : "Loading reference image..."}
                     </div>
                   ) : masterImageUrl ? (
                     <button
                       type="button"
                       onClick={() => setPhotoPreview({
-                        eyebrow: "Master Reference",
-                        displayName: "Master reference",
+                        eyebrow: isJa ? "マスタ参考画像" : "Master Reference",
+                        displayName: isJa ? "マスタ参考画像" : "Master reference",
                         subtitle: title || undefined,
-                        images: [{ url: masterImageUrl, label: "Master reference" }],
+                        images: [{ url: masterImageUrl, label: isJa ? "マスタ参考画像" : "Master reference" }],
                         activeIndex: 0,
                       })}
                       className="block w-full"
@@ -604,26 +641,28 @@ export default function ApprovalsDetailModal({
                     </button>
                   ) : (
                     <div className="flex h-44 items-center justify-center px-4 text-center text-xs font-semibold text-[var(--text-muted)]">
-                      No master reference image was found for this record.
+                      {isJa ? "このレコードのマスタ参考画像はありません。" : "No master reference image was found for this record."}
                     </div>
                   )}
                 </div>
               </div>
 
               <div className="freya-card rounded-[8px] border border-[var(--border)] bg-[var(--surface)] p-4 shadow-2xs">
-                <div className="text-[10px] font-mono font-semibold uppercase tracking-[0.18em] text-[var(--text-muted)]">Actions</div>
+                <div className="text-[10px] font-mono font-semibold uppercase tracking-[0.18em] text-[var(--text-muted)]">
+                  {isJa ? "アクション" : "Actions"}
+                </div>
 
                 <div className="mt-3 flex flex-wrap gap-2">
                   {mode === "recycle" ? (
                     <>
                       {canRestoreRecycleBin(authUser) ? (
                         <ActionButton tone="primary" disabled={busy} onClick={() => onRestore?.(record)}>
-                          Restore Record
+                          {isJa ? "レコードを復元" : "Restore Record"}
                         </ActionButton>
                       ) : null}
                       {canPermanentlyDeleteRecycleBin(authUser) ? (
                         <ActionButton tone="danger" disabled={busy} onClick={() => onPermanentDelete?.(record)}>
-                          Permanent Delete
+                          {isJa ? "完全に削除" : "Permanent Delete"}
                         </ActionButton>
                       ) : null}
                     </>
@@ -631,37 +670,37 @@ export default function ApprovalsDetailModal({
                     <>
                       {canEditRecord ? (
                         <ActionButton tone="primary" disabled={busy} onClick={() => onOpenEdit?.(sourceRecord)}>
-                          Edit Record
+                          {isJa ? "レコードを編集" : "Edit Record"}
                         </ActionButton>
                       ) : null}
                       {canApproveApproval(sourceRecord, authUser) ? (
                         <ActionButton tone="primary" disabled={busy} onClick={() => onApprove?.(sourceRecord)}>
-                          {getApproveActionLabel(sourceRecord, authUser)}
+                          {getApproveActionLabel(sourceRecord, authUser, isJa)}
                         </ActionButton>
                       ) : null}
                       {canRequestCorrection(sourceRecord, authUser) ? (
                         <ActionButton tone="warning" disabled={busy} onClick={() => onRequestCorrection?.(sourceRecord)}>
-                          {getCorrectionActionLabel(sourceRecord, authUser)}
+                          {getCorrectionActionLabel(sourceRecord, authUser, isJa)}
                         </ActionButton>
                       ) : null}
                       {canApproveDeleteRequest(sourceRecord, authUser) ? (
                         <ActionButton tone="danger" disabled={busy} onClick={() => onApproveDeleteRequest?.(sourceRecord)}>
-                          Approve Delete
+                          {isJa ? "削除申請を承認" : "Approve Delete"}
                         </ActionButton>
                       ) : null}
                       {canRejectDeleteRequest(sourceRecord, authUser) ? (
                         <ActionButton tone="neutral" disabled={busy} onClick={() => onRejectDeleteRequest?.(sourceRecord)}>
-                          Reject Delete
+                          {isJa ? "削除申請を却下" : "Reject Delete"}
                         </ActionButton>
                       ) : null}
                       {canCancelDeleteRequest(sourceRecord, authUser) ? (
                         <ActionButton tone="warning" disabled={busy} onClick={() => onCancelDeleteRequest?.(sourceRecord)}>
-                          Cancel Delete Request
+                          {isJa ? "削除申請を取り消し" : "Cancel Delete Request"}
                         </ActionButton>
                       ) : null}
                       {canRequestApprovalDeletion(sourceRecord, authUser) ? (
                         <ActionButton tone="danger" disabled={busy} onClick={() => onRequestDeletion?.(sourceRecord)}>
-                          Request Delete
+                          {isJa ? "削除を申請" : "Request Delete"}
                         </ActionButton>
                       ) : null}
                     </>

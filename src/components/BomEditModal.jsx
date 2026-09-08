@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
+import { useLanguage } from '../contexts/LanguageContext';
 import { query, createMasterRecord, updateMasterRecord } from '../services/api';
 
 const HINBAN_PROJECTION = {
@@ -28,9 +29,13 @@ const HINBAN_PROJECTION = {
 function AsyncHinbanSelect({
   value,
   onChange,
-  placeholder = "Search child material...",
+  placeholder,
   disabled = false,
 }) {
+  const { language } = useLanguage();
+  const isJa = language === "ja";
+  const defaultPlaceholder = placeholder || (isJa ? "構成品（原材料）を検索..." : "Search child material...");
+
   const [isOpen, setIsOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [options, setOptions] = useState([]);
@@ -145,7 +150,7 @@ function AsyncHinbanSelect({
         } ${disabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
       >
         <span className={`truncate font-medium ${value ? "text-[var(--text-primary)] font-semibold" : "text-[var(--text-muted)]"}`}>
-          {value || placeholder}
+          {value || defaultPlaceholder}
         </span>
         <div className="flex items-center gap-1 shrink-0 ml-2 text-[var(--text-muted)]">
           {value && (
@@ -156,7 +161,7 @@ function AsyncHinbanSelect({
                 onChange(null, "");
               }}
               className="hover:text-[var(--status-danger)] transition-colors p-0.5 rounded cursor-pointer"
-              title="Clear"
+              title={isJa ? "クリア" : "Clear"}
             >
               <span className="material-symbols-outlined" style={{ fontSize: 16 }}>close</span>
             </span>
@@ -193,7 +198,7 @@ function AsyncHinbanSelect({
               ref={searchInputRef}
               type="text"
               className="w-full rounded-[6px] border border-[var(--border)] bg-[var(--surface)] pl-8 pr-7 py-1.5 text-xs text-[var(--text-primary)] placeholder-[var(--text-muted)] outline-none focus:border-[var(--freya-blue)]"
-              placeholder="Search part number or name..."
+              placeholder={isJa ? "品番または品名で検索..." : "Search part number or name..."}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
@@ -213,7 +218,7 @@ function AsyncHinbanSelect({
             {loading ? (
               <div className="p-4 text-xs text-[var(--text-muted)] text-center flex items-center justify-center gap-2">
                 <span className="material-symbols-outlined animate-spin" style={{ fontSize: 16 }}>progress_activity</span>
-                <span>Searching...</span>
+                <span>{isJa ? "検索中..." : "Searching..."}</span>
               </div>
             ) : options.length > 0 ? (
               options.map((opt, i) => {
@@ -245,7 +250,9 @@ function AsyncHinbanSelect({
                 );
               })
             ) : (
-              <div className="p-4 text-xs text-[var(--text-muted)] text-center">No matches found</div>
+              <div className="p-4 text-xs text-[var(--text-muted)] text-center">
+                {isJa ? "該当する品目が見つかりません" : "No matches found"}
+              </div>
             )}
           </div>
         </div>,
@@ -259,9 +266,13 @@ function SearchableProcessSelect({
   value,
   onChange,
   options = [],
-  placeholder = "-- Select Process --",
+  placeholder,
   disabled = false,
 }) {
+  const { language } = useLanguage();
+  const isJa = language === "ja";
+  const defaultPlaceholder = placeholder || (isJa ? "-- 工程を選択 --" : "-- Select Process --");
+
   const [isOpen, setIsOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [coords, setCoords] = useState({ top: 0, left: 0, width: 0, showAbove: false });
@@ -345,7 +356,7 @@ function SearchableProcessSelect({
         } ${disabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
       >
         <span className={`truncate font-medium ${selectedOpt ? "text-[var(--text-primary)] font-semibold" : "text-[var(--text-muted)]"}`}>
-          {selectedOpt ? `${selectedOpt['工程コード']} - ${selectedOpt['工程名']}` : placeholder}
+          {selectedOpt ? `${selectedOpt['工程コード']} - ${selectedOpt['工程名']}` : defaultPlaceholder}
         </span>
         <div className="flex items-center gap-1 shrink-0 ml-2 text-[var(--text-muted)]">
           {value && (
@@ -356,7 +367,7 @@ function SearchableProcessSelect({
                 onChange("");
               }}
               className="hover:text-[var(--status-danger)] transition-colors p-0.5 rounded cursor-pointer"
-              title="Clear"
+              title={isJa ? "クリア" : "Clear"}
             >
               <span className="material-symbols-outlined" style={{ fontSize: 16 }}>close</span>
             </span>
@@ -393,7 +404,7 @@ function SearchableProcessSelect({
               ref={searchInputRef}
               type="text"
               className="w-full rounded-[6px] border border-[var(--border)] bg-[var(--surface)] pl-8 pr-7 py-1.5 text-xs text-[var(--text-primary)] placeholder-[var(--text-muted)] outline-none focus:border-[var(--freya-blue)]"
-              placeholder="Search process code / name..."
+              placeholder={isJa ? "工程コードまたは工程名で検索..." : "Search process code / name..."}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
@@ -441,7 +452,9 @@ function SearchableProcessSelect({
                 );
               })
             ) : (
-              <div className="p-3 text-xs text-[var(--text-muted)] text-center">No matching processes found</div>
+              <div className="p-3 text-xs text-[var(--text-muted)] text-center">
+                {isJa ? "一致する工程が見つかりません" : "No matching processes found"}
+              </div>
             )}
           </div>
         </div>,
@@ -452,6 +465,9 @@ function SearchableProcessSelect({
 }
 
 export default function BomEditModal({ existingBom, initialHinban = "", onClose, onSaved, onEditExisting, onFlash }) {
+  const { language } = useLanguage();
+  const isJa = language === "ja";
+
   const [loadingInitial, setLoadingInitial] = useState(true);
   
   // Data for selectors
@@ -489,7 +505,7 @@ export default function BomEditModal({ existingBom, initialHinban = "", onClose,
         }
       } catch (err) {
         console.error(err);
-        if (onFlash) onFlash({ type: "error", message: "Failed to load master data" });
+        if (onFlash) onFlash({ type: "error", message: isJa ? "マスターデータの読み込みに失敗しました" : "Failed to load master data" });
       } finally {
         setLoadingInitial(false);
       }
@@ -508,7 +524,10 @@ export default function BomEditModal({ existingBom, initialHinban = "", onClose,
         const existing = await query("Sasaki_Coating_MasterDB", "bomMasterDB", { "品番": hinban });
         const records = Array.isArray(existing) ? existing : existing?.data;
         if (records && records.length > 0) {
-          if (window.confirm(`A BOM for ${hinban} already exists.\n\nDo you want to edit it instead?`)) {
+          const confirmMsg = isJa
+            ? `品番「${hinban}」のBOMは既に存在します。\n\n既存のBOMを編集しますか？`
+            : `A BOM for ${hinban} already exists.\n\nDo you want to edit it instead?`;
+          if (window.confirm(confirmMsg)) {
             if (onEditExisting) {
               onEditExisting(records[0]);
             }
@@ -599,7 +618,7 @@ export default function BomEditModal({ existingBom, initialHinban = "", onClose,
 
   async function handleSave() {
     if (!targetHinban) {
-      alert("Target 品番 (Parent Material) is required.");
+      alert(isJa ? "対象品番（親品目）は必須です。" : "Target 品番 (Parent Material) is required.");
       return;
     }
 
@@ -616,21 +635,21 @@ export default function BomEditModal({ existingBom, initialHinban = "", onClose,
           updates: payload,
           tabKey: "bomDB"
         });
-        if (onFlash) onFlash({ type: "success", message: "BOM updated successfully!" });
+        if (onFlash) onFlash({ type: "success", message: isJa ? "BOMを更新しました！" : "BOM updated successfully!" });
       } else {
         const existing = await query("Sasaki_Coating_MasterDB", "bomMasterDB", { "品番": targetHinban });
         const records = Array.isArray(existing) ? existing : existing?.data;
         if (records && records.length > 0) {
-          if (onFlash) onFlash({ type: "error", message: `A BOM for ${targetHinban} already exists!` });
+          if (onFlash) onFlash({ type: "error", message: isJa ? `品番「${targetHinban}」のBOMは既に存在します！` : `A BOM for ${targetHinban} already exists!` });
           return;
         }
         await createMasterRecord({ data: payload, tabKey: "bomDB" });
-        if (onFlash) onFlash({ type: "success", message: "New BOM created successfully!" });
+        if (onFlash) onFlash({ type: "success", message: isJa ? "新規BOMを作成しました！" : "New BOM created successfully!" });
       }
       onSaved();
     } catch (err) {
       console.error(err);
-      if (onFlash) onFlash({ type: "error", message: "Failed to save BOM" });
+      if (onFlash) onFlash({ type: "error", message: isJa ? "BOMの保存に失敗しました" : "Failed to save BOM" });
     } finally {
       setSaving(false);
     }
@@ -643,8 +662,12 @@ export default function BomEditModal({ existingBom, initialHinban = "", onClose,
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-[var(--border)] bg-[var(--surface)]">
           <div>
-            <h2 className="text-base font-bold text-[var(--text-primary)]">{isEdit ? "Edit BOM" : "Create New BOM"}</h2>
-            <p className="text-xs text-[var(--text-secondary)] mt-0.5">Configure processes and child materials</p>
+            <h2 className="text-base font-bold text-[var(--text-primary)]">
+              {isEdit ? (isJa ? "BOM編集" : "Edit BOM") : (isJa ? "新規BOM作成" : "Create New BOM")}
+            </h2>
+            <p className="text-xs text-[var(--text-secondary)] mt-0.5">
+              {isJa ? "工程順序と構成品（原材料）の設定" : "Configure processes and child materials"}
+            </p>
           </div>
           <button 
             onClick={onClose}
@@ -659,14 +682,14 @@ export default function BomEditModal({ existingBom, initialHinban = "", onClose,
           {loadingInitial ? (
             <div className="flex items-center justify-center py-10 text-xs font-medium text-[var(--text-muted)]">
               <span className="material-symbols-outlined animate-spin mr-2" style={{ fontSize: 18 }}>progress_activity</span>
-              Loading master data...
+              {isJa ? "マスターデータを読み込み中..." : "Loading master data..."}
             </div>
           ) : (
             <>
               {/* Target Material Selector */}
               <div className="rounded-[8px] border border-[var(--border)] bg-[var(--surface-subtle)] p-4 relative z-30">
                 <label className="block text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--text-muted)] mb-2">
-                  Target 品番 (Parent Material)
+                  {isJa ? "対象品番 (親品目 / 完成品・中間品)" : "Target 品番 (Parent Material)"}
                 </label>
                 <AsyncHinbanSelect 
                   value={targetHinban} 
@@ -678,13 +701,15 @@ export default function BomEditModal({ existingBom, initialHinban = "", onClose,
               {/* Processes Builder */}
               <div>
                 <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--text-muted)]">Process Steps</h3>
+                  <h3 className="text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--text-muted)]">
+                    {isJa ? "工程ステップ一覧" : "Process Steps"}
+                  </h3>
                 </div>
 
                 <div className="flex flex-col gap-3.5">
                   {bomSteps.length === 0 ? (
                     <div className="text-center py-6 border border-dashed border-[var(--border)] rounded-[8px] text-[var(--text-muted)] text-xs">
-                      No process steps added yet. Click "Add Step" to begin.
+                      {isJa ? "工程ステップがまだ追加されていません。「工程を追加」をクリックして開始してください。" : "No process steps added yet. Click \"Add Step\" to begin."}
                     </div>
                   ) : (
                     bomSteps.map((step, index) => (
@@ -713,19 +738,19 @@ export default function BomEditModal({ existingBom, initialHinban = "", onClose,
                               }}
                               onDragEnd={handleSort}
                               className="material-symbols-outlined text-[var(--text-muted)] hover:text-[var(--freya-blue)] transition-colors text-base cursor-grab active:cursor-grabbing select-none p-1 -m-1 rounded hover:bg-[var(--surface-hover)]"
-                              title="Drag to reorder step"
+                              title={isJa ? "ドラッグして工程順序を変更" : "Drag to reorder step"}
                             >
                               drag_indicator
                             </span>
                             <span className="text-[10px] font-bold text-[var(--freya-blue)] bg-[var(--freya-blue)]/10 px-2 py-0.5 rounded-[4px] border border-[var(--freya-blue)]/20 pointer-events-none select-none">
-                              Step {index + 1}
+                              {isJa ? `工程 ${index + 1}` : `Step ${index + 1}`}
                             </span>
                           </div>
                           <button 
                             type="button"
                             onClick={() => handleRemoveStep(index)}
                             className="text-[var(--status-danger)]/70 hover:text-[var(--status-danger)] hover:bg-[var(--status-danger)]/10 p-1 rounded-[4px] transition-colors"
-                            title="Remove Step"
+                            title={isJa ? "工程を削除" : "Remove Step"}
                           >
                             <span className="material-symbols-outlined" style={{ fontSize: 16 }}>delete</span>
                           </button>
@@ -735,22 +760,24 @@ export default function BomEditModal({ existingBom, initialHinban = "", onClose,
                           
                           {/* Process Selection */}
                           <div>
-                            <label className="block text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--text-muted)] mb-1">Process (工程)</label>
+                            <label className="block text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--text-muted)] mb-1">
+                              {isJa ? "工程" : "Process (工程)"}
+                            </label>
                             <SearchableProcessSelect
                               value={step['工程コード'] || ""}
                               options={processes}
                               onChange={(val) => handleStepChange(index, 'processSelect', val)}
-                              placeholder="-- Select Process --"
                             />
                           </div>
 
                           {/* Material Selection */}
                           <div>
-                            <label className="block text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--text-muted)] mb-1">Child Material (構成品番)</label>
+                            <label className="block text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--text-muted)] mb-1">
+                              {isJa ? "構成品・原材料 (構成品番)" : "Child Material (構成品番)"}
+                            </label>
                             <AsyncHinbanSelect 
                               value={step['構成品番'] || ""}
                               onChange={(opt, hinban) => handleStepChange(index, 'materialSelect', opt)}
-                              placeholder="Search child material..."
                               className="md"
                             />
                           </div>
@@ -847,7 +874,7 @@ export default function BomEditModal({ existingBom, initialHinban = "", onClose,
                       className="inline-flex items-center gap-1.5 rounded-[6px] border border-[var(--freya-blue)]/40 bg-[var(--surface)] px-5 py-2 text-xs font-semibold text-[var(--freya-blue)] hover:bg-[var(--freya-blue)]/10 transition-colors shadow-2xs"
                     >
                       <span className="material-symbols-outlined" style={{ fontSize: 18 }}>add</span>
-                      Add Step {bomSteps.length > 0 && `(Step ${bomSteps.length + 1})`}
+                      {isJa ? "工程を追加" : "Add Step"} {bomSteps.length > 0 && (isJa ? `(工程 ${bomSteps.length + 1})` : `(Step ${bomSteps.length + 1})`)}
                     </button>
                   </div>
                 </div>
@@ -862,7 +889,7 @@ export default function BomEditModal({ existingBom, initialHinban = "", onClose,
             onClick={onClose}
             className="rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3.5 py-2 text-xs font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-hover)] transition-colors shadow-2xs"
           >
-            Cancel
+            {isJa ? "キャンセル" : "Cancel"}
           </button>
           <button 
             onClick={handleSave}
@@ -872,9 +899,9 @@ export default function BomEditModal({ existingBom, initialHinban = "", onClose,
             {saving ? (
               <>
                 <span className="material-symbols-outlined animate-spin" style={{ fontSize: 16 }}>progress_activity</span>
-                Saving...
+                {isJa ? "保存中..." : "Saving..."}
               </>
-            ) : "Save BOM"}
+            ) : (isJa ? "BOMを保存" : "Save BOM")}
           </button>
         </div>
 

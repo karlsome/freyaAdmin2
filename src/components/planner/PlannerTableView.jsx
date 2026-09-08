@@ -1,7 +1,11 @@
 import { formatDuration, sortScheduledProducts } from "../../utils/planner";
 import EmptyState from "../EmptyState";
+import { useLanguage } from "../../contexts/LanguageContext";
 
 export default function PlannerTableView({ scheduledProducts = [], onRemoveItem }) {
+  const { language } = useLanguage();
+  const isJa = language === "ja";
+
   const items = sortScheduledProducts(scheduledProducts);
   const totalQuantity = items.reduce((sum, item) => sum + Number(item.quantity || 0), 0);
   const totalBoxes = items.reduce((sum, item) => sum + Number(item.boxes || 0), 0);
@@ -9,9 +13,33 @@ export default function PlannerTableView({ scheduledProducts = [], onRemoveItem 
 
   if (!items.length) {
     return (
-      <EmptyState className="rounded-[8px] border border-[var(--border)] bg-[var(--surface)] py-14 text-xs text-[var(--text-muted)]">No products in the current plan.</EmptyState>
+      <EmptyState className="rounded-[8px] border border-[var(--border)] bg-[var(--surface)] py-14 text-xs text-[var(--text-muted)]">
+        {isJa ? "現在の計画に対象製品がありません。" : "No products in the current plan."}
+      </EmptyState>
     );
   }
+
+  const headings = isJa ? [
+    "設備",
+    "背番号",
+    "品番",
+    "品名",
+    "数量",
+    "箱数",
+    "開始時刻",
+    "所要時間",
+    "操作",
+  ] : [
+    "Equipment",
+    "背番号",
+    "品番",
+    "品名",
+    "Qty",
+    "Boxes",
+    "Start",
+    "Estimated",
+    "Actions",
+  ];
 
   return (
     <div className="freya-card overflow-hidden rounded-[8px] border border-[var(--border)] bg-[var(--surface)] shadow-sm">
@@ -19,17 +47,7 @@ export default function PlannerTableView({ scheduledProducts = [], onRemoveItem 
         <table className="min-w-full">
           <thead className="border-b border-[var(--border)] bg-[var(--surface-subtle)]">
             <tr>
-              {[
-                "Equipment",
-                "背番号",
-                "品番",
-                "品名",
-                "Qty",
-                "Boxes",
-                "Start",
-                "Estimated",
-                "Actions",
-              ].map((label) => (
+              {headings.map((label) => (
                 <th key={label} className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">{label}</th>
               ))}
             </tr>
@@ -56,7 +74,7 @@ export default function PlannerTableView({ scheduledProducts = [], onRemoveItem 
                     onClick={() => onRemoveItem(item)}
                     className="rounded-[6px] border border-[var(--border)] px-2.5 py-1 text-xs font-semibold text-[var(--status-danger)] hover:bg-[var(--status-danger)]/10 transition-colors"
                   >
-                    Remove
+                    {isJa ? "削除" : "Remove"}
                   </button>
                 </td>
               </tr>
@@ -64,7 +82,9 @@ export default function PlannerTableView({ scheduledProducts = [], onRemoveItem 
           </tbody>
           <tfoot className="border-t border-[var(--border)] bg-[var(--surface-subtle)]">
             <tr>
-              <td colSpan={4} className="px-4 py-3 text-xs font-semibold text-[var(--text-primary)]">Totals</td>
+              <td colSpan={4} className="px-4 py-3 text-xs font-semibold text-[var(--text-primary)]">
+                {isJa ? "合計" : "Totals"}
+              </td>
               <td className="px-4 py-3 text-xs font-semibold text-[var(--text-primary)]">{totalQuantity}</td>
               <td className="px-4 py-3 text-xs font-semibold text-[var(--text-primary)]">{totalBoxes}</td>
               <td className="px-4 py-3 text-xs font-semibold text-[var(--text-primary)]">—</td>

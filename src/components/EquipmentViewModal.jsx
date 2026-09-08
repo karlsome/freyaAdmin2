@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import ModalShell from "./ModalShell";
+import { fetchEquipmentHistory } from "../services/api";
+import { useLanguage } from "../contexts/LanguageContext";
 
 function ImageLightbox({ url, onClose }) {
   if (!url) return null;
@@ -19,7 +21,6 @@ function ImageLightbox({ url, onClose }) {
     document.body
   );
 }
-import { fetchEquipmentHistory } from "../services/api";
 
 function DetailRow({ label, value }) {
   if (!value) return null;
@@ -31,7 +32,7 @@ function DetailRow({ label, value }) {
   );
 }
 
-function EventCard({ event }) {
+function EventCard({ event, isJa }) {
   const [lightboxURL, setLightboxURL] = useState(null);
   const images = Array.isArray(event.imageURLs) ? event.imageURLs : [];
   const tags = Array.isArray(event.tags) ? event.tags : [];
@@ -44,7 +45,7 @@ function EventCard({ event }) {
             {event.eventDate}
           </span>
         ) : (
-          <span className="text-[11px] text-on-surface-variant/50">日付未記入</span>
+          <span className="text-[11px] text-on-surface-variant/50">{isJa ? "日付未記入" : "No date"}</span>
         )}
         {event["名前"] && (
           <span className="text-[11px] text-on-surface-variant">{event["名前"]}</span>
@@ -67,7 +68,7 @@ function EventCard({ event }) {
           {images.map((url) => (
             <button key={url} type="button" onClick={() => setLightboxURL(url)}
               className="overflow-hidden rounded-xl border border-separator/40 transition hover:opacity-80">
-              <img src={url} alt="添付画像" className="h-14 w-14 object-cover" />
+              <img src={url} alt={isJa ? "添付画像" : "Attached image"} className="h-14 w-14 object-cover" />
             </button>
           ))}
         </div>
@@ -86,6 +87,8 @@ function EventCard({ event }) {
  *   onClose    — () => void
  */
 export default function EquipmentViewModal({ open, equipment, onClose }) {
+  const { language } = useLanguage();
+  const isJa = language === "ja";
   const [history, setHistory] = useState([]);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [historyError, setHistoryError] = useState("");
@@ -108,14 +111,14 @@ export default function EquipmentViewModal({ open, equipment, onClose }) {
       })
       .catch((err) => {
         if (!active) return;
-        setHistoryError(err?.message || "Failed to load event history.");
+        setHistoryError(err?.message || (isJa ? "事案履歴の読み込みに失敗しました。" : "Failed to load event history."));
       })
       .finally(() => {
         if (active) setHistoryLoading(false);
       });
 
     return () => { active = false; };
-  }, [open, equipment]);
+  }, [open, equipment, isJa]);
 
   if (!open || !equipment) return null;
 
@@ -123,7 +126,7 @@ export default function EquipmentViewModal({ open, equipment, onClose }) {
     <ModalShell
       open={!!open}
       onClose={onClose}
-      eyebrow="設備詳細"
+      eyebrow={isJa ? "設備詳細" : "Equipment Details"}
       title={equipment.name || "—"}
       subtitle={equipment["工場"] || undefined}
       maxWidth="max-w-xl"
@@ -135,7 +138,7 @@ export default function EquipmentViewModal({ open, equipment, onClose }) {
             onClick={onClose}
             className="rounded-2xl bg-surface-container px-5 py-2.5 text-xs font-semibold text-on-surface transition hover:bg-surface-container-high"
           >
-            閉じる
+            {isJa ? "閉じる" : "Close"}
           </button>
         </div>
       }
@@ -143,30 +146,30 @@ export default function EquipmentViewModal({ open, equipment, onClose }) {
           <div className="max-h-[80vh] overflow-y-auto px-6 py-6 scrollbar-hide">
 
             <section className="mb-6">
-              <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.18em] text-outline">設備情報</p>
+              <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.18em] text-outline">{isJa ? "設備情報" : "Equipment Info"}</p>
               {equipment.imageURL && (
                 <div className="mb-3 overflow-hidden rounded-2xl border border-separator/40 bg-surface-container">
                   <img
                     src={equipment.imageURL}
-                    alt={equipment.name || "equipment"}
+                    alt={equipment.name || (isJa ? "設備" : "equipment")}
                     className="h-40 w-full object-contain p-3"
                     onError={(e) => { e.currentTarget.style.display = "none"; }}
                   />
                 </div>
               )}
               <dl className="grid grid-cols-2 gap-4 rounded-2xl border border-separator/40 bg-surface-container px-5 py-4">
-                <DetailRow label="設備名" value={equipment.name} />
-                <DetailRow label="工場" value={equipment["工場"]} />
-                <DetailRow label="設置日" value={equipment.installationDate} />
+                <DetailRow label={isJa ? "設備名" : "Equipment Name"} value={equipment.name} />
+                <DetailRow label={isJa ? "工場" : "Factory"} value={equipment["工場"]} />
+                <DetailRow label={isJa ? "設置日" : "Installation Date"} value={equipment.installationDate} />
               </dl>
             </section>
 
             <section>
               <div className="mb-3 flex items-center justify-between">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-outline">事案履歴</p>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-outline">{isJa ? "事案履歴" : "Incident History"}</p>
                 {!historyLoading && (
                   <span className="text-[11px] text-on-surface-variant">
-                    {history.length} {history.length === 1 ? "件" : "件"}
+                    {history.length} {isJa ? "件" : (history.length === 1 ? "event" : "events")}
                   </span>
                 )}
               </div>
@@ -174,7 +177,7 @@ export default function EquipmentViewModal({ open, equipment, onClose }) {
               {historyLoading && (
                 <div className="flex items-center gap-2 py-4 text-sm text-on-surface-variant">
                   <span className="material-symbols-outlined animate-spin" style={{ fontSize: 16 }}>progress_activity</span>
-                  読み込み中…
+                  {isJa ? "読み込み中…" : "Loading…"}
                 </div>
               )}
 
@@ -184,7 +187,7 @@ export default function EquipmentViewModal({ open, equipment, onClose }) {
 
               {!historyLoading && !historyError && history.length === 0 && (
                 <div className="rounded-2xl border border-separator/40 bg-surface px-4 py-6 text-center text-sm text-on-surface-variant italic">
-                  事案の記録はまだありません。
+                  {isJa ? "事案の記録はまだありません。" : "No incidents recorded yet."}
                 </div>
               )}
 
@@ -192,7 +195,7 @@ export default function EquipmentViewModal({ open, equipment, onClose }) {
                 <div className="flex flex-col gap-3">
                   {history.map((event, index) => {
                     const id = event._id?.$oid ?? event._id ?? String(index);
-                    return <EventCard key={id} event={event} />;
+                    return <EventCard key={id} event={event} isJa={isJa} />;
                   })}
                 </div>
               )}

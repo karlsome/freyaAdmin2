@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { BASE_URL } from "../services/api";
+import { useLanguage } from "../contexts/LanguageContext";
 
 function isVideoUrl(url) {
   return /\.(mp4|mov)$/i.test(url.split("?")[0]);
@@ -39,6 +40,8 @@ function buildImageDownloadName(url, label) {
 }
 
 export default function SensorDevicePhotoPreviewModal({ preview, onClose, onNavigate }) {
+  const { language } = useLanguage();
+  const isJa = language === "ja";
   const [isDownloading, setIsDownloading] = useState(false);
   const images = Array.isArray(preview?.images) ? preview.images.filter((image) => image?.url) : [];
   const activeIndex = clampPreviewIndex(preview?.activeIndex, images.length);
@@ -46,15 +49,18 @@ export default function SensorDevicePhotoPreviewModal({ preview, onClose, onNavi
   const hasMultipleImages = images.length > 1;
   const canGoPrevious = activeIndex > 0;
   const canGoNext = activeIndex < images.length - 1;
-  const title = String(preview?.displayName ?? "").trim() || String(preview?.deviceId ?? "").trim() || "Photos";
-  const eyebrow = String(preview?.eyebrow ?? "").trim() || "Photos";
+  const title = String(preview?.displayName ?? "").trim() || String(preview?.deviceId ?? "").trim() || (isJa ? "写真" : "Photos");
+  const eyebrow = String(preview?.eyebrow ?? "").trim() || (isJa ? "写真" : "Photos");
   const customSubtitle = String(preview?.subtitle ?? "").trim();
+  const photoCounter = isJa
+    ? `${images.length} 枚中 ${activeIndex + 1} 枚目`
+    : `Photo ${activeIndex + 1} of ${images.length}`;
   const subtitleParts = customSubtitle
-    ? [customSubtitle, hasMultipleImages ? `Photo ${activeIndex + 1} of ${images.length}` : ""].filter(Boolean)
+    ? [customSubtitle, hasMultipleImages ? photoCounter : ""].filter(Boolean)
     : [
         preview?.displayName ? String(preview?.deviceId ?? "").trim() : "",
         String(preview?.factoryName ?? "").trim(),
-        hasMultipleImages ? `Photo ${activeIndex + 1} of ${images.length}` : "",
+        hasMultipleImages ? photoCounter : "",
       ].filter(Boolean);
 
   const handleDownload = async () => {
@@ -127,7 +133,7 @@ export default function SensorDevicePhotoPreviewModal({ preview, onClose, onNavi
       <div
         role="dialog"
         aria-modal="true"
-        aria-label={`Photos for ${title}`}
+        aria-label={isJa ? `${title} の写真` : `Photos for ${title}`}
         onMouseDown={(event) => event.stopPropagation()}
         className="freya-card flex max-h-[92vh] w-full max-w-5xl flex-col overflow-hidden rounded-[12px] border border-[var(--border)] bg-[var(--surface-raised)] shadow-2xl"
       >
@@ -144,7 +150,7 @@ export default function SensorDevicePhotoPreviewModal({ preview, onClose, onNavi
             type="button"
             onClick={onClose}
             className="w-8 h-8 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:border-[var(--border-strong)] flex items-center justify-center transition-colors flex-shrink-0"
-            aria-label="Close photo preview"
+            aria-label={isJa ? "プレビューを閉じる" : "Close photo preview"}
           >
             <span className="material-symbols-outlined" style={{ fontSize: 16 }}>close</span>
           </button>
@@ -181,7 +187,7 @@ export default function SensorDevicePhotoPreviewModal({ preview, onClose, onNavi
                   type="button"
                   onClick={() => onNavigate(-1)}
                   disabled={!canGoPrevious}
-                  aria-label="Show previous image"
+                  aria-label={isJa ? "前のファイルを表示" : "Show previous image"}
                   className="absolute left-3 top-1/2 z-10 -translate-y-1/2 rounded-[6px] border border-[var(--border)] bg-[var(--surface)]/90 p-1.5 text-[var(--text-primary)] shadow-xs transition-colors hover:bg-[var(--surface-hover)] disabled:cursor-not-allowed disabled:opacity-40"
                 >
                   <span className="material-symbols-outlined" style={{ fontSize: 18 }}>chevron_left</span>
@@ -191,7 +197,7 @@ export default function SensorDevicePhotoPreviewModal({ preview, onClose, onNavi
                   type="button"
                   onClick={() => onNavigate(1)}
                   disabled={!canGoNext}
-                  aria-label="Show next image"
+                  aria-label={isJa ? "次のファイルを表示" : "Show next image"}
                   className="absolute right-3 top-1/2 z-10 -translate-y-1/2 rounded-[6px] border border-[var(--border)] bg-[var(--surface)]/90 p-1.5 text-[var(--text-primary)] shadow-xs transition-colors hover:bg-[var(--surface-hover)] disabled:cursor-not-allowed disabled:opacity-40"
                 >
                   <span className="material-symbols-outlined" style={{ fontSize: 18 }}>chevron_right</span>
@@ -203,13 +209,17 @@ export default function SensorDevicePhotoPreviewModal({ preview, onClose, onNavi
           <div className="rounded-[8px] border border-[var(--border)] bg-[var(--surface)] px-4 py-3">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
-                <p className="text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">Current File</p>
-                <p className="mt-0.5 text-xs font-semibold text-[var(--text-primary)]">{activeImage.label || `File ${activeIndex + 1}`}</p>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">
+                  {isJa ? "表示中のファイル" : "Current File"}
+                </p>
+                <p className="mt-0.5 text-xs font-semibold text-[var(--text-primary)]">
+                  {activeImage.label || (isJa ? `ファイル ${activeIndex + 1}` : `File ${activeIndex + 1}`)}
+                </p>
               </div>
               <p className="text-[11px] text-[var(--text-muted)]">
                 {hasMultipleImages
-                  ? `Use the left and right arrow keys to browse all ${images.length} files.`
-                  : "Press Escape to close this preview."}
+                  ? (isJa ? `左右の矢印キーで全 ${images.length} 件のファイルを切り替えられます。` : `Use the left and right arrow keys to browse all ${images.length} files.`)
+                  : (isJa ? "Escキーでプレビューを閉じます。" : "Press Escape to close this preview.")}
               </p>
             </div>
           </div>
@@ -218,8 +228,8 @@ export default function SensorDevicePhotoPreviewModal({ preview, onClose, onNavi
         <div className="flex flex-col gap-3 border-t border-[var(--border)] bg-[var(--surface-raised)] px-6 py-3.5 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-[11px] font-mono text-[var(--text-muted)]">
             {hasMultipleImages
-              ? `File ${activeIndex + 1} of ${images.length}`
-              : "Single file attached"}
+              ? (isJa ? `${images.length} 件中 ${activeIndex + 1} 件目` : `File ${activeIndex + 1} of ${images.length}`)
+              : (isJa ? "ファイルが1件添付されています" : "Single file attached")}
           </p>
 
           <div className="flex flex-wrap items-center justify-end gap-2.5">
@@ -230,7 +240,7 @@ export default function SensorDevicePhotoPreviewModal({ preview, onClose, onNavi
                 disabled={!canGoPrevious}
                 className="rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-hover)] shadow-2xs transition-colors disabled:cursor-not-allowed disabled:opacity-40"
               >
-                Previous
+                {isJa ? "前へ" : "Previous"}
               </button>
             ) : null}
 
@@ -241,7 +251,7 @@ export default function SensorDevicePhotoPreviewModal({ preview, onClose, onNavi
                 disabled={!canGoNext}
                 className="rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-hover)] shadow-2xs transition-colors disabled:cursor-not-allowed disabled:opacity-40"
               >
-                Next
+                {isJa ? "次へ" : "Next"}
               </button>
             ) : null}
 
@@ -251,7 +261,7 @@ export default function SensorDevicePhotoPreviewModal({ preview, onClose, onNavi
               rel="noreferrer"
               className="rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-hover)] shadow-2xs transition-colors"
             >
-              Open File
+              {isJa ? "ファイルを開く" : "Open File"}
             </a>
 
             <button
@@ -265,7 +275,7 @@ export default function SensorDevicePhotoPreviewModal({ preview, onClose, onNavi
                   progress_activity
                 </span>
               )}
-              <span>{isDownloading ? "Downloading…" : "Download File"}</span>
+              <span>{isDownloading ? (isJa ? "ダウンロード中…" : "Downloading…") : (isJa ? "ファイルをダウンロード" : "Download File")}</span>
             </button>
           </div>
         </div>

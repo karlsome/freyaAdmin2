@@ -1,20 +1,23 @@
 import { useState, useRef, useEffect } from "react";
 import Hls from "hls.js";
 import { BASE_URL } from "../../services/api";
+import { useLanguage } from "../../contexts/LanguageContext";
 
 const FACTORY_CAMS = {
   '小瀬': [
-    { id: 'tapo_cam',  label: 'CAM 1 (SRS Line)' },
-    { id: 'tapo_cam2', label: 'CAM 2 (Press Line)' },
-    { id: 'tapo_cam3', label: 'CAM 3 (Inspection)' },
+    { id: 'tapo_cam',  label: 'CAM 1 (SRS Line)', labelJa: 'CAM 1（SRSライン）' },
+    { id: 'tapo_cam2', label: 'CAM 2 (Press Line)', labelJa: 'CAM 2（プレスライン）' },
+    { id: 'tapo_cam3', label: 'CAM 3 (Inspection)', labelJa: 'CAM 3（検査）' },
   ],
   '倉知': [
-    { id: 'kurachi_cam',  label: 'CAM 1 (Assembly)' },
-    { id: 'kurachi_cam2', label: 'CAM 2 (Packaging)' },
+    { id: 'kurachi_cam',  label: 'CAM 1 (Assembly)', labelJa: 'CAM 1（組立）' },
+    { id: 'kurachi_cam2', label: 'CAM 2 (Packaging)', labelJa: 'CAM 2（梱包）' },
   ],
 };
 
 export default function LiveCameraFeedCard({ onOpenModal, onAskAI, isHighlighted }) {
+  const { language } = useLanguage();
+  const isJa = language === "ja";
   const [activeFactory, setActiveFactory] = useState('小瀬');
   const camList = FACTORY_CAMS[activeFactory] || FACTORY_CAMS['小瀬'];
   const [activeStream, setActiveStream] = useState(camList[0].id);
@@ -78,7 +81,8 @@ export default function LiveCameraFeedCard({ onOpenModal, onAskAI, isHighlighted
     };
   }, [activeStream, isStreaming]);
 
-  const activeCamLabel = camList.find(c => c.id === activeStream)?.label || "Camera";
+  const activeCamObj = camList.find(c => c.id === activeStream);
+  const activeCamLabel = activeCamObj ? (isJa ? (activeCamObj.labelJa || activeCamObj.label) : activeCamObj.label) : (isJa ? "カメラ" : "Camera");
 
   return (
     <div
@@ -94,20 +98,24 @@ export default function LiveCameraFeedCard({ onOpenModal, onAskAI, isHighlighted
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h3 className="text-sm sm:text-base font-semibold text-[var(--text-primary)]">Live Factory Feeds</h3>
+              <h3 className="text-sm sm:text-base font-semibold text-[var(--text-primary)]">
+                {isJa ? "工場ライブ映像" : "Live Factory Feeds"}
+              </h3>
               {isStreaming ? (
                 <span className="inline-flex items-center gap-1.5 h-6 px-2.5 rounded-[4px] text-xs font-semibold uppercase bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                  ● Live Feed
+                  {isJa ? "● ライブ配信中" : "● Live Feed"}
                 </span>
               ) : (
                 <span className="inline-flex items-center gap-1.5 h-6 px-2.5 rounded-[4px] text-xs font-semibold uppercase bg-slate-500/10 text-[var(--text-muted)] border border-[var(--border)]">
                   <span className="w-1.5 h-1.5 rounded-full bg-slate-400" />
-                  Standby (Data Saver)
+                  {isJa ? "待機中（データ節約）" : "Standby (Data Saver)"}
                 </span>
               )}
             </div>
-            <p className="text-xs text-[var(--text-muted)] mt-0.5">Real-time facility camera streaming</p>
+            <p className="text-xs text-[var(--text-muted)] mt-0.5">
+              {isJa ? "各拠点のリアルタイムカメラ映像" : "Real-time facility camera streaming"}
+            </p>
           </div>
         </div>
 
@@ -115,18 +123,18 @@ export default function LiveCameraFeedCard({ onOpenModal, onAskAI, isHighlighted
           {onAskAI && (
             <button
               onClick={() => onAskAI(`Check live camera stream for ${activeFactory} - ${activeCamLabel}`)}
-              title="Ask AI to analyze video feed"
+              title={isJa ? "AIに映像の分析を依頼" : "Ask AI to analyze video feed"}
               className="flex items-center gap-1.5 text-xs font-semibold text-[var(--freya-blue)] hover:bg-[var(--freya-blue-subtle)] px-2.5 py-1 rounded-[6px] transition-colors"
             >
               <span className="material-symbols-outlined" style={{ fontSize: 16 }}>auto_awesome</span>
-              <span>Ask AI</span>
+              <span>{isJa ? "AIに聞く" : "Ask AI"}</span>
             </button>
           )}
 
           {onOpenModal && (
             <button
               onClick={() => onOpenModal(activeFactory, activeStream)}
-              title="Expand full-screen camera modal"
+              title={isJa ? "カメラ画面を拡大表示" : "Expand full-screen camera modal"}
               className="w-8 h-8 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:border-[var(--border-strong)] flex items-center justify-center transition-colors shadow-2xs"
             >
               <span className="material-symbols-outlined" style={{ fontSize: 18 }}>open_in_full</span>
@@ -164,7 +172,7 @@ export default function LiveCameraFeedCard({ onOpenModal, onAskAI, isHighlighted
                   : "bg-[var(--surface)] text-[var(--text-muted)] border-[var(--border)] hover:text-[var(--text-primary)] font-medium"
               }`}
             >
-              {cam.label}
+              {isJa ? (cam.labelJa || cam.label) : cam.label}
             </button>
           ))}
         </div>
@@ -178,14 +186,14 @@ export default function LiveCameraFeedCard({ onOpenModal, onAskAI, isHighlighted
           </div>
           <p className="text-xs font-semibold text-[var(--text-primary)]">{activeFactory} · {activeCamLabel}</p>
           <p className="text-[11px] text-[var(--text-muted)] mt-0.5 max-w-[260px] mb-3">
-            Live stream is paused to save data. Click below to connect live video.
+            {isJa ? "データ通信量節約のため一時停止しています。下のボタンで再生を開始します。" : "Live stream is paused to save data. Click below to connect live video."}
           </p>
           <button
             onClick={() => setIsStreaming(true)}
             className="h-8 px-4 rounded-[6px] bg-[var(--freya-blue)] hover:bg-[var(--freya-blue-hover)] text-white text-xs font-semibold flex items-center gap-1.5 shadow-xs transition-all cursor-pointer"
           >
             <span className="material-symbols-outlined" style={{ fontSize: 16 }}>play_arrow</span>
-            <span>Start Stream</span>
+            <span>{isJa ? "配信を開始" : "Start Stream"}</span>
           </button>
         </div>
       ) : (
@@ -202,11 +210,11 @@ export default function LiveCameraFeedCard({ onOpenModal, onAskAI, isHighlighted
           <div className="absolute top-2 right-2 flex items-center gap-1.5 z-20">
             <button
               onClick={() => setIsStreaming(false)}
-              title="Stop streaming to save data"
+              title={isJa ? "データ節約のため配信を停止" : "Stop streaming to save data"}
               className="h-6 px-2 rounded-[4px] bg-black/70 hover:bg-black/90 backdrop-blur-xs text-white text-[10px] font-semibold border border-white/20 flex items-center gap-1 transition-colors cursor-pointer"
             >
               <span className="material-symbols-outlined text-rose-400" style={{ fontSize: 13 }}>pause</span>
-              <span>Stop Stream</span>
+              <span>{isJa ? "停止" : "Stop Stream"}</span>
             </button>
           </div>
 
@@ -216,20 +224,20 @@ export default function LiveCameraFeedCard({ onOpenModal, onAskAI, isHighlighted
               <span className="material-symbols-outlined text-slate-500 mb-2" style={{ fontSize: 32 }}>videocam_off</span>
               <p className="text-xs font-semibold text-slate-200">{activeFactory} · {activeCamLabel}</p>
               <p className="text-[11px] text-slate-400 mt-1 max-w-[280px]">
-                Camera proxy link standby. Local stream feed will resume automatically upon network handshake.
+                {isJa ? "カメラ待機中。ネットワーク接続が確立され次第、自動的に再開されます。" : "Camera proxy link standby. Local stream feed will resume automatically upon network handshake."}
               </p>
               <div className="flex items-center gap-2 mt-3">
                 <button
                   onClick={() => setIsStreaming(false)}
                   className="px-3 py-1.5 text-xs font-semibold rounded-[6px] bg-slate-800 text-slate-200 hover:bg-slate-700 transition-colors"
                 >
-                  Close Stream
+                  {isJa ? "配信を閉じる" : "Close Stream"}
                 </button>
                 <button
                   onClick={() => onOpenModal && onOpenModal(activeFactory, activeStream)}
                   className="px-3 py-1.5 text-xs font-semibold rounded-[6px] bg-[var(--freya-blue)] text-white hover:bg-[var(--freya-blue-hover)] transition-colors"
                 >
-                  Diagnostics Modal
+                  {isJa ? "診断モーダル" : "Diagnostics Modal"}
                 </button>
               </div>
             </div>

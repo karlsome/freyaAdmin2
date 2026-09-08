@@ -48,29 +48,29 @@ const DETAIL_HIDDEN_FIELDS = new Set([
 ]);
 
 export const APPROVAL_TABS = [
-  { key: "kensaDB", label: "Inspection" },
-  { key: "pressDB", label: "Press" },
-  { key: "SRSDB", label: "SRS" },
-  { key: "slitDB", label: "Slit" },
+  { key: "kensaDB", label: "Inspection", labelJa: "検査" },
+  { key: "pressDB", label: "Press", labelJa: "プレス" },
+  { key: "SRSDB", label: "SRS", labelJa: "SRS" },
+  { key: "slitDB", label: "Slit", labelJa: "スリット" },
 ];
 
 export const APPROVAL_VIEW_MODES = [
-  { key: "review", label: "Review" },
-  { key: "batch", label: "Batch" },
+  { key: "review", label: "Review", labelJa: "レビュー" },
+  { key: "batch", label: "Batch", labelJa: "一括承認" },
 ];
 
 export const APPROVAL_RANGE_MODES = [
-  { key: "current", label: "Current Day" },
-  { key: "all", label: "All History" },
+  { key: "current", label: "Current Day", labelJa: "当日" },
+  { key: "all", label: "All History", labelJa: "全期間" },
 ];
 
 export const APPROVAL_STATUS_OPTIONS = [
-  { value: "", label: "All Status" },
-  { value: "pending", label: "Pending" },
-  { value: "hancho_approved", label: "Hancho Approved" },
-  { value: "fully_approved", label: "Fully Approved" },
-  { value: "correction_needed", label: "Correction Needed" },
-  { value: "correction_needed_from_kacho", label: "Kacho Correction Request" },
+  { value: "", label: "All Status", labelJa: "全ステータス" },
+  { value: "pending", label: "Pending", labelJa: "未承認" },
+  { value: "hancho_approved", label: "Hancho Approved", labelJa: "班長承認済" },
+  { value: "fully_approved", label: "Fully Approved", labelJa: "最終承認済" },
+  { value: "correction_needed", label: "Correction Needed", labelJa: "差戻し（修正待ち）" },
+  { value: "correction_needed_from_kacho", label: "Kacho Correction Request", labelJa: "課長差戻し" },
 ];
 
 export const APPROVAL_FILTER_OPERATOR_LABELS = {
@@ -83,6 +83,18 @@ export const APPROVAL_FILTER_OPERATOR_LABELS = {
   greater: "greater than",
   less: "less than",
   range: "range",
+};
+
+export const APPROVAL_FILTER_OPERATOR_LABELS_JA = {
+  equals: "等しい",
+  not_equals: "等しくない",
+  contains: "含む",
+  in: "含む (複数)",
+  exists: "存在する",
+  not_exists: "存在しない",
+  greater: "より大きい",
+  less: "より小さい",
+  range: "範囲",
 };
 
 const APPROVAL_STATUS_ADVANCED_OPTIONS = APPROVAL_STATUS_OPTIONS
@@ -479,14 +491,15 @@ export function getApprovalStatusKey(record = {}) {
   return record?.approvalStatus || "pending";
 }
 
-export function getApprovalStatusMeta(record = {}) {
+export function getApprovalStatusMeta(record = {}, isJa = false) {
   const statusKey = getApprovalStatusKey(record);
 
   switch (statusKey) {
     case "pending_delete":
       return {
         key: statusKey,
-        label: "Delete Pending",
+        label: isJa ? "削除申請中" : "Delete Pending",
+        labelJa: "削除申請中",
         badgeClassName: "bg-error/15 text-error",
         rowClassName: "bg-error/5",
         icon: "delete",
@@ -494,7 +507,8 @@ export function getApprovalStatusMeta(record = {}) {
     case "hancho_approved":
       return {
         key: statusKey,
-        label: "Hancho Approved",
+        label: isJa ? "班長承認済" : "Hancho Approved",
+        labelJa: "班長承認済",
         badgeClassName: "bg-sky-500/15 text-sky-700 dark:text-sky-300",
         rowClassName: "bg-sky-500/5",
         icon: "task_alt",
@@ -502,7 +516,8 @@ export function getApprovalStatusMeta(record = {}) {
     case "fully_approved":
       return {
         key: statusKey,
-        label: "Fully Approved",
+        label: isJa ? "最終承認済" : "Fully Approved",
+        labelJa: "最終承認済",
         badgeClassName: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300",
         rowClassName: "",
         icon: "verified",
@@ -510,7 +525,8 @@ export function getApprovalStatusMeta(record = {}) {
     case "correction_needed":
       return {
         key: statusKey,
-        label: "Correction Needed",
+        label: isJa ? "差戻し（修正待ち）" : "Correction Needed",
+        labelJa: "差戻し（修正待ち）",
         badgeClassName: "bg-rose-500/15 text-rose-700 dark:text-rose-300",
         rowClassName: "bg-rose-500/5",
         icon: "edit_note",
@@ -518,7 +534,8 @@ export function getApprovalStatusMeta(record = {}) {
     case "correction_needed_from_kacho":
       return {
         key: statusKey,
-        label: "Kacho Correction",
+        label: isJa ? "課長差戻し" : "Kacho Correction",
+        labelJa: "課長差戻し",
         badgeClassName: "bg-amber-500/15 text-amber-700 dark:text-amber-300",
         rowClassName: "bg-amber-500/5",
         icon: "assignment_late",
@@ -527,7 +544,8 @@ export function getApprovalStatusMeta(record = {}) {
     default:
       return {
         key: "pending",
-        label: "Pending",
+        label: isJa ? "未承認" : "Pending",
+        labelJa: "未承認",
         badgeClassName: "bg-amber-500/15 text-amber-700 dark:text-amber-300",
         rowClassName: "bg-amber-500/5",
         icon: "schedule",
@@ -768,17 +786,17 @@ export function canApproveApproval(record = {}, authUser = {}) {
   return false;
 }
 
-export function getApproveActionLabel(record = {}, authUser = {}) {
+export function getApproveActionLabel(record = {}, authUser = {}, isJa = false) {
   const role = authUser?.role || "";
   const status = record?.approvalStatus || "pending";
 
   if (role === "班長" && status === "correction_needed_from_kacho") {
-    return "Fix Complete · Re-approve";
+    return isJa ? "修正完了・再承認" : "Fix Complete · Re-approve";
   }
 
-  if (role === "班長") return "Hancho Approve";
-  if (APPROVAL_SENIOR_ROLES.has(role)) return "Kacho Approve";
-  return "Approve";
+  if (role === "班長") return isJa ? "班長承認" : "Hancho Approve";
+  if (APPROVAL_SENIOR_ROLES.has(role)) return isJa ? "課長/部長承認" : "Kacho Approve";
+  return isJa ? "承認" : "Approve";
 }
 
 export function canRequestCorrection(record = {}, authUser = {}) {
@@ -798,12 +816,12 @@ export function canRequestCorrection(record = {}, authUser = {}) {
   return false;
 }
 
-export function getCorrectionActionLabel(record = {}, authUser = {}) {
+export function getCorrectionActionLabel(record = {}, authUser = {}, isJa = false) {
   if (authUser?.role === "班長" && record?.approvalStatus === "correction_needed_from_kacho") {
-    return "Request Factory Correction";
+    return isJa ? "現場への再修正依頼" : "Request Factory Correction";
   }
 
-  return "Request Correction";
+  return isJa ? "修正依頼（差戻し）" : "Request Correction";
 }
 
 export function canSoftDeleteApproval(record = {}, authUser = {}) {

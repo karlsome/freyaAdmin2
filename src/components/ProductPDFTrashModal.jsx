@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import { useLanguage } from "../contexts/LanguageContext";
 import EmptyState from "./EmptyState";
 import IconButton from "./IconButton";
 import {
@@ -28,6 +29,8 @@ export default function ProductPDFTrashModal({
   onRecoverAll,
   onDeleteAll,
 }) {
+  const { language } = useLanguage();
+  const isJa = language === "ja";
   const modalRef = useRef(null);
 
   useEffect(() => {
@@ -64,9 +67,15 @@ export default function ProductPDFTrashModal({
           <div className="border-b border-[var(--border)] px-6 py-4">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
               <div>
-                <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--text-muted)]">Trash</div>
-                <h3 className="mt-0.5 text-xl font-bold tracking-tight text-[var(--text-primary)]">Deleted Product PDFs</h3>
-                <p className="mt-0.5 text-xs text-[var(--text-secondary)]">Files stay recoverable for 30 days before permanent cleanup.</p>
+                <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--text-muted)]">
+                  {isJa ? "ゴミ箱" : "Trash"}
+                </div>
+                <h3 className="mt-0.5 text-xl font-bold tracking-tight text-[var(--text-primary)]">
+                  {isJa ? "削除済み製品PDF" : "Deleted Product PDFs"}
+                </h3>
+                <p className="mt-0.5 text-xs text-[var(--text-secondary)]">
+                  {isJa ? "完全に削除されるまでの30日間は復元可能です。" : "Files stay recoverable for 30 days before permanent cleanup."}
+                </p>
               </div>
 
               <div className="flex flex-wrap items-center gap-2">
@@ -76,7 +85,7 @@ export default function ProductPDFTrashModal({
                   disabled={disableBulkActions}
                   className="rounded-[6px] border border-[var(--status-success)]/30 bg-[var(--status-success)]/10 px-3 py-1.5 text-xs font-semibold text-[var(--status-success)] hover:bg-[var(--status-success)]/20 transition-colors shadow-2xs disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  Recover All
+                  {isJa ? "すべて復元" : "Recover All"}
                 </button>
                 <button
                   type="button"
@@ -84,9 +93,9 @@ export default function ProductPDFTrashModal({
                   disabled={disableBulkActions}
                   className="rounded-[6px] border border-[var(--status-danger)]/30 bg-[var(--status-danger)]/10 px-3 py-1.5 text-xs font-semibold text-[var(--status-danger)] hover:bg-[var(--status-danger)]/20 transition-colors shadow-2xs disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  Delete All
+                  {isJa ? "すべて削除" : "Delete All"}
                 </button>
-                <IconButton icon="close" onClick={onClose} size="md" ariaLabel="Close dialog" />
+                <IconButton icon="close" onClick={onClose} size="md" ariaLabel={isJa ? "閉じる" : "Close dialog"} />
               </div>
             </div>
           </div>
@@ -94,14 +103,16 @@ export default function ProductPDFTrashModal({
           <div className="max-h-[62vh] overflow-y-auto px-6 py-4 scrollbar-hide">
             {loading ? (
               <div className="rounded-[8px] border border-[var(--border)] bg-[var(--surface-subtle)] px-6 py-12 text-center text-xs font-medium text-[var(--text-muted)]">
-                Loading trash…
+                {isJa ? "ゴミ箱を読み込み中…" : "Loading trash…"}
               </div>
             ) : error ? (
               <div className="rounded-[8px] border border-[var(--status-danger)]/30 bg-[var(--status-danger)]/10 px-6 py-12 text-center text-xs font-medium text-[var(--status-danger)]">
                 {error}
               </div>
             ) : !items.length ? (
-              <EmptyState className="bg-[var(--surface-subtle)] py-10">Trash is empty.</EmptyState>
+              <EmptyState className="bg-[var(--surface-subtle)] py-10">
+                {isJa ? "ゴミ箱は空です。" : "Trash is empty."}
+              </EmptyState>
             ) : (
               <div className="space-y-2.5">
                 {items.map((item) => {
@@ -122,14 +133,18 @@ export default function ProductPDFTrashModal({
                           <div className="flex flex-col gap-2 lg:flex-row lg:items-start lg:justify-between">
                             <div className="min-w-0">
                               <div className="truncate text-sm font-bold text-[var(--text-primary)]">{formatProductPDFTitle(item)}</div>
-                              <div className="mt-0.5 truncate text-xs text-[var(--text-secondary)]">{item?.fileName || "Untitled file"}</div>
+                              <div className="mt-0.5 truncate text-xs text-[var(--text-secondary)]">
+                                {item?.fileName || (isJa ? "名称未設定ファイル" : "Untitled file")}
+                              </div>
                               <div className="mt-1 text-[11px] text-[var(--text-muted)]">
-                                Type: {item?.pdfType || "—"} · Deleted {daysAgo} day{daysAgo === 1 ? "" : "s"} ago · Uploaded {formatProductPDFDateTime(item?.uploadedAt)}
+                                {isJa
+                                  ? `タイプ: ${item?.pdfType || "—"} · ${daysAgo}日前に削除 · アップロード: ${formatProductPDFDateTime(item?.uploadedAt)}`
+                                  : `Type: ${item?.pdfType || "—"} · Deleted ${daysAgo} day${daysAgo === 1 ? "" : "s"} ago · Uploaded ${formatProductPDFDateTime(item?.uploadedAt)}`}
                               </div>
                             </div>
 
                             <div className="shrink-0 rounded-[4px] border border-[var(--border)] bg-[var(--surface)] px-2 py-0.5 text-[11px] font-semibold text-[var(--text-secondary)]">
-                              {daysLeft} day{daysLeft === 1 ? "" : "s"} left
+                              {isJa ? `残り ${daysLeft} 日` : `${daysLeft} day${daysLeft === 1 ? "" : "s"} left`}
                             </div>
                           </div>
 
@@ -140,7 +155,7 @@ export default function ProductPDFTrashModal({
                               disabled={actionBusy}
                               className="rounded-[6px] border border-[var(--status-success)]/30 bg-[var(--status-success)]/10 px-2.5 py-1 text-xs font-semibold text-[var(--status-success)] hover:bg-[var(--status-success)]/20 transition-colors shadow-2xs disabled:cursor-not-allowed disabled:opacity-50"
                             >
-                              Recover
+                              {isJa ? "復元" : "Recover"}
                             </button>
                             <button
                               type="button"
@@ -148,7 +163,7 @@ export default function ProductPDFTrashModal({
                               disabled={actionBusy}
                               className="rounded-[6px] border border-[var(--status-danger)]/30 bg-[var(--status-danger)]/10 px-2.5 py-1 text-xs font-semibold text-[var(--status-danger)] hover:bg-[var(--status-danger)]/20 transition-colors shadow-2xs disabled:cursor-not-allowed disabled:opacity-50"
                             >
-                              Delete Permanently
+                              {isJa ? "完全に削除" : "Delete Permanently"}
                             </button>
                           </div>
                         </div>
@@ -162,9 +177,11 @@ export default function ProductPDFTrashModal({
 
           <div className="flex flex-col gap-3 border-t border-[var(--border)] bg-[var(--surface-subtle)] px-6 py-3 md:flex-row md:items-center md:justify-between">
             <div className="flex flex-wrap items-center gap-3 text-xs text-[var(--text-secondary)]">
-              <span>Showing {start}-{end} of {totalCount}</span>
+              <span>{isJa ? `${totalCount} 件中 ${start}〜${end} 件を表示` : `Showing ${start}-${end} of ${totalCount}`}</span>
               <label className="flex items-center gap-1.5">
-                <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--text-muted)]">Per page</span>
+                <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--text-muted)]">
+                  {isJa ? "表示件数" : "Per page"}
+                </span>
                 <select
                   value={pageSize}
                   onChange={(event) => onPageSizeChange(Number(event.target.value))}
@@ -185,10 +202,10 @@ export default function ProductPDFTrashModal({
                   disabled={page <= 1 || loading}
                   className="rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-hover)] transition-colors shadow-2xs disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  Previous
+                  {isJa ? "前へ" : "Previous"}
                 </button>
                 <div className="rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs font-semibold text-[var(--text-secondary)]">
-                  Page {page} / {totalPages}
+                  {isJa ? `${page} / ${totalPages} ページ` : `Page ${page} / ${totalPages}`}
                 </div>
                 <button
                   type="button"
@@ -196,7 +213,7 @@ export default function ProductPDFTrashModal({
                   disabled={page >= totalPages || loading}
                   className="rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-hover)] transition-colors shadow-2xs disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  Next
+                  {isJa ? "次へ" : "Next"}
                 </button>
               </div>
             )}

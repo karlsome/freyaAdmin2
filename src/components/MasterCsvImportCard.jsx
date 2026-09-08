@@ -1,4 +1,6 @@
-function PreviewTable({ rows }) {
+import { useLanguage } from "../contexts/LanguageContext";
+
+function PreviewTable({ rows, isJa }) {
   if (!rows.length) return null;
 
   const previewRows = rows.slice(0, 5);
@@ -7,7 +9,7 @@ function PreviewTable({ rows }) {
   return (
     <div className="mt-4 overflow-hidden rounded-[6px] border border-[var(--border)] bg-[var(--surface)]">
       <div className="border-b border-[var(--border)] bg-[var(--surface-subtle)] px-4 py-2 text-xs font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">
-        CSV Preview
+        {isJa ? "CSVプレビュー" : "CSV Preview"}
       </div>
       <div className="overflow-x-auto">
         <table className="ui-table-data min-w-full">
@@ -34,7 +36,9 @@ function PreviewTable({ rows }) {
         </table>
       </div>
       <div className="border-t border-[var(--border)] bg-[var(--surface-subtle)] px-4 py-2 text-xs font-mono text-[var(--text-muted)]">
-        Showing {Math.min(5, rows.length)} of {rows.length} parsed rows.
+        {isJa
+          ? `${rows.length} 行中 ${Math.min(5, rows.length)} 行を表示中`
+          : `Showing ${Math.min(5, rows.length)} of ${rows.length} parsed rows.`}
       </div>
     </div>
   );
@@ -48,6 +52,9 @@ export default function MasterCsvImportCard({
   onFileSelect,
   onImport,
 }) {
+  const { language } = useLanguage();
+  const isJa = language === "ja";
+
   return (
     <div className="freya-card rounded-[8px] border border-[var(--border)] bg-[var(--surface)] p-5 mb-6 shadow-sm">
       <div className="flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-between">
@@ -59,9 +66,13 @@ export default function MasterCsvImportCard({
               </span>
             </div>
             <div>
-              <h3 className="text-base font-semibold text-[var(--text-primary)]">CSV Import</h3>
+              <h3 className="text-base font-semibold text-[var(--text-primary)]">
+                {isJa ? "CSVインポート" : "CSV Import"}
+              </h3>
               <p className="text-xs text-[var(--text-muted)] mt-0.5">
-                Parse Shift-JIS files, preview the first rows, then insert everything into the current master collection.
+                {isJa
+                  ? "Shift-JISファイルを解析し、プレビュー確認後に現在のマスターコレクションへ一括登録します。"
+                  : "Parse Shift-JIS files, preview the first rows, then insert everything into the current master collection."}
               </p>
             </div>
           </div>
@@ -75,7 +86,11 @@ export default function MasterCsvImportCard({
               className="hidden"
               onChange={(event) => onFileSelect(event.target.files?.[0] || null)}
             />
-            {parsing ? "Parsing…" : fileName ? `Selected: ${fileName}` : "Choose CSV file"}
+            {parsing
+              ? (isJa ? "解析中…" : "Parsing…")
+              : fileName
+                ? (isJa ? `選択中: ${fileName}` : `Selected: ${fileName}`)
+                : (isJa ? "CSVファイルを選択" : "Choose CSV file")}
           </label>
 
           <button
@@ -87,12 +102,14 @@ export default function MasterCsvImportCard({
             <span className="material-symbols-outlined" style={{ fontSize: 16 }}>
               cloud_upload
             </span>
-            {importing ? "Importing…" : "Insert All To Database"}
+            {importing
+              ? (isJa ? "インポート中…" : "Importing…")
+              : (isJa ? "データベースに全件登録" : "Insert All To Database")}
           </button>
         </div>
       </div>
 
-      <PreviewTable rows={parsedRows} />
+      <PreviewTable rows={parsedRows} isJa={isJa} />
     </div>
   );
 }

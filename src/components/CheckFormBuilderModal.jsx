@@ -15,6 +15,7 @@ import {
 import FilePreviewModal from "./FilePreviewModal";
 import CheckFormImageOverlayEditorModal from "./CheckFormImageOverlayEditorModal";
 import { getAuthUser } from "../utils/masterDB";
+import { useLanguage } from "../contexts/LanguageContext";
 
 function toBase64(file) {
   return new Promise((resolve, reject) => {
@@ -34,23 +35,23 @@ function normalizeId(value) {
 }
 
 const FIELD_TYPES = [
-  { value: "toggle", label: "Toggle Buttons", icon: "task_alt" },
-  { value: "text", label: "Text", icon: "short_text" },
-  { value: "number", label: "Number", icon: "pin" },
-  { value: "select", label: "Select", icon: "list" },
+  { value: "toggle", label: "Toggle Buttons", label_ja: "トグル判定", icon: "task_alt" },
+  { value: "text", label: "Text", label_ja: "テキスト", icon: "short_text" },
+  { value: "number", label: "Number", label_ja: "数値", icon: "pin" },
+  { value: "select", label: "Select", label_ja: "選択肢", icon: "list" },
 ];
 
 const FIELD_TYPE_META = Object.fromEntries(FIELD_TYPES.map((type) => [type.value, type]));
 
 const SCHEDULE_OPTIONS = [
-  { value: "daily", label: "Daily", hint: "Every day", icon: "today" },
-  { value: "weekly", label: "Weekly", hint: "Every Monday", icon: "date_range" },
-  { value: "monthly", label: "Monthly", hint: "1st day of month", icon: "calendar_month" },
+  { value: "daily", label: "Daily", label_ja: "日次", hint: "Every day", hint_ja: "毎日", icon: "today" },
+  { value: "weekly", label: "Weekly", label_ja: "週次", hint: "Every Monday", hint_ja: "毎週月曜日", icon: "date_range" },
+  { value: "monthly", label: "Monthly", label_ja: "月次", hint: "1st day of month", hint_ja: "毎月1日", icon: "calendar_month" },
 ];
 
 const TIMING_OPTIONS = [
-  { value: "pre", label: "Pre-Production", hint: "Before starting production", icon: "play_circle" },
-  { value: "post", label: "Post-Production", hint: "After completing production", icon: "task" },
+  { value: "pre", label: "Pre-Production", label_ja: "製造前", hint: "Before starting production", hint_ja: "製造開始前", icon: "play_circle" },
+  { value: "post", label: "Post-Production", label_ja: "製造後", hint: "After completing production", hint_ja: "製造完了後", icon: "task" },
 ];
 
 const NAME_FIELD = {
@@ -347,6 +348,8 @@ export default function CheckFormBuilderModal({
   onSaved,
   presetSchedule = "",
 }) {
+  const { language } = useLanguage();
+  const isJa = language === "ja";
   const [viewportSize, setViewportSize] = useState(() => getBuilderViewportSize());
   const [draft, setDraft] = useState(() => {
     if (initial) {
@@ -553,11 +556,11 @@ export default function CheckFormBuilderModal({
 
   async function save(deployStatus) {
     if (!draft.name.trim()) {
-      setError("Form name is required.");
+      setError(isJa ? "フォーム名は必須です。" : "Form name is required.");
       return;
     }
     if (nameConflict) {
-      setError("Please choose a unique form name before saving.");
+      setError(isJa ? "保存する前に固有のフォーム名を選択してください。" : "Please choose a unique form name before saving.");
       return;
     }
 
@@ -614,20 +617,21 @@ export default function CheckFormBuilderModal({
         <div className="flex items-start justify-between border-b border-[var(--border)] px-6 py-4">
           <div className="min-w-0 flex-1 pr-4">
             <p className="text-[10px] font-semibold uppercase tracking-[0.04em] text-[var(--freya-blue)]">
-              {isClone ? "Clone Template" : initial ? "Edit Form" : "New Form"}
+              {isClone ? (isJa ? "テンプレートを複製" : "Clone Template") : initial ? (isJa ? "フォームを編集" : "Edit Form") : (isJa ? "新規フォーム" : "New Form")}
             </p>
             <h2 className="mt-0.5 text-lg font-bold text-[var(--text-primary)]">
-              {isClone ? "Clone Checklist Form" : "Checklist Form Builder"}
+              {isClone ? (isJa ? "点検フォームを複製" : "Clone Checklist Form") : (isJa ? "点検フォームビルダー" : "Checklist Form Builder")}
             </h2>
             <p className="mt-1 max-w-3xl text-xs leading-relaxed text-[var(--text-muted)]">
               {isClone
-                ? "Review and customize the copied checks and scope, then deploy as a new checklist form."
-                : "Keep the setup simple, then shape each check inline so the form reads clearly before you save it."}
+                ? (isJa ? "コピーした項目や対象範囲を確認・カスタマイズし、新しい点検フォームとして適用します。" : "Review and customize the copied checks and scope, then deploy as a new checklist form.")
+                : (isJa ? "基本設定を行い、各点検項目をインラインで調整してわかりやすいフォームを作成します。" : "Keep the setup simple, then shape each check inline so the form reads clearly before you save it.")}
             </p>
           </div>
           <button
             type="button"
             onClick={onClose}
+            aria-label={isJa ? "閉じる" : "Close"}
             className="p-1 rounded-[6px] text-[var(--text-muted)] hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)] transition"
           >
             <span className="material-symbols-outlined" style={{ fontSize: 16 }}>close</span>
@@ -637,16 +641,16 @@ export default function CheckFormBuilderModal({
         <div className="min-h-0 flex-1 overflow-y-auto px-4 py-5 sm:px-6 space-y-4">
           <section className="rounded-[8px] border border-[var(--border)] bg-[var(--surface)] p-4">
             <div className="mb-3">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">Form Setup</p>
-              <p className="mt-0.5 text-xs text-[var(--text-muted)]">Define the name, description, factory, cadence, and activation date before editing the checks.</p>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">{isJa ? "フォーム設定" : "Form Setup"}</p>
+              <p className="mt-0.5 text-xs text-[var(--text-muted)]">{isJa ? "点検項目を編集する前に、フォーム名、説明、工場、頻度、開始日を設定します。" : "Define the name, description, factory, cadence, and activation date before editing the checks."}</p>
             </div>
 
             <div className="grid gap-4 lg:grid-cols-2">
               <div>
-                <label className="mb-1.5 block text-xs font-semibold uppercase tracking-[0.18em] text-outline">Form Name</label>
+                <label className="mb-1.5 block text-xs font-semibold uppercase tracking-[0.18em] text-outline">{isJa ? "フォーム名" : "Form Name"}</label>
                 <input
                   type="text"
-                  placeholder="Form name *"
+                  placeholder={isJa ? "フォーム名 *" : "Form name *"}
                   value={draft.name}
                   onChange={(event) => setTop("name", event.target.value)}
                   className={`${inputClass} ${nameConflict ? "border-error/50 focus:border-error/60" : ""}`}
@@ -654,15 +658,15 @@ export default function CheckFormBuilderModal({
                 {nameConflict ? (
                   <p className="mt-1.5 flex items-center gap-1 text-xs text-error">
                     <span className="material-symbols-outlined" style={{ fontSize: 14 }}>error</span>
-                    This form name is already in use.
+                    {isJa ? "このフォーム名は既に使用されています。" : "This form name is already in use."}
                   </p>
                 ) : null}
               </div>
 
               <div>
-                <label className="mb-1.5 block text-xs font-semibold uppercase tracking-[0.18em] text-outline">Factory</label>
+                <label className="mb-1.5 block text-xs font-semibold uppercase tracking-[0.18em] text-outline">{isJa ? "工場" : "Factory"}</label>
                 <select value={draft.工場} onChange={(event) => setTop("工場", event.target.value)} className={inputClass}>
-                  <option value="">Select a factory</option>
+                  <option value="">{isJa ? "工場を選択" : "Select a factory"}</option>
                   {factories.map((factory) => (
                     <option key={factory._id ?? factory.工場} value={factory.工場}>{factory.工場}</option>
                   ))}
@@ -670,10 +674,10 @@ export default function CheckFormBuilderModal({
               </div>
 
               <div className="lg:col-span-2">
-                <label className="mb-1.5 block text-xs font-semibold uppercase tracking-[0.18em] text-outline">Description</label>
+                <label className="mb-1.5 block text-xs font-semibold uppercase tracking-[0.18em] text-outline">{isJa ? "説明" : "Description"}</label>
                 <textarea
                   rows={3}
-                  placeholder="Tell admins and operators what this checklist form is for."
+                  placeholder={isJa ? "管理者や作業者にこの点検フォームの用途を伝えます。" : "Tell admins and operators what this checklist form is for."}
                   value={draft.description}
                   onChange={(event) => setTop("description", event.target.value)}
                   className={`${inputClass} resize-y`}
@@ -681,7 +685,7 @@ export default function CheckFormBuilderModal({
               </div>
 
               <div className="lg:col-span-2">
-                <label className="mb-1.5 block text-xs font-semibold uppercase tracking-[0.18em] text-outline">Frequency</label>
+                <label className="mb-1.5 block text-xs font-semibold uppercase tracking-[0.18em] text-outline">{isJa ? "頻度" : "Frequency"}</label>
                 <div className="grid gap-2 sm:grid-cols-3">
                   {SCHEDULE_OPTIONS.map((option) => {
                     const isActive = draft.schedule === option.value;
@@ -698,8 +702,8 @@ export default function CheckFormBuilderModal({
                         }`}
                       >
                         <span className="material-symbols-outlined mb-2 block" style={{ fontSize: 18 }}>{option.icon}</span>
-                        <span className="block text-xs font-semibold uppercase tracking-[0.18em]">{option.label}</span>
-                        <span className={`mt-1 block text-[11px] ${isActive ? "text-primary/80" : "text-outline"}`}>{option.hint}</span>
+                        <span className="block text-xs font-semibold uppercase tracking-[0.18em]">{isJa ? (option.label_ja || option.label) : option.label}</span>
+                        <span className={`mt-1 block text-[11px] ${isActive ? "text-primary/80" : "text-outline"}`}>{isJa ? (option.hint_ja || option.hint) : option.hint}</span>
                       </button>
                     );
                   })}
@@ -707,7 +711,7 @@ export default function CheckFormBuilderModal({
               </div>
 
               <div>
-                <label className="mb-1.5 block text-xs font-semibold uppercase tracking-[0.18em] text-outline">First Active Date</label>
+                <label className="mb-1.5 block text-xs font-semibold uppercase tracking-[0.18em] text-outline">{isJa ? "開始日" : "First Active Date"}</label>
                 <input
                   type="date"
                   value={draft.startDate}
@@ -716,8 +720,10 @@ export default function CheckFormBuilderModal({
                 />
                 <p className="mt-1.5 text-xs text-outline">
                   {selectedScheduleOption
-                    ? `${selectedScheduleOption.label} forms repeat ${selectedScheduleOption.hint.toLowerCase()}.`
-                    : "Choose a cadence so operators know when this form should appear."}
+                    ? (isJa
+                        ? `${selectedScheduleOption.label_ja || selectedScheduleOption.label}フォームは${(selectedScheduleOption.hint_ja || selectedScheduleOption.hint)}繰り返されます。`
+                        : `${selectedScheduleOption.label} forms repeat ${selectedScheduleOption.hint.toLowerCase()}.`)
+                    : (isJa ? "作業者がいつこのフォームを実施すべきか分かるよう、頻度を選択してください。" : "Choose a cadence so operators know when this form should appear.")}
                 </p>
               </div>
             </div>
@@ -726,8 +732,8 @@ export default function CheckFormBuilderModal({
           <section className="rounded-2xl border border-separator/40 bg-surface-container/40 p-5">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
               <div>
-                <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Machine Scope</p>
-                <p className="mt-1 text-sm text-outline">Select the machines this form applies to. Switch factories first if needed.</p>
+                <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">{isJa ? "対象設備" : "Machine Scope"}</p>
+                <p className="mt-1 text-sm text-outline">{isJa ? "このフォームを適用する設備を選択します。必要に応じて先に工場を切り替えてください。" : "Select the machines this form applies to. Switch factories first if needed."}</p>
               </div>
               {filteredEquipment.length > 0 ? (
                 <button
@@ -736,7 +742,7 @@ export default function CheckFormBuilderModal({
                   className="inline-flex items-center gap-2 rounded-full border border-separator/40 bg-surface px-3 py-2 text-xs font-semibold text-on-surface transition hover:bg-surface-container"
                 >
                   <span className="material-symbols-outlined" style={{ fontSize: 14 }}>{allFilteredSelected ? "remove_done" : "done_all"}</span>
-                  {allFilteredSelected ? "Clear all" : "Select all"}
+                  {allFilteredSelected ? (isJa ? "すべて解除" : "Clear all") : (isJa ? "すべて選択" : "Select all")}
                 </button>
               ) : null}
             </div>
@@ -744,13 +750,13 @@ export default function CheckFormBuilderModal({
             <div className="mt-4 flex flex-wrap gap-2">
               {!draft.工場 ? (
                 <span className="rounded-full border border-dashed border-outline-variant/20 bg-surface px-3 py-1.5 text-xs font-semibold text-outline">
-                  Select a factory first
+                  {isJa ? "先に工場を選択してください" : "Select a factory first"}
                 </span>
               ) : null}
 
               {draft.工場 && filteredEquipment.length === 0 ? (
                 <span className="rounded-full border border-dashed border-outline-variant/20 bg-surface px-3 py-1.5 text-xs font-semibold text-outline">
-                  No machines found
+                  {isJa ? "設備が見つかりません" : "No machines found"}
                 </span>
               ) : null}
 
@@ -779,11 +785,11 @@ export default function CheckFormBuilderModal({
           <section className="rounded-2xl border border-separator/40 bg-surface-container/40 p-5">
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Checks</p>
-                <p className="mt-1 text-sm text-outline">Each field card contains the full setup for that check. Use the number on the left to track checklist order.</p>
+                <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">{isJa ? "点検項目" : "Checks"}</p>
+                <p className="mt-1 text-sm text-outline">{isJa ? "各カードで点検項目の詳細を設定します。左側の番号で順序を確認できます。" : "Each field card contains the full setup for that check. Use the number on the left to track checklist order."}</p>
               </div>
               <span className="inline-flex w-fit rounded-full bg-primary/10 px-3 py-1 text-xs font-bold text-primary">
-                {draft.fields.length} checks total
+                {isJa ? `合計 ${draft.fields.length} 項目` : `${draft.fields.length} checks total`}
               </span>
             </div>
 
@@ -814,7 +820,7 @@ export default function CheckFormBuilderModal({
                 <span className="flex h-6 w-6 items-center justify-center rounded-[4px] bg-[var(--freya-blue)]/10 text-[var(--freya-blue)]">
                   <span className="material-symbols-outlined" style={{ fontSize: 16 }}>add</span>
                 </span>
-                Add checklist item
+                {isJa ? "点検項目を追加" : "Add checklist item"}
               </button>
             </div>
           </section>
@@ -830,19 +836,19 @@ export default function CheckFormBuilderModal({
                 disabled={busy}
                 className="w-fit rounded-[6px] border border-[var(--status-danger)]/30 px-3 py-1.5 text-xs font-semibold text-[var(--status-danger)] transition hover:bg-[var(--status-danger)]/10 disabled:opacity-50"
               >
-                Delete Form
+                {isJa ? "フォームを削除" : "Delete Form"}
               </button>
             ) : null}
             {initial && !isClone && confirmingDelete ? (
               <div className="flex flex-wrap items-center gap-2">
-                <p className="text-xs font-semibold text-[var(--status-danger)]">Delete this form?</p>
+                <p className="text-xs font-semibold text-[var(--status-danger)]">{isJa ? "このフォームを削除しますか？" : "Delete this form?"}</p>
                 <button
                   type="button"
                   onClick={deleteForm}
                   disabled={busy}
                   className="rounded-[6px] bg-[var(--status-danger)] px-3 py-1.5 text-xs font-semibold text-white transition hover:opacity-90 disabled:opacity-50"
                 >
-                  Yes, delete
+                  {isJa ? "はい、削除します" : "Yes, delete"}
                 </button>
                 <button
                   type="button"
@@ -850,7 +856,7 @@ export default function CheckFormBuilderModal({
                   disabled={busy}
                   className="rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs font-semibold text-[var(--text-primary)] transition hover:bg-[var(--surface-hover)]"
                 >
-                  Cancel
+                  {isJa ? "キャンセル" : "Cancel"}
                 </button>
               </div>
             ) : null}
@@ -862,7 +868,7 @@ export default function CheckFormBuilderModal({
               onClick={onClose}
               className="rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs font-semibold text-[var(--text-primary)] transition hover:bg-[var(--surface-hover)]"
             >
-              Cancel
+              {isJa ? "キャンセル" : "Cancel"}
             </button>
             <button
               type="button"
@@ -870,7 +876,7 @@ export default function CheckFormBuilderModal({
               onClick={() => save("draft")}
               className="rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs font-semibold text-[var(--text-primary)] transition hover:bg-[var(--surface-hover)] disabled:opacity-50"
             >
-              {busy ? "Saving..." : "Save Draft"}
+              {busy ? (isJa ? "保存中..." : "Saving...") : (isJa ? "下書き保存" : "Save Draft")}
             </button>
             <button
               type="button"
@@ -878,7 +884,7 @@ export default function CheckFormBuilderModal({
               onClick={() => save("active")}
               className="rounded-[6px] bg-[var(--freya-blue)] px-3.5 py-1.5 text-xs font-semibold text-white hover:bg-[var(--freya-blue-hover)] transition-colors disabled:opacity-50 shadow-xs"
             >
-              {busy ? "Saving..." : isClone ? "Clone & Deploy" : initial ? "Save Changes" : "Deploy"}
+              {busy ? (isJa ? "保存中..." : "Saving...") : isClone ? (isJa ? "複製して適用" : "Clone & Deploy") : initial ? (isJa ? "変更を保存" : "Save Changes") : (isJa ? "適用" : "Deploy")}
             </button>
           </div>
         </div>
@@ -892,7 +898,7 @@ export default function CheckFormBuilderModal({
         <span className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-primary">
           <span className="material-symbols-outlined text-on-primary" style={{ fontSize: 16, fontVariationSettings: "'FILL' 1" }}>check</span>
         </span>
-        <span className="text-sm font-semibold text-surface">Form created successfully</span>
+        <span className="text-sm font-semibold text-surface">{isJa ? "フォームを作成しました" : "Form created successfully"}</span>
       </div>
     </div>
   ) : null;
@@ -919,6 +925,8 @@ function FieldCard({
   canMoveDown,
   username,
 }) {
+  const { language } = useLanguage();
+  const isJa = language === "ja";
   const typeMeta = getFieldTypeMeta(field.type);
   const hasRange = field.type === "number" && (field.min != null || field.max != null);
   const fieldImageURL = normalizeImageURL(field.imageURL);
@@ -940,24 +948,24 @@ function FieldCard({
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
                     <p className="truncate text-sm font-semibold text-on-surface">
-                      {field.label || (field.locked ? "名前" : `Untitled ${typeMeta.label.toLowerCase()} check`)}
+                      {field.label || (field.locked ? "名前" : (isJa ? `無題の${typeMeta.label_ja || typeMeta.label}項目` : `Untitled ${typeMeta.label.toLowerCase()} check`))}
                     </p>
                     <span className="inline-flex rounded-full bg-primary/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-primary">
-                      {typeMeta.label}
+                      {isJa ? (typeMeta.label_ja || typeMeta.label) : typeMeta.label}
                     </span>
                     {field.locked ? (
                       <span className="inline-flex rounded-full bg-surface-container px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-outline">
-                        Locked
+                        {isJa ? "固定" : "Locked"}
                       </span>
                     ) : null}
                     {field.required ? (
                       <span className="inline-flex rounded-full bg-error/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-error">
-                        Required
+                        {isJa ? "必須" : "Required"}
                       </span>
                     ) : null}
                     {field.photoRequired ? (
                       <span className="inline-flex rounded-full bg-surface-container px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-on-surface">
-                        Photo
+                        {isJa ? "写真" : "Photo"}
                       </span>
                     ) : null}
                     {!field.locked ? (
@@ -966,24 +974,24 @@ function FieldCard({
                           ? "bg-amber-500/10 text-amber-700 dark:text-amber-400"
                           : "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400"
                       }`}>
-                        {field.timing === "post" ? "Post-Prod" : "Pre-Prod"}
+                        {field.timing === "post" ? (isJa ? "製造後" : "Post-Prod") : (isJa ? "製造前" : "Pre-Prod")}
                       </span>
                     ) : null}
                   </div>
                   <p className="mt-1 text-xs leading-5 text-outline">
-                    {field.description || (field.locked ? "Every form includes the operator name field." : "Add a short instruction so operators know exactly what to check.")}
+                    {field.description || (field.locked ? (isJa ? "すべてのフォームに作業者名項目が含まれます。" : "Every form includes the operator name field.") : (isJa ? "作業者が確認すべき内容を指示として入力します。" : "Add a short instruction so operators know exactly what to check."))}
                   </p>
                   <div className="mt-2 flex flex-wrap gap-2 text-[11px] font-semibold">
-                    {field.unit ? <span className="rounded-full bg-surface-container px-2.5 py-1 text-on-surface">Unit: {field.unit}</span> : null}
+                    {field.unit ? <span className="rounded-full bg-surface-container px-2.5 py-1 text-on-surface">{isJa ? `単位: ${field.unit}` : `Unit: ${field.unit}`}</span> : null}
                     {hasRange ? (
                       <span className="rounded-full bg-surface-container px-2.5 py-1 text-on-surface">
-                        Range: {field.min != null ? field.min : "-"} - {field.max != null ? field.max : "-"}
+                        {isJa ? `範囲: ${field.min != null ? field.min : "-"} ～ ${field.max != null ? field.max : "-"}` : `Range: ${field.min != null ? field.min : "-"} - ${field.max != null ? field.max : "-"}`}
                       </span>
                     ) : null}
                     {field.type === "select" && Array.isArray(field.options) && field.options.length > 0 ? (
-                      <span className="rounded-full bg-surface-container px-2.5 py-1 text-on-surface">{field.options.length} options</span>
+                      <span className="rounded-full bg-surface-container px-2.5 py-1 text-on-surface">{isJa ? `${field.options.length} 個の選択肢` : `${field.options.length} options`}</span>
                     ) : null}
-                    {field.imageURL ? <span className="rounded-full bg-surface-container px-2.5 py-1 text-on-surface">Reference image</span> : null}
+                    {field.imageURL ? <span className="rounded-full bg-surface-container px-2.5 py-1 text-on-surface">{isJa ? "参考画像" : "Reference image"}</span> : null}
                   </div>
                 </div>
               </button>
@@ -993,12 +1001,12 @@ function FieldCard({
                   type="button"
                   onClick={(event) => {
                     event.stopPropagation();
-                    setThumbnailPreviewImage({ imageURL: fieldImageURL, name: field.label || "Reference image" });
+                    setThumbnailPreviewImage({ imageURL: fieldImageURL, name: field.label || (isJa ? "参考画像" : "Reference image") });
                   }}
                   className="mt-0.5 flex h-14 w-14 flex-shrink-0 overflow-hidden rounded-2xl border border-separator/40 bg-surface-container transition hover:border-primary/35 hover:shadow-[0_8px_20px_rgba(67,97,238,0.14)]"
-                  aria-label={`Preview reference image for ${field.label || "checklist field"}`}
+                  aria-label={isJa ? `${field.label || "点検項目"}の参考画像をプレビュー` : `Preview reference image for ${field.label || "checklist field"}`}
                 >
-                  <img src={fieldImageURL} alt={field.label || "Reference image"} className="h-full w-full object-cover" />
+                  <img src={fieldImageURL} alt={field.label || (isJa ? "参考画像" : "Reference image")} className="h-full w-full object-cover" />
                 </button>
               ) : null}
             </div>
@@ -1010,7 +1018,7 @@ function FieldCard({
                     type="button"
                     disabled={!canMoveUp}
                     onClick={onMoveUp}
-                    title="Move up"
+                    title={isJa ? "上に移動" : "Move up"}
                     className="flex h-8 w-8 items-center justify-center rounded-full text-outline transition hover:bg-surface-container hover:text-primary disabled:opacity-30"
                   >
                     <span className="material-symbols-outlined" style={{ fontSize: 16 }}>arrow_upward</span>
@@ -1019,7 +1027,7 @@ function FieldCard({
                     type="button"
                     disabled={!canMoveDown}
                     onClick={onMoveDown}
-                    title="Move down"
+                    title={isJa ? "下に移動" : "Move down"}
                     className="flex h-8 w-8 items-center justify-center rounded-full text-outline transition hover:bg-surface-container hover:text-primary disabled:opacity-30"
                   >
                     <span className="material-symbols-outlined" style={{ fontSize: 16 }}>arrow_downward</span>
@@ -1027,7 +1035,7 @@ function FieldCard({
                   <button
                     type="button"
                     onClick={onDuplicate}
-                    title="Duplicate step"
+                    title={isJa ? "項目を複製" : "Duplicate step"}
                     className="flex h-8 w-8 items-center justify-center rounded-full text-outline transition hover:bg-primary/10 hover:text-primary"
                   >
                     <span className="material-symbols-outlined" style={{ fontSize: 16 }}>content_copy</span>
@@ -1035,7 +1043,7 @@ function FieldCard({
                   <button
                     type="button"
                     onClick={onDelete}
-                    title="Delete step"
+                    title={isJa ? "項目を削除" : "Delete step"}
                     className="flex h-8 w-8 items-center justify-center rounded-full text-outline transition hover:bg-error/10 hover:text-error"
                   >
                     <span className="material-symbols-outlined" style={{ fontSize: 16 }}>delete</span>
@@ -1048,7 +1056,7 @@ function FieldCard({
                 onClick={onToggle}
                 className="inline-flex items-center gap-1 rounded-full border border-separator/40 bg-surface px-3 py-1.5 text-[11px] font-semibold text-on-surface transition hover:bg-surface-container"
               >
-                {expanded ? "Collapse" : "Edit"}
+                {expanded ? (isJa ? "閉じる" : "Collapse") : (isJa ? "編集" : "Edit")}
                 <span className="material-symbols-outlined" style={{ fontSize: 14 }}>{expanded ? "expand_less" : "expand_more"}</span>
               </button>
             </div>
@@ -1059,9 +1067,9 @@ function FieldCard({
           <div className="border-t border-outline-variant/20 px-4 py-4">
             {field.locked ? (
               <div className="rounded-2xl border border-separator/40 bg-surface px-4 py-4">
-                <p className="text-sm font-semibold text-on-surface">This field is fixed</p>
+                <p className="text-sm font-semibold text-on-surface">{isJa ? "この項目は固定されています" : "This field is fixed"}</p>
                 <p className="mt-1 text-sm leading-6 text-outline">
-                  The operator name field is added automatically to every checklist form and cannot be removed or edited.
+                  {isJa ? "作業者名項目はすべての点検フォームに自動的に追加され、削除や編集はできません。" : "The operator name field is added automatically to every checklist form and cannot be removed or edited."}
                 </p>
               </div>
             ) : (
@@ -1139,37 +1147,40 @@ function ReferenceImageLibraryModal({
   onPreviewImage,
   onSelectImage,
 }) {
+  const { language } = useLanguage();
+  const isJa = language === "ja";
+
   if (!open) return null;
 
   return (
     <OverlayDialog
       onClose={onClose}
-      eyebrow="Reference Image"
-      title="Image Library"
-      description="Upload a new reference image or reuse one already saved in this checklist folder."
+      eyebrow={isJa ? "参考画像" : "Reference Image"}
+      title={isJa ? "画像ライブラリ" : "Image Library"}
+      description={isJa ? "新しい参考画像をアップロードするか、この点検フォルダーに保存されている画像を選択します。" : "Upload a new reference image or reuse one already saved in this checklist folder."}
       maxWidthClass="max-w-6xl"
       footer={(
         <div className="flex items-center justify-between gap-3">
-          <p className="text-xs text-outline">{images.length} saved images available in this folder.</p>
+          <p className="text-xs text-outline">{isJa ? `このフォルダーに保存されている画像: ${images.length} 件` : `${images.length} saved images available in this folder.`}</p>
           <button
             type="button"
             onClick={onClose}
             className="rounded-2xl border border-separator/40 px-4 py-2 text-xs font-semibold text-on-surface transition hover:bg-surface-container"
           >
-            Done
+            {isJa ? "完了" : "Done"}
           </button>
         </div>
       )}
     >
       <div className="space-y-4 px-5 py-5 sm:px-6">
         <div className="flex flex-wrap items-center gap-2">
-          <span className="rounded-full bg-primary/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-primary">Folder</span>
-          <span className="rounded-full border border-separator/40 bg-surface-container px-3 py-1 text-xs font-semibold text-on-surface">{folderKey || "Unassigned"}</span>
+          <span className="rounded-full bg-primary/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-primary">{isJa ? "フォルダー" : "Folder"}</span>
+          <span className="rounded-full border border-separator/40 bg-surface-container px-3 py-1 text-xs font-semibold text-on-surface">{folderKey || (isJa ? "未割り当て" : "Unassigned")}</span>
         </div>
 
         {!loading && images.length === 0 ? (
           <div className="rounded-3xl border border-separator/40 bg-surface-container/50 px-4 py-4 text-sm leading-6 text-outline">
-            No saved images were found in this checklist folder yet. Start by uploading a new one.
+            {isJa ? "この点検フォルダーには保存された画像がまだありません。新しくアップロードしてください。" : "No saved images were found in this checklist folder yet. Start by uploading a new one."}
           </div>
         ) : null}
 
@@ -1184,8 +1195,8 @@ function ReferenceImageLibraryModal({
               {uploading ? "progress_activity" : "add_photo_alternate"}
             </span>
             <div>
-              <p className="text-sm font-semibold text-primary">{uploading ? "Uploading..." : "Upload new image"}</p>
-              <p className="mt-1 text-xs leading-5 text-primary/80">This will be added to the same checklist folder for reuse later.</p>
+              <p className="text-sm font-semibold text-primary">{uploading ? (isJa ? "アップロード中..." : "Uploading...") : (isJa ? "新しい画像をアップロード" : "Upload new image")}</p>
+              <p className="mt-1 text-xs leading-5 text-primary/80">{isJa ? "同じ点検フォルダーに追加され、後で再利用できます。" : "This will be added to the same checklist folder for reuse later."}</p>
             </div>
           </button>
 
@@ -1220,23 +1231,23 @@ function ReferenceImageLibraryModal({
                 >
                   <img
                     src={image.imageURL}
-                    alt={image.name || fieldLabel || "Reference image"}
+                    alt={image.name || fieldLabel || (isJa ? "参考画像" : "Reference image")}
                     className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.02]"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/15 to-transparent" />
                   <span className="absolute left-3 top-3 rounded-full bg-white/85 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-900">
-                    {isSelected ? "Current" : "Saved"}
+                    {isSelected ? (isJa ? "現在選択中" : "Current") : (isJa ? "保存済み" : "Saved")}
                   </span>
                   <span className="absolute inset-x-0 bottom-0 px-3 py-3 text-left text-xs font-semibold text-white">
-                    Preview image
+                    {isJa ? "画像をプレビュー" : "Preview image"}
                   </span>
                 </button>
 
                 <div className="flex items-center justify-between gap-3 p-3">
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-xs font-semibold text-on-surface">{image.name || fieldLabel || "Saved image"}</p>
+                    <p className="truncate text-xs font-semibold text-on-surface">{image.name || fieldLabel || (isJa ? "保存済み画像" : "Saved image")}</p>
                     <p className="mt-1 text-[11px] leading-5 text-outline">
-                      {isSelected ? "Currently selected for this check." : "Preview it first or assign it directly."}
+                      {isSelected ? (isJa ? "この項目に現在設定されています。" : "Currently selected for this check.") : (isJa ? "プレビューで確認するか、直接指定します。" : "Preview it first or assign it directly.")}
                     </p>
                   </div>
 
@@ -1249,7 +1260,7 @@ function ReferenceImageLibraryModal({
                         : "bg-primary text-on-primary hover:opacity-90"
                     }`}
                   >
-                    {isSelected ? "Selected" : "Use image"}
+                    {isSelected ? (isJa ? "選択中" : "Selected") : (isJa ? "画像を使用" : "Use image")}
                   </button>
                 </div>
               </div>
@@ -1262,6 +1273,9 @@ function ReferenceImageLibraryModal({
 }
 
 function ReferenceImagePreviewModal({ image, selectedImageURL, onClose, onSelectImage, onEditOverlay, editingOverlay }) {
+  const { language } = useLanguage();
+  const isJa = language === "ja";
+
   if (!image?.imageURL) return null;
 
   const normalizedImageURL = normalizeImageURL(image.imageURL);
@@ -1270,9 +1284,9 @@ function ReferenceImagePreviewModal({ image, selectedImageURL, onClose, onSelect
   return (
     <OverlayDialog
       onClose={onClose}
-      eyebrow="Preview"
-      title={image.name || "Reference image"}
-      description="Inspect the image at full size before assigning it to the checklist field."
+      eyebrow={isJa ? "プレビュー" : "Preview"}
+      title={image.name || (isJa ? "参考画像" : "Reference image")}
+      description={isJa ? "点検項目に指定する前にフルサイズで画像を確認します。" : "Inspect the image at full size before assigning it to the checklist field."}
       maxWidthClass="max-w-5xl"
       zIndexClass="z-[100]"
       overlayClassName="bg-black/75 backdrop-blur-sm"
@@ -1291,7 +1305,7 @@ function ReferenceImagePreviewModal({ image, selectedImageURL, onClose, onSelect
               !onEditOverlay || editingOverlay ? "opacity-50" : "hover:bg-white/10"
             }`}
           >
-            {editingOverlay ? "Preparing editor..." : "Edit overlay"}
+            {editingOverlay ? (isJa ? "エディター準備中..." : "Preparing editor...") : (isJa ? "注釈を編集" : "Edit overlay")}
           </button>
           <a
             href={normalizedImageURL}
@@ -1299,7 +1313,7 @@ function ReferenceImagePreviewModal({ image, selectedImageURL, onClose, onSelect
             rel="noreferrer"
             className="rounded-2xl border border-white/15 px-4 py-2 text-xs font-semibold text-white transition hover:bg-white/10"
           >
-            Open in new tab
+            {isJa ? "新しいタブで開く" : "Open in new tab"}
           </a>
           <button
             type="button"
@@ -1314,19 +1328,21 @@ function ReferenceImagePreviewModal({ image, selectedImageURL, onClose, onSelect
                 : "bg-primary text-on-primary hover:opacity-90"
             }`}
           >
-            {isSelected ? "Already selected" : "Use this image"}
+            {isSelected ? (isJa ? "既に選択済み" : "Already selected") : (isJa ? "この画像を使用" : "Use this image")}
           </button>
         </div>
       )}
     >
       <div className="flex min-h-[50vh] items-center justify-center bg-black/25 p-4 sm:p-6">
-        <img src={normalizedImageURL} alt={image.name || "Reference image"} className="max-h-[72vh] max-w-full rounded-[24px] object-contain shadow-2xl" />
+        <img src={normalizedImageURL} alt={image.name || (isJa ? "参考画像" : "Reference image")} className="max-h-[72vh] max-w-full rounded-[24px] object-contain shadow-2xl" />
       </div>
     </OverlayDialog>
   );
 }
 
 function FieldEditor({ field, onChange, username }) {
+  const { language } = useLanguage();
+  const isJa = language === "ja";
   const [preparingEditor, setPreparingEditor] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState("");
@@ -1355,7 +1371,7 @@ function FieldEditor({ field, onChange, username }) {
     } catch (error) {
       const raw = error?.message || "";
       setAvailableImages([]);
-      setLibraryError(raw.startsWith("<") ? "Unable to load saved images - check server is running." : raw || "Unable to load saved images.");
+      setLibraryError(raw.startsWith("<") ? (isJa ? "保存済み画像を読み込めません。サーバーが稼働しているか確認してください。" : "Unable to load saved images - check server is running.") : raw || (isJa ? "保存済み画像を読み込めません。" : "Unable to load saved images."));
     } finally {
       setLoadingLibrary(false);
     }
@@ -1379,7 +1395,7 @@ function FieldEditor({ field, onChange, username }) {
     setPreviewImage({
       imageURL,
       storagePath: image?.storagePath || "",
-      name: image?.name || field.label || "Reference image",
+      name: image?.name || field.label || (isJa ? "参考画像" : "Reference image"),
     });
   }
 
@@ -1396,11 +1412,11 @@ function FieldEditor({ field, onChange, username }) {
       setEditorSession({
         mode: "new",
         dataURL,
-        name: file.name || field.label || "Reference image",
+        name: file.name || field.label || (isJa ? "参考画像" : "Reference image"),
       });
     } catch (error) {
       const raw = error?.message || "";
-      setUploadError(raw.startsWith("<") ? "Unable to open the editor - check server is running." : raw || "Unable to open the editor.");
+      setUploadError(raw.startsWith("<") ? (isJa ? "エディターを開けません。サーバーが稼働しているか確認してください。" : "Unable to open the editor - check server is running.") : raw || (isJa ? "エディターを開けません。" : "Unable to open the editor."));
     } finally {
       setPreparingEditor(false);
     }
@@ -1420,11 +1436,11 @@ function FieldEditor({ field, onChange, username }) {
       setEditorSession({
         mode: "edit",
         dataURL: result?.dataURL,
-        name: result?.fileName || image?.name || field.label || "Reference image",
+        name: result?.fileName || image?.name || field.label || (isJa ? "参考画像" : "Reference image"),
       });
     } catch (error) {
       const raw = error?.message || "";
-      setUploadError(raw.startsWith("<") ? "Unable to load the image into the editor - check server is running." : raw || "Unable to open the editor.");
+      setUploadError(raw.startsWith("<") ? (isJa ? "エディターに画像を読み込めません。サーバーが稼働しているか確認してください。" : "Unable to load the image into the editor - check server is running.") : raw || (isJa ? "エディターに画像を読み込めません。" : "Unable to open the editor."));
     } finally {
       setPreparingEditor(false);
     }
@@ -1463,7 +1479,7 @@ function FieldEditor({ field, onChange, username }) {
       setAvailableImages((current) => normalizeReferenceLibraryImages([
         {
           imageURL: nextImageURL,
-          name: result?.fileName || "Latest upload",
+          name: result?.fileName || (isJa ? "最新のアップロード" : "Latest upload"),
           storagePath: result?.storagePath || "",
         },
         ...current,
@@ -1473,7 +1489,7 @@ function FieldEditor({ field, onChange, username }) {
       setPreviewImage(null);
     } catch (error) {
       const raw = error?.message || "";
-      const message = raw.startsWith("<") ? "Upload failed - check server is running." : raw || "Upload failed.";
+      const message = raw.startsWith("<") ? (isJa ? "アップロードに失敗しました。サーバーが稼働しているか確認してください。" : "Upload failed - check server is running.") : raw || (isJa ? "アップロードに失敗しました。" : "Upload failed.");
       setUploadError(message);
       throw new Error(message);
     } finally {
@@ -1486,10 +1502,10 @@ function FieldEditor({ field, onChange, username }) {
       <div className="space-y-4">
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_280px]">
         <div>
-          <label className="mb-1.5 block text-xs font-semibold uppercase tracking-[0.18em] text-outline">Title</label>
+          <label className="mb-1.5 block text-xs font-semibold uppercase tracking-[0.18em] text-outline">{isJa ? "タイトル" : "Title"}</label>
           <input
             type="text"
-            placeholder="Describe this check..."
+            placeholder={isJa ? "この点検項目を説明..." : "Describe this check..."}
             value={field.label}
             onChange={(event) => onChange({ label: event.target.value })}
             className={inputClass}
@@ -1497,7 +1513,7 @@ function FieldEditor({ field, onChange, username }) {
         </div>
 
         <div>
-          <label className="mb-1.5 block text-xs font-semibold uppercase tracking-[0.18em] text-outline">Type</label>
+          <label className="mb-1.5 block text-xs font-semibold uppercase tracking-[0.18em] text-outline">{isJa ? "種類" : "Type"}</label>
           <div className="grid grid-cols-2 gap-2">
             {FIELD_TYPES.map((type) => (
               <button
@@ -1511,7 +1527,7 @@ function FieldEditor({ field, onChange, username }) {
                 }`}
               >
                 {renderFieldTypeGlyph(type, 16)}
-                {type.label}
+                {isJa ? (type.label_ja || type.label) : type.label}
               </button>
             ))}
           </div>
@@ -1519,10 +1535,10 @@ function FieldEditor({ field, onChange, username }) {
       </div>
 
       <div>
-        <label className="mb-1.5 block text-xs font-semibold uppercase tracking-[0.18em] text-outline">Instruction</label>
+        <label className="mb-1.5 block text-xs font-semibold uppercase tracking-[0.18em] text-outline">{isJa ? "指示・注意事項" : "Instruction"}</label>
         <textarea
           rows={3}
-          placeholder="What should be checked and how should operators interpret it?"
+          placeholder={isJa ? "点検する内容と、作業者がどのように判断すべきかを記載します。" : "What should be checked and how should operators interpret it?"}
           value={field.description ?? ""}
           onChange={(event) => onChange({ description: event.target.value })}
           className={`${inputClass} resize-y`}
@@ -1531,22 +1547,22 @@ function FieldEditor({ field, onChange, username }) {
 
       <div className="grid gap-4 lg:grid-cols-2">
         <div className="space-y-3">
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-outline">Rules</p>
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-outline">{isJa ? "ルール" : "Rules"}</p>
           <ToggleRow
             checked={field.required}
             onToggle={() => onChange({ required: !field.required })}
-            label="Required"
-            description="Operators must answer this field before they can submit the form."
+            label={isJa ? "必須" : "Required"}
+            description={isJa ? "作業者がフォームを送信する前に、この項目への回答が必須になります。" : "Operators must answer this field before they can submit the form."}
           />
           <ToggleRow
             checked={field.photoRequired}
             onToggle={() => onChange({ photoRequired: !field.photoRequired })}
-            label="Photo Required"
-            description="Ask the operator to attach an image when this check is completed."
+            label={isJa ? "写真必須" : "Photo Required"}
+            description={isJa ? "この項目の点検時に作業者へ画像の添付を求めます。" : "Ask the operator to attach an image when this check is completed."}
           />
 
           <div className="pt-2">
-            <p className="mb-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-outline">Step Timing</p>
+            <p className="mb-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-outline">{isJa ? "実施タイミング" : "Step Timing"}</p>
             <div className="grid grid-cols-2 gap-2">
               <button
                 type="button"
@@ -1558,7 +1574,7 @@ function FieldEditor({ field, onChange, username }) {
                 }`}
               >
                 <span className="material-symbols-outlined" style={{ fontSize: 16 }}>play_circle</span>
-                Pre-Production
+                {isJa ? "製造前" : "Pre-Production"}
               </button>
               <button
                 type="button"
@@ -1570,7 +1586,7 @@ function FieldEditor({ field, onChange, username }) {
                 }`}
               >
                 <span className="material-symbols-outlined" style={{ fontSize: 16 }}>task</span>
-                Post-Production
+                {isJa ? "製造後" : "Post-Production"}
               </button>
             </div>
           </div>
@@ -1579,8 +1595,8 @@ function FieldEditor({ field, onChange, username }) {
         <div className="rounded-2xl border border-separator/40 bg-surface px-4 py-4">
           <div className="flex items-center justify-between gap-3">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-outline">Reference Image</p>
-              <p className="mt-1 text-xs leading-5 text-outline">Choose a saved image for this checklist or upload a new one into its folder.</p>
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-outline">{isJa ? "参考画像" : "Reference Image"}</p>
+              <p className="mt-1 text-xs leading-5 text-outline">{isJa ? "この点検項目用に保存された画像を選択するか、フォルダーに新しい画像をアップロードします。" : "Choose a saved image for this checklist or upload a new one into its folder."}</p>
             </div>
           </div>
 
@@ -1595,12 +1611,12 @@ function FieldEditor({ field, onChange, username }) {
               {uploading || loadingLibrary || preparingEditor ? (
                 <>
                   <span className="material-symbols-outlined animate-spin" style={{ fontSize: 16 }}>progress_activity</span>
-                  {uploading ? "Uploading..." : preparingEditor ? "Preparing editor..." : "Loading images..."}
+                  {uploading ? (isJa ? "アップロード中..." : "Uploading...") : preparingEditor ? (isJa ? "エディター準備中..." : "Preparing editor...") : (isJa ? "画像を読み込み中..." : "Loading images...")}
                 </>
               ) : (
                 <>
                   <span className="material-symbols-outlined" style={{ fontSize: 16 }}>photo_library</span>
-                  {field.imageURL ? "Replace image" : "Choose image"}
+                  {field.imageURL ? (isJa ? "画像を変更" : "Replace image") : (isJa ? "画像を選択" : "Choose image")}
                 </>
               )}
             </button>
@@ -1608,11 +1624,11 @@ function FieldEditor({ field, onChange, username }) {
             {selectedImageURL ? (
               <button
                 type="button"
-                onClick={() => handleOpenPreview({ imageURL: selectedImageURL, name: field.label || "Reference image" })}
+                onClick={() => handleOpenPreview({ imageURL: selectedImageURL, name: field.label || (isJa ? "参考画像" : "Reference image") })}
                 className="inline-flex items-center gap-2 rounded-2xl border border-separator/40 px-4 py-2 text-xs font-semibold text-on-surface transition hover:bg-surface-container"
               >
                 <span className="material-symbols-outlined" style={{ fontSize: 16 }}>open_in_full</span>
-                Preview image
+                {isJa ? "画像をプレビュー" : "Preview image"}
               </button>
             ) : null}
           </div>
@@ -1625,16 +1641,16 @@ function FieldEditor({ field, onChange, username }) {
               <img src={selectedImageURL} alt="reference" className="h-40 w-full object-cover" />
               <div className="absolute inset-x-0 bottom-0 flex items-center justify-between gap-2 bg-gradient-to-t from-black/75 via-black/15 to-transparent px-3 py-3">
                 <div>
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-white/80">Current image</p>
-                  <p className="mt-1 text-xs font-semibold text-white">Open a preview to inspect details.</p>
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-white/80">{isJa ? "現在の画像" : "Current image"}</p>
+                  <p className="mt-1 text-xs font-semibold text-white">{isJa ? "詳細を確認するにはプレビューを開きます。" : "Open a preview to inspect details."}</p>
                 </div>
                 <button
                   type="button"
-                  onClick={() => handleOpenPreview({ imageURL: selectedImageURL, name: field.label || "Reference image" })}
+                  onClick={() => handleOpenPreview({ imageURL: selectedImageURL, name: field.label || (isJa ? "参考画像" : "Reference image") })}
                   className="inline-flex items-center gap-1 rounded-full bg-white/15 px-3 py-1.5 text-[11px] font-semibold text-white backdrop-blur-sm transition hover:bg-white/20"
                 >
                   <span className="material-symbols-outlined" style={{ fontSize: 14 }}>open_in_full</span>
-                  Preview
+                  {isJa ? "プレビュー" : "Preview"}
                 </button>
               </div>
               <button
@@ -1652,7 +1668,7 @@ function FieldEditor({ field, onChange, username }) {
       {field.type === "number" ? (
         <div className="grid gap-4 lg:grid-cols-3">
           <div>
-            <label className="mb-1.5 block text-xs font-semibold uppercase tracking-[0.18em] text-outline">Min</label>
+            <label className="mb-1.5 block text-xs font-semibold uppercase tracking-[0.18em] text-outline">{isJa ? "最小値" : "Min"}</label>
             <input
               type="number"
               value={field.min ?? ""}
@@ -1661,7 +1677,7 @@ function FieldEditor({ field, onChange, username }) {
             />
           </div>
           <div>
-            <label className="mb-1.5 block text-xs font-semibold uppercase tracking-[0.18em] text-outline">Max</label>
+            <label className="mb-1.5 block text-xs font-semibold uppercase tracking-[0.18em] text-outline">{isJa ? "最大値" : "Max"}</label>
             <input
               type="number"
               value={field.max ?? ""}
@@ -1670,10 +1686,10 @@ function FieldEditor({ field, onChange, username }) {
             />
           </div>
           <div>
-            <label className="mb-1.5 block text-xs font-semibold uppercase tracking-[0.18em] text-outline">Unit</label>
+            <label className="mb-1.5 block text-xs font-semibold uppercase tracking-[0.18em] text-outline">{isJa ? "単位" : "Unit"}</label>
             <input
               type="text"
-              placeholder="e.g. °C"
+              placeholder={isJa ? "例: °C" : "e.g. °C"}
               value={field.unit ?? ""}
               onChange={(event) => onChange({ unit: event.target.value })}
               className={inputClass}
@@ -1722,6 +1738,8 @@ function FieldEditor({ field, onChange, username }) {
 }
 
 function SelectOptionsEditor({ options, onChange }) {
+  const { language } = useLanguage();
+  const isJa = language === "ja";
   const [newOption, setNewOption] = useState("");
 
   function addOption() {
@@ -1739,8 +1757,8 @@ function SelectOptionsEditor({ options, onChange }) {
     <div className="rounded-2xl border border-separator/40 bg-surface px-4 py-4">
       <div className="flex items-center justify-between gap-3">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-outline">Options</p>
-          <p className="mt-1 text-xs leading-5 text-outline">Add the choices operators can select for this field.</p>
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-outline">{isJa ? "選択肢" : "Options"}</p>
+          <p className="mt-1 text-xs leading-5 text-outline">{isJa ? "作業者がこの項目で選択できる選択肢を追加します。" : "Add the choices operators can select for this field."}</p>
         </div>
       </div>
 
@@ -1758,7 +1776,7 @@ function SelectOptionsEditor({ options, onChange }) {
       <div className="mt-3 flex gap-2">
         <input
           type="text"
-          placeholder="Add option..."
+          placeholder={isJa ? "選択肢を追加..." : "Add option..."}
           value={newOption}
           onChange={(event) => setNewOption(event.target.value)}
           onKeyDown={(event) => {
@@ -1770,7 +1788,7 @@ function SelectOptionsEditor({ options, onChange }) {
           className="flex-1 rounded-2xl border border-separator/40 bg-surface-container px-3 py-2 text-sm text-on-surface outline-none transition focus:border-primary/40"
         />
         <button type="button" onClick={addOption} className="rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-on-primary hover:opacity-90 active:scale-95 transition-all duration-150">
-          Add
+          {isJa ? "追加" : "Add"}
         </button>
       </div>
     </div>

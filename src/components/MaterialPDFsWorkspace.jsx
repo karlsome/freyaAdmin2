@@ -1,4 +1,5 @@
 import { useDeferredValue, useEffect, useState } from "react";
+import { useLanguage } from "../contexts/LanguageContext";
 import {
   batchDeleteMaterialPDFs,
   checkExistingMaterialPDFs,
@@ -50,6 +51,8 @@ function getReturnedDocumentId(result) {
 }
 
 export default function MaterialPDFsWorkspace({ refreshToken = 0, onFlash }) {
+  const { language } = useLanguage();
+  const isJa = language === "ja";
   const [activeType, setActiveType] = useState(DEFAULT_MATERIAL_PDF_TYPE);
   const [materials, setMaterials] = useState([]);
   const [items, setItems] = useState([]);
@@ -146,7 +149,7 @@ export default function MaterialPDFsWorkspace({ refreshToken = 0, onFlash }) {
         setMaterials(sortMaterialRecords(nextMaterials));
       } catch (loadError) {
         if (cancelled) return;
-        publishFlash("error", loadError.message || "Failed to load material metadata for PDF linking.");
+        publishFlash("error", loadError.message || (isJa ? "PDF連携用の材料メタデータの取得に失敗しました。" : "Failed to load material metadata for PDF linking."));
       }
     }
 
@@ -193,7 +196,7 @@ export default function MaterialPDFsWorkspace({ refreshToken = 0, onFlash }) {
         setItems([]);
         setTotalCount(0);
         setTotalPages(1);
-        setError(loadError.message || "Failed to load material PDFs.");
+        setError(loadError.message || (isJa ? "材料PDFの読み込みに失敗しました。" : "Failed to load material PDFs."));
       } finally {
         if (!cancelled) {
           setLoading(false);
@@ -243,7 +246,7 @@ export default function MaterialPDFsWorkspace({ refreshToken = 0, onFlash }) {
         setTrashItems([]);
         setTrashTotalCount(0);
         setTrashTotalPages(1);
-        setTrashError(loadError.message || "Failed to load deleted PDFs.");
+        setTrashError(loadError.message || (isJa ? "削除済みPDFの読み込みに失敗しました。" : "Failed to load deleted PDFs."));
       } finally {
         if (!cancelled) {
           setTrashLoading(false);
@@ -346,32 +349,32 @@ export default function MaterialPDFsWorkspace({ refreshToken = 0, onFlash }) {
   async function handleDeleteItem(item) {
     const documentId = getMaterialPDFItemId(item);
     if (!documentId) {
-      publishFlash("error", "This file is missing an ID and cannot be deleted.");
+      publishFlash("error", isJa ? "このファイルにはIDがないため削除できません。" : "This file is missing an ID and cannot be deleted.");
       return;
     }
-    if (!window.confirm(`Delete ${item?.fileName || "this PDF"}?`)) return;
+    if (!window.confirm(isJa ? `「${item?.fileName || "このPDF"}」を削除しますか？` : `Delete ${item?.fileName || "this PDF"}?`)) return;
 
     try {
-      assertApiSuccess(await deleteMaterialPDF(documentId), "Failed to delete PDF.");
-      publishFlash("success", "PDF moved to trash.");
+      assertApiSuccess(await deleteMaterialPDF(documentId), isJa ? "PDFの削除に失敗しました。" : "Failed to delete PDF.");
+      publishFlash("success", isJa ? "PDFをゴミ箱に移動しました。" : "PDF moved to trash.");
       refreshLists();
     } catch (deleteError) {
-      publishFlash("error", deleteError.message || "Failed to delete the selected PDF.");
+      publishFlash("error", deleteError.message || (isJa ? "選択したPDFの削除に失敗しました。" : "Failed to delete the selected PDF."));
     }
   }
 
   async function handleDeleteSelected() {
     const documentIds = [...selectedIds].filter(Boolean);
     if (!documentIds.length) return;
-    if (!window.confirm(`Delete ${documentIds.length} selected PDF file(s)?`)) return;
+    if (!window.confirm(isJa ? `選択された ${documentIds.length} 件のPDFファイルを削除しますか？` : `Delete ${documentIds.length} selected PDF file(s)?`)) return;
 
     try {
-      assertApiSuccess(await batchDeleteMaterialPDFs(documentIds), "Batch delete failed.");
-      publishFlash("success", `${documentIds.length} file(s) moved to trash.`);
+      assertApiSuccess(await batchDeleteMaterialPDFs(documentIds), isJa ? "一括削除に失敗しました。" : "Batch delete failed.");
+      publishFlash("success", isJa ? `${documentIds.length} 件のファイルをゴミ箱に移動しました。` : `${documentIds.length} file(s) moved to trash.`);
       setSelectedIds(new Set());
       refreshLists();
     } catch (deleteError) {
-      publishFlash("error", deleteError.message || "Failed to delete the selected files.");
+      publishFlash("error", deleteError.message || (isJa ? "選択したファイルの削除に失敗しました。" : "Failed to delete the selected files."));
     }
   }
 
@@ -420,11 +423,11 @@ export default function MaterialPDFsWorkspace({ refreshToken = 0, onFlash }) {
 
       setBulkFiles([]);
       if (!successCount && !failureCount) {
-        publishFlash("warning", "Every matched material was skipped, so nothing was uploaded.");
+        publishFlash("warning", isJa ? "一致したすべての材料がスキップされたため、何もアップロードされませんでした。" : "Every matched material was skipped, so nothing was uploaded.");
       } else if (failureCount) {
-        publishFlash("warning", `Bulk upload finished. Uploaded ${successCount}, failed ${failureCount}.`);
+        publishFlash("warning", isJa ? `一括アップロード完了。成功: ${successCount} 件、失敗: ${failureCount} 件。` : `Bulk upload finished. Uploaded ${successCount}, failed ${failureCount}.`);
       } else {
-        publishFlash("success", `Bulk upload finished. Uploaded ${successCount} file${successCount === 1 ? "" : "s"}.`);
+        publishFlash("success", isJa ? `一括アップロード完了。${successCount} 件のファイルをアップロードしました。` : `Bulk upload finished. Uploaded ${successCount} file${successCount === 1 ? "" : "s"}.`);
       }
       refreshLists();
     } finally {
@@ -435,11 +438,11 @@ export default function MaterialPDFsWorkspace({ refreshToken = 0, onFlash }) {
 
   async function handleUploadSingle() {
     if (!singleFile) {
-      publishFlash("warning", "Select a PDF file before uploading.");
+      publishFlash("warning", isJa ? "アップロードするPDFファイルを選択してください。" : "Select a PDF file before uploading.");
       return;
     }
     if (!selectedSerialNumbers.length) {
-      publishFlash("warning", "Select at least one material before uploading.");
+      publishFlash("warning", isJa ? "アップロードする前に少なくとも1つの材料を選択してください。" : "Select at least one material before uploading.");
       return;
     }
 
@@ -456,13 +459,13 @@ export default function MaterialPDFsWorkspace({ refreshToken = 0, onFlash }) {
 
       await executeSingleUpload(singleFile, selectedSerialNumbers);
     } catch (checkError) {
-      publishFlash("error", checkError.message || "Failed to validate existing PDFs before upload.");
+      publishFlash("error", checkError.message || (isJa ? "アップロード前の既存PDF検証に失敗しました。" : "Failed to validate existing PDFs before upload."));
     }
   }
 
   function handleReviewBulkUpload() {
     if (!bulkFiles.length) {
-      publishFlash("warning", "Select one or more PDF files for bulk upload.");
+      publishFlash("warning", isJa ? "一括アップロード用のPDFファイルを1つ以上選択してください。" : "Select one or more PDF files for bulk upload.");
       return;
     }
 
@@ -477,7 +480,7 @@ export default function MaterialPDFsWorkspace({ refreshToken = 0, onFlash }) {
     setBulkMatchState(null);
 
     if (!assignments.length) {
-      publishFlash("warning", "No files were assigned to materials.");
+      publishFlash("warning", isJa ? "材料に割り当てられたファイルがありません。" : "No files were assigned to materials.");
       return;
     }
 
@@ -498,7 +501,7 @@ export default function MaterialPDFsWorkspace({ refreshToken = 0, onFlash }) {
 
       await executeBulkUpload(assignments);
     } catch (checkError) {
-      publishFlash("error", checkError.message || "Failed to validate existing PDFs for the bulk upload.");
+      publishFlash("error", checkError.message || (isJa ? "一括アップロード用の既存PDF検証に失敗しました。" : "Failed to validate existing PDFs for the bulk upload."));
     }
   }
 
@@ -517,15 +520,15 @@ export default function MaterialPDFsWorkspace({ refreshToken = 0, onFlash }) {
 
   async function handleRecoverTrashItem(item) {
     const documentId = getMaterialPDFItemId(item);
-    if (!documentId || !window.confirm(`Recover ${item?.fileName || "this PDF"}?`)) return;
+    if (!documentId || !window.confirm(isJa ? `「${item?.fileName || "このPDF"}」を復元しますか？` : `Recover ${item?.fileName || "this PDF"}?`)) return;
 
     setTrashBusy(true);
     try {
-      assertApiSuccess(await recoverMaterialPDF(documentId), "Failed to recover PDF.");
-      publishFlash("success", "PDF recovered successfully.");
+      assertApiSuccess(await recoverMaterialPDF(documentId), isJa ? "PDFの復元に失敗しました。" : "Failed to recover PDF.");
+      publishFlash("success", isJa ? "PDFを正常に復元しました。" : "PDF recovered successfully.");
       refreshLists();
     } catch (recoverError) {
-      publishFlash("error", recoverError.message || "Failed to recover the PDF.");
+      publishFlash("error", recoverError.message || (isJa ? "PDFの復元に失敗しました。" : "Failed to recover the PDF."));
     } finally {
       setTrashBusy(false);
     }
@@ -534,16 +537,16 @@ export default function MaterialPDFsWorkspace({ refreshToken = 0, onFlash }) {
   async function handleDeleteTrashItem(item) {
     const documentId = getMaterialPDFItemId(item);
     if (!documentId) return;
-    if (!window.confirm(`Permanently delete ${item?.fileName || "this PDF"}? This cannot be undone.`)) return;
-    if (!window.confirm("Final confirmation: delete permanently?")) return;
+    if (!window.confirm(isJa ? `「${item?.fileName || "このPDF"}」を完全に削除しますか？この操作は取り消せません。` : `Permanently delete ${item?.fileName || "this PDF"}? This cannot be undone.`)) return;
+    if (!window.confirm(isJa ? "最終確認: 完全に削除しますか？" : "Final confirmation: delete permanently?")) return;
 
     setTrashBusy(true);
     try {
-      assertApiSuccess(await permanentlyDeleteMaterialPDF(documentId), "Permanent delete failed.");
-      publishFlash("success", "PDF permanently deleted.");
+      assertApiSuccess(await permanentlyDeleteMaterialPDF(documentId), isJa ? "完全削除に失敗しました。" : "Permanent delete failed.");
+      publishFlash("success", isJa ? "PDFを完全に削除しました。" : "PDF permanently deleted.");
       refreshLists();
     } catch (deleteError) {
-      publishFlash("error", deleteError.message || "Failed to permanently delete the PDF.");
+      publishFlash("error", deleteError.message || (isJa ? "PDFの完全削除に失敗しました。" : "Failed to permanently delete the PDF."));
     } finally {
       setTrashBusy(false);
     }
@@ -551,19 +554,19 @@ export default function MaterialPDFsWorkspace({ refreshToken = 0, onFlash }) {
 
   async function handleRecoverAllTrash() {
     if (!trashItems.length) return;
-    if (!window.confirm(`Recover all ${trashItems.length} deleted file(s)?`)) return;
+    if (!window.confirm(isJa ? `削除済みの ${trashItems.length} 件のファイルをすべて復元しますか？` : `Recover all ${trashItems.length} deleted file(s)?`)) return;
 
     setTrashBusy(true);
     try {
       for (const item of trashItems) {
         const documentId = getMaterialPDFItemId(item);
         if (!documentId) continue;
-        assertApiSuccess(await recoverMaterialPDF(documentId), "Failed to recover one or more PDFs.");
+        assertApiSuccess(await recoverMaterialPDF(documentId), isJa ? "一部のPDFの復元に失敗しました。" : "Failed to recover one or more PDFs.");
       }
-      publishFlash("success", `Recovered ${trashItems.length} file(s) from trash.`);
+      publishFlash("success", isJa ? `ゴミ箱から ${trashItems.length} 件のファイルを復元しました。` : `Recovered ${trashItems.length} file(s) from trash.`);
       refreshLists();
     } catch (recoverError) {
-      publishFlash("error", recoverError.message || "Failed while recovering deleted PDFs.");
+      publishFlash("error", recoverError.message || (isJa ? "削除済みPDFの復元中に失敗しました。" : "Failed while recovering deleted PDFs."));
     } finally {
       setTrashBusy(false);
     }
@@ -571,30 +574,30 @@ export default function MaterialPDFsWorkspace({ refreshToken = 0, onFlash }) {
 
   async function handleDeleteAllTrash() {
     if (!trashItems.length) return;
-    if (!window.confirm(`Permanently delete all ${trashItems.length} item(s) in trash?`)) return;
-    if (!window.confirm("Final confirmation: delete everything permanently?")) return;
+    if (!window.confirm(isJa ? `ゴミ箱内の全 ${trashItems.length} 件を完全に削除しますか？` : `Permanently delete all ${trashItems.length} item(s) in trash?`)) return;
+    if (!window.confirm(isJa ? "最終確認: すべて完全に削除しますか？" : "Final confirmation: delete everything permanently?")) return;
 
     setTrashBusy(true);
     try {
       for (const item of trashItems) {
         const documentId = getMaterialPDFItemId(item);
         if (!documentId) continue;
-        assertApiSuccess(await permanentlyDeleteMaterialPDF(documentId), "Failed to permanently delete one or more PDFs.");
+        assertApiSuccess(await permanentlyDeleteMaterialPDF(documentId), isJa ? "一部のPDFの完全削除に失敗しました。" : "Failed to permanently delete one or more PDFs.");
       }
-      publishFlash("success", `Permanently deleted ${trashItems.length} file(s) from trash.`);
+      publishFlash("success", isJa ? `ゴミ箱から ${trashItems.length} 件のファイルを完全に削除しました。` : `Permanently deleted ${trashItems.length} file(s) from trash.`);
       refreshLists();
     } catch (deleteError) {
-      publishFlash("error", deleteError.message || "Failed while permanently deleting trashed PDFs.");
+      publishFlash("error", deleteError.message || (isJa ? "ゴミ箱のPDFの完全削除中に失敗しました。" : "Failed while permanently deleting trashed PDFs."));
     } finally {
       setTrashBusy(false);
     }
   }
 
   const stats = [
-    { label: "Total Files", value: totalCount, icon: "description", accent: "bg-[var(--freya-blue)]/10 text-[var(--freya-blue)]" },
-    { label: "Visible Page", value: items.length, icon: "grid_view", accent: "bg-[var(--text-primary)]/10 text-[var(--text-primary)]" },
-    { label: "Selected", value: selectedIds.size, icon: "task_alt", accent: "bg-[var(--status-success)]/10 text-[var(--status-success)]" },
-    { label: "Linked Materials", value: currentLinkedMaterials, icon: "sell", accent: "bg-amber-500/10 text-amber-600 dark:text-amber-400" },
+    { label: isJa ? "合計ファイル数" : "Total Files", value: totalCount, icon: "description", accent: "bg-[var(--freya-blue)]/10 text-[var(--freya-blue)]" },
+    { label: isJa ? "表示中のページ" : "Visible Page", value: items.length, icon: "grid_view", accent: "bg-[var(--text-primary)]/10 text-[var(--text-primary)]" },
+    { label: isJa ? "選択中" : "Selected", value: selectedIds.size, icon: "task_alt", accent: "bg-[var(--status-success)]/10 text-[var(--status-success)]" },
+    { label: isJa ? "連携材料数" : "Linked Materials", value: currentLinkedMaterials, icon: "sell", accent: "bg-amber-500/10 text-amber-600 dark:text-amber-400" },
   ];
 
   return (
@@ -602,10 +605,14 @@ export default function MaterialPDFsWorkspace({ refreshToken = 0, onFlash }) {
       <div className="freya-card mb-6 rounded-[8px] border border-[var(--border)] bg-[var(--surface)] p-6 shadow-sm">
         <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--text-muted)]">Document Library</div>
+            <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--text-muted)]">
+              {isJa ? "ドキュメントライブラリ" : "Document Library"}
+            </div>
             <h3 className="mt-0.5 text-2xl font-bold tracking-tight text-[var(--text-primary)]">作業条件表 (PSA) / その他1 / その他2</h3>
             <p className="mt-1 max-w-2xl text-xs text-[var(--text-secondary)]">
-              Manage material-linked PDFs by document type. Uploads preserve the legacy conflict checks, bulk filename matching, and trash/recovery workflow.
+              {isJa
+                ? "文書タイプ別に材料連携PDFを管理します。従来の重複確認、ファイル名の一括照合、ゴミ箱・復元ワークフローに対応しています。"
+                : "Manage material-linked PDFs by document type. Uploads preserve the legacy conflict checks, bulk filename matching, and trash/recovery workflow."}
             </p>
           </div>
 
@@ -618,7 +625,7 @@ export default function MaterialPDFsWorkspace({ refreshToken = 0, onFlash }) {
             className="inline-flex items-center gap-2 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3.5 py-1.5 text-xs font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-hover)] transition-colors shadow-2xs"
           >
             <span className="material-symbols-outlined" style={{ fontSize: 16 }}>delete</span>
-            Open Trash
+            {isJa ? "ゴミ箱を開く" : "Open Trash"}
           </button>
         </div>
 
@@ -635,7 +642,11 @@ export default function MaterialPDFsWorkspace({ refreshToken = 0, onFlash }) {
         <div className="freya-card mb-6 rounded-[8px] border border-[var(--border)] bg-[var(--surface)] p-12 text-center">
           <span className="material-symbols-outlined text-[var(--text-muted)]" style={{ fontSize: 48 }}>video_library</span>
           <h4 className="mt-3 text-lg font-bold text-[var(--text-primary)]">{activeTypeMeta.label}</h4>
-          <p className="mt-1.5 text-xs text-[var(--text-secondary)]">This legacy section is still marked as coming soon. The sub-tab is live in navigation, but uploads and browsing are not enabled yet.</p>
+          <p className="mt-1.5 text-xs text-[var(--text-secondary)]">
+            {isJa
+              ? "このレガシーセクションは準備中です。ナビゲーションのサブタブは有効ですが、アップロードや閲覧はまだ開始されていません。"
+              : "This legacy section is still marked as coming soon. The sub-tab is live in navigation, but uploads and browsing are not enabled yet."}
+          </p>
         </div>
       ) : (
         <>

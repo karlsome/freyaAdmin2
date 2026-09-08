@@ -1,5 +1,6 @@
 import { useId, useRef } from "react";
 import PlannerGoalList from "./PlannerGoalList";
+import { useLanguage } from "../../contexts/LanguageContext";
 
 export default function PlannerGoalsPanel({
   goals = [],
@@ -17,6 +18,8 @@ export default function PlannerGoalsPanel({
   onDeleteGoal,
   onScheduleGoal,
 }) {
+  const { language } = useLanguage();
+  const isJa = language === "ja";
   const inputId = useId();
   const fileInputRef = useRef(null);
 
@@ -25,8 +28,12 @@ export default function PlannerGoalsPanel({
       <div className="freya-card rounded-[8px] border border-[var(--border)] bg-[var(--surface)] p-4 shadow-sm">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <h3 className="text-sm font-semibold text-[var(--text-primary)]">Production Goals</h3>
-            <p className="mt-0.5 text-xs text-[var(--text-secondary)]">Set goal quantities first, then place them onto equipment schedules.</p>
+            <h3 className="text-sm font-semibold text-[var(--text-primary)]">
+              {isJa ? "生産目標" : "Production Goals"}
+            </h3>
+            <p className="mt-0.5 text-xs text-[var(--text-secondary)]">
+              {isJa ? "まず目標数量を設定し、設備スケジュールに配置します。" : "Set goal quantities first, then place them onto equipment schedules."}
+            </p>
           </div>
 
           <div className="flex flex-wrap gap-2">
@@ -37,7 +44,7 @@ export default function PlannerGoalsPanel({
               className="flex items-center gap-1.5 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-hover)] disabled:cursor-not-allowed disabled:opacity-50 transition-colors shadow-none"
             >
               <span className="material-symbols-outlined" style={{ fontSize: 15 }}>upload</span>
-              {importing ? "Reading CSV…" : "Upload CSV"}
+              {importing ? (isJa ? "CSV読込中…" : "Reading CSV…") : (isJa ? "CSVアップロード" : "Upload CSV")}
             </button>
             <button
               type="button"
@@ -45,7 +52,7 @@ export default function PlannerGoalsPanel({
               className="flex items-center gap-1.5 rounded-[6px] bg-[var(--freya-blue)] px-3 py-1.5 text-xs font-semibold text-white hover:bg-[var(--freya-blue-hover)] transition-colors shadow-none"
             >
               <span className="material-symbols-outlined" style={{ fontSize: 15 }}>add_circle</span>
-              Manual Input
+              {isJa ? "手動入力" : "Manual Input"}
             </button>
             <button
               type="button"
@@ -56,7 +63,7 @@ export default function PlannerGoalsPanel({
               <span className={`material-symbols-outlined ${smartSchedulingBusy ? "animate-spin" : ""}`} style={{ fontSize: 15 }}>
                 auto_awesome
               </span>
-              {smartSchedulingBusy ? "Scheduling…" : "Smart Scheduling"}
+              {smartSchedulingBusy ? (isJa ? "計画立案中…" : "Scheduling…") : (isJa ? "スマート計画" : "Smart Scheduling")}
             </button>
           </div>
         </div>
@@ -71,14 +78,14 @@ export default function PlannerGoalsPanel({
                 type="text"
                 value={goalSearch}
                 onChange={(event) => onGoalSearchChange(event.target.value)}
-                placeholder="Search by 背番号, 品番, or 品名…"
+                placeholder={isJa ? "背番号、品番、品名で検索…" : "Search by 背番号, 品番, or 品名…"}
                 className="h-full flex-1 bg-transparent text-xs text-[var(--text-primary)] outline-none placeholder:text-[var(--text-muted)]"
               />
             </div>
           </div>
 
           <div className="rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] px-2.5 py-1 text-xs font-mono text-[var(--text-secondary)]">
-            {goals.length} goal{goals.length === 1 ? "" : "s"} in view
+            {isJa ? `表示中: ${goals.length} 件の目標` : `${goals.length} goal${goals.length === 1 ? "" : "s"} in view`}
           </div>
         </div>
 
