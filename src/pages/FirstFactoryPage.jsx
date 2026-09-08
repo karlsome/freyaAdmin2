@@ -1847,6 +1847,11 @@ export default function FirstFactoryPage() {
   
   const scheduleWithTimes = computeTimeSchedule(scheduledItems, startTime);
 
+  const scheduledEndTime = useMemo(() => {
+    if (!scheduleWithTimes || scheduleWithTimes.length === 0) return null;
+    return scheduleWithTimes[scheduleWithTimes.length - 1]?.endTime || null;
+  }, [scheduleWithTimes]);
+
   const handlePrintSchedulePDF = () => {
     const authUser = readStoredAuthUser() || {};
     const fullName = getAuthDisplayName(authUser);
@@ -2504,24 +2509,44 @@ export default function FirstFactoryPage() {
               onDragOver={(e) => e.preventDefault()}
               onDrop={(e) => onDropScheduled(e)}
             >
-              <h3 className="mb-4 text-sm font-semibold text-[var(--text-primary)] flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  {t('ff_priorityOrder')}
-                  <div className="flex items-center gap-2 text-xs font-normal text-[var(--text-muted)]">
-                    <span className="material-symbols-outlined" style={{fontSize:16}}>schedule</span>
-                    {t('ff_start')} 
+              <h3 className="mb-4 text-sm font-semibold text-[var(--text-primary)] flex items-center justify-between flex-wrap gap-2">
+                <div className="flex items-center gap-3 flex-wrap">
+                  <span className="font-semibold text-sm">{t('ff_priorityOrder')}</span>
+                  <div className="flex items-center gap-1.5 text-xs font-normal text-[var(--text-muted)] bg-[var(--surface-raised)] border border-[var(--border)] rounded-[6px] px-2 py-1">
+                    <span className="material-symbols-outlined text-[var(--freya-blue)]" style={{fontSize: 16}}>schedule</span>
+                    <span>{t('ff_start')}</span> 
                     <input 
                       type="time" 
                       value={startTime}
                       onChange={e => setStartTime(e.target.value)}
-                      className="rounded-[4px] bg-[var(--surface-raised)] border border-[var(--border)] px-2 py-0.5 text-xs font-mono freya-tabular text-[var(--text-primary)] focus:outline-none focus:border-[var(--freya-blue)]"
+                      className="rounded-[4px] bg-[var(--surface)] border border-[var(--border)] px-1.5 py-0.5 text-xs font-mono freya-tabular text-[var(--text-primary)] focus:outline-none focus:border-[var(--freya-blue)] cursor-pointer"
                     />
+                    {scheduledEndTime && (
+                      <>
+                        <span className="text-[var(--text-muted)] px-0.5">～</span>
+                        <span>{t('ff_end')}</span>
+                        <span className="rounded-[4px] bg-[var(--surface)] border border-[var(--border)] px-1.5 py-0.5 text-xs font-mono freya-tabular font-semibold text-[var(--text-primary)]" title={language === 'ja' ? '終了予定時刻' : 'Scheduled end time'}>
+                          {scheduledEndTime}
+                        </span>
+                      </>
+                    )}
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <span className="rounded-[4px] bg-[var(--surface-raised)] px-2 py-0.5 text-xs font-semibold text-[var(--text-primary)] border border-[var(--border)] freya-tabular">
-                    {formatTime(scheduledTotalMins)}
-                  </span>
+                <div className="flex items-center gap-2 flex-wrap">
+                  {scheduledEndTime ? (
+                    <span 
+                      className="rounded-[6px] bg-[var(--surface-raised)] px-2.5 py-1 text-xs font-semibold text-[var(--text-primary)] border border-[var(--border)] freya-tabular flex items-center gap-1.5"
+                      title={language === 'ja' ? `スケジュール時間帯: ${startTime} ～ ${scheduledEndTime} (${formatTime(scheduledTotalMins)})` : `Schedule span: ${startTime} ～ ${scheduledEndTime} (${formatTime(scheduledTotalMins)})`}
+                    >
+                      <span className="material-symbols-outlined text-[var(--freya-blue)]" style={{ fontSize: 16 }}>schedule</span>
+                      <span className="font-mono font-bold text-[var(--text-primary)]">{startTime} ～ {scheduledEndTime}</span>
+                      <span className="text-[var(--text-muted)] font-mono font-normal">({formatTime(scheduledTotalMins)})</span>
+                    </span>
+                  ) : (
+                    <span className="rounded-[4px] bg-[var(--surface-raised)] px-2 py-0.5 text-xs font-semibold text-[var(--text-muted)] border border-[var(--border)] freya-tabular">
+                      {formatTime(scheduledTotalMins)}
+                    </span>
+                  )}
                   <button
                     type="button"
                     onClick={handlePrintSchedulePDF}
@@ -2597,7 +2622,7 @@ export default function FirstFactoryPage() {
                         </span>
                         <span className="flex flex-col items-center justify-center rounded-[4px] bg-[var(--surface)] border border-[var(--border)] px-2 py-0.5 text-xs font-mono freya-tabular text-[var(--text-secondary)] min-w-[50px]">
                           <span>{item.startTime}</span>
-                          <span className="text-[10px] text-[var(--text-muted)]">to {item.endTime}</span>
+                          <span className="text-[10px] text-[var(--text-muted)]">～ {item.endTime}</span>
                         </span>
                         
                         {item.type === 'setup' ? (
@@ -2706,6 +2731,18 @@ export default function FirstFactoryPage() {
                       </div>
                     );
                   })
+                )}
+                {scheduleWithTimes.length > 0 && (
+                  <div className="mt-2 pt-2.5 border-t border-[var(--border)] flex items-center justify-between text-xs text-[var(--text-muted)] freya-tabular shrink-0">
+                    <span>
+                      {language === 'ja' ? `合計: ${scheduledItems.length} 工程` : `Total: ${scheduledItems.length} items`}
+                    </span>
+                    <span className="font-semibold text-[var(--text-primary)] flex items-center gap-1.5">
+                      <span className="material-symbols-outlined text-[var(--freya-blue)]" style={{ fontSize: 14 }}>schedule</span>
+                      <span className="font-mono">{startTime} ～ {scheduledEndTime}</span>
+                      <span className="text-[var(--text-muted)] font-normal font-mono">({formatTime(scheduledTotalMins)})</span>
+                    </span>
+                  </div>
                 )}
               </div>
             </div>

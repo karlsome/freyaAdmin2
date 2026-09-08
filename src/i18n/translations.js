@@ -511,6 +511,8 @@ const translations = {
     // Priority Order List
     ff_priorityOrder: "Priority Order",
     ff_start: "Start:",
+    ff_end: "End:",
+    ff_timeRange: "Time Range",
     ff_print: "Print",
     ff_printTooltip: "Print A3 Production Schedule PDF",
     ff_reset: "Reset",
@@ -1170,6 +1172,8 @@ const translations = {
     // 優先順位リスト
     ff_priorityOrder: "本日の優先順位",
     ff_start: "開始:",
+    ff_end: "終了:",
+    ff_timeRange: "時間帯",
     ff_print: "印刷",
     ff_printTooltip: "A3縦 生産計画PDF印刷",
     ff_reset: "リセット",
