@@ -1865,7 +1865,7 @@ export default function FirstFactoryPage() {
   };
 
   return (
-    <div className="w-full h-screen overflow-y-auto space-y-6 pt-20 px-4 sm:px-6 md:px-8 pb-16">
+    <div className="w-full h-screen overflow-y-auto space-y-6 pt-20 px-4 sm:px-6 md:px-8 pb-16 text-[var(--text-primary)]">
       <PageHeader
         eyebrow="First Factory"
         title={t('ff_title')}
@@ -2032,17 +2032,17 @@ export default function FirstFactoryPage() {
         <div className="flex flex-col gap-6">
           {/* Discrepancy Notice Banner for the Current Date */}
           {currentDayDiscrepancies.count > 0 && (
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 rounded-[8px] border border-[var(--semantic-warning)]/30 bg-[var(--semantic-warning)]/10 p-4">
+            <div className="freya-card rounded-[8px] border border-amber-500/30 bg-amber-500/5 p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-sm">
               <div className="flex items-center gap-3">
-                <span className="material-symbols-outlined text-[var(--semantic-warning)]" style={{ fontSize: 22 }}>sync_problem</span>
+                <span className="material-symbols-outlined text-amber-500" style={{ fontSize: 22 }}>sync_problem</span>
                 <div>
-                  <h4 className="text-sm font-semibold text-[var(--text-primary)] flex items-center gap-2">
+                  <h4 className="text-sm font-bold text-[var(--text-primary)] flex items-center gap-2">
                     {language === 'ja' ? `${parseInt(selectedMonth.split('-')[1], 10)}/${selectedDay} にExcelとの差異を検知` : `Excel Discrepancy on ${parseInt(selectedMonth.split('-')[1], 10)}/${selectedDay}`}
-                    <span className="rounded-[4px] bg-[var(--semantic-warning)]/20 border border-[var(--semantic-warning)]/30 px-2 py-0.5 text-xs font-semibold text-[var(--semantic-warning)] freya-tabular">
+                    <span className="rounded-[4px] bg-amber-500/15 border border-amber-500/30 px-2 py-0.5 text-xs font-mono font-bold text-amber-700 dark:text-amber-300 freya-tabular shadow-2xs">
                       {language === 'ja' ? `${currentDayDiscrepancies.count} 件の差異品番` : `${currentDayDiscrepancies.count} affected hinban${currentDayDiscrepancies.count === 1 ? '' : 's'}`}
                     </span>
                   </h4>
-                  <p className="text-xs text-[var(--text-muted)] mt-0.5">
+                  <p className="text-xs text-[var(--text-secondary)] mt-0.5 font-medium">
                     {language === 'ja' 
                       ? `一部の設定済品番が最新Excelで0mまたは数量変更されています。「自動反映」を実行するとこの日付 (${selectedDateStr}) のみ更新されます。` 
                       : `Some scheduled hinbans have 0m in Excel or changed quantities. Auto-aligning will only update this specific date (${selectedDateStr}) without affecting other dates.`}
@@ -2053,14 +2053,14 @@ export default function FirstFactoryPage() {
                 <button
                   type="button"
                   onClick={() => setIsDiscrepancyModalOpen(true)}
-                  className="rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-raised)] hover:border-[var(--border-strong)] transition-colors cursor-pointer"
+                  className="rounded-[6px] border border-[var(--border)] bg-[var(--surface)] hover:bg-[var(--surface-hover)] hover:border-[var(--border-strong)] px-3 py-1.5 text-xs font-semibold text-[var(--text-primary)] transition-colors shadow-2xs cursor-pointer"
                 >
                   {language === 'ja' ? '詳細を確認' : 'Review Details'}
                 </button>
                 <button
                   type="button"
                   onClick={handleAutoAlignCurrentDate}
-                  className="flex items-center gap-1.5 rounded-[6px] bg-[var(--semantic-warning)] px-3.5 py-1.5 text-xs font-semibold text-white hover:opacity-90 transition-opacity cursor-pointer"
+                  className="flex items-center gap-1.5 rounded-[6px] bg-amber-600 hover:bg-amber-700 px-3.5 py-1.5 text-xs font-bold text-white transition-all shadow-2xs cursor-pointer"
                 >
                   <span className="material-symbols-outlined" style={{ fontSize: 16 }}>auto_fix_high</span>
                   {language === 'ja' ? `${parseInt(selectedMonth.split('-')[1], 10)}/${selectedDay} をExcelに自動反映` : `Auto-Align ${parseInt(selectedMonth.split('-')[1], 10)}/${selectedDay} with Excel`}
@@ -2069,14 +2069,14 @@ export default function FirstFactoryPage() {
             </div>
           )}
 
-          <div className="flex items-center justify-between rounded-[8px] border border-[var(--border)] bg-[var(--surface-raised)] p-4">
+          <div className="freya-card rounded-[8px] border border-[var(--border)] bg-[var(--surface)] p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-sm">
             <div className="flex flex-wrap items-center gap-3">
-              <span className="text-xs font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">{t('ff_targetDate')}</span>
+              <span className="text-xs font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)] font-mono">{t('ff_targetDate')}</span>
               <div className="flex items-center gap-1 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] p-1 shrink-0">
                 <button
                   type="button"
                   onClick={() => handleStepDate(-1)}
-                  className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[4px] text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-raised)] transition-colors cursor-pointer"
+                  className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[4px] text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-hover)] transition-colors cursor-pointer"
                   title={t('ff_prevDay')}
                 >
                   <span className="material-symbols-outlined" style={{ fontSize: 18 }}>chevron_left</span>
@@ -2085,21 +2085,21 @@ export default function FirstFactoryPage() {
                   type="date" 
                   value={selectedDateStr}
                   onChange={handleDateChange}
-                  className="w-[135px] shrink-0 border-0 bg-transparent px-2 py-0.5 text-xs font-semibold font-mono freya-tabular text-[var(--text-primary)] focus:outline-none cursor-pointer"
+                  className="w-[135px] shrink-0 border-0 bg-transparent px-2 py-0.5 text-xs font-bold font-mono freya-tabular text-[var(--text-primary)] focus:outline-none cursor-pointer"
                 />
-                <span className={`inline-flex items-center justify-center rounded-[4px] w-[58px] py-0.5 text-[11px] font-semibold shrink-0 text-center ${
+                <span className={`inline-flex items-center justify-center rounded-[4px] w-[58px] py-0.5 text-[11px] font-bold shrink-0 text-center ${
                   selectedDayOfWeekInfo.isSunday 
-                    ? 'bg-red-500/15 text-red-600 dark:text-red-400 border border-red-500/30' 
+                    ? 'bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/25' 
                     : selectedDayOfWeekInfo.isSaturday 
-                      ? 'bg-blue-500/15 text-blue-600 dark:text-blue-400 border border-blue-500/30' 
-                      : 'bg-[var(--surface-raised)] text-[var(--text-secondary)] border border-[var(--border)]'
+                      ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/25' 
+                      : 'bg-[var(--surface)] text-[var(--text-secondary)] border border-[var(--border)]'
                 }`}>
                   <span>{language === 'ja' ? `${selectedDayOfWeekInfo.ja}曜日` : selectedDayOfWeekInfo.en}</span>
                 </span>
                 <button
                   type="button"
                   onClick={() => handleStepDate(1)}
-                  className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[4px] text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-raised)] transition-colors cursor-pointer"
+                  className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[4px] text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-hover)] transition-colors cursor-pointer"
                   title={t('ff_nextDay')}
                 >
                   <span className="material-symbols-outlined" style={{ fontSize: 18 }}>chevron_right</span>
@@ -2111,17 +2111,17 @@ export default function FirstFactoryPage() {
                 <button
                   type="button"
                   onClick={handleGoToToday}
-                  className="inline-flex items-center gap-1 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1 text-xs font-medium text-[var(--text-primary)] hover:bg-[var(--surface-raised)] hover:border-[var(--border-strong)] transition-colors cursor-pointer"
+                  className="inline-flex items-center gap-1.5 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-hover)] hover:border-[var(--border-strong)] transition-colors shadow-2xs cursor-pointer"
                   title={language === 'ja' ? '今日の日付に戻る' : 'Go to today'}
                 >
-                  <span className="material-symbols-outlined" style={{ fontSize: 16 }}>today</span>
+                  <span className="material-symbols-outlined text-[var(--text-muted)]" style={{ fontSize: 16 }}>today</span>
                   {t('ff_today')}
                 </button>
               )}
             </div>
             <button 
               onClick={handleSaveSchedule}
-              className="flex items-center gap-2 rounded-[6px] bg-[var(--freya-blue)] px-4 py-2 text-xs font-semibold text-white hover:opacity-90 active:scale-95 transition-all cursor-pointer"
+              className="inline-flex items-center justify-center gap-1.5 rounded-[6px] bg-[var(--freya-blue)] px-4 py-2 text-xs font-semibold text-white transition-colors hover:bg-[var(--freya-blue-hover)] shadow-xs cursor-pointer"
             >
               <span className="material-symbols-outlined" style={{ fontSize: 16 }}>save</span>
               {t('ff_saveDailySchedule')}
@@ -2131,44 +2131,52 @@ export default function FirstFactoryPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Pool Column */}
             <div 
-              className="flex flex-col rounded-[8px] border border-[var(--border)] bg-[var(--surface)] p-4 min-h-[500px]"
+              className="freya-card rounded-[8px] border border-[var(--border)] bg-[var(--surface)] p-4 flex flex-col gap-3.5 shadow-sm min-h-[550px]"
               onDragOver={(e) => e.preventDefault()}
               onDrop={onDropPool}
             >
-              <div className="mb-4 flex flex-col gap-3">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-sm font-semibold text-[var(--text-primary)]">
+              <div className="flex items-center justify-between pb-3 border-b border-[var(--border)]">
+                <div className="flex items-center gap-2">
+                  <span className="material-symbols-outlined text-[var(--freya-blue)]" style={{ fontSize: 20 }}>inventory_2</span>
+                  <h3 className="text-sm font-bold text-[var(--text-primary)]">
                     {t('ff_availableToSchedule')}
                   </h3>
-                  <div className="flex items-center gap-2">
-                    <span className="rounded-[4px] bg-[var(--surface-raised)] px-2 py-0.5 text-xs font-semibold text-[var(--text-primary)] border border-[var(--border)] freya-tabular" title={t('ff_totalEstimatedFilteredTime')}>
-                      {formatTime(poolTotalMins)}
-                    </span>
-                    <button 
-                      onClick={() => setShowNoAdhesive(!showNoAdhesive)}
-                      className={`flex items-center gap-1 text-xs px-2 py-0.5 rounded-[4px] border transition-colors cursor-pointer ${showNoAdhesive ? 'border-[var(--freya-blue)] bg-[var(--freya-blue)]/10 text-[var(--freya-blue)]' : 'border-[var(--border)] text-[var(--text-muted)] hover:bg-[var(--surface-raised)]'}`}
-                      title={showNoAdhesive ? t('ff_hideNoAdhesive') : t('ff_showNoAdhesive')}
-                    >
-                      <span className="material-symbols-outlined" style={{fontSize: 16}}>
-                        {showNoAdhesive ? 'visibility' : 'visibility_off'}
-                      </span>
-                      {showNoAdhesive ? t('ff_hideNoAdhesive') : t('ff_showNoAdhesive')}
-                    </button>
-                    <span className="text-xs font-medium text-[var(--text-muted)] freya-tabular">
-                      {processedPoolItems.length !== poolItems.length 
-                        ? (language === 'ja' ? `${processedPoolItems.length} / ${poolItems.length} 件` : `${processedPoolItems.length} / ${poolItems.length} items`)
-                        : (language === 'ja' ? `${poolItems.length} 件` : `${poolItems.length} items`)}
-                    </span>
-                  </div>
                 </div>
+                <div className="flex items-center gap-2">
+                  <span className="rounded-[4px] bg-[var(--surface)] px-2.5 py-1 text-xs font-mono font-bold text-[var(--text-primary)] border border-[var(--border)] freya-tabular" title={t('ff_totalEstimatedFilteredTime')}>
+                    ⏱️ {formatTime(poolTotalMins)}
+                  </span>
+                  <button 
+                    onClick={() => setShowNoAdhesive(!showNoAdhesive)}
+                    className={`inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-[6px] border transition-colors cursor-pointer shadow-2xs font-semibold ${
+                      showNoAdhesive 
+                        ? 'border-[var(--freya-blue)]/30 bg-[var(--freya-blue-subtle)] text-[var(--freya-blue)]' 
+                        : 'border-[var(--border)] bg-[var(--surface)] text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-hover)]'
+                    }`}
+                    title={showNoAdhesive ? t('ff_hideNoAdhesive') : t('ff_showNoAdhesive')}
+                  >
+                    <span className="material-symbols-outlined" style={{ fontSize: 16 }}>
+                      {showNoAdhesive ? 'visibility' : 'visibility_off'}
+                    </span>
+                    {showNoAdhesive ? t('ff_hideNoAdhesive') : t('ff_showNoAdhesive')}
+                  </button>
+                  <span className="text-xs font-mono font-semibold text-[var(--text-muted)] bg-[var(--surface)] border border-[var(--border)] rounded-[4px] px-2 py-0.5 freya-tabular">
+                    {processedPoolItems.length !== poolItems.length 
+                      ? (language === 'ja' ? `${processedPoolItems.length} / ${poolItems.length} 件` : `${processedPoolItems.length} / ${poolItems.length} items`)
+                      : (language === 'ja' ? `${poolItems.length} 件` : `${poolItems.length} items`)}
+                  </span>
+                </div>
+              </div>
 
-                {/* Search Bar */}
+              {/* Search & Filter Toolbar */}
+              <div className="rounded-[6px] border border-[var(--border)] bg-[var(--surface)] p-2.5 flex flex-col gap-2">
+                {/* Search input */}
                 <div className="relative">
-                  <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" style={{ fontSize: 16 }}>search</span>
+                  <span className="material-symbols-outlined absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" style={{ fontSize: 16 }}>search</span>
                   <input
                     type="text"
                     placeholder={t('ff_searchHinban')}
-                    className="h-9 w-full rounded-[6px] border border-[var(--border)] bg-[var(--surface)] py-2 pl-9 pr-8 text-xs text-[var(--text-primary)] placeholder:text-[var(--text-muted)] outline-none focus:border-[var(--freya-blue)]"
+                    className="h-8 w-full rounded-[6px] border border-[var(--border)] bg-[var(--surface)] py-1.5 pl-8 pr-7 text-xs text-[var(--text-primary)] placeholder:text-[var(--text-muted)] outline-none focus:border-[var(--freya-blue)] transition-colors"
                     value={poolSearch}
                     onChange={(e) => setPoolSearch(e.target.value)}
                   />
@@ -2176,22 +2184,22 @@ export default function FirstFactoryPage() {
                     <button
                       type="button"
                       onClick={() => setPoolSearch('')}
-                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)] hover:text-[var(--text-primary)] cursor-pointer"
+                      className="absolute right-2 top-1/2 -translate-y-1/2 text-[var(--text-muted)] hover:text-[var(--text-primary)] cursor-pointer"
                     >
                       <span className="material-symbols-outlined" style={{ fontSize: 16 }}>close</span>
                     </button>
                   )}
                 </div>
 
-                {/* Sorting & Filter Controls Toolbar */}
-                <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-[var(--border)]">
-                  {/* Sort Selector */}
-                  <div className="flex items-center gap-1.5 rounded-[6px] border border-[var(--border)] bg-[var(--surface-raised)] px-2 py-1 text-xs">
-                    <span className="material-symbols-outlined text-[var(--text-muted)]" style={{ fontSize: 16 }}>sort</span>
+                {/* Filter Controls Row */}
+                <div className="flex flex-wrap items-center gap-2">
+                  {/* Sort */}
+                  <div className="flex items-center gap-1 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-2 py-1 text-xs">
+                    <span className="material-symbols-outlined text-[var(--text-muted)]" style={{ fontSize: 15 }}>sort</span>
                     <select
                       value={poolSortBy}
                       onChange={(e) => setPoolSortBy(e.target.value)}
-                      className="bg-transparent font-semibold text-[var(--text-primary)] focus:outline-none cursor-pointer"
+                      className="bg-transparent font-medium text-xs text-[var(--text-primary)] focus:outline-none cursor-pointer"
                     >
                       <option value="timeOption-asc">{t('ff_sort_timeOptionAsc')}</option>
                       <option value="timeOption-desc">{t('ff_sort_timeOptionDesc')}</option>
@@ -2207,19 +2215,19 @@ export default function FirstFactoryPage() {
                     </select>
                   </div>
 
-                  {/* Batch Size Quick Filters */}
-                  <div className="flex items-center rounded-[6px] border border-[var(--border)] bg-[var(--surface-raised)] p-0.5 text-xs font-semibold">
+                  {/* Batch size filter */}
+                  <div className="flex items-center rounded-[6px] border border-[var(--border)] bg-[var(--surface)] p-0.5 text-xs font-semibold">
                     <button
                       type="button"
                       onClick={() => setPoolBatchFilter('all')}
-                      className={`px-2 py-0.5 rounded-[4px] transition-colors cursor-pointer ${poolBatchFilter === 'all' ? 'bg-[var(--surface)] text-[var(--text-primary)] border border-[var(--border)] shadow-2xs' : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'}`}
+                      className={`px-2 py-0.5 rounded-[4px] transition-colors cursor-pointer ${poolBatchFilter === 'all' ? 'bg-[var(--freya-blue)] text-white shadow-xs font-bold' : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'}`}
                     >
                       {t('ff_allSizes')}
                     </button>
                     <button
                       type="button"
                       onClick={() => setPoolBatchFilter('large')}
-                      className={`flex items-center gap-1 px-2 py-0.5 rounded-[4px] transition-colors cursor-pointer ${poolBatchFilter === 'large' ? 'bg-[var(--surface)] text-[var(--text-primary)] border border-[var(--border)] shadow-2xs' : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'}`}
+                      className={`px-2 py-0.5 rounded-[4px] transition-colors cursor-pointer ${poolBatchFilter === 'large' ? 'bg-[var(--freya-blue)] text-white shadow-xs font-bold' : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'}`}
                       title={language === 'ja' ? '500m以上または5巻以上の大ロット' : 'Items >= 500m or >= 5 rolls'}
                     >
                       <span>{t('ff_largeBatch')}</span>
@@ -2227,21 +2235,21 @@ export default function FirstFactoryPage() {
                     <button
                       type="button"
                       onClick={() => setPoolBatchFilter('small')}
-                      className={`flex items-center gap-1 px-2 py-0.5 rounded-[4px] transition-colors cursor-pointer ${poolBatchFilter === 'small' ? 'bg-[var(--surface)] text-[var(--text-primary)] border border-[var(--border)] shadow-2xs' : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'}`}
+                      className={`px-2 py-0.5 rounded-[4px] transition-colors cursor-pointer ${poolBatchFilter === 'small' ? 'bg-[var(--freya-blue)] text-white shadow-xs font-bold' : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'}`}
                       title={language === 'ja' ? '200m未満の小ロット' : 'Items < 200m'}
                     >
                       <span>{t('ff_smallBatch')}</span>
                     </button>
                   </div>
 
-                  {/* Width Filter (if multiple widths present) */}
+                  {/* Width Filter */}
                   {availableWidths.length > 1 && (
-                    <div className="flex items-center gap-1 rounded-[6px] border border-[var(--border)] bg-[var(--surface-raised)] px-2 py-1 text-xs">
+                    <div className="flex items-center gap-1 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-2 py-1 text-xs">
                       <span className="text-[var(--text-muted)] font-medium">{t('ff_width')}</span>
                       <select
                         value={poolWidthFilter}
                         onChange={(e) => setPoolWidthFilter(e.target.value)}
-                        className="bg-transparent font-semibold text-[var(--text-primary)] focus:outline-none cursor-pointer"
+                        className="bg-transparent font-medium text-xs text-[var(--text-primary)] focus:outline-none cursor-pointer"
                       >
                         <option value="all">{language === 'ja' ? `全幅 (${availableWidths.length})` : `All Widths (${availableWidths.length})`}</option>
                         {availableWidths.map(w => (
@@ -2261,16 +2269,17 @@ export default function FirstFactoryPage() {
                         setPoolSortBy('timeOption-asc');
                         setPoolSearch('');
                       }}
-                      className="ml-auto text-[11px] font-semibold text-[var(--freya-blue)] hover:underline cursor-pointer"
+                      className="ml-auto text-xs font-semibold text-[var(--freya-blue)] hover:underline cursor-pointer"
                     >
                       {t('ff_resetFilters')}
                     </button>
                   )}
                 </div>
               </div>
+
               <div className="flex flex-col gap-2 flex-1 overflow-y-auto">
                 {/* Setup & Task Items */}
-                <div className="flex flex-col gap-2 mb-4 pb-4 border-b border-[var(--border)]">
+                <div className="rounded-[6px] border border-[var(--border)] bg-[var(--surface)] p-2.5 mb-2">
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
                     {PRESET_SETUP_ITEMS.map(preset => {
                       const duration = setupTimes[preset.name] !== undefined ? setupTimes[preset.name] : preset.defaultTime;
@@ -2287,11 +2296,11 @@ export default function FirstFactoryPage() {
                             }
                             onDragStartSchedule(e, { type: 'setup', name: preset.name, comment, duration }, 'pool');
                           }}
-                          className="cursor-grab rounded-[6px] border border-[var(--border)] bg-[var(--surface-raised)] p-2 flex flex-col justify-between hover:border-[var(--freya-blue)] transition-colors text-xs font-medium text-[var(--text-primary)]"
+                          className="cursor-grab rounded-[6px] border border-[var(--border)] bg-[var(--surface)] p-2 flex flex-col justify-between hover:border-[var(--freya-blue)] hover:bg-[var(--surface-hover)] transition-all text-xs font-medium text-[var(--text-primary)] shadow-2xs"
                         >
                           <div className="flex items-center justify-between gap-1 w-full">
                             <div className="flex items-center gap-1.5 min-w-0 flex-1">
-                              <span className="truncate font-semibold text-[var(--text-primary)]" title={comment ? `${presetDisplayName} ${comment}` : presetDisplayName}>
+                              <span className="truncate font-bold text-xs text-[var(--text-primary)]" title={comment ? `${presetDisplayName} ${comment}` : presetDisplayName}>
                                 {comment ? `${presetDisplayName} ${comment}` : presetDisplayName}
                               </span>
                               <button
@@ -2301,7 +2310,7 @@ export default function FirstFactoryPage() {
                                   setCommentModalItem({ name: preset.name, displayName: presetDisplayName, isPreset: true, comment });
                                   setTempCommentText(comment);
                                 }}
-                                className={`p-0.5 rounded-[4px] hover:bg-[var(--surface)] transition-colors shrink-0 cursor-pointer ${comment ? 'text-[var(--freya-blue)] font-semibold' : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'}`}
+                                className={`p-0.5 rounded-[4px] hover:bg-[var(--surface-hover)] transition-colors shrink-0 cursor-pointer ${comment ? 'text-[var(--freya-blue)] font-semibold' : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'}`}
                                 title={comment ? `Title: ${presetDisplayName} ${comment}` : t('ff_editTitleNote')}
                               >
                                 <span className="material-symbols-outlined" style={{ fontSize: 15 }}>
@@ -2314,14 +2323,14 @@ export default function FirstFactoryPage() {
                                 type="number" 
                                 value={duration} 
                                 onChange={e => handleUpdateSetupTime(preset.name, e.target.value)}
-                                className="w-11 rounded-[4px] bg-[var(--surface)] border border-[var(--border)] px-1 py-0.5 text-center text-xs font-mono freya-tabular text-[var(--text-primary)] focus:outline-none focus:border-[var(--freya-blue)]"
+                                className="w-12 h-7 rounded-[4px] bg-[var(--surface)] border border-[var(--border)] px-1 py-0.5 text-center text-xs font-mono font-bold freya-tabular text-[var(--text-primary)] focus:outline-none focus:border-[var(--freya-blue)]"
                                 min="0"
                               />
                               <span className="text-[11px] text-[var(--text-muted)] font-medium">{t('ff_minutesShort')}</span>
                               <button 
-                                type="button"
+                                type="button" 
                                 onClick={() => handleAddToSchedule({ type: 'setup', name: preset.name, comment, duration })}
-                                className="flex h-6 w-6 shrink-0 items-center justify-center rounded-[4px] border border-[var(--border)] bg-[var(--surface)] hover:bg-[var(--surface-raised)] hover:text-[var(--freya-blue)] text-[var(--text-muted)] transition-colors ml-0.5 cursor-pointer"
+                                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[4px] border border-[var(--border)] bg-[var(--surface)] hover:bg-[var(--surface-hover)] hover:border-[var(--freya-blue)] hover:text-[var(--freya-blue)] text-[var(--text-muted)] transition-colors shadow-2xs ml-0.5 cursor-pointer"
                                 title={t('ff_addToSchedule')}
                               >
                                 <span className="material-symbols-outlined" style={{fontSize: 15}}>arrow_forward</span>
@@ -2347,15 +2356,15 @@ export default function FirstFactoryPage() {
                           duration: Number(customSetupDuration) || 0 
                         }, 'pool');
                       }}
-                      className="cursor-grab rounded-[6px] border border-dashed border-[var(--border)] bg-[var(--surface-raised)] p-2 flex flex-col justify-between hover:border-[var(--freya-blue)] transition-colors text-xs font-medium text-[var(--text-primary)]"
+                      className="cursor-grab rounded-[6px] border border-dashed border-[var(--border)] bg-[var(--surface)] p-2 flex flex-col justify-between hover:border-[var(--freya-blue)] hover:shadow-xs transition-all text-xs font-medium shadow-2xs"
                     >
-                      <div className="flex items-center gap-1 min-w-0 flex-1">
+                      <div className="flex items-center gap-1.5 min-w-0 flex-1">
                         <input 
                           type="text" 
                           value={customSetupName} 
                           placeholder={t('ff_enterCustomName')}
                           onChange={e => handleUpdateCustomName(e.target.value)}
-                          className="w-full min-w-0 rounded-[4px] bg-[var(--surface)] border border-[var(--border)] px-2 py-0.5 text-xs text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:outline-none focus:border-[var(--freya-blue)]"
+                          className="w-full min-w-0 rounded-[4px] bg-[var(--surface)] border border-[var(--border)] px-2 py-1 text-xs font-medium text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:outline-none focus:border-[var(--freya-blue)]"
                         />
                         <button
                           type="button"
@@ -2364,7 +2373,7 @@ export default function FirstFactoryPage() {
                             setCommentModalItem({ name: customSetupName.trim() || t('ff_customSetup'), isPreset: true, isCustom: true, comment: setupComments['custom'] || '' });
                             setTempCommentText(setupComments['custom'] || '');
                           }}
-                          className={`p-0.5 rounded-[4px] hover:bg-[var(--surface)] transition-colors shrink-0 cursor-pointer ${setupComments['custom'] ? 'text-[var(--freya-blue)] font-semibold' : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'}`}
+                          className={`p-1 rounded-[4px] hover:bg-[var(--surface-hover)] transition-colors shrink-0 cursor-pointer ${setupComments['custom'] ? 'text-[var(--freya-blue)] font-semibold' : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'}`}
                           title={setupComments['custom'] ? `Note: ${setupComments['custom']}` : t('ff_editTitleNote')}
                         >
                           <span className="material-symbols-outlined" style={{ fontSize: 15 }}>
@@ -2376,26 +2385,26 @@ export default function FirstFactoryPage() {
                           value={customSetupDuration} 
                           placeholder={t('ff_minutesShort')}
                           onChange={e => handleUpdateCustomDuration(e.target.value)}
-                          className="w-11 rounded-[4px] bg-[var(--surface)] border border-[var(--border)] px-1 py-0.5 text-center text-xs font-mono freya-tabular text-[var(--text-primary)] focus:outline-none focus:border-[var(--freya-blue)] shrink-0"
+                          className="w-12 h-7 rounded-[4px] bg-[var(--surface)] border border-[var(--border)] px-1 py-0.5 text-center text-xs font-mono font-bold freya-tabular text-[var(--text-primary)] focus:outline-none focus:border-[var(--freya-blue)] shrink-0"
                           min="0"
                         />
                         <span className="text-[11px] text-[var(--text-muted)] font-medium shrink-0">{t('ff_minutesShort')}</span>
                         <button 
-                          type="button"
+                          type="button" 
                           onClick={() => handleAddToSchedule({ 
                             type: 'setup', 
                             name: customSetupName.trim() || t('ff_customSetup'), 
                             comment: setupComments['custom'] || '',
                             duration: Number(customSetupDuration) || 0 
                           })}
-                          className="flex h-6 w-6 shrink-0 items-center justify-center rounded-[4px] border border-[var(--border)] bg-[var(--surface)] hover:bg-[var(--surface-raised)] hover:text-[var(--freya-blue)] text-[var(--text-muted)] transition-colors ml-0.5 cursor-pointer"
+                          className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[4px] border border-[var(--border)] bg-[var(--surface)] hover:bg-[var(--surface-hover)] hover:border-[var(--freya-blue)] hover:text-[var(--freya-blue)] text-[var(--text-muted)] transition-colors shadow-2xs ml-0.5 cursor-pointer"
                           title={t('ff_addToSchedule')}
                         >
                           <span className="material-symbols-outlined" style={{fontSize: 15}}>arrow_forward</span>
                         </button>
                       </div>
                       {setupComments['custom'] && (
-                        <div className="text-[10px] text-[var(--text-muted)] font-normal truncate mt-1 pt-1 border-t border-[var(--border)] flex items-center gap-1">
+                        <div className="text-[10px] text-[var(--text-muted)] font-medium truncate mt-1 pt-1 border-t border-[var(--border)] flex items-center gap-1">
                           <span className="text-[var(--freya-blue)]">💬</span>
                           <span className="truncate">{setupComments['custom']}</span>
                         </div>
@@ -2403,27 +2412,31 @@ export default function FirstFactoryPage() {
                     </div>
                   </div>
                 </div>
+
                 {/* Column Headers for Available Hinbans */}
                 {processedPoolItems.length > 0 && (
-                  <div className="flex items-center gap-3 px-3 py-1.5 text-[12px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)] select-none border-b border-[var(--border)] mb-1">
+                  <div className="flex items-center gap-3 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-[var(--text-muted)] border-b border-[var(--border)] mb-1 select-none">
                     <div className="flex-1 flex items-center gap-4 min-w-0 pr-1">
-                      <div className="w-[230px] shrink-0 text-left">
+                      <div className="w-[220px] shrink-0 text-left font-mono">
                         {language === 'ja' ? '品番' : 'Hinban'}
                       </div>
-                      <div className="w-[90px] shrink-0 text-left">
+                      <div className="w-[85px] shrink-0 text-left font-mono">
                         {language === 'ja' ? '型番' : 'Kataban'}
                       </div>
-                      <div className="w-[70px] shrink-0 text-left">
+                      <div className="w-[80px] shrink-0 text-left font-mono">
                         {language === 'ja' ? '時間オプション' : 'Time Option'}
                       </div>
                     </div>
-                    <div className="w-8 shrink-0 ml-1" />
+                    <div className="w-8 shrink-0 ml-1 text-center font-mono">
+                      {language === 'ja' ? '追加' : 'Add'}
+                    </div>
                   </div>
                 )}
 
                 {processedPoolItems.length === 0 ? (
-                  <div className="text-center text-sm text-outline mt-10">
-                    {poolItems.length === 0 ? t('ff_noItemsForDate') : t('ff_noItemsMatchFilter')}
+                  <div className="text-center text-xs text-[var(--text-muted)] mt-10 border border-dashed border-[var(--border)] rounded-[8px] p-8 flex flex-col items-center justify-center gap-2">
+                    <span className="material-symbols-outlined text-[var(--text-muted)]" style={{ fontSize: 28 }}>inbox</span>
+                    <p className="font-medium">{poolItems.length === 0 ? t('ff_noItemsForDate') : t('ff_noItemsMatchFilter')}</p>
                   </div>
                 ) : (
                   processedPoolItems.map(item => {
@@ -2439,60 +2452,64 @@ export default function FirstFactoryPage() {
                       key={item.id}
                       draggable
                       onDragStart={(e) => onDragStartSchedule(e, { type: 'pool-hinban', hinban: item.hinban, id: item.id }, 'pool')}
-                      className={`cursor-grab active:cursor-grabbing rounded-[6px] border p-3 flex items-center gap-3 transition-colors ${
+                      className={`group cursor-grab active:cursor-grabbing rounded-[6px] border p-2.5 flex items-center gap-3 transition-all shadow-2xs hover:border-[var(--border-strong)] hover:bg-[var(--surface-hover)] ${
                         isRawMaterial 
-                          ? 'border-amber-500/40 bg-amber-500/5 hover:border-amber-500/60' 
-                          : 'border-[var(--border)] bg-[var(--surface)] hover:bg-[var(--surface-raised)] hover:border-[var(--border-strong)]'
+                          ? 'border-amber-500/30 bg-amber-500/5 hover:border-amber-500/50' 
+                          : 'border-[var(--border)] bg-[var(--surface)]'
                       }`}
                     >
                       <div className="flex-1 flex flex-col cursor-pointer min-w-0 pr-1" onClick={() => handleCardClick(item.hinban)}>
                         <div className="flex items-center gap-4 w-full">
                           {/* Column 1: Hinban */}
-                          <div className="w-[230px] shrink-0 flex items-center gap-1.5 min-w-0">
-                            <span className="font-semibold text-xs text-[var(--text-primary)] truncate" title={item.hinban}>
+                          <div className="w-[220px] shrink-0 flex items-center gap-1.5 min-w-0">
+                            <span className="font-mono font-bold text-xs text-[var(--text-primary)] group-hover:text-[var(--freya-blue)] transition-colors truncate" title={item.hinban}>
                               {item.hinban}
                             </span>
                             {isRawMaterial && (
-                              <span className="shrink-0 rounded-[4px] bg-amber-500/10 px-1.5 py-0.5 text-[9px] font-semibold text-amber-600 uppercase tracking-wider border border-amber-500/20">
+                              <span className="shrink-0 rounded-[4px] bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20 px-1.5 py-0.5 text-[9px] font-bold font-mono uppercase tracking-wider">
                                 {language === 'ja' ? '原材料 (粘着無)' : 'Raw Material'}
                               </span>
                             )}
                           </div>
 
                           {/* Column 2: Kataban */}
-                          <div className="w-[90px] shrink-0 text-left">
+                          <div className="w-[85px] shrink-0 text-left">
                             {item._kataban ? (
-                              <span className="font-medium text-xs text-[var(--text-secondary)] truncate block" title={`型番: ${item._kataban}`}>
+                              <span className="inline-block truncate text-xs font-mono font-medium text-[var(--text-secondary)]" title={`型番: ${item._kataban}`}>
                                 {item._kataban}
                               </span>
                             ) : (
-                              <span className="text-[var(--text-muted)]/40 text-xs">—</span>
+                              <span className="text-[var(--text-muted)] text-xs font-mono">—</span>
                             )}
                           </div>
 
                           {/* Column 3: Time Option */}
-                          <div className="w-[70px] shrink-0 text-left">
+                          <div className="w-[80px] shrink-0 text-left">
                             {item._timeOption ? (
-                              <span className="font-mono font-semibold text-xs text-[var(--freya-blue)] truncate block freya-tabular" title={`時間オプション: ${item._timeOption}`}>
+                              <span className="inline-flex items-center px-1.5 py-0.5 rounded-[4px] bg-[var(--freya-blue-subtle)] border border-[var(--freya-blue)]/20 text-[11px] font-mono font-semibold text-[var(--freya-blue)] freya-tabular" title={`時間オプション: ${item._timeOption}`}>
                                 {item._timeOption}
                               </span>
                             ) : (
-                              <span className="text-[var(--text-muted)]/40 text-xs">—</span>
+                              <span className="text-[var(--text-muted)] text-xs font-mono">—</span>
                             )}
                           </div>
                         </div>
 
-                        <div className="flex items-center gap-2 mt-1.5 text-xs text-[var(--text-muted)] freya-tabular flex-wrap">
-                          <span className="rounded-[4px] bg-[var(--surface-raised)] border border-[var(--border)] px-1.5 py-0.5 font-semibold text-[var(--text-primary)]">
+                        <div className="flex items-center gap-2 mt-1.5 text-xs text-[var(--text-muted)] flex-wrap">
+                          <span className="rounded-[4px] bg-[var(--surface)] border border-[var(--border)] px-1.5 py-0.5 text-[11px] font-mono font-bold text-[var(--text-primary)] freya-tabular">
                             {language === 'ja' ? `数量: ${qty}${item._unit}` : `Qty: ${qty}${item._unit}`}
                           </span>
-                          <span>{numRolls} {item._unit === '枚' ? (language === 'ja' ? '束' : 'packs') : (language === 'ja' ? '巻' : 'rolls')}</span>
-                          <span>{durationMins} {t('ff_minutesShort')}</span>
+                          <span className="rounded-[4px] bg-[var(--surface)] border border-[var(--border)] px-1.5 py-0.5 text-[11px] font-mono text-[var(--text-secondary)] freya-tabular">
+                            {numRolls} {item._unit === '枚' ? (language === 'ja' ? '束' : 'packs') : (language === 'ja' ? '巻' : 'rolls')}
+                          </span>
+                          <span className="rounded-[4px] bg-[var(--surface)] border border-[var(--border)] px-1.5 py-0.5 text-[11px] font-mono text-[var(--text-secondary)] freya-tabular">
+                            ⏱️ {durationMins} {t('ff_minutesShort')}
+                          </span>
                         </div>
                       </div>
                       <button 
                         onClick={() => handleAddToSchedule({ type: 'pool-hinban', hinban: item.hinban, id: item.id })}
-                        className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[4px] border border-[var(--border)] bg-[var(--surface)] hover:bg-[var(--surface-raised)] hover:text-[var(--freya-blue)] text-[var(--text-muted)] transition-colors cursor-pointer ml-1"
+                        className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[6px] border border-[var(--border)] bg-[var(--surface)] hover:bg-[var(--surface-hover)] hover:border-[var(--freya-blue)] hover:text-[var(--freya-blue)] text-[var(--text-muted)] transition-colors shadow-2xs ml-1 cursor-pointer"
                         title={t('ff_addToSchedule')}
                       >
                         <span className="material-symbols-outlined" style={{fontSize: 16}}>arrow_forward</span>
@@ -2505,91 +2522,110 @@ export default function FirstFactoryPage() {
 
             {/* Scheduled Column */}
             <div 
-              className="flex flex-col rounded-[8px] border border-[var(--border)] bg-[var(--surface)] p-4 min-h-[500px]"
+              className="freya-card rounded-[8px] border border-[var(--border)] bg-[var(--surface)] p-4 flex flex-col gap-3.5 shadow-sm min-h-[550px]"
               onDragOver={(e) => e.preventDefault()}
               onDrop={(e) => onDropScheduled(e)}
             >
-              <h3 className="mb-4 text-sm font-semibold text-[var(--text-primary)] flex items-center justify-between flex-wrap gap-2">
-                <div className="flex items-center gap-3 flex-wrap">
-                  <span className="font-semibold text-sm">{t('ff_priorityOrder')}</span>
-                  <div className="flex items-center gap-1.5 text-xs font-normal text-[var(--text-muted)] bg-[var(--surface-raised)] border border-[var(--border)] rounded-[6px] px-2 py-1">
+              <div className="flex flex-col gap-3 pb-3 border-b border-[var(--border)]">
+                <div className="flex items-center justify-between flex-wrap gap-2">
+                  <div className="flex items-center gap-2">
+                    <span className="material-symbols-outlined text-[var(--freya-blue)]" style={{ fontSize: 20 }}>format_list_numbered</span>
+                    <h3 className="text-sm font-bold text-[var(--text-primary)] tracking-tight">
+                      {t('ff_priorityOrder')}
+                    </h3>
+                  </div>
+
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <button
+                      type="button"
+                      onClick={handlePrintSchedulePDF}
+                      disabled={scheduledItems.length === 0}
+                      className="flex items-center gap-1.5 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] hover:bg-[var(--surface-hover)] hover:border-[var(--border-strong)] px-2.5 py-1 text-xs font-semibold text-[var(--text-primary)] active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer shadow-2xs"
+                      title={language === 'ja' ? '優先順位スケジュール表 (A3) を印刷' : 'Print A3 Priority Production Schedule'}
+                    >
+                      <span className="material-symbols-outlined" style={{ fontSize: 16 }}>print</span>
+                      <span>{language === 'ja' ? '印刷 (A3)' : 'Print (A3)'}</span>
+                    </button>
+                    <button 
+                      type="button"
+                      onClick={() => {
+                        if (window.confirm(t('ff_resetScheduleConfirm'))) {
+                          setScheduleOrder([]);
+                        }
+                      }}
+                      className="flex items-center gap-1 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-2 py-1 text-xs font-medium text-[var(--text-secondary)] hover:text-red-600 hover:border-red-500/30 hover:bg-red-500/10 transition-colors shadow-2xs cursor-pointer"
+                    >
+                      <span className="material-symbols-outlined" style={{fontSize: 16}}>restart_alt</span>
+                      {t('ff_reset')}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Schedule Time Range & Duration Toolbar */}
+                <div className="flex items-center justify-between flex-wrap gap-2 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] p-2">
+                  <div className="flex items-center gap-1.5 text-xs font-semibold text-[var(--text-secondary)]">
                     <span className="material-symbols-outlined text-[var(--freya-blue)]" style={{fontSize: 16}}>schedule</span>
                     <span>{t('ff_start')}</span> 
                     <input 
                       type="time" 
                       value={startTime}
                       onChange={e => setStartTime(e.target.value)}
-                      className="rounded-[4px] bg-[var(--surface)] border border-[var(--border)] px-1.5 py-0.5 text-xs font-mono freya-tabular text-[var(--text-primary)] focus:outline-none focus:border-[var(--freya-blue)] cursor-pointer"
+                      className="rounded-[4px] bg-[var(--surface)] border border-[var(--border)] px-1.5 py-0.5 text-xs font-mono font-bold freya-tabular text-[var(--text-primary)] focus:outline-none focus:border-[var(--freya-blue)] cursor-pointer"
                     />
                     {scheduledEndTime && (
                       <>
-                        <span className="text-[var(--text-muted)] px-0.5">～</span>
+                        <span className="text-[var(--text-muted)] px-0.5 font-bold">～</span>
                         <span>{t('ff_end')}</span>
-                        <span className="rounded-[4px] bg-[var(--surface)] border border-[var(--border)] px-1.5 py-0.5 text-xs font-mono freya-tabular font-semibold text-[var(--text-primary)]" title={language === 'ja' ? '終了予定時刻' : 'Scheduled end time'}>
+                        <span className="rounded-[4px] bg-[var(--surface)] border border-[var(--border)] px-1.5 py-0.5 text-xs font-mono freya-tabular font-bold text-[var(--text-primary)]" title={language === 'ja' ? '終了予定時刻' : 'Scheduled end time'}>
                           {scheduledEndTime}
                         </span>
                       </>
                     )}
                   </div>
-                </div>
-                <div className="flex items-center gap-2 flex-wrap">
+
                   {scheduledEndTime ? (
                     <span 
-                      className="rounded-[6px] bg-[var(--surface-raised)] px-2.5 py-1 text-xs font-semibold text-[var(--text-primary)] border border-[var(--border)] freya-tabular flex items-center gap-1.5"
+                      className="rounded-[4px] bg-[var(--surface)] px-2.5 py-1 text-xs font-bold text-[var(--text-primary)] border border-[var(--border)] freya-tabular flex items-center gap-1.5 shadow-2xs"
                       title={language === 'ja' ? `スケジュール時間帯: ${startTime} ～ ${scheduledEndTime} (${formatTime(scheduledTotalMins)})` : `Schedule span: ${startTime} ～ ${scheduledEndTime} (${formatTime(scheduledTotalMins)})`}
                     >
-                      <span className="material-symbols-outlined text-[var(--freya-blue)]" style={{ fontSize: 16 }}>schedule</span>
-                      <span className="font-mono font-bold text-[var(--text-primary)]">{startTime} ～ {scheduledEndTime}</span>
-                      <span className="text-[var(--text-muted)] font-mono font-normal">({formatTime(scheduledTotalMins)})</span>
+                      <span className="material-symbols-outlined text-[var(--freya-blue)]" style={{ fontSize: 16 }}>timelapse</span>
+                      <span className="font-mono">{startTime} ～ {scheduledEndTime}</span>
+                      <span className="text-[var(--text-muted)] font-mono font-medium">({formatTime(scheduledTotalMins)})</span>
                     </span>
                   ) : (
-                    <span className="rounded-[4px] bg-[var(--surface-raised)] px-2 py-0.5 text-xs font-semibold text-[var(--text-muted)] border border-[var(--border)] freya-tabular">
-                      {formatTime(scheduledTotalMins)}
+                    <span className="rounded-[4px] bg-[var(--surface)] px-2 py-0.5 text-xs font-mono font-bold text-[var(--text-primary)] border border-[var(--border)] shadow-2xs freya-tabular">
+                      ⏱️ {formatTime(scheduledTotalMins)}
                     </span>
                   )}
-                  <button
-                    type="button"
-                    onClick={handlePrintSchedulePDF}
-                    disabled={scheduledItems.length === 0}
-                    className="flex items-center gap-1.5 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1 text-xs font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-raised)] hover:border-[var(--border-strong)] active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
-                    title={language === 'ja' ? '優先順位スケジュール表 (A3) を印刷' : 'Print A3 Priority Production Schedule'}
-                  >
-                    <span className="material-symbols-outlined" style={{ fontSize: 16 }}>print</span>
-                    <span>{language === 'ja' ? '印刷 (A3)' : 'Print (A3)'}</span>
-                  </button>
-                  <button 
-                    type="button"
-                    onClick={() => {
-                      if (window.confirm(t('ff_resetScheduleConfirm'))) {
-                        setScheduleOrder([]);
-                      }
-                    }}
-                    className="flex items-center gap-1 rounded-[6px] border border-[var(--border)] px-2 py-1 text-xs text-[var(--text-muted)] hover:bg-[var(--surface-raised)] hover:text-[var(--text-primary)] transition-colors cursor-pointer"
-                  >
-                    <span className="material-symbols-outlined" style={{fontSize: 16}}>restart_alt</span>
-                    {t('ff_reset')}
-                  </button>
                 </div>
-              </h3>
+              </div>
+
+              {/* Column Headers for Priority Order Schedule */}
+              {scheduleWithTimes.length > 0 && (
+                <div className="flex items-center gap-3 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-[var(--text-muted)] border-b border-[var(--border)] mb-1 select-none">
+                  <div className="w-7 shrink-0 text-center font-mono">#</div>
+                  <div className="w-[62px] shrink-0 text-center font-mono">{language === 'ja' ? '時間帯' : 'Time'}</div>
+                  <div className="flex-1 flex items-center gap-4 min-w-0 pr-1">
+                    <div className="w-[210px] shrink-0 text-left font-mono">{language === 'ja' ? '工程 / 品番' : 'Process / Hinban'}</div>
+                    <div className="w-[85px] shrink-0 text-left font-mono">{language === 'ja' ? '型番' : 'Kataban'}</div>
+                    <div className="w-[80px] shrink-0 text-left font-mono">{language === 'ja' ? '時間オプション' : 'Time Option'}</div>
+                  </div>
+                  <div className="w-[62px] shrink-0 text-right font-mono">{language === 'ja' ? '所要' : 'Duration'}</div>
+                  <div className="w-7 shrink-0 ml-1" />
+                </div>
+              )}
+
               <div className="flex flex-col gap-2 flex-1 overflow-y-auto">
                 {scheduleWithTimes.length === 0 ? (
-                  <div className="text-center text-sm text-[var(--text-muted)] mt-10 border border-dashed border-[var(--border)] rounded-[8px] p-8">
-                    {t('ff_dragToSetPriority')}
+                  <div className="text-center text-xs text-[var(--text-muted)] mt-10 border border-dashed border-[var(--border)] rounded-[8px] p-8 flex flex-col items-center justify-center gap-2">
+                    <span className="material-symbols-outlined text-[var(--text-muted)]" style={{ fontSize: 28 }}>drag_indicator</span>
+                    <p className="font-medium">{t('ff_dragToSetPriority')}</p>
                   </div>
                 ) : (
                   scheduleWithTimes.map((item, index) => {
                     const disc = item.type === 'hinban' ? currentDayDiscrepancies.map[item.hinban] : null;
                     const isZeroOrMissing = disc && (disc.type === 'moved_or_zero' || disc.type === 'missing_in_excel');
                     const isQtyMismatch = disc && disc.type === 'qty_mismatch';
-
-                    let cardBorderClass = 'border-[var(--border)] bg-[var(--surface-raised)] hover:border-[var(--border-strong)]';
-                    if (item.type === 'setup') {
-                      cardBorderClass = 'border-amber-500/30 bg-amber-500/5 hover:border-amber-500/50';
-                    } else if (isZeroOrMissing) {
-                      cardBorderClass = 'border-red-500/40 bg-red-500/5 hover:border-red-500/60';
-                    } else if (isQtyMismatch) {
-                      cardBorderClass = 'border-amber-500/40 bg-amber-500/5 hover:border-amber-500/60';
-                    }
 
                     const setupDisplayName = item.type === 'setup' 
                       ? (item.name === '段取り' ? t('ff_dandori') : (item.name === '試作' ? t('ff_trial') : item.name))
@@ -2599,7 +2635,7 @@ export default function FirstFactoryPage() {
                     const itemKataban = item._kataban || extractKataban(matchedPool || item);
                     const itemTimeOption = item._timeOption || extractTimeOption(matchedPool || item);
 
-                    return (
+                    return item.type === 'setup' ? (
                       <div 
                         key={item.id}
                         draggable
@@ -2609,121 +2645,160 @@ export default function FirstFactoryPage() {
                           e.stopPropagation(); // Prevent column drop
                           onDropScheduled(e, index);
                         }}
-                        className={`cursor-grab active:cursor-grabbing rounded-[6px] border p-2.5 flex items-center gap-3 transition-colors ${cardBorderClass}`}
+                        className="cursor-grab active:cursor-grabbing rounded-[6px] border border-amber-500/30 bg-amber-500/5 hover:border-amber-500/50 p-2.5 flex items-center gap-3 transition-all shadow-2xs"
                       >
-                        <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-[4px] border text-xs font-mono font-semibold ${
+                        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[4px] bg-amber-500 text-white font-mono font-bold text-xs shadow-2xs">
+                          {index + 1}
+                        </span>
+                        <span className="flex flex-col items-center justify-center rounded-[4px] bg-[var(--surface)] border border-amber-500/30 px-2 py-0.5 text-xs font-mono freya-tabular min-w-[62px] shadow-2xs">
+                          <span className="font-bold text-[var(--text-primary)]">{item.startTime}</span>
+                          <span className="text-[10px] text-[var(--text-muted)] font-medium">～ {item.endTime}</span>
+                        </span>
+                        
+                        <div className="flex-1 flex items-center justify-between min-w-0 pr-2">
+                          <div className="flex items-center gap-2 min-w-0 flex-1">
+                            <span className="shrink-0 rounded-[4px] bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-bold text-amber-700 dark:text-amber-400 border border-amber-500/30">
+                              {item.name === '段取り' ? 'SETUP' : (item.name === '試作' ? 'TRIAL' : 'TASK')}
+                            </span>
+                            <span className="font-bold text-xs text-[var(--text-primary)] truncate" title={item.comment ? `${setupDisplayName} ${item.comment}` : setupDisplayName}>
+                              {item.comment ? `${setupDisplayName} ${item.comment}` : setupDisplayName}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setCommentModalItem(item);
+                                setTempCommentText(item.comment || '');
+                              }}
+                              className={`p-1 rounded-[4px] hover:bg-[var(--surface-hover)] transition-colors shrink-0 cursor-pointer ${item.comment ? 'text-[var(--freya-blue)] font-semibold' : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'}`}
+                              title={t('ff_editTitleNote')}
+                            >
+                              <span className="material-symbols-outlined" style={{ fontSize: 16 }}>
+                                edit_note
+                              </span>
+                            </button>
+                          </div>
+                          <span className="text-xs font-mono font-bold freya-tabular text-amber-700 dark:text-amber-400 whitespace-nowrap ml-2 bg-amber-500/10 border border-amber-500/20 rounded-[4px] px-2 py-0.5">
+                            {item.duration} {t('ff_minutesShort')}
+                          </span>
+                        </div>
+                        <button 
+                          onClick={() => handleRemoveFromSchedule(item)}
+                          className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[4px] border border-[var(--border)] bg-[var(--surface)] hover:bg-[var(--surface-hover)] hover:border-red-500/30 hover:text-red-600 text-[var(--text-muted)] transition-all shadow-2xs ml-1 cursor-pointer"
+                          title={t('ff_removeFromSchedule')}
+                        >
+                          <span className="material-symbols-outlined" style={{fontSize: 16}}>arrow_back</span>
+                        </button>
+                      </div>
+                    ) : (
+                      <div 
+                        key={item.id}
+                        draggable
+                        onDragStart={(e) => onDragStartSchedule(e, item, 'scheduled')}
+                        onDragOver={(e) => e.preventDefault()}
+                        onDrop={(e) => {
+                          e.stopPropagation(); // Prevent column drop
+                          onDropScheduled(e, index);
+                        }}
+                        className={`group cursor-grab active:cursor-grabbing rounded-[6px] border p-2.5 flex items-center gap-3 transition-all shadow-2xs hover:border-[var(--border-strong)] hover:bg-[var(--surface-hover)] ${
                           isZeroOrMissing 
-                            ? 'border-red-500/40 bg-red-500/15 text-red-600' 
+                            ? 'border-red-500/40 bg-red-500/5' 
                             : isQtyMismatch 
-                            ? 'border-amber-500/40 bg-amber-500/15 text-amber-600' 
-                            : 'border-[var(--border)] bg-[var(--surface)] text-[var(--text-primary)]'
+                            ? 'border-amber-500/40 bg-amber-500/5' 
+                            : 'border-[var(--border)] bg-[var(--surface)]'
+                        }`}
+                      >
+                        <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-[4px] text-xs font-mono font-bold shadow-2xs ${
+                          isZeroOrMissing 
+                            ? 'bg-red-600 text-white' 
+                            : isQtyMismatch 
+                            ? 'bg-amber-600 text-white' 
+                            : 'bg-[var(--surface)] border border-[var(--border)] text-[var(--text-primary)]'
                         }`}>
                           {index + 1}
                         </span>
-                        <span className="flex flex-col items-center justify-center rounded-[4px] bg-[var(--surface)] border border-[var(--border)] px-2 py-0.5 text-xs font-mono freya-tabular text-[var(--text-secondary)] min-w-[50px]">
-                          <span>{item.startTime}</span>
-                          <span className="text-[10px] text-[var(--text-muted)]">～ {item.endTime}</span>
+                        <span className="flex flex-col items-center justify-center rounded-[4px] bg-[var(--surface)] border border-[var(--border)] px-2 py-0.5 text-xs font-mono freya-tabular text-[var(--text-primary)] min-w-[62px] shadow-2xs">
+                          <span className="font-bold text-[var(--text-primary)]">{item.startTime}</span>
+                          <span className="text-[10px] text-[var(--text-muted)] font-medium">～ {item.endTime}</span>
                         </span>
-                        
-                        {item.type === 'setup' ? (
-                          <div className="flex-1 flex items-center justify-between min-w-0 pr-2">
-                            <div className="flex items-center gap-2 min-w-0 flex-1">
-                              <span className="font-semibold text-sm text-amber-700 dark:text-amber-400 truncate" title={item.comment ? `${setupDisplayName} ${item.comment}` : setupDisplayName}>
-                                {item.comment ? `${setupDisplayName} ${item.comment}` : setupDisplayName}
+
+                        <div className="flex-1 flex flex-col cursor-pointer min-w-0 pr-1" onClick={() => handleCardClick(item.hinban)}>
+                          <div className="flex items-center gap-4 w-full">
+                            {/* Column 1: Hinban + Discrepancy Warnings */}
+                            <div className="w-[210px] shrink-0 flex items-center gap-1.5 min-w-0">
+                              <span className="font-mono font-bold text-xs text-[var(--text-primary)] group-hover:text-[var(--freya-blue)] transition-colors truncate" title={item.hinban}>
+                                {item.hinban}
                               </span>
+                              {isZeroOrMissing && (
+                                <span className="shrink-0 inline-flex items-center gap-0.5 rounded-[4px] bg-red-500/10 px-1.5 py-0.5 text-[9px] font-bold text-red-600 dark:text-red-400 border border-red-500/30">
+                                  <span className="material-symbols-outlined" style={{ fontSize: 11 }}>warning</span>
+                                  <span className="truncate max-w-[65px]">{disc.type === 'missing_in_excel' ? t('ff_notInExcel') : (disc.movedText || t('ff_zeroMetersToday'))}</span>
+                                </span>
+                              )}
+                              {isQtyMismatch && (
+                                <span className="shrink-0 inline-flex items-center gap-0.5 rounded-[4px] bg-amber-500/10 px-1.5 py-0.5 text-[9px] font-bold text-amber-700 dark:text-amber-400 border border-amber-500/30">
+                                  <span className="material-symbols-outlined" style={{ fontSize: 11 }}>difference</span>
+                                  <span>{disc.excelQty}{item.unit || 'm'}</span>
+                                </span>
+                              )}
+                            </div>
+
+                            {/* Column 2: Kataban */}
+                            <div className="w-[85px] shrink-0 text-left">
+                              {itemKataban ? (
+                                <span className="inline-block truncate text-xs font-mono font-medium text-[var(--text-secondary)]" title={`型番: ${itemKataban}`}>
+                                  {itemKataban}
+                                </span>
+                              ) : (
+                                <span className="text-[var(--text-muted)] text-xs font-mono">—</span>
+                              )}
+                            </div>
+
+                            {/* Column 3: Time Option */}
+                            <div className="w-[80px] shrink-0 text-left">
+                              {itemTimeOption ? (
+                                <span className="inline-flex items-center px-1.5 py-0.5 rounded-[4px] bg-[var(--freya-blue-subtle)] border border-[var(--freya-blue)]/20 text-[11px] font-semibold font-mono freya-tabular text-[var(--freya-blue)] shadow-2xs" title={`時間オプション: ${itemTimeOption}`}>
+                                  {itemTimeOption}
+                                </span>
+                              ) : (
+                                <span className="text-[var(--text-muted)] text-xs font-mono">—</span>
+                              )}
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-2 mt-1.5 text-xs text-[var(--text-secondary)] flex-wrap">
+                            <span className="rounded-[4px] bg-[var(--surface)] border border-[var(--border)] px-1.5 py-0.5 text-[11px] font-mono text-[var(--text-secondary)]">
+                              {item.unit === '枚'
+                                ? (language === 'ja' ? `束 ${item.rollIndex}/${item.totalRolls}` : `Pack ${item.rollIndex}/${item.totalRolls}`)
+                                : (language === 'ja' ? `巻 ${item.rollIndex}/${item.totalRolls}` : `Roll ${item.rollIndex}/${item.totalRolls}`)
+                              }
+                            </span>
+                            <span className="rounded-[4px] bg-[var(--surface)] border border-[var(--border)] px-1.5 py-0.5 text-[11px] font-mono font-bold text-[var(--text-primary)] freya-tabular">
+                              {item.meters}{item.unit || 'm'}
+                            </span>
+                            {isQtyMismatch && item.rollIndex === 1 && (
                               <button
                                 type="button"
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  setCommentModalItem(item);
-                                  setTempCommentText(item.comment || '');
+                                  handleUpdateHinbanQty(item.hinban);
                                 }}
-                                className={`p-1 rounded-[4px] hover:bg-[var(--surface)] transition-colors shrink-0 cursor-pointer ${item.comment ? 'text-amber-800 dark:text-amber-300 font-semibold' : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'}`}
-                                title={t('ff_editTitleNote')}
+                                className="inline-flex items-center gap-1 rounded-[4px] border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-[11px] font-bold text-amber-700 dark:text-amber-400 hover:bg-amber-500/20 transition-colors ml-1 cursor-pointer shadow-2xs"
+                                title={language === 'ja' ? '最新Excelデータに合わせて巻数・所要時間を更新' : 'Update rolls and duration to match Excel'}
                               >
-                                <span className="material-symbols-outlined" style={{ fontSize: 16 }}>
-                                  edit_note
-                                </span>
+                                <span className="material-symbols-outlined" style={{ fontSize: 12 }}>sync</span>
+                                {t('ff_updateQtyPrompt').replace('{qty}', `${disc.excelQty}${item.unit || 'm'}`)}
                               </button>
-                            </div>
-                            <span className="text-xs font-mono freya-tabular font-semibold text-amber-700 dark:text-amber-400 whitespace-nowrap ml-2">{item.duration} {t('ff_minutesShort')}</span>
+                            )}
                           </div>
-                        ) : (
-                          <>
-                            <div className="flex-1 flex flex-col cursor-pointer min-w-0 pr-1" onClick={() => handleCardClick(item.hinban)}>
-                              <div className="flex items-center gap-4 w-full">
-                                {/* Column 1: Hinban + Discrepancy Warnings */}
-                                <div className="w-[220px] shrink-0 flex items-center gap-1.5 min-w-0">
-                                  <span className="font-semibold text-sm text-[var(--text-primary)] hover:text-[var(--freya-blue)] transition-colors truncate" title={item.hinban}>
-                                    {item.hinban}
-                                  </span>
-                                  {isZeroOrMissing && (
-                                    <span className="shrink-0 inline-flex items-center gap-0.5 rounded-[4px] bg-red-500/10 px-1 py-0.5 text-[10px] font-semibold text-red-600 border border-red-500/20">
-                                      <span className="material-symbols-outlined" style={{ fontSize: 11 }}>warning</span>
-                                      <span className="truncate max-w-[65px]">{disc.type === 'missing_in_excel' ? t('ff_notInExcel') : (disc.movedText || t('ff_zeroMetersToday'))}</span>
-                                    </span>
-                                  )}
-                                  {isQtyMismatch && (
-                                    <span className="shrink-0 inline-flex items-center gap-0.5 rounded-[4px] bg-amber-500/10 px-1 py-0.5 text-[10px] font-semibold text-amber-700 dark:text-amber-400 border border-amber-500/20">
-                                      <span className="material-symbols-outlined" style={{ fontSize: 11 }}>difference</span>
-                                      <span>{disc.excelQty}{item.unit || 'm'}</span>
-                                    </span>
-                                  )}
-                                </div>
+                        </div>
 
-                                {/* Column 2: Kataban */}
-                                <div className="w-[90px] shrink-0 text-left">
-                                  {itemKataban ? (
-                                    <span className="font-medium text-xs text-[var(--text-secondary)] truncate block" title={`型番: ${itemKataban}`}>
-                                      {itemKataban}
-                                    </span>
-                                  ) : (
-                                    <span className="text-[var(--text-muted)] text-xs">—</span>
-                                  )}
-                                </div>
-
-                                {/* Column 3: Time Option */}
-                                <div className="w-[70px] shrink-0 text-left">
-                                  {itemTimeOption ? (
-                                    <span className="font-mono freya-tabular font-medium text-xs text-[var(--freya-blue)] truncate block" title={`時間オプション: ${itemTimeOption}`}>
-                                      {itemTimeOption}
-                                    </span>
-                                  ) : (
-                                    <span className="text-[var(--text-muted)] text-xs">—</span>
-                                  )}
-                                </div>
-                              </div>
-
-                              <div className="flex items-center gap-2 mt-1.5 text-xs text-[var(--text-muted)] flex-wrap">
-                                <span className="rounded-[4px] bg-[var(--surface)] border border-[var(--border)] px-1.5 py-0.5 text-[11px] font-medium text-[var(--text-secondary)]">
-                                  {item.unit === '枚'
-                                    ? (language === 'ja' ? `束 ${item.rollIndex}/${item.totalRolls}` : `Pack ${item.rollIndex}/${item.totalRolls}`)
-                                    : (language === 'ja' ? `巻 ${item.rollIndex}/${item.totalRolls}` : `Roll ${item.rollIndex}/${item.totalRolls}`)
-                                  }
-                                </span>
-                                <span className="font-mono freya-tabular">{item.meters}{item.unit || 'm'}</span>
-                                {isQtyMismatch && item.rollIndex === 1 && (
-                                  <button
-                                    type="button"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleUpdateHinbanQty(item.hinban);
-                                    }}
-                                    className="inline-flex items-center gap-1 rounded-[4px] border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-[11px] font-semibold text-amber-700 dark:text-amber-400 hover:bg-amber-500/20 transition-colors ml-1 cursor-pointer"
-                                    title={language === 'ja' ? '最新Excelデータに合わせて巻数・所要時間を更新' : 'Update rolls and duration to match Excel'}
-                                  >
-                                    <span className="material-symbols-outlined" style={{ fontSize: 12 }}>sync</span>
-                                    {t('ff_updateQtyPrompt').replace('{qty}', `${disc.excelQty}${item.unit || 'm'}`)}
-                                  </button>
-                                )}
-                              </div>
-                            </div>
-                            <span className="text-xs font-mono freya-tabular font-semibold text-[var(--text-primary)] whitespace-nowrap">{item.duration} {t('ff_minutesShort')}</span>
-                          </>
-                        )}
+                        <span className="text-xs font-mono font-bold freya-tabular text-[var(--text-primary)] whitespace-nowrap bg-[var(--surface)] border border-[var(--border)] rounded-[4px] px-2 py-0.5">
+                          {item.duration} {t('ff_minutesShort')}
+                        </span>
                         <button 
                           onClick={() => handleRemoveFromSchedule(item)}
-                          className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[4px] border border-[var(--border)] bg-[var(--surface)] hover:bg-red-500/10 hover:border-red-500/30 text-[var(--text-muted)] hover:text-red-500 transition-colors ml-2 cursor-pointer"
+                          className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[4px] border border-[var(--border)] bg-[var(--surface)] hover:bg-[var(--surface-hover)] hover:border-red-500/30 hover:text-red-600 text-[var(--text-muted)] transition-all shadow-2xs ml-1 cursor-pointer"
                           title={t('ff_removeFromSchedule')}
                         >
                           <span className="material-symbols-outlined" style={{fontSize: 16}}>arrow_back</span>
@@ -2733,14 +2808,14 @@ export default function FirstFactoryPage() {
                   })
                 )}
                 {scheduleWithTimes.length > 0 && (
-                  <div className="mt-2 pt-2.5 border-t border-[var(--border)] flex items-center justify-between text-xs text-[var(--text-muted)] freya-tabular shrink-0">
-                    <span>
+                  <div className="mt-3 pt-3 border-t border-[var(--border)] flex items-center justify-between text-xs text-[var(--text-secondary)] freya-tabular shrink-0 bg-[var(--surface)] rounded-[6px] px-3 py-2 border border-[var(--border)] shadow-2xs">
+                    <span className="font-bold text-[var(--text-primary)]">
                       {language === 'ja' ? `合計: ${scheduledItems.length} 工程` : `Total: ${scheduledItems.length} items`}
                     </span>
-                    <span className="font-semibold text-[var(--text-primary)] flex items-center gap-1.5">
-                      <span className="material-symbols-outlined text-[var(--freya-blue)]" style={{ fontSize: 14 }}>schedule</span>
+                    <span className="font-bold text-[var(--text-primary)] flex items-center gap-1.5">
+                      <span className="material-symbols-outlined text-[var(--freya-blue)]" style={{ fontSize: 16 }}>schedule</span>
                       <span className="font-mono">{startTime} ～ {scheduledEndTime}</span>
-                      <span className="text-[var(--text-muted)] font-normal font-mono">({formatTime(scheduledTotalMins)})</span>
+                      <span className="text-[var(--text-muted)] font-semibold font-mono">({formatTime(scheduledTotalMins)})</span>
                     </span>
                   </div>
                 )}

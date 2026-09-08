@@ -15,10 +15,11 @@
   --text-muted: #64748B;
   --text-tertiary: #64748B;
 
-  --page-bg: #F8FAFC;
+  --page-bg: #FFFFFF;
   --surface: #FFFFFF;
   --surface-raised: #FFFFFF;
   --surface-hover: #F1F5F9;
+  --surface-subtle: #FFFFFF;
 
   --border: #E5E7EB;
   --border-strong: #CBD5E1;
@@ -81,6 +82,7 @@
   --surface: #0F172A;
   --surface-raised: #111827;
   --surface-hover: #1E293B;
+  --surface-subtle: #161F30;
 
   --border: #1E293B;
   --border-strong: #334155;
