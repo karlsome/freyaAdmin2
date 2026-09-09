@@ -1,4 +1,4 @@
-import { useId, useRef } from "react";
+import { useEffect, useId, useRef } from "react";
 import PlannerGoalList from "./PlannerGoalList";
 import { useLanguage } from "../../contexts/LanguageContext";
 
@@ -11,10 +11,15 @@ export default function PlannerGoalsPanel({
   goalSearch,
   importing,
   smartSchedulingBusy,
+  reconciling = false,
+  outOfSyncCount = 0,
   onGoalSearchChange,
   onCsvSelected,
   onOpenManualGoal,
   onOpenSmartScheduling,
+  onOpenBulkEdit,
+  onReconcileGoals,
+  onReconcileSingleGoal,
   onDeleteGoal,
   onScheduleGoal,
 }) {
@@ -22,6 +27,14 @@ export default function PlannerGoalsPanel({
   const isJa = language === "ja";
   const inputId = useId();
   const fileInputRef = useRef(null);
+  const renderT0Ref = useRef(performance.now());
+  renderT0Ref.current = performance.now();
+
+  console.log(`⏱️ [PlannerGoalsPanel] Rendering goals panel with ${goals.length} goals`);
+
+  useEffect(() => {
+    console.log(`✅ [PlannerGoalsPanel] Rendered to DOM in ${(performance.now() - renderT0Ref.current).toFixed(1)}ms`);
+  });
 
   return (
     <div className="space-y-4">
@@ -64,6 +77,36 @@ export default function PlannerGoalsPanel({
                 auto_awesome
               </span>
               {smartSchedulingBusy ? (isJa ? "計画立案中…" : "Scheduling…") : (isJa ? "スマート計画" : "Smart Scheduling")}
+            </button>
+            <button
+              type="button"
+              onClick={onOpenBulkEdit}
+              disabled={!goals.length}
+              className="flex items-center gap-1.5 rounded-[6px] border border-amber-500/30 bg-amber-500/10 px-3 py-1.5 text-xs font-semibold text-amber-700 dark:text-amber-400 hover:bg-amber-500/20 disabled:cursor-not-allowed disabled:opacity-40 transition-colors shadow-none"
+            >
+              <span className="material-symbols-outlined" style={{ fontSize: 15 }}>edit_note</span>
+              {isJa ? "目標編集" : "Edit Goals"}
+            </button>
+            <button
+              type="button"
+              onClick={onReconcileGoals}
+              disabled={reconciling || !goals.length}
+              className={`flex items-center gap-1.5 rounded-[6px] border px-3 py-1.5 text-xs font-semibold transition-colors shadow-none disabled:cursor-not-allowed disabled:opacity-40 ${
+                outOfSyncCount > 0
+                  ? "border-amber-500/40 bg-amber-500/15 text-amber-700 dark:text-amber-300 hover:bg-amber-500/25"
+                  : "border-[var(--border)] bg-[var(--surface)] text-[var(--text-secondary)] hover:bg-[var(--surface-hover)]"
+              }`}
+              title={isJa ? "タイムラインの実際の割当数量と生産目標を同期します" : "Reconcile goal quantities with actual items scheduled on the timeline"}
+            >
+              <span className={`material-symbols-outlined ${reconciling ? "animate-spin" : ""}`} style={{ fontSize: 15 }}>
+                sync
+              </span>
+              <span>{reconciling ? (isJa ? "同期中…" : "Syncing…") : (isJa ? "タイムライン同期" : "Sync with Timeline")}</span>
+              {outOfSyncCount > 0 && (
+                <span className="rounded-full bg-amber-500 px-1.5 py-0.2 text-[9px] font-bold text-white">
+                  {outOfSyncCount}
+                </span>
+              )}
             </button>
           </div>
         </div>
@@ -109,6 +152,7 @@ export default function PlannerGoalsPanel({
         productColors={productColors}
         onDeleteGoal={onDeleteGoal}
         onScheduleGoal={onScheduleGoal}
+        onReconcileSingleGoal={onReconcileSingleGoal}
       />
     </div>
   );

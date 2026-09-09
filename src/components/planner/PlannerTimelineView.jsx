@@ -1,3 +1,4 @@
+import { useEffect, useMemo, useRef } from "react";
 import {
   equipmentConflicts,
   getFirstVisibleSlotMinutes,
@@ -41,21 +42,47 @@ export default function PlannerTimelineView({
   inProgressMap = {},
   breaks = [],
   hideUnavailableEquipment = false,
+  startTime = "08:45",
   onToggleHideUnavailable,
+  onStartTimeChange,
   onSlotSelect,
   onMoveScheduledItem,
   onRemoveScheduledItem,
 }) {
   const { language } = useLanguage();
   const isJa = language === "ja";
+  const renderT0Ref = useRef(performance.now());
+  renderT0Ref.current = performance.now();
 
-  const timeSlots = getTimelineSlots(scheduledProducts, actualBlocks, breaks);
+  const timeSlots = useMemo(() => {
+    return getTimelineSlots(scheduledProducts, actualBlocks, breaks, startTime);
+  }, [scheduledProducts, actualBlocks, breaks, startTime]);
   const now = new Date();
   const currentMinutes = (now.getHours() * 60) + now.getMinutes();
-  const timelineStart = timeToMinutes(timeSlots[0] || "08:45");
+  const timelineStart = timeToMinutes(timeSlots[0] || startTime || "08:45");
   const currentMarkerPosition = currentMinutes >= timelineStart
     ? (((currentMinutes - timelineStart) / 15) * SLOT_WIDTH) + LABEL_WIDTH
     : null;
+
+  const mappedSlots = useMemo(() => {
+    return timeSlots.map((slot) => ({
+      slot,
+      slotMinutes: timeToMinutes(slot),
+    }));
+  }, [timeSlots]);
+
+  const scheduledProductsWithSlot = useMemo(() => {
+    return scheduledProducts.map((p) => ({
+      ...p,
+      _firstSlot: getFirstVisibleSlotMinutes(p, breaks, startTime),
+    }));
+  }, [scheduledProducts, breaks, startTime]);
+
+  console.log(`⏱️ [PlannerTimelineView] Rendering timeline grid: ${equipment.length} equipment × ${timeSlots.length} slots (${equipment.length * timeSlots.length * 2} cells), ${scheduledProducts.length} scheduled items`);
+
+  useEffect(() => {
+    console.log(`✅ [PlannerTimelineView] Rendered to DOM in ${(performance.now() - renderT0Ref.current).toFixed(1)}ms`);
+  });
 
   if (!equipment.length) {
     return (
@@ -83,15 +110,31 @@ export default function PlannerTimelineView({
           </p>
         </div>
 
-        <button
-          type="button"
-          onClick={onToggleHideUnavailable}
-          className={`rounded-[6px] border px-3 py-1.5 text-xs font-semibold transition ${hideUnavailableEquipment ? "border-[var(--freya-blue)]/30 bg-[var(--freya-blue)]/10 text-[var(--freya-blue)]" : "border-[var(--border)] bg-[var(--surface-subtle)] text-[var(--text-primary)] hover:bg-[var(--surface-hover)]"}`}
-        >
-          {hideUnavailableEquipment
-            ? (isJa ? "利用不可設備を表示" : "Show unavailable equipment")
-            : (isJa ? "利用不可設備を非表示" : "Hide unavailable equipment")}
-        </button>
+        <div className="flex flex-wrap items-center gap-2">
+          {onStartTimeChange ? (
+            <div className="flex items-center gap-1.5 rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] px-2.5 py-1 text-xs font-semibold text-[var(--text-secondary)]">
+              <span className="material-symbols-outlined text-[var(--freya-blue)]" style={{ fontSize: 16 }}>schedule</span>
+              <span>{isJa ? "開始:" : "Start:"}</span>
+              <input
+                type="time"
+                value={startTime || "08:45"}
+                onChange={(e) => onStartTimeChange(e.target.value)}
+                className="h-6 rounded bg-[var(--surface)] border border-[var(--border)] px-1.5 text-xs font-mono font-bold text-[var(--text-primary)] focus:outline-none focus:border-[var(--freya-blue)] cursor-pointer"
+                title={isJa ? "タイムライン開始時刻" : "Timeline start time"}
+              />
+            </div>
+          ) : null}
+
+          <button
+            type="button"
+            onClick={onToggleHideUnavailable}
+            className={`rounded-[6px] border px-3 py-1.5 text-xs font-semibold transition ${hideUnavailableEquipment ? "border-[var(--freya-blue)]/30 bg-[var(--freya-blue)]/10 text-[var(--freya-blue)]" : "border-[var(--border)] bg-[var(--surface-subtle)] text-[var(--text-primary)] hover:bg-[var(--surface-hover)]"}`}
+          >
+            {hideUnavailableEquipment
+              ? (isJa ? "利用不可設備を表示" : "Show unavailable equipment")
+              : (isJa ? "利用不可設備を非表示" : "Hide unavailable equipment")}
+          </button>
+        </div>
       </div>
 
       <div className="overflow-auto rounded-[8px] border border-[var(--border)] bg-[var(--surface)]">
@@ -117,7 +160,7 @@ export default function PlannerTimelineView({
           </div>
 
           {equipment.map((equipmentName) => {
-            const plannedItems = scheduledProducts.filter((item) => item.equipment === equipmentName);
+            const plannedItems = scheduledProductsWithSlot.filter((item) => item.equipment === equipmentName);
             const actualItems = actualBlocks.filter((item) => item.equipment === equipmentName);
             const plannedUnavailable = getEquipmentAvailabilityFlag(equipmentName, scheduledProducts);
             const actualUnavailable = getEquipmentAvailabilityFlag(equipmentName, actualBlocks);
@@ -137,11 +180,10 @@ export default function PlannerTimelineView({
                   </div>
 
                   <div className="flex">
-                    {timeSlots.map((slot) => {
-                      const slotMinutes = timeToMinutes(slot);
+                    {mappedSlots.map(({ slot, slotMinutes }) => {
                       const breakBlock = isBreakAtSlot(slotMinutes, equipmentName, breaks);
                       const product = getProductForSlot(slotMinutes, equipmentName, plannedItems, breaks);
-                      const firstVisibleSlot = product ? getFirstVisibleSlotMinutes(product, breaks) : null;
+                      const firstVisibleSlot = product ? product._firstSlot : null;
 
                       if (breakBlock) {
                         return (
@@ -231,8 +273,7 @@ export default function PlannerTimelineView({
                   </div>
 
                   <div className="flex">
-                    {timeSlots.map((slot) => {
-                      const slotMinutes = timeToMinutes(slot);
+                    {mappedSlots.map(({ slot, slotMinutes }) => {
                       const block = getActualBlockForSlot(slotMinutes, equipmentName, actualItems);
                       const inProgress = inProgressMap?.[equipmentName]?.[slot];
 

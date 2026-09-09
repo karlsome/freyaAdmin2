@@ -4,6 +4,39 @@ const LOCAL_URL = "http://localhost:3000/";
 const ENV_URL = import.meta.env.VITE_API_URL?.trim();
 const BASE_URL = (ENV_URL || LOCAL_URL).replace(/\/?$/, "/");
 
+const PLANNER_PREVIEW_CACHE_MS = 60 * 1000;
+const PLANNER_PUBLISHED_CACHE_MS = 60 * 1000;
+const _previewCache = new Map();
+const _publishedCache = new Map();
+const _previewInflight = new Map();
+const _publishedInflight = new Map();
+
+function getPlannerCacheKey(factory = "", date = "") {
+  return `${factory}__${date}`;
+}
+
+export function invalidatePlannerPreviewCache(factory, date) {
+  if (factory && date) {
+    const key = getPlannerCacheKey(factory, date);
+    _previewCache.delete(key);
+    _previewInflight.delete(key);
+  } else {
+    _previewCache.clear();
+    _previewInflight.clear();
+  }
+}
+
+export function invalidatePlannerPublishedCache(factory, date) {
+  if (factory && date) {
+    const key = getPlannerCacheKey(factory, date);
+    _publishedCache.delete(key);
+    _publishedInflight.delete(key);
+  } else {
+    _publishedCache.clear();
+    _publishedInflight.clear();
+  }
+}
+
 async function readJson(res) {
   const text = await res.text();
   if (!text) return {};
@@ -170,13 +203,14 @@ export async function fetchPlannerPlans({ factory, date } = {}) {
   }
 }
 
-export async function upsertPlannerPlan({ factory, date, products, breaks, createdBy }) {
+export async function upsertPlannerPlan({ factory, date, products, breaks, createdBy, startTime }) {
   const existingPlans = await fetchPlannerPlans({ factory, date });
   const payload = {
     factory,
     date,
     products,
     breaks,
+    startTime,
     createdBy,
     updatedBy: createdBy,
   };
@@ -191,6 +225,7 @@ export async function upsertPlannerPlan({ factory, date, products, breaks, creat
         date,
         products,
         breaks,
+        startTime,
         updatedBy: createdBy,
       }),
     });
@@ -240,4 +275,186 @@ export async function fetchPlannerInProgress(factory, date) {
   );
 
   return Array.isArray(rows) ? rows : [];
+}
+
+// ─── Goal Reconciliation ───────────────────────────────────────────────────────
+export async function reconcilePlannerGoals({ factory, date, goals = [], scheduledProducts = [] }) {
+  if (!factory || !date) return { updatedCount: 0, updatedGoals: [] };
+
+  const targetGoals = goals.filter((g) => g.date === date && g.factory === factory);
+  let updatedCount = 0;
+  const updatedGoals = [];
+
+  for (const goal of targetGoals) {
+    const actualScheduled = scheduledProducts
+      .filter((p) => (p.goalId && p.goalId === goal._id) || (p.背番号 && p.背番号 === goal.背番号))
+      .reduce((sum, p) => sum + (Number(p.quantity) || 0), 0);
+
+    const target = Number(goal.targetQuantity) || 0;
+    const currentScheduled = Number(goal.scheduledQuantity) || 0;
+
+    if (actualScheduled !== currentScheduled) {
+      const newRemaining = Math.max(0, target - actualScheduled);
+      const newStatus = actualScheduled >= target ? "completed" : actualScheduled > 0 ? "in-progress" : "pending";
+
+      await updatePlannerGoal(goal._id, {
+        scheduledQuantity: actualScheduled,
+        remainingQuantity: newRemaining,
+        status: newStatus,
+      });
+
+      updatedCount++;
+      updatedGoals.push({ ...goal, scheduledQuantity: actualScheduled, remainingQuantity: newRemaining, status: newStatus });
+    }
+  }
+
+  return { updatedCount, updatedGoals };
+}
+
+// ─── Auto-Planner Preview & Draft ──────────────────────────────────────────────
+export async function fetchPlannerPreview({ factory, date, forceRefresh = false } = {}) {
+  if (!factory || !date) return null;
+
+  const key = getPlannerCacheKey(factory, date);
+  const now = Date.now();
+
+  if (!forceRefresh) {
+    const cached = _previewCache.get(key);
+    if (cached && now - cached.ts < PLANNER_PREVIEW_CACHE_MS) {
+      return cached.data;
+    }
+
+    const inflight = _previewInflight.get(key);
+    if (inflight) return inflight;
+  }
+
+  const promise = (async () => {
+    try {
+      const params = new URLSearchParams({ factory, date });
+      const result = await requestJson(`api/production-planner/preview?${params.toString()}`);
+      const preview = result?.preview || result?.data || null;
+
+      _previewCache.set(key, { ts: Date.now(), data: preview });
+      return preview;
+    } finally {
+      _previewInflight.delete(key);
+    }
+  })();
+
+  _previewInflight.set(key, promise);
+  return promise;
+}
+
+export async function savePlannerPreviewDraft({ factory, date, scheduleUntilTime, updatedBy, assignments, basisRows }) {
+  const result = await requestJson("api/production-planner/preview-draft/save", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      factory,
+      date,
+      scheduleUntilTime,
+      updatedBy,
+      assignments,
+      basisRows,
+    }),
+  });
+
+  invalidatePlannerPreviewCache(factory, date);
+  return result?.data || result;
+}
+
+export async function deletePlannerPreviewDraft({ factory, date }) {
+  const params = new URLSearchParams({ factory, date });
+  const result = await requestJson(`api/production-planner/preview-draft?${params.toString()}`, {
+    method: "DELETE",
+  });
+
+  invalidatePlannerPreviewCache(factory, date);
+  return result;
+}
+
+// ─── Auto-Planner Published Schedules ──────────────────────────────────────────
+export async function fetchPlannerPublished({ factory, date, forceRefresh = false } = {}) {
+  if (!factory || !date) return null;
+
+  const key = getPlannerCacheKey(factory, date);
+  const now = Date.now();
+
+  if (!forceRefresh) {
+    const cached = _publishedCache.get(key);
+    if (cached && now - cached.ts < PLANNER_PUBLISHED_CACHE_MS) {
+      return cached.data;
+    }
+
+    const inflight = _publishedInflight.get(key);
+    if (inflight) return inflight;
+  }
+
+  const promise = (async () => {
+    try {
+      const params = new URLSearchParams({ factory, date });
+      const result = await requestJson(`api/production-planner/published?${params.toString()}`);
+      const data = result?.data || null;
+
+      _publishedCache.set(key, { ts: Date.now(), data });
+      return data;
+    } finally {
+      _publishedInflight.delete(key);
+    }
+  })();
+
+  _publishedInflight.set(key, promise);
+  return promise;
+}
+
+export async function publishPlannerSchedule({
+  factory,
+  date,
+  scheduleUntilTime,
+  sourceMode = "auto",
+  sourceType = "manual",
+  sourceLabel = "",
+  note = "",
+  publishedBy,
+  assignments,
+  basisRows,
+}) {
+  const result = await requestJson("api/production-planner/published/publish", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      factory,
+      date,
+      scheduleUntilTime,
+      sourceMode,
+      sourceType,
+      sourceLabel,
+      note,
+      publishedBy,
+      assignments,
+      basisRows,
+    }),
+  });
+
+  invalidatePlannerPreviewCache(factory, date);
+  invalidatePlannerPublishedCache(factory, date);
+  return result?.data || result;
+}
+
+export async function restorePlannerPublishedVersion({ factory, date, sourceVersion, publishedBy, note = "" }) {
+  const result = await requestJson("api/production-planner/published/restore", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      factory,
+      date,
+      sourceVersion,
+      publishedBy,
+      note,
+    }),
+  });
+
+  invalidatePlannerPreviewCache(factory, date);
+  invalidatePlannerPublishedCache(factory, date);
+  return result?.data || result;
 }

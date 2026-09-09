@@ -13,6 +13,7 @@ import {
 export default function PlannerSelectedSummary({
   scheduledProducts = [],
   breaks = [],
+  startTime = "08:45",
   searchValue,
   onSearchChange,
   onRemoveItem,
@@ -153,11 +154,11 @@ export default function PlannerSelectedSummary({
               </EmptyState>
             ) : equipmentNames.map((equipment) => {
               const items = equipmentMap[equipment];
-              const firstStart = Math.min(...items.map((item) => Number(item.startTime?.split(":")[0]) * 60 + Number(item.startTime?.split(":")[1])));
+              const firstStart = Math.min(...items.map((item) => timeToMinutes(item?.startTime || startTime || "08:45")));
               const lastEnd = Math.max(...items.map((item) => getScheduledSpan(item, breaks).endTime));
               const totalQuantity = items.reduce((sum, item) => sum + Number(item.quantity || 0), 0);
-              const { utilization, formattedTime } = getEquipmentUtilization(scheduledProducts, equipment, breaks);
-              const workMinutes = getEffectiveWorkMinutes(breaks, equipment);
+              const { utilization, formattedTime } = getEquipmentUtilization(scheduledProducts, equipment, breaks, startTime);
+              const workMinutes = getEffectiveWorkMinutes(breaks, equipment, startTime);
 
               return (
                 <section key={equipment} className="rounded-[8px] border border-[var(--border)] bg-[var(--surface-subtle)] p-4">

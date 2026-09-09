@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import Papa from "papaparse";
 import LiquidSegmentedControl from "../components/LiquidSegmentedControl";
 import MasterTabNav from "../components/MasterTabNav";
@@ -16,12 +17,16 @@ import PlannerGoalImportReviewModal from "../components/planner/PlannerGoalImpor
 import PlannerSlotSchedulingModal from "../components/planner/PlannerSlotSchedulingModal";
 import PlannerSmartSchedulingModal from "../components/planner/PlannerSmartSchedulingModal";
 import PlannerPrintModal from "../components/planner/PlannerPrintModal";
+import PlannerBulkEditGoalsModal from "../components/planner/PlannerBulkEditGoalsModal";
+import PlannerPreviewTab from "../components/planner/PlannerPreviewTab";
+import PlannerPublishedTab from "../components/planner/PlannerPublishedTab";
 import {
   batchCreatePlannerGoals,
   checkPlannerGoalDuplicates,
   createPlannerGoal,
   deletePlannerGoal,
   deletePlannerPlanByFactoryDate,
+  deletePlannerPreviewDraft,
   fetchPlannerActualProduction,
   fetchPlannerEquipment,
   fetchPlannerFactories,
@@ -29,8 +34,14 @@ import {
   fetchPlannerInProgress,
   fetchPlannerPlans,
   fetchPlannerPressHistory,
+  fetchPlannerPreview,
   fetchPlannerProducts,
+  fetchPlannerPublished,
   lookupPlannerProduct,
+  publishPlannerSchedule,
+  reconcilePlannerGoals,
+  restorePlannerPublishedVersion,
+  savePlannerPreviewDraft,
   schedulePlannerGoal,
   updatePlannerGoal,
   upsertPlannerPlan,
@@ -61,6 +72,8 @@ import { useLanguage } from "../contexts/LanguageContext";
 
 const MAIN_TABS = [
   { key: "goals", label: "Production Goals", labelJa: "生産目標", icon: "flag" },
+  { key: "preview", label: "Preview", labelJa: "需要自動計画", icon: "radar" },
+  { key: "published", label: "Published", labelJa: "公開スケジュール", icon: "broadcast_on_home" },
   { key: "planning", label: "Planning", labelJa: "計画立案", icon: "event_note" },
 ];
 
@@ -145,10 +158,15 @@ export default function PlannerPage() {
   const isJa = language === "ja";
   const authUser = getAuthUser();
   const requestIdRef = useRef(0);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const urlTab = searchParams.get("tab");
+  const mainTab = MAIN_TABS.some((t) => t.key === urlTab) ? urlTab : "goals";
+
   const [factories, setFactories] = useState([]);
-  const [factoryName, setFactoryName] = useState(() => localStorage.getItem("planner_selected_factory") || "");
-  const [planDate, setPlanDate] = useState(todayStr());
-  const [endDate, setEndDate] = useState("");
+  const [factoryName, setFactoryName] = useState(() => searchParams.get("factory") || localStorage.getItem("planner_selected_factory") || "");
+  const [planDate, setPlanDate] = useState(() => searchParams.get("date") || todayStr());
+  const [endDate, setEndDate] = useState(() => searchParams.get("endDate") || "");
+  const [startTime, setStartTime] = useState(() => searchParams.get("startTime") || localStorage.getItem("planner_start_time") || "08:45");
   const [equipment, setEquipment] = useState([]);
   const [products, setProducts] = useState([]);
   const [goals, setGoals] = useState([]);
@@ -159,7 +177,6 @@ export default function PlannerPage() {
   const [currentPlanId, setCurrentPlanId] = useState("");
   const [loadingFactories, setLoadingFactories] = useState(false);
   const [dataLoading, setDataLoading] = useState(false);
-  const [mainTab, setMainTab] = useState("goals");
   const [viewTab, setViewTab] = useState("timeline");
   const [goalSearch, setGoalSearch] = useState("");
   const [selectedSearch, setSelectedSearch] = useState("");
@@ -182,8 +199,56 @@ export default function PlannerPage() {
   const [smartPreviewOpen, setSmartPreviewOpen] = useState(false);
   const [printModalOpen, setPrintModalOpen] = useState(false);
 
+  // Bulk Edit Goals
+  const [bulkEditOpen, setBulkEditOpen] = useState(false);
+  const [bulkEditBusy, setBulkEditBusy] = useState(false);
+
+  // Timeline Reconciliation
+  const [reconciling, setReconciling] = useState(false);
+
+  // Auto-planner Preview & Draft
+  const [previewData, setPreviewData] = useState(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
+  const [previewSaving, setPreviewSaving] = useState(false);
+  const [previewPublishing, setPreviewPublishing] = useState(false);
+
+  // Published Schedule
+  const [publishedData, setPublishedData] = useState(null);
+  const [publishedLoading, setPublishedLoading] = useState(false);
+  const [publishedRestoring, setPublishedRestoring] = useState(false);
+
+  function handleMainTabChange(nextTab) {
+    const t0 = performance.now();
+    console.log(`⏱️ [Planner] Tab button clicked: current="${mainTab}" -> target="${nextTab}" at ${t0.toFixed(1)}ms`);
+    console.time(`⏱️ [Planner] Total tab transition to "${nextTab}"`);
+    const nextParams = new URLSearchParams(searchParams);
+    if (nextTab === "goals") {
+      nextParams.delete("tab");
+    } else {
+      nextParams.set("tab", nextTab);
+    }
+    setSearchParams(nextParams, { replace: true });
+    console.log(`⏱️ [Planner] setSearchParams completed in ${(performance.now() - t0).toFixed(1)}ms`);
+  }
+
+  useEffect(() => {
+    console.log(`🎯 [Planner] Active tab rendered: "${mainTab}"`);
+    try {
+      console.timeEnd(`⏱️ [Planner] Total tab transition to "${mainTab}"`);
+    } catch {}
+  }, [mainTab]);
+
   const productColors = buildProductColorMap(products, [...goals, ...scheduledProducts]);
   const filteredGoals = filterGoals(goals, goalSearch);
+  const outOfSyncCount = useMemo(() => {
+    return goals.reduce((count, goal) => {
+      if (goal.date !== planDate) return count;
+      const actual = scheduledProducts
+        .filter((p) => (p.goalId && p.goalId === goal._id) || (p.背番号 && p.背番号 === goal.背番号))
+        .reduce((sum, p) => sum + (Number(p.quantity) || 0), 0);
+      return actual !== Number(goal.scheduledQuantity || 0) ? count + 1 : count;
+    }, 0);
+  }, [goals, planDate, scheduledProducts]);
 
   function showFlash(message, type = "info") {
     setFlash({ message, type });
@@ -230,6 +295,7 @@ export default function PlannerPage() {
     const activeRangeEnd = nextEndDate && nextEndDate >= nextDate ? nextEndDate : "";
 
     if (!nextFactory) {
+      console.log("ℹ️ [Planner API] No factory selected, resetting planner state.");
       setEquipment([]);
       setGoals([]);
       setScheduledProducts([]);
@@ -241,6 +307,8 @@ export default function PlannerPage() {
     }
 
     const requestId = ++requestIdRef.current;
+    console.log(`🔄 [Planner API #${requestId}] Loading data for factory="${nextFactory}", date="${nextDate}"`);
+    console.time(`⏱️ [Planner API #${requestId}] Total data fetch`);
     setDataLoading(true);
 
     try {
@@ -253,7 +321,20 @@ export default function PlannerPage() {
         fetchPlannerInProgress(nextFactory, nextDate),
       ]);
 
-      if (requestId !== requestIdRef.current) return;
+      if (requestId !== requestIdRef.current) {
+        console.warn(`⚠️ [Planner API #${requestId}] Stale response ignored (current is #${requestIdRef.current})`);
+        return;
+      }
+
+      console.timeEnd(`⏱️ [Planner API #${requestId}] Total data fetch`);
+      console.log(`✅ [Planner API #${requestId}] Received:`, {
+        equipment: nextEquipment.length,
+        products: nextProducts.length,
+        goals: nextGoals.length,
+        plans: nextPlans.length,
+        actualRows: actualRows.length,
+        inProgressRows: inProgressRows.length,
+      });
 
       const nextColorMap = buildProductColorMap(nextProducts, nextGoals);
       const currentPlan = Array.isArray(nextPlans) && nextPlans.length ? nextPlans[0] : null;
@@ -265,9 +346,14 @@ export default function PlannerPage() {
       setActualBlocks(processActualProductionData(actualRows));
       setInProgressMap(processInProgressData(inProgressRows));
       setBreaks(currentPlan?.breaks?.length ? cloneBreaks(currentPlan.breaks) : cloneBreaks(DEFAULT_BREAKS));
+      if (currentPlan?.startTime) {
+        setStartTime(currentPlan.startTime);
+        localStorage.setItem("planner_start_time", currentPlan.startTime);
+      }
       setCurrentPlanId(currentPlan?._id || "");
     } catch (error) {
       if (requestId !== requestIdRef.current) return;
+      console.error(`❌ [Planner API #${requestId}] Error loading planner data:`, error);
       showFlash(error.message || "Failed to load planner data.", "error");
     } finally {
       if (requestId === requestIdRef.current) {
@@ -280,7 +366,7 @@ export default function PlannerPage() {
     loadPlannerData();
   }, [loadPlannerData]);
 
-  async function persistPlan(nextProducts, nextBreaks) {
+  async function persistPlan(nextProducts, nextBreaks, nextStartTime = startTime) {
     if (!factoryName) return;
 
     if (!nextProducts.length) {
@@ -294,13 +380,252 @@ export default function PlannerPage() {
       date: planDate,
       products: serializePlanProducts(nextProducts),
       breaks: cloneBreaks(nextBreaks),
+      startTime: nextStartTime,
       createdBy: getUserDisplayName(authUser),
     });
+  }
+
+  function handleStartTimeChange(nextStartTime) {
+    const value = nextStartTime || "08:45";
+    setStartTime(value);
+    localStorage.setItem("planner_start_time", value);
+    const nextParams = new URLSearchParams(searchParams);
+    if (value && value !== "08:45") nextParams.set("startTime", value);
+    else nextParams.delete("startTime");
+    setSearchParams(nextParams, { replace: true });
+    if (scheduledProducts.length > 0) {
+      persistPlan(scheduledProducts, breaks, value);
+    }
   }
 
   async function refreshAfterMutation(message, type = "success") {
     await loadPlannerData();
     if (message) showFlash(message, type);
+  }
+
+  // ─── Auto-Planner Preview Loaders & Handlers ────────────────────────────────
+  const loadPreview = useCallback(async (forceRefresh = false) => {
+    if (!factoryName || !planDate) return;
+    setPreviewLoading(true);
+    try {
+      const data = await fetchPlannerPreview({ factory: factoryName, date: planDate, forceRefresh });
+      setPreviewData(data);
+    } catch (err) {
+      showFlash(err.message || (isJa ? "プレビューデータの取得に失敗しました。" : "Failed to load preview data."), "error");
+    } finally {
+      setPreviewLoading(false);
+    }
+  }, [factoryName, planDate, isJa]);
+
+  useEffect(() => {
+    if (mainTab === "preview" && factoryName && planDate) {
+      loadPreview();
+    }
+  }, [mainTab, factoryName, planDate, loadPreview]);
+
+  async function handleSavePreviewDraft({ scheduleUntilTime, assignments, basisRows }) {
+    if (!factoryName || !planDate) return;
+    setPreviewSaving(true);
+    try {
+      await savePlannerPreviewDraft({
+        factory: factoryName,
+        date: planDate,
+        scheduleUntilTime,
+        updatedBy: getUserDisplayName(authUser),
+        assignments,
+        basisRows,
+      });
+      await loadPreview(true);
+      showFlash(isJa ? "需要計画下書きを保存しました。" : "Preview draft saved successfully.", "success");
+    } catch (err) {
+      showFlash(err.message || (isJa ? "下書きの保存に失敗しました。" : "Failed to save draft."), "error");
+    } finally {
+      setPreviewSaving(false);
+    }
+  }
+
+  async function handleDiscardPreviewDraft() {
+    if (!factoryName || !planDate) return;
+    setPreviewSaving(true);
+    try {
+      await deletePlannerPreviewDraft({ factory: factoryName, date: planDate });
+      await loadPreview(true);
+      showFlash(isJa ? "需要計画下書きを破棄しました。" : "Draft discarded.", "info");
+    } catch (err) {
+      showFlash(err.message || (isJa ? "下書きの破棄に失敗しました。" : "Failed to discard draft."), "error");
+    } finally {
+      setPreviewSaving(false);
+    }
+  }
+
+  async function handlePublishFromPreview({
+    scheduleUntilTime,
+    sourceMode,
+    sourceType,
+    sourceLabel,
+    note,
+    assignments,
+    basisRows,
+  }) {
+    if (!factoryName || !planDate) return;
+    setPreviewPublishing(true);
+    try {
+      await publishPlannerSchedule({
+        factory: factoryName,
+        date: planDate,
+        scheduleUntilTime,
+        sourceMode,
+        sourceType,
+        sourceLabel,
+        note,
+        publishedBy: getUserDisplayName(authUser),
+        assignments,
+        basisRows,
+      });
+      showFlash(isJa ? "スケジュールを公開しました。" : "Schedule published to shop floor successfully.", "success");
+      handleMainTabChange("published");
+    } catch (err) {
+      showFlash(err.message || (isJa ? "スケジュールの公開に失敗しました。" : "Failed to publish schedule."), "error");
+    } finally {
+      setPreviewPublishing(false);
+    }
+  }
+
+  // ─── Published Schedule Loaders & Handlers ──────────────────────────────────
+  const loadPublished = useCallback(async (forceRefresh = false) => {
+    if (!factoryName || !planDate) return;
+    setPublishedLoading(true);
+    try {
+      const data = await fetchPlannerPublished({ factory: factoryName, date: planDate, forceRefresh });
+      setPublishedData(data);
+    } catch (err) {
+      showFlash(err.message || (isJa ? "公開スケジュールの取得に失敗しました。" : "Failed to load published schedule."), "error");
+    } finally {
+      setPublishedLoading(false);
+    }
+  }, [factoryName, planDate, isJa]);
+
+  useEffect(() => {
+    if (mainTab === "published" && factoryName && planDate) {
+      loadPublished();
+    }
+  }, [mainTab, factoryName, planDate, loadPublished]);
+
+  async function handleRestorePublishedVersion(versionNumber) {
+    if (!factoryName || !planDate || !versionNumber) return;
+    setPublishedRestoring(true);
+    try {
+      await restorePlannerPublishedVersion({
+        factory: factoryName,
+        date: planDate,
+        sourceVersion: versionNumber,
+        publishedBy: getUserDisplayName(authUser),
+        note: `Restored version v${versionNumber}`,
+      });
+      await loadPublished(true);
+      showFlash(isJa ? `バージョン v${versionNumber} を復元しました。` : `Restored version v${versionNumber}.`, "success");
+    } catch (err) {
+      showFlash(err.message || (isJa ? "バージョンの復元に失敗しました。" : "Failed to restore version."), "error");
+    } finally {
+      setPublishedRestoring(false);
+    }
+  }
+
+  // ─── Bulk Edit Goals Handlers ───────────────────────────────────────────────
+  async function handleBulkDeleteSelected(ids) {
+    if (!ids?.length) return;
+    setBulkEditBusy(true);
+    try {
+      await Promise.all(ids.map((id) => deletePlannerGoal(id)));
+      await refreshAfterMutation(
+        isJa ? `${ids.length} 件の目標を削除しました。` : `Deleted ${ids.length} goal(s).`
+      );
+    } catch (err) {
+      showFlash(err.message || (isJa ? "目標の削除に失敗しました。" : "Failed to delete goals."), "error");
+    } finally {
+      setBulkEditBusy(false);
+    }
+  }
+
+  async function handleBulkDeleteAll(ids) {
+    if (!ids?.length) return;
+    setBulkEditBusy(true);
+    try {
+      await Promise.all(ids.map((id) => deletePlannerGoal(id)));
+      await refreshAfterMutation(
+        isJa ? `本日の目標 ${ids.length} 件をすべて削除しました。` : `Deleted all ${ids.length} goal(s).`
+      );
+    } catch (err) {
+      showFlash(err.message || (isJa ? "すべての目標の削除に失敗しました。" : "Failed to delete all goals."), "error");
+    } finally {
+      setBulkEditBusy(false);
+    }
+  }
+
+  async function handleBulkUpdateTarget(goalId, newTarget) {
+    const targetGoal = goals.find((g) => g._id === goalId);
+    const scheduled = Number(targetGoal?.scheduledQuantity) || 0;
+    const remaining = Math.max(0, newTarget - scheduled);
+    const status = scheduled >= newTarget ? "completed" : scheduled > 0 ? "in-progress" : "pending";
+
+    await updatePlannerGoal(goalId, {
+      targetQuantity: newTarget,
+      remainingQuantity: remaining,
+      status,
+    });
+    await refreshAfterMutation(
+      isJa ? "目標数量を更新しました。" : "Goal quantity updated."
+    );
+  }
+
+  // ─── Timeline Reconciliation Handlers ───────────────────────────────────────
+  async function handleReconcileGoals() {
+    if (!factoryName) return;
+    setReconciling(true);
+    try {
+      const result = await reconcilePlannerGoals({
+        factory: factoryName,
+        date: planDate,
+        goals,
+        scheduledProducts,
+      });
+      if (result.updatedCount > 0) {
+        await refreshAfterMutation(
+          isJa
+            ? `${result.updatedCount} 件の目標をタイムラインと同期しました。`
+            : `Reconciled ${result.updatedCount} goal(s) with timeline.`
+        );
+      } else {
+        showFlash(isJa ? "すべての目標はタイムラインと同期されています。" : "All goals are already in sync with the timeline.", "info");
+      }
+    } catch (err) {
+      showFlash(err.message || (isJa ? "同期に失敗しました。" : "Failed to reconcile goals."), "error");
+    } finally {
+      setReconciling(false);
+    }
+  }
+
+  async function handleReconcileSingleGoal(goal) {
+    if (!goal?._id) return;
+    const actual = scheduledProducts
+      .filter((p) => (p.goalId && p.goalId === goal._id) || (p.背番号 && p.背番号 === goal.背番号))
+      .reduce((sum, p) => sum + (Number(p.quantity) || 0), 0);
+    const target = Number(goal.targetQuantity) || 0;
+    const newRemaining = Math.max(0, target - actual);
+    const newStatus = actual >= target ? "completed" : actual > 0 ? "in-progress" : "pending";
+
+    try {
+      await updatePlannerGoal(goal._id, {
+        scheduledQuantity: actual,
+        remainingQuantity: newRemaining,
+        status: newStatus,
+      });
+      await refreshAfterMutation(
+        isJa ? `目標 (${goal.背番号 || goal.品番}) をタイムラインと同期しました。` : `Goal (${goal.背番号 || goal.品番}) reconciled with timeline.`
+      );
+    } catch (err) {
+      showFlash(err.message || (isJa ? "同期に失敗しました。" : "Failed to reconcile goal."), "error");
+    }
   }
 
   async function handleManualGoalSubmit({ product, quantity, date }) {
@@ -591,7 +916,7 @@ export default function PlannerPage() {
       await Promise.all(scheduleOperations);
       await persistPlan(nextProducts, breaks);
       setSlotModalState({ open: false, equipment: "", startTime: "" });
-      setMainTab("planning");
+      handleMainTabChange("planning");
       await refreshAfterMutation(`Scheduled ${queue.length} goal${queue.length === 1 ? "" : "s"}.`);
     } catch (error) {
       showFlash(error.message || "Failed to schedule goals.", "error");
@@ -701,7 +1026,7 @@ export default function PlannerPage() {
       setPlanDate(goal.date);
       setEndDate("");
     }
-    setMainTab("planning");
+    handleMainTabChange("planning");
     showFlash(`Switch to the timeline and click a slot to place ${goal.背番号 || goal.品番}.`, "info");
   }
 
@@ -776,7 +1101,7 @@ export default function PlannerPage() {
               if (hasPartConflict) continue;
             }
 
-            const currentStartMinutes = getLatestEquipmentEnd(workingProducts, equipmentName, breaks);
+            const currentStartMinutes = getLatestEquipmentEnd(workingProducts, equipmentName, breaks, startTime);
             const availableWindow = (maxEndTime + SMART_SCHEDULING_GRACE_MINUTES) - currentStartMinutes;
             if (availableWindow <= 0) continue;
 
@@ -863,6 +1188,7 @@ export default function PlannerPage() {
         planDate,
         scheduledProducts,
         breaks,
+        startTime,
       });
     } catch (error) {
       showFlash(error.message || (isJa ? "カレンダー表示を開けませんでした。" : "Failed to open calendar view."), "error");
@@ -889,6 +1215,7 @@ export default function PlannerPage() {
         scheduledProducts,
         selectedEquipment,
         breaks,
+        startTime,
       });
     } catch (error) {
       showFlash(error.message || (isJa ? "印刷プレビューを開けませんでした。" : "Failed to open print preview."), "error");
@@ -937,15 +1264,33 @@ export default function PlannerPage() {
           setFactoryName(value);
           if (value) localStorage.setItem("planner_selected_factory", value);
           else localStorage.removeItem("planner_selected_factory");
+          const nextParams = new URLSearchParams(searchParams);
+          if (value) nextParams.set("factory", value);
+          else nextParams.delete("factory");
+          setSearchParams(nextParams, { replace: true });
         }}
-        onDateChange={setPlanDate}
-        onEndDateChange={setEndDate}
+        onDateChange={(value) => {
+          setPlanDate(value);
+          const nextParams = new URLSearchParams(searchParams);
+          if (value && value !== todayStr()) nextParams.set("date", value);
+          else nextParams.delete("date");
+          setSearchParams(nextParams, { replace: true });
+        }}
+        onEndDateChange={(value) => {
+          setEndDate(value);
+          const nextParams = new URLSearchParams(searchParams);
+          if (value) nextParams.set("endDate", value);
+          else nextParams.delete("endDate");
+          setSearchParams(nextParams, { replace: true });
+        }}
+        startTime={startTime}
+        onStartTimeChange={handleStartTimeChange}
       />
 
       <div className="space-y-4">
-        <MasterTabNav tabs={MAIN_TABS} activeTab={mainTab} onChange={setMainTab} className="mb-4" />
+        <MasterTabNav tabs={MAIN_TABS} activeTab={mainTab} onChange={handleMainTabChange} className="mb-4" />
 
-        {mainTab === "goals" ? (
+        {mainTab === "goals" && (
           <PlannerGoalsPanel
             goals={filteredGoals}
             currentDate={planDate}
@@ -955,6 +1300,8 @@ export default function PlannerPage() {
             goalSearch={goalSearch}
             importing={csvReading}
             smartSchedulingBusy={smartPreviewLoading}
+            reconciling={reconciling}
+            outOfSyncCount={outOfSyncCount}
             onGoalSearchChange={setGoalSearch}
             onCsvSelected={handleCsvSelected}
             onOpenManualGoal={() => {
@@ -965,14 +1312,66 @@ export default function PlannerPage() {
               setManualGoalOpen(true);
             }}
             onOpenSmartScheduling={handleOpenSmartScheduling}
+            onOpenBulkEdit={() => setBulkEditOpen(true)}
+            onReconcileGoals={handleReconcileGoals}
+            onReconcileSingleGoal={handleReconcileSingleGoal}
             onDeleteGoal={handleDeleteGoal}
             onScheduleGoal={handleGoalPlanIntent}
           />
-        ) : (
+        )}
+
+        {mainTab === "preview" && (
+          <PlannerPreviewTab
+            preview={previewData}
+            loading={previewLoading}
+            saving={previewSaving}
+            publishing={previewPublishing}
+            factoryName={factoryName}
+            planDate={planDate}
+            onRefresh={() => loadPreview(true)}
+            onSaveDraft={handleSavePreviewDraft}
+            onDiscardDraft={handleDiscardPreviewDraft}
+            onPublish={handlePublishFromPreview}
+          />
+        )}
+
+        {mainTab === "published" && (
+          <PlannerPublishedTab
+            publishedData={publishedData}
+            loading={publishedLoading}
+            restoring={publishedRestoring}
+            factoryName={factoryName}
+            planDate={planDate}
+            onRefresh={() => loadPublished(true)}
+            onOpenPreview={() => handleMainTabChange("preview")}
+            onRestoreVersion={handleRestorePublishedVersion}
+            onPrint={() => {
+              const activeAssignments = publishedData?.activeSchedule?.assignments || [];
+              if (!activeAssignments.length) {
+                showFlash(isJa ? "印刷可能な公開スケジュールがありません。" : "No published schedule available to print.", "warning");
+                return;
+              }
+              try {
+                openPlannerPrintWindow({
+                  factoryName,
+                  planDate,
+                  scheduledProducts: activeAssignments,
+                  breaks,
+                  startTime,
+                });
+              } catch (err) {
+                showFlash(err.message || (isJa ? "印刷プレビューを開けませんでした。" : "Failed to open print preview."), "error");
+              }
+            }}
+          />
+        )}
+
+        {mainTab === "planning" && (
           <div className="space-y-4">
             <PlannerSelectedSummary
               scheduledProducts={scheduledProducts}
               breaks={breaks}
+              startTime={startTime}
               searchValue={selectedSearch}
               onSearchChange={setSelectedSearch}
               onRemoveItem={handleRemoveScheduledItem}
@@ -1011,6 +1410,8 @@ export default function PlannerPage() {
                 actualBlocks={actualBlocks}
                 inProgressMap={inProgressMap}
                 breaks={breaks}
+                startTime={startTime}
+                onStartTimeChange={handleStartTimeChange}
                 hideUnavailableEquipment={hideUnavailableEquipment}
                 onToggleHideUnavailable={() => setHideUnavailableEquipment((value) => !value)}
                 onSlotSelect={(equipmentName, startTime) => {
@@ -1114,6 +1515,18 @@ export default function PlannerPage() {
           if (!smartApplying) setSmartPreviewOpen(false);
         }}
         onConfirm={handleApplySmartScheduling}
+      />
+
+      <PlannerBulkEditGoalsModal
+        open={bulkEditOpen}
+        factoryName={factoryName}
+        planDate={planDate}
+        goals={goals}
+        busy={bulkEditBusy}
+        onClose={() => setBulkEditOpen(false)}
+        onDeleteSelected={handleBulkDeleteSelected}
+        onDeleteAll={handleBulkDeleteAll}
+        onUpdateTarget={handleBulkUpdateTarget}
       />
     </div>
   );

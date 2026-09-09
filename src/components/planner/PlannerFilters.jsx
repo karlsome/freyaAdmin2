@@ -5,17 +5,19 @@ export default function PlannerFilters({
   factoryName,
   planDate,
   endDate,
+  startTime = "08:45",
   loading,
   onFactoryChange,
   onDateChange,
   onEndDateChange,
+  onStartTimeChange,
 }) {
   const { language } = useLanguage();
   const isJa = language === "ja";
 
   return (
     <div className="freya-card rounded-[8px] border border-[var(--border)] bg-[var(--surface)] p-4 shadow-sm">
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4 xl:items-end">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5 xl:items-end">
         <div className="flex flex-col gap-1">
           <label className="text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">
             {isJa ? "工場" : "Factory"}
@@ -53,6 +55,18 @@ export default function PlannerFilters({
             value={endDate}
             onChange={(event) => onEndDateChange(event.target.value)}
             className="h-8 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-2.5 text-xs text-[var(--text-primary)] outline-none focus:border-[var(--freya-blue)] transition-colors"
+          />
+        </div>
+
+        <div className="flex flex-col gap-1">
+          <label className="text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">
+            {isJa ? "開始時刻" : "Start Time"}
+          </label>
+          <input
+            type="time"
+            value={startTime || "08:45"}
+            onChange={(event) => onStartTimeChange?.(event.target.value)}
+            className="h-8 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-2.5 text-xs font-mono font-bold text-[var(--text-primary)] outline-none focus:border-[var(--freya-blue)] transition-colors cursor-pointer"
           />
         </div>
 

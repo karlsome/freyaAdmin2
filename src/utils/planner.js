@@ -80,8 +80,36 @@ export function formatDuration(totalSeconds) {
   return hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
 }
 
+const _productLookupCache = new WeakMap();
+
+function getProductIndex(products = []) {
+  if (!Array.isArray(products) || !products.length) return { bySerial: new Map(), byCode: new Map(), byId: new Map() };
+  let index = _productLookupCache.get(products);
+  if (!index) {
+    const bySerial = new Map();
+    const byCode = new Map();
+    const byId = new Map();
+    products.forEach((p) => {
+      if (p.背番号 && !bySerial.has(p.背番号)) bySerial.set(p.背番号, p);
+      if (p.品番 && !byCode.has(p.品番)) byCode.set(p.品番, p);
+      if (p._id) byId.set(String(p._id), p);
+    });
+    index = { bySerial, byCode, byId };
+    _productLookupCache.set(products, index);
+  }
+  return index;
+}
+
 export function getMatchingProduct(item, products = []) {
   if (!item) return null;
+
+  if (Array.isArray(products) && products.length > 50) {
+    const { bySerial, byCode, byId } = getProductIndex(products);
+    if (item.背番号 && bySerial.has(item.背番号)) return bySerial.get(item.背番号);
+    if (item.品番 && byCode.has(item.品番)) return byCode.get(item.品番);
+    if (item._id && byId.has(String(item._id))) return byId.get(String(item._id));
+    return null;
+  }
 
   return products.find((product) => (
     (item.背番号 && product.背番号 === item.背番号)
@@ -244,7 +272,22 @@ export function findNextAvailableTime(startMinutes, durationMinutes, equipment, 
   };
 }
 
+const _spanCache = new WeakMap();
+
 export function getScheduledSpan(item, breaks = DEFAULT_BREAKS) {
+  if (item && typeof item === "object") {
+    const cached = _spanCache.get(item);
+    if (cached && cached.breaks === breaks && cached.startTime === item.startTime) {
+      return cached.span;
+    }
+    const startMinutes = timeToMinutes(item?.startTime || PLANNER_CONFIG.workStartTime);
+    const totalSeconds = Number(item?.estimatedTime?.totalSeconds || 0);
+    const durationMinutes = totalSeconds / 60;
+    const span = findNextAvailableTime(startMinutes, durationMinutes, item?.equipment, breaks);
+    _spanCache.set(item, { breaks, startTime: item.startTime, span });
+    return span;
+  }
+
   const startMinutes = timeToMinutes(item?.startTime || PLANNER_CONFIG.workStartTime);
   const totalSeconds = Number(item?.estimatedTime?.totalSeconds || 0);
   const durationMinutes = totalSeconds / 60;
@@ -252,30 +295,46 @@ export function getScheduledSpan(item, breaks = DEFAULT_BREAKS) {
   return findNextAvailableTime(startMinutes, durationMinutes, item?.equipment, breaks);
 }
 
-export function getLatestEquipmentEnd(scheduledProducts = [], equipment, breaks = DEFAULT_BREAKS) {
+export function getLatestEquipmentEnd(scheduledProducts = [], equipment, breaks = DEFAULT_BREAKS, customStartTime = PLANNER_CONFIG.workStartTime) {
   const items = scheduledProducts.filter((item) => item.equipment === equipment && item.startTime);
   if (!items.length) {
-    return timeToMinutes(PLANNER_CONFIG.workStartTime);
+    return timeToMinutes(customStartTime || PLANNER_CONFIG.workStartTime);
   }
 
   return Math.max(...items.map((item) => getScheduledSpan(item, breaks).endTime));
 }
 
-export function getTimelineSlots(scheduledProducts = [], actualBlocks = [], breaks = DEFAULT_BREAKS) {
+export function getTimelineSlots(scheduledProducts = [], actualBlocks = [], breaks = DEFAULT_BREAKS, customStartTime = null) {
   const slots = [];
-  const startMinutes = timeToMinutes(PLANNER_CONFIG.workStartTime);
+  const baseStartStr = customStartTime || PLANNER_CONFIG.workStartTime;
+  let startMinutes = timeToMinutes(baseStartStr);
   let endMinutes = timeToMinutes(PLANNER_CONFIG.workEndTime);
 
   scheduledProducts.forEach((item) => {
     if (!item?.startTime || !item?.estimatedTime?.totalSeconds) return;
+    const itemStart = timeToMinutes(item.startTime);
+    startMinutes = Math.min(startMinutes, itemStart);
     const span = getScheduledSpan(item, breaks);
     endMinutes = Math.max(endMinutes, span.endTime);
   });
 
   actualBlocks.forEach((block) => {
+    if (block?.startTime) {
+      startMinutes = Math.min(startMinutes, timeToMinutes(block.startTime));
+    }
     const end = timeToMinutes(block?.endTime || PLANNER_CONFIG.workEndTime);
     endMinutes = Math.max(endMinutes, end);
   });
+
+  // Snap startMinutes down to nearest interval
+  startMinutes = Math.floor(startMinutes / PLANNER_CONFIG.intervalMinutes) * PLANNER_CONFIG.intervalMinutes;
+
+  // Cap single-day timeline slots at 24:00 (1440 minutes) to avoid generating hundreds of empty multi-day columns
+  const maxDayMinutes = 1440;
+  if (endMinutes > maxDayMinutes) {
+    console.warn(`⚠️ [Planner] Production extends past midnight (${minutesToTime(endMinutes)}). Capping single-day timeline view at 24:00.`);
+    endMinutes = maxDayMinutes;
+  }
 
   for (let minute = startMinutes; minute <= endMinutes; minute += PLANNER_CONFIG.intervalMinutes) {
     slots.push(minutesToTime(minute));
@@ -284,8 +343,8 @@ export function getTimelineSlots(scheduledProducts = [], actualBlocks = [], brea
   return slots;
 }
 
-export function getFirstVisibleSlotMinutes(item, breaks = DEFAULT_BREAKS) {
-  let current = timeToMinutes(item?.startTime || PLANNER_CONFIG.workStartTime);
+export function getFirstVisibleSlotMinutes(item, breaks = DEFAULT_BREAKS, customStartTime = PLANNER_CONFIG.workStartTime) {
+  let current = timeToMinutes(item?.startTime || customStartTime || PLANNER_CONFIG.workStartTime);
 
   while (isBreakAtSlot(current, item?.equipment, breaks)) {
     current += PLANNER_CONFIG.intervalMinutes;
@@ -559,10 +618,10 @@ export function getPlannerGoalState(goal) {
   };
 }
 
-export function getEffectiveWorkMinutes(breaks = DEFAULT_BREAKS, equipment = null) {
-  const workStart = timeToMinutes(PLANNER_CONFIG.workStartTime);
+export function getEffectiveWorkMinutes(breaks = DEFAULT_BREAKS, equipment = null, customStartTime = PLANNER_CONFIG.workStartTime) {
+  const workStart = timeToMinutes(customStartTime || PLANNER_CONFIG.workStartTime);
   const workEnd = timeToMinutes(PLANNER_CONFIG.workEndTime);
-  const totalMinutes = workEnd - workStart;
+  const totalMinutes = Math.max(1, workEnd - workStart);
 
   const breakMinutes = (Array.isArray(breaks) ? breaks : []).reduce((sum, item) => {
     const matchesEquipment = !equipment || !item.equipment || item.equipment === equipment;
@@ -573,10 +632,10 @@ export function getEffectiveWorkMinutes(breaks = DEFAULT_BREAKS, equipment = nul
   return Math.max(1, totalMinutes - breakMinutes);
 }
 
-export function getEquipmentUtilization(scheduledProducts = [], equipment, breaks = DEFAULT_BREAKS) {
+export function getEquipmentUtilization(scheduledProducts = [], equipment, breaks = DEFAULT_BREAKS, customStartTime = PLANNER_CONFIG.workStartTime) {
   const products = scheduledProducts.filter((item) => item.equipment === equipment);
   const totalMinutes = products.reduce((sum, item) => sum + ((Number(item?.estimatedTime?.totalSeconds || 0)) / 60), 0);
-  const utilization = Math.round((totalMinutes / getEffectiveWorkMinutes(breaks, equipment)) * 100);
+  const utilization = Math.round((totalMinutes / getEffectiveWorkMinutes(breaks, equipment, customStartTime)) * 100);
 
   return {
     totalMinutes,

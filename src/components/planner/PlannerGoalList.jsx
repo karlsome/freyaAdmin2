@@ -7,7 +7,7 @@ import {
 } from "../../utils/planner";
 import { useLanguage } from "../../contexts/LanguageContext";
 
-function GoalRow({ goal, currentDate, scheduledProducts, products, productColors, onDeleteGoal, onScheduleGoal }) {
+function GoalRow({ goal, currentDate, scheduledProducts, products, productColors, onDeleteGoal, onScheduleGoal, onReconcileSingleGoal }) {
   const { language } = useLanguage();
   const isJa = language === "ja";
 
@@ -19,6 +19,11 @@ function GoalRow({ goal, currentDate, scheduledProducts, products, productColors
   const schedulable = goal.date === currentDate && Number(goal.remainingQuantity || 0) > 0;
   const stateLabel = isJa ? (goalState.labelJa || goalState.label) : goalState.label;
 
+  const actualScheduled = scheduledProducts
+    .filter((p) => (p.goalId && p.goalId === goal._id) || (p.背番号 && p.背番号 === goal.背番号))
+    .reduce((sum, p) => sum + (Number(p.quantity) || 0), 0);
+  const isOutOfSync = goal.date === currentDate && actualScheduled !== Number(goal.scheduledQuantity || 0);
+
   return (
     <article className="freya-card rounded-[8px] border border-[var(--border)] bg-[var(--surface)] p-3 shadow-sm hover:border-slate-300 dark:hover:border-slate-700 transition-colors">
       <div className="flex flex-col gap-3 xl:grid xl:grid-cols-[minmax(90px,1fr)_minmax(160px,1.2fr)_minmax(220px,1.8fr)_minmax(200px,1.8fr)_minmax(140px,1.2fr)_minmax(100px,0.9fr)_minmax(90px,0.8fr)_auto] xl:items-center text-xs">
@@ -26,7 +31,20 @@ function GoalRow({ goal, currentDate, scheduledProducts, products, productColors
           <span className={`h-2 w-2 rounded-full ${goalState.dotClassName}`} />
           <div>
             <div className="font-semibold text-[var(--text-primary)] font-mono">{goal.背番号 || "-"}</div>
-            <div className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">{stateLabel}</div>
+            <div className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider flex items-center gap-1">
+              <span>{stateLabel}</span>
+              {isOutOfSync && (
+                <button
+                  type="button"
+                  onClick={() => onReconcileSingleGoal?.(goal)}
+                  title={isJa ? `計画数(${goal.scheduledQuantity})とタイムライン実数(${actualScheduled})が不一致です。クリックして同期` : `Scheduled (${goal.scheduledQuantity}) doesn't match timeline (${actualScheduled}). Click to reconcile.`}
+                  className="inline-flex items-center gap-0.5 text-[9px] font-bold text-amber-600 dark:text-amber-400 hover:underline"
+                >
+                  <span className="material-symbols-outlined" style={{ fontSize: 12 }}>sync_problem</span>
+                  {isJa ? "同期ズレ" : "Sync"}
+                </button>
+              )}
+            </div>
           </div>
         </div>
 
@@ -108,6 +126,7 @@ export default function PlannerGoalList({
   productColors = {},
   onDeleteGoal,
   onScheduleGoal,
+  onReconcileSingleGoal,
 }) {
   const { language } = useLanguage();
   const isJa = language === "ja";
@@ -153,6 +172,7 @@ export default function PlannerGoalList({
                 productColors={productColors}
                 onDeleteGoal={onDeleteGoal}
                 onScheduleGoal={onScheduleGoal}
+                onReconcileSingleGoal={onReconcileSingleGoal}
               />
             ))}
           </div>
