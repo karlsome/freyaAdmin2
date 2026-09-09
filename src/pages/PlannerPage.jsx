@@ -18,6 +18,7 @@ import PlannerSlotSchedulingModal from "../components/planner/PlannerSlotSchedul
 import PlannerSmartSchedulingModal from "../components/planner/PlannerSmartSchedulingModal";
 import PlannerPrintModal from "../components/planner/PlannerPrintModal";
 import PlannerBulkEditGoalsModal from "../components/planner/PlannerBulkEditGoalsModal";
+import PlannerMachineStatusModal from "../components/planner/PlannerMachineStatusModal";
 import PlannerPreviewTab from "../components/planner/PlannerPreviewTab";
 import PlannerPublishedTab from "../components/planner/PlannerPublishedTab";
 import {
@@ -60,11 +61,14 @@ import {
   getScheduledSpan,
   getUserDisplayName,
   hasSchedulingConflict,
+  isEquipmentUnavailable,
   isGroupEquipment,
+  loadUnavailableEquipmentFromStorage,
   minutesToTime,
   normalizePlanProducts,
   processActualProductionData,
   processInProgressData,
+  saveUnavailableEquipmentToStorage,
   timeToMinutes,
 } from "../utils/planner";
 import { openPlannerCalendarWindow, openPlannerPrintWindow } from "../utils/plannerExports";
@@ -182,6 +186,10 @@ export default function PlannerPage() {
   const [selectedSearch, setSelectedSearch] = useState("");
   const [flash, setFlash] = useState(null);
   const [hideUnavailableEquipment, setHideUnavailableEquipment] = useState(false);
+  const [unavailableEquipment, setUnavailableEquipment] = useState(() =>
+    loadUnavailableEquipmentFromStorage(searchParams.get("factory") || localStorage.getItem("planner_selected_factory") || "")
+  );
+  const [machineStatusModalOpen, setMachineStatusModalOpen] = useState(false);
   const [breakModalOpen, setBreakModalOpen] = useState(false);
   const [breakSaving, setBreakSaving] = useState(false);
   const [manualGoalOpen, setManualGoalOpen] = useState(false);
@@ -302,6 +310,7 @@ export default function PlannerPage() {
       setActualBlocks([]);
       setInProgressMap({});
       setBreaks(cloneBreaks(DEFAULT_BREAKS));
+      setUnavailableEquipment([]);
       setCurrentPlanId("");
       return;
     }
@@ -350,6 +359,11 @@ export default function PlannerPage() {
         setStartTime(currentPlan.startTime);
         localStorage.setItem("planner_start_time", currentPlan.startTime);
       }
+      const planUnavailable = Array.isArray(currentPlan?.unavailableEquipment) ? currentPlan.unavailableEquipment : null;
+      const storedUnavailable = loadUnavailableEquipmentFromStorage(nextFactory);
+      const activeUnavailable = planUnavailable !== null ? planUnavailable : storedUnavailable;
+      setUnavailableEquipment(activeUnavailable);
+      saveUnavailableEquipmentToStorage(nextFactory, activeUnavailable);
       setCurrentPlanId(currentPlan?._id || "");
     } catch (error) {
       if (requestId !== requestIdRef.current) return;
@@ -366,10 +380,10 @@ export default function PlannerPage() {
     loadPlannerData();
   }, [loadPlannerData]);
 
-  async function persistPlan(nextProducts, nextBreaks, nextStartTime = startTime) {
+  async function persistPlan(nextProducts, nextBreaks, nextStartTime = startTime, nextUnavailable = unavailableEquipment) {
     if (!factoryName) return;
 
-    if (!nextProducts.length) {
+    if (!nextProducts.length && !nextUnavailable?.length) {
       await deletePlannerPlanByFactoryDate(factoryName, planDate);
       setCurrentPlanId("");
       return;
@@ -381,8 +395,55 @@ export default function PlannerPage() {
       products: serializePlanProducts(nextProducts),
       breaks: cloneBreaks(nextBreaks),
       startTime: nextStartTime,
+      unavailableEquipment: nextUnavailable,
       createdBy: getUserDisplayName(authUser),
     });
+  }
+
+  async function handleUpdateMachineStatus(targetEquipment, isUnavailable, reason = "") {
+    if (!factoryName || !targetEquipment) return;
+
+    const currentList = Array.isArray(unavailableEquipment) ? [...unavailableEquipment] : [];
+    let nextList;
+    if (isUnavailable) {
+      const existingIdx = currentList.findIndex((item) => {
+        const name = typeof item === "string" ? item : item?.equipment;
+        return name === targetEquipment;
+      });
+      const newEntry = {
+        equipment: targetEquipment,
+        reason: reason || (isJa ? "故障・メンテナンス中" : "Maintenance / Out of service"),
+        reportedAt: new Date().toISOString(),
+        reportedBy: getUserDisplayName(authUser),
+      };
+      if (existingIdx >= 0) {
+        nextList = [...currentList];
+        nextList[existingIdx] = newEntry;
+      } else {
+        nextList = [...currentList, newEntry];
+      }
+    } else {
+      nextList = currentList.filter((item) => {
+        const name = typeof item === "string" ? item : item?.equipment;
+        return name !== targetEquipment;
+      });
+    }
+
+    setUnavailableEquipment(nextList);
+    saveUnavailableEquipmentToStorage(factoryName, nextList);
+
+    try {
+      await persistPlan(scheduledProducts, breaks, startTime, nextList);
+      showFlash(
+        isUnavailable
+          ? (isJa ? `設備「${targetEquipment}」を停止中に設定しました。` : `Machine ${targetEquipment} marked as unavailable.`)
+          : (isJa ? `設備「${targetEquipment}」の停止を解除しました。` : `Machine ${targetEquipment} marked as operational.`),
+        "success"
+      );
+    } catch (err) {
+      console.error("Failed to persist unavailable equipment:", err);
+      showFlash(err.message || (isJa ? "設備状況の保存に失敗しました。" : "Failed to save machine status."), "error");
+    }
   }
 
   function handleStartTimeChange(nextStartTime) {
@@ -1045,7 +1106,7 @@ export default function PlannerPage() {
     setSmartPreviewLoading(true);
     try {
       const result = await fetchPlannerPressHistory(factoryName, schedulableGoals.map((goal) => ({ 背番号: goal.背番号, 品番: goal.品番 })));
-      const preview = buildSmartAssignments(goals, planDate, result?.trends || {}, products);
+      const preview = buildSmartAssignments(goals, planDate, result?.trends || {}, products, unavailableEquipment);
       setSmartPreview({ ...preview, trends: result?.trends || {} });
       setSmartPreviewOpen(true);
     } catch (error) {
@@ -1093,6 +1154,7 @@ export default function PlannerPage() {
           let scheduled = false;
 
           for (const { equipmentName } of rankedEquipment) {
+            if (isEquipmentUnavailable(equipmentName, unavailableEquipment)) continue;
             if (!isGroupEquipment(equipmentName) && unavailableParts.has(equipmentName)) continue;
 
             if (isGroupEquipment(equipmentName)) {
@@ -1412,6 +1474,14 @@ export default function PlannerPage() {
                 breaks={breaks}
                 startTime={startTime}
                 onStartTimeChange={handleStartTimeChange}
+                unavailableEquipment={unavailableEquipment}
+                onOpenMachineStatusModal={() => {
+                  if (!factoryName) {
+                    showFlash(isJa ? "工場を選択してください。" : "Please select a factory first.", "warning");
+                    return;
+                  }
+                  setMachineStatusModalOpen(true);
+                }}
                 hideUnavailableEquipment={hideUnavailableEquipment}
                 onToggleHideUnavailable={() => setHideUnavailableEquipment((value) => !value)}
                 onSlotSelect={(equipmentName, startTime) => {
@@ -1498,6 +1568,7 @@ export default function PlannerPage() {
         startTime={slotModalState.startTime}
         goals={goals}
         currentDate={planDate}
+        unavailableEquipment={unavailableEquipment}
         submitting={slotSubmitting}
         onClose={() => {
           if (!slotSubmitting) setSlotModalState({ open: false, equipment: "", startTime: "" });
@@ -1527,6 +1598,15 @@ export default function PlannerPage() {
         onDeleteSelected={handleBulkDeleteSelected}
         onDeleteAll={handleBulkDeleteAll}
         onUpdateTarget={handleBulkUpdateTarget}
+      />
+
+      <PlannerMachineStatusModal
+        open={machineStatusModalOpen}
+        onClose={() => setMachineStatusModalOpen(false)}
+        factoryName={factoryName}
+        equipment={equipment}
+        unavailableEquipment={unavailableEquipment}
+        onUpdateStatus={handleUpdateMachineStatus}
       />
     </div>
   );

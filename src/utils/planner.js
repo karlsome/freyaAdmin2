@@ -678,7 +678,7 @@ function is992WProduct(goal, products = []) {
   return String(fullProduct?.モデル || "").trim() === "992W(310D)";
 }
 
-export function buildSmartAssignments(goals = [], currentDate, trends = {}, products = []) {
+export function buildSmartAssignments(goals = [], currentDate, trends = {}, products = [], unavailableEquipment = []) {
   const todaysGoals = goals.filter((goal) => goal.date === currentDate && Number(goal.remainingQuantity || 0) > 0);
   const assignments = {};
   const tdLockedEquipment = { group: null, single: null };
@@ -717,11 +717,14 @@ export function buildSmartAssignments(goals = [], currentDate, trends = {}, prod
       const needsGroup = firstDigit >= 1 && firstDigit <= 4;
       const equipmentType = needsGroup ? "group" : "single";
 
-      if (material === "TD" && tdLockedEquipment[equipmentType]) {
+      if (material === "TD" && tdLockedEquipment[equipmentType] && !isEquipmentUnavailable(tdLockedEquipment[equipmentType], unavailableEquipment)) {
         bestEquipment = tdLockedEquipment[equipmentType];
       } else {
         const equipmentOptions = Object.entries(trend.equipmentDistribution)
-          .filter(([equipment]) => (needsGroup ? isGroupEquipment(equipment) : !isGroupEquipment(equipment)))
+          .filter(([equipment]) => {
+            if (isEquipmentUnavailable(equipment, unavailableEquipment)) return false;
+            return needsGroup ? isGroupEquipment(equipment) : !isGroupEquipment(equipment);
+          })
           .map(([equipment, frequency]) => {
             const materialBonus = (assignments[equipment] || []).filter((item) => {
               return is992WProduct(item, products) && getMaterialSuffix(String(item.背番号 || "")) === material;
@@ -741,7 +744,14 @@ export function buildSmartAssignments(goals = [], currentDate, trends = {}, prod
           }
         }
       }
-    } else if (trend?.mostFrequentEquipment) {
+    } else if (trend?.equipmentDistribution) {
+      const candidates = Object.entries(trend.equipmentDistribution)
+        .filter(([equipment]) => !isEquipmentUnavailable(equipment, unavailableEquipment))
+        .sort((left, right) => right[1] - left[1]);
+      if (candidates.length > 0) {
+        bestEquipment = candidates[0][0];
+      }
+    } else if (trend?.mostFrequentEquipment && !isEquipmentUnavailable(trend.mostFrequentEquipment, unavailableEquipment)) {
       bestEquipment = trend.mostFrequentEquipment;
     }
 
@@ -767,4 +777,65 @@ export function buildSmartAssignments(goals = [], currentDate, trends = {}, prod
     totalUnassigned,
     sourceGoals: todaysGoals,
   };
+}
+
+// ─── Equipment Availability & Machine Status ────────────────────────────────
+export function getUnavailableStorageKey(factory = "") {
+  return `planner_unavailable_equipment_${String(factory || "").trim()}`;
+}
+
+export function loadUnavailableEquipmentFromStorage(factory = "") {
+  if (!factory) return {};
+  try {
+    const raw = localStorage.getItem(getUnavailableStorageKey(factory));
+    return raw ? JSON.parse(raw) : {};
+  } catch {
+    return {};
+  }
+}
+
+export function saveUnavailableEquipmentToStorage(factory = "", map = {}) {
+  if (!factory) return;
+  try {
+    localStorage.setItem(getUnavailableStorageKey(factory), JSON.stringify(map || {}));
+  } catch (err) {
+    console.warn("Failed to save unavailable equipment to localStorage:", err);
+  }
+}
+
+export function isEquipmentUnavailable(equipmentName = "", unavailableMap = {}) {
+  const normalized = String(equipmentName || "").trim();
+  if (!normalized || !unavailableMap || typeof unavailableMap !== "object") return false;
+
+  if (unavailableMap[normalized]?.isUnavailable) return true;
+
+  if (normalized.includes(",")) {
+    const parts = normalized.split(",").map((p) => p.trim());
+    return parts.some((part) => unavailableMap[part]?.isUnavailable);
+  }
+
+  return false;
+}
+
+export function getEquipmentUnavailableInfo(equipmentName = "", unavailableMap = {}) {
+  const normalized = String(equipmentName || "").trim();
+  if (!normalized || !unavailableMap || typeof unavailableMap !== "object") return null;
+
+  if (unavailableMap[normalized]?.isUnavailable) return unavailableMap[normalized];
+
+  if (normalized.includes(",")) {
+    const parts = normalized.split(",").map((p) => p.trim());
+    for (const part of parts) {
+      if (unavailableMap[part]?.isUnavailable) {
+        return unavailableMap[part];
+      }
+    }
+  }
+
+  return null;
+}
+
+export function getBrokenDownEquipmentCount(equipmentList = [], unavailableMap = {}) {
+  if (!Array.isArray(equipmentList) || !equipmentList.length) return 0;
+  return equipmentList.filter((eq) => isEquipmentUnavailable(eq, unavailableMap)).length;
 }

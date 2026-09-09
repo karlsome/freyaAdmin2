@@ -1,10 +1,13 @@
 import { useEffect, useMemo, useRef } from "react";
 import {
   equipmentConflicts,
+  getBrokenDownEquipmentCount,
+  getEquipmentUnavailableInfo,
   getFirstVisibleSlotMinutes,
   getProductForSlot,
   getTimelineSlots,
   isBreakAtSlot,
+  isEquipmentUnavailable,
   isGroupEquipment,
   minutesToTime,
   timeToMinutes,
@@ -41,10 +44,12 @@ export default function PlannerTimelineView({
   actualBlocks = [],
   inProgressMap = {},
   breaks = [],
+  unavailableEquipment = {},
   hideUnavailableEquipment = false,
   startTime = "08:45",
   onToggleHideUnavailable,
   onStartTimeChange,
+  onOpenMachineStatusModal,
   onSlotSelect,
   onMoveScheduledItem,
   onRemoveScheduledItem,
@@ -53,6 +58,8 @@ export default function PlannerTimelineView({
   const isJa = language === "ja";
   const renderT0Ref = useRef(performance.now());
   renderT0Ref.current = performance.now();
+
+  const brokenDownCount = getBrokenDownEquipmentCount(equipment, unavailableEquipment);
 
   const timeSlots = useMemo(() => {
     return getTimelineSlots(scheduledProducts, actualBlocks, breaks, startTime);
@@ -111,6 +118,22 @@ export default function PlannerTimelineView({
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
+          {onOpenMachineStatusModal ? (
+            <button
+              type="button"
+              onClick={onOpenMachineStatusModal}
+              className={`flex items-center gap-1.5 rounded-[6px] border px-3 py-1.5 text-xs font-semibold transition shadow-2xs cursor-pointer ${brokenDownCount > 0 ? "border-amber-400/60 bg-amber-500/10 text-amber-800 dark:text-amber-300 hover:bg-amber-500/20" : "border-[var(--border)] bg-[var(--surface-subtle)] text-[var(--text-primary)] hover:bg-[var(--surface-hover)]"}`}
+            >
+              <span className="material-symbols-outlined text-[var(--freya-blue)]" style={{ fontSize: 16 }}>build</span>
+              <span>{isJa ? "設備状況" : "Machine Status"}</span>
+              {brokenDownCount > 0 ? (
+                <span className="rounded-full bg-red-600 px-1.5 py-0.2 text-[10px] font-bold text-white leading-tight">
+                  {brokenDownCount}
+                </span>
+              ) : null}
+            </button>
+          ) : null}
+
           {onStartTimeChange ? (
             <div className="flex items-center gap-1.5 rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] px-2.5 py-1 text-xs font-semibold text-[var(--text-secondary)]">
               <span className="material-symbols-outlined text-[var(--freya-blue)]" style={{ fontSize: 16 }}>schedule</span>
@@ -128,7 +151,7 @@ export default function PlannerTimelineView({
           <button
             type="button"
             onClick={onToggleHideUnavailable}
-            className={`rounded-[6px] border px-3 py-1.5 text-xs font-semibold transition ${hideUnavailableEquipment ? "border-[var(--freya-blue)]/30 bg-[var(--freya-blue)]/10 text-[var(--freya-blue)]" : "border-[var(--border)] bg-[var(--surface-subtle)] text-[var(--text-primary)] hover:bg-[var(--surface-hover)]"}`}
+            className={`rounded-[6px] border px-3 py-1.5 text-xs font-semibold transition cursor-pointer ${hideUnavailableEquipment ? "border-[var(--freya-blue)]/30 bg-[var(--freya-blue)]/10 text-[var(--freya-blue)]" : "border-[var(--border)] bg-[var(--surface-subtle)] text-[var(--text-primary)] hover:bg-[var(--surface-hover)]"}`}
           >
             {hideUnavailableEquipment
               ? (isJa ? "利用不可設備を表示" : "Show unavailable equipment")
@@ -164,14 +187,28 @@ export default function PlannerTimelineView({
             const actualItems = actualBlocks.filter((item) => item.equipment === equipmentName);
             const plannedUnavailable = getEquipmentAvailabilityFlag(equipmentName, scheduledProducts);
             const actualUnavailable = getEquipmentAvailabilityFlag(equipmentName, actualBlocks);
+            const isBroken = isEquipmentUnavailable(equipmentName, unavailableEquipment);
+            const brokenInfo = isBroken ? getEquipmentUnavailableInfo(equipmentName, unavailableEquipment) : null;
 
-            if (hideUnavailableEquipment && plannedUnavailable && actualUnavailable) return null;
+            if (hideUnavailableEquipment && (isBroken || (plannedUnavailable && actualUnavailable))) return null;
 
             return (
               <div key={equipmentName} className="border-b border-[var(--border)] last:border-b-0">
-                <div className={`flex min-h-[52px] ${plannedUnavailable ? "opacity-50" : ""}`}>
+                <div className={`relative flex min-h-[52px] ${isBroken ? "bg-[repeating-linear-gradient(45deg,rgba(239,68,68,0.06),rgba(239,68,68,0.06)_12px,transparent_12px,transparent_24px)]" : ""} ${plannedUnavailable ? "opacity-50" : ""}`}>
                   <div className="sticky left-0 z-[5] flex flex-col justify-center border-r border-[var(--border)] bg-[var(--surface)] px-4" style={{ width: LABEL_WIDTH }}>
-                    <div className="text-xs font-semibold text-[var(--text-primary)]">{equipmentName}</div>
+                    <div className="flex items-center gap-1.5">
+                      <div className="text-xs font-semibold text-[var(--text-primary)]">{equipmentName}</div>
+                      {isBroken ? (
+                        <button
+                          type="button"
+                          onClick={onOpenMachineStatusModal}
+                          className="rounded bg-red-100 dark:bg-red-950/80 border border-red-300 dark:border-red-800 px-1 py-0 text-[9px] font-bold text-red-700 dark:text-red-300 hover:bg-red-200 transition cursor-pointer"
+                          title={brokenInfo?.reason ? `【故障】${brokenInfo.reason}` : (isJa ? "故障中" : "Broken down")}
+                        >
+                          {isJa ? "停止中" : "Down"}
+                        </button>
+                      ) : null}
+                    </div>
                     <div className="text-[10px] text-[var(--text-muted)] uppercase tracking-[0.02em]">
                       {isJa
                         ? (isGroupEquipment(equipmentName) ? "計画 (グループ)" : "計画")
@@ -251,12 +288,14 @@ export default function PlannerTimelineView({
                               onMoveScheduledItem(payload.scheduleId, equipmentName, slot);
                             }
                           }}
-                          className="group relative border-r border-[var(--border)] transition hover:bg-[var(--freya-blue)]/5"
+                          className={`group relative border-r transition ${isBroken ? "border-red-200/50 dark:border-red-900/30 hover:bg-red-500/10 cursor-pointer" : "border-[var(--border)] hover:bg-[var(--freya-blue)]/5 cursor-pointer"}`}
                           style={{ width: SLOT_WIDTH }}
-                          title={`Add products at ${equipmentName} ${slot}`}
+                          title={isBroken
+                            ? (isJa ? `【設備停止中】${brokenInfo?.reason || "故障"} - ${equipmentName} ${slot}` : `[Machine Down] ${brokenInfo?.reason || "Broken"} - ${equipmentName} ${slot}`)
+                            : `Add products at ${equipmentName} ${slot}`}
                         >
-                          <span className="material-symbols-outlined absolute inset-0 flex items-center justify-center text-[var(--freya-blue)]/0 transition group-hover:text-[var(--freya-blue)]/70" style={{ fontSize: 16 }}>
-                            add_circle
+                          <span className={`material-symbols-outlined absolute inset-0 flex items-center justify-center transition ${isBroken ? "text-red-400/0 group-hover:text-red-500/80" : "text-[var(--freya-blue)]/0 group-hover:text-[var(--freya-blue)]/70"}`} style={{ fontSize: 16 }}>
+                            {isBroken ? "report_problem" : "add_circle"}
                           </span>
                         </button>
                       );
@@ -264,7 +303,7 @@ export default function PlannerTimelineView({
                   </div>
                 </div>
 
-                <div className={`flex min-h-[46px] bg-[var(--surface-subtle)]/40 ${actualUnavailable ? "opacity-50" : ""}`}>
+                <div className={`flex min-h-[46px] bg-[var(--surface-subtle)]/40 ${isBroken ? "bg-[repeating-linear-gradient(45deg,rgba(239,68,68,0.03),rgba(239,68,68,0.03)_12px,transparent_12px,transparent_24px)]" : ""} ${actualUnavailable ? "opacity-50" : ""}`}>
                   <div className="sticky left-0 z-[5] flex flex-col justify-center border-r border-[var(--border)] bg-[var(--surface-subtle)] px-4" style={{ width: LABEL_WIDTH }}>
                     <div className="text-xs font-semibold text-[var(--text-primary)]">{equipmentName}</div>
                     <div className="text-[10px] text-[var(--text-muted)] uppercase tracking-[0.02em]">

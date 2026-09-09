@@ -203,7 +203,7 @@ export async function fetchPlannerPlans({ factory, date } = {}) {
   }
 }
 
-export async function upsertPlannerPlan({ factory, date, products, breaks, createdBy, startTime }) {
+export async function upsertPlannerPlan({ factory, date, products, breaks, createdBy, startTime, unavailableEquipment }) {
   const existingPlans = await fetchPlannerPlans({ factory, date });
   const payload = {
     factory,
@@ -211,6 +211,7 @@ export async function upsertPlannerPlan({ factory, date, products, breaks, creat
     products,
     breaks,
     startTime,
+    unavailableEquipment,
     createdBy,
     updatedBy: createdBy,
   };
@@ -226,6 +227,7 @@ export async function upsertPlannerPlan({ factory, date, products, breaks, creat
         products,
         breaks,
         startTime,
+        unavailableEquipment,
         updatedBy: createdBy,
       }),
     });

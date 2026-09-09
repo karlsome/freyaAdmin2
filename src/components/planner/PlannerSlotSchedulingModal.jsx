@@ -41,12 +41,18 @@ function QueueRow({ item, index, total, onMove, onQuantityChange, onRemove, isJa
   );
 }
 
+import {
+  getEquipmentUnavailableInfo,
+  isEquipmentUnavailable,
+} from "../../utils/planner";
+
 export default function PlannerSlotSchedulingModal({
   open,
   equipment,
   startTime,
   goals = [],
   currentDate,
+  unavailableEquipment = {},
   submitting = false,
   onClose,
   onConfirm,
@@ -55,6 +61,9 @@ export default function PlannerSlotSchedulingModal({
   const isJa = language === "ja";
   const [search, setSearch] = useState("");
   const [queue, setQueue] = useState([]);
+
+  const isBroken = isEquipmentUnavailable(equipment, unavailableEquipment);
+  const brokenInfo = isBroken ? getEquipmentUnavailableInfo(equipment, unavailableEquipment) : null;
 
   useEffect(() => {
     if (!open) return;
@@ -120,6 +129,22 @@ export default function PlannerSlotSchedulingModal({
         </div>
       )}
     >
+      {isBroken ? (
+        <div className="mb-4 flex items-center gap-2.5 rounded-lg border border-red-300 dark:border-red-800 bg-red-50 dark:bg-red-950/40 p-3 text-xs text-red-800 dark:text-red-200 shadow-2xs">
+          <span className="material-symbols-outlined text-lg text-red-600 dark:text-red-400">warning</span>
+          <div>
+            <div className="font-bold">
+              {isJa ? `【注意】${equipment} は現在、故障・保全停止中として登録されています。` : `[Warning] ${equipment} is currently reported as broken down / under maintenance.`}
+            </div>
+            {brokenInfo?.reason ? (
+              <div className="mt-0.5 text-[11px] text-red-600 dark:text-red-300">
+                {isJa ? `停止理由: ${brokenInfo.reason}` : `Reason: ${brokenInfo.reason}`}
+              </div>
+            ) : null}
+          </div>
+        </div>
+      ) : null}
+
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)]">
         <div className="rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] p-3">
           <div className="flex h-9 items-center gap-2 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 focus-within:border-[var(--freya-blue)] focus-within:ring-1 focus-within:ring-[var(--freya-blue)]">
