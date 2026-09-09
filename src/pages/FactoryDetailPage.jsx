@@ -22,6 +22,7 @@ import ProcessPanel from "../components/ProcessPanel";
 import ProductionFilterBar from "../components/ProductionFilterBar";
 import StatSummaryCard from "../components/StatSummaryCard";
 import { useRecordModal } from "../hooks/useRecordModal";
+import { useLanguage } from "../contexts/LanguageContext";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function fmtDate(d) { return d.toISOString().split("T")[0]; }
@@ -34,8 +35,23 @@ function defectChip(rate) {
   return "bg-emerald-400/15 text-emerald-400";
 }
 
+const PROCESS_LABELS_JA = {
+  Kensa: "検査工程",
+  Press: "プレス工程",
+  SRS: "SRS工程",
+  Slit: "スリット工程",
+};
+
+const SECTION_LABELS_JA = {
+  Daily: "日別",
+  Weekly: "週別",
+  Monthly: "月別",
+};
+
 // ─── MfgLotModal ─────────────────────────────────────────────────────────────
 function MfgLotModal({ onClose, initialLot = "", initialHinban = "" }) {
+  const { language } = useLanguage();
+  const isJa = language === "ja";
   const [lotInput, setLotInput]       = useState(initialLot);
   const [hinbanInput, setHinbanInput] = useState(initialHinban);
   const [step, setStep]               = useState("input");
@@ -46,7 +62,7 @@ function MfgLotModal({ onClose, initialLot = "", initialHinban = "" }) {
 
   const doSearch = useCallback(async (lot, hinban) => {
     if (!lot || lot.length < 3 || !hinban) {
-      setErrMsg("品番 and 製造ロット are required.");
+      setErrMsg(isJa ? "品番と製造ロットを入力してください。" : "品番 and 製造ロット are required.");
       return;
     }
     setLoading(true);
@@ -62,11 +78,11 @@ function MfgLotModal({ onClose, initialLot = "", initialHinban = "" }) {
         setStep("results");
       }
     } catch (e) {
-      setErrMsg("Search failed. Please check the inputs and try again.");
+      setErrMsg(isJa ? "検索に失敗しました。入力内容を確認して再度お試しください。" : "Search failed. Please check the inputs and try again.");
       setStep("error");
     }
     setLoading(false);
-  }, []);
+  }, [isJa]);
 
   useEffect(() => {
     const tLot = initialLot.trim();
@@ -85,7 +101,7 @@ function MfgLotModal({ onClose, initialLot = "", initialHinban = "" }) {
       setResults(res);
       setStep("results");
     } catch {
-      setErrMsg("Failed to retrieve lot data.");
+      setErrMsg(isJa ? "ロットデータの取得に失敗しました。" : "Failed to retrieve lot data.");
       setStep("error");
     }
     setLoading(false);
@@ -105,7 +121,9 @@ function MfgLotModal({ onClose, initialLot = "", initialHinban = "" }) {
         <div className="px-6 py-4 flex items-center justify-between border-b border-[var(--border)] bg-[var(--surface-subtle)]">
           <div className="flex items-center gap-2">
             <span className="material-symbols-outlined text-[var(--freya-blue)]" style={{ fontSize: 20 }}>manage_search</span>
-            <h3 className="text-sm font-bold text-[var(--text-primary)]">材料ロット詳細 (Material Lot Finder)</h3>
+            <h3 className="text-sm font-bold text-[var(--text-primary)]">
+              {isJa ? "材料ロット詳細" : "材料ロット詳細 (Material Lot Finder)"}
+            </h3>
           </div>
           <button onClick={onClose} className="h-8 w-8 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-hover)] flex items-center justify-center transition-colors">
             <span className="material-symbols-outlined" style={{ fontSize: 16 }}>close</span>
@@ -134,13 +152,15 @@ function MfgLotModal({ onClose, initialLot = "", initialHinban = "" }) {
               disabled={loading || lotInput.trim().length < 3 || !hinbanInput.trim()}
               className="px-4 h-9 rounded-[6px] bg-[var(--freya-blue)] text-white text-xs font-semibold disabled:opacity-40 hover:bg-[var(--freya-blue-hover)] transition-colors shadow-xs"
             >
-              {loading ? "…" : "Search"}
+              {loading ? "…" : (isJa ? "検索" : "Search")}
             </button>
           </div>
 
           {step === "selecting" && (
             <div>
-              <p className="text-xs text-[var(--text-muted)] mb-3">Multiple matches — select a 材料背番号 (Sebanggo):</p>
+              <p className="text-xs text-[var(--text-muted)] mb-3">
+                {isJa ? "複数の候補が見つかりました — 材料背番号を選択してください:" : "Multiple matches — select a 材料背番号 (Sebanggo):"}
+              </p>
               <div className="space-y-2">
                 {sebanggoOptions.map((s) => (
                   <button key={s} onClick={() => handleSelectSebanggo(s)} className="w-full px-4 py-2.5 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] text-left text-xs font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-hover)] transition-colors font-mono">
@@ -164,7 +184,9 @@ function MfgLotModal({ onClose, initialLot = "", initialHinban = "" }) {
                       <div className="px-4 py-2.5 bg-[var(--surface-subtle)] border-b border-[var(--border)] flex items-center justify-between">
                         <span className="font-bold text-xs text-[var(--text-primary)]">記録 #{i + 1}</span>
                         {rec.Status === "Completed" && (
-                          <span className="px-2 py-0.5 rounded-[4px] bg-emerald-500/15 border border-emerald-500/25 text-emerald-600 dark:text-emerald-400 text-[10px] font-mono font-bold">Completed</span>
+                          <span className="px-2 py-0.5 rounded-[4px] bg-emerald-500/15 border border-emerald-500/25 text-emerald-600 dark:text-emerald-400 text-[10px] font-mono font-bold">
+                            {isJa ? "完了" : "Completed"}
+                          </span>
                         )}
                       </div>
                       
@@ -211,7 +233,9 @@ function MfgLotModal({ onClose, initialLot = "", initialHinban = "" }) {
                   ))}
                 </div>
               ) : (
-                <p className="text-xs text-[var(--text-muted)] text-center py-4">No records found for this lot.</p>
+                <p className="text-xs text-[var(--text-muted)] text-center py-4">
+                  {isJa ? "このロットの記録は見つかりませんでした。" : "No records found for this lot."}
+                </p>
               )}
             </div>
           )}
@@ -231,9 +255,11 @@ function MfgLotModal({ onClose, initialLot = "", initialHinban = "" }) {
 console.log('API URL:', import.meta.env.VITE_API_URL);
 // ─── Main page ────────────────────────────────────────────────────────────────
 export default function FactoryDetailPage({ combined = false }) {
+  const { language, t } = useLanguage();
+  const isJa = language === "ja";
   const { factoryName: encoded } = useParams();
   const factoryName = combined ? "__all__" : decodeURIComponent(encoded);
-  const pageTitle = combined ? "Overview" : factoryName;
+  const pageTitle = combined ? (isJa ? "工場概要" : "Overview") : factoryName;
   const navigate    = useNavigate();
   const location    = useLocation();
   const hasAutoOpened = useRef(false);
@@ -323,7 +349,7 @@ export default function FactoryDetailPage({ combined = false }) {
   const stripTotal   = allFlat.reduce((s, r) => s + (Number(r.Process_Quantity) || Number(r.Total) || 0), 0);
   const stripNG      = allFlat.reduce((s, r) => s + (Number(r.SRS_Total_NG) || Number(r.Total_NG) || 0), 0);
   const stripRate    = stripTotal > 0 ? Math.round((stripNG / stripTotal) * 10000) / 100 : 0;
-  const defStatus    = getDefectStatus(stripRate);
+  const defStatus    = getDefectStatus(stripRate, isJa);
 
   // Per-process stats
   const PROCESS_ACCENT = {
@@ -340,46 +366,6 @@ export default function FactoryDetailPage({ combined = false }) {
     return { proc, total, ng, rate, accent: PROCESS_ACCENT[proc] ?? { color: "text-primary", bg: "bg-primary/10" } };
   });
 
-  const overviewSummaryCards = [
-    {
-      key: "total-processed",
-      icon: "output",
-      label: "Total Processed",
-      value: stripTotal.toLocaleString(),
-      subtitle: "units processed",
-      accent: "text-primary bg-primary/10",
-    },
-    {
-      key: "ng-units",
-      icon: "report",
-      label: "NG Units",
-      value: stripNG.toLocaleString(),
-      subtitle: "defective units",
-      accent: stripNG > 0 ? "text-error bg-error/10" : "text-emerald-500 bg-emerald-500/10",
-    },
-    {
-      key: "defect-rate",
-      icon: "percent",
-      label: "Defect Rate",
-      value: `${stripRate.toFixed(2)}%`,
-      subtitle: defStatus.label,
-      accent:
-        stripRate >= 2
-          ? "text-error bg-error/10"
-          : stripRate >= 1.5
-            ? "text-amber-500 bg-amber-500/10"
-            : "text-emerald-500 bg-emerald-500/10",
-    },
-    {
-      key: "sensors",
-      icon: "sensors",
-      label: combined ? "Total Sensors" : "Sensors Online",
-      value: String(sensor?.sensorCount ?? 0),
-      subtitle: combined ? "connected sensors across factories" : "active sensor devices",
-      accent: sensor?.hasData ? "text-emerald-500 bg-emerald-500/10" : "text-outline bg-surface-container-high",
-    },
-  ];
-
   return (
     <section className="w-full h-screen overflow-y-auto space-y-6 pt-20 px-4 sm:px-6 md:px-8 pb-16">
       {/* ── Page Header ── */}
@@ -387,7 +373,7 @@ export default function FactoryDetailPage({ combined = false }) {
         <div className="flex items-start gap-3 flex-shrink-0">
           <button
             onClick={() => navigate(combined ? "/factories" : "/dashboard")}
-            aria-label="Back"
+            aria-label={isJa ? "戻る" : "Back"}
             className="mt-1 w-8 h-8 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:border-[var(--border-strong)] flex items-center justify-center transition-colors shadow-2xs"
           >
             <span className="material-symbols-outlined" style={{ fontSize: 18 }}>arrow_back</span>
@@ -406,7 +392,9 @@ export default function FactoryDetailPage({ combined = false }) {
               )}
             </div>
             <p className="text-sm font-normal text-[var(--text-muted)] mt-1">
-              {combined ? "All Facilities Consolidated" : "Facility Production & Telemetry"}
+              {combined
+                ? (isJa ? "全工場集約" : "All Facilities Consolidated")
+                : (isJa ? "工場生産 & テレメトリ" : "Facility Production & Telemetry")}
               {" · "}
               <span className="freya-tabular">{dateFrom === dateTo ? dateFrom : `${dateFrom} → ${dateTo}`}</span>
             </p>
@@ -418,13 +406,13 @@ export default function FactoryDetailPage({ combined = false }) {
           {(env || sensor?.hasData) && !loading && (
             <div
               onClick={() => navigate(combined ? "/sensors" : `/sensors/${encoded}`)}
-              title="View Sensor Telemetry"
+              title={isJa ? "センサテレメトリを表示" : "View Sensor Telemetry"}
               className="flex items-center gap-3 sm:gap-4 px-3 py-1.5 rounded-[6px] bg-[var(--surface-hover)] border border-[var(--border)] hover:border-[var(--border-strong)] cursor-pointer transition-colors shadow-2xs"
             >
               <div className="flex items-center gap-1.5 text-[var(--freya-blue)] pr-2 border-r border-[var(--border)] flex-shrink-0">
                 <span className="material-symbols-outlined" style={{ fontSize: 18 }}>thermostat</span>
                 <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--text-muted)] hidden xl:inline">
-                  Telemetry
+                  {isJa ? "テレメトリ" : "Telemetry"}
                 </span>
               </div>
 
@@ -432,7 +420,7 @@ export default function FactoryDetailPage({ combined = false }) {
                 {env?.temperature != null && (
                   <div className="flex flex-col">
                     <span className="text-[9px] font-semibold uppercase tracking-wider text-[var(--text-muted)] leading-tight">
-                      Ambient Temp
+                      {isJa ? "周囲温度" : "Ambient Temp"}
                     </span>
                     <span className="text-xs sm:text-sm font-semibold text-[var(--text-primary)] freya-tabular leading-tight">
                       {env.temperature}°C
@@ -442,7 +430,7 @@ export default function FactoryDetailPage({ combined = false }) {
                 {env?.humidity != null && (
                   <div className="flex flex-col">
                     <span className="text-[9px] font-semibold uppercase tracking-wider text-[var(--text-muted)] leading-tight">
-                      Humidity
+                      {isJa ? "湿度" : "Humidity"}
                     </span>
                     <span className="text-xs sm:text-sm font-semibold text-[var(--text-primary)] freya-tabular leading-tight">
                       {env.humidity}%
@@ -452,7 +440,7 @@ export default function FactoryDetailPage({ combined = false }) {
                 {sensor?.highestTemp != null && (
                   <div className="flex flex-col">
                     <span className="text-[9px] font-semibold uppercase tracking-wider text-[var(--text-muted)] leading-tight">
-                      Peak Sensor
+                      {isJa ? "最高温度センサ" : "Peak Sensor"}
                     </span>
                     <span className="text-xs sm:text-sm font-semibold text-[var(--text-primary)] freya-tabular leading-tight">
                       {sensor.highestTemp}°C
@@ -462,7 +450,7 @@ export default function FactoryDetailPage({ combined = false }) {
                 {sensor?.averageHumidity != null && (
                   <div className="flex flex-col">
                     <span className="text-[9px] font-semibold uppercase tracking-wider text-[var(--text-muted)] leading-tight">
-                      Avg Humidity
+                      {isJa ? "平均湿度" : "Avg Humidity"}
                     </span>
                     <span className="text-xs sm:text-sm font-semibold text-[var(--text-primary)] freya-tabular leading-tight">
                       {sensor.averageHumidity}%
@@ -472,7 +460,7 @@ export default function FactoryDetailPage({ combined = false }) {
                 {sensor?.wbgt != null && (
                   <div className="flex flex-col">
                     <span className="text-[9px] font-semibold uppercase tracking-wider text-[var(--text-muted)] leading-tight">
-                      WBGT Heat Index
+                      {isJa ? "暑さ指数 (WBGT)" : "WBGT Heat Index"}
                     </span>
                     <span className="text-xs sm:text-sm font-semibold text-[var(--text-primary)] freya-tabular leading-tight">
                       {sensor.wbgt}°C
@@ -481,7 +469,7 @@ export default function FactoryDetailPage({ combined = false }) {
                 )}
                 {env?.isDefault && (
                   <span className="text-[9px] font-medium text-[var(--text-muted)] px-1.5 py-0.5 rounded-[4px] bg-slate-200/70 dark:bg-slate-800 self-center">
-                    Simulated
+                    {isJa ? "シミュレーション" : "Simulated"}
                   </span>
                 )}
               </div>
@@ -494,7 +482,7 @@ export default function FactoryDetailPage({ combined = false }) {
               className="inline-flex items-center gap-2 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3.5 py-2 text-xs font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-hover)] transition-colors shadow-2xs"
             >
               <span className="material-symbols-outlined text-[var(--text-muted)]" style={{ fontSize: 16 }}>videocam</span>
-              View Live Feed
+              {isJa ? "ライブ映像" : "View Live Feed"}
             </button>
           )}
 
@@ -503,7 +491,7 @@ export default function FactoryDetailPage({ combined = false }) {
             className="inline-flex items-center gap-2 rounded-[6px] bg-[var(--freya-blue)] px-3.5 py-2 text-xs font-semibold text-white hover:bg-[var(--freya-blue-hover)] transition-colors shadow-2xs"
           >
             <span className="material-symbols-outlined" style={{ fontSize: 16 }}>sensors</span>
-            {combined ? "Sensor Fleet" : "Sensor Telemetry"}
+            {combined ? (isJa ? "センサ一覧" : "Sensor Fleet") : (isJa ? "センサテレメトリ" : "Sensor Telemetry")}
           </button>
         </div>
       </div>
@@ -514,35 +502,35 @@ export default function FactoryDetailPage({ combined = false }) {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <StatSummaryCard
             variant="freya"
-            label="Total Processed"
+            label={isJa ? "総処理数" : "Total Processed"}
             value={stripTotal.toLocaleString()}
-            subtitle="Units produced across all lines"
+            subtitle={isJa ? "全ラインでの総生産数" : "Units produced across all lines"}
             icon="output"
             loading={loading}
           />
           <StatSummaryCard
             variant="freya"
-            label="Defect Units (NG)"
+            label={isJa ? "不良数 (NG)" : "Defect Units (NG)"}
             value={stripNG.toLocaleString()}
-            subtitle={stripNG > 0 ? "Requires quality review" : "Zero defects detected"}
+            subtitle={stripNG > 0 ? (isJa ? "品質確認が必要" : "Requires quality review") : (isJa ? "不良なし" : "Zero defects detected")}
             statusDot={stripNG > 0 ? "defect" : "complete"}
             icon="report"
             loading={loading}
           />
           <StatSummaryCard
             variant="freya"
-            label="Defect Rate"
+            label={isJa ? "不良率" : "Defect Rate"}
             value={`${stripRate.toFixed(2)}%`}
-            subtitle={`${defStatus.label} threshold`}
+            subtitle={isJa ? `${defStatus.label} 基準値` : `${defStatus.label} threshold`}
             statusDot={stripRate >= 2 ? "defect" : stripRate >= 1 ? "warning" : "complete"}
             icon="percent"
             loading={loading}
           />
           <StatSummaryCard
             variant="freya"
-            label={combined ? "Connected Sensors" : "Sensors Online"}
+            label={combined ? (isJa ? "接続センサ数" : "Connected Sensors") : (isJa ? "稼働中センサ" : "Sensors Online")}
             value={String(sensor?.sensorCount ?? 0)}
-            subtitle={sensor?.hasData ? "Live telemetry streaming" : "Active monitoring nodes"}
+            subtitle={combined ? (isJa ? "全工場の接続センサ" : "connected sensors across factories") : (sensor?.hasData ? (isJa ? "リアルタイム計測中" : "Live telemetry streaming") : (isJa ? "監視ノード待機中" : "Active monitoring nodes"))}
             statusDot={sensor?.hasData ? "complete" : undefined}
             icon="sensors"
             loading={loading}
@@ -555,12 +543,12 @@ export default function FactoryDetailPage({ combined = false }) {
             <StatSummaryCard
               key={proc}
               variant="freya"
-              label={`${proc} Process`}
+              label={isJa ? (PROCESS_LABELS_JA[proc] || `${proc}工程`) : `${proc} Process`}
               value={total > 0 ? total.toLocaleString() : "—"}
               subtitle={
                 total > 0
-                  ? `${rate.toFixed(2)}% Defect · ${ng.toLocaleString()} NG`
-                  : "No active production"
+                  ? (isJa ? `不良率: ${rate.toFixed(2)}% · ${ng.toLocaleString()} NG` : `${rate.toFixed(2)}% Defect · ${ng.toLocaleString()} NG`)
+                  : (isJa ? "稼働実績なし" : "No active production")
               }
               statusDot={total > 0 ? (rate >= 2 ? "defect" : rate >= 1 ? "warning" : "complete") : undefined}
               icon="precision_manufacturing"
@@ -604,14 +592,22 @@ export default function FactoryDetailPage({ combined = false }) {
           <div className="flex items-center gap-2.5">
             <span className="material-symbols-outlined text-[var(--freya-blue)]" style={{ fontSize: 20 }}>table_chart</span>
             <div>
-              <h3 className="text-base font-semibold text-[var(--text-primary)] leading-none">Production Runs</h3>
-              <p className="text-xs text-[var(--text-muted)] mt-1">Detailed process logs and inspection outputs</p>
+              <h3 className="text-base font-semibold text-[var(--text-primary)] leading-none">
+                {isJa ? "製造実績" : "Production Runs"}
+              </h3>
+              <p className="text-xs text-[var(--text-muted)] mt-1">
+                {isJa ? "工程別ログおよび検査実績の詳細" : "Detailed process logs and inspection outputs"}
+              </p>
             </div>
           </div>
 
           {sectionNames.length > 1 && (
             <LiquidSegmentedControl
-              items={sectionNames}
+              items={sectionNames.map((name) => ({
+                key: name,
+                label: name,
+                labelJa: SECTION_LABELS_JA[name] || name,
+              }))}
               activeKey={activeSection}
               onChange={setActiveSection}
             />

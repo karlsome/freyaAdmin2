@@ -230,7 +230,7 @@ export default function ExportOptionsModal({ data, onClose, processName = "Expor
 
   const executeExportPDF = () => {
     const cols = getOrderedColumns();
-    if (cols.length === 0) return alert("Please select at least one column.");
+    if (cols.length === 0) return alert(isJa ? "少なくとも1つの列を選択してください。" : "Please select at least one column.");
 
     const flatData = data.map(row => flattenObject(row));
     const tableBody = flatData.map(row => cols.map(c => String(row[c] ?? "")));

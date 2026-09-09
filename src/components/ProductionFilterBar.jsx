@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { fetchDistinctValues } from "../services/api";
 import AdvancedFilterSection from "./AdvancedFilterSection";
 import FormField from "./FormField";
 import TagInput from "./TagInput";
 import CustomFieldSelectorModal from "./CustomFieldSelectorModal";
+import { useLanguage } from "../contexts/LanguageContext";
 
 const APPROVAL_STATUS_VALUES = [
   "pending",
@@ -16,26 +17,26 @@ const APPROVAL_STATUS_VALUES = [
 // ─── Filter schema — shared fields across kensaDB / pressDB / SRSDB / slitDB ──
 export const FILTER_SCHEMA = [
   // Basic
-  { field: "品番",              label: "品番",                type: "select", group: "Basic",                  operators: ["equals", "in"] },
-  { field: "背番号",            label: "背番号",              type: "select", group: "Basic",                  operators: ["equals", "not_equals", "in", "exists", "not_exists"] },
-  { field: "モデル",            label: "モデル",              type: "select", group: "Basic",                  operators: ["equals", "not_equals", "in", "exists", "not_exists"] },
-  { field: "製造ロット",        label: "製造ロット",          type: "text",   group: "Basic",                  operators: ["equals", "not_equals", "contains", "exists", "not_exists"] },
-  { field: "Date",              label: "Date",                type: "date",   group: "Basic",                  operators: ["equals", "not_equals", "greater_than", "less_than", "exists", "not_exists"] },
+  { field: "品番",              label: "品番",                labelJa: "品番",                type: "select", group: "Basic",                  groupJa: "基本項目",     operators: ["equals", "in"] },
+  { field: "背番号",            label: "背番号",              labelJa: "背番号",              type: "select", group: "Basic",                  groupJa: "基本項目",     operators: ["equals", "not_equals", "in", "exists", "not_exists"] },
+  { field: "モデル",            label: "モデル",              labelJa: "モデル",              type: "select", group: "Basic",                  groupJa: "基本項目",     operators: ["equals", "not_equals", "in", "exists", "not_exists"] },
+  { field: "製造ロット",        label: "製造ロット",          labelJa: "製造ロット",          type: "text",   group: "Basic",                  groupJa: "基本項目",     operators: ["equals", "not_equals", "contains", "exists", "not_exists"] },
+  { field: "Date",              label: "Date",                labelJa: "日付",                type: "date",   group: "Basic",                  groupJa: "基本項目",     operators: ["equals", "not_equals", "greater_than", "less_than", "exists", "not_exists"] },
   // Quantity & Performance
-  { field: "Total",             label: "Total",               type: "number", group: "Quantity & Performance", operators: ["equals", "not_equals", "greater_than", "less_than", "exists", "not_exists"] },
-  { field: "Total_NG",          label: "Total NG",            type: "number", group: "Quantity & Performance", operators: ["equals", "not_equals", "greater_than", "less_than", "exists", "not_exists"] },
-  { field: "Process_Quantity",  label: "Process Quantity",    type: "number", group: "Quantity & Performance", operators: ["equals", "not_equals", "greater_than", "less_than", "exists", "not_exists"] },
-  { field: "Remaining_Quantity",label: "Remaining Quantity",  type: "number", group: "Quantity & Performance", operators: ["equals", "not_equals", "greater_than", "less_than", "exists", "not_exists"] },
-  { field: "Cycle_Time",        label: "Cycle Time",          type: "number", group: "Quantity & Performance", operators: ["equals", "not_equals", "greater_than", "less_than", "exists", "not_exists"] },
-  { field: "Spare",             label: "Spare",               type: "number", group: "Quantity & Performance", operators: ["equals", "not_equals", "greater_than", "less_than", "exists", "not_exists"] },
+  { field: "Total",             label: "Total",               labelJa: "生産数 (Total)",       type: "number", group: "Quantity & Performance", groupJa: "数量・実績",   operators: ["equals", "not_equals", "greater_than", "less_than", "exists", "not_exists"] },
+  { field: "Total_NG",          label: "Total NG",            labelJa: "総不良数 (Total NG)",   type: "number", group: "Quantity & Performance", groupJa: "数量・実績",   operators: ["equals", "not_equals", "greater_than", "less_than", "exists", "not_exists"] },
+  { field: "Process_Quantity",  label: "Process Quantity",    labelJa: "処理数 (Process Qty)", type: "number", group: "Quantity & Performance", groupJa: "数量・実績",   operators: ["equals", "not_equals", "greater_than", "less_than", "exists", "not_exists"] },
+  { field: "Remaining_Quantity",label: "Remaining Quantity",  labelJa: "残数 (Remaining Qty)", type: "number", group: "Quantity & Performance", groupJa: "数量・実績",   operators: ["equals", "not_equals", "greater_than", "less_than", "exists", "not_exists"] },
+  { field: "Cycle_Time",        label: "Cycle Time",          labelJa: "サイクルタイム",        type: "number", group: "Quantity & Performance", groupJa: "数量・実績",   operators: ["equals", "not_equals", "greater_than", "less_than", "exists", "not_exists"] },
+  { field: "Spare",             label: "Spare",               labelJa: "予備 (Spare)",         type: "number", group: "Quantity & Performance", groupJa: "数量・実績",   operators: ["equals", "not_equals", "greater_than", "less_than", "exists", "not_exists"] },
   // Time
-  { field: "Time_start",        label: "Time Start",          type: "time",   group: "Time",                   operators: ["equals", "not_equals", "greater_than", "less_than", "exists", "not_exists"] },
-  { field: "Time_end",          label: "Time End",            type: "time",   group: "Time",                   operators: ["equals", "not_equals", "greater_than", "less_than", "exists", "not_exists"] },
+  { field: "Time_start",        label: "Time Start",          labelJa: "開始時刻",            type: "time",   group: "Time",                   groupJa: "時間",         operators: ["equals", "not_equals", "greater_than", "less_than", "exists", "not_exists"] },
+  { field: "Time_end",          label: "Time End",            labelJa: "終了時刻",            type: "time",   group: "Time",                   groupJa: "時間",         operators: ["equals", "not_equals", "greater_than", "less_than", "exists", "not_exists"] },
   // Worker & Equipment
-  { field: "Worker_Name",       label: "Worker Name",         type: "select", group: "Worker & Equipment",     operators: ["equals", "not_equals", "in", "exists", "not_exists"] },
-  { field: "設備",              label: "設備",                type: "select", group: "Worker & Equipment",     operators: ["equals", "not_equals", "in", "exists", "not_exists"] },
+  { field: "Worker_Name",       label: "Worker Name",         labelJa: "作業者名",            type: "select", group: "Worker & Equipment",     groupJa: "作業者・設備", operators: ["equals", "not_equals", "in", "exists", "not_exists"] },
+  { field: "設備",              label: "設備",                labelJa: "設備",                type: "select", group: "Worker & Equipment",     groupJa: "作業者・設備", operators: ["equals", "not_equals", "in", "exists", "not_exists"] },
   // Status
-  { field: "approvalStatus",    label: "Approval Status",     type: "select", group: "Status",                 operators: ["equals", "not_equals", "in", "exists", "not_exists"], options: APPROVAL_STATUS_VALUES },
+  { field: "approvalStatus",    label: "Approval Status",     labelJa: "承認ステータス",       type: "select", group: "Status",                 groupJa: "ステータス",   operators: ["equals", "not_equals", "in", "exists", "not_exists"], options: APPROVAL_STATUS_VALUES },
 ];
 
 const OPERATOR_LABELS = {
@@ -47,6 +48,17 @@ const OPERATOR_LABELS = {
   not_exists:   "does not exist",
   greater_than: "> greater than",
   less_than:    "< less than",
+};
+
+const OPERATOR_LABELS_JA = {
+  equals:       "= 一致",
+  not_equals:   "≠ 不一致",
+  contains:     "含む",
+  in:           "いずれかに一致",
+  exists:       "存在する",
+  not_exists:   "存在しない",
+  greater_than: "> より大きい",
+  less_than:    "< より小さい",
 };
 
 function hasFilterValue(row) {
@@ -156,6 +168,17 @@ export default function ProductionFilterBar({
     onApply?.({ dateFrom, dateTo, partNumbers, serialNumbers, advancedFilters });
   };
 
+  const { language } = useLanguage();
+  const isJa = language === "ja";
+
+  const activeSchema = useMemo(() => {
+    return FILTER_SCHEMA.map((f) => ({
+      ...f,
+      label: isJa && f.labelJa ? f.labelJa : f.label,
+      group: isJa && f.groupJa ? f.groupJa : f.group,
+    }));
+  }, [isJa]);
+
   const hasActiveFilters = 
     dateFrom !== todayStr() ||
     dateTo !== todayStr() ||
@@ -167,7 +190,7 @@ export default function ProductionFilterBar({
     <div className="freya-card p-5 mb-6">
       {/* Core filters grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 mb-4">
-        <FormField label="From">
+        <FormField label={isJa ? "開始日" : "From"}>
           <input
             type="date"
             value={dateFrom}
@@ -175,7 +198,7 @@ export default function ProductionFilterBar({
             className="freya-input w-full text-sm text-[var(--text-primary)]"
           />
         </FormField>
-        <FormField label="To">
+        <FormField label={isJa ? "終了日" : "To"}>
           <input
             type="date"
             value={dateTo}
@@ -183,21 +206,21 @@ export default function ProductionFilterBar({
             className="freya-input w-full text-sm text-[var(--text-primary)]"
           />
         </FormField>
-        <FormField label="品番 (Part No.)">
+        <FormField label={isJa ? "品番" : "品番 (Part No.)"}>
           <TagInput
             tags={partNumbers}
             onAdd={(t) => setPartNumbers((v) => [...v, t])}
             onRemove={(t) => setPartNumbers((v) => v.filter((x) => x !== t))}
-            placeholder="Enter to add…"
+            placeholder={isJa ? "入力して追加…" : "Enter to add…"}
             uppercase
           />
         </FormField>
-        <FormField label="背番号 (Serial No.)">
+        <FormField label={isJa ? "背番号" : "背番号 (Serial No.)"}>
           <TagInput
             tags={serialNumbers}
             onAdd={(t) => setSerialNumbers((v) => [...v, t])}
             onRemove={(t) => setSerialNumbers((v) => v.filter((x) => x !== t))}
-            placeholder="Enter to add…"
+            placeholder={isJa ? "入力して追加…" : "Enter to add…"}
             uppercase
           />
         </FormField>
@@ -208,19 +231,21 @@ export default function ProductionFilterBar({
       <div className="mt-4 pt-4 border-t border-[var(--border)]">
         <AdvancedFilterSection
           rows={filterRows}
-          fieldDefinitions={[...FILTER_SCHEMA, ...customFields]}
+          fieldDefinitions={[...activeSchema, ...customFields]}
           onUpdateRow={handleUpdateRow}
           onAddRow={handleAddRow}
           onRemoveRow={handleRemoveRow}
           onClearRows={handleClearRows}
           loadDistinctOptions={(field) => fetchDistinctValues(factoryName, field)}
           shouldLoadOptions={(fieldDefinition) => fieldDefinition.type === "select"}
-          operatorLabels={OPERATOR_LABELS}
+          operatorLabels={isJa ? OPERATOR_LABELS_JA : OPERATOR_LABELS}
           useOperatorLabelsInSelect
           optionsCacheKey={factoryName}
           onCustomFieldClick={handleCustomFieldClick}
-          title="Advanced Filters"
-          addRowLabel="Add Filter"
+          title={isJa ? "詳細フィルタ" : "Advanced Filters"}
+          addRowLabel={isJa ? "フィルタ追加" : "Add Filter"}
+          selectFieldLabel={isJa ? "項目を選択" : "Select field"}
+          selectOperatorLabel={isJa ? "条件を選択" : "Select operator"}
           showActiveSummary={false}
           variant="compact"
           framed={false}
@@ -235,7 +260,7 @@ export default function ProductionFilterBar({
           className="freya-btn-primary"
         >
           <span className="material-symbols-outlined" style={{ fontSize: 16 }}>filter_alt</span>
-          {loading ? "Loading…" : "Apply Filters"}
+          {loading ? (isJa ? "読み込み中…" : "Loading…") : (isJa ? "フィルタ適用" : "Apply Filters")}
         </button>
 
         {onReset && hasActiveFilters && (
@@ -252,7 +277,7 @@ export default function ProductionFilterBar({
             className="flex items-center gap-2 h-10 px-4 rounded-[6px] border border-rose-200 dark:border-rose-900 bg-rose-50 dark:bg-rose-950/30 text-rose-600 dark:text-rose-400 text-sm font-semibold hover:bg-rose-100 dark:hover:bg-rose-900/40 disabled:opacity-50 transition-colors"
           >
             <span className="material-symbols-outlined" style={{ fontSize: 16 }}>filter_alt_off</span>
-            Reset Filters
+            {isJa ? "フィルタ解除" : "Reset Filters"}
           </button>
         )}
 
@@ -262,7 +287,7 @@ export default function ProductionFilterBar({
             className="freya-btn-secondary"
           >
             <span className="material-symbols-outlined" style={{ fontSize: 16 }}>manage_search</span>
-            Manufacturing Lot Finder
+            {isJa ? "材料ロット検索" : "Manufacturing Lot Finder"}
           </button>
         )}
       </div>

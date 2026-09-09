@@ -1,7 +1,7 @@
-//This component displays a paginated, sortable, and searchable table of production records for a specific process (Kensa, Press, SRS, or Slit). It also includes a summary section that aggregates data by part number and worker ID. The component is designed to be reusable for different processes by passing the appropriate props.
 import { useEffect, useMemo, useRef, useState } from "react";
 import DataTable from "./DataTable";
 import ExportOptionsModal from "./ExportOptionsModal";
+import { useLanguage } from "../contexts/LanguageContext";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const ITEMS_PER_PAGE = 25;
@@ -11,6 +11,13 @@ export const PROCESS_ACCENT = {
   Press: { dot: "bg-emerald-400", label: "text-emerald-400" },
   SRS:   { dot: "bg-slate-400",   label: "text-slate-400" },
   Slit:  { dot: "bg-sky-400",     label: "text-sky-400" },
+};
+
+const PROCESS_LABELS_JA = {
+  Kensa: "検査工程",
+  Press: "プレス工程",
+  SRS: "SRS工程",
+  Slit: "スリット工程",
 };
 
 const SORT_NUMERIC = new Set(["Total", "Total_NG", "Process_Quantity", "Remaining_Quantity", "Cycle_Time"]);
@@ -49,6 +56,8 @@ function groupSummary(rows) {
 //   rows        — array of raw production records from the matching DB
 //   onRowClick  — callback(record, processName) when a row is clicked
 export default function ProcessPanel({ processName, rows, onRowClick, showFactoryColumn = false }) {
+  const { language } = useLanguage();
+  const isJa = language === "ja";
   const accent = PROCESS_ACCENT[processName] ?? PROCESS_ACCENT.Kensa;
   const [sort, setSort]               = useState({ col: null, dir: 1 });
   const [page, setPage]               = useState(1);
@@ -151,7 +160,7 @@ export default function ProcessPanel({ processName, rows, onRowClick, showFactor
       },
       {
         key: "Process_Quantity",
-        label: "Total",
+        label: isJa ? "生産数" : "Total",
         width: 108,
         align: "right",
         renderCell: (row) => {
@@ -162,7 +171,7 @@ export default function ProcessPanel({ processName, rows, onRowClick, showFactor
       },
       {
         key: "Total_NG",
-        label: "Total NG",
+        label: isJa ? "不良数" : "Total NG",
         width: 112,
         align: "right",
         renderCell: (row) => {
@@ -217,7 +226,7 @@ export default function ProcessPanel({ processName, rows, onRowClick, showFactor
       },
       ...baseColumns.slice(2),
     ];
-  }, [showFactoryColumn]);
+  }, [showFactoryColumn, isJa]);
 
   return (
     <div className="freya-card overflow-hidden flex flex-col">
@@ -225,7 +234,9 @@ export default function ProcessPanel({ processName, rows, onRowClick, showFactor
       <div className="px-5 py-3.5 flex items-center justify-between gap-3 border-b border-[var(--border)] bg-[var(--surface)]">
         <div className="flex items-center gap-2.5 min-w-0">
           <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${accent.dot}`} />
-          <h4 className="text-sm font-semibold text-[var(--text-primary)] truncate">{processName} Process</h4>
+          <h4 className="text-sm font-semibold text-[var(--text-primary)] truncate">
+            {isJa ? (PROCESS_LABELS_JA[processName] || `${processName}工程`) : `${processName} Process`}
+          </h4>
           <span className="px-2 py-0.5 rounded-[4px] bg-slate-100 dark:bg-slate-800 text-[11px] font-semibold text-[var(--text-muted)] flex-shrink-0 tabular-nums">
             {totalItems}
           </span>
@@ -240,13 +251,13 @@ export default function ProcessPanel({ processName, rows, onRowClick, showFactor
               className="px-3 py-1.5 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] text-[11px] font-medium text-[var(--text-secondary)] hover:bg-[var(--surface-hover)] transition-colors flex items-center gap-1.5"
             >
               <span className="material-symbols-outlined" style={{ fontSize: 14 }}>expand_more</span>
-              Summary
+              {isJa ? "サマリー" : "Summary"}
             </button>
           )}
 
           <input
             type="text"
-            placeholder="Search…"
+            placeholder={isJa ? "検索…" : "Search…"}
             value={search}
             onChange={(e) => { setSearch(e.target.value); setPage(1); }}
             className="h-8 px-3 rounded-[6px] bg-[var(--surface)] border border-[var(--border)] text-xs
@@ -272,18 +283,30 @@ export default function ProcessPanel({ processName, rows, onRowClick, showFactor
         onRowClick={onRowClick ? (row) => onRowClick(row, processName) : undefined}
         renderPageInfo={() => (
           <div className="flex items-center justify-between w-full">
-            <span className="text-xs text-[var(--text-muted)] tabular-nums">{totalItems} records · showing {pageStart}-{pageEnd}</span>
+            <span className="text-xs text-[var(--text-muted)] tabular-nums">
+              {isJa
+                ? `${totalItems} 件中 ${pageStart}〜${pageEnd} 件を表示`
+                : `${totalItems} records · showing ${pageStart}-${pageEnd}`}
+            </span>
             <button
               onClick={() => setShowExport(true)}
               className="px-3 py-1.5 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] text-[11px] font-medium text-[var(--text-secondary)] hover:text-[var(--freya-blue)] hover:border-[var(--freya-blue)] transition-colors flex items-center gap-1.5"
             >
               <span className="material-symbols-outlined" style={{ fontSize: 14 }}>download</span>
-              Export
+              {isJa ? "エクスポート" : "Export"}
             </button>
           </div>
         )}
-        emptyTitle={search ? "No results match your search" : "No data available"}
-        emptyMessage={search ? "Adjust the search term to find matching production records." : "No production records are available for this process."}
+        emptyTitle={
+          search
+            ? (isJa ? "検索条件に一致する結果がありません" : "No results match your search")
+            : (isJa ? "データがありません" : "No data available")
+        }
+        emptyMessage={
+          search
+            ? (isJa ? "検索条件を変更して再度お試しください。" : "Adjust the search term to find matching production records.")
+            : (isJa ? "この工程の生産実績データはありません。" : "No production records are available for this process.")
+        }
         enableColumnResize
         enableColumnReorder
         layoutStorageKey={`freyaAdmin2.process-panel-layout:${processName}:${showFactoryColumn ? "factory" : "default"}`}
@@ -299,8 +322,8 @@ export default function ProcessPanel({ processName, rows, onRowClick, showFactor
         headerCellClassName="px-4 py-2.5 text-left whitespace-nowrap text-[12px] font-semibold text-[var(--text-muted)] uppercase tracking-[0.04em]"
         cellClassName="px-4 py-2.5 align-top text-sm font-medium tabular-nums"
         rowClassName="border-b border-[var(--border)] transition hover:bg-slate-50/75 dark:hover:bg-slate-800/40"
-        previousLabel="前へ"
-        nextLabel="次へ"
+        previousLabel={isJa ? "前へ" : "Previous"}
+        nextLabel={isJa ? "次へ" : "Next"}
       />
 
       {/* Summary collapsible */}
@@ -319,12 +342,12 @@ export default function ProcessPanel({ processName, rows, onRowClick, showFactor
                   <span className="material-symbols-outlined" style={{ fontSize: 14 }}>
                     {showSummary ? "keyboard_arrow_up" : "keyboard_arrow_down"}
                   </span>
-                  <span>Daily Summary ({summary.length} parts)</span>
+                  <span>{isJa ? `日別サマリー (${summary.length} 品番)` : `Daily Summary (${summary.length} parts)`}</span>
                 </div>
                 <div className="flex items-center gap-4 text-[11px] font-medium tracking-wide pr-2">
-                  <span className="flex gap-1.5 items-center"><span className="text-outline/70 uppercase text-[9px]">Total</span> <span className="text-on-surface font-semibold">{overallTotal.toLocaleString()}</span></span>
-                  <span className="flex gap-1.5 items-center"><span className="text-outline/70 uppercase text-[9px]">NG</span> <span className={`font-semibold ${overallNg > 0 ? 'text-error' : 'text-on-surface'}`}>{overallNg.toLocaleString()}</span></span>
-                  <span className="flex gap-1.5 items-center"><span className="text-outline/70 uppercase text-[9px]">Rate</span> <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold ${defectChip(overallRate)}`}>{overallRate}%</span></span>
+                  <span className="flex gap-1.5 items-center"><span className="text-outline/70 uppercase text-[9px]">{isJa ? "生産数" : "Total"}</span> <span className="text-on-surface font-semibold">{overallTotal.toLocaleString()}</span></span>
+                  <span className="flex gap-1.5 items-center"><span className="text-outline/70 uppercase text-[9px]">{isJa ? "不良数" : "NG"}</span> <span className={`font-semibold ${overallNg > 0 ? 'text-error' : 'text-on-surface'}`}>{overallNg.toLocaleString()}</span></span>
+                  <span className="flex gap-1.5 items-center"><span className="text-outline/70 uppercase text-[9px]">{isJa ? "不良率" : "Rate"}</span> <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold ${defectChip(overallRate)}`}>{overallRate}%</span></span>
                 </div>
               </button>
             );
@@ -336,9 +359,9 @@ export default function ProcessPanel({ processName, rows, onRowClick, showFactor
                   <tr className="text-[10px] font-semibold uppercase tracking-wider text-outline">
                     <th className="ui-table-heading text-left pb-2 pr-6">品番</th>
                     <th className="ui-table-heading text-left pb-2 pr-6">背番号</th>
-                    <th className="ui-table-heading text-right pb-2 pr-6">Total</th>
-                    <th className="ui-table-heading text-right pb-2 pr-6">Total NG</th>
-                    <th className="ui-table-heading text-right pb-2">不良率</th>
+                    <th className="ui-table-heading text-right pb-2 pr-6">{isJa ? "生産数" : "Total"}</th>
+                    <th className="ui-table-heading text-right pb-2 pr-6">{isJa ? "不良数" : "Total NG"}</th>
+                    <th className="ui-table-heading text-right pb-2">{isJa ? "不良率" : "Defect Rate"}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-separator/20">

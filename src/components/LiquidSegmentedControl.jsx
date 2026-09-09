@@ -1,9 +1,20 @@
 import { useLanguage } from "../contexts/LanguageContext";
 
+const KNOWN_LABELS_JA = {
+  Daily: "日別",
+  Weekly: "週別",
+  Monthly: "月別",
+  Overview: "概要",
+  Timeline: "タイムライン",
+  Kanban: "カンバン",
+  Table: "表形式",
+};
+
 function normalizeItems(items = [], isJa = false) {
   return items.map((item) => {
     if (typeof item === "string") {
-      return { key: item, label: item, disabled: false };
+      const labelJa = KNOWN_LABELS_JA[item] || item;
+      return { key: item, label: isJa ? labelJa : item, disabled: false };
     }
 
     const resolvedLabel = (isJa && item.labelJa) ? item.labelJa : (item.label ?? item.key);
