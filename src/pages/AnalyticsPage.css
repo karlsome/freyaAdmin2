@@ -1,0 +1,146 @@
+/* Material analytics uses the shared FREYA palette and responsive type scale. */
+.material-analytics :is(button, input, select):focus-visible {
+  outline: 2px solid var(--freya-blue);
+  outline-offset: 2px;
+}
+
+.material-analytics .analytics-filters :is(input, select) {
+  border-color: var(--border-strong);
+  background: var(--surface);
+  font-size: 14px;
+}
+
+.material-analytics :is(.analytics-ledger, .analytics-run-table) th {
+  height: 40px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  border-bottom: 1px solid var(--border-strong);
+}
+
+.material-analytics :is(.analytics-ledger, .analytics-run-table) td {
+  font-variant-numeric: tabular-nums;
+}
+
+.material-analytics :is(.analytics-ledger, .analytics-run-table) > tbody > tr > td {
+  font-size: 14px;
+  min-height: 44px;
+}
+
+.analytics-card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 360px), 1fr));
+  gap: 16px;
+  align-items: start;
+}
+
+.analytics-lot-card {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  overflow: hidden;
+  color: var(--text-primary);
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-1);
+}
+
+.analytics-lot-card--expanded {
+  border-color: var(--freya-blue);
+}
+
+.analytics-card-metrics dt {
+  margin-bottom: 8px;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.analytics-card-metrics dd {
+  overflow-wrap: anywhere;
+  font-variant-numeric: tabular-nums;
+}
+
+.analytics-card-details > div {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+  align-items: baseline;
+  gap: 12px;
+}
+
+.analytics-card-details dt {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.analytics-card-details dd {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  color: var(--text-primary);
+}
+
+.analytics-evidence {
+  min-height: 28px;
+}
+
+.analytics-evidence-button {
+  display: inline-flex;
+  min-height: 28px;
+  align-items: center;
+  gap: 4px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  padding: 4px 8px;
+  background: var(--surface);
+  color: var(--text-secondary);
+  font-family: Inter, "Noto Sans JP", sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  transition: background-color 0.15s, border-color 0.15s;
+}
+
+.analytics-evidence-button:hover {
+  border-color: var(--freya-blue);
+  background: var(--freya-blue-subtle);
+}
+
+.analytics-evidence-button--defect,
+.analytics-qc-marker {
+  border-color: var(--status-defect-border);
+  background: var(--status-defect-bg);
+  color: var(--text-primary);
+}
+
+.analytics-evidence-button--defect .material-symbols-outlined,
+.analytics-qc-marker .material-symbols-outlined {
+  color: var(--status-defect);
+}
+
+.analytics-qc-marker {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border-width: 1px;
+  border-radius: var(--radius-sm);
+  padding: 4px 8px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+@media (max-width: 767px) {
+  .analytics-card-grid { gap: 12px; }
+  .analytics-card-details dd { font-size: 16px; }
+  .analytics-lot-card > button { font-size: 16px; }
+  .material-analytics .analytics-filters :is(input, select) {
+    height: 48px;
+    font-size: 16px;
+  }
+  .material-analytics .analytics-filters button,
+  .analytics-evidence-button { min-height: 44px; }
+}
+
+@media (min-width: 1920px) {
+  .material-analytics :is(.analytics-ledger, .analytics-run-table) > tbody > tr > td {
+    font-size: 15px;
+  }
+}

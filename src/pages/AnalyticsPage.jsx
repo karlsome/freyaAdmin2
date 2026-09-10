@@ -1,4 +1,5 @@
 import { Fragment, useEffect, useMemo, useState } from "react";
+import "./AnalyticsPage.css";
 import PageHeader from "../components/PageHeader";
 import LiquidSegmentedControl from "../components/LiquidSegmentedControl";
 import { useLanguage } from "../contexts/LanguageContext";
@@ -107,18 +108,18 @@ function MetricTile({ label, value, unit, icon, tone = "neutral", emphasis = fal
   return (
     <div
       className={joinClasses(
-        "min-h-[70px] rounded-[8px] border px-3.5 py-3 shadow-2xs",
+        "min-h-[104px] min-w-0 rounded-[8px] border p-4",
         toneClasses[tone] || toneClasses.neutral,
-        emphasis ? "sm:col-span-2 lg:col-span-2" : ""
+        emphasis ? "col-span-2 sm:col-span-1 xl:col-span-2" : ""
       )}
     >
       <div className="flex items-center justify-between gap-3">
-        <span className="text-[10px] font-black uppercase tracking-[0.12em] text-current opacity-70">{label}</span>
-        {icon ? <span className="material-symbols-outlined text-[17px] text-current opacity-75">{icon}</span> : null}
+        <span className="text-xs font-semibold uppercase tracking-[0.04em] text-[var(--text-secondary)]">{label}</span>
+        {icon ? <span className="material-symbols-outlined text-[17px] text-current">{icon}</span> : null}
       </div>
-      <div className="mt-1.5 flex items-baseline gap-1 font-mono">
-        <span className={joinClasses("font-black tracking-tight", emphasis ? "text-2xl" : "text-lg")}>{value}</span>
-        {unit ? <span className="text-[11px] font-bold text-current opacity-70">{unit}</span> : null}
+      <div className="mt-2 flex flex-wrap items-baseline gap-1">
+        <span className={joinClasses("font-bold tracking-tight tabular-nums", emphasis ? "text-[32px]" : "text-[28px]")}>{value}</span>
+        {unit ? <span className="text-xs font-bold text-[var(--text-secondary)]">{unit}</span> : null}
       </div>
     </div>
   );
@@ -136,13 +137,138 @@ function TraceBadge({ children, icon, tone = "neutral", title }) {
     <span
       title={title}
       className={joinClasses(
-        "inline-flex h-6 items-center gap-1 rounded-[5px] border px-2 text-[11px] font-bold",
+        "inline-flex h-6 items-center gap-1 rounded-[4px] border px-2 text-xs font-semibold",
         toneClasses[tone] || toneClasses.neutral
       )}
     >
       {icon ? <span className="material-symbols-outlined text-[13px]">{icon}</span> : null}
       {children}
     </span>
+  );
+}
+
+function EvidencePills({ labelImages: labels, defectImages: defects, scannedQR, lotNumber, isJa, onPreview, showLabels = false }) {
+  const labelImages = labels || [];
+  const defectImages = defects || [];
+  const groups = [
+    { type: "label", images: labelImages, icon: "photo_camera", label: isJa ? "ラベル" : "Label photos" },
+    { type: "defect", images: defectImages, icon: "report_problem", label: isJa ? "不良写真" : "QC photos" },
+  ];
+
+  return (
+    <div className="analytics-evidence flex flex-wrap items-center justify-start gap-1" onClick={(event) => event.stopPropagation()}>
+      {scannedQR && <TraceBadge icon="qr_code" title={scannedQR}>QR</TraceBadge>}
+      {groups.map(({ type, images, icon, label }) => images.length > 0 && (
+        <button
+          key={type}
+          type="button"
+          className={joinClasses("analytics-evidence-button", type === "defect" && "analytics-evidence-button--defect")}
+          title={`${label} (${images.length})`}
+          aria-label={`${lotNumber}: ${label} (${images.length})`}
+          onClick={() => onPreview({ url: images[0], title: `${lotNumber} • ${label}`, type })}
+        >
+          <span className="material-symbols-outlined text-base" aria-hidden="true">{icon}</span>
+          {showLabels && <span>{showLabels === "compact" ? (type === "label" ? (isJa ? "ラベル" : "Label") : "QC") : label}</span>}
+          <span className="tabular-nums">{images.length}</span>
+        </button>
+      ))}
+      {!scannedQR && labelImages.length === 0 && defectImages.length === 0 && (
+        <span className="text-xs text-[var(--text-muted)]">{showLabels ? (isJa ? "写真なし" : "No photos") : "—"}</span>
+      )}
+    </div>
+  );
+}
+
+function MaterialLotCard({ lot, isExpanded, onToggle, onPreview, isJa }) {
+  const material = lot.materialSeiban && lot.materialSeiban !== "—" ? lot.materialSeiban : null;
+  const products = [...new Set((lot.products || []).map((product) => product.seiban || product.hinban).filter(Boolean))];
+  const detailId = `lot-card-${encodeURIComponent(lot.key || lot.lotNumber)}`;
+
+  return (
+    <article className={joinClasses("analytics-lot-card", isExpanded && "analytics-lot-card--expanded")}>
+      <div className="p-4 sm:p-6">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <div className="mb-2 flex flex-wrap items-center gap-2">
+              <TraceBadge icon="category">{material || (isJa ? "材料未登録" : "Material unavailable")}</TraceBadge>
+              <span className="text-xs text-[var(--text-muted)]">{isJa ? "材料ロット" : "Material lot"}</span>
+            </div>
+            <h3 className="break-words font-mono text-base font-semibold text-[var(--text-primary)]">{lot.lotNumber}</h3>
+            <p className="mt-1 break-words text-sm text-[var(--text-secondary)]">{lot.materialName || "—"}</p>
+          </div>
+          {(lot.defectImages || []).length > 0 && (
+            <span className="analytics-qc-marker" title={isJa ? "不良写真あり" : "QC evidence available"}>
+              <span className="material-symbols-outlined text-base" aria-hidden="true">report_problem</span>
+              QC
+            </span>
+          )}
+        </div>
+
+        <dl className="analytics-card-metrics mt-4 grid grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)_minmax(0,1fr)] gap-3 rounded-[6px] border border-[var(--border-strong)] bg-[var(--surface-subtle)] p-3">
+          <div>
+            <dt>{isJa ? "使用量" : "Used"}</dt>
+            <dd className="text-xl font-bold text-emerald-700 dark:text-emerald-300">{fmtMeters(lot.totalMeters)} <span className="text-sm font-medium">m</span></dd>
+          </div>
+          <div className="text-right">
+            <dt>{isJa ? "生産数" : "Pieces"}</dt>
+            <dd className="text-base font-semibold">{formatNumber(lot.totalPieces)}</dd>
+          </div>
+          <div className="text-right">
+            <dt>{isJa ? "実績" : "Runs"}</dt>
+            <dd className="text-base font-semibold">{formatNumber(lot.runsCount)}</dd>
+          </div>
+        </dl>
+
+        <dl className="analytics-card-details mt-4 space-y-3 text-sm">
+          <div><dt>{isJa ? "設備" : "Machines"}</dt><dd className="font-mono">{(lot.machines || []).join(", ") || "—"}</dd></div>
+          <div><dt>{isJa ? "製品 / 背番号" : "Product / Seiban"}</dt><dd className="flex flex-wrap gap-1">{products.length ? products.map((product) => <TraceBadge key={product}>{product}</TraceBadge>) : "—"}</dd></div>
+          <div><dt>{isJa ? "最終使用" : "Last used"}</dt><dd className="tabular-nums">{formatShortDate(lot.latestDate, lot.runs[0]?.timeStart, isJa)}</dd></div>
+        </dl>
+      </div>
+
+      <div className="mt-auto border-t border-[var(--border)] px-4 py-3 sm:px-6">
+        <span className="mb-2 block text-xs font-medium text-[var(--text-secondary)]">{isJa ? "証拠" : "Evidence"}</span>
+        <EvidencePills labelImages={lot.labelImages} defectImages={lot.defectImages} lotNumber={lot.lotNumber} isJa={isJa} onPreview={onPreview} showLabels />
+      </div>
+      <button
+        type="button"
+        onClick={onToggle}
+        aria-expanded={isExpanded}
+        aria-controls={detailId}
+        aria-label={`${isJa ? "使用履歴" : "Usage history"}: ${lot.lotNumber}`}
+        className="flex min-h-12 w-full items-center justify-between gap-2 border-t border-[var(--border-strong)] bg-[var(--surface-subtle)] px-4 py-3 text-sm font-semibold text-[var(--freya-blue)] transition-colors hover:bg-[var(--surface-hover)] sm:px-6"
+      >
+        <span>{isExpanded ? (isJa ? "使用履歴を閉じる" : "Hide usage history") : (isJa ? "使用履歴を表示" : "View usage history")}</span>
+        <span className={joinClasses("material-symbols-outlined text-xl transition-transform", isExpanded && "rotate-180")} aria-hidden="true">expand_more</span>
+      </button>
+
+      {isExpanded && (
+        <div id={detailId} className="space-y-3 border-t border-[var(--border-strong)] bg-[var(--page-bg)] p-4 sm:p-6">
+          <h4 className="text-sm font-semibold">{isJa ? "使用履歴" : "Usage history"} <span className="font-normal text-[var(--text-muted)]">({lot.runs.length})</span></h4>
+          {lot.runs.map((run, index) => {
+            const labelImage = run.labelImage || (run.materialLabelImages || [])[0];
+            return (
+              <div key={index} className="rounded-[6px] border border-[var(--border-strong)] bg-[var(--surface)] p-3">
+                <div className="flex flex-wrap items-baseline justify-between gap-2 text-sm">
+                  <span className="font-medium tabular-nums">{formatShortDate(run.date, run.timeStart, isJa)}</span>
+                  <span className="font-semibold tabular-nums text-emerald-700 dark:text-emerald-300">{fmtMeters(run.meters)} m</span>
+                </div>
+                <dl className="analytics-card-details mt-3 space-y-2 text-sm">
+                  <div><dt>{isJa ? "設備" : "Machine"}</dt><dd className="font-mono">{run.machine || "—"}</dd></div>
+                  <div><dt>{isJa ? "製品 / 背番号" : "Product / Seiban"}</dt><dd className="font-mono">{run.hinban || "—"} / {run.seiban || "—"}</dd></div>
+                  <div><dt>{isJa ? "生産数" : "Pieces"}</dt><dd className="tabular-nums">{formatNumber(run.pieces)}</dd></div>
+                  <div><dt>{isJa ? "作業者" : "Worker"}</dt><dd>{run.worker || "—"}</dd></div>
+                </dl>
+                <div className="mt-3 border-t border-[var(--border)] pt-3">
+                  <span className="mb-2 block text-xs font-medium text-[var(--text-secondary)]">{isJa ? "トレース" : "Trace"}</span>
+                  <EvidencePills labelImages={labelImage ? [labelImage] : []} defectImages={run.defectImages} scannedQR={run.scannedQR} lotNumber={run.lotNumber || lot.lotNumber} isJa={isJa} onPreview={onPreview} showLabels />
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </article>
   );
 }
 
@@ -154,7 +280,7 @@ export default function AnalyticsPage() {
   const [moduleTab, setModuleTab] = useState("materialLots");
 
   // ── Inner View Mode: 'table' (DEFAULT per spec) vs 'cards' ────────────────
-  const [viewMode, setViewMode] = useState("table");
+  const [viewMode, setViewMode] = useState(() => typeof window !== "undefined" && window.matchMedia("(max-width: 767px)").matches ? "cards" : "table");
 
   // ── Loading & Data State ──────────────────────────────────────────────────
   const [loading, setLoading] = useState(true);
@@ -411,7 +537,7 @@ export default function AnalyticsPage() {
   };
 
   return (
-    <section className="w-full h-screen overflow-y-auto space-y-4 pt-20 px-4 sm:px-6 md:px-8 pb-16">
+    <section className="material-analytics w-full h-screen overflow-y-auto space-y-6 bg-[var(--page-bg)] text-[var(--text-primary)] pt-20 px-4 sm:px-6 md:px-8 pb-16">
       {/* ── Page Header ──────────────────────────────────────────────────────── */}
       <PageHeader
         eyebrow={isJa ? "トレーサビリティ台帳" : "Traceability Ledger"}
@@ -519,7 +645,7 @@ export default function AnalyticsPage() {
 
       {/* ── Material Usage Ledger Content ─────────────────────────────────────── */}
       {moduleTab === "materialLots" && (
-        <div className="space-y-3.5">
+        <div className="space-y-6">
           {/* ── 1. Material Ledger Summary ───────────────────────────────────── */}
           <div className="freya-card overflow-hidden rounded-[8px] border border-[var(--border)] bg-[var(--surface)] shadow-sm">
             <div className="border-b border-[var(--border)] bg-[var(--surface-subtle)] px-4 py-3">
@@ -529,15 +655,15 @@ export default function AnalyticsPage() {
                     <span className="inline-flex h-7 w-7 items-center justify-center rounded-[6px] border border-[var(--freya-blue)]/25 bg-[var(--freya-blue)]/10 text-[var(--freya-blue)]">
                       <span className="material-symbols-outlined text-[16px]">inventory_2</span>
                     </span>
-                    <h2 className="text-sm font-black uppercase tracking-[0.08em] text-[var(--text-primary)]">
+                    <h2 className="text-lg font-semibold text-[var(--text-primary)]">
                       {isJa ? "材料使用サマリー" : "Material Usage Summary"}
                     </h2>
-                    <span className="rounded-[5px] border border-[var(--border)] bg-[var(--surface)] px-2 py-1 text-[11px] font-bold text-[var(--text-muted)]">
+                    <span className="rounded-[4px] border border-[var(--border)] bg-[var(--surface)] px-2 py-1 text-xs font-bold text-[var(--text-muted)]">
                       <span className="font-mono">{dateRange.from}</span> <span aria-hidden="true">~</span>{" "}
                       <span className="font-mono">{dateRange.to}</span>
                     </span>
                   </div>
-                  <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px] text-[var(--text-muted)]">
+                  <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-[var(--text-muted)]">
                     <TraceBadge icon="category">
                       {isJa ? "材料" : "Material"}:{" "}
                       <span className="font-mono text-[var(--text-primary)]">
@@ -552,14 +678,14 @@ export default function AnalyticsPage() {
                     </TraceBadge>
                   </div>
                 </div>
-                <div className="flex items-center gap-2 text-[11px] font-semibold text-[var(--text-muted)]">
+                <div className="flex items-center gap-2 text-xs font-semibold text-[var(--text-muted)]">
                   <span className="material-symbols-outlined text-[15px]">database</span>
-                  <span>{isJa ? "Lot_Details 集計" : "Aggregated from Lot_Details"}</span>
+                  <span>{isJa ? "選択期間の使用実績" : "Usage in the selected period"}</span>
                 </div>
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-3 p-3 sm:grid-cols-3 lg:grid-cols-7">
+            <div className="grid grid-cols-2 gap-4 p-4 sm:grid-cols-3 xl:grid-cols-7">
               <MetricTile
                 label={isJa ? "総使用量" : "Total Used"}
                 value={fmtMeters(filteredSummary.meters)}
@@ -588,7 +714,6 @@ export default function AnalyticsPage() {
                 label={isJa ? "ショット" : "Shots"}
                 value={formatNumber(filteredSummary.shots)}
                 icon="bolt"
-                tone="amber"
               />
               <MetricTile
                 label={isJa ? "不良写真" : "QC Evidence"}
@@ -600,17 +725,18 @@ export default function AnalyticsPage() {
           </div>
 
           {/* ── 2. Compact Filter Bar (No Expand All per Section 8) ───────────── */}
-          <div className="freya-card rounded-[8px] border border-[var(--border)] bg-[var(--surface)] p-2.5 shadow-sm">
+          <div className="analytics-filters freya-card rounded-[8px] border border-[var(--border)] bg-[var(--surface)] p-4 shadow-sm">
             <div className="flex flex-wrap items-end justify-between gap-2.5">
               {/* Left Filters */}
               <div className="flex flex-wrap items-end gap-2 flex-1">
                 {/* Date Preset Dropdown */}
                 <div>
-                  <label className="mb-0.5 block text-[10px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">
+                  <label htmlFor="analytics-date" className="mb-2 block text-[13px] font-medium uppercase tracking-[0.04em] text-[var(--text-muted)]">
                     {t("date")}
                   </label>
                   <div className="relative">
                     <select
+                      id="analytics-date"
                       value={rangePreset}
                       onChange={(e) => setRangePreset(e.target.value)}
                       className="h-8 min-w-[120px] appearance-none rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] pl-2.5 pr-7 text-xs font-semibold text-[var(--text-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--freya-blue)] cursor-pointer"
@@ -634,25 +760,27 @@ export default function AnalyticsPage() {
                 {rangePreset === "custom" && (
                   <>
                     <div>
-                      <label className="mb-0.5 block text-[10px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">
+                      <label htmlFor="analytics-from" className="mb-2 block text-[13px] font-medium uppercase tracking-[0.04em] text-[var(--text-muted)]">
                         {isJa ? "開始日" : "From"}
                       </label>
                       <input
                         type="date"
+                        id="analytics-from"
                         value={customFrom}
                         onChange={(e) => setCustomFrom(e.target.value)}
-                        className="h-8 rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] px-2 text-xs text-[var(--text-primary)] font-mono focus:outline-none focus:ring-1 focus:ring-[var(--freya-blue)]"
+                        className="h-10 rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] px-2 text-xs text-[var(--text-primary)] font-mono focus:outline-none focus:ring-1 focus:ring-[var(--freya-blue)]"
                       />
                     </div>
                     <div>
-                      <label className="mb-0.5 block text-[10px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">
+                      <label htmlFor="analytics-to" className="mb-2 block text-[13px] font-medium uppercase tracking-[0.04em] text-[var(--text-muted)]">
                         {isJa ? "終了日" : "To"}
                       </label>
                       <input
                         type="date"
+                        id="analytics-to"
                         value={customTo}
                         onChange={(e) => setCustomTo(e.target.value)}
-                        className="h-8 rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] px-2 text-xs text-[var(--text-primary)] font-mono focus:outline-none focus:ring-1 focus:ring-[var(--freya-blue)]"
+                        className="h-10 rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] px-2 text-xs text-[var(--text-primary)] font-mono focus:outline-none focus:ring-1 focus:ring-[var(--freya-blue)]"
                       />
                     </div>
                   </>
@@ -660,14 +788,15 @@ export default function AnalyticsPage() {
 
                 {/* Material Code Filter */}
                 <div className="min-w-[130px]">
-                  <label className="mb-0.5 block text-[10px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">
+                  <label htmlFor="analytics-material" className="mb-2 block text-[13px] font-medium uppercase tracking-[0.04em] text-[var(--text-muted)]">
                     {isJa ? "材料背番号" : "Material"}
                   </label>
                   <div className="relative">
                     <select
+                      id="analytics-material"
                       value={materialSeiban}
                       onChange={(e) => setMaterialSeiban(e.target.value)}
-                      className="h-8 w-full appearance-none rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] pl-2.5 pr-7 text-xs font-semibold text-[var(--text-primary)] font-mono focus:outline-none focus:ring-1 focus:ring-[var(--freya-blue)] cursor-pointer"
+                      className="h-10 w-full appearance-none rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] pl-2.5 pr-7 text-xs font-semibold text-[var(--text-primary)] font-mono focus:outline-none focus:ring-1 focus:ring-[var(--freya-blue)] cursor-pointer"
                     >
                       <option value="">{isJa ? "すべての材料" : "All Materials"}</option>
                       {(data.filterOptions.materialSeibans || []).map((ms) => (
@@ -682,14 +811,15 @@ export default function AnalyticsPage() {
 
                 {/* Machine Filter */}
                 <div className="min-w-[110px]">
-                  <label className="mb-0.5 block text-[10px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">
+                  <label htmlFor="analytics-machine" className="mb-2 block text-[13px] font-medium uppercase tracking-[0.04em] text-[var(--text-muted)]">
                     {isJa ? "設備" : "Machine"}
                   </label>
                   <div className="relative">
                     <select
+                      id="analytics-machine"
                       value={machine}
                       onChange={(e) => setMachine(e.target.value)}
-                      className="h-8 w-full appearance-none rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] pl-2.5 pr-7 text-xs font-semibold text-[var(--text-primary)] font-mono focus:outline-none focus:ring-1 focus:ring-[var(--freya-blue)] cursor-pointer"
+                      className="h-10 w-full appearance-none rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] pl-2.5 pr-7 text-xs font-semibold text-[var(--text-primary)] font-mono focus:outline-none focus:ring-1 focus:ring-[var(--freya-blue)] cursor-pointer"
                     >
                       <option value="">{isJa ? "すべての設備" : "All Machines"}</option>
                       {(data.filterOptions.machines || []).map((m) => (
@@ -704,14 +834,15 @@ export default function AnalyticsPage() {
 
                 {/* Factory Filter */}
                 <div className="min-w-[100px]">
-                  <label className="mb-0.5 block text-[10px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">
+                  <label htmlFor="analytics-factory" className="mb-2 block text-[13px] font-medium uppercase tracking-[0.04em] text-[var(--text-muted)]">
                     {t("factory")}
                   </label>
                   <div className="relative">
                     <select
+                      id="analytics-factory"
                       value={factory}
                       onChange={(e) => setFactory(e.target.value)}
-                      className="h-8 w-full appearance-none rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] pl-2.5 pr-7 text-xs font-semibold text-[var(--text-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--freya-blue)] cursor-pointer"
+                      className="h-10 w-full appearance-none rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] pl-2.5 pr-7 text-xs font-semibold text-[var(--text-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--freya-blue)] cursor-pointer"
                     >
                       <option value="">{t("all")}</option>
                       {(data.filterOptions.factories || []).map((f) => (
@@ -726,7 +857,7 @@ export default function AnalyticsPage() {
 
                 {/* Search Box */}
                 <div className="min-w-[190px] flex-1">
-                  <label className="mb-0.5 block text-[10px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">
+                  <label htmlFor="analytics-search" className="mb-2 block text-[13px] font-medium uppercase tracking-[0.04em] text-[var(--text-muted)]">
                     {isJa ? "検索" : "Search"}
                   </label>
                   <div className="relative">
@@ -735,16 +866,18 @@ export default function AnalyticsPage() {
                     </span>
                     <input
                       type="text"
+                      id="analytics-search"
                       value={search}
                       onChange={(e) => setSearch(e.target.value)}
                       onKeyDown={(e) => e.key === "Enter" && handleSearchSubmit(e)}
                       placeholder={isJa ? "ロット番号・品番・QRコード..." : "Lot #, Code, Hinban, QR..."}
-                      className="h-8 w-full rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] pl-7 pr-7 text-xs text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:outline-none focus:ring-1 focus:ring-[var(--freya-blue)]"
+                      className="h-10 w-full rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] pl-7 pr-7 text-xs text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:outline-none focus:ring-1 focus:ring-[var(--freya-blue)]"
                     />
                     {search && (
                       <button
                         type="button"
                         onClick={() => setSearch("")}
+                        aria-label={isJa ? "検索をクリア" : "Clear search"}
                         className="absolute right-2 top-1/2 -translate-y-1/2 text-[var(--text-muted)] hover:text-[var(--text-primary)]"
                       >
                         <span className="material-symbols-outlined text-[13px]">close</span>
@@ -757,7 +890,7 @@ export default function AnalyticsPage() {
                 <button
                   type="button"
                   onClick={handleResetFilters}
-                  className="h-8 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-2.5 text-xs font-semibold text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-hover)] transition-colors shadow-2xs inline-flex items-center gap-1"
+                  className="h-10 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-2.5 text-xs font-semibold text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-hover)] transition-colors shadow-2xs inline-flex items-center gap-1"
                   title={isJa ? "リセット" : "Reset"}
                 >
                   <span className="material-symbols-outlined text-[14px]">restart_alt</span>
@@ -771,9 +904,10 @@ export default function AnalyticsPage() {
                   <button
                     type="button"
                     onClick={() => setViewMode("table")}
-                    className={`inline-flex items-center gap-1 rounded-[4px] px-2.5 py-1 text-xs font-semibold transition ${
+                    aria-pressed={viewMode === "table"}
+                    className={`inline-flex min-h-10 items-center gap-2 rounded-[4px] px-3 py-2 text-sm font-semibold transition ${
                       viewMode === "table"
-                        ? "bg-[var(--surface)] text-[var(--text-primary)] shadow-xs"
+                        ? "bg-[var(--freya-blue-subtle)] text-[var(--freya-blue)] shadow-sm"
                         : "text-[var(--text-muted)] hover:text-[var(--text-primary)]"
                     }`}
                   >
@@ -783,9 +917,10 @@ export default function AnalyticsPage() {
                   <button
                     type="button"
                     onClick={() => setViewMode("cards")}
-                    className={`inline-flex items-center gap-1 rounded-[4px] px-2.5 py-1 text-xs font-semibold transition ${
+                    aria-pressed={viewMode === "cards"}
+                    className={`inline-flex min-h-10 items-center gap-2 rounded-[4px] px-3 py-2 text-sm font-semibold transition ${
                       viewMode === "cards"
-                        ? "bg-[var(--surface)] text-[var(--text-primary)] shadow-xs"
+                        ? "bg-[var(--freya-blue-subtle)] text-[var(--freya-blue)] shadow-sm"
                         : "text-[var(--text-muted)] hover:text-[var(--text-primary)]"
                     }`}
                   >
@@ -825,22 +960,22 @@ export default function AnalyticsPage() {
                ========================================================================= */
             <div className="freya-card overflow-hidden rounded-[8px] border border-[var(--border)] bg-[var(--surface)] shadow-sm">
               <div className="overflow-x-auto">
-                <table className="w-full table-fixed border-collapse text-left text-xs min-w-[1080px]">
+                <table className="analytics-ledger w-full table-fixed border-collapse text-left text-sm min-w-[1440px]">
                   {/* Strict Column Widths (Section 3) */}
                   <colgroup>
                     <col style={{ width: "8%" }} />   {/* Material */}
                     <col style={{ width: "12%" }} />  {/* Lot */}
                     <col style={{ width: "10%" }} />  {/* Used (right-aligned, bold) */}
-                    <col style={{ width: "27%" }} />  {/* Product / Seiban */}
+                    <col style={{ width: "26%" }} />  {/* Product / Seiban */}
                     <col style={{ width: "6%" }} />   {/* Runs (right-aligned) */}
                     <col style={{ width: "11%" }} />  {/* Machines */}
                     <col style={{ width: "8%" }} />   {/* Pieces (right-aligned) */}
                     <col style={{ width: "10%" }} />  {/* Last Used */}
-                    <col style={{ width: "8%" }} />   {/* Evidence */}
+                    <col style={{ width: "9%" }} />   {/* Evidence */}
                   </colgroup>
 
                   {/* Table Header */}
-                  <thead className="sticky top-0 z-10 select-none border-b border-[var(--border)] bg-[var(--surface-subtle)] text-[10px] font-black uppercase tracking-[0.12em] text-[var(--text-muted)]">
+                  <thead className="sticky top-0 z-10 select-none border-b border-[var(--border)] bg-[var(--surface-subtle)] text-xs font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">
                     <tr>
                       {/* Material */}
                       <th
@@ -939,13 +1074,13 @@ export default function AnalyticsPage() {
                       </th>
 
                       {/* EVIDENCE */}
-                      <th className="px-3 py-2.5 text-center">{isJa ? "証拠" : "EVIDENCE"}</th>
+                      <th className="px-3 py-2.5 text-left">{isJa ? "証拠" : "EVIDENCE"}</th>
                     </tr>
                   </thead>
 
                   {/* Table Body */}
                   <tbody className="divide-y divide-[var(--border)]">
-                    {filteredLots.map((lot) => {
+                    {filteredLots.map((lot, lotIdx) => {
                       const lotKey = lot.key || lot.lotNumber;
                       const isExpanded = expandedLots.has(lotKey);
                       const matSeiban = lot.materialSeiban && lot.materialSeiban !== "—" ? lot.materialSeiban : null;
@@ -973,8 +1108,9 @@ export default function AnalyticsPage() {
                             onClick={() => toggleLotExpand(lotKey)}
                             className={joinClasses(
                               "group cursor-pointer select-none transition-colors",
+                              !isExpanded && lotIdx % 2 === 1 ? "bg-[var(--page-bg)]" : "",
                               isExpanded
-                                ? "bg-[var(--freya-blue)]/5 shadow-[inset_3px_0_0_var(--freya-blue)]"
+                                ? "bg-[var(--freya-blue-subtle)] shadow-[inset_3px_0_0_var(--freya-blue)]"
                                 : defectImgs.length > 0
                                   ? "shadow-[inset_3px_0_0_rgba(244,63,94,0.55)] hover:bg-rose-500/5"
                                   : "hover:bg-[var(--surface-hover)]"
@@ -991,25 +1127,31 @@ export default function AnalyticsPage() {
                                 >
                                   chevron_right
                                 </span>
-                                <span className="truncate font-black">
+                                <button
+                                  type="button"
+                                  className="truncate text-left font-semibold"
+                                  aria-expanded={isExpanded}
+                                  aria-label={`${isJa ? "ロット詳細" : "Lot details"}: ${lot.lotNumber}`}
+                                  onClick={(event) => { event.stopPropagation(); toggleLotExpand(lotKey); }}
+                                >
                                   {matSeiban || <span className="font-normal text-[var(--text-muted)]">—</span>}
-                                </span>
+                                </button>
                               </div>
                             </td>
 
                             {/* 2. Lot Number (+ future physical ID support) */}
                             <td className="px-3 py-3 font-mono text-xs text-[var(--text-primary)]">
                               <div className="flex min-w-0 flex-col gap-0.5">
-                                <span className="truncate font-black text-[var(--text-primary)]">{lot.lotNumber}</span>
+                                <span className="truncate font-semibold text-[var(--text-primary)]">{lot.lotNumber}</span>
                                 {lot.materialName ? (
-                                  <span className="truncate text-[10px] font-medium text-[var(--text-muted)]">{lot.materialName}</span>
+                                  <span className="truncate text-xs font-medium text-[var(--text-muted)]">{lot.materialName}</span>
                                 ) : null}
                               </div>
                             </td>
 
                             {/* 3. Used (Meters): Primary Metric Emphasis, Right-Aligned, 1 Decimal */}
-                            <td className="px-3 py-3 text-right font-mono text-[13px] font-black text-emerald-700 dark:text-emerald-300 whitespace-nowrap">
-                              {fmtMeters(lot.totalMeters)} <span className="text-[11px] font-semibold text-[var(--text-muted)]">m</span>
+                            <td className="px-3 py-3 text-right font-mono text-[13px] font-semibold text-emerald-700 dark:text-emerald-300 whitespace-nowrap">
+                              {fmtMeters(lot.totalMeters)} <span className="text-xs font-semibold text-[var(--text-muted)]">m</span>
                             </td>
 
                             {/* 4. Product / Seiban (Section 6: Clean C74 · C76 format with tooltip) */}
@@ -1019,13 +1161,13 @@ export default function AnalyticsPage() {
                                   {visibleSeibans.map((seiban) => (
                                     <span
                                       key={seiban}
-                                      className="rounded-[5px] border border-[var(--border)] bg-[var(--surface)] px-1.5 py-0.5 font-bold text-[var(--text-primary)]"
+                                      className="rounded-[4px] border border-[var(--border)] bg-[var(--surface)] px-1.5 py-0.5 font-bold text-[var(--text-primary)]"
                                     >
                                       {seiban}
                                     </span>
                                   ))}
                                   {extraCount > 0 && (
-                                    <span className="rounded-[5px] border border-[var(--border)] bg-[var(--surface-subtle)] px-1.5 py-0.5 text-[10px] font-bold text-[var(--text-muted)]">
+                                    <span className="rounded-[4px] border border-[var(--border)] bg-[var(--surface-subtle)] px-1.5 py-0.5 text-xs font-bold text-[var(--text-muted)]">
                                       +{extraCount}
                                     </span>
                                   )}
@@ -1056,60 +1198,20 @@ export default function AnalyticsPage() {
                             </td>
 
                             {/* 9. Evidence Action Pills (Section 12: Compact indicators) */}
-                            <td className="px-3 py-3 text-center">
-                              <div className="flex items-center justify-center gap-1.5" onClick={(e) => e.stopPropagation()}>
-                                {labelImgs.length > 0 && (
-                                  <button
-                                    type="button"
-                                    onClick={() =>
-                                      setSelectedImageModal({
-                                        url: labelImgs[0],
-                                        title: `${lot.lotNumber} • ${isJa ? "材料ラベル" : "Label Photo"}`,
-                                        type: "label",
-                                      })
-                                    }
-                                    className="inline-flex h-7 items-center gap-1 rounded-[5px] bg-[var(--surface)] border border-[var(--border)] px-2 text-[11px] font-mono font-bold text-[var(--text-secondary)] hover:border-[var(--freya-blue)] hover:text-[var(--freya-blue)] transition"
-                                    title={isJa ? "材料ラベル写真" : "Label photo"}
-                                  >
-                                    <span className="material-symbols-outlined text-[14px]">photo_camera</span>
-                                    <span>{labelImgs.length}</span>
-                                  </button>
-                                )}
-
-                                {defectImgs.length > 0 && (
-                                  <button
-                                    type="button"
-                                    onClick={() =>
-                                      setSelectedImageModal({
-                                        url: defectImgs[0],
-                                        title: `${lot.lotNumber} • ${isJa ? "不良証拠写真" : "Defect Photo"}`,
-                                        type: "defect",
-                                      })
-                                    }
-                                    className="inline-flex h-7 items-center gap-1 rounded-[5px] bg-rose-500/10 border border-rose-500/30 px-2 text-[11px] font-mono font-bold text-rose-700 dark:text-rose-300 hover:bg-rose-500/20 transition"
-                                    title={isJa ? "不良証拠写真" : "QC Defect photo"}
-                                  >
-                                    <span className="material-symbols-outlined text-[14px]">report_problem</span>
-                                    <span>{defectImgs.length}</span>
-                                  </button>
-                                )}
-
-                                {labelImgs.length === 0 && defectImgs.length === 0 && (
-                                  <span className="text-[var(--text-muted)]/30 text-[10px]">—</span>
-                                )}
-                              </div>
+                            <td className="px-3 py-3 text-left">
+                              <EvidencePills labelImages={labelImgs} defectImages={defectImgs} lotNumber={lot.lotNumber} isJa={isJa} onPreview={setSelectedImageModal} />
                             </td>
                           </tr>
 
                           {/* ── Sub-Row: Lot_Details Usage History ───────────── */}
                           {isExpanded && (
-                            <tr className="bg-[var(--surface-subtle)]/80">
+                            <tr className="bg-[var(--surface-subtle)]">
                               <td colSpan={9} className="border-t border-[var(--border)] p-0">
                                 <div className="space-y-3 px-4 py-4">
                                   <div className="flex flex-col gap-3 border-b border-[var(--border)] pb-3 lg:flex-row lg:items-start lg:justify-between">
                                     <div className="min-w-0">
                                       <div className="flex flex-wrap items-center gap-2">
-                                        <span className="font-mono text-sm font-black text-[var(--text-primary)]">
+                                        <span className="font-mono text-sm font-semibold text-[var(--text-primary)]">
                                           {lot.lotNumber}
                                         </span>
                                         <TraceBadge icon="category" tone="blue">
@@ -1135,27 +1237,27 @@ export default function AnalyticsPage() {
                                     </div>
                                     <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
                                       <div className="rounded-[6px] border border-emerald-500/25 bg-emerald-500/10 px-3 py-2 text-right font-mono text-emerald-700 dark:text-emerald-300">
-                                        <div className="text-[10px] font-black uppercase tracking-[0.1em] opacity-70">{isJa ? "使用量" : "Used"}</div>
-                                        <div className="text-sm font-black">{fmtMeters(lot.totalMeters)} m</div>
+                                        <div className="text-xs font-semibold uppercase tracking-[0.1em] opacity-70">{isJa ? "使用量" : "Used"}</div>
+                                        <div className="text-sm font-semibold">{fmtMeters(lot.totalMeters)} m</div>
                                       </div>
                                       <div className="rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-right font-mono">
-                                        <div className="text-[10px] font-black uppercase tracking-[0.1em] text-[var(--text-muted)]">{isJa ? "生産数" : "Pieces"}</div>
-                                        <div className="text-sm font-black text-[var(--text-primary)]">{formatNumber(lot.totalPieces)}</div>
+                                        <div className="text-xs font-semibold uppercase tracking-[0.1em] text-[var(--text-muted)]">{isJa ? "生産数" : "Pieces"}</div>
+                                        <div className="text-sm font-semibold text-[var(--text-primary)]">{formatNumber(lot.totalPieces)}</div>
                                       </div>
                                       <div className="rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-right font-mono">
-                                        <div className="text-[10px] font-black uppercase tracking-[0.1em] text-[var(--text-muted)]">{isJa ? "ショット" : "Shots"}</div>
-                                        <div className="text-sm font-black text-[var(--text-primary)]">{formatNumber(lot.totalShots)}</div>
+                                        <div className="text-xs font-semibold uppercase tracking-[0.1em] text-[var(--text-muted)]">{isJa ? "ショット" : "Shots"}</div>
+                                        <div className="text-sm font-semibold text-[var(--text-primary)]">{formatNumber(lot.totalShots)}</div>
                                       </div>
                                       <div className="rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-right font-mono">
-                                        <div className="text-[10px] font-black uppercase tracking-[0.1em] text-[var(--text-muted)]">{isJa ? "履歴" : "Runs"}</div>
-                                        <div className="text-sm font-black text-[var(--text-primary)]">{formatNumber(lot.runsCount)}</div>
+                                        <div className="text-xs font-semibold uppercase tracking-[0.1em] text-[var(--text-muted)]">{isJa ? "履歴" : "Runs"}</div>
+                                        <div className="text-sm font-semibold text-[var(--text-primary)]">{formatNumber(lot.runsCount)}</div>
                                       </div>
                                     </div>
                                   </div>
 
                                   <div className="overflow-x-auto rounded-[8px] border border-[var(--border)] bg-[var(--surface)] shadow-2xs">
-                                    <table className="w-full min-w-[1040px] border-collapse text-left text-xs">
-                                      <thead className="border-b border-[var(--border)] bg-[var(--surface-subtle)] text-[10px] font-black uppercase tracking-[0.12em] text-[var(--text-muted)]">
+                                    <table className="analytics-run-table w-full min-w-[1200px] border-collapse text-left text-sm">
+                                      <thead className="border-b border-[var(--border)] bg-[var(--surface-subtle)] text-xs font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">
                                         <tr>
                                           <th className="px-3 py-2">{isJa ? "加工日時" : "Date / Time"}</th>
                                           <th className="px-3 py-2">{isJa ? "設備" : "Machine"}</th>
@@ -1166,7 +1268,7 @@ export default function AnalyticsPage() {
                                           <th className="px-3 py-2 text-right">{isJa ? "生産数" : "Pieces"}</th>
                                           <th className="px-3 py-2">{isJa ? "送り / 取り数" : "Pitch / Cycle"}</th>
                                           <th className="px-3 py-2">{isJa ? "作業者" : "Worker"}</th>
-                                          <th className="px-3 py-2 text-center">{isJa ? "トレース" : "Trace"}</th>
+                                          <th className="px-3 py-2 text-left">{isJa ? "トレース" : "Trace"}</th>
                                         </tr>
                                       </thead>
                                       <tbody className="divide-y divide-[var(--border)] font-mono">
@@ -1179,16 +1281,16 @@ export default function AnalyticsPage() {
                                               <td className="whitespace-nowrap px-3 py-2.5 text-[var(--text-primary)]">
                                                 {formatShortDate(r.date, r.timeStart, isJa)}
                                               </td>
-                                              <td className="whitespace-nowrap px-3 py-2.5 font-black text-[var(--text-primary)]">
+                                              <td className="whitespace-nowrap px-3 py-2.5 font-semibold text-[var(--text-primary)]">
                                                 {r.machine || "—"}
                                               </td>
                                               <td className="whitespace-nowrap px-3 py-2.5 text-[var(--text-muted)]">
                                                 {r.hinban || "—"}
                                               </td>
-                                              <td className="whitespace-nowrap px-3 py-2.5 font-black text-[var(--text-primary)]">
+                                              <td className="whitespace-nowrap px-3 py-2.5 font-semibold text-[var(--text-primary)]">
                                                 {r.seiban || "—"}
                                               </td>
-                                              <td className="whitespace-nowrap px-3 py-2.5 text-right font-black text-emerald-700 dark:text-emerald-300">
+                                              <td className="whitespace-nowrap px-3 py-2.5 text-right font-semibold text-emerald-700 dark:text-emerald-300">
                                                 {fmtMeters(r.meters)} m
                                               </td>
                                               <td className="whitespace-nowrap px-3 py-2.5 text-right font-semibold text-[var(--text-secondary)]">
@@ -1203,47 +1305,8 @@ export default function AnalyticsPage() {
                                               <td className="whitespace-nowrap px-3 py-2.5 font-sans font-semibold text-[var(--text-secondary)]">
                                                 {r.worker || "—"}
                                               </td>
-                                              <td className="whitespace-nowrap px-3 py-2.5 text-center">
-                                                <div className="flex items-center justify-center gap-1 font-sans">
-                                                  {r.scannedQR ? (
-                                                    <TraceBadge icon="qr_code" title={r.scannedQR}>QR</TraceBadge>
-                                                  ) : null}
-                                                  {runLabelImage ? (
-                                                    <button
-                                                      type="button"
-                                                      onClick={() =>
-                                                        setSelectedImageModal({
-                                                          url: runLabelImage,
-                                                          title: `${r.lotNumber || lot.lotNumber} • ${isJa ? "材料ラベル" : "Label Photo"}`,
-                                                          type: "label",
-                                                        })
-                                                      }
-                                                      className="inline-flex h-6 items-center gap-1 rounded-[5px] border border-[var(--border)] bg-[var(--surface)] px-2 text-[11px] font-bold text-[var(--text-secondary)] transition hover:border-[var(--freya-blue)] hover:text-[var(--freya-blue)]"
-                                                    >
-                                                      <span className="material-symbols-outlined text-[13px]">photo_camera</span>
-                                                      <span>{isJa ? "ラベル" : "Label"}</span>
-                                                    </button>
-                                                  ) : null}
-                                                  {runDefectImages.length > 0 ? (
-                                                    <button
-                                                      type="button"
-                                                      onClick={() =>
-                                                        setSelectedImageModal({
-                                                          url: runDefectImages[0],
-                                                          title: `${r.lotNumber || lot.lotNumber} • ${isJa ? "不良証拠写真" : "Defect Photo"}`,
-                                                          type: "defect",
-                                                        })
-                                                      }
-                                                      className="inline-flex h-6 items-center gap-1 rounded-[5px] border border-rose-500/30 bg-rose-500/10 px-2 text-[11px] font-black text-rose-700 transition hover:bg-rose-500/20 dark:text-rose-300"
-                                                    >
-                                                      <span className="material-symbols-outlined text-[13px]">report_problem</span>
-                                                      <span>{runDefectImages.length}</span>
-                                                    </button>
-                                                  ) : null}
-                                                  {!r.scannedQR && !runLabelImage && runDefectImages.length === 0 ? (
-                                                    <span className="text-[var(--text-muted)]/30">—</span>
-                                                  ) : null}
-                                                </div>
+                                              <td className="whitespace-nowrap px-3 py-2.5 text-left">
+                                                <EvidencePills labelImages={runLabelImage ? [runLabelImage] : []} defectImages={runDefectImages} scannedQR={r.scannedQR} lotNumber={r.lotNumber || lot.lotNumber} isJa={isJa} onPreview={setSelectedImageModal} showLabels="compact" />
                                               </td>
                                             </tr>
                                           );
@@ -1251,10 +1314,10 @@ export default function AnalyticsPage() {
                                       </tbody>
                                       <tfoot className="border-t border-[var(--border)] bg-[var(--surface-subtle)] font-mono text-xs font-bold">
                                         <tr>
-                                          <td colSpan={4} className="px-3 py-2 text-right text-[10px] uppercase tracking-[0.12em] text-[var(--text-muted)]">
+                                          <td colSpan={4} className="px-3 py-2 text-right text-xs uppercase tracking-[0.04em] text-[var(--text-muted)]">
                                             {isJa ? "ロット合計" : "Lot Total"}
                                           </td>
-                                          <td className="px-3 py-2 text-right font-black text-emerald-700 dark:text-emerald-300">
+                                          <td className="px-3 py-2 text-right font-semibold text-emerald-700 dark:text-emerald-300">
                                             {fmtMeters(lot.totalMeters)} m
                                           </td>
                                           <td className="px-3 py-2 text-right text-[var(--text-secondary)]">
@@ -1281,19 +1344,19 @@ export default function AnalyticsPage() {
                   <tfoot className="border-t-2 border-[var(--border)] bg-[var(--surface-subtle)] font-mono text-xs font-bold text-[var(--text-primary)]">
                     <tr>
                       <td className="px-3 py-2.5">TOTAL</td>
-                      <td className="px-3 py-2.5 text-[var(--text-muted)] text-[11px] font-normal">
+                      <td className="px-3 py-2.5 text-[var(--text-muted)] text-xs font-normal">
                         {filteredSummary.lotsCount} lots
                       </td>
                       {/* Total Used Meters (Right-Aligned) */}
-                      <td className="px-3 py-2.5 text-right font-black text-emerald-700 dark:text-emerald-300">
-                        {fmtMeters(filteredSummary.meters)} <span className="text-[11px] font-semibold">m</span>
+                      <td className="px-3 py-2.5 text-right font-semibold text-emerald-700 dark:text-emerald-300">
+                        {fmtMeters(filteredSummary.meters)} <span className="text-xs font-semibold">m</span>
                       </td>
-                      <td className="px-3 py-2.5 text-[var(--text-muted)] text-[11px] font-normal">
+                      <td className="px-3 py-2.5 text-[var(--text-muted)] text-xs font-normal">
                         {filteredSummary.productsCount} {isJa ? "製品" : "products"}
                       </td>
                       {/* Runs (Right-Aligned) */}
                       <td className="px-3 py-2.5 text-right">{filteredSummary.runs}</td>
-                      <td className="px-3 py-2.5 text-[var(--text-muted)] text-[11px] font-normal truncate">
+                      <td className="px-3 py-2.5 text-[var(--text-muted)] text-xs font-normal truncate">
                         {filteredSummary.machinesCount} {isJa ? "台" : "machines"}
                       </td>
                       {/* Pieces (Right-Aligned) */}
@@ -1308,132 +1371,10 @@ export default function AnalyticsPage() {
             /* =========================================================================
                CARD VIEW (SECONDARY OPTION per Spec)
                ========================================================================= */
-            <div className="space-y-2.5">
+            <div className="analytics-card-grid">
               {filteredLots.map((lot) => {
                 const lotKey = lot.key || lot.lotNumber;
-                const isExpanded = expandedLots.has(lotKey);
-                const matSeiban = lot.materialSeiban && lot.materialSeiban !== "—" ? lot.materialSeiban : null;
-                const defectImgs = lot.defectImages || [];
-
-                return (
-                  <div
-                    key={lotKey}
-                    className="freya-card rounded-[8px] border border-[var(--border)] bg-[var(--surface)] shadow-sm overflow-hidden transition hover:border-[var(--border-strong)]"
-                  >
-                    {/* Card Header Bar */}
-                    <div
-                      onClick={() => toggleLotExpand(lotKey)}
-                      className="p-3 flex flex-wrap items-center justify-between gap-3 cursor-pointer select-none hover:bg-[var(--surface-subtle)]/40 transition"
-                    >
-                      {/* Left: Material & Lot */}
-                      <div className="flex items-center gap-2.5">
-                        <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-[6px] bg-[var(--surface-subtle)] border border-[var(--border)] font-mono font-bold text-xs text-[var(--text-primary)]">
-                          {matSeiban ? matSeiban.slice(0, 3) : "LOT"}
-                        </div>
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <span className="font-mono font-bold text-sm text-[var(--text-primary)]">
-                              {lot.lotNumber}
-                            </span>
-                            {matSeiban && (
-                              <span className="font-mono text-xs font-semibold text-[var(--text-secondary)]">
-                                ({matSeiban})
-                              </span>
-                            )}
-                          </div>
-                          <div className="text-[11px] text-[var(--text-muted)] font-mono">
-                            {lot.machines.join(", ") || "—"} • {lot.products.map((p) => p.seiban).filter(Boolean).join(", ") || "—"}
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Right: Metrics with Meters as Primary */}
-                      <div className="flex items-center gap-3.5">
-                        {/* Meters Used */}
-                        <div className="text-right">
-                          <div className="text-[10px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">
-                            {isJa ? "使用量" : "Used"}
-                          </div>
-                          <div className="text-base font-black font-mono text-emerald-700 dark:text-emerald-300">
-                            {fmtMeters(lot.totalMeters)} m
-                          </div>
-                        </div>
-
-                        {/* Pieces */}
-                        <div className="text-right">
-                          <div className="text-[10px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">
-                            {isJa ? "生産数" : "Pieces"}
-                          </div>
-                          <div className="text-xs font-bold font-mono text-[var(--text-primary)]">
-                            {formatNumber(lot.totalPieces)}
-                          </div>
-                        </div>
-
-                        {/* Runs */}
-                        <div className="text-right">
-                          <div className="text-[10px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">
-                            {isJa ? "実績" : "Runs"}
-                          </div>
-                          <div className="text-xs font-bold font-mono text-[var(--text-primary)]">
-                            {lot.runsCount}
-                          </div>
-                        </div>
-
-                        {/* Defect indicator */}
-                        {defectImgs.length > 0 && (
-                          <span className="inline-flex items-center gap-0.5 rounded-[4px] bg-rose-500/10 border border-rose-500/30 px-1.5 py-0.5 text-[10px] font-mono font-bold text-rose-700 dark:text-rose-300">
-                            <span className="material-symbols-outlined text-[12px]">report_problem</span>
-                            <span>{defectImgs.length}</span>
-                          </span>
-                        )}
-
-                        <span
-                          className="material-symbols-outlined text-[var(--text-muted)] transition-transform duration-200"
-                          style={{
-                            transform: isExpanded ? "rotate(180deg)" : "rotate(0deg)",
-                            fontSize: 18,
-                          }}
-                        >
-                          expand_more
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Card Expanded Content */}
-                    {isExpanded && (
-                      <div className="border-t border-[var(--border)] bg-[var(--surface-subtle)]/50 p-3.5 space-y-2.5">
-                        <div className="overflow-x-auto rounded-[6px] border border-[var(--border)] bg-[var(--surface)]">
-                          <table className="w-full text-left text-xs font-mono">
-                            <thead className="border-b border-[var(--border)] bg-[var(--surface-subtle)] text-[10px] font-bold text-[var(--text-muted)] uppercase">
-                              <tr>
-                                <th className="px-3 py-1.5">{isJa ? "日時" : "Date / Time"}</th>
-                                <th className="px-3 py-1.5">{isJa ? "設備" : "Machine"}</th>
-                                <th className="px-3 py-1.5">{isJa ? "品番" : "Product"}</th>
-                                <th className="px-3 py-1.5">{isJa ? "背番号" : "Seiban"}</th>
-                                <th className="px-3 py-1.5 text-right font-bold text-[var(--text-primary)]">{isJa ? "メーター" : "Meters"}</th>
-                                <th className="px-3 py-1.5 text-right">{isJa ? "生産数" : "Pieces"}</th>
-                                <th className="px-3 py-1.5 font-sans">{isJa ? "作業者" : "Worker"}</th>
-                              </tr>
-                            </thead>
-                            <tbody className="divide-y divide-[var(--border)]">
-                              {lot.runs.map((r, rIdx) => (
-                                <tr key={rIdx} className="hover:bg-[var(--surface-hover)]">
-                                  <td className="px-3 py-1.5 text-[var(--text-primary)]">{formatShortDate(r.date, r.timeStart, isJa)}</td>
-                                  <td className="px-3 py-1.5 font-bold text-[var(--text-primary)]">{r.machine}</td>
-                                  <td className="px-3 py-1.5 text-[var(--text-muted)]">{r.hinban || "—"}</td>
-                                  <td className="px-3 py-1.5 font-bold text-[var(--text-primary)]">{r.seiban || "—"}</td>
-                                  <td className="px-3 py-1.5 text-right font-black text-emerald-700 dark:text-emerald-300">{fmtMeters(r.meters)} m</td>
-                                  <td className="px-3 py-1.5 text-right">{formatNumber(r.pieces)}</td>
-                                  <td className="px-3 py-1.5 font-sans">{r.worker}</td>
-                                </tr>
-                              ))}
-                            </tbody>
-                          </table>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                );
+                return <MaterialLotCard key={lotKey} lot={lot} isExpanded={expandedLots.has(lotKey)} onToggle={() => toggleLotExpand(lotKey)} onPreview={setSelectedImageModal} isJa={isJa} />;
               })}
             </div>
           )}
@@ -1471,7 +1412,7 @@ export default function AnalyticsPage() {
                   href={selectedImageModal.url}
                   target="_blank"
                   rel="noreferrer"
-                  className="flex h-6 px-2 items-center justify-center gap-1 rounded-[4px] border border-[var(--border)] bg-[var(--surface)] text-[11px] font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-hover)] transition"
+                  className="flex h-6 px-2 items-center justify-center gap-1 rounded-[4px] border border-[var(--border)] bg-[var(--surface)] text-xs font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-hover)] transition"
                 >
                   <span className="material-symbols-outlined" style={{ fontSize: 13 }}>open_in_new</span>
                   <span>{isJa ? "原本" : "Original"}</span>
