@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useLanguage } from "../contexts/LanguageContext";
 import IconButton from "./IconButton";
 import freyaLogo from "../assets/freya-systems-logo.png";
@@ -92,7 +92,38 @@ function isActiveFor(item, activePage) {
 }
 
 export default function Sidebar({ activePage, badges = {}, mobileOpen = false, onClose, onLogout, onNavigate, onOpenSettings, className = "" }) {
-  const [openItems, setOpenItems] = useState(() => new Set());
+  // Initialize openItems with any item that has an active child
+  const [openItems, setOpenItems] = useState(() => {
+    const initial = new Set();
+    navItems.forEach((item) => {
+      if (hasActiveChild(item, activePage)) {
+        initial.add(item.page);
+      }
+    });
+    return initial;
+  });
+
+  // Track the previous active parent so when navigating between major sections,
+  // the newly active parent auto-expands while allowing the user to manually collapse/expand
+  const prevActiveParentRef = useRef(
+    navItems.find((item) => hasActiveChild(item, activePage))?.page
+  );
+
+  useEffect(() => {
+    const currentActiveParent = navItems.find((item) => hasActiveChild(item, activePage))?.page;
+    if (currentActiveParent && currentActiveParent !== prevActiveParentRef.current) {
+      prevActiveParentRef.current = currentActiveParent;
+      setOpenItems((prev) => {
+        if (!prev.has(currentActiveParent)) {
+          const next = new Set(prev);
+          next.add(currentActiveParent);
+          return next;
+        }
+        return prev;
+      });
+    }
+  }, [activePage]);
+
   const { t, language, changeLanguage } = useLanguage();
 
   useEffect(() => {
@@ -109,7 +140,11 @@ export default function Sidebar({ activePage, badges = {}, mobileOpen = false, o
   function toggleOpen(page) {
     setOpenItems((prev) => {
       const next = new Set(prev);
-      next.has(page) ? next.delete(page) : next.add(page);
+      if (next.has(page)) {
+        next.delete(page);
+      } else {
+        next.add(page);
+      }
       return next;
     });
   }
@@ -148,7 +183,7 @@ export default function Sidebar({ activePage, badges = {}, mobileOpen = false, o
           {navItems.map((item) => {
             const isActive = isActiveFor(item, activePage);
             const hasChildren = !!item.children?.length;
-            const isOpen = openItems.has(item.page) || hasActiveChild(item, activePage);
+            const isOpen = openItems.has(item.page);
             const activeChildPage = getActiveChildPage(item, activePage);
             const label = t(item.labelKey);
 
@@ -158,6 +193,9 @@ export default function Sidebar({ activePage, badges = {}, mobileOpen = false, o
                   <button
                     type="button"
                     onClick={() => {
+                      if (hasChildren && !openItems.has(item.page)) {
+                        setOpenItems((prev) => new Set(prev).add(item.page));
+                      }
                       onNavigate(item.page);
                       if (isMobile) onClose?.();
                     }}
@@ -197,7 +235,10 @@ export default function Sidebar({ activePage, badges = {}, mobileOpen = false, o
                   {hasChildren && (
                     <button
                       type="button"
-                      onClick={() => toggleOpen(item.page)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        toggleOpen(item.page);
+                      }}
                       aria-label={`${isOpen ? "Collapse" : "Expand"} ${label} submenu`}
                       title={`${isOpen ? "Collapse" : "Expand"} ${label}`}
                       className={`mr-1.5 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-[6px] transition-all duration-200 hover:bg-[var(--surface-hover)] ${

@@ -2,7 +2,7 @@ import { Fragment, useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import "./AnalyticsPage.css";
 import PageHeader from "../components/PageHeader";
-import LiquidSegmentedControl from "../components/LiquidSegmentedControl";
+import MasterTabNav from "../components/MasterTabNav";
 import RecordDetailModal from "../components/RecordDetailModal";
 import { useRecordModal } from "../hooks/useRecordModal";
 import { useLanguage } from "../contexts/LanguageContext";
@@ -925,39 +925,41 @@ export default function AnalyticsPage() {
         }
       />
 
-      {/* ── Top-Level Analytics Module Tabs ──────────────────────────────────── */}
-      <div className="border-b border-[var(--border)] pb-2">
-        <LiquidSegmentedControl
-          items={[
-            {
-              key: "material",
-              label: t("materialAnalytics"),
-              icon: "inventory_2",
-              badge: filteredLots.length > 0 ? filteredLots.length : undefined,
-            },
-            {
-              key: "production",
-              label: t("productionAnalytics"),
-              icon: "precision_manufacturing",
-              badge: t("comingSoon"),
-            },
-            {
-              key: "quality",
-              label: t("qualityAnalytics"),
-              icon: "fact_check",
-              badge: t("comingSoon"),
-            },
-            {
-              key: "machines",
-              label: t("machineAnalytics"),
-              icon: "speed",
-              badge: t("comingSoon"),
-            },
-          ]}
-          activeKey={activeTab}
-          onChange={handleTabChange}
-        />
-      </div>
+      {/* ── Top-Level Analytics Module Tabs (First Factory Folder Tab Style) ──── */}
+      <MasterTabNav
+        tabs={[
+          {
+            key: "material",
+            label: t("materialAnalytics"),
+            icon: "inventory_2",
+            badge: filteredLots.length > 0 ? filteredLots.length : undefined,
+            ready: true,
+          },
+          {
+            key: "production",
+            label: t("productionAnalytics"),
+            icon: "precision_manufacturing",
+            badge: t("comingSoon"),
+            ready: true,
+          },
+          {
+            key: "quality",
+            label: t("qualityAnalytics"),
+            icon: "fact_check",
+            badge: t("comingSoon"),
+            ready: true,
+          },
+          {
+            key: "machines",
+            label: t("machineAnalytics"),
+            icon: "speed",
+            badge: t("comingSoon"),
+            ready: true,
+          },
+        ]}
+        activeTab={activeTab}
+        onSelect={(tab) => handleTabChange(tab.key)}
+      />
 
       {/* ── Placeholder for Future Analytics Modules ──────────────────────────── */}
       {activeTab !== "material" && (
