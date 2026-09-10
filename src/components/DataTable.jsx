@@ -353,9 +353,10 @@ export default function DataTable({
 
   const orderedColumns = displayOrder.map((key) => columnMap.get(key)).filter(Boolean);
   const resolvedColumns = orderedColumns.map((column) => {
-    const minWidth = parseNumericSize(column.minWidth) ?? defaultMinColumnWidth;
+    const parsedWidth = parseNumericSize(column.width);
+    const minWidth = parseNumericSize(column.minWidth) ?? (parsedWidth != null && parsedWidth < defaultMinColumnWidth ? parsedWidth : defaultMinColumnWidth);
     const maxWidth = parseNumericSize(column.maxWidth) ?? defaultMaxColumnWidth;
-    const explicitWidth = columnWidths[column.key] ?? parseNumericSize(column.width) ?? defaultColumnWidth;
+    const explicitWidth = columnWidths[column.key] ?? parsedWidth ?? defaultColumnWidth;
     const width = typeof explicitWidth === "number"
       ? Math.max(minWidth, maxWidth != null ? Math.min(explicitWidth, maxWidth) : explicitWidth)
       : explicitWidth;
@@ -649,7 +650,12 @@ export default function DataTable({
                       <th
                         key={column.key}
                         className={resolvedHeaderCellClassName}
-                        style={stickyHeader ? { top: toSizeValue(stickyHeaderOffset), zIndex: 15 } : undefined}
+                        style={{
+                          ...(stickyHeader ? { top: toSizeValue(stickyHeaderOffset), zIndex: 15 } : {}),
+                          ...(column.resolvedWidth != null ? { width: toSizeValue(column.resolvedWidth) } : {}),
+                          ...(column.resolvedMinWidth != null ? { minWidth: toSizeValue(column.resolvedMinWidth) } : {}),
+                          ...(column.resolvedMaxWidth != null ? { maxWidth: toSizeValue(column.resolvedMaxWidth) } : {}),
+                        }}
                         onDragOver={reorderable ? (event) => handleColumnDragOver(event, column.key) : undefined}
                         onDrop={reorderable ? (event) => handleColumnDrop(event, column.key) : undefined}
                       >
@@ -752,7 +758,15 @@ export default function DataTable({
                         );
 
                         return (
-                          <td key={column.key} className={resolvedCellClassName}>
+                          <td
+                            key={column.key}
+                            className={resolvedCellClassName}
+                            style={{
+                              ...(column.resolvedWidth != null ? { width: toSizeValue(column.resolvedWidth) } : {}),
+                              ...(column.resolvedMinWidth != null ? { minWidth: toSizeValue(column.resolvedMinWidth) } : {}),
+                              ...(column.resolvedMaxWidth != null ? { maxWidth: toSizeValue(column.resolvedMaxWidth) } : {}),
+                            }}
+                          >
                             {column.disableCellWrapper ? (
                               content
                             ) : (

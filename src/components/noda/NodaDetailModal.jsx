@@ -311,9 +311,14 @@ export default function NodaDetailModal({ open, requestId, mode = "view", authUs
         />
       </div>
     ),
-    width: 44,
+    width: 38,
+    minWidth: 38,
+    maxWidth: 42,
+    headerCellClassName: "!w-[38px] !min-w-[38px] !max-w-[42px] !px-1.5 !py-3 text-center",
+    cellClassName: "!w-[38px] !min-w-[38px] !max-w-[42px] !px-1.5 !py-3 text-center",
     sortable: false,
     reorderable: false,
+    resizable: false,
     align: "center",
     renderCell: (lineItem) => {
       const isEligible = lineItem.status !== "completed" && lineItem.status !== "in-progress";
@@ -394,31 +399,29 @@ export default function NodaDetailModal({ open, requestId, mode = "view", authUs
     {
       key: "quantity",
       label: isJa ? "数量" : "Quantity",
-      width: 140,
-      minWidth: 140,
+      width: 100,
+      minWidth: 100,
       noTruncate: true,
       renderCell: (lineItem) => (
         canManageRequest && viewMode === "edit" ? (
-          <div className="flex items-center gap-1.5">
-            <input
-              type="number"
-              min="1"
-              value={lineQuantities[lineItem.lineNumber] ?? lineItem.quantity}
-              onChange={(event) => setLineQuantities((current) => ({
-                ...current,
-                [lineItem.lineNumber]: event.target.value,
-              }))}
-              className="h-8 w-20 rounded-md border border-[var(--border)] bg-white px-2 text-sm font-mono text-[var(--text-primary)] outline-none transition focus:border-primary/40 dark:bg-surface-container"
-            />
-            <button
-              type="button"
-              onClick={() => handleSaveLineQuantity(lineItem)}
-              disabled={busy}
-              className="rounded-md border border-[var(--border)] px-2.5 py-1 text-xs font-semibold text-[var(--text-primary)] transition hover:bg-[var(--surface-hover)] disabled:opacity-50"
-            >
-              {isJa ? "保存" : "Save"}
-            </button>
-          </div>
+          <input
+            type="number"
+            min="1"
+            value={lineQuantities[lineItem.lineNumber] ?? lineItem.quantity}
+            onChange={(event) => setLineQuantities((current) => ({
+              ...current,
+              [lineItem.lineNumber]: event.target.value,
+            }))}
+            onBlur={(event) => handleSaveLineQuantity(lineItem, event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") {
+                event.currentTarget.blur();
+              }
+            }}
+            disabled={busy}
+            className="h-8 w-20 rounded-md border border-[var(--border)] bg-white px-2 text-sm font-mono text-[var(--text-primary)] outline-none transition focus:border-primary/40 focus:ring-1 focus:ring-primary/40 dark:bg-surface-container disabled:opacity-50"
+            title={isJa ? "数量を変更して外をクリックすると自動保存されます" : "Edit quantity and click outside or press Enter to auto-save"}
+          />
         ) : (
           <span className="font-mono font-medium text-[var(--text-primary)]">{lineItem.quantity}</span>
         )
@@ -584,11 +587,22 @@ export default function NodaDetailModal({ open, requestId, mode = "view", authUs
     }
   }
 
-  async function handleSaveLineQuantity(lineItem) {
+  async function handleSaveLineQuantity(lineItem, rawValue) {
     if (!request?._id) return;
-    const newQuantity = Number.parseInt(lineQuantities[lineItem.lineNumber], 10) || 0;
-    if (newQuantity <= 0) {
+    const valueToUse = rawValue !== undefined ? rawValue : lineQuantities[lineItem.lineNumber];
+    const newQuantity = Number.parseInt(valueToUse ?? lineItem.quantity, 10);
+    const originalQuantity = Number.parseInt(lineItem.quantity, 10);
+
+    if (Number.isNaN(newQuantity) || newQuantity <= 0) {
       setError(isJa ? "明細行の数量は0より大きい必要があります。" : "Line item quantity must be greater than zero.");
+      setLineQuantities((current) => ({
+        ...current,
+        [lineItem.lineNumber]: originalQuantity,
+      }));
+      return;
+    }
+
+    if (newQuantity === originalQuantity) {
       return;
     }
 
@@ -600,16 +614,22 @@ export default function NodaDetailModal({ open, requestId, mode = "view", authUs
       await updateNodaLineItemQuantity(request._id, {
         lineNumber: lineItem.lineNumber,
         newQuantity,
-        originalQuantity: lineItem.quantity,
+        originalQuantity,
         背番号: lineItem.背番号,
       }, actorName);
       await loadRequest();
       onSubmitted?.({
         type: "success",
-        message: isJa ? `行 ${lineItem.lineNumber} の数量を更新しました。` : `Updated quantity for line ${lineItem.lineNumber}.`,
+        message: isJa
+          ? `行 ${lineItem.lineNumber} の数量を更新しました (${originalQuantity} → ${newQuantity})。`
+          : `Updated quantity for line ${lineItem.lineNumber} (${originalQuantity} → ${newQuantity}).`,
       });
     } catch (saveError) {
       setError(saveError.message || (isJa ? "数量の更新に失敗しました。" : "Failed to update line quantity."));
+      setLineQuantities((current) => ({
+        ...current,
+        [lineItem.lineNumber]: originalQuantity,
+      }));
     } finally {
       setBusy(false);
     }
