@@ -57,10 +57,13 @@
   border: 1px solid var(--border-strong);
   border-radius: var(--radius-card);
   box-shadow: var(--shadow-1);
+  cursor: pointer;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
 }
 
-.analytics-lot-card--expanded {
+.analytics-lot-card:hover {
   border-color: var(--freya-blue);
+  box-shadow: var(--shadow-2);
 }
 
 .analytics-card-metrics dt {
