@@ -10,7 +10,7 @@
   font-size: 14px;
 }
 
-.material-analytics :is(.analytics-ledger, .analytics-run-table) th {
+.material-analytics .analytics-ledger th {
   height: 40px;
   font-size: 12px;
   font-weight: 600;
@@ -18,13 +18,26 @@
   border-bottom: 1px solid var(--border-strong);
 }
 
+.material-analytics .analytics-run-table th {
+  height: 36px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  border-bottom: 1px solid var(--border);
+}
+
 .material-analytics :is(.analytics-ledger, .analytics-run-table) td {
   font-variant-numeric: tabular-nums;
 }
 
-.material-analytics :is(.analytics-ledger, .analytics-run-table) > tbody > tr > td {
+.material-analytics .analytics-ledger > tbody > tr > td {
   font-size: 14px;
   min-height: 44px;
+}
+
+.material-analytics .analytics-run-table > tbody > tr > td {
+  font-size: 13.5px;
+  min-height: 38px;
 }
 
 .analytics-card-grid {

@@ -1205,59 +1205,70 @@ export default function AnalyticsPage() {
 
                           {/* ── Sub-Row: Lot_Details Usage History ───────────── */}
                           {isExpanded && (
-                            <tr className="bg-[var(--surface-subtle)]">
+                            <tr className="bg-slate-50/70 dark:bg-slate-900/40 shadow-[inset_3px_0_0_var(--freya-blue)]">
                               <td colSpan={9} className="border-t border-[var(--border)] p-0">
-                                <div className="space-y-3 px-4 py-4">
-                                  <div className="flex flex-col gap-3 border-b border-[var(--border)] pb-3 lg:flex-row lg:items-start lg:justify-between">
-                                    <div className="min-w-0">
-                                      <div className="flex flex-wrap items-center gap-2">
-                                        <span className="font-mono text-base font-semibold text-[var(--text-primary)]">
-                                          {lot.lotNumber}
-                                        </span>
-                                        <TraceBadge icon="category" tone="blue">
-                                          {lot.materialSeiban || "—"}
-                                        </TraceBadge>
-                                        {lot.materialName ? (
-                                          <span className="truncate text-xs font-normal text-[var(--text-muted)]">
-                                            {lot.materialName}
-                                          </span>
-                                        ) : null}
-                                      </div>
-                                      <div className="mt-2 flex flex-wrap gap-1.5">
-                                        <TraceBadge icon="precision_manufacturing" title={(lot.machines || []).join(", ")}>
-                                          {(lot.machines || []).join(", ") || "—"}
-                                        </TraceBadge>
-                                        <TraceBadge icon="person">
-                                          {(lot.workers || []).join(", ") || "—"}
-                                        </TraceBadge>
-                                        <TraceBadge icon="factory">
-                                          {(lot.factories || []).join(", ") || "—"}
-                                        </TraceBadge>
-                                      </div>
+                                <div className="py-4 pl-8 pr-4 sm:py-5 sm:pl-14 sm:pr-8 xl:pl-16 xl:pr-10">
+                                  <div className="rounded-[8px] border border-[var(--border)] bg-[var(--surface)] p-4 sm:p-5 shadow-xs space-y-4">
+                                    {/* Nested Child Indicator */}
+                                    <div className="flex items-center gap-2 pb-2 text-xs font-semibold text-[var(--text-muted)] border-b border-[var(--border)]">
+                                      <span className="material-symbols-outlined text-[16px] text-[var(--freya-blue)]">
+                                        subdirectory_arrow_right
+                                      </span>
+                                      <span className="uppercase tracking-[0.04em]">
+                                        {isJa ? "材料ロット使用内訳・加工履歴" : "Lot Usage Breakdown & History"}
+                                      </span>
                                     </div>
-                                    <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-                                      <div className="rounded-[6px] border border-emerald-500/25 bg-emerald-500/10 px-3 py-2 text-right font-mono text-emerald-700 dark:text-emerald-300">
-                                        <div className="text-[11px] font-medium uppercase tracking-[0.04em] opacity-75">{isJa ? "使用量" : "Used"}</div>
-                                        <div className="text-sm font-bold freya-tabular">{fmtMeters(lot.totalMeters)} m</div>
-                                      </div>
-                                      <div className="rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-right font-mono">
-                                        <div className="text-[11px] font-medium uppercase tracking-[0.04em] text-[var(--text-muted)]">{isJa ? "生産数" : "Pieces"}</div>
-                                        <div className="text-sm font-bold text-[var(--text-primary)] freya-tabular">{formatNumber(lot.totalPieces)}</div>
-                                      </div>
-                                      <div className="rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-right font-mono">
-                                        <div className="text-[11px] font-medium uppercase tracking-[0.04em] text-[var(--text-muted)]">{isJa ? "ショット" : "Shots"}</div>
-                                        <div className="text-sm font-bold text-[var(--text-primary)] freya-tabular">{formatNumber(lot.totalShots)}</div>
-                                      </div>
-                                      <div className="rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-right font-mono">
-                                        <div className="text-[11px] font-medium uppercase tracking-[0.04em] text-[var(--text-muted)]">{isJa ? "履歴" : "Runs"}</div>
-                                        <div className="text-sm font-bold text-[var(--text-primary)] freya-tabular">{formatNumber(lot.runsCount)}</div>
-                                      </div>
-                                    </div>
-                                  </div>
 
-                                  <div className="overflow-x-auto rounded-[8px] border border-[var(--border)] bg-[var(--surface)] shadow-2xs">
-                                    <table className="analytics-run-table w-full min-w-[1200px] border-collapse text-left text-sm">
-                                      <thead className="border-b border-[var(--border)] bg-[var(--surface-subtle)] text-xs font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">
+                                    <div className="flex flex-col gap-3 border-b border-[var(--border)] pb-3 lg:flex-row lg:items-start lg:justify-between">
+                                      <div className="min-w-0">
+                                        <div className="flex flex-wrap items-center gap-2">
+                                          <span className="font-mono text-base font-semibold text-[var(--text-primary)]">
+                                            {lot.lotNumber}
+                                          </span>
+                                          <TraceBadge icon="category" tone="blue">
+                                            {lot.materialSeiban || "—"}
+                                          </TraceBadge>
+                                          {lot.materialName ? (
+                                            <span className="truncate text-xs font-normal text-[var(--text-muted)]">
+                                              {lot.materialName}
+                                            </span>
+                                          ) : null}
+                                        </div>
+                                        <div className="mt-2 flex flex-wrap gap-1.5">
+                                          <TraceBadge icon="precision_manufacturing" title={(lot.machines || []).join(", ")}>
+                                            {(lot.machines || []).join(", ") || "—"}
+                                          </TraceBadge>
+                                          <TraceBadge icon="person">
+                                            {(lot.workers || []).join(", ") || "—"}
+                                          </TraceBadge>
+                                          <TraceBadge icon="factory">
+                                            {(lot.factories || []).join(", ") || "—"}
+                                          </TraceBadge>
+                                        </div>
+                                      </div>
+                                      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                                        <div className="rounded-[6px] border border-emerald-500/25 bg-emerald-500/10 px-3 py-2 text-right font-mono text-emerald-700 dark:text-emerald-300">
+                                          <div className="text-[11px] font-medium uppercase tracking-[0.04em] opacity-75">{isJa ? "使用量" : "Used"}</div>
+                                          <div className="text-sm font-bold freya-tabular">{fmtMeters(lot.totalMeters)} m</div>
+                                        </div>
+                                        <div className="rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-right font-mono">
+                                          <div className="text-[11px] font-medium uppercase tracking-[0.04em] text-[var(--text-muted)]">{isJa ? "生産数" : "Pieces"}</div>
+                                          <div className="text-sm font-bold text-[var(--text-primary)] freya-tabular">{formatNumber(lot.totalPieces)}</div>
+                                        </div>
+                                        <div className="rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-right font-mono">
+                                          <div className="text-[11px] font-medium uppercase tracking-[0.04em] text-[var(--text-muted)]">{isJa ? "ショット" : "Shots"}</div>
+                                          <div className="text-sm font-bold text-[var(--text-primary)] freya-tabular">{formatNumber(lot.totalShots)}</div>
+                                        </div>
+                                        <div className="rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-right font-mono">
+                                          <div className="text-[11px] font-medium uppercase tracking-[0.04em] text-[var(--text-muted)]">{isJa ? "履歴" : "Runs"}</div>
+                                          <div className="text-sm font-bold text-[var(--text-primary)] freya-tabular">{formatNumber(lot.runsCount)}</div>
+                                        </div>
+                                      </div>
+                                    </div>
+
+                                    <div className="overflow-x-auto rounded-[6px] border border-[var(--border)] bg-[var(--surface)] shadow-2xs">
+                                      <table className="analytics-run-table w-full min-w-[1100px] border-collapse text-left text-sm">
+                                        <thead className="border-b border-[var(--border)] bg-slate-100/70 dark:bg-slate-800/60 text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">
                                         <tr>
                                           <th className="px-3 py-2">{isJa ? "加工日時" : "Date / Time"}</th>
                                           <th className="px-3 py-2">{isJa ? "設備" : "Machine"}</th>
@@ -1330,6 +1341,7 @@ export default function AnalyticsPage() {
                                         </tr>
                                       </tfoot>
                                     </table>
+                                    </div>
                                   </div>
                                 </div>
                               </td>
