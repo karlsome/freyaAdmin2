@@ -21,9 +21,14 @@ const navItems = [
   },
   { icon: "event_note",               labelKey: "planner",             page: "planner" },
   { icon: "inventory_2",              labelKey: "inventory",           page: "inventory" },
-  { icon: "notifications",            labelKey: "notifications",       page: "notifications" },
-  { icon: "analytics",                labelKey: "analytics",           page: "analytics" },
-  { icon: "payments",                 labelKey: "financials",          page: "financials" },
+  { icon: "analytics",                labelKey: "analytics",           page: "analytics",
+    children: [
+      { icon: "inventory_2",          labelKey: "materialAnalytics",   page: "analytics/material" },
+      { icon: "precision_manufacturing", labelKey: "productionAnalytics", page: "analytics/production" },
+      { icon: "fact_check",           labelKey: "qualityAnalytics",    page: "analytics/quality" },
+      { icon: "speed",                labelKey: "machineAnalytics",    page: "analytics/machines" },
+    ]
+  },
   { icon: "group",                    labelKey: "userManagement",      page: "userManagement" },
   { icon: "fact_check",               labelKey: "approvals",           page: "approvals" },
   { icon: "database",                 labelKey: "masterDB",            page: "masterDB" },

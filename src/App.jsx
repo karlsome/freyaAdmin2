@@ -239,8 +239,8 @@ function App() {
               <Route path="/inventory" element={<InventoryPage />} />
               <Route path="/factoryStatus" element={<FactoryStatusPage />} />
               <Route path="/factoryStatus/:tab" element={<FactoryStatusPage />} />
-              <Route path="/factoryStatus/logs" element={<FactoryStatusLogsPage />} />
-              <Route path="/analytics" element={<AnalyticsPage />} />
+              <Route path="/analytics" element={<Navigate to="/analytics/material" replace />} />
+              <Route path="/analytics/:tab" element={<AnalyticsPage />} />
               {placeholderPages.map((page) => (
                 <Route key={page} path={`/${page}`} element={<PlaceholderPage page={page} />} />
               ))}

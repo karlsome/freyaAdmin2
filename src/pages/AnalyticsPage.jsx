@@ -1,4 +1,5 @@
 import { Fragment, useEffect, useMemo, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
 import "./AnalyticsPage.css";
 import PageHeader from "../components/PageHeader";
 import LiquidSegmentedControl from "../components/LiquidSegmentedControl";
@@ -508,8 +509,24 @@ export default function AnalyticsPage() {
   const { language, t } = useLanguage();
   const isJa = language === "ja";
 
-  // ── Top-Level Analytics Module Tabs ───────────────────────────────────────
-  const [moduleTab, setModuleTab] = useState("materialLots");
+  // ── Top-Level Analytics Module Tabs (Route-Driven: /analytics/:tab) ───────
+  const { tab: routeTab } = useParams();
+  const navigate = useNavigate();
+
+  const VALID_TABS = ["material", "production", "quality", "machines"];
+  const normalizedRouteTab = routeTab === "materialLots" ? "material" : routeTab;
+  const activeTab = VALID_TABS.includes(normalizedRouteTab) ? normalizedRouteTab : "material";
+
+  // Redirect if URL tab is missing, invalid, or obsolete key (e.g. /analytics -> /analytics/material)
+  useEffect(() => {
+    if (!routeTab || routeTab === "materialLots" || !VALID_TABS.includes(routeTab)) {
+      navigate("/analytics/material", { replace: true });
+    }
+  }, [routeTab, navigate]);
+
+  const handleTabChange = (newTab) => {
+    navigate(`/analytics/${newTab}`);
+  };
 
   // ── Inner View Mode: 'table' (DEFAULT per spec) vs 'cards' ────────────────
   const [viewMode, setViewMode] = useState(() => typeof window !== "undefined" && window.matchMedia("(max-width: 767px)").matches ? "cards" : "table");
@@ -628,10 +645,10 @@ export default function AnalyticsPage() {
   };
 
   useEffect(() => {
-    if (moduleTab === "materialLots") {
+    if (activeTab === "material") {
       loadData();
     }
-  }, [dateRange.from, dateRange.to, factory, machine, materialSeiban, moduleTab]);
+  }, [dateRange.from, dateRange.to, factory, machine, materialSeiban, activeTab]);
 
   const handleSearchSubmit = (e) => {
     e?.preventDefault();
@@ -805,15 +822,25 @@ export default function AnalyticsPage() {
         eyebrowClassName="text-xs tracking-[0.04em]"
         title={
           <div className="flex items-center gap-2.5">
-            <span className="material-symbols-outlined text-[var(--freya-blue)]">receipt_long</span>
-            <span>{isJa ? "材料使用実績" : "Material Usage"}</span>
+            <span className="material-symbols-outlined text-[var(--freya-blue)]">
+              {activeTab === "material" ? "receipt_long" : activeTab === "production" ? "precision_manufacturing" : activeTab === "quality" ? "fact_check" : "speed"}
+            </span>
+            <span>
+              {activeTab === "material"
+                ? (isJa ? "材料使用実績" : "Material Usage")
+                : activeTab === "production"
+                ? t("productionAnalytics")
+                : activeTab === "quality"
+                ? t("qualityAnalytics")
+                : t("machineAnalytics")}
+            </span>
           </div>
         }
         subtitle={`${dateRange.from} 〜 ${dateRange.to}`}
         className="mb-1 md:flex-row md:items-center md:justify-between"
         actions={
           <div className="flex flex-wrap items-center gap-2">
-            {moduleTab === "materialLots" && (
+            {activeTab === "material" && (
               <button
                 type="button"
                 onClick={exportToCSV}
@@ -840,7 +867,7 @@ export default function AnalyticsPage() {
         <LiquidSegmentedControl
           items={[
             {
-              key: "materialLots",
+              key: "material",
               label: t("materialAnalytics"),
               icon: "inventory_2",
               badge: filteredLots.length > 0 ? filteredLots.length : undefined,
@@ -864,24 +891,24 @@ export default function AnalyticsPage() {
               badge: t("comingSoon"),
             },
           ]}
-          activeKey={moduleTab}
-          onChange={setModuleTab}
+          activeKey={activeTab}
+          onChange={handleTabChange}
         />
       </div>
 
       {/* ── Placeholder for Future Analytics Modules ──────────────────────────── */}
-      {moduleTab !== "materialLots" && (
+      {activeTab !== "material" && (
         <div className="freya-card rounded-[12px] border border-[var(--border)] bg-[var(--surface)] p-12 text-center shadow-sm space-y-4 max-w-2xl mx-auto my-8">
           <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-[var(--freya-blue)]/10 text-[var(--freya-blue)] border border-[var(--freya-blue)]/20">
             <span className="material-symbols-outlined" style={{ fontSize: 28 }}>
-              {moduleTab === "production" ? "precision_manufacturing" : moduleTab === "quality" ? "fact_check" : "speed"}
+              {activeTab === "production" ? "precision_manufacturing" : activeTab === "quality" ? "fact_check" : "speed"}
             </span>
           </div>
           <div>
             <h3 className="text-lg font-semibold text-[var(--text-primary)]">
-              {moduleTab === "production"
+              {activeTab === "production"
                 ? (isJa ? "生産ライン稼働率・出来高分析" : "Production & Line Output Analytics")
-                : moduleTab === "quality"
+                : activeTab === "quality"
                 ? (isJa ? "不良率・品質トレンド分析" : "Defect Rate & Quality Analytics")
                 : (isJa ? "設備総合効率 (OEE) & ダウンタイム分析" : "Machine OEE & Downtime Analytics")}
             </h3>
@@ -894,7 +921,7 @@ export default function AnalyticsPage() {
           <div>
             <button
               type="button"
-              onClick={() => setModuleTab("materialLots")}
+              onClick={() => handleTabChange("material")}
               className="inline-flex items-center gap-2 rounded-[6px] bg-[var(--freya-blue)] text-white px-4 py-2 text-sm font-semibold shadow-sm hover:opacity-90 transition"
             >
               <span className="material-symbols-outlined" style={{ fontSize: 16 }}>arrow_back</span>
@@ -905,7 +932,7 @@ export default function AnalyticsPage() {
       )}
 
       {/* ── Material Usage Ledger Content ─────────────────────────────────────── */}
-      {moduleTab === "materialLots" && (
+      {activeTab === "material" && (
         <div className="space-y-6">
           {/* ── 1. Material Ledger Summary ───────────────────────────────────── */}
           <div className="freya-card overflow-hidden rounded-[8px] border border-[var(--border)] bg-[var(--surface)] shadow-sm">
