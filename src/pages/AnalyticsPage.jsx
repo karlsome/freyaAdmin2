@@ -520,102 +520,82 @@ export default function AnalyticsPage() {
       {/* ── Material Usage Ledger Content ─────────────────────────────────────── */}
       {moduleTab === "materialLots" && (
         <div className="space-y-3.5">
-          {/* ── 1. Compact Summary Header (Clean Counts per Spec Section 7) ──── */}
-          <div className="freya-card rounded-[8px] border border-[var(--border)] bg-[var(--surface)] p-3.5 shadow-sm">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
-              {/* Left Context Info: Simplified to counts */}
-              <div className="space-y-1">
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-black uppercase tracking-wider text-[var(--text-primary)]">
-                    {isJa ? "材料使用サマリー" : "Material Usage Summary"}
-                  </span>
-                  <span className="rounded-[4px] bg-[var(--surface-subtle)] border border-[var(--border)] px-1.5 py-0.2 text-[10px] font-mono text-[var(--text-muted)]">
-                    {dateRange.from} 〜 {dateRange.to}
-                  </span>
-                </div>
-
-                <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-[var(--text-muted)]">
-                  <div>
-                    <span className="text-[var(--text-secondary)] mr-1">{isJa ? "材料:" : "Material:"}</span>
-                    <span className="font-mono font-bold text-[var(--text-primary)]">
-                      {materialSeiban || (isJa ? `全種別 (${data.filterOptions.materialSeibans?.length || 0})` : `All (${data.filterOptions.materialSeibans?.length || 0})`)}
+          {/* ── 1. Material Ledger Summary ───────────────────────────────────── */}
+          <div className="freya-card overflow-hidden rounded-[8px] border border-[var(--border)] bg-[var(--surface)] shadow-sm">
+            <div className="border-b border-[var(--border)] bg-[var(--surface-subtle)] px-4 py-3">
+              <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="inline-flex h-7 w-7 items-center justify-center rounded-[6px] border border-[var(--freya-blue)]/25 bg-[var(--freya-blue)]/10 text-[var(--freya-blue)]">
+                      <span className="material-symbols-outlined text-[16px]">inventory_2</span>
+                    </span>
+                    <h2 className="text-sm font-black uppercase tracking-[0.08em] text-[var(--text-primary)]">
+                      {isJa ? "材料使用サマリー" : "Material Usage Summary"}
+                    </h2>
+                    <span className="rounded-[5px] border border-[var(--border)] bg-[var(--surface)] px-2 py-1 text-[11px] font-bold text-[var(--text-muted)]">
+                      <span className="font-mono">{dateRange.from}</span> <span aria-hidden="true">~</span>{" "}
+                      <span className="font-mono">{dateRange.to}</span>
                     </span>
                   </div>
-                  <div>
-                    <span className="text-[var(--text-secondary)] mr-1">{isJa ? "製品:" : "Products:"}</span>
-                    <span className="font-mono font-bold text-[var(--text-primary)]">{filteredSummary.productsCount}</span>
+                  <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px] text-[var(--text-muted)]">
+                    <TraceBadge icon="category">
+                      {isJa ? "材料" : "Material"}:{" "}
+                      <span className="font-mono text-[var(--text-primary)]">
+                        {materialSeiban || (isJa ? `全種別 ${data.filterOptions.materialSeibans?.length || 0}` : `All ${data.filterOptions.materialSeibans?.length || 0}`)}
+                      </span>
+                    </TraceBadge>
+                    <TraceBadge icon="precision_manufacturing">
+                      {isJa ? "設備" : "Machines"}: <span className="font-mono text-[var(--text-primary)]">{filteredSummary.machinesCount}</span>
+                    </TraceBadge>
+                    <TraceBadge icon="deployed_code">
+                      {isJa ? "製品" : "Products"}: <span className="font-mono text-[var(--text-primary)]">{filteredSummary.productsCount}</span>
+                    </TraceBadge>
                   </div>
-                  <div>
-                    <span className="text-[var(--text-secondary)] mr-1">{isJa ? "設備:" : "Machines:"}</span>
-                    <span className="font-mono font-bold text-[var(--text-primary)]">{filteredSummary.machinesCount}</span>
-                  </div>
+                </div>
+                <div className="flex items-center gap-2 text-[11px] font-semibold text-[var(--text-muted)]">
+                  <span className="material-symbols-outlined text-[15px]">database</span>
+                  <span>{isJa ? "Lot_Details 集計" : "Aggregated from Lot_Details"}</span>
                 </div>
               </div>
+            </div>
 
-              {/* Right Key Metrics: TOTAL USED as dominant KPI */}
-              <div className="flex flex-wrap items-center gap-2.5">
-                {/* TOTAL USED (Meters): Primary Metric Emphasis */}
-                <div className="flex flex-col items-end rounded-[6px] border border-emerald-500/30 bg-emerald-500/10 px-3.5 py-1.5">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-300 font-mono">
-                    {isJa ? "総消費メーター数" : "Total Used"}
-                  </span>
-                  <span className="text-xl font-black font-mono text-emerald-700 dark:text-emerald-300">
-                    {fmtMeters(filteredSummary.meters)} <span className="text-xs font-semibold">m</span>
-                  </span>
-                </div>
-
-                {/* LOTS */}
-                <div className="flex flex-col items-end rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] px-3 py-1.5 min-w-[70px]">
-                  <span className="text-[10px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">
-                    {isJa ? "ロット数" : "Lots"}
-                  </span>
-                  <span className="text-sm font-bold font-mono text-[var(--text-primary)]">
-                    {formatNumber(filteredSummary.lotsCount)}
-                  </span>
-                </div>
-
-                {/* PIECES */}
-                <div className="flex flex-col items-end rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] px-3 py-1.5 min-w-[80px]">
-                  <span className="text-[10px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">
-                    {isJa ? "生産個数" : "Pieces"}
-                  </span>
-                  <span className="text-sm font-bold font-mono text-[var(--text-primary)]">
-                    {formatNumber(filteredSummary.pieces)}
-                  </span>
-                </div>
-
-                {/* RUNS */}
-                <div className="flex flex-col items-end rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] px-3 py-1.5 min-w-[70px]">
-                  <span className="text-[10px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">
-                    {isJa ? "実績数" : "Runs"}
-                  </span>
-                  <span className="text-sm font-bold font-mono text-[var(--text-primary)]">
-                    {formatNumber(filteredSummary.runs)}
-                  </span>
-                </div>
-
-                {/* QC DEFECTS (Red only if defects exist per Spec) */}
-                {filteredSummary.defectsCount > 0 ? (
-                  <div className="flex flex-col items-end rounded-[6px] border border-rose-500/30 bg-rose-500/10 px-3 py-1.5">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-rose-700 dark:text-rose-300 font-mono">
-                      {isJa ? "不良写真" : "QC Defects"}
-                    </span>
-                    <span className="text-sm font-bold font-mono text-rose-700 dark:text-rose-300 flex items-center gap-1">
-                      <span className="material-symbols-outlined text-[14px]">report_problem</span>
-                      <span>{filteredSummary.defectsCount}</span>
-                    </span>
-                  </div>
-                ) : (
-                  <div className="flex flex-col items-end rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] px-3 py-1.5">
-                    <span className="text-[10px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">
-                      {isJa ? "品質" : "QC"}
-                    </span>
-                    <span className="text-xs font-semibold text-[var(--text-muted)] font-mono">
-                      0 NG
-                    </span>
-                  </div>
-                )}
-              </div>
+            <div className="grid grid-cols-2 gap-3 p-3 sm:grid-cols-3 lg:grid-cols-7">
+              <MetricTile
+                label={isJa ? "総使用量" : "Total Used"}
+                value={fmtMeters(filteredSummary.meters)}
+                unit="m"
+                icon="straighten"
+                tone="emerald"
+                emphasis
+              />
+              <MetricTile
+                label={isJa ? "ロット" : "Lots"}
+                value={formatNumber(filteredSummary.lotsCount)}
+                icon="qr_code_2"
+                tone="blue"
+              />
+              <MetricTile
+                label={isJa ? "生産数" : "Pieces"}
+                value={formatNumber(filteredSummary.pieces)}
+                icon="tag"
+              />
+              <MetricTile
+                label={isJa ? "実績" : "Runs"}
+                value={formatNumber(filteredSummary.runs)}
+                icon="history"
+              />
+              <MetricTile
+                label={isJa ? "ショット" : "Shots"}
+                value={formatNumber(filteredSummary.shots)}
+                icon="bolt"
+                tone="amber"
+              />
+              <MetricTile
+                label={isJa ? "不良写真" : "QC Evidence"}
+                value={formatNumber(filteredSummary.defectsCount)}
+                icon={filteredSummary.defectsCount > 0 ? "report_problem" : "verified"}
+                tone={filteredSummary.defectsCount > 0 ? "rose" : "neutral"}
+              />
             </div>
           </div>
 
@@ -845,7 +825,7 @@ export default function AnalyticsPage() {
                ========================================================================= */
             <div className="freya-card overflow-hidden rounded-[8px] border border-[var(--border)] bg-[var(--surface)] shadow-sm">
               <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs border-collapse table-fixed min-w-[900px]">
+                <table className="w-full table-fixed border-collapse text-left text-xs min-w-[1080px]">
                   {/* Strict Column Widths (Section 3) */}
                   <colgroup>
                     <col style={{ width: "8%" }} />   {/* Material */}
@@ -860,7 +840,7 @@ export default function AnalyticsPage() {
                   </colgroup>
 
                   {/* Table Header */}
-                  <thead className="border-b border-[var(--border)] bg-[var(--surface-subtle)] text-[var(--text-muted)] uppercase text-[11px] font-semibold tracking-[0.04em] sticky top-0 z-10 select-none">
+                  <thead className="sticky top-0 z-10 select-none border-b border-[var(--border)] bg-[var(--surface-subtle)] text-[10px] font-black uppercase tracking-[0.12em] text-[var(--text-muted)]">
                     <tr>
                       {/* Material */}
                       <th
@@ -991,34 +971,61 @@ export default function AnalyticsPage() {
                         <Fragment key={lotKey}>
                           <tr
                             onClick={() => toggleLotExpand(lotKey)}
-                            className={`cursor-pointer transition-colors select-none ${
-                              isExpanded ? "bg-[var(--surface-subtle)]" : "hover:bg-[var(--surface-hover)]"
-                            }`}
+                            className={joinClasses(
+                              "group cursor-pointer select-none transition-colors",
+                              isExpanded
+                                ? "bg-[var(--freya-blue)]/5 shadow-[inset_3px_0_0_var(--freya-blue)]"
+                                : defectImgs.length > 0
+                                  ? "shadow-[inset_3px_0_0_rgba(244,63,94,0.55)] hover:bg-rose-500/5"
+                                  : "hover:bg-[var(--surface-hover)]"
+                            )}
                           >
                             {/* 1. Material */}
-                            <td className="px-3 py-2.5 font-mono font-bold text-xs text-[var(--text-primary)] truncate" title={lot.materialName || matSeiban}>
-                              {matSeiban || <span className="text-[var(--text-muted)] font-normal">—</span>}
+                            <td className="px-3 py-3 font-mono text-xs text-[var(--text-primary)]" title={lot.materialName || matSeiban}>
+                              <div className="flex min-w-0 items-center gap-2">
+                                <span
+                                  className={joinClasses(
+                                    "material-symbols-outlined text-[16px] text-[var(--text-muted)] transition-transform group-hover:text-[var(--freya-blue)]",
+                                    isExpanded ? "rotate-90 text-[var(--freya-blue)]" : ""
+                                  )}
+                                >
+                                  chevron_right
+                                </span>
+                                <span className="truncate font-black">
+                                  {matSeiban || <span className="font-normal text-[var(--text-muted)]">—</span>}
+                                </span>
+                              </div>
                             </td>
 
                             {/* 2. Lot Number (+ future physical ID support) */}
-                            <td className="px-3 py-2.5 font-mono font-bold text-xs text-[var(--text-primary)] truncate">
-                              {lot.lotNumber}
+                            <td className="px-3 py-3 font-mono text-xs text-[var(--text-primary)]">
+                              <div className="flex min-w-0 flex-col gap-0.5">
+                                <span className="truncate font-black text-[var(--text-primary)]">{lot.lotNumber}</span>
+                                {lot.materialName ? (
+                                  <span className="truncate text-[10px] font-medium text-[var(--text-muted)]">{lot.materialName}</span>
+                                ) : null}
+                              </div>
                             </td>
 
                             {/* 3. Used (Meters): Primary Metric Emphasis, Right-Aligned, 1 Decimal */}
-                            <td className="px-3 py-2.5 text-right font-mono text-[13px] font-black text-[var(--text-primary)] dark:text-emerald-300 whitespace-nowrap">
+                            <td className="px-3 py-3 text-right font-mono text-[13px] font-black text-emerald-700 dark:text-emerald-300 whitespace-nowrap">
                               {fmtMeters(lot.totalMeters)} <span className="text-[11px] font-semibold text-[var(--text-muted)]">m</span>
                             </td>
 
                             {/* 4. Product / Seiban (Section 6: Clean C74 · C76 format with tooltip) */}
-                            <td className="px-3 py-2.5 text-xs text-[var(--text-secondary)] font-mono truncate" title={fullProductsTooltip}>
+                            <td className="px-3 py-3 text-xs text-[var(--text-secondary)] font-mono truncate" title={fullProductsTooltip}>
                               {visibleSeibans.length > 0 ? (
-                                <div className="flex items-center gap-1 truncate">
-                                  <span className="font-bold text-[var(--text-primary)]">
-                                    {visibleSeibans.join(" · ")}
-                                  </span>
+                                <div className="flex items-center gap-1.5 truncate">
+                                  {visibleSeibans.map((seiban) => (
+                                    <span
+                                      key={seiban}
+                                      className="rounded-[5px] border border-[var(--border)] bg-[var(--surface)] px-1.5 py-0.5 font-bold text-[var(--text-primary)]"
+                                    >
+                                      {seiban}
+                                    </span>
+                                  ))}
                                   {extraCount > 0 && (
-                                    <span className="rounded-[4px] bg-[var(--surface-subtle)] border border-[var(--border)] px-1 py-0.2 text-[10px] text-[var(--text-muted)] font-medium">
+                                    <span className="rounded-[5px] border border-[var(--border)] bg-[var(--surface-subtle)] px-1.5 py-0.5 text-[10px] font-bold text-[var(--text-muted)]">
                                       +{extraCount}
                                     </span>
                                   )}
@@ -1029,27 +1036,27 @@ export default function AnalyticsPage() {
                             </td>
 
                             {/* 5. Runs (Right-Aligned per Section 4) */}
-                            <td className="px-3 py-2.5 text-right font-mono text-xs text-[var(--text-secondary)]">
+                            <td className="px-3 py-3 text-right font-mono text-xs font-semibold text-[var(--text-secondary)]">
                               {lot.runsCount}
                             </td>
 
                             {/* 6. Machines */}
-                            <td className="px-3 py-2.5 font-mono text-xs text-[var(--text-secondary)] truncate" title={lot.machines.join(", ")}>
-                              {lot.machines.join(", ") || "—"}
+                            <td className="px-3 py-3 font-mono text-xs text-[var(--text-secondary)] truncate" title={lot.machines.join(", ")}>
+                              <span className="font-bold text-[var(--text-primary)]">{lot.machines.join(", ") || "—"}</span>
                             </td>
 
                             {/* 7. Pieces (Right-Aligned, Comma Formatted per Section 4) */}
-                            <td className="px-3 py-2.5 text-right font-mono text-xs text-[var(--text-secondary)]">
+                            <td className="px-3 py-3 text-right font-mono text-xs font-semibold text-[var(--text-secondary)]">
                               {formatNumber(lot.totalPieces)}
                             </td>
 
                             {/* 8. Last Used */}
-                            <td className="px-3 py-2.5 text-xs text-[var(--text-muted)] font-mono whitespace-nowrap">
+                            <td className="px-3 py-3 text-xs text-[var(--text-muted)] font-mono whitespace-nowrap">
                               {formatShortDate(lot.latestDate, lot.runs[0]?.timeStart, isJa)}
                             </td>
 
                             {/* 9. Evidence Action Pills (Section 12: Compact indicators) */}
-                            <td className="px-3 py-2.5 text-center">
+                            <td className="px-3 py-3 text-center">
                               <div className="flex items-center justify-center gap-1.5" onClick={(e) => e.stopPropagation()}>
                                 {labelImgs.length > 0 && (
                                   <button
@@ -1061,10 +1068,10 @@ export default function AnalyticsPage() {
                                         type: "label",
                                       })
                                     }
-                                    className="inline-flex items-center gap-0.5 rounded-[4px] bg-[var(--surface-subtle)] border border-[var(--border)] px-1.5 py-0.5 text-[10px] font-mono text-[var(--text-secondary)] hover:border-[var(--freya-blue)] hover:text-[var(--freya-blue)] transition"
+                                    className="inline-flex h-7 items-center gap-1 rounded-[5px] bg-[var(--surface)] border border-[var(--border)] px-2 text-[11px] font-mono font-bold text-[var(--text-secondary)] hover:border-[var(--freya-blue)] hover:text-[var(--freya-blue)] transition"
                                     title={isJa ? "材料ラベル写真" : "Label photo"}
                                   >
-                                    <span className="material-symbols-outlined text-[12px]">photo_camera</span>
+                                    <span className="material-symbols-outlined text-[14px]">photo_camera</span>
                                     <span>{labelImgs.length}</span>
                                   </button>
                                 )}
@@ -1079,10 +1086,10 @@ export default function AnalyticsPage() {
                                         type: "defect",
                                       })
                                     }
-                                    className="inline-flex items-center gap-0.5 rounded-[4px] bg-rose-500/10 border border-rose-500/30 px-1.5 py-0.5 text-[10px] font-mono font-bold text-rose-700 dark:text-rose-300 hover:bg-rose-500/20 transition"
+                                    className="inline-flex h-7 items-center gap-1 rounded-[5px] bg-rose-500/10 border border-rose-500/30 px-2 text-[11px] font-mono font-bold text-rose-700 dark:text-rose-300 hover:bg-rose-500/20 transition"
                                     title={isJa ? "不良証拠写真" : "QC Defect photo"}
                                   >
-                                    <span className="material-symbols-outlined text-[12px]">report_problem</span>
+                                    <span className="material-symbols-outlined text-[14px]">report_problem</span>
                                     <span>{defectImgs.length}</span>
                                   </button>
                                 )}
@@ -1094,143 +1101,169 @@ export default function AnalyticsPage() {
                             </td>
                           </tr>
 
-                          {/* ── Sub-Row: Usage History (Section 9, 10, 11) ── */}
+                          {/* ── Sub-Row: Lot_Details Usage History ───────────── */}
                           {isExpanded && (
-                            <tr className="bg-[var(--surface-subtle)]/70">
-                              <td colSpan={9} className="p-4 border-t border-[var(--border)]">
-                                <div className="space-y-2.5 max-w-5xl">
-                                  {/* Sub-Header with Totals */}
-                                  <div className="flex flex-wrap items-center justify-between gap-2 text-xs border-b border-[var(--border)] pb-2">
-                                    <div className="flex items-center gap-2">
-                                      <span className="font-mono font-bold text-xs text-[var(--text-primary)]">
-                                        LOT: {lot.lotNumber}
-                                      </span>
-                                      <span className="text-[var(--text-muted)]">•</span>
-                                      <span className="text-xs text-[var(--text-muted)]">
-                                        {isJa ? "材料:" : "Material:"}{" "}
-                                        <strong className="text-[var(--text-primary)] font-mono">{lot.materialSeiban || "—"}</strong>
-                                        {lot.materialName && ` (${lot.materialName})`}
-                                      </span>
+                            <tr className="bg-[var(--surface-subtle)]/80">
+                              <td colSpan={9} className="border-t border-[var(--border)] p-0">
+                                <div className="space-y-3 px-4 py-4">
+                                  <div className="flex flex-col gap-3 border-b border-[var(--border)] pb-3 lg:flex-row lg:items-start lg:justify-between">
+                                    <div className="min-w-0">
+                                      <div className="flex flex-wrap items-center gap-2">
+                                        <span className="font-mono text-sm font-black text-[var(--text-primary)]">
+                                          {lot.lotNumber}
+                                        </span>
+                                        <TraceBadge icon="category" tone="blue">
+                                          {lot.materialSeiban || "—"}
+                                        </TraceBadge>
+                                        {lot.materialName ? (
+                                          <span className="truncate text-xs font-semibold text-[var(--text-muted)]">
+                                            {lot.materialName}
+                                          </span>
+                                        ) : null}
+                                      </div>
+                                      <div className="mt-2 flex flex-wrap gap-1.5">
+                                        <TraceBadge icon="precision_manufacturing" title={(lot.machines || []).join(", ")}>
+                                          {(lot.machines || []).join(", ") || "—"}
+                                        </TraceBadge>
+                                        <TraceBadge icon="person">
+                                          {(lot.workers || []).join(", ") || "—"}
+                                        </TraceBadge>
+                                        <TraceBadge icon="factory">
+                                          {(lot.factories || []).join(", ") || "—"}
+                                        </TraceBadge>
+                                      </div>
                                     </div>
-                                    <div className="flex items-center gap-3 font-mono text-xs">
-                                      <span>
-                                        {isJa ? "ロット総使用:" : "Total Used:"}{" "}
-                                        <strong className="text-emerald-700 dark:text-emerald-300 text-sm">
-                                          {fmtMeters(lot.totalMeters)} m
-                                        </strong>
-                                      </span>
-                                      <span>•</span>
-                                      <span>
-                                        {isJa ? "生産個数:" : "Pieces:"}{" "}
-                                        <strong className="text-[var(--text-primary)]">{formatNumber(lot.totalPieces)}</strong>
-                                      </span>
+                                    <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                                      <div className="rounded-[6px] border border-emerald-500/25 bg-emerald-500/10 px-3 py-2 text-right font-mono text-emerald-700 dark:text-emerald-300">
+                                        <div className="text-[10px] font-black uppercase tracking-[0.1em] opacity-70">{isJa ? "使用量" : "Used"}</div>
+                                        <div className="text-sm font-black">{fmtMeters(lot.totalMeters)} m</div>
+                                      </div>
+                                      <div className="rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-right font-mono">
+                                        <div className="text-[10px] font-black uppercase tracking-[0.1em] text-[var(--text-muted)]">{isJa ? "生産数" : "Pieces"}</div>
+                                        <div className="text-sm font-black text-[var(--text-primary)]">{formatNumber(lot.totalPieces)}</div>
+                                      </div>
+                                      <div className="rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-right font-mono">
+                                        <div className="text-[10px] font-black uppercase tracking-[0.1em] text-[var(--text-muted)]">{isJa ? "ショット" : "Shots"}</div>
+                                        <div className="text-sm font-black text-[var(--text-primary)]">{formatNumber(lot.totalShots)}</div>
+                                      </div>
+                                      <div className="rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-right font-mono">
+                                        <div className="text-[10px] font-black uppercase tracking-[0.1em] text-[var(--text-muted)]">{isJa ? "履歴" : "Runs"}</div>
+                                        <div className="text-sm font-black text-[var(--text-primary)]">{formatNumber(lot.runsCount)}</div>
+                                      </div>
                                     </div>
                                   </div>
 
-                                  {/* Usage History Table (Section 9) */}
-                                  <div className="overflow-x-auto rounded-[6px] border border-[var(--border)] bg-[var(--surface)] shadow-2xs">
-                                    <table className="w-full text-left text-xs border-collapse">
-                                      <thead className="border-b border-[var(--border)] bg-[var(--surface-subtle)] text-[var(--text-muted)] text-[10px] font-bold uppercase tracking-wider">
+                                  <div className="overflow-x-auto rounded-[8px] border border-[var(--border)] bg-[var(--surface)] shadow-2xs">
+                                    <table className="w-full min-w-[1040px] border-collapse text-left text-xs">
+                                      <thead className="border-b border-[var(--border)] bg-[var(--surface-subtle)] text-[10px] font-black uppercase tracking-[0.12em] text-[var(--text-muted)]">
                                         <tr>
-                                          <th className="px-3 py-1.5">{isJa ? "加工日時" : "DATE / TIME"}</th>
-                                          <th className="px-3 py-1.5">{isJa ? "設備" : "MACHINE"}</th>
-                                          <th className="px-3 py-1.5">{isJa ? "品番" : "PRODUCT"}</th>
-                                          <th className="px-3 py-1.5">{isJa ? "背番号" : "SEIBAN"}</th>
-                                          <th className="px-3 py-1.5 text-right font-black text-[var(--text-primary)]">
-                                            {isJa ? "使用量 (m)" : "USED"}
-                                          </th>
-                                          <th className="px-3 py-1.5 text-right">{isJa ? "ショット" : "SHOTS"}</th>
-                                          <th className="px-3 py-1.5 text-right">{isJa ? "生産数" : "PIECES"}</th>
-                                          <th className="px-3 py-1.5">{isJa ? "作業者" : "WORKER"}</th>
-                                          <th className="px-3 py-1.5 text-center">{isJa ? "添付証拠" : "EVIDENCE"}</th>
+                                          <th className="px-3 py-2">{isJa ? "加工日時" : "Date / Time"}</th>
+                                          <th className="px-3 py-2">{isJa ? "設備" : "Machine"}</th>
+                                          <th className="px-3 py-2">{isJa ? "品番" : "Product"}</th>
+                                          <th className="px-3 py-2">{isJa ? "背番号" : "Seiban"}</th>
+                                          <th className="px-3 py-2 text-right">{isJa ? "使用量" : "Used"}</th>
+                                          <th className="px-3 py-2 text-right">{isJa ? "ショット" : "Shots"}</th>
+                                          <th className="px-3 py-2 text-right">{isJa ? "生産数" : "Pieces"}</th>
+                                          <th className="px-3 py-2">{isJa ? "送り / 取り数" : "Pitch / Cycle"}</th>
+                                          <th className="px-3 py-2">{isJa ? "作業者" : "Worker"}</th>
+                                          <th className="px-3 py-2 text-center">{isJa ? "トレース" : "Trace"}</th>
                                         </tr>
                                       </thead>
                                       <tbody className="divide-y divide-[var(--border)] font-mono">
-                                        {lot.runs.map((r, rIdx) => (
-                                          <tr key={rIdx} className="hover:bg-[var(--surface-hover)] transition-colors">
-                                            <td className="px-3 py-1.5 whitespace-nowrap text-[var(--text-primary)]">
-                                              {formatShortDate(r.date, r.timeStart, isJa)}
-                                            </td>
-                                            <td className="px-3 py-1.5 whitespace-nowrap font-bold text-[var(--text-primary)]">
-                                              {r.machine}
-                                            </td>
-                                            <td className="px-3 py-1.5 whitespace-nowrap text-[var(--text-muted)]">
-                                              {r.hinban || "—"}
-                                            </td>
-                                            <td className="px-3 py-1.5 whitespace-nowrap font-bold text-[var(--text-primary)]">
-                                              {r.seiban || "—"}
-                                            </td>
-                                            {/* Used Meters in this run */}
-                                            <td className="px-3 py-1.5 text-right whitespace-nowrap font-black text-emerald-700 dark:text-emerald-300">
-                                              {fmtMeters(r.meters)} m
-                                            </td>
-                                            <td className="px-3 py-1.5 text-right whitespace-nowrap text-[var(--text-secondary)]">
-                                              {formatNumber(r.shots)}
-                                            </td>
-                                            <td className="px-3 py-1.5 text-right whitespace-nowrap text-[var(--text-secondary)]">
-                                              {formatNumber(r.pieces)}
-                                            </td>
-                                            <td className="px-3 py-1.5 whitespace-nowrap text-[var(--text-secondary)] font-sans">
-                                              {r.worker}
-                                            </td>
-                                            <td className="px-3 py-1.5 whitespace-nowrap text-center">
-                                              <div className="flex items-center justify-center gap-1 font-sans">
-                                                {r.labelImage && (
-                                                  <button
-                                                    type="button"
-                                                    onClick={() =>
-                                                      setSelectedImageModal({
-                                                        url: r.labelImage,
-                                                        title: `${r.lotNumber} • ${isJa ? "材料ラベル" : "Label Photo"}`,
-                                                        type: "label",
-                                                      })
-                                                    }
-                                                    className="inline-flex items-center gap-0.5 rounded-[4px] bg-[var(--surface-subtle)] border border-[var(--border)] px-1.5 py-0.5 text-[10px] hover:border-[var(--freya-blue)] hover:text-[var(--freya-blue)] transition"
-                                                  >
-                                                    <span className="material-symbols-outlined text-[12px]">photo_camera</span>
-                                                    <span>{isJa ? "ラベル" : "Label"}</span>
-                                                  </button>
-                                                )}
-                                                {r.defectImages && r.defectImages.length > 0 && (
-                                                  <button
-                                                    type="button"
-                                                    onClick={() =>
-                                                      setSelectedImageModal({
-                                                        url: r.defectImages[0],
-                                                        title: `${r.lotNumber} • ${isJa ? "不良証拠写真" : "Defect Photo"}`,
-                                                        type: "defect",
-                                                      })
-                                                    }
-                                                    className="inline-flex items-center gap-0.5 rounded-[4px] bg-rose-500/10 border border-rose-500/30 px-1.5 py-0.5 text-[10px] font-bold text-rose-700 dark:text-rose-300 hover:bg-rose-500/20 transition"
-                                                  >
-                                                    <span className="material-symbols-outlined text-[12px]">report_problem</span>
-                                                    <span>{r.defectImages.length}</span>
-                                                  </button>
-                                                )}
-                                                {!r.labelImage && (!r.defectImages || r.defectImages.length === 0) && (
-                                                  <span className="text-[var(--text-muted)]/30">—</span>
-                                                )}
-                                              </div>
-                                            </td>
-                                          </tr>
-                                        ))}
+                                        {lot.runs.map((r, rIdx) => {
+                                          const runDefectImages = r.defectImages || [];
+                                          const runLabelImage = r.labelImage || (r.materialLabelImages || [])[0];
+
+                                          return (
+                                            <tr key={rIdx} className="transition-colors hover:bg-[var(--surface-hover)]">
+                                              <td className="whitespace-nowrap px-3 py-2.5 text-[var(--text-primary)]">
+                                                {formatShortDate(r.date, r.timeStart, isJa)}
+                                              </td>
+                                              <td className="whitespace-nowrap px-3 py-2.5 font-black text-[var(--text-primary)]">
+                                                {r.machine || "—"}
+                                              </td>
+                                              <td className="whitespace-nowrap px-3 py-2.5 text-[var(--text-muted)]">
+                                                {r.hinban || "—"}
+                                              </td>
+                                              <td className="whitespace-nowrap px-3 py-2.5 font-black text-[var(--text-primary)]">
+                                                {r.seiban || "—"}
+                                              </td>
+                                              <td className="whitespace-nowrap px-3 py-2.5 text-right font-black text-emerald-700 dark:text-emerald-300">
+                                                {fmtMeters(r.meters)} m
+                                              </td>
+                                              <td className="whitespace-nowrap px-3 py-2.5 text-right font-semibold text-[var(--text-secondary)]">
+                                                {formatNumber(r.shots)}
+                                              </td>
+                                              <td className="whitespace-nowrap px-3 py-2.5 text-right font-semibold text-[var(--text-secondary)]">
+                                                {formatNumber(r.pieces)}
+                                              </td>
+                                              <td className="whitespace-nowrap px-3 py-2.5 text-[var(--text-secondary)]">
+                                                {r.feedPitch ? `${formatNumber(r.feedPitch)}mm` : "—"} / {r.pcPerCycle ? `${formatNumber(r.pcPerCycle)}pc` : "—"}
+                                              </td>
+                                              <td className="whitespace-nowrap px-3 py-2.5 font-sans font-semibold text-[var(--text-secondary)]">
+                                                {r.worker || "—"}
+                                              </td>
+                                              <td className="whitespace-nowrap px-3 py-2.5 text-center">
+                                                <div className="flex items-center justify-center gap-1 font-sans">
+                                                  {r.scannedQR ? (
+                                                    <TraceBadge icon="qr_code" title={r.scannedQR}>QR</TraceBadge>
+                                                  ) : null}
+                                                  {runLabelImage ? (
+                                                    <button
+                                                      type="button"
+                                                      onClick={() =>
+                                                        setSelectedImageModal({
+                                                          url: runLabelImage,
+                                                          title: `${r.lotNumber || lot.lotNumber} • ${isJa ? "材料ラベル" : "Label Photo"}`,
+                                                          type: "label",
+                                                        })
+                                                      }
+                                                      className="inline-flex h-6 items-center gap-1 rounded-[5px] border border-[var(--border)] bg-[var(--surface)] px-2 text-[11px] font-bold text-[var(--text-secondary)] transition hover:border-[var(--freya-blue)] hover:text-[var(--freya-blue)]"
+                                                    >
+                                                      <span className="material-symbols-outlined text-[13px]">photo_camera</span>
+                                                      <span>{isJa ? "ラベル" : "Label"}</span>
+                                                    </button>
+                                                  ) : null}
+                                                  {runDefectImages.length > 0 ? (
+                                                    <button
+                                                      type="button"
+                                                      onClick={() =>
+                                                        setSelectedImageModal({
+                                                          url: runDefectImages[0],
+                                                          title: `${r.lotNumber || lot.lotNumber} • ${isJa ? "不良証拠写真" : "Defect Photo"}`,
+                                                          type: "defect",
+                                                        })
+                                                      }
+                                                      className="inline-flex h-6 items-center gap-1 rounded-[5px] border border-rose-500/30 bg-rose-500/10 px-2 text-[11px] font-black text-rose-700 transition hover:bg-rose-500/20 dark:text-rose-300"
+                                                    >
+                                                      <span className="material-symbols-outlined text-[13px]">report_problem</span>
+                                                      <span>{runDefectImages.length}</span>
+                                                    </button>
+                                                  ) : null}
+                                                  {!r.scannedQR && !runLabelImage && runDefectImages.length === 0 ? (
+                                                    <span className="text-[var(--text-muted)]/30">—</span>
+                                                  ) : null}
+                                                </div>
+                                              </td>
+                                            </tr>
+                                          );
+                                        })}
                                       </tbody>
-                                      {/* Usage History Total Footer (Section 11) */}
                                       <tfoot className="border-t border-[var(--border)] bg-[var(--surface-subtle)] font-mono text-xs font-bold">
                                         <tr>
-                                          <td colSpan={4} className="px-3 py-1.5 text-right uppercase text-[10px] text-[var(--text-muted)]">
-                                            {isJa ? "合計消費メーター:" : "TOTAL USED:"}
+                                          <td colSpan={4} className="px-3 py-2 text-right text-[10px] uppercase tracking-[0.12em] text-[var(--text-muted)]">
+                                            {isJa ? "ロット合計" : "Lot Total"}
                                           </td>
-                                          <td className="px-3 py-1.5 text-right font-black text-emerald-700 dark:text-emerald-300">
+                                          <td className="px-3 py-2 text-right font-black text-emerald-700 dark:text-emerald-300">
                                             {fmtMeters(lot.totalMeters)} m
                                           </td>
-                                          <td className="px-3 py-1.5 text-right text-[var(--text-secondary)]">
+                                          <td className="px-3 py-2 text-right text-[var(--text-secondary)]">
                                             {formatNumber(lot.totalShots)}
                                           </td>
-                                          <td className="px-3 py-1.5 text-right text-[var(--text-secondary)]">
+                                          <td className="px-3 py-2 text-right text-[var(--text-secondary)]">
                                             {formatNumber(lot.totalPieces)}
                                           </td>
-                                          <td colSpan={2}></td>
+                                          <td colSpan={3}></td>
                                         </tr>
                                       </tfoot>
                                     </table>
