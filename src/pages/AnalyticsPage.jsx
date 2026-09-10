@@ -3,6 +3,8 @@ import { useNavigate, useParams } from "react-router-dom";
 import "./AnalyticsPage.css";
 import PageHeader from "../components/PageHeader";
 import LiquidSegmentedControl from "../components/LiquidSegmentedControl";
+import RecordDetailModal from "../components/RecordDetailModal";
+import { useRecordModal } from "../hooks/useRecordModal";
 import { useLanguage } from "../contexts/LanguageContext";
 import { fetchMaterialLotAnalytics } from "../services/api";
 
@@ -254,7 +256,7 @@ function MaterialLotCard({ lot, onOpenHistory, onPreview, isJa }) {
   );
 }
 
-function LotUsageHistoryModal({ lot, onClose, onPreview, isJa }) {
+function LotUsageHistoryModal({ lot, onClose, onPreview, onOpenRecord, isJa }) {
   if (!lot) return null;
 
   const material = lot.materialSeiban && lot.materialSeiban !== "—" ? lot.materialSeiban : null;
@@ -266,7 +268,7 @@ function LotUsageHistoryModal({ lot, onClose, onPreview, isJa }) {
       aria-modal="true"
       aria-labelledby="lot-usage-modal-title"
       onClick={onClose}
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/65 p-2 sm:p-4 md:p-6 backdrop-blur-xs animate-[fadeIn_0.15s_ease-out]"
+      className="fixed inset-0 z-40 flex items-center justify-center bg-black/65 p-2 sm:p-4 md:p-6 backdrop-blur-xs animate-[fadeIn_0.15s_ease-out]"
     >
       <div
         onClick={(e) => e.stopPropagation()}
@@ -391,18 +393,33 @@ function LotUsageHistoryModal({ lot, onClose, onPreview, isJa }) {
                   const runLabelImage = r.labelImage || (r.materialLabelImages || [])[0];
 
                   return (
-                    <tr key={rIdx} className="transition-colors hover:bg-[var(--surface-hover)]">
+                    <tr
+                      key={rIdx}
+                      onClick={() => onOpenRecord?.(r)}
+                      title={isJa ? "クリックしてプレス加工実績詳細を表示" : "Click to view Press Process Record Details"}
+                      className="group/run cursor-pointer transition-colors hover:bg-blue-50/60 dark:hover:bg-blue-950/25"
+                    >
                       <td className="whitespace-nowrap px-3 py-2.5 text-sm font-normal text-[var(--text-primary)] freya-tabular">
                         {formatShortDate(r.date, r.timeStart, isJa)}
                       </td>
                       <td className="whitespace-nowrap px-3 py-2.5 text-sm font-semibold text-[var(--text-primary)]">
                         {r.machine || "—"}
                       </td>
-                      <td className="whitespace-nowrap px-3 py-2.5 text-sm font-normal text-[var(--text-muted)]">
-                        {r.hinban || "—"}
+                      <td className="whitespace-nowrap px-3 py-2.5 text-sm font-normal text-[var(--text-muted)] group-hover/run:text-[var(--text-primary)]">
+                        <span className="inline-flex items-center gap-1 group-hover/run:underline decoration-[var(--freya-blue)] underline-offset-2">
+                          {r.hinban || "—"}
+                        </span>
                       </td>
                       <td className="whitespace-nowrap px-3 py-2.5 text-sm font-semibold text-[var(--text-primary)]">
-                        {r.seiban || "—"}
+                        <span className="inline-flex items-center gap-1 text-[var(--text-primary)] group-hover/run:text-[var(--freya-blue)]">
+                          {r.seiban || "—"}
+                          <span
+                            className="material-symbols-outlined text-[13px] opacity-0 group-hover/run:opacity-100 text-[var(--freya-blue)] transition-opacity"
+                            aria-hidden="true"
+                          >
+                            open_in_new
+                          </span>
+                        </span>
                       </td>
                       <td className="whitespace-nowrap px-3 py-2.5 text-right text-sm font-bold text-emerald-700 dark:text-emerald-300 freya-tabular">
                         {fmtMeters(r.meters)} m
@@ -419,7 +436,7 @@ function LotUsageHistoryModal({ lot, onClose, onPreview, isJa }) {
                       <td className="whitespace-nowrap px-3 py-2.5 font-sans text-sm font-medium text-[var(--text-secondary)]">
                         {r.worker || "—"}
                       </td>
-                      <td className="whitespace-nowrap px-3 py-2.5 text-left">
+                      <td className="whitespace-nowrap px-3 py-2.5 text-left" onClick={(e) => e.stopPropagation()}>
                         <EvidencePills
                           labelImages={runLabelImage ? [runLabelImage] : []}
                           defectImages={runDefectImages}
@@ -459,18 +476,29 @@ function LotUsageHistoryModal({ lot, onClose, onPreview, isJa }) {
             {(lot.runs || []).map((run, index) => {
               const labelImage = run.labelImage || (run.materialLabelImages || [])[0];
               return (
-                <div key={index} className="rounded-[8px] border border-[var(--border)] bg-[var(--surface)] p-3 shadow-2xs">
+                <div
+                  key={index}
+                  onClick={() => onOpenRecord?.(run)}
+                  title={isJa ? "タップしてプレス加工実績詳細を表示" : "Tap to view Press Process Record Details"}
+                  className="group/run cursor-pointer rounded-[8px] border border-[var(--border)] bg-[var(--surface)] p-3 shadow-2xs transition-colors hover:border-[var(--freya-blue)] hover:bg-blue-50/30 dark:hover:bg-blue-950/20"
+                >
                   <div className="flex flex-wrap items-baseline justify-between gap-2 text-sm">
                     <span className="font-medium tabular-nums">{formatShortDate(run.date, run.timeStart, isJa)}</span>
                     <span className="font-semibold tabular-nums text-emerald-700 dark:text-emerald-300">{fmtMeters(run.meters)} m</span>
                   </div>
                   <dl className="analytics-card-details mt-2 space-y-1.5 text-sm">
                     <div><dt>{isJa ? "設備" : "Machine"}</dt><dd className="font-mono">{run.machine || "—"}</dd></div>
-                    <div><dt>{isJa ? "製品 / 背番号" : "Product / Seiban"}</dt><dd className="font-mono">{run.hinban || "—"} / {run.seiban || "—"}</dd></div>
+                    <div>
+                      <dt>{isJa ? "製品 / 背番号" : "Product / Seiban"}</dt>
+                      <dd className="font-mono flex items-center gap-1.5 text-[var(--text-primary)] group-hover/run:text-[var(--freya-blue)]">
+                        <span>{run.hinban || "—"} / {run.seiban || "—"}</span>
+                        <span className="material-symbols-outlined text-[13px]" aria-hidden="true">open_in_new</span>
+                      </dd>
+                    </div>
                     <div><dt>{isJa ? "生産数" : "Pieces"}</dt><dd className="tabular-nums">{formatNumber(run.pieces)}</dd></div>
                     <div><dt>{isJa ? "作業者" : "Worker"}</dt><dd>{run.worker || "—"}</dd></div>
                   </dl>
-                  <div className="mt-3 border-t border-[var(--border)] pt-2.5">
+                  <div className="mt-3 border-t border-[var(--border)] pt-2.5" onClick={(e) => e.stopPropagation()}>
                     <EvidencePills
                       labelImages={labelImage ? [labelImage] : []}
                       defectImages={run.defectImages}
@@ -576,12 +604,47 @@ export default function AnalyticsPage() {
   // Expanded Lots in Table
   const [expandedLots, setExpandedLots] = useState(new Set());
 
+  // Record Detail Modal (Press Process)
+  const { modalRecord, modalProcess, openRecord, closeRecord } = useRecordModal();
+
+  const handleOpenRecordDetail = (r) => {
+    if (!r) return;
+    const raw = r.rawRecord || {};
+    const record = {
+      ...raw,
+      _id: r.pressId || raw._id || r._id,
+      _source: "pressDB",
+      _process: "Press",
+      "品番": r.hinban || raw["品番"] || "",
+      "背番号": r.seiban || raw["背番号"] || "",
+      "設備": r.machine || raw["設備"] || "",
+      "Worker_Name": r.worker || raw.Worker_Name || "",
+      "工場": r.factory || raw["工場"] || "",
+      "Date": r.date || raw.Date || "",
+      "Time_start": r.timeStart || raw.Time_start || "",
+      "Time_end": r.timeEnd || raw.Time_end || "",
+      "Process_Quantity": r.pieces ?? raw.Process_Quantity ?? raw.Total ?? 0,
+      "Total": r.pieces ?? raw.Total ?? raw.Process_Quantity ?? 0,
+      "ショット数": r.shots ?? raw["ショット数"] ?? 0,
+      "Cycle_Time": raw.Cycle_Time || 0,
+      "Total_NG": r.totalNg ?? raw.Total_NG ?? 0,
+      "Comment": r.comment || raw.Comment || "",
+      "材料ロット": r.lotNumber || raw["材料ロット"] || "",
+      materialLabelImages: r.materialLabelImages || (r.labelImage ? [r.labelImage] : []) || (raw.materialLabelImages || []),
+      "初物チェック画像": r.firstCheckImage || raw["初物チェック画像"] || null,
+      "終物チェック画像": r.lastCheckImage || raw["終物チェック画像"] || null,
+    };
+    openRecord(record, "Press");
+  };
+
   // Close modals on Escape key
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.key === "Escape") {
         if (selectedImageModal) {
           setSelectedImageModal(null);
+        } else if (modalRecord) {
+          closeRecord();
         } else if (historyModalLot) {
           setHistoryModalLot(null);
         }
@@ -589,18 +652,18 @@ export default function AnalyticsPage() {
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [selectedImageModal, historyModalLot]);
+  }, [selectedImageModal, modalRecord, historyModalLot, closeRecord]);
 
   // Lock body scroll when any modal is open
   useEffect(() => {
-    if (historyModalLot || selectedImageModal) {
+    if (historyModalLot || selectedImageModal || modalRecord) {
       const original = document.body.style.overflow;
       document.body.style.overflow = "hidden";
       return () => {
         document.body.style.overflow = original;
       };
     }
-  }, [historyModalLot, selectedImageModal]);
+  }, [historyModalLot, selectedImageModal, modalRecord]);
 
   // Sorting state for table
   const [sortField, setSortField] = useState("latestDate");
@@ -1576,18 +1639,33 @@ export default function AnalyticsPage() {
                                           const runLabelImage = r.labelImage || (r.materialLabelImages || [])[0];
 
                                           return (
-                                            <tr key={rIdx} className="transition-colors hover:bg-[var(--surface-hover)]">
+                                            <tr
+                                              key={rIdx}
+                                              onClick={() => handleOpenRecordDetail(r)}
+                                              title={isJa ? "クリックしてプレス加工実績詳細を表示" : "Click to view Press Process Record Details"}
+                                              className="group/run cursor-pointer transition-colors hover:bg-blue-50/60 dark:hover:bg-blue-950/25"
+                                            >
                                               <td className="whitespace-nowrap px-3 py-2.5 text-sm font-normal text-[var(--text-primary)] freya-tabular">
                                                 {formatShortDate(r.date, r.timeStart, isJa)}
                                               </td>
                                               <td className="whitespace-nowrap px-3 py-2.5 text-sm font-semibold text-[var(--text-primary)]">
                                                 {r.machine || "—"}
                                               </td>
-                                              <td className="whitespace-nowrap px-3 py-2.5 text-sm font-normal text-[var(--text-muted)]">
-                                                {r.hinban || "—"}
+                                              <td className="whitespace-nowrap px-3 py-2.5 text-sm font-normal text-[var(--text-muted)] group-hover/run:text-[var(--text-primary)]">
+                                                <span className="inline-flex items-center gap-1 group-hover/run:underline decoration-[var(--freya-blue)] underline-offset-2">
+                                                  {r.hinban || "—"}
+                                                </span>
                                               </td>
                                               <td className="whitespace-nowrap px-3 py-2.5 text-sm font-semibold text-[var(--text-primary)]">
-                                                {r.seiban || "—"}
+                                                <span className="inline-flex items-center gap-1 text-[var(--text-primary)] group-hover/run:text-[var(--freya-blue)]">
+                                                  {r.seiban || "—"}
+                                                  <span
+                                                    className="material-symbols-outlined text-[13px] opacity-0 group-hover/run:opacity-100 text-[var(--freya-blue)] transition-opacity"
+                                                    aria-hidden="true"
+                                                  >
+                                                    open_in_new
+                                                  </span>
+                                                </span>
                                               </td>
                                               <td className="whitespace-nowrap px-3 py-2.5 text-right text-sm font-bold text-emerald-700 dark:text-emerald-300 freya-tabular">
                                                 {fmtMeters(r.meters)} m
@@ -1604,7 +1682,7 @@ export default function AnalyticsPage() {
                                               <td className="whitespace-nowrap px-3 py-2.5 font-sans text-sm font-medium text-[var(--text-secondary)]">
                                                 {r.worker || "—"}
                                               </td>
-                                              <td className="whitespace-nowrap px-3 py-2.5 text-left">
+                                              <td className="whitespace-nowrap px-3 py-2.5 text-left" onClick={(e) => e.stopPropagation()}>
                                                 <EvidencePills labelImages={runLabelImage ? [runLabelImage] : []} defectImages={runDefectImages} scannedQR={r.scannedQR} lotNumber={r.lotNumber || lot.lotNumber} isJa={isJa} onPreview={setSelectedImageModal} showLabels="compact" />
                                               </td>
                                             </tr>
@@ -1695,7 +1773,22 @@ export default function AnalyticsPage() {
           lot={historyModalLot}
           onClose={() => setHistoryModalLot(null)}
           onPreview={setSelectedImageModal}
+          onOpenRecord={handleOpenRecordDetail}
           isJa={isJa}
+        />
+      )}
+
+      {/* ── Press Process Record Details Modal ─────────────────────────────── */}
+      {modalRecord && (
+        <RecordDetailModal
+          record={modalRecord}
+          processName={modalProcess || "Press"}
+          onClose={closeRecord}
+          onLotClick={(lotNum) => {
+            closeRecord();
+            setSearch(lotNum);
+          }}
+          onUpdated={loadData}
         />
       )}
 
@@ -1703,7 +1796,7 @@ export default function AnalyticsPage() {
       {selectedImageModal && (
         <div
           onClick={() => setSelectedImageModal(null)}
-          className="fixed inset-0 z-[60] flex items-center justify-center bg-black/75 p-4 backdrop-blur-sm animate-[fadeIn_0.15s_ease-out]"
+          className="fixed inset-0 z-[70] flex items-center justify-center bg-black/75 p-4 backdrop-blur-sm animate-[fadeIn_0.15s_ease-out]"
         >
           <div
             onClick={(e) => e.stopPropagation()}
