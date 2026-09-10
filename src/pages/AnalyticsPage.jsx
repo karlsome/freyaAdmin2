@@ -4,6 +4,7 @@ import "./AnalyticsPage.css";
 import PageHeader from "../components/PageHeader";
 import MasterTabNav from "../components/MasterTabNav";
 import RecordDetailModal from "../components/RecordDetailModal";
+import SensorDevicePhotoPreviewModal from "../components/SensorDevicePhotoPreviewModal";
 import { useRecordModal } from "../hooks/useRecordModal";
 import { useLanguage } from "../contexts/LanguageContext";
 import { fetchMaterialLotAnalytics } from "../services/api";
@@ -154,9 +155,26 @@ function EvidencePills({ labelImages: labels, defectImages: defects, scannedQR, 
   const labelImages = labels || [];
   const defectImages = defects || [];
   const groups = [
-    { type: "label", images: labelImages, icon: "photo_camera", label: isJa ? "ラベル" : "Label photos" },
+    { type: "label", images: labelImages, icon: "photo_camera", label: isJa ? "材料ラベル" : "Label photos" },
     { type: "defect", images: defectImages, icon: "report_problem", label: isJa ? "不良写真" : "QC photos" },
   ];
+
+  const handleOpenGroup = (type, images, label) => {
+    if (!images || images.length === 0 || !onPreview) return;
+    const isDefect = type === "defect";
+    onPreview({
+      eyebrow: isJa ? (isDefect ? "品質・不良写真" : "材料証拠写真") : (isDefect ? "QC Defect Photos" : "Material Evidence"),
+      displayName: `${lotNumber}`,
+      subtitle: `${label} (${images.length})`,
+      images: images.map((url, i) => ({
+        url,
+        label: isJa
+          ? `${label} ${i + 1}`
+          : `${isDefect ? "QC Defect Photo" : "Material Label"} ${i + 1}`,
+      })),
+      activeIndex: 0,
+    });
+  };
 
   return (
     <div className="analytics-evidence flex flex-wrap items-center justify-start gap-1" onClick={(event) => event.stopPropagation()}>
@@ -168,7 +186,7 @@ function EvidencePills({ labelImages: labels, defectImages: defects, scannedQR, 
           className={joinClasses("analytics-evidence-button", type === "defect" && "analytics-evidence-button--defect")}
           title={`${label} (${images.length})`}
           aria-label={`${lotNumber}: ${label} (${images.length})`}
-          onClick={() => onPreview({ url: images[0], title: `${lotNumber} • ${label}`, type })}
+          onClick={() => handleOpenGroup(type, images, label)}
         >
           <span className="material-symbols-outlined text-base" aria-hidden="true">{icon}</span>
           {showLabels && <span>{showLabels === "compact" ? (type === "label" ? (isJa ? "ラベル" : "Label") : "QC") : label}</span>}
@@ -595,8 +613,35 @@ export default function AnalyticsPage() {
   const [materialSeiban, setMaterialSeiban] = useState("");
   const [search, setSearch] = useState("");
 
-  // Lightbox Modal for Full Image View: { url, title, type: 'label'|'defect' }
-  const [selectedImageModal, setSelectedImageModal] = useState(null);
+  // Reusable Photo Preview Modal (matching Factory Overview -> Product Details photo preview)
+  const [photoPreview, setPhotoPreview] = useState(null);
+
+  const handlePhotoNavigate = (direction) => {
+    setPhotoPreview((current) => {
+      if (!current) return current;
+      const total = current.images?.length || 0;
+      if (!total) return current;
+      const nextIndex = Math.min(Math.max((current.activeIndex || 0) + direction, 0), total - 1);
+      return { ...current, activeIndex: nextIndex };
+    });
+  };
+
+  const handleOpenPhotoPreview = (previewData) => {
+    if (!previewData) return;
+    if (Array.isArray(previewData.images) && previewData.images.length > 0) {
+      setPhotoPreview(previewData);
+      return;
+    }
+    if (previewData.url) {
+      setPhotoPreview({
+        eyebrow: isJa ? "証拠写真" : "Record Photos",
+        displayName: previewData.title || (isJa ? "写真" : "Photo"),
+        subtitle: previewData.title,
+        images: [{ url: previewData.url, label: previewData.title || (isJa ? "写真 1" : "Photo 1") }],
+        activeIndex: 0,
+      });
+    }
+  };
 
   // Modal for Viewing Full Usage History of a Material Lot (Card View)
   const [historyModalLot, setHistoryModalLot] = useState(null);
@@ -641,8 +686,8 @@ export default function AnalyticsPage() {
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.key === "Escape") {
-        if (selectedImageModal) {
-          setSelectedImageModal(null);
+        if (photoPreview) {
+          setPhotoPreview(null);
         } else if (modalRecord) {
           closeRecord();
         } else if (historyModalLot) {
@@ -652,18 +697,18 @@ export default function AnalyticsPage() {
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [selectedImageModal, modalRecord, historyModalLot, closeRecord]);
+  }, [photoPreview, modalRecord, historyModalLot, closeRecord]);
 
   // Lock body scroll when any modal is open
   useEffect(() => {
-    if (historyModalLot || selectedImageModal || modalRecord) {
+    if (historyModalLot || photoPreview || modalRecord) {
       const original = document.body.style.overflow;
       document.body.style.overflow = "hidden";
       return () => {
         document.body.style.overflow = original;
       };
     }
-  }, [historyModalLot, selectedImageModal, modalRecord]);
+  }, [historyModalLot, photoPreview, modalRecord]);
 
   // Sorting state for table
   const [sortField, setSortField] = useState("latestDate");
@@ -881,21 +926,15 @@ export default function AnalyticsPage() {
     <section className="material-analytics w-full h-screen overflow-y-auto space-y-6 bg-[var(--page-bg)] text-[var(--text-primary)] pt-20 px-4 sm:px-6 md:px-8 pb-16">
       {/* ── Page Header ──────────────────────────────────────────────────────── */}
       <PageHeader
-        eyebrow={isJa ? "トレーサビリティ台帳" : "Traceability Ledger"}
+        eyebrow="ANALYTICS"
         eyebrowClassName="text-xs tracking-[0.04em]"
         title={
           <div className="flex items-center gap-2.5">
             <span className="material-symbols-outlined text-[var(--freya-blue)]">
-              {activeTab === "material" ? "receipt_long" : activeTab === "production" ? "precision_manufacturing" : activeTab === "quality" ? "fact_check" : "speed"}
+              analytics
             </span>
             <span>
-              {activeTab === "material"
-                ? (isJa ? "材料使用実績" : "Material Usage")
-                : activeTab === "production"
-                ? t("productionAnalytics")
-                : activeTab === "quality"
-                ? t("qualityAnalytics")
-                : t("machineAnalytics")}
+              {isJa ? "アナリティクス" : "Analytics"}
             </span>
           </div>
         }
@@ -1552,7 +1591,7 @@ export default function AnalyticsPage() {
 
                             {/* 9. Evidence Action Pills (Section 12: Compact indicators) */}
                             <td className="px-3 py-3 text-left">
-                              <EvidencePills labelImages={labelImgs} defectImages={defectImgs} lotNumber={lot.lotNumber} isJa={isJa} onPreview={setSelectedImageModal} />
+                              <EvidencePills labelImages={labelImgs} defectImages={defectImgs} lotNumber={lot.lotNumber} isJa={isJa} onPreview={handleOpenPhotoPreview} />
                             </td>
                           </tr>
 
@@ -1685,7 +1724,7 @@ export default function AnalyticsPage() {
                                                 {r.worker || "—"}
                                               </td>
                                               <td className="whitespace-nowrap px-3 py-2.5 text-left" onClick={(e) => e.stopPropagation()}>
-                                                <EvidencePills labelImages={runLabelImage ? [runLabelImage] : []} defectImages={runDefectImages} scannedQR={r.scannedQR} lotNumber={r.lotNumber || lot.lotNumber} isJa={isJa} onPreview={setSelectedImageModal} showLabels="compact" />
+                                                <EvidencePills labelImages={runLabelImage ? [runLabelImage] : []} defectImages={runDefectImages} scannedQR={r.scannedQR} lotNumber={r.lotNumber || lot.lotNumber} isJa={isJa} onPreview={handleOpenPhotoPreview} showLabels="compact" />
                                               </td>
                                             </tr>
                                           );
@@ -1759,7 +1798,7 @@ export default function AnalyticsPage() {
                     key={lotKey}
                     lot={lot}
                     onOpenHistory={setHistoryModalLot}
-                    onPreview={setSelectedImageModal}
+                    onPreview={handleOpenPhotoPreview}
                     isJa={isJa}
                   />
                 );
@@ -1774,7 +1813,7 @@ export default function AnalyticsPage() {
         <LotUsageHistoryModal
           lot={historyModalLot}
           onClose={() => setHistoryModalLot(null)}
-          onPreview={setSelectedImageModal}
+          onPreview={handleOpenPhotoPreview}
           onOpenRecord={handleOpenRecordDetail}
           isJa={isJa}
         />
@@ -1794,62 +1833,13 @@ export default function AnalyticsPage() {
         />
       )}
 
-      {/* ── Image Lightbox Modal ─────────────────────────────────────────────── */}
-      {selectedImageModal && (
-        <div
-          onClick={() => setSelectedImageModal(null)}
-          className="fixed inset-0 z-[70] flex items-center justify-center bg-black/75 p-4 backdrop-blur-sm animate-[fadeIn_0.15s_ease-out]"
-        >
-          <div
-            onClick={(e) => e.stopPropagation()}
-            className="relative max-h-[92vh] max-w-[92vw] overflow-hidden rounded-[12px] border border-[var(--border)] bg-[var(--surface-raised)] shadow-2xl flex flex-col"
-          >
-            {/* Modal Header */}
-            <div className="flex items-center justify-between border-b border-[var(--border)] bg-[var(--surface-subtle)] px-4 py-2.5">
-              <div className="flex items-center gap-2">
-                <span
-                  className={`material-symbols-outlined ${
-                    selectedImageModal.type === "defect" ? "text-rose-500" : "text-emerald-500"
-                  }`}
-                  style={{ fontSize: 18 }}
-                >
-                  {selectedImageModal.type === "defect" ? "report_problem" : "photo_camera"}
-                </span>
-                <h4 className="text-sm font-semibold text-[var(--text-primary)] font-mono">
-                  {selectedImageModal.title || (isJa ? "証拠写真" : "Evidence Image")}
-                </h4>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <a
-                  href={selectedImageModal.url}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="flex h-6 px-2 items-center justify-center gap-1 rounded-[4px] border border-[var(--border)] bg-[var(--surface)] text-xs font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-hover)] transition"
-                >
-                  <span className="material-symbols-outlined" style={{ fontSize: 13 }}>open_in_new</span>
-                  <span>{isJa ? "原本" : "Original"}</span>
-                </a>
-                <button
-                  type="button"
-                  onClick={() => setSelectedImageModal(null)}
-                  className="flex h-6 w-6 items-center justify-center rounded-[4px] border border-[var(--border)] bg-[var(--surface)] text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-hover)] transition"
-                >
-                  <span className="material-symbols-outlined" style={{ fontSize: 15 }}>close</span>
-                </button>
-              </div>
-            </div>
-
-            {/* Modal Image Content */}
-            <div className="p-3 flex items-center justify-center max-h-[82vh] overflow-auto bg-black/5 dark:bg-black/30">
-              <img
-                src={selectedImageModal.url}
-                alt="Evidence Preview"
-                className="max-h-[76vh] max-w-full rounded-[6px] border border-[var(--border)] object-contain shadow-md"
-              />
-            </div>
-          </div>
-        </div>
+      {/* ── Reusable Photo Preview Modal (Same as Product Details) ─────────── */}
+      {photoPreview && (
+        <SensorDevicePhotoPreviewModal
+          preview={photoPreview}
+          onClose={() => setPhotoPreview(null)}
+          onNavigate={handlePhotoNavigate}
+        />
       )}
     </section>
   );
