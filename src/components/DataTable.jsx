@@ -58,9 +58,16 @@ function getDefaultColumnWidths(columns) {
 
 function normalizeColumnOrder(order, columns) {
   const nextKeys = getDefaultColumnOrder(columns);
-  const safeOrder = Array.isArray(order) ? order.filter((key) => nextKeys.includes(key)) : [];
+  const leadingKeys = [];
+  if (columns[0] && columns[0].reorderable === false) {
+    leadingKeys.push(columns[0].key);
+  }
+  const safeOrder = Array.isArray(order)
+    ? order.filter((key) => nextKeys.includes(key) && !leadingKeys.includes(key))
+    : [];
+  const remainingKeys = nextKeys.filter((key) => !safeOrder.includes(key) && !leadingKeys.includes(key));
 
-  return [...safeOrder, ...nextKeys.filter((key) => !safeOrder.includes(key))];
+  return [...leadingKeys, ...safeOrder, ...remainingKeys];
 }
 
 function normalizeColumnWidths(widths, columns) {
@@ -282,9 +289,13 @@ export default function DataTable({
   useEffect(() => {
     setColumnOrder((currentOrder) => {
       const nextKeys = columns.map((column) => column.key);
-      const preservedKeys = currentOrder.filter((key) => nextKeys.includes(key));
-      const appendedKeys = nextKeys.filter((key) => !preservedKeys.includes(key));
-      const mergedKeys = [...preservedKeys, ...appendedKeys];
+      const leadingKeys = [];
+      if (columns[0] && columns[0].reorderable === false) {
+        leadingKeys.push(columns[0].key);
+      }
+      const preservedKeys = currentOrder.filter((key) => nextKeys.includes(key) && !leadingKeys.includes(key));
+      const appendedKeys = nextKeys.filter((key) => !preservedKeys.includes(key) && !leadingKeys.includes(key));
+      const mergedKeys = [...leadingKeys, ...preservedKeys, ...appendedKeys];
 
       if (
         mergedKeys.length === currentOrder.length &&

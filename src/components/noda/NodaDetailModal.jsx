@@ -7,6 +7,7 @@ import StatusChip from "../StatusChip";
 import { useLanguage } from "../../contexts/LanguageContext";
 import {
   addItemsToNodaRequest,
+  batchUpdateNodaLineItemStatus,
   checkNodaInventory,
   deleteNodaLineItem,
   deleteNodaRequest,
@@ -134,7 +135,7 @@ function sortNodaLineItems(items = [], sort = {}) {
 }
 
 export default function NodaDetailModal({ open, requestId, mode = "view", authUser, onClose, onSubmitted }) {
-  const { language } = useLanguage();
+  const { language, t } = useLanguage();
   const isJa = language === "ja";
   const canManageRequest = canManageNodaRequests(authUser);
   const [request, setRequest] = useState(null);
@@ -147,12 +148,22 @@ export default function NodaDetailModal({ open, requestId, mode = "view", authUs
   const [pickupDate, setPickupDate] = useState("");
   const [lineQuantities, setLineQuantities] = useState({});
   const [lineItemSort, setLineItemSort] = useState({ column: "", direction: 1 });
+  const [selectedLineNumbers, setSelectedLineNumbers] = useState([]);
   const [addForm, setAddForm] = useState({ partNumber: "", backNumber: "", quantity: "" });
   const [addCart, setAddCart] = useState([]);
   const [inventoryPreview, setInventoryPreview] = useState(null);
 
   const isBulkRequest = request?.requestType === "bulk";
   const canEditBulkItems = canManageRequest && viewMode === "edit" && isBulkRequest && request?.status === "pending";
+  const bulkLineItems = useMemo(() => (isBulkRequest ? request?.lineItems || [] : []), [isBulkRequest, request]);
+  const eligibleLineItems = useMemo(
+    () => bulkLineItems.filter((item) => item.status !== "completed" && item.status !== "in-progress"),
+    [bulkLineItems]
+  );
+  const eligibleLineNumbers = useMemo(
+    () => eligibleLineItems.map((item) => item.lineNumber),
+    [eligibleLineItems]
+  );
 
   const loadRequest = useCallback(async () => {
     if (!requestId) return;
@@ -174,6 +185,7 @@ export default function NodaDetailModal({ open, requestId, mode = "view", authUs
       setLineQuantities(
         Object.fromEntries((nextRequest?.lineItems || []).map((lineItem) => [lineItem.lineNumber, String(lineItem.quantity || "")]))
       );
+      setSelectedLineNumbers([]);
       setAddForm({ partNumber: "", backNumber: "", quantity: "" });
       setAddCart([]);
       setInventoryPreview(null);
@@ -190,6 +202,7 @@ export default function NodaDetailModal({ open, requestId, mode = "view", authUs
     setViewMode(canManageRequest ? mode : "view");
     setBulkTab("existing");
     setLineItemSort({ column: "", direction: 1 });
+    setSelectedLineNumbers([]);
     void loadRequest();
   }, [canManageRequest, loadRequest, mode, open]);
 
@@ -248,26 +261,109 @@ export default function NodaDetailModal({ open, requestId, mode = "view", authUs
     });
   }
 
+  const isAllEligibleSelected =
+    eligibleLineNumbers.length > 0 &&
+    eligibleLineNumbers.every((num) => selectedLineNumbers.includes(num));
+  const isSomeEligibleSelected =
+    eligibleLineNumbers.some((num) => selectedLineNumbers.includes(num)) &&
+    !isAllEligibleSelected;
+
+  const selectColumn = canManageRequest && viewMode === "edit" && isBulkRequest ? [{
+    key: "select",
+    label: (
+      <div className="flex items-center justify-center">
+        <input
+          type="checkbox"
+          checked={isAllEligibleSelected}
+          ref={(el) => {
+            if (el) {
+              el.indeterminate = isSomeEligibleSelected;
+            }
+          }}
+          onChange={(event) => {
+            if (eligibleLineNumbers.length === 0) {
+              alert(t("noEligibleLinesToComplete") || (isJa ? "完了可能な保留中/一時停止アイテムがありません。" : "No eligible pending/paused items to complete."));
+              return;
+            }
+            if (event.target.checked) {
+              setSelectedLineNumbers(eligibleLineNumbers);
+            } else {
+              setSelectedLineNumbers([]);
+            }
+          }}
+          className="h-4 w-4 rounded border-2 border-slate-400 bg-white text-blue-600 focus:ring-blue-500 cursor-pointer accent-[var(--freya-blue)]"
+          title={isJa ? "すべての対象アイテムを選択" : "Select all eligible items"}
+        />
+      </div>
+    ),
+    width: 44,
+    sortable: false,
+    reorderable: false,
+    align: "center",
+    renderCell: (lineItem) => {
+      const isEligible = lineItem.status !== "completed" && lineItem.status !== "in-progress";
+      const isChecked = selectedLineNumbers.includes(lineItem.lineNumber);
+
+      return (
+        <div className="flex items-center justify-center" onClick={(event) => event.stopPropagation()}>
+          <input
+            type="checkbox"
+            checked={isChecked}
+            disabled={!isEligible}
+            onChange={(event) => {
+              setSelectedLineNumbers((prev) =>
+                event.target.checked
+                  ? [...prev, lineItem.lineNumber]
+                  : prev.filter((num) => num !== lineItem.lineNumber)
+              );
+            }}
+            className="h-4 w-4 rounded border-2 border-slate-400 bg-white text-blue-600 focus:ring-blue-500 cursor-pointer disabled:cursor-not-allowed disabled:bg-slate-100 disabled:border-slate-300 disabled:opacity-50 accent-[var(--freya-blue)]"
+          />
+        </div>
+      );
+    },
+    disableCellWrapper: true,
+  }] : [];
+
   const lineItemColumns = [
+    ...selectColumn,
     {
       key: "lineNumber",
-      label: isJa ? "行" : "Line",
-      width: 88,
-      renderCell: (lineItem) => <span className="text-on-surface">{lineItem.lineNumber}</span>,
+      label: isJa ? "行" : "Line #",
+      width: 72,
+      renderCell: (lineItem) => <span className="font-medium text-on-surface">{lineItem.lineNumber}</span>,
       disableCellWrapper: true,
     },
     {
       key: "品番",
-      label: "品番",
-      width: 164,
+      label: isJa ? "品番" : "Part Number",
+      width: 156,
       renderCell: (lineItem) => <span className="font-semibold text-on-surface">{lineItem.品番 || "—"}</span>,
       disableCellWrapper: true,
     },
     {
       key: "背番号",
-      label: "背番号",
-      width: 164,
+      label: isJa ? "背番号" : "Back #",
+      width: 100,
       renderCell: (lineItem) => <span className="text-on-surface">{lineItem.背番号 || "—"}</span>,
+      disableCellWrapper: true,
+    },
+    {
+      key: "箱数",
+      label: isJa ? "箱数" : "Shipped Boxes",
+      width: 104,
+      renderCell: (lineItem) => <span className="text-on-surface">{lineItem.箱数 ?? "—"}</span>,
+      disableCellWrapper: true,
+    },
+    {
+      key: "箱数足りない",
+      label: isJa ? "不足箱数" : "Shortage Boxes",
+      width: 110,
+      renderCell: (lineItem) => (
+        <span className={lineItem["箱数足りない"] > 0 ? "font-semibold text-error" : "text-on-surface-variant"}>
+          {lineItem["箱数足りない"] ?? "0"}
+        </span>
+      ),
       disableCellWrapper: true,
     },
     {
@@ -508,6 +604,115 @@ export default function NodaDetailModal({ open, requestId, mode = "view", authUs
     } finally {
       setBusy(false);
     }
+  }
+
+  async function handleMarkSelectedComplete() {
+    if (!request?._id || selectedLineNumbers.length === 0) {
+      alert(t("noLinesSelected") || (isJa ? "完了するアイテムを少なくとも1つ選択してください。" : "Please select at least one item to complete."));
+      return;
+    }
+
+    const count = selectedLineNumbers.length;
+    const confirmTemplate = t("alertMarkSelectedLinesCompleted") ||
+      (isJa
+        ? "選択した{count}件のアイテムを完了済みにしますか？これらの在庫が引き落とされます。"
+        : "Are you sure you want to mark {count} selected items as completed? This will deduct inventory for each item.");
+    const confirmMsg = confirmTemplate.replace("{count}", count);
+
+    if (!window.confirm(confirmMsg)) return;
+
+    setBusy(true);
+    setError("");
+
+    try {
+      const actorName = await resolveActorName();
+      const result = await batchUpdateNodaLineItemStatus(
+        request._id,
+        { lineNumbers: selectedLineNumbers, status: "completed" },
+        actorName
+      );
+
+      setSelectedLineNumbers([]);
+      await loadRequest();
+      onSubmitted?.({
+        type: "success",
+        message: isJa
+          ? `${result?.updatedCount || count} 件の明細を完了済みにしました。`
+          : `Successfully marked ${result?.updatedCount || count} item(s) as completed.`,
+      });
+    } catch (saveError) {
+      setError(saveError.message || (isJa ? "選択項目の完了に失敗しました。" : "Failed to complete selected items."));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleMarkAllPendingComplete() {
+    if (!request?._id) return;
+    const count = eligibleLineNumbers.length;
+    if (count === 0) {
+      alert(t("noEligibleLinesToComplete") || (isJa ? "完了可能な保留中/一時停止アイテムがありません。" : "No eligible pending/paused items to complete."));
+      return;
+    }
+
+    const confirmTemplate = t("alertMarkAllLinesCompleted") ||
+      (isJa
+        ? "対象の{count}件のアイテムをすべて完了済みにしますか？すべての在庫が引き落とされます。"
+        : "Are you sure you want to mark all {count} eligible items as completed? This will deduct inventory for each item.");
+    const confirmMsg = confirmTemplate.replace("{count}", count);
+
+    if (!window.confirm(confirmMsg)) return;
+
+    setBusy(true);
+    setError("");
+
+    try {
+      const actorName = await resolveActorName();
+      const result = await batchUpdateNodaLineItemStatus(
+        request._id,
+        { lineNumbers: "all", status: "completed" },
+        actorName
+      );
+
+      setSelectedLineNumbers([]);
+      await loadRequest();
+      onSubmitted?.({
+        type: "success",
+        message: isJa
+          ? `${result?.updatedCount || count} 件の明細を完了済みにしました。`
+          : `Successfully marked ${result?.updatedCount || count} item(s) as completed.`,
+      });
+    } catch (saveError) {
+      setError(saveError.message || (isJa ? "保留中項目の完了に失敗しました。" : "Failed to complete all pending items."));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  function handleExportLineItems() {
+    if (!request || !summaryItems.length) return;
+    const matrix = [
+      ["Line Number", "Part Number (品番)", "Serial Number (背番号)", "Quantity", "Reserved", "Shortfall", "Status"],
+      ...summaryItems.map((item) => [
+        item.lineNumber ?? "",
+        item.品番 ?? "",
+        item.背番号 ?? "",
+        item.quantity ?? "",
+        item.reservedQuantity ?? item.quantity ?? "",
+        item.shortfallQuantity ?? 0,
+        item.status ?? "",
+      ]),
+    ];
+    const csvContent = "\uFEFF" + matrix.map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(",")).join("\r\n");
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `noda_${request.requestNumber || "detail"}_lines.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   }
 
   async function handleDeleteRequest() {
@@ -937,6 +1142,61 @@ export default function NodaDetailModal({ open, requestId, mode = "view", authUs
 
                 {bulkTab === "existing" || !canEditBulkItems ? (
                   <div className="freya-card rounded-[8px] border border-[var(--border)] bg-[var(--surface-subtle)] p-5">
+                    <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+                      <div className="flex items-center gap-3">
+                        <h4 className="text-base font-semibold text-on-surface">{isJa ? "明細一覧" : "Line Items"}</h4>
+                        <span className="text-xs text-on-surface-variant">({summaryItems.length})</span>
+                        {canManageRequest && viewMode === "edit" && selectedLineNumbers.length > 0 ? (
+                          <span className="inline-flex items-center rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-semibold text-primary">
+                            {selectedLineNumbers.length} {isJa ? "件選択中" : "selected"}
+                          </span>
+                        ) : null}
+                      </div>
+                      <div className="flex flex-wrap items-center gap-2">
+                        {canManageRequest && viewMode === "edit" && isBulkRequest ? (
+                          <>
+                            {selectedLineNumbers.length > 0 ? (
+                              <button
+                                type="button"
+                                id="btnMarkSelectedComplete"
+                                onClick={handleMarkSelectedComplete}
+                                disabled={busy}
+                                className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-600 bg-emerald-50 px-3 py-1.5 text-xs font-medium text-emerald-700 shadow-sm transition hover:bg-emerald-100 disabled:opacity-50 dark:bg-emerald-950/30 dark:text-emerald-300"
+                              >
+                                <span className="material-symbols-outlined" style={{ fontSize: 16 }}>check_circle</span>
+                                <span id="btnMarkSelectedCompleteText">
+                                  {t("markSelectedComplete") || (isJa ? "選択項目を完了" : "Complete Selected")} ({selectedLineNumbers.length})
+                                </span>
+                              </button>
+                            ) : null}
+                            <button
+                              type="button"
+                              id="btnMarkAllPendingComplete"
+                              onClick={handleMarkAllPendingComplete}
+                              disabled={busy}
+                              className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-medium text-white shadow-sm transition hover:bg-emerald-700 disabled:opacity-50"
+                            >
+                              <span className="material-symbols-outlined" style={{ fontSize: 16 }}>done_all</span>
+                              <span>
+                                {t("markCompleteAll") || (isJa ? "保留中をすべて完了" : "Complete All Pending")}
+                              </span>
+                            </button>
+                          </>
+                        ) : null}
+                        {summaryItems.length > 0 ? (
+                          <button
+                            type="button"
+                            onClick={handleExportLineItems}
+                            className="inline-flex items-center gap-1.5 rounded-lg border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs font-medium text-blue-700 transition hover:bg-blue-100 dark:border-blue-800 dark:bg-blue-950/30 dark:text-blue-300"
+                            title={isJa ? "明細をCSVエクスポート" : "Export line items to CSV"}
+                          >
+                            <span className="material-symbols-outlined" style={{ fontSize: 16 }}>download</span>
+                            <span>{isJa ? "CSVエクスポート" : "Export CSV"}</span>
+                          </button>
+                        ) : null}
+                      </div>
+                    </div>
+
                     <DataTable
                       columns={lineItemColumns}
                       rows={sortedSummaryItems}
@@ -946,9 +1206,8 @@ export default function NodaDetailModal({ open, requestId, mode = "view", authUs
                       renderPageInfo={null}
                       emptyTitle={isJa ? "明細行がありません" : "No line items"}
                       emptyMessage={isJa ? "このリクエストには明細行が含まれていません。" : "This request does not contain any line items."}
-                      enableColumnResize
-                      enableColumnReorder
-                      layoutStorageKey="freyaAdmin2.noda-detail-line-items-layout"
+                      enableColumnResize={false}
+                      enableColumnReorder={false}
                       stickyHeader
                       stickyHeaderOffset={0}
                       className="overflow-hidden rounded-2xl border border-outline-variant/15"

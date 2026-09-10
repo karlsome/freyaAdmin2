@@ -93,6 +93,14 @@ export async function updateNodaLineItemStatus(requestId, lineNumber, status) {
   });
 }
 
+export async function batchUpdateNodaLineItemStatus(requestId, { lineNumbers, status }, userName) {
+  return postNodaAction("batchUpdateLineItemStatus", {
+    requestId,
+    data: { lineNumbers, status },
+    userName,
+  });
+}
+
 export async function updateNodaLineItemQuantity(requestId, data, userName) {
   return postNodaAction("updateLineItemQuantity", { requestId, data, userName });
 }
