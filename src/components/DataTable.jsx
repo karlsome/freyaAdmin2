@@ -660,12 +660,12 @@ export default function DataTable({
                               onClick={() => onSort(sortKey)}
                               className={resolvedHeaderButtonClassName}
                             >
-                              <span className="truncate">{column.label}</span>
+                              <span className={column.noTruncate ? "whitespace-nowrap" : "truncate"}>{column.label}</span>
                               <span className={active ? "text-primary" : "text-outline"}>{arrow || "↕"}</span>
                             </button>
                           ) : (
                             <div className={resolvedHeaderButtonClassName}>
-                              <span className="truncate">{column.label}</span>
+                              <span className={column.noTruncate ? "whitespace-nowrap" : "truncate"}>{column.label}</span>
                             </div>
                           )}
 

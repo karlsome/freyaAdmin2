@@ -82,14 +82,29 @@ function StatusBadge({ request, language }) {
 
 function InventoryBadge({ lineItem, isJa }) {
   if (lineItem.inventoryStatus === "none") {
-    return <span className="inline-flex rounded-full bg-error/10 px-2.5 py-1 text-xs font-semibold text-error">{isJa ? "待機中" : "Waiting"}</span>;
+    return (
+      <span className="inline-flex items-center gap-1 rounded-full bg-red-500/10 px-2.5 py-0.5 text-xs font-semibold text-red-600 dark:text-red-400">
+        <span className="material-symbols-outlined" style={{ fontSize: 13 }}>cancel</span>
+        {isJa ? "待機中" : "Waiting"}
+      </span>
+    );
   }
 
   if (lineItem.inventoryStatus === "insufficient") {
-    return <span className="inline-flex rounded-full bg-amber-500/10 px-2.5 py-1 text-xs font-semibold text-amber-700 dark:text-amber-300">{isJa ? "一部引当" : "Partial"}</span>;
+    return (
+      <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/10 px-2.5 py-0.5 text-xs font-semibold text-amber-600 dark:text-amber-400">
+        <span className="material-symbols-outlined" style={{ fontSize: 13 }}>warning</span>
+        {isJa ? "一部引当" : "Partial"}
+      </span>
+    );
   }
 
-  return <span className="inline-flex rounded-full bg-emerald-500/10 px-2.5 py-1 text-xs font-semibold text-emerald-700 dark:text-emerald-300">{isJa ? "引当完了" : "OK"}</span>;
+  return (
+    <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2.5 py-0.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+      <span className="material-symbols-outlined" style={{ fontSize: 13 }}>check_circle</span>
+      {isJa ? "引当完了" : "OK"}
+    </span>
+  );
 }
 
 function sortNodaLineItems(items = [], sort = {}) {
@@ -330,37 +345,47 @@ export default function NodaDetailModal({ open, requestId, mode = "view", authUs
     {
       key: "lineNumber",
       label: isJa ? "行" : "Line #",
-      width: 72,
-      renderCell: (lineItem) => <span className="font-medium text-on-surface">{lineItem.lineNumber}</span>,
+      width: 75,
+      minWidth: 75,
+      noTruncate: true,
+      renderCell: (lineItem) => <span className="font-mono font-medium text-[var(--text-primary)]">{lineItem.lineNumber}</span>,
       disableCellWrapper: true,
     },
     {
       key: "品番",
       label: isJa ? "品番" : "Part Number",
-      width: 156,
-      renderCell: (lineItem) => <span className="font-semibold text-on-surface">{lineItem.品番 || "—"}</span>,
+      width: 170,
+      minWidth: 170,
+      noTruncate: true,
+      renderCell: (lineItem) => <span className="font-mono font-semibold text-[var(--text-primary)]">{lineItem.品番 || "—"}</span>,
       disableCellWrapper: true,
     },
     {
       key: "背番号",
       label: isJa ? "背番号" : "Back #",
       width: 100,
-      renderCell: (lineItem) => <span className="text-on-surface">{lineItem.背番号 || "—"}</span>,
+      minWidth: 100,
+      noTruncate: true,
+      renderCell: (lineItem) => <span className="font-medium text-[var(--text-primary)]">{lineItem.背番号 || "—"}</span>,
       disableCellWrapper: true,
     },
     {
       key: "箱数",
-      label: isJa ? "箱数" : "Shipped Boxes",
-      width: 104,
-      renderCell: (lineItem) => <span className="text-on-surface">{lineItem.箱数 ?? "—"}</span>,
+      label: isJa ? "出荷箱数" : "Shipped Boxes",
+      width: 125,
+      minWidth: 125,
+      noTruncate: true,
+      renderCell: (lineItem) => <span className="font-mono text-[var(--text-primary)]">{lineItem.箱数 ?? "—"}</span>,
       disableCellWrapper: true,
     },
     {
       key: "箱数足りない",
       label: isJa ? "不足箱数" : "Shortage Boxes",
-      width: 110,
+      width: 125,
+      minWidth: 125,
+      noTruncate: true,
       renderCell: (lineItem) => (
-        <span className={lineItem["箱数足りない"] > 0 ? "font-semibold text-error" : "text-on-surface-variant"}>
+        <span className={lineItem["箱数足りない"] > 0 ? "font-mono font-semibold text-error" : "font-mono text-[var(--text-muted)]"}>
           {lineItem["箱数足りない"] ?? "0"}
         </span>
       ),
@@ -369,10 +394,12 @@ export default function NodaDetailModal({ open, requestId, mode = "view", authUs
     {
       key: "quantity",
       label: isJa ? "数量" : "Quantity",
-      width: 168,
+      width: 140,
+      minWidth: 140,
+      noTruncate: true,
       renderCell: (lineItem) => (
         canManageRequest && viewMode === "edit" ? (
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5">
             <input
               type="number"
               min="1"
@@ -381,19 +408,19 @@ export default function NodaDetailModal({ open, requestId, mode = "view", authUs
                 ...current,
                 [lineItem.lineNumber]: event.target.value,
               }))}
-              className="h-10 w-24 rounded-2xl border border-outline-variant/30 bg-white px-3 text-sm text-on-surface outline-none transition focus:border-primary/40 dark:bg-surface-container"
+              className="h-8 w-20 rounded-md border border-[var(--border)] bg-white px-2 text-sm font-mono text-[var(--text-primary)] outline-none transition focus:border-primary/40 dark:bg-surface-container"
             />
             <button
               type="button"
               onClick={() => handleSaveLineQuantity(lineItem)}
               disabled={busy}
-              className="rounded-2xl border border-separator/40 px-3 py-2 text-xs font-semibold text-on-surface transition hover:bg-surface-container"
+              className="rounded-md border border-[var(--border)] px-2.5 py-1 text-xs font-semibold text-[var(--text-primary)] transition hover:bg-[var(--surface-hover)] disabled:opacity-50"
             >
               {isJa ? "保存" : "Save"}
             </button>
           </div>
         ) : (
-          <span className="text-on-surface">{lineItem.quantity}</span>
+          <span className="font-mono font-medium text-[var(--text-primary)]">{lineItem.quantity}</span>
         )
       ),
       disableCellWrapper: true,
@@ -401,28 +428,40 @@ export default function NodaDetailModal({ open, requestId, mode = "view", authUs
     {
       key: "reservedQuantity",
       label: isJa ? "即時引当" : "Reserved",
-      width: 116,
-      renderCell: (lineItem) => <span className="text-on-surface">{lineItem.reservedQuantity ?? lineItem.quantity}</span>,
+      width: 105,
+      minWidth: 105,
+      noTruncate: true,
+      renderCell: (lineItem) => <span className="font-mono text-[var(--text-primary)]">{lineItem.reservedQuantity ?? lineItem.quantity}</span>,
       disableCellWrapper: true,
     },
     {
       key: "shortfallQuantity",
       label: isJa ? "不足分" : "Shortfall",
-      width: 116,
-      renderCell: (lineItem) => <span className="text-on-surface">{lineItem.shortfallQuantity ?? 0}</span>,
+      width: 105,
+      minWidth: 105,
+      noTruncate: true,
+      renderCell: (lineItem) => (
+        <span className={Number(lineItem.shortfallQuantity) > 0 ? "font-mono font-semibold text-error" : "font-mono text-[var(--text-muted)]"}>
+          {lineItem.shortfallQuantity ?? 0}
+        </span>
+      ),
       disableCellWrapper: true,
     },
     {
       key: "inventoryStatus",
       label: isJa ? "在庫状況" : "Inventory",
-      width: 124,
+      width: 120,
+      minWidth: 120,
+      noTruncate: true,
       renderCell: (lineItem) => <InventoryBadge lineItem={lineItem} isJa={isJa} />,
       disableCellWrapper: true,
     },
     {
       key: "status",
       label: isJa ? "ステータス" : "Status",
-      width: 152,
+      width: 140,
+      minWidth: 140,
+      noTruncate: true,
       renderCell: (lineItem) => {
         const lineMeta = getNodaStatusMeta(lineItem.status, language);
 
@@ -431,7 +470,7 @@ export default function NodaDetailModal({ open, requestId, mode = "view", authUs
             value={lineItem.status}
             onChange={(event) => handleUpdateLineStatus(lineItem, event.target.value)}
             disabled={busy}
-            className="h-10 rounded-2xl border border-outline-variant/30 bg-white px-3 text-sm text-on-surface outline-none transition focus:border-primary/40 dark:bg-surface-container"
+            className="h-8 rounded-md border border-[var(--border)] bg-white px-2 text-xs font-medium text-[var(--text-primary)] outline-none transition focus:border-primary/40 dark:bg-surface-container"
           >
             <option value="pending">{isJa ? "保留中" : "Pending"}</option>
             <option value="in-progress">{isJa ? "進行中" : "In Progress"}</option>
@@ -450,15 +489,17 @@ export default function NodaDetailModal({ open, requestId, mode = "view", authUs
       key: "actions",
       label: isJa ? "操作" : "Actions",
       sortable: false,
-      width: 124,
+      width: 120,
+      minWidth: 120,
+      noTruncate: true,
       align: "right",
       renderCell: (lineItem) => (
-        <div className="flex items-center justify-end gap-2">
+        <div className="flex items-center justify-end gap-1.5">
           <button
             type="button"
             onClick={() => handleUpdateLineStatus(lineItem, "completed")}
             disabled={busy || lineItem.status === "completed" || lineItem.status === "in-progress"}
-            className="flex h-9 w-9 items-center justify-center rounded-2xl text-emerald-700 transition hover:bg-emerald-500/10 disabled:opacity-40 dark:text-emerald-300"
+            className="flex h-8 w-8 items-center justify-center rounded-lg text-emerald-600 transition hover:bg-emerald-500/10 disabled:opacity-30 dark:text-emerald-400"
             title={isJa ? "完了にする" : "Mark completed"}
           >
             <span className="material-symbols-outlined" style={{ fontSize: 18 }}>check_circle</span>
@@ -467,7 +508,7 @@ export default function NodaDetailModal({ open, requestId, mode = "view", authUs
             type="button"
             onClick={() => handleDeleteLineItem(lineItem)}
             disabled={busy}
-            className="flex h-9 w-9 items-center justify-center rounded-2xl text-error transition hover:bg-error/10 disabled:opacity-40"
+            className="flex h-8 w-8 items-center justify-center rounded-lg text-red-600 transition hover:bg-red-500/10 disabled:opacity-30 dark:text-red-400"
             title={isJa ? "行を削除" : "Delete line"}
           >
             <span className="material-symbols-outlined" style={{ fontSize: 18 }}>delete</span>
@@ -877,24 +918,51 @@ export default function NodaDetailModal({ open, requestId, mode = "view", authUs
   }
 
   const footer = (
-    <div className="flex flex-wrap items-center justify-between gap-3">
-      <div className="text-sm text-on-surface-variant">
-        {loading ? (isJa ? "リクエスト読込中…" : "Loading request…") : request ? request.requestNumber : ""}
+    <div className="flex flex-wrap items-center justify-between gap-3 w-full">
+      <div>
+        {canManageRequest && viewMode === "edit" ? (
+          <button
+            type="button"
+            onClick={handleDeleteRequest}
+            disabled={busy}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-red-200 bg-red-50 px-3.5 py-2 text-sm font-semibold text-red-700 shadow-sm transition hover:bg-red-100 disabled:opacity-50 dark:border-red-900/40 dark:bg-red-950/30 dark:text-red-300"
+          >
+            <span className="material-symbols-outlined" style={{ fontSize: 18 }}>delete</span>
+            <span>{isJa ? "リクエストを削除" : "Delete Request"}</span>
+          </button>
+        ) : (
+          <div className="flex items-center gap-2">
+            <span className="inline-flex items-center rounded-md border border-[var(--border)] bg-[var(--surface-subtle)] px-2.5 py-1 text-xs font-mono font-medium text-[var(--text-muted)]">
+              {loading ? (isJa ? "読込中…" : "Loading…") : request ? request.requestNumber : ""}
+            </span>
+          </div>
+        )}
       </div>
-      <div className="flex flex-wrap gap-3">
+      <div className="flex flex-wrap items-center gap-2.5">
+        {canManageRequest && viewMode === "view" ? (
+          <button
+            type="button"
+            onClick={() => setViewMode("edit")}
+            className="inline-flex items-center gap-1.5 rounded-lg bg-[var(--freya-blue,#2563eb)] px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:opacity-90 active:scale-[0.99]"
+          >
+            <span className="material-symbols-outlined" style={{ fontSize: 18 }}>edit</span>
+            <span>{isJa ? "リクエストを編集" : "Edit Request"}</span>
+          </button>
+        ) : null}
         {viewMode === "edit" ? (
           <button
             type="button"
             onClick={() => setViewMode("view")}
-            className="rounded-2xl border border-separator/40 px-4 py-2 text-sm font-semibold text-on-surface transition hover:bg-surface-container"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-4 py-2 text-sm font-semibold text-[var(--text-primary)] transition hover:bg-[var(--surface-hover)]"
           >
-            {isJa ? "編集をキャンセル" : "Cancel Edit"}
+            <span className="material-symbols-outlined" style={{ fontSize: 18 }}>done</span>
+            <span>{isJa ? "編集完了" : "Finish Editing"}</span>
           </button>
         ) : null}
         <button
           type="button"
           onClick={() => onClose?.()}
-          className="rounded-2xl border border-separator/40 px-4 py-2 text-sm font-semibold text-on-surface transition hover:bg-surface-container"
+          className="rounded-lg border border-[var(--border)] px-4 py-2 text-sm font-semibold text-[var(--text-primary)] transition hover:bg-[var(--surface-hover)]"
         >
           {isJa ? "閉じる" : "Close"}
         </button>
@@ -932,67 +1000,54 @@ export default function NodaDetailModal({ open, requestId, mode = "view", authUs
             <div className="freya-card rounded-[8px] border border-[var(--border)] bg-[var(--surface-subtle)] p-5">
               <div className="flex flex-wrap items-start justify-between gap-4">
                 <div>
-                  <div className="flex flex-wrap items-center gap-3">
-                    <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">{isJa ? "概要" : "Overview"}</div>
+                  <div className="flex flex-wrap items-center gap-2.5">
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--text-muted)]">{isJa ? "概要" : "Overview"}</span>
                     <StatusBadge request={request} language={language} />
-                    <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-primary">
+                    <span className="rounded-full bg-blue-500/10 px-2.5 py-0.5 text-xs font-semibold uppercase tracking-wider text-blue-600 dark:text-blue-400">
                       {isBulkRequest ? (isJa ? "一括" : "Bulk") : (isJa ? "個別" : "Single")}
                     </span>
+                    {viewMode === "edit" ? (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/10 px-2.5 py-0.5 text-xs font-semibold text-amber-600 dark:text-amber-400">
+                        <span className="material-symbols-outlined" style={{ fontSize: 14 }}>edit</span>
+                        {isJa ? "編集中" : "Editing Mode"}
+                      </span>
+                    ) : null}
                   </div>
-                  <p className="mt-2 text-sm text-on-surface-variant">
+                  <p className="mt-2 text-sm text-[var(--text-secondary)]">
                     {isJa ? `作成日時: ${formatNodaDateTime(request.createdAt)} • 作成者: ${request.createdBy || "不明"}` : `Created ${formatNodaDateTime(request.createdAt)} by ${request.createdBy || "Unknown User"}`}
                   </p>
-                  <p className="mt-1 text-sm text-on-surface-variant">
-                    {isJa ? `完了日時: ${formatNodaDateTime(request.completedAt)}` : `Completed ${formatNodaDateTime(request.completedAt)}`}
-                  </p>
-                </div>
-                <div className="flex flex-wrap gap-3">
-                  {canManageRequest && viewMode === "view" ? (
-                    <button
-                      type="button"
-                      onClick={() => setViewMode("edit")}
-                      className="rounded-2xl bg-primary px-4 py-2.5 text-sm font-semibold text-on-primary transition hover:opacity-90"
-                    >
-                      {isJa ? "リクエストを編集" : "Edit Request"}
-                    </button>
-                  ) : null}
-                  {canManageRequest ? (
-                    <button
-                      type="button"
-                      onClick={handleDeleteRequest}
-                      disabled={busy}
-                      className="rounded-2xl bg-error px-4 py-2.5 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-60"
-                    >
-                      {isJa ? "リクエストを削除" : "Delete Request"}
-                    </button>
+                  {request.completedAt ? (
+                    <p className="mt-1 text-sm text-[var(--text-secondary)]">
+                      {isJa ? `完了日時: ${formatNodaDateTime(request.completedAt)}` : `Completed ${formatNodaDateTime(request.completedAt)}`}
+                    </p>
                   ) : null}
                 </div>
               </div>
 
-              <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-6">
-                <div className="rounded-2xl border border-outline-variant/15 bg-surface-container-low/35 p-4">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">{isJa ? "引取日" : "Pickup Date"}</p>
-                  <p className="mt-2 text-sm font-semibold text-on-surface">{formatNodaDate(request.pickupDate || request.date)}</p>
+              <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-6">
+                <div className="rounded-xl border border-[var(--border)] bg-white/70 p-3.5 shadow-sm transition hover:shadow dark:bg-surface-container">
+                  <p className="text-[11px] font-medium uppercase tracking-wider text-[var(--text-muted)]">{isJa ? "引取日" : "Pickup Date"}</p>
+                  <p className="mt-1.5 font-mono text-sm font-semibold text-[var(--text-primary)]">{formatNodaDate(request.pickupDate || request.date)}</p>
                 </div>
-                <div className="rounded-2xl border border-outline-variant/15 bg-surface-container-low/35 p-4">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">{isJa ? "納入指示日" : "Deadline"}</p>
-                  <p className="mt-2 text-sm font-semibold text-on-surface">{formatNodaDate(request.納入指示日)}</p>
+                <div className="rounded-xl border border-[var(--border)] bg-white/70 p-3.5 shadow-sm transition hover:shadow dark:bg-surface-container">
+                  <p className="text-[11px] font-medium uppercase tracking-wider text-[var(--text-muted)]">{isJa ? "納入指示日" : "Deadline"}</p>
+                  <p className="mt-1.5 font-mono text-sm font-semibold text-[var(--text-primary)]">{formatNodaDate(request.納入指示日)}</p>
                 </div>
-                <div className="rounded-2xl border border-outline-variant/15 bg-surface-container-low/35 p-4">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">{isJa ? "便" : "Delivery Order"}</p>
-                  <p className="mt-2 text-sm font-semibold text-on-surface">{request.便 || "—"}</p>
+                <div className="rounded-xl border border-[var(--border)] bg-white/70 p-3.5 shadow-sm transition hover:shadow dark:bg-surface-container">
+                  <p className="text-[11px] font-medium uppercase tracking-wider text-[var(--text-muted)]">{isJa ? "便" : "Delivery Order"}</p>
+                  <p className="mt-1.5 text-sm font-semibold text-[var(--text-primary)]">{request.便 || "—"}</p>
                 </div>
-                <div className="rounded-2xl border border-outline-variant/15 bg-surface-container-low/35 p-4">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">{isJa ? "納品書番号" : "Delivery Note"}</p>
-                  <p className="mt-2 text-sm font-semibold text-on-surface">{request.納品書番号 || "—"}</p>
+                <div className="rounded-xl border border-[var(--border)] bg-white/70 p-3.5 shadow-sm transition hover:shadow dark:bg-surface-container">
+                  <p className="text-[11px] font-medium uppercase tracking-wider text-[var(--text-muted)]">{isJa ? "納品書番号" : "Delivery Note"}</p>
+                  <p className="mt-1.5 font-mono text-sm font-semibold text-[var(--text-primary)]">{request.納品書番号 || "—"}</p>
                 </div>
-                <div className="rounded-2xl border border-outline-variant/15 bg-surface-container-low/35 p-4">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">{isJa ? "完了日" : "Completed Date"}</p>
-                  <p className="mt-2 text-sm font-semibold text-on-surface">{formatNodaDate(request.completedAt)}</p>
+                <div className="rounded-xl border border-[var(--border)] bg-white/70 p-3.5 shadow-sm transition hover:shadow dark:bg-surface-container">
+                  <p className="text-[11px] font-medium uppercase tracking-wider text-[var(--text-muted)]">{isJa ? "完了日" : "Completed Date"}</p>
+                  <p className="mt-1.5 font-mono text-sm font-semibold text-[var(--text-primary)]">{formatNodaDate(request.completedAt)}</p>
                 </div>
-                <div className="rounded-2xl border border-outline-variant/15 bg-surface-container-low/35 p-4">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">{isJa ? "完了時刻" : "Completed Time"}</p>
-                  <p className="mt-2 text-sm font-semibold text-on-surface">{formatNodaTime(request.completedAt)}</p>
+                <div className="rounded-xl border border-[var(--border)] bg-white/70 p-3.5 shadow-sm transition hover:shadow dark:bg-surface-container">
+                  <p className="text-[11px] font-medium uppercase tracking-wider text-[var(--text-muted)]">{isJa ? "完了時刻" : "Completed Time"}</p>
+                  <p className="mt-1.5 font-mono text-sm font-semibold text-[var(--text-primary)]">{formatNodaTime(request.completedAt)}</p>
                 </div>
               </div>
             </div>
