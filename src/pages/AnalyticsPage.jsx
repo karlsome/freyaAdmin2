@@ -117,9 +117,9 @@ function MetricTile({ label, value, unit, icon, tone = "neutral", emphasis = fal
         <span className="text-xs font-semibold uppercase tracking-[0.04em] text-[var(--text-secondary)]">{label}</span>
         {icon ? <span className="material-symbols-outlined text-[17px] text-current">{icon}</span> : null}
       </div>
-      <div className="mt-2 flex flex-wrap items-baseline gap-1">
-        <span className={joinClasses("font-bold tracking-tight tabular-nums", emphasis ? "text-[32px]" : "text-[28px]")}>{value}</span>
-        {unit ? <span className="text-xs font-bold text-[var(--text-secondary)]">{unit}</span> : null}
+      <div className="mt-2 flex flex-wrap items-baseline gap-1.5">
+        <span className={joinClasses("font-bold tracking-tight tabular-nums font-mono", emphasis ? "text-[32px]" : "text-[28px] sm:text-[32px]")}>{value}</span>
+        {unit ? <span className="text-sm font-medium text-[var(--text-secondary)]">{unit}</span> : null}
       </div>
     </div>
   );
@@ -541,7 +541,7 @@ export default function AnalyticsPage() {
       {/* ── Page Header ──────────────────────────────────────────────────────── */}
       <PageHeader
         eyebrow={isJa ? "トレーサビリティ台帳" : "Traceability Ledger"}
-        eyebrowClassName="text-xs tracking-[0.18em]"
+        eyebrowClassName="text-xs tracking-[0.04em]"
         title={
           <div className="flex items-center gap-2.5">
             <span className="material-symbols-outlined text-[var(--freya-blue)]">receipt_long</span>
@@ -617,14 +617,14 @@ export default function AnalyticsPage() {
             </span>
           </div>
           <div>
-            <h3 className="text-base font-bold text-[var(--text-primary)]">
+            <h3 className="text-lg font-semibold text-[var(--text-primary)]">
               {moduleTab === "production"
                 ? (isJa ? "生産ライン稼働率・出来高分析" : "Production & Line Output Analytics")
                 : moduleTab === "quality"
                 ? (isJa ? "不良率・品質トレンド分析" : "Defect Rate & Quality Analytics")
                 : (isJa ? "設備総合効率 (OEE) & ダウンタイム分析" : "Machine OEE & Downtime Analytics")}
             </h3>
-            <p className="text-xs text-[var(--text-muted)] mt-1.5 max-w-md mx-auto">
+            <p className="text-sm font-normal text-[var(--text-muted)] mt-1.5 max-w-md mx-auto">
               {isJa
                 ? "このアナリティクスモジュールは近日統合予定です。リアルタイムKPI、工程別推移、およびAIによる傾向分析がここに追加されます。"
                 : "This analytics section is planned for upcoming release. It will feature real-time line metrics, AI trend predictions, and granular efficiency logs."}
@@ -634,7 +634,7 @@ export default function AnalyticsPage() {
             <button
               type="button"
               onClick={() => setModuleTab("materialLots")}
-              className="inline-flex items-center gap-1.5 rounded-[6px] bg-[var(--freya-blue)] text-white px-4 py-2 text-xs font-semibold shadow-sm hover:opacity-90 transition"
+              className="inline-flex items-center gap-2 rounded-[6px] bg-[var(--freya-blue)] text-white px-4 py-2 text-sm font-semibold shadow-sm hover:opacity-90 transition"
             >
               <span className="material-symbols-outlined" style={{ fontSize: 16 }}>arrow_back</span>
               <span>{isJa ? "材料分析に戻る" : "Back to Material Analytics"}</span>
@@ -655,10 +655,10 @@ export default function AnalyticsPage() {
                     <span className="inline-flex h-7 w-7 items-center justify-center rounded-[6px] border border-[var(--freya-blue)]/25 bg-[var(--freya-blue)]/10 text-[var(--freya-blue)]">
                       <span className="material-symbols-outlined text-[16px]">inventory_2</span>
                     </span>
-                    <h2 className="text-lg font-semibold text-[var(--text-primary)]">
+                    <h2 className="text-xl font-semibold text-[var(--text-primary)]">
                       {isJa ? "材料使用サマリー" : "Material Usage Summary"}
                     </h2>
-                    <span className="rounded-[4px] border border-[var(--border)] bg-[var(--surface)] px-2 py-1 text-xs font-bold text-[var(--text-muted)]">
+                    <span className="rounded-[4px] border border-[var(--border)] bg-[var(--surface)] px-2 py-1 text-xs font-semibold text-[var(--text-muted)]">
                       <span className="font-mono">{dateRange.from}</span> <span aria-hidden="true">~</span>{" "}
                       <span className="font-mono">{dateRange.to}</span>
                     </span>
@@ -739,7 +739,7 @@ export default function AnalyticsPage() {
                       id="analytics-date"
                       value={rangePreset}
                       onChange={(e) => setRangePreset(e.target.value)}
-                      className="h-8 min-w-[120px] appearance-none rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] pl-2.5 pr-7 text-xs font-semibold text-[var(--text-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--freya-blue)] cursor-pointer"
+                      className="h-10 min-w-[130px] appearance-none rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] pl-3 pr-8 text-sm font-medium text-[var(--text-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--freya-blue)] cursor-pointer"
                     >
                       <option value="today">{t("todayLabel")}</option>
                       <option value="yesterday">{t("yesterday")}</option>
@@ -750,7 +750,7 @@ export default function AnalyticsPage() {
                       <option value="lastMonth">{t("lastMonth")}</option>
                       <option value="custom">{t("custom")}</option>
                     </select>
-                    <span className="material-symbols-outlined pointer-events-none absolute right-1.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)] text-[16px]">
+                    <span className="material-symbols-outlined pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-[var(--text-muted)] text-[16px]">
                       expand_more
                     </span>
                   </div>
@@ -768,7 +768,7 @@ export default function AnalyticsPage() {
                         id="analytics-from"
                         value={customFrom}
                         onChange={(e) => setCustomFrom(e.target.value)}
-                        className="h-10 rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] px-2 text-xs text-[var(--text-primary)] font-mono focus:outline-none focus:ring-1 focus:ring-[var(--freya-blue)]"
+                        className="h-10 rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] px-3 text-sm text-[var(--text-primary)] font-mono focus:outline-none focus:ring-1 focus:ring-[var(--freya-blue)]"
                       />
                     </div>
                     <div>
@@ -780,7 +780,7 @@ export default function AnalyticsPage() {
                         id="analytics-to"
                         value={customTo}
                         onChange={(e) => setCustomTo(e.target.value)}
-                        className="h-10 rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] px-2 text-xs text-[var(--text-primary)] font-mono focus:outline-none focus:ring-1 focus:ring-[var(--freya-blue)]"
+                        className="h-10 rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] px-3 text-sm text-[var(--text-primary)] font-mono focus:outline-none focus:ring-1 focus:ring-[var(--freya-blue)]"
                       />
                     </div>
                   </>
@@ -796,14 +796,14 @@ export default function AnalyticsPage() {
                       id="analytics-material"
                       value={materialSeiban}
                       onChange={(e) => setMaterialSeiban(e.target.value)}
-                      className="h-10 w-full appearance-none rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] pl-2.5 pr-7 text-xs font-semibold text-[var(--text-primary)] font-mono focus:outline-none focus:ring-1 focus:ring-[var(--freya-blue)] cursor-pointer"
+                      className="h-10 w-full appearance-none rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] pl-3 pr-8 text-sm font-medium text-[var(--text-primary)] font-mono focus:outline-none focus:ring-1 focus:ring-[var(--freya-blue)] cursor-pointer"
                     >
                       <option value="">{isJa ? "すべての材料" : "All Materials"}</option>
                       {(data.filterOptions.materialSeibans || []).map((ms) => (
                         <option key={ms} value={ms}>{ms}</option>
                       ))}
                     </select>
-                    <span className="material-symbols-outlined pointer-events-none absolute right-1.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)] text-[16px]">
+                    <span className="material-symbols-outlined pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-[var(--text-muted)] text-[16px]">
                       expand_more
                     </span>
                   </div>
@@ -819,14 +819,14 @@ export default function AnalyticsPage() {
                       id="analytics-machine"
                       value={machine}
                       onChange={(e) => setMachine(e.target.value)}
-                      className="h-10 w-full appearance-none rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] pl-2.5 pr-7 text-xs font-semibold text-[var(--text-primary)] font-mono focus:outline-none focus:ring-1 focus:ring-[var(--freya-blue)] cursor-pointer"
+                      className="h-10 w-full appearance-none rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] pl-3 pr-8 text-sm font-medium text-[var(--text-primary)] font-mono focus:outline-none focus:ring-1 focus:ring-[var(--freya-blue)] cursor-pointer"
                     >
                       <option value="">{isJa ? "すべての設備" : "All Machines"}</option>
                       {(data.filterOptions.machines || []).map((m) => (
                         <option key={m} value={m}>{m}</option>
                       ))}
                     </select>
-                    <span className="material-symbols-outlined pointer-events-none absolute right-1.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)] text-[16px]">
+                    <span className="material-symbols-outlined pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-[var(--text-muted)] text-[16px]">
                       expand_more
                     </span>
                   </div>
@@ -842,14 +842,14 @@ export default function AnalyticsPage() {
                       id="analytics-factory"
                       value={factory}
                       onChange={(e) => setFactory(e.target.value)}
-                      className="h-10 w-full appearance-none rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] pl-2.5 pr-7 text-xs font-semibold text-[var(--text-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--freya-blue)] cursor-pointer"
+                      className="h-10 w-full appearance-none rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] pl-3 pr-8 text-sm font-medium text-[var(--text-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--freya-blue)] cursor-pointer"
                     >
                       <option value="">{t("all")}</option>
                       {(data.filterOptions.factories || []).map((f) => (
                         <option key={f} value={f}>{f}</option>
                       ))}
                     </select>
-                    <span className="material-symbols-outlined pointer-events-none absolute right-1.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)] text-[16px]">
+                    <span className="material-symbols-outlined pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-[var(--text-muted)] text-[16px]">
                       expand_more
                     </span>
                   </div>
@@ -861,7 +861,7 @@ export default function AnalyticsPage() {
                     {isJa ? "検索" : "Search"}
                   </label>
                   <div className="relative">
-                    <span className="material-symbols-outlined absolute left-2 top-1/2 -translate-y-1/2 text-[var(--text-muted)] text-[15px]">
+                    <span className="material-symbols-outlined absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)] text-[16px]">
                       search
                     </span>
                     <input
@@ -871,7 +871,7 @@ export default function AnalyticsPage() {
                       onChange={(e) => setSearch(e.target.value)}
                       onKeyDown={(e) => e.key === "Enter" && handleSearchSubmit(e)}
                       placeholder={isJa ? "ロット番号・品番・QRコード..." : "Lot #, Code, Hinban, QR..."}
-                      className="h-10 w-full rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] pl-7 pr-7 text-xs text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:outline-none focus:ring-1 focus:ring-[var(--freya-blue)]"
+                      className="h-10 w-full rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] pl-8 pr-7 text-sm font-normal text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:outline-none focus:ring-1 focus:ring-[var(--freya-blue)]"
                     />
                     {search && (
                       <button
@@ -890,10 +890,10 @@ export default function AnalyticsPage() {
                 <button
                   type="button"
                   onClick={handleResetFilters}
-                  className="h-10 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-2.5 text-xs font-semibold text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-hover)] transition-colors shadow-2xs inline-flex items-center gap-1"
+                  className="h-10 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 text-sm font-semibold text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-hover)] transition-colors shadow-2xs inline-flex items-center gap-1.5"
                   title={isJa ? "リセット" : "Reset"}
                 >
-                  <span className="material-symbols-outlined text-[14px]">restart_alt</span>
+                  <span className="material-symbols-outlined text-[15px]">restart_alt</span>
                   <span>{t("reset")}</span>
                 </button>
               </div>
@@ -1010,7 +1010,7 @@ export default function AnalyticsPage() {
                       {/* USED (Right-aligned, primary metric per Section 4 & 5) */}
                       <th
                         onClick={() => handleSort("meters")}
-                        className="px-3 py-2.5 text-right cursor-pointer hover:text-[var(--text-primary)] transition font-bold"
+                        className="px-3 py-2.5 text-right cursor-pointer hover:text-[var(--text-primary)] transition font-semibold"
                       >
                         <div className="flex items-center justify-end gap-1">
                           <span>{isJa ? "使用量 (m)" : "USED"}</span>
@@ -1117,7 +1117,7 @@ export default function AnalyticsPage() {
                             )}
                           >
                             {/* 1. Material */}
-                            <td className="px-3 py-3 font-mono text-xs text-[var(--text-primary)]" title={lot.materialName || matSeiban}>
+                            <td className="px-3 py-3 font-mono text-sm font-medium text-[var(--text-primary)]" title={lot.materialName || matSeiban}>
                               <div className="flex min-w-0 items-center gap-2">
                                 <span
                                   className={joinClasses(
@@ -1129,7 +1129,7 @@ export default function AnalyticsPage() {
                                 </span>
                                 <button
                                   type="button"
-                                  className="truncate text-left font-semibold"
+                                  className="truncate text-left font-semibold text-sm"
                                   aria-expanded={isExpanded}
                                   aria-label={`${isJa ? "ロット詳細" : "Lot details"}: ${lot.lotNumber}`}
                                   onClick={(event) => { event.stopPropagation(); toggleLotExpand(lotKey); }}
@@ -1140,34 +1140,34 @@ export default function AnalyticsPage() {
                             </td>
 
                             {/* 2. Lot Number (+ future physical ID support) */}
-                            <td className="px-3 py-3 font-mono text-xs text-[var(--text-primary)]">
+                            <td className="px-3 py-3 font-mono text-sm text-[var(--text-primary)]">
                               <div className="flex min-w-0 flex-col gap-0.5">
-                                <span className="truncate font-semibold text-[var(--text-primary)]">{lot.lotNumber}</span>
+                                <span className="truncate font-semibold text-sm text-[var(--text-primary)]">{lot.lotNumber}</span>
                                 {lot.materialName ? (
-                                  <span className="truncate text-xs font-medium text-[var(--text-muted)]">{lot.materialName}</span>
+                                  <span className="truncate text-xs font-normal text-[var(--text-muted)]">{lot.materialName}</span>
                                 ) : null}
                               </div>
                             </td>
 
                             {/* 3. Used (Meters): Primary Metric Emphasis, Right-Aligned, 1 Decimal */}
-                            <td className="px-3 py-3 text-right font-mono text-[13px] font-semibold text-emerald-700 dark:text-emerald-300 whitespace-nowrap">
+                            <td className="px-3 py-3 text-right font-mono text-base font-bold text-emerald-700 dark:text-emerald-300 whitespace-nowrap freya-tabular">
                               {fmtMeters(lot.totalMeters)} <span className="text-xs font-semibold text-[var(--text-muted)]">m</span>
                             </td>
 
                             {/* 4. Product / Seiban (Section 6: Clean C74 · C76 format with tooltip) */}
-                            <td className="px-3 py-3 text-xs text-[var(--text-secondary)] font-mono truncate" title={fullProductsTooltip}>
+                            <td className="px-3 py-3 text-sm font-medium text-[var(--text-secondary)] font-mono truncate" title={fullProductsTooltip}>
                               {visibleSeibans.length > 0 ? (
                                 <div className="flex items-center gap-1.5 truncate">
                                   {visibleSeibans.map((seiban) => (
                                     <span
                                       key={seiban}
-                                      className="rounded-[4px] border border-[var(--border)] bg-[var(--surface)] px-1.5 py-0.5 font-bold text-[var(--text-primary)]"
+                                      className="rounded-[4px] border border-[var(--border)] bg-[var(--surface)] px-1.5 py-0.5 text-xs font-semibold text-[var(--text-primary)]"
                                     >
                                       {seiban}
                                     </span>
                                   ))}
                                   {extraCount > 0 && (
-                                    <span className="rounded-[4px] border border-[var(--border)] bg-[var(--surface-subtle)] px-1.5 py-0.5 text-xs font-bold text-[var(--text-muted)]">
+                                    <span className="rounded-[4px] border border-[var(--border)] bg-[var(--surface-subtle)] px-1.5 py-0.5 text-xs font-semibold text-[var(--text-muted)]">
                                       +{extraCount}
                                     </span>
                                   )}
@@ -1178,22 +1178,22 @@ export default function AnalyticsPage() {
                             </td>
 
                             {/* 5. Runs (Right-Aligned per Section 4) */}
-                            <td className="px-3 py-3 text-right font-mono text-xs font-semibold text-[var(--text-secondary)]">
+                            <td className="px-3 py-3 text-right font-mono text-sm font-medium text-[var(--text-secondary)] freya-tabular">
                               {lot.runsCount}
                             </td>
 
                             {/* 6. Machines */}
-                            <td className="px-3 py-3 font-mono text-xs text-[var(--text-secondary)] truncate" title={lot.machines.join(", ")}>
-                              <span className="font-bold text-[var(--text-primary)]">{lot.machines.join(", ") || "—"}</span>
+                            <td className="px-3 py-3 font-mono text-sm text-[var(--text-secondary)] truncate" title={lot.machines.join(", ")}>
+                              <span className="font-semibold text-sm text-[var(--text-primary)]">{lot.machines.join(", ") || "—"}</span>
                             </td>
 
                             {/* 7. Pieces (Right-Aligned, Comma Formatted per Section 4) */}
-                            <td className="px-3 py-3 text-right font-mono text-xs font-semibold text-[var(--text-secondary)]">
+                            <td className="px-3 py-3 text-right font-mono text-sm font-medium text-[var(--text-secondary)] freya-tabular">
                               {formatNumber(lot.totalPieces)}
                             </td>
 
                             {/* 8. Last Used */}
-                            <td className="px-3 py-3 text-xs text-[var(--text-muted)] font-mono whitespace-nowrap">
+                            <td className="px-3 py-3 text-sm font-normal text-[var(--text-muted)] font-mono whitespace-nowrap freya-tabular">
                               {formatShortDate(lot.latestDate, lot.runs[0]?.timeStart, isJa)}
                             </td>
 
@@ -1211,14 +1211,14 @@ export default function AnalyticsPage() {
                                   <div className="flex flex-col gap-3 border-b border-[var(--border)] pb-3 lg:flex-row lg:items-start lg:justify-between">
                                     <div className="min-w-0">
                                       <div className="flex flex-wrap items-center gap-2">
-                                        <span className="font-mono text-sm font-semibold text-[var(--text-primary)]">
+                                        <span className="font-mono text-base font-semibold text-[var(--text-primary)]">
                                           {lot.lotNumber}
                                         </span>
                                         <TraceBadge icon="category" tone="blue">
                                           {lot.materialSeiban || "—"}
                                         </TraceBadge>
                                         {lot.materialName ? (
-                                          <span className="truncate text-xs font-semibold text-[var(--text-muted)]">
+                                          <span className="truncate text-xs font-normal text-[var(--text-muted)]">
                                             {lot.materialName}
                                           </span>
                                         ) : null}
@@ -1237,20 +1237,20 @@ export default function AnalyticsPage() {
                                     </div>
                                     <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
                                       <div className="rounded-[6px] border border-emerald-500/25 bg-emerald-500/10 px-3 py-2 text-right font-mono text-emerald-700 dark:text-emerald-300">
-                                        <div className="text-xs font-semibold uppercase tracking-[0.1em] opacity-70">{isJa ? "使用量" : "Used"}</div>
-                                        <div className="text-sm font-semibold">{fmtMeters(lot.totalMeters)} m</div>
+                                        <div className="text-[11px] font-medium uppercase tracking-[0.04em] opacity-75">{isJa ? "使用量" : "Used"}</div>
+                                        <div className="text-sm font-bold freya-tabular">{fmtMeters(lot.totalMeters)} m</div>
                                       </div>
                                       <div className="rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-right font-mono">
-                                        <div className="text-xs font-semibold uppercase tracking-[0.1em] text-[var(--text-muted)]">{isJa ? "生産数" : "Pieces"}</div>
-                                        <div className="text-sm font-semibold text-[var(--text-primary)]">{formatNumber(lot.totalPieces)}</div>
+                                        <div className="text-[11px] font-medium uppercase tracking-[0.04em] text-[var(--text-muted)]">{isJa ? "生産数" : "Pieces"}</div>
+                                        <div className="text-sm font-bold text-[var(--text-primary)] freya-tabular">{formatNumber(lot.totalPieces)}</div>
                                       </div>
                                       <div className="rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-right font-mono">
-                                        <div className="text-xs font-semibold uppercase tracking-[0.1em] text-[var(--text-muted)]">{isJa ? "ショット" : "Shots"}</div>
-                                        <div className="text-sm font-semibold text-[var(--text-primary)]">{formatNumber(lot.totalShots)}</div>
+                                        <div className="text-[11px] font-medium uppercase tracking-[0.04em] text-[var(--text-muted)]">{isJa ? "ショット" : "Shots"}</div>
+                                        <div className="text-sm font-bold text-[var(--text-primary)] freya-tabular">{formatNumber(lot.totalShots)}</div>
                                       </div>
                                       <div className="rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-right font-mono">
-                                        <div className="text-xs font-semibold uppercase tracking-[0.1em] text-[var(--text-muted)]">{isJa ? "履歴" : "Runs"}</div>
-                                        <div className="text-sm font-semibold text-[var(--text-primary)]">{formatNumber(lot.runsCount)}</div>
+                                        <div className="text-[11px] font-medium uppercase tracking-[0.04em] text-[var(--text-muted)]">{isJa ? "履歴" : "Runs"}</div>
+                                        <div className="text-sm font-bold text-[var(--text-primary)] freya-tabular">{formatNumber(lot.runsCount)}</div>
                                       </div>
                                     </div>
                                   </div>
@@ -1278,31 +1278,31 @@ export default function AnalyticsPage() {
 
                                           return (
                                             <tr key={rIdx} className="transition-colors hover:bg-[var(--surface-hover)]">
-                                              <td className="whitespace-nowrap px-3 py-2.5 text-[var(--text-primary)]">
+                                              <td className="whitespace-nowrap px-3 py-2.5 text-sm font-normal text-[var(--text-primary)] freya-tabular">
                                                 {formatShortDate(r.date, r.timeStart, isJa)}
                                               </td>
-                                              <td className="whitespace-nowrap px-3 py-2.5 font-semibold text-[var(--text-primary)]">
+                                              <td className="whitespace-nowrap px-3 py-2.5 text-sm font-semibold text-[var(--text-primary)]">
                                                 {r.machine || "—"}
                                               </td>
-                                              <td className="whitespace-nowrap px-3 py-2.5 text-[var(--text-muted)]">
+                                              <td className="whitespace-nowrap px-3 py-2.5 text-sm font-normal text-[var(--text-muted)]">
                                                 {r.hinban || "—"}
                                               </td>
-                                              <td className="whitespace-nowrap px-3 py-2.5 font-semibold text-[var(--text-primary)]">
+                                              <td className="whitespace-nowrap px-3 py-2.5 text-sm font-semibold text-[var(--text-primary)]">
                                                 {r.seiban || "—"}
                                               </td>
-                                              <td className="whitespace-nowrap px-3 py-2.5 text-right font-semibold text-emerald-700 dark:text-emerald-300">
+                                              <td className="whitespace-nowrap px-3 py-2.5 text-right text-sm font-bold text-emerald-700 dark:text-emerald-300 freya-tabular">
                                                 {fmtMeters(r.meters)} m
                                               </td>
-                                              <td className="whitespace-nowrap px-3 py-2.5 text-right font-semibold text-[var(--text-secondary)]">
+                                              <td className="whitespace-nowrap px-3 py-2.5 text-right text-sm font-medium text-[var(--text-secondary)] freya-tabular">
                                                 {formatNumber(r.shots)}
                                               </td>
-                                              <td className="whitespace-nowrap px-3 py-2.5 text-right font-semibold text-[var(--text-secondary)]">
+                                              <td className="whitespace-nowrap px-3 py-2.5 text-right text-sm font-medium text-[var(--text-secondary)] freya-tabular">
                                                 {formatNumber(r.pieces)}
                                               </td>
-                                              <td className="whitespace-nowrap px-3 py-2.5 text-[var(--text-secondary)]">
+                                              <td className="whitespace-nowrap px-3 py-2.5 text-sm font-normal text-[var(--text-secondary)] freya-tabular">
                                                 {r.feedPitch ? `${formatNumber(r.feedPitch)}mm` : "—"} / {r.pcPerCycle ? `${formatNumber(r.pcPerCycle)}pc` : "—"}
                                               </td>
-                                              <td className="whitespace-nowrap px-3 py-2.5 font-sans font-semibold text-[var(--text-secondary)]">
+                                              <td className="whitespace-nowrap px-3 py-2.5 font-sans text-sm font-medium text-[var(--text-secondary)]">
                                                 {r.worker || "—"}
                                               </td>
                                               <td className="whitespace-nowrap px-3 py-2.5 text-left">
@@ -1312,18 +1312,18 @@ export default function AnalyticsPage() {
                                           );
                                         })}
                                       </tbody>
-                                      <tfoot className="border-t border-[var(--border)] bg-[var(--surface-subtle)] font-mono text-xs font-bold">
+                                      <tfoot className="border-t border-[var(--border)] bg-[var(--surface-subtle)] font-mono text-sm font-semibold">
                                         <tr>
-                                          <td colSpan={4} className="px-3 py-2 text-right text-xs uppercase tracking-[0.04em] text-[var(--text-muted)]">
+                                          <td colSpan={4} className="px-3 py-2.5 text-right text-xs font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">
                                             {isJa ? "ロット合計" : "Lot Total"}
                                           </td>
-                                          <td className="px-3 py-2 text-right font-semibold text-emerald-700 dark:text-emerald-300">
+                                          <td className="px-3 py-2.5 text-right font-bold text-emerald-700 dark:text-emerald-300 freya-tabular">
                                             {fmtMeters(lot.totalMeters)} m
                                           </td>
-                                          <td className="px-3 py-2 text-right text-[var(--text-secondary)]">
+                                          <td className="px-3 py-2.5 text-right font-medium text-[var(--text-secondary)] freya-tabular">
                                             {formatNumber(lot.totalShots)}
                                           </td>
-                                          <td className="px-3 py-2 text-right text-[var(--text-secondary)]">
+                                          <td className="px-3 py-2.5 text-right font-medium text-[var(--text-secondary)] freya-tabular">
                                             {formatNumber(lot.totalPieces)}
                                           </td>
                                           <td colSpan={3}></td>
@@ -1341,26 +1341,26 @@ export default function AnalyticsPage() {
                   </tbody>
 
                   {/* Main Table Total Footer */}
-                  <tfoot className="border-t-2 border-[var(--border)] bg-[var(--surface-subtle)] font-mono text-xs font-bold text-[var(--text-primary)]">
+                  <tfoot className="border-t-2 border-[var(--border)] bg-[var(--surface-subtle)] font-mono text-sm font-semibold text-[var(--text-primary)]">
                     <tr>
-                      <td className="px-3 py-2.5">TOTAL</td>
-                      <td className="px-3 py-2.5 text-[var(--text-muted)] text-xs font-normal">
+                      <td className="px-3 py-3 text-xs font-semibold uppercase tracking-[0.04em]">TOTAL</td>
+                      <td className="px-3 py-3 text-[var(--text-muted)] text-xs font-normal">
                         {filteredSummary.lotsCount} lots
                       </td>
                       {/* Total Used Meters (Right-Aligned) */}
-                      <td className="px-3 py-2.5 text-right font-semibold text-emerald-700 dark:text-emerald-300">
-                        {fmtMeters(filteredSummary.meters)} <span className="text-xs font-semibold">m</span>
+                      <td className="px-3 py-3 text-right font-bold text-base text-emerald-700 dark:text-emerald-300 freya-tabular whitespace-nowrap">
+                        {fmtMeters(filteredSummary.meters)} <span className="text-xs font-semibold text-[var(--text-muted)]">m</span>
                       </td>
-                      <td className="px-3 py-2.5 text-[var(--text-muted)] text-xs font-normal">
+                      <td className="px-3 py-3 text-[var(--text-muted)] text-xs font-normal">
                         {filteredSummary.productsCount} {isJa ? "製品" : "products"}
                       </td>
                       {/* Runs (Right-Aligned) */}
-                      <td className="px-3 py-2.5 text-right">{filteredSummary.runs}</td>
-                      <td className="px-3 py-2.5 text-[var(--text-muted)] text-xs font-normal truncate">
+                      <td className="px-3 py-3 text-right font-medium text-sm freya-tabular">{filteredSummary.runs}</td>
+                      <td className="px-3 py-3 text-[var(--text-muted)] text-xs font-normal truncate">
                         {filteredSummary.machinesCount} {isJa ? "台" : "machines"}
                       </td>
                       {/* Pieces (Right-Aligned) */}
-                      <td className="px-3 py-2.5 text-right">{formatNumber(filteredSummary.pieces)}</td>
+                      <td className="px-3 py-3 text-right font-medium text-sm freya-tabular">{formatNumber(filteredSummary.pieces)}</td>
                       <td colSpan={2}></td>
                     </tr>
                   </tfoot>
@@ -1402,7 +1402,7 @@ export default function AnalyticsPage() {
                 >
                   {selectedImageModal.type === "defect" ? "report_problem" : "photo_camera"}
                 </span>
-                <h4 className="text-xs font-bold text-[var(--text-primary)] font-mono">
+                <h4 className="text-sm font-semibold text-[var(--text-primary)] font-mono">
                   {selectedImageModal.title || (isJa ? "証拠写真" : "Evidence Image")}
                 </h4>
               </div>
