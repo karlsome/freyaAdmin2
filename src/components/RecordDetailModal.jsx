@@ -401,7 +401,7 @@ function MaintenanceSection({ record, onPreview }) {
 //   onClose     — callback to close the modal
 //   onLotClick  — optional callback(lot: string) when a 材料ロット chip is clicked
 //   onUpdated   — optional callback triggered after successful edit
-export default function RecordDetailModal({ record, processName, onClose, onLotClick, onUpdated }) {
+export default function RecordDetailModal({ record, processName, onClose, onLotClick, onUpdated, zIndex }) {
   const { language } = useLanguage();
   const isJa = language === "ja";
 
@@ -532,7 +532,7 @@ export default function RecordDetailModal({ record, processName, onClose, onLotC
   const keyFields = [
     [isJa ? "工場" : "Factory",         record["工場"]],
     [isJa ? "日付" : "Date",            record.Date],
-    [isJa ? "作業者" : "Operator",       record.Worker_Name],
+    [isJa ? "作業者" : "Operator",       record.Worker_Name || record["作業者"] || record.worker || record.operator],
     [isJa ? "設備" : "Equipment",       record["設備"]],
     [isJa ? "開始時刻" : "Start Time",   record.Time_start],
     [isJa ? "終了時刻" : "End Time",     record.Time_end],
@@ -558,7 +558,7 @@ export default function RecordDetailModal({ record, processName, onClose, onLotC
 
   const modal = (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-3 sm:p-4 backdrop-blur-sm"
+      className={`fixed inset-0 ${zIndex || "z-50"} flex items-center justify-center bg-black/60 p-3 sm:p-4 backdrop-blur-sm`}
       onMouseDown={(event) => {
         if (event.target === event.currentTarget) onClose();
       }}

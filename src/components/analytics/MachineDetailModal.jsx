@@ -2,6 +2,7 @@ import React, { useState, useMemo, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import ChartJS from "./chartSetup";
 import { exportEquipmentToCsv } from "./equipmentAnalyticsUtils";
+import RecordDetailModal from "../RecordDetailModal";
 
 export default function MachineDetailModal({
   machine,
@@ -22,14 +23,33 @@ export default function MachineDetailModal({
   const [sortField, setSortField] = useState("Date");
   const [sortAsc, setSortAsc] = useState(false);
 
+  // Record Details Modal state
+  const [selectedRecordForDetail, setSelectedRecordForDetail] = useState(null);
+
   // Handle ESC key to close
   useEffect(() => {
     function handleKeyDown(e) {
-      if (e.key === "Escape") onClose();
+      if (e.key === "Escape") {
+        if (selectedRecordForDetail) {
+          setSelectedRecordForDetail(null);
+        } else {
+          onClose();
+        }
+      }
     }
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [onClose]);
+  }, [onClose, selectedRecordForDetail]);
+
+  const handleOpenRecordDetail = (r) => {
+    if (!r) return;
+    setSelectedRecordForDetail({
+      ...r,
+      _source: "pressDB",
+      _process: "Press",
+      _id: r._id?.$oid || r._id,
+    });
+  };
 
   // Aggregate daily shots for daily trend chart
   const dailyShots = useMemo(() => {
@@ -142,7 +162,7 @@ export default function MachineDetailModal({
           String(r.Date || "").toLowerCase().includes(q) ||
           String(r["品番"] || "").toLowerCase().includes(q) ||
           String(r["背番号"] || "").toLowerCase().includes(q) ||
-          String(r["作業者"] || r.Worker_Name || "").toLowerCase().includes(q)
+          String(r.Worker_Name || r["作業者"] || r.worker || r.operator || "").toLowerCase().includes(q)
       );
     }
 
@@ -153,6 +173,9 @@ export default function MachineDetailModal({
       if (sortField === "ショット数" || sortField === "Process_Quantity" || sortField === "Total_NG") {
         valA = Number(valA || 0);
         valB = Number(valB || 0);
+      } else if (sortField === "作業者") {
+        valA = String(a.Worker_Name || a["作業者"] || a.worker || a.operator || "");
+        valB = String(b.Worker_Name || b["作業者"] || b.worker || b.operator || "");
       } else {
         valA = String(valA || "");
         valB = String(valB || "");
@@ -184,8 +207,9 @@ export default function MachineDetailModal({
   };
 
   return createPortal(
-    <div
-      className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-in fade-in duration-150"
+    <>
+      <div
+        className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-in fade-in duration-150"
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
@@ -296,206 +320,248 @@ export default function MachineDetailModal({
           </div>
 
           {/* Daily Trend Chart */}
-          <div className="rounded-lg border border-[var(--border)] bg-[var(--surface-subtle)]/50 p-4">
-            <h4 className="text-sm font-semibold text-[var(--text-primary)] mb-3">
-              {isJa ? "日別稼働ショット数 推移" : "Daily Performance Trend"}
-            </h4>
-            <div className="h-56 w-full relative">
-              <canvas ref={chartCanvasRef} />
-            </div>
-          </div>
-
-          {/* Records Table Section */}
-          <div className="space-y-3">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <h4 className="text-sm font-semibold text-[var(--text-primary)]">
-                {isJa ? "設備稼働実績一覧" : "Detailed Production Records"}
+            <div className="rounded-lg border border-[var(--border)] bg-[var(--surface-subtle)]/50 p-4">
+              <h4 className="text-sm font-semibold text-[var(--text-primary)] mb-3">
+                {isJa ? "日別稼働ショット数 推移" : "Daily Performance Trend"}
               </h4>
-
-              {/* Search input & items per page */}
-              <div className="flex items-center gap-2">
-                <input
-                  type="text"
-                  value={searchTerm}
-                  onChange={(e) => {
-                    setSearchTerm(e.target.value);
-                    setCurrentPage(1);
-                  }}
-                  placeholder={isJa ? "品番・背番号・作業者で検索..." : "Search part, back no, worker..."}
-                  className="freya-input h-8 w-56 text-xs"
-                />
-
-                <select
-                  value={pageSize}
-                  onChange={(e) => {
-                    setPageSize(Number(e.target.value));
-                    setCurrentPage(1);
-                  }}
-                  className="freya-input h-8 text-xs cursor-pointer"
-                >
-                  <option value={10}>10 {isJa ? "件" : "/ page"}</option>
-                  <option value={25}>25 {isJa ? "件" : "/ page"}</option>
-                  <option value={50}>50 {isJa ? "件" : "/ page"}</option>
-                </select>
+              <div className="h-56 w-full relative">
+                <canvas ref={chartCanvasRef} />
               </div>
             </div>
 
-            {/* Table */}
-            <div className="overflow-x-auto rounded-lg border border-[var(--border)]">
-              <table className="w-full text-xs text-left">
-                <thead className="bg-[var(--surface-subtle)] border-b border-[var(--border)] text-[var(--text-muted)] uppercase font-semibold select-none">
-                  <tr>
-                    <th
-                      className="px-3 py-2.5 cursor-pointer hover:bg-[var(--surface-hover)]"
-                      onClick={() => handleSort("Date")}
-                    >
-                      <div className="flex items-center gap-1">
-                        <span>{isJa ? "日付" : "Date"}</span>
-                        {sortField === "Date" && <span>{sortAsc ? "↑" : "↓"}</span>}
-                      </div>
-                    </th>
-                    <th
-                      className="px-3 py-2.5 cursor-pointer hover:bg-[var(--surface-hover)]"
-                      onClick={() => handleSort("品番")}
-                    >
-                      <div className="flex items-center gap-1">
-                        <span>{isJa ? "品番" : "Part Number"}</span>
-                        {sortField === "品番" && <span>{sortAsc ? "↑" : "↓"}</span>}
-                      </div>
-                    </th>
-                    <th
-                      className="px-3 py-2.5 cursor-pointer hover:bg-[var(--surface-hover)]"
-                      onClick={() => handleSort("背番号")}
-                    >
-                      <div className="flex items-center gap-1">
-                        <span>{isJa ? "背番号" : "Back No"}</span>
-                        {sortField === "背番号" && <span>{sortAsc ? "↑" : "↓"}</span>}
-                      </div>
-                    </th>
-                    <th
-                      className="px-3 py-2.5 cursor-pointer hover:bg-[var(--surface-hover)]"
-                      onClick={() => handleSort("作業者")}
-                    >
-                      <div className="flex items-center gap-1">
-                        <span>{isJa ? "作業者" : "Worker"}</span>
-                        {sortField === "作業者" && <span>{sortAsc ? "↑" : "↓"}</span>}
-                      </div>
-                    </th>
-                    <th
-                      className="px-3 py-2.5 text-right cursor-pointer hover:bg-[var(--surface-hover)]"
-                      onClick={() => handleSort("ショット数")}
-                    >
-                      <div className="flex items-center justify-end gap-1">
-                        <span>{isJa ? "ショット数" : "Shots"}</span>
-                        {sortField === "ショット数" && <span>{sortAsc ? "↑" : "↓"}</span>}
-                      </div>
-                    </th>
-                    <th
-                      className="px-3 py-2.5 text-right cursor-pointer hover:bg-[var(--surface-hover)]"
-                      onClick={() => handleSort("Process_Quantity")}
-                    >
-                      <div className="flex items-center justify-end gap-1">
-                        <span>{isJa ? "処理数量" : "Process Qty"}</span>
-                        {sortField === "Process_Quantity" && <span>{sortAsc ? "↑" : "↓"}</span>}
-                      </div>
-                    </th>
-                    <th
-                      className="px-3 py-2.5 text-right cursor-pointer hover:bg-[var(--surface-hover)]"
-                      onClick={() => handleSort("Total_NG")}
-                    >
-                      <div className="flex items-center justify-end gap-1">
-                        <span>{isJa ? "不良数" : "Defects"}</span>
-                        {sortField === "Total_NG" && <span>{sortAsc ? "↑" : "↓"}</span>}
-                      </div>
-                    </th>
-                    <th className="px-3 py-2.5 text-center">
-                      <span>{isJa ? "稼働時間帯" : "Time"}</span>
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-[var(--border)] bg-[var(--surface)] font-medium text-[var(--text-primary)]">
-                  {pagedRecords.length > 0 ? (
-                    pagedRecords.map((r, i) => (
-                      <tr key={i} className="hover:bg-[var(--surface-subtle)]/60 transition-colors">
-                        <td className="px-3 py-2 font-mono whitespace-nowrap text-[var(--text-secondary)]">
-                          {r.Date}
-                        </td>
-                        <td className="px-3 py-2 font-mono whitespace-nowrap">{r["品番"] || "—"}</td>
-                        <td className="px-3 py-2 font-mono whitespace-nowrap">
-                          {r["背番号"] ? (
-                            <span className="rounded bg-[var(--surface-subtle)] px-1.5 py-0.5 border border-[var(--border)]">
-                              {r["背番号"]}
-                            </span>
-                          ) : (
-                            "—"
-                          )}
-                        </td>
-                        <td className="px-3 py-2 whitespace-nowrap">{r["作業者"] || r.Worker_Name || "—"}</td>
-                        <td className="px-3 py-2 text-right font-mono font-bold tabular-nums">
-                          {Number(r["ショット数"] || 0).toLocaleString()}
-                        </td>
-                        <td className="px-3 py-2 text-right font-mono tabular-nums text-[var(--text-secondary)]">
-                          {Number(r.Process_Quantity || 0).toLocaleString()}
-                        </td>
-                        <td className="px-3 py-2 text-right font-mono tabular-nums">
-                          {Number(r.Total_NG || r.SRS_Total_NG || 0) > 0 ? (
-                            <span className="text-rose-500 font-bold">
-                              {Number(r.Total_NG || r.SRS_Total_NG || 0).toLocaleString()}
-                            </span>
-                          ) : (
-                            <span className="text-[var(--text-muted)]">0</span>
-                          )}
-                        </td>
-                        <td className="px-3 py-2 text-center font-mono text-[11px] text-[var(--text-muted)] whitespace-nowrap">
-                          {r.Time_start && r.Time_end ? `${r.Time_start} ~ ${r.Time_end}` : "—"}
-                        </td>
-                      </tr>
-                    ))
-                  ) : (
-                    <tr>
-                      <td colSpan={8} className="px-4 py-8 text-center text-xs text-[var(--text-muted)]">
-                        {isJa ? "該当する記録はありません" : "No records found matching criteria"}
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-
-            {/* Pagination Controls */}
-            {totalPages > 1 && (
-              <div className="flex items-center justify-between text-xs text-[var(--text-muted)] pt-2">
-                <span>
-                  {filteredRecords.length} {isJa ? "件中" : "records"} ({(pageIndex - 1) * pageSize + 1} -{" "}
-                  {Math.min(filteredRecords.length, pageIndex * pageSize)})
-                </span>
-                <div className="flex items-center gap-1.5">
-                  <button
-                    type="button"
-                    disabled={pageIndex <= 1}
-                    onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                    className="rounded border border-[var(--border)] px-2 py-1 hover:bg-[var(--surface-hover)] disabled:opacity-40 disabled:pointer-events-none"
-                  >
-                    {isJa ? "前へ" : "Prev"}
-                  </button>
-                  <span className="px-2 font-mono">
-                    {pageIndex} / {totalPages}
+            {/* Records Table Section */}
+            <div className="space-y-3">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div className="flex items-center gap-2">
+                  <h4 className="text-sm font-semibold text-[var(--text-primary)]">
+                    {isJa ? "設備稼働実績一覧" : "Detailed Production Records"}
+                  </h4>
+                  <span className="text-[11px] text-[var(--text-muted)] font-normal hidden sm:inline">
+                    • {isJa ? "行をクリックで実績詳細を表示" : "Click any row to open Record Details"}
                   </span>
-                  <button
-                    type="button"
-                    disabled={pageIndex >= totalPages}
-                    onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                    className="rounded border border-[var(--border)] px-2 py-1 hover:bg-[var(--surface-hover)] disabled:opacity-40 disabled:pointer-events-none"
+                </div>
+
+                {/* Search input & items per page */}
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    value={searchTerm}
+                    onChange={(e) => {
+                      setSearchTerm(e.target.value);
+                      setCurrentPage(1);
+                    }}
+                    placeholder={isJa ? "品番・背番号・作業者で検索..." : "Search part, back no, worker..."}
+                    className="freya-input h-8 w-56 text-xs"
+                  />
+
+                  <select
+                    value={pageSize}
+                    onChange={(e) => {
+                      setPageSize(Number(e.target.value));
+                      setCurrentPage(1);
+                    }}
+                    className="freya-input h-8 text-xs cursor-pointer"
                   >
-                    {isJa ? "次へ" : "Next"}
-                  </button>
+                    <option value={10}>10 {isJa ? "件" : "/ page"}</option>
+                    <option value={25}>25 {isJa ? "件" : "/ page"}</option>
+                    <option value={50}>50 {isJa ? "件" : "/ page"}</option>
+                  </select>
                 </div>
               </div>
-            )}
+
+              {/* Table */}
+              <div className="overflow-x-auto rounded-lg border border-[var(--border)]">
+                <table className="w-full text-xs text-left">
+                  <thead className="bg-[var(--surface-subtle)] border-b border-[var(--border)] text-[var(--text-muted)] uppercase font-semibold select-none">
+                    <tr>
+                      <th
+                        className="px-3 py-2.5 cursor-pointer hover:bg-[var(--surface-hover)]"
+                        onClick={() => handleSort("Date")}
+                      >
+                        <div className="flex items-center gap-1">
+                          <span>{isJa ? "日付" : "Date"}</span>
+                          {sortField === "Date" && <span>{sortAsc ? "↑" : "↓"}</span>}
+                        </div>
+                      </th>
+                      <th
+                        className="px-3 py-2.5 cursor-pointer hover:bg-[var(--surface-hover)]"
+                        onClick={() => handleSort("品番")}
+                      >
+                        <div className="flex items-center gap-1">
+                          <span>{isJa ? "品番" : "Part Number"}</span>
+                          {sortField === "品番" && <span>{sortAsc ? "↑" : "↓"}</span>}
+                        </div>
+                      </th>
+                      <th
+                        className="px-3 py-2.5 cursor-pointer hover:bg-[var(--surface-hover)]"
+                        onClick={() => handleSort("背番号")}
+                      >
+                        <div className="flex items-center gap-1">
+                          <span>{isJa ? "背番号" : "Back No"}</span>
+                          {sortField === "背番号" && <span>{sortAsc ? "↑" : "↓"}</span>}
+                        </div>
+                      </th>
+                      <th
+                        className="px-3 py-2.5 cursor-pointer hover:bg-[var(--surface-hover)]"
+                        onClick={() => handleSort("作業者")}
+                      >
+                        <div className="flex items-center gap-1">
+                          <span>{isJa ? "作業者" : "Worker"}</span>
+                          {sortField === "作業者" && <span>{sortAsc ? "↑" : "↓"}</span>}
+                        </div>
+                      </th>
+                      <th
+                        className="px-3 py-2.5 text-right cursor-pointer hover:bg-[var(--surface-hover)]"
+                        onClick={() => handleSort("ショット数")}
+                      >
+                        <div className="flex items-center justify-end gap-1">
+                          <span>{isJa ? "ショット数" : "Shots"}</span>
+                          {sortField === "ショット数" && <span>{sortAsc ? "↑" : "↓"}</span>}
+                        </div>
+                      </th>
+                      <th
+                        className="px-3 py-2.5 text-right cursor-pointer hover:bg-[var(--surface-hover)]"
+                        onClick={() => handleSort("Process_Quantity")}
+                      >
+                        <div className="flex items-center justify-end gap-1">
+                          <span>{isJa ? "処理数量" : "Process Qty"}</span>
+                          {sortField === "Process_Quantity" && <span>{sortAsc ? "↑" : "↓"}</span>}
+                        </div>
+                      </th>
+                      <th
+                        className="px-3 py-2.5 text-right cursor-pointer hover:bg-[var(--surface-hover)]"
+                        onClick={() => handleSort("Total_NG")}
+                      >
+                        <div className="flex items-center justify-end gap-1">
+                          <span>{isJa ? "不良数" : "Defects"}</span>
+                          {sortField === "Total_NG" && <span>{sortAsc ? "↑" : "↓"}</span>}
+                        </div>
+                      </th>
+                      <th className="px-3 py-2.5 text-center">
+                        <span>{isJa ? "稼働時間帯" : "Time"}</span>
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-[var(--border)] bg-[var(--surface)] font-medium text-[var(--text-primary)]">
+                    {pagedRecords.length > 0 ? (
+                      pagedRecords.map((r, i) => {
+                        const workerName = r.Worker_Name || r["作業者"] || r.worker || r.operator || "—";
+                        const ngCount = Number(r.Total_NG || r.SRS_Total_NG || 0);
+
+                        return (
+                          <tr
+                            key={r._id ? (r._id.$oid || r._id) : i}
+                            onClick={() => handleOpenRecordDetail(r)}
+                            className="hover:bg-blue-500/5 dark:hover:bg-blue-500/10 cursor-pointer transition-colors group/row"
+                            title={isJa ? "クリックして実績詳細を表示" : "Click to view Record Details"}
+                          >
+                            <td className="px-3 py-2 font-mono whitespace-nowrap text-[var(--text-secondary)]">
+                              {r.Date}
+                            </td>
+                            <td className="px-3 py-2 font-mono whitespace-nowrap font-semibold text-[var(--text-primary)] group-hover/row:text-[var(--freya-blue)] transition-colors">
+                              {r["品番"] || "—"}
+                            </td>
+                            <td className="px-3 py-2 font-mono whitespace-nowrap">
+                              {r["背番号"] ? (
+                                <span className="rounded bg-[var(--surface-subtle)] px-1.5 py-0.5 border border-[var(--border)]">
+                                  {r["背番号"]}
+                                </span>
+                              ) : (
+                                "—"
+                              )}
+                            </td>
+                            <td className="px-3 py-2 whitespace-nowrap text-[var(--text-primary)] font-medium">
+                              {workerName}
+                            </td>
+                            <td className="px-3 py-2 text-right font-mono font-bold tabular-nums">
+                              {Number(r["ショット数"] || 0).toLocaleString()}
+                            </td>
+                            <td className="px-3 py-2 text-right font-mono tabular-nums text-[var(--text-secondary)]">
+                              {Number(r.Process_Quantity || 0).toLocaleString()}
+                            </td>
+                            <td className="px-3 py-2 text-right font-mono tabular-nums">
+                              {ngCount > 0 ? (
+                                <span className="text-rose-500 font-bold">
+                                  {ngCount.toLocaleString()}
+                                </span>
+                              ) : (
+                                <span className="text-[var(--text-muted)]">0</span>
+                              )}
+                            </td>
+                            <td className="px-3 py-2 text-center font-mono text-[11px] text-[var(--text-muted)] whitespace-nowrap">
+                              <div className="flex items-center justify-center gap-1.5">
+                                <span>{r.Time_start && r.Time_end ? `${r.Time_start} ~ ${r.Time_end}` : "—"}</span>
+                                <span className="material-symbols-outlined text-[15px] text-[var(--text-muted)] opacity-0 group-hover/row:opacity-100 group-hover/row:text-[var(--freya-blue)] transition-opacity">
+                                  open_in_new
+                                </span>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })
+                    ) : (
+                      <tr>
+                        <td colSpan={8} className="px-4 py-8 text-center text-xs text-[var(--text-muted)]">
+                          {isJa ? "該当する記録はありません" : "No records found matching criteria"}
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Pagination Controls */}
+              {totalPages > 1 && (
+                <div className="flex items-center justify-between text-xs text-[var(--text-muted)] pt-2">
+                  <span>
+                    {isJa
+                      ? `${filteredRecords.length} 件中 ${(pageIndex - 1) * pageSize + 1} - ${Math.min(
+                          pageIndex * pageSize,
+                          filteredRecords.length
+                        )} 件を表示`
+                      : `Showing ${(pageIndex - 1) * pageSize + 1} - ${Math.min(
+                          pageIndex * pageSize,
+                          filteredRecords.length
+                        )} of ${filteredRecords.length} records`}
+                  </span>
+                  <div className="flex items-center gap-1">
+                    <button
+                      type="button"
+                      disabled={pageIndex <= 1}
+                      onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                      className="rounded border border-[var(--border)] px-2 py-1 hover:bg-[var(--surface-hover)] disabled:opacity-40 disabled:pointer-events-none"
+                    >
+                      {isJa ? "前へ" : "Prev"}
+                    </button>
+                    <span className="px-2 font-mono">
+                      {pageIndex} / {totalPages}
+                    </span>
+                    <button
+                      type="button"
+                      disabled={pageIndex >= totalPages}
+                      onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                      className="rounded border border-[var(--border)] px-2 py-1 hover:bg-[var(--surface-hover)] disabled:opacity-40 disabled:pointer-events-none"
+                    >
+                      {isJa ? "次へ" : "Next"}
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>
-    </div>,
+
+      {/* ── Record Details Modal ────────────────────────────────────── */}
+      {selectedRecordForDetail && (
+        <RecordDetailModal
+          record={selectedRecordForDetail}
+          processName="Press"
+          onClose={() => setSelectedRecordForDetail(null)}
+          zIndex="z-[10000]"
+        />
+      )}
+    </>,
     document.body
   );
 }
