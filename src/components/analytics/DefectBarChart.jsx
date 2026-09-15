@@ -1,7 +1,7 @@
-import React, { useEffect, useRef, useMemo } from "react";
+import React, { useEffect, useRef, useState, useMemo } from "react";
 import ChartJS from "./chartSetup";
 import { useLanguage } from "../../contexts/LanguageContext";
-import { resolveDefectLabels } from "./defectLabelUtils";
+import { resolveDefectLabels, wrapLabelToLines } from "./defectLabelUtils";
 
 const DEFECT_COLORS = [
   "#EF4444", "#F59E0B", "#10B981", "#3B82F6", "#8B5CF6",
@@ -21,6 +21,20 @@ export default function DefectBarChart({
   const { language } = useLanguage();
   const isJa = language === "ja";
 
+  const [orientation, setOrientation] = useState(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("freya_defect_bar_orient") || "horizontal";
+    }
+    return "horizontal";
+  });
+
+  const handleOrientationChange = (mode) => {
+    setOrientation(mode);
+    if (typeof window !== "undefined") {
+      localStorage.setItem("freya_defect_bar_orient", mode);
+    }
+  };
+
   const availableModels = useMemo(() => {
     if (!Array.isArray(defectDefinitions)) return [];
     return defectDefinitions.map((d) => d?.モデル).filter(Boolean);
@@ -33,7 +47,7 @@ export default function DefectBarChart({
     "counter9Total", "counter10Total", "counter11Total", "counter12Total"
   ];
 
-  const labels = useMemo(() => {
+  const rawLabels = useMemo(() => {
     return resolveDefectLabels({
       collectionName,
       defectAnalysis,
@@ -51,6 +65,8 @@ export default function DefectBarChart({
     return data.reduce((sum, v) => sum + v, 0);
   }, [data]);
 
+  const isHorizontal = orientation === "horizontal";
+
   useEffect(() => {
     if (!canvasRef.current) return;
     const ctx = canvasRef.current.getContext("2d");
@@ -64,22 +80,27 @@ export default function DefectBarChart({
       chartInstanceRef.current = null;
     }
 
+    const displayLabels = isHorizontal
+      ? rawLabels.map((l) => wrapLabelToLines(l, 28))
+      : rawLabels.map((l) => wrapLabelToLines(l, 14));
+
     chartInstanceRef.current = new ChartJS(ctx, {
       type: "bar",
       data: {
-        labels,
+        labels: displayLabels,
         datasets: [
           {
             label: isJa ? "不良数" : "Defect Count",
             data,
-            backgroundColor: labels.map((_, i) => DEFECT_COLORS[i % DEFECT_COLORS.length] + "DD"),
-            borderColor: labels.map((_, i) => DEFECT_COLORS[i % DEFECT_COLORS.length]),
+            backgroundColor: rawLabels.map((_, i) => DEFECT_COLORS[i % DEFECT_COLORS.length] + "DD"),
+            borderColor: rawLabels.map((_, i) => DEFECT_COLORS[i % DEFECT_COLORS.length]),
             borderWidth: 1.5,
             borderRadius: 4,
           },
         ],
       },
       options: {
+        indexAxis: isHorizontal ? "y" : "x",
         responsive: true,
         maintainAspectRatio: false,
         plugins: {
@@ -88,7 +109,7 @@ export default function DefectBarChart({
           },
           tooltip: {
             enabled: true,
-            backgroundColor: "rgba(15, 23, 42, 0.92)",
+            backgroundColor: "rgba(15, 23, 42, 0.95)",
             titleColor: "#ffffff",
             bodyColor: "#f1f5f9",
             borderColor: "rgba(239, 68, 68, 0.4)",
@@ -98,48 +119,73 @@ export default function DefectBarChart({
             callbacks: {
               title: (ctxList) => {
                 const idx = ctxList[0]?.dataIndex;
-                return labels[idx] || ctxList[0]?.label || "";
+                return rawLabels[idx] || "";
               },
               label: (ctxItem) => {
-                const count = Number(ctxItem.parsed.y || 0);
+                const count = isHorizontal ? Number(ctxItem.parsed.x || 0) : Number(ctxItem.parsed.y || 0);
                 const pct = totalDefects > 0 ? ((count / totalDefects) * 100).toFixed(1) : "0.0";
                 return `  ${isJa ? "不良件数" : "Defect Count"}: ${count.toLocaleString()} (${pct}%)`;
               },
             },
           },
         },
-        scales: {
-          y: {
-            beginAtZero: true,
-            title: {
-              display: true,
-              text: isJa ? "不良数 (件)" : "Count",
-              color: "#94a3b8",
-              font: { size: 11 },
-            },
-            grid: {
-              color: "rgba(148, 163, 184, 0.12)",
-            },
-            ticks: {
-              precision: 0,
-              callback: (val) => Number(val).toLocaleString(),
-            },
-          },
-          x: {
-            grid: {
-              display: false,
-            },
-            ticks: {
-              maxRotation: 45,
-              minRotation: 25,
-              font: { size: 11 },
-              callback: function (val, index) {
-                const label = labels[index] || "";
-                return label.length > 10 ? label.slice(0, 9) + "…" : label;
+        scales: isHorizontal
+          ? {
+              x: {
+                beginAtZero: true,
+                title: {
+                  display: true,
+                  text: isJa ? "不良数 (件)" : "Count",
+                  color: "#94a3b8",
+                  font: { size: 11 },
+                },
+                grid: {
+                  color: "rgba(148, 163, 184, 0.12)",
+                },
+                ticks: {
+                  precision: 0,
+                  callback: (val) => Number(val).toLocaleString(),
+                },
+              },
+              y: {
+                grid: {
+                  display: false,
+                },
+                ticks: {
+                  autoSkip: false,
+                  font: { size: 11 },
+                },
+              },
+            }
+          : {
+              y: {
+                beginAtZero: true,
+                title: {
+                  display: true,
+                  text: isJa ? "不良数 (件)" : "Count",
+                  color: "#94a3b8",
+                  font: { size: 11 },
+                },
+                grid: {
+                  color: "rgba(148, 163, 184, 0.12)",
+                },
+                ticks: {
+                  precision: 0,
+                  callback: (val) => Number(val).toLocaleString(),
+                },
+              },
+              x: {
+                grid: {
+                  display: false,
+                },
+                ticks: {
+                  autoSkip: false,
+                  maxRotation: 45,
+                  minRotation: 20,
+                  font: { size: 10 },
+                },
               },
             },
-          },
-        },
       },
     });
 
@@ -155,11 +201,12 @@ export default function DefectBarChart({
         chartInstanceRef.current = null;
       }
     };
-  }, [labels, data, totalDefects, isJa]);
+  }, [rawLabels, data, totalDefects, isHorizontal, isJa]);
 
   return (
     <div className="freya-card flex flex-col rounded-[8px] border border-[var(--border)] bg-[var(--surface)] p-4 shadow-xs">
-      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+      {/* Header */}
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2 border-b border-[var(--border)] pb-3">
         <div className="flex items-center gap-2">
           <span className="material-symbols-outlined text-[18px] text-rose-500">bar_chart</span>
           <h3 className="text-sm font-semibold text-[var(--text-primary)]">
@@ -173,6 +220,37 @@ export default function DefectBarChart({
         </div>
 
         <div className="flex items-center gap-2">
+          {/* Orientation Toggle: Horizontal vs Vertical */}
+          <div className="flex items-center rounded-md border border-[var(--border)] bg-[var(--surface-subtle)] p-0.5">
+            <button
+              type="button"
+              onClick={() => handleOrientationChange("horizontal")}
+              title={isJa ? "横棒グラフ (名称が見やすい)" : "Horizontal bars (readable labels)"}
+              className={`flex items-center gap-1 rounded px-2 py-0.5 text-xs font-medium transition cursor-pointer ${
+                isHorizontal
+                  ? "bg-[var(--surface)] text-[var(--text-primary)] shadow-xs font-semibold"
+                  : "text-[var(--text-muted)] hover:text-[var(--text-primary)]"
+              }`}
+            >
+              <span className="material-symbols-outlined text-[15px] leading-none">align_horizontal_left</span>
+              <span className="hidden sm:inline">{isJa ? "横" : "Horiz"}</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => handleOrientationChange("vertical")}
+              title={isJa ? "縦棒グラフ" : "Vertical bars"}
+              className={`flex items-center gap-1 rounded px-2 py-0.5 text-xs font-medium transition cursor-pointer ${
+                !isHorizontal
+                  ? "bg-[var(--surface)] text-[var(--text-primary)] shadow-xs font-semibold"
+                  : "text-[var(--text-muted)] hover:text-[var(--text-primary)]"
+              }`}
+            >
+              <span className="material-symbols-outlined text-[15px] leading-none">bar_chart</span>
+              <span className="hidden sm:inline">{isJa ? "縦" : "Vert"}</span>
+            </button>
+          </div>
+
+          {/* Model Definition Dropdown */}
           {collectionName === "kensaDB" && availableModels.length > 0 && (
             <div className="flex items-center gap-1">
               <span className="text-[11px] font-medium text-[var(--text-muted)] hidden sm:inline">
@@ -199,9 +277,10 @@ export default function DefectBarChart({
         </div>
       </div>
 
-      <div className="h-72 w-full relative">
+      <div className="h-80 sm:h-96 w-full relative">
         <canvas ref={canvasRef} />
       </div>
     </div>
   );
 }
+

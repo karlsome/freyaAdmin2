@@ -50,11 +50,18 @@ export function AnalyticsKpiCard({ title, value, subtext, icon, color = "blue", 
             </span>
           )}
         </div>
-        <p className="mt-0.5 font-mono text-xl font-bold text-[var(--text-primary)] tabular-nums truncate">
+        <p
+          className={`mt-0.5 font-bold text-[var(--text-primary)] tabular-nums truncate ${
+            typeof value === "string" && value.length > 16 ? "text-sm font-semibold leading-tight" : "font-mono text-xl"
+          }`}
+          title={typeof value === "string" ? value : undefined}
+        >
           {value ?? "—"}
         </p>
         {subtext && (
-          <p className="mt-0.5 text-[11px] text-[var(--text-muted)] truncate">{subtext}</p>
+          <p className="mt-0.5 text-[11px] text-[var(--text-muted)] truncate" title={typeof subtext === "string" ? subtext : undefined}>
+            {subtext}
+          </p>
         )}
       </div>
     </div>

@@ -44,3 +44,30 @@ export function resolveDefectLabels({
 
   return genericLabels;
 }
+
+/**
+ * Wraps long defect labels into multiline arrays for Chart.js labels.
+ * Splits on common separators (spaces, slashes, commas, Japanese delimiters)
+ * while keeping words whole so full defect names remain completely readable without ellipses.
+ */
+export function wrapLabelToLines(label, maxCharsPerLine = 18) {
+  if (!label || typeof label !== "string") return label || "";
+  if (label.length <= maxCharsPerLine) return label;
+
+  const tokens = label.match(/[^ \t/・、,()（）]+[ \t/・、,()（）]*/g) || [label];
+  const lines = [];
+  let current = "";
+
+  for (const token of tokens) {
+    if (!token) continue;
+    if ((current + token).trim().length <= maxCharsPerLine) {
+      current += token;
+    } else {
+      if (current.trim()) lines.push(current.trim());
+      current = token;
+    }
+  }
+  if (current.trim()) lines.push(current.trim());
+
+  return lines.length > 1 ? lines : label;
+}
