@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import ChartJS from "./chartSetup";
 import { exportEquipmentToCsv } from "./equipmentAnalyticsUtils";
 import RecordDetailModal from "../RecordDetailModal";
+import MachineMoMComparisonView from "./MachineMoMComparisonView";
 
 export default function MachineDetailModal({
   machine,
@@ -15,6 +16,9 @@ export default function MachineDetailModal({
 }) {
   const chartCanvasRef = useRef(null);
   const chartInstanceRef = useRef(null);
+
+  // Active Tab state: "overview" | "mom"
+  const [activeTab, setActiveTab] = useState("overview");
 
   // Search & Pagination state
   const [searchTerm, setSearchTerm] = useState("");
@@ -261,10 +265,46 @@ export default function MachineDetailModal({
           </div>
         </div>
 
+        {/* Modal Tab Switcher */}
+        <div className="flex border-b border-[var(--border)] bg-[var(--surface)] px-6 pt-2 shrink-0">
+          <div className="flex gap-4">
+            <button
+              type="button"
+              onClick={() => setActiveTab("overview")}
+              className={`flex items-center gap-2 border-b-2 pb-2.5 pt-1 text-xs font-semibold transition cursor-pointer ${
+                activeTab === "overview"
+                  ? "border-[var(--freya-blue)] text-[var(--freya-blue)]"
+                  : "border-transparent text-[var(--text-muted)] hover:text-[var(--text-primary)]"
+              }`}
+            >
+              <span className="material-symbols-outlined text-[17px]">bar_chart</span>
+              <span>{isJa ? "期間実績・推移" : "Overview & Records"}</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setActiveTab("mom")}
+              className={`flex items-center gap-2 border-b-2 pb-2.5 pt-1 text-xs font-semibold transition cursor-pointer ${
+                activeTab === "mom"
+                  ? "border-[var(--freya-blue)] text-[var(--freya-blue)]"
+                  : "border-transparent text-[var(--text-muted)] hover:text-[var(--text-primary)]"
+              }`}
+            >
+              <span className="material-symbols-outlined text-[17px]">compare_arrows</span>
+              <span>{isJa ? "前月比・月別比較 (MoM)" : "Month-over-Month Comparison"}</span>
+              <span className="rounded-full bg-blue-500/10 px-1.5 py-0.2 text-[10px] font-bold text-blue-600 dark:text-blue-400 border border-blue-500/20">
+                MoM
+              </span>
+            </button>
+          </div>
+        </div>
+
         {/* Modal Scrollable Body */}
         <div className="flex-1 overflow-y-auto p-6 space-y-6">
-          {/* 4 Summary Metric Cards */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          {activeTab === "overview" ? (
+            <>
+              {/* 4 Summary Metric Cards */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             {/* Total Shots */}
             <div className="rounded-lg border border-blue-500/20 bg-blue-500/5 p-3.5">
               <span className="text-xs font-semibold text-blue-600 dark:text-blue-400 block">
@@ -548,9 +588,18 @@ export default function MachineDetailModal({
                 </div>
               )}
             </div>
-          </div>
+            </>
+          ) : (
+            <MachineMoMComparisonView
+              machine={machine}
+              factory={factory}
+              isJa={isJa}
+              onOpenRecord={handleOpenRecordDetail}
+            />
+          )}
         </div>
       </div>
+    </div>
 
       {/* ── Record Details Modal ────────────────────────────────────── */}
       {selectedRecordForDetail && (
