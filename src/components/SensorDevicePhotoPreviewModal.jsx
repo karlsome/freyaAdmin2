@@ -39,7 +39,7 @@ function buildImageDownloadName(url, label) {
   return `${safeLabel}.jpg`;
 }
 
-export default function SensorDevicePhotoPreviewModal({ preview, onClose, onNavigate }) {
+export default function SensorDevicePhotoPreviewModal({ preview, onClose, onNavigate, zIndex = "z-[9999]" }) {
   const { language } = useLanguage();
   const isJa = language === "ja";
   const [isDownloading, setIsDownloading] = useState(false);
@@ -125,7 +125,7 @@ export default function SensorDevicePhotoPreviewModal({ preview, onClose, onNavi
 
   return createPortal(
     <div
-      className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm animate-[fadeIn_0.15s_ease-out]"
+      className={`fixed inset-0 ${zIndex} flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm animate-[fadeIn_0.15s_ease-out]`}
       onMouseDown={(event) => {
         if (event.target === event.currentTarget) onClose();
       }}

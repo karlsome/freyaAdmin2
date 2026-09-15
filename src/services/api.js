@@ -2747,14 +2747,36 @@ export async function fetchEquipmentList() {
  * @param {string} params.startDate
  * @param {string} params.endDate
  * @param {string[]} [params.equipment]
+ * @param {string} [params.hinban]
+ * @param {string} [params.seiban]
  */
-export async function fetchEquipmentData({ startDate, endDate, equipment } = {}) {
+export async function fetchEquipmentData({ startDate, endDate, equipment, hinban, seiban } = {}) {
   return _postJson("api/equipment/data", {
     startDate: startDate || undefined,
     endDate: endDate || undefined,
     equipment: Array.isArray(equipment) && equipment.length > 0 ? equipment : undefined,
+    hinban: hinban || undefined,
+    seiban: seiban || undefined,
   });
 }
+
+/**
+ * Fetch cross-machine part comparison data for a given part (hinban/seiban)
+ * @param {Object} params
+ * @param {string} params.hinban
+ * @param {string} [params.seiban]
+ * @param {string} [params.startDate]
+ * @param {string} [params.endDate]
+ */
+export async function fetchPartCrossMachineComparison({ hinban, seiban, startDate, endDate } = {}) {
+  return _postJson("api/equipment/part-comparison", {
+    hinban: hinban || undefined,
+    seiban: seiban || undefined,
+    startDate: startDate || undefined,
+    endDate: endDate || undefined,
+  });
+}
+
 
 
 

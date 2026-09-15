@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo, useRef } from "react";
 import ChartJS from "./chartSetup";
 import { fetchEquipmentData } from "../../services/api";
 import { calculateEquipmentAnalytics } from "./equipmentAnalyticsUtils";
+import PartMachineComparisonModal from "./PartMachineComparisonModal";
 
 /**
  * Generate a list of recent months (YYYY-MM)
@@ -47,6 +48,9 @@ export default function MachineMoMComparisonView({
 
   // Chart mode: "cumulative" (Pace) vs "daily" (Side-by-side)
   const [chartMode, setChartMode] = useState("cumulative");
+
+  // Cross-machine part comparison state
+  const [selectedPartForComparison, setSelectedPartForComparison] = useState(null);
 
   // Data states
   const [loading, setLoading] = useState(true);
@@ -739,6 +743,7 @@ export default function MachineMoMComparisonView({
                 </th>
                 <th className="px-3 py-2.5 text-right">{isJa ? "ショット差分 (Δ)" : "Variance (Δ)"}</th>
                 <th className="px-3 py-2.5 text-right">{isJa ? "シェア変化" : "Share Shift"}</th>
+                <th className="px-3 py-2.5 text-center">{isJa ? "全設備比較" : "Benchmark"}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[var(--border)] bg-[var(--surface)] font-medium text-[var(--text-primary)]">
@@ -750,12 +755,19 @@ export default function MachineMoMComparisonView({
                   return (
                     <tr
                       key={`${p.hinban}-${p.seiban}`}
-                      onClick={() => onOpenRecord?.(p.sampleRecord)}
-                      className="hover:bg-blue-500/5 dark:hover:bg-blue-500/10 cursor-pointer transition-colors"
-                      title={isJa ? "クリックしてこの品番の実績詳細を表示" : "Click to view details"}
+                      className="hover:bg-blue-500/5 dark:hover:bg-blue-500/10 transition-colors group"
                     >
-                      <td className="px-3 py-2 font-mono whitespace-nowrap font-bold text-[var(--text-primary)]">
-                        {p.hinban}
+                      <td 
+                        onClick={() => setSelectedPartForComparison({ hinban: p.hinban, seiban: p.seiban })}
+                        className="px-3 py-2 font-mono whitespace-nowrap font-bold text-blue-600 dark:text-blue-400 hover:underline cursor-pointer"
+                        title={isJa ? "クリックして全設備比較モーダルを開く" : "Click to benchmark across machines"}
+                      >
+                        <div className="flex items-center gap-1.5">
+                          <span>{p.hinban}</span>
+                          <svg className="w-3 h-3 opacity-0 group-hover:opacity-70 transition-opacity" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                          </svg>
+                        </div>
                       </td>
                       <td className="px-3 py-2 font-mono whitespace-nowrap">
                         {p.seiban ? (
@@ -798,12 +810,40 @@ export default function MachineMoMComparisonView({
                           {Number(p.shareDiff) >= 0 ? `+${p.shareDiff}%` : `${p.shareDiff}%`}
                         </span>
                       </td>
+                      <td className="px-3 py-2 text-center whitespace-nowrap">
+                        <div className="inline-flex items-center gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => setSelectedPartForComparison({ hinban: p.hinban, seiban: p.seiban })}
+                            className="inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-semibold rounded-md bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 border border-blue-500/20 hover:border-blue-500/30 transition-colors shadow-xs"
+                            title={isJa ? `この品番 (${p.hinban}) を他設備と比較` : `Compare ${p.hinban} across machines`}
+                          >
+                            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                            </svg>
+                            <span>{isJa ? "他設備比較" : "Compare"}</span>
+                          </button>
+                          {p.sampleRecord && (
+                            <button
+                              type="button"
+                              onClick={() => onOpenRecord?.(p.sampleRecord)}
+                              className="p-1 rounded text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-subtle)] transition-colors"
+                              title={isJa ? "この設備の直近実績詳細を開く" : "View latest record details"}
+                            >
+                              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                              </svg>
+                            </button>
+                          )}
+                        </div>
+                      </td>
                     </tr>
                   );
                 })
               ) : (
                 <tr>
-                  <td colSpan={6} className="px-4 py-8 text-center text-xs text-[var(--text-muted)]">
+                  <td colSpan={7} className="px-4 py-8 text-center text-xs text-[var(--text-muted)]">
                     {isJa ? "生産品目データがありません" : "No part records found for selected months"}
                   </td>
                 </tr>
@@ -812,6 +852,20 @@ export default function MachineMoMComparisonView({
           </table>
         </div>
       </div>
+
+      {/* ── Cross-Machine Part Comparison Modal ── */}
+      {selectedPartForComparison && (
+        <PartMachineComparisonModal
+          isOpen={!!selectedPartForComparison}
+          onClose={() => setSelectedPartForComparison(null)}
+          hinban={selectedPartForComparison.hinban}
+          seiban={selectedPartForComparison.seiban}
+          monthA={monthA}
+          monthB={monthB}
+          isJa={isJa}
+          zIndex="z-[10000]"
+        />
+      )}
     </div>
   );
 }
