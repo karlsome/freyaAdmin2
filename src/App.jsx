@@ -192,14 +192,6 @@ function App() {
 
   return (
     <div className="overflow-hidden">
-      {isDark && (
-        <div className="aurora-bg" aria-hidden="true">
-          <div className="aurora-blob aurora-blob-1" />
-          <div className="aurora-blob aurora-blob-2" />
-          <div className="aurora-blob aurora-blob-3" />
-          <div className="aurora-blob aurora-blob-4" />
-        </div>
-      )}
       {isLoginRoute ? (
         <LoginPage
           isDark={isDark}
@@ -218,7 +210,7 @@ function App() {
             onNavigate={(page) => navigate(`/${page}`)}
           />
           <main
-            className={`app-main-shell ml-0 min-h-screen bg-background dark:bg-transparent relative md:ml-16 ${shellIntro && !canUseViewTransitions ? "app-main-shell--enter" : ""} ${justLoggedIn && canUseViewTransitions ? "app-main-shell--handoff-target" : ""}`}
+            className={`app-main-shell ml-0 min-h-screen bg-background relative md:ml-16 ${shellIntro && !canUseViewTransitions ? "app-main-shell--enter" : ""} ${justLoggedIn && canUseViewTransitions ? "app-main-shell--handoff-target" : ""}`}
             style={{ zIndex: 1 }}
           >
             <TopNav
@@ -241,6 +233,7 @@ function App() {
               <Route path="/factoryStatus/:tab" element={<FactoryStatusPage />} />
               <Route path="/analytics" element={<Navigate to="/analytics/material" replace />} />
               <Route path="/analytics/:tab" element={<AnalyticsPage />} />
+              <Route path="/analytics/:tab/:process" element={<AnalyticsPage />} />
               {placeholderPages.map((page) => (
                 <Route key={page} path={`/${page}`} element={<PlaceholderPage page={page} />} />
               ))}

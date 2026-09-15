@@ -75,35 +75,6 @@
   --c-form-control-placeholder: 144 143 160;
 }
 
-/* ─── Lava lamp animation (dark mode only) ──────────────────────────────────── */
-@keyframes lava-1 {
-  0%        { transform: translateY(60vh) translateX(0)    scale(1.0);  border-radius: 55% 45% 60% 40% / 50% 55% 45% 50%; }
-  20%       { transform: translateY(30vh) translateX(4vw)  scale(1.15); border-radius: 40% 60% 45% 55% / 60% 40% 55% 45%; }
-  45%       { transform: translateY(-5vh) translateX(-3vw) scale(0.9);  border-radius: 65% 35% 55% 45% / 45% 60% 40% 55%; }
-  65%       { transform: translateY(10vh) translateX(6vw)  scale(1.1);  border-radius: 45% 55% 40% 60% / 55% 45% 60% 40%; }
-  85%       { transform: translateY(45vh) translateX(-5vw) scale(0.95); border-radius: 60% 40% 50% 50% / 40% 60% 50% 50%; }
-  100%      { transform: translateY(60vh) translateX(0)    scale(1.0);  border-radius: 55% 45% 60% 40% / 50% 55% 45% 50%; }
-}
-@keyframes lava-2 {
-  0%        { transform: translateY(-10vh) translateX(0)    scale(1.0);  border-radius: 50% 50% 55% 45% / 60% 40% 55% 45%; }
-  25%       { transform: translateY(25vh)  translateX(-6vw) scale(1.2);  border-radius: 60% 40% 45% 55% / 45% 55% 40% 60%; }
-  50%       { transform: translateY(65vh)  translateX(4vw)  scale(0.85); border-radius: 40% 60% 60% 40% / 55% 45% 50% 50%; }
-  75%       { transform: translateY(35vh)  translateX(-4vw) scale(1.05); border-radius: 55% 45% 40% 60% / 40% 60% 60% 40%; }
-  100%      { transform: translateY(-10vh) translateX(0)    scale(1.0);  border-radius: 50% 50% 55% 45% / 60% 40% 55% 45%; }
-}
-@keyframes lava-3 {
-  0%        { transform: translateY(80vh)  translateX(0)    scale(0.9);  border-radius: 45% 55% 50% 50% / 55% 45% 60% 40%; }
-  30%       { transform: translateY(40vh)  translateX(7vw)  scale(1.1);  border-radius: 60% 40% 55% 45% / 40% 60% 45% 55%; }
-  55%       { transform: translateY(5vh)   translateX(-5vw) scale(1.2);  border-radius: 50% 50% 40% 60% / 60% 40% 50% 50%; }
-  80%       { transform: translateY(55vh)  translateX(3vw)  scale(0.95); border-radius: 40% 60% 60% 40% / 45% 55% 55% 45%; }
-  100%      { transform: translateY(80vh)  translateX(0)    scale(0.9);  border-radius: 45% 55% 50% 50% / 55% 45% 60% 40%; }
-}
-@keyframes lava-4 {
-  0%        { transform: translateY(20vh)  translateX(0)    scale(1.05); border-radius: 50% 50% 45% 55% / 50% 50% 55% 45%; }
-  35%       { transform: translateY(-15vh) translateX(-7vw) scale(0.9);  border-radius: 55% 45% 60% 40% / 45% 55% 40% 60%; }
-  60%       { transform: translateY(50vh)  translateX(5vw)  scale(1.15); border-radius: 40% 60% 50% 50% / 60% 40% 55% 45%; }
-  100%      { transform: translateY(20vh)  translateX(0)    scale(1.05); border-radius: 50% 50% 45% 55% / 50% 50% 55% 45%; }
-}
 
 @keyframes pagination-liquid-morph {
   0% {
@@ -311,60 +282,13 @@ select:-webkit-autofill:focus {
   background-color: rgb(var(--c-form-control-bg-hover)) !important;
 }
 
-/* Dark mode lava lamp background */
+/* Dark mode background */
 .dark {
-  background-color: rgb(6, 4, 16);
+  background-color: rgb(var(--c-background));
 }
 .dark body {
-  background: transparent;
+  background-color: rgb(var(--c-background));
   background-image: none;
-}
-
-/* Lava lamp container */
-.aurora-bg {
-  position: fixed;
-  inset: 0;
-  z-index: 0;
-  pointer-events: none;
-  overflow: hidden;
-  background: rgb(6, 4, 16);
-}
-.aurora-blob {
-  position: absolute;
-  filter: blur(55px);
-  will-change: transform, border-radius;
-}
-.aurora-blob-1 {
-  width: 38vw;
-  height: 42vh;
-  left: 10vw;
-  top: 10vh;
-  background: rgba(35, 6, 75, 0.95);
-  animation: lava-1 22s ease-in-out infinite;
-}
-.aurora-blob-2 {
-  width: 30vw;
-  height: 36vh;
-  left: 55vw;
-  top: 5vh;
-  background: rgba(45, 8, 90, 0.92);
-  animation: lava-2 28s ease-in-out infinite;
-}
-.aurora-blob-3 {
-  width: 34vw;
-  height: 38vh;
-  left: 30vw;
-  top: 15vh;
-  background: rgba(28, 5, 62, 0.95);
-  animation: lava-3 18s ease-in-out infinite;
-}
-.aurora-blob-4 {
-  width: 26vw;
-  height: 30vh;
-  left: 65vw;
-  top: 30vh;
-  background: rgba(50, 10, 100, 0.90);
-  animation: lava-4 32s ease-in-out infinite;
 }
 
 /* ─── Glass card ────────────────────────────────────────────────────────────── */

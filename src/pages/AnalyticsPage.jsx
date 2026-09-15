@@ -10,6 +10,19 @@ import StatSummaryCard from "../components/StatSummaryCard";
 import { useRecordModal } from "../hooks/useRecordModal";
 import { useLanguage } from "../contexts/LanguageContext";
 import { fetchMaterialLotAnalytics } from "../services/api";
+import ProductionAnalyticsView from "../components/analytics/ProductionAnalyticsView";
+import QualityAnalyticsView from "../components/analytics/QualityAnalyticsView";
+import TagInput from "../components/TagInput";
+import AdvancedFilterSection from "../components/AdvancedFilterSection";
+import ProductSelectorModal from "../components/analytics/ProductSelectorModal";
+import {
+  ANALYTICS_FILTER_SCHEMA,
+  OPERATOR_LABELS,
+  OPERATOR_LABELS_JA,
+  createNewFilterRow,
+  buildAnalyticsFilterClauses,
+} from "../components/analytics/analyticsFilterUtils";
+import { fetchDistinctValues } from "../services/api";
 
 function formatNumber(val) {
   if (val === undefined || val === null || Number.isNaN(Number(val))) return "0";
@@ -528,23 +541,125 @@ export default function AnalyticsPage() {
   const { language, t } = useLanguage();
   const isJa = language === "ja";
 
-  // ── Top-Level Analytics Module Tabs (Route-Driven: /analytics/:tab) ───────
-  const { tab: routeTab } = useParams();
+  // ── Top-Level Analytics Module Tabs (Route-Driven: /analytics/:tab/:process?) ───────
+  const { tab: routeTab, process: routeProcess } = useParams();
   const navigate = useNavigate();
 
   const VALID_TABS = ["material", "production", "quality", "machines"];
+  const VALID_PROCESSES = ["kensaDB", "pressDB", "slitDB", "SRSDB"];
   const normalizedRouteTab = routeTab === "materialLots" ? "material" : routeTab;
   const activeTab = VALID_TABS.includes(normalizedRouteTab) ? normalizedRouteTab : "material";
+  const activeProcess = VALID_PROCESSES.includes(routeProcess) ? routeProcess : "kensaDB";
 
   // Redirect if URL tab is missing, invalid, or obsolete key (e.g. /analytics -> /analytics/material)
   useEffect(() => {
     if (!routeTab || routeTab === "materialLots" || !VALID_TABS.includes(routeTab)) {
       navigate("/analytics/material", { replace: true });
+      return;
     }
-  }, [routeTab, navigate]);
+
+    if (activeTab === "production" || activeTab === "quality") {
+      if (!routeProcess || !VALID_PROCESSES.includes(routeProcess)) {
+        navigate(`/analytics/${activeTab}/kensaDB`, { replace: true });
+      }
+    } else if ((activeTab === "material" || activeTab === "machines") && routeProcess) {
+      navigate(`/analytics/${activeTab}`, { replace: true });
+    }
+  }, [routeTab, routeProcess, activeTab, navigate]);
 
   const handleTabChange = (newTab) => {
-    navigate(`/analytics/${newTab}`);
+    if (newTab === "production" || newTab === "quality") {
+      const proc = VALID_PROCESSES.includes(routeProcess) ? routeProcess : "kensaDB";
+      navigate(`/analytics/${newTab}/${proc}`);
+    } else {
+      navigate(`/analytics/${newTab}`);
+    }
+  };
+
+  const handleProcessChange = (newProcess) => {
+    navigate(`/analytics/${activeTab}/${newProcess}`);
+  };
+
+  // ── Production & Quality Product Filters & Advanced Filters ───────────────
+  const [partNumbers, setPartNumbers] = useState([]);
+  const [serialNumbers, setSerialNumbers] = useState([]);
+  const [isProductModalOpen, setIsProductModalOpen] = useState(false);
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
+  const [advancedRows, setAdvancedRows] = useState(() => [createNewFilterRow()]);
+  const [appliedPartNumbers, setAppliedPartNumbers] = useState([]);
+  const [appliedSerialNumbers, setAppliedSerialNumbers] = useState([]);
+  const [appliedAdvancedFilters, setAppliedAdvancedFilters] = useState([]);
+
+  const activeAdvancedCount = useMemo(() => {
+    return advancedRows.filter(
+      (r) =>
+        r.field &&
+        r.operator &&
+        (Array.isArray(r.value)
+          ? r.value.length > 0
+          : r.value !== "" && r.value !== undefined && r.value !== null)
+    ).length;
+  }, [advancedRows]);
+
+  const activeFilterSchema = useMemo(() => {
+    return ANALYTICS_FILTER_SCHEMA.map((f) => ({
+      ...f,
+      label: isJa && f.labelJa ? f.labelJa : f.label,
+      group: isJa && f.groupJa ? f.groupJa : f.group,
+    }));
+  }, [isJa]);
+
+  const handleAddAdvancedRow = () => {
+    setAdvancedRows((prev) => [...prev, createNewFilterRow()]);
+  };
+
+  const handleRemoveAdvancedRow = (id) => {
+    setAdvancedRows((prev) => {
+      const next = prev.filter((r) => r.id !== id);
+      return next.length > 0 ? next : [createNewFilterRow()];
+    });
+  };
+
+  const handleClearAdvancedRows = () => {
+    setAdvancedRows([createNewFilterRow()]);
+    setAppliedAdvancedFilters([]);
+  };
+
+  const handleUpdateAdvancedRow = (id, patch) => {
+    setAdvancedRows((prev) =>
+      prev.map((row) => {
+        if (row.id !== id) return row;
+        const next = { ...row, ...patch };
+        if ("field" in patch && patch.field !== row.field) {
+          const def = ANALYTICS_FILTER_SCHEMA.find((s) => s.field === patch.field);
+          next.operator = def?.operators?.[0] || "equals";
+          next.value = next.operator === "in" ? [] : "";
+        }
+        if ("operator" in patch && patch.operator !== row.operator) {
+          next.value = patch.operator === "in" ? [] : "";
+        }
+        if ("value" in patch && row.operator === "in" && !Array.isArray(patch.value)) {
+          next.value = patch.value ? [patch.value] : [];
+        }
+        return next;
+      })
+    );
+  };
+
+  const handleApplyFilters = () => {
+    setAppliedPartNumbers(partNumbers);
+    setAppliedSerialNumbers(serialNumbers);
+    const clauses = buildAnalyticsFilterClauses(advancedRows, ANALYTICS_FILTER_SCHEMA);
+    setAppliedAdvancedFilters(clauses);
+  };
+
+  const handleProductModalConfirm = (newBans, selectedProducts) => {
+    setSerialNumbers(newBans);
+    const associatedHinbans = selectedProducts.map((p) => p.品番).filter(Boolean);
+    const nextPartNumbers = Array.from(new Set([...partNumbers, ...associatedHinbans]));
+    setPartNumbers(nextPartNumbers);
+    setAppliedSerialNumbers(newBans);
+    setAppliedPartNumbers(nextPartNumbers);
   };
 
   // ── Inner View Mode: 'table' (DEFAULT per spec) vs 'cards' ────────────────
@@ -744,6 +859,12 @@ export default function AnalyticsPage() {
     setMachine("");
     setMaterialSeiban("");
     setSearch("");
+    setPartNumbers([]);
+    setSerialNumbers([]);
+    setAdvancedRows([createNewFilterRow()]);
+    setAppliedPartNumbers([]);
+    setAppliedSerialNumbers([]);
+    setAppliedAdvancedFilters([]);
   };
 
   // Toggle Lot Expansion in Table / Card
@@ -896,7 +1017,7 @@ export default function AnalyticsPage() {
   };
 
   return (
-    <section className="material-analytics w-full h-screen overflow-y-auto space-y-6 bg-[var(--page-bg)] text-[var(--text-primary)] pt-20 px-4 sm:px-6 md:px-8 pb-16">
+    <section className="material-analytics w-full h-screen overflow-y-auto space-y-6 bg-background text-[var(--text-primary)] pt-20 px-4 sm:px-6 md:px-8 pb-16">
       {/* ── Page Header ──────────────────────────────────────────────────────── */}
       <PageHeader
         eyebrow="ANALYTICS"
@@ -951,14 +1072,12 @@ export default function AnalyticsPage() {
             key: "production",
             label: t("productionAnalytics"),
             icon: "precision_manufacturing",
-            badge: t("comingSoon"),
             ready: true,
           },
           {
             key: "quality",
             label: t("qualityAnalytics"),
             icon: "fact_check",
-            badge: t("comingSoon"),
             ready: true,
           },
           {
@@ -973,21 +1092,247 @@ export default function AnalyticsPage() {
         onSelect={(tab) => handleTabChange(tab.key)}
       />
 
-      {/* ── Placeholder for Future Analytics Modules ──────────────────────────── */}
-      {activeTab !== "material" && (
+      {/* ── Filters Bar for Production & Quality ───────────────────────────────── */}
+      {(activeTab === "production" || activeTab === "quality") && (
+        <div className="analytics-filters freya-card rounded-[8px] border border-[var(--border)] bg-[var(--surface)] p-4 sm:p-5 shadow-xs space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 items-end">
+            {/* Date Preset Dropdown */}
+            <FormField label={t("date")}>
+              <div className="relative">
+                <select
+                  id="analytics-global-date"
+                  value={rangePreset}
+                  onChange={(e) => setRangePreset(e.target.value)}
+                  className="freya-input h-10 min-w-[140px] appearance-none pr-8 text-sm font-medium text-[var(--text-primary)] cursor-pointer"
+                >
+                  <option value="today">{t("todayLabel")}</option>
+                  <option value="yesterday">{t("yesterday")}</option>
+                  <option value="thisWeek">{t("thisWeek")}</option>
+                  <option value="last7Days">{t("last7Days")}</option>
+                  <option value="thisMonth">{t("thisMonth")}</option>
+                  <option value="lastWeek">{t("lastWeek")}</option>
+                  <option value="lastMonth">{t("lastMonth")}</option>
+                  <option value="custom">{t("custom")}</option>
+                </select>
+                <span className="material-symbols-outlined pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)] text-[16px]">
+                  expand_more
+                </span>
+              </div>
+            </FormField>
+
+            {/* Custom Date Pickers */}
+            {rangePreset === "custom" && (
+              <>
+                <FormField label={isJa ? "開始日" : "From"}>
+                  <input
+                    type="date"
+                    value={customFrom}
+                    onChange={(e) => setCustomFrom(e.target.value)}
+                    className="freya-input h-10 text-sm text-[var(--text-primary)]"
+                  />
+                </FormField>
+                <FormField label={isJa ? "終了日" : "To"}>
+                  <input
+                    type="date"
+                    value={customTo}
+                    onChange={(e) => setCustomTo(e.target.value)}
+                    className="freya-input h-10 text-sm text-[var(--text-primary)]"
+                  />
+                </FormField>
+              </>
+            )}
+
+            {/* Factory Filter */}
+            <FormField label={t("factory")} className="min-w-[130px]">
+              <div className="relative">
+                <select
+                  id="analytics-global-factory"
+                  value={factory}
+                  onChange={(e) => setFactory(e.target.value)}
+                  className="freya-input h-10 w-full appearance-none pr-8 text-sm font-medium text-[var(--text-primary)] cursor-pointer"
+                >
+                  <option value="">{isJa ? "全工場" : "All Factories"}</option>
+                  {["第二工場", "肥田瀬", "小瀬", "天徳", "倉知"].map((f) => (
+                    <option key={f} value={f}>{f}</option>
+                  ))}
+                </select>
+                <span className="material-symbols-outlined pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)] text-[16px]">
+                  expand_more
+                </span>
+              </div>
+            </FormField>
+
+            {/* Part Number (品番) Filter */}
+            <FormField label={isJa ? "品番 (Part No.)" : "Part Number"}>
+              <TagInput
+                tags={partNumbers}
+                onAdd={(t) => {
+                  setPartNumbers((prev) => [...prev, t]);
+                  setAppliedPartNumbers((prev) => [...prev, t]);
+                }}
+                onRemove={(t) => {
+                  setPartNumbers((prev) => prev.filter((x) => x !== t));
+                  setAppliedPartNumbers((prev) => prev.filter((x) => x !== t));
+                }}
+                placeholder={isJa ? "入力してEnter…" : "Enter part no…"}
+                uppercase
+              />
+            </FormField>
+
+            {/* Serial Number (背番号) Filter */}
+            <FormField label={isJa ? "背番号 (Serial No.)" : "Serial Number"}>
+              <TagInput
+                tags={serialNumbers}
+                onAdd={(t) => {
+                  setSerialNumbers((prev) => [...prev, t]);
+                  setAppliedSerialNumbers((prev) => [...prev, t]);
+                }}
+                onRemove={(t) => {
+                  setSerialNumbers((prev) => prev.filter((x) => x !== t));
+                  setAppliedSerialNumbers((prev) => prev.filter((x) => x !== t));
+                }}
+                placeholder={isJa ? "入力してEnter…" : "Enter serial no…"}
+                uppercase
+              />
+            </FormField>
+          </div>
+
+          {/* Action Row */}
+          <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-[var(--border)]">
+            <div className="flex flex-wrap items-center gap-2">
+              {/* Product Selector Modal Button */}
+              <button
+                type="button"
+                onClick={() => setIsProductModalOpen(true)}
+                className="inline-flex h-9 items-center gap-1.5 rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] px-3 text-xs font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-hover)] transition"
+              >
+                <span className="material-symbols-outlined text-[17px] text-[var(--freya-blue)]">
+                  inventory_2
+                </span>
+                <span>{isJa ? "製品マスタから選択" : "Select from Products"}</span>
+                {serialNumbers.length > 0 && (
+                  <span className="ml-1 rounded-full bg-[var(--freya-blue)] px-1.5 py-0.2 text-[10px] font-bold text-white">
+                    {serialNumbers.length}
+                  </span>
+                )}
+              </button>
+
+              {/* Advanced Filter Toggle Button */}
+              <button
+                type="button"
+                onClick={() => setShowAdvancedFilters((prev) => !prev)}
+                className={`inline-flex h-9 items-center gap-1.5 rounded-[6px] border px-3 text-xs font-semibold transition ${
+                  showAdvancedFilters || activeAdvancedCount > 0
+                    ? "border-[var(--freya-blue)]/50 bg-[var(--freya-blue)]/10 text-[var(--freya-blue)]"
+                    : "border-[var(--border)] bg-[var(--surface-subtle)] text-[var(--text-primary)] hover:bg-[var(--surface-hover)]"
+                }`}
+              >
+                <span className="material-symbols-outlined text-[17px]">
+                  {showAdvancedFilters ? "tune" : "filter_list"}
+                </span>
+                <span>{isJa ? "詳細フィルター" : "Advanced Filters"}</span>
+                {activeAdvancedCount > 0 && (
+                  <span className="ml-1 rounded-full bg-[var(--freya-blue)] px-1.5 py-0.2 text-[10px] font-bold text-white">
+                    {activeAdvancedCount}
+                  </span>
+                )}
+                <span className="material-symbols-outlined text-[16px]">
+                  {showAdvancedFilters ? "expand_less" : "expand_more"}
+                </span>
+              </button>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={handleApplyFilters}
+                className="inline-flex h-9 items-center gap-1.5 rounded-[6px] bg-[var(--freya-blue)] px-4 text-xs font-semibold text-white hover:opacity-90 transition shadow-xs"
+              >
+                <span className="material-symbols-outlined text-[16px]">filter_alt</span>
+                <span>{isJa ? "フィルター適用" : "Apply Filters"}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={handleResetFilters}
+                className="inline-flex h-9 items-center gap-1.5 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 text-xs font-semibold text-[var(--text-secondary)] hover:bg-[var(--surface-hover)] transition"
+              >
+                <span className="material-symbols-outlined text-[16px]">restart_alt</span>
+                <span>{isJa ? "リセット" : "Reset"}</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Collapsible Advanced Filters Section */}
+          {showAdvancedFilters && (
+            <div className="pt-3 border-t border-[var(--border)]">
+              <AdvancedFilterSection
+                rows={advancedRows}
+                fieldDefinitions={activeFilterSchema}
+                onUpdateRow={handleUpdateAdvancedRow}
+                onAddRow={handleAddAdvancedRow}
+                onRemoveRow={handleRemoveAdvancedRow}
+                onClearRows={handleClearAdvancedRows}
+                loadDistinctOptions={(field) => fetchDistinctValues(factory, field)}
+                shouldLoadOptions={(def) => def.type === "select"}
+                operatorLabels={isJa ? OPERATOR_LABELS_JA : OPERATOR_LABELS}
+                useOperatorLabelsInSelect
+                optionsCacheKey={factory || "all"}
+                title={isJa ? "詳細フィルター条件" : "Advanced Filter Rules"}
+                addRowLabel={isJa ? "条件追加" : "Add Condition"}
+                selectFieldLabel={isJa ? "項目を選択" : "Select field"}
+                selectOperatorLabel={isJa ? "条件を選択" : "Select operator"}
+                variant="compact"
+                framed={false}
+              />
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Product Selector Modal */}
+      <ProductSelectorModal
+        isOpen={isProductModalOpen}
+        onClose={() => setIsProductModalOpen(false)}
+        selectedBans={serialNumbers}
+        onConfirm={handleProductModalConfirm}
+      />
+
+      {/* ── Production & Lines Content ────────────────────────────────────────── */}
+      {activeTab === "production" && (
+        <ProductionAnalyticsView
+          dateRange={dateRange}
+          factory={factory}
+          activeProcess={activeProcess}
+          onProcessChange={handleProcessChange}
+          bans={appliedSerialNumbers}
+          partNumbers={appliedPartNumbers}
+          advancedFilters={appliedAdvancedFilters}
+        />
+      )}
+
+      {/* ── Defects & Quality Content ─────────────────────────────────────────── */}
+      {activeTab === "quality" && (
+        <QualityAnalyticsView
+          dateRange={dateRange}
+          factory={factory}
+          activeProcess={activeProcess}
+          onProcessChange={handleProcessChange}
+          bans={appliedSerialNumbers}
+          partNumbers={appliedPartNumbers}
+          advancedFilters={appliedAdvancedFilters}
+        />
+      )}
+
+      {/* ── Machines Placeholder ──────────────────────────────────────────────── */}
+      {activeTab === "machines" && (
         <div className="freya-card rounded-[12px] border border-[var(--border)] bg-[var(--surface)] p-12 text-center shadow-sm space-y-4 max-w-2xl mx-auto my-8">
           <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-[var(--freya-blue)]/10 text-[var(--freya-blue)] border border-[var(--freya-blue)]/20">
-            <span className="material-symbols-outlined" style={{ fontSize: 28 }}>
-              {activeTab === "production" ? "precision_manufacturing" : activeTab === "quality" ? "fact_check" : "speed"}
-            </span>
+            <span className="material-symbols-outlined" style={{ fontSize: 28 }}>speed</span>
           </div>
           <div>
             <h3 className="text-lg font-semibold text-[var(--text-primary)]">
-              {activeTab === "production"
-                ? (isJa ? "生産ライン稼働率・出来高分析" : "Production & Line Output Analytics")
-                : activeTab === "quality"
-                ? (isJa ? "不良率・品質トレンド分析" : "Defect Rate & Quality Analytics")
-                : (isJa ? "設備総合効率 (OEE) & ダウンタイム分析" : "Machine OEE & Downtime Analytics")}
+              {isJa ? "設備総合効率 (OEE) & ダウンタイム分析" : "Machine OEE & Downtime Analytics"}
             </h3>
             <p className="text-sm font-normal text-[var(--text-muted)] mt-1.5 max-w-md mx-auto">
               {isJa
@@ -1313,17 +1658,16 @@ export default function AnalyticsPage() {
             <div className="freya-card overflow-hidden rounded-[8px] border border-[var(--border)] bg-[var(--surface)] shadow-sm">
               <div className="overflow-x-auto">
                 <table className="analytics-ledger w-full table-fixed border-collapse text-left text-sm min-w-[1440px]">
-                  {/* Strict Column Widths (Section 3) */}
                   <colgroup>
-                    <col style={{ width: "8%" }} />   {/* Material */}
-                    <col style={{ width: "12%" }} />  {/* Lot */}
-                    <col style={{ width: "10%" }} />  {/* Used (right-aligned, bold) */}
-                    <col style={{ width: "26%" }} />  {/* Product / Seiban */}
-                    <col style={{ width: "6%" }} />   {/* Runs (right-aligned) */}
-                    <col style={{ width: "11%" }} />  {/* Machines */}
-                    <col style={{ width: "8%" }} />   {/* Pieces (right-aligned) */}
-                    <col style={{ width: "10%" }} />  {/* Last Used */}
-                    <col style={{ width: "9%" }} />   {/* Evidence */}
+                    <col style={{ width: "8%" }} />
+                    <col style={{ width: "12%" }} />
+                    <col style={{ width: "10%" }} />
+                    <col style={{ width: "26%" }} />
+                    <col style={{ width: "6%" }} />
+                    <col style={{ width: "11%" }} />
+                    <col style={{ width: "8%" }} />
+                    <col style={{ width: "10%" }} />
+                    <col style={{ width: "9%" }} />
                   </colgroup>
 
                   {/* Table Header */}

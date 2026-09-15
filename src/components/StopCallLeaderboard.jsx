@@ -78,8 +78,13 @@ export function aggregateLeaders(flatEvents) {
     });
   }
 
-  // Sort by effectiveness score descending (higher = better)
-  leaders.sort((a, b) => b.effectivenessScore - a.effectivenessScore);
+  // Sort by total responses descending (higher = better), tie-break by effectiveness score
+  leaders.sort((a, b) => {
+    if (b.totalResponses !== a.totalResponses) {
+      return b.totalResponses - a.totalResponses;
+    }
+    return b.effectivenessScore - a.effectivenessScore;
+  });
   return leaders;
 }
 

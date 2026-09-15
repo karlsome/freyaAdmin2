@@ -2700,3 +2700,38 @@ export async function askAICopilot({ prompt, currentPersona, kpiContext, history
   return data;
 }
 
+// ─── Production & Quality Analytics ─────────────────────────────────────────
+export async function fetchAnalyticsData({
+  fromDate,
+  toDate,
+  collectionName = "kensaDB",
+  factoryFilter,
+  bans = [],
+  partNumbers = [],
+  models = [],
+  advancedFilters = [],
+  userRole = "admin",
+  factoryAccess = [],
+}) {
+  const body = {
+    fromDate,
+    toDate,
+    collectionName,
+    userRole,
+    factoryAccess,
+  };
+  if (factoryFilter) body.factoryFilter = factoryFilter;
+  if (Array.isArray(bans) && bans.length > 0) body.bans = bans;
+  if (Array.isArray(partNumbers) && partNumbers.length > 0) body.partNumbers = partNumbers;
+  if (Array.isArray(models) && models.length > 0) body.models = models;
+  if (Array.isArray(advancedFilters) && advancedFilters.length > 0) body.advancedFilters = advancedFilters;
+
+  return _postJson("api/analytics-data", body);
+}
+
+export async function fetchMasterDbProducts(model) {
+  const queryParam = model ? `?model=${encodeURIComponent(model)}` : "";
+  return _getJson(`api/masterdb/products${queryParam}`);
+}
+
+
