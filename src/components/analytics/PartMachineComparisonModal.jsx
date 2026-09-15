@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import { createPortal } from "react-dom";
+import { useNavigate } from "react-router-dom";
 import ChartJS from "./chartSetup";
 import { fetchEquipmentData, fetchPartCrossMachineComparison, fetchMasterImage } from "../../services/api";
 import { calculateEquipmentAnalytics, getFactoryBadgeStyle } from "./equipmentAnalyticsUtils";
@@ -22,6 +23,7 @@ export default function PartMachineComparisonModal({
   isJa = true,
   zIndex = "z-[10000]",
 }) {
+  const navigate = useNavigate();
   const [datePreset, setDatePreset] = useState("bothMonths");
   const [customRange, setCustomRange] = useState({ from: "", to: "" });
 
@@ -472,13 +474,30 @@ export default function PartMachineComparisonModal({
               </div>
             </div>
 
-            <button
-              type="button"
-              onClick={onClose}
-              className="rounded-md p-1.5 text-[var(--text-muted)] hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)] transition cursor-pointer"
-            >
-              <span className="material-symbols-outlined text-[20px]">close</span>
-            </button>
+            <div className="flex items-center gap-1.5 shrink-0">
+              <button
+                type="button"
+                onClick={() => {
+                  onClose();
+                  const q = new URLSearchParams();
+                  if (hinban) q.set("hinban", hinban);
+                  if (seiban) q.set("seiban", seiban);
+                  navigate(`/analytics/parts?${q.toString()}`);
+                }}
+                className="hidden sm:inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold rounded-md border border-[var(--border)] bg-[var(--surface)] hover:bg-[var(--surface-hover)] text-[var(--text-secondary)] transition shadow-2xs"
+                title={isJa ? "専用タブ（全画面）で開く" : "Open in dedicated tab"}
+              >
+                <span className="material-symbols-outlined text-[15px]">open_in_new</span>
+                <span>{isJa ? "全画面タブで開く" : "Full View"}</span>
+              </button>
+              <button
+                type="button"
+                onClick={onClose}
+                className="rounded-md p-1.5 text-[var(--text-muted)] hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)] transition cursor-pointer"
+              >
+                <span className="material-symbols-outlined text-[20px]">close</span>
+              </button>
+            </div>
           </div>
 
           {/* ── 2. Filter Bar (Date Range Selector) ────────────────────── */}

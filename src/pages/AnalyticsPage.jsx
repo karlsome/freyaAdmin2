@@ -13,6 +13,7 @@ import { fetchMaterialLotAnalytics } from "../services/api";
 import ProductionAnalyticsView from "../components/analytics/ProductionAnalyticsView";
 import QualityAnalyticsView from "../components/analytics/QualityAnalyticsView";
 import MachinePerformanceView from "../components/analytics/MachinePerformanceView";
+import PartBenchmarkingView from "../components/analytics/PartBenchmarkingView";
 import TagInput from "../components/TagInput";
 import AdvancedFilterSection from "../components/AdvancedFilterSection";
 import ProductSelectorModal from "../components/analytics/ProductSelectorModal";
@@ -546,7 +547,7 @@ export default function AnalyticsPage() {
   const { tab: routeTab, process: routeProcess } = useParams();
   const navigate = useNavigate();
 
-  const VALID_TABS = ["material", "production", "quality", "machines"];
+  const VALID_TABS = ["material", "production", "quality", "machines", "parts"];
   const VALID_PROCESSES = ["kensaDB", "pressDB", "slitDB", "SRSDB"];
   const normalizedRouteTab = routeTab === "materialLots" ? "material" : routeTab;
   const activeTab = VALID_TABS.includes(normalizedRouteTab) ? normalizedRouteTab : "material";
@@ -563,7 +564,7 @@ export default function AnalyticsPage() {
       if (!routeProcess || !VALID_PROCESSES.includes(routeProcess)) {
         navigate(`/analytics/${activeTab}/kensaDB`, { replace: true });
       }
-    } else if ((activeTab === "material" || activeTab === "machines") && routeProcess) {
+    } else if ((activeTab === "material" || activeTab === "machines" || activeTab === "parts") && routeProcess) {
       navigate(`/analytics/${activeTab}`, { replace: true });
     }
   }, [routeTab, routeProcess, activeTab, navigate]);
@@ -1087,6 +1088,12 @@ export default function AnalyticsPage() {
             icon: "speed",
             ready: true,
           },
+          {
+            key: "parts",
+            label: isJa ? "品番・設備比較" : "Part Benchmarking",
+            icon: "category",
+            ready: true,
+          },
         ]}
         activeTab={activeTab}
         onSelect={(tab) => handleTabChange(tab.key)}
@@ -1326,6 +1333,9 @@ export default function AnalyticsPage() {
 
       {/* ── Machine Performance & Equipment Management ────────────────────── */}
       {activeTab === "machines" && <MachinePerformanceView />}
+
+      {/* ── Part Benchmarking (Cross-Machine Fleet Performance) ─────────────── */}
+      {activeTab === "parts" && <PartBenchmarkingView isJa={isJa} />}
 
       {/* ── Material Usage Ledger Content ─────────────────────────────────────── */}
       {activeTab === "material" && (

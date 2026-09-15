@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { useLanguage } from "../../contexts/LanguageContext";
 import { fetchAnalyticsData } from "../../services/api";
 import { AnalyticsKpiCard } from "./AnalyticsKpiCards";
@@ -27,6 +28,7 @@ export default function ProductionAnalyticsView({
 }) {
   const { language, t } = useLanguage();
   const isJa = language === "ja";
+  const navigate = useNavigate();
 
   const [collectionName, setCollectionName] = useState(activeProcess || "kensaDB");
   const collection = activeProcess || collectionName;
@@ -226,6 +228,33 @@ export default function ProductionAnalyticsView({
         <div className="lg:col-span-2">
           <EquipmentEfficiencyChart equipmentStats={equipmentStats} />
         </div>
+      </div>
+
+      {/* ── Quick Shortcut: Part Benchmarking Across Fleet ──────────────── */}
+      <div className="freya-card rounded-[8px] border border-[var(--border)] bg-[var(--surface-subtle)]/70 p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-xs">
+        <div className="flex items-center gap-3">
+          <div className="h-10 w-10 rounded-lg bg-[var(--freya-blue)]/10 text-[var(--freya-blue)] flex items-center justify-center border border-[var(--freya-blue)]/20 shrink-0">
+            <span className="material-symbols-outlined text-[22px]">category</span>
+          </div>
+          <div>
+            <h4 className="text-sm font-bold text-[var(--text-primary)]">
+              {isJa ? "品番・背番号ごとの設備横断比較" : "Cross-Machine Part Benchmarking"}
+            </h4>
+            <p className="text-xs text-[var(--text-muted)] mt-0.5">
+              {isJa
+                ? "同一品番がどの設備で最も効率良く、低不良率で生産されているかを設備間で比較・分析します。"
+                : "Compare volume, defect rates, and operating pace for specific parts across all machines in your fleet."}
+            </p>
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={() => navigate("/analytics/parts")}
+          className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-bold rounded-lg bg-[var(--freya-blue)] text-white hover:opacity-90 transition shadow-xs shrink-0 self-end sm:self-center"
+        >
+          <span>{isJa ? "品番・設備比較を開く" : "Open Part Benchmarking"}</span>
+          <span className="material-symbols-outlined text-[15px]">arrow_forward</span>
+        </button>
       </div>
     </div>
   );
