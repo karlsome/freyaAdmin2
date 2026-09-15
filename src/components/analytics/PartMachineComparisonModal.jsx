@@ -13,9 +13,19 @@ function getMonthEndDate(ym) {
   return `${ym}-${String(lastDay).padStart(2, "0")}`;
 }
 
+const PALETTE = [
+  { bg: "rgba(59, 130, 246, 0.8)", border: "#3b82f6" },
+  { bg: "rgba(168, 85, 247, 0.8)", border: "#a855f7" },
+  { bg: "rgba(16, 185, 129, 0.8)", border: "#10b981" },
+  { bg: "rgba(245, 158, 11, 0.8)", border: "#f59e0b" },
+  { bg: "rgba(236, 72, 153, 0.8)", border: "#ec4899" },
+  { bg: "rgba(14, 165, 233, 0.8)", border: "#0ea5e9" },
+];
+
 export default function PartMachineComparisonModal({
   isOpen,
   onClose,
+  parts,
   hinban,
   seiban,
   monthA = "2026-09",
@@ -27,11 +37,24 @@ export default function PartMachineComparisonModal({
   const [datePreset, setDatePreset] = useState("bothMonths");
   const [customRange, setCustomRange] = useState({ from: "", to: "" });
 
+  // Normalise parts array: Array<{ hinban, seiban }>
+  const activeParts = useMemo(() => {
+    if (Array.isArray(parts) && parts.length > 0) return parts;
+    if (hinban) {
+      const hList = String(hinban).split(",").map((h) => h.trim()).filter(Boolean);
+      const sList = seiban ? String(seiban).split(",").map((s) => s.trim()) : [];
+      return hList.map((h, i) => ({ hinban: h, seiban: sList[i] || "" }));
+    }
+    return [];
+  }, [parts, hinban, seiban]);
+
+  const [chartDisplayMode, setChartDisplayMode] = useState("stacked");
+
   const [loading, setLoading] = useState(true);
   const [records, setRecords] = useState([]);
   const [error, setError] = useState(null);
 
-  // Master product image state
+  // Master product image state (for single part)
   const [productImage, setProductImage] = useState(null);
   const [masterData, setMasterData] = useState(null);
   const [imageLoading, setImageLoading] = useState(false);
@@ -65,24 +88,24 @@ export default function PartMachineComparisonModal({
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [isOpen, onClose, photoPreview, selectedRecordForDetail]);
 
-  // Load product image from masterDB
+  // Load product image from masterDB if exactly 1 part
   useEffect(() => {
-    if (!isOpen || !hinban) {
+    if (!isOpen || activeParts.length !== 1) {
       setProductImage(null);
       setMasterData(null);
       setImageError(false);
       setImageLoading(false);
       return;
     }
+    const single = activeParts[0];
     let cancelled = false;
     setImageLoading(true);
     setImageError(false);
 
-    fetchMasterImage(hinban, seiban)
+    fetchMasterImage(single.hinban, single.seiban)
       .then((img) => {
         if (!cancelled) {
           setMasterData(img);
-          // fetchMasterImage returns { imageURL, 品番, 背番号, 品名 } or null
           const url = typeof img === "string" ? img : img?.imageURL || null;
           setProductImage(url);
           setImageLoading(false);
@@ -99,7 +122,7 @@ export default function PartMachineComparisonModal({
     return () => {
       cancelled = true;
     };
-  }, [isOpen, hinban, seiban]);
+  }, [isOpen, activeParts]);
 
   // Compute active date range
   const activeDateRange = useMemo(() => {
@@ -134,9 +157,9 @@ export default function PartMachineComparisonModal({
     return customRange;
   }, [datePreset, monthA, monthB, customRange]);
 
-  // Fetch records across all machines for this part
+  // Fetch records across all machines for active part(s)
   useEffect(() => {
-    if (!isOpen || !hinban) return;
+    if (!isOpen || activeParts.length === 0) return;
     let cancelled = false;
 
     async function loadData() {
@@ -144,11 +167,15 @@ export default function PartMachineComparisonModal({
       setError(null);
       try {
         let fetchedRecords = null;
+        const partsPayload = activeParts.map((p) => ({
+          hinban: p.hinban,
+          seiban: p.seiban || undefined,
+        }));
+
         try {
           // Try dedicated cross-machine endpoint first
           const dedicatedRes = await fetchPartCrossMachineComparison({
-            hinban,
-            seiban: seiban || undefined,
+            parts: partsPayload,
             startDate: activeDateRange.from || undefined,
             endDate: activeDateRange.to || undefined,
           });
@@ -162,10 +189,9 @@ export default function PartMachineComparisonModal({
         if (!fetchedRecords) {
           // Fallback to fetchEquipmentData
           const res = await fetchEquipmentData({
+            parts: partsPayload,
             startDate: activeDateRange.from || undefined,
             endDate: activeDateRange.to || undefined,
-            hinban,
-            seiban: seiban || undefined,
           });
           if (res?.success && Array.isArray(res.data)) {
             fetchedRecords = res.data;
@@ -191,7 +217,7 @@ export default function PartMachineComparisonModal({
     return () => {
       cancelled = true;
     };
-  }, [isOpen, hinban, seiban, activeDateRange]);
+  }, [isOpen, activeParts, activeDateRange]);
 
   // Group records by machine
   const machineStats = useMemo(() => {
@@ -205,6 +231,7 @@ export default function PartMachineComparisonModal({
           factory: r["工場"] || "",
           records: [],
           workers: new Set(),
+          partsMap: new Map(),
         });
       }
       const entry = map.get(eq);
@@ -212,6 +239,17 @@ export default function PartMachineComparisonModal({
       const worker = r.Worker_Name || r["作業者"] || r.worker || r.operator;
       if (worker) entry.workers.add(worker);
       if (!entry.factory && r["工場"]) entry.factory = r["工場"];
+
+      // Track by part within this machine
+      const h = r["品番"] || "";
+      const s = r["背番号"] || "";
+      const pKey = `${h}::${s}`;
+      if (!entry.partsMap.has(pKey)) {
+        entry.partsMap.set(pKey, { hinban: h, seiban: s, shots: 0, defects: 0 });
+      }
+      const pEntry = entry.partsMap.get(pKey);
+      pEntry.shots += Number(r.Total_Count || r.totalCount || r.良品数 || 0);
+      pEntry.defects += Number(r.Bad_Count || r.badCount || r.不良数 || 0);
     });
 
     let totalAllShots = 0;
@@ -222,6 +260,7 @@ export default function PartMachineComparisonModal({
         ...item,
         analytics,
         workerList: Array.from(item.workers),
+        partsBreakdown: Array.from(item.partsMap.values()).sort((a, b) => b.shots - a.shots),
       };
     });
 
@@ -290,38 +329,65 @@ export default function PartMachineComparisonModal({
     }
 
     const labels = machineStats.machines.map((m) => `${m.machine} (${m.factory || "—"})`);
-    const shotsData = machineStats.machines.map((m) => m.analytics.totalShots || 0);
     const defectRateData = machineStats.machines.map((m) => m.analytics.defectRate || 0);
+
+    const datasets = [];
+
+    if (activeParts.length > 1 && chartDisplayMode === "stacked") {
+      activeParts.forEach((part, pIdx) => {
+        const color = PALETTE[pIdx % PALETTE.length];
+        const partShotsData = machineStats.machines.map((m) => {
+          const match = m.partsBreakdown.find((p) => p.hinban === part.hinban);
+          return match ? match.shots : 0;
+        });
+
+        datasets.push({
+          type: "bar",
+          label: `${part.hinban}${part.seiban ? ` (${part.seiban})` : ""}`,
+          data: partShotsData,
+          backgroundColor: color.bg,
+          borderColor: color.border,
+          borderWidth: 1,
+          borderRadius: 4,
+          stack: "shotsStack",
+          yAxisID: "y",
+          order: 2 + pIdx,
+        });
+      });
+    } else {
+      const shotsData = machineStats.machines.map((m) => m.analytics.totalShots || 0);
+      datasets.push({
+        type: "bar",
+        label: isJa ? "総ショット数" : "Total Shots",
+        data: shotsData,
+        backgroundColor: "rgba(59, 130, 246, 0.75)",
+        borderColor: "#3b82f6",
+        borderWidth: 1.5,
+        borderRadius: 4,
+        yAxisID: "y",
+        order: 2,
+      });
+    }
+
+    // Defect line
+    datasets.push({
+      type: "line",
+      label: isJa ? "不良率 (%)" : "Defect Rate (%)",
+      data: defectRateData,
+      borderColor: "#ef4444",
+      backgroundColor: "rgba(239, 68, 68, 0.15)",
+      borderWidth: 2,
+      pointRadius: 4,
+      pointBackgroundColor: "#ef4444",
+      yAxisID: "y1",
+      order: 1,
+    });
 
     chartInstanceRef.current = new ChartJS(ctx, {
       type: "bar",
       data: {
         labels,
-        datasets: [
-          {
-            type: "bar",
-            label: isJa ? "総ショット数" : "Total Shots",
-            data: shotsData,
-            backgroundColor: "rgba(59, 130, 246, 0.75)",
-            borderColor: "#3b82f6",
-            borderWidth: 1.5,
-            borderRadius: 4,
-            yAxisID: "y",
-            order: 2,
-          },
-          {
-            type: "line",
-            label: isJa ? "不良率 (%)" : "Defect Rate (%)",
-            data: defectRateData,
-            borderColor: "#ef4444",
-            backgroundColor: "rgba(239, 68, 68, 0.15)",
-            borderWidth: 2,
-            pointRadius: 4,
-            pointBackgroundColor: "#ef4444",
-            yAxisID: "y1",
-            order: 1,
-          },
-        ],
+        datasets,
       },
       options: {
         responsive: true,
@@ -409,10 +475,13 @@ export default function PartMachineComparisonModal({
           aria-modal="true"
         >
           {/* ── 1. Modal Header ─────────────────────────────────────────── */}
-          <div className="px-6 py-4 border-b border-[var(--border)] flex items-center justify-between bg-[var(--surface-subtle)] shrink-0">
+          <div className="px-6 py-4 border-b border-[var(--border)] flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-[var(--surface-subtle)] shrink-0">
             <div className="flex items-center gap-3 min-w-0">
-              {/* Product Master Thumbnail with Lazy Loading, Fallback & Click-to-Preview */}
-              {imageLoading ? (
+              {activeParts.length > 1 ? (
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20 shadow-2xs">
+                  <span className="material-symbols-outlined text-[24px]">view_in_ar</span>
+                </div>
+              ) : imageLoading ? (
                 <div className="h-12 w-16 shrink-0 rounded-lg overflow-hidden border border-[var(--border)] bg-[var(--surface-subtle)] flex items-center justify-center animate-pulse">
                   <span className="material-symbols-outlined text-[18px] text-[var(--text-muted)] animate-spin">
                     progress_activity
@@ -424,9 +493,9 @@ export default function PartMachineComparisonModal({
                   onClick={() =>
                     setPhotoPreview({
                       eyebrow: isJa ? "マスター画像" : "Master Image",
-                      displayName: masterData?.["品名"] ?? hinban,
-                      subtitle: `${hinban}${seiban ? ` / ${seiban}` : ""}`,
-                      images: [{ url: productImage, label: masterData?.["品名"] ?? hinban }],
+                      displayName: masterData?.["品名"] ?? activeParts[0]?.hinban,
+                      subtitle: `${activeParts[0]?.hinban}${activeParts[0]?.seiban ? ` / ${activeParts[0]?.seiban}` : ""}`,
+                      images: [{ url: productImage, label: masterData?.["品名"] ?? activeParts[0]?.hinban }],
                       activeIndex: 0,
                     })
                   }
@@ -435,7 +504,7 @@ export default function PartMachineComparisonModal({
                 >
                   <img
                     src={productImage}
-                    alt={masterData?.["品名"] ?? hinban}
+                    alt={masterData?.["品名"] ?? activeParts[0]?.hinban}
                     loading="lazy"
                     decoding="async"
                     onError={() => setImageError(true)}
@@ -452,36 +521,96 @@ export default function PartMachineComparisonModal({
                   <span className="material-symbols-outlined text-[24px]">category</span>
                 </div>
               )}
+
               <div className="min-w-0">
-                <div className="flex items-center gap-2">
-                  <h2 className="text-base sm:text-lg font-black text-[var(--text-primary)] font-mono truncate">
-                    {hinban}
-                  </h2>
-                  {seiban && (
-                    <span className="rounded-md border border-[var(--border)] bg-[var(--surface)] px-2 py-0.5 text-xs font-bold font-mono text-[var(--text-primary)] shadow-2xs">
-                      {seiban}
-                    </span>
-                  )}
-                  <span className="rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 px-2 py-0.5 text-[10px] font-bold border border-blue-500/20">
-                    {isJa ? "全設備実績比較" : "Cross-Machine Benchmark"}
-                  </span>
-                </div>
-                <p className="text-xs text-[var(--text-muted)] mt-0.5">
-                  {isJa
-                    ? "同一品番がどの設備でどれだけ生産され、品質・速度に差があるかを比較します。"
-                    : "Compare volume, defect rate, and speed across all machines producing this part."}
-                </p>
+                {activeParts.length > 1 ? (
+                  <div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h2 className="text-base sm:text-lg font-black text-[var(--text-primary)]">
+                        {isJa ? "複数品番パッケージ横断比較" : "Multi-Part Bundle Benchmark"}
+                      </h2>
+                      <span className="rounded-full bg-purple-500/10 text-purple-600 dark:text-purple-400 px-2 py-0.5 text-[10px] font-bold border border-purple-500/20">
+                        {activeParts.length} {isJa ? "品番" : "parts"}
+                      </span>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-1.5 mt-1">
+                      {activeParts.map((p) => (
+                        <span
+                          key={`${p.hinban}-${p.seiban}`}
+                          className="px-1.5 py-0.2 rounded bg-[var(--surface)] border border-[var(--border)] font-mono text-[10px] text-[var(--text-primary)] font-bold shadow-2xs"
+                        >
+                          {p.hinban}{p.seiban ? ` (${p.seiban})` : ""}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                ) : (
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h2 className="text-base sm:text-lg font-black text-[var(--text-primary)] font-mono truncate">
+                        {activeParts[0]?.hinban || hinban}
+                      </h2>
+                      {(activeParts[0]?.seiban || seiban) && (
+                        <span className="rounded-md border border-[var(--border)] bg-[var(--surface)] px-2 py-0.5 text-xs font-bold font-mono text-[var(--text-primary)] shadow-2xs">
+                          {activeParts[0]?.seiban || seiban}
+                        </span>
+                      )}
+                      <span className="rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 px-2 py-0.5 text-[10px] font-bold border border-blue-500/20">
+                        {isJa ? "全設備実績比較" : "Cross-Machine Benchmark"}
+                      </span>
+                    </div>
+                    {masterData?.["品名"] && (
+                      <p className="text-xs font-medium text-[var(--text-secondary)] mt-0.5 truncate">
+                        {masterData["品名"]}
+                      </p>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
 
-            <div className="flex items-center gap-1.5 shrink-0">
+            <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
+              {activeParts.length > 1 && (
+                <div className="flex items-center gap-1 bg-[var(--surface)] p-0.5 rounded-lg border border-[var(--border)]">
+                  <button
+                    type="button"
+                    onClick={() => setChartDisplayMode("stacked")}
+                    className={`px-2.5 py-1 text-xs font-bold rounded transition ${
+                      chartDisplayMode === "stacked"
+                        ? "bg-[var(--surface-subtle)] text-[var(--freya-blue)] shadow-2xs"
+                        : "text-[var(--text-muted)] hover:text-[var(--text-primary)]"
+                    }`}
+                  >
+                    {isJa ? "内訳" : "Stacked"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setChartDisplayMode("combined")}
+                    className={`px-2.5 py-1 text-xs font-bold rounded transition ${
+                      chartDisplayMode === "combined"
+                        ? "bg-[var(--surface-subtle)] text-[var(--freya-blue)] shadow-2xs"
+                        : "text-[var(--text-muted)] hover:text-[var(--text-primary)]"
+                    }`}
+                  >
+                    {isJa ? "合算" : "Combined"}
+                  </button>
+                </div>
+              )}
               <button
                 type="button"
                 onClick={() => {
                   onClose();
                   const q = new URLSearchParams();
-                  if (hinban) q.set("hinban", hinban);
-                  if (seiban) q.set("seiban", seiban);
+                  if (activeParts.length > 0) {
+                    q.set("hinban", activeParts.map((p) => p.hinban).join(","));
+                    const seibans = activeParts.map((p) => p.seiban || "").join(",");
+                    if (seibans.replace(/,/g, "")) {
+                      q.set("seiban", seibans);
+                    }
+                  } else {
+                    if (hinban) q.set("hinban", hinban);
+                    if (seiban) q.set("seiban", seiban);
+                  }
                   navigate(`/analytics/parts?${q.toString()}`);
                 }}
                 className="hidden sm:inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold rounded-md border border-[var(--border)] bg-[var(--surface)] hover:bg-[var(--surface-hover)] text-[var(--text-secondary)] transition shadow-2xs"
@@ -710,6 +839,18 @@ export default function PartMachineComparisonModal({
                                     </span>
                                     <span>{item.machine}</span>
                                   </div>
+                                  {activeParts.length > 1 && item.partsBreakdown?.length > 0 && (
+                                    <div className="flex flex-wrap items-center gap-1 mt-1 font-normal">
+                                      {item.partsBreakdown.map((pb) => (
+                                        <span
+                                          key={`${pb.hinban}-${pb.seiban}`}
+                                          className="px-1.5 py-0.2 rounded bg-[var(--surface-subtle)] border border-[var(--border)] text-[9px] text-[var(--text-muted)]"
+                                        >
+                                          {pb.hinban.slice(-5)}: {pb.shots.toLocaleString()}
+                                        </span>
+                                      ))}
+                                    </div>
+                                  )}
                                 </td>
 
                                 <td className="px-3 py-2.5">

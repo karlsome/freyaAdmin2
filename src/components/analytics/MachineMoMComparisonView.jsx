@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import ChartJS from "./chartSetup";
 import { fetchEquipmentData } from "../../services/api";
 import { calculateEquipmentAnalytics } from "./equipmentAnalyticsUtils";
@@ -46,11 +47,16 @@ export default function MachineMoMComparisonView({
   const [monthA, setMonthA] = useState(() => availableMonths[0] || "2026-09");
   const [monthB, setMonthB] = useState(() => availableMonths[1] || "2026-08");
 
+  const navigate = useNavigate();
+
   // Chart mode: "cumulative" (Pace) vs "daily" (Side-by-side)
   const [chartMode, setChartMode] = useState("cumulative");
 
-  // Cross-machine part comparison state
+  // Cross-machine part comparison state (single object or array of objects)
   const [selectedPartForComparison, setSelectedPartForComparison] = useState(null);
+
+  // Multi-part selection state: Array<{ hinban, seiban }>
+  const [selectedMultiParts, setSelectedMultiParts] = useState([]);
 
   // Data states
   const [loading, setLoading] = useState(true);
@@ -61,10 +67,33 @@ export default function MachineMoMComparisonView({
   const chartCanvasRef = useRef(null);
   const chartInstanceRef = useRef(null);
 
+  // Reset multi-part selection on machine or months change
+  useEffect(() => {
+    setSelectedMultiParts([]);
+  }, [machine, monthA, monthB]);
+
   // Swap months
   const handleSwapMonths = () => {
     setMonthA(monthB);
     setMonthB(monthA);
+  };
+
+  const handleToggleSelectPart = (p) => {
+    setSelectedMultiParts((prev) => {
+      const exists = prev.some((item) => item.hinban === p.hinban && item.seiban === p.seiban);
+      if (exists) {
+        return prev.filter((item) => !(item.hinban === p.hinban && item.seiban === p.seiban));
+      }
+      return [...prev, { hinban: p.hinban, seiban: p.seiban }];
+    });
+  };
+
+  const handleSelectAllParts = () => {
+    if (selectedMultiParts.length === partMixComparison.length) {
+      setSelectedMultiParts([]);
+    } else {
+      setSelectedMultiParts(partMixComparison.map((p) => ({ hinban: p.hinban, seiban: p.seiban })));
+    }
   };
 
   // Fetch records for both months
@@ -729,10 +758,62 @@ export default function MachineMoMComparisonView({
           </span>
         </div>
 
+        {/* Multi-Part Selection Floating Action Bar */}
+        {selectedMultiParts.length > 0 && (
+          <div className="p-3 bg-blue-500/10 border border-blue-500/30 rounded-lg flex flex-wrap items-center justify-between gap-3 animate-in fade-in duration-150 shadow-xs">
+            <div className="flex items-center gap-2">
+              <span className="material-symbols-outlined text-[20px] text-[var(--freya-blue)]">
+                checklist
+              </span>
+              <span className="text-xs font-bold text-[var(--text-primary)]">
+                {selectedMultiParts.length} {isJa ? "品番を選択中" : "parts selected"}
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  const hinbans = selectedMultiParts.map((p) => p.hinban).join(",");
+                  const seibans = selectedMultiParts.map((p) => p.seiban || "").join(",");
+                  navigate(`/analytics/parts?hinban=${encodeURIComponent(hinbans)}&seiban=${encodeURIComponent(seibans)}`);
+                }}
+                className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-bold rounded-lg bg-[var(--freya-blue)] text-white hover:opacity-90 transition shadow-xs cursor-pointer"
+              >
+                <span>{isJa ? "全画面で横断比較" : "Benchmark in Full View"}</span>
+                <span className="material-symbols-outlined text-[15px]">arrow_forward</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setSelectedPartForComparison(selectedMultiParts)}
+                className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-semibold rounded-lg border border-[var(--border)] bg-[var(--surface)] hover:bg-[var(--surface-hover)] text-[var(--text-primary)] transition shadow-2xs cursor-pointer"
+              >
+                <span className="material-symbols-outlined text-[15px]">view_in_ar</span>
+                <span>{isJa ? "モーダルで比較" : "Compare in Modal"}</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setSelectedMultiParts([])}
+                className="text-xs text-[var(--text-muted)] hover:text-rose-500 font-semibold px-2 py-1 transition cursor-pointer"
+              >
+                {isJa ? "選択解除" : "Deselect"}
+              </button>
+            </div>
+          </div>
+        )}
+
         <div className="overflow-x-auto rounded-lg border border-[var(--border)]">
           <table className="w-full text-xs text-left">
             <thead className="bg-[var(--surface-subtle)] border-b border-[var(--border)] text-[var(--text-muted)] uppercase font-semibold select-none">
               <tr>
+                <th className="w-9 px-3 py-2.5 text-center">
+                  <input
+                    type="checkbox"
+                    checked={partMixComparison.length > 0 && selectedMultiParts.length === partMixComparison.length}
+                    onChange={handleSelectAllParts}
+                    className="rounded border-[var(--border)] text-[var(--freya-blue)] focus:ring-[var(--freya-blue)] cursor-pointer"
+                    title={isJa ? "すべて選択 / 解除" : "Select / Deselect all"}
+                  />
+                </th>
                 <th className="px-3 py-2.5">{isJa ? "品番" : "Part Number"}</th>
                 <th className="px-3 py-2.5">{isJa ? "背番号" : "Back No"}</th>
                 <th className="px-3 py-2.5 text-right">
@@ -751,12 +832,25 @@ export default function MachineMoMComparisonView({
                 partMixComparison.map((p) => {
                   const diff = p.diffShots;
                   const isPositive = diff >= 0;
+                  const isChecked = selectedMultiParts.some(
+                    (item) => item.hinban === p.hinban && item.seiban === p.seiban
+                  );
 
                   return (
                     <tr
                       key={`${p.hinban}-${p.seiban}`}
-                      className="hover:bg-blue-500/5 dark:hover:bg-blue-500/10 transition-colors group"
+                      className={`hover:bg-blue-500/5 dark:hover:bg-blue-500/10 transition-colors group ${
+                        isChecked ? "bg-blue-500/5" : ""
+                      }`}
                     >
+                      <td className="w-9 px-3 py-2 text-center" onClick={(e) => e.stopPropagation()}>
+                        <input
+                          type="checkbox"
+                          checked={isChecked}
+                          onChange={() => handleToggleSelectPart(p)}
+                          className="rounded border-[var(--border)] text-[var(--freya-blue)] focus:ring-[var(--freya-blue)] cursor-pointer"
+                        />
+                      </td>
                       <td 
                         onClick={() => setSelectedPartForComparison({ hinban: p.hinban, seiban: p.seiban })}
                         className="px-3 py-2 font-mono whitespace-nowrap font-bold text-blue-600 dark:text-blue-400 hover:underline cursor-pointer"
@@ -843,7 +937,7 @@ export default function MachineMoMComparisonView({
                 })
               ) : (
                 <tr>
-                  <td colSpan={7} className="px-4 py-8 text-center text-xs text-[var(--text-muted)]">
+                  <td colSpan={8} className="px-4 py-8 text-center text-xs text-[var(--text-muted)]">
                     {isJa ? "生産品目データがありません" : "No part records found for selected months"}
                   </td>
                 </tr>
@@ -858,8 +952,9 @@ export default function MachineMoMComparisonView({
         <PartMachineComparisonModal
           isOpen={!!selectedPartForComparison}
           onClose={() => setSelectedPartForComparison(null)}
-          hinban={selectedPartForComparison.hinban}
-          seiban={selectedPartForComparison.seiban}
+          parts={Array.isArray(selectedPartForComparison) ? selectedPartForComparison : undefined}
+          hinban={Array.isArray(selectedPartForComparison) ? undefined : selectedPartForComparison.hinban}
+          seiban={Array.isArray(selectedPartForComparison) ? undefined : selectedPartForComparison.seiban}
           monthA={monthA}
           monthB={monthB}
           isJa={isJa}

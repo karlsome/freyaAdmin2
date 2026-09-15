@@ -2750,28 +2750,34 @@ export async function fetchEquipmentList() {
  * @param {string} [params.hinban]
  * @param {string} [params.seiban]
  */
-export async function fetchEquipmentData({ startDate, endDate, equipment, hinban, seiban } = {}) {
+export async function fetchEquipmentData({ startDate, endDate, equipment, hinban, seiban, hinbans, parts } = {}) {
   return _postJson("api/equipment/data", {
     startDate: startDate || undefined,
     endDate: endDate || undefined,
     equipment: Array.isArray(equipment) && equipment.length > 0 ? equipment : undefined,
     hinban: hinban || undefined,
     seiban: seiban || undefined,
+    hinbans: Array.isArray(hinbans) && hinbans.length > 0 ? hinbans : undefined,
+    parts: Array.isArray(parts) && parts.length > 0 ? parts : undefined,
   });
 }
 
 /**
- * Fetch cross-machine part comparison data for a given part (hinban/seiban)
+ * Fetch cross-machine part comparison data for given part(s)
  * @param {Object} params
- * @param {string} params.hinban
+ * @param {string} [params.hinban]
  * @param {string} [params.seiban]
+ * @param {Array<{hinban: string, seiban?: string}>} [params.parts]
+ * @param {string[]} [params.hinbans]
  * @param {string} [params.startDate]
  * @param {string} [params.endDate]
  */
-export async function fetchPartCrossMachineComparison({ hinban, seiban, startDate, endDate } = {}) {
+export async function fetchPartCrossMachineComparison({ hinban, seiban, hinbans, parts, startDate, endDate } = {}) {
   return _postJson("api/equipment/part-comparison", {
     hinban: hinban || undefined,
     seiban: seiban || undefined,
+    hinbans: Array.isArray(hinbans) && hinbans.length > 0 ? hinbans : undefined,
+    parts: Array.isArray(parts) && parts.length > 0 ? parts : undefined,
     startDate: startDate || undefined,
     endDate: endDate || undefined,
   });
