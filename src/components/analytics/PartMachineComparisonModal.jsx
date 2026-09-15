@@ -248,8 +248,8 @@ export default function PartMachineComparisonModal({
         entry.partsMap.set(pKey, { hinban: h, seiban: s, shots: 0, defects: 0 });
       }
       const pEntry = entry.partsMap.get(pKey);
-      pEntry.shots += Number(r.Total_Count || r.totalCount || r.良品数 || 0);
-      pEntry.defects += Number(r.Bad_Count || r.badCount || r.不良数 || 0);
+      pEntry.shots += Number(r["ショット数"] ?? r.shots ?? r.Process_Quantity ?? r.Total_Count ?? r.totalCount ?? r.良品数 ?? 0);
+      pEntry.defects += Number(r.Total_NG ?? r.SRS_Total_NG ?? r["不良数"] ?? r.defects ?? r.Bad_Count ?? r.badCount ?? r.Defect_Count ?? 0);
     });
 
     let totalAllShots = 0;

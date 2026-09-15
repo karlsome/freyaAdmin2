@@ -31,6 +31,16 @@ function getMonthEndDate(ym) {
   return `${ym}-${String(lastDay).padStart(2, "0")}`;
 }
 
+export function getRecordShots(r) {
+  if (!r) return 0;
+  return Number(r["ショット数"] ?? r.shots ?? r.Process_Quantity ?? r.Total_Count ?? r.totalCount ?? r.良品数 ?? 0);
+}
+
+export function getRecordDefects(r) {
+  if (!r) return 0;
+  return Number(r.Total_NG ?? r.SRS_Total_NG ?? r["不良数"] ?? r.defects ?? r.Bad_Count ?? r.badCount ?? r.Defect_Count ?? 0);
+}
+
 const PALETTE = [
   { bg: "rgba(59, 130, 246, 0.8)", border: "#3b82f6", label: "Blue" },
   { bg: "rgba(168, 85, 247, 0.8)", border: "#a855f7", label: "Purple" },
@@ -353,8 +363,8 @@ export default function PartBenchmarkingView({ isJa = true }) {
         entry.partsMap.set(pKey, { hinban: h, seiban: s, shots: 0, defects: 0, recordsCount: 0 });
       }
       const pEntry = entry.partsMap.get(pKey);
-      const shots = Number(r.Total_Count || r.totalCount || r.良品数 || 0);
-      const defects = Number(r.Bad_Count || r.badCount || r.不良数 || 0);
+      const shots = getRecordShots(r);
+      const defects = getRecordDefects(r);
       pEntry.shots += shots;
       pEntry.defects += defects;
       pEntry.recordsCount += 1;
@@ -1551,8 +1561,8 @@ export default function PartBenchmarkingView({ isJa = true }) {
                                           </thead>
                                           <tbody className="divide-y divide-[var(--border)]">
                                             {m.records.map((r, rIdx) => {
-                                              const shots = Number(r.Total_Count || r.totalCount || r.良品数 || 0);
-                                              const defects = Number(r.Bad_Count || r.badCount || r.不良数 || 0);
+                                              const shots = getRecordShots(r);
+                                              const defects = getRecordDefects(r);
                                               const worker = r.Worker_Name || r["作業者"] || "—";
                                               const h = r["品番"] || "—";
                                               const s = r["背番号"] || "";
