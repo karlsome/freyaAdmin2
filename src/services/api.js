@@ -2734,4 +2734,27 @@ export async function fetchMasterDbProducts(model) {
   return _getJson(`api/masterdb/products${queryParam}`);
 }
 
+/**
+ * Fetch equipment list grouped by factory for Equipment Management / Machine Performance.
+ */
+export async function fetchEquipmentList() {
+  return _getJson("api/equipment/list");
+}
+
+/**
+ * Fetch detailed production records for equipment analytics.
+ * @param {Object} params
+ * @param {string} params.startDate
+ * @param {string} params.endDate
+ * @param {string[]} [params.equipment]
+ */
+export async function fetchEquipmentData({ startDate, endDate, equipment } = {}) {
+  return _postJson("api/equipment/data", {
+    startDate: startDate || undefined,
+    endDate: endDate || undefined,
+    equipment: Array.isArray(equipment) && equipment.length > 0 ? equipment : undefined,
+  });
+}
+
+
 

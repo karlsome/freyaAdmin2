@@ -12,6 +12,7 @@ import { useLanguage } from "../contexts/LanguageContext";
 import { fetchMaterialLotAnalytics } from "../services/api";
 import ProductionAnalyticsView from "../components/analytics/ProductionAnalyticsView";
 import QualityAnalyticsView from "../components/analytics/QualityAnalyticsView";
+import MachinePerformanceView from "../components/analytics/MachinePerformanceView";
 import TagInput from "../components/TagInput";
 import AdvancedFilterSection from "../components/AdvancedFilterSection";
 import ProductSelectorModal from "../components/analytics/ProductSelectorModal";
@@ -1082,9 +1083,8 @@ export default function AnalyticsPage() {
           },
           {
             key: "machines",
-            label: t("machineAnalytics"),
+            label: isJa ? "設備稼働・ショット数" : "Machine Performance",
             icon: "speed",
-            badge: t("comingSoon"),
             ready: true,
           },
         ]}
@@ -1324,34 +1324,8 @@ export default function AnalyticsPage() {
         />
       )}
 
-      {/* ── Machines Placeholder ──────────────────────────────────────────────── */}
-      {activeTab === "machines" && (
-        <div className="freya-card rounded-[12px] border border-[var(--border)] bg-[var(--surface)] p-12 text-center shadow-sm space-y-4 max-w-2xl mx-auto my-8">
-          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-[var(--freya-blue)]/10 text-[var(--freya-blue)] border border-[var(--freya-blue)]/20">
-            <span className="material-symbols-outlined" style={{ fontSize: 28 }}>speed</span>
-          </div>
-          <div>
-            <h3 className="text-lg font-semibold text-[var(--text-primary)]">
-              {isJa ? "設備総合効率 (OEE) & ダウンタイム分析" : "Machine OEE & Downtime Analytics"}
-            </h3>
-            <p className="text-sm font-normal text-[var(--text-muted)] mt-1.5 max-w-md mx-auto">
-              {isJa
-                ? "このアナリティクスモジュールは近日統合予定です。リアルタイムKPI、工程別推移、およびAIによる傾向分析がここに追加されます。"
-                : "This analytics section is planned for upcoming release. It will feature real-time line metrics, AI trend predictions, and granular efficiency logs."}
-            </p>
-          </div>
-          <div>
-            <button
-              type="button"
-              onClick={() => handleTabChange("material")}
-              className="inline-flex items-center gap-2 rounded-[6px] bg-[var(--freya-blue)] text-white px-4 py-2 text-sm font-semibold shadow-sm hover:opacity-90 transition"
-            >
-              <span className="material-symbols-outlined" style={{ fontSize: 16 }}>arrow_back</span>
-              <span>{isJa ? "材料分析に戻る" : "Back to Material Analytics"}</span>
-            </button>
-          </div>
-        </div>
-      )}
+      {/* ── Machine Performance & Equipment Management ────────────────────── */}
+      {activeTab === "machines" && <MachinePerformanceView />}
 
       {/* ── Material Usage Ledger Content ─────────────────────────────────────── */}
       {activeTab === "material" && (
