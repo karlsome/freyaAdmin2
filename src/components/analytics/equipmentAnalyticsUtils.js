@@ -163,3 +163,72 @@ export function exportEquipmentToCsv(equipmentName, records = [], isJa = true) {
   document.body.removeChild(link);
   URL.revokeObjectURL(url);
 }
+
+/**
+ * Returns color classes and dot color for a given factory name.
+ */
+export function getFactoryBadgeStyle(factory = "") {
+  const fac = String(factory || "").trim();
+  if (!fac) {
+    return {
+      bg: "bg-slate-500/10",
+      text: "text-slate-600 dark:text-slate-400",
+      border: "border-slate-500/20",
+      dot: "bg-slate-400",
+    };
+  }
+  if (fac.includes("肥田瀬")) {
+    return {
+      bg: "bg-blue-500/10",
+      text: "text-blue-600 dark:text-blue-400",
+      border: "border-blue-500/20",
+      dot: "bg-blue-500",
+    };
+  }
+  if (fac.includes("小瀬") || fac.includes("瀬")) {
+    return {
+      bg: "bg-emerald-500/10",
+      text: "text-emerald-600 dark:text-emerald-400",
+      border: "border-emerald-500/20",
+      dot: "bg-emerald-500",
+    };
+  }
+  if (fac.includes("第二")) {
+    return {
+      bg: "bg-purple-500/10",
+      text: "text-purple-600 dark:text-purple-400",
+      border: "border-purple-500/20",
+      dot: "bg-purple-500",
+    };
+  }
+  if (fac.includes("SCNA") || fac.includes("scna")) {
+    return {
+      bg: "bg-amber-500/10",
+      text: "text-amber-600 dark:text-amber-400",
+      border: "border-amber-500/20",
+      dot: "bg-amber-500",
+    };
+  }
+  if (fac.includes("倉知")) {
+    return {
+      bg: "bg-cyan-500/10",
+      text: "text-cyan-600 dark:text-cyan-400",
+      border: "border-cyan-500/20",
+      dot: "bg-cyan-500",
+    };
+  }
+  if (fac.includes("NFH") || fac.includes("nfh")) {
+    return {
+      bg: "bg-rose-500/10",
+      text: "text-rose-600 dark:text-rose-400",
+      border: "border-rose-500/20",
+      dot: "bg-rose-500",
+    };
+  }
+  return {
+    bg: "bg-indigo-500/10",
+    text: "text-indigo-600 dark:text-indigo-400",
+    border: "border-indigo-500/20",
+    dot: "bg-indigo-500",
+  };
+}

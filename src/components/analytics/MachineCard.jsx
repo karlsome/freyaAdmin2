@@ -1,4 +1,5 @@
 import React from "react";
+import { getFactoryBadgeStyle } from "./equipmentAnalyticsUtils";
 
 export default function MachineCard({
   machine,
@@ -45,11 +46,15 @@ export default function MachineCard({
               <h4 className="text-sm font-bold text-[var(--text-primary)] truncate group-hover:text-[var(--freya-blue)] transition-colors" title={machine}>
                 {machine}
               </h4>
-              {factory && (
-                <span className="inline-block mt-0.5 rounded-[3px] bg-blue-500/10 text-blue-600 dark:text-blue-400 px-1.5 py-0.2 text-[10px] font-semibold border border-blue-500/20">
-                  {factory}
-                </span>
-              )}
+              {factory && (() => {
+                const facStyle = getFactoryBadgeStyle(factory);
+                return (
+                  <span className={`inline-flex items-center gap-1 mt-0.5 rounded-[4px] ${facStyle.bg} ${facStyle.text} px-1.5 py-0.5 text-[10px] font-semibold border ${facStyle.border}`}>
+                    <span className={`h-1.5 w-1.5 rounded-full ${facStyle.dot}`} />
+                    {factory}
+                  </span>
+                );
+              })()}
             </div>
           </div>
 
