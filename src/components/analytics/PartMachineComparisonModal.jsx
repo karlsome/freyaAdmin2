@@ -1010,6 +1010,29 @@ export default function PartMachineComparisonModal({
                                               </tr>
                                             ))}
                                           </tbody>
+                                          <tfoot className="bg-[var(--surface-subtle)] border-t-2 border-[var(--border)] font-semibold text-[var(--text-primary)] sticky bottom-0 z-10 shadow-sm text-xs">
+                                            <tr>
+                                              <td colSpan={3} className="py-1.5 px-2 text-right font-sans font-bold text-[var(--text-primary)]">
+                                                {isJa ? `合計 (${item.records.length} 件):` : `Total (${item.records.length} runs):`}
+                                              </td>
+                                              <td className="py-1.5 px-2 text-right font-mono font-bold text-[var(--text-primary)] tabular-nums">
+                                                {item.records.reduce((sum, r) => sum + Number(r["ショット数"] || 0), 0).toLocaleString()}
+                                              </td>
+                                              <td className="py-1.5 px-2 text-right font-mono font-bold tabular-nums">
+                                                {item.records.reduce((sum, r) => sum + Number(r.Process_Quantity || 0), 0).toLocaleString()}
+                                              </td>
+                                              <td className="py-1.5 px-2 text-right font-mono font-bold tabular-nums">
+                                                {(() => {
+                                                  const totalNG = item.records.reduce((sum, r) => sum + Number(r.Total_NG || 0), 0);
+                                                  return totalNG > 0 ? (
+                                                    <span className="text-rose-500 font-bold">{totalNG.toLocaleString()}</span>
+                                                  ) : (
+                                                    "0"
+                                                  );
+                                                })()}
+                                              </td>
+                                            </tr>
+                                          </tfoot>
                                         </table>
                                       </div>
                                     </div>

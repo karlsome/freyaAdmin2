@@ -99,6 +99,32 @@ export default function PartBenchmarkingView({ isJa = true }) {
   const [expandedMachine, setExpandedMachine] = useState(null);
   const [selectedRecordForDetail, setSelectedRecordForDetail] = useState(null);
 
+  // Sort states for Machine fleet benchmark table
+  const [machineSortField, setMachineSortField] = useState("shots");
+  const [machineSortAsc, setMachineSortAsc] = useState(false);
+
+  // Sort states for Run records sub-table
+  const [recordSortField, setRecordSortField] = useState("date");
+  const [recordSortAsc, setRecordSortAsc] = useState(false);
+
+  const handleMachineSort = (field) => {
+    if (machineSortField === field) {
+      setMachineSortAsc((prev) => !prev);
+    } else {
+      setMachineSortField(field);
+      setMachineSortAsc(field === "machine");
+    }
+  };
+
+  const handleRecordSort = (field) => {
+    if (recordSortField === field) {
+      setRecordSortAsc((prev) => !prev);
+    } else {
+      setRecordSortField(field);
+      setRecordSortAsc(field === "part" || field === "worker" || field === "time");
+    }
+  };
+
   // Product Selector Modal state
   const [isProductModalOpen, setIsProductModalOpen] = useState(false);
 
@@ -436,6 +462,103 @@ export default function PartBenchmarkingView({ isJa = true }) {
       overallDefectRate,
     };
   }, [machineStats]);
+
+  // Sorted machines for table display
+  const sortedMachines = useMemo(() => {
+    const list = [...machineStats.machines];
+    list.sort((a, b) => {
+      let aVal = 0;
+      let bVal = 0;
+      switch (machineSortField) {
+        case "machine":
+          return machineSortAsc
+            ? a.machine.localeCompare(b.machine)
+            : b.machine.localeCompare(a.machine);
+        case "shots":
+          aVal = a.analytics?.totalShots || 0;
+          bVal = b.analytics?.totalShots || 0;
+          break;
+        case "share":
+          aVal = a.share || 0;
+          bVal = b.share || 0;
+          break;
+        case "defects":
+          // Compare defect rate first, then total defects
+          aVal = a.analytics?.defectRate ?? 0;
+          bVal = b.analytics?.defectRate ?? 0;
+          if (aVal === bVal) {
+            aVal = a.analytics?.totalDefects || 0;
+            bVal = b.analytics?.totalDefects || 0;
+          }
+          break;
+        case "hours":
+          aVal = a.analytics?.workingHours || 0;
+          bVal = b.analytics?.workingHours || 0;
+          break;
+        case "pace":
+          aVal = a.analytics?.avgShotsPerHour || 0;
+          bVal = b.analytics?.avgShotsPerHour || 0;
+          break;
+        case "runs":
+          aVal = a.records?.length || 0;
+          bVal = b.records?.length || 0;
+          break;
+        default:
+          aVal = a.analytics?.totalShots || 0;
+          bVal = b.analytics?.totalShots || 0;
+      }
+      return machineSortAsc ? aVal - bVal : bVal - aVal;
+    });
+    return list;
+  }, [machineStats.machines, machineSortField, machineSortAsc]);
+
+  // Helper to sort run records for an expanded machine
+  const getSortedRecords = (recordsList) => {
+    if (!recordsList || recordsList.length === 0) return [];
+    const list = [...recordsList];
+    list.sort((a, b) => {
+      switch (recordSortField) {
+        case "part": {
+          const aPart = `${a["品番"] || ""} ${a["背番号"] || ""}`.trim();
+          const bPart = `${b["品番"] || ""} ${b["背番号"] || ""}`.trim();
+          return recordSortAsc ? aPart.localeCompare(bPart) : bPart.localeCompare(aPart);
+        }
+        case "date": {
+          const aDate = a.Date || "";
+          const bDate = b.Date || "";
+          if (aDate === bDate) {
+            const aTime = a.Time_start || "";
+            const bTime = b.Time_start || "";
+            return recordSortAsc ? aTime.localeCompare(bTime) : bTime.localeCompare(aTime);
+          }
+          return recordSortAsc ? aDate.localeCompare(bDate) : bDate.localeCompare(aDate);
+        }
+        case "time": {
+          const aTime = a.Time_start || "";
+          const bTime = b.Time_start || "";
+          return recordSortAsc ? aTime.localeCompare(bTime) : bTime.localeCompare(aTime);
+        }
+        case "worker": {
+          const aWorker = a.Worker_Name || a["作業者"] || a.worker || a.operator || "";
+          const bWorker = b.Worker_Name || b["作業者"] || b.worker || b.operator || "";
+          return recordSortAsc ? aWorker.localeCompare(bWorker) : bWorker.localeCompare(aWorker);
+        }
+        case "shots": {
+          const aShots = getRecordShots(a);
+          const bShots = getRecordShots(b);
+          return recordSortAsc ? aShots - bShots : bShots - aShots;
+        }
+        case "defects": {
+          const aDefects = getRecordDefects(a);
+          const bDefects = getRecordDefects(b);
+          return recordSortAsc ? aDefects - bDefects : bDefects - aDefects;
+        }
+        default:
+          return 0;
+      }
+    });
+    return list;
+  };
 
   // Render Dual-Axis / Multi-Part Chart
   useEffect(() => {
@@ -1389,17 +1512,157 @@ export default function PartBenchmarkingView({ isJa = true }) {
                   <table className="w-full text-xs text-left">
                     <thead className="bg-[var(--surface-subtle)] border-b border-[var(--border)] text-[var(--text-muted)] uppercase font-semibold select-none">
                       <tr>
-                        <th className="px-3 py-2.5">{isJa ? "設備名" : "Machine"}</th>
-                        <th className="px-3 py-2.5 text-right">{isJa ? "生産ショット数" : "Total Shots"}</th>
-                        <th className="px-3 py-2.5 text-right">{isJa ? "全体シェア" : "Share"}</th>
-                        <th className="px-3 py-2.5 text-right">{isJa ? "不良数 / 不良率" : "Defects / Rate"}</th>
-                        <th className="px-3 py-2.5 text-right">{isJa ? "稼働時間" : "Operating Hours"}</th>
-                        <th className="px-3 py-2.5 text-right">{isJa ? "ペース (ショット/h)" : "Pace"}</th>
-                        <th className="px-3 py-2.5 text-center">{isJa ? "ロット詳細" : "Details"}</th>
+                        <th
+                          onClick={() => handleMachineSort("machine")}
+                          className="px-3 py-2.5 cursor-pointer hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)] transition-colors group"
+                        >
+                          <div className="flex items-center gap-1">
+                            <span>{isJa ? "設備名" : "Machine"}</span>
+                            <span
+                              className={`material-symbols-outlined text-[13px] transition-colors ${
+                                machineSortField === "machine"
+                                  ? "text-blue-500 font-bold"
+                                  : "text-[var(--text-muted)] opacity-0 group-hover:opacity-60"
+                              }`}
+                            >
+                              {machineSortField === "machine"
+                                ? machineSortAsc
+                                  ? "arrow_upward"
+                                  : "arrow_downward"
+                                : "unfold_more"}
+                            </span>
+                          </div>
+                        </th>
+                        <th
+                          onClick={() => handleMachineSort("shots")}
+                          className="px-3 py-2.5 text-right cursor-pointer hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)] transition-colors group"
+                        >
+                          <div className="flex items-center justify-end gap-1">
+                            <span>{isJa ? "生産ショット数" : "Total Shots"}</span>
+                            <span
+                              className={`material-symbols-outlined text-[13px] transition-colors ${
+                                machineSortField === "shots"
+                                  ? "text-blue-500 font-bold"
+                                  : "text-[var(--text-muted)] opacity-0 group-hover:opacity-60"
+                              }`}
+                            >
+                              {machineSortField === "shots"
+                                ? machineSortAsc
+                                  ? "arrow_upward"
+                                  : "arrow_downward"
+                                : "unfold_more"}
+                            </span>
+                          </div>
+                        </th>
+                        <th
+                          onClick={() => handleMachineSort("share")}
+                          className="px-3 py-2.5 text-right cursor-pointer hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)] transition-colors group"
+                        >
+                          <div className="flex items-center justify-end gap-1">
+                            <span>{isJa ? "全体シェア" : "Share"}</span>
+                            <span
+                              className={`material-symbols-outlined text-[13px] transition-colors ${
+                                machineSortField === "share"
+                                  ? "text-blue-500 font-bold"
+                                  : "text-[var(--text-muted)] opacity-0 group-hover:opacity-60"
+                              }`}
+                            >
+                              {machineSortField === "share"
+                                ? machineSortAsc
+                                  ? "arrow_upward"
+                                  : "arrow_downward"
+                                : "unfold_more"}
+                            </span>
+                          </div>
+                        </th>
+                        <th
+                          onClick={() => handleMachineSort("defects")}
+                          className="px-3 py-2.5 text-right cursor-pointer hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)] transition-colors group"
+                        >
+                          <div className="flex items-center justify-end gap-1">
+                            <span>{isJa ? "不良数 / 不良率" : "Defects / Rate"}</span>
+                            <span
+                              className={`material-symbols-outlined text-[13px] transition-colors ${
+                                machineSortField === "defects"
+                                  ? "text-blue-500 font-bold"
+                                  : "text-[var(--text-muted)] opacity-0 group-hover:opacity-60"
+                              }`}
+                            >
+                              {machineSortField === "defects"
+                                ? machineSortAsc
+                                  ? "arrow_upward"
+                                  : "arrow_downward"
+                                : "unfold_more"}
+                            </span>
+                          </div>
+                        </th>
+                        <th
+                          onClick={() => handleMachineSort("hours")}
+                          className="px-3 py-2.5 text-right cursor-pointer hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)] transition-colors group"
+                        >
+                          <div className="flex items-center justify-end gap-1">
+                            <span>{isJa ? "稼働時間" : "Operating Hours"}</span>
+                            <span
+                              className={`material-symbols-outlined text-[13px] transition-colors ${
+                                machineSortField === "hours"
+                                  ? "text-blue-500 font-bold"
+                                  : "text-[var(--text-muted)] opacity-0 group-hover:opacity-60"
+                              }`}
+                            >
+                              {machineSortField === "hours"
+                                ? machineSortAsc
+                                  ? "arrow_upward"
+                                  : "arrow_downward"
+                                : "unfold_more"}
+                            </span>
+                          </div>
+                        </th>
+                        <th
+                          onClick={() => handleMachineSort("pace")}
+                          className="px-3 py-2.5 text-right cursor-pointer hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)] transition-colors group"
+                        >
+                          <div className="flex items-center justify-end gap-1">
+                            <span>{isJa ? "ペース (ショット/h)" : "Pace"}</span>
+                            <span
+                              className={`material-symbols-outlined text-[13px] transition-colors ${
+                                machineSortField === "pace"
+                                  ? "text-blue-500 font-bold"
+                                  : "text-[var(--text-muted)] opacity-0 group-hover:opacity-60"
+                              }`}
+                            >
+                              {machineSortField === "pace"
+                                ? machineSortAsc
+                                  ? "arrow_upward"
+                                  : "arrow_downward"
+                                : "unfold_more"}
+                            </span>
+                          </div>
+                        </th>
+                        <th
+                          onClick={() => handleMachineSort("runs")}
+                          className="px-3 py-2.5 text-center cursor-pointer hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)] transition-colors group"
+                        >
+                          <div className="flex items-center justify-center gap-1">
+                            <span>{isJa ? "ロット詳細" : "Details"}</span>
+                            <span
+                              className={`material-symbols-outlined text-[13px] transition-colors ${
+                                machineSortField === "runs"
+                                  ? "text-blue-500 font-bold"
+                                  : "text-[var(--text-muted)] opacity-0 group-hover:opacity-60"
+                              }`}
+                            >
+                              {machineSortField === "runs"
+                                ? machineSortAsc
+                                  ? "arrow_upward"
+                                  : "arrow_downward"
+                                : "unfold_more"}
+                            </span>
+                          </div>
+                        </th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-[var(--border)] bg-[var(--surface)] font-medium text-[var(--text-primary)]">
-                      {machineStats.machines.map((m) => {
+                      {sortedMachines.map((m) => {
                         const analytics = m.analytics;
                         const isExpanded = expandedMachine === m.machine;
                         const rate = analytics?.defectRate || 0;
@@ -1548,19 +1811,141 @@ export default function PartBenchmarkingView({ isJa = true }) {
                                       </div>
                                       <div className="overflow-x-auto rounded border border-[var(--border)] bg-[var(--surface)] max-h-56 overflow-y-auto">
                                         <table className="w-full text-[11px] text-left">
-                                          <thead className="bg-[var(--surface-subtle)] border-b border-[var(--border)] text-[var(--text-muted)] sticky top-0">
+                                          <thead className="bg-[var(--surface-subtle)] border-b border-[var(--border)] text-[var(--text-muted)] sticky top-0 select-none">
                                             <tr>
-                                              <th className="px-2.5 py-1.5">{isJa ? "品番" : "Part"}</th>
-                                              <th className="px-2.5 py-1.5">{isJa ? "日付" : "Date"}</th>
-                                              <th className="px-2.5 py-1.5">{isJa ? "時間帯" : "Time"}</th>
-                                              <th className="px-2.5 py-1.5">{isJa ? "作業者" : "Worker"}</th>
-                                              <th className="px-2.5 py-1.5 text-right">{isJa ? "ショット数" : "Shots"}</th>
-                                              <th className="px-2.5 py-1.5 text-right">{isJa ? "不良数" : "Defects"}</th>
-                                              <th className="px-2.5 py-1.5 text-center">{isJa ? "詳細" : "Details"}</th>
+                                              <th
+                                                onClick={() => handleRecordSort("part")}
+                                                className="px-2.5 py-1.5 cursor-pointer hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)] transition-colors group"
+                                              >
+                                                <div className="flex items-center gap-1">
+                                                  <span>{isJa ? "品番" : "Part"}</span>
+                                                  <span
+                                                    className={`material-symbols-outlined text-[12px] transition-colors ${
+                                                      recordSortField === "part"
+                                                        ? "text-blue-500 font-bold"
+                                                        : "text-[var(--text-muted)] opacity-0 group-hover:opacity-60"
+                                                    }`}
+                                                  >
+                                                    {recordSortField === "part"
+                                                      ? recordSortAsc
+                                                        ? "arrow_upward"
+                                                        : "arrow_downward"
+                                                      : "unfold_more"}
+                                                  </span>
+                                                </div>
+                                              </th>
+                                              <th
+                                                onClick={() => handleRecordSort("date")}
+                                                className="px-2.5 py-1.5 cursor-pointer hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)] transition-colors group"
+                                              >
+                                                <div className="flex items-center gap-1">
+                                                  <span>{isJa ? "日付" : "Date"}</span>
+                                                  <span
+                                                    className={`material-symbols-outlined text-[12px] transition-colors ${
+                                                      recordSortField === "date"
+                                                        ? "text-blue-500 font-bold"
+                                                        : "text-[var(--text-muted)] opacity-0 group-hover:opacity-60"
+                                                    }`}
+                                                  >
+                                                    {recordSortField === "date"
+                                                      ? recordSortAsc
+                                                        ? "arrow_upward"
+                                                        : "arrow_downward"
+                                                      : "unfold_more"}
+                                                  </span>
+                                                </div>
+                                              </th>
+                                              <th
+                                                onClick={() => handleRecordSort("time")}
+                                                className="px-2.5 py-1.5 cursor-pointer hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)] transition-colors group"
+                                              >
+                                                <div className="flex items-center gap-1">
+                                                  <span>{isJa ? "時間帯" : "Time"}</span>
+                                                  <span
+                                                    className={`material-symbols-outlined text-[12px] transition-colors ${
+                                                      recordSortField === "time"
+                                                        ? "text-blue-500 font-bold"
+                                                        : "text-[var(--text-muted)] opacity-0 group-hover:opacity-60"
+                                                    }`}
+                                                  >
+                                                    {recordSortField === "time"
+                                                      ? recordSortAsc
+                                                        ? "arrow_upward"
+                                                        : "arrow_downward"
+                                                      : "unfold_more"}
+                                                  </span>
+                                                </div>
+                                              </th>
+                                              <th
+                                                onClick={() => handleRecordSort("worker")}
+                                                className="px-2.5 py-1.5 cursor-pointer hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)] transition-colors group"
+                                              >
+                                                <div className="flex items-center gap-1">
+                                                  <span>{isJa ? "作業者" : "Worker"}</span>
+                                                  <span
+                                                    className={`material-symbols-outlined text-[12px] transition-colors ${
+                                                      recordSortField === "worker"
+                                                        ? "text-blue-500 font-bold"
+                                                        : "text-[var(--text-muted)] opacity-0 group-hover:opacity-60"
+                                                    }`}
+                                                  >
+                                                    {recordSortField === "worker"
+                                                      ? recordSortAsc
+                                                        ? "arrow_upward"
+                                                        : "arrow_downward"
+                                                      : "unfold_more"}
+                                                  </span>
+                                                </div>
+                                              </th>
+                                              <th
+                                                onClick={() => handleRecordSort("shots")}
+                                                className="px-2.5 py-1.5 text-right cursor-pointer hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)] transition-colors group"
+                                              >
+                                                <div className="flex items-center justify-end gap-1">
+                                                  <span>{isJa ? "ショット数" : "Shots"}</span>
+                                                  <span
+                                                    className={`material-symbols-outlined text-[12px] transition-colors ${
+                                                      recordSortField === "shots"
+                                                        ? "text-blue-500 font-bold"
+                                                        : "text-[var(--text-muted)] opacity-0 group-hover:opacity-60"
+                                                    }`}
+                                                  >
+                                                    {recordSortField === "shots"
+                                                      ? recordSortAsc
+                                                        ? "arrow_upward"
+                                                        : "arrow_downward"
+                                                      : "unfold_more"}
+                                                  </span>
+                                                </div>
+                                              </th>
+                                              <th
+                                                onClick={() => handleRecordSort("defects")}
+                                                className="px-2.5 py-1.5 text-right cursor-pointer hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)] transition-colors group"
+                                              >
+                                                <div className="flex items-center justify-end gap-1">
+                                                  <span>{isJa ? "不良数" : "Defects"}</span>
+                                                  <span
+                                                    className={`material-symbols-outlined text-[12px] transition-colors ${
+                                                      recordSortField === "defects"
+                                                        ? "text-blue-500 font-bold"
+                                                        : "text-[var(--text-muted)] opacity-0 group-hover:opacity-60"
+                                                    }`}
+                                                  >
+                                                    {recordSortField === "defects"
+                                                      ? recordSortAsc
+                                                        ? "arrow_upward"
+                                                        : "arrow_downward"
+                                                      : "unfold_more"}
+                                                  </span>
+                                                </div>
+                                              </th>
+                                              <th className="px-2.5 py-1.5 text-center">
+                                                <span>{isJa ? "詳細" : "Details"}</span>
+                                              </th>
                                             </tr>
                                           </thead>
                                           <tbody className="divide-y divide-[var(--border)]">
-                                            {m.records.map((r, rIdx) => {
+                                            {getSortedRecords(m.records).map((r, rIdx) => {
                                               const shots = getRecordShots(r);
                                               const defects = getRecordDefects(r);
                                               const worker = r.Worker_Name || r["作業者"] || "—";
@@ -1601,6 +1986,33 @@ export default function PartBenchmarkingView({ isJa = true }) {
                                               );
                                             })}
                                           </tbody>
+                                          <tfoot className="bg-[var(--surface-subtle)] border-t-2 border-[var(--border)] font-semibold text-[var(--text-primary)] sticky bottom-0 z-10 shadow-sm">
+                                            <tr>
+                                              <td colSpan={4} className="px-2.5 py-2 text-right font-sans font-bold text-xs text-[var(--text-primary)]">
+                                                {isJa ? `合計 (${m.records.length} 件):` : `Total (${m.records.length} runs):`}
+                                              </td>
+                                              <td className="px-2.5 py-2 text-right font-mono font-bold text-xs text-[var(--text-primary)] tabular-nums">
+                                                {m.records.reduce((sum, r) => sum + getRecordShots(r), 0).toLocaleString()}
+                                              </td>
+                                              <td className="px-2.5 py-2 text-right font-mono font-bold text-xs tabular-nums">
+                                                {(() => {
+                                                  const totalNG = m.records.reduce((sum, r) => sum + getRecordDefects(r), 0);
+                                                  return totalNG > 0 ? (
+                                                    <span className="text-rose-500 font-bold">{totalNG.toLocaleString()}</span>
+                                                  ) : (
+                                                    <span className="text-[var(--text-muted)]">0</span>
+                                                  );
+                                                })()}
+                                              </td>
+                                              <td className="px-2.5 py-2 text-center text-[10px] font-mono font-semibold text-[var(--text-muted)]">
+                                                {(() => {
+                                                  const totalSh = m.records.reduce((sum, r) => sum + getRecordShots(r), 0);
+                                                  const totalNG = m.records.reduce((sum, r) => sum + getRecordDefects(r), 0);
+                                                  return totalSh > 0 ? `${((totalNG / totalSh) * 100).toFixed(2)}% NG` : "—";
+                                                })()}
+                                              </td>
+                                            </tr>
+                                          </tfoot>
                                         </table>
                                       </div>
                                     </div>
