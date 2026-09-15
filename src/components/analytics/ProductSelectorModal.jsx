@@ -190,7 +190,8 @@ export default function ProductSelectorModal({
                     ? "背番号、品番、モデル名で検索..."
                     : "Search by serial no, part no, model..."
                 }
-                className="freya-input h-9 w-full pl-9 pr-8 text-xs text-[var(--text-primary)]"
+                className="freya-input h-9 w-full !pl-9 pr-8 text-xs text-[var(--text-primary)]"
+                style={{ paddingLeft: "36px" }}
               />
               {search && (
                 <button

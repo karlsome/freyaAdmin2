@@ -10,6 +10,8 @@ import {
 import { calculateEquipmentAnalytics, getFactoryBadgeStyle } from "./equipmentAnalyticsUtils";
 import RecordDetailModal from "../RecordDetailModal";
 import SensorDevicePhotoPreviewModal from "../SensorDevicePhotoPreviewModal";
+import ProductSelectorModal from "./ProductSelectorModal";
+import { AnalyticsKpiCard } from "./AnalyticsKpiCards";
 
 function getRecentMonths(count = 12) {
   const result = [];
@@ -86,6 +88,30 @@ export default function PartBenchmarkingView({ isJa = true }) {
   // Drilldown states
   const [expandedMachine, setExpandedMachine] = useState(null);
   const [selectedRecordForDetail, setSelectedRecordForDetail] = useState(null);
+
+  // Product Selector Modal state
+  const [isProductModalOpen, setIsProductModalOpen] = useState(false);
+
+  const handleConfirmProductModal = (selectedBans, selectedProductObjs) => {
+    if (selectedProductObjs && selectedProductObjs.length > 0) {
+      setSelectedParts(
+        selectedProductObjs.map((p) => ({
+          hinban: p.品番,
+          seiban: p.背番号 || "",
+          name: p.品名 || "",
+          model: p.モデル || "",
+          imageURL: p.imageURL || null,
+        }))
+      );
+    } else if (selectedBans && selectedBans.length > 0) {
+      setSelectedParts(
+        selectedBans.map((b) => ({
+          hinban: b,
+          seiban: b,
+        }))
+      );
+    }
+  };
 
   const chartCanvasRef = useRef(null);
   const chartInstanceRef = useRef(null);
@@ -703,21 +729,73 @@ export default function PartBenchmarkingView({ isJa = true }) {
     <div className="space-y-5 animate-in fade-in duration-150">
       {/* ── 1. Top Search & Filter Bar ─────────────────────────────────────────── */}
       <div className="freya-card rounded-[8px] border border-[var(--border)] bg-[var(--surface)] p-4 sm:p-5 shadow-xs space-y-4">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        {/* Top Controls Header */}
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div className="flex items-center gap-2.5">
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[var(--freya-blue)]/10 text-[var(--freya-blue)] border border-[var(--freya-blue)]/20">
+              <span className="material-symbols-outlined text-[22px]">compare_arrows</span>
+            </div>
+            <div>
+              <h2 className="text-base font-bold text-[var(--text-primary)] font-sans">
+                {isJa ? "品番・設備横断ベンチマーク" : "Part Fleet Benchmarking"}
+              </h2>
+              <p className="text-xs text-[var(--text-muted)]">
+                {isJa
+                  ? "複数品番や製品群の設備別生産ショット数・不良率・稼働ペースを横断比較します。"
+                  : "Benchmark part volume, defect rates, and operating cadence across all machines."}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2.5">
+            {/* Pop-up Product Selector Modal Trigger */}
+            <button
+              type="button"
+              onClick={() => setIsProductModalOpen(true)}
+              className="flex items-center gap-2 rounded-md border border-[var(--border)] bg-[var(--surface)] px-3.5 py-2 text-xs font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-hover)] shadow-xs transition cursor-pointer"
+            >
+              <span className="material-symbols-outlined text-[18px] text-[var(--freya-blue)]">
+                inventory_2
+              </span>
+              <span>{isJa ? "製品マスタから選択" : "Select from Products"}</span>
+              {selectedParts.length > 0 && (
+                <span className="rounded-[4px] bg-[var(--freya-blue)]/10 text-[var(--freya-blue)] border border-[var(--freya-blue)]/20 px-1.5 py-0.5 text-[11px] font-semibold">
+                  {selectedParts.length}
+                </span>
+              )}
+            </button>
+
+            {/* Refresh / Clear Button */}
+            {selectedParts.length > 0 && (
+              <button
+                type="button"
+                onClick={handleClearAllParts}
+                className="flex items-center gap-1.5 rounded-md border border-[var(--border)] bg-[var(--surface-subtle)] px-3 py-2 text-xs font-semibold text-[var(--text-secondary)] hover:text-rose-600 hover:bg-[var(--surface-hover)] transition cursor-pointer"
+                title={isJa ? "選択をすべてクリア" : "Clear selection"}
+              >
+                <span className="material-symbols-outlined text-[16px]">close</span>
+                <span>{isJa ? "クリア" : "Clear"}</span>
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Search, Period Presets, and Months Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-2 border-t border-[var(--border)]/60">
           {/* Part Search Autocomplete */}
-          <div className="relative flex-1 max-w-xl" ref={searchContainerRef}>
-            <div className="flex items-center justify-between mb-1.5">
-              <label className="block text-xs font-semibold text-[var(--text-secondary)]">
-                {isJa ? "品番・背番号を追加（複数選択・一括入力可）" : "Add Parts / Back No (Multi-select / Paste List)"}
+          <div className="sm:col-span-2 relative" ref={searchContainerRef}>
+            <div className="flex items-center justify-between mb-1">
+              <label className="block text-xs font-medium text-[var(--text-muted)]">
+                {isJa ? "品番・背番号の直接追加 (カンマ区切り可)" : "Direct Part Search (or paste list)"}
               </label>
               {selectedParts.length > 0 && (
-                <span className="text-[11px] font-bold text-[var(--freya-blue)]">
-                  {selectedParts.length} {isJa ? "品番選択中" : "parts selected"}
+                <span className="text-[11px] font-semibold text-[var(--freya-blue)]">
+                  {selectedParts.length} {isJa ? "品番選択中" : "selected"}
                 </span>
               )}
             </div>
             <div className="relative">
-              <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)] text-[18px]">
+              <span className="material-symbols-outlined pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[18px] text-[var(--text-muted)] select-none">
                 search
               </span>
               <input
@@ -732,13 +810,14 @@ export default function PartBenchmarkingView({ isJa = true }) {
                 placeholder={
                   selectedParts.length > 0
                     ? isJa
-                      ? "さらに品番を追加検索（カンマ区切りで一括入力も可能）..."
-                      : "Add more parts (or paste comma-separated list)..."
+                      ? "さらに品番を追加検索（カンマ区切り可）..."
+                      : "Add more parts (comma-separated)..."
                     : isJa
-                    ? "品番、背番号、品名を入力（カンマ区切りで複数一括入力可）..."
-                    : "Enter part number, back number, or paste multiple..."
+                    ? "品番、背番号、品名を入力..."
+                    : "Enter part number, back number, or name..."
                 }
-                className="w-full pl-9 pr-8 py-2 text-sm bg-[var(--surface-subtle)] border border-[var(--border)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--freya-blue)] text-[var(--text-primary)] transition"
+                className="freya-input h-9 text-xs w-full font-sans pr-8 !pl-9"
+                style={{ paddingLeft: "36px" }}
               />
               {searchQuery && (
                 <button
@@ -746,7 +825,7 @@ export default function PartBenchmarkingView({ isJa = true }) {
                   onClick={() => setSearchQuery("")}
                   className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)] hover:text-[var(--text-primary)]"
                 >
-                  <span className="material-symbols-outlined text-[16px]">close</span>
+                  <span className="material-symbols-outlined text-[15px]">close</span>
                 </button>
               )}
             </div>
@@ -796,9 +875,9 @@ export default function PartBenchmarkingView({ isJa = true }) {
                               )}
                             </div>
                             <div className="min-w-0 truncate">
-                              <span className="font-mono font-bold text-[var(--text-primary)] mr-2">{p.品番}</span>
+                              <span className="font-sans font-semibold text-[var(--text-primary)] mr-2">{p.品番}</span>
                               {p.背番号 && (
-                                <span className="px-1.5 py-0.5 rounded bg-[var(--surface-subtle)] border border-[var(--border)] font-mono text-[10px] mr-2">
+                                <span className="px-1.5 py-0.5 rounded bg-[var(--surface-subtle)] border border-[var(--border)] font-sans text-[10px] text-[var(--text-muted)] mr-2">
                                   {p.背番号}
                                 </span>
                               )}
@@ -807,14 +886,14 @@ export default function PartBenchmarkingView({ isJa = true }) {
                           </div>
                           <div className="flex items-center gap-2 shrink-0 ml-2">
                             {p.モデル && (
-                              <span className="text-[10px] text-[var(--text-muted)] bg-[var(--surface-subtle)] px-2 py-0.5 rounded border border-[var(--border)]">
+                              <span className="text-[10px] text-[var(--text-muted)] bg-[var(--surface-subtle)] px-2 py-0.5 rounded border border-[var(--border)] font-sans">
                                 {p.モデル}
                               </span>
                             )}
                             {isAlreadySelected ? (
-                              <span className="text-[11px] text-emerald-600 font-bold">✓ {isJa ? "選択中" : "Selected"}</span>
+                              <span className="text-[11px] text-emerald-600 font-semibold">✓ {isJa ? "選択中" : "Selected"}</span>
                             ) : (
-                              <span className="text-[11px] text-[var(--freya-blue)] font-bold">+ {isJa ? "追加" : "Add"}</span>
+                              <span className="text-[11px] text-[var(--freya-blue)] font-semibold">+ {isJa ? "追加" : "Add"}</span>
                             )}
                           </div>
                         </div>
@@ -830,7 +909,7 @@ export default function PartBenchmarkingView({ isJa = true }) {
                 {/* Dropdown Multi-Select Action Bar */}
                 <div className="p-2 border-t border-[var(--border)] bg-[var(--surface-subtle)] flex items-center justify-between text-xs">
                   <div className="flex items-center gap-2">
-                    <span className="font-bold text-[var(--text-primary)]">
+                    <span className="font-semibold text-[var(--text-primary)]">
                       {selectedParts.length} {isJa ? "件選択中" : "selected"}
                     </span>
                     {filteredProducts.length > 0 && (
@@ -846,7 +925,7 @@ export default function PartBenchmarkingView({ isJa = true }) {
                   <button
                     type="button"
                     onClick={() => setShowDropdown(false)}
-                    className="px-3 py-1 bg-[var(--freya-blue)] text-white rounded font-bold text-xs shadow-2xs hover:opacity-90 transition"
+                    className="px-3 py-1 bg-[var(--freya-blue)] text-white rounded font-semibold text-xs shadow-2xs hover:opacity-90 transition"
                   >
                     {isJa ? "完了 (閉じる)" : "Done"}
                   </button>
@@ -855,38 +934,59 @@ export default function PartBenchmarkingView({ isJa = true }) {
             )}
           </div>
 
-          {/* Date Presets Selector */}
-          <div className="flex flex-wrap items-center gap-1.5 shrink-0">
-            <span className="text-xs font-semibold text-[var(--text-muted)] mr-1">
-              {isJa ? "期間:" : "Period:"}
-            </span>
-            {[
-              { key: "bothMonths", label: `${monthA} & ${monthB} (${isJa ? "両月" : "Both"})` },
-              { key: "monthA", label: `${monthA} (${isJa ? "当月" : "Month A"})` },
-              { key: "monthB", label: `${monthB} (${isJa ? "先月" : "Month B"})` },
-              { key: "last30Days", label: isJa ? "直近30日" : "30 Days" },
-              { key: "allTime", label: isJa ? "全期間" : "All Time" },
-            ].map((preset) => (
-              <button
-                key={preset.key}
-                type="button"
-                onClick={() => setDatePreset(preset.key)}
-                className={`px-3 py-1 text-xs font-bold rounded-lg border transition ${
-                  datePreset === preset.key
-                    ? "bg-[var(--freya-blue)] text-white border-[var(--freya-blue)] shadow-xs"
-                    : "bg-[var(--surface-subtle)] text-[var(--text-secondary)] border-[var(--border)] hover:bg-[var(--surface-hover)]"
-                }`}
+          {/* Period Preset Dropdown */}
+          <div>
+            <label className="block text-xs font-medium text-[var(--text-muted)] mb-1">
+              {isJa ? "期間プリセット" : "Period Preset"}
+            </label>
+            <select
+              value={datePreset}
+              onChange={(e) => setDatePreset(e.target.value)}
+              className="freya-input h-9 text-xs cursor-pointer w-full font-sans"
+            >
+              <option value="bothMonths">{`${monthA} & ${monthB} (${isJa ? "2ヶ月合算" : "Both Months"})`}</option>
+              <option value="monthA">{`${monthA} (${isJa ? "当月" : "Month A"})`}</option>
+              <option value="monthB">{`${monthB} (${isJa ? "先月" : "Month B"})`}</option>
+              <option value="last30Days">{isJa ? "直近30日間" : "Last 30 Days"}</option>
+              <option value="last90Days">{isJa ? "直近90日間" : "Last 90 Days"}</option>
+              <option value="allTime">{isJa ? "全期間" : "All Time"}</option>
+            </select>
+          </div>
+
+          {/* MoM Target Months */}
+          <div>
+            <label className="block text-xs font-medium text-[var(--text-muted)] mb-1">
+              {isJa ? "比較対象月 (MoM)" : "Target Months (MoM)"}
+            </label>
+            <div className="grid grid-cols-2 gap-1.5">
+              <select
+                value={monthA}
+                onChange={(e) => setMonthA(e.target.value)}
+                className="freya-input h-9 text-xs cursor-pointer w-full font-sans"
+                title={isJa ? "当月 (Month A)" : "Month A"}
               >
-                {preset.label}
-              </button>
-            ))}
+                {availableMonths.map((m) => (
+                  <option key={m} value={m}>{m}</option>
+                ))}
+              </select>
+              <select
+                value={monthB}
+                onChange={(e) => setMonthB(e.target.value)}
+                className="freya-input h-9 text-xs cursor-pointer w-full font-sans"
+                title={isJa ? "先月 (Month B)" : "Month B"}
+              >
+                {availableMonths.map((m) => (
+                  <option key={m} value={m}>{m}</option>
+                ))}
+              </select>
+            </div>
           </div>
         </div>
 
         {/* Selected Part Tags / Chips */}
         {selectedParts.length > 0 ? (
           <div className="pt-2 border-t border-[var(--border)] flex flex-wrap items-center gap-2">
-            <span className="text-xs text-[var(--text-muted)] font-semibold shrink-0">
+            <span className="text-xs text-[var(--text-muted)] font-medium shrink-0">
               {isJa ? "選択中品番:" : "Selected parts:"}
             </span>
             {selectedParts.map((p, pIdx) => {
@@ -894,12 +994,12 @@ export default function PartBenchmarkingView({ isJa = true }) {
               return (
                 <div
                   key={`${p.hinban}-${p.seiban}`}
-                  className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-mono font-bold rounded-lg bg-[var(--surface)] border border-[var(--border)] shadow-2xs group"
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-sans font-semibold rounded-md bg-[var(--surface)] border border-[var(--border)] shadow-2xs group"
                   style={{ borderLeftColor: color.border, borderLeftWidth: 3 }}
                 >
                   <span className="text-[var(--text-primary)]">{p.hinban}</span>
                   {p.seiban && (
-                    <span className="px-1.5 py-0.2 rounded bg-[var(--surface-subtle)] border border-[var(--border)] text-[10px] text-[var(--text-muted)]">
+                    <span className="px-1.5 py-0.5 rounded bg-[var(--surface-subtle)] border border-[var(--border)] text-[10px] font-sans font-medium text-[var(--text-muted)]">
                       {p.seiban}
                     </span>
                   )}
@@ -921,7 +1021,7 @@ export default function PartBenchmarkingView({ isJa = true }) {
                 key={model}
                 type="button"
                 onClick={() => handleAddAllWithModel(model)}
-                className="px-2.5 py-0.8 text-[11px] font-semibold rounded-md border border-purple-500/20 bg-purple-500/10 text-purple-600 dark:text-purple-400 hover:bg-purple-500/20 transition inline-flex items-center gap-1"
+                className="px-2.5 py-1 text-[11px] font-semibold rounded-md border border-purple-500/20 bg-purple-500/10 text-purple-600 dark:text-purple-400 hover:bg-purple-500/20 transition inline-flex items-center gap-1 cursor-pointer"
                 title={isJa ? `同一モデル「${model}」の品番をすべて追加` : `Add all parts with model ${model}`}
               >
                 <span className="material-symbols-outlined text-[13px]">group_add</span>
@@ -932,7 +1032,7 @@ export default function PartBenchmarkingView({ isJa = true }) {
             <button
               type="button"
               onClick={handleClearAllParts}
-              className="px-2 py-0.8 text-[11px] font-semibold text-rose-500 hover:text-rose-600 hover:underline transition ml-auto sm:ml-0"
+              className="px-2 py-1 text-[11px] font-semibold text-rose-500 hover:text-rose-600 hover:underline transition ml-auto sm:ml-0 cursor-pointer"
             >
               {isJa ? "すべてクリア" : "Clear all"}
             </button>
@@ -949,9 +1049,10 @@ export default function PartBenchmarkingView({ isJa = true }) {
                   key={`${chip.hinban}-${chip.seiban}`}
                   type="button"
                   onClick={() => handleAddPart(chip)}
-                  className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-mono font-bold rounded-md bg-[var(--surface-subtle)] hover:bg-blue-500/10 text-[var(--text-primary)] hover:text-blue-600 dark:hover:text-blue-400 border border-[var(--border)] transition shadow-2xs"
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-sans font-medium rounded-md bg-[var(--surface-subtle)] hover:bg-[var(--surface-hover)] text-[var(--text-primary)] border border-[var(--border)] transition shadow-2xs cursor-pointer"
                 >
-                  <span>+ {chip.hinban}</span>
+                  <span className="text-[var(--freya-blue)] font-bold">+</span>
+                  <span className="font-semibold">{chip.hinban}</span>
                   {chip.seiban && (
                     <span className="px-1 py-0.2 rounded bg-black/5 dark:bg-white/5 text-[10px] text-[var(--text-muted)]">
                       {chip.seiban}
@@ -1012,16 +1113,16 @@ export default function PartBenchmarkingView({ isJa = true }) {
 
               <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-2">
-                  <h2 className="text-lg sm:text-xl font-black font-mono text-[var(--text-primary)]">
+                  <h2 className="text-base sm:text-lg font-bold font-sans text-[var(--text-primary)]">
                     {selectedParts[0].hinban}
                   </h2>
                   {selectedParts[0].seiban && (
-                    <span className="rounded-md border border-[var(--border)] bg-[var(--surface-subtle)] px-2.5 py-0.5 text-xs font-bold font-mono text-[var(--text-primary)] shadow-2xs">
+                    <span className="rounded-[4px] border border-[var(--border)] bg-[var(--surface-subtle)] px-2 py-0.5 text-xs font-semibold font-sans text-[var(--text-primary)] shadow-2xs">
                       {selectedParts[0].seiban}
                     </span>
                   )}
                   {primaryMasterData?.["モデル"] && (
-                    <span className="rounded-md bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20 px-2 py-0.5 text-[11px] font-bold">
+                    <span className="rounded-[4px] bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20 px-2 py-0.5 text-[11px] font-semibold font-sans">
                       {primaryMasterData["モデル"]}
                     </span>
                   )}
@@ -1043,7 +1144,7 @@ export default function PartBenchmarkingView({ isJa = true }) {
               <button
                 type="button"
                 onClick={handleClearAllParts}
-                className="px-3 py-1.5 text-xs font-semibold rounded-lg border border-[var(--border)] bg-[var(--surface-subtle)] text-[var(--text-secondary)] hover:bg-[var(--surface-hover)] transition"
+                className="px-3 py-1.5 text-xs font-semibold rounded-md border border-[var(--border)] bg-[var(--surface)] text-[var(--text-secondary)] hover:bg-[var(--surface-hover)] shadow-xs transition cursor-pointer"
               >
                 {isJa ? "品番変更" : "Change Part"}
               </button>
@@ -1057,15 +1158,15 @@ export default function PartBenchmarkingView({ isJa = true }) {
         <div className="freya-card rounded-[8px] border border-[var(--border)] bg-[var(--surface)] p-4 sm:p-5 shadow-xs">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div className="flex items-center gap-3 min-w-0">
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20 shadow-xs">
-                <span className="material-symbols-outlined text-[26px]">view_in_ar</span>
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20 shadow-xs">
+                <span className="material-symbols-outlined text-[24px]">view_in_ar</span>
               </div>
               <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-2">
-                  <h2 className="text-base sm:text-lg font-black text-[var(--text-primary)]">
+                  <h2 className="text-base font-bold font-sans text-[var(--text-primary)]">
                     {isJa ? "複数品番パッケージ分析" : "Multi-Part Bundle Analysis"}
                   </h2>
-                  <span className="rounded-full bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20 px-2.5 py-0.5 text-xs font-bold">
+                  <span className="rounded-[4px] bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20 px-2 py-0.5 text-xs font-semibold font-sans">
                     {selectedParts.length} {isJa ? "品番選択中" : "parts"}
                   </span>
                 </div>
@@ -1078,13 +1179,13 @@ export default function PartBenchmarkingView({ isJa = true }) {
             </div>
 
             {/* Chart Mode Toggle */}
-            <div className="flex items-center gap-1.5 bg-[var(--surface-subtle)] p-1 rounded-lg border border-[var(--border)] self-end sm:self-center">
+            <div className="flex items-center gap-1.5 bg-[var(--surface-subtle)] p-1 rounded-md border border-[var(--border)] self-end sm:self-center">
               <button
                 type="button"
                 onClick={() => setChartDisplayMode("stacked")}
-                className={`px-3 py-1 text-xs font-bold rounded-md transition ${
+                className={`px-3 py-1 text-xs font-semibold rounded-[4px] transition cursor-pointer ${
                   chartDisplayMode === "stacked"
-                    ? "bg-[var(--surface)] text-[var(--freya-blue)] shadow-2xs"
+                    ? "bg-[var(--surface)] text-[var(--freya-blue)] shadow-2xs font-bold"
                     : "text-[var(--text-muted)] hover:text-[var(--text-primary)]"
                 }`}
               >
@@ -1093,9 +1194,9 @@ export default function PartBenchmarkingView({ isJa = true }) {
               <button
                 type="button"
                 onClick={() => setChartDisplayMode("combined")}
-                className={`px-3 py-1 text-xs font-bold rounded-md transition ${
+                className={`px-3 py-1 text-xs font-semibold rounded-[4px] transition cursor-pointer ${
                   chartDisplayMode === "combined"
-                    ? "bg-[var(--surface)] text-[var(--freya-blue)] shadow-2xs"
+                    ? "bg-[var(--surface)] text-[var(--freya-blue)] shadow-2xs font-bold"
                     : "text-[var(--text-muted)] hover:text-[var(--text-primary)]"
                 }`}
               >
@@ -1108,25 +1209,33 @@ export default function PartBenchmarkingView({ isJa = true }) {
 
       {/* ── 3. Empty State (When No Part Selected) ────────────────────────────── */}
       {selectedParts.length === 0 && (
-        <div className="freya-card rounded-[8px] border border-[var(--border)] bg-[var(--surface)] p-12 text-center shadow-xs">
-          <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-[var(--freya-blue)]/10 text-[var(--freya-blue)] flex items-center justify-center border border-[var(--freya-blue)]/20 shadow-xs">
-            <span className="material-symbols-outlined text-[36px]">compare_arrows</span>
+        <div className="freya-card rounded-[8px] border border-[var(--border)] bg-[var(--surface)] p-10 sm:p-12 text-center shadow-xs">
+          <div className="w-12 h-12 mx-auto mb-3 rounded-lg bg-[var(--freya-blue)]/10 text-[var(--freya-blue)] flex items-center justify-center border border-[var(--freya-blue)]/20 shadow-xs">
+            <span className="material-symbols-outlined text-[28px]">compare_arrows</span>
           </div>
-          <h3 className="text-lg font-bold text-[var(--text-primary)]">
+          <h3 className="text-base font-bold font-sans text-[var(--text-primary)]">
             {isJa ? "品番・背番号を選択して設備横断比較を開始" : "Select Part Number(s) to Compare Across Machines"}
           </h3>
-          <p className="mt-1.5 max-w-md mx-auto text-xs text-[var(--text-secondary)]">
+          <p className="mt-1 max-w-md mx-auto text-xs text-[var(--text-muted)]">
             {isJa
               ? "単一の品番だけでなく、左右ペアや製品グループなど複数の品番を同時選択して合算・内訳比較が可能です。"
               : "Compare volume share, defect rates, and operating speeds for single parts or multiple part bundles across your entire fleet."}
           </p>
-          <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
+          <div className="mt-5 flex flex-wrap items-center justify-center gap-3">
+            <button
+              type="button"
+              onClick={() => setIsProductModalOpen(true)}
+              className="flex items-center gap-1.5 px-4 py-2 text-xs font-semibold rounded-md bg-[var(--freya-blue)] text-white shadow-xs hover:opacity-90 transition cursor-pointer"
+            >
+              <span className="material-symbols-outlined text-[16px]">inventory_2</span>
+              <span>{isJa ? "製品マスタから選択" : "Select from Products"}</span>
+            </button>
             <button
               type="button"
               onClick={() => {
                 if (quickPartChips[0]) handleAddPart(quickPartChips[0]);
               }}
-              className="px-4 py-2 text-xs font-bold rounded-lg bg-[var(--freya-blue)] text-white shadow-sm hover:opacity-90 transition"
+              className="px-4 py-2 text-xs font-semibold rounded-md border border-[var(--border)] bg-[var(--surface)] text-[var(--text-primary)] hover:bg-[var(--surface-hover)] shadow-xs transition cursor-pointer"
             >
               {isJa ? "サンプル品番で比較を見る" : "View Sample Part"}
             </button>
@@ -1137,7 +1246,7 @@ export default function PartBenchmarkingView({ isJa = true }) {
                   handleAddPart(quickPartChips[0]);
                   handleAddPart(quickPartChips[1]);
                 }}
-                className="px-4 py-2 text-xs font-bold rounded-lg border border-[var(--border)] bg-[var(--surface-subtle)] text-[var(--text-primary)] hover:bg-[var(--surface-hover)] transition"
+                className="px-4 py-2 text-xs font-semibold rounded-md border border-[var(--border)] bg-[var(--surface)] text-[var(--text-primary)] hover:bg-[var(--surface-hover)] shadow-xs transition cursor-pointer"
               >
                 {isJa ? "複数品番ペアで比較を見る" : "View 2-Part Bundle"}
               </button>
@@ -1174,65 +1283,55 @@ export default function PartBenchmarkingView({ isJa = true }) {
             <>
               {/* ── Summary KPI Cards ───────────────────────────────────────── */}
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
-                <div className="freya-card rounded-[8px] border border-[var(--border)] bg-[var(--surface)] p-4 shadow-xs">
-                  <div className="flex items-center justify-between text-xs text-[var(--text-muted)] font-semibold">
-                    <span>{isJa ? "総生産ショット数" : "Total Part Shots"}</span>
-                    <span className="material-symbols-outlined text-[18px] text-blue-500">production_quantity_limits</span>
-                  </div>
-                  <div className="text-2xl font-black font-mono text-[var(--text-primary)] mt-1.5">
-                    {(machineStats.totalAllShots || 0).toLocaleString()}
-                  </div>
-                  <p className="text-[11px] text-[var(--text-muted)] mt-1">
-                    {isJa
+                <AnalyticsKpiCard
+                  title={isJa ? "総生産ショット数" : "Total Part Shots"}
+                  value={(machineStats.totalAllShots || 0).toLocaleString()}
+                  subtext={
+                    isJa
                       ? `${machineStats.machines.length} 設備で加工実績あり`
-                      : `${machineStats.machines.length} active machines`}
-                  </p>
-                </div>
+                      : `${machineStats.machines.length} active machines`
+                  }
+                  icon="speed"
+                  color="blue"
+                />
 
-                <div className="freya-card rounded-[8px] border border-[var(--border)] bg-[var(--surface)] p-4 shadow-xs">
-                  <div className="flex items-center justify-between text-xs text-[var(--text-muted)] font-semibold">
-                    <span>{isJa ? "最多生産設備 (シェア)" : "Top Volume Machine"}</span>
-                    <span className="material-symbols-outlined text-[18px] text-emerald-500">leaderboard</span>
-                  </div>
-                  <div className="text-2xl font-black font-mono text-emerald-600 dark:text-emerald-400 mt-1.5">
-                    {highlights.topMachine?.machine || "—"}
-                  </div>
-                  <p className="text-[11px] text-[var(--text-muted)] mt-1">
-                    {highlights.topMachine
+                <AnalyticsKpiCard
+                  title={isJa ? "最多生産設備 (シェア)" : "Top Volume Machine"}
+                  value={highlights.topMachine?.machine || "—"}
+                  subtext={
+                    highlights.topMachine
                       ? `${(highlights.topMachine.analytics?.totalShots || 0).toLocaleString()} shots (${highlights.topMachine.share}%)`
-                      : "—"}
-                  </p>
-                </div>
+                      : "—"
+                  }
+                  icon="leaderboard"
+                  color="emerald"
+                  badge={highlights.topMachine?.factory ? { text: highlights.topMachine.factory } : undefined}
+                />
 
-                <div className="freya-card rounded-[8px] border border-[var(--border)] bg-[var(--surface)] p-4 shadow-xs">
-                  <div className="flex items-center justify-between text-xs text-[var(--text-muted)] font-semibold">
-                    <span>{isJa ? "最良品質設備 (ベンチマーク)" : "Best Quality Machine"}</span>
-                    <span className="material-symbols-outlined text-[18px] text-purple-500">verified</span>
-                  </div>
-                  <div className="text-2xl font-black font-mono text-purple-600 dark:text-purple-400 mt-1.5">
-                    {highlights.bestQualityMachine?.machine || "—"}
-                  </div>
-                  <p className="text-[11px] text-[var(--text-muted)] mt-1">
-                    {highlights.bestQualityMachine
+                <AnalyticsKpiCard
+                  title={isJa ? "最良品質設備 (ベンチマーク)" : "Best Quality Machine"}
+                  value={highlights.bestQualityMachine?.machine || "—"}
+                  subtext={
+                    highlights.bestQualityMachine
                       ? `${highlights.bestQualityMachine.analytics?.defectRate || 0}% ${isJa ? "不良率" : "defect rate"}`
-                      : "—"}
-                  </p>
-                </div>
+                      : "—"
+                  }
+                  icon="verified"
+                  color="purple"
+                  badge={highlights.bestQualityMachine?.factory ? { text: highlights.bestQualityMachine.factory } : undefined}
+                />
 
-                <div className="freya-card rounded-[8px] border border-[var(--border)] bg-[var(--surface)] p-4 shadow-xs">
-                  <div className="flex items-center justify-between text-xs text-[var(--text-muted)] font-semibold">
-                    <span>{isJa ? "全体平均不良率" : "Overall Defect Rate"}</span>
-                    <span className="material-symbols-outlined text-[18px] text-rose-500">pie_chart</span>
-                  </div>
-                  <div className="text-2xl font-black font-mono text-rose-500 mt-1.5">
-                    {highlights.overallDefectRate}%
-                  </div>
-                  <p className="text-[11px] text-[var(--text-muted)] mt-1">
-                    {isJa
+                <AnalyticsKpiCard
+                  title={isJa ? "全体平均不良率" : "Overall Defect Rate"}
+                  value={`${highlights.overallDefectRate}%`}
+                  subtext={
+                    isJa
                       ? `累計不良数: ${(highlights.totalDefects || 0).toLocaleString()} 個`
-                      : `Total defects: ${(highlights.totalDefects || 0).toLocaleString()}`}
-                  </p>
-                </div>
+                      : `Total defects: ${(highlights.totalDefects || 0).toLocaleString()}`
+                  }
+                  icon="pie_chart"
+                  color={Number(highlights.overallDefectRate) >= 2.0 ? "rose" : "amber"}
+                />
               </div>
 
               {/* ── Dual-Axis Chart ─────────────────────────────────────────── */}
@@ -1318,7 +1417,7 @@ export default function PartBenchmarkingView({ isJa = true }) {
                               onClick={() => setExpandedMachine(isExpanded ? null : m.machine)}
                               className="hover:bg-blue-500/5 dark:hover:bg-blue-500/10 cursor-pointer transition-colors"
                             >
-                              <td className="px-3 py-2 font-mono whitespace-nowrap font-bold text-[var(--text-primary)]">
+                              <td className="px-3 py-2 font-sans font-semibold text-xs whitespace-nowrap text-[var(--text-primary)]">
                                 <div className="flex items-center gap-2">
                                   <span>{m.machine}</span>
                                   {m.factory && (
@@ -1335,7 +1434,7 @@ export default function PartBenchmarkingView({ isJa = true }) {
                                     {m.partsBreakdown.map((pb) => (
                                       <span
                                         key={`${pb.hinban}-${pb.seiban}`}
-                                        className="inline-block px-1.5 py-0.2 rounded bg-[var(--surface-subtle)] border border-[var(--border)] text-[9px] text-[var(--text-muted)] font-normal"
+                                        className="inline-block px-1.5 py-0.2 rounded bg-[var(--surface-subtle)] border border-[var(--border)] text-[9px] text-[var(--text-muted)] font-normal font-sans"
                                       >
                                         {pb.hinban.slice(-5)}: {pb.shots.toLocaleString()}
                                       </span>
@@ -1380,7 +1479,7 @@ export default function PartBenchmarkingView({ isJa = true }) {
                                     e.stopPropagation();
                                     setExpandedMachine(isExpanded ? null : m.machine);
                                   }}
-                                  className="inline-flex items-center gap-1 px-2 py-0.8 text-[11px] font-semibold rounded bg-[var(--surface-subtle)] hover:bg-[var(--surface-hover)] border border-[var(--border)] text-[var(--text-primary)] transition"
+                                  className="inline-flex items-center gap-1 px-2 py-0.8 text-[11px] font-semibold rounded bg-[var(--surface-subtle)] hover:bg-[var(--surface-hover)] border border-[var(--border)] text-[var(--text-primary)] transition cursor-pointer"
                                 >
                                   <span>{m.records.length} {isJa ? "ロット" : "runs"}</span>
                                   <span
@@ -1413,7 +1512,7 @@ export default function PartBenchmarkingView({ isJa = true }) {
                                                 key={`${pb.hinban}-${pb.seiban}`}
                                                 className="p-2 rounded border border-[var(--border)] bg-[var(--surface-subtle)]/50 text-[10px]"
                                               >
-                                                <div className="font-mono font-bold text-[var(--text-primary)] truncate">
+                                                <div className="font-sans font-semibold text-[var(--text-primary)] truncate">
                                                   {pb.hinban}
                                                 </div>
                                                 <div className="flex items-center justify-between text-[var(--text-secondary)] mt-0.5">
@@ -1467,7 +1566,7 @@ export default function PartBenchmarkingView({ isJa = true }) {
                                                   }}
                                                   className="hover:bg-blue-500/10 cursor-pointer transition-colors"
                                                 >
-                                                  <td className="px-2.5 py-1.5 font-mono font-bold text-[var(--text-primary)]">
+                                                  <td className="px-2.5 py-1.5 font-sans font-semibold text-[var(--text-primary)]">
                                                     {h} {s ? `(${s})` : ""}
                                                   </td>
                                                   <td className="px-2.5 py-1.5 font-mono">{r.Date || "—"}</td>
@@ -1509,6 +1608,16 @@ export default function PartBenchmarkingView({ isJa = true }) {
             </>
           )}
         </>
+      )}
+
+      {/* ── Product Selector Modal ─────────────────────────────────────── */}
+      {isProductModalOpen && (
+        <ProductSelectorModal
+          isOpen={isProductModalOpen}
+          onClose={() => setIsProductModalOpen(false)}
+          selectedBans={selectedParts.map((p) => p.seiban).filter(Boolean)}
+          onConfirm={handleConfirmProductModal}
+        />
       )}
 
       {/* ── Record Details Modal on Top ───────────────────────────────── */}
