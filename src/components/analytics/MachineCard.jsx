@@ -46,7 +46,7 @@ export default function MachineCard({
                 {machine}
               </h4>
               {factory && (
-                <span className="text-[11px] font-medium text-[var(--text-muted)]">
+                <span className="inline-block mt-0.5 rounded-[3px] bg-blue-500/10 text-blue-600 dark:text-blue-400 px-1.5 py-0.2 text-[10px] font-semibold border border-blue-500/20">
                   {factory}
                 </span>
               )}

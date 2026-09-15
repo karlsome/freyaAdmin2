@@ -5,11 +5,11 @@ import {
   getBusinessDayRange,
   calculateEquipmentAnalytics,
   groupRecordsByEquipment,
-  exportEquipmentToCsv,
 } from "./equipmentAnalyticsUtils";
 import MachineCard from "./MachineCard";
 import MachineComparisonChart from "./MachineComparisonChart";
 import MachineDetailModal from "./MachineDetailModal";
+import MachineSelectorModal from "./MachineSelectorModal";
 import { AnalyticsKpiCard } from "./AnalyticsKpiCards";
 
 export default function MachinePerformanceView() {
@@ -43,10 +43,8 @@ export default function MachinePerformanceView() {
     return []; // Empty means all selected initially
   });
 
-  // Factory Accordion expand states
-  const [expandedFactories, setExpandedFactories] = useState({});
-  const [searchEquipment, setSearchEquipment] = useState("");
-  const [isFilterPanelOpen, setIsFilterPanelOpen] = useState(false);
+  // Machine Selector Pop-up Modal state
+  const [isMachineModalOpen, setIsMachineModalOpen] = useState(false);
 
   // Sorting
   const [sortBy, setSortBy] = useState("shotsDesc");
@@ -70,13 +68,6 @@ export default function MachinePerformanceView() {
           const byFactory = res.equipmentByFactory || {};
           setAvailableEquipment(all);
           setEquipmentByFactory(byFactory);
-
-          // Initialize all factories as expanded
-          const exp = {};
-          Object.keys(byFactory).forEach((f) => {
-            exp[f] = true;
-          });
-          setExpandedFactories(exp);
 
           // If no previous selection, default to select all
           setSelectedEquipment((prev) => (prev.length === 0 ? all : prev));
@@ -252,40 +243,6 @@ export default function MachinePerformanceView() {
     };
   }, [machineCardsData]);
 
-  // Equipment Checkbox Toggle Handlers
-  const toggleAllEquipment = (selectAll) => {
-    const next = selectAll ? [...availableEquipment] : [];
-    handleSaveEquipmentPreferences(next);
-  };
-
-  const toggleFactoryEquipment = (factory, selectAll) => {
-    const factoryEquip = equipmentByFactory[factory] || [];
-    let next;
-    if (selectAll) {
-      next = Array.from(new Set([...selectedEquipment, ...factoryEquip]));
-    } else {
-      next = selectedEquipment.filter((eq) => !factoryEquip.includes(eq));
-    }
-    handleSaveEquipmentPreferences(next);
-  };
-
-  const toggleSingleEquipment = (equip) => {
-    let next;
-    if (selectedEquipment.includes(equip)) {
-      next = selectedEquipment.filter((e) => e !== equip);
-    } else {
-      next = [...selectedEquipment, equip];
-    }
-    handleSaveEquipmentPreferences(next);
-  };
-
-  const toggleFactoryExpand = (factory) => {
-    setExpandedFactories((prev) => ({
-      ...prev,
-      [factory]: !prev[factory],
-    }));
-  };
-
   // Find active machine for modal
   const selectedModalData = useMemo(() => {
     if (!activeMachineDetail) return null;
@@ -305,9 +262,9 @@ export default function MachinePerformanceView() {
       <div className="freya-card rounded-[8px] border border-[var(--border)] bg-[var(--surface)] p-4 sm:p-5 shadow-xs space-y-4">
         {/* Top Controls Row */}
         <div className="flex flex-wrap items-center justify-between gap-4">
-          <div className="flex items-center gap-2">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[var(--freya-blue)]/10 text-[var(--freya-blue)]">
-              <span className="material-symbols-outlined text-[20px]">speed</span>
+          <div className="flex items-center gap-2.5">
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[var(--freya-blue)]/10 text-[var(--freya-blue)] border border-[var(--freya-blue)]/20">
+              <span className="material-symbols-outlined text-[22px]">speed</span>
             </div>
             <div>
               <h2 className="text-base font-bold text-[var(--text-primary)]">
@@ -321,22 +278,18 @@ export default function MachinePerformanceView() {
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
-            {/* Toggle Equipment Selector Dropdown */}
+          <div className="flex items-center gap-2.5">
+            {/* Pop-up Machine Selector Modal Trigger Button */}
             <button
               type="button"
-              onClick={() => setIsFilterPanelOpen(!isFilterPanelOpen)}
-              className={`flex items-center gap-1.5 rounded-md border px-3 py-2 text-xs font-semibold shadow-xs transition cursor-pointer ${
-                isFilterPanelOpen
-                  ? "bg-[var(--freya-blue)] text-white border-[var(--freya-blue)]"
-                  : "border-[var(--border)] bg-[var(--surface)] text-[var(--text-primary)] hover:bg-[var(--surface-hover)]"
-              }`}
+              onClick={() => setIsMachineModalOpen(true)}
+              className="flex items-center gap-2 rounded-md border border-[var(--border)] bg-[var(--surface)] px-3.5 py-2 text-xs font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-hover)] shadow-xs transition cursor-pointer"
             >
-              <span className="material-symbols-outlined text-[16px]">tune</span>
-              <span>
-                {isJa ? "設備選択 / 工場絞り込み" : "Filter Machines"}
+              <span className="material-symbols-outlined text-[18px] text-[var(--freya-blue)]">
+                precision_manufacturing
               </span>
-              <span className="rounded-[4px] bg-black/10 dark:bg-white/10 px-1.5 py-0.2 text-[10px]">
+              <span>{isJa ? "設備を選択 (工場別)" : "Select Machines"}</span>
+              <span className="rounded-[4px] bg-[var(--surface-subtle)] border border-[var(--border)] px-1.5 py-0.5 text-[11px] font-mono text-[var(--text-muted)]">
                 {selectedEquipment.length} / {availableEquipment.length}
               </span>
             </button>
@@ -346,7 +299,7 @@ export default function MachinePerformanceView() {
               type="button"
               onClick={loadData}
               disabled={loading}
-              className="flex items-center gap-1.5 rounded-md bg-[var(--freya-blue)] px-3 py-2 text-xs font-semibold text-white shadow-xs hover:opacity-90 transition disabled:opacity-50 cursor-pointer"
+              className="flex items-center gap-1.5 rounded-md bg-[var(--freya-blue)] px-3.5 py-2 text-xs font-semibold text-white shadow-xs hover:opacity-90 transition disabled:opacity-50 cursor-pointer"
             >
               <span
                 className={`material-symbols-outlined text-[16px] ${
@@ -360,7 +313,7 @@ export default function MachinePerformanceView() {
           </div>
         </div>
 
-        {/* Date Range Selector Row */}
+        {/* Date Range & Sort Row */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-2 border-t border-[var(--border)]/60">
           {/* Preset Selector */}
           <div>
@@ -434,135 +387,6 @@ export default function MachinePerformanceView() {
             </select>
           </div>
         </div>
-
-        {/* Collapsible Equipment Filter Panel (Grouped by Factory) */}
-        {isFilterPanelOpen && (
-          <div className="rounded-lg border border-[var(--border)] bg-[var(--surface-subtle)]/70 p-4 space-y-3 animate-in fade-in duration-150">
-            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--border)] pb-2.5">
-              <div className="flex items-center gap-3">
-                <span className="text-xs font-bold text-[var(--text-primary)]">
-                  {isJa ? "対象設備の選択 (工場別)" : "Select Target Machines by Facility"}
-                </span>
-                <div className="flex items-center gap-2 text-xs">
-                  <button
-                    type="button"
-                    onClick={() => toggleAllEquipment(true)}
-                    className="text-[var(--freya-blue)] hover:underline font-semibold cursor-pointer"
-                  >
-                    {isJa ? "全選択" : "Select All"}
-                  </button>
-                  <span className="text-[var(--text-muted)]">•</span>
-                  <button
-                    type="button"
-                    onClick={() => toggleAllEquipment(false)}
-                    className="text-[var(--freya-blue)] hover:underline font-semibold cursor-pointer"
-                  >
-                    {isJa ? "全解除" : "Deselect All"}
-                  </button>
-                </div>
-              </div>
-
-              {/* Quick Search */}
-              <input
-                type="text"
-                value={searchEquipment}
-                onChange={(e) => setSearchEquipment(e.target.value)}
-                placeholder={isJa ? "設備名で絞り込み..." : "Filter machine names..."}
-                className="freya-input h-7 w-52 text-xs"
-              />
-            </div>
-
-            {/* Factory Groups List */}
-            <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
-              {Object.entries(equipmentByFactory).map(([factory, equipList]) => {
-                const isExpanded = expandedFactories[factory] !== false;
-                const filteredEquip = equipList.filter((eq) =>
-                  String(eq).toLowerCase().includes(searchEquipment.trim().toLowerCase())
-                );
-                if (searchEquipment.trim() && filteredEquip.length === 0) return null;
-
-                const selectedInFactory = equipList.filter((eq) =>
-                  selectedEquipment.includes(eq)
-                );
-
-                return (
-                  <div
-                    key={factory}
-                    className="rounded-md border border-[var(--border)] bg-[var(--surface)] overflow-hidden"
-                  >
-                    {/* Factory Group Header */}
-                    <div className="flex items-center justify-between px-3 py-2 bg-[var(--surface-subtle)]/40 text-xs">
-                      <button
-                        type="button"
-                        onClick={() => toggleFactoryExpand(factory)}
-                        className="flex items-center gap-1.5 font-bold text-[var(--text-primary)] hover:text-[var(--freya-blue)] cursor-pointer"
-                      >
-                        <span
-                          className={`material-symbols-outlined text-[16px] transition-transform ${
-                            isExpanded ? "rotate-180" : ""
-                          }`}
-                        >
-                          expand_more
-                        </span>
-                        <span>{factory}</span>
-                        <span className="rounded-full bg-[var(--surface)] px-1.5 py-0.2 text-[10px] font-mono border border-[var(--border)] text-[var(--text-muted)]">
-                          {selectedInFactory.length}/{equipList.length}
-                        </span>
-                      </button>
-
-                      <div className="flex items-center gap-2">
-                        <button
-                          type="button"
-                          onClick={() => toggleFactoryEquipment(factory, true)}
-                          className="text-[11px] text-[var(--freya-blue)] hover:underline font-medium"
-                        >
-                          {isJa ? "全選択" : "All"}
-                        </button>
-                        <span className="text-[var(--text-muted)] text-[10px]">•</span>
-                        <button
-                          type="button"
-                          onClick={() => toggleFactoryEquipment(factory, false)}
-                          className="text-[11px] text-[var(--text-muted)] hover:underline font-medium"
-                        >
-                          {isJa ? "解除" : "None"}
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* Checkboxes Grid */}
-                    {isExpanded && (
-                      <div className="p-2.5 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
-                        {filteredEquip.map((equip) => {
-                          const isChecked = selectedEquipment.includes(equip);
-                          return (
-                            <label
-                              key={equip}
-                              className={`flex items-center gap-2 p-1.5 rounded-md border text-xs cursor-pointer transition select-none ${
-                                isChecked
-                                  ? "border-blue-500/30 bg-blue-500/5 text-[var(--text-primary)] font-medium"
-                                  : "border-[var(--border)]/40 bg-[var(--surface)] text-[var(--text-muted)] hover:bg-[var(--surface-hover)]"
-                              }`}
-                            >
-                              <input
-                                type="checkbox"
-                                checked={isChecked}
-                                onChange={() => toggleSingleEquipment(equip)}
-                                className="h-3.5 w-3.5 rounded border-gray-300 text-[var(--freya-blue)] focus:ring-[var(--freya-blue)] cursor-pointer"
-                              />
-                              <span className="truncate" title={equip}>
-                                {equip}
-                              </span>
-                            </label>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
       </div>
 
       {error && (
@@ -659,7 +483,7 @@ export default function MachinePerformanceView() {
             <p className="text-xs mt-1">
               {isJa
                 ? "「設備選択」から対象設備をチェックしてください。"
-                : "Please select machines from the filter dropdown above."}
+                : "Please select machines from the filter modal above."}
             </p>
           </div>
         )}
@@ -677,6 +501,16 @@ export default function MachinePerformanceView() {
           isJa={isJa}
         />
       )}
+
+      {/* ── 6. Pop-up Machine Selector Modal ──────────────────────────────── */}
+      <MachineSelectorModal
+        isOpen={isMachineModalOpen}
+        onClose={() => setIsMachineModalOpen(false)}
+        equipmentByFactory={equipmentByFactory}
+        allEquipment={availableEquipment}
+        selectedEquipment={selectedEquipment}
+        onConfirm={handleSaveEquipmentPreferences}
+      />
     </div>
   );
 }
