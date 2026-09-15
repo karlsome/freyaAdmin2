@@ -6,6 +6,7 @@ import QualityTrendChart from "./QualityTrendChart";
 import DefectBarChart from "./DefectBarChart";
 import DefectDistributionChart from "./DefectDistributionChart";
 import FactoryDefectsChart from "./FactoryDefectsChart";
+import { resolveDefectLabels } from "./defectLabelUtils";
 
 const PROCESSES = [
   { key: "kensaDB", labelJa: "検査 (kensaDB)", labelEn: "Inspection (kensaDB)", icon: "search_check" },
@@ -87,19 +88,47 @@ export default function QualityAnalyticsView({
   const dailyTrend = analyticsData?.dailyTrend || [];
   const factoryStats = analyticsData?.factoryStats || [];
   const defectAnalysis = analyticsData?.defectAnalysis || [];
+  const defectDefinitions = analyticsData?.defectDefinitions || [];
+
+  const [activeModel, setActiveModel] = useState("");
+
+  // Sync activeModel from advancedFilters if user specified a model
+  useEffect(() => {
+    if (Array.isArray(advancedFilters)) {
+      for (const clause of advancedFilters) {
+        if (clause && typeof clause === "object" && clause["モデル"]) {
+          const m = Array.isArray(clause["モデル"]) ? clause["モデル"][0] : clause["モデル"];
+          if (typeof m === "string" && m.trim()) {
+            setActiveModel(m.trim());
+            return;
+          }
+        }
+      }
+    }
+  }, [advancedFilters]);
 
   const totalProduction = summary.totalProduction || 0;
   const totalDefects = summary.totalDefects || 0;
   const avgDefectRate = summary.avgDefectRate != null ? Number(summary.avgDefectRate.toFixed(2)) : 0;
   const yieldRate = totalProduction > 0 ? (((totalProduction - totalDefects) / totalProduction) * 100).toFixed(2) : "—";
 
-  // Calculate highest defect mode from defectAnalysis
+  // Calculate highest defect mode from defectAnalysis using dynamic defect labels
   let topDefectName = "—";
   let topDefectCount = 0;
   if (defectAnalysis.length > 0) {
     const analysis = defectAnalysis[0];
-    const labels = analysis.defectLabels || [];
-    const fields = analysis.defectFields || [];
+    const labels = resolveDefectLabels({
+      collectionName: collection,
+      defectAnalysis,
+      defectDefinitions,
+      selectedModel: activeModel,
+      isJa,
+    });
+    const fields = analysis.defectFields || [
+      "counter1Total", "counter2Total", "counter3Total", "counter4Total",
+      "counter5Total", "counter6Total", "counter7Total", "counter8Total",
+      "counter9Total", "counter10Total", "counter11Total", "counter12Total"
+    ];
     fields.forEach((field, i) => {
       const val = Number(analysis[field] || 0);
       if (val > topDefectCount) {
@@ -224,12 +253,24 @@ export default function QualityAnalyticsView({
 
         {/* 3. Defect Count by Type */}
         <div>
-          <DefectBarChart defectAnalysis={defectAnalysis} collectionName={collectionName} />
+          <DefectBarChart
+            defectAnalysis={defectAnalysis}
+            defectDefinitions={defectDefinitions}
+            collectionName={collection}
+            activeModel={activeModel}
+            onModelChange={setActiveModel}
+          />
         </div>
 
         {/* 4. Defect Distribution (by Process) */}
         <div>
-          <DefectDistributionChart defectAnalysis={defectAnalysis} />
+          <DefectDistributionChart
+            defectAnalysis={defectAnalysis}
+            defectDefinitions={defectDefinitions}
+            collectionName={collection}
+            activeModel={activeModel}
+            onModelChange={setActiveModel}
+          />
         </div>
       </div>
     </div>

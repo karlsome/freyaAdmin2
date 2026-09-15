@@ -1,6 +1,7 @@
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useMemo } from "react";
 import ChartJS from "./chartSetup";
 import { useLanguage } from "../../contexts/LanguageContext";
+import { resolveDefectLabels } from "./defectLabelUtils";
 
 const DEFECT_COLORS = [
   "#EF4444", "#F59E0B", "#10B981", "#3B82F6", "#8B5CF6",
@@ -8,11 +9,47 @@ const DEFECT_COLORS = [
   "#F43F5E", "#06B6D4"
 ];
 
-export default function DefectBarChart({ defectAnalysis = [], collectionName = "kensaDB" }) {
+export default function DefectBarChart({
+  defectAnalysis = [],
+  defectDefinitions = [],
+  collectionName = "kensaDB",
+  activeModel = "",
+  onModelChange,
+}) {
   const canvasRef = useRef(null);
   const chartInstanceRef = useRef(null);
   const { language } = useLanguage();
   const isJa = language === "ja";
+
+  const availableModels = useMemo(() => {
+    if (!Array.isArray(defectDefinitions)) return [];
+    return defectDefinitions.map((d) => d?.モデル).filter(Boolean);
+  }, [defectDefinitions]);
+
+  const analysis = defectAnalysis[0] || {};
+  const defectFields = analysis.defectFields || [
+    "counter1Total", "counter2Total", "counter3Total", "counter4Total",
+    "counter5Total", "counter6Total", "counter7Total", "counter8Total",
+    "counter9Total", "counter10Total", "counter11Total", "counter12Total"
+  ];
+
+  const labels = useMemo(() => {
+    return resolveDefectLabels({
+      collectionName,
+      defectAnalysis,
+      defectDefinitions,
+      selectedModel: activeModel,
+      isJa,
+    });
+  }, [collectionName, defectAnalysis, defectDefinitions, activeModel, isJa]);
+
+  const data = useMemo(() => {
+    return defectFields.map((field) => Number(analysis[field] || 0));
+  }, [analysis, defectFields]);
+
+  const totalDefects = useMemo(() => {
+    return data.reduce((sum, v) => sum + v, 0);
+  }, [data]);
 
   useEffect(() => {
     if (!canvasRef.current) return;
@@ -26,24 +63,6 @@ export default function DefectBarChart({ defectAnalysis = [], collectionName = "
       chartInstanceRef.current.destroy();
       chartInstanceRef.current = null;
     }
-
-    const analysis = defectAnalysis[0] || {};
-    const defaultLabels = isJa
-      ? ["カウンター1", "カウンター2", "カウンター3", "カウンター4", "カウンター5", "カウンター6", "カウンター7", "カウンター8", "カウンター9", "カウンター10", "カウンター11", "カウンター12"]
-      : ["Counter 1", "Counter 2", "Counter 3", "Counter 4", "Counter 5", "Counter 6", "Counter 7", "Counter 8", "Counter 9", "Counter 10", "Counter 11", "Counter 12"];
-
-    const labels = analysis.defectLabels && analysis.defectLabels.length > 0
-      ? analysis.defectLabels
-      : defaultLabels;
-
-    const defectFields = analysis.defectFields || [
-      "counter1Total", "counter2Total", "counter3Total", "counter4Total",
-      "counter5Total", "counter6Total", "counter7Total", "counter8Total",
-      "counter9Total", "counter10Total", "counter11Total", "counter12Total"
-    ];
-
-    const data = defectFields.map((field) => Number(analysis[field] || 0));
-    const totalDefects = data.reduce((sum, v) => sum + v, 0);
 
     chartInstanceRef.current = new ChartJS(ctx, {
       type: "bar",
@@ -77,10 +96,14 @@ export default function DefectBarChart({ defectAnalysis = [], collectionName = "
             padding: 10,
             cornerRadius: 6,
             callbacks: {
+              title: (ctxList) => {
+                const idx = ctxList[0]?.dataIndex;
+                return labels[idx] || ctxList[0]?.label || "";
+              },
               label: (ctxItem) => {
                 const count = Number(ctxItem.parsed.y || 0);
                 const pct = totalDefects > 0 ? ((count / totalDefects) * 100).toFixed(1) : "0.0";
-                return `  ${isJa ? "件数" : "Count"}: ${count.toLocaleString()} (${pct}%)`;
+                return `  ${isJa ? "不良件数" : "Defect Count"}: ${count.toLocaleString()} (${pct}%)`;
               },
             },
           },
@@ -90,7 +113,7 @@ export default function DefectBarChart({ defectAnalysis = [], collectionName = "
             beginAtZero: true,
             title: {
               display: true,
-              text: isJa ? "不良数" : "Count",
+              text: isJa ? "不良数 (件)" : "Count",
               color: "#94a3b8",
               font: { size: 11 },
             },
@@ -108,8 +131,12 @@ export default function DefectBarChart({ defectAnalysis = [], collectionName = "
             },
             ticks: {
               maxRotation: 45,
-              minRotation: 30,
+              minRotation: 25,
               font: { size: 11 },
+              callback: function (val, index) {
+                const label = labels[index] || "";
+                return label.length > 10 ? label.slice(0, 9) + "…" : label;
+              },
             },
           },
         },
@@ -128,21 +155,50 @@ export default function DefectBarChart({ defectAnalysis = [], collectionName = "
         chartInstanceRef.current = null;
       }
     };
-  }, [defectAnalysis, collectionName, isJa]);
+  }, [labels, data, totalDefects, isJa]);
 
   return (
     <div className="freya-card flex flex-col rounded-[8px] border border-[var(--border)] bg-[var(--surface)] p-4 shadow-xs">
-      <div className="mb-3 flex items-center justify-between">
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <span className="material-symbols-outlined text-[18px] text-rose-500">bar_chart</span>
           <h3 className="text-sm font-semibold text-[var(--text-primary)]">
             {isJa ? "不良種別件数" : "Defect Count by Type"}
           </h3>
+          {activeModel && (
+            <span className="rounded-[4px] border border-blue-500/20 bg-blue-500/10 px-2 py-0.5 text-[11px] font-semibold text-blue-600 dark:text-blue-400">
+              {activeModel}
+            </span>
+          )}
         </div>
-        <span className="font-mono text-xs text-[var(--text-muted)]">
-          {collectionName}
-        </span>
+
+        <div className="flex items-center gap-2">
+          {collectionName === "kensaDB" && availableModels.length > 0 && (
+            <div className="flex items-center gap-1">
+              <span className="text-[11px] font-medium text-[var(--text-muted)] hidden sm:inline">
+                {isJa ? "モデル定義:" : "Model Def:"}
+              </span>
+              <select
+                value={activeModel}
+                onChange={(e) => onModelChange && onModelChange(e.target.value)}
+                className="h-7 rounded-[4px] border border-[var(--border)] bg-[var(--surface)] px-2 text-xs font-medium text-[var(--text-primary)] focus:border-[var(--freya-blue)] focus:outline-none cursor-pointer"
+              >
+                <option value="">{isJa ? "汎用カウンター" : "Generic Counters"}</option>
+                {availableModels.map((m) => (
+                  <option key={m} value={m}>
+                    {m}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          <span className="rounded-[4px] bg-rose-500/10 px-2 py-0.5 text-xs font-semibold text-rose-600 dark:text-rose-400">
+            {isJa ? "合計:" : "Total:"} {totalDefects.toLocaleString()}
+          </span>
+        </div>
       </div>
+
       <div className="h-72 w-full relative">
         <canvas ref={canvasRef} />
       </div>
