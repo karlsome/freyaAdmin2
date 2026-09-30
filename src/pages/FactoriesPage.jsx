@@ -1,8 +1,10 @@
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useDashboardData } from "../hooks/useDashboardData";
 import FactoryCard from "../components/FactoryCard";
 import PageHeader from "../components/PageHeader";
 import RecordDetailModal from "../components/RecordDetailModal";
+import FirstFactoryDetailModal from "../components/FirstFactoryDetailModal";
 import { getDefectStatus } from "../utils/statusHelpers";
 import { useRecordModal } from "../hooks/useRecordModal";
 import { useLanguage } from "../contexts/LanguageContext";
@@ -12,6 +14,10 @@ export default function FactoriesPage() {
   const navigate = useNavigate();
   const { modalRecord, modalProcess, openRecord, closeRecord } = useRecordModal();
   const { t } = useLanguage();
+
+  const [firstFactoryRoll, setFirstFactoryRoll] = useState(null);
+  const [firstFactoryAllRolls, setFirstFactoryAllRolls] = useState([]);
+  const [showFirstFactoryModal, setShowFirstFactoryModal] = useState(false);
 
   const total    = factories.length;
   const normal   = factories.filter((f) => getDefectStatus(f.defectRate).level === "normal").length;
@@ -58,8 +64,15 @@ export default function FactoriesPage() {
               <FactoryCard
                 key={factory.name}
                 factory={factory}
-                onClick={() => navigate(`/factory/${encodeURIComponent(factory.name)}`)}
+                onClick={() => {
+                  navigate(`/factory/${encodeURIComponent(factory.name)}`);
+                }}
                 onDefectClick={openRecord}
+                onPsaRollClick={(roll) => {
+                  setFirstFactoryRoll(roll);
+                  setFirstFactoryAllRolls(factory.records || []);
+                  setShowFirstFactoryModal(true);
+                }}
               />
             ))}
       </div>
@@ -69,6 +82,15 @@ export default function FactoriesPage() {
           record={modalRecord}
           processName={modalProcess}
           onClose={closeRecord}
+        />
+      )}
+
+      {showFirstFactoryModal && (
+        <FirstFactoryDetailModal
+          roll={firstFactoryRoll}
+          allRolls={firstFactoryAllRolls}
+          onClose={() => setShowFirstFactoryModal(false)}
+          onSelectRoll={(r) => setFirstFactoryRoll(r)}
         />
       )}
     </section>

@@ -266,6 +266,68 @@ export async function fetchProductionData(factoryName, date) {
   }
 }
 
+// ─── First Factory (PSA Process) Production Data ─────────────────────────────
+export async function fetchFirstFactoryProduction(date) {
+  const key = `firstFactoryProd_${date}`;
+  const cached = _getCached(key, SENSOR_TTL);
+  if (cached) return cached;
+
+  try {
+    const res = await fetch(`${BASE_URL}api/production/status?date=${encodeURIComponent(date)}`);
+    if (res.ok) {
+      const json = await res.json();
+      if (json.success && Array.isArray(json.records)) {
+        _setCache(key, json.records);
+        return json.records;
+      }
+    }
+  } catch {
+    // fallback to universal query
+  }
+
+  try {
+    const data = await query("submittedDB", "firstFactoryProduction", { date });
+    const records = Array.isArray(data) ? data : (data?.records || data?.data || []);
+    _setCache(key, records);
+    return records;
+  } catch {
+    return [];
+  }
+}
+
+export async function fetchFirstFactoryProductionByPeriod(from, to, partNumbers = [], filters = {}) {
+  const queryObj = {};
+  if (from && to && from === to) {
+    queryObj.date = from;
+  } else if (from && to) {
+    queryObj.date = { $gte: from, $lte: to };
+  } else if (from) {
+    queryObj.date = { $gte: from };
+  } else if (to) {
+    queryObj.date = { $lte: to };
+  }
+
+  if (Array.isArray(partNumbers) && partNumbers.length > 0) {
+    queryObj.hinban = { $in: partNumbers };
+  }
+
+  if (filters?.machine) queryObj.machine = filters.machine;
+  if (filters?.worker) queryObj.worker = filters.worker;
+  if (filters?.status) queryObj.status = filters.status;
+
+  try {
+    const data = await query("submittedDB", "firstFactoryProduction", queryObj, {
+      sort: { date: -1, startEpoch: -1, createdAt: -1 },
+      limit: 3000,
+    });
+    return Array.isArray(data) ? data : (data?.records || data?.data || []);
+  } catch (err) {
+    console.error("fetchFirstFactoryProductionByPeriod error:", err);
+    return [];
+  }
+}
+
+
 // ─── Sensor data (tempHumidityDB) ─────────────────────────────────────────────
 export function calcWBGT(temperature, humidity) {
   try {
