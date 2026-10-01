@@ -449,6 +449,55 @@ export default function FirstFactoryDetailModal({
                   </span>
                 </div>
               </div>
+
+              {/* Temperature Snapshot (KEYENCE TR-W1000 OCR) */}
+              {(r.temperatures || r.ovenTemp1 != null || r.ambientTemp != null) && (
+                <div className="rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] p-3 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <p className="text-[10px] font-semibold text-[var(--text-muted)] uppercase tracking-wider font-mono flex items-center gap-1.5">
+                      <span>🌡️</span>
+                      <span>{isJa ? "開始時温度スナップショット (KEYENCE TR-W1000 OCR)" : "Start Temperature Snapshot (KEYENCE TR-W1000 OCR)"}</span>
+                    </p>
+                    {(r.tempSnapshotAt || r.temperatures?.capturedAt) && (
+                      <span className="text-[10px] font-mono text-[var(--text-muted)]">
+                        {new Date(r.tempSnapshotAt || r.temperatures?.capturedAt).toLocaleTimeString()}
+                      </span>
+                    )}
+                  </div>
+                  <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 text-center">
+                    <div className="p-2 rounded-[4px] bg-[var(--surface)] border border-[var(--border)]">
+                      <p className="text-[10px] text-[var(--text-muted)] font-mono">{isJa ? "炉温 1" : "Oven 1"}</p>
+                      <p className="text-sm font-bold font-mono text-[var(--text-primary)]">
+                        {r.ovenTemp1 ?? r.temperatures?.ovenTemp1 ?? "—"} <span className="text-[10px] font-normal">°C</span>
+                      </p>
+                    </div>
+                    <div className="p-2 rounded-[4px] bg-[var(--surface)] border border-[var(--border)]">
+                      <p className="text-[10px] text-[var(--text-muted)] font-mono">{isJa ? "炉温 2" : "Oven 2"}</p>
+                      <p className="text-sm font-bold font-mono text-[var(--text-primary)]">
+                        {r.ovenTemp2 ?? r.temperatures?.ovenTemp2 ?? "—"} <span className="text-[10px] font-normal">°C</span>
+                      </p>
+                    </div>
+                    <div className="p-2 rounded-[4px] bg-[var(--surface)] border border-[var(--border)]">
+                      <p className="text-[10px] text-[var(--text-muted)] font-mono">{isJa ? "炉温 3" : "Oven 3"}</p>
+                      <p className="text-sm font-bold font-mono text-[var(--text-primary)]">
+                        {r.ovenTemp3 ?? r.temperatures?.ovenTemp3 ?? "—"} <span className="text-[10px] font-normal">°C</span>
+                      </p>
+                    </div>
+                    <div className="p-2 rounded-[4px] bg-[var(--surface)] border border-[var(--border)]">
+                      <p className="text-[10px] text-[var(--text-muted)] font-mono">{isJa ? "周囲温度" : "Ambient"}</p>
+                      <p className="text-sm font-bold font-mono text-[var(--text-primary)]">
+                        {r.ambientTemp ?? r.temperatures?.ambientTemp ?? "—"} <span className="text-[10px] font-normal">°C</span>
+                      </p>
+                    </div>
+                    <div className="p-2 rounded-[4px] bg-[var(--surface)] border border-[var(--border)] col-span-2 sm:col-span-1">
+                      <p className="text-[10px] text-[var(--text-muted)] font-mono">{isJa ? "湿度" : "Humidity"}</p>
+                      <p className="text-sm font-bold font-mono text-[var(--text-primary)]">
+                        {r.ambientHumidity ?? r.temperatures?.ambientHumidity ?? "—"} <span className="text-[10px] font-normal">%</span>
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
