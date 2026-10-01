@@ -490,12 +490,14 @@ export default function RecordDetailModal({ record, processName, onClose, onLotC
     ? String(record["材料ロット"]).split(",").map((l) => l.trim()).filter(Boolean)
     : [];
 
-  const SKIP    = new Set(["_id", "_source", "__v"]);
+  const SKIP    = new Set(["_id", "_source", "__v", "非不良廃棄_詳細"]);
   const entries = Object.entries(record).filter(([k]) => !SKIP.has(k) && record[k] != null && record[k] !== "");
 
   const kensaCounters = Object.entries(record?.Counters || {})
     .filter(([, v]) => Number(v) > 0)
     .map(([k, v]) => [k, v, true]);
+
+  const isHidase = record["工場"] === "肥田瀬";
 
   const keyFields = [
     ["工場",      record["工場"]],
@@ -504,8 +506,13 @@ export default function RecordDetailModal({ record, processName, onClose, onLotC
     ["設備",      record["設備"]],
     ["開始時刻",  record.Time_start],
     ["終了時刻",  record.Time_end],
-    ["稼働時間",  hrs != null ? `${hrs.toFixed(2)} hrs` : null],
+    ["稼働時間",  hrs != null ? `${hrs.toFixed(2)} hrs` : (record.Total_Work_Hours != null ? `${Number(record.Total_Work_Hours).toFixed(2)} hrs` : null)],
     ["数量 (Qty)", record.Process_Quantity],
+    ...(isHidase ? [
+      ["良品数 (Total)", record.Total],
+      ["非不良廃棄", record["非不良廃棄"]],
+      ["疵引処理数", record["疵引処理数"]],
+    ] : []),
     ["サイクルタイム", record.Cycle_Time ? `${record.Cycle_Time}s` : null],
     ["ショット数", record["ショット数"]],
     ...kensaCounters,
@@ -611,12 +618,17 @@ export default function RecordDetailModal({ record, processName, onClose, onLotC
         </div>
 
         {/* Stats strip */}
-        <div className="grid grid-cols-3 gap-2.5 px-6 py-4 border-b border-separator/40">
-          {[
+        <div className={`grid ${isHidase ? "grid-cols-2 sm:grid-cols-4" : "grid-cols-3"} gap-2.5 px-6 py-4 border-b border-separator/40`}>
+          {(isHidase ? [
+            { label: "Total (良品)", value: (Number(record.Total) || qty).toLocaleString(), color: "text-on-surface", bg: "bg-surface-container/60" },
+            { label: "処理数 (Qty)", value: (Number(record.Process_Quantity) || qty).toLocaleString(), color: "text-on-surface", bg: "bg-surface-container/60" },
+            { label: "非不良廃棄", value: Number(record["非不良廃棄"] ?? 0).toLocaleString(), color: Number(record["非不良廃棄"]) > 0 ? "text-amber-500" : "text-on-surface", bg: Number(record["非不良廃棄"]) > 0 ? "bg-amber-500/10" : "bg-surface-container/60" },
+            { label: "Total NG", value: ng, color: ng > 0 ? "text-error" : "text-on-surface", bg: ng > 0 ? "bg-error/8" : "bg-surface-container/60" },
+          ] : [
             { label: "Total",    value: qty.toLocaleString(), color: "text-on-surface",  bg: "bg-surface-container/60" },
             { label: "Total NG", value: ng,                   color: ng > 0 ? "text-error" : "text-on-surface", bg: ng > 0 ? "bg-error/8" : "bg-surface-container/60" },
             { label: "不良率",   value: `${defRate}%`,        color: defColor, bg: "bg-surface-container/60" },
-          ].map(({ label, value, color, bg }) => (
+          ]).map(({ label, value, color, bg }) => (
             <div key={label} className={`rounded-xl px-3 py-3 text-center border border-separator/40 ${bg}`}>
               <p className={`text-xl sm:text-2xl font-semibold leading-none ${color}`}>{value}</p>
               <p className="text-[10px] font-semibold text-outline uppercase tracking-wider mt-1.5">{label}</p>
@@ -660,6 +672,77 @@ export default function RecordDetailModal({ record, processName, onClose, onLotC
             </div>
           )}
         </div>
+
+        {/* 肥田瀬 初回生産品 / 終物 / サンプル / 調整用 (非不良廃棄) section */}
+        {isHidase && (record["非不良廃棄_詳細"] || record["非不良廃棄"] != null) && (
+          <div className="px-6 py-4 border-b border-separator/40 bg-surface-container/20">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <span className="material-symbols-outlined text-amber-500" style={{ fontSize: 18 }}>
+                  delete_sweep
+                </span>
+                <h4 className="text-xs font-semibold text-on-surface uppercase tracking-wider">
+                  初回生産品 ・ 終物 ・ サンプル ・ 調整用
+                </h4>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-[11px] text-outline">非不良廃棄 合計:</span>
+                <span className="px-2.5 py-0.5 rounded-full bg-amber-500/15 text-amber-500 text-xs font-bold font-mono">
+                  {Number(record["非不良廃棄"] ?? 0).toLocaleString()}
+                </span>
+              </div>
+            </div>
+
+            {(() => {
+              const details = record["非不良廃棄_詳細"] || {};
+              const categories = [
+                {
+                  label: "初回生産品",
+                  count: Number(details["初回生産品"] ?? record["初回生産品"] ?? 0),
+                  icon: "flag",
+                },
+                {
+                  label: "終物",
+                  count: Number(details["終物"] ?? record["終物"] ?? 0),
+                  icon: "stop_circle",
+                },
+                {
+                  label: "サンプル",
+                  count: Number(details["サンプル"] ?? record["サンプル"] ?? 0),
+                  icon: "science",
+                },
+                {
+                  label: "調整用",
+                  count: Number(details["調整用"] ?? record["調整用"] ?? 0),
+                  icon: "tune",
+                },
+              ];
+
+              return (
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                  {categories.map(({ label, count, icon }) => (
+                    <div
+                      key={label}
+                      className={`rounded-xl p-3 border transition-all ${
+                        count > 0
+                          ? "bg-amber-500/10 border-amber-500/30 shadow-sm"
+                          : "bg-surface-container/40 border-separator/30 opacity-70"
+                      }`}
+                    >
+                      <div className="flex items-center gap-1.5 text-outline mb-1">
+                        <span className="material-symbols-outlined text-[13px]">{icon}</span>
+                        <span className="text-[10px] font-semibold tracking-wide truncate">{label}</span>
+                      </div>
+                      <p className={`text-lg font-bold font-mono ${count > 0 ? "text-amber-500" : "text-on-surface-variant"}`}>
+                        {count.toLocaleString()}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              );
+            })()}
+          </div>
+        )}
 
         {/* Uploaded photos — collapsible */}
         {(() => {

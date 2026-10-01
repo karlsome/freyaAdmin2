@@ -5,13 +5,74 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { fetchExportTemplates, saveExportTemplate } from "../services/api";
 
+const EXCLUDED_EXPORT_KEYS = new Set([
+  "_id",
+  "_source",
+  "__v",
+  "editHistory",
+  "uniqueID",
+  "materialLabelImages",
+  "materialLabelImageCount",
+  "初物チェック画像",
+  "終物チェック画像",
+  "材料ラベル画像",
+  "Break_Time_Data",
+  "Maintenance_Data",
+  "StopCall",
+  "Counters",
+]);
+
+function shouldExcludeKey(key, value) {
+  if (EXCLUDED_EXPORT_KEYS.has(key)) return true;
+  if (/画像|Image|Images|Photo/i.test(key)) return true;
+  if (typeof value === "string" && (value.startsWith("http://") || value.startsWith("https://") || value.startsWith("data:image/"))) return true;
+  return false;
+}
+
+let cachedFontBase64 = null;
+
+async function loadJapaneseFont(doc) {
+  try {
+    if (!cachedFontBase64) {
+      const fontUrl = `${import.meta.env.BASE_URL}fonts/NotoSansJP-Regular.ttf`;
+      const res = await fetch(fontUrl);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const buffer = await res.arrayBuffer();
+      let binary = '';
+      const bytes = new Uint8Array(buffer);
+      const len = bytes.byteLength;
+      for (let i = 0; i < len; i += 8192) {
+        binary += String.fromCharCode.apply(null, bytes.subarray(i, Math.min(i + 8192, len)));
+      }
+      cachedFontBase64 = btoa(binary);
+    }
+    doc.addFileToVFS('NotoSansJP-Regular.ttf', cachedFontBase64);
+    doc.addFont('NotoSansJP-Regular.ttf', 'NotoSansJP', 'normal');
+    doc.setFont('NotoSansJP');
+    return true;
+  } catch (err) {
+    console.warn("Japanese font load failed, falling back to default font:", err);
+    return false;
+  }
+}
+
 function flattenObject(obj, prefix = '') {
   const flattened = {};
   for (const key in obj) {
     if (!Object.prototype.hasOwnProperty.call(obj, key)) continue;
     
-    // Ignore internal or unhelpful keys
-    if (key === '_id' || key === 'editHistory') continue;
+    // Ignore internal, image, or technical tracking keys
+    if (shouldExcludeKey(key, obj[key])) continue;
+
+    // For 肥田瀬 non-defect disposal detail, flatten directly into clean category names
+    if (key === '非不良廃棄_詳細' && typeof obj[key] === 'object' && obj[key] !== null) {
+      const details = obj[key];
+      flattened["初回生産品"] = details["初回生産品"] ?? 0;
+      flattened["終物"] = details["終物"] ?? 0;
+      flattened["サンプル"] = details["サンプル"] ?? 0;
+      flattened["調整用"] = details["調整用"] ?? 0;
+      continue;
+    }
 
     if (obj[key] === null || obj[key] === undefined) {
       flattened[prefix + key] = '';
@@ -25,7 +86,10 @@ function flattenObject(obj, prefix = '') {
           Object.assign(flattened, nested);
         });
       } else {
-        flattened[prefix + key] = obj[key].join(', ');
+        const filtered = obj[key].filter(v => typeof v !== 'string' || (!v.startsWith('http') && !v.startsWith('data:')));
+        if (filtered.length > 0) {
+          flattened[prefix + key] = filtered.join(', ');
+        }
       }
     } else {
       flattened[prefix + key] = obj[key];
@@ -47,7 +111,26 @@ export default function ExportOptionsModal({ data, onClose, processName = "Expor
       const flat = flattenObject(item);
       Object.keys(flat).forEach(k => headerSet.add(k));
     });
-    return Array.from(headerSet).sort();
+
+    const PRIORITY_ORDER = [
+      "Date", "日付", "Time_start", "開始時刻", "Time_end", "終了時刻",
+      "工場", "品番", "背番号", "設備", "Worker_Name", "作業者",
+      "Process_Quantity", "Total", "良品",
+      "非不良廃棄", "初回生産品", "終物", "サンプル", "調整用", "疵引処理数",
+      "Total_NG", "SRS_Total_NG", "不良率",
+      "Total_Work_Hours", "稼働時間", "Cycle_Time", "サイクルタイム",
+      "ショット数", "疵引不良", "加工不良", "その他", "Spare", "材料ロット", "Comment", "コメント"
+    ];
+    const priorityIndex = (h) => {
+      const idx = PRIORITY_ORDER.indexOf(h);
+      return idx === -1 ? 999 : idx;
+    };
+    return Array.from(headerSet).sort((a, b) => {
+      const pa = priorityIndex(a);
+      const pb = priorityIndex(b);
+      if (pa !== pb) return pa - pb;
+      return a.localeCompare(b, "ja");
+    });
   }, [data]);
 
   // Load templates on mount
@@ -215,7 +298,7 @@ export default function ExportOptionsModal({ data, onClose, processName = "Expor
     });
 
     const csv = Papa.unparse(csvData, { columns: cols });
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.setAttribute("href", url);
@@ -225,7 +308,7 @@ export default function ExportOptionsModal({ data, onClose, processName = "Expor
     onClose();
   };
 
-  const executeExportPDF = () => {
+  const executeExportPDF = async () => {
     const cols = getOrderedColumns();
     if (cols.length === 0) return alert("Please select at least one column.");
 
@@ -234,17 +317,31 @@ export default function ExportOptionsModal({ data, onClose, processName = "Expor
 
     // Initialize jsPDF in landscape
     const doc = new jsPDF({ orientation: "landscape" });
-    
+
+    // Load Japanese font (cached after first load)
+    const hasJpFont = await loadJapaneseFont(doc);
+
     // Auto-table with auto-scaling to fit the page
     autoTable(doc, {
       head: [cols],
       body: tableBody,
-      styles: { fontSize: 8 },
-      headStyles: { fillColor: [66, 133, 244] },
-      margin: { top: 15 },
-      horizontalPageBreak: true, 
-      didDrawPage: function (data) {
-        doc.text(`${processName} Report`, data.settings.margin.left, 10);
+      styles: {
+        font: hasJpFont ? 'NotoSansJP' : undefined,
+        fontSize: 7.5,
+        overflow: 'ellipsize',
+        cellPadding: 1.5,
+      },
+      headStyles: {
+        font: hasJpFont ? 'NotoSansJP' : undefined,
+        fillColor: [66, 133, 244],
+        textColor: 255,
+      },
+      margin: { top: 15, left: 8, right: 8, bottom: 8 },
+      horizontalPageBreak: false,
+      didDrawPage: function (pageData) {
+        if (hasJpFont) doc.setFont('NotoSansJP');
+        doc.setFontSize(10);
+        doc.text(`${processName} Report`, pageData.settings.margin.left, 10);
       }
     });
 

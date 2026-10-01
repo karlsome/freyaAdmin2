@@ -848,12 +848,18 @@ async function _buildProdQuery(factory, start, end, partNumbers, serialNumbers, 
       continue;
     }
 
+    let targetField = field;
+    if (field === "初回生産品") targetField = "非不良廃棄_詳細.初回生産品";
+    else if (field === "終物") targetField = "非不良廃棄_詳細.終物";
+    else if (field === "サンプル") targetField = "非不良廃棄_詳細.サンプル";
+    else if (field === "調整用") targetField = "非不良廃棄_詳細.調整用";
+
     const coerced = (_NUMBER_FIELDS.has(field) || type === "number") ? Number(value) : value;
     let clause = null;
 
     switch (operator) {
       case "equals":
-        clause = { [field]: coerced };
+        clause = { [targetField]: coerced };
         break;
       case "in": {
         const values = Array.isArray(value)
@@ -863,17 +869,17 @@ async function _buildProdQuery(factory, start, end, partNumbers, serialNumbers, 
               .map((item) => item.trim())
               .filter(Boolean)
               .map((item) => ((_NUMBER_FIELDS.has(field) || type === "number") ? Number(item) : item));
-        clause = values.length ? { [field]: { $in: values } } : null;
+        clause = values.length ? { [targetField]: { $in: values } } : null;
         break;
       }
       case "contains":
-        clause = { [field]: { $regex: value, $options: "i" } };
+        clause = { [targetField]: { $regex: value, $options: "i" } };
         break;
       case "greater_than":
-        clause = { [field]: { $gt: coerced } };
+        clause = { [targetField]: { $gt: coerced } };
         break;
       case "less_than":
-        clause = { [field]: { $lt: coerced } };
+        clause = { [targetField]: { $lt: coerced } };
         break;
       default:
         break;

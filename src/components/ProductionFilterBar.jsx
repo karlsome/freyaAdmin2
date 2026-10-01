@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { fetchDistinctValues } from "../services/api";
 import AdvancedFilterSection from "./AdvancedFilterSection";
 import FormField from "./FormField";
@@ -96,6 +96,21 @@ export default function ProductionFilterBar({
   const [customFields, setCustomFields] = useState([]);
   const [activeCustomRowId, setActiveCustomRowId] = useState(null);
 
+  const activeSchema = useMemo(() => {
+    if (factoryName === "肥田瀬") {
+      return [
+        ...FILTER_SCHEMA,
+        { field: "非不良廃棄", label: "非不良廃棄", type: "number", group: "Quantity & Performance", operators: ["equals", "not_equals", "greater_than", "less_than", "exists", "not_exists"] },
+        { field: "疵引処理数", label: "疵引処理数", type: "number", group: "Quantity & Performance", operators: ["equals", "not_equals", "greater_than", "less_than", "exists", "not_exists"] },
+        { field: "初回生産品", label: "初回生産品", type: "number", group: "Quantity & Performance", operators: ["equals", "not_equals", "greater_than", "less_than", "exists", "not_exists"] },
+        { field: "終物", label: "終物", type: "number", group: "Quantity & Performance", operators: ["equals", "not_equals", "greater_than", "less_than", "exists", "not_exists"] },
+        { field: "サンプル", label: "サンプル", type: "number", group: "Quantity & Performance", operators: ["equals", "not_equals", "greater_than", "less_than", "exists", "not_exists"] },
+        { field: "調整用", label: "調整用", type: "number", group: "Quantity & Performance", operators: ["equals", "not_equals", "greater_than", "less_than", "exists", "not_exists"] },
+      ];
+    }
+    return FILTER_SCHEMA;
+  }, [factoryName]);
+
   const handleAddRow    = () => setFilterRows((r) => [...r, newRow()]);
   const handleRemoveRow = (id) => setFilterRows((r) => r.filter((x) => x.id !== id));
   const handleClearRows = () => setFilterRows([newRow()]);
@@ -105,7 +120,7 @@ export default function ProductionFilterBar({
       if (x.id !== id) return x;
       const next = { ...x, ...patch };
       if ("field" in patch && patch.field !== x.field) {
-        const def = [...FILTER_SCHEMA, ...customFields].find((s) => s.field === patch.field);
+        const def = [...activeSchema, ...customFields].find((s) => s.field === patch.field);
         next.operator = def?.operators?.[0] || "equals";
         next.value = next.operator === "in" ? [] : "";
       }
@@ -150,7 +165,7 @@ export default function ProductionFilterBar({
 
   const handleApply = () => {
     const advancedFilters = filterRows.filter(hasFilterValue).map(row => {
-      const def = [...FILTER_SCHEMA, ...customFields].find(s => s.field === row.field);
+      const def = [...activeSchema, ...customFields].find(s => s.field === row.field);
       return { ...row, type: def?.type || "text" };
     });
     onApply?.({ dateFrom, dateTo, partNumbers, serialNumbers, advancedFilters });
@@ -208,7 +223,7 @@ export default function ProductionFilterBar({
       <div className="mt-4 pt-4 border-t border-separator/30">
         <AdvancedFilterSection
           rows={filterRows}
-          fieldDefinitions={[...FILTER_SCHEMA, ...customFields]}
+          fieldDefinitions={[...activeSchema, ...customFields]}
           onUpdateRow={handleUpdateRow}
           onAddRow={handleAddRow}
           onRemoveRow={handleRemoveRow}

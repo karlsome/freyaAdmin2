@@ -340,15 +340,29 @@ export default function FactoryDetailPage({ combined = false }) {
     return { proc, total, ng, rate, accent: PROCESS_ACCENT[proc] ?? { color: "text-primary", bg: "bg-primary/10" } };
   });
 
+  const isHidase = !combined && factoryName === "肥田瀬";
+
+  const stripDisposal = isHidase
+    ? allFlat.reduce((s, r) => s + (Number(r["非不良廃棄"]) || 0), 0)
+    : 0;
+
   const overviewSummaryCards = [
     {
       key: "total-processed",
       icon: "output",
-      label: "Total Processed",
+      label: isHidase ? "Total Processed (処理数)" : "Total Processed",
       value: stripTotal.toLocaleString(),
-      subtitle: "units processed",
+      subtitle: isHidase ? "total units processed" : "units processed",
       accent: "text-primary bg-primary/10",
     },
+    ...(isHidase ? [{
+      key: "non-defect-disposal",
+      icon: "delete_sweep",
+      label: "非不良廃棄",
+      value: stripDisposal.toLocaleString(),
+      subtitle: "non-defective scrap",
+      accent: "text-amber-500 bg-amber-500/10",
+    }] : []),
     {
       key: "ng-units",
       icon: "report",
@@ -428,7 +442,7 @@ export default function FactoryDetailPage({ combined = false }) {
       {/* ── Summary strip ── */}
       <div className="space-y-3 mb-6">
         {/* Row 1: overall */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className={`grid grid-cols-2 ${isHidase ? "md:grid-cols-5" : "md:grid-cols-4"} gap-4`}>
           {overviewSummaryCards.map((card) => (
             <StatSummaryCard
               key={card.key}
@@ -563,6 +577,7 @@ export default function FactoryDetailPage({ combined = false }) {
                   processName={proc}
                   rows={currentRows[proc] ?? []}
                   showFactoryColumn={combined}
+                  factoryName={combined ? null : factoryName}
                   onRowClick={(record, pName) => {
                     openRecord(record, pName);
                   }}
