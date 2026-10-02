@@ -2,7 +2,9 @@ import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
 import LiquidSegmentedControl from "./LiquidSegmentedControl";
+import SensorDevicePhotoPreviewModal from "./SensorDevicePhotoPreviewModal";
 import { useLanguage } from "../contexts/LanguageContext";
+import { fetchMasterImage } from "../services/api";
 
 /**
  * FirstFactoryDetailModal
@@ -13,9 +15,7 @@ import { useLanguage } from "../contexts/LanguageContext";
  */
 export default function FirstFactoryDetailModal({
   roll,
-  allRolls = [],
   onClose,
-  onSelectRoll,
   zIndex = "z-50",
 }) {
   const { language } = useLanguage();
@@ -23,19 +23,29 @@ export default function FirstFactoryDetailModal({
   const navigate = useNavigate();
 
   const [activeTab, setActiveTab] = useState("spec");
-  const [photoExpanded, setPhotoExpanded] = useState(false);
-  const [currentRoll, setCurrentRoll] = useState(roll);
+  const [photoPreview, setPhotoPreview] = useState(null);
+  const [masterImage, setMasterImage] = useState(null);
 
+  const r = roll;
+
+  // Master image fallback if record lacks camera photo
   useEffect(() => {
-    setCurrentRoll(roll);
-  }, [roll]);
+    if (!r) return;
+    if (!r.imageUrl && !r.photoUrl && !r.imageURL && (r.hinban || r.labelHinban)) {
+      let cancelled = false;
+      fetchMasterImage(r.hinban, r.labelHinban).then((img) => {
+        if (!cancelled && img) setMasterImage(img);
+      });
+      return () => { cancelled = true; };
+    }
+  }, [r]);
 
   // Handle ESC key to close
   useEffect(() => {
     function handleKeyDown(e) {
       if (e.key === "Escape") {
-        if (photoExpanded) {
-          setPhotoExpanded(false);
+        if (photoPreview) {
+          setPhotoPreview(null);
         } else {
           onClose();
         }
@@ -43,11 +53,39 @@ export default function FirstFactoryDetailModal({
     }
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [onClose, photoExpanded]);
+  }, [onClose, photoPreview]);
 
-  if (!currentRoll) return null;
+  if (!r) return null;
 
-  const r = currentRoll;
+  const photoUrl =
+    r.imageUrl ||
+    r.photoUrl ||
+    r.imageURL ||
+    (Array.isArray(r.items) && r.items.find((it) => it.imageUrl || it.imageURL)?.imageUrl) ||
+    masterImage?.imageURL ||
+    null;
+
+  const handleOpenPhotoPreview = () => {
+    if (!photoUrl) return;
+    setPhotoPreview({
+      eyebrow: isJa ? "材料現品票写真" : "Material Label Photo",
+      displayName: r.hinmei || r.hinban || (isJa ? "第一工場 PSA ラミネート" : "First Factory PSA Laminating"),
+      subtitle: [
+        r.hinban,
+        r.labelHinban ? `Label: ${r.labelHinban}` : null,
+        r.lotNo ? `Lot: ${r.lotNo}` : null,
+        r.uniqueID ? `ID: ${r.uniqueID}` : null,
+      ].filter(Boolean).join(" / "),
+      images: [
+        {
+          url: photoUrl,
+          label: r.hinmei || r.hinban || (isJa ? "材料現品票写真" : "Material Label Photo"),
+        },
+      ],
+      activeIndex: 0,
+    });
+  };
+
   const status = (r.status || "queue").toLowerCase();
 
   const statusMeta =
@@ -92,14 +130,6 @@ export default function FirstFactoryDetailModal({
       badge: Array.isArray(r.printHistory) ? r.printHistory.length : 0,
     },
   ];
-
-  const rollTabs = (allRolls || []).map((item, idx) => ({
-    key: String(item._id || item.itemId || idx),
-    label: `Roll ${item.rollIndex ?? idx + 1}/${item.totalRolls ?? allRolls.length}`,
-    item,
-  }));
-
-  const activeRollKey = String(r._id || r.itemId || "");
 
   const modal = (
     <div
@@ -151,41 +181,6 @@ export default function FirstFactoryDetailModal({
 
         {/* ── Body ── */}
         <div className="p-6 space-y-5 flex-1">
-          {/* Quick Roll Switcher (if multiple rolls exist) */}
-          {rollTabs.length > 1 && (
-            <div className="flex items-center gap-2 overflow-x-auto pb-1 border-b border-[var(--border)]">
-              <span className="text-[10px] font-mono uppercase tracking-wider text-[var(--text-muted)] flex-shrink-0 mr-1">
-                {isJa ? "巻選択:" : "Rolls:"}
-              </span>
-              {rollTabs.map((rt) => {
-                const isSelected = rt.key === activeRollKey;
-                const isCompleted = rt.item.status === "completed";
-                return (
-                  <button
-                    key={rt.key}
-                    type="button"
-                    onClick={() => {
-                      setCurrentRoll(rt.item);
-                      if (onSelectRoll) onSelectRoll(rt.item);
-                    }}
-                    className={`px-2.5 py-1 rounded-[4px] text-xs font-mono font-semibold transition-colors flex items-center gap-1.5 flex-shrink-0 ${
-                      isSelected
-                        ? "bg-[var(--freya-blue)] text-white shadow-xs"
-                        : "bg-[var(--surface)] border border-[var(--border)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-hover)]"
-                    }`}
-                  >
-                    <span
-                      className={`w-1.5 h-1.5 rounded-full ${
-                        isCompleted ? (isSelected ? "bg-white" : "bg-emerald-500") : isSelected ? "bg-white/80" : "bg-amber-400"
-                      }`}
-                    />
-                    {rt.label}
-                  </button>
-                );
-              })}
-            </div>
-          )}
-
           {/* ── Key Metrics Cards ── */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <div className="p-3 rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)]">
@@ -250,6 +245,65 @@ export default function FirstFactoryDetailModal({
           {/* ── Tab Content ── */}
           {activeTab === "spec" && (
             <div className="space-y-4">
+              {/* Photo Preview Card */}
+              {photoUrl ? (
+                <div className="p-3.5 rounded-[8px] border border-[var(--border)] bg-[var(--surface-subtle)] flex flex-col sm:flex-row items-center sm:items-start gap-4">
+                  <div
+                    onClick={handleOpenPhotoPreview}
+                    className="relative group cursor-zoom-in rounded-[6px] overflow-hidden border border-[var(--border)] bg-black/5 hover:border-[var(--freya-blue)] transition-all flex-shrink-0"
+                    title={isJa ? "クリックして拡大表示" : "Click to enlarge"}
+                  >
+                    <img
+                      src={photoUrl}
+                      alt={isJa ? "材料現品票写真" : "Material Label Photo"}
+                      className="h-36 sm:h-44 w-auto max-w-full object-contain rounded-[5px]"
+                    />
+                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/25 flex items-center justify-center transition-colors">
+                      <span className="material-symbols-outlined text-white opacity-0 group-hover:opacity-100 drop-shadow-md text-2xl transition-opacity">
+                        zoom_in
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="flex-1 min-w-0 space-y-2 text-xs w-full">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] font-bold text-[var(--text-primary)] flex items-center gap-1.5 font-mono">
+                        <span className="material-symbols-outlined text-[var(--freya-blue)]" style={{ fontSize: 16 }}>photo_camera</span>
+                        {isJa ? "材料現品票写真" : "Material Label Photo"}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={handleOpenPhotoPreview}
+                        className="text-[11px] font-mono font-semibold text-[var(--freya-blue)] hover:underline inline-flex items-center gap-0.5"
+                      >
+                        <span className="material-symbols-outlined" style={{ fontSize: 14 }}>fullscreen</span>
+                        {isJa ? "拡大" : "Enlarge"}
+                      </button>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2 text-[11px] font-mono">
+                      {r.lotNo && (
+                        <div>
+                          <span className="text-[var(--text-muted)]">{isJa ? "ロット: " : "Lot: "}</span>
+                          <span className="font-semibold text-[var(--text-primary)]">{r.lotNo}</span>
+                        </div>
+                      )}
+                      {(r.rawMaterialLength || r.meters) && (
+                        <div>
+                          <span className="text-[var(--text-muted)]">{isJa ? "材料長: " : "Length: "}</span>
+                          <span className="font-semibold text-[var(--text-primary)]">{r.rawMaterialLength || r.meters} m</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="p-3.5 rounded-[8px] border border-dashed border-[var(--border)] bg-[var(--surface-subtle)] text-center text-xs text-[var(--text-muted)] font-mono flex items-center justify-center gap-2">
+                  <span className="material-symbols-outlined" style={{ fontSize: 16 }}>no_photography</span>
+                  <span>{isJa ? "材料現品票写真なし" : "No photo captured for this roll"}</span>
+                </div>
+              )}
+
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2.5 text-xs">
                 <div className="flex justify-between border-b border-[var(--border)] pb-1.5">
                   <span className="text-[var(--text-muted)] font-mono">{isJa ? "品番" : "Part Number"}:</span>
@@ -347,12 +401,12 @@ export default function FirstFactoryDetailModal({
                 <p className="text-[10px] font-semibold text-[var(--text-muted)] uppercase tracking-wider font-mono">
                   {isJa ? "材料現品ラベル写真" : "Material Label Photo"}
                 </p>
-                {r.imageUrl ? (
+                {photoUrl ? (
                   <div className="relative inline-block">
                     <img
-                      src={r.imageUrl}
+                      src={photoUrl}
                       alt={isJa ? "材料ラベル写真" : "Material label photo"}
-                      onClick={() => setPhotoExpanded(true)}
+                      onClick={handleOpenPhotoPreview}
                       className="max-h-56 max-w-full rounded-[6px] border border-[var(--border)] object-contain cursor-zoom-in hover:border-[var(--freya-blue)] transition-colors bg-black/10"
                     />
                     <p className="text-[10px] text-[var(--text-muted)] mt-1 font-mono">
@@ -608,28 +662,12 @@ export default function FirstFactoryDetailModal({
         </div>
       </div>
 
-      {/* ── Expanded Photo Lightbox ── */}
-      {photoExpanded && r.imageUrl && (
-        <div
-          className="fixed inset-0 z-[60] flex items-center justify-center bg-black/85 p-4"
-          onClick={() => setPhotoExpanded(false)}
-        >
-          <div className="relative max-w-4xl max-h-[90vh]" onClick={(e) => e.stopPropagation()}>
-            <img
-              src={r.imageUrl}
-              alt={isJa ? "材料ラベル拡大" : "Expanded label"}
-              className="max-h-[85vh] max-w-full rounded-[8px] object-contain shadow-2xl"
-            />
-            <button
-              type="button"
-              onClick={() => setPhotoExpanded(false)}
-              className="absolute top-3 right-3 w-8 h-8 rounded-full bg-black/60 text-white flex items-center justify-center hover:bg-black/90 transition-colors"
-            >
-              <span className="material-symbols-outlined" style={{ fontSize: 20 }}>close</span>
-            </button>
-          </div>
-        </div>
-      )}
+      {/* ── Standard Photo Preview Modal ── */}
+      <SensorDevicePhotoPreviewModal
+        preview={photoPreview}
+        onClose={() => setPhotoPreview(null)}
+        zIndex="z-[9999]"
+      />
     </div>
   );
 

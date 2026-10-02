@@ -26,7 +26,14 @@ import { useRecordModal } from "../hooks/useRecordModal";
 import { useLanguage } from "../contexts/LanguageContext";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
-function fmtDate(d) { return d.toISOString().split("T")[0]; }
+function fmtDate(d) {
+  if (!d) return "";
+  if (typeof d === "string") return d.split("T")[0];
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
 function todayStr() { return fmtDate(new Date()); }
 
 function defectChip(rate) {
@@ -252,39 +259,6 @@ function MfgLotModal({ onClose, initialLot = "", initialHinban = "" }) {
   return createPortal(modal, document.body);
 }
 
-// ─── Helpers for First Factory (PSA Process) ─────────────────────────────────
-function prepareRollForModal(record, allPsaRecords = []) {
-  if (!record) return { roll: null, allRolls: [] };
-
-  if (Array.isArray(record.items) && record.items.length > 0) {
-    const rolls = record.items.map((it, idx) => ({
-      ...record,
-      ...it,
-      _id: it.id || `${record._id}_${idx}`,
-      rollIndex: it.rollIndex ?? idx + 1,
-      totalRolls: it.totalRolls ?? record.items.length,
-      meters: it.meters ?? it.rollMeters ?? record.totalMeters,
-      hinban: it.hinban || record.hinban,
-      hinmei: it.hinmei || record.hinmei,
-      kizai: it.kizai || record.kizai,
-      machine: it.machine || record.machine || "PSA2",
-      worker: it.worker || record.worker || "—",
-      status: record.status || "completed",
-    }));
-    return { roll: rolls[0], allRolls: rolls };
-  }
-
-  let siblings = [];
-  if (record.groupId) {
-    siblings = allPsaRecords.filter((x) => x.groupId === record.groupId);
-  } else if (record.date && record.hinban) {
-    siblings = allPsaRecords.filter((x) => x.date === record.date && x.hinban === record.hinban);
-  }
-  if (!siblings.length) siblings = [record];
-
-  return { roll: record, allRolls: siblings };
-}
-
 // ─── Main page ────────────────────────────────────────────────────────────────
 export default function FactoryDetailPage({ combined = false }) {
   const { language, t } = useLanguage();
@@ -314,11 +288,35 @@ export default function FactoryDetailPage({ combined = false }) {
   };
 
   const storedFilters = getStoredFilters();
-  const [dateFrom,      setDateFrom]      = useState(initialDateFrom !== todayStr() ? initialDateFrom : (storedFilters.dateFrom || initialDateFrom));
-  const [dateTo,        setDateTo]        = useState(initialDateTo !== todayStr() ? initialDateTo : (storedFilters.dateTo || initialDateTo));
+  const hasExplicitUrlDates = Boolean(searchParams.get("dateFrom") || searchParams.get("dateTo"));
+  // If storedFilters has a dateTo in the past (before today), it's stale history from a previous session — default to today
+  const isStoredDateStale = Boolean(storedFilters.dateTo && storedFilters.dateTo < todayStr());
+
+  const [dateFrom,      setDateFrom]      = useState(() => {
+    if (hasExplicitUrlDates) return initialDateFrom;
+    if (isStoredDateStale) return todayStr();
+    return storedFilters.dateFrom || initialDateFrom;
+  });
+  const [dateTo,        setDateTo]        = useState(() => {
+    if (hasExplicitUrlDates) return initialDateTo;
+    if (isStoredDateStale) return todayStr();
+    return storedFilters.dateTo || initialDateTo;
+  });
   const [partNumbers,   setPartNumbers]   = useState(storedFilters.partNumbers || []);
   const [serialNumbers, setSerialNumbers] = useState(initialSebanggo ? [initialSebanggo] : (storedFilters.serialNumbers || []));
   const [advancedFilters, setAdvancedFilters] = useState(storedFilters.advancedFilters || []);
+
+  // If stored date was stale, clean it up so subsequent loads are fresh
+  useEffect(() => {
+    if (isStoredDateStale) {
+      try {
+        const next = { ...storedFilters, dateFrom: todayStr(), dateTo: todayStr() };
+        window.localStorage.setItem(storageKey, JSON.stringify(next));
+      } catch (e) {
+        // ignore
+      }
+    }
+  }, [isStoredDateStale, storageKey]);
 
   const [prodData,      setProdData]      = useState(null);
   const [sensor,        setSensor]        = useState(null);
@@ -329,7 +327,6 @@ export default function FactoryDetailPage({ combined = false }) {
   // First Factory (PSA Process) dedicated states
   const [psaRecords, setPsaRecords] = useState([]);
   const [selectedPsaRoll, setSelectedPsaRoll] = useState(null);
-  const [selectedPsaRollsList, setSelectedPsaRollsList] = useState([]);
   const [psaSearchTerm, setPsaSearchTerm] = useState("");
   const [psaStatusFilter, setPsaStatusFilter] = useState("all");
 
@@ -358,10 +355,11 @@ export default function FactoryDetailPage({ combined = false }) {
       return;
     }
 
-    const [p, s, e] = await Promise.allSettled([
+    const [p, s, e, psa] = await Promise.allSettled([
       fetchProductionByPeriod(combined ? null : factoryName, from, to, parts, serials, filters),
       combined ? fetchCombinedSensorData(from) : fetchSensorData(factoryName, from),
       combined ? fetchCombinedEnvironmentalData() : fetchEnvironmentalData(factoryName),
+      combined ? fetchFirstFactoryProductionByPeriod(from, to, parts, { advancedFilters: filters }) : Promise.resolve([]),
     ]);
     if (p.status === "fulfilled") {
       setProdData(p.value);
@@ -369,6 +367,7 @@ export default function FactoryDetailPage({ combined = false }) {
     }
     if (s.status === "fulfilled") setSensor(s.value);
     if (e.status === "fulfilled") setEnv(e.value);
+    if (psa.status === "fulfilled") setPsaRecords(psa.value || []);
     setLoading(false);
   }, [combined, factoryName, isFirstFactory]);
 
@@ -403,13 +402,17 @@ export default function FactoryDetailPage({ combined = false }) {
     let toDate = new Date();
 
     if (preset === "today") {
-      // today
+      fromDate = today;
+      toDate = today;
     } else if (preset === "7days") {
       fromDate.setDate(today.getDate() - 6);
+      toDate = today;
     } else if (preset === "30days") {
       fromDate.setDate(today.getDate() - 29);
+      toDate = today;
     } else if (preset === "thisMonth") {
       fromDate = new Date(today.getFullYear(), today.getMonth(), 1);
+      toDate = today;
     } else if (preset === "prevMonth") {
       fromDate = new Date(today.getFullYear(), today.getMonth() - 1, 1);
       toDate = new Date(today.getFullYear(), today.getMonth(), 0);
@@ -436,15 +439,15 @@ export default function FactoryDetailPage({ combined = false }) {
     let manualCount = 0;
 
     (psaRecords || []).forEach((r) => {
-      const m = Number(r.totalMeters) || Number(r.meters) || Number(r.rollMeters) || 0;
+      const m = Number(r.meters) || Number(r.rollMeters) || Number(r.totalMeters) || 0;
       totalMeters += m;
-      const rolls = r.totalRolls || (Array.isArray(r.items) ? r.items.length : 1);
-      totalRolls += rolls;
+      const rollCount = Array.isArray(r.items) && r.items.length > 0 ? r.items.length : 1;
+      totalRolls += rollCount;
 
-      const st = (r.status || "").toLowerCase();
-      if (st === "completed") completedRolls += rolls;
-      else if (st === "in-progress" || st === "active") inProgressRolls += rolls;
-      else queuedRolls += rolls;
+      const st = (r.status || "queue").toLowerCase();
+      if (st === "completed") completedRolls += rollCount;
+      else if (st === "in-progress" || st === "active") inProgressRolls += rollCount;
+      else queuedRolls += rollCount;
 
       if (r.manualAdvance || (Array.isArray(r.printHistory) && r.printHistory.some((p) => p.manualAdvance))) {
         manualCount++;
@@ -453,7 +456,7 @@ export default function FactoryDetailPage({ combined = false }) {
 
     const progressRate = totalRolls > 0 ? Math.round((completedRolls / totalRolls) * 100) : 0;
     return {
-      totalMeters,
+      totalMeters: Math.round(totalMeters * 10) / 10,
       totalRolls,
       completedRolls,
       inProgressRolls,
@@ -506,9 +509,7 @@ export default function FactoryDetailPage({ combined = false }) {
   }, [isFirstFactory, psaRecords, psaStatusFilter, psaSearchTerm]);
 
   const handleOpenPsaRoll = (rec) => {
-    const { roll, allRolls } = prepareRollForModal(rec, psaRecords);
-    setSelectedPsaRoll(roll);
-    setSelectedPsaRollsList(allRolls);
+    setSelectedPsaRoll(rec);
   };
 
   const sections     = prodData?.sections ?? {};
@@ -756,7 +757,7 @@ export default function FactoryDetailPage({ combined = false }) {
             </div>
 
             {/* Row 2: per-process telemetry */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className={`grid grid-cols-1 sm:grid-cols-2 ${combined ? "lg:grid-cols-5" : "lg:grid-cols-4"} gap-4`}>
               {perProcess.map(({ proc, total, ng, rate }) => (
                 <StatSummaryCard
                   key={proc}
@@ -773,6 +774,23 @@ export default function FactoryDetailPage({ combined = false }) {
                   loading={loading}
                 />
               ))}
+              {combined && (
+                <div onClick={() => navigate("/factory/第一工場")} className="cursor-pointer" title={isJa ? "第一工場の詳細画面へ" : "Go to First Factory page"}>
+                  <StatSummaryCard
+                    variant="freya"
+                    label={isJa ? "第一工場 PSA工程" : "First Factory PSA"}
+                    value={psaStats.totalMeters > 0 ? `${psaStats.totalMeters.toLocaleString()} m` : (psaRecords.length > 0 ? `${psaRecords.length} records` : "—")}
+                    subtitle={
+                      psaStats.totalRolls > 0
+                        ? (isJa ? `完了: ${psaStats.completedRolls}/${psaStats.totalRolls} ロール (詳細へ)` : `${psaStats.completedRolls}/${psaStats.totalRolls} rolls (click for details)`)
+                        : (isJa ? "第一工場で確認" : "Click to view First Factory")
+                    }
+                    statusDot={psaStats.inProgressRolls > 0 ? "warning" : psaStats.completedRolls > 0 ? "complete" : undefined}
+                    icon="layers"
+                    loading={loading}
+                  />
+                </div>
+              )}
             </div>
           </>
         )}
@@ -981,7 +999,7 @@ export default function FactoryDetailPage({ combined = false }) {
                   <tbody className="divide-y divide-[var(--border)]">
                     {filteredPsaRecords.map((r, i) => {
                       const totalRolls = r.totalRolls || (Array.isArray(r.items) ? r.items.length : 1);
-                      let meters = Number(r.totalMeters) || Number(r.meters) || Number(r.rollMeters) || 0;
+                      let meters = Number(r.meters) || Number(r.rollMeters) || Number(r.totalMeters) || 0;
                       if (!meters && Array.isArray(r.items)) {
                         meters = r.items.reduce((acc, it) => acc + (Number(it.meters) || 0), 0);
                       }
@@ -1185,12 +1203,7 @@ export default function FactoryDetailPage({ combined = false }) {
       {selectedPsaRoll && (
         <FirstFactoryDetailModal
           roll={selectedPsaRoll}
-          allRolls={selectedPsaRollsList}
-          onClose={() => {
-            setSelectedPsaRoll(null);
-            setSelectedPsaRollsList([]);
-          }}
-          onSelectRoll={(r) => setSelectedPsaRoll(r)}
+          onClose={() => setSelectedPsaRoll(null)}
         />
       )}
 

@@ -16,7 +16,6 @@ export default function FactoriesPage() {
   const { t } = useLanguage();
 
   const [firstFactoryRoll, setFirstFactoryRoll] = useState(null);
-  const [firstFactoryAllRolls, setFirstFactoryAllRolls] = useState([]);
   const [showFirstFactoryModal, setShowFirstFactoryModal] = useState(false);
 
   const total    = factories.length;
@@ -70,7 +69,6 @@ export default function FactoriesPage() {
                 onDefectClick={openRecord}
                 onPsaRollClick={(roll) => {
                   setFirstFactoryRoll(roll);
-                  setFirstFactoryAllRolls(factory.records || []);
                   setShowFirstFactoryModal(true);
                 }}
               />
@@ -88,9 +86,7 @@ export default function FactoriesPage() {
       {showFirstFactoryModal && (
         <FirstFactoryDetailModal
           roll={firstFactoryRoll}
-          allRolls={firstFactoryAllRolls}
           onClose={() => setShowFirstFactoryModal(false)}
-          onSelectRoll={(r) => setFirstFactoryRoll(r)}
         />
       )}
     </section>

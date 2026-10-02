@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { fetchDistinctValues } from "../services/api";
 import AdvancedFilterSection from "./AdvancedFilterSection";
 import FormField from "./FormField";
@@ -79,7 +79,13 @@ function newRow() { return { id: ++_rowId, field: "", operator: "equals", value:
 //   onApply          — callback({ dateFrom, dateTo, partNumbers, serialNumbers, advancedFilters })
 //   onLotFinderOpen  — optional callback; when provided, shows Manufacturing Lot Finder button
 //   children         — optional extra filter fields rendered inside the same grid
-function todayStr() { return new Date().toISOString().split("T")[0]; }
+function todayStr() {
+  const d = new Date();
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
 
 export default function ProductionFilterBar({
   factoryName,
@@ -98,6 +104,23 @@ export default function ProductionFilterBar({
   const [dateTo,        setDateTo]        = useState(defaultDateTo);
   const [partNumbers,   setPartNumbers]   = useState(defaultPartNumbers);
   const [serialNumbers, setSerialNumbers] = useState(defaultSerialNumbers);
+
+  useEffect(() => {
+    setDateFrom(defaultDateFrom);
+  }, [defaultDateFrom]);
+
+  useEffect(() => {
+    setDateTo(defaultDateTo);
+  }, [defaultDateTo]);
+
+  useEffect(() => {
+    setPartNumbers(defaultPartNumbers);
+  }, [defaultPartNumbers]);
+
+  useEffect(() => {
+    setSerialNumbers(defaultSerialNumbers);
+  }, [defaultSerialNumbers]);
+
   const [filterRows,    setFilterRows]    = useState(() => {
     if (defaultAdvancedFilters && defaultAdvancedFilters.length > 0) {
       return defaultAdvancedFilters.map(f => ({ ...f, id: ++_rowId }));
