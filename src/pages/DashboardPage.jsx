@@ -1,395 +1,313 @@
-import { useState, useRef, useEffect, useMemo } from "react";
-import { useTodayData } from "../hooks/useTodayData";
-import { useRecordModal } from "../hooks/useRecordModal";
+import { lazy, Suspense, useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useLanguage } from "../contexts/LanguageContext";
-
-import PageHeader from "../components/PageHeader";
-import RecordDetailModal from "../components/RecordDetailModal";
+import { useDigitalTwin } from "../hooks/useDigitalTwin";
 import CameraModal from "../components/CameraModal";
-
-import FinanceOverviewCard from "../components/dashboard/FinanceOverviewCard";
-import LiveCameraFeedCard from "../components/dashboard/LiveCameraFeedCard";
-import FactoryProductionCard from "../components/dashboard/FactoryProductionCard";
-import MachineTelemetryCard from "../components/dashboard/MachineTelemetryCard";
-import QualityDefectsCard from "../components/dashboard/QualityDefectsCard";
-import IssuesApprovalsCard from "../components/dashboard/IssuesApprovalsCard";
 import AICopilotPanel from "../components/dashboard/AICopilotPanel";
-import AIShapeRenderer from "../components/dashboard/AIShapeRenderer";
+import MachineDrawer from "../components/twin/MachineDrawer";
+import { KOSE_LAYOUT, KOSE_MACHINE_IDS } from "../data/factoryLayouts/kose";
+import {
+  ATTENTION_STATUSES,
+  STATUS_ORDER,
+  STATUS_THEME,
+  effectiveStatus,
+  formatNumber,
+  statusLabel,
+} from "../components/twin/twinTheme";
+import "../components/twin/twin.css";
+import { applyDemo, isDemoMode } from "../components/twin/twinDemo";
 
-const PERSONA_PRESETS = {
-  plant_operations: {
-    id: "plant_operations",
-    label: "Plant Operations",
-    labelJa: "製造・現場オペレーション",
-    icon: "factory",
-    description: "Focus on output volume, line bottlenecks, and worker efficiency",
-    descriptionJa: "生産量、ラインのボトルネック、作業効率にフォーカス",
-    cards: ["production", "defects", "camera", "telemetry", "issues", "finance"],
-  },
-  executive: {
-    id: "executive",
-    label: "Executive & Financials",
-    labelJa: "経営・財務サマリー",
-    icon: "payments",
-    description: "Focus on gross production value, defect scrap cost, and margins",
-    descriptionJa: "生産総額、不良廃棄コスト、歩留まりにフォーカス",
-    cards: ["finance", "defects", "production", "issues", "camera", "telemetry"],
-  },
-  maintenance: {
-    id: "maintenance",
-    label: "Maintenance & Facilities",
-    labelJa: "保全・設備管理",
-    icon: "build",
-    description: "Focus on machine idle times, sensor diagnostics, and live cameras",
-    descriptionJa: "設備の停止・稼働状況、センサー診断、ライブカメラにフォーカス",
-    cards: ["telemetry", "camera", "issues", "production", "defects", "finance"],
-  },
-  all: {
-    id: "all",
-    label: "All Cards Overview",
-    labelJa: "全体概要 (全カード)",
-    icon: "grid_view",
-    description: "Full modular overview across all operational metrics",
-    descriptionJa: "すべての運用指標をモジュール形式で俯瞰",
-    cards: ["production", "finance", "defects", "camera", "telemetry", "issues"],
-  },
-};
+// three.js is heavy: load the 3D scene only when the dashboard is opened
+const FactoryScene = lazy(() => import("../components/twin/FactoryScene"));
+
+const FACTORY = KOSE_LAYOUT.factory;
+
+function useIsDarkMode() {
+  const [isDark, setIsDark] = useState(() => document.documentElement.classList.contains("dark"));
+  useEffect(() => {
+    const root = document.documentElement;
+    const observer = new MutationObserver(() => setIsDark(root.classList.contains("dark")));
+    observer.observe(root, { attributes: true, attributeFilter: ["class"] });
+    return () => observer.disconnect();
+  }, []);
+  return isDark;
+}
+
+function KpiCard({ icon, label, value, unit, color, progress }) {
+  return (
+    <div className="twin-kpi" style={{ "--kpi-color": color }}>
+      <div className="twin-kpi__icon">
+        <span className="material-symbols-outlined">{icon}</span>
+      </div>
+      <div className="min-w-0 flex-1">
+        <div className="twin-kpi__label">{label}</div>
+        <div className="twin-kpi__value">
+          {value}
+          {unit && <small>{unit}</small>}
+        </div>
+        {progress !== undefined && (
+          <div className="twin-kpi__bar">
+            <span style={{ width: `${Math.min(100, Math.max(0, progress))}%` }} />
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
 
 export default function DashboardPage() {
-  const { kpis, issues, recent, byFactory, byProcess, loading, error, lastRefresh, refresh } = useTodayData();
-  const { modalRecord, modalProcess, openRecord, closeRecord } = useRecordModal();
-  const { t, language } = useLanguage();
+  const { language } = useLanguage();
+  const isJa = language === "ja";
+  const isDark = useIsDarkMode();
+  const navigate = useNavigate();
+  const { data: liveData, loading, error, lastRefresh, refresh } = useDigitalTwin(FACTORY);
+  const demo = isDemoMode();
+  const data = useMemo(() => (demo ? applyDemo(liveData) : liveData), [demo, liveData]);
 
-  // Persona Preset state
-  const [currentPersona, setCurrentPersona] = useState("plant_operations");
-  const [activeCardOrder, setActiveCardOrder] = useState(PERSONA_PRESETS.plant_operations.cards);
-  const [highlightedCard, setHighlightedCard] = useState(null);
-  const highlightTimeoutRef = useRef(null);
+  const [selectedId, setSelectedId] = useState(null);
+  const [chatOpen, setChatOpen] = useState(false);
+  const [cameraOpen, setCameraOpen] = useState(false);
+  const [viewKey, setViewKey] = useState(0);
 
-  // AI Copilot state
-  const [copilotOpen, setCopilotOpen] = useState(true);
+  const machinesById = useMemo(() => {
+    const map = {};
+    (data?.machines || []).forEach((m) => { map[m.id] = m; });
+    return map;
+  }, [data]);
 
-  // Camera Modal state
-  const [cameraModalConfig, setCameraModalConfig] = useState({ open: false, factory: '小瀬', stream: 'tapo_cam' });
+  // ── Summary over the machines on the floor map ──
+  const summary = useMemo(() => {
+    const counts = Object.fromEntries(STATUS_ORDER.map((s) => [s, 0]));
+    let pieces = 0;
+    KOSE_MACHINE_IDS.forEach((id) => {
+      const m = machinesById[id];
+      counts[effectiveStatus(m)] += 1;
+      pieces += m?.pieces || 0;
+    });
+    const goal = data?.goal || 0;
+    return {
+      counts,
+      total: KOSE_MACHINE_IDS.length,
+      running: counts.running,
+      pieces,
+      goal,
+      goalPct: goal > 0 ? Math.round((pieces / goal) * 100) : null,
+    };
+  }, [machinesById, data]);
 
-  const today = new Date().toLocaleDateString(language === "ja" ? "ja-JP" : "en-US", {
-    weekday: "long", year: "numeric", month: "long", day: "numeric",
-  });
+  // ── Machines needing attention (pairs shown once) ──
+  const attention = useMemo(() => {
+    const seen = new Set();
+    const list = [];
+    KOSE_MACHINE_IDS.forEach((id) => {
+      if (seen.has(id)) return;
+      const m = machinesById[id];
+      const status = effectiveStatus(m);
+      if (!ATTENTION_STATUSES.has(status)) return;
+      seen.add(id);
+      let label = id;
+      if (m?.pair?.together) {
+        seen.add(m.pair.partner);
+        label = `${id.replace("OZ", "")} ⇄ ${m.pair.partner.replace("OZ", "")}`;
+      }
+      list.push({ id, label, status });
+    });
+    return list.sort((a, b) => STATUS_ORDER.indexOf(a.status) - STATUS_ORDER.indexOf(b.status));
+  }, [machinesById]);
+
+  const selected = selectedId ? machinesById[selectedId] || { id: selectedId, status: "off" } : null;
+  const selectedPartner = selected?.pair?.together ? machinesById[selected.pair.partner] : null;
+
+  useEffect(() => {
+    const onKey = (e) => { if (e.key === "Escape") setSelectedId(null); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
 
   const refreshLabel = lastRefresh
-    ? lastRefresh.toLocaleTimeString(language === "ja" ? "ja-JP" : "en-US", { hour: "2-digit", minute: "2-digit" })
-    : null;
-
-  // Handle persona tab switch
-  const handleSelectPersona = (personaId) => {
-    setCurrentPersona(personaId);
-    const targetCards = PERSONA_PRESETS[personaId]?.cards || PERSONA_PRESETS.plant_operations.cards;
-    setActiveCardOrder(targetCards);
-    setHighlightedCard(targetCards[0]);
-
-    if (highlightTimeoutRef.current) clearTimeout(highlightTimeoutRef.current);
-    highlightTimeoutRef.current = setTimeout(() => {
-      setHighlightedCard(null);
-    }, 2500);
-  };
-
-  const [aiMetadata, setAiMetadata] = useState(null);
-  const [aiSpotlight, setAiSpotlight] = useState(null);
-
-  // Reorder cards dynamically (triggered by AI or user prompt)
-  const handleReorderCards = (newOrder, highlightId, extraMetadata = null) => {
-    setActiveCardOrder(newOrder);
-    if (extraMetadata) {
-      setAiMetadata(extraMetadata);
-      if (extraMetadata.spotlight) {
-        setAiSpotlight(extraMetadata.spotlight);
-      } else if (extraMetadata.activeWorkers && extraMetadata.activeWorkers.length > 0) {
-        setAiSpotlight({
-          type: "workers",
-          title: `Active Personnel Shift Overview — ${extraMetadata.factory || "小瀬"} Factory`,
-          summary: `Zero-noise breakdown of ${extraMetadata.activeWorkers.length} active operators and their machine assignments today.`,
-          factory: extraMetadata.factory || "小瀬",
-          workers: extraMetadata.activeWorkers
-        });
-      }
-    }
-    if (highlightId) {
-      setHighlightedCard(highlightId);
-      if (highlightTimeoutRef.current) clearTimeout(highlightTimeoutRef.current);
-      highlightTimeoutRef.current = setTimeout(() => {
-        setHighlightedCard(null);
-      }, 6000);
-
-      // Smoothly scroll the highlighted card or spotlight into view
-      setTimeout(() => {
-        const el = document.getElementById(extraMetadata?.spotlight ? "ai-spotlight-section" : `card-wrapper-${highlightId}`);
-        if (el) {
-          el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-        }
-      }, 100);
-    }
-  };
-
-  const handleResetToDefault = () => {
-    const defaultCards = PERSONA_PRESETS[currentPersona]?.cards || PERSONA_PRESETS.plant_operations.cards;
-    setActiveCardOrder(defaultCards);
-    setHighlightedCard(null);
-    setAiMetadata(null);
-    setAiSpotlight(null);
-  };
-
-  // Component Map
-  const renderCard = (cardId) => {
-    const isHighlighted = highlightedCard === cardId;
-
-    switch (cardId) {
-      case "finance":
-        return (
-          <FinanceOverviewCard
-            key="finance"
-            kpis={kpis}
-            byProcess={byProcess}
-            loading={loading}
-            isHighlighted={isHighlighted}
-            onAskAI={(prompt) => {
-              setCopilotOpen(true);
-              handleReorderCards(["finance", "defects", "production", "telemetry", "camera", "issues"], "finance");
-            }}
-          />
-        );
-      case "camera":
-        return (
-          <LiveCameraFeedCard
-            key="camera"
-            isHighlighted={isHighlighted}
-            onOpenModal={(factory, stream) => setCameraModalConfig({ open: true, factory, stream })}
-            onAskAI={(prompt) => {
-              setCopilotOpen(true);
-              handleReorderCards(["camera", "telemetry", "production", "defects", "issues", "finance"], "camera");
-            }}
-          />
-        );
-      case "production":
-        return (
-          <FactoryProductionCard
-            key="production"
-            kpis={kpis}
-            byFactory={byFactory}
-            byProcess={byProcess}
-            loading={loading}
-            isHighlighted={isHighlighted}
-            aiMetadata={aiMetadata}
-            onAskAI={(prompt) => {
-              setCopilotOpen(true);
-              handleReorderCards(["production", "defects", "camera", "telemetry", "issues", "finance"], "production");
-            }}
-          />
-        );
-      case "telemetry":
-        return (
-          <MachineTelemetryCard
-            key="telemetry"
-            kpis={kpis}
-            loading={loading}
-            isHighlighted={isHighlighted}
-            onAskAI={(prompt) => {
-              setCopilotOpen(true);
-              handleReorderCards(["telemetry", "camera", "issues", "production", "defects", "finance"], "telemetry");
-            }}
-          />
-        );
-      case "defects":
-        return (
-          <QualityDefectsCard
-            key="defects"
-            kpis={kpis}
-            issues={issues}
-            byProcess={byProcess}
-            loading={loading}
-            isHighlighted={isHighlighted}
-            onRecordClick={openRecord}
-            onAskAI={(prompt) => {
-              setCopilotOpen(true);
-              handleReorderCards(["defects", "production", "issues", "finance", "camera", "telemetry"], "defects");
-            }}
-          />
-        );
-      case "issues":
-        return (
-          <IssuesApprovalsCard
-            key="issues"
-            issues={issues}
-            recent={recent}
-            isHighlighted={isHighlighted}
-            onRecordClick={openRecord}
-            onAskAI={(prompt) => {
-              setCopilotOpen(true);
-              handleReorderCards(["issues", "defects", "production", "telemetry", "finance", "camera"], "issues");
-            }}
-          />
-        );
-      default:
-        return null;
-    }
-  };
+    ? lastRefresh.toLocaleTimeString(isJa ? "ja-JP" : "en-US", { hour: "2-digit", minute: "2-digit", second: "2-digit" })
+    : "—";
 
   return (
-    <section className="w-full h-screen overflow-y-auto space-y-5 pt-20 px-4 sm:px-6 md:px-8 pb-16">
-      {/* ── Top Header ── */}
-      <PageHeader
-        title={t("dashboard")}
-        subtitle={today}
-        className="sm:mb-4"
-        actionsClassName="w-full sm:w-auto sm:justify-end gap-2.5"
-        actions={(
-          <>
-            <button
-              onClick={() => setCopilotOpen((prev) => !prev)}
-              className={`h-10 px-3.5 text-xs font-semibold rounded-[6px] border transition-all flex items-center gap-2 ${
-                copilotOpen
-                  ? "bg-[var(--freya-blue-subtle)] text-[var(--freya-blue)] border-[var(--freya-blue)]"
-                  : "bg-[var(--surface)] text-[var(--text-primary)] border-[var(--border)] hover:bg-[var(--surface-hover)]"
-              }`}
-            >
-              <span className="material-symbols-outlined" style={{ fontSize: 18 }}>smart_toy</span>
-              <span>{copilotOpen ? (language === "ja" ? "Copilotを隠す" : "Hide Copilot") : (language === "ja" ? "AI Copilot" : "AI Copilot")}</span>
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-            </button>
-
-            <button
-              onClick={refresh}
-              disabled={loading}
-              className="freya-btn-secondary h-10 px-4 text-xs font-semibold"
-            >
-              <span className={`material-symbols-outlined ${loading ? "animate-spin" : ""}`} style={{ fontSize: 16 }}>refresh</span>
-              {refreshLabel ? `${t("refresh")} · ${refreshLabel}` : t("refresh")}
-            </button>
-          </>
-        )}
-      />
-
-      {/* ── Error banner ── */}
-      {error && (
-        <div className="freya-card border-rose-200 dark:border-rose-900 bg-rose-50/50 dark:bg-rose-950/20 p-4 mb-4 flex items-center gap-3 text-rose-600 dark:text-rose-400">
-          <span className="material-symbols-outlined flex-shrink-0" style={{ fontSize: 20 }}>error</span>
-          <p className="text-sm font-semibold">
-            {language === "ja" ? `サーバーに接続できません — 表示中のデータは古い可能性があります。(${error})` : `Backend unreachable — data may be stale. (${error})`}
-          </p>
+    <section className="w-full h-screen flex flex-col gap-4 pt-20 px-4 sm:px-6 md:px-8 pb-6 overflow-hidden">
+      {/* ── Header: title + 3 big numbers + actions ── */}
+      <header className="flex flex-col xl:flex-row xl:items-center gap-4">
+        <div className="flex items-center gap-3 min-w-[220px]">
+          <span className="material-symbols-outlined text-[var(--freya-blue)]" style={{ fontSize: 34 }}>factory</span>
+          <div>
+            <h1 className="text-2xl font-extrabold text-[var(--text-primary)] leading-tight">
+              {isJa ? `${FACTORY}工場` : `${FACTORY} Factory`}
+            </h1>
+            <p className="text-xs font-semibold text-[var(--text-muted)] flex items-center gap-1.5">
+              <span className={`w-2 h-2 rounded-full ${error ? "bg-rose-500" : "bg-emerald-500 animate-pulse"}`} />
+              {isJa ? "ライブ" : "Live"} · {refreshLabel}
+              {demo && (
+                <span className="ml-1 px-2 py-0.5 rounded-full bg-amber-500 text-white text-[10px] font-bold">
+                  {isJa ? "プレビュー" : "PREVIEW"}
+                </span>
+              )}
+            </p>
+          </div>
         </div>
-      )}
 
-      {/* ── Split Layout: Dynamic Canvas (Left) + AI Copilot Panel (Right) ── */}
-      <div className="flex flex-col lg:flex-row items-start gap-5">
-        {/* ── Dynamic Components Canvas (Left) ── */}
-        <div className="flex-1 min-w-0 w-full space-y-4">
-          {/* Persona Presets Bar */}
-          <div className="p-2 sm:p-2.5 rounded-[8px] bg-[var(--surface)] border border-[var(--border)] shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)] px-1 hidden md:inline">
-                {language === "ja" ? "表示ロール:" : "Role View:"}
-              </span>
-              <div className="inline-flex p-0.5 rounded-[6px] bg-[var(--surface-hover)] border border-[var(--border)] flex-wrap gap-0.5">
-                {Object.values(PERSONA_PRESETS).map((preset) => (
-                  <button
-                    key={preset.id}
-                    onClick={() => handleSelectPersona(preset.id)}
-                    className={`h-8 px-3 text-xs font-semibold rounded-[4px] transition-all flex items-center gap-1.5 ${
-                      currentPersona === preset.id
-                        ? "bg-[var(--freya-blue)] text-white shadow-xs"
-                        : "text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--surface)]"
-                    }`}
-                  >
-                    <span className="material-symbols-outlined" style={{ fontSize: 16 }}>{preset.icon}</span>
-                    <span>{language === "ja" ? preset.labelJa : preset.label}</span>
-                  </button>
-                ))}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 flex-1">
+          <KpiCard
+            icon="precision_manufacturing"
+            label={isJa ? "稼働中の設備" : "Machines running"}
+            value={summary.running}
+            unit={`/ ${summary.total}`}
+            color={STATUS_THEME.running.color}
+            progress={(summary.running / summary.total) * 100}
+          />
+          <KpiCard
+            icon="inventory_2"
+            label={isJa ? "本日の生産数" : "Pieces today"}
+            value={formatNumber(summary.pieces)}
+            unit={isJa ? "個" : "pcs"}
+            color="#3b82f6"
+          />
+          <KpiCard
+            icon="flag"
+            label={isJa ? "本日の目標達成率" : "Goal today"}
+            value={summary.goalPct === null ? "—" : summary.goalPct}
+            unit={summary.goalPct === null ? "" : `%  (${formatNumber(summary.goal)})`}
+            color="#a855f7"
+            progress={summary.goalPct ?? 0}
+          />
+        </div>
+
+        <div className="flex items-center gap-2 self-end xl:self-center">
+          <button
+            type="button"
+            onClick={refresh}
+            className="twin-icon-btn"
+            title={isJa ? "更新" : "Refresh"}
+            aria-label={isJa ? "更新" : "Refresh"}
+          >
+            <span className={`material-symbols-outlined ${loading ? "animate-spin" : ""}`}>refresh</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setChatOpen((v) => !v)}
+            className={`h-10 px-4 rounded-[12px] border text-sm font-bold flex items-center gap-2 transition-colors ${
+              chatOpen
+                ? "bg-[var(--freya-blue)] text-white border-[var(--freya-blue)]"
+                : "bg-[var(--surface)] text-[var(--text-primary)] border-[var(--border)] hover:bg-[var(--surface-hover)]"
+            }`}
+          >
+            <span className="material-symbols-outlined" style={{ fontSize: 20 }}>smart_toy</span>
+            {isJa ? "AIチャット" : "AI chat"}
+          </button>
+        </div>
+      </header>
+
+      {/* ── Body: 3D twin + collapsible AI chat ── */}
+      <div className="flex-1 min-h-0 flex gap-4">
+        <div className="twin-stage flex-1 min-w-0 min-h-[420px]">
+          <Suspense fallback={<div className="twin-loading"><div className="twin-spinner" /></div>}>
+            <FactoryScene
+              machinesById={machinesById}
+              selectedId={selectedId}
+              onSelect={setSelectedId}
+              isDark={isDark}
+              isJa={isJa}
+              viewKey={viewKey}
+            />
+          </Suspense>
+
+          {/* Needs attention — big tappable chips */}
+          <div className="twin-overlay top-3 left-3 flex-wrap max-w-[60%]">
+            {attention.length === 0 && data && (
+              <div className="twin-chip" style={{ "--status": STATUS_THEME.running.color, cursor: "default" }}>
+                <span className="material-symbols-outlined">check_circle</span>
+                {isJa ? "異常なし" : "All clear"}
               </div>
-            </div>
-
-            <div className="flex items-center gap-2 self-end sm:self-center">
+            )}
+            {attention.slice(0, 6).map((a) => (
               <button
-                onClick={handleResetToDefault}
-                title={language === "ja" ? "配置を初期状態に戻す" : "Reset layout order"}
-                className="h-8 px-2.5 text-xs font-semibold text-[var(--text-muted)] hover:text-[var(--text-primary)] rounded-[4px] hover:bg-[var(--surface-hover)] transition-colors flex items-center gap-1"
+                key={a.id}
+                type="button"
+                className="twin-chip"
+                style={{ "--status": STATUS_THEME[a.status].color }}
+                onClick={() => setSelectedId(a.id)}
               >
-                <span className="material-symbols-outlined" style={{ fontSize: 14 }}>restart_alt</span>
-                <span>{language === "ja" ? "初期配置に戻す" : "Reset Grid"}</span>
+                <span className="material-symbols-outlined">{STATUS_THEME[a.status].icon}</span>
+                {a.label}
+                <small>{statusLabel(a.status, isJa)}</small>
               </button>
+            ))}
+            {attention.length > 6 && (
+              <div className="twin-chip" style={{ "--status": "#94a3b8", cursor: "default" }}>+{attention.length - 6}</div>
+            )}
+          </div>
+
+          {/* Reset view */}
+          {!selectedId && (
+            <div className="twin-overlay top-3 right-3">
+              <button
+                type="button"
+                className="twin-icon-btn"
+                onClick={() => setViewKey((k) => k + 1)}
+                title={isJa ? "全体表示" : "Overview"}
+                aria-label={isJa ? "全体表示" : "Overview"}
+              >
+                <span className="material-symbols-outlined">zoom_out_map</span>
+              </button>
+            </div>
+          )}
+
+          {/* Legend with live counts */}
+          <div className="twin-overlay bottom-3 left-3">
+            <div className="twin-legend">
+              {["running", "idle", "stopCall", "cncCancel", "maintenance", "break", "off"].map((s) => (
+                <span key={s} className="twin-legend__item" style={{ "--status": STATUS_THEME[s].color }}>
+                  <span className="twin-legend__swatch" />
+                  {statusLabel(s, isJa)}
+                  <b>{summary.counts[s] || 0}</b>
+                </span>
+              ))}
             </div>
           </div>
 
-          {/* Description hint */}
-          <p className="text-xs text-[var(--text-muted)] px-1">
-            {language === "ja" ? PERSONA_PRESETS[currentPersona]?.descriptionJa : PERSONA_PRESETS[currentPersona]?.description} · <em>{language === "ja" ? "AIプロンプトやロール選択で下のカードが動的に再配置されます。" : "AI prompts or presets dynamically reconfigure the cards below."}</em>
-          </p>
-
-          {/* ── AI Spotlight View: Big, upfront, noise-free ── */}
-          {aiSpotlight && (
-            <div id="ai-spotlight-section" className="w-full mb-6 transition-all duration-300">
-              <AIShapeRenderer
-                spotlight={aiSpotlight}
-                onClose={() => setAiSpotlight(null)}
-                onAskAI={(prompt) => {
-                  setCopilotOpen(true);
-                }}
-              />
-
-              {/* Separator indicating standard background cards below */}
-              <div className="flex items-center justify-between pt-4 pb-1 text-xs text-[var(--text-muted)] border-t border-[var(--border)] mt-4">
-                <div className="flex items-center gap-1.5 font-semibold uppercase tracking-[0.04em]">
-                  <span className="material-symbols-outlined" style={{ fontSize: 15 }}>layers</span>
-                  <span>{language === "ja" ? "通常工場概要（全カード）" : "Standard Facility Overview (Secondary)"}</span>
-                </div>
-                <button
-                  onClick={() => setAiSpotlight(null)}
-                  className="hover:text-[var(--text-primary)] underline transition-colors cursor-pointer text-[11px]"
-                >
-                  {language === "ja" ? "フォーカス解除" : "Dismiss Focus View"}
-                </button>
+          {/* Error banner (keeps last good data visible) */}
+          {error && (
+            <div className="twin-overlay bottom-3 right-3">
+              <div className="twin-chip" style={{ "--status": STATUS_THEME.stopCall.color, cursor: "default" }}>
+                <span className="material-symbols-outlined">cloud_off</span>
+                {isJa ? "サーバー接続エラー" : "Server unreachable"}
               </div>
             </div>
           )}
 
-          {/* Dynamic Cards Grid */}
-          <div className={`grid grid-cols-1 ${copilotOpen ? "xl:grid-cols-2" : "md:grid-cols-2 xl:grid-cols-3"} gap-4 sm:gap-5 transition-all duration-300`}>
-            {activeCardOrder.map((cardId) => (
-              <div key={cardId} id={`card-wrapper-${cardId}`}>
-                {renderCard(cardId)}
-              </div>
-            ))}
-          </div>
+          {loading && !data && (
+            <div className="twin-loading"><div className="twin-spinner" /></div>
+          )}
+
+          <MachineDrawer
+            machine={selected}
+            partner={selectedPartner}
+            isJa={isJa}
+            onClose={() => setSelectedId(null)}
+            onCamera={() => setCameraOpen(true)}
+            onDetails={() => navigate("/factoryStatus")}
+          />
         </div>
 
-        {/* ── AI Copilot Panel (Right) ── */}
-        {copilotOpen && (
-          <div className="w-full lg:w-80 xl:w-96 lg:sticky lg:top-20 h-[560px] lg:h-[calc(100vh-10.5rem)] flex-shrink-0">
+        {chatOpen && (
+          <div className="hidden lg:block w-80 xl:w-96 flex-shrink-0 min-h-0">
             <AICopilotPanel
-              currentPersona={currentPersona}
-              kpiContext={kpis}
-              onReorderCards={handleReorderCards}
-              onReset={handleResetToDefault}
-              onClose={() => setCopilotOpen(false)}
+              currentPersona="plant_operations"
+              kpiContext={{ factory: FACTORY, ...summary }}
+              onReorderCards={() => {}}
+              onReset={() => {}}
+              onClose={() => setChatOpen(false)}
             />
           </div>
         )}
       </div>
 
-      {/* ── Record detail modal ── */}
-      {modalRecord && (
-        <RecordDetailModal
-          record={modalRecord}
-          processName={modalProcess}
-          onClose={closeRecord}
-        />
-      )}
-
-      {/* ── Fullscreen Camera Modal ── */}
-      {cameraModalConfig.open && (
-        <CameraModal
-          factory={cameraModalConfig.factory}
-          stream={cameraModalConfig.stream}
-          onClose={() => setCameraModalConfig({ open: false, factory: '小瀬', stream: 'tapo_cam' })}
-        />
+      {cameraOpen && (
+        <CameraModal factory={FACTORY} stream="tapo_cam" onClose={() => setCameraOpen(false)} />
       )}
     </section>
   );
