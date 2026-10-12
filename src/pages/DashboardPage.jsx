@@ -1,26 +1,33 @@
-import { lazy, Suspense, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useLanguage } from "../contexts/LanguageContext";
 import { useDigitalTwin } from "../hooks/useDigitalTwin";
+import { useDashboardLayout } from "../hooks/useDashboardLayout";
+import { useRecordModal } from "../hooks/useRecordModal";
 import CameraModal from "../components/CameraModal";
+import RecordDetailModal from "../components/RecordDetailModal";
 import AICopilotPanel from "../components/dashboard/AICopilotPanel";
+import AIShapeRenderer from "../components/dashboard/AIShapeRenderer";
 import MachineDrawer from "../components/twin/MachineDrawer";
 import { KOSE_LAYOUT, KOSE_MACHINE_IDS } from "../data/factoryLayouts/kose";
-import {
-  ATTENTION_STATUSES,
-  STATUS_ORDER,
-  STATUS_THEME,
-  effectiveStatus,
-  formatNumber,
-  statusLabel,
-} from "../components/twin/twinTheme";
-import "../components/twin/twin.css";
+import { STATUS_ORDER, STATUS_THEME, effectiveStatus, formatNumber } from "../components/twin/twinTheme";
 import { applyDemo, isDemoMode } from "../components/twin/twinDemo";
-
-// three.js is heavy: load the 3D scene only when the dashboard is opened
-const FactoryScene = lazy(() => import("../components/twin/FactoryScene"));
+import PanelSlot from "../components/panels/PanelSlot";
+import WidgetPicker from "../components/panels/WidgetPicker";
+import LayoutSwitcher from "../components/panels/LayoutSwitcher";
+import TwinPanel from "../components/panels/TwinPanel";
+import MachineBoardPanel from "../components/panels/MachineBoardPanel";
+import AlertsPanel from "../components/panels/AlertsPanel";
+import GoalPanel from "../components/panels/GoalPanel";
+import WorkersPanel from "../components/panels/WorkersPanel";
+import LegacyCardPanel, { LegacyDataLoader } from "../components/panels/LegacyCardPanel";
+import { attentionUnits, buildUnits } from "../components/panels/twinUnits";
+import { AI_CARD_TO_WIDGET, LAYOUT_MODES, RIGHT_EDGE_SLOTS, WIDGETS } from "../components/panels/widgetRegistry";
+import "../components/twin/twin.css";
+import "../components/panels/panels.css";
 
 const FACTORY = KOSE_LAYOUT.factory;
+const DEFAULT_CAMERA = { factory: FACTORY, stream: "tapo_cam" };
 
 function useIsDarkMode() {
   const [isDark, setIsDark] = useState(() => document.documentElement.classList.contains("dark"));
@@ -64,16 +71,26 @@ export default function DashboardPage() {
   const demo = isDemoMode();
   const data = useMemo(() => (demo ? applyDemo(liveData) : liveData), [demo, liveData]);
 
+  const { mode, slots, allSlots, setMode, setSlotWidget, applySlots, resetMode } = useDashboardLayout(FACTORY);
+  const { modalRecord, modalProcess, openRecord, closeRecord } = useRecordModal();
+
   const [selectedId, setSelectedId] = useState(null);
   const [chatOpen, setChatOpen] = useState(false);
-  const [cameraOpen, setCameraOpen] = useState(false);
-  const [viewKey, setViewKey] = useState(0);
+  const [camera, setCamera] = useState(null);
+  const [pickerSlot, setPickerSlot] = useState(null);
+  const [legacy, setLegacy] = useState(null);
+  const [highlighted, setHighlighted] = useState(null);
+  const [spotlight, setSpotlight] = useState(null);
+  const highlightTimer = useRef(null);
 
   const machinesById = useMemo(() => {
     const map = {};
     (data?.machines || []).forEach((m) => { map[m.id] = m; });
     return map;
   }, [data]);
+
+  const units = useMemo(() => buildUnits(machinesById), [machinesById]);
+  const attention = useMemo(() => attentionUnits(units), [units]);
 
   // ── Summary over the machines on the floor map ──
   const summary = useMemo(() => {
@@ -95,26 +112,6 @@ export default function DashboardPage() {
     };
   }, [machinesById, data]);
 
-  // ── Machines needing attention (pairs shown once) ──
-  const attention = useMemo(() => {
-    const seen = new Set();
-    const list = [];
-    KOSE_MACHINE_IDS.forEach((id) => {
-      if (seen.has(id)) return;
-      const m = machinesById[id];
-      const status = effectiveStatus(m);
-      if (!ATTENTION_STATUSES.has(status)) return;
-      seen.add(id);
-      let label = id;
-      if (m?.pair?.together) {
-        seen.add(m.pair.partner);
-        label = `${id.replace("OZ", "")} ⇄ ${m.pair.partner.replace("OZ", "")}`;
-      }
-      list.push({ id, label, status });
-    });
-    return list.sort((a, b) => STATUS_ORDER.indexOf(a.status) - STATUS_ORDER.indexOf(b.status));
-  }, [machinesById]);
-
   const selected = selectedId ? machinesById[selectedId] || { id: selectedId, status: "off" } : null;
   const selectedPartner = selected?.pair?.together ? machinesById[selected.pair.partner] : null;
 
@@ -124,12 +121,97 @@ export default function DashboardPage() {
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
+  useEffect(() => () => clearTimeout(highlightTimer.current), []);
+
+  const needsLegacy = slots.some((id) => WIDGETS[id]?.legacy);
+
+  const flashSlot = useCallback((widgetId) => {
+    setHighlighted(widgetId);
+    clearTimeout(highlightTimer.current);
+    highlightTimer.current = setTimeout(() => setHighlighted(null), 6000);
+  }, []);
+
+  // ── AI copilot still answers with the old card names: map them onto the slots ──
+  const handleAiLayout = useCallback((cardOrder = [], highlightCard, uiAction) => {
+    const widgets = cardOrder.map((c) => AI_CARD_TO_WIDGET[c]).filter((w) => w && w !== "twin");
+    if (widgets.length) {
+      const targetMode = mode === 1 ? 3 : mode;
+      const list = [...allSlots[targetMode]];
+      let k = 0;
+      list.forEach((id, i) => {
+        if (id === "twin" || k >= widgets.length) return;
+        list[i] = widgets[k++];
+      });
+      applySlots(targetMode, list);
+    }
+    const hl = AI_CARD_TO_WIDGET[highlightCard];
+    if (hl) flashSlot(hl);
+
+    if (uiAction?.spotlight) {
+      setSpotlight(uiAction.spotlight);
+    } else if (uiAction?.activeWorkers?.length) {
+      setSpotlight({
+        type: "workers",
+        title: `Active Personnel Shift Overview — ${uiAction.factory || FACTORY} Factory`,
+        summary: `Zero-noise breakdown of ${uiAction.activeWorkers.length} active operators and their machine assignments today.`,
+        factory: uiAction.factory || FACTORY,
+        workers: uiAction.activeWorkers,
+      });
+    }
+  }, [mode, allSlots, applySlots, flashSlot]);
+
+  const askAI = useCallback(() => setChatOpen(true), []);
+  const openCamera = useCallback((factory = FACTORY, stream = "tapo_cam") => setCamera({ factory, stream }), []);
+
+  const renderWidget = (widgetId, index) => {
+    switch (widgetId) {
+      case "twin":
+        return (
+          <TwinPanel
+            machinesById={machinesById}
+            selectedId={selectedId}
+            onSelect={setSelectedId}
+            isDark={isDark}
+            isJa={isJa}
+            attention={attention}
+            counts={summary.counts}
+            hasData={Boolean(data)}
+            error={error}
+            loading={loading}
+            drawerCovers={RIGHT_EDGE_SLOTS[mode].includes(index)}
+          />
+        );
+      case "machines":
+        return <MachineBoardPanel units={units} selectedId={selectedId} onSelect={setSelectedId} isJa={isJa} />;
+      case "alerts":
+        return <AlertsPanel attention={attention} onSelect={setSelectedId} isJa={isJa} hasData={Boolean(data)} />;
+      case "goal":
+        return <GoalPanel summary={summary} units={units} onSelect={setSelectedId} isJa={isJa} />;
+      case "workers":
+        return <WorkersPanel units={units} onSelect={setSelectedId} isJa={isJa} hasData={Boolean(data)} />;
+      default:
+        return (
+          <LegacyCardPanel
+            widgetId={widgetId}
+            legacy={legacy}
+            onAskAI={askAI}
+            onRecordClick={openRecord}
+            onOpenCamera={openCamera}
+          />
+        );
+    }
+  };
+
   const refreshLabel = lastRefresh
     ? lastRefresh.toLocaleTimeString(isJa ? "ja-JP" : "en-US", { hour: "2-digit", minute: "2-digit", second: "2-digit" })
     : "—";
 
+  const areas = LAYOUT_MODES[mode].areas;
+
   return (
-    <section className="w-full h-screen flex flex-col gap-4 pt-20 px-4 sm:px-6 md:px-8 pb-6 overflow-hidden">
+    <section className="w-full min-h-screen lg:h-screen flex flex-col gap-4 pt-20 px-4 sm:px-6 md:px-8 pb-6 lg:overflow-hidden">
+      {needsLegacy && <LegacyDataLoader onData={setLegacy} />}
+
       {/* ── Header: title + 3 big numbers + actions ── */}
       <header className="flex flex-col xl:flex-row xl:items-center gap-4">
         <div className="flex items-center gap-3 min-w-[220px]">
@@ -177,9 +259,10 @@ export default function DashboardPage() {
         </div>
 
         <div className="flex items-center gap-2 self-end xl:self-center">
+          <LayoutSwitcher mode={mode} onChange={setMode} isJa={isJa} />
           <button
             type="button"
-            onClick={refresh}
+            onClick={() => { refresh(); legacy?.refresh?.(); }}
             className="twin-icon-btn"
             title={isJa ? "更新" : "Refresh"}
             aria-label={isJa ? "更新" : "Refresh"}
@@ -201,96 +284,39 @@ export default function DashboardPage() {
         </div>
       </header>
 
-      {/* ── Body: 3D twin + collapsible AI chat ── */}
+      {/* ── Body: layout grid + collapsible AI chat ── */}
       <div className="flex-1 min-h-0 flex gap-4">
-        <div className="twin-stage flex-1 min-w-0 min-h-[420px]">
-          <Suspense fallback={<div className="twin-loading"><div className="twin-spinner" /></div>}>
-            <FactoryScene
-              machinesById={machinesById}
-              selectedId={selectedId}
-              onSelect={setSelectedId}
-              isDark={isDark}
-              isJa={isJa}
-              viewKey={viewKey}
-            />
-          </Suspense>
-
-          {/* Needs attention — big tappable chips */}
-          <div className="twin-overlay top-3 left-3 flex-wrap max-w-[60%]">
-            {attention.length === 0 && data && (
-              <div className="twin-chip" style={{ "--status": STATUS_THEME.running.color, cursor: "default" }}>
-                <span className="material-symbols-outlined">check_circle</span>
-                {isJa ? "異常なし" : "All clear"}
-              </div>
-            )}
-            {attention.slice(0, 6).map((a) => (
-              <button
-                key={a.id}
-                type="button"
-                className="twin-chip"
-                style={{ "--status": STATUS_THEME[a.status].color }}
-                onClick={() => setSelectedId(a.id)}
+        <div className="relative flex-1 min-w-0 min-h-0 flex">
+          <div className={`dash-grid dash-grid--${mode}`}>
+            {slots.map((widgetId, i) => (
+              <PanelSlot
+                key={widgetId}
+                widgetId={widgetId}
+                area={areas[i]}
+                highlighted={highlighted === widgetId}
+                onChange={() => setPickerSlot(i)}
+                isJa={isJa}
+                flush={widgetId === "twin"}
               >
-                <span className="material-symbols-outlined">{STATUS_THEME[a.status].icon}</span>
-                {a.label}
-                <small>{statusLabel(a.status, isJa)}</small>
-              </button>
+                {renderWidget(widgetId, i)}
+              </PanelSlot>
             ))}
-            {attention.length > 6 && (
-              <div className="twin-chip" style={{ "--status": "#94a3b8", cursor: "default" }}>+{attention.length - 6}</div>
-            )}
           </div>
-
-          {/* Reset view */}
-          {!selectedId && (
-            <div className="twin-overlay top-3 right-3">
-              <button
-                type="button"
-                className="twin-icon-btn"
-                onClick={() => setViewKey((k) => k + 1)}
-                title={isJa ? "全体表示" : "Overview"}
-                aria-label={isJa ? "全体表示" : "Overview"}
-              >
-                <span className="material-symbols-outlined">zoom_out_map</span>
-              </button>
-            </div>
-          )}
-
-          {/* Legend with live counts */}
-          <div className="twin-overlay bottom-3 left-3">
-            <div className="twin-legend">
-              {["running", "idle", "stopCall", "cncCancel", "maintenance", "break", "off"].map((s) => (
-                <span key={s} className="twin-legend__item" style={{ "--status": STATUS_THEME[s].color }}>
-                  <span className="twin-legend__swatch" />
-                  {statusLabel(s, isJa)}
-                  <b>{summary.counts[s] || 0}</b>
-                </span>
-              ))}
-            </div>
-          </div>
-
-          {/* Error banner (keeps last good data visible) */}
-          {error && (
-            <div className="twin-overlay bottom-3 right-3">
-              <div className="twin-chip" style={{ "--status": STATUS_THEME.stopCall.color, cursor: "default" }}>
-                <span className="material-symbols-outlined">cloud_off</span>
-                {isJa ? "サーバー接続エラー" : "Server unreachable"}
-              </div>
-            </div>
-          )}
-
-          {loading && !data && (
-            <div className="twin-loading"><div className="twin-spinner" /></div>
-          )}
 
           <MachineDrawer
             machine={selected}
             partner={selectedPartner}
             isJa={isJa}
             onClose={() => setSelectedId(null)}
-            onCamera={() => setCameraOpen(true)}
+            onCamera={() => openCamera()}
             onDetails={() => navigate("/factoryStatus")}
           />
+
+          {spotlight && (
+            <div className="dash-spotlight">
+              <AIShapeRenderer spotlight={spotlight} onClose={() => setSpotlight(null)} onAskAI={askAI} />
+            </div>
+          )}
         </div>
 
         {chatOpen && (
@@ -298,16 +324,34 @@ export default function DashboardPage() {
             <AICopilotPanel
               currentPersona="plant_operations"
               kpiContext={{ factory: FACTORY, ...summary }}
-              onReorderCards={() => {}}
-              onReset={() => {}}
+              onReorderCards={handleAiLayout}
+              onReset={() => { setSpotlight(null); setHighlighted(null); }}
               onClose={() => setChatOpen(false)}
             />
           </div>
         )}
       </div>
 
-      {cameraOpen && (
-        <CameraModal factory={FACTORY} stream="tapo_cam" onClose={() => setCameraOpen(false)} />
+      <WidgetPicker
+        open={pickerSlot !== null}
+        currentId={pickerSlot !== null ? slots[pickerSlot] : null}
+        usedIds={slots}
+        isJa={isJa}
+        onPick={(id) => { setSlotWidget(pickerSlot, id); setPickerSlot(null); }}
+        onReset={() => { resetMode(); setPickerSlot(null); }}
+        onClose={() => setPickerSlot(null)}
+      />
+
+      {camera && (
+        <CameraModal
+          factory={camera.factory || DEFAULT_CAMERA.factory}
+          stream={camera.stream || DEFAULT_CAMERA.stream}
+          onClose={() => setCamera(null)}
+        />
+      )}
+
+      {modalRecord && (
+        <RecordDetailModal record={modalRecord} processName={modalProcess} onClose={closeRecord} />
       )}
     </section>
   );

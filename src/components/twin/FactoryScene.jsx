@@ -58,7 +58,7 @@ function CameraRig({ selectedPos, drawerOpen, viewKey }) {
       ref={controlsRef}
       makeDefault
       minDistance={4}
-      maxDistance={45}
+      maxDistance={75}
       minPolarAngle={0.15}
       maxPolarAngle={Math.PI / 2.35}
       smoothTime={0.45}
@@ -377,7 +377,7 @@ function FactoryContents({ machinesById, selectedId, onSelect, isJa, colors }) {
 /**
  * Full 3D digital twin of the 小瀬 floor.
  */
-export default function FactoryScene({ machinesById, selectedId, onSelect, isDark, isJa, viewKey = 0 }) {
+export default function FactoryScene({ machinesById, selectedId, onSelect, isDark, isJa, viewKey = 0, drawerCovers = true }) {
   const colors = sceneColors(isDark);
   const selectedPos = selectedId ? getMachinePosition(selectedId) : null;
 
@@ -390,7 +390,7 @@ export default function FactoryScene({ machinesById, selectedId, onSelect, isDar
       gl={{ antialias: true, powerPreference: "high-performance" }}
     >
       <color attach="background" args={[colors.bg]} />
-      <fog attach="fog" args={[colors.bg, 40, 80]} />
+      <fog attach="fog" args={[colors.bg, 70, 130]} />
 
       <ambientLight intensity={isDark ? 0.45 : 0.6} />
       <hemisphereLight args={["#ffffff", isDark ? "#1e293b" : "#cbd5e1", isDark ? 0.55 : 0.7]} />
@@ -419,7 +419,7 @@ export default function FactoryScene({ machinesById, selectedId, onSelect, isDar
         />
       </Suspense>
 
-      <CameraRig selectedPos={selectedPos} drawerOpen={Boolean(selectedId)} viewKey={viewKey} />
+      <CameraRig selectedPos={selectedPos} drawerOpen={Boolean(selectedId) && drawerCovers} viewKey={viewKey} />
     </Canvas>
   );
 }
