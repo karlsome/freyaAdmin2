@@ -49,18 +49,18 @@ function KpiCard({ icon, label, value, unit, color, progress }) {
       <div className="twin-kpi__icon">
         <span className="material-symbols-outlined">{icon}</span>
       </div>
-      <div className="min-w-0 flex-1">
+      <div className="twin-kpi__body">
         <div className="twin-kpi__label">{label}</div>
         <div className="twin-kpi__value">
           {value}
           {unit && <small>{unit}</small>}
         </div>
-        {progress !== undefined && (
-          <div className="twin-kpi__bar">
-            <span style={{ width: `${Math.min(100, Math.max(0, progress))}%` }} />
-          </div>
-        )}
       </div>
+      {progress !== undefined && (
+        <div className="twin-kpi__bar">
+          <span style={{ width: `${Math.min(100, Math.max(0, progress))}%` }} />
+        </div>
+      )}
     </div>
   );
 }
@@ -242,17 +242,17 @@ function FactoryDashboard({ factory, factories, onFactoryChange }) {
   const areas = LAYOUT_MODES[mode].areas;
 
   return (
-    <section className="w-full min-h-screen lg:h-screen flex flex-col gap-4 pt-20 px-4 sm:px-6 md:px-8 pb-6 lg:overflow-hidden">
+    <section className="w-full min-h-screen lg:h-screen flex flex-col gap-2.5 pt-16 px-4 sm:px-5 md:px-6 pb-3 lg:overflow-hidden">
       {needsLegacy && <LegacyDataLoader onData={setLegacy} />}
 
-      {/* ── Header: title + 3 big numbers + actions ── */}
-      <header className="flex flex-col xl:flex-row xl:items-center gap-4">
-        <div className="flex items-center gap-3 min-w-[220px]">
-          <span className="material-symbols-outlined text-[var(--freya-blue)]" style={{ fontSize: 34 }}>factory</span>
+      {/* ── Header: title + 3 compact KPI pills + actions ── */}
+      <header className="flex flex-col xl:flex-row xl:items-center gap-2.5">
+        <div className="flex items-center gap-2.5 min-w-[180px]">
+          <span className="material-symbols-outlined text-[var(--freya-blue)]" style={{ fontSize: 26 }}>factory</span>
           <div>
             <FactoryPicker factory={factory} factories={factories} onChange={onFactoryChange} isJa={isJa} />
-            <p className="text-xs font-semibold text-[var(--text-muted)] flex items-center gap-1.5">
-              <span className={`w-2 h-2 rounded-full ${error ? "bg-rose-500" : "bg-emerald-500 animate-pulse"}`} />
+            <p className="text-[11px] font-semibold text-[var(--text-muted)] flex items-center gap-1.5 leading-tight">
+              <span className={`w-1.5 h-1.5 rounded-full ${error ? "bg-rose-500" : "bg-emerald-500 animate-pulse"}`} />
               {isJa ? "ライブ" : "Live"} · {refreshLabel}
               {demo && (
                 <button
@@ -263,7 +263,7 @@ function FactoryDashboard({ factory, factories, onFactoryChange }) {
                     url.searchParams.delete("demo");
                     window.location.assign(url);
                   }}
-                  className="ml-1 px-2 py-0.5 rounded-full bg-amber-500 hover:bg-amber-600 text-white text-[10px] font-bold flex items-center gap-1"
+                  className="ml-1 px-1.5 py-0.5 rounded-full bg-amber-500 hover:bg-amber-600 text-white text-[9.5px] font-bold flex items-center gap-1"
                   title={isJa ? "サンプルデータ表示中 — クリックで実データに戻る" : "Sample data — click to show live data"}
                 >
                   {isJa ? "サンプルデータ ✕" : "SAMPLE DATA ✕"}
@@ -273,7 +273,7 @@ function FactoryDashboard({ factory, factories, onFactoryChange }) {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 flex-1">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 flex-1">
           <KpiCard
             icon="precision_manufacturing"
             label={isJa ? "稼働中の設備" : "Machines running"}
@@ -293,13 +293,13 @@ function FactoryDashboard({ factory, factories, onFactoryChange }) {
             icon="flag"
             label={isJa ? "本日の目標達成率" : "Goal today"}
             value={summary.goalPct === null ? "—" : summary.goalPct}
-            unit={summary.goalPct === null ? "" : `%  (${formatNumber(summary.goal)})`}
+            unit={summary.goalPct === null ? "" : `% (${formatNumber(summary.goal)})`}
             color="#a855f7"
             progress={summary.goalPct ?? 0}
           />
         </div>
 
-        <div className="flex items-center gap-2 self-end xl:self-center">
+        <div className="flex items-center gap-1.5 self-end xl:self-center">
           <LayoutSwitcher mode={mode} onChange={setMode} isJa={isJa} />
           <button
             type="button"
@@ -324,13 +324,13 @@ function FactoryDashboard({ factory, factories, onFactoryChange }) {
           <button
             type="button"
             onClick={() => setChatOpen((v) => !v)}
-            className={`h-10 px-4 rounded-[12px] border text-sm font-bold flex items-center gap-2 transition-colors ${
+            className={`h-9 px-3 rounded-[10px] border text-xs font-bold flex items-center gap-1.5 transition-colors ${
               chatOpen
                 ? "bg-[var(--freya-blue)] text-white border-[var(--freya-blue)]"
                 : "bg-[var(--surface)] text-[var(--text-primary)] border-[var(--border)] hover:bg-[var(--surface-hover)]"
             }`}
           >
-            <span className="material-symbols-outlined" style={{ fontSize: 20 }}>smart_toy</span>
+            <span className="material-symbols-outlined" style={{ fontSize: 17 }}>smart_toy</span>
             {isJa ? "AIチャット" : "AI chat"}
           </button>
         </div>

@@ -34,7 +34,7 @@ export default function FactoryPicker({ factory, factories, onChange, isJa }) {
         aria-expanded={open}
         onClick={() => setOpen((v) => !v)}
       >
-        <h1 className="text-2xl font-extrabold text-[var(--text-primary)] leading-tight">
+        <h1 className="text-lg sm:text-xl font-extrabold text-[var(--text-primary)] leading-tight">
           {isJa ? `${factory}工場` : `${factory} Factory`}
         </h1>
         <span className="material-symbols-outlined">expand_more</span>
