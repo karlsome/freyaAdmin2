@@ -303,7 +303,7 @@ export default function TwinPanel({
               aria-label="Toggle sensor info cards"
             >
               <span className="material-symbols-outlined" style={{ fontSize: 18 }}>
-                {showSensorInfo ? "info" : "info_outline"}
+                info
               </span>
             </button>
           )}
