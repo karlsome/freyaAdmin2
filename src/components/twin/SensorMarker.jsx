@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Html } from "@react-three/drei";
+import { Html } from "./HtmlOverlay";
 import SensorHeatAura from "./SensorHeatAura";
 
 const STATUS_COLOR = {

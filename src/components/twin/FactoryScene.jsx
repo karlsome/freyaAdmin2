@@ -1,12 +1,25 @@
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
+import * as THREE from "three";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import { CameraControls, Edges, Grid, Html } from "@react-three/drei";
+import { CameraControls, Edges, Grid } from "@react-three/drei";
+import { Html } from "./HtmlOverlay";
 import NcCutter from "./NcCutter";
 import ManasMachine from "./ManasMachine";
 import SensorMarker from "./SensorMarker";
 import CameraMarker from "./CameraMarker";
 import { KOSE_LAYOUT, NC_DEPTH, getMachinePosition } from "../../data/factoryLayouts/kose";
 import { STATUS_THEME, effectiveStatus, formatNumber } from "./twinTheme";
+
+// Suppress @react-three/fiber's internal `new THREE.Clock()` deprecation warning on Three.js r183+
+if (typeof THREE.setConsoleFunction === "function") {
+  THREE.setConsoleFunction((level, message, ...params) => {
+    if (level === "warn" && typeof message === "string" && message.includes("THREE.Clock:")) {
+      return;
+    }
+    const fn = console[level] || console.log;
+    fn.call(console, message, ...params);
+  });
+}
 
 const DEFAULT_TARGET = [0, 0, 0.6];
 const VIEW_DIR = (() => {

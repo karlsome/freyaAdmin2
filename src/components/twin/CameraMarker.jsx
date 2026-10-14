@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useFrame } from "@react-three/fiber";
-import { Html } from "@react-three/drei";
 import * as THREE from "three";
 import Hls from "hls.js";
+import { Html } from "./HtmlOverlay";
 import { BASE_URL } from "../../services/api";
 
 /**
@@ -21,7 +21,7 @@ export default function CameraMarker({
   const { id, streamId = id, pos = [0, 0], rotationY = 0, label, labelJa } = camera;
   const tallyRef = useRef();
   const fovRef = useRef();
-  const videoRef = useRef(null);
+  const [videoEl, setVideoEl] = useState(null);
 
   const [streamError, setStreamError] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -52,11 +52,12 @@ export default function CameraMarker({
     }
   });
 
-  // Connect live HLS video to the mini 3D monitor
+  // Connect live HLS video to the mini 3D monitor once the <video> DOM element mounts
   useEffect(() => {
-    if (minimized) return;
-    const video = videoRef.current;
-    if (!video) return;
+    if (minimized || !videoEl) return undefined;
+
+    setStreamError(false);
+    setIsPlaying(false);
 
     const camBase = import.meta.env.VITE_CAM_URL || BASE_URL;
     const src = `${camBase}api/cam?stream=${streamId}`;
@@ -70,26 +71,37 @@ export default function CameraMarker({
         xhrSetup: (xhr) => {
           if (basicAuth) xhr.setRequestHeader("Authorization", basicAuth);
         },
-        liveSyncDurationCount: 2,
-        liveMaxLatencyDurationCount: 6,
-        lowLatencyMode: true,
+        liveSyncDurationCount: 3,
+        liveMaxLatencyDurationCount: 10,
+        lowLatencyMode: false,
+        liveBackBufferLength: 0,
       });
 
       hls.on(Hls.Events.ERROR, (_, data) => {
         if (data.fatal) {
-          setStreamError(true);
-          hls.destroy();
+          if (data.type === Hls.ErrorTypes.MEDIA_ERROR) {
+            hls.recoverMediaError();
+          } else {
+            setStreamError(true);
+            hls.destroy();
+          }
         }
       });
 
       hls.loadSource(src);
-      hls.attachMedia(video);
+      hls.attachMedia(videoEl);
       hls.on(Hls.Events.MANIFEST_PARSED, () => {
-        video.play().then(() => setIsPlaying(true)).catch(() => setStreamError(true));
+        videoEl
+          .play()
+          .then(() => setIsPlaying(true))
+          .catch(() => {});
       });
-    } else if (video.canPlayType("application/vnd.apple.mpegurl")) {
-      video.src = src;
-      video.play().then(() => setIsPlaying(true)).catch(() => setStreamError(true));
+    } else if (videoEl.canPlayType("application/vnd.apple.mpegurl")) {
+      videoEl.src = src;
+      videoEl
+        .play()
+        .then(() => setIsPlaying(true))
+        .catch(() => setStreamError(true));
     } else {
       setStreamError(true);
     }
@@ -97,7 +109,7 @@ export default function CameraMarker({
     return () => {
       if (hls) hls.destroy();
     };
-  }, [streamId, minimized]);
+  }, [videoEl, streamId, minimized]);
 
   const handleOpenModal = (e) => {
     e?.stopPropagation && e.stopPropagation();
@@ -231,10 +243,15 @@ export default function CameraMarker({
             {/* Video Viewport Screen */}
             <div className="twin-camera-screen__viewport">
               <video
-                ref={videoRef}
+                ref={setVideoEl}
                 autoPlay
                 muted
                 playsInline
+                onLoadedData={() => setIsPlaying(true)}
+                onPlaying={() => {
+                  setIsPlaying(true);
+                  setStreamError(false);
+                }}
                 className="twin-camera-screen__video"
                 style={{ display: streamError ? "none" : "block" }}
               />
