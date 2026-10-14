@@ -39,7 +39,7 @@ export default function TwinPanel({
 }) {
   const [viewKey, setViewKey] = useState(0);
   const [showSensors, setShowSensors] = useState(true);
-  const [showSensorInfo, setShowSensorInfo] = useState(true);
+  const [showSensorInfo, setShowSensorInfo] = useState(false);
   const [showCameras, setShowCameras] = useState(true);
   const [editMode, setEditMode] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -47,6 +47,8 @@ export default function TwinPanel({
 
   const [localSensors, setLocalSensors] = useState(null);
   const [localCameras, setLocalCameras] = useState(null);
+  const editModeRef = useRef(editMode);
+  editModeRef.current = editMode;
 
   const { sensors: factorySensors } = useFactorySensors(factory);
   const annotations = useMemo(() => getFactoryAnnotations(factory), [factory]);
@@ -56,7 +58,7 @@ export default function TwinPanel({
   useEffect(() => {
     let active = true;
     syncFactoryAnnotations(factory).then((data) => {
-      if (active && data) {
+      if (active && data && !editModeRef.current) {
         if (Array.isArray(data.cameras) && data.cameras.length > 0) {
           setLocalCameras(data.cameras);
         }
@@ -67,7 +69,11 @@ export default function TwinPanel({
     });
 
     const onAnnotationsChanged = (e) => {
-      if (e.detail?.source === "cloud" && (!e.detail.factoryName || e.detail.factoryName === factory)) {
+      if (
+        !editModeRef.current &&
+        e.detail?.source === "cloud" &&
+        (!e.detail.factoryName || e.detail.factoryName === factory)
+      ) {
         if (e.detail.payload?.cameras) setLocalCameras(e.detail.payload.cameras);
         if (e.detail.payload?.sensors) setLocalSensors(e.detail.payload.sensors);
       }
@@ -80,14 +86,53 @@ export default function TwinPanel({
     };
   }, [factory]);
 
+  // Merge live sensor telemetry (`factorySensors`) with any local/cloud position overrides (`localSensors`)
   const effectiveSensors = useMemo(() => {
-    if (localSensors) return localSensors;
-    return factorySensors;
+    if (!localSensors || localSensors.length === 0) return factorySensors;
+    if (!factorySensors || factorySensors.length === 0) return localSensors;
+    return factorySensors.map((s, idx) => {
+      const sKey = s.id || s.deviceId;
+      const override =
+        localSensors.find((ls) => (ls.id || ls.deviceId) === sKey) ||
+        localSensors[idx];
+      if (!override) return s;
+      const pos = Array.isArray(override.pos)
+        ? override.pos
+        : Array.isArray(override.position)
+          ? override.position
+          : s.pos;
+      return {
+        ...s,
+        pos,
+        radius: override.radius ?? s.radius,
+        name: override.name || s.name,
+        nameJa: override.nameJa || s.nameJa,
+      };
+    });
   }, [localSensors, factorySensors]);
 
   const effectiveCameras = useMemo(() => {
-    if (localCameras) return localCameras;
-    return defaultCameras;
+    if (!localCameras || localCameras.length === 0) return defaultCameras;
+    if (!defaultCameras || defaultCameras.length === 0) return localCameras;
+    return defaultCameras.map((c, idx) => {
+      const cKey = c.id || c.streamId;
+      const override =
+        localCameras.find((lc) => (lc.id || lc.streamId) === cKey) ||
+        localCameras[idx];
+      if (!override) return c;
+      const pos = Array.isArray(override.pos)
+        ? override.pos
+        : Array.isArray(override.position)
+          ? override.position
+          : c.pos;
+      return {
+        ...c,
+        ...override,
+        id: c.id || override.id || override.streamId,
+        streamId: c.streamId || override.streamId || override.id,
+        pos,
+      };
+    });
   }, [localCameras, defaultCameras]);
 
   const latestSensorsRef = useRef(effectiveSensors);
@@ -98,15 +143,19 @@ export default function TwinPanel({
   const handleUpdatePosition = (type, id, pos) => {
     if (type === "sensor") {
       setLocalSensors((prev) => {
-        const base = prev || factorySensors;
-        const updated = base.map((s) => (s.id === id ? { ...s, pos } : s));
+        const base = prev && prev.length > 0 ? prev : latestSensorsRef.current;
+        const updated = base.map((s) =>
+          (s.id || s.deviceId) === id ? { ...s, pos, position: pos } : s
+        );
         latestSensorsRef.current = updated;
         return updated;
       });
     } else if (type === "camera") {
       setLocalCameras((prev) => {
-        const base = prev || defaultCameras;
-        const updated = base.map((c) => (c.id === id ? { ...c, pos } : c));
+        const base = prev && prev.length > 0 ? prev : latestCamerasRef.current;
+        const updated = base.map((c) =>
+          (c.id || c.streamId) === id ? { ...c, pos, position: pos } : c
+        );
         latestCamerasRef.current = updated;
         return updated;
       });
@@ -115,8 +164,10 @@ export default function TwinPanel({
 
   const handleRotateCamera = (id, newRotationY) => {
     setLocalCameras((prev) => {
-      const base = prev || defaultCameras;
-      const updated = base.map((c) => (c.id === id ? { ...c, rotationY: newRotationY } : c));
+      const base = prev && prev.length > 0 ? prev : latestCamerasRef.current;
+      const updated = base.map((c) =>
+        (c.id || c.streamId) === id ? { ...c, rotationY: newRotationY } : c
+      );
       latestCamerasRef.current = updated;
       saveFactoryAnnotations(factory, {
         sensors: latestSensorsRef.current,

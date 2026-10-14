@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Html } from "./HtmlOverlay";
 import SensorHeatAura from "./SensorHeatAura";
 
@@ -11,20 +11,22 @@ const STATUS_COLOR = {
 
 /**
  * 3D IoT Temperature & Humidity Sensor on the factory floor with animated heat aura.
- * Supports compact/expanded view toggling so the badge never blocks machines or floor UI.
+ * Defaults safe ("normal") sensors to a sleek compact pill so machines aren't obstructed,
+ * while automatically expanding Warning / Heat Hazard sensors into full alert cards.
  */
 export default function SensorMarker({
   sensor,
   isJa,
   selected,
   onSelect,
-  showInfo = true,
+  showInfo = false,
   editMode = false,
   isDragging = false,
   onStartDrag,
 }) {
   const {
     id,
+    deviceId,
     pos = [0, 0],
     radius = 3.0,
     temperature = 24.5,
@@ -34,12 +36,28 @@ export default function SensorMarker({
     isDanger = false,
   } = sensor;
 
-  // Local collapse toggle allows individual sensors to be collapsed/expanded
-  const [collapsed, setCollapsed] = useState(false);
+  const markerId = id || deviceId;
 
-  const displayName = isJa ? (sensor.nameJa || sensor.name) : (sensor.name || sensor.nameJa || id);
+  // null = follow automatic rule (expand if showInfo is on OR sensor is warning/danger)
+  // true = user manually expanded this sensor; false = user manually collapsed this sensor
+  const [userExpanded, setUserExpanded] = useState(null);
+
+  // Reset manual override whenever the global toolbar info toggle changes
+  useEffect(() => {
+    setUserExpanded(null);
+  }, [showInfo]);
+
+  const displayName = isJa ? (sensor.nameJa || sensor.name) : (sensor.name || sensor.nameJa || markerId);
   const color = STATUS_COLOR[status] || STATUS_COLOR.normal;
-  const isCardVisible = showInfo && !collapsed;
+  const autoExpand = showInfo || isDanger || status === "warning";
+  const isCardVisible = userExpanded !== null ? userExpanded : autoExpand;
+
+  const startSensorDrag = (e) => {
+    if (!editMode || !onStartDrag) return;
+    e.stopPropagation();
+    if (e.preventDefault) e.preventDefault();
+    onStartDrag("sensor", markerId);
+  };
 
   return (
     <group position={[pos[0], 0, pos[1]]}>
@@ -57,12 +75,7 @@ export default function SensorMarker({
       {/* ── 3D Sensor Node Hardware on the Floor (Draggable in edit mode) ── */}
       <group
         position={[0, 0, 0]}
-        onPointerDown={(e) => {
-          if (editMode && onStartDrag) {
-            e.stopPropagation();
-            onStartDrag("sensor", id);
-          }
-        }}
+        onPointerDown={startSensorDrag}
       >
         {/* Base disc */}
         <mesh position={[0, 0.04, 0]} castShadow>
@@ -96,9 +109,10 @@ export default function SensorMarker({
         {isCardVisible ? (
           /* Full Detailed Card */
           <div
-            className={`twin-sensor-badge ${isDanger ? "twin-sensor-badge--danger" : ""} ${selected ? "twin-sensor-badge--selected" : ""} ${isDragging ? "twin-sensor-badge--dragging" : ""}`}
+            className={`twin-sensor-badge ${isDanger ? "twin-sensor-badge--danger" : ""} ${selected ? "twin-sensor-badge--selected" : ""} ${editMode ? "twin-sensor-pill--editable" : ""} ${isDragging ? "twin-sensor-badge--dragging" : ""}`}
             style={{ "--sensor-color": color }}
-            onClick={() => !editMode && onSelect && onSelect(id)}
+            onPointerDown={startSensorDrag}
+            onClick={() => !editMode && onSelect && onSelect(markerId)}
           >
             {/* Header with minimize button */}
             <div className="twin-sensor-badge__header">
@@ -109,9 +123,10 @@ export default function SensorMarker({
               <button
                 type="button"
                 className="twin-sensor-badge__close-btn"
+                onPointerDown={(e) => e.stopPropagation()}
                 onClick={(e) => {
                   e.stopPropagation();
-                  setCollapsed(true);
+                  setUserExpanded(false);
                 }}
                 title={isJa ? "詳細を最小化 (熱オーラは維持)" : "Minimize details"}
               >
@@ -133,7 +148,7 @@ export default function SensorMarker({
                   <span>{isJa ? `熱中症警戒 ${wbgt ? `(${wbgt}°C)` : ""}` : `HEAT HAZARD ${wbgt ? `(${wbgt}°C)` : ""}`}</span>
                 </>
               ) : status === "warning" ? (
-                <span>{isJa ? "高温注意" : "Warm / Caution"}</span>
+                <span>{isJa ? `高温注意 ${wbgt ? `(WBGT ${wbgt}°C)` : ""}` : `Warm / Caution ${wbgt ? `(WBGT ${wbgt}°C)` : ""}`}</span>
               ) : (
                 <span>{isJa ? "快適・安全" : "Comfortable"}</span>
               )}
@@ -143,10 +158,7 @@ export default function SensorMarker({
             {editMode && (
               <div
                 className={`twin-edit-drag-pill ${isDragging ? "is-dragging" : ""}`}
-                onPointerDown={(e) => {
-                  e.stopPropagation();
-                  if (onStartDrag) onStartDrag("sensor", id);
-                }}
+                onPointerDown={startSensorDrag}
               >
                 <span className="material-symbols-outlined" style={{ fontSize: 13 }}>drag_indicator</span>
                 <span>{isJa ? "ドラッグして移動" : "Drag to move"}</span>
@@ -157,20 +169,15 @@ export default function SensorMarker({
           /* Sleek Minimalist Pill (Takes almost no screen space, doesn't block machines) */
           <button
             type="button"
-            onPointerDown={(e) => {
-              if (editMode && onStartDrag) {
-                e.stopPropagation();
-                onStartDrag("sensor", id);
-              }
-            }}
+            onPointerDown={startSensorDrag}
             onClick={(e) => {
               if (editMode) return;
               e.stopPropagation();
-              setCollapsed(false);
+              setUserExpanded(true);
             }}
             className={`twin-sensor-pill ${isDanger ? "twin-sensor-pill--danger" : ""} ${editMode ? "twin-sensor-pill--editable" : ""} ${isDragging ? "twin-sensor-badge--dragging" : ""}`}
             style={{ "--sensor-color": color }}
-            title={editMode ? (isJa ? "ドラッグして移動" : "Drag to move") : (isJa ? `${displayName}: ${temperature}°C (クリックで詳細表示)` : `${displayName}: ${temperature}°C (Click to expand)`)}
+            title={editMode ? (isJa ? "ドラッグして移動" : "Drag to move") : (isJa ? `${displayName}: ${temperature}°C / ${humidity}% (クリックで詳細表示)` : `${displayName}: ${temperature}°C / ${humidity}% (Click to expand)`)}
           >
             <span className="material-symbols-outlined twin-sensor-pill__icon">
               {editMode ? "drag_indicator" : (isDanger ? "warning" : "thermostat")}

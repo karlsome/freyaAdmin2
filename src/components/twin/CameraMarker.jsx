@@ -19,6 +19,7 @@ export default function CameraMarker({
   onRotateCamera,
 }) {
   const { id, streamId = id, pos = [0, 0], rotationY = 0, label, labelJa } = camera;
+  const markerId = id || streamId;
   const tallyRef = useRef();
   const fovRef = useRef();
   const [videoEl, setVideoEl] = useState(null);
@@ -28,7 +29,7 @@ export default function CameraMarker({
   const [isHovered, setIsHovered] = useState(false);
   const [minimized, setMinimized] = useState(false);
 
-  const title = isJa ? (labelJa || label) : (label || labelJa || id);
+  const title = isJa ? (labelJa || label) : (label || labelJa || markerId);
 
   // Directional FOV projection cone on the floor
   const fovGeo = useMemo(() => {
@@ -71,6 +72,9 @@ export default function CameraMarker({
         xhrSetup: (xhr) => {
           if (basicAuth) xhr.setRequestHeader("Authorization", basicAuth);
         },
+        capLevelToPlayerSize: true,
+        maxBufferLength: 6,
+        maxMaxBufferLength: 12,
         liveSyncDurationCount: 3,
         liveMaxLatencyDurationCount: 10,
         lowLatencyMode: false,
@@ -106,10 +110,29 @@ export default function CameraMarker({
       setStreamError(true);
     }
 
+    const onVisibilityChange = () => {
+      if (!hls) return;
+      if (document.visibilityState === "hidden") {
+        hls.stopLoad();
+      } else {
+        hls.startLoad();
+        videoEl.play().catch(() => {});
+      }
+    };
+    document.addEventListener("visibilitychange", onVisibilityChange);
+
     return () => {
+      document.removeEventListener("visibilitychange", onVisibilityChange);
       if (hls) hls.destroy();
     };
   }, [videoEl, streamId, minimized]);
+
+  const startCameraDrag = (e) => {
+    if (!editMode || !onStartDrag) return;
+    e.stopPropagation();
+    if (e.preventDefault) e.preventDefault();
+    onStartDrag("camera", markerId);
+  };
 
   const handleOpenModal = (e) => {
     e?.stopPropagation && e.stopPropagation();
@@ -148,12 +171,7 @@ export default function CameraMarker({
       <group
         position={[0, 0, 0]}
         rotation={[0, rotationY, 0]}
-        onPointerDown={(e) => {
-          if (editMode && onStartDrag) {
-            e.stopPropagation();
-            onStartDrag("camera", id);
-          }
-        }}
+        onPointerDown={startCameraDrag}
       >
         {/* Mount pole */}
         <mesh position={[0, 0.5, 0]} castShadow>
@@ -193,9 +211,10 @@ export default function CameraMarker({
       <Html position={[0, 1.7, 0]} center zIndexRange={[35, 10]}>
         {!minimized ? (
           <div
-            className={`twin-camera-screen ${isDragging ? "twin-camera-screen--dragging" : ""}`}
+            className={`twin-camera-screen ${editMode ? "twin-camera-badge--editable" : ""} ${isDragging ? "twin-camera-screen--dragging" : ""}`}
             onMouseEnter={() => setIsHovered(true)}
             onMouseLeave={() => setIsHovered(false)}
+            onPointerDown={startCameraDrag}
             onClick={handleOpenModal}
             title={editMode ? (isJa ? "ドラッグして移動" : "Drag to move") : (isJa ? "クリックで全画面拡大表示" : "Click to open full-screen live feed")}
           >
@@ -210,11 +229,12 @@ export default function CameraMarker({
                   <button
                     type="button"
                     className="twin-camera-screen__btn twin-camera-screen__btn--rotate"
+                    onPointerDown={(e) => e.stopPropagation()}
                     onClick={(e) => {
                       e.stopPropagation();
                       if (onRotateCamera) {
                         const nextRot = Number(((rotationY + Math.PI / 4) % (Math.PI * 2)).toFixed(3));
-                        onRotateCamera(id, nextRot);
+                        onRotateCamera(markerId, nextRot);
                       }
                     }}
                     title={isJa ? "カメラの向きを45°回転" : "Rotate camera angle (45°)"}
@@ -229,6 +249,7 @@ export default function CameraMarker({
                 <button
                   type="button"
                   className="twin-camera-screen__btn"
+                  onPointerDown={(e) => e.stopPropagation()}
                   onClick={(e) => {
                     e.stopPropagation();
                     setMinimized(true);
@@ -281,10 +302,7 @@ export default function CameraMarker({
             {editMode && (
               <div
                 className={`twin-edit-drag-pill twin-edit-drag-pill--camera ${isDragging ? "is-dragging" : ""}`}
-                onPointerDown={(e) => {
-                  e.stopPropagation();
-                  if (onStartDrag) onStartDrag("camera", id);
-                }}
+                onPointerDown={startCameraDrag}
               >
                 <span className="material-symbols-outlined" style={{ fontSize: 13 }}>drag_indicator</span>
                 <span>{isJa ? "ドラッグして移動" : "Drag to move"}</span>
@@ -295,12 +313,7 @@ export default function CameraMarker({
           /* Minimized compact camera pill */
           <button
             type="button"
-            onPointerDown={(e) => {
-              if (editMode && onStartDrag) {
-                e.stopPropagation();
-                onStartDrag("camera", id);
-              }
-            }}
+            onPointerDown={startCameraDrag}
             onClick={(e) => {
               if (editMode) return;
               e.stopPropagation();
@@ -316,11 +329,12 @@ export default function CameraMarker({
             {editMode ? (
               <span
                 className="twin-camera-screen__btn twin-camera-screen__btn--rotate"
+                onPointerDown={(e) => e.stopPropagation()}
                 onClick={(e) => {
                   e.stopPropagation();
                   if (onRotateCamera) {
                     const nextRot = Number(((rotationY + Math.PI / 4) % (Math.PI * 2)).toFixed(3));
-                    onRotateCamera(id, nextRot);
+                    onRotateCamera(markerId, nextRot);
                   }
                 }}
                 title={isJa ? "カメラの向きを45°回転" : "Rotate camera angle (45°)"}

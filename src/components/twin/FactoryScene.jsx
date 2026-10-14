@@ -264,7 +264,7 @@ function MachineBadge({ position, height, title, value, unit, status, isJa, dim,
           {value}
           {unit && <small>{unit}</small>}
         </span>
-        {(theme.pulse || status === "off") && <span className="twin-badge__status">{isJa ? theme.ja : theme.en}</span>}
+        {status !== "running" && <span className="twin-badge__status">{isJa ? theme.ja : theme.en}</span>}
       </button>
     </Html>
   );
@@ -276,6 +276,66 @@ function badgeValue(machine, isJa, shared = false) {
   if (pieces !== null && pieces !== undefined && pieces > 0) return { value: formatNumber(pieces), unit: isJa ? "個" : "pcs" };
   if (cycles) return { value: formatNumber(cycles), unit: isJa ? "回" : "cyc" };
   return { value: "0", unit: isJa ? "個" : "pcs" };
+}
+
+const FLOOR_PLANE = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+const _raycaster = new THREE.Raycaster();
+const _ndc = new THREE.Vector2();
+const _hit = new THREE.Vector3();
+
+/**
+ * Projects window pointer coordinates directly onto the mathematical floor plane (y = 0)
+ * during active drag so HTML overlays and 3D machine meshes never block dragging.
+ */
+function FloorDragTracker({ activeDrag, onUpdatePosition, onEndDrag }) {
+  const { camera, gl } = useThree();
+
+  useEffect(() => {
+    if (!activeDrag) return undefined;
+
+    const hw = KOSE_LAYOUT.floor.width / 2 - 0.5;
+    const hd = KOSE_LAYOUT.floor.depth / 2 - 0.5;
+
+    const handlePointerMove = (e) => {
+      if (!onUpdatePosition || !gl?.domElement) return;
+      const rect = gl.domElement.getBoundingClientRect();
+      if (!rect.width || !rect.height) return;
+
+      _ndc.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+      _ndc.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+
+      camera.updateMatrixWorld();
+      _raycaster.setFromCamera(_ndc, camera);
+      const hit = _raycaster.ray.intersectPlane(FLOOR_PLANE, _hit);
+      if (!hit) return;
+
+      const x = Math.max(-hw, Math.min(hw, hit.x));
+      const z = Math.max(-hd, Math.min(hd, hit.z));
+      const roundedX = Math.round(x * 20) / 20;
+      const roundedZ = Math.round(z * 20) / 20;
+      onUpdatePosition(activeDrag.type, activeDrag.id, [roundedX, roundedZ]);
+    };
+
+    const handlePointerUp = () => {
+      if (onEndDrag) onEndDrag();
+    };
+
+    document.body.style.cursor = "grabbing";
+    document.body.style.userSelect = "none";
+    window.addEventListener("pointermove", handlePointerMove, { passive: true });
+    window.addEventListener("pointerup", handlePointerUp);
+    window.addEventListener("pointercancel", handlePointerUp);
+
+    return () => {
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
+      window.removeEventListener("pointermove", handlePointerMove);
+      window.removeEventListener("pointerup", handlePointerUp);
+      window.removeEventListener("pointercancel", handlePointerUp);
+    };
+  }, [activeDrag, camera, gl, onUpdatePosition, onEndDrag]);
+
+  return null;
 }
 
 /* ── Scene contents ── */
@@ -290,13 +350,11 @@ function FactoryContents({
   onSelectCamera,
   showSensors = true,
   showCameras = true,
-  showSensorInfo = true,
+  showSensorInfo = false,
   editMode = false,
   activeDrag = null,
   onStartDrag,
   onRotateCamera,
-  onFloorPointerMove,
-  onFloorPointerUp,
 }) {
   const ncPos = useMemo(() => Object.fromEntries(KOSE_LAYOUT.ncMachines.map((m) => [m.id, m.pos])), []);
 
@@ -313,19 +371,6 @@ function FactoryContents({
   return (
     <>
       <Floor colors={colors} />
-
-      {/* Invisible drag catcher plane active during drag to smoothly track coordinates across full floor */}
-      {activeDrag && (
-        <mesh
-          position={[0, 0.05, 0]}
-          rotation={[-Math.PI / 2, 0, 0]}
-          onPointerMove={onFloorPointerMove}
-          onPointerUp={onFloorPointerUp}
-        >
-          <planeGeometry args={[KOSE_LAYOUT.floor.width + 30, KOSE_LAYOUT.floor.depth + 30]} />
-          <meshBasicMaterial visible={false} />
-        </mesh>
-      )}
 
       <MeetingRoom isJa={isJa} />
       <PalletZone isJa={isJa} />
@@ -438,34 +483,40 @@ function FactoryContents({
 
       {/* ── Environmental Sensors with dynamic Heat Auras ── */}
       {showSensors &&
-        sensors.map((sensor) => (
-          <SensorMarker
-            key={sensor.id || sensor.deviceId}
-            sensor={sensor}
-            isJa={isJa}
-            selected={selectedId === sensor.id}
-            onSelect={onSelect}
-            showInfo={showSensorInfo}
-            editMode={editMode}
-            isDragging={activeDrag?.type === "sensor" && activeDrag?.id === sensor.id}
-            onStartDrag={onStartDrag}
-          />
-        ))}
+        sensors.map((sensor) => {
+          const sId = sensor.id || sensor.deviceId;
+          return (
+            <SensorMarker
+              key={sId}
+              sensor={sensor}
+              isJa={isJa}
+              selected={selectedId === sId}
+              onSelect={onSelect}
+              showInfo={showSensorInfo}
+              editMode={editMode}
+              isDragging={activeDrag?.type === "sensor" && activeDrag?.id === sId}
+              onStartDrag={onStartDrag}
+            />
+          );
+        })}
 
       {/* ── Factory CCTV Cameras with live stream pop-up ── */}
       {showCameras &&
-        cameras.map((camera) => (
-          <CameraMarker
-            key={camera.id || camera.streamId}
-            camera={camera}
-            isJa={isJa}
-            onSelectCamera={onSelectCamera}
-            editMode={editMode}
-            isDragging={activeDrag?.type === "camera" && activeDrag?.id === camera.id}
-            onStartDrag={onStartDrag}
-            onRotateCamera={onRotateCamera}
-          />
-        ))}
+        cameras.map((camera) => {
+          const cId = camera.id || camera.streamId;
+          return (
+            <CameraMarker
+              key={cId}
+              camera={camera}
+              isJa={isJa}
+              onSelectCamera={onSelectCamera}
+              editMode={editMode}
+              isDragging={activeDrag?.type === "camera" && activeDrag?.id === cId}
+              onStartDrag={onStartDrag}
+              onRotateCamera={onRotateCamera}
+            />
+          );
+        })}
     </>
   );
 }
@@ -487,14 +538,14 @@ export default function FactoryScene({
   onSelectCamera,
   showSensors = true,
   showCameras = true,
-  showSensorInfo = true,
+  showSensorInfo = false,
   editMode = false,
   onUpdatePosition,
   onRotateCamera,
   onCommitPositions,
 }) {
   const colors = sceneColors(isDark);
-  const selectedSensor = sensors.find((s) => s.id === selectedId);
+  const selectedSensor = sensors.find((s) => (s.id || s.deviceId) === selectedId);
   const selectedPos = selectedId ? (getMachinePosition(selectedId) || selectedSensor?.pos || null) : null;
 
   const [activeDrag, setActiveDrag] = useState(null);
@@ -503,40 +554,14 @@ export default function FactoryScene({
     setActiveDrag({ type, id });
   };
 
-  const handleFloorPointerMove = (e) => {
-    if (!activeDrag || !onUpdatePosition) return;
-    e.stopPropagation();
-    const hw = KOSE_LAYOUT.floor.width / 2 - 0.6;
-    const hd = KOSE_LAYOUT.floor.depth / 2 - 0.6;
-    const x = Math.max(-hw, Math.min(hw, e.point.x));
-    const z = Math.max(-hd, Math.min(hd, e.point.z));
-    // 0.05m snap for crisp placement
-    const roundedX = Math.round(x * 20) / 20;
-    const roundedZ = Math.round(z * 20) / 20;
-    onUpdatePosition(activeDrag.type, activeDrag.id, [roundedX, roundedZ]);
+  const handleEndDrag = () => {
+    setActiveDrag((prev) => {
+      if (prev && onCommitPositions) {
+        onCommitPositions();
+      }
+      return null;
+    });
   };
-
-  const handleFloorPointerUp = () => {
-    if (activeDrag) {
-      setActiveDrag(null);
-      if (onCommitPositions) onCommitPositions();
-    }
-  };
-
-  // Window pointerup listener guarantees drag release even if pointer moves outside canvas
-  useEffect(() => {
-    if (!activeDrag) return;
-    const onWindowPointerUp = () => {
-      setActiveDrag(null);
-      if (onCommitPositions) onCommitPositions();
-    };
-    window.addEventListener("pointerup", onWindowPointerUp);
-    window.addEventListener("pointercancel", onWindowPointerUp);
-    return () => {
-      window.removeEventListener("pointerup", onWindowPointerUp);
-      window.removeEventListener("pointercancel", onWindowPointerUp);
-    };
-  }, [activeDrag, onCommitPositions]);
 
   // Cancel any drag if user exits editMode
   useEffect(() => {
@@ -547,7 +572,7 @@ export default function FactoryScene({
 
   return (
     <Canvas
-      shadows="percentage"
+      shadows="soft"
       dpr={[1, 2]}
       camera={{ position: [0, 19, 14], fov: 40, near: 0.1, far: 200 }}
       onPointerMissed={() => {
@@ -564,7 +589,7 @@ export default function FactoryScene({
         position={[9, 18, 10]}
         intensity={isDark ? 1.5 : 1.8}
         castShadow
-        shadow-mapSize={[2048, 2048]}
+        shadow-mapSize={[1024, 1024]}
         shadow-camera-left={-16}
         shadow-camera-right={16}
         shadow-camera-top={11}
@@ -574,6 +599,12 @@ export default function FactoryScene({
         shadow-bias={-0.0004}
       />
       <directionalLight position={[-10, 8, -6]} intensity={0.35} />
+
+      <FloorDragTracker
+        activeDrag={activeDrag}
+        onUpdatePosition={onUpdatePosition}
+        onEndDrag={handleEndDrag}
+      />
 
       <Suspense fallback={null}>
         <FactoryContents
@@ -592,8 +623,6 @@ export default function FactoryScene({
           activeDrag={activeDrag}
           onStartDrag={handleStartDrag}
           onRotateCamera={onRotateCamera}
-          onFloorPointerMove={handleFloorPointerMove}
-          onFloorPointerUp={handleFloorPointerUp}
         />
       </Suspense>
 

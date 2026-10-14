@@ -222,3 +222,18 @@ interface FloorAnnotation {
   4. **Camera Controls Locking**: Disables Orbit/CameraControls during drag so camera dragging never tilts the 3D scene.
   5. **Instant Persistence**: Automatically commits positions to localStorage on drop.
 
+### Phase 6: 3D Drag-and-Drop Fix, Live Telemetry Fix & Spatial UI Optimization — [IN PROGRESS]
+* **Identified Issues**:
+  1. **Cannot Drag Cameras / Sensors to Target Floor Coordinates**:
+     * Relying on a Three.js `<mesh visible={false} onPointerMove={...} />` failed because Three.js raycasting ignores `visible: false` objects, 3D machine meshes (`NcCutter`, `ManasMachine`) intercept pointer rays, and floating `<Html>` badges on top of `<canvas>` swallow DOM pointer events during drag.
+     * Expanded camera monitors and sensor cards only bound `onPointerDown` to the small bottom strip rather than the entire card/monitor header in Edit Mode.
+     * Background 15s `syncFactoryAnnotations` calls dispatched `freya:annotations-changed` (`source: "cloud"`), overwriting in-progress local positions.
+  2. **Live Sensor Telemetry Shadowed by Saved Coordinates**:
+     * `TwinPanel.jsx` replaced `factorySensors` with `localSensors` from MongoDB, stripping live `temperature`, `humidity`, `wbgt`, and `defaultTemp` values and causing all sensors to display the `24.5°C / 50% RH` fallback.
+  3. **Spatial HUD Occlusion & Render Weight**:
+     * Expanded `Comfortable` sensor cards and 3 live video monitors overlapped machine badges (`OZNC01`, `OZNC03`, `OZNC11`, `OZNC14`, `OZNC15`).
+     * `shadows="percentage"` (`2048×2048`), redundant per-badge `camera.updateMatrixWorld()` calls, and uncapped HLS buffers added unnecessary GPU/CPU load.
+* **Solution**:
+  1. **Mathematical Ray-Plane Floor Dragging (`THREE.Plane`)**: Attach `window` `pointermove` / `pointerup` listeners during `activeDrag` and project cursor coordinates directly onto a mathematical horizontal ground plane ($y = 0$) via `raycaster.ray.intersectPlane()`. Works smoothly across the entire floor regardless of HTML overlays or 3D machine meshes.
+  2. **Merge Coordinates with Live Telemetry**: Keep live sensor telemetry from `useFactorySensors` as the source of truth and overlay saved `[x, z]` coordinates on top, with JST date querying and one-time annotation sync on mount.
+  3. **Exception-Based Sensor Pills & Lighter Rendering**: Default safe (`normal`) sensors to compact pills unless in Warning/Danger or Edit Mode, switch to `shadows="soft"` (`1024×1024`), and cap HLS buffer size + pause streams when tab is hidden.

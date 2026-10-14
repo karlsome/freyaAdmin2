@@ -150,7 +150,6 @@ export const Html = forwardRef(function Html(
   useFrame(() => {
     const el = elRef.current;
     if (!groupRef.current || !el) return;
-    camera.updateMatrixWorld();
     groupRef.current.updateWorldMatrix(true, false);
     const vec = calculatePosition(groupRef.current, camera, size);
 

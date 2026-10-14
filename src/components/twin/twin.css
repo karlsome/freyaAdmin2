@@ -1227,10 +1227,17 @@ html:not(.dark) .twin-edit-btn--ghost:hover {
 }
 
 /* Interactive editable marker highlights */
+.twin-stage--editing .twin-badge {
+  pointer-events: none;
+  opacity: 0.48;
+}
+
 .twin-sensor-pill--editable,
 .twin-camera-badge--editable {
   cursor: grab;
   border-style: dashed;
+  touch-action: none;
+  user-select: none;
 }
 
 .twin-sensor-pill--editable:hover,
@@ -1245,6 +1252,7 @@ html:not(.dark) .twin-edit-btn--ghost:hover {
   box-shadow: 0 14px 30px rgba(0, 0, 0, 0.6), 0 0 22px rgba(245, 158, 11, 0.6) !important;
   opacity: 0.95;
   cursor: grabbing !important;
+  touch-action: none;
 }
 
 /* Permanent Cloud Save Notification Toast */
