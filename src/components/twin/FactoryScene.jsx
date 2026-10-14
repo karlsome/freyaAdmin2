@@ -237,7 +237,7 @@ function MachineBadge({ position, height, title, value, unit, status, isJa, dim,
           {value}
           {unit && <small>{unit}</small>}
         </span>
-        {theme.pulse && <span className="twin-badge__status">{isJa ? theme.ja : theme.en}</span>}
+        {(theme.pulse || status === "off") && <span className="twin-badge__status">{isJa ? theme.ja : theme.en}</span>}
       </button>
     </Html>
   );
@@ -248,7 +248,7 @@ function badgeValue(machine, isJa, shared = false) {
   const cycles = shared ? machine?.pair?.sharedCycles : machine?.todayCycles;
   if (pieces !== null && pieces !== undefined && pieces > 0) return { value: formatNumber(pieces), unit: isJa ? "個" : "pcs" };
   if (cycles) return { value: formatNumber(cycles), unit: isJa ? "回" : "cyc" };
-  return { value: "—", unit: "" };
+  return { value: "0", unit: isJa ? "個" : "pcs" };
 }
 
 /* ── Scene contents ── */

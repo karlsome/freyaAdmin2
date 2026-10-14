@@ -10,11 +10,25 @@ export const STATUS_THEME = {
   cncCancel:   { color: "#ec4899", ja: "CNC中断",  en: "CNC cancel",  icon: "dangerous",     pulse: true },
 };
 
-/** Statuses that need an admin's attention. */
 export const ATTENTION_STATUSES = new Set(["stopCall", "cncCancel", "maintenance", "idle"]);
+
+export const TIMELINE_THEME = {
+  running:     { color: "#22c55e", ja: "稼働",     en: "Running",     icon: "play_circle" },
+  idle:        { color: "#f59e0b", ja: "待機",     en: "Idle",        icon: "hourglass_top" },
+  setup:       { color: "#eab308", ja: "段取切替", en: "Setup",       icon: "tune" },
+  break:       { color: "#3b82f6", ja: "休憩",     en: "Break",       icon: "coffee" },
+  stopCall:    { color: "#ef4444", ja: "停止呼出", en: "Stop call",   icon: "campaign" },
+  maintenance: { color: "#a855f7", ja: "メンテ",   en: "Maintenance", icon: "build" },
+  off:         { color: "#64748b", ja: "未稼働",   en: "Off",         icon: "power_settings_new" },
+};
 
 export function statusLabel(status, isJa) {
   const theme = STATUS_THEME[status] || STATUS_THEME.off;
+  return isJa ? theme.ja : theme.en;
+}
+
+export function timelineLabel(type, isJa) {
+  const theme = TIMELINE_THEME[type] || TIMELINE_THEME.off;
   return isJa ? theme.ja : theme.en;
 }
 
@@ -37,3 +51,4 @@ export function formatNumber(n) {
   if (n === null || n === undefined || Number.isNaN(n)) return "—";
   return Number(n).toLocaleString();
 }
+

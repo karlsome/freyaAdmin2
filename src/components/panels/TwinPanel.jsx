@@ -1,5 +1,6 @@
 import { lazy, Suspense, useState } from "react";
 import { STATUS_THEME, statusLabel } from "../twin/twinTheme";
+import FloorPlan2D from "./FloorPlan2D";
 
 // three.js is heavy: load the 3D scene only when this panel is shown
 const FactoryScene = lazy(() => import("../twin/FactoryScene"));
@@ -7,8 +8,9 @@ const FactoryScene = lazy(() => import("../twin/FactoryScene"));
 const LEGEND_STATUSES = ["running", "idle", "stopCall", "cncCancel", "maintenance", "break", "off"];
 
 /**
- * 3D factory panel: scene + attention chips + overview button + legend.
- * The machine drawer lives on the page so it also works when the 3D panel is hidden.
+ * Factory panel: 3D scene (or automatic 2D floor for factories without a 3D map)
+ * + attention chips + overview button + legend.
+ * The machine drawer lives on the page so it also works when this panel is hidden.
  */
 export default function TwinPanel({
   machinesById,
@@ -22,22 +24,38 @@ export default function TwinPanel({
   error,
   loading,
   drawerCovers,
+  has3D = true,
+  units = [],
+  hasSensors = true,
 }) {
   const [viewKey, setViewKey] = useState(0);
 
   return (
-    <div className="twin-stage dash-twin">
-      <Suspense fallback={<div className="twin-loading"><div className="twin-spinner" /></div>}>
-        <FactoryScene
-          machinesById={machinesById}
-          selectedId={selectedId}
-          onSelect={onSelect}
-          isDark={isDark}
-          isJa={isJa}
-          viewKey={viewKey}
-          drawerCovers={drawerCovers}
-        />
-      </Suspense>
+    <div className={`twin-stage dash-twin ${has3D ? "" : "dash-twin--2d"}`}>
+      {has3D ? (
+        <Suspense fallback={<div className="twin-loading"><div className="twin-spinner" /></div>}>
+          <FactoryScene
+            machinesById={machinesById}
+            selectedId={selectedId}
+            onSelect={onSelect}
+            isDark={isDark}
+            isJa={isJa}
+            viewKey={viewKey}
+            drawerCovers={drawerCovers}
+          />
+        </Suspense>
+      ) : (
+        hasData && (
+          <FloorPlan2D
+            units={units}
+            machinesById={machinesById}
+            selectedId={selectedId}
+            onSelect={onSelect}
+            isJa={isJa}
+            hasSensors={hasSensors}
+          />
+        )
+      )}
 
       {/* Needs attention — big tappable chips */}
       <div className="twin-overlay dash-twin__chips">
@@ -66,7 +84,7 @@ export default function TwinPanel({
       </div>
 
       {/* Reset view */}
-      {!selectedId && (
+      {has3D && !selectedId && (
         <div className="twin-overlay top-3 right-3">
           <button
             type="button"

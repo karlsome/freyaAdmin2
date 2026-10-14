@@ -6,6 +6,7 @@
 export const WIDGETS = {
   twin:       { icon: "view_in_ar",              color: "#3b82f6", en: "3D Factory",          ja: "3D工場" },
   machines:   { icon: "grid_view",               color: "#22c55e", en: "Machine board",       ja: "設備ボード" },
+  timeline:   { icon: "view_timeline",           color: "#6366f1", en: "Run/idle timeline",   ja: "稼働タイムライン" },
   alerts:     { icon: "notifications_active",    color: "#ef4444", en: "Needs attention",     ja: "要対応" },
   goal:       { icon: "flag",                    color: "#a855f7", en: "Goal & output",       ja: "目標と生産数" },
   workers:    { icon: "groups",                  color: "#06b6d4", en: "Workers on floor",    ja: "現場の作業者" },
@@ -19,7 +20,7 @@ export const WIDGETS = {
 
 /** Order shown in the picker: simple live widgets first, then the older detailed cards. */
 export const PICKER_GROUPS = [
-  { en: "Live factory", ja: "ライブ工場", ids: ["twin", "machines", "alerts", "goal", "workers", "camera"] },
+  { en: "Live factory", ja: "ライブ工場", ids: ["twin", "machines", "timeline", "alerts", "goal", "workers", "camera"] },
   { en: "Detailed cards", ja: "詳細カード", ids: ["production", "defects", "issues", "finance", "telemetry"] },
 ];
 

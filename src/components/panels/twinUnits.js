@@ -1,23 +1,24 @@
 import { KOSE_MACHINE_IDS } from "../../data/factoryLayouts/kose";
 import { ATTENTION_STATUSES, STATUS_ORDER, effectiveStatus } from "../twin/twinTheme";
 
-const naturalIds = [...KOSE_MACHINE_IDS].sort((a, b) => {
+const naturalSort = (ids) => [...ids].sort((a, b) => {
   const aNc = a.startsWith("OZNC");
   const bNc = b.startsWith("OZNC");
   if (aNc !== bNc) return aNc ? -1 : 1;
-  return a.localeCompare(b, "en", { numeric: true });
+  return a.localeCompare(b, "ja", { numeric: true });
 });
 
 export const shortId = (id) => (id || "").replace(/^OZ/, "");
 
 /**
- * Machines on the floor map as display "units": pairs running together become one unit
+ * Machines on the floor as display "units": pairs running together become one unit
  * with one status, one piece count and one worker.
+ * `machineIds` defaults to the 小瀬 floor map.
  */
-export function buildUnits(machinesById) {
+export function buildUnits(machinesById, machineIds = KOSE_MACHINE_IDS) {
   const seen = new Set();
   const units = [];
-  naturalIds.forEach((id) => {
+  naturalSort(machineIds).forEach((id) => {
     if (seen.has(id)) return;
     seen.add(id);
     const m = machinesById[id];

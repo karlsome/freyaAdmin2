@@ -15,3 +15,19 @@ export async function fetchDigitalTwin(factoryName) {
   }
   return data;
 }
+
+/**
+ * Factories the dashboard can show (recent press records or a cycle sensor).
+ * Backend: Kurachi GET /api/digital-twin-factories
+ */
+export async function fetchTwinFactories() {
+  const response = await fetch(`${BASE_URL}api/digital-twin-factories`, {
+    method: "GET",
+    headers: { "Content-Type": "application/json" },
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok || data?.success === false) {
+    throw new Error(data?.error || `API ${response.status}`);
+  }
+  return Array.isArray(data.factories) ? data.factories : [];
+}
