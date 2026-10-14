@@ -346,10 +346,11 @@ export function calcWBGT(temperature, humidity) {
   }
 }
 
-function _parseSensorReadings(readings, offsets = {}) {
+function _parseSensorReadings(readings, offsets = {}, names = {}) {
   const sensorMap = new Map();
   readings.forEach((r) => {
-    const id = r.device;
+    const id = String(r.device ?? "").trim();
+    if (!id) return;
     const rTime = new Date(`${r.Date} ${r.Time}`);
     const existing = sensorMap.get(id);
     if (!existing || rTime > new Date(`${existing.Date} ${existing.Time}`)) {
@@ -358,14 +359,17 @@ function _parseSensorReadings(readings, offsets = {}) {
   });
 
   const sensors = Array.from(sensorMap.values()).map((r) => {
+    const id = String(r.device ?? "").trim();
     let rawTemp = parseFloat(String(r.Temperature ?? "").replace("°C", "").trim());
-    if (!isNaN(rawTemp) && offsets[r.device]) {
-      rawTemp += offsets[r.device];
+    if (!isNaN(rawTemp) && offsets[id]) {
+      rawTemp += offsets[id];
     }
+    const rawHumid = parseFloat(String(r.Humidity ?? "").replace("%", "").trim());
     return {
-      deviceId:    r.device,
+      deviceId:    id,
+      name:        names[id] || null,
       temperature: Math.round(rawTemp * 100) / 100,
-      humidity:    parseFloat(String(r.Humidity    ?? "").replace("%",  "").trim()),
+      humidity:    Math.round(rawHumid * 100) / 100,
       status:      r.sensorStatus ?? "OK",
       lastUpdate:  `${r.Date} ${r.Time}`,
       factory:     r["工場"],
@@ -393,18 +397,35 @@ export async function fetchSensorData(factoryName, date) {
 
   const empty = { sensors: [], highestTemp: null, averageHumidity: null, wbgt: null, sensorCount: 0, hasData: false };
   try {
-    const readings = await _getJson(`api/factory/sensors/${encodeURIComponent(factoryName)}/${encodeURIComponent(date)}`);
+    let readings = [];
+    try {
+      readings = await _getJson(`api/factory/sensors/${encodeURIComponent(factoryName)}/${encodeURIComponent(date)}`);
+    } catch {
+      readings = [];
+    }
+    if (!readings?.length) {
+      readings = await query(
+        "submittedDB",
+        "tempHumidityDB",
+        { 工場: factoryName },
+        { sort: { Date: -1, Time: -1 }, limit: 200 }
+      );
+    }
     if (!readings?.length) { _setCache(key, empty); return empty; }
 
     const deviceNames = await fetchIoTDeviceNames(factoryName);
     const offsets = {};
+    const names = {};
     if (Array.isArray(deviceNames)) {
-      deviceNames.forEach(d => {
-        if (d.offset) offsets[d.deviceId] = Number(d.offset);
+      deviceNames.forEach((d) => {
+        const id = String(d?.deviceId ?? "").trim();
+        if (!id) return;
+        if (d.offset) offsets[id] = Number(d.offset);
+        if (d.name) names[id] = String(d.name).trim();
       });
     }
 
-    const data = _parseSensorReadings(readings, offsets);
+    const data = _parseSensorReadings(readings, offsets, names);
     _setCache(key, data);
     return data;
   } catch {

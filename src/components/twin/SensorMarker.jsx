@@ -182,6 +182,7 @@ export default function SensorMarker({
             <span className="material-symbols-outlined twin-sensor-pill__icon">
               {editMode ? "drag_indicator" : (isDanger ? "warning" : "thermostat")}
             </span>
+            <span className="twin-sensor-pill__name">{displayName}</span>
             <span className="twin-sensor-pill__temp">{temperature}°C</span>
             {isDanger && !editMode && <span className="twin-sensor-pill__dot" />}
           </button>

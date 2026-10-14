@@ -839,6 +839,11 @@ html:not(.dark) .twin-sensor-pill {
   font-size: 13px;
   color: var(--sensor-color, #10b981);
 }
+.twin-sensor-pill__name {
+  font-size: 10.5px;
+  font-weight: 700;
+  opacity: 0.9;
+}
 .twin-sensor-pill__temp {
   font-weight: 800;
   font-variant-numeric: tabular-nums;

@@ -1,10 +1,20 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { calcWBGT, fetchSensorData } from "../services/api";
+import { calcWBGT, fetchIoTDeviceNames, fetchSensorData } from "../services/api";
 import { getFactoryAnnotations } from "../data/factoryLayouts/annotations";
-import { KOSE_DEFAULT_SENSORS } from "../data/factoryLayouts/kose";
+import { KOSE_DEFAULT_SENSORS, getMachinePosition } from "../data/factoryLayouts/kose";
 import { isDemoMode } from "../components/twin/twinDemo";
 
 const SENSOR_POLL_MS = 15_000;
+
+const LEGACY_FAKE_IDS = new Set([
+  "oze_env_01",
+  "oze_env_02",
+  "oze_env_03",
+  "oze_sensor_srs",
+  "oze_sensor_east",
+  "oze_sensor_shipping",
+  "68:FE:71:32:3E:98",
+]);
 
 function todayJST() {
   return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Tokyo" }).format(new Date());
@@ -25,8 +35,29 @@ function evaluateHeatStress(temp, humidity) {
 }
 
 /**
- * Loads sensor positions and maps them to live readings for the 3D twin.
- * Evaluates real-time worker heat stress thresholds for floor auras.
+ * Infers a floor coordinate [x, z] from a sensor's real name (e.g. "Sensor 1 - OZNC11" or "Sensor 2 - 入口")
+ * if the sensor doesn't yet have a saved 3D position.
+ */
+function inferPositionFromName(name = "", idx = 0) {
+  const upper = String(name).toUpperCase();
+  const machineMatch = upper.match(/OZNC\d{2}|OZMANAS/);
+  if (machineMatch) {
+    const mPos = getMachinePosition(machineMatch[0]);
+    if (mPos) {
+      const offsetX = mPos[0] < 0 ? 1.1 : -1.1;
+      return [Number((mPos[0] + offsetX).toFixed(2)), Number(mPos[1].toFixed(2))];
+    }
+  }
+  if (name.includes("入口")) {
+    return [0, 5.08];
+  }
+  const fallback = KOSE_DEFAULT_SENSORS[idx % KOSE_DEFAULT_SENSORS.length];
+  return fallback?.pos || [0, 0];
+}
+
+/**
+ * Loads all real sensors for the factory from submittedDB.tempHumidityDB + ioTNames,
+ * maps them to their real names and 3D floor coordinates, and evaluates WBGT heat stress.
  */
 export function useFactorySensors(factoryName) {
   const [sensors, setSensors] = useState([]);
@@ -34,53 +65,77 @@ export function useFactorySensors(factoryName) {
   const [lastUpdate, setLastUpdate] = useState(null);
   const inFlight = useRef(false);
   const liveReadingsRef = useRef([]);
+  const iotNamesRef = useRef(new Map());
 
   const buildResolvedSensors = useCallback(
-    (liveSensors = liveReadingsRef.current) => {
+    (liveSensors = liveReadingsRef.current, iotMap = iotNamesRef.current) => {
       const annotations = getFactoryAnnotations(factoryName);
-      const baseSensors = annotations.sensors?.length ? annotations.sensors : KOSE_DEFAULT_SENSORS;
+      const savedSensors = (annotations.sensors || []).filter(
+        (s) => !LEGACY_FAKE_IDS.has(s.id) && !LEGACY_FAKE_IDS.has(s.deviceId)
+      );
+
+      // Use real DB device IDs whenever available; only fall back to KOSE_DEFAULT_SENSORS when offline
+      const deviceIdSet = new Set();
+      iotMap.forEach((_, devId) => {
+        if (devId && !LEGACY_FAKE_IDS.has(devId)) deviceIdSet.add(devId);
+      });
+      liveSensors.forEach((ls) => {
+        if (ls.deviceId && !LEGACY_FAKE_IDS.has(ls.deviceId)) deviceIdSet.add(ls.deviceId);
+      });
+      if (deviceIdSet.size === 0) {
+        KOSE_DEFAULT_SENSORS.forEach((d) => {
+          if (d.deviceId) deviceIdSet.add(d.deviceId);
+        });
+      }
+
+      const allDeviceIds = Array.from(deviceIdSet);
       const isDemo = isDemoMode();
 
-      return baseSensors.map((s, idx) => {
+      return allDeviceIds.map((deviceId, idx) => {
         const defaultDef =
-          KOSE_DEFAULT_SENSORS.find(
-            (d) => (s.id && d.id === s.id) || (s.deviceId && d.deviceId === s.deviceId)
-          ) ||
-          KOSE_DEFAULT_SENSORS[idx] ||
-          {};
+          KOSE_DEFAULT_SENSORS.find((d) => d.deviceId === deviceId || d.id === deviceId) || {};
+        const savedOverride =
+          savedSensors.find((s) => s.deviceId === deviceId || s.id === deviceId) || null;
+        const live = liveSensors.find((ls) => ls.deviceId === deviceId) || null;
+        const iotMeta = iotMap.get(deviceId) || null;
 
-        const mergedBase = { ...defaultDef, ...s };
-        const pos = Array.isArray(s.pos)
-          ? s.pos
-          : Array.isArray(s.position)
-            ? s.position
-            : defaultDef.pos || [0, 0];
+        // Real name priority: ioTNames DB -> live reading name -> default seed name -> deviceId MAC
+        const realName =
+          iotMeta?.name ||
+          live?.name ||
+          defaultDef.name ||
+          savedOverride?.name ||
+          deviceId;
 
-        // Match live sensor by deviceId, or fallback by index if hardware reports MAC addresses
-        const live =
-          liveSensors.find(
-            (ls) =>
-              ls.deviceId &&
-              mergedBase.deviceId &&
-              (ls.deviceId === mergedBase.deviceId || ls.deviceId.includes(mergedBase.deviceId))
-          ) ||
-          liveSensors[idx] ||
-          null;
+        const pos = Array.isArray(savedOverride?.pos)
+          ? savedOverride.pos
+          : Array.isArray(savedOverride?.position)
+            ? savedOverride.position
+            : Array.isArray(defaultDef.pos)
+              ? defaultDef.pos
+              : inferPositionFromName(realName, idx);
 
-        let temp = live?.temperature ?? mergedBase.defaultTemp ?? 24.5;
-        let humidity = live?.humidity ?? mergedBase.defaultHumidity ?? 50;
+        let temp = live?.temperature ?? defaultDef.defaultTemp ?? 20.0;
+        let humidity = live?.humidity ?? defaultDef.defaultHumidity ?? 40.0;
 
-        if (isDemo || !live) {
+        if (isDemo && !live) {
           const drift = Math.sin(Date.now() / 15000 + idx) * 0.3;
           temp = Math.round((temp + drift) * 10) / 10;
+        } else {
+          temp = Math.round(Number(temp) * 10) / 10;
+          humidity = Math.round(Number(humidity) * 10) / 10;
         }
 
         const heat = evaluateHeatStress(temp, humidity);
 
         return {
-          ...mergedBase,
-          id: mergedBase.id || mergedBase.deviceId || `sensor_${idx}`,
+          ...defaultDef,
+          id: deviceId,
+          deviceId,
+          name: realName,
+          nameJa: realName,
           pos,
+          radius: savedOverride?.radius ?? defaultDef.radius ?? 3.0,
           temperature: temp,
           humidity,
           wbgt: heat.wbgt,
@@ -101,19 +156,33 @@ export function useFactorySensors(factoryName) {
     inFlight.current = true;
 
     try {
-      let liveSensors = [];
-      try {
-        const todayStr = todayJST();
-        const sensorData = await fetchSensorData(factoryName, todayStr);
-        if (sensorData?.sensors?.length) {
-          liveSensors = sensorData.sensors;
-        }
-      } catch {
-        // Fall back to pre-configured defaults if offline
+      const todayStr = todayJST();
+      const [sensorDataRes, iotRecordsRes] = await Promise.allSettled([
+        fetchSensorData(factoryName, todayStr),
+        fetchIoTDeviceNames(factoryName),
+      ]);
+
+      const nextIoTMap = new Map();
+      if (iotRecordsRes.status === "fulfilled" && Array.isArray(iotRecordsRes.value)) {
+        iotRecordsRes.value.forEach((r) => {
+          const id = String(r?.deviceId ?? "").trim();
+          if (id) {
+            nextIoTMap.set(id, {
+              name: r.name ? String(r.name).trim() : "",
+              offset: Number(r.offset) || 0,
+            });
+          }
+        });
       }
 
+      const liveSensors =
+        sensorDataRes.status === "fulfilled" && Array.isArray(sensorDataRes.value?.sensors)
+          ? sensorDataRes.value.sensors
+          : [];
+
+      iotNamesRef.current = nextIoTMap;
       liveReadingsRef.current = liveSensors;
-      setSensors(buildResolvedSensors(liveSensors));
+      setSensors(buildResolvedSensors(liveSensors, nextIoTMap));
       setLastUpdate(new Date());
     } finally {
       inFlight.current = false;
@@ -131,7 +200,7 @@ export function useFactorySensors(factoryName) {
 
     const onAnnotationsChanged = (e) => {
       if (!e.detail?.factoryName || e.detail.factoryName === factoryName) {
-        setSensors(buildResolvedSensors(liveReadingsRef.current));
+        setSensors(buildResolvedSensors(liveReadingsRef.current, iotNamesRef.current));
       }
     };
     window.addEventListener("freya:annotations-changed", onAnnotationsChanged);

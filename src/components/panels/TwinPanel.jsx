@@ -90,11 +90,9 @@ export default function TwinPanel({
   const effectiveSensors = useMemo(() => {
     if (!localSensors || localSensors.length === 0) return factorySensors;
     if (!factorySensors || factorySensors.length === 0) return localSensors;
-    return factorySensors.map((s, idx) => {
-      const sKey = s.id || s.deviceId;
-      const override =
-        localSensors.find((ls) => (ls.id || ls.deviceId) === sKey) ||
-        localSensors[idx];
+    return factorySensors.map((s) => {
+      const sKey = s.deviceId || s.id;
+      const override = localSensors.find((ls) => (ls.deviceId || ls.id) === sKey);
       if (!override) return s;
       const pos = Array.isArray(override.pos)
         ? override.pos
@@ -105,8 +103,6 @@ export default function TwinPanel({
         ...s,
         pos,
         radius: override.radius ?? s.radius,
-        name: override.name || s.name,
-        nameJa: override.nameJa || s.nameJa,
       };
     });
   }, [localSensors, factorySensors]);

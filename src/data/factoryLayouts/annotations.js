@@ -4,6 +4,24 @@ import { fetchTwinAnnotations, saveTwinAnnotations, resetTwinAnnotations } from 
 const STORAGE_PREFIX = "freya_twin_annotations_";
 const _memoryCache = new Map();
 
+const LEGACY_FAKE_SENSOR_IDS = new Set([
+  "oze_env_01",
+  "oze_env_02",
+  "oze_env_03",
+  "oze_sensor_srs",
+  "oze_sensor_east",
+  "oze_sensor_shipping",
+  "68:FE:71:32:3E:98",
+]);
+
+function sanitizeSensors(sensors, fallbackSensors) {
+  if (!Array.isArray(sensors)) return fallbackSensors;
+  const valid = sensors.filter(
+    (s) => s && !LEGACY_FAKE_SENSOR_IDS.has(s.id) && !LEGACY_FAKE_SENSOR_IDS.has(s.deviceId)
+  );
+  return valid.length > 0 ? valid : fallbackSensors;
+}
+
 function getDefaultAnnotations(factoryName) {
   if (!factoryName) return { sensors: [], cameras: [] };
   if (factoryName.includes("小瀬") || factoryName.toLowerCase().includes("oze")) {
@@ -27,21 +45,26 @@ export function getFactoryAnnotations(factoryName) {
     return _memoryCache.get(factoryName);
   }
 
+  const defaults = getDefaultAnnotations(factoryName);
   const storageKey = `${STORAGE_PREFIX}${factoryName}`;
   try {
     const raw = localStorage.getItem(storageKey);
     if (raw) {
       const parsed = JSON.parse(raw);
       if (parsed && Array.isArray(parsed.sensors) && Array.isArray(parsed.cameras)) {
-        _memoryCache.set(factoryName, parsed);
-        return parsed;
+        const cleaned = {
+          ...parsed,
+          sensors: sanitizeSensors(parsed.sensors, defaults.sensors),
+          cameras: parsed.cameras.length > 0 ? parsed.cameras : defaults.cameras,
+        };
+        _memoryCache.set(factoryName, cleaned);
+        return cleaned;
       }
     }
   } catch {
     // Fallback if parsing fails
   }
 
-  const defaults = getDefaultAnnotations(factoryName);
   _memoryCache.set(factoryName, defaults);
   return defaults;
 }
@@ -52,13 +75,14 @@ export function getFactoryAnnotations(factoryName) {
  */
 export async function syncFactoryAnnotations(factoryName) {
   if (!factoryName) return getDefaultAnnotations(factoryName);
+  const defaults = getDefaultAnnotations(factoryName);
 
   try {
     const cloud = await fetchTwinAnnotations(factoryName);
     if (cloud && (cloud.sensors?.length > 0 || cloud.cameras?.length > 0)) {
       const payload = {
-        sensors: cloud.sensors,
-        cameras: cloud.cameras,
+        sensors: sanitizeSensors(cloud.sensors, defaults.sensors),
+        cameras: cloud.cameras?.length > 0 ? cloud.cameras : defaults.cameras,
         updatedAt: cloud.updatedAt || Date.now(),
       };
       _memoryCache.set(factoryName, payload);
