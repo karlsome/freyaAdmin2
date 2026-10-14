@@ -2845,6 +2845,131 @@ export async function fetchPartCrossMachineComparison({ hinban, seiban, hinbans,
   });
 }
 
+// ─── Digital Twin 3D Annotations (Sensors & Cameras Coordinates in MongoDB) ──
+export async function fetchTwinAnnotations(factoryName) {
+  if (!factoryName) return null;
+
+  // 1. Try dedicated REST endpoint
+  try {
+    const res = await fetch(`${BASE_URL}api/digital-twin/${encodeURIComponent(factoryName)}/annotations`);
+    if (res.ok) {
+      const data = await res.json();
+      if (data && data.success && (data.sensors !== null || data.cameras !== null)) {
+        return {
+          sensors: Array.isArray(data.sensors) ? data.sensors : [],
+          cameras: Array.isArray(data.cameras) ? data.cameras : [],
+          updatedAt: data.updatedAt,
+        };
+      }
+    }
+  } catch (_) {
+    // fallback to generic queries
+  }
+
+  // 2. Fallback to Sasaki_Coating_MasterDB.twinAnnotations via POST /queries
+  try {
+    const rows = await query("Sasaki_Coating_MasterDB", "twinAnnotations", { factory: factoryName });
+    if (rows && rows.length > 0) {
+      const doc = rows[0];
+      return {
+        sensors: Array.isArray(doc.sensors) ? doc.sensors : [],
+        cameras: Array.isArray(doc.cameras) ? doc.cameras : [],
+        updatedAt: doc.updatedAt,
+      };
+    }
+  } catch (err) {
+    console.warn("fetchTwinAnnotations query fallback failed:", err);
+  }
+
+  return null;
+}
+
+export async function saveTwinAnnotations(factoryName, { sensors, cameras, username = "admin" }) {
+  if (!factoryName) return false;
+
+  const payload = {
+    factory: factoryName,
+    sensors: Array.isArray(sensors) ? sensors : [],
+    cameras: Array.isArray(cameras) ? cameras : [],
+    updatedAt: new Date().toISOString(),
+    updatedBy: username,
+  };
+
+  let saved = false;
+
+  // 1. Try dedicated REST endpoint
+  try {
+    const res = await _postJson(`api/digital-twin/${encodeURIComponent(factoryName)}/annotations`, payload);
+    if (res?.success) saved = true;
+  } catch (_) {
+    // fallback to generic queries
+  }
+
+  // 2. Fallback: Save directly via POST /queries to MongoDB
+  if (!saved) {
+    try {
+      const existing = await query("Sasaki_Coating_MasterDB", "twinAnnotations", { factory: factoryName });
+      if (existing && existing.length > 0) {
+        await _postJson("queries", {
+          dbName: "Sasaki_Coating_MasterDB",
+          collectionName: "twinAnnotations",
+          query: { factory: factoryName },
+          update: {
+            $set: {
+              sensors: payload.sensors,
+              cameras: payload.cameras,
+              updatedAt: new Date(),
+              updatedBy: username,
+            },
+          },
+        });
+      } else {
+        await _postJson("queries", {
+          dbName: "Sasaki_Coating_MasterDB",
+          collectionName: "twinAnnotations",
+          insertData: {
+            factory: factoryName,
+            sensors: payload.sensors,
+            cameras: payload.cameras,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+            updatedBy: username,
+          },
+        });
+      }
+      saved = true;
+    } catch (err) {
+      console.error("Failed to save twin annotations to MongoDB:", err);
+    }
+  }
+
+  return saved;
+}
+
+export async function resetTwinAnnotations(factoryName) {
+  if (!factoryName) return;
+
+  try {
+    await fetch(`${BASE_URL}api/digital-twin/${encodeURIComponent(factoryName)}/annotations`, { method: "DELETE" });
+  } catch (_) {}
+
+  try {
+    await _postJson("queries", {
+      dbName: "Sasaki_Coating_MasterDB",
+      collectionName: "twinAnnotations",
+      query: { factory: factoryName },
+      update: {
+        $set: {
+          sensors: [],
+          cameras: [],
+          updatedAt: new Date(),
+          _reset: true,
+        },
+      },
+    });
+  } catch (_) {}
+}
+
 
 
 

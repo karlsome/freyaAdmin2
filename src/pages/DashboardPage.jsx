@@ -187,6 +187,7 @@ function FactoryDashboard({ factory, factories, onFactoryChange }) {
       case "twin":
         return (
           <TwinPanel
+            factory={factory}
             machinesById={machinesById}
             selectedId={selectedId}
             onSelect={setSelectedId}
@@ -201,6 +202,7 @@ function FactoryDashboard({ factory, factories, onFactoryChange }) {
             has3D={has3D}
             units={units}
             hasSensors={Boolean(data?.hasCycleSensors)}
+            onOpenCamera={(streamId) => openCamera(factory, streamId)}
           />
         );
       case "machines":

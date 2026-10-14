@@ -49,3 +49,51 @@ export function getOutlineTexture() {
   outlineTexture.colorSpace = THREE.SRGBColorSpace;
   return outlineTexture;
 }
+
+let heatTexture = null;
+/**
+ * Procedural circular radial heat-aura texture for temperature sensors on the floor.
+ */
+export function getRadialHeatTexture() {
+  if (heatTexture) return heatTexture;
+  const size = 256;
+  const canvas = document.createElement("canvas");
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext("2d");
+  const half = size / 2;
+  const grad = ctx.createRadialGradient(half, half, 0, half, half, half);
+  grad.addColorStop(0, "rgba(255, 255, 255, 1.0)");
+  grad.addColorStop(0.25, "rgba(255, 255, 255, 0.85)");
+  grad.addColorStop(0.55, "rgba(255, 255, 255, 0.40)");
+  grad.addColorStop(0.85, "rgba(255, 255, 255, 0.10)");
+  grad.addColorStop(1.0, "rgba(255, 255, 255, 0.0)");
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, size, size);
+  heatTexture = new THREE.CanvasTexture(canvas);
+  heatTexture.colorSpace = THREE.SRGBColorSpace;
+  return heatTexture;
+}
+
+let heatRingTexture = null;
+/**
+ * Circular wave ring texture for heat stress hazard warnings.
+ */
+export function getHeatRingTexture() {
+  if (heatRingTexture) return heatRingTexture;
+  const size = 256;
+  const canvas = document.createElement("canvas");
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext("2d");
+  const half = size / 2;
+  ctx.beginPath();
+  ctx.arc(half, half, half - 12, 0, Math.PI * 2);
+  ctx.lineWidth = 14;
+  ctx.strokeStyle = "rgba(255, 255, 255, 0.95)";
+  ctx.stroke();
+  heatRingTexture = new THREE.CanvasTexture(canvas);
+  heatRingTexture.colorSpace = THREE.SRGBColorSpace;
+  return heatRingTexture;
+}
+

@@ -1,0 +1,131 @@
+import { KOSE_DEFAULT_SENSORS, KOSE_DEFAULT_CAMERAS } from "./kose";
+import { fetchTwinAnnotations, saveTwinAnnotations, resetTwinAnnotations } from "../../services/api";
+
+const STORAGE_PREFIX = "freya_twin_annotations_";
+const _memoryCache = new Map();
+
+function getDefaultAnnotations(factoryName) {
+  if (!factoryName) return { sensors: [], cameras: [] };
+  if (factoryName.includes("小瀬") || factoryName.toLowerCase().includes("oze")) {
+    return {
+      sensors: [...KOSE_DEFAULT_SENSORS],
+      cameras: [...KOSE_DEFAULT_CAMERAS],
+    };
+  }
+  return { sensors: [], cameras: [] };
+}
+
+/**
+ * Returns the currently active 3D annotations (sensors & cameras) for a given factory.
+ * Checks memory cache -> localStorage -> pre-seeded defaults.
+ * Synchronous for immediate rendering without UI delay.
+ */
+export function getFactoryAnnotations(factoryName) {
+  if (!factoryName) return { sensors: [], cameras: [] };
+
+  if (_memoryCache.has(factoryName)) {
+    return _memoryCache.get(factoryName);
+  }
+
+  const storageKey = `${STORAGE_PREFIX}${factoryName}`;
+  try {
+    const raw = localStorage.getItem(storageKey);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (parsed && Array.isArray(parsed.sensors) && Array.isArray(parsed.cameras)) {
+        _memoryCache.set(factoryName, parsed);
+        return parsed;
+      }
+    }
+  } catch {
+    // Fallback if parsing fails
+  }
+
+  const defaults = getDefaultAnnotations(factoryName);
+  _memoryCache.set(factoryName, defaults);
+  return defaults;
+}
+
+/**
+ * Synchronizes annotations with the permanent MongoDB backend.
+ * Ensures anyone viewing the dashboard sees the latest permanent positions.
+ */
+export async function syncFactoryAnnotations(factoryName) {
+  if (!factoryName) return getDefaultAnnotations(factoryName);
+
+  try {
+    const cloud = await fetchTwinAnnotations(factoryName);
+    if (cloud && (cloud.sensors?.length > 0 || cloud.cameras?.length > 0)) {
+      const payload = {
+        sensors: cloud.sensors,
+        cameras: cloud.cameras,
+        updatedAt: cloud.updatedAt || Date.now(),
+      };
+      _memoryCache.set(factoryName, payload);
+      try {
+        localStorage.setItem(`${STORAGE_PREFIX}${factoryName}`, JSON.stringify(payload));
+      } catch (_) {}
+
+      window.dispatchEvent(
+        new CustomEvent("freya:annotations-changed", { detail: { factoryName, payload, source: "cloud" } })
+      );
+      return payload;
+    }
+  } catch (err) {
+    console.warn("syncFactoryAnnotations error, using cached coordinates:", err);
+  }
+
+  return getFactoryAnnotations(factoryName);
+}
+
+/**
+ * Persists updated sensor/camera annotations permanently to MongoDB
+ * as well as localStorage and in-memory cache for instant responsiveness.
+ */
+export async function saveFactoryAnnotations(factoryName, { sensors, cameras }) {
+  if (!factoryName) return;
+  const storageKey = `${STORAGE_PREFIX}${factoryName}`;
+  const payload = {
+    sensors: Array.isArray(sensors) ? sensors : [],
+    cameras: Array.isArray(cameras) ? cameras : [],
+    updatedAt: Date.now(),
+  };
+
+  // 1. Immediately update local state & event bus for zero-latency UI
+  _memoryCache.set(factoryName, payload);
+  try {
+    localStorage.setItem(storageKey, JSON.stringify(payload));
+  } catch (err) {
+    console.warn("Failed to write to localStorage:", err);
+  }
+  window.dispatchEvent(new CustomEvent("freya:annotations-changed", { detail: { factoryName, payload } }));
+
+  // 2. Permanently save to MongoDB backend so all dashboard viewers see the position
+  try {
+    await saveTwinAnnotations(factoryName, { sensors: payload.sensors, cameras: payload.cameras });
+  } catch (err) {
+    console.error("Failed to permanently save annotations to MongoDB:", err);
+  }
+}
+
+/**
+ * Resets annotations back to the factory defaults both locally and in MongoDB.
+ */
+export async function resetFactoryAnnotations(factoryName) {
+  if (!factoryName) return;
+  const storageKey = `${STORAGE_PREFIX}${factoryName}`;
+  const defaults = getDefaultAnnotations(factoryName);
+
+  _memoryCache.delete(factoryName);
+  try {
+    localStorage.removeItem(storageKey);
+  } catch (_) {}
+
+  window.dispatchEvent(new CustomEvent("freya:annotations-changed", { detail: { factoryName, payload: defaults } }));
+
+  try {
+    await resetTwinAnnotations(factoryName);
+  } catch (err) {
+    console.warn("Failed to reset annotations in MongoDB:", err);
+  }
+}

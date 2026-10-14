@@ -1,8 +1,10 @@
-import { Suspense, useEffect, useMemo, useRef } from "react";
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { CameraControls, Edges, Grid, Html } from "@react-three/drei";
 import NcCutter from "./NcCutter";
 import ManasMachine from "./ManasMachine";
+import SensorMarker from "./SensorMarker";
+import CameraMarker from "./CameraMarker";
 import { KOSE_LAYOUT, NC_DEPTH, getMachinePosition } from "../../data/factoryLayouts/kose";
 import { STATUS_THEME, effectiveStatus, formatNumber } from "./twinTheme";
 
@@ -25,7 +27,7 @@ function sceneColors(isDark) {
 }
 
 /* ── Camera rig: default overview + fly-to on selection ── */
-function CameraRig({ selectedPos, drawerOpen, viewKey }) {
+function CameraRig({ selectedPos, drawerOpen, viewKey, controlsEnabled = true }) {
   const controlsRef = useRef();
   const { size } = useThree();
 
@@ -57,6 +59,7 @@ function CameraRig({ selectedPos, drawerOpen, viewKey }) {
     <CameraControls
       ref={controlsRef}
       makeDefault
+      enabled={controlsEnabled}
       minDistance={4}
       maxDistance={75}
       minPolarAngle={0.15}
@@ -68,12 +71,18 @@ function CameraRig({ selectedPos, drawerOpen, viewKey }) {
 }
 
 /* ── Floor, walls and grid ── */
-function Floor({ colors }) {
+function Floor({ colors, onPointerDown, onPointerMove, onPointerUp }) {
   const { width, depth } = KOSE_LAYOUT.floor;
   const wall = 0.08;
   return (
     <group>
-      <mesh rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
+      <mesh
+        rotation={[-Math.PI / 2, 0, 0]}
+        receiveShadow
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={onPointerUp}
+      >
         <planeGeometry args={[width, depth]} />
         <meshStandardMaterial color={colors.floor} roughness={0.95} />
       </mesh>
@@ -219,7 +228,7 @@ function PairLink({ a, b, together, color }) {
 }
 
 /* ── Floating badge above a machine ── */
-function MachineBadge({ position, height, title, value, unit, status, isJa, dim, onClick, selected }) {
+function MachineBadge({ position, height, title, value, unit, status, isJa, dim, onClick, selected, sebanggo }) {
   const theme = STATUS_THEME[status] || STATUS_THEME.off;
   return (
     <Html position={[position[0], height, position[1]]} center zIndexRange={[30, 10]}>
@@ -233,6 +242,11 @@ function MachineBadge({ position, height, title, value, unit, status, isJa, dim,
           <span className="twin-badge__dot" />
           {title}
         </span>
+        {sebanggo && status !== "off" && (
+          <span className="twin-badge__sebanggo" title={`背番号: ${sebanggo}`}>
+            {sebanggo}
+          </span>
+        )}
         <span className="twin-badge__value">
           {value}
           {unit && <small>{unit}</small>}
@@ -252,7 +266,25 @@ function badgeValue(machine, isJa, shared = false) {
 }
 
 /* ── Scene contents ── */
-function FactoryContents({ machinesById, selectedId, onSelect, isJa, colors }) {
+function FactoryContents({
+  machinesById,
+  selectedId,
+  onSelect,
+  isJa,
+  colors,
+  sensors = [],
+  cameras = [],
+  onSelectCamera,
+  showSensors = true,
+  showCameras = true,
+  showSensorInfo = true,
+  editMode = false,
+  activeDrag = null,
+  onStartDrag,
+  onRotateCamera,
+  onFloorPointerMove,
+  onFloorPointerUp,
+}) {
   const ncPos = useMemo(() => Object.fromEntries(KOSE_LAYOUT.ncMachines.map((m) => [m.id, m.pos])), []);
 
   const pairState = useMemo(() => KOSE_LAYOUT.pairs.map(([a, b]) => {
@@ -268,6 +300,20 @@ function FactoryContents({ machinesById, selectedId, onSelect, isJa, colors }) {
   return (
     <>
       <Floor colors={colors} />
+
+      {/* Invisible drag catcher plane active during drag to smoothly track coordinates across full floor */}
+      {activeDrag && (
+        <mesh
+          position={[0, 0.05, 0]}
+          rotation={[-Math.PI / 2, 0, 0]}
+          onPointerMove={onFloorPointerMove}
+          onPointerUp={onFloorPointerUp}
+        >
+          <planeGeometry args={[KOSE_LAYOUT.floor.width + 30, KOSE_LAYOUT.floor.depth + 30]} />
+          <meshBasicMaterial visible={false} />
+        </mesh>
+      )}
+
       <MeetingRoom isJa={isJa} />
       <PalletZone isJa={isJa} />
 
@@ -315,6 +361,7 @@ function FactoryContents({ machinesById, selectedId, onSelect, isJa, colors }) {
         const m = machinesById[id];
         const status = effectiveStatus(m);
         const { value, unit } = badgeValue(m, isJa);
+        const sebanggo = m?.sebanggo || m?.activeRun?.sebanggo || null;
         return (
           <MachineBadge
             key={`badge-${id}`}
@@ -327,6 +374,7 @@ function FactoryContents({ machinesById, selectedId, onSelect, isJa, colors }) {
             isJa={isJa}
             dim={status === "off"}
             selected={selectedId === id}
+            sebanggo={sebanggo}
             onClick={() => onSelect(id)}
           />
         );
@@ -335,6 +383,7 @@ function FactoryContents({ machinesById, selectedId, onSelect, isJa, colors }) {
         const a = ncPos[p.a];
         const b = ncPos[p.b];
         const { value, unit } = badgeValue(p.lead, isJa, true);
+        const sebanggo = p.lead?.pair?.sebanggo || p.lead?.sebanggo || machinesById[p.a]?.sebanggo || machinesById[p.b]?.sebanggo || null;
         return (
           <MachineBadge
             key={`badge-${p.a}-${p.b}`}
@@ -347,6 +396,7 @@ function FactoryContents({ machinesById, selectedId, onSelect, isJa, colors }) {
             isJa={isJa}
             dim={p.status === "off"}
             selected={selectedId === p.a || selectedId === p.b}
+            sebanggo={sebanggo}
             onClick={() => onSelect(p.lead?.id || p.a)}
           />
         );
@@ -355,6 +405,7 @@ function FactoryContents({ machinesById, selectedId, onSelect, isJa, colors }) {
         const m = machinesById[KOSE_LAYOUT.manas.id];
         const status = effectiveStatus(m);
         const { value, unit } = badgeValue(m, isJa);
+        const sebanggo = m?.sebanggo || null;
         return (
           <MachineBadge
             position={KOSE_LAYOUT.manas.pos}
@@ -366,27 +417,129 @@ function FactoryContents({ machinesById, selectedId, onSelect, isJa, colors }) {
             isJa={isJa}
             dim={status === "off"}
             selected={selectedId === KOSE_LAYOUT.manas.id}
+            sebanggo={m?.hasCycleSensor ? sebanggo : null}
             onClick={() => onSelect(KOSE_LAYOUT.manas.id)}
           />
         );
       })()}
+
+      {/* ── Environmental Sensors with dynamic Heat Auras ── */}
+      {showSensors &&
+        sensors.map((sensor) => (
+          <SensorMarker
+            key={sensor.id || sensor.deviceId}
+            sensor={sensor}
+            isJa={isJa}
+            selected={selectedId === sensor.id}
+            onSelect={onSelect}
+            showInfo={showSensorInfo}
+            editMode={editMode}
+            isDragging={activeDrag?.type === "sensor" && activeDrag?.id === sensor.id}
+            onStartDrag={onStartDrag}
+          />
+        ))}
+
+      {/* ── Factory CCTV Cameras with live stream pop-up ── */}
+      {showCameras &&
+        cameras.map((camera) => (
+          <CameraMarker
+            key={camera.id || camera.streamId}
+            camera={camera}
+            isJa={isJa}
+            onSelectCamera={onSelectCamera}
+            editMode={editMode}
+            isDragging={activeDrag?.type === "camera" && activeDrag?.id === camera.id}
+            onStartDrag={onStartDrag}
+            onRotateCamera={onRotateCamera}
+          />
+        ))}
     </>
   );
 }
 
 /**
  * Full 3D digital twin of the 小瀬 floor.
+ * Supports interactive dragging & camera orientation in Edit Mode.
  */
-export default function FactoryScene({ machinesById, selectedId, onSelect, isDark, isJa, viewKey = 0, drawerCovers = true }) {
+export default function FactoryScene({
+  machinesById,
+  selectedId,
+  onSelect,
+  isDark,
+  isJa,
+  viewKey = 0,
+  drawerCovers = true,
+  sensors = [],
+  cameras = [],
+  onSelectCamera,
+  showSensors = true,
+  showCameras = true,
+  showSensorInfo = true,
+  editMode = false,
+  onUpdatePosition,
+  onRotateCamera,
+  onCommitPositions,
+}) {
   const colors = sceneColors(isDark);
-  const selectedPos = selectedId ? getMachinePosition(selectedId) : null;
+  const selectedSensor = sensors.find((s) => s.id === selectedId);
+  const selectedPos = selectedId ? (getMachinePosition(selectedId) || selectedSensor?.pos || null) : null;
+
+  const [activeDrag, setActiveDrag] = useState(null);
+
+  const handleStartDrag = (type, id) => {
+    setActiveDrag({ type, id });
+  };
+
+  const handleFloorPointerMove = (e) => {
+    if (!activeDrag || !onUpdatePosition) return;
+    e.stopPropagation();
+    const hw = KOSE_LAYOUT.floor.width / 2 - 0.6;
+    const hd = KOSE_LAYOUT.floor.depth / 2 - 0.6;
+    const x = Math.max(-hw, Math.min(hw, e.point.x));
+    const z = Math.max(-hd, Math.min(hd, e.point.z));
+    // 0.05m snap for crisp placement
+    const roundedX = Math.round(x * 20) / 20;
+    const roundedZ = Math.round(z * 20) / 20;
+    onUpdatePosition(activeDrag.type, activeDrag.id, [roundedX, roundedZ]);
+  };
+
+  const handleFloorPointerUp = () => {
+    if (activeDrag) {
+      setActiveDrag(null);
+      if (onCommitPositions) onCommitPositions();
+    }
+  };
+
+  // Window pointerup listener guarantees drag release even if pointer moves outside canvas
+  useEffect(() => {
+    if (!activeDrag) return;
+    const onWindowPointerUp = () => {
+      setActiveDrag(null);
+      if (onCommitPositions) onCommitPositions();
+    };
+    window.addEventListener("pointerup", onWindowPointerUp);
+    window.addEventListener("pointercancel", onWindowPointerUp);
+    return () => {
+      window.removeEventListener("pointerup", onWindowPointerUp);
+      window.removeEventListener("pointercancel", onWindowPointerUp);
+    };
+  }, [activeDrag, onCommitPositions]);
+
+  // Cancel any drag if user exits editMode
+  useEffect(() => {
+    if (!editMode && activeDrag) {
+      setActiveDrag(null);
+    }
+  }, [editMode, activeDrag]);
 
   return (
     <Canvas
       shadows="percentage"
       dpr={[1, 2]}
       camera={{ position: [0, 19, 14], fov: 40, near: 0.1, far: 200 }}
-      onPointerMissed={() => onSelect(null)}
+      onPointerMissed={() => {
+        if (!activeDrag) onSelect(null);
+      }}
       gl={{ antialias: true, powerPreference: "high-performance" }}
     >
       <color attach="background" args={[colors.bg]} />
@@ -416,10 +569,28 @@ export default function FactoryScene({ machinesById, selectedId, onSelect, isDar
           onSelect={onSelect}
           isJa={isJa}
           colors={colors}
+          sensors={sensors}
+          cameras={cameras}
+          onSelectCamera={onSelectCamera}
+          showSensors={showSensors}
+          showCameras={showCameras}
+          showSensorInfo={showSensorInfo}
+          editMode={editMode}
+          activeDrag={activeDrag}
+          onStartDrag={handleStartDrag}
+          onRotateCamera={onRotateCamera}
+          onFloorPointerMove={handleFloorPointerMove}
+          onFloorPointerUp={handleFloorPointerUp}
         />
       </Suspense>
 
-      <CameraRig selectedPos={selectedPos} drawerOpen={Boolean(selectedId) && drawerCovers} viewKey={viewKey} />
+      <CameraRig
+        selectedPos={selectedPos}
+        drawerOpen={Boolean(selectedId) && drawerCovers}
+        viewKey={viewKey}
+        controlsEnabled={!activeDrag}
+      />
     </Canvas>
   );
 }
+

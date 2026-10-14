@@ -47,7 +47,68 @@ export const KOSE_LAYOUT = {
     ["OZNC07", "OZNC09"],
     ["OZNC08", "OZNC10"],
   ],
+  sensors: [
+    {
+      id: "oze_env_01",
+      deviceId: "oze_sensor_srs",
+      name: "SRS Line Zone (NC03-06)",
+      nameJa: "SRS・NC加工エリア（温湿度 #1）",
+      pos: toWorld(232, 190),
+      radius: 3.4,
+      defaultTemp: 31.8, // Demonstrates red heat hazard warning out of the box!
+      defaultHumidity: 66,
+    },
+    {
+      id: "oze_env_02",
+      deviceId: "oze_sensor_east",
+      name: "East NC Bay",
+      nameJa: "東側NC加工エリア（温湿度 #2）",
+      pos: toWorld(740, 270),
+      radius: 3.0,
+      defaultTemp: 27.4, // Warning amber
+      defaultHumidity: 52,
+    },
+    {
+      id: "oze_env_03",
+      deviceId: "oze_sensor_shipping",
+      name: "Inspection & Shipping",
+      nameJa: "検査・出荷パレット（温湿度 #3）",
+      pos: toWorld(520, 480),
+      radius: 2.8,
+      defaultTemp: 23.5, // Normal emerald/cyan
+      defaultHumidity: 46,
+    },
+  ],
+  cameras: [
+    {
+      id: "tapo_cam",
+      streamId: "tapo_cam",
+      label: "CAM 1 (SRS Line)",
+      labelJa: "CAM 1（SRSライン）",
+      pos: toWorld(60, 80),
+      rotationY: Math.PI / 4,
+    },
+    {
+      id: "tapo_cam2",
+      streamId: "tapo_cam2",
+      label: "CAM 2 (Press / Center)",
+      labelJa: "CAM 2（プレス・中央通路）",
+      pos: toWorld(505, 50),
+      rotationY: Math.PI,
+    },
+    {
+      id: "tapo_cam3",
+      streamId: "tapo_cam3",
+      label: "CAM 3 (Inspection & Manas)",
+      labelJa: "CAM 3（検査・MANAS）",
+      pos: toWorld(960, 320),
+      rotationY: -Math.PI * 0.75,
+    },
+  ],
 };
+
+export const KOSE_DEFAULT_SENSORS = KOSE_LAYOUT.sensors;
+export const KOSE_DEFAULT_CAMERAS = KOSE_LAYOUT.cameras;
 
 export const KOSE_MACHINE_IDS = [
   ...KOSE_LAYOUT.ncMachines.map((m) => m.id),

@@ -111,6 +111,25 @@ html:not(.dark) .twin-badge {
   letter-spacing: 0.04em;
   opacity: 0.85;
 }
+.twin-badge__sebanggo {
+  display: inline-flex;
+  align-items: center;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  padding: 1px 7px;
+  border-radius: 5px;
+  background: color-mix(in srgb, var(--status, #2563eb) 22%, transparent);
+  color: var(--status, #2563eb);
+  border: 1px solid color-mix(in srgb, var(--status, #2563eb) 45%, transparent);
+  margin: 1px 0;
+  line-height: 1.2;
+}
+html:not(.dark) .twin-badge__sebanggo {
+  background: color-mix(in srgb, var(--status, #2563eb) 14%, transparent);
+  color: #0f172a;
+}
 .twin-badge__dot {
   width: 7px;
   height: 7px;
@@ -645,5 +664,629 @@ html:not(.dark) .twin-legend { background: rgba(255, 255, 255, 0.88); color: #33
 @media (prefers-reduced-motion: reduce) {
   .twin-badge--alert,
   .twin-drawer__status--alert,
-  .twin-drawer { animation: none; }
+  .twin-drawer,
+  .twin-sensor-badge--danger { animation: none; }
 }
+
+/* ── 3D Sensor Badges ── */
+.twin-sensor-badge {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  min-width: 90px;
+  padding: 5px 10px 5px;
+  border-radius: 12px;
+  border: 1.5px solid color-mix(in srgb, var(--sensor-color, #10b981) 60%, transparent);
+  background: rgba(15, 23, 42, 0.82);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  color: #f8fafc;
+  font-family: 'Inter', system-ui, sans-serif;
+  white-space: nowrap;
+  cursor: pointer;
+  user-select: none;
+  box-shadow: 0 8px 24px -6px color-mix(in srgb, var(--sensor-color, #10b981) 50%, transparent);
+  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.2s ease;
+}
+html:not(.dark) .twin-sensor-badge {
+  background: rgba(255, 255, 255, 0.92);
+  color: #0f172a;
+}
+.twin-sensor-badge:hover {
+  transform: translateY(-2px) scale(1.05);
+}
+.twin-sensor-badge--selected {
+  transform: scale(1.1);
+  border-color: var(--sensor-color, #10b981);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--sensor-color, #10b981) 40%, transparent);
+}
+
+.twin-sensor-badge__header {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.twin-sensor-badge__icon {
+  font-size: 14px;
+  color: var(--sensor-color, #10b981);
+}
+.twin-sensor-badge__title {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  opacity: 0.9;
+}
+
+.twin-sensor-badge__readings {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+.twin-sensor-badge__temp {
+  font-size: 15px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  color: var(--sensor-color, #10b981);
+}
+.twin-sensor-badge__humid {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted, #94a3b8);
+  font-variant-numeric: tabular-nums;
+}
+
+.twin-sensor-badge__tag {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 9.5px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--sensor-color, #10b981) 18%, transparent);
+  color: var(--sensor-color, #10b981);
+  margin-top: 1px;
+}
+
+/* Pulsing Red Hazard Aura & Tag when too hot for workers */
+.twin-sensor-badge--danger {
+  border-color: #ef4444;
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.22), rgba(15, 23, 42, 0.88));
+  box-shadow: 0 0 25px rgba(239, 68, 68, 0.65);
+  animation: twin-heat-pulse 1.3s ease-in-out infinite alternate;
+}
+html:not(.dark) .twin-sensor-badge--danger {
+  background: linear-gradient(135deg, rgba(254, 226, 226, 0.95), rgba(255, 255, 255, 0.98));
+}
+.twin-sensor-badge__tag--danger,
+.twin-sensor-badge__tag--extreme {
+  background: #ef4444;
+  color: #ffffff;
+}
+.twin-sensor-badge__dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #ffffff;
+}
+.twin-sensor-badge__dot.pulse {
+  animation: twin-dot-pulse 0.9s ease-in-out infinite alternate;
+}
+
+@keyframes twin-heat-pulse {
+  0% { transform: scale(1); box-shadow: 0 0 14px rgba(239, 68, 68, 0.4); }
+  100% { transform: scale(1.05); box-shadow: 0 0 28px rgba(239, 68, 68, 0.85); }
+}
+@keyframes twin-dot-pulse {
+  0% { opacity: 0.3; transform: scale(0.8); }
+  100% { opacity: 1; transform: scale(1.3); }
+}
+
+/* ── Compact Sensor Pill (Avoids blocking machines) ── */
+.twin-sensor-badge__close-btn {
+  margin-left: auto;
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 4px;
+  border: none;
+  background: transparent;
+  color: inherit;
+  opacity: 0.7;
+  cursor: pointer;
+  transition: opacity 0.15s ease, background 0.15s ease;
+}
+.twin-sensor-badge__close-btn:hover {
+  opacity: 1;
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.twin-sensor-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 9px 3px 7px;
+  border-radius: 999px;
+  border: 1.5px solid var(--sensor-color, #10b981);
+  background: rgba(15, 23, 42, 0.9);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  color: #f8fafc;
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  box-shadow: 0 4px 14px -2px color-mix(in srgb, var(--sensor-color, #10b981) 45%, transparent);
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+html:not(.dark) .twin-sensor-pill {
+  background: rgba(255, 255, 255, 0.94);
+  color: #0f172a;
+}
+.twin-sensor-pill:hover {
+  transform: translateY(-2px) scale(1.08);
+}
+.twin-sensor-pill--danger {
+  border-color: #ef4444;
+  box-shadow: 0 0 16px rgba(239, 68, 68, 0.65);
+  animation: twin-heat-pulse 1.3s ease-in-out infinite alternate;
+}
+.twin-sensor-pill__icon {
+  font-size: 13px;
+  color: var(--sensor-color, #10b981);
+}
+.twin-sensor-pill__temp {
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  color: var(--sensor-color, #10b981);
+}
+.twin-sensor-pill__dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #ef4444;
+  animation: twin-dot-pulse 0.8s ease-in-out infinite alternate;
+}
+
+/* ── 3D Camera Mini-Monitor Screen ── */
+.twin-camera-screen {
+  width: 175px;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1.5px solid rgba(56, 189, 248, 0.7);
+  background: rgba(15, 23, 42, 0.94);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow: 0 10px 30px -4px rgba(0, 0, 0, 0.75), 0 0 20px rgba(56, 189, 248, 0.35);
+  cursor: pointer;
+  user-select: none;
+  font-family: 'Inter', system-ui, sans-serif;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+.twin-camera-screen:hover {
+  transform: translateY(-3px) scale(1.05);
+  border-color: #38bdf8;
+  box-shadow: 0 14px 38px -4px rgba(0, 0, 0, 0.85), 0 0 28px rgba(56, 189, 248, 0.6);
+}
+
+.twin-camera-screen__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 8px;
+  background: rgba(30, 41, 59, 0.88);
+  border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+  color: #f8fafc;
+  font-size: 10px;
+  font-weight: 700;
+}
+.twin-camera-screen__title {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  max-width: 100px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.twin-camera-screen__icon {
+  font-size: 13px;
+  color: #38bdf8;
+}
+.twin-camera-screen__actions {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.twin-camera-screen__live {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 8px;
+  font-weight: 800;
+  padding: 1px 4px;
+  border-radius: 3px;
+  background: #ef4444;
+  color: #fff;
+  letter-spacing: 0.04em;
+}
+.twin-camera-screen__live-dot {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: #fff;
+  animation: twin-dot-pulse 0.8s ease-in-out infinite alternate;
+}
+.twin-camera-screen__btn {
+  display: grid;
+  place-items: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 3px;
+  border: none;
+  background: transparent;
+  color: #94a3b8;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.twin-camera-screen__btn:hover {
+  background: rgba(255, 255, 255, 0.15);
+  color: #fff;
+}
+
+.twin-camera-screen__viewport {
+  position: relative;
+  width: 100%;
+  height: 98px;
+  background: #020617;
+  overflow: hidden;
+}
+.twin-camera-screen__video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.twin-camera-screen__standby {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  background: radial-gradient(circle at center, #0f172a 0%, #020617 100%);
+  color: #38bdf8;
+}
+.twin-camera-screen__scanlines {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    0deg,
+    rgba(0, 0, 0, 0.25) 0px,
+    rgba(0, 0, 0, 0.25) 1px,
+    transparent 1px,
+    transparent 2px
+  );
+  opacity: 0.6;
+}
+.twin-camera-screen__standby-text {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  opacity: 0.9;
+}
+
+.twin-camera-screen__hover-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  background: rgba(15, 23, 42, 0.75);
+  backdrop-filter: blur(2px);
+  color: #38bdf8;
+  font-size: 11px;
+  font-weight: 700;
+  opacity: 0;
+  transition: opacity 0.18s ease;
+}
+.twin-camera-screen:hover .twin-camera-screen__hover-overlay {
+  opacity: 1;
+}
+
+/* ── 3D Camera Badges (Minimized) ── */
+.twin-camera-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px 4px 8px;
+  border-radius: 999px;
+  border: 1.5px solid rgba(56, 189, 248, 0.6);
+  background: rgba(15, 23, 42, 0.88);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  color: #f8fafc;
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+  box-shadow: 0 4px 14px -3px rgba(56, 189, 248, 0.45);
+  transition: transform 0.18s ease, background 0.18s ease, box-shadow 0.18s ease;
+}
+html:not(.dark) .twin-camera-badge {
+  background: rgba(255, 255, 255, 0.92);
+  color: #0f172a;
+}
+.twin-camera-badge:hover {
+  transform: translateY(-2px) scale(1.06);
+  background: rgba(56, 189, 248, 0.2);
+  box-shadow: 0 6px 20px -3px rgba(56, 189, 248, 0.65);
+}
+.twin-camera-badge__icon {
+  font-size: 14px;
+  color: #38bdf8;
+}
+.twin-camera-badge__title {
+  letter-spacing: 0.02em;
+}
+.twin-camera-badge__live {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 9px;
+  font-weight: 800;
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: #ef4444;
+  color: #fff;
+  letter-spacing: 0.05em;
+}
+.twin-camera-badge__dot {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: #fff;
+  animation: twin-dot-pulse 0.8s ease-in-out infinite alternate;
+}
+
+/* ── 3D Twin Location Edit Mode ── */
+.twin-stage--editing {
+  outline: 2px dashed rgba(245, 158, 11, 0.45);
+  outline-offset: -2px;
+}
+
+.twin-edit-banner {
+  position: absolute;
+  top: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 8px 16px;
+  border-radius: 12px;
+  background: rgba(15, 23, 42, 0.94);
+  border: 1.5px solid rgba(245, 158, 11, 0.65);
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5), 0 0 18px rgba(245, 158, 11, 0.25);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  color: #f8fafc;
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 12.5px;
+  font-weight: 600;
+  max-width: calc(100% - 32px);
+  animation: twin-banner-slide-down 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes twin-banner-slide-down {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -10px);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+}
+
+html:not(.dark) .twin-edit-banner {
+  background: rgba(255, 255, 255, 0.95);
+  border-color: rgba(217, 119, 6, 0.6);
+  color: #0f172a;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.15), 0 0 18px rgba(245, 158, 11, 0.18);
+}
+
+.twin-edit-banner__info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.twin-edit-banner__icon {
+  font-size: 19px;
+  color: #f59e0b;
+  flex-shrink: 0;
+}
+
+.twin-edit-banner__actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.twin-edit-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 30px;
+  padding: 0 12px;
+  border-radius: 8px;
+  font-size: 11.5px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.twin-edit-btn--ghost {
+  background: rgba(148, 163, 184, 0.15);
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  color: var(--text-muted, #94a3b8);
+}
+
+.twin-edit-btn--ghost:hover {
+  background: rgba(148, 163, 184, 0.28);
+  color: #f8fafc;
+}
+
+html:not(.dark) .twin-edit-btn--ghost:hover {
+  color: #0f172a;
+}
+
+.twin-edit-btn--primary {
+  background: #f59e0b;
+  border: none;
+  color: #0f172a;
+  box-shadow: 0 2px 8px rgba(245, 158, 11, 0.4);
+}
+
+.twin-edit-btn--primary:hover {
+  background: #fbbf24;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(245, 158, 11, 0.55);
+}
+
+/* Edit Mode Amber Highlight on Toolbar */
+.twin-icon-btn.is-amber {
+  background: rgba(245, 158, 11, 0.22);
+  border-color: #f59e0b;
+  color: #fbbf24;
+  box-shadow: 0 0 12px rgba(245, 158, 11, 0.4);
+}
+
+/* Draggable Pill Strips on Marker Cards */
+.twin-edit-drag-pill {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  margin-top: 5px;
+  padding: 3px 8px;
+  border-radius: 6px;
+  background: rgba(245, 158, 11, 0.22);
+  border: 1px dashed rgba(245, 158, 11, 0.8);
+  color: #fbbf24;
+  font-size: 10px;
+  font-weight: 700;
+  cursor: grab;
+  user-select: none;
+  transition: all 0.15s ease;
+}
+
+.twin-edit-drag-pill:hover,
+.twin-edit-drag-pill.is-dragging {
+  background: rgba(245, 158, 11, 0.4);
+  cursor: grabbing;
+}
+
+.twin-edit-drag-pill--camera {
+  background: rgba(56, 189, 248, 0.22);
+  border-color: rgba(56, 189, 248, 0.8);
+  color: #38bdf8;
+}
+
+.twin-edit-drag-pill--camera:hover,
+.twin-edit-drag-pill--camera.is-dragging {
+  background: rgba(56, 189, 248, 0.4);
+}
+
+/* Rotate camera angle button */
+.twin-camera-screen__btn--rotate {
+  color: #38bdf8;
+}
+.twin-camera-screen__btn--rotate:hover {
+  background: rgba(56, 189, 248, 0.25);
+  color: #7dd3fc;
+}
+
+/* Interactive editable marker highlights */
+.twin-sensor-pill--editable,
+.twin-camera-badge--editable {
+  cursor: grab;
+  border-style: dashed;
+}
+
+.twin-sensor-pill--editable:hover,
+.twin-camera-badge--editable:hover {
+  cursor: grab;
+}
+
+.twin-sensor-badge--dragging,
+.twin-camera-screen--dragging,
+.twin-camera-badge--dragging {
+  transform: scale(1.08) translateY(-6px);
+  box-shadow: 0 14px 30px rgba(0, 0, 0, 0.6), 0 0 22px rgba(245, 158, 11, 0.6) !important;
+  opacity: 0.95;
+  cursor: grabbing !important;
+}
+
+/* Permanent Cloud Save Notification Toast */
+.twin-edit-toast {
+  position: absolute;
+  top: 18px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 45;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.94);
+  border: 1.5px solid rgba(16, 185, 129, 0.7);
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5), 0 0 18px rgba(16, 185, 129, 0.35);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  color: #f8fafc;
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  animation: twin-toast-pop 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes twin-toast-pop {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -8px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0) scale(1);
+  }
+}
+
+html:not(.dark) .twin-edit-toast {
+  background: rgba(255, 255, 255, 0.96);
+  border-color: rgba(16, 185, 129, 0.8);
+  color: #0f172a;
+}
+
+
+
+
