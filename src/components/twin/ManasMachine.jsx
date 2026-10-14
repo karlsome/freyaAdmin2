@@ -22,22 +22,42 @@ const COLORS = {
  * red material bed extending out the front, side control box and hydraulic unit.
  * Bed stripes scroll while running.
  */
-export default function ManasMachine({ id, position, size, status, selected, cycle, onSelect }) {
+export default function ManasMachine({ id, position, size, status, selected, cycle, call, onSelect }) {
   const [w, d] = size;
   const running = status === "running";
   const groupRef = useRef();
+  const bodyMatRef = useRef();
   const stripesRef = useRef();
   const [hovered, setHovered] = useState(false);
   const flashRef = useCycleFlash(cycle);
 
+  const callColor = call?.leader
+    ? "#ef4444"
+    : call?.stop
+      ? "#a855f7"
+      : call?.box
+        ? "#f59e0b"
+        : call?.material
+          ? "#3b82f6"
+          : null;
+
   useFrame(({ clock }, delta) => {
+    const t = clock.getElapsedTime();
     const k = Math.min(1, delta * 4);
     if (groupRef.current) {
       const lift = hovered || selected ? 0.06 : 0;
       groupRef.current.position.y += (lift - groupRef.current.position.y) * k;
     }
+    if (bodyMatRef.current) {
+      if (callColor) {
+        const pulse = (Math.sin(t * (call?.leader ? 8 : 4.5)) + 1) * 0.5;
+        bodyMatRef.current.emissive.set(callColor);
+        bodyMatRef.current.emissiveIntensity = 0.16 + pulse * (call?.leader ? 0.6 : 0.32);
+      } else {
+        bodyMatRef.current.emissiveIntensity = 0;
+      }
+    }
     if (stripesRef.current) {
-      const t = clock.getElapsedTime();
       stripesRef.current.children.forEach((child, i) => {
         const base = running ? ((t * 0.35 + i / 3) % 1) : i / 3;
         child.position.x = -2.4 + base * 2.1;
@@ -56,10 +76,11 @@ export default function ManasMachine({ id, position, size, status, selected, cyc
     [2.2, -1.8], [2.2, 0], [2.2, 1.8],
     [1.0, -1.8], [1.0, 1.8],
   ];
+  const effectiveGlowStatus = call?.leader || call?.stop ? "stopCall" : status;
 
   return (
     <group position={[position[0], 0, position[1]]}>
-      <StatusGlow width={w * 0.95} depth={d * 0.62} status={status} selected={selected} flashRef={flashRef} />
+      <StatusGlow width={w * 0.95} depth={d * 0.62} status={effectiveGlowStatus} selected={selected} flashRef={flashRef} />
 
       <group
         ref={groupRef}
@@ -74,7 +95,7 @@ export default function ManasMachine({ id, position, size, status, selected, cyc
         </mesh>
         <mesh position={[1.0, 0.72, 0]} castShadow receiveShadow>
           <boxGeometry args={[2.4, 1.3, 3.6]} />
-          <meshStandardMaterial color={COLORS.body} roughness={0.55} metalness={0.15} />
+          <meshStandardMaterial ref={bodyMatRef} color={COLORS.body} roughness={0.55} metalness={0.15} />
         </mesh>
         <mesh position={[0.55, 0.78, 1.805]}>
           <planeGeometry args={[0.55, 0.32]} />

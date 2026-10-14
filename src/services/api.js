@@ -2875,10 +2875,11 @@ export async function fetchTwinAnnotations(factoryName) {
     const res = await fetch(`${BASE_URL}api/digital-twin/${encodeURIComponent(factoryName)}/annotations`);
     if (res.ok) {
       const data = await res.json();
-      if (data && data.success && (data.sensors !== null || data.cameras !== null)) {
+      if (data && data.success && (data.sensors !== null || data.cameras !== null || data.callMonitor !== null)) {
         return {
           sensors: Array.isArray(data.sensors) ? data.sensors : [],
           cameras: Array.isArray(data.cameras) ? data.cameras : [],
+          callMonitor: data.callMonitor || null,
           updatedAt: data.updatedAt,
         };
       }
@@ -2895,6 +2896,7 @@ export async function fetchTwinAnnotations(factoryName) {
       return {
         sensors: Array.isArray(doc.sensors) ? doc.sensors : [],
         cameras: Array.isArray(doc.cameras) ? doc.cameras : [],
+        callMonitor: doc.callMonitor || null,
         updatedAt: doc.updatedAt,
       };
     }
@@ -2905,13 +2907,14 @@ export async function fetchTwinAnnotations(factoryName) {
   return null;
 }
 
-export async function saveTwinAnnotations(factoryName, { sensors, cameras, username = "admin" }) {
+export async function saveTwinAnnotations(factoryName, { sensors, cameras, callMonitor, username = "admin" }) {
   if (!factoryName) return false;
 
   const payload = {
     factory: factoryName,
     sensors: Array.isArray(sensors) ? sensors : [],
     cameras: Array.isArray(cameras) ? cameras : [],
+    callMonitor: callMonitor || null,
     updatedAt: new Date().toISOString(),
     updatedBy: username,
   };
@@ -2939,6 +2942,7 @@ export async function saveTwinAnnotations(factoryName, { sensors, cameras, usern
             $set: {
               sensors: payload.sensors,
               cameras: payload.cameras,
+              callMonitor: payload.callMonitor,
               updatedAt: new Date(),
               updatedBy: username,
             },
@@ -2952,6 +2956,7 @@ export async function saveTwinAnnotations(factoryName, { sensors, cameras, usern
             factory: factoryName,
             sensors: payload.sensors,
             cameras: payload.cameras,
+            callMonitor: payload.callMonitor,
             createdAt: new Date(),
             updatedAt: new Date(),
             updatedBy: username,
@@ -2983,6 +2988,7 @@ export async function resetTwinAnnotations(factoryName) {
         $set: {
           sensors: [],
           cameras: [],
+          callMonitor: null,
           updatedAt: new Date(),
           _reset: true,
         },

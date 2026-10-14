@@ -7,8 +7,11 @@ import NcCutter from "./NcCutter";
 import ManasMachine from "./ManasMachine";
 import SensorMarker from "./SensorMarker";
 import CameraMarker from "./CameraMarker";
-import { KOSE_LAYOUT, NC_DEPTH, getMachinePosition } from "../../data/factoryLayouts/kose";
+import MachineCallEffect from "./MachineCallEffect";
+import StopCallMonitor3D from "./StopCallMonitor3D";
+import { KOSE_LAYOUT, NC_DEPTH, getMachinePosition, ncLengthFor } from "../../data/factoryLayouts/kose";
 import { STATUS_THEME, effectiveStatus, formatNumber } from "./twinTheme";
+import { CALL_THEMES } from "../../hooks/useFactoryCallMonitor";
 
 // Suppress @react-three/fiber's internal `new THREE.Clock()` deprecation warning on Three.js r183+
 if (typeof THREE.setConsoleFunction === "function") {
@@ -240,31 +243,85 @@ function PairLink({ a, b, together, color }) {
   );
 }
 
-/* ── Floating badge above a machine ── */
-function MachineBadge({ position, height, title, value, unit, status, isJa, dim, onClick, selected, sebanggo }) {
+/* ── Floating compact micro-badge above a machine ── */
+function MachineBadge({
+  position,
+  height,
+  title,
+  value,
+  unit,
+  status,
+  isJa,
+  dim,
+  onClick,
+  selected,
+  sebanggo,
+  call,
+  totalNG = 0,
+}) {
   const theme = STATUS_THEME[status] || STATUS_THEME.off;
+  const callTheme = call?.theme || null;
+  const badgeColor = callTheme ? callTheme.color : theme.color;
+  const shortTitle = String(title).replace(/OZ/g, "");
+  const showStatusTag = !call && (status === "break" || status === "maintenance" || status === "cncCancel" || status === "stopCall");
+
   return (
     <Html position={[position[0], height, position[1]]} center zIndexRange={[30, 10]}>
       <button
         type="button"
         onClick={onClick}
-        className={`twin-badge ${selected ? "twin-badge--selected" : ""} ${dim ? "twin-badge--dim" : ""} ${theme.pulse ? "twin-badge--alert" : ""}`}
-        style={{ "--status": theme.color }}
+        className={`twin-badge ${selected ? "twin-badge--selected" : ""} ${dim && !call ? "twin-badge--dim" : ""} ${(theme.pulse || call) ? "twin-badge--alert" : ""} ${call ? `twin-badge--calling twin-badge--calling-${call.primaryCall}` : ""}`}
+        style={{ "--status": badgeColor }}
       >
+        {/* Row 1: Dot + Short Machine Name + Inline Sebanggo + Rank/NG */}
         <span className="twin-badge__title">
           <span className="twin-badge__dot" />
-          {title}
+          <span>{shortTitle}</span>
+          {sebanggo && status !== "off" && (
+            <span className="twin-badge__sebanggo" title={`背番号: ${sebanggo}`}>
+              {sebanggo}
+            </span>
+          )}
+          {call && <span className="twin-badge__rank">#{call.rank}</span>}
+          {totalNG > 0 && <span className="twin-badge__ng">NG {totalNG}</span>}
         </span>
-        {sebanggo && status !== "off" && (
-          <span className="twin-badge__sebanggo" title={`背番号: ${sebanggo}`}>
-            {sebanggo}
-          </span>
+
+        {/* Row 2: Active Call Pills OR Compact Piece Count */}
+        {call ? (
+          <div className="twin-badge__calls">
+            {call.leader && (
+              <span className="twin-badge__call-pill" style={{ background: CALL_THEMES.leader.color }}>
+                🚨{isJa ? "呼出" : "CALL"}
+              </span>
+            )}
+            {call.stop && (
+              <span className="twin-badge__call-pill" style={{ background: CALL_THEMES.stop.color }}>
+                🛑{isJa ? "停止" : "STOP"}
+              </span>
+            )}
+            {call.box && (
+              <span className="twin-badge__call-pill" style={{ background: CALL_THEMES.box.color }}>
+                📦{isJa ? "空箱" : "BOX"}
+              </span>
+            )}
+            {call.material && (
+              <span className="twin-badge__call-pill" style={{ background: CALL_THEMES.material.color }}>
+                🧻{call.zairyoSebanggo || (isJa ? "部材" : "ROLL")}
+              </span>
+            )}
+            <span className="twin-badge__call-timer">{call.waitFormatted}</span>
+          </div>
+        ) : (
+          <div className="twin-badge__bottom">
+            <span className="twin-badge__value">
+              {value}
+              {unit && <small>{unit}</small>}
+            </span>
+            {showStatusTag && (
+              <span className="twin-badge__status">{isJa ? theme.ja : theme.en}</span>
+            )}
+          </div>
         )}
-        <span className="twin-badge__value">
-          {value}
-          {unit && <small>{unit}</small>}
-        </span>
-        {status !== "running" && <span className="twin-badge__status">{isJa ? theme.ja : theme.en}</span>}
       </button>
     </Html>
   );
@@ -347,13 +404,22 @@ function FactoryContents({
   colors,
   sensors = [],
   cameras = [],
+  callMonitor = null,
+  activeCalls = [],
+  callsByMachine = {},
+  liveMachines = {},
+  isCallStreamConnected = false,
   onSelectCamera,
+  onOpenCallMonitor,
   showSensors = true,
   showCameras = true,
+  showCallMonitor = true,
   showSensorInfo = false,
   editMode = false,
   activeDrag = null,
   onStartDrag,
+  onUpdateMonitorHeight,
+  onCommitPositions,
   onRotateCamera,
 }) {
   const ncPos = useMemo(() => Object.fromEntries(KOSE_LAYOUT.ncMachines.map((m) => [m.id, m.pos])), []);
@@ -389,6 +455,7 @@ function FactoryContents({
         const m = machinesById[id];
         const spec = { ...KOSE_LAYOUT.defaultSpecs[id], ...(m?.tableLength ? { tableLength: m.tableLength } : {}), ...(m?.noOfHead ? { noOfHead: m.noOfHead } : {}) };
         const status = effectiveStatus(m);
+        const call = callsByMachine[id] || null;
         return (
           <NcCutter
             key={id}
@@ -398,6 +465,7 @@ function FactoryContents({
             tableLength={spec.tableLength || 1200}
             status={status}
             cycle={m?.cycle ?? null}
+            call={call}
             selected={selectedId === id || (pairedTogether.has(id) && selectedId === machinesById[id]?.pair?.partner)}
             onSelect={onSelect}
           />
@@ -410,21 +478,51 @@ function FactoryContents({
         size={KOSE_LAYOUT.manas.size}
         status={effectiveStatus(machinesById[KOSE_LAYOUT.manas.id])}
         cycle={machinesById[KOSE_LAYOUT.manas.id]?.cycle ?? null}
+        call={callsByMachine[KOSE_LAYOUT.manas.id] || null}
         selected={selectedId === KOSE_LAYOUT.manas.id}
         onSelect={onSelect}
       />
 
+      {/* ── 3D Per-Machine Call Animations (Leader Red Siren/Pulse, 3D Bouncing Box, 3D Material Roll) ── */}
+      {KOSE_LAYOUT.ncMachines.map(({ id, pos }) => {
+        const call = callsByMachine[id];
+        if (!call) return null;
+        const m = machinesById[id];
+        const tableLength = m?.tableLength || KOSE_LAYOUT.defaultSpecs[id]?.tableLength || 1200;
+        return (
+          <MachineCallEffect
+            key={`call-fx-${id}`}
+            call={call}
+            position={pos}
+            width={ncLengthFor(tableLength)}
+            depth={NC_DEPTH}
+            baseHeight={1.55}
+          />
+        );
+      })}
+      {callsByMachine[KOSE_LAYOUT.manas.id] && (
+        <MachineCallEffect
+          call={callsByMachine[KOSE_LAYOUT.manas.id]}
+          position={KOSE_LAYOUT.manas.pos}
+          width={KOSE_LAYOUT.manas.size[0]}
+          depth={KOSE_LAYOUT.manas.size[1] * 0.65}
+          baseHeight={3.1}
+        />
+      )}
+
       {/* Badges: one per machine, one shared badge per pair running together */}
       {KOSE_LAYOUT.ncMachines.filter(({ id }) => !pairedTogether.has(id)).map(({ id, pos }) => {
         const m = machinesById[id];
+        const live = liveMachines[id];
+        const call = callsByMachine[id] || null;
         const status = effectiveStatus(m);
         const { value, unit } = badgeValue(m, isJa);
-        const sebanggo = m?.sebanggo || m?.activeRun?.sebanggo || null;
+        const sebanggo = live?.sebanggo || m?.sebanggo || m?.activeRun?.sebanggo || null;
         return (
           <MachineBadge
             key={`badge-${id}`}
             position={pos}
-            height={1.15}
+            height={call ? 2.15 : 0.88}
             title={id}
             value={value}
             unit={unit}
@@ -433,6 +531,8 @@ function FactoryContents({
             dim={status === "off"}
             selected={selectedId === id}
             sebanggo={sebanggo}
+            call={call}
+            totalNG={live?.totalNG || 0}
             onClick={() => onSelect(id)}
           />
         );
@@ -442,12 +542,14 @@ function FactoryContents({
         const b = ncPos[p.b];
         const { value, unit } = badgeValue(p.lead, isJa, true);
         const sebanggo = p.lead?.pair?.sebanggo || p.lead?.sebanggo || machinesById[p.a]?.sebanggo || machinesById[p.b]?.sebanggo || null;
+        const call = callsByMachine[p.a] || callsByMachine[p.b] || null;
+        const totalNG = (liveMachines[p.a]?.totalNG || 0) + (liveMachines[p.b]?.totalNG || 0);
         return (
           <MachineBadge
             key={`badge-${p.a}-${p.b}`}
             position={[a[0], (a[1] + b[1]) / 2]}
-            height={1.25}
-            title={`${p.a.replace("OZ", "")} ⇄ ${p.b.replace("OZ", "")}`}
+            height={call ? 2.15 : 0.92}
+            title={`${p.a.replace("OZ", "")}⇄${p.b.replace("OZ", "")}`}
             value={value}
             unit={unit}
             status={p.status}
@@ -455,31 +557,55 @@ function FactoryContents({
             dim={p.status === "off"}
             selected={selectedId === p.a || selectedId === p.b}
             sebanggo={sebanggo}
+            call={call}
+            totalNG={totalNG}
             onClick={() => onSelect(p.lead?.id || p.a)}
           />
         );
       })}
       {(() => {
         const m = machinesById[KOSE_LAYOUT.manas.id];
+        const live = liveMachines[KOSE_LAYOUT.manas.id];
+        const call = callsByMachine[KOSE_LAYOUT.manas.id] || null;
         const status = effectiveStatus(m);
         const { value, unit } = badgeValue(m, isJa);
-        const sebanggo = m?.sebanggo || null;
+        const sebanggo = live?.sebanggo || m?.sebanggo || null;
         return (
           <MachineBadge
             position={KOSE_LAYOUT.manas.pos}
-            height={3.0}
-            title="OZMANAS"
-            value={m?.hasCycleSensor ? value : (m?.sebanggo || "—")}
+            height={call ? 3.7 : 2.35}
+            title="MANAS"
+            value={m?.hasCycleSensor ? value : (sebanggo || "—")}
             unit={m?.hasCycleSensor ? unit : ""}
             status={status}
             isJa={isJa}
             dim={status === "off"}
             selected={selectedId === KOSE_LAYOUT.manas.id}
             sebanggo={m?.hasCycleSensor ? sebanggo : null}
+            call={call}
+            totalNG={live?.totalNG || 0}
             onClick={() => onSelect(KOSE_LAYOUT.manas.id)}
           />
         );
       })()}
+
+      {/* ── 3D Physical Call Monitor TV (factory-stopcall-tv.html) ── */}
+      {showCallMonitor && callMonitor && (
+        <StopCallMonitor3D
+          monitor={callMonitor}
+          activeCalls={activeCalls}
+          machinesById={machinesById}
+          isConnected={isCallStreamConnected}
+          isJa={isJa}
+          onOpenMonitor={onOpenCallMonitor}
+          onSelectMachine={onSelect}
+          editMode={editMode}
+          isDragging={activeDrag?.type === "monitor"}
+          onStartDrag={onStartDrag}
+          onUpdateMonitorHeight={onUpdateMonitorHeight}
+          onCommitPositions={onCommitPositions}
+        />
+      )}
 
       {/* ── Environmental Sensors with dynamic Heat Auras ── */}
       {showSensors &&
@@ -535,12 +661,20 @@ export default function FactoryScene({
   drawerCovers = true,
   sensors = [],
   cameras = [],
+  callMonitor = null,
+  activeCalls = [],
+  callsByMachine = {},
+  liveMachines = {},
+  isCallStreamConnected = false,
   onSelectCamera,
+  onOpenCallMonitor,
   showSensors = true,
   showCameras = true,
+  showCallMonitor = true,
   showSensorInfo = false,
   editMode = false,
   onUpdatePosition,
+  onUpdateMonitorHeight,
   onRotateCamera,
   onCommitPositions,
 }) {
@@ -615,13 +749,22 @@ export default function FactoryScene({
           colors={colors}
           sensors={sensors}
           cameras={cameras}
+          callMonitor={callMonitor}
+          activeCalls={activeCalls}
+          callsByMachine={callsByMachine}
+          liveMachines={liveMachines}
+          isCallStreamConnected={isCallStreamConnected}
           onSelectCamera={onSelectCamera}
+          onOpenCallMonitor={onOpenCallMonitor}
           showSensors={showSensors}
           showCameras={showCameras}
+          showCallMonitor={showCallMonitor}
           showSensorInfo={showSensorInfo}
           editMode={editMode}
           activeDrag={activeDrag}
           onStartDrag={handleStartDrag}
+          onUpdateMonitorHeight={onUpdateMonitorHeight}
+          onCommitPositions={onCommitPositions}
           onRotateCamera={onRotateCamera}
         />
       </Suspense>

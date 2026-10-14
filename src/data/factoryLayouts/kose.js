@@ -115,10 +115,20 @@ export const KOSE_LAYOUT = {
       rotationY: -Math.PI * 0.75,
     },
   ],
+  callMonitor: {
+    id: "kose_stopcall_tv",
+    label: "Call Monitor TV",
+    labelJa: "呼出モニター TV",
+    pos: toWorld(232, 10),
+    height: 3.4,
+    rotationY: 0,
+    url: "https://karlsome.github.io/Kurachi/factory-stopcall-tv.html?filter=%E5%B0%8F%E7%80%AC",
+  },
 };
 
 export const KOSE_DEFAULT_SENSORS = KOSE_LAYOUT.sensors;
 export const KOSE_DEFAULT_CAMERAS = KOSE_LAYOUT.cameras;
+export const KOSE_DEFAULT_MONITOR = KOSE_LAYOUT.callMonitor;
 
 export const KOSE_MACHINE_IDS = [
   ...KOSE_LAYOUT.ncMachines.map((m) => m.id),

@@ -1,4 +1,4 @@
-import { KOSE_DEFAULT_SENSORS, KOSE_DEFAULT_CAMERAS } from "./kose";
+import { KOSE_DEFAULT_SENSORS, KOSE_DEFAULT_CAMERAS, KOSE_DEFAULT_MONITOR } from "./kose";
 import { fetchTwinAnnotations, saveTwinAnnotations, resetTwinAnnotations } from "../../services/api";
 
 const STORAGE_PREFIX = "freya_twin_annotations_";
@@ -22,24 +22,58 @@ function sanitizeSensors(sensors, fallbackSensors) {
   return valid.length > 0 ? valid : fallbackSensors;
 }
 
+function sanitizeCameras(cameras, fallbackCameras) {
+  if (!Array.isArray(cameras) || cameras.length === 0) return fallbackCameras;
+  if (!Array.isArray(fallbackCameras) || fallbackCameras.length === 0) return cameras;
+
+  return fallbackCameras.map((defCam, idx) => {
+    const match =
+      cameras.find(
+        (c) =>
+          c &&
+          (c.streamId === defCam.streamId ||
+            c.id === defCam.id ||
+            c.id === defCam.streamId ||
+            c.streamId === defCam.id)
+      ) || cameras[idx];
+    if (!match) return defCam;
+
+    const pos = Array.isArray(match.pos)
+      ? match.pos
+      : Array.isArray(match.position)
+        ? match.position
+        : defCam.pos;
+
+    return {
+      ...defCam,
+      ...match,
+      id: defCam.id,
+      streamId: defCam.streamId,
+      pos,
+      rotationY: typeof match.rotationY === "number" ? match.rotationY : defCam.rotationY,
+    };
+  });
+}
+
 function getDefaultAnnotations(factoryName) {
-  if (!factoryName) return { sensors: [], cameras: [] };
+  if (!factoryName) return { sensors: [], cameras: [], callMonitor: null };
   if (factoryName.includes("小瀬") || factoryName.toLowerCase().includes("oze")) {
     return {
       sensors: [...KOSE_DEFAULT_SENSORS],
       cameras: [...KOSE_DEFAULT_CAMERAS],
+      callMonitor: { ...KOSE_DEFAULT_MONITOR },
     };
   }
-  return { sensors: [], cameras: [] };
+  return { sensors: [], cameras: [], callMonitor: null };
 }
 
 /**
- * Returns the currently active 3D annotations (sensors & cameras) for a given factory.
+ * Returns the currently active 3D annotations (sensors, cameras, callMonitor) for a given factory.
  * Checks memory cache -> localStorage -> pre-seeded defaults.
  * Synchronous for immediate rendering without UI delay.
  */
 export function getFactoryAnnotations(factoryName) {
-  if (!factoryName) return { sensors: [], cameras: [] };
+  if (!factoryName) return { sensors: [], cameras: [], callMonitor: null };
 
   if (_memoryCache.has(factoryName)) {
     return _memoryCache.get(factoryName);
@@ -55,7 +89,8 @@ export function getFactoryAnnotations(factoryName) {
         const cleaned = {
           ...parsed,
           sensors: sanitizeSensors(parsed.sensors, defaults.sensors),
-          cameras: parsed.cameras.length > 0 ? parsed.cameras : defaults.cameras,
+          cameras: sanitizeCameras(parsed.cameras, defaults.cameras),
+          callMonitor: parsed.callMonitor ? { ...defaults.callMonitor, ...parsed.callMonitor } : defaults.callMonitor,
         };
         _memoryCache.set(factoryName, cleaned);
         return cleaned;
@@ -82,7 +117,8 @@ export async function syncFactoryAnnotations(factoryName) {
     if (cloud && (cloud.sensors?.length > 0 || cloud.cameras?.length > 0)) {
       const payload = {
         sensors: sanitizeSensors(cloud.sensors, defaults.sensors),
-        cameras: cloud.cameras?.length > 0 ? cloud.cameras : defaults.cameras,
+        cameras: sanitizeCameras(cloud.cameras, defaults.cameras),
+        callMonitor: cloud.callMonitor ? { ...defaults.callMonitor, ...cloud.callMonitor } : defaults.callMonitor,
         updatedAt: cloud.updatedAt || Date.now(),
       };
       _memoryCache.set(factoryName, payload);
@@ -103,15 +139,17 @@ export async function syncFactoryAnnotations(factoryName) {
 }
 
 /**
- * Persists updated sensor/camera annotations permanently to MongoDB
+ * Persists updated sensor/camera/callMonitor annotations permanently to MongoDB
  * as well as localStorage and in-memory cache for instant responsiveness.
  */
-export async function saveFactoryAnnotations(factoryName, { sensors, cameras }) {
+export async function saveFactoryAnnotations(factoryName, { sensors, cameras, callMonitor }) {
   if (!factoryName) return;
   const storageKey = `${STORAGE_PREFIX}${factoryName}`;
+  const defaults = getDefaultAnnotations(factoryName);
   const payload = {
     sensors: Array.isArray(sensors) ? sensors : [],
     cameras: Array.isArray(cameras) ? cameras : [],
+    callMonitor: callMonitor || defaults.callMonitor,
     updatedAt: Date.now(),
   };
 
@@ -126,7 +164,11 @@ export async function saveFactoryAnnotations(factoryName, { sensors, cameras }) 
 
   // 2. Permanently save to MongoDB backend so all dashboard viewers see the position
   try {
-    await saveTwinAnnotations(factoryName, { sensors: payload.sensors, cameras: payload.cameras });
+    await saveTwinAnnotations(factoryName, {
+      sensors: payload.sensors,
+      cameras: payload.cameras,
+      callMonitor: payload.callMonitor,
+    });
   } catch (err) {
     console.error("Failed to permanently save annotations to MongoDB:", err);
   }

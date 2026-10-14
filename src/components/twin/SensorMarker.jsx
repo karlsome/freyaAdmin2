@@ -48,6 +48,9 @@ export default function SensorMarker({
   }, [showInfo]);
 
   const displayName = isJa ? (sensor.nameJa || sensor.name) : (sensor.name || sensor.nameJa || markerId);
+  const shortName = String(displayName)
+    .replace(/^Sensor\s*(\d+)\s*[-–—]\s*/i, "S$1·")
+    .replace(/OZ/g, "");
   const color = STATUS_COLOR[status] || STATUS_COLOR.normal;
   const autoExpand = showInfo || isDanger || status === "warning";
   const isCardVisible = userExpanded !== null ? userExpanded : autoExpand;
@@ -105,7 +108,7 @@ export default function SensorMarker({
       </group>
 
       {/* ── Floating 3D HUD (Compact vs Detailed view to avoid blocking UI) ── */}
-      <Html position={[0, 1.45, 0]} center zIndexRange={[35, 10]}>
+      <Html position={[0, 1.18, 0]} center zIndexRange={[35, 10]}>
         {isCardVisible ? (
           /* Full Detailed Card */
           <div
@@ -182,7 +185,7 @@ export default function SensorMarker({
             <span className="material-symbols-outlined twin-sensor-pill__icon">
               {editMode ? "drag_indicator" : (isDanger ? "warning" : "thermostat")}
             </span>
-            <span className="twin-sensor-pill__name">{displayName}</span>
+            <span className="twin-sensor-pill__name">{shortName}</span>
             <span className="twin-sensor-pill__temp">{temperature}°C</span>
             {isDanger && !editMode && <span className="twin-sensor-pill__dot" />}
           </button>

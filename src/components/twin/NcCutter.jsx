@@ -42,7 +42,7 @@ function Tube({ from, to, radius = 0.022 }) {
  * orange indicator lights, 1–2 white cutting heads, black tubular safety rails and a
  * control pedestal. The gantry and heads move while the machine is running.
  */
-export default function NcCutter({ id, position, noOfHead = 1, tableLength = 1200, status, selected, cycle, onSelect }) {
+export default function NcCutter({ id, position, noOfHead = 1, tableLength = 1200, status, selected, cycle, call, onSelect }) {
   const L = ncLengthFor(tableLength);
   const D = NC_DEPTH;
   const heads = Math.max(1, Math.min(2, Number(noOfHead) || 1));
@@ -52,12 +52,22 @@ export default function NcCutter({ id, position, noOfHead = 1, tableLength = 120
   const groupRef = useRef();
   const gantryRef = useRef();
   const headsRef = useRef();
+  const frameMatRef = useRef();
   const lightMats = useRef([]);
   const tipRef = useRef();
   const [hovered, setHovered] = useState(false);
   const flashRef = useCycleFlash(cycle);
 
   const gantryRestX = L * 0.05;
+  const callColor = call?.leader
+    ? "#ef4444"
+    : call?.stop
+      ? "#a855f7"
+      : call?.box
+        ? "#f59e0b"
+        : call?.material
+          ? "#3b82f6"
+          : null;
 
   useFrame(({ clock }, delta) => {
     const t = clock.getElapsedTime();
@@ -74,8 +84,27 @@ export default function NcCutter({ id, position, noOfHead = 1, tableLength = 120
       const lift = hovered || selected ? 0.06 : 0;
       groupRef.current.position.y += (lift - groupRef.current.position.y) * k;
     }
-    const lightIntensity = running ? 2.2 + Math.sin(t * 6 + phase) * 0.6 : status === "off" ? 0.1 : 0.8;
-    lightMats.current.forEach((m) => { if (m) m.emissiveIntensity = lightIntensity; });
+    if (frameMatRef.current) {
+      if (callColor) {
+        const pulse = (Math.sin(t * (call?.leader ? 8 : 4.5)) + 1) * 0.5;
+        frameMatRef.current.emissive.set(callColor);
+        frameMatRef.current.emissiveIntensity = 0.18 + pulse * (call?.leader ? 0.65 : 0.35);
+      } else {
+        frameMatRef.current.emissiveIntensity = 0;
+      }
+    }
+    const lightIntensity = callColor
+      ? 2.8 + Math.sin(t * 9) * 1.6
+      : running
+        ? 2.2 + Math.sin(t * 6 + phase) * 0.6
+        : status === "off"
+          ? 0.1
+          : 0.8;
+    lightMats.current.forEach((m) => {
+      if (m) {
+        m.emissiveIntensity = lightIntensity;
+      }
+    });
     if (tipRef.current) {
       const age = flashRef.current ? t - flashRef.current : Infinity;
       const s = age < 0.8 ? 1 + (1 - age / 0.8) * 2.5 : running ? 1 : 0.001;
@@ -91,10 +120,11 @@ export default function NcCutter({ id, position, noOfHead = 1, tableLength = 120
 
   const headOffsets = heads === 2 ? [-0.11, 0.11] : [0];
   const slats = [-0.3, -0.1, 0.1, 0.3];
+  const effectiveGlowStatus = call?.leader || call?.stop ? "stopCall" : status;
 
   return (
     <group position={[position[0], 0, position[1]]}>
-      <StatusGlow width={L + 0.5} depth={D} status={status} selected={selected} flashRef={flashRef} />
+      <StatusGlow width={L + 0.5} depth={D} status={effectiveGlowStatus} selected={selected} flashRef={flashRef} />
 
       <group
         ref={groupRef}
@@ -109,7 +139,7 @@ export default function NcCutter({ id, position, noOfHead = 1, tableLength = 120
         </mesh>
         <mesh position={[0, 0.385, 0]} castShadow receiveShadow>
           <boxGeometry args={[L, 0.09, D]} />
-          <meshStandardMaterial color={COLORS.frame} roughness={0.45} />
+          <meshStandardMaterial ref={frameMatRef} color={COLORS.frame} roughness={0.45} />
         </mesh>
 
         {/* Cutting bed + conveyor feed */}
@@ -139,8 +169,8 @@ export default function NcCutter({ id, position, noOfHead = 1, tableLength = 120
                 <boxGeometry args={[0.1, 0.03, 0.005]} />
                 <meshStandardMaterial
                   ref={(m) => { lightMats.current[side > 0 ? 1 : 0] = m; }}
-                  color={COLORS.light}
-                  emissive={COLORS.light}
+                  color={callColor || COLORS.light}
+                  emissive={callColor || COLORS.light}
                   emissiveIntensity={1}
                   toneMapped={false}
                 />

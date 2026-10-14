@@ -2,6 +2,8 @@ import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { STATUS_THEME, statusLabel } from "../twin/twinTheme";
 import FloorPlan2D from "./FloorPlan2D";
 import { useFactorySensors } from "../../hooks/useFactorySensors";
+import { useFactoryCallMonitor } from "../../hooks/useFactoryCallMonitor";
+import StopCallMonitorModal from "../twin/StopCallMonitorModal";
 import {
   getFactoryAnnotations,
   saveFactoryAnnotations,
@@ -17,7 +19,7 @@ const LEGEND_STATUSES = ["running", "idle", "stopCall", "cncCancel", "maintenanc
 /**
  * Factory panel: 3D scene (or automatic 2D floor for factories without a 3D map)
  * + attention chips + overview button + legend.
- * Supports interactive location editing for sensors and cameras with permanent cloud persistence.
+ * Supports interactive location editing for sensors, cameras, and the 3D Call Monitor TV.
  */
 export default function TwinPanel({
   factory = "小瀬",
@@ -41,18 +43,34 @@ export default function TwinPanel({
   const [showSensors, setShowSensors] = useState(true);
   const [showSensorInfo, setShowSensorInfo] = useState(false);
   const [showCameras, setShowCameras] = useState(true);
+  const [showCallMonitor, setShowCallMonitor] = useState(true);
+  const [callMonitorModalOpen, setCallMonitorModalOpen] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [savedCloudToast, setSavedCloudToast] = useState(false);
 
   const [localSensors, setLocalSensors] = useState(null);
   const [localCameras, setLocalCameras] = useState(null);
+  const [localMonitor, setLocalMonitor] = useState(null);
   const editModeRef = useRef(editMode);
   editModeRef.current = editMode;
 
   const { sensors: factorySensors } = useFactorySensors(factory);
+  const {
+    activeCalls,
+    callsByMachine,
+    liveMachines,
+    isConnected: isCallStreamConnected,
+    now: callNow,
+    hasSimulatedCalls,
+    toggleSimulatedCall,
+    clearSimulatedCalls,
+    loadDemoPreset,
+  } = useFactoryCallMonitor(factory);
+
   const annotations = useMemo(() => getFactoryAnnotations(factory), [factory]);
   const defaultCameras = annotations.cameras || [];
+  const defaultMonitor = annotations.callMonitor || null;
 
   // Sync annotations from permanent MongoDB backend on mount and factory change
   useEffect(() => {
@@ -65,6 +83,9 @@ export default function TwinPanel({
         if (Array.isArray(data.sensors) && data.sensors.length > 0) {
           setLocalSensors(data.sensors);
         }
+        if (data.callMonitor) {
+          setLocalMonitor(data.callMonitor);
+        }
       }
     });
 
@@ -76,6 +97,7 @@ export default function TwinPanel({
       ) {
         if (e.detail.payload?.cameras) setLocalCameras(e.detail.payload.cameras);
         if (e.detail.payload?.sensors) setLocalSensors(e.detail.payload.sensors);
+        if (e.detail.payload?.callMonitor) setLocalMonitor(e.detail.payload.callMonitor);
       }
     };
     window.addEventListener("freya:annotations-changed", onAnnotationsChanged);
@@ -92,7 +114,9 @@ export default function TwinPanel({
     if (!factorySensors || factorySensors.length === 0) return localSensors;
     return factorySensors.map((s) => {
       const sKey = s.deviceId || s.id;
-      const override = localSensors.find((ls) => (ls.deviceId || ls.id) === sKey);
+      const override = localSensors.find(
+        (ls) => ls && (ls.deviceId === sKey || ls.id === sKey || ls.deviceId === s.id || ls.id === s.deviceId)
+      );
       if (!override) return s;
       const pos = Array.isArray(override.pos)
         ? override.pos
@@ -108,14 +132,33 @@ export default function TwinPanel({
   }, [localSensors, factorySensors]);
 
   const effectiveCameras = useMemo(() => {
-    if (!localCameras || localCameras.length === 0) return defaultCameras;
-    if (!defaultCameras || defaultCameras.length === 0) return localCameras;
-    return defaultCameras.map((c, idx) => {
-      const cKey = c.id || c.streamId;
+    const baseList =
+      defaultCameras && defaultCameras.length > 0 ? defaultCameras : localCameras || [];
+    if (!localCameras || localCameras.length === 0) {
+      return baseList.map((c) => {
+        const canonicalId = c.streamId || c.id;
+        const pos = Array.isArray(c.pos)
+          ? c.pos
+          : Array.isArray(c.position)
+            ? c.position
+            : [0, 0];
+        return { ...c, id: canonicalId, streamId: canonicalId, pos };
+      });
+    }
+    return baseList.map((c, idx) => {
+      const canonicalId = c.streamId || c.id;
       const override =
-        localCameras.find((lc) => (lc.id || lc.streamId) === cKey) ||
-        localCameras[idx];
-      if (!override) return c;
+        localCameras.find(
+          (lc) =>
+            lc &&
+            (lc.streamId === canonicalId ||
+              lc.id === canonicalId ||
+              lc.id === c.id ||
+              lc.streamId === c.id)
+        ) || localCameras[idx];
+      if (!override) {
+        return { ...c, id: canonicalId, streamId: canonicalId };
+      }
       const pos = Array.isArray(override.pos)
         ? override.pos
         : Array.isArray(override.position)
@@ -124,50 +167,91 @@ export default function TwinPanel({
       return {
         ...c,
         ...override,
-        id: c.id || override.id || override.streamId,
-        streamId: c.streamId || override.streamId || override.id,
+        id: canonicalId,
+        streamId: canonicalId,
         pos,
       };
     });
   }, [localCameras, defaultCameras]);
 
+  const effectiveMonitor = useMemo(() => {
+    if (!defaultMonitor) return localMonitor;
+    if (!localMonitor) return defaultMonitor;
+    const pos = Array.isArray(localMonitor.pos)
+      ? localMonitor.pos
+      : Array.isArray(localMonitor.position)
+        ? localMonitor.position
+        : defaultMonitor.pos;
+    return {
+      ...defaultMonitor,
+      ...localMonitor,
+      pos,
+    };
+  }, [localMonitor, defaultMonitor]);
+
   const latestSensorsRef = useRef(effectiveSensors);
   latestSensorsRef.current = effectiveSensors;
   const latestCamerasRef = useRef(effectiveCameras);
   latestCamerasRef.current = effectiveCameras;
+  const latestMonitorRef = useRef(effectiveMonitor);
+  latestMonitorRef.current = effectiveMonitor;
 
   const handleUpdatePosition = (type, id, pos) => {
     if (type === "sensor") {
-      setLocalSensors((prev) => {
-        const base = prev && prev.length > 0 ? prev : latestSensorsRef.current;
+      setLocalSensors(() => {
+        const base = latestSensorsRef.current;
         const updated = base.map((s) =>
-          (s.id || s.deviceId) === id ? { ...s, pos, position: pos } : s
+          s.id === id || s.deviceId === id ? { ...s, pos, position: pos } : s
         );
         latestSensorsRef.current = updated;
         return updated;
       });
     } else if (type === "camera") {
-      setLocalCameras((prev) => {
-        const base = prev && prev.length > 0 ? prev : latestCamerasRef.current;
+      setLocalCameras(() => {
+        const base = latestCamerasRef.current;
         const updated = base.map((c) =>
-          (c.id || c.streamId) === id ? { ...c, pos, position: pos } : c
+          c.id === id || c.streamId === id ? { ...c, pos, position: pos } : c
         );
         latestCamerasRef.current = updated;
+        return updated;
+      });
+    } else if (type === "monitor") {
+      setLocalMonitor((prev) => {
+        const base = prev || latestMonitorRef.current || defaultMonitor;
+        const updated = { ...base, pos, position: pos };
+        latestMonitorRef.current = updated;
         return updated;
       });
     }
   };
 
+  const handleUpdateMonitorHeight = (newHeight, commitImmediately = false) => {
+    setLocalMonitor((prev) => {
+      const base = prev || latestMonitorRef.current || defaultMonitor;
+      const updated = { ...base, height: newHeight };
+      latestMonitorRef.current = updated;
+      if (commitImmediately) {
+        saveFactoryAnnotations(factory, {
+          sensors: latestSensorsRef.current,
+          cameras: latestCamerasRef.current,
+          callMonitor: updated,
+        });
+      }
+      return updated;
+    });
+  };
+
   const handleRotateCamera = (id, newRotationY) => {
-    setLocalCameras((prev) => {
-      const base = prev && prev.length > 0 ? prev : latestCamerasRef.current;
+    setLocalCameras(() => {
+      const base = latestCamerasRef.current;
       const updated = base.map((c) =>
-        (c.id || c.streamId) === id ? { ...c, rotationY: newRotationY } : c
+        c.id === id || c.streamId === id ? { ...c, rotationY: newRotationY } : c
       );
       latestCamerasRef.current = updated;
       saveFactoryAnnotations(factory, {
         sensors: latestSensorsRef.current,
         cameras: updated,
+        callMonitor: latestMonitorRef.current,
       });
       return updated;
     });
@@ -179,6 +263,7 @@ export default function TwinPanel({
       await saveFactoryAnnotations(factory, {
         sensors: latestSensorsRef.current,
         cameras: latestCamerasRef.current,
+        callMonitor: latestMonitorRef.current,
       });
       setSavedCloudToast(true);
       setTimeout(() => setSavedCloudToast(false), 3500);
@@ -191,6 +276,7 @@ export default function TwinPanel({
     await resetFactoryAnnotations(factory);
     setLocalSensors(null);
     setLocalCameras(null);
+    setLocalMonitor(null);
   };
 
   const handleToggleEditMode = () => {
@@ -199,6 +285,7 @@ export default function TwinPanel({
       if (next) {
         setShowSensors(true);
         setShowCameras(true);
+        setShowCallMonitor(true);
       }
       return next;
     });
@@ -213,8 +300,8 @@ export default function TwinPanel({
             <span className="material-symbols-outlined twin-edit-banner__icon">edit_location</span>
             <span>
               {isJa
-                ? "位置編集モード: センサーやカメラをドラッグして希望の位置に配置してください"
-                : "Edit Mode: Drag sensors and cameras across the floor to position them"}
+                ? "位置編集モード: センサー・カメラ・呼出モニターTVをドラッグで移動（TVは高さ↕も調整可）"
+                : "Edit Mode: Drag sensors, cameras & Call Monitor TV (adjust TV height with ↕)"}
             </span>
           </div>
           <div className="twin-edit-banner__actions">
@@ -267,12 +354,20 @@ export default function TwinPanel({
             drawerCovers={drawerCovers}
             sensors={effectiveSensors}
             cameras={effectiveCameras}
+            callMonitor={effectiveMonitor}
+            activeCalls={activeCalls}
+            callsByMachine={callsByMachine}
+            liveMachines={liveMachines}
+            isCallStreamConnected={isCallStreamConnected}
             onSelectCamera={onOpenCamera}
+            onOpenCallMonitor={() => setCallMonitorModalOpen(true)}
             showSensors={showSensors}
             showCameras={showCameras}
+            showCallMonitor={showCallMonitor}
             showSensorInfo={showSensorInfo}
             editMode={editMode}
             onUpdatePosition={handleUpdatePosition}
+            onUpdateMonitorHeight={handleUpdateMonitorHeight}
             onRotateCamera={handleRotateCamera}
             onCommitPositions={handleCommitPositions}
           />
@@ -290,41 +385,102 @@ export default function TwinPanel({
         )
       )}
 
-      {/* Needs attention — big tappable chips */}
+      {/* Needs attention & Active Call chips */}
       <div className="twin-overlay dash-twin__chips">
-        {attention.length === 0 && hasData && (
+        {/* Live Stop-Call / Box / Material Request Chips */}
+        {activeCalls.map((c) => {
+          const shortType = c.leader
+            ? isJa
+              ? "リーダー呼出"
+              : "LEADER"
+            : c.stop
+              ? isJa
+                ? "停止待ち"
+                : "STOP"
+              : c.box
+                ? isJa
+                  ? "空箱 📦"
+                  : "BOX 📦"
+                : isJa
+                  ? "部材 🧻"
+                  : "ROLL 🧻";
+          return (
+            <button
+              key={`call-chip-${c.machine}`}
+              type="button"
+              className="twin-chip twin-chip--call"
+              style={{ "--status": c.theme.color }}
+              onClick={() => onSelect(c.machine)}
+              title={isJa ? `クリックして ${c.machine} にフォーカス` : `Click to focus ${c.machine}`}
+            >
+              <span className="material-symbols-outlined">{c.theme.icon}</span>
+              <span>#{c.rank} {c.machine.replace(/^OZ/, "")}</span>
+              <small>{shortType} · {c.waitFormatted}</small>
+            </button>
+          );
+        })}
+
+        {activeCalls.length === 0 && attention.length === 0 && hasData && (
           <div className="twin-chip" style={{ "--status": STATUS_THEME.running.color, cursor: "default" }}>
             <span className="material-symbols-outlined">check_circle</span>
             {isJa ? "異常なし" : "All clear"}
           </div>
         )}
-        {attention.slice(0, 6).map((a) => (
-          <button
-            key={a.id}
-            type="button"
-            className="twin-chip"
-            style={{ "--status": STATUS_THEME[a.status].color }}
-            onClick={() => onSelect(a.id)}
-          >
-            <span className="material-symbols-outlined">{STATUS_THEME[a.status].icon}</span>
-            {a.label}
-            <small>{statusLabel(a.status, isJa)}</small>
-          </button>
-        ))}
+        {attention
+          .filter((a) => !callsByMachine[a.id])
+          .slice(0, Math.max(1, 5 - activeCalls.length))
+          .map((a) => (
+            <button
+              key={a.id}
+              type="button"
+              className="twin-chip"
+              style={{ "--status": STATUS_THEME[a.status].color }}
+              onClick={() => onSelect(a.id)}
+            >
+              <span className="material-symbols-outlined">{STATUS_THEME[a.status].icon}</span>
+              {a.label}
+              <small>{statusLabel(a.status, isJa)}</small>
+            </button>
+          ))}
         {attention.length > 6 && (
           <div className="twin-chip" style={{ "--status": "#94a3b8", cursor: "default" }}>+{attention.length - 6}</div>
         )}
       </div>
 
-      {/* Overlay controls: Toggles for Sensors/Heat Auras, Sensor Info, Cameras, Location Edit + Reset view */}
+      {/* Overlay controls: Toggles for Call Monitor TV, Sensors/Heat Auras, Sensor Info, Cameras, Location Edit + Reset view */}
       {has3D && (
         <div className="twin-overlay top-3 right-3 flex items-center gap-1.5">
+          {/* Open Call Monitor Modal + 3D Simulator button */}
+          <button
+            type="button"
+            className={`twin-call-tv-btn ${activeCalls.length > 0 ? "is-alert" : ""}`}
+            onClick={() => setCallMonitorModalOpen(true)}
+            title={isJa ? "呼び出しモニターTV & 3Dテストを開く" : "Open Stop-Call Monitor TV & 3D Call Tester"}
+          >
+            <span className="material-symbols-outlined" style={{ fontSize: 17 }}>live_tv</span>
+            <span className="hidden sm:inline">{isJa ? "呼出モニター" : "Call Monitor"}</span>
+            {activeCalls.length > 0 && (
+              <span className="twin-call-tv-btn__badge">{activeCalls.length}</span>
+            )}
+          </button>
+
+          {/* Toggle 3D Call Monitor TV visibility */}
+          <button
+            type="button"
+            className={`twin-icon-btn ${showCallMonitor ? "is-on" : ""}`}
+            onClick={() => setShowCallMonitor((v) => !v)}
+            title={isJa ? "3D呼出モニターTV表示 切替" : "Toggle 3D Call Monitor TV in scene"}
+            aria-label="Toggle 3D Call Monitor TV"
+          >
+            <span className="material-symbols-outlined" style={{ fontSize: 18 }}>tv</span>
+          </button>
+
           {/* Location edit mode toggle */}
           <button
             type="button"
             className={`twin-icon-btn ${editMode ? "is-on is-amber" : ""}`}
             onClick={handleToggleEditMode}
-            title={isJa ? "カメラ・センサーの位置編集モード (ドラッグして移動)" : "Edit Locations (Drag to reposition)"}
+            title={isJa ? "カメラ・センサー・モニターの位置編集モード" : "Edit Locations (Drag to reposition)"}
             aria-label="Toggle location edit mode"
           >
             <span className="material-symbols-outlined" style={{ fontSize: 18 }}>
@@ -402,6 +558,26 @@ export default function TwinPanel({
 
       {loading && !hasData && (
         <div className="twin-loading"><div className="twin-spinner" /></div>
+      )}
+
+      {/* Full Stop-Call Monitor TV Modal */}
+      {callMonitorModalOpen && (
+        <StopCallMonitorModal
+          factory={factory}
+          activeCalls={activeCalls}
+          callsByMachine={callsByMachine}
+          liveMachines={liveMachines}
+          machinesById={machinesById}
+          isConnected={isCallStreamConnected}
+          now={callNow}
+          isJa={isJa}
+          hasSimulatedCalls={hasSimulatedCalls}
+          onToggleSimulatedCall={toggleSimulatedCall}
+          onClearSimulatedCalls={clearSimulatedCalls}
+          onLoadDemoPreset={loadDemoPreset}
+          onSelectMachine={onSelect}
+          onClose={() => setCallMonitorModalOpen(false)}
+        />
       )}
     </div>
   );
