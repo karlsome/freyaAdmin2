@@ -23,6 +23,8 @@ const FOV_MAT = new THREE.MeshBasicMaterial({
   side: THREE.DoubleSide,
 });
 const RING_GEO = new THREE.RingGeometry(0.38, 0.5, 20);
+const STAND_BASE_GEO = new THREE.CylinderGeometry(0.16, 0.21, 0.045, 12);
+const STAND_RING_GEO = new THREE.RingGeometry(0.22, 0.27, 16);
 const POLE_GEO = new THREE.CylinderGeometry(0.04, 0.04, 1.0, 8);
 const SWIVEL_GEO = new THREE.SphereGeometry(0.07, 8, 8);
 const BODY_GEO = new THREE.BoxGeometry(0.18, 0.14, 0.36);
@@ -30,6 +32,8 @@ const LENS_BARREL_GEO = new THREE.CylinderGeometry(0.065, 0.065, 0.08, 10);
 const LENS_GLASS_GEO = new THREE.CircleGeometry(0.05, 10);
 const TALLY_GEO = new THREE.SphereGeometry(0.015, 6, 6);
 
+const STAND_BASE_MAT = new THREE.MeshStandardMaterial({ color: "#1e293b", metalness: 0.6, roughness: 0.4 });
+const STAND_RING_MAT = new THREE.MeshBasicMaterial({ color: "#38bdf8", transparent: true, opacity: 0.55, depthWrite: false, side: THREE.DoubleSide });
 const POLE_MAT = new THREE.MeshStandardMaterial({ color: "#475569", metalness: 0.7, roughness: 0.3 });
 const SWIVEL_MAT = new THREE.MeshStandardMaterial({ color: "#334155", metalness: 0.8 });
 const BODY_MAT = new THREE.MeshStandardMaterial({ color: "#f8fafc", roughness: 0.3 });
@@ -38,12 +42,13 @@ const LENS_GLASS_MAT = new THREE.MeshBasicMaterial({ color: "#0284c7" });
 const TALLY_MAT = new THREE.MeshBasicMaterial({ color: "#ef4444", toneMapped: false });
 
 /**
- * 3D CCTV Camera with an interactive mini 3D surveillance monitor screen.
- * Displays live video in 3D; clicking the small screen pops up the full-screen CameraModal.
+ * 3D CCTV Camera stand with a clickable camera icon badge (default) and expandable 3D live monitor.
+ * The physical 3D stand and camera icon remain visible at all times so users can click them anytime.
  */
 const CameraMarker = memo(function CameraMarker({
   camera,
   isJa,
+  showScreen = false,
   onSelectCamera,
   editMode = false,
   isDragging = false,
@@ -57,9 +62,15 @@ const CameraMarker = memo(function CameraMarker({
   const [streamError, setStreamError] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
-  const [minimized, setMinimized] = useState(false);
+  const [minimized, setMinimized] = useState(!showScreen);
+
+  // Sync with global toolbar toggle while still allowing individual cameras to be clicked open/closed
+  useEffect(() => {
+    setMinimized(!showScreen);
+  }, [showScreen]);
 
   const title = isJa ? (labelJa || label) : (label || labelJa || markerId);
+  const shortTag = String(title).split("(")[0].trim() || markerId;
 
   // Connect live HLS video to the mini 3D monitor once the <video> DOM element mounts
   useEffect(() => {
@@ -148,16 +159,24 @@ const CameraMarker = memo(function CameraMarker({
     if (onSelectCamera) onSelectCamera(streamId);
   };
 
+  const handleStandClick = (e) => {
+    e.stopPropagation();
+    if (editMode) return;
+    setMinimized((prev) => !prev);
+  };
+
   return (
     <group position={[pos[0], 0, pos[1]]}>
-      {/* ── Floor FOV Projection Cone ── */}
-      <mesh
-        rotation={[-Math.PI / 2, 0, -rotationY]}
-        position={[0, 0.012, 0]}
-        geometry={FOV_GEO}
-        material={FOV_MAT}
-        renderOrder={1}
-      />
+      {/* ── Floor FOV Projection Cone (shown when camera screen is open, hovered, or in edit mode) ── */}
+      {(!minimized || isHovered || editMode) && (
+        <mesh
+          rotation={[-Math.PI / 2, 0, -rotationY]}
+          position={[0, 0.012, 0]}
+          geometry={FOV_GEO}
+          material={FOV_MAT}
+          renderOrder={1}
+        />
+      )}
 
       {/* ── Edit Mode Floor Ring Anchor ── */}
       {editMode && (
@@ -166,12 +185,26 @@ const CameraMarker = memo(function CameraMarker({
         </mesh>
       )}
 
-      {/* ── 3D Camera Mount & Casing (Draggable in edit mode) ── */}
+      {/* ── 3D Camera Stand & Casing (Always visible; clickable to toggle camera feed, draggable in edit mode) ── */}
       <group
         position={[0, 0, 0]}
         rotation={[0, rotationY, 0]}
         onPointerDown={startCameraDrag}
+        onClick={handleStandClick}
+        onPointerOver={(e) => {
+          e.stopPropagation();
+          setIsHovered(true);
+          document.body.style.cursor = editMode ? "grab" : "pointer";
+        }}
+        onPointerOut={(e) => {
+          e.stopPropagation();
+          setIsHovered(false);
+          document.body.style.cursor = "";
+        }}
       >
+        {/* Stand floor base plate & cyan locator ring */}
+        <mesh position={[0, 0.022, 0]} geometry={STAND_BASE_GEO} material={STAND_BASE_MAT} />
+        <mesh position={[0, 0.014, 0]} rotation={[-Math.PI / 2, 0, 0]} geometry={STAND_RING_GEO} material={STAND_RING_MAT} />
         {/* Mount pole */}
         <mesh position={[0, 0.5, 0]} geometry={POLE_GEO} material={POLE_MAT} />
         {/* Swivel bracket */}
@@ -188,8 +221,8 @@ const CameraMarker = memo(function CameraMarker({
         </group>
       </group>
 
-      {/* ── Little 3D Surveillance Screen on the Camera ── */}
-      <Html position={[0, 1.7, 0]} center zIndexRange={[35, 10]}>
+      {/* ── Floating Camera Icon Pin (default) or 3D Live Surveillance Screen ── */}
+      <Html position={[0, minimized ? 1.42 : 1.7, 0]} center zIndexRange={[35, 10]}>
         {!minimized ? (
           <div
             className={`twin-camera-screen ${editMode ? "twin-camera-badge--editable" : ""} ${isDragging ? "twin-camera-screen--dragging" : ""}`}
@@ -235,9 +268,9 @@ const CameraMarker = memo(function CameraMarker({
                     e.stopPropagation();
                     setMinimized(true);
                   }}
-                  title={isJa ? "最小化" : "Minimize"}
+                  title={isJa ? "カメラ画面を閉じる" : "Hide camera screen"}
                 >
-                  <span className="material-symbols-outlined" style={{ fontSize: 13 }}>remove</span>
+                  <span className="material-symbols-outlined" style={{ fontSize: 13 }}>close</span>
                 </button>
               </div>
             </div>
@@ -291,9 +324,11 @@ const CameraMarker = memo(function CameraMarker({
             )}
           </div>
         ) : (
-          /* Minimized compact camera pill */
+          /* Compact clickable camera icon badge above the 3D camera stand */
           <button
             type="button"
+            onMouseEnter={() => setIsHovered(true)}
+            onMouseLeave={() => setIsHovered(false)}
             onPointerDown={startCameraDrag}
             onClick={(e) => {
               if (editMode) return;
@@ -301,12 +336,12 @@ const CameraMarker = memo(function CameraMarker({
               setMinimized(false);
             }}
             className={`twin-camera-badge ${editMode ? "twin-camera-badge--editable" : ""} ${isDragging ? "twin-camera-badge--dragging" : ""}`}
-            title={editMode ? (isJa ? "ドラッグして移動" : "Drag to move") : (isJa ? "クリックで3D画面を開く" : "Click to show 3D monitor")}
+            title={editMode ? (isJa ? "ドラッグして移動" : "Drag to move") : (isJa ? `${title} — クリックでライブカメラを表示` : `${title} — Click to open live camera`)}
           >
             <span className="material-symbols-outlined twin-camera-badge__icon">
               {editMode ? "drag_indicator" : "videocam"}
             </span>
-            <span className="twin-camera-badge__title">{title}</span>
+            <span className="twin-camera-badge__title">{shortTag}</span>
             {editMode ? (
               <span
                 className="twin-camera-screen__btn twin-camera-screen__btn--rotate"
@@ -323,10 +358,7 @@ const CameraMarker = memo(function CameraMarker({
                 <span className="material-symbols-outlined" style={{ fontSize: 13 }}>rotate_right</span>
               </span>
             ) : (
-              <span className="twin-camera-badge__live">
-                <span className="twin-camera-badge__dot" />
-                LIVE
-              </span>
+              <span className="twin-camera-badge__dot" />
             )}
           </button>
         )}

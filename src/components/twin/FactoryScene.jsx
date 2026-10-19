@@ -633,23 +633,23 @@ function FactoryContents({
           );
         })}
 
-      {/* ── Factory CCTV Cameras with live stream pop-up ── */}
-      {showCameras &&
-        cameras.map((camera) => {
-          const cId = camera.id || camera.streamId;
-          return (
-            <CameraMarker
-              key={cId}
-              camera={camera}
-              isJa={isJa}
-              onSelectCamera={onSelectCamera}
-              editMode={editMode}
-              isDragging={activeDrag?.type === "camera" && activeDrag?.id === cId}
-              onStartDrag={onStartDrag}
-              onRotateCamera={onRotateCamera}
-            />
-          );
-        })}
+      {/* ── Factory CCTV Cameras (3D stand + icon always visible; live 3D screen controlled by showCameras) ── */}
+      {cameras.map((camera) => {
+        const cId = camera.id || camera.streamId;
+        return (
+          <CameraMarker
+            key={cId}
+            camera={camera}
+            isJa={isJa}
+            showScreen={showCameras}
+            onSelectCamera={onSelectCamera}
+            editMode={editMode}
+            isDragging={activeDrag?.type === "camera" && activeDrag?.id === cId}
+            onStartDrag={onStartDrag}
+            onRotateCamera={onRotateCamera}
+          />
+        );
+      })}
     </>
   );
 }

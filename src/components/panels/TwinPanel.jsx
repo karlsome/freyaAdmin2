@@ -42,7 +42,7 @@ export default function TwinPanel({
   const [viewKey, setViewKey] = useState(0);
   const [showSensors, setShowSensors] = useState(true);
   const [showSensorInfo, setShowSensorInfo] = useState(false);
-  const [showCameras, setShowCameras] = useState(true);
+  const [showCameras, setShowCameras] = useState(false);
   const [showCallMonitor, setShowCallMonitor] = useState(true);
   const [callMonitorModalOpen, setCallMonitorModalOpen] = useState(false);
   const [liteMode, setLiteMode] = useState(() => {
@@ -535,8 +535,12 @@ export default function TwinPanel({
             type="button"
             className={`twin-icon-btn ${showCameras ? "is-on" : ""}`}
             onClick={() => setShowCameras((v) => !v)}
-            title={isJa ? "ライブカメラ 3D画面表示 切替" : "Toggle CCTV Cameras"}
-            aria-label={isJa ? "ライブカメラ 3D画面表示 切替" : "Toggle CCTV Cameras"}
+            title={
+              isJa
+                ? (showCameras ? "ライブカメラ3D画面を非表示 (カメラスタンド・アイコンは維持)" : "すべてのライブカメラ3D画面を表示")
+                : (showCameras ? "Hide 3D camera screens (keep camera stands & icons)" : "Show all 3D camera screens")
+            }
+            aria-label={isJa ? "ライブカメラ 3D画面表示 切替" : "Toggle CCTV Camera Screens"}
           >
             <span className="material-symbols-outlined" style={{ fontSize: 18 }}>videocam</span>
           </button>
