@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { memo, useEffect, useState } from "react";
+import * as THREE from "three";
 import { Html } from "./HtmlOverlay";
 import SensorHeatAura from "./SensorHeatAura";
 
@@ -9,12 +10,25 @@ const STATUS_COLOR = {
   normal:  "#10b981",
 };
 
+// Shared static geometries & materials for all floor sensors
+const BASE_GEO = new THREE.CylinderGeometry(0.22, 0.26, 0.08, 12);
+const ROD_GEO = new THREE.CylinderGeometry(0.035, 0.035, 0.5, 8);
+const HEAD_GEO = new THREE.BoxGeometry(0.24, 0.28, 0.16);
+const LED_GEO = new THREE.CylinderGeometry(0.05, 0.05, 0.05, 8);
+const ANT_GEO = new THREE.CylinderGeometry(0.008, 0.008, 0.25, 6);
+const RING_GEO = new THREE.RingGeometry(0.34, 0.46, 20);
+
+const BASE_MAT = new THREE.MeshStandardMaterial({ color: "#1e293b", roughness: 0.6, metalness: 0.5 });
+const ROD_MAT = new THREE.MeshStandardMaterial({ color: "#475569", roughness: 0.4, metalness: 0.7 });
+const HEAD_MAT = new THREE.MeshStandardMaterial({ color: "#0f172a", roughness: 0.5, metalness: 0.4 });
+const ANT_MAT = new THREE.MeshStandardMaterial({ color: "#94a3b8", metalness: 0.8 });
+
 /**
  * 3D IoT Temperature & Humidity Sensor on the factory floor with animated heat aura.
  * Defaults safe ("normal") sensors to a sleek compact pill so machines aren't obstructed,
  * while automatically expanding Warning / Heat Hazard sensors into full alert cards.
  */
-export default function SensorMarker({
+const SensorMarker = memo(function SensorMarker({
   sensor,
   isJa,
   selected,
@@ -69,8 +83,7 @@ export default function SensorMarker({
 
       {/* ── Edit Mode Floor Ring Anchor ── */}
       {editMode && (
-        <mesh position={[0, 0.025, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-          <ringGeometry args={[0.34, 0.46, 24]} />
+        <mesh position={[0, 0.025, 0]} rotation={[-Math.PI / 2, 0, 0]} geometry={RING_GEO}>
           <meshBasicMaterial color={isDragging ? "#fbbf24" : "#f59e0b"} depthWrite={false} />
         </mesh>
       )}
@@ -81,30 +94,17 @@ export default function SensorMarker({
         onPointerDown={startSensorDrag}
       >
         {/* Base disc */}
-        <mesh position={[0, 0.04, 0]} castShadow>
-          <cylinderGeometry args={[0.22, 0.26, 0.08, 16]} />
-          <meshStandardMaterial color="#1e293b" roughness={0.6} metalness={0.5} />
-        </mesh>
+        <mesh position={[0, 0.04, 0]} geometry={BASE_GEO} material={BASE_MAT} />
         {/* Support rod */}
-        <mesh position={[0, 0.32, 0]} castShadow>
-          <cylinderGeometry args={[0.035, 0.035, 0.5, 12]} />
-          <meshStandardMaterial color="#475569" roughness={0.4} metalness={0.7} />
-        </mesh>
+        <mesh position={[0, 0.32, 0]} geometry={ROD_GEO} material={ROD_MAT} />
         {/* Sensor enclosure head */}
-        <mesh position={[0, 0.65, 0]} castShadow>
-          <boxGeometry args={[0.24, 0.28, 0.16]} />
-          <meshStandardMaterial color="#0f172a" roughness={0.5} metalness={0.4} />
-        </mesh>
+        <mesh position={[0, 0.65, 0]} geometry={HEAD_GEO} material={HEAD_MAT} />
         {/* Status LED emitter disc */}
-        <mesh position={[0, 0.82, 0]}>
-          <cylinderGeometry args={[0.05, 0.05, 0.05, 12]} />
+        <mesh position={[0, 0.82, 0]} geometry={LED_GEO}>
           <meshBasicMaterial color={color} toneMapped={false} />
         </mesh>
         {/* Antenna */}
-        <mesh position={[0.07, 0.95, 0]}>
-          <cylinderGeometry args={[0.008, 0.008, 0.25, 8]} />
-          <meshStandardMaterial color="#94a3b8" metalness={0.8} />
-        </mesh>
+        <mesh position={[0.07, 0.95, 0]} geometry={ANT_GEO} material={ANT_MAT} />
       </group>
 
       {/* ── Floating 3D HUD (Compact vs Detailed view to avoid blocking UI) ── */}
@@ -193,4 +193,6 @@ export default function SensorMarker({
       </Html>
     </group>
   );
-}
+});
+
+export default SensorMarker;

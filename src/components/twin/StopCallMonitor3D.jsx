@@ -1,7 +1,6 @@
-import { useEffect, useRef, useState } from "react";
+import { memo, useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 import { useFrame } from "@react-three/fiber";
-import { RoundedBox } from "@react-three/drei";
 import { Html } from "./HtmlOverlay";
 import { CALL_THEMES } from "../../hooks/useFactoryCallMonitor";
 import { KOSE_MACHINE_IDS } from "../../data/factoryLayouts/kose";
@@ -16,7 +15,7 @@ const MAX_TV_HEIGHT = 7.5;
  * supports Edit Mode floor dragging + vertical Height (`↕ Y`) adjustment,
  * and opens the full Call Monitor modal when clicked.
  */
-export default function StopCallMonitor3D({
+const StopCallMonitor3D = memo(function StopCallMonitor3D({
   monitor,
   activeCalls = [],
   machinesById = {},
@@ -31,7 +30,6 @@ export default function StopCallMonitor3D({
   onCommitPositions,
 }) {
   const bezelMatRef = useRef();
-  const screenGlowRef = useRef();
   const floorRingRef = useRef();
   const [hovered, setHovered] = useState(false);
   const [heightDragStart, setHeightDragStart] = useState(null);
@@ -73,19 +71,22 @@ export default function StopCallMonitor3D({
   }, [heightDragStart, onUpdateMonitorHeight, onCommitPositions]);
 
   useFrame(({ clock }) => {
-    const t = clock.getElapsedTime();
     const hasAlert = activeCalls.length > 0;
-    if (bezelMatRef.current) {
-      const pulse = hasAlert ? 1.4 + Math.sin(t * 7) * 0.9 : 0.65;
-      bezelMatRef.current.emissiveIntensity = pulse;
+    if (!hasAlert) {
+      if (bezelMatRef.current && bezelMatRef.current.emissiveIntensity !== 0.65) {
+        bezelMatRef.current.emissiveIntensity = 0.65;
+      }
+      if (floorRingRef.current && floorRingRef.current.scale.x !== 1) {
+        floorRingRef.current.scale.set(1, 1, 1);
+      }
+      return;
     }
-    if (screenGlowRef.current) {
-      screenGlowRef.current.intensity = hasAlert
-        ? 2.2 + Math.sin(t * 7) * 1.1
-        : 0.7;
+    const t = clock.getElapsedTime();
+    if (bezelMatRef.current) {
+      bezelMatRef.current.emissiveIntensity = 1.4 + Math.sin(t * 7) * 0.9;
     }
     if (floorRingRef.current) {
-      const s = 1 + Math.sin(t * (hasAlert ? 5 : 2)) * 0.08;
+      const s = 1 + Math.sin(t * 5) * 0.08;
       floorRingRef.current.scale.set(s, s, 1);
     }
   });
@@ -141,7 +142,7 @@ export default function StopCallMonitor3D({
         rotation={[-Math.PI / 2, 0, 0]}
         onPointerDown={handlePointerDown}
       >
-        <ringGeometry args={[editMode ? 0.48 : 0.28, editMode ? 0.74 : 0.4, 32]} />
+        <ringGeometry args={[editMode ? 0.48 : 0.28, editMode ? 0.74 : 0.4, 24]} />
         <meshBasicMaterial
           color={activeColor}
           transparent
@@ -157,17 +158,16 @@ export default function StopCallMonitor3D({
         <mesh
           key={dx}
           position={[dx, poleHeight / 2, -0.08]}
-          castShadow
           onPointerDown={handlePointerDown}
           onClick={handleClick}
         >
-          <cylinderGeometry args={[0.03, 0.04, poleHeight, 12]} />
+          <cylinderGeometry args={[0.03, 0.04, poleHeight, 8]} />
           <meshStandardMaterial color="#1e293b" metalness={0.7} roughness={0.3} />
         </mesh>
       ))}
 
       {/* Crossbar truss */}
-      <mesh position={[0, tvHeight - 0.12, -0.08]} castShadow>
+      <mesh position={[0, tvHeight - 0.12, -0.08]}>
         <boxGeometry args={[1.35, 0.05, 0.05]} />
         <meshStandardMaterial color="#334155" metalness={0.7} roughness={0.3} />
       </mesh>
@@ -189,9 +189,10 @@ export default function StopCallMonitor3D({
           document.body.style.cursor = "";
         }}
       >
-        <RoundedBox args={[1.85, 1.04, 0.08]} radius={0.04} smoothness={3} castShadow>
+        <mesh castShadow>
+          <boxGeometry args={[1.85, 1.04, 0.08]} />
           <meshStandardMaterial color="#0f172a" metalness={0.6} roughness={0.35} />
-        </RoundedBox>
+        </mesh>
 
         {/* Glowing LED Status Bezel around the 3D TV */}
         <mesh position={[0, 0, 0.042]}>
@@ -200,7 +201,7 @@ export default function StopCallMonitor3D({
             ref={bezelMatRef}
             color={activeColor}
             emissive={activeColor}
-            emissiveIntensity={1}
+            emissiveIntensity={0.65}
             toneMapped={false}
           />
         </mesh>
@@ -216,15 +217,6 @@ export default function StopCallMonitor3D({
           <boxGeometry args={[0.6, 0.045, 0.045]} />
           <meshBasicMaterial color={activeColor} toneMapped={false} />
         </mesh>
-
-        <pointLight
-          ref={screenGlowRef}
-          position={[0, 0, 0.45]}
-          color={activeColor}
-          intensity={1.2}
-          distance={4.5}
-          decay={2}
-        />
       </group>
 
       {/* Interactive 3D HTML Mini Call-Monitor Screen */}
@@ -389,4 +381,6 @@ export default function StopCallMonitor3D({
       </Html>
     </group>
   );
-}
+});
+
+export default StopCallMonitor3D;

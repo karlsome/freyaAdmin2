@@ -1,6 +1,6 @@
-import { useRef, useState } from "react";
+import { memo, useRef, useState } from "react";
 import { useFrame } from "@react-three/fiber";
-import { Edges, RoundedBox } from "@react-three/drei";
+import { Edges } from "@react-three/drei";
 import StatusGlow from "./StatusGlow";
 import { useCycleFlash } from "./twinHooks";
 
@@ -22,7 +22,7 @@ const COLORS = {
  * red material bed extending out the front, side control box and hydraulic unit.
  * Bed stripes scroll while running.
  */
-export default function ManasMachine({ id, position, size, status, selected, cycle, call, onSelect }) {
+const ManasMachine = memo(function ManasMachine({ id, position, size, status, selected, cycle, call, onSelect }) {
   const [w, d] = size;
   const running = status === "running";
   const groupRef = useRef();
@@ -42,24 +42,33 @@ export default function ManasMachine({ id, position, size, status, selected, cyc
           : null;
 
   useFrame(({ clock }, delta) => {
+    const targetLift = hovered || selected ? 0.06 : 0;
+    const grpY = groupRef.current ? Math.abs(groupRef.current.position.y - targetLift) : 0;
+
+    if (!running && !callColor && grpY < 0.001) {
+      if (bodyMatRef.current && bodyMatRef.current.emissiveIntensity !== 0) {
+        bodyMatRef.current.emissiveIntensity = 0;
+      }
+      return;
+    }
+
     const t = clock.getElapsedTime();
     const k = Math.min(1, delta * 4);
     if (groupRef.current) {
-      const lift = hovered || selected ? 0.06 : 0;
-      groupRef.current.position.y += (lift - groupRef.current.position.y) * k;
+      groupRef.current.position.y += (targetLift - groupRef.current.position.y) * k;
     }
     if (bodyMatRef.current) {
       if (callColor) {
         const pulse = (Math.sin(t * (call?.leader ? 8 : 4.5)) + 1) * 0.5;
         bodyMatRef.current.emissive.set(callColor);
         bodyMatRef.current.emissiveIntensity = 0.16 + pulse * (call?.leader ? 0.6 : 0.32);
-      } else {
+      } else if (bodyMatRef.current.emissiveIntensity !== 0) {
         bodyMatRef.current.emissiveIntensity = 0;
       }
     }
-    if (stripesRef.current) {
+    if (stripesRef.current && running) {
       stripesRef.current.children.forEach((child, i) => {
-        const base = running ? ((t * 0.35 + i / 3) % 1) : i / 3;
+        const base = (t * 0.35 + i / 3) % 1;
         child.position.x = -2.4 + base * 2.1;
       });
     }
@@ -109,7 +118,7 @@ export default function ManasMachine({ id, position, size, status, selected, cyc
           <Edges color={COLORS.fenceEdge} />
         </mesh>
         {fencePosts.map(([x, z]) => (
-          <mesh key={`${x}-${z}`} position={[x, 1.85, z]} castShadow>
+          <mesh key={`${x}-${z}`} position={[x, 1.85, z]}>
             <boxGeometry args={[0.06, 0.95, 0.06]} />
             <meshStandardMaterial color={COLORS.fence} roughness={0.5} />
           </mesh>
@@ -124,7 +133,7 @@ export default function ManasMachine({ id, position, size, status, selected, cyc
         </mesh>
         {/* Overhead aluminium truss */}
         {[-1.1, 1.1].map((z) => (
-          <mesh key={z} position={[1.0, 2.42, z]} castShadow>
+          <mesh key={z} position={[1.0, 2.42, z]}>
             <boxGeometry args={[2.6, 0.08, 0.1]} />
             <meshStandardMaterial color="#cbd5e1" metalness={0.6} roughness={0.3} />
           </mesh>
@@ -141,39 +150,43 @@ export default function ManasMachine({ id, position, size, status, selected, cyc
         </mesh>
         <group ref={stripesRef} position={[0, 0.805, 0]}>
           {[0, 1, 2].map((i) => (
-            <mesh key={i}>
+            <mesh key={i} position={[-2.4 + (i / 3) * 2.1, 0, 0]}>
               <boxGeometry args={[0.05, 0.006, 3.0]} />
               <meshStandardMaterial color={COLORS.stripe} />
             </mesh>
           ))}
         </group>
-        <mesh position={[-2.5, 0.8, 0]} rotation={[Math.PI / 2, 0, 0]} castShadow>
-          <cylinderGeometry args={[0.1, 0.1, 3.1, 16]} />
+        <mesh position={[-2.5, 0.8, 0]} rotation={[Math.PI / 2, 0, 0]}>
+          <cylinderGeometry args={[0.1, 0.1, 3.1, 12]} />
           <meshStandardMaterial color="#e5e7eb" metalness={0.5} roughness={0.3} />
         </mesh>
 
         {/* Control box */}
-        <RoundedBox args={[0.45, 0.55, 0.22]} radius={0.03} smoothness={3} position={[-0.15, 0.95, 1.9]} castShadow>
+        <mesh position={[-0.15, 0.95, 1.9]}>
+          <boxGeometry args={[0.45, 0.55, 0.22]} />
           <meshStandardMaterial color="#9ca3af" roughness={0.5} />
-        </RoundedBox>
+        </mesh>
         <mesh position={[-0.15, 0.98, 2.012]}>
           <planeGeometry args={[0.22, 0.2]} />
           <meshStandardMaterial color={COLORS.glass} emissive="#f59e0b" emissiveIntensity={status === "off" ? 0 : 0.35} />
         </mesh>
 
         {/* Hydraulic unit */}
-        <RoundedBox args={[0.8, 0.6, 0.7]} radius={0.04} smoothness={3} position={[2.15, 0.32, -2.2]} castShadow>
+        <mesh position={[2.15, 0.32, -2.2]}>
+          <boxGeometry args={[0.8, 0.6, 0.7]} />
           <meshStandardMaterial color={COLORS.hydraulic} roughness={0.5} />
-        </RoundedBox>
+        </mesh>
         <mesh position={[1.9, 0.82, -2.2]} rotation={[0, Math.PI / 2, 0]}>
-          <torusGeometry args={[0.18, 0.03, 8, 20, Math.PI * 1.4]} />
+          <torusGeometry args={[0.18, 0.03, 6, 12, Math.PI * 1.4]} />
           <meshStandardMaterial color={COLORS.hose} roughness={0.6} />
         </mesh>
         <mesh position={[2.3, 0.8, -2.2]} rotation={[0, Math.PI / 2, 0.6]}>
-          <torusGeometry args={[0.14, 0.025, 8, 20, Math.PI * 1.2]} />
+          <torusGeometry args={[0.14, 0.025, 6, 12, Math.PI * 1.2]} />
           <meshStandardMaterial color={COLORS.hose} roughness={0.6} />
         </mesh>
       </group>
     </group>
   );
-}
+});
+
+export default ManasMachine;

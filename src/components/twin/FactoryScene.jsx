@@ -1,4 +1,4 @@
-import { Suspense, useEffect, useMemo, useRef, useState } from "react";
+import { memo, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { CameraControls, Edges, Grid } from "@react-three/drei";
@@ -87,7 +87,7 @@ function CameraRig({ selectedPos, drawerOpen, viewKey, controlsEnabled = true })
 }
 
 /* ── Floor, walls and grid ── */
-function Floor({ colors, onPointerDown, onPointerMove, onPointerUp }) {
+const Floor = memo(function Floor({ colors, onPointerDown, onPointerMove, onPointerUp }) {
   const { width, depth } = KOSE_LAYOUT.floor;
   const wall = 0.08;
   return (
@@ -120,14 +120,14 @@ function Floor({ colors, onPointerDown, onPointerMove, onPointerUp }) {
         [-width / 2, 0, wall, depth],
         [width / 2, 0, wall, depth],
       ].map(([x, z, w, d], i) => (
-        <mesh key={i} position={[x, 0.15, z]} castShadow receiveShadow>
+        <mesh key={i} position={[x, 0.15, z]}>
           <boxGeometry args={[w, 0.3, d]} />
           <meshStandardMaterial color={colors.wall} roughness={0.8} />
         </mesh>
       ))}
     </group>
   );
-}
+});
 
 function SceneLabel({ position, icon, text, tone = "neutral" }) {
   return (
@@ -140,8 +140,22 @@ function SceneLabel({ position, icon, text, tone = "neutral" }) {
   );
 }
 
+// Shared static geometries & materials for decorative zones
+const CHAIR_GEO = new THREE.BoxGeometry(0.35, 0.44, 0.35);
+const CHAIR_MAT = new THREE.MeshStandardMaterial({ color: "#64748b", roughness: 0.7 });
+const TABLE_GEO = new THREE.BoxGeometry(3.2, 0.06, 1.0);
+const TABLE_MAT = new THREE.MeshStandardMaterial({ color: "#d6b88d", roughness: 0.7 });
+
+const PALLET_SLAT_GEO = new THREE.BoxGeometry(1.25, 0.1, 0.16);
+const PALLET_SLAT_MAT = new THREE.MeshStandardMaterial({ color: "#a47148", roughness: 0.9 });
+const PALLET_TOP_GEO = new THREE.BoxGeometry(1.25, 0.04, 1.0);
+const PALLET_TOP_MAT = new THREE.MeshStandardMaterial({ color: "#b98555", roughness: 0.9 });
+const PALLET_BOX_GEO = new THREE.BoxGeometry(0.48, 0.36, 0.4);
+const PALLET_BOX_MAT_A = new THREE.MeshStandardMaterial({ color: "#d4b08a", roughness: 0.85 });
+const PALLET_BOX_MAT_B = new THREE.MeshStandardMaterial({ color: "#c8a27a", roughness: 0.85 });
+
 /* ── Meeting / break room ── */
-function MeetingRoom({ isJa }) {
+const MeetingRoom = memo(function MeetingRoom({ isJa }) {
   const { pos, size } = KOSE_LAYOUT.room;
   return (
     <group position={[pos[0], 0, pos[1]]}>
@@ -155,23 +169,17 @@ function MeetingRoom({ isJa }) {
         <Edges color="#f59e0b" />
       </mesh>
       {/* simple table + chairs */}
-      <mesh position={[0, 0.38, 0]} castShadow>
-        <boxGeometry args={[3.2, 0.06, 1.0]} />
-        <meshStandardMaterial color="#d6b88d" roughness={0.7} />
-      </mesh>
+      <mesh position={[0, 0.38, 0]} geometry={TABLE_GEO} material={TABLE_MAT} />
       {[-1.2, -0.4, 0.4, 1.2].flatMap((x) => [-0.8, 0.8].map((z) => (
-        <mesh key={`${x}-${z}`} position={[x, 0.22, z]} castShadow>
-          <boxGeometry args={[0.35, 0.44, 0.35]} />
-          <meshStandardMaterial color="#64748b" roughness={0.7} />
-        </mesh>
+        <mesh key={`${x}-${z}`} position={[x, 0.22, z]} geometry={CHAIR_GEO} material={CHAIR_MAT} />
       )))}
       <SceneLabel position={[0, 1.9, 0]} icon="meeting_room" text={isJa ? "小瀬ガレージ / 会議室" : "Meeting / Break room"} tone="amber" />
     </group>
   );
-}
+});
 
 /* ── Finished-goods pallet zone (decoration) ── */
-function PalletZone({ isJa }) {
+const PalletZone = memo(function PalletZone({ isJa }) {
   const { pos, size } = KOSE_LAYOUT.pallet;
   const pallets = [-2.3, 0, 2.3];
   const stacks = [
@@ -188,30 +196,26 @@ function PalletZone({ isJa }) {
       {pallets.map((x, pi) => (
         <group key={x} position={[x, 0, 0]}>
           {[-0.4, 0, 0.4].map((z) => (
-            <mesh key={z} position={[0, 0.05, z]} castShadow receiveShadow>
-              <boxGeometry args={[1.25, 0.1, 0.16]} />
-              <meshStandardMaterial color="#a47148" roughness={0.9} />
-            </mesh>
+            <mesh key={z} position={[0, 0.05, z]} geometry={PALLET_SLAT_GEO} material={PALLET_SLAT_MAT} />
           ))}
-          <mesh position={[0, 0.12, 0]} castShadow receiveShadow>
-            <boxGeometry args={[1.25, 0.04, 1.0]} />
-            <meshStandardMaterial color="#b98555" roughness={0.9} />
-          </mesh>
+          <mesh position={[0, 0.12, 0]} geometry={PALLET_TOP_GEO} material={PALLET_TOP_MAT} />
           {stacks[pi].map(([bx, bz, level = 0], bi) => (
-            <mesh key={bi} position={[bx - 0.25, 0.32 + level * 0.36, bz - 0.21]} castShadow receiveShadow>
-              <boxGeometry args={[0.48, 0.36, 0.4]} />
-              <meshStandardMaterial color={bi % 2 ? "#c8a27a" : "#d4b08a"} roughness={0.85} />
-            </mesh>
+            <mesh
+              key={bi}
+              position={[bx - 0.25, 0.32 + level * 0.36, bz - 0.21]}
+              geometry={PALLET_BOX_GEO}
+              material={bi % 2 ? PALLET_BOX_MAT_B : PALLET_BOX_MAT_A}
+            />
           ))}
         </group>
       ))}
       <SceneLabel position={[0, 1.6, 0]} icon="inventory_2" text={isJa ? "出荷パレット" : "Finished-goods pallet"} tone="teal" />
     </group>
   );
-}
+});
 
 /* ── Pair connection on the floor between paired machines ── */
-function PairLink({ a, b, together, color }) {
+const PairLink = memo(function PairLink({ a, b, together, color }) {
   const ref = useRef();
   const x = a[0];
   const z1 = Math.min(a[1], b[1]) + NC_DEPTH / 2 + 0.05;
@@ -219,10 +223,9 @@ function PairLink({ a, b, together, color }) {
   const len = Math.max(0.05, z2 - z1);
 
   useFrame(({ clock }) => {
-    if (ref.current && together) {
-      const opacity = 0.65 + Math.sin(clock.getElapsedTime() * 3) * 0.25;
-      ref.current.children.forEach((child) => { child.material.opacity = opacity; });
-    }
+    if (!together || !ref.current) return;
+    const opacity = 0.65 + Math.sin(clock.getElapsedTime() * 3) * 0.25;
+    ref.current.children.forEach((child) => { child.material.opacity = opacity; });
   });
 
   return (
@@ -241,10 +244,11 @@ function PairLink({ a, b, together, color }) {
       ))}
     </group>
   );
-}
+});
 
 /* ── Floating compact micro-badge above a machine ── */
-function MachineBadge({
+const MachineBadge = memo(function MachineBadge({
+  machineId,
   position,
   height,
   title,
@@ -253,7 +257,7 @@ function MachineBadge({
   status,
   isJa,
   dim,
-  onClick,
+  onSelect,
   selected,
   sebanggo,
   call,
@@ -269,7 +273,7 @@ function MachineBadge({
     <Html position={[position[0], height, position[1]]} center zIndexRange={[30, 10]}>
       <button
         type="button"
-        onClick={onClick}
+        onClick={() => onSelect && onSelect(machineId)}
         className={`twin-badge ${selected ? "twin-badge--selected" : ""} ${dim && !call ? "twin-badge--dim" : ""} ${(theme.pulse || call) ? "twin-badge--alert" : ""} ${call ? `twin-badge--calling twin-badge--calling-${call.primaryCall}` : ""}`}
         style={{ "--status": badgeColor }}
       >
@@ -325,7 +329,7 @@ function MachineBadge({
       </button>
     </Html>
   );
-}
+});
 
 function badgeValue(machine, isJa, shared = false) {
   const pieces = shared ? machine?.pair?.sharedPieces : machine?.pieces;
@@ -521,6 +525,7 @@ function FactoryContents({
         return (
           <MachineBadge
             key={`badge-${id}`}
+            machineId={id}
             position={pos}
             height={call ? 2.15 : 0.88}
             title={id}
@@ -533,7 +538,7 @@ function FactoryContents({
             sebanggo={sebanggo}
             call={call}
             totalNG={live?.totalNG || 0}
-            onClick={() => onSelect(id)}
+            onSelect={onSelect}
           />
         );
       })}
@@ -547,6 +552,7 @@ function FactoryContents({
         return (
           <MachineBadge
             key={`badge-${p.a}-${p.b}`}
+            machineId={p.lead?.id || p.a}
             position={[a[0], (a[1] + b[1]) / 2]}
             height={call ? 2.15 : 0.92}
             title={`${p.a.replace("OZ", "")}⇄${p.b.replace("OZ", "")}`}
@@ -559,7 +565,7 @@ function FactoryContents({
             sebanggo={sebanggo}
             call={call}
             totalNG={totalNG}
-            onClick={() => onSelect(p.lead?.id || p.a)}
+            onSelect={onSelect}
           />
         );
       })}
@@ -572,6 +578,7 @@ function FactoryContents({
         const sebanggo = live?.sebanggo || m?.sebanggo || null;
         return (
           <MachineBadge
+            machineId={KOSE_LAYOUT.manas.id}
             position={KOSE_LAYOUT.manas.pos}
             height={call ? 3.7 : 2.35}
             title="MANAS"
@@ -584,7 +591,7 @@ function FactoryContents({
             sebanggo={m?.hasCycleSensor ? sebanggo : null}
             call={call}
             totalNG={live?.totalNG || 0}
-            onClick={() => onSelect(KOSE_LAYOUT.manas.id)}
+            onSelect={onSelect}
           />
         );
       })()}
@@ -648,6 +655,53 @@ function FactoryContents({
 }
 
 /**
+ * Monitors WebGL renderer capabilities and sustained frame times.
+ * Automatically activates Lite Mode on software/basic GPUs or if FPS drops below 26 FPS.
+ */
+function AdaptivePerformanceWatcher({ liteMode, onAutoLite }) {
+  const { gl } = useThree();
+  const sampleRef = useRef({ frames: 0, elapsed: 0, triggered: false });
+
+  useEffect(() => {
+    if (liteMode || sampleRef.current.triggered || !onAutoLite) return;
+    try {
+      const ctx = gl.getContext();
+      const ext = ctx?.getExtension("WEBGL_debug_renderer_info");
+      if (ext) {
+        const renderer = String(ctx.getParameter(ext.UNMASKED_RENDERER_WEBGL) || "");
+        if (/SwiftShader|llvmpipe|Software|Basic Render|Intel\(R\) HD Graphics/i.test(renderer)) {
+          sampleRef.current.triggered = true;
+          onAutoLite();
+        }
+      }
+    } catch {
+      // ignore
+    }
+  }, [gl, liteMode, onAutoLite]);
+
+  useFrame((_, delta) => {
+    if (liteMode || sampleRef.current.triggered || !onAutoLite) return;
+    // Ignore tab-switch spikes > 250ms
+    if (delta > 0.25) return;
+    const s = sampleRef.current;
+    s.frames += 1;
+    s.elapsed += delta;
+    if (s.elapsed >= 3.0) {
+      const avgFps = s.frames / s.elapsed;
+      if (avgFps < 26) {
+        s.triggered = true;
+        onAutoLite();
+      } else {
+        s.frames = 0;
+        s.elapsed = 0;
+      }
+    }
+  });
+
+  return null;
+}
+
+/**
  * Full 3D digital twin of the 小瀬 floor.
  * Supports interactive dragging & camera orientation in Edit Mode.
  */
@@ -672,6 +726,8 @@ export default function FactoryScene({
   showCameras = true,
   showCallMonitor = true,
   showSensorInfo = false,
+  liteMode = false,
+  onAutoLite,
   editMode = false,
   onUpdatePosition,
   onUpdateMonitorHeight,
@@ -706,13 +762,13 @@ export default function FactoryScene({
 
   return (
     <Canvas
-      shadows="soft"
-      dpr={[1, 2]}
+      shadows={!liteMode}
+      dpr={liteMode ? 1 : [1, 1.5]}
       camera={{ position: [0, 19, 14], fov: 40, near: 0.1, far: 200 }}
       onPointerMissed={() => {
         if (!activeDrag) onSelect(null);
       }}
-      gl={{ antialias: true, powerPreference: "high-performance" }}
+      gl={{ antialias: !liteMode, powerPreference: "high-performance" }}
     >
       <color attach="background" args={[colors.bg]} />
       <fog attach="fog" args={[colors.bg, 70, 130]} />
@@ -722,17 +778,19 @@ export default function FactoryScene({
       <directionalLight
         position={[9, 18, 10]}
         intensity={isDark ? 1.5 : 1.8}
-        castShadow
-        shadow-mapSize={[1024, 1024]}
+        castShadow={!liteMode}
+        shadow-mapSize={[512, 512]}
         shadow-camera-left={-16}
         shadow-camera-right={16}
         shadow-camera-top={11}
         shadow-camera-bottom={-11}
         shadow-camera-near={1}
         shadow-camera-far={60}
-        shadow-bias={-0.0004}
+        shadow-bias={-0.0005}
       />
       <directionalLight position={[-10, 8, -6]} intensity={0.35} />
+
+      <AdaptivePerformanceWatcher liteMode={liteMode} onAutoLite={onAutoLite} />
 
       <FloorDragTracker
         activeDrag={activeDrag}

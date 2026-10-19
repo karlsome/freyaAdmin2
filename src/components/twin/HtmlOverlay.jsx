@@ -59,7 +59,7 @@ function objectZIndex(el, camera, zIndexRange) {
 export const Html = forwardRef(function Html(
   {
     children,
-    eps = 0.001,
+    eps = 0.25,
     style,
     className,
     prepend,
@@ -81,6 +81,7 @@ export const Html = forwardRef(function Html(
   const groupRef = useRef(null);
   const oldZoom = useRef(0);
   const oldPosition = useRef([0, 0]);
+  const oldZIndex = useRef(null);
   const visible = useRef(true);
 
   const target = portal?.current || gl.domElement.parentNode;
@@ -96,7 +97,9 @@ export const Html = forwardRef(function Html(
 
     scene.updateMatrixWorld();
     const vec = calculatePosition(groupRef.current, camera, size);
-    container.style.cssText = `position:absolute;top:0;left:0;transform:translate3d(${vec[0]}px,${vec[1]}px,0);transform-origin:0 0;`;
+    const rx = Math.round(vec[0] * 10) / 10;
+    const ry = Math.round(vec[1] * 10) / 10;
+    container.style.cssText = `position:absolute;top:0;left:0;will-change:transform;transform:translate3d(${rx}px,${ry}px,0);transform-origin:0 0;`;
 
     if (prepend) target.prepend(container);
     else target.appendChild(container);
@@ -149,24 +152,37 @@ export const Html = forwardRef(function Html(
 
   useFrame(() => {
     const el = elRef.current;
-    if (!groupRef.current || !el) return;
-    groupRef.current.updateWorldMatrix(true, false);
-    const vec = calculatePosition(groupRef.current, camera, size);
+    const grp = groupRef.current;
+    if (!grp || !el) return;
+
+    const vec = calculatePosition(grp, camera, size);
 
     if (
       Math.abs(oldZoom.current - camera.zoom) > eps ||
       Math.abs(oldPosition.current[0] - vec[0]) > eps ||
       Math.abs(oldPosition.current[1] - vec[1]) > eps
     ) {
-      const isBehindCamera = isObjectBehindCamera(groupRef.current, camera);
+      const isBehindCamera = isObjectBehindCamera(grp, camera);
       const nextVisible = !isBehindCamera;
       if (visible.current !== nextVisible) {
         visible.current = nextVisible;
         el.style.display = nextVisible ? "block" : "none";
       }
-      el.style.zIndex = `${objectZIndex(groupRef.current, camera, zIndexRange)}`;
-      const scale = distanceFactor === undefined ? 1 : objectScale(groupRef.current, camera) * distanceFactor;
-      el.style.transform = `translate3d(${vec[0]}px,${vec[1]}px,0) scale(${scale})`;
+      if (nextVisible) {
+        const nextZ = objectZIndex(grp, camera, zIndexRange);
+        if (nextZ !== oldZIndex.current) {
+          oldZIndex.current = nextZ;
+          el.style.zIndex = `${nextZ}`;
+        }
+        const rx = Math.round(vec[0] * 10) / 10;
+        const ry = Math.round(vec[1] * 10) / 10;
+        if (distanceFactor === undefined) {
+          el.style.transform = `translate3d(${rx}px,${ry}px,0)`;
+        } else {
+          const scale = objectScale(grp, camera) * distanceFactor;
+          el.style.transform = `translate3d(${rx}px,${ry}px,0) scale(${scale})`;
+        }
+      }
       oldPosition.current = vec;
       oldZoom.current = camera.zoom;
     }

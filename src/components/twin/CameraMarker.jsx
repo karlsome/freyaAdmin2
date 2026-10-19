@@ -1,15 +1,47 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import { useFrame } from "@react-three/fiber";
+import { memo, useEffect, useState } from "react";
 import * as THREE from "three";
 import Hls from "hls.js";
 import { Html } from "./HtmlOverlay";
 import { BASE_URL } from "../../services/api";
 
+// Shared static geometries & materials across all CCTV cameras
+const FOV_GEO = (() => {
+  const shape = new THREE.Shape();
+  const len = 3.6;
+  const halfAngle = Math.PI / 6; // 30 deg
+  shape.moveTo(0, 0);
+  shape.lineTo(len * Math.sin(-halfAngle), len * Math.cos(-halfAngle));
+  shape.absarc(0, 0, len, Math.PI / 2 - halfAngle, Math.PI / 2 + halfAngle, false);
+  shape.closePath();
+  return new THREE.ShapeGeometry(shape, 12);
+})();
+const FOV_MAT = new THREE.MeshBasicMaterial({
+  color: "#38bdf8",
+  transparent: true,
+  opacity: 0.13,
+  depthWrite: false,
+  side: THREE.DoubleSide,
+});
+const RING_GEO = new THREE.RingGeometry(0.38, 0.5, 20);
+const POLE_GEO = new THREE.CylinderGeometry(0.04, 0.04, 1.0, 8);
+const SWIVEL_GEO = new THREE.SphereGeometry(0.07, 8, 8);
+const BODY_GEO = new THREE.BoxGeometry(0.18, 0.14, 0.36);
+const LENS_BARREL_GEO = new THREE.CylinderGeometry(0.065, 0.065, 0.08, 10);
+const LENS_GLASS_GEO = new THREE.CircleGeometry(0.05, 10);
+const TALLY_GEO = new THREE.SphereGeometry(0.015, 6, 6);
+
+const POLE_MAT = new THREE.MeshStandardMaterial({ color: "#475569", metalness: 0.7, roughness: 0.3 });
+const SWIVEL_MAT = new THREE.MeshStandardMaterial({ color: "#334155", metalness: 0.8 });
+const BODY_MAT = new THREE.MeshStandardMaterial({ color: "#f8fafc", roughness: 0.3 });
+const LENS_BARREL_MAT = new THREE.MeshStandardMaterial({ color: "#0f172a", roughness: 0.2, metalness: 0.9 });
+const LENS_GLASS_MAT = new THREE.MeshBasicMaterial({ color: "#0284c7" });
+const TALLY_MAT = new THREE.MeshBasicMaterial({ color: "#ef4444", toneMapped: false });
+
 /**
  * 3D CCTV Camera with an interactive mini 3D surveillance monitor screen.
  * Displays live video in 3D; clicking the small screen pops up the full-screen CameraModal.
  */
-export default function CameraMarker({
+const CameraMarker = memo(function CameraMarker({
   camera,
   isJa,
   onSelectCamera,
@@ -20,8 +52,6 @@ export default function CameraMarker({
 }) {
   const { id, streamId = id, pos = [0, 0], rotationY = 0, label, labelJa } = camera;
   const markerId = id || streamId;
-  const tallyRef = useRef();
-  const fovRef = useRef();
   const [videoEl, setVideoEl] = useState(null);
 
   const [streamError, setStreamError] = useState(false);
@@ -30,28 +60,6 @@ export default function CameraMarker({
   const [minimized, setMinimized] = useState(false);
 
   const title = isJa ? (labelJa || label) : (label || labelJa || markerId);
-
-  // Directional FOV projection cone on the floor
-  const fovGeo = useMemo(() => {
-    const shape = new THREE.Shape();
-    const len = 3.6;
-    const halfAngle = Math.PI / 6; // 30 deg
-    shape.moveTo(0, 0);
-    shape.lineTo(len * Math.sin(-halfAngle), len * Math.cos(-halfAngle));
-    shape.absarc(0, 0, len, Math.PI / 2 - halfAngle, Math.PI / 2 + halfAngle, false);
-    shape.closePath();
-    return new THREE.ShapeGeometry(shape);
-  }, []);
-
-  useFrame(({ clock }) => {
-    const t = clock.getElapsedTime();
-    if (tallyRef.current) {
-      tallyRef.current.material.opacity = 0.35 + 0.65 * Math.sin(t * 3.5);
-    }
-    if (fovRef.current) {
-      fovRef.current.material.opacity = 0.11 + 0.04 * Math.sin(t * 2);
-    }
-  });
 
   // Connect live HLS video to the mini 3D monitor once the <video> DOM element mounts
   useEffect(() => {
@@ -144,25 +152,16 @@ export default function CameraMarker({
     <group position={[pos[0], 0, pos[1]]}>
       {/* ── Floor FOV Projection Cone ── */}
       <mesh
-        ref={fovRef}
         rotation={[-Math.PI / 2, 0, -rotationY]}
         position={[0, 0.012, 0]}
-        geometry={fovGeo}
+        geometry={FOV_GEO}
+        material={FOV_MAT}
         renderOrder={1}
-      >
-        <meshBasicMaterial
-          color="#38bdf8"
-          transparent
-          opacity={0.14}
-          depthWrite={false}
-          side={THREE.DoubleSide}
-        />
-      </mesh>
+      />
 
       {/* ── Edit Mode Floor Ring Anchor ── */}
       {editMode && (
-        <mesh position={[0, 0.025, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-          <ringGeometry args={[0.38, 0.5, 24]} />
+        <mesh position={[0, 0.025, 0]} rotation={[-Math.PI / 2, 0, 0]} geometry={RING_GEO}>
           <meshBasicMaterial color={isDragging ? "#38bdf8" : "#0284c7"} depthWrite={false} />
         </mesh>
       )}
@@ -174,36 +173,18 @@ export default function CameraMarker({
         onPointerDown={startCameraDrag}
       >
         {/* Mount pole */}
-        <mesh position={[0, 0.5, 0]} castShadow>
-          <cylinderGeometry args={[0.04, 0.04, 1.0, 12]} />
-          <meshStandardMaterial color="#475569" metalness={0.7} roughness={0.3} />
-        </mesh>
+        <mesh position={[0, 0.5, 0]} geometry={POLE_GEO} material={POLE_MAT} />
         {/* Swivel bracket */}
-        <mesh position={[0, 1.0, 0]} castShadow>
-          <sphereGeometry args={[0.07, 12, 12]} />
-          <meshStandardMaterial color="#334155" metalness={0.8} />
-        </mesh>
+        <mesh position={[0, 1.0, 0]} geometry={SWIVEL_GEO} material={SWIVEL_MAT} />
         {/* Camera body angled down */}
         <group position={[0, 1.0, 0.12]} rotation={[Math.PI / 7, 0, 0]}>
-          <mesh castShadow>
-            <boxGeometry args={[0.18, 0.14, 0.36]} />
-            <meshStandardMaterial color="#f8fafc" roughness={0.3} />
-          </mesh>
+          <mesh geometry={BODY_GEO} material={BODY_MAT} />
           {/* Front lens barrel */}
-          <mesh position={[0, 0, 0.2]} rotation={[Math.PI / 2, 0, 0]}>
-            <cylinderGeometry args={[0.065, 0.065, 0.08, 16]} />
-            <meshStandardMaterial color="#0f172a" roughness={0.2} metalness={0.9} />
-          </mesh>
+          <mesh position={[0, 0, 0.2]} rotation={[Math.PI / 2, 0, 0]} geometry={LENS_BARREL_GEO} material={LENS_BARREL_MAT} />
           {/* Glass lens element */}
-          <mesh position={[0, 0, 0.24]}>
-            <circleGeometry args={[0.05, 16]} />
-            <meshBasicMaterial color="#0284c7" />
-          </mesh>
-          {/* Blinking tally light LED */}
-          <mesh ref={tallyRef} position={[0.06, 0.06, 0.18]}>
-            <sphereGeometry args={[0.015, 8, 8]} />
-            <meshBasicMaterial color="#ef4444" transparent toneMapped={false} />
-          </mesh>
+          <mesh position={[0, 0, 0.24]} geometry={LENS_GLASS_GEO} material={LENS_GLASS_MAT} />
+          {/* Tally light LED */}
+          <mesh position={[0.06, 0.06, 0.18]} geometry={TALLY_GEO} material={TALLY_MAT} />
         </group>
       </group>
 
@@ -352,4 +333,6 @@ export default function CameraMarker({
       </Html>
     </group>
   );
-}
+});
+
+export default CameraMarker;

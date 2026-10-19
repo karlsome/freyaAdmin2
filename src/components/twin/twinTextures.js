@@ -19,14 +19,14 @@ function roundedRectPath(ctx, x, y, w, h, r) {
 
 export function getGlowTexture() {
   if (glowTexture) return glowTexture;
-  const size = 256;
+  const size = 128;
   const canvas = document.createElement("canvas");
   canvas.width = size;
   canvas.height = size;
   const ctx = canvas.getContext("2d");
-  ctx.filter = "blur(22px)";
+  ctx.filter = "blur(11px)";
   ctx.fillStyle = "#ffffff";
-  roundedRectPath(ctx, 48, 48, size - 96, size - 96, 40);
+  roundedRectPath(ctx, 24, 24, size - 48, size - 48, 20);
   ctx.fill();
   glowTexture = new THREE.CanvasTexture(canvas);
   glowTexture.colorSpace = THREE.SRGBColorSpace;
@@ -35,15 +35,15 @@ export function getGlowTexture() {
 
 export function getOutlineTexture() {
   if (outlineTexture) return outlineTexture;
-  const size = 256;
+  const size = 128;
   const canvas = document.createElement("canvas");
   canvas.width = size;
   canvas.height = size;
   const ctx = canvas.getContext("2d");
   ctx.strokeStyle = "#ffffff";
-  ctx.lineWidth = 7;
-  ctx.setLineDash([22, 12]);
-  roundedRectPath(ctx, 12, 12, size - 24, size - 24, 30);
+  ctx.lineWidth = 3.5;
+  ctx.setLineDash([11, 6]);
+  roundedRectPath(ctx, 6, 6, size - 12, size - 12, 15);
   ctx.stroke();
   outlineTexture = new THREE.CanvasTexture(canvas);
   outlineTexture.colorSpace = THREE.SRGBColorSpace;
@@ -56,7 +56,7 @@ let heatTexture = null;
  */
 export function getRadialHeatTexture() {
   if (heatTexture) return heatTexture;
-  const size = 256;
+  const size = 128;
   const canvas = document.createElement("canvas");
   canvas.width = size;
   canvas.height = size;
@@ -81,15 +81,15 @@ let heatRingTexture = null;
  */
 export function getHeatRingTexture() {
   if (heatRingTexture) return heatRingTexture;
-  const size = 256;
+  const size = 128;
   const canvas = document.createElement("canvas");
   canvas.width = size;
   canvas.height = size;
   const ctx = canvas.getContext("2d");
   const half = size / 2;
   ctx.beginPath();
-  ctx.arc(half, half, half - 12, 0, Math.PI * 2);
-  ctx.lineWidth = 14;
+  ctx.arc(half, half, half - 6, 0, Math.PI * 2);
+  ctx.lineWidth = 7;
   ctx.strokeStyle = "rgba(255, 255, 255, 0.95)";
   ctx.stroke();
   heatRingTexture = new THREE.CanvasTexture(canvas);

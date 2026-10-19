@@ -113,13 +113,17 @@ export function useFactoryCallMonitor(factoryName = "小瀬") {
   const lastMsgRef = useRef(Date.now());
   const reconnectTimerRef = useRef(null);
 
-  // Tick once per second when there are active calls or when viewing elapsed times
+  const hasAnyCalls = serverCalls.length > 0 || simulatedCalls.length > 0;
+
+  // Tick once per second ONLY when there are active calls that need live wait-time counters
   useEffect(() => {
+    if (!hasAnyCalls) return undefined;
+    setNow(Date.now());
     const id = window.setInterval(() => {
       setNow(Date.now());
     }, 1000);
     return () => window.clearInterval(id);
-  }, []);
+  }, [hasAnyCalls]);
 
   useEffect(() => {
     if (!factoryName) return undefined;
@@ -234,8 +238,12 @@ export function useFactoryCallMonitor(factoryName = "小瀬") {
     };
   }, [factoryName]);
 
+const EMPTY_CALLS = [];
+const EMPTY_CALLS_MAP = {};
+
   // Merge real server calls + any admin-simulated calls, sorted oldest-first (`since` ascending)
   const activeCalls = useMemo(() => {
+    if (serverCalls.length === 0 && simulatedCalls.length === 0) return EMPTY_CALLS;
     const mergedMap = new Map();
     serverCalls.forEach((c) => {
       if (c && c.machine) mergedMap.set(c.machine, { ...c, isSimulated: false });
@@ -247,6 +255,8 @@ export function useFactoryCallMonitor(factoryName = "小瀬") {
     const sorted = Array.from(mergedMap.values())
       .filter((c) => c.leader || c.stop || c.box || c.material)
       .sort((a, b) => (a.since || 0) - (b.since || 0));
+
+    if (sorted.length === 0) return EMPTY_CALLS;
 
     return sorted.map((c, idx) => {
       const primaryCall = getPrimaryCallType(c);
@@ -264,6 +274,7 @@ export function useFactoryCallMonitor(factoryName = "小瀬") {
 
   // Fast O(1) lookup by machine ID (including constituents if a paired machine name was used)
   const callsByMachine = useMemo(() => {
+    if (activeCalls.length === 0) return EMPTY_CALLS_MAP;
     const map = {};
     activeCalls.forEach((call) => {
       map[call.machine] = call;

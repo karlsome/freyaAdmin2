@@ -257,12 +257,14 @@ function MaterialRoll3D({ offset = [0, 0, 0] }) {
   );
 }
 
+import { memo } from "react";
+
 /**
  * Renders the 3D floor shockwaves, vertical light column, and floating 3D call objects
  * (Siren for Leader/Stop, Bouncing Box for Box Request, Rolling Cylinder for Material Request)
  * for any calling machine on the factory floor.
  */
-export default function MachineCallEffect({
+const MachineCallEffect = memo(function MachineCallEffect({
   call,
   position,
   width = 3.0,
@@ -273,7 +275,6 @@ export default function MachineCallEffect({
   const ring2Ref = useRef();
   const floorGlowRef = useRef();
   const pillarRef = useRef();
-  const lightRef = useRef();
   const glowTex = useMemo(() => getGlowTexture(), []);
 
   const primaryType = getPrimaryCallType(call) || "leader";
@@ -317,12 +318,6 @@ export default function MachineCallEffect({
     if (pillarRef.current) {
       pillarRef.current.material.opacity = 0.14 + Math.sin(t * 6) * 0.08;
     }
-
-    if (lightRef.current) {
-      lightRef.current.intensity = isUrgent
-        ? 3.2 + Math.sin(t * 8) * 1.8
-        : 1.8 + Math.sin(t * 4) * 0.8;
-    }
   });
 
   if (!call) return null;
@@ -333,16 +328,6 @@ export default function MachineCallEffect({
 
   return (
     <group position={[position[0], 0, position[1]]}>
-      {/* Dynamic point light that bathes the calling machine in Red / Amber / Blue */}
-      <pointLight
-        ref={lightRef}
-        position={[0, 1.35, 0]}
-        color={theme.glow}
-        intensity={2.5}
-        distance={5.5}
-        decay={2}
-      />
-
       {/* Intense pulsing floor aura under the machine */}
       <mesh
         ref={floorGlowRef}
@@ -429,5 +414,7 @@ export default function MachineCallEffect({
       })}
     </group>
   );
-}
+});
+
+export default MachineCallEffect;
 

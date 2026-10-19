@@ -45,9 +45,28 @@ export default function TwinPanel({
   const [showCameras, setShowCameras] = useState(true);
   const [showCallMonitor, setShowCallMonitor] = useState(true);
   const [callMonitorModalOpen, setCallMonitorModalOpen] = useState(false);
+  const [liteMode, setLiteMode] = useState(() => {
+    try {
+      return localStorage.getItem("freya_twin_lite_mode") === "1";
+    } catch {
+      return false;
+    }
+  });
   const [editMode, setEditMode] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [savedCloudToast, setSavedCloudToast] = useState(false);
+
+  const toggleLiteMode = () => {
+    setLiteMode((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem("freya_twin_lite_mode", next ? "1" : "0");
+      } catch {
+        // ignore
+      }
+      return next;
+    });
+  };
 
   const [localSensors, setLocalSensors] = useState(null);
   const [localCameras, setLocalCameras] = useState(null);
@@ -365,6 +384,8 @@ export default function TwinPanel({
             showCameras={showCameras}
             showCallMonitor={showCallMonitor}
             showSensorInfo={showSensorInfo}
+            liteMode={liteMode}
+            onAutoLite={() => setLiteMode(true)}
             editMode={editMode}
             onUpdatePosition={handleUpdatePosition}
             onUpdateMonitorHeight={handleUpdateMonitorHeight}
@@ -447,7 +468,7 @@ export default function TwinPanel({
         )}
       </div>
 
-      {/* Overlay controls: Toggles for Call Monitor TV, Sensors/Heat Auras, Sensor Info, Cameras, Location Edit + Reset view */}
+      {/* Overlay controls: Toggles for Call Monitor TV, Sensors/Heat Auras, Sensor Info, Cameras, Location Edit, Lite Mode + Reset view */}
       {has3D && (
         <div className="twin-overlay top-3 right-3 flex items-center gap-1.5">
           {/* Open Call Monitor Modal + 3D Simulator button */}
@@ -518,6 +539,15 @@ export default function TwinPanel({
             aria-label={isJa ? "ライブカメラ 3D画面表示 切替" : "Toggle CCTV Cameras"}
           >
             <span className="material-symbols-outlined" style={{ fontSize: 18 }}>videocam</span>
+          </button>
+          <button
+            type="button"
+            className={`twin-icon-btn ${liteMode ? "is-on" : ""}`}
+            onClick={toggleLiteMode}
+            title={isJa ? (liteMode ? "軽量モード: オン (低スペックPC向け・影オフ)" : "軽量モード: オフ (クリックで軽量化)") : (liteMode ? "Lite Mode: ON (Low-spec PC optimized)" : "Lite Mode: OFF (Click for low-spec PC optimization)")}
+            aria-label="Toggle Lite 3D Performance Mode"
+          >
+            <span className="material-symbols-outlined" style={{ fontSize: 18 }}>bolt</span>
           </button>
           {!selectedId && (
             <button
