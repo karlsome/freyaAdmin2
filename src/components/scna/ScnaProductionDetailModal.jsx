@@ -1,5 +1,6 @@
 import { useState } from "react";
 import ModalShell from "../ModalShell";
+import SensorDevicePhotoPreviewModal from "../SensorDevicePhotoPreviewModal";
 import { useLanguage } from "../../contexts/LanguageContext";
 import {
   getRecordBreakData,
@@ -10,7 +11,7 @@ import {
 export default function ScnaProductionDetailModal({ open, record, onClose }) {
   const { language } = useLanguage();
   const isJa = language === "ja";
-  const [lightboxImage, setLightboxImage] = useState(null);
+  const [photoPreview, setPhotoPreview] = useState(null);
 
   if (!open || !record) return null;
 
@@ -430,14 +431,27 @@ export default function ScnaProductionDetailModal({ open, record, onClose }) {
                 </h4>
               </div>
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                {images.map((image) => (
+                {images.map((image, index) => (
                   <div key={image.key} className="space-y-1.5">
                     <div className="text-xs font-medium text-[var(--text-secondary)]">
                       {isJa && image.labelJa ? image.labelJa : image.label}
                     </div>
                     <button
                       type="button"
-                      onClick={() => setLightboxImage(image)}
+                      onClick={() =>
+                        setPhotoPreview({
+                          eyebrow: isJa ? "SCNA 記録画像" : "SCNA Record Photos",
+                          displayName:
+                            record["品番"] ||
+                            (isJa ? "生産記録画像" : "Production Record Image"),
+                          subtitle: `${record["設備"] || "N/A"} • ${formattedDate} (${record.Time_start || "N/A"} - ${record.Time_end || "N/A"})`,
+                          images: images.map((img) => ({
+                            url: img.url,
+                            label: isJa && img.labelJa ? img.labelJa : img.label,
+                          })),
+                          activeIndex: index,
+                        })
+                      }
                       className="group relative block w-full overflow-hidden rounded-[6px] border border-[var(--border)] bg-[var(--surface-raised)]"
                     >
                       <img
@@ -460,47 +474,24 @@ export default function ScnaProductionDetailModal({ open, record, onClose }) {
         </div>
       </ModalShell>
 
-      {/* Fullscreen Image Lightbox */}
-      {lightboxImage && (
-        <ModalShell
-          open={Boolean(lightboxImage)}
-          onClose={() => setLightboxImage(null)}
-          eyebrow={isJa ? "画像プレビュー" : "Image Preview"}
-          title={lightboxImage.label}
-          maxWidth="max-w-5xl"
-          zIndex="z-[60]"
-          footer={
-            <div className="flex items-center justify-between w-full">
-              <a
-                href={lightboxImage.url}
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex items-center gap-1.5 text-xs font-semibold text-[var(--freya-blue)] hover:underline"
-              >
-                <span className="material-symbols-outlined" style={{ fontSize: 16 }}>
-                  open_in_new
-                </span>
-                {isJa ? "新しいタブで開く" : "Open original in new tab"}
-              </a>
-              <button
-                type="button"
-                onClick={() => setLightboxImage(null)}
-                className="h-9 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-4 text-xs font-semibold text-[var(--text-primary)] transition hover:bg-[var(--surface-hover)]"
-              >
-                {isJa ? "閉じる" : "Close"}
-              </button>
-            </div>
-          }
-        >
-          <div className="flex items-center justify-center bg-black/90 p-4 max-h-[80vh] overflow-auto">
-            <img
-              src={lightboxImage.url}
-              alt={lightboxImage.label}
-              className="max-h-[74vh] max-w-full object-contain rounded-[4px]"
-            />
-          </div>
-        </ModalShell>
-      )}
+      <SensorDevicePhotoPreviewModal
+        preview={photoPreview}
+        onClose={() => setPhotoPreview(null)}
+        onNavigate={(direction) => {
+          setPhotoPreview((current) => {
+            if (!current || !Array.isArray(current.images) || current.images.length <= 1) {
+              return current;
+            }
+            const nextIndex =
+              (current.activeIndex + direction + current.images.length) %
+              current.images.length;
+            return {
+              ...current,
+              activeIndex: nextIndex,
+            };
+          });
+        }}
+      />
     </>
   );
 }
