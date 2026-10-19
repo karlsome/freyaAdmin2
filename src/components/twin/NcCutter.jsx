@@ -2,7 +2,7 @@ import { memo, useRef, useState } from "react";
 import * as THREE from "three";
 import { useFrame } from "@react-three/fiber";
 import StatusGlow from "./StatusGlow";
-import { phaseFor, useCycleFlash } from "./twinHooks";
+import { hashUnit, phaseFor, useCycleFlash } from "./twinHooks";
 import { NC_DEPTH, ncLengthFor } from "../../data/factoryLayouts/kose";
 
 const COLORS = {
@@ -46,6 +46,69 @@ const MAT_PED_SCREEN_OFF = new THREE.MeshStandardMaterial({ color: "#1e293b", em
 const MAT_PED_STOP = new THREE.MeshStandardMaterial({ color: "#ef4444", emissive: "#ef4444", emissiveIntensity: 0.4 });
 const MAT_PED_KNOB = new THREE.MeshStandardMaterial({ color: "#f8fafc" });
 
+function moveTowards(current, target, maxDelta) {
+  if (Math.abs(target - current) <= maxDelta) return target;
+  return current + Math.sign(target - current) * maxDelta;
+}
+
+function pickNextCncStep(st, t, minX, maxX, maxZ) {
+  const spanX = maxX - minX;
+  const r = Math.random();
+
+  if (r < 0.22) {
+    // Rapid G00 traverse to a new region on the cutting bed (blade lifted)
+    st.mode = "rapid";
+    st.targetX = minX + Math.random() * spanX;
+    st.targetZ = (Math.random() * 2 - 1) * maxZ;
+    st.speedX = 0.75 + Math.random() * 0.65;
+    st.speedZ = 0.85 + Math.random() * 0.65;
+    st.headSpread = 0.09 + Math.random() * 0.09;
+    st.cutting = false;
+    st.nextAt = t + 0.35 + Math.random() * 0.55;
+  } else if (r < 0.52) {
+    // Longitudinal X cutting stroke (steady feedrate along X, holding or slightly tapering Z)
+    st.mode = "cutX";
+    const dir = st.cmdX > (minX + maxX) * 0.5 ? -1 : 1;
+    const stroke = (0.25 + Math.random() * 0.65) * spanX;
+    st.targetX = Math.max(minX, Math.min(maxX, st.cmdX + dir * stroke));
+    st.targetZ = Math.max(-maxZ, Math.min(maxZ, st.cmdZ + (Math.random() - 0.5) * maxZ * 0.35));
+    st.speedX = 0.18 + Math.random() * 0.32;
+    st.speedZ = 0.12 + Math.random() * 0.2;
+    st.cutting = true;
+    st.nextAt = t + 1.0 + Math.random() * 1.9;
+  } else if (r < 0.76) {
+    // Cross-cut / slitting pass across Z while indexing X slightly
+    st.mode = "cutZ";
+    const stepX = (Math.random() - 0.45) * spanX * 0.18;
+    st.targetX = Math.max(minX, Math.min(maxX, st.cmdX + stepX));
+    const zDir = st.cmdZ >= 0 ? -1 : 1;
+    st.targetZ = zDir * (0.45 + Math.random() * 0.55) * maxZ;
+    st.speedX = 0.22 + Math.random() * 0.25;
+    st.speedZ = 0.28 + Math.random() * 0.38;
+    st.headSpread = 0.095 + Math.random() * 0.08;
+    st.cutting = true;
+    st.nextAt = t + 0.75 + Math.random() * 1.4;
+  } else if (r < 0.91) {
+    // Local contour / die-cut nesting pass (rapid small oscillations around anchor point)
+    st.mode = "contour";
+    st.anchorX = st.cmdX;
+    st.anchorZ = st.cmdZ;
+    st.ampX = 0.035 + Math.random() * 0.075;
+    st.ampZ = 0.045 + Math.random() * 0.11;
+    st.freqX = 4.5 + Math.random() * 6.5;
+    st.freqZ = 5.5 + Math.random() * 7.5;
+    st.cutting = true;
+    st.nextAt = t + 0.9 + Math.random() * 1.6;
+  } else {
+    // Short dwell / blade plunge / vacuum lock pause
+    st.mode = "dwell";
+    st.targetX = st.cmdX;
+    st.targetZ = st.cmdZ;
+    st.cutting = false;
+    st.nextAt = t + 0.22 + Math.random() * 0.65;
+  }
+}
+
 function Tube({ from, to, radius = 0.022 }) {
   const dx = to[0] - from[0];
   const dy = to[1] - from[1];
@@ -69,7 +132,7 @@ function Tube({ from, to, radius = 0.022 }) {
  * Low-poly model of the 小瀬 NC flatbed cutting machine:
  * white/charcoal body, beige cutting bed, green conveyor feed, charcoal gantry with
  * orange indicator lights, 1–2 white cutting heads, black tubular safety rails and a
- * control pedestal. The gantry and heads move while the machine is running.
+ * control pedestal. The gantry and heads execute randomized, unsynchronized CNC toolpaths while running.
  */
 const NcCutter = memo(function NcCutter({ id, position, noOfHead = 1, tableLength = 1200, status, selected, cycle, call, onSelect }) {
   const L = ncLengthFor(tableLength);
@@ -78,16 +141,32 @@ const NcCutter = memo(function NcCutter({ id, position, noOfHead = 1, tableLengt
   const running = status === "running";
   const phase = phaseFor(id);
 
+  // Per-machine deterministic rest/initial coordinates so even idle or freshly-mounted machines never line up
+  const minX = -L * 0.14;
+  const maxX = L * 0.36;
+  const maxZ = D * 0.25;
+  const gantryRestX = status === "off"
+    ? -L * 0.16
+    : minX + hashUnit(id, 1) * (maxX - minX);
+  const initialStartX = running
+    ? minX + hashUnit(id, 2) * (maxX - minX)
+    : gantryRestX;
+  const initialStartZ = running
+    ? (hashUnit(id, 3) * 2 - 1) * maxZ
+    : 0;
+
   const groupRef = useRef();
   const gantryRef = useRef();
   const headsRef = useRef();
+  const head0Ref = useRef();
+  const head1Ref = useRef();
   const frameMatRef = useRef();
   const lightMats = useRef([]);
   const tipRef = useRef();
+  const cncRef = useRef(null);
   const [hovered, setHovered] = useState(false);
   const flashRef = useCycleFlash(cycle);
 
-  const gantryRestX = L * 0.05;
   const callColor = call?.leader
     ? "#ef4444"
     : call?.stop
@@ -123,15 +202,72 @@ const NcCutter = memo(function NcCutter({ id, position, noOfHead = 1, tableLengt
       }
     }
 
-    const k = Math.min(1, delta * 4);
-    if (gantryRef.current) {
-      const targetX = running ? gantryRestX + Math.sin(t * 0.7 + phase) * L * 0.27 : gantryRestX;
-      gantryRef.current.position.x += (targetX - gantryRef.current.position.x) * k;
+    const dt = Math.min(delta, 0.1);
+    const k = Math.min(1, dt * 4);
+
+    if (running) {
+      if (!cncRef.current) {
+        const initX = gantryRef.current ? gantryRef.current.position.x : initialStartX;
+        const initZ = headsRef.current ? headsRef.current.position.z : initialStartZ;
+        cncRef.current = {
+          mode: "cutX",
+          cmdX: initX,
+          cmdZ: initZ,
+          targetX: initX,
+          targetZ: initZ,
+          anchorX: initX,
+          anchorZ: initZ,
+          speedX: 0.25,
+          speedZ: 0.3,
+          ampX: 0.05,
+          ampZ: 0.07,
+          freqX: 5.5,
+          freqZ: 6.5,
+          headSpread: 0.11,
+          cutting: true,
+          nextAt: 0,
+        };
+        pickNextCncStep(cncRef.current, t, minX, maxX, maxZ);
+        // Stagger initial step expiry so machines mounted together never transition at the same instant
+        cncRef.current.nextAt = t + 0.15 + Math.random() * 1.8;
+      }
+
+      const st = cncRef.current;
+      if (t >= st.nextAt) {
+        pickNextCncStep(st, t, minX, maxX, maxZ);
+      }
+
+      if (st.mode === "contour") {
+        const cx = st.anchorX + Math.sin(t * st.freqX + phase) * st.ampX;
+        const cz = st.anchorZ + Math.cos(t * st.freqZ + phase) * st.ampZ;
+        st.cmdX = Math.max(minX, Math.min(maxX, cx));
+        st.cmdZ = Math.max(-maxZ, Math.min(maxZ, cz));
+      } else {
+        st.cmdX = moveTowards(st.cmdX, st.targetX, st.speedX * dt);
+        st.cmdZ = moveTowards(st.cmdZ, st.targetZ, st.speedZ * dt);
+      }
+
+      const servoLerp = Math.min(1, dt * 14);
+      if (gantryRef.current) {
+        gantryRef.current.position.x += (st.cmdX - gantryRef.current.position.x) * servoLerp;
+      }
+      if (headsRef.current) {
+        headsRef.current.position.z += (st.cmdZ - headsRef.current.position.z) * servoLerp;
+      }
+      if (heads === 2 && head0Ref.current && head1Ref.current) {
+        const targetSpread = st.headSpread || 0.11;
+        head0Ref.current.position.z += (-targetSpread - head0Ref.current.position.z) * k;
+        head1Ref.current.position.z += (targetSpread - head1Ref.current.position.z) * k;
+      }
+    } else {
+      if (gantryRef.current) {
+        gantryRef.current.position.x += (gantryRestX - gantryRef.current.position.x) * k;
+      }
+      if (headsRef.current) {
+        headsRef.current.position.z += (0 - headsRef.current.position.z) * k;
+      }
     }
-    if (headsRef.current) {
-      const targetZ = running ? Math.sin(t * 1.6 + phase) * D * 0.2 : 0;
-      headsRef.current.position.z += (targetZ - headsRef.current.position.z) * k;
-    }
+
     if (groupRef.current) {
       groupRef.current.position.y += (targetLift - groupRef.current.position.y) * k;
     }
@@ -144,10 +280,11 @@ const NcCutter = memo(function NcCutter({ id, position, noOfHead = 1, tableLengt
         frameMatRef.current.emissiveIntensity = 0;
       }
     }
+    const isActivelyCutting = running && (cncRef.current?.cutting ?? true);
     const lightIntensity = callColor
       ? 2.8 + Math.sin(t * 9) * 1.6
       : running
-        ? 2.2 + Math.sin(t * 6 + phase) * 0.6
+        ? (isActivelyCutting ? 2.4 : 1.5) + Math.sin(t * (5 + hashUnit(id, 4) * 3) + phase) * 0.55
         : status === "off"
           ? 0.1
           : 0.8;
@@ -156,7 +293,7 @@ const NcCutter = memo(function NcCutter({ id, position, noOfHead = 1, tableLengt
     });
     if (tipRef.current) {
       const age = flashRef.current ? t - flashRef.current : Infinity;
-      const s = age < 0.8 ? 1 + (1 - age / 0.8) * 2.5 : running ? 1 : 0.001;
+      const s = age < 0.8 ? 1 + (1 - age / 0.8) * 2.5 : isActivelyCutting ? 1 : 0.001;
       tipRef.current.scale.setScalar(s);
     }
   });
@@ -195,7 +332,7 @@ const NcCutter = memo(function NcCutter({ id, position, noOfHead = 1, tableLengt
         ))}
 
         {/* Gantry */}
-        <group ref={gantryRef} position={[gantryRestX, 0, 0]}>
+        <group ref={gantryRef} position={[initialStartX, 0, 0]}>
           {[-1, 1].map((side) => (
             <group key={side} position={[0, 0.63, side * (D / 2 + 0.05)]}>
               <mesh scale={[0.28, 0.44, 0.2]} geometry={BOX_GEO} material={MAT_CARRIAGE} />
@@ -214,9 +351,9 @@ const NcCutter = memo(function NcCutter({ id, position, noOfHead = 1, tableLengt
           <mesh position={[-0.1, 0.71, 0]} scale={[0.04, 0.04, D + 0.02]} geometry={BOX_GEO} material={MAT_RAIL} />
 
           {/* Cutting heads */}
-          <group ref={headsRef}>
-            {headOffsets.map((z) => (
-              <group key={z} position={[-0.15, 0, z]}>
+          <group ref={headsRef} position={[0, 0, initialStartZ]}>
+            {headOffsets.map((z, idx) => (
+              <group key={z} ref={idx === 0 ? head0Ref : head1Ref} position={[-0.15, 0, z]}>
                 <mesh position={[0, 0.62, 0]} scale={[0.1, 0.3, 0.12]} geometry={BOX_GEO} material={MAT_HEAD} />
                 <mesh position={[0, 0.8, 0]} scale={[0.11, 0.07, 0.13]} geometry={BOX_GEO} material={MAT_CAP} />
                 <mesh position={[0, 0.47, 0]} geometry={NOZZLE_GEO} material={MAT_NOZZLE} />
