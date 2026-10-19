@@ -50,55 +50,207 @@ export function getDefaultMachineAnalyticsDates() {
 
 export function getRecordImages(record = {}) {
   const images = [];
-  if (record["画像"]) {
-    images.push({
-      key: "firstCycle",
-      label: "First Cycle Check (初物チェック画像)",
-      url: record["画像"],
+
+  if (Array.isArray(record.materialLabelImages)) {
+    record.materialLabelImages.forEach((url, index) => {
+      if (typeof url === "string" && url.trim()) {
+        images.push({
+          key: `materialLabelImages[${index}]`,
+          label: `Material Label ${index + 1}`,
+          labelJa: `材料ラベル ${index + 1} (Material Label ${index + 1})`,
+          url,
+        });
+      }
     });
   }
-  if (record["終了時画像"]) {
+
+  const firstArticleUrl = record["初物チェック画像"] || record["画像"];
+  if (typeof firstArticleUrl === "string" && firstArticleUrl.trim()) {
     images.push({
-      key: "lastCycle",
-      label: "Last Cycle Check (終物チェック画像)",
-      url: record["終了時画像"],
+      key: "firstArticleCheck",
+      label: "First Article Check Image",
+      labelJa: "初物チェック画像 (First Article Check Image)",
+      url: firstArticleUrl,
     });
   }
-  if (record["材料ラベル画像"]) {
+
+  const finalArticleUrl = record["終物チェック画像"] || record["終了時画像"];
+  if (typeof finalArticleUrl === "string" && finalArticleUrl.trim()) {
     images.push({
-      key: "materialLabel",
-      label: "Material Label (材料ラベル画像)",
+      key: "finalArticleCheck",
+      label: "Final Article Check Image",
+      labelJa: "終物チェック画像 (Final Article Check Image)",
+      url: finalArticleUrl,
+    });
+  }
+
+  if (typeof record["材料ラベル画像"] === "string" && record["材料ラベル画像"].trim()) {
+    images.push({
+      key: "materialLabelImage",
+      label: "Material Label Image",
+      labelJa: "材料ラベル画像 (Material Label Image)",
       url: record["材料ラベル画像"],
     });
   }
-  if (record["不良記録画像"]) {
+
+  if (typeof record["不良記録画像"] === "string" && record["不良記録画像"].trim()) {
     images.push({
       key: "defectRecord",
-      label: "Defect Record (不良記録画像)",
+      label: "Defect Record Image",
+      labelJa: "不良記録画像 (Defect Record Image)",
       url: record["不良記録画像"],
     });
   }
+
   return images;
 }
 
-export function formatIndianapolisTimestamp(value) {
+export function formatIndianapolisTimestamp(value, includeSeconds = false) {
   if (!value) return "N/A";
   try {
     const d = new Date(value);
     if (Number.isNaN(d.getTime())) return String(value);
-    return d.toLocaleString("en-US", {
+    const options = {
       timeZone: "America/Indiana/Indianapolis",
       year: "numeric",
       month: "2-digit",
       day: "2-digit",
       hour: "2-digit",
       minute: "2-digit",
-      second: "2-digit",
       hour12: true,
-    });
+    };
+    if (includeSeconds) {
+      options.second = "2-digit";
+    }
+    return d.toLocaleString("en-US", options);
   } catch {
     return String(value);
   }
+}
+
+export function getRecordBreakData(record = {}) {
+  const breakDataObj = record.Break_Time_Data;
+  const entries = [];
+
+  if (breakDataObj && typeof breakDataObj === "object") {
+    Object.keys(breakDataObj).forEach((breakKey) => {
+      if (breakKey === "breakSessions" || breakKey === "totalBreakMinutes" || breakKey === "totalBreakHours") {
+        return;
+      }
+      const item = breakDataObj[breakKey];
+      if (item && typeof item === "object" && (item.start || item.end || item.startTime || item.endTime)) {
+        const start = item.start || item.startTime || "";
+        const end = item.end || item.endTime || "";
+        entries.push({
+          key: breakKey,
+          label: breakKey.toUpperCase(),
+          start: start || "N/A",
+          end: end || "N/A",
+          durationMinutes: item.durationMinutes ?? null,
+          timestamp: item.timestamp ?? null,
+        });
+      }
+    });
+
+    if (entries.length === 0 && Array.isArray(breakDataObj.breakSessions)) {
+      breakDataObj.breakSessions.forEach((session, idx) => {
+        if (!session) return;
+        const start = session.start || session.startTime || "";
+        const end = session.end || session.endTime || "";
+        if (start || end) {
+          entries.push({
+            key: `break${idx + 1}`,
+            label: `BREAK${idx + 1}`,
+            start: start || "N/A",
+            end: end || "N/A",
+            durationMinutes: session.durationMinutes ?? null,
+            timestamp: session.timestamp ?? null,
+          });
+        }
+      });
+    }
+  }
+
+  const totalBreakMinutes =
+    record.Total_Break_Minutes ?? breakDataObj?.totalBreakMinutes ?? 0;
+  const totalBreakHours =
+    record.Total_Break_Hours ?? breakDataObj?.totalBreakHours ?? 0;
+
+  return {
+    hasBreakData: Boolean(
+      breakDataObj ||
+        record.Total_Break_Minutes !== undefined ||
+        record.Total_Break_Hours !== undefined
+    ),
+    entries,
+    totalBreakMinutes,
+    totalBreakHours,
+  };
+}
+
+export function getRecordQualityChecks(record = {}) {
+  const twoHourQc = record["2HourQualityCheck"];
+  if (twoHourQc && typeof twoHourQc === "object" && twoHourQc.checks) {
+    const checksObj = twoHourQc.checks;
+    const checks = Object.keys(checksObj)
+      .map((checkKey) => {
+        const check = checksObj[checkKey];
+        if (!check || typeof check !== "object") return null;
+
+        let displayTime = "N/A";
+        if (check.timestamp) {
+          const formatted = formatIndianapolisTimestamp(check.timestamp, false);
+          displayTime = formatted !== "N/A" ? formatted : check.checkTime || "N/A";
+        } else if (check.checkTime) {
+          displayTime = check.checkTime;
+        }
+
+        return {
+          key: checkKey,
+          checkNumber: check.checkNumber || checkKey,
+          checkerName: check.checkerName || check.checker || "N/A",
+          displayTime,
+          raw: check,
+        };
+      })
+      .filter(Boolean);
+
+    return {
+      hasQualityChecks: true,
+      totalChecks: twoHourQc.totalChecks ?? checks.length ?? 0,
+      checks,
+    };
+  }
+
+  // Fallback for Quality_Check_Data structure if present
+  const fallbackQc = record.Quality_Check_Data;
+  if (fallbackQc && typeof fallbackQc === "object") {
+    const sessions = Array.isArray(fallbackQc.checkSessions)
+      ? fallbackQc.checkSessions
+      : [];
+    const checks = sessions.map((session, idx) => ({
+      key: `check_${idx + 1}`,
+      checkNumber: session.checkNumber || idx + 1,
+      checkerName: session.checkerName || session.checker || "N/A",
+      displayTime: formatIndianapolisTimestamp(
+        session.timestamp || session.completedTimestamp || session.scheduledTimestamp,
+        false
+      ),
+      raw: session,
+    }));
+
+    return {
+      hasQualityChecks: true,
+      totalChecks: fallbackQc.totalChecks ?? checks.length ?? 0,
+      checks,
+    };
+  }
+
+  return {
+    hasQualityChecks: false,
+    totalChecks: 0,
+    checks: [],
+  };
 }
 
 export function parsePercentageValue(percentValue) {
@@ -323,10 +475,11 @@ export function processMachineTimelineData(records = [], dateFrom, dateTo) {
         }
       }
 
-      if (record.Break_Time_Data && Array.isArray(record.Break_Time_Data.breakSessions)) {
-        record.Break_Time_Data.breakSessions.forEach((breakSession) => {
-          const breakStart = parseTimeToMinutes(breakSession.startTime);
-          const breakEnd = parseTimeToMinutes(breakSession.endTime);
+      const breakInfo = getRecordBreakData(record);
+      if (breakInfo.entries.length > 0) {
+        breakInfo.entries.forEach((breakEntry) => {
+          const breakStart = parseTimeToMinutes(breakEntry.start);
+          const breakEnd = parseTimeToMinutes(breakEntry.end);
 
           if (breakStart !== null && breakEnd !== null) {
             timeSlots.forEach((slot, slotIdx) => {
@@ -362,28 +515,32 @@ export const SCNA_MACHINE_EXPORT_COLUMNS = [
   { key: "品番", label: "Part Number (品番)", category: "production", defaultOrder: 4 },
   { key: "背番号", label: "Back Number (背番号)", category: "production", defaultOrder: 5 },
   { key: "WorkOrder_No", label: "Work Order No", category: "production", defaultOrder: 6 },
-  { key: "Product_Name", label: "Product Name", category: "production", defaultOrder: null },
-  { key: "Total", label: "Total Good (良品数)", category: "production", defaultOrder: 9 },
-  { key: "Process_Quantity", label: "Process Quantity (加工数)", category: "production", defaultOrder: 10 },
-  { key: "Remaining_WorkOrder", label: "Remaining Work Order", category: "production", defaultOrder: null },
-  { key: "Required_Quantity", label: "Required Quantity", category: "production", defaultOrder: null },
+  { key: "Product_Name", label: "SKU / Product Name", category: "production", defaultOrder: null },
+  { key: "Total", label: "Actual Total (良品数)", category: "production", defaultOrder: 9 },
+  { key: "Process_Quantity", label: "Quantity Made (加工数)", category: "production", defaultOrder: 10 },
+  { key: "ショット数", label: "Shot Count (ショット数)", category: "production", defaultOrder: null },
+  { key: "スペアからの部分数", label: "Spare Parts Count (スペアからの部分数)", category: "production", defaultOrder: null },
+  { key: "Spare", label: "Spare (予備)", category: "production", defaultOrder: null },
 
   { key: "Total_NG", label: "Total NG (不良合計)", category: "quality", defaultOrder: null },
-  { key: "疵引不良", label: "Non Conforming Supplier (疵引不良)", category: "quality", defaultOrder: null },
-  { key: "加工不良", label: "Non Conforming Internal (加工不良)", category: "quality", defaultOrder: null },
+  { key: "疵引不良", label: "Non Conforming Internal (疵引不良)", category: "quality", defaultOrder: null },
+  { key: "加工不良", label: "Non Conforming Supplier (加工不良)", category: "quality", defaultOrder: null },
   { key: "その他", label: "Other NG (その他)", category: "quality", defaultOrder: null },
   { key: "疵引処理数", label: "Scratch Processed Qty (疵引処理数)", category: "quality", defaultOrder: null },
   { key: "Quality_Check_Count", label: "Quality Checks Count", category: "quality", defaultOrder: null },
 
   { key: "Time_start", label: "Start Time (開始時刻)", category: "timing", defaultOrder: 7 },
   { key: "Time_end", label: "End Time (終了時刻)", category: "timing", defaultOrder: 8 },
+  { key: "Total_Work_Hours", label: "Total Work Hours (稼働時間)", category: "timing", defaultOrder: null },
   { key: "Cycle_Time", label: "Cycle Time (s) (サイクルタイム)", category: "timing", defaultOrder: null },
   { key: "Total_Break_Minutes", label: "Break Time (min) (休憩時間・分)", category: "timing", defaultOrder: null },
   { key: "Total_Break_Hours", label: "Break Time (hrs) (休憩時間・時)", category: "timing", defaultOrder: null },
 
-  { key: "WorkOrder_Assigned_Machine", label: "Assigned Machine", category: "workorder", defaultOrder: null },
+  { key: "WorkOrder_Assigned_Machine", label: "Assigned To", category: "workorder", defaultOrder: null },
+  { key: "WorkOrder_Status", label: "Work Order Status", category: "workorder", defaultOrder: null },
+  { key: "WorkOrder_Target_Machines", label: "Target Machines", category: "workorder", defaultOrder: null },
+  { key: "WorkOrder_NC_Program_Sent", label: "NC Program Sent", category: "workorder", defaultOrder: null },
 
-  { key: "製造ロット", label: "Lot Number (製造ロット)", category: "additional", defaultOrder: null },
   { key: "材料ロット", label: "Material Lot (材料ロット)", category: "additional", defaultOrder: null },
   { key: "Comment", label: "Comment (コメント)", category: "additional", defaultOrder: null },
 ];
@@ -425,13 +582,15 @@ export const SCNA_DEFAULT_EXPORT_TEMPLATES = {
       { key: "Product_Name", order: 7 },
       { key: "Time_start", order: 8 },
       { key: "Time_end", order: 9 },
-      { key: "Process_Quantity", order: 10 },
-      { key: "Total", order: 11 },
-      { key: "Total_NG", order: 12 },
-      { key: "Cycle_Time", order: 13 },
-      { key: "Total_Break_Minutes", order: 14 },
-      { key: "製造ロット", order: 15 },
-      { key: "Comment", order: 16 },
+      { key: "Total_Work_Hours", order: 10 },
+      { key: "Process_Quantity", order: 11 },
+      { key: "Total", order: 12 },
+      { key: "Total_NG", order: 13 },
+      { key: "Cycle_Time", order: 14 },
+      { key: "Total_Break_Minutes", order: 15 },
+      { key: "Quality_Check_Count", order: 16 },
+      { key: "材料ロット", order: 17 },
+      { key: "Comment", order: 18 },
     ],
   },
 };
@@ -441,17 +600,30 @@ export function extractMachineExportValue(record = {}, columnKey) {
     case "WorkOrder_No":
       return record.WorkOrder_Info?.workOrderNumber || "";
     case "Product_Name":
-      return record.WorkOrder_Info?.productName || "";
+      return record.WorkOrder_Info?.sku || record.WorkOrder_Info?.productName || "";
     case "Required_Quantity":
       return record.WorkOrder_Info?.requiredQuantity || "";
     case "WorkOrder_Assigned_Machine":
-      return record.WorkOrder_Info?.assignedMachine || "";
+      return record.WorkOrder_Info?.assignedTo || record.WorkOrder_Info?.assignedMachine || "";
+    case "WorkOrder_Status":
+      return record.WorkOrder_Info?.status || "";
+    case "WorkOrder_Target_Machines":
+      return Array.isArray(record.WorkOrder_Info?.targetMachines)
+        ? record.WorkOrder_Info.targetMachines.join(", ")
+        : record.WorkOrder_Info?.targetMachines || "";
+    case "WorkOrder_NC_Program_Sent":
+      if (record.WorkOrder_Info?.ncProgramSent === undefined) return "";
+      return record.WorkOrder_Info.ncProgramSent ? "Yes" : "No";
     case "Total_Break_Minutes":
-      return record.Break_Time_Data?.totalBreakMinutes || 0;
+      return record.Total_Break_Minutes ?? record.Break_Time_Data?.totalBreakMinutes ?? 0;
     case "Total_Break_Hours":
-      return record.Break_Time_Data?.totalBreakHours || 0;
+      return record.Total_Break_Hours ?? record.Break_Time_Data?.totalBreakHours ?? 0;
     case "Quality_Check_Count":
-      return record.Quality_Check_Data?.totalChecks || 0;
+      return (
+        record["2HourQualityCheck"]?.totalChecks ??
+        record.Quality_Check_Data?.totalChecks ??
+        0
+      );
     case "Cycle_Time":
       return record.Cycle_Time ? Number(record.Cycle_Time).toFixed(2) : "";
     default:

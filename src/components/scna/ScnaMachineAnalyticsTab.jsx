@@ -309,7 +309,8 @@ export default function ScnaMachineAnalyticsTab({ onFlash }) {
             ).toFixed(2)
           : "0.00";
       const totalBreakMinutes = machineRecords.reduce(
-        (sum, r) => sum + (r.Break_Time_Data?.totalBreakMinutes || 0),
+        (sum, r) =>
+          sum + (r.Total_Break_Minutes ?? r.Break_Time_Data?.totalBreakMinutes ?? 0),
         0
       );
       const yieldRate =
@@ -392,9 +393,9 @@ export default function ScnaMachineAnalyticsTab({ onFlash }) {
         (record.Total || 0).toLocaleString(),
         (record.Total_NG || 0).toLocaleString(),
         record.Cycle_Time ? `${Number(record.Cycle_Time).toFixed(2)}s` : "0s",
-        record.Break_Time_Data?.totalBreakMinutes || 0,
+        record.Total_Break_Minutes ?? record.Break_Time_Data?.totalBreakMinutes ?? 0,
         record.WorkOrder_Info?.workOrderNumber || "N/A",
-        record["製造ロット"] || "N/A",
+        record["材料ロット"] || record["製造ロット"] || "N/A",
       ]);
 
       autoTable(pdf, {

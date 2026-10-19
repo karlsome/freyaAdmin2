@@ -250,11 +250,13 @@ export default function ScnaFreyaTabletTab({ onFlash }) {
       item["その他"] || 0,
       item.Cycle_Time || 0,
       item.WorkOrder_Info?.workOrderNumber || "",
-      item.WorkOrder_Info?.productName || "",
+      item.WorkOrder_Info?.sku || item.WorkOrder_Info?.productName || "",
       item.WorkOrder_Info?.requiredQuantity || 0,
       item.Remaining_WorkOrder || "",
-      item.Break_Time_Data?.totalBreakMinutes || 0,
-      item.Quality_Check_Data?.totalChecks || 0,
+      item.Total_Break_Minutes ?? item.Break_Time_Data?.totalBreakMinutes ?? 0,
+      item["2HourQualityCheck"]?.totalChecks ??
+        item.Quality_Check_Data?.totalChecks ??
+        0,
       item["製造ロット"] || "",
       item["材料ロット"] || "",
       (item.Comment || "").replace(/"/g, '""'),

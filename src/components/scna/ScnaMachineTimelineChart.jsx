@@ -1,5 +1,5 @@
 import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef, useState } from "react";
-import { parseTimeToMinutes, processMachineTimelineData } from "../../utils/scna";
+import { getRecordBreakData, parseTimeToMinutes, processMachineTimelineData } from "../../utils/scna";
 
 function drawRoundedRect(ctx, x, y, width, height, radius) {
   const r = Math.min(radius, width / 2, height / 2);
@@ -228,12 +228,13 @@ const ScnaMachineTimelineChart = forwardRef(function ScnaMachineTimelineChart(
     const date = dates[dateIdx];
 
     let matchingBreakSession = null;
-    if (status === 2 && record?.Break_Time_Data?.breakSessions) {
+    if (status === 2 && record) {
       const slotMinutes = parseTimeToMinutes(timeSlot);
+      const breakEntries = getRecordBreakData(record).entries;
       matchingBreakSession =
-        record.Break_Time_Data.breakSessions.find((bs) => {
-          const bsStart = parseTimeToMinutes(bs.startTime);
-          const bsEnd = parseTimeToMinutes(bs.endTime);
+        breakEntries.find((bs) => {
+          const bsStart = parseTimeToMinutes(bs.start);
+          const bsEnd = parseTimeToMinutes(bs.end);
           return (
             bsStart !== null &&
             bsEnd !== null &&
@@ -396,11 +397,12 @@ const ScnaMachineTimelineChart = forwardRef(function ScnaMachineTimelineChart(
             <div className="mt-2 pt-2 border-t border-[var(--border)] space-y-0.5 text-[11px]">
               {hoverInfo.matchingBreakSession && (
                 <div>
-                  <strong className="text-[var(--text-muted)]">Break Session:</strong>{" "}
+                  <strong className="text-[var(--text-muted)]">
+                    {hoverInfo.matchingBreakSession.label}:
+                  </strong>{" "}
                   <span className="font-mono text-[var(--text-primary)]">
-                    {hoverInfo.matchingBreakSession.startTime} -{" "}
-                    {hoverInfo.matchingBreakSession.endTime} (
-                    {hoverInfo.matchingBreakSession.durationMinutes} min)
+                    {hoverInfo.matchingBreakSession.start} -{" "}
+                    {hoverInfo.matchingBreakSession.end}
                   </span>
                 </div>
               )}
