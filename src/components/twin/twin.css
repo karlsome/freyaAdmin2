@@ -875,9 +875,11 @@ html:not(.dark) .twin-sensor-pill {
   animation: twin-dot-pulse 0.8s ease-in-out infinite alternate;
 }
 
-/* ── 3D Camera Mini-Monitor Screen (Compact PiP) ── */
+/* ── 3D Camera Mini-Monitor Screen (Resizable PiP) ── */
 .twin-camera-screen {
-  width: 126px;
+  width: 176px;
+  min-width: 110px;
+  max-width: 540px;
   border-radius: 8px;
   overflow: hidden;
   border: 1px solid rgba(56, 189, 248, 0.65);
@@ -886,10 +888,10 @@ html:not(.dark) .twin-sensor-pill {
   cursor: pointer;
   user-select: none;
   font-family: 'Inter', system-ui, sans-serif;
-  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+  transition: box-shadow 0.18s ease, border-color 0.18s ease;
 }
-.twin-camera-screen:hover {
-  transform: translateY(-2px) scale(1.08);
+.twin-camera-screen:hover,
+.twin-camera-screen--resizing {
   z-index: 50;
   border-color: #38bdf8;
   box-shadow: 0 12px 30px -4px rgba(0, 0, 0, 0.85), 0 0 22px rgba(56, 189, 248, 0.55);
@@ -899,38 +901,42 @@ html:not(.dark) .twin-sensor-pill {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 2.5px 6px;
-  background: rgba(30, 41, 59, 0.88);
+  gap: 6px;
+  padding: 3px 6px;
+  background: rgba(30, 41, 59, 0.92);
   border-bottom: 1px solid rgba(148, 163, 184, 0.18);
   color: #f8fafc;
-  font-size: 8.5px;
+  font-size: 9.5px;
   font-weight: 700;
 }
 .twin-camera-screen__title {
   display: flex;
   align-items: center;
-  gap: 3px;
-  max-width: 72px;
+  gap: 3.5px;
+  flex: 1;
+  min-width: 0;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 .twin-camera-screen__icon {
-  font-size: 11px;
+  font-size: 12px;
   color: #38bdf8;
+  flex-shrink: 0;
 }
 .twin-camera-screen__actions {
   display: flex;
   align-items: center;
   gap: 3px;
+  flex-shrink: 0;
 }
 .twin-camera-screen__live {
   display: flex;
   align-items: center;
   gap: 2.5px;
-  font-size: 7px;
+  font-size: 7.5px;
   font-weight: 800;
-  padding: 0.5px 3.5px;
+  padding: 1px 4px;
   border-radius: 3px;
   background: #ef4444;
   color: #fff;
@@ -946,9 +952,9 @@ html:not(.dark) .twin-sensor-pill {
 .twin-camera-screen__btn {
   display: grid;
   place-items: center;
-  width: 14px;
-  height: 14px;
-  border-radius: 3px;
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
   border: none;
   background: transparent;
   color: #94a3b8;
@@ -956,14 +962,14 @@ html:not(.dark) .twin-sensor-pill {
   transition: background 0.15s ease, color 0.15s ease;
 }
 .twin-camera-screen__btn:hover {
-  background: rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.16);
   color: #fff;
 }
 
 .twin-camera-screen__viewport {
   position: relative;
   width: 100%;
-  height: 64px;
+  height: 99px;
   background: #020617;
   overflow: hidden;
 }
@@ -1010,23 +1016,68 @@ html:not(.dark) .twin-sensor-pill {
   opacity: 0.9;
 }
 
-.twin-camera-screen__hover-overlay {
+.twin-camera-screen__expand-pill {
   position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 5px;
-  background: rgba(15, 23, 42, 0.75);
-  backdrop-filter: blur(2px);
+  bottom: 5px;
+  left: 5px;
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 5px;
+  border: 1px solid rgba(56, 189, 248, 0.6);
+  background: rgba(15, 23, 42, 0.85);
   color: #38bdf8;
-  font-size: 11px;
-  font-weight: 700;
-  opacity: 0;
-  transition: opacity 0.18s ease;
+  cursor: pointer;
+  transition: background 0.15s ease, transform 0.15s ease;
 }
-.twin-camera-screen:hover .twin-camera-screen__hover-overlay {
-  opacity: 1;
+.twin-camera-screen__expand-pill:hover {
+  background: #0284c7;
+  color: #fff;
+  transform: scale(1.08);
+}
+
+.twin-camera-screen__size-chip {
+  position: absolute;
+  bottom: 5px;
+  left: 6px;
+  padding: 1.5px 6px;
+  border-radius: 4px;
+  background: rgba(15, 23, 42, 0.9);
+  border: 1px solid rgba(56, 189, 248, 0.55);
+  color: #38bdf8;
+  font-size: 9px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;
+}
+
+.twin-camera-screen__resize-handle {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 20px;
+  height: 20px;
+  cursor: nwse-resize;
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-end;
+  padding: 3px;
+  z-index: 5;
+  background: linear-gradient(135deg, transparent 45%, rgba(15, 23, 42, 0.85) 48%);
+}
+.twin-camera-screen__resize-grip {
+  width: 9px;
+  height: 9px;
+  border-right: 2px solid rgba(56, 189, 248, 0.85);
+  border-bottom: 2px solid rgba(56, 189, 248, 0.85);
+  border-bottom-right-radius: 2px;
+  transition: border-color 0.15s ease, transform 0.15s ease;
+}
+.twin-camera-screen__resize-handle:hover .twin-camera-screen__resize-grip,
+.twin-camera-screen--resizing .twin-camera-screen__resize-grip {
+  border-color: #fff;
+  transform: scale(1.12);
 }
 
 /* ── 3D Camera Badges (Minimized / Default Pin) ── */

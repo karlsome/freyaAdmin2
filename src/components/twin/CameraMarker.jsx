@@ -1,8 +1,13 @@
-import { memo, useEffect, useState } from "react";
+import { memo, useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 import Hls from "hls.js";
 import { Html } from "./HtmlOverlay";
 import { BASE_URL } from "../../services/api";
+
+const PREVIEW_MIN_W = 110;
+const PREVIEW_MAX_W = 540;
+const PREVIEW_DEFAULT_W = 176;
+const PREVIEW_PRESETS = [136, 220, 320, 440];
 
 // Shared static geometries & materials across all CCTV cameras
 const FOV_GEO = (() => {
@@ -42,7 +47,7 @@ const LENS_GLASS_MAT = new THREE.MeshBasicMaterial({ color: "#0284c7" });
 const TALLY_MAT = new THREE.MeshBasicMaterial({ color: "#ef4444", toneMapped: false });
 
 /**
- * 3D CCTV Camera stand with a clickable camera icon badge (default) and expandable 3D live monitor.
+ * 3D CCTV Camera stand with a clickable camera icon badge (default) and expandable/resizable 3D live monitor.
  * The physical 3D stand and camera icon remain visible at all times so users can click them anytime.
  */
 const CameraMarker = memo(function CameraMarker({
@@ -57,12 +62,26 @@ const CameraMarker = memo(function CameraMarker({
 }) {
   const { id, streamId = id, pos = [0, 0], rotationY = 0, label, labelJa } = camera;
   const markerId = id || streamId;
+  const storageKey = `freya_cam_preview_w_${markerId}`;
   const [videoEl, setVideoEl] = useState(null);
 
   const [streamError, setStreamError] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
   const [minimized, setMinimized] = useState(!showScreen);
+  const [isResizing, setIsResizing] = useState(false);
+  const [previewWidth, setPreviewWidth] = useState(() => {
+    try {
+      const saved = Number(localStorage.getItem(storageKey) || localStorage.getItem("freya_cam_preview_w_default"));
+      if (Number.isFinite(saved) && saved >= PREVIEW_MIN_W && saved <= PREVIEW_MAX_W) {
+        return saved;
+      }
+    } catch {
+      // ignore
+    }
+    return PREVIEW_DEFAULT_W;
+  });
+  const justResizedRef = useRef(false);
 
   // Sync with global toolbar toggle while still allowing individual cameras to be clicked open/closed
   useEffect(() => {
@@ -71,6 +90,58 @@ const CameraMarker = memo(function CameraMarker({
 
   const title = isJa ? (labelJa || label) : (label || labelJa || markerId);
   const shortTag = String(title).split("(")[0].trim() || markerId;
+  const previewHeight = Math.round(previewWidth * 0.5625);
+
+  const persistWidth = (w) => {
+    try {
+      localStorage.setItem(storageKey, String(w));
+      localStorage.setItem("freya_cam_preview_w_default", String(w));
+    } catch {
+      // ignore
+    }
+  };
+
+  const handleCyclePresetSize = (e) => {
+    e.stopPropagation();
+    const next = PREVIEW_PRESETS.find((p) => p > previewWidth + 12) || PREVIEW_PRESETS[0];
+    setPreviewWidth(next);
+    persistWidth(next);
+  };
+
+  const handleStartResize = (e) => {
+    e.stopPropagation();
+    if (e.preventDefault) e.preventDefault();
+    const startX = e.clientX;
+    const startY = e.clientY;
+    const startW = previewWidth;
+    justResizedRef.current = true;
+    setIsResizing(true);
+
+    let latestW = startW;
+    const onMove = (moveEvt) => {
+      const dx = moveEvt.clientX - startX;
+      const dy = moveEvt.clientY - startY;
+      // Since the card is horizontally centered on the 3D anchor, dragging right/down grows width proportionally
+      const deltaW = Math.abs(dx) >= Math.abs(dy) ? dx * 1.8 : dy * (16 / 9) * 1.4;
+      latestW = Math.round(Math.max(PREVIEW_MIN_W, Math.min(PREVIEW_MAX_W, startW + deltaW)));
+      setPreviewWidth(latestW);
+    };
+
+    const onUp = () => {
+      setIsResizing(false);
+      persistWidth(latestW);
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+      window.removeEventListener("pointercancel", onUp);
+      setTimeout(() => {
+        justResizedRef.current = false;
+      }, 120);
+    };
+
+    window.addEventListener("pointermove", onMove, { passive: true });
+    window.addEventListener("pointerup", onUp);
+    window.addEventListener("pointercancel", onUp);
+  };
 
   // Connect live HLS video to the mini 3D monitor once the <video> DOM element mounts
   useEffect(() => {
@@ -155,7 +226,7 @@ const CameraMarker = memo(function CameraMarker({
 
   const handleOpenModal = (e) => {
     e?.stopPropagation && e.stopPropagation();
-    if (editMode) return; // In edit mode, don't open popup modal
+    if (editMode || justResizedRef.current) return; // Don't open modal in edit mode or right after resizing
     if (onSelectCamera) onSelectCamera(streamId);
   };
 
@@ -221,16 +292,17 @@ const CameraMarker = memo(function CameraMarker({
         </group>
       </group>
 
-      {/* ── Floating Camera Icon Pin (default) or 3D Live Surveillance Screen ── */}
+      {/* ── Floating Camera Icon Pin (default) or Resizable 3D Live Surveillance Screen ── */}
       <Html position={[0, minimized ? 1.42 : 1.7, 0]} center zIndexRange={[35, 10]}>
         {!minimized ? (
           <div
-            className={`twin-camera-screen ${editMode ? "twin-camera-badge--editable" : ""} ${isDragging ? "twin-camera-screen--dragging" : ""}`}
+            className={`twin-camera-screen ${editMode ? "twin-camera-badge--editable" : ""} ${isDragging ? "twin-camera-screen--dragging" : ""} ${isResizing ? "twin-camera-screen--resizing" : ""}`}
+            style={{ width: `${previewWidth}px` }}
             onMouseEnter={() => setIsHovered(true)}
             onMouseLeave={() => setIsHovered(false)}
             onPointerDown={startCameraDrag}
             onClick={handleOpenModal}
-            title={editMode ? (isJa ? "ドラッグして移動" : "Drag to move") : (isJa ? "クリックで全画面拡大表示" : "Click to open full-screen live feed")}
+            title={editMode ? (isJa ? "ドラッグして移動" : "Drag to move") : (isJa ? "クリックで全画面・右下ドラッグでサイズ変更" : "Click for full-screen · Drag corner to resize")}
           >
             {/* Monitor Header */}
             <div className="twin-camera-screen__header">
@@ -256,6 +328,15 @@ const CameraMarker = memo(function CameraMarker({
                     <span className="material-symbols-outlined" style={{ fontSize: 13 }}>rotate_right</span>
                   </button>
                 )}
+                <button
+                  type="button"
+                  className="twin-camera-screen__btn"
+                  onPointerDown={(e) => e.stopPropagation()}
+                  onClick={handleCyclePresetSize}
+                  title={isJa ? "プレビューサイズ切替 (S/M/L/XL)" : "Cycle preview size (S/M/L/XL)"}
+                >
+                  <span className="material-symbols-outlined" style={{ fontSize: 12 }}>aspect_ratio</span>
+                </button>
                 <span className="twin-camera-screen__live">
                   <span className="twin-camera-screen__live-dot" />
                   LIVE
@@ -276,7 +357,7 @@ const CameraMarker = memo(function CameraMarker({
             </div>
 
             {/* Video Viewport Screen */}
-            <div className="twin-camera-screen__viewport">
+            <div className="twin-camera-screen__viewport" style={{ height: `${previewHeight}px` }}>
               <video
                 ref={setVideoEl}
                 autoPlay
@@ -303,11 +384,36 @@ const CameraMarker = memo(function CameraMarker({
                 </div>
               )}
 
-              {/* Hover overlay hint: click to enlarge (only when not in editMode) */}
-              {!editMode && isHovered && (
-                <div className="twin-camera-screen__hover-overlay">
-                  <span className="material-symbols-outlined" style={{ fontSize: 20 }}>open_in_full</span>
-                  <span>{isJa ? "拡大表示" : "Expand"}</span>
+              {/* Live size indicator while dragging the resize handle */}
+              {isResizing && (
+                <div className="twin-camera-screen__size-chip">
+                  {previewWidth} × {previewHeight}
+                </div>
+              )}
+
+              {/* Subtle bottom-left Fullscreen button on hover (keeps video unobstructed) */}
+              {!editMode && !isResizing && isHovered && (
+                <button
+                  type="button"
+                  className="twin-camera-screen__expand-pill"
+                  onPointerDown={(e) => e.stopPropagation()}
+                  onClick={handleOpenModal}
+                  title={isJa ? "全画面で開く" : "Open full-screen"}
+                >
+                  <span className="material-symbols-outlined" style={{ fontSize: 13 }}>open_in_full</span>
+                </button>
+              )}
+
+              {/* Bottom-Right Corner Drag Handle to resize preview */}
+              {!editMode && (
+                <div
+                  className="twin-camera-screen__resize-handle"
+                  onPointerDown={handleStartResize}
+                  onDoubleClick={handleCyclePresetSize}
+                  onClick={(e) => e.stopPropagation()}
+                  title={isJa ? "ドラッグでサイズ変更 / ダブルクリックでS・M・L切替" : "Drag to resize preview · Double-click to cycle S/M/L"}
+                >
+                  <span className="twin-camera-screen__resize-grip" />
                 </div>
               )}
             </div>
