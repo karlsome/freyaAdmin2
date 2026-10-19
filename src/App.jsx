@@ -27,6 +27,7 @@ import PrototypeRequestPage from "./pages/PrototypeRequestPage";
 import FirstFactoryPage from "./pages/FirstFactoryPage";
 import StopCallPage from "./pages/StopCallPage";
 import AnalyticsPage from "./pages/AnalyticsPage";
+import ScnaPage from "./pages/ScnaPage";
 import LoginPage from "./pages/LoginPage";
 import {
   clearStoredAuthUser,
@@ -40,7 +41,6 @@ const placeholderPages = [
   "financials",
   "userManagement",
   "customerManagement",
-  "scna",
   "videoManual",
 ];
 
@@ -228,6 +228,8 @@ function App() {
               <Route path="/planner" element={<PlannerPage />} />
               <Route path="/approvals" element={<ApprovalsPage />} />
               <Route path="/noda" element={<NodaPage />} />
+              <Route path="/scna" element={<ScnaPage />} />
+              <Route path="/scna/:tab" element={<ScnaPage />} />
               <Route path="/inventory" element={<InventoryPage />} />
               <Route path="/factoryStatus" element={<FactoryStatusPage />} />
               <Route path="/factoryStatus/:tab" element={<FactoryStatusPage />} />
