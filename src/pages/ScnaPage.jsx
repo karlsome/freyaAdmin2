@@ -91,35 +91,39 @@ export default function ScnaPage() {
   }
 
   return (
-    <div className="px-4 py-6 sm:px-6 lg:px-8 max-w-[1600px] mx-auto">
-      <PageHeader
-        eyebrow="SCNA"
-        title={isJa ? "SCNA管理" : "SCNA Management"}
-        subtitle={
-          isJa
-            ? "サプライチェーンネットワーク分析とワークオーダー管理"
-            : "Supply Chain Network Analytics & Work Order Management"
-        }
-      />
+    <section className="w-full h-screen overflow-y-auto space-y-6 pt-20 px-4 sm:px-6 md:px-8 pb-16">
+      <div className="w-full">
+        <PageHeader
+          eyebrow="SCNA"
+          eyebrowClassName="tracking-[0.18em] text-[var(--freya-blue)]"
+          title={isJa ? "SCNA管理" : "SCNA Management"}
+          subtitle={
+            isJa
+              ? "サプライチェーンネットワーク分析とワークオーダー管理"
+              : "Supply Chain Network Analytics & Work Order Management"
+          }
+          className="mb-6"
+        />
 
-      <MasterTabNav
-        tabs={SCNA_TABS}
-        activeTab={activeTab}
-        onChange={handleTabChange}
-      />
+        <MasterTabNav
+          tabs={SCNA_TABS}
+          activeTab={activeTab}
+          onChange={handleTabChange}
+        />
 
-      <FlashBanner flash={flash} onClose={() => setFlash(null)} />
+        <FlashBanner flash={flash} onClose={() => setFlash(null)} />
 
-      {activeTab === "freyaTablet" && (
-        <ScnaFreyaTabletTab onFlash={setFlash} />
-      )}
-      {activeTab === "workOrder" && (
-        <ScnaWorkOrderTab onFlash={setFlash} />
-      )}
-      {activeTab === "analytics" && (
-        <ScnaMachineAnalyticsTab onFlash={setFlash} />
-      )}
-    </div>
+        {activeTab === "freyaTablet" && (
+          <ScnaFreyaTabletTab onFlash={setFlash} />
+        )}
+        {activeTab === "workOrder" && (
+          <ScnaWorkOrderTab onFlash={setFlash} />
+        )}
+        {activeTab === "analytics" && (
+          <ScnaMachineAnalyticsTab onFlash={setFlash} />
+        )}
+      </div>
+    </section>
   );
 }
 
