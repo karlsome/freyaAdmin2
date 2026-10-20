@@ -231,3 +231,42 @@ export async function setGatekeeperEnabled({ factory, machine, enabled, username
   }
   return record;
 }
+
+// ─── NC programs (PLT → JSON points, sent to the CNC by the miniPC listener) ───
+export async function fetchScnaNcProgramCounts() {
+  const response = await fetch(`${BASE_URL}api/scna-nc-programs/counts`);
+  return parseJsonResponse(response, "Failed to fetch NC program counts");
+}
+
+export async function fetchScnaNcPrograms(sebanggo) {
+  const response = await fetch(
+    `${BASE_URL}api/scna-nc-programs/by-sebanggo/${encodeURIComponent(sebanggo)}`
+  );
+  const payload = await parseJsonResponse(response, "Failed to fetch NC programs");
+  return Array.isArray(payload) ? payload : [];
+}
+
+export async function uploadScnaNcProgram({ sebanggo, displayName, fileName, pltBase64, points, uploadedBy }) {
+  const response = await fetch(`${BASE_URL}api/scna-nc-programs`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ sebanggo, displayName, fileName, pltBase64, points, uploadedBy }),
+  });
+  return parseJsonResponse(response, "Failed to upload NC program");
+}
+
+export async function renameScnaNcProgram(id, displayName) {
+  const response = await fetch(`${BASE_URL}api/scna-nc-programs/${encodeURIComponent(id)}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ displayName }),
+  });
+  return parseJsonResponse(response, "Failed to rename NC program");
+}
+
+export async function deleteScnaNcProgram(id) {
+  const response = await fetch(`${BASE_URL}api/scna-nc-programs/${encodeURIComponent(id)}`, {
+    method: "DELETE",
+  });
+  return parseJsonResponse(response, "Failed to delete NC program");
+}

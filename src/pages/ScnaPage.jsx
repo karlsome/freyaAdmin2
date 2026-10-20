@@ -7,6 +7,7 @@ import ScnaGatekeeperTab from "../components/scna/ScnaGatekeeperTab";
 import ScnaFreyaTabletTab from "../components/scna/ScnaFreyaTabletTab";
 import ScnaMachineAnalyticsTab from "../components/scna/ScnaMachineAnalyticsTab";
 import ScnaWorkOrderTab from "../components/scna/ScnaWorkOrderTab";
+import ScnaNcProgramsTab from "../components/scna/ScnaNcProgramsTab";
 
 const SCNA_TABS = [
   {
@@ -36,6 +37,13 @@ const SCNA_TABS = [
     label: "Gatekeeper",
     labelEn: "Gatekeeper",
     labelJa: "ゲートキーパー",
+  },
+  {
+    key: "ncPrograms",
+    icon: "precision_manufacturing",
+    label: "NC Programs",
+    labelEn: "NC Programs",
+    labelJa: "NCプログラム",
   },
 ];
 
@@ -132,6 +140,9 @@ export default function ScnaPage() {
         )}
         {activeTab === "gatekeeper" && (
           <ScnaGatekeeperTab onFlash={setFlash} />
+        )}
+        {activeTab === "ncPrograms" && (
+          <ScnaNcProgramsTab onFlash={setFlash} />
         )}
       </div>
     </section>

@@ -30,6 +30,13 @@ const FLOOR_DEPTH = 25.0;
 export const SCNA_LAYOUT = {
   factory: "SCNA",
   floor: { width: FLOOR_WIDTH, depth: FLOOR_DEPTH },
+  // Default 3D camera orientation: view from +X looking toward -X (landscape view matching SCNA dashboard)
+  cameraView: {
+    dir: [0.57, 0.82, 0],
+    focusDir: [0.62, 0.78, -0.3],
+    target: [0.5, 0, 0],
+    swapFloorAxes: true,
+  },
   ncMachines: [
     { id: "AOL-1", pos: [3.45, -5.85] },
     { id: "AOL-2", pos: [2.85, -3.15] },
