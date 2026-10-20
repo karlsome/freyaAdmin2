@@ -38,6 +38,12 @@ const FOCUS_DIR = (() => {
   return v.map((n) => n / len);
 })();
 
+function normalizeVec3(v, fallback) {
+  if (!Array.isArray(v) || v.length < 3) return fallback;
+  const len = Math.hypot(v[0], v[1], v[2]);
+  return len > 0 ? [v[0] / len, v[1] / len, v[2] / len] : fallback;
+}
+
 function sceneColors(isDark) {
   return isDark
     ? { bg: "#0b1220", floor: "#141c2b", cell: "#1e293b", section: "#2b3a52", wall: "#334155", label: "dark" }
@@ -45,35 +51,57 @@ function sceneColors(isDark) {
 }
 
 /* ── Camera rig: default overview + fly-to on selection ── */
-function CameraRig({ floor = KOSE_LAYOUT.floor, selectedPos, drawerOpen, viewKey, controlsEnabled = true }) {
+function CameraRig({
+  floor = KOSE_LAYOUT.floor,
+  cameraView = null,
+  selectedPos,
+  drawerOpen,
+  viewKey,
+  controlsEnabled = true,
+}) {
   const controlsRef = useRef();
   const { size } = useThree();
+
+  const viewDir = useMemo(() => normalizeVec3(cameraView?.dir, VIEW_DIR), [cameraView?.dir]);
+  const focusDir = useMemo(() => normalizeVec3(cameraView?.focusDir, FOCUS_DIR), [cameraView?.focusDir]);
+  const defaultTarget = cameraView?.target || DEFAULT_TARGET;
+  const swapAxes = Boolean(cameraView?.swapFloorAxes);
 
   const overview = useMemo(() => {
     const aspect = size.width / Math.max(1, size.height);
     const k = 2 * Math.tan((40 * Math.PI) / 360);
-    const depthSpan = Math.max(17, (floor?.depth || KOSE_LAYOUT.floor.depth) + 2.6);
-    const widthSpan = (floor?.width || KOSE_LAYOUT.floor.width) + 2;
+    const fWidth = floor?.width || KOSE_LAYOUT.floor.width;
+    const fDepth = floor?.depth || KOSE_LAYOUT.floor.depth;
+    const depthSpan = Math.max(17, (swapAxes ? fWidth : fDepth) + 2.6);
+    const widthSpan = (swapAxes ? fDepth : fWidth) + 2;
     const dist = Math.max(depthSpan / k, widthSpan / (k * aspect)) * 1.02;
     return {
-      pos: DEFAULT_TARGET.map((t, i) => t + VIEW_DIR[i] * dist),
-      target: DEFAULT_TARGET,
+      pos: defaultTarget.map((t, i) => t + viewDir[i] * dist),
+      target: defaultTarget,
     };
-  }, [size.width, size.height, floor?.width, floor?.depth]);
+  }, [size.width, size.height, floor?.width, floor?.depth, swapAxes, defaultTarget, viewDir]);
+
+  const didInitRef = useRef(false);
+  const prevCameraViewRef = useRef(cameraView);
 
   useEffect(() => {
     const c = controlsRef.current;
     if (!c) return;
+    const isFactorySwitch = !didInitRef.current || prevCameraViewRef.current !== cameraView;
+    didInitRef.current = true;
+    prevCameraViewRef.current = cameraView;
+    const animate = !isFactorySwitch;
+
     if (selectedPos) {
       const target = [selectedPos[0], 0.5, selectedPos[1]];
-      const pos = target.map((t, i) => t + FOCUS_DIR[i] * 9);
-      c.setLookAt(...pos, ...target, true);
-      c.setFocalOffset(drawerOpen ? 1.8 : 0, 0, 0, true);
+      const pos = target.map((t, i) => t + focusDir[i] * 9);
+      c.setLookAt(...pos, ...target, animate);
+      c.setFocalOffset(drawerOpen ? 1.8 : 0, 0, 0, animate);
     } else {
-      c.setFocalOffset(0, 0, 0, true);
-      c.setLookAt(...overview.pos, ...overview.target, true);
+      c.setFocalOffset(0, 0, 0, animate);
+      c.setLookAt(...overview.pos, ...overview.target, animate);
     }
-  }, [selectedPos, drawerOpen, overview, viewKey]);
+  }, [selectedPos, drawerOpen, overview, focusDir, cameraView, viewKey]);
 
   return (
     <CameraControls
@@ -158,12 +186,26 @@ const PALLET_BOX_GEO = new THREE.BoxGeometry(0.48, 0.36, 0.4);
 const PALLET_BOX_MAT_A = new THREE.MeshStandardMaterial({ color: "#d4b08a", roughness: 0.85 });
 const PALLET_BOX_MAT_B = new THREE.MeshStandardMaterial({ color: "#c8a27a", roughness: 0.85 });
 
-const RACK_POST_GEO = new THREE.BoxGeometry(0.08, 1.35, 0.08);
-const RACK_BEAM_GEO = new THREE.BoxGeometry(2.6, 0.06, 0.95);
-const RACK_MAT = new THREE.MeshStandardMaterial({ color: "#3b82f6", roughness: 0.55, metalness: 0.3 });
-const STORAGE_ROLL_GEO = new THREE.CylinderGeometry(0.24, 0.24, 0.82, 14);
-const STORAGE_ROLL_MAT_A = new THREE.MeshStandardMaterial({ color: "#f1f5f9", roughness: 0.6 });
+const STANDING_ROLL_GEO = new THREE.CylinderGeometry(0.24, 0.24, 1, 16);
+const STANDING_CORE_GEO = new THREE.CylinderGeometry(0.095, 0.095, 1, 12);
+const STANDING_HOLE_GEO = new THREE.CylinderGeometry(0.055, 0.055, 1, 10);
+const STORAGE_ROLL_MAT_A = new THREE.MeshStandardMaterial({ color: "#f8fafc", roughness: 0.6 });
 const STORAGE_ROLL_MAT_B = new THREE.MeshStandardMaterial({ color: "#cbd5e1", roughness: 0.6 });
+const STORAGE_ROLL_MAT_C = new THREE.MeshStandardMaterial({ color: "#e2e8f0", roughness: 0.55 });
+const STORAGE_CORE_MAT = new THREE.MeshStandardMaterial({ color: "#b45309", roughness: 0.8 });
+const STORAGE_HOLE_MAT = new THREE.MeshStandardMaterial({ color: "#1e293b", roughness: 0.9 });
+const ROLL_PALLET_SLAT_GEO = new THREE.BoxGeometry(1.5, 0.1, 0.16);
+const ROLL_PALLET_TOP_GEO = new THREE.BoxGeometry(1.5, 0.045, 1.3);
+
+const DOOR_UNIT_BOX = new THREE.BoxGeometry(1, 1, 1);
+const DOOR_FRAME_MAT = new THREE.MeshStandardMaterial({ color: "#334155", roughness: 0.45, metalness: 0.35 });
+const DOOR_ACCENT_MAT = new THREE.MeshStandardMaterial({ color: "#ec4899", roughness: 0.4, metalness: 0.15 });
+const DOOR_LEAF_MAT = new THREE.MeshStandardMaterial({ color: "#f1f5f9", roughness: 0.4, metalness: 0.2 });
+const DOOR_GLASS_MAT = new THREE.MeshStandardMaterial({ color: "#38bdf8", roughness: 0.2, metalness: 0.1, transparent: true, opacity: 0.55 });
+const DOOR_BAR_MAT = new THREE.MeshStandardMaterial({ color: "#94a3b8", roughness: 0.3, metalness: 0.65 });
+const DOOR_EXIT_SIGN_MAT = new THREE.MeshStandardMaterial({ color: "#10b981", emissive: "#10b981", emissiveIntensity: 0.75, toneMapped: false });
+const DOOR_MAT_FLOOR = new THREE.MeshStandardMaterial({ color: "#334155", roughness: 0.9 });
+
 const OFFICE_DESK_GEO = new THREE.BoxGeometry(1.9, 0.06, 0.85);
 const OFFICE_LEG_GEO = new THREE.BoxGeometry(0.08, 0.42, 0.78);
 const OFFICE_MONITOR_GEO = new THREE.BoxGeometry(0.46, 0.28, 0.04);
@@ -229,43 +271,54 @@ const PalletZone = memo(function PalletZone({ pallet = KOSE_LAYOUT.pallet, isJa 
   );
 });
 
-/* ── SCNA Roll Storage Zone (top-left) ── */
+/* ── SCNA Roll Storage Zone: Wooden pallets with vertical standing material rolls ── */
+const ROLL_STORAGE_PALLETS = [
+  { px: -2.2, pz: -0.82, heights: [0.92, 0.84, 0.96, 0.78] },
+  { px: -2.2, pz: 0.82, heights: [0.86, 0.94, 0.8, 0.9] },
+  { px: 0.0, pz: -0.82, heights: [0.95, 0.88, 0.82, 0.92] },
+  { px: 0.0, pz: 0.82, heights: [0.8, 0.9, 0.96, 0.85] },
+  { px: 2.2, pz: -0.82, heights: [0.88, 0.76, 0.92, 0.84] },
+  { px: 2.2, pz: 0.82, heights: [0.94, 0.86, 0.9, 0.78] },
+];
+const STANDING_ROLL_OFFSETS = [
+  [-0.36, -0.32],
+  [0.36, -0.32],
+  [-0.36, 0.32],
+  [0.36, 0.32],
+];
+const ROLL_MATS = [STORAGE_ROLL_MAT_A, STORAGE_ROLL_MAT_B, STORAGE_ROLL_MAT_C];
+
 const RollStorageZone = memo(function RollStorageZone({ zone, isJa }) {
   if (!zone) return null;
   const { pos } = zone;
-  const rackXs = [-1.85, 1.85];
-  const rollOffsets = [-0.85, 0, 0.85];
 
   return (
     <group position={[pos[0], 0, pos[1]]}>
-      {/* Two 2-tier material roll storage racks */}
-      {rackXs.map((rx, rIdx) => (
-        <group key={rx} position={[rx, 0, 0]}>
-          {[-1.25, 1.25].flatMap((px) =>
-            [-0.45, 0.45].map((pz) => (
-              <mesh key={`${px}-${pz}`} position={[px, 0.675, pz]} geometry={RACK_POST_GEO} material={RACK_MAT} />
-            ))
-          )}
-          {[0.25, 0.88].map((shelfY, tier) => (
-            <group key={shelfY}>
-              <mesh position={[0, shelfY, 0]} geometry={RACK_BEAM_GEO} material={RACK_MAT} />
-              {rollOffsets.map((rox, oi) => (
-                <mesh
-                  key={rox}
-                  position={[rox, shelfY + 0.27, 0]}
-                  rotation={[Math.PI / 2, 0, 0]}
-                  geometry={STORAGE_ROLL_GEO}
-                  material={(oi + tier + rIdx) % 2 === 0 ? STORAGE_ROLL_MAT_A : STORAGE_ROLL_MAT_B}
-                  castShadow
-                />
-              ))}
-            </group>
+      {ROLL_STORAGE_PALLETS.map(({ px, pz, heights }, pIdx) => (
+        <group key={`${px}-${pz}`} position={[px, 0, pz]}>
+          {/* Wooden pallet stringers & top deck */}
+          {[-0.48, 0, 0.48].map((sz) => (
+            <mesh key={sz} position={[0, 0.05, sz]} geometry={ROLL_PALLET_SLAT_GEO} material={PALLET_SLAT_MAT} receiveShadow />
           ))}
+          <mesh position={[0, 0.122, 0]} geometry={ROLL_PALLET_TOP_GEO} material={PALLET_TOP_MAT} castShadow receiveShadow />
+
+          {/* 4 vertical (standing) cylindrical rolls per pallet */}
+          {STANDING_ROLL_OFFSETS.map(([rx, rz], rIdx) => {
+            const h = heights[rIdx] || 0.88;
+            const mat = ROLL_MATS[(pIdx + rIdx) % ROLL_MATS.length];
+            return (
+              <group key={`${rx}-${rz}`} position={[rx, 0.145, rz]}>
+                <mesh position={[0, h / 2, 0]} scale={[1, h, 1]} geometry={STANDING_ROLL_GEO} material={mat} castShadow receiveShadow />
+                <mesh position={[0, h / 2 + 0.006, 0]} scale={[1, h + 0.012, 1]} geometry={STANDING_CORE_GEO} material={STORAGE_CORE_MAT} />
+                <mesh position={[0, h / 2 + 0.01, 0]} scale={[1, h + 0.02, 1]} geometry={STANDING_HOLE_GEO} material={STORAGE_HOLE_MAT} />
+              </group>
+            );
+          })}
         </group>
       ))}
 
       <SceneLabel
-        position={[0, 1.95, 0]}
+        position={[0, 1.55, 0]}
         icon="album"
         text={isJa ? zone.labelJa || "ROLL STORAGE" : zone.labelEn || "ROLL STORAGE"}
         tone="blue"
@@ -317,23 +370,57 @@ const OfficeZone = memo(function OfficeZone({ zone, isJa }) {
   );
 });
 
-/* ── SCNA Entrance / Exit Zones (bottom edge pink pills) ── */
+/* ── SCNA Entrance / Exit Zones: 3D double-door portal along the perimeter wall ── */
 const EntranceZone = memo(function EntranceZone({ entrance, isJa }) {
   if (!entrance) return null;
-  const { pos, size } = entrance;
+  const { pos } = entrance;
+  const doorZ = 0.82;
+
   return (
     <group position={[pos[0], 0, pos[1]]}>
-      <mesh position={[0, 0.01, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-        <planeGeometry args={size} />
-        <meshBasicMaterial color="#ec4899" transparent opacity={0.34} depthWrite={false} />
-      </mesh>
-      <mesh position={[0, 0.18, 0]}>
-        <boxGeometry args={[size[0], 0.36, size[1]]} />
-        <meshStandardMaterial color="#f472b6" transparent opacity={0.18} depthWrite={false} />
-        <Edges color="#ec4899" />
-      </mesh>
+      {/* Threshold floor mat + pink safety border inside doorway */}
+      <mesh position={[0, 0.012, 0.22]} scale={[2.6, 0.016, 1.15]} geometry={DOOR_UNIT_BOX} material={DOOR_ACCENT_MAT} receiveShadow />
+      <mesh position={[0, 0.022, 0.22]} scale={[2.46, 0.014, 1.02]} geometry={DOOR_UNIT_BOX} material={DOOR_MAT_FLOOR} receiveShadow />
+
+      {/* 3D Door Frame / Portal Jambs & Header along +Z wall */}
+      {[-1.26, 1.26].map((jx) => (
+        <group key={`jamb-${jx}`} position={[jx, 0.9, doorZ]}>
+          <mesh scale={[0.14, 1.8, 0.18]} geometry={DOOR_UNIT_BOX} material={DOOR_FRAME_MAT} castShadow />
+          <mesh position={[0, 0, -0.095]} scale={[0.15, 1.82, 0.02]} geometry={DOOR_UNIT_BOX} material={DOOR_ACCENT_MAT} />
+        </group>
+      ))}
+      {/* Top header lintel beam */}
+      <mesh position={[0, 1.84, doorZ]} scale={[2.72, 0.14, 0.2]} geometry={DOOR_UNIT_BOX} material={DOOR_FRAME_MAT} castShadow />
+      <mesh position={[0, 1.84, doorZ - 0.105]} scale={[2.74, 0.06, 0.02]} geometry={DOOR_UNIT_BOX} material={DOOR_ACCENT_MAT} />
+
+      {/* Overhead illuminated green EXIT sign box */}
+      <mesh position={[0, 2.02, doorZ - 0.02]} scale={[0.56, 0.18, 0.08]} geometry={DOOR_UNIT_BOX} material={DOOR_FRAME_MAT} />
+      <mesh position={[0, 2.02, doorZ - 0.065]} scale={[0.48, 0.12, 0.015]} geometry={DOOR_UNIT_BOX} material={DOOR_EXIT_SIGN_MAT} />
+
+      {/* Double swing door leaves (hinged at jambs, swung open inward ~38°) */}
+      {[-1, 1].map((side) => (
+        <group
+          key={`leaf-${side}`}
+          position={[side * 1.18, 0, doorZ - 0.02]}
+          rotation={[0, side * 0.66, 0]}
+        >
+          <group position={[-side * 0.56, 0.86, 0]}>
+            {/* Door leaf panel */}
+            <mesh scale={[1.12, 1.68, 0.06]} geometry={DOOR_UNIT_BOX} material={DOOR_LEAF_MAT} castShadow receiveShadow />
+            {/* Door perimeter accent frame */}
+            <mesh position={[0, 0.82, 0]} scale={[1.13, 0.04, 0.065]} geometry={DOOR_UNIT_BOX} material={DOOR_ACCENT_MAT} />
+            <mesh position={[0, -0.82, 0]} scale={[1.13, 0.04, 0.065]} geometry={DOOR_UNIT_BOX} material={DOOR_ACCENT_MAT} />
+            {/* Upper glass vision window */}
+            <mesh position={[0, 0.32, 0]} scale={[0.62, 0.52, 0.07]} geometry={DOOR_UNIT_BOX} material={DOOR_GLASS_MAT} />
+            {/* Horizontal crash/push bar on both sides of door */}
+            <mesh position={[0, -0.06, -0.045]} scale={[0.86, 0.045, 0.035]} geometry={DOOR_UNIT_BOX} material={DOOR_BAR_MAT} />
+            <mesh position={[0, -0.06, 0.045]} scale={[0.86, 0.045, 0.035]} geometry={DOOR_UNIT_BOX} material={DOOR_BAR_MAT} />
+          </group>
+        </group>
+      ))}
+
       <SceneLabel
-        position={[0, 0.9, 0]}
+        position={[0, 2.35, 0.45]}
         icon="door_front"
         text={isJa ? entrance.labelJa || entrance.labelEn : entrance.labelEn}
         tone="pink"
@@ -1140,6 +1227,7 @@ export default function FactoryScene({
 
       <CameraRig
         floor={layout.floor}
+        cameraView={layout.cameraView}
         selectedPos={selectedPos}
         drawerOpen={Boolean(selectedId) && drawerCovers}
         viewKey={viewKey}
