@@ -1,9 +1,11 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import ModalShell from "../ModalShell";
 import { useLanguage } from "../../contexts/LanguageContext";
 import {
+  buildDynamicMachineExportColumns,
   downloadCsvWithBom,
   extractMachineExportValue,
+  flattenMachineRecord,
   SCNA_DEFAULT_EXPORT_TEMPLATES,
   SCNA_MACHINE_EXPORT_CATEGORIES,
   SCNA_MACHINE_EXPORT_COLUMNS,
@@ -11,10 +13,31 @@ import {
 
 const STORAGE_KEY = "machineAnalyticsTemplates";
 
+// Legacy FreyaAdmin stored an array of
+// { _id, templateName, selectedHeaders: [{ name, order }] } under the same key.
+function migrateLegacyTemplates(list) {
+  const result = {};
+  list.forEach((tpl, index) => {
+    if (!tpl || !Array.isArray(tpl.selectedHeaders)) return;
+    const key = String(tpl._id || `legacy_${index}`);
+    result[key] = {
+      name: tpl.templateName || `Template ${index + 1}`,
+      columns: tpl.selectedHeaders.map((h) => ({
+        key: h.name,
+        order: h.order ?? null,
+      })),
+    };
+  });
+  return result;
+}
+
 function loadCustomTemplates() {
   try {
     const saved = localStorage.getItem(STORAGE_KEY);
-    return saved ? JSON.parse(saved) : {};
+    if (!saved) return {};
+    const parsed = JSON.parse(saved);
+    if (Array.isArray(parsed)) return migrateLegacyTemplates(parsed);
+    return parsed && typeof parsed === "object" ? parsed : {};
   } catch {
     return {};
   }
@@ -28,11 +51,11 @@ function saveCustomTemplates(templates) {
   }
 }
 
-function buildColumnsFromTemplate(templateColumns = []) {
+function buildColumnsFromTemplate(templateColumns = [], allColumns = SCNA_MACHINE_EXPORT_COLUMNS) {
   const orderMap = new Map(
     templateColumns.map((col) => [col.key, col.order ?? null])
   );
-  return SCNA_MACHINE_EXPORT_COLUMNS.map((col) => ({
+  return allColumns.map((col) => ({
     ...col,
     selected: orderMap.has(col.key),
     order: orderMap.get(col.key) ?? null,
@@ -50,12 +73,17 @@ export default function ScnaMachineExportModal({
   const { language } = useLanguage();
   const isJa = language === "ja";
 
+  // Mounted fresh each time the modal opens, so records/templates are current.
+  const [allColumns] = useState(() => [
+    ...SCNA_MACHINE_EXPORT_COLUMNS,
+    ...buildDynamicMachineExportColumns(records),
+  ]);
   const [customTemplates, setCustomTemplates] = useState(() =>
     loadCustomTemplates()
   );
   const [selectedTemplateKey, setSelectedTemplateKey] = useState("default");
   const [columnsState, setColumnsState] = useState(() =>
-    buildColumnsFromTemplate(SCNA_DEFAULT_EXPORT_TEMPLATES.default.columns)
+    buildColumnsFromTemplate(SCNA_DEFAULT_EXPORT_TEMPLATES.default.columns, allColumns)
   );
   const [searchQuery, setSearchQuery] = useState("");
   const [manageModalOpen, setManageModalOpen] = useState(false);
@@ -63,12 +91,6 @@ export default function ScnaMachineExportModal({
   const [showSavePrompt, setShowSavePrompt] = useState(false);
   const [editingTemplateKey, setEditingTemplateKey] = useState(null);
   const [editingTemplateName, setEditingTemplateName] = useState("");
-
-  useEffect(() => {
-    if (open) {
-      setCustomTemplates(loadCustomTemplates());
-    }
-  }, [open]);
 
   const allTemplates = useMemo(
     () => ({
@@ -89,7 +111,7 @@ export default function ScnaMachineExportModal({
     setSelectedTemplateKey(templateKey);
     const tpl = allTemplates[templateKey];
     if (tpl && Array.isArray(tpl.columns)) {
-      setColumnsState(buildColumnsFromTemplate(tpl.columns));
+      setColumnsState(buildColumnsFromTemplate(tpl.columns, allColumns));
     }
   }
 
@@ -237,9 +259,13 @@ export default function ScnaMachineExportModal({
     }
 
     const headers = selectedCols.map((col) => col.label);
-    const csvRows = records.map((record) =>
-      selectedCols.map((col) => extractMachineExportValue(record, col.key))
-    );
+    const needsFlatten = selectedCols.some((col) => col.dynamic);
+    const csvRows = records.map((record) => {
+      const flat = needsFlatten ? flattenMachineRecord(record) : null;
+      return selectedCols.map((col) =>
+        col.dynamic ? flat?.[col.key] ?? "" : extractMachineExportValue(record, col.key)
+      );
+    });
 
     const filename = `SCNA_Machine_Analytics_${dateFrom || "start"}_to_${dateTo || "end"}.csv`;
     downloadCsvWithBom(headers, csvRows, filename);
@@ -469,14 +495,17 @@ export default function ScnaMachineExportModal({
                             }
                             className="h-4 w-4 rounded border-[var(--border)] text-[var(--freya-blue)]"
                           />
-                          <span className="text-xs font-medium text-[var(--text-primary)] truncate">
+                          <span
+                            className="text-xs font-medium text-[var(--text-primary)] truncate"
+                            title={col.key}
+                          >
                             {col.label}
                           </span>
                         </label>
                         <input
                           type="number"
                           min="1"
-                          max="24"
+                          max={allColumns.length}
                           disabled={!col.selected}
                           value={col.order ?? ""}
                           placeholder="#"

@@ -102,6 +102,20 @@ export function getRecordImages(record = {}) {
     });
   }
 
+  // Any other Firebase Storage URL fields (legacy getImageCount counted these too)
+  const knownUrls = new Set(images.map((img) => img.url));
+  Object.keys(record).forEach((key) => {
+    const value = record[key];
+    if (
+      typeof value === "string" &&
+      value.includes("firebasestorage.googleapis.com") &&
+      !knownUrls.has(value)
+    ) {
+      knownUrls.add(value);
+      images.push({ key: `extra:${key}`, label: key, labelJa: key, url: value });
+    }
+  });
+
   return images;
 }
 
@@ -263,12 +277,33 @@ export function parsePercentageValue(percentValue) {
   return 0;
 }
 
+function formatPercentField(raw) {
+  if (raw === null || raw === undefined || raw === "") return "0%";
+  const str = String(raw).trim();
+  return str.endsWith("%") ? str : `${str}%`;
+}
+
+// SCNAWorkOrderDB stores these as numbers under the "(%)" keys.
+// The "%" keys are a fallback for documents edited by an earlier build.
 export function getWorkOrderMaterialLoading(wo = {}) {
-  return wo["Material loading %"] ?? wo["Material loading (%)"] ?? "0%";
+  return formatPercentField(wo["Material loading (%)"] ?? wo["Material loading %"]);
 }
 
 export function getWorkOrderFinishedGoods(wo = {}) {
-  return wo["Finished goods note %"] ?? wo["Finished goods note (%)"] ?? "0%";
+  return formatPercentField(wo["Finished goods note (%)"] ?? wo["Finished goods note %"]);
+}
+
+export function formatWorkOrderDateTime(dateInput) {
+  if (!dateInput) return "N/A";
+  const date = new Date(dateInput);
+  if (Number.isNaN(date.getTime())) return String(dateInput);
+  return date.toLocaleString("en-US", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 }
 
 export function formatWorkOrderDate(dateInput) {
@@ -550,9 +585,116 @@ export const SCNA_MACHINE_EXPORT_CATEGORIES = [
   { key: "production", title: "🏭 Production Details", titleJa: "🏭 生産詳細" },
   { key: "quality", title: "✅ Quality & NG Data", titleJa: "✅ 品質・不良データ" },
   { key: "timing", title: "⏱️ Timing & Breaks", titleJa: "⏱️ 時間・休憩" },
+  { key: "breaks", title: "☕ Break Details", titleJa: "☕ 休憩詳細" },
+  { key: "qualitychecks", title: "🔍 Quality Checks", titleJa: "🔍 品質チェック" },
+  { key: "maintenance", title: "🔧 Maintenance & Trouble", titleJa: "🔧 メンテナンス・トラブル" },
   { key: "workorder", title: "📦 Work Order Info", titleJa: "📦 ワークオーダー情報" },
+  { key: "images", title: "🖼️ Images", titleJa: "🖼️ 画像" },
   { key: "additional", title: "📝 Additional Info", titleJa: "📝 追加情報" },
+  { key: "other", title: "🗂️ Other Fields", titleJa: "🗂️ その他のフィールド" },
 ];
+
+// English labels for nested/extra fields (from legacy getMachineFieldMapping)
+const SCNA_DYNAMIC_FIELD_LABELS = {
+  "Break_Time_Data.break1.start": "Break 1 Start",
+  "Break_Time_Data.break1.end": "Break 1 End",
+  "Break_Time_Data.break2.start": "Break 2 Start",
+  "Break_Time_Data.break2.end": "Break 2 End",
+  "Break_Time_Data.break3.start": "Break 3 Start",
+  "Break_Time_Data.break3.end": "Break 3 End",
+  "Break_Time_Data.break4.start": "Break 4 Start",
+  "Break_Time_Data.break4.end": "Break 4 End",
+  "Maintenance_Data.totalMinutes": "Maintenance Minutes",
+  "Maintenance_Data.totalHours": "Maintenance Hours",
+  Total_Trouble_Minutes: "Trouble Minutes",
+  Total_Trouble_Hours: "Trouble Hours",
+  "2HourQualityCheck.lastCheckTimestamp": "Last Quality Check Time",
+  "WorkOrder_Info.isWorkOrder": "Is Work Order",
+  "初物チェック画像": "First Cycle Check Image (初物チェック画像)",
+  "終物チェック画像": "Last Cycle Check Image (終物チェック画像)",
+  "材料ラベル画像": "Material Label Image (材料ラベル画像)",
+  materialLabelImages: "Material Label Images",
+  materialLabelImageCount: "Material Label Count",
+  shot1: "Shot 1",
+  shot2: "Shot 2",
+};
+
+// Flattened keys already exposed through curated (computed) columns
+const SCNA_CURATED_FLAT_KEYS = new Set([
+  "_id",
+  "WorkOrder_Info.workOrderNumber",
+  "WorkOrder_Info.sku",
+  "WorkOrder_Info.productName",
+  "WorkOrder_Info.requiredQuantity",
+  "WorkOrder_Info.assignedTo",
+  "WorkOrder_Info.assignedMachine",
+  "WorkOrder_Info.status",
+  "WorkOrder_Info.targetMachines",
+  "WorkOrder_Info.ncProgramSent",
+  "2HourQualityCheck.totalChecks",
+  "Break_Time_Data.totalBreakMinutes",
+  "Break_Time_Data.totalBreakHours",
+]);
+
+/**
+ * Flatten nested objects with dot notation (legacy flattenMachineObject).
+ * Arrays of primitives are joined; arrays of objects get [index] keys.
+ */
+export function flattenMachineRecord(obj, prefix = "", out = {}) {
+  if (!obj || typeof obj !== "object") return out;
+  Object.keys(obj).forEach((key) => {
+    const value = obj[key];
+    const path = `${prefix}${key}`;
+    if (value === null || value === undefined) {
+      out[path] = "";
+    } else if (Array.isArray(value)) {
+      if (value.length > 0 && value[0] && typeof value[0] === "object") {
+        value.forEach((item, index) =>
+          flattenMachineRecord(item, `${path}[${index}].`, out)
+        );
+      } else {
+        out[path] = value.join(", ");
+      }
+    } else if (typeof value === "object" && !(value instanceof Date)) {
+      flattenMachineRecord(value, `${path}.`, out);
+    } else {
+      out[path] = value;
+    }
+  });
+  return out;
+}
+
+function categorizeDynamicField(key) {
+  if (/^Break_Time_Data|break/i.test(key)) return "breaks";
+  if (/QualityCheck|Quality_Check_Data/.test(key)) return "qualitychecks";
+  if (/Maintenance|Trouble/i.test(key)) return "maintenance";
+  if (/^WorkOrder_Info/.test(key)) return "workorder";
+  if (/image|画像/i.test(key)) return "images";
+  return "other";
+}
+
+/**
+ * Build extra export columns for every flattened field present in the records
+ * that is not already covered by SCNA_MACHINE_EXPORT_COLUMNS.
+ */
+export function buildDynamicMachineExportColumns(records = []) {
+  const curatedKeys = new Set(SCNA_MACHINE_EXPORT_COLUMNS.map((col) => col.key));
+  const discovered = new Set();
+  records.forEach((record) => {
+    Object.keys(flattenMachineRecord(record)).forEach((key) => discovered.add(key));
+  });
+
+  return Array.from(discovered)
+    .filter((key) => !curatedKeys.has(key) && !SCNA_CURATED_FLAT_KEYS.has(key))
+    .sort()
+    .map((key) => ({
+      key,
+      label: SCNA_DYNAMIC_FIELD_LABELS[key] || key,
+      category: categorizeDynamicField(key),
+      defaultOrder: null,
+      dynamic: true,
+    }));
+}
 
 export const SCNA_DEFAULT_EXPORT_TEMPLATES = {
   default: {

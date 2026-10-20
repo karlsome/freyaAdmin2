@@ -16,6 +16,7 @@ import { readStoredAuthUser } from "../../utils/auth";
 import {
   downloadCsvWithBom,
   formatWorkOrderDate,
+  formatWorkOrderDateTime,
   getDefaultWorkOrderDates,
   getWorkOrderDeadlineMeta,
   getWorkOrderFinishedGoods,
@@ -24,6 +25,22 @@ import {
   parsePercentageValue,
   SCNA_PAGE_SIZE_OPTIONS,
 } from "../../utils/scna";
+
+const REQUIRED_UPLOAD_FIELDS = [
+  "Number",
+  "Status",
+  "Customer-Custom fields",
+  "P_SKU-Custom fields",
+];
+
+function summarizeUploadErrors(errors) {
+  if (!Array.isArray(errors) || errors.length === 0) return "";
+  const lines = errors
+    .slice(0, 5)
+    .map((err) => `${err.workOrderNumber || "Unknown"}: ${err.error}`);
+  const more = errors.length > 5 ? ` (+${errors.length - 5} more)` : "";
+  return ` ${errors.length} failed — ${lines.join("; ")}${more}`;
+}
 
 export default function ScnaWorkOrderTab({ onFlash }) {
   const { language } = useLanguage();
@@ -42,7 +59,7 @@ export default function ScnaWorkOrderTab({ onFlash }) {
 
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
-  const [sort, setSort] = useState({ column: "Date", direction: -1 });
+  const [sort, setSort] = useState({ column: "Date and time", direction: -1 });
 
   const [rows, setRows] = useState([]);
   const [statistics, setStatistics] = useState({
@@ -255,20 +272,27 @@ export default function ScnaWorkOrderTab({ onFlash }) {
         throw new Error("JSON file is empty.");
       }
 
-      const requiredFields = [
-        "Number",
-        "Status",
-        "Customer-Custom fields",
-        "P_SKU-Custom fields",
-      ];
-      const firstItem = jsonData[0];
-      const missingFields = requiredFields.filter(
-        (field) => !Object.prototype.hasOwnProperty.call(firstItem, field)
-      );
+      const invalidRows = [];
+      jsonData.forEach((order, index) => {
+        const missing = REQUIRED_UPLOAD_FIELDS.filter(
+          (field) =>
+            !order ||
+            !Object.prototype.hasOwnProperty.call(order, field) ||
+            order[field] === null ||
+            order[field] === ""
+        );
+        if (missing.length > 0) {
+          invalidRows.push(`#${index + 1}${order?.Number ? ` (${order.Number})` : ""}: ${missing.join(", ")}`);
+        }
+      });
 
-      if (missingFields.length > 0) {
+      if (invalidRows.length > 0) {
+        const preview = invalidRows.slice(0, 5).join("; ");
+        const more = invalidRows.length > 5 ? ` (+${invalidRows.length - 5} more)` : "";
         throw new Error(
-          `Missing required fields in JSON: ${missingFields.join(", ")}`
+          isJa
+            ? `必須項目が不足しているワークオーダーがあります: ${preview}${more}`
+            : `Invalid work orders (missing required fields): ${preview}${more}`
         );
       }
 
@@ -290,19 +314,27 @@ export default function ScnaWorkOrderTab({ onFlash }) {
       const duplicates = Array.isArray(result.duplicates)
         ? result.duplicates
         : [];
+      const errorSummary = summarizeUploadErrors(result.errors);
+      const uploadedList = Array.isArray(result.uploadedNumbers)
+        ? result.uploadedNumbers
+        : [];
 
-      if (result.duplicatesFound || duplicates.length > 0) {
+      if (duplicates.length > 0) {
         setDuplicateUploadState({
-          workOrders: jsonData,
           duplicates,
           insertedCount: result.inserted || 0,
+          uploadedNumbers: uploadedList,
+          errorSummary,
         });
       } else {
         onFlash?.({
-          type: "success",
-          message: isJa
-            ? `${result.inserted || 0} 件のワークオーダーをアップロードしました。`
-            : `Successfully uploaded ${result.inserted || 0} work orders!`,
+          type: errorSummary ? "warning" : "success",
+          message:
+            (isJa
+              ? `${result.inserted || 0} 件のワークオーダーをアップロードしました。`
+              : `Successfully uploaded ${result.inserted || 0} work orders.`) +
+            (uploadedList.length ? ` [${uploadedList.join(", ")}]` : "") +
+            errorSummary,
         });
         setRefreshNonce((n) => n + 1);
       }
@@ -317,7 +349,7 @@ export default function ScnaWorkOrderTab({ onFlash }) {
   }
 
   async function handleConfirmOverwriteDuplicates() {
-    if (!duplicateUploadState?.workOrders) return;
+    if (!duplicateUploadState?.duplicates?.length) return;
     setUploadingJson(true);
     try {
       const username =
@@ -325,8 +357,9 @@ export default function ScnaWorkOrderTab({ onFlash }) {
         localStorage.getItem("username") ||
         "admin";
 
+      // Only re-send the duplicates (new rows were already inserted)
       const overwriteResult = await bulkUploadWorkOrders({
-        workOrders: duplicateUploadState.workOrders,
+        workOrders: duplicateUploadState.duplicates,
         username,
         overwrite: true,
       });
@@ -337,11 +370,15 @@ export default function ScnaWorkOrderTab({ onFlash }) {
         );
       }
 
+      const errorSummary = summarizeUploadErrors(overwriteResult.errors);
       onFlash?.({
-        type: "success",
-        message: isJa
-          ? `重複分を含め、全 ${overwriteResult.inserted || 0} 件のワークオーダーをアップロード・更新しました。`
-          : `Successfully uploaded/updated ${overwriteResult.inserted || 0} work orders (including duplicates)!`,
+        type: errorSummary ? "warning" : "success",
+        message:
+          (isJa
+            ? `新規 ${duplicateUploadState.insertedCount} 件を登録し、重複 ${overwriteResult.inserted || 0} 件を上書きしました。`
+            : `Uploaded ${duplicateUploadState.insertedCount} new and overwrote ${overwriteResult.inserted || 0} duplicate work orders.`) +
+          (duplicateUploadState.errorSummary || "") +
+          errorSummary,
       });
       setDuplicateUploadState(null);
       setRefreshNonce((n) => n + 1);
@@ -391,12 +428,11 @@ export default function ScnaWorkOrderTab({ onFlash }) {
         "Owner",
         "Created Date",
         "Deadline",
-        "Material Loading %",
-        "Finished Goods %",
-        "Quantity Status",
         "Estimated Cost",
-        "Actual Cost",
+        "Quantity Status",
         "Time Track",
+        "Material Loading (%)",
+        "Finished Goods Note (%)",
       ];
 
       const csvRows = result.data.map((wo) => [
@@ -406,14 +442,13 @@ export default function ScnaWorkOrderTab({ onFlash }) {
         wo["P_SKU-Custom fields"] || "",
         wo["Assign to-Custom fields"] || "",
         wo.Owner || "",
-        formatWorkOrderDate(wo["Date"]),
-        formatWorkOrderDate(wo["Deadline"]),
-        getWorkOrderMaterialLoading(wo),
-        getWorkOrderFinishedGoods(wo),
+        wo["Date and time"] ? formatWorkOrderDateTime(wo["Date and time"]) : "",
+        wo.Deadline ? formatWorkOrderDate(wo.Deadline) : "",
+        wo["Estimated cost"] ?? "",
         wo["Quantity status"] || "",
-        wo["Estimated cost"] || 0,
-        wo["Cost"] || 0,
         wo["Time track"] || "",
+        parsePercentageValue(getWorkOrderMaterialLoading(wo)),
+        parsePercentageValue(getWorkOrderFinishedGoods(wo)),
       ]);
 
       const todayStr = new Date().toISOString().split("T")[0];
@@ -446,8 +481,8 @@ export default function ScnaWorkOrderTab({ onFlash }) {
             <div className="font-mono font-bold text-[var(--text-primary)]">
               {row.Number || "N/A"}
             </div>
-            <div className="text-[11px] font-mono text-[var(--text-muted)]">
-              {row["P_SKU-Custom fields"] || "No SKU"}
+            <div className="text-[11px] text-[var(--text-muted)]">
+              {row.Owner || "No owner"}
             </div>
           </div>
         ),
@@ -533,15 +568,9 @@ export default function ScnaWorkOrderTab({ onFlash }) {
         width: 145,
         renderCell: (row) => {
           const est = parseFloat(row["Estimated cost"]) || 0;
-          const act = parseFloat(row["Cost"]) || 0;
           return (
-            <div>
-              <div className="font-mono font-bold text-[var(--text-primary)]">
-                ${est.toFixed(2)}
-              </div>
-              <div className="text-[11px] font-mono text-[var(--text-muted)]">
-                Actual: ${act.toFixed(2)}
-              </div>
+            <div className="font-mono font-bold text-[var(--text-primary)]">
+              ${est.toFixed(2)}
             </div>
           );
         },
@@ -943,10 +972,12 @@ export default function ScnaWorkOrderTab({ onFlash }) {
                 type="button"
                 onClick={() => {
                   onFlash?.({
-                    type: "success",
-                    message: isJa
-                      ? `新規 ${duplicateUploadState.insertedCount} 件を登録し、重複 ${duplicateUploadState.duplicates.length} 件をスキップしました。`
-                      : `Uploaded ${duplicateUploadState.insertedCount} new work orders. Skipped ${duplicateUploadState.duplicates.length} duplicates.`,
+                    type: duplicateUploadState.errorSummary ? "warning" : "success",
+                    message:
+                      (isJa
+                        ? `新規 ${duplicateUploadState.insertedCount} 件を登録し、重複 ${duplicateUploadState.duplicates.length} 件をスキップしました。`
+                        : `Uploaded ${duplicateUploadState.insertedCount} new work orders. Skipped ${duplicateUploadState.duplicates.length} duplicates.`) +
+                      (duplicateUploadState.errorSummary || ""),
                   });
                   setDuplicateUploadState(null);
                   setRefreshNonce((n) => n + 1);

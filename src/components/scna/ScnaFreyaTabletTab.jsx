@@ -165,10 +165,14 @@ export default function ScnaFreyaTabletTab({ onFlash }) {
       (sum, item) => sum + (parseInt(item.Total_NG, 10) || 0),
       0
     );
+    // Only records with a numeric cycle time count toward the average (legacy parity)
+    const cycleTimeValues = rows
+      .map((item) => parseFloat(item.Cycle_Time))
+      .filter((value) => !Number.isNaN(value));
     const avgCycleTime =
-      totalRecords > 0
-        ? rows.reduce((sum, item) => sum + (parseFloat(item.Cycle_Time) || 0), 0) /
-          totalRecords
+      cycleTimeValues.length > 0
+        ? cycleTimeValues.reduce((sum, value) => sum + value, 0) /
+          cycleTimeValues.length
         : 0;
 
     return {
@@ -334,7 +338,7 @@ export default function ScnaFreyaTabletTab({ onFlash }) {
         renderCell: (row) => (
           <div>
             <div className="font-mono font-bold text-[var(--text-primary)]">
-              {Number(row.Total || 0).toLocaleString()}
+              {Number(row.Total || row.Process_Quantity || 0).toLocaleString()}
             </div>
             <div className="text-[11px] font-mono text-[var(--text-muted)]">
               Made: {Number(row.Process_Quantity || 0).toLocaleString()}
@@ -602,7 +606,7 @@ export default function ScnaFreyaTabletTab({ onFlash }) {
           variant="freya"
           icon="timer"
           label={isJa ? "平均サイクルタイム (Avg Cycle Time)" : "Avg Cycle Time"}
-          value={`${stats.avgCycleTime.toFixed(1)}s`}
+          value={`${stats.avgCycleTime.toFixed(2)}s`}
           subtitle={isJa ? "1サイクルあたり平均秒数" : "Average seconds per cycle"}
           accent="amber"
           loading={loading}

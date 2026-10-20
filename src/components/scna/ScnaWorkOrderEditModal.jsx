@@ -5,35 +5,34 @@ import { fetchWorkOrderById, updateWorkOrder } from "../../services/scnaApi";
 import { readStoredAuthUser } from "../../utils/auth";
 import {
   formatWorkOrderDateInput,
-  getWorkOrderFinishedGoods,
-  getWorkOrderMaterialLoading,
+  formatWorkOrderDateTime,
+  parsePercentageValue,
 } from "../../utils/scna";
 
+// Field set mirrors SCNAWorkOrderDB documents (and legacy scnaWorkOrder.js edit form).
 function buildInitialForm(wo = {}) {
+  const material = wo["Material loading (%)"] ?? wo["Material loading %"];
+  const finished = wo["Finished goods note (%)"] ?? wo["Finished goods note %"];
   return {
+    Number: wo.Number || "",
     Status: wo.Status || "Entered",
     "Customer-Custom fields": wo["Customer-Custom fields"] || "",
     "P_SKU-Custom fields": wo["P_SKU-Custom fields"] || "",
     "Assign to-Custom fields": wo["Assign to-Custom fields"] || "",
     Owner: wo.Owner || "",
-    Deadline: formatWorkOrderDateInput(wo["Deadline"]),
-    Date: wo["Date"] || "",
-    "Material loading %": getWorkOrderMaterialLoading(wo) === "0%" && !wo["Material loading %"] && !wo["Material loading (%)"]
-      ? ""
-      : String(wo["Material loading %"] ?? wo["Material loading (%)"] ?? ""),
-    "Finished goods note %": getWorkOrderFinishedGoods(wo) === "0%" && !wo["Finished goods note %"] && !wo["Finished goods note (%)"]
-      ? ""
-      : String(wo["Finished goods note %"] ?? wo["Finished goods note (%)"] ?? ""),
+    Deadline: formatWorkOrderDateInput(wo.Deadline),
+    "Material loading (%)": material == null ? "0" : String(parsePercentageValue(material)),
+    "Finished goods note (%)": finished == null ? "0" : String(parsePercentageValue(finished)),
     "Quantity status": wo["Quantity status"] || "",
     "Time track": wo["Time track"] || "",
     "Estimated cost": wo["Estimated cost"] ?? "",
-    Cost: wo["Cost"] ?? "",
-    "Production Status-Custom fields": wo["Production Status-Custom fields"] || "",
-    "Pick List Status": wo["Pick List Status"] || "",
-    "Order Type-Custom fields": wo["Order Type-Custom fields"] || "",
-    "Same Day Delivery-Custom fields": wo["Same Day Delivery-Custom fields"] || "",
-    "Invoice number": wo["Invoice number"] || "",
   };
+}
+
+function clampPercent(value) {
+  const parsed = parseInt(value, 10);
+  if (Number.isNaN(parsed)) return 0;
+  return Math.min(100, Math.max(0, parsed));
 }
 
 export default function ScnaWorkOrderEditModal({
@@ -100,12 +99,12 @@ export default function ScnaWorkOrderEditModal({
 
   async function handleSubmit(e) {
     e.preventDefault();
-    if (!form["Customer-Custom fields"]?.trim() || !form["P_SKU-Custom fields"]?.trim()) {
+    if (!form.Number.trim()) {
       onFlash?.({
         type: "warning",
         message: isJa
-          ? "必須項目（ステータス・顧客・製品SKU）を入力してください。"
-          : "Customer and Product SKU are required fields.",
+          ? "ワークオーダー番号を入力してください。"
+          : "Work Order Number is required.",
       });
       return;
     }
@@ -113,11 +112,19 @@ export default function ScnaWorkOrderEditModal({
     setSaving(true);
     try {
       const updatedData = {
-        ...form,
-        "Estimated cost":
-          form["Estimated cost"] !== "" ? parseFloat(form["Estimated cost"]) : 0,
-        Cost: form.Cost !== "" ? parseFloat(form.Cost) : 0,
-        Deadline: form.Deadline ? new Date(form.Deadline).toISOString() : null,
+        Number: form.Number.trim(),
+        Status: form.Status,
+        "Customer-Custom fields": form["Customer-Custom fields"],
+        "P_SKU-Custom fields": form["P_SKU-Custom fields"],
+        "Assign to-Custom fields": form["Assign to-Custom fields"],
+        Owner: form.Owner,
+        "Estimated cost": parseFloat(form["Estimated cost"]) || 0,
+        // Same YYYY-MM-DD format the bulk upload endpoint stores
+        Deadline: form.Deadline || null,
+        "Material loading (%)": clampPercent(form["Material loading (%)"]),
+        "Finished goods note (%)": clampPercent(form["Finished goods note (%)"]),
+        "Quantity status": form["Quantity status"],
+        "Time track": form["Time track"],
       };
 
       const username =
@@ -173,8 +180,8 @@ export default function ScnaWorkOrderEditModal({
       }
       subtitle={
         isJa
-          ? "ステータス・担当者・納期・進捗率・コスト情報を更新します"
-          : "Update status, assignment, deadline, progress percentages, and financial metrics"
+          ? `作成日時: ${formatWorkOrderDateTime(workOrder["Date and time"])}`
+          : `Created: ${formatWorkOrderDateTime(workOrder["Date and time"])}`
       }
       maxWidth="max-w-4xl"
       footer={
@@ -220,21 +227,21 @@ export default function ScnaWorkOrderEditModal({
             </h4>
 
             <div>
-              <label className={labelClass}>Work Order Number</label>
+              <label className={labelClass}>Work Order Number *</label>
               <input
                 type="text"
-                value={workOrder.Number || ""}
-                disabled
-                className="h-9 w-full rounded-[6px] border border-[var(--border)] bg-[var(--surface-hover)] px-3 text-xs font-mono text-[var(--text-muted)] cursor-not-allowed"
+                value={form.Number}
+                onChange={(e) => updateField("Number", e.target.value)}
+                required
+                className={`${inputClass} font-mono`}
               />
             </div>
 
             <div>
-              <label className={labelClass}>Status *</label>
+              <label className={labelClass}>Status</label>
               <select
                 value={form.Status}
                 onChange={(e) => updateField("Status", e.target.value)}
-                required
                 className={inputClass}
               >
                 <option value="Entered">Entered</option>
@@ -245,27 +252,25 @@ export default function ScnaWorkOrderEditModal({
             </div>
 
             <div>
-              <label className={labelClass}>Customer *</label>
+              <label className={labelClass}>Customer</label>
               <input
                 type="text"
                 value={form["Customer-Custom fields"]}
                 onChange={(e) =>
                   updateField("Customer-Custom fields", e.target.value)
                 }
-                required
                 className={inputClass}
               />
             </div>
 
             <div>
-              <label className={labelClass}>Product SKU *</label>
+              <label className={labelClass}>Product SKU</label>
               <input
                 type="text"
                 value={form["P_SKU-Custom fields"]}
                 onChange={(e) =>
                   updateField("P_SKU-Custom fields", e.target.value)
                 }
-                required
                 className={inputClass}
               />
             </div>
@@ -297,83 +302,22 @@ export default function ScnaWorkOrderEditModal({
                 className={inputClass}
               />
             </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div>
-                <label className={labelClass}>Deadline</label>
-                <input
-                  type="date"
-                  value={form.Deadline}
-                  onChange={(e) => updateField("Deadline", e.target.value)}
-                  className={inputClass}
-                />
-              </div>
-
-              <div>
-                <label className={labelClass}>Created Date</label>
-                <input
-                  type="text"
-                  value={form.Date}
-                  onChange={(e) => updateField("Date", e.target.value)}
-                  placeholder="MM/DD/YYYY or YYYY-MM-DD"
-                  className={inputClass}
-                />
-              </div>
-            </div>
           </div>
 
           {/* Progress & Financial */}
           <div className="space-y-3.5">
             <h4 className="text-xs font-semibold uppercase tracking-wider text-purple-600 dark:text-purple-400 border-b border-[var(--border)] pb-2">
               {isJa
-                ? "進捗・コスト (Progress & Financial)"
-                : "Progress & Financial"}
+                ? "納期・進捗・コスト (Schedule, Progress & Cost)"
+                : "Schedule, Progress & Cost"}
             </h4>
 
             <div>
-              <label className={labelClass}>Material Loading %</label>
+              <label className={labelClass}>Deadline</label>
               <input
-                type="text"
-                value={form["Material loading %"]}
-                onChange={(e) =>
-                  updateField("Material loading %", e.target.value)
-                }
-                placeholder="e.g., 75%"
-                className={inputClass}
-              />
-            </div>
-
-            <div>
-              <label className={labelClass}>Finished Goods Note %</label>
-              <input
-                type="text"
-                value={form["Finished goods note %"]}
-                onChange={(e) =>
-                  updateField("Finished goods note %", e.target.value)
-                }
-                placeholder="e.g., 50%"
-                className={inputClass}
-              />
-            </div>
-
-            <div>
-              <label className={labelClass}>Quantity Status</label>
-              <input
-                type="text"
-                value={form["Quantity status"]}
-                onChange={(e) => updateField("Quantity status", e.target.value)}
-                placeholder="e.g., 100 / 200"
-                className={inputClass}
-              />
-            </div>
-
-            <div>
-              <label className={labelClass}>Time Track</label>
-              <input
-                type="text"
-                value={form["Time track"]}
-                onChange={(e) => updateField("Time track", e.target.value)}
-                placeholder="e.g., 02:30:00"
+                type="date"
+                value={form.Deadline}
+                onChange={(e) => updateField("Deadline", e.target.value)}
                 className={inputClass}
               />
             </div>
@@ -389,82 +333,54 @@ export default function ScnaWorkOrderEditModal({
               />
             </div>
 
-            <div>
-              <label className={labelClass}>Actual Cost ($)</label>
-              <input
-                type="number"
-                step="0.01"
-                value={form.Cost}
-                onChange={(e) => updateField("Cost", e.target.value)}
-                className={inputClass}
-              />
-            </div>
-          </div>
-        </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className={labelClass}>Material Loading (%)</label>
+                <input
+                  type="number"
+                  min="0"
+                  max="100"
+                  value={form["Material loading (%)"]}
+                  onChange={(e) =>
+                    updateField("Material loading (%)", e.target.value)
+                  }
+                  className={inputClass}
+                />
+              </div>
 
-        {/* Additional Fields */}
-        <div className="pt-2 border-t border-[var(--border)]">
-          <h4 className="text-xs font-semibold uppercase tracking-wider text-[var(--text-secondary)] mb-3.5">
-            {isJa ? "追加フィールド (Additional Fields)" : "Additional Fields"}
-          </h4>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
-            <div>
-              <label className={labelClass}>Production Status</label>
-              <input
-                type="text"
-                value={form["Production Status-Custom fields"]}
-                onChange={(e) =>
-                  updateField("Production Status-Custom fields", e.target.value)
-                }
-                className={inputClass}
-              />
-            </div>
-
-            <div>
-              <label className={labelClass}>Pick List Status</label>
-              <input
-                type="text"
-                value={form["Pick List Status"]}
-                onChange={(e) =>
-                  updateField("Pick List Status", e.target.value)
-                }
-                className={inputClass}
-              />
+              <div>
+                <label className={labelClass}>Finished Goods Note (%)</label>
+                <input
+                  type="number"
+                  min="0"
+                  max="100"
+                  value={form["Finished goods note (%)"]}
+                  onChange={(e) =>
+                    updateField("Finished goods note (%)", e.target.value)
+                  }
+                  className={inputClass}
+                />
+              </div>
             </div>
 
             <div>
-              <label className={labelClass}>Order Type</label>
+              <label className={labelClass}>Quantity Status</label>
               <input
                 type="text"
-                value={form["Order Type-Custom fields"]}
-                onChange={(e) =>
-                  updateField("Order Type-Custom fields", e.target.value)
-                }
+                value={form["Quantity status"]}
+                onChange={(e) => updateField("Quantity status", e.target.value)}
+                placeholder="e.g., Available quantity"
                 className={inputClass}
               />
             </div>
 
             <div>
-              <label className={labelClass}>Same Day Delivery</label>
-              <select
-                value={form["Same Day Delivery-Custom fields"]}
-                onChange={(e) =>
-                  updateField("Same Day Delivery-Custom fields", e.target.value)
-                }
-                className={inputClass}
-              >
-                <option value="">Not Set</option>
-                <option value="Yes">Yes</option>
-                <option value="No">No</option>
-              </select>
-            </div>
-
-            <div>
-              <label className={labelClass}>Invoice Number</label>
+              <label className={labelClass}>Time Track</label>
               <input
                 type="text"
-                value={form["Invoice number"]}
-                onChange={(e) => updateField("Invoice number", e.target.value)}
+                value={form["Time track"]}
+                onChange={(e) => updateField("Time track", e.target.value)}
+                placeholder="e.g., Assigned"
                 className={inputClass}
               />
             </div>
@@ -474,4 +390,3 @@ export default function ScnaWorkOrderEditModal({
     </ModalShell>
   );
 }
-

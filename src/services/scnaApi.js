@@ -66,12 +66,12 @@ export async function fetchWorkOrders({
   filters = {},
   page = 1,
   limit = 10,
-  sort = { column: "Date", direction: -1 },
+  sort = { column: "Date and time", direction: -1 },
 } = {}) {
   const statusVal = filters.status || filters.Status || "";
   const customerVal = filters.customer || filters["Customer-Custom fields"] || "";
   const assignToVal = filters.assignTo || filters["Assign to-Custom fields"] || "";
-  const sortField = sort.column || sort.field || "Date";
+  const sortField = sort.column || sort.field || "Date and time";
   const sortDirNumeric =
     sort.direction === "asc" || sort.direction === 1 ? 1 : -1;
 

@@ -4,7 +4,7 @@ import StatusChip from "../StatusChip";
 import { useLanguage } from "../../contexts/LanguageContext";
 import { fetchWorkOrderById } from "../../services/scnaApi";
 import {
-  formatWorkOrderDate,
+  formatWorkOrderDateTime,
   getWorkOrderDeadlineMeta,
   getWorkOrderFinishedGoods,
   getWorkOrderMaterialLoading,
@@ -66,8 +66,6 @@ export default function ScnaWorkOrderDetailModal({
   );
 
   const estimatedCost = parseFloat(workOrder["Estimated cost"]) || 0;
-  const actualCost = parseFloat(workOrder["Cost"]) || 0;
-  const costVariance = actualCost - estimatedCost;
 
   const hasAdditionalDetails = Boolean(
     workOrder["Production Status-Custom fields"] ||
@@ -167,10 +165,10 @@ export default function ScnaWorkOrderDetailModal({
               </div>
               <div className="flex items-center justify-between gap-2 border-b border-[var(--border)]/50 pb-1.5">
                 <span className="font-medium text-[var(--text-muted)]">
-                  Created Date:
+                  Created Date & Time:
                 </span>
                 <span className="font-mono text-[var(--text-primary)]">
-                  {formatWorkOrderDate(workOrder["Date"])}
+                  {formatWorkOrderDateTime(workOrder["Date and time"])}
                 </span>
               </div>
               <div className="flex items-center justify-between gap-2 pb-0.5">
@@ -310,24 +308,18 @@ export default function ScnaWorkOrderDetailModal({
             </div>
             <div className="rounded-[6px] border border-[var(--border)] bg-[var(--surface)] p-3 text-center">
               <div className="text-[11px] font-medium text-[var(--text-muted)]">
-                Actual Cost
+                Last Updated
               </div>
-              <div className="mt-1 text-lg font-bold font-mono text-blue-600 dark:text-blue-400">
-                ${actualCost.toFixed(2)}
+              <div className="mt-1 text-sm font-semibold font-mono text-[var(--text-primary)]">
+                {formatWorkOrderDateTime(workOrder["Last Updated"])}
               </div>
             </div>
             <div className="rounded-[6px] border border-[var(--border)] bg-[var(--surface)] p-3 text-center">
               <div className="text-[11px] font-medium text-[var(--text-muted)]">
-                Cost Variance
+                Last Updated By
               </div>
-              <div
-                className={`mt-1 text-lg font-bold font-mono ${
-                  costVariance > 0
-                    ? "text-rose-600 dark:text-rose-400"
-                    : "text-emerald-600 dark:text-emerald-400"
-                }`}
-              >
-                ${costVariance.toFixed(2)}
+              <div className="mt-1 text-sm font-semibold text-[var(--text-primary)]">
+                {workOrder["Last Updated By"] || workOrder["Created By"] || "N/A"}
               </div>
             </div>
           </div>

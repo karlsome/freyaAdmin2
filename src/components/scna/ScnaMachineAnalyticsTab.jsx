@@ -856,15 +856,17 @@ export default function ScnaMachineAnalyticsTab({ onFlash }) {
         onClose={() => setDetailRecord(null)}
       />
 
-      {/* Custom CSV Export Modal */}
-      <ScnaMachineExportModal
-        open={exportModalOpen}
-        onClose={() => setExportModalOpen(false)}
-        records={filteredExportRecords}
-        dateFrom={appliedDates.dateFrom}
-        dateTo={appliedDates.dateTo}
-        onFlash={onFlash}
-      />
+      {/* Custom CSV Export Modal (mounted per-open so columns reflect current data) */}
+      {exportModalOpen && (
+        <ScnaMachineExportModal
+          open={exportModalOpen}
+          onClose={() => setExportModalOpen(false)}
+          records={filteredExportRecords}
+          dateFrom={appliedDates.dateFrom}
+          dateTo={appliedDates.dateTo}
+          onFlash={onFlash}
+        />
+      )}
     </div>
   );
 }
