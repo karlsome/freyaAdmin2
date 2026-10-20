@@ -364,6 +364,7 @@ export default function TwinPanel({
       {has3D ? (
         <Suspense fallback={<div className="twin-loading"><div className="twin-spinner" /></div>}>
           <FactoryScene
+            factory={factory}
             machinesById={machinesById}
             selectedId={selectedId}
             onSelect={onSelect}

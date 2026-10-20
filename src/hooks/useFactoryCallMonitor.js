@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { BASE_URL } from "../services/factoryStatusApi";
 import { isDemoMode } from "../components/twin/twinDemo";
+import { normalizeFactoryMachineId } from "../data/factoryLayouts";
 
 const STALE_MS = 70_000;
 
@@ -97,6 +98,33 @@ const DEMO_INITIAL_CALLS = [
   },
 ];
 
+const DEMO_INITIAL_CALLS_SCNA = [
+  {
+    machine: "AOL-1",
+    leader: true,
+    stop: false,
+    box: false,
+    material: false,
+    since: Date.now() - 125_000,
+  },
+  {
+    machine: "SCNA-PSA",
+    leader: false,
+    stop: false,
+    box: false,
+    material: true,
+    zairyoSebanggo: "PSA-R04",
+    since: Date.now() - 68_000,
+  },
+];
+
+function defaultDemoCallsFor(factoryName) {
+  if (String(factoryName).toUpperCase().includes("SCNA")) {
+    return DEMO_INITIAL_CALLS_SCNA;
+  }
+  return DEMO_INITIAL_CALLS;
+}
+
 /**
  * Connects to the real-time factory Stop-Call & Machine State SSE stream (`/sse/factory/:factory`),
  * matching `factory-stopcall-tv.html` in the Kurachi repository.
@@ -104,7 +132,7 @@ const DEMO_INITIAL_CALLS = [
  */
 export function useFactoryCallMonitor(factoryName = "小瀬") {
   const [serverCalls, setServerCalls] = useState([]);
-  const [simulatedCalls, setSimulatedCalls] = useState(() => (isDemoMode() ? DEMO_INITIAL_CALLS : []));
+  const [simulatedCalls, setSimulatedCalls] = useState(() => (isDemoMode() ? defaultDemoCallsFor(factoryName) : []));
   const [liveMachines, setLiveMachines] = useState({});
   const [isConnected, setIsConnected] = useState(false);
   const [now, setNow] = useState(() => Date.now());
@@ -167,11 +195,13 @@ export function useFactoryCallMonitor(factoryName = "小瀬") {
           const next = { ...prev };
           data.machines.forEach((m) => {
             if (!m || !m.equipment) return;
+            const normEq = normalizeFactoryMachineId(m.equipment, factoryName);
             next[m.equipment] = { ...m };
-            // If equipment is grouped (e.g. "OZNC03,OZNC05"), also index by constituent
+            next[normEq] = { ...m, equipment: normEq };
+            // If equipment is grouped (e.g. "OZNC03,OZNC05" or "AOL-2,AOL-3"), also index by constituent
             if (m.equipment.includes(",")) {
               m.equipment.split(",").forEach((part) => {
-                const clean = part.trim();
+                const clean = normalizeFactoryMachineId(part.trim(), factoryName);
                 if (clean && !next[clean]) next[clean] = { ...m, equipment: clean };
               });
             }
@@ -246,10 +276,16 @@ const EMPTY_CALLS_MAP = {};
     if (serverCalls.length === 0 && simulatedCalls.length === 0) return EMPTY_CALLS;
     const mergedMap = new Map();
     serverCalls.forEach((c) => {
-      if (c && c.machine) mergedMap.set(c.machine, { ...c, isSimulated: false });
+      if (c && c.machine) {
+        const machine = normalizeFactoryMachineId(c.machine, factoryName);
+        mergedMap.set(machine, { ...c, machine, isSimulated: false });
+      }
     });
     simulatedCalls.forEach((c) => {
-      if (c && c.machine) mergedMap.set(c.machine, { ...c, isSimulated: true });
+      if (c && c.machine) {
+        const machine = normalizeFactoryMachineId(c.machine, factoryName);
+        mergedMap.set(machine, { ...c, machine, isSimulated: true });
+      }
     });
 
     const sorted = Array.from(mergedMap.values())
@@ -325,13 +361,14 @@ const EMPTY_CALLS_MAP = {};
   }, []);
 
   const loadDemoPreset = useCallback(() => {
+    const preset = defaultDemoCallsFor(factoryName);
     setSimulatedCalls(
-      DEMO_INITIAL_CALLS.map((c, idx) => ({
+      preset.map((c, idx) => ({
         ...c,
         since: Date.now() - (120 - idx * 35) * 1000,
       }))
     );
-  }, []);
+  }, [factoryName]);
 
   return {
     activeCalls,

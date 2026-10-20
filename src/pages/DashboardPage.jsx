@@ -9,7 +9,7 @@ import RecordDetailModal from "../components/RecordDetailModal";
 import AICopilotPanel from "../components/dashboard/AICopilotPanel";
 import AIShapeRenderer from "../components/dashboard/AIShapeRenderer";
 import MachineDrawer from "../components/twin/MachineDrawer";
-import { has3DLayout, machineIdsFor } from "../data/factoryLayouts";
+import { getFactory3DLayout, has3DLayout, machineIdsFor, normalizeFactoryMachineId } from "../data/factoryLayouts";
 import { useSelectedFactory, useTwinFactories } from "../hooks/useTwinFactories";
 import { useAlertChime } from "../hooks/useAlertChime";
 import FactoryPicker from "../components/panels/FactoryPicker";
@@ -79,7 +79,7 @@ function FactoryDashboard({ factory, factories, onFactoryChange }) {
   const navigate = useNavigate();
   const { data: liveData, loading, error, lastRefresh, refresh } = useDigitalTwin(factory);
   const demo = isDemoMode();
-  const data = useMemo(() => (demo ? applyDemo(liveData) : liveData), [demo, liveData]);
+  const data = useMemo(() => (demo ? applyDemo(liveData, factory) : liveData), [demo, liveData, factory]);
   const has3D = has3DLayout(factory);
 
   const { mode, slots, allSlots, setMode, setSlotWidget, applySlots, resetMode } = useDashboardLayout(factory);
@@ -96,16 +96,61 @@ function FactoryDashboard({ factory, factories, onFactoryChange }) {
 
   const machinesById = useMemo(() => {
     const map = {};
-    (data?.machines || []).forEach((m) => { map[m.id] = m; });
+    const layout3d = has3D ? getFactory3DLayout(factory) : null;
+    const defaultSpecs = layout3d?.defaultSpecs || {};
+    const defaultPairs = new Map();
+    (layout3d?.pairs || []).forEach(([a, b]) => {
+      defaultPairs.set(a, b);
+      defaultPairs.set(b, a);
+    });
+
+    (data?.machines || []).forEach((m) => {
+      const canonicalId = normalizeFactoryMachineId(m.id, factory);
+      const spec = defaultSpecs[canonicalId] || {};
+      const defaultPartner = defaultPairs.get(canonicalId);
+      const normalizedPair = m.pair
+        ? { ...m.pair, partner: normalizeFactoryMachineId(m.pair.partner, factory) }
+        : defaultPartner
+          ? { partner: defaultPartner, together: false }
+          : null;
+      const merged = {
+        ...spec,
+        ...m,
+        id: canonicalId,
+        pair: normalizedPair,
+      };
+      map[m.id] = merged;
+      map[canonicalId] = merged;
+    });
+
+    // Seed fallback entries for 3D layout machines not yet present in backend payload
+    if (layout3d) {
+      const allIds = machineIdsFor(factory);
+      allIds.forEach((id) => {
+        if (!map[id]) {
+          const spec = defaultSpecs[id] || {};
+          const partner = defaultPairs.get(id);
+          map[id] = {
+            id,
+            status: "off",
+            todayCycles: 0,
+            pieces: null,
+            ...spec,
+            pair: partner ? { partner, together: false } : null,
+          };
+        }
+      });
+    }
+
     return map;
-  }, [data]);
+  }, [data, factory, has3D]);
 
   // 小瀬: the fixed floor map. Other factories: machines used in the last 30 days.
   const machineIds = useMemo(() => machineIdsFor(factory, data?.machines || []), [factory, data]);
-  const floorMachines = useMemo(() => {
-    const ids = new Set(machineIds);
-    return (data?.machines || []).filter((m) => ids.has(m.id));
-  }, [machineIds, data]);
+  const floorMachines = useMemo(
+    () => machineIds.map((id) => machinesById[id]).filter(Boolean),
+    [machineIds, machinesById]
+  );
 
   const units = useMemo(() => buildUnits(machinesById, machineIds), [machinesById, machineIds]);
   const attention = useMemo(() => attentionUnits(units), [units]);

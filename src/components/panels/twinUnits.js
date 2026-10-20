@@ -2,8 +2,8 @@ import { KOSE_MACHINE_IDS } from "../../data/factoryLayouts/kose";
 import { ATTENTION_STATUSES, STATUS_ORDER, effectiveStatus } from "../twin/twinTheme";
 
 const naturalSort = (ids) => [...ids].sort((a, b) => {
-  const aNc = a.startsWith("OZNC");
-  const bNc = b.startsWith("OZNC");
+  const aNc = a.startsWith("OZNC") || a.startsWith("AOL-");
+  const bNc = b.startsWith("OZNC") || b.startsWith("AOL-");
   if (aNc !== bNc) return aNc ? -1 : 1;
   return a.localeCompare(b, "ja", { numeric: true });
 });

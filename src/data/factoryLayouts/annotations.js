@@ -1,4 +1,5 @@
 import { KOSE_DEFAULT_SENSORS, KOSE_DEFAULT_CAMERAS, KOSE_DEFAULT_MONITOR } from "./kose";
+import { SCNA_DEFAULT_SENSORS, SCNA_DEFAULT_CAMERAS, SCNA_DEFAULT_MONITOR } from "./scna";
 import { fetchTwinAnnotations, saveTwinAnnotations, resetTwinAnnotations } from "../../services/api";
 
 const STORAGE_PREFIX = "freya_twin_annotations_";
@@ -64,6 +65,13 @@ function getDefaultAnnotations(factoryName) {
       callMonitor: { ...KOSE_DEFAULT_MONITOR },
     };
   }
+  if (factoryName.toUpperCase().includes("SCNA")) {
+    return {
+      sensors: [...SCNA_DEFAULT_SENSORS],
+      cameras: [...SCNA_DEFAULT_CAMERAS],
+      callMonitor: { ...SCNA_DEFAULT_MONITOR },
+    };
+  }
   return { sensors: [], cameras: [], callMonitor: null };
 }
 
@@ -114,7 +122,7 @@ export async function syncFactoryAnnotations(factoryName) {
 
   try {
     const cloud = await fetchTwinAnnotations(factoryName);
-    if (cloud && (cloud.sensors?.length > 0 || cloud.cameras?.length > 0)) {
+    if (cloud && (cloud.sensors?.length > 0 || cloud.cameras?.length > 0 || cloud.callMonitor)) {
       const payload = {
         sensors: sanitizeSensors(cloud.sensors, defaults.sensors),
         cameras: sanitizeCameras(cloud.cameras, defaults.cameras),

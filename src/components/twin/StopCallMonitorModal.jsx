@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { CALL_THEMES, formatCallWait } from "../../hooks/useFactoryCallMonitor";
 import { KOSE_MACHINE_IDS } from "../../data/factoryLayouts/kose";
+import { SCNA_MACHINE_IDS, SCNA_TV_GRID } from "../../data/factoryLayouts/scna";
 import { effectiveStatus } from "./twinTheme";
 
 // Exact 6 rows x 5 columns grid layout from Kurachi/factory-stopcall-tv.html
@@ -36,8 +37,12 @@ export default function StopCallMonitorModal({
   onSelectMachine,
   onClose,
 }) {
+  const isScna = String(factory).toUpperCase().includes("SCNA");
+  const factoryMachineIds = isScna ? SCNA_MACHINE_IDS : KOSE_MACHINE_IDS;
+  const factoryTvGrid = isScna ? SCNA_TV_GRID : KOSE_TV_GRID;
+
   const [tab, setTab] = useState("board"); // "board" | "simulator" | "iframe"
-  const [simMachine, setSimMachine] = useState("OZNC01");
+  const [simMachine, setSimMachine] = useState(() => factoryMachineIds[0] || "OZNC01");
   const [simMatSeb, setSimMatSeb] = useState("7GD-ROLL");
 
   const tvUrl = `https://karlsome.github.io/Kurachi/factory-stopcall-tv.html?filter=${encodeURIComponent(factory)}`;
@@ -133,7 +138,7 @@ export default function StopCallMonitorModal({
                 onChange={(e) => setSimMachine(e.target.value)}
                 className="twin-tv-simbar__select"
               >
-                {KOSE_MACHINE_IDS.map((id) => (
+                {factoryMachineIds.map((id) => (
                   <option key={id} value={id}>
                     {id}
                   </option>
@@ -194,7 +199,7 @@ export default function StopCallMonitorModal({
         {/* Body Content */}
         {tab === "board" && (
           <div className="twin-tv-board">
-            {KOSE_TV_GRID.map((cell, idx) => {
+            {factoryTvGrid.map((cell, idx) => {
               if (cell === "GAP") {
                 return <div key={`gap-${idx}`} className="twin-tv-board__gap" />;
               }
@@ -323,7 +328,7 @@ export default function StopCallMonitorModal({
             </div>
 
             <div className="twin-tv-simgrid__cards">
-              {KOSE_MACHINE_IDS.map((mId) => {
+              {factoryMachineIds.map((mId) => {
                 const c = callsByMachine[mId];
                 return (
                   <div key={mId} className={`twin-tv-simcard ${c ? "is-active" : ""}`}>

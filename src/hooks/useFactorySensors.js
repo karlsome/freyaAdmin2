@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { calcWBGT, fetchIoTDeviceNames, fetchSensorData } from "../services/api";
 import { getFactoryAnnotations } from "../data/factoryLayouts/annotations";
-import { KOSE_DEFAULT_SENSORS, getMachinePosition } from "../data/factoryLayouts/kose";
+import { KOSE_DEFAULT_SENSORS } from "../data/factoryLayouts/kose";
+import { getMachinePositionForFactory } from "../data/factoryLayouts";
 import { isDemoMode } from "../components/twin/twinDemo";
 
 const SENSOR_POLL_MS = 15_000;
@@ -38,11 +39,11 @@ function evaluateHeatStress(temp, humidity) {
  * Infers a floor coordinate [x, z] from a sensor's real name (e.g. "Sensor 1 - OZNC11" or "Sensor 2 - 入口")
  * if the sensor doesn't yet have a saved 3D position.
  */
-function inferPositionFromName(name = "", idx = 0) {
+function inferPositionFromName(name = "", idx = 0, factoryName = "小瀬") {
   const upper = String(name).toUpperCase();
-  const machineMatch = upper.match(/OZNC\d{2}|OZMANAS/);
+  const machineMatch = upper.match(/OZNC\d{2}|OZMANAS|AOL-\d|SCNA-MANAS|SCNA-PSA|SRS\s?\d/);
   if (machineMatch) {
-    const mPos = getMachinePosition(machineMatch[0]);
+    const mPos = getMachinePositionForFactory(machineMatch[0], factoryName);
     if (mPos) {
       const offsetX = mPos[0] < 0 ? 1.1 : -1.1;
       return [Number((mPos[0] + offsetX).toFixed(2)), Number(mPos[1].toFixed(2))];
@@ -82,7 +83,8 @@ export function useFactorySensors(factoryName) {
       liveSensors.forEach((ls) => {
         if (ls.deviceId && !LEGACY_FAKE_IDS.has(ls.deviceId)) deviceIdSet.add(ls.deviceId);
       });
-      if (deviceIdSet.size === 0) {
+      const isKose = !factoryName || factoryName.includes("小瀬") || String(factoryName).toLowerCase().includes("oze");
+      if (deviceIdSet.size === 0 && isKose) {
         KOSE_DEFAULT_SENSORS.forEach((d) => {
           if (d.deviceId) deviceIdSet.add(d.deviceId);
         });
@@ -113,7 +115,7 @@ export function useFactorySensors(factoryName) {
             ? savedOverride.position
             : Array.isArray(defaultDef.pos)
               ? defaultDef.pos
-              : inferPositionFromName(realName, idx);
+              : inferPositionFromName(realName, idx, factoryName);
 
         let temp = live?.temperature ?? defaultDef.defaultTemp ?? 20.0;
         let humidity = live?.humidity ?? defaultDef.defaultHumidity ?? 40.0;

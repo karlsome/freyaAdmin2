@@ -22,7 +22,7 @@ const COLORS = {
  * red material bed extending out the front, side control box and hydraulic unit.
  * Bed stripes scroll while running.
  */
-const ManasMachine = memo(function ManasMachine({ id, position, size, status, selected, cycle, call, onSelect }) {
+const ManasMachine = memo(function ManasMachine({ id, position, size, modelScale = 1, status, selected, cycle, call, onSelect }) {
   const [w, d] = size;
   const running = status === "running";
   const groupRef = useRef();
@@ -93,6 +93,7 @@ const ManasMachine = memo(function ManasMachine({ id, position, size, status, se
 
       <group
         ref={groupRef}
+        scale={modelScale}
         onClick={(e) => { e.stopPropagation(); onSelect?.(id); }}
         onPointerOver={handlePointer(true)}
         onPointerOut={handlePointer(false)}

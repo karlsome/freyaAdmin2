@@ -137,7 +137,10 @@ export const KOSE_MACHINE_IDS = [
 
 /** Table length (x) in world units for a given mm table size. */
 export function ncLengthFor(tableLength) {
-  return Number(tableLength) >= 2000 ? 3.4 : 3.0;
+  const len = Number(tableLength) || 0;
+  if (len >= 2400) return 4.2;
+  if (len >= 2000) return 3.4;
+  return 3.0;
 }
 export const NC_DEPTH = 1.3;
 

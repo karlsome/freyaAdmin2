@@ -197,8 +197,12 @@ html:not(.dark) .twin-badge__sebanggo {
 .twin-zone-label .material-symbols-outlined { font-size: 12px; }
 .twin-zone-label--amber { color: #b45309; background: rgba(254, 243, 199, 0.82); }
 .twin-zone-label--teal { color: #0f766e; background: rgba(204, 251, 241, 0.85); }
+.twin-zone-label--blue { color: #1d4ed8; background: rgba(219, 234, 254, 0.88); }
+.twin-zone-label--pink { color: #ffffff; background: rgba(236, 72, 153, 0.92); box-shadow: 0 2px 8px rgba(236, 72, 153, 0.35); }
 .dark .twin-zone-label--amber { color: #fcd34d; background: rgba(120, 53, 15, 0.55); }
 .dark .twin-zone-label--teal { color: #5eead4; background: rgba(19, 78, 74, 0.6); }
+.dark .twin-zone-label--blue { color: #93c5fd; background: rgba(30, 58, 138, 0.62); }
+.dark .twin-zone-label--pink { color: #fce7f3; background: rgba(219, 39, 119, 0.85); }
 
 /* ── Overlays on the 3D stage ── */
 .twin-overlay {

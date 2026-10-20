@@ -17,6 +17,7 @@ const MAX_TV_HEIGHT = 7.5;
  */
 const StopCallMonitor3D = memo(function StopCallMonitor3D({
   monitor,
+  machineIds = KOSE_MACHINE_IDS,
   activeCalls = [],
   machinesById = {},
   isConnected = false,
@@ -315,7 +316,7 @@ const StopCallMonitor3D = memo(function StopCallMonitor3D({
           ) : (
             <div className="twin-tv-card__clear">
               <div className="twin-tv-card__mini-grid">
-                {KOSE_MACHINE_IDS.map((mId) => {
+                {machineIds.map((mId) => {
                   const st = effectiveStatus(machinesById[mId]);
                   const dotColor =
                     st === "running"

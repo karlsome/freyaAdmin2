@@ -1,19 +1,25 @@
 import { useEffect, useState } from "react";
 import { fetchTwinFactories } from "../services/digitalTwinApi";
-import { DEFAULT_FACTORY, has3DLayout } from "../data/factoryLayouts";
+import { DEFAULT_3D_FACTORIES, DEFAULT_FACTORY, has3DLayout } from "../data/factoryLayouts";
 
 const STORAGE_KEY = "freya.dashboard.factory.v1";
 
-/** List of factories for the dashboard picker. Falls back to the default factory if the call fails. */
+/** List of factories for the dashboard picker. Guarantees 3D factories (小瀬, SCNA) are always selectable. */
 export function useTwinFactories() {
-  const [factories, setFactories] = useState([{ factory: DEFAULT_FACTORY, hasCycleSensors: true }]);
+  const [factories, setFactories] = useState(DEFAULT_3D_FACTORIES);
 
   useEffect(() => {
     let alive = true;
     fetchTwinFactories()
       .then((list) => {
         if (!alive || !list.length) return;
-        setFactories(list.map((f) => ({ ...f, has3D: has3DLayout(f.factory) })));
+        const map = new Map();
+        DEFAULT_3D_FACTORIES.forEach((f) => map.set(f.factory, { ...f, has3D: has3DLayout(f.factory) }));
+        list.forEach((f) => {
+          const prev = map.get(f.factory) || {};
+          map.set(f.factory, { ...prev, ...f, has3D: has3DLayout(f.factory) });
+        });
+        setFactories(Array.from(map.values()));
       })
       .catch(() => { /* keep the fallback list */ });
     return () => { alive = false; };

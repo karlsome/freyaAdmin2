@@ -10,6 +10,18 @@ const DEMO_STATUS = {
 };
 const DEMO_PAIRS = { OZNC04: "OZNC06", OZNC08: "OZNC10", OZNC09: "OZNC07" };
 
+const SCNA_DEMO_STATUS = {
+  "AOL-1": "running",
+  "AOL-4": "running",
+  "AOL-5": "idle",
+  "SCNA-MANAS": "running",
+  "SCNA-PSA": "running",
+  "SRS 1": "running",
+  "SRS 2": "break",
+};
+// Demonstrates AOL-2 & AOL-3 running as a pair while AOL-4 & AOL-5 run solo (and AOL-1 is always solo)
+const SCNA_DEMO_PAIRS = { "AOL-2": "AOL-3" };
+
 function makeDemoRuns(id, status, i) {
   if (status === "off") {
     return {
@@ -146,17 +158,34 @@ export function isDemoMode() {
   return typeof window !== "undefined" && new URLSearchParams(window.location.search).get("demo") === "1";
 }
 
-export function applyDemo(data) {
-  if (!data) return data;
-  if (data.factory && data.factory !== "小瀬") return applyGenericDemo(data);
-  const byId = Object.fromEntries((data.machines || []).map((m) => [m.id, { ...m }]));
+export function applyDemo(data, factoryOverride) {
+  if (!data && !factoryOverride) return data;
+  const baseData = data || { factory: factoryOverride, machines: [] };
+  const targetFactory = factoryOverride || baseData.factory || "小瀬";
+  const isScna = String(targetFactory).toUpperCase().includes("SCNA");
+  const isKose = targetFactory === "小瀬" || String(targetFactory).toLowerCase().includes("oze");
+  if (!isKose && !isScna) return applyGenericDemo(baseData);
+
+  const statusMap = isScna ? SCNA_DEMO_STATUS : DEMO_STATUS;
+  const pairsMap = isScna ? SCNA_DEMO_PAIRS : DEMO_PAIRS;
+
+  const byId = Object.fromEntries((baseData.machines || []).map((m) => [m.id, { ...m }]));
   const ensure = (id) => {
-    byId[id] = byId[id] || { id, status: "off", todayCycles: 0, pieces: null, pair: null };
+    byId[id] = byId[id] || {
+      id,
+      status: "off",
+      todayCycles: 0,
+      pieces: null,
+      pair: null,
+      hasCycleSensor: true,
+      tableLength: id === "AOL-1" ? 2500 : id.startsWith("AOL-") ? 1200 : undefined,
+      noOfHead: id.startsWith("AOL-") ? 1 : undefined,
+    };
     return byId[id];
   };
   const now = Date.now();
 
-  Object.entries(DEMO_STATUS).forEach(([id, status], i) => {
+  Object.entries(statusMap).forEach(([id, status], i) => {
     const m = ensure(id);
     const demoInfo = makeDemoRuns(id, status, i);
     const runsPieces = demoInfo.completedRuns.reduce((sum, r) => sum + r.pieces, 0);
@@ -176,12 +205,12 @@ export function applyDemo(data) {
     m.timeline = demoInfo.timeline;
     m.timelineSummary = demoInfo.timelineSummary;
 
-    if (m.pair && !DEMO_PAIRS[id] && !Object.values(DEMO_PAIRS).includes(id)) {
+    if (m.pair && !pairsMap[id] && !Object.values(pairsMap).includes(id)) {
       m.pair = { partner: m.pair.partner, together: false };
     }
   });
 
-  Object.entries(DEMO_PAIRS).forEach(([leadId, partnerId], i) => {
+  Object.entries(pairsMap).forEach(([leadId, partnerId], i) => {
     const lead = ensure(leadId);
     const partner = ensure(partnerId);
     const status = i === 1 ? "idle" : "running";
@@ -222,5 +251,11 @@ export function applyDemo(data) {
     partner.pair = { partner: leadId, ...shared };
   });
 
-  return { ...data, goal: data.goal || 17520, machines: Object.values(byId) };
+  // For SCNA solo pair-capable machines (AOL-4 & AOL-5), indicate their partner link while running solo
+  if (isScna && byId["AOL-4"] && byId["AOL-5"]) {
+    byId["AOL-4"].pair = { partner: "AOL-5", together: false };
+    byId["AOL-5"].pair = { partner: "AOL-4", together: false };
+  }
+
+  return { ...baseData, goal: baseData.goal || (isScna ? 8400 : 17520), machines: Object.values(byId) };
 }
