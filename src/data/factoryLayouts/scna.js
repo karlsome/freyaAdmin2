@@ -99,6 +99,18 @@ export const SCNA_LAYOUT = {
         labelJa: "ENTRANCE / EXIT 2 (出入口 2)",
       },
     ],
+    kensaTables: [
+      {
+        id: "kensa_1",
+        pos: [7.2, 3.35],
+        size: [1.3, 3.2],
+      },
+      {
+        id: "kensa_2",
+        pos: [7.2, -1.85],
+        size: [1.3, 3.2],
+      },
+    ],
   },
   // Fallback specs if setsubiDB has no data (from the floor plan labels)
   defaultSpecs: {

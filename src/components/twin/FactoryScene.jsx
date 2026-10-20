@@ -5,7 +5,7 @@ import { CameraControls, Edges, Grid } from "@react-three/drei";
 import { Html } from "./HtmlOverlay";
 import NcCutter from "./NcCutter";
 import ManasMachine from "./ManasMachine";
-import { PsaMachine, SrsMachine } from "./ScnaMachines";
+import { PsaMachine, SrsMachine, KensaTable } from "./ScnaMachines";
 import SensorMarker from "./SensorMarker";
 import CameraMarker from "./CameraMarker";
 import MachineCallEffect from "./MachineCallEffect";
@@ -232,22 +232,12 @@ const PalletZone = memo(function PalletZone({ pallet = KOSE_LAYOUT.pallet, isJa 
 /* ── SCNA Roll Storage Zone (top-left) ── */
 const RollStorageZone = memo(function RollStorageZone({ zone, isJa }) {
   if (!zone) return null;
-  const { pos, size } = zone;
+  const { pos } = zone;
   const rackXs = [-1.85, 1.85];
   const rollOffsets = [-0.85, 0, 0.85];
 
   return (
     <group position={[pos[0], 0, pos[1]]}>
-      <mesh position={[0, 0.006, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-        <planeGeometry args={size} />
-        <meshBasicMaterial color="#3b82f6" transparent opacity={0.16} depthWrite={false} />
-      </mesh>
-      <mesh position={[0, 0.8, 0]}>
-        <boxGeometry args={[size[0], 1.6, size[1]]} />
-        <meshStandardMaterial color="#60a5fa" transparent opacity={0.08} depthWrite={false} />
-        <Edges color="#3b82f6" />
-      </mesh>
-
       {/* Two 2-tier material roll storage racks */}
       {rackXs.map((rx, rIdx) => (
         <group key={rx} position={[rx, 0, 0]}>
@@ -597,11 +587,14 @@ function FactoryContents({
       {layout.room && <MeetingRoom room={layout.room} isJa={isJa} />}
       {layout.pallet && <PalletZone pallet={layout.pallet} isJa={isJa} />}
 
-      {/* SCNA decorative zones (ROLL STORAGE, OFFICE, ENTRANCE/EXIT 1 & 2) */}
+      {/* SCNA decorative zones (ROLL STORAGE, OFFICE, ENTRANCE/EXIT 1 & 2, KENSA TABLES) */}
       {layout.zones?.rollStorage && <RollStorageZone zone={layout.zones.rollStorage} isJa={isJa} />}
       {layout.zones?.office && <OfficeZone zone={layout.zones.office} isJa={isJa} />}
       {(layout.zones?.entrances || []).map((ent) => (
         <EntranceZone key={ent.id} entrance={ent} isJa={isJa} />
+      ))}
+      {(layout.zones?.kensaTables || []).map((kt) => (
+        <KensaTable key={kt.id} position={kt.pos} size={kt.size} />
       ))}
 
       {/* Pair links on floor (e.g. OZNC pairs in 小瀬, or AOL-2/3 and AOL-4/5 in SCNA) */}
@@ -746,7 +739,7 @@ function FactoryContents({
             position={srs.pos}
             width={srs.size[0] * 0.9}
             depth={srs.size[1] * 0.85}
-            baseHeight={1.85}
+            baseHeight={2.15}
           />
         );
       })}
@@ -889,7 +882,7 @@ function FactoryContents({
             key={`badge-${srs.id}`}
             machineId={srs.id}
             position={srs.pos}
-            height={call ? 2.25 : 1.55}
+            height={call ? 2.45 : 2.15}
             title={srs.title || srs.id}
             value={value}
             unit={unit}
