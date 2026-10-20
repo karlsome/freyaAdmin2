@@ -206,8 +206,6 @@ const DOOR_BAR_MAT = new THREE.MeshStandardMaterial({ color: "#94a3b8", roughnes
 const DOOR_EXIT_SIGN_MAT = new THREE.MeshStandardMaterial({ color: "#10b981", emissive: "#10b981", emissiveIntensity: 0.75, toneMapped: false });
 const DOOR_MAT_FLOOR = new THREE.MeshStandardMaterial({ color: "#334155", roughness: 0.9 });
 
-const OFFICE_DESK_GEO = new THREE.BoxGeometry(1.9, 0.06, 0.85);
-const OFFICE_LEG_GEO = new THREE.BoxGeometry(0.08, 0.42, 0.78);
 const OFFICE_MONITOR_GEO = new THREE.BoxGeometry(0.46, 0.28, 0.04);
 const OFFICE_MONITOR_MAT = new THREE.MeshStandardMaterial({ color: "#0f172a", emissive: "#38bdf8", emissiveIntensity: 0.25 });
 
@@ -327,44 +325,225 @@ const RollStorageZone = memo(function RollStorageZone({ zone, isJa }) {
   );
 });
 
-/* ── SCNA Office Zone (bottom-left) ── */
+/* ── SCNA 5-Room Office Complex (President/CEO Office, Leader Office, Office, Laboratory, Cafeteria) ── */
+const OFFICE_BASE_MAT = new THREE.MeshBasicMaterial({ color: "#0284c7", transparent: true, opacity: 0.14, depthWrite: false });
+const ROOM_PAD_MAT = new THREE.MeshBasicMaterial({ color: "#334155", transparent: true, opacity: 0.22, depthWrite: false });
+const ROOM_WALL_MAT = new THREE.MeshStandardMaterial({ color: "#94a3b8", transparent: true, opacity: 0.12, depthWrite: false });
+const EXEC_DESK_MAT = new THREE.MeshStandardMaterial({ color: "#92400e", roughness: 0.55 });
+const CAFE_TABLE_MAT = new THREE.MeshStandardMaterial({ color: "#f8fafc", roughness: 0.45 });
+const CAFE_COUNTER_MAT = new THREE.MeshStandardMaterial({ color: "#475569", roughness: 0.55 });
+const COFFEE_BODY_MAT = new THREE.MeshStandardMaterial({ color: "#0f172a", roughness: 0.35, metalness: 0.4 });
+const COFFEE_CHROME_MAT = new THREE.MeshStandardMaterial({ color: "#e2e8f0", roughness: 0.25, metalness: 0.75 });
+const COFFEE_CUP_MAT = new THREE.MeshStandardMaterial({ color: "#ffffff", roughness: 0.3 });
+const LAB_CHAMBER_MAT = new THREE.MeshStandardMaterial({ color: "#e2e8f0", roughness: 0.35, metalness: 0.3 });
+const LAB_BENCH_TOP_MAT = new THREE.MeshStandardMaterial({ color: "#0f766e", roughness: 0.5 });
+const LAB_SAMPLE_AMBER = new THREE.MeshStandardMaterial({ color: "#f59e0b", roughness: 0.25, transparent: true, opacity: 0.85 });
+const LAB_SAMPLE_BLUE = new THREE.MeshStandardMaterial({ color: "#38bdf8", roughness: 0.25, transparent: true, opacity: 0.85 });
+
+function SingleComputerDesk({ position, executive = false }) {
+  return (
+    <group position={position}>
+      <mesh position={[0, 0.42, 0]} scale={[0.85, 0.055, 1.55]} geometry={DOOR_UNIT_BOX} material={executive ? EXEC_DESK_MAT : TABLE_MAT} castShadow receiveShadow />
+      <mesh position={[0, 0.21, -0.68]} scale={[0.78, 0.42, 0.07]} geometry={DOOR_UNIT_BOX} material={CHAIR_MAT} />
+      <mesh position={[0, 0.21, 0.68]} scale={[0.78, 0.42, 0.07]} geometry={DOOR_UNIT_BOX} material={CHAIR_MAT} />
+      {/* Monitor + stand + keyboard */}
+      <mesh position={[-0.14, 0.6, 0]} rotation={[0, Math.PI / 2, 0]} geometry={OFFICE_MONITOR_GEO} material={OFFICE_MONITOR_MAT} />
+      <mesh position={[-0.16, 0.46, 0]} scale={[0.06, 0.08, 0.14]} geometry={DOOR_UNIT_BOX} material={CHAIR_MAT} />
+      <mesh position={[0.12, 0.455, 0]} scale={[0.14, 0.015, 0.36]} geometry={DOOR_UNIT_BOX} material={DOOR_FRAME_MAT} />
+      {/* Operator chair */}
+      <mesh position={[0.52, 0.22, 0]} geometry={CHAIR_GEO} material={DOOR_FRAME_MAT} />
+      <mesh position={[0.67, 0.42, 0]} scale={[0.06, 0.38, 0.34]} geometry={DOOR_UNIT_BOX} material={DOOR_FRAME_MAT} />
+      {/* Visitor chairs for President/CEO Office */}
+      {executive &&
+        [-0.38, 0.38].map((vz) => (
+          <mesh key={vz} position={[-0.58, 0.22, vz]} geometry={CHAIR_GEO} material={CHAIR_MAT} />
+        ))}
+    </group>
+  );
+}
+
+function RoomBox({ center, size, borderColor = "#64748b" }) {
+  const [sx, sz] = size;
+  return (
+    <group position={[center[0], 0, center[1]]}>
+      <mesh position={[0, 0.01, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+        <planeGeometry args={[sx, sz]} />
+        <primitive object={ROOM_PAD_MAT} attach="material" />
+      </mesh>
+      <mesh position={[0, 0.38, 0]}>
+        <boxGeometry args={[sx, 0.76, sz]} />
+        <primitive object={ROOM_WALL_MAT} attach="material" />
+        <Edges color={borderColor} />
+      </mesh>
+    </group>
+  );
+}
+
 const OfficeZone = memo(function OfficeZone({ zone, isJa }) {
   if (!zone) return null;
   const { pos, size } = zone;
-  const deskRows = [-3.6, -1.1, 1.4, 3.9];
-  const deskCols = [-1.7, 1.7];
+
+  // 4 desks in the main "Office" room (top-middle)
+  const officeDesks = [
+    [-2.5, 1.85],
+    [-2.5, -0.15],
+    [-1.25, 1.85],
+    [-1.25, -0.15],
+  ];
+
+  // 3 lunch tables in the "Cafeteria" room (shifted right so coffee station sits on the left)
+  const cafeTableZs = [0.2, -2.0, -4.2];
+
+  // 3 refrigerator-style adhesive test chambers in the "Laboratory" room (top-right)
+  const labChamberZs = [-2.35, -3.55, -4.75];
 
   return (
     <group position={[pos[0], 0, pos[1]]}>
-      <mesh position={[0, 0.006, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+      {/* Outer blue zone floor tint matching the SCNA floor plan diagram */}
+      <mesh position={[0, 0.005, 0]} rotation={[-Math.PI / 2, 0, 0]}>
         <planeGeometry args={size} />
-        <meshBasicMaterial color="#f59e0b" transparent opacity={0.13} depthWrite={false} />
-      </mesh>
-      <mesh position={[0, 0.85, 0]}>
-        <boxGeometry args={[size[0], 1.7, size[1]]} />
-        <meshStandardMaterial color="#fbbf24" transparent opacity={0.1} depthWrite={false} />
-        <Edges color="#f59e0b" />
+        <primitive object={OFFICE_BASE_MAT} attach="material" />
       </mesh>
 
-      {/* Office workstation rows */}
-      {deskRows.flatMap((dz) =>
-        deskCols.map((dx) => (
-          <group key={`${dx}-${dz}`} position={[dx, 0, dz]}>
-            <mesh position={[0, 0.42, 0]} geometry={OFFICE_DESK_GEO} material={TABLE_MAT} />
-            <mesh position={[-0.85, 0.21, 0]} geometry={OFFICE_LEG_GEO} material={CHAIR_MAT} />
-            <mesh position={[0.85, 0.21, 0]} geometry={OFFICE_LEG_GEO} material={CHAIR_MAT} />
-            <mesh position={[0, 0.59, -0.18]} geometry={OFFICE_MONITOR_GEO} material={OFFICE_MONITOR_MAT} />
-            <mesh position={[-0.45, 0.22, 0.58]} geometry={CHAIR_GEO} material={CHAIR_MAT} />
-            <mesh position={[0.45, 0.22, 0.58]} geometry={CHAIR_GEO} material={CHAIR_MAT} />
-          </group>
-        ))
-      )}
+      {/* ── 1. President / CEO Office (Upper-Left, single computer table) ── */}
+      <RoomBox center={[-1.15, 4.55]} size={[2.6, 2.15]} borderColor="#f59e0b" />
+      <SingleComputerDesk position={[-1.15, 0, 4.55]} executive />
+      <SceneLabel
+        position={[-1.15, 1.45, 4.55]}
+        icon="badge"
+        text={isJa ? "President/CEO Office (社長室)" : "President/CEO Office"}
+        tone="amber"
+      />
+
+      {/* ── 2. Leader Office (Lower-Left, single computer table) ── */}
+      <RoomBox center={[1.95, 4.55]} size={[2.8, 2.15]} borderColor="#38bdf8" />
+      <SingleComputerDesk position={[1.95, 0, 4.55]} />
+      <SceneLabel
+        position={[1.95, 1.45, 4.55]}
+        icon="supervisor_account"
+        text={isJa ? "Leader Office (リーダー室)" : "Leader Office"}
+        tone="blue"
+      />
+
+      {/* ── 3. Main Office (Top-Middle, 4 computers and tables) ── */}
+      <RoomBox center={[-1.9, 0.85]} size={[3.15, 4.1]} borderColor="#f59e0b" />
+      {officeDesks.map(([dx, dz]) => (
+        <SingleComputerDesk key={`${dx}-${dz}`} position={[dx, 0, dz]} />
+      ))}
+      <SceneLabel
+        position={[-1.9, 1.55, 0.85]}
+        icon="apartment"
+        text={isJa ? "Office (事務所)" : "Office"}
+        tone="amber"
+      />
+
+      {/* ── 4. Laboratory (Top-Right, adhesive experiment room with refrigerator-style test chambers) ── */}
+      <RoomBox center={[-1.9, -3.55]} size={[3.15, 4.1]} borderColor="#2dd4bf" />
+      {/* 3 Tall Refrigerator-style Adhesive Environmental / Curing Chambers along back wall (-X) */}
+      {labChamberZs.map((cz, idx) => (
+        <group key={`chamber-${cz}`} position={[-3.02, 0, cz]}>
+          {/* Tall rectangular refrigerator/chamber body */}
+          <mesh position={[0, 0.68, 0]} scale={[0.72, 1.36, 0.86]} geometry={DOOR_UNIT_BOX} material={LAB_CHAMBER_MAT} castShadow receiveShadow />
+          {/* Upper digital controller header + glowing status display */}
+          <mesh position={[0.365, 1.24, 0]} scale={[0.02, 0.14, 0.78]} geometry={DOOR_UNIT_BOX} material={DOOR_FRAME_MAT} />
+          <mesh position={[0.378, 1.24, -0.16]} scale={[0.01, 0.07, 0.22]} geometry={DOOR_UNIT_BOX} material={idx === 1 ? DOOR_EXIT_SIGN_MAT : OFFICE_MONITOR_MAT} />
+          {/* Glass inspection door window on front (+X) face */}
+          <mesh position={[0.365, 0.76, 0]} scale={[0.02, 0.58, 0.56]} geometry={DOOR_UNIT_BOX} material={DOOR_GLASS_MAT} />
+          {/* Lower chamber service panel */}
+          <mesh position={[0.365, 0.22, 0]} scale={[0.02, 0.32, 0.76]} geometry={DOOR_UNIT_BOX} material={DOOR_BAR_MAT} />
+          {/* Vertical refrigerator door handle */}
+          <mesh position={[0.39, 0.76, 0.34]} scale={[0.025, 0.36, 0.025]} geometry={DOOR_UNIT_BOX} material={DOOR_FRAME_MAT} />
+        </group>
+      ))}
+      {/* Side double-door chemical / adhesive storage refrigerator */}
+      <group position={[-1.65, 0, -5.18]}>
+        <mesh position={[0, 0.68, 0]} scale={[1.18, 1.36, 0.66]} geometry={DOOR_UNIT_BOX} material={LAB_CHAMBER_MAT} castShadow receiveShadow />
+        {[-0.28, 0.28].map((hx) => (
+          <mesh key={hx} position={[hx, 0.72, 0.335]} scale={[0.48, 1.18, 0.02]} geometry={DOOR_UNIT_BOX} material={DOOR_LEAF_MAT} />
+        ))}
+        <mesh position={[-0.05, 0.72, 0.355]} scale={[0.02, 0.34, 0.02]} geometry={DOOR_UNIT_BOX} material={DOOR_FRAME_MAT} />
+        <mesh position={[0.05, 0.72, 0.355]} scale={[0.02, 0.34, 0.02]} geometry={DOOR_UNIT_BOX} material={DOOR_FRAME_MAT} />
+      </group>
+      {/* Central adhesive experiment lab workbench with sample bottles & testing gear */}
+      <group position={[-1.35, 0, -3.25]}>
+        <mesh position={[0, 0.36, 0]} scale={[0.88, 0.72, 2.2]} geometry={DOOR_UNIT_BOX} material={DOOR_LEAF_MAT} castShadow receiveShadow />
+        <mesh position={[0, 0.74, 0]} scale={[0.94, 0.045, 2.26]} geometry={DOOR_UNIT_BOX} material={LAB_BENCH_TOP_MAT} receiveShadow />
+        {/* Adhesive sample jars / beakers */}
+        {[-0.65, -0.35, -0.05].map((bz, bi) => (
+          <mesh
+            key={bz}
+            position={[-0.12, 0.84, bz]}
+            scale={[0.32, 0.16, 0.32]}
+            geometry={STANDING_ROLL_GEO}
+            material={bi % 2 === 0 ? LAB_SAMPLE_BLUE : LAB_SAMPLE_AMBER}
+          />
+        ))}
+        {/* Digital viscometer / tensile tester + lab monitor */}
+        <mesh position={[0.05, 0.92, 0.55]} scale={[0.32, 0.34, 0.32]} geometry={DOOR_UNIT_BOX} material={DOOR_FRAME_MAT} />
+        <mesh position={[-0.15, 0.9, -0.82]} rotation={[0, Math.PI / 2, 0]} geometry={OFFICE_MONITOR_GEO} material={OFFICE_MONITOR_MAT} />
+      </group>
+      <SceneLabel
+        position={[-1.9, 1.55, -3.55]}
+        icon="science"
+        text={isJa ? "Laboratory (接着剤実験室)" : "Laboratory"}
+        tone="teal"
+      />
+
+      {/* ── 5. Cafeteria (Bottom-Right, break/lunch tables, chairs, and coffee machine station) ── */}
+      <RoomBox center={[1.85, -1.325]} size={[3.25, 8.55]} borderColor="#10b981" />
+      {/* 3 Cafeteria dining tables with 4 chairs each */}
+      {cafeTableZs.map((tz) => (
+        <group key={`cafe-tbl-${tz}`} position={[1.85, 0, tz]}>
+          <mesh position={[0, 0.42, 0]} scale={[1.65, 0.055, 0.95]} geometry={DOOR_UNIT_BOX} material={CAFE_TABLE_MAT} castShadow receiveShadow />
+          {[-0.68, 0.68].flatMap((lx) =>
+            [-0.36, 0.36].map((lz) => (
+              <mesh key={`${lx}-${lz}`} position={[lx, 0.21, lz]} scale={[0.06, 0.42, 0.06]} geometry={DOOR_UNIT_BOX} material={CHAIR_MAT} />
+            ))
+          )}
+          {[-0.45, 0.45].flatMap((cx) =>
+            [-0.72, 0.72].map((cz) => (
+              <mesh key={`cchair-${cx}-${cz}`} position={[cx, 0.22, cz]} geometry={CHAIR_GEO} material={CHAIR_MAT} />
+            ))
+          )}
+        </group>
+      ))}
+      {/* Cafeteria Coffee Bar Counter + 3D Espresso/Coffee Machine + Breakroom Fridge (Left / +Z side) */}
+      <group position={[1.55, 0, 2.38]}>
+        {/* Kitchenette counter cabinet */}
+        <mesh position={[0, 0.38, 0]} scale={[2.1, 0.76, 0.72]} geometry={DOOR_UNIT_BOX} material={CAFE_COUNTER_MAT} castShadow receiveShadow />
+        <mesh position={[0, 0.78, 0]} scale={[2.16, 0.045, 0.76]} geometry={DOOR_UNIT_BOX} material={CAFE_TABLE_MAT} receiveShadow />
+        {/* 3D Coffee / Espresso Machine (facing -Z into cafeteria) */}
+        <group position={[-0.42, 0.8, 0]}>
+          {/* Main coffee machine housing */}
+          <mesh position={[0, 0.24, 0.05]} scale={[0.46, 0.48, 0.42]} geometry={DOOR_UNIT_BOX} material={COFFEE_BODY_MAT} castShadow />
+          {/* Top overhanging brew head + metallic dispense spout */}
+          <mesh position={[0, 0.38, -0.14]} scale={[0.44, 0.14, 0.18]} geometry={DOOR_UNIT_BOX} material={COFFEE_CHROME_MAT} />
+          <mesh position={[0, 0.27, -0.15]} scale={[0.14, 0.1, 0.1]} geometry={DOOR_UNIT_BOX} material={DOOR_FRAME_MAT} />
+          {/* Top coffee bean hopper */}
+          <mesh position={[-0.1, 0.54, 0.04]} scale={[0.45, 0.14, 0.45]} geometry={STANDING_ROLL_GEO} material={DOOR_FRAME_MAT} />
+          {/* Illuminated display on front of coffee machine */}
+          <mesh position={[0.12, 0.38, -0.235]} scale={[0.12, 0.07, 0.01]} geometry={DOOR_UNIT_BOX} material={DOOR_EXIT_SIGN_MAT} />
+          {/* Drip tray + 2 white coffee cups */}
+          <mesh position={[0, 0.02, -0.14]} scale={[0.42, 0.03, 0.18]} geometry={DOOR_UNIT_BOX} material={COFFEE_CHROME_MAT} />
+          {[-0.09, 0.09].map((cupX) => (
+            <mesh key={cupX} position={[cupX, 0.075, -0.14]} scale={[0.2, 0.08, 0.2]} geometry={STANDING_ROLL_GEO} material={COFFEE_CUP_MAT} />
+          ))}
+        </group>
+        {/* Microwave / toaster oven next to coffee machine */}
+        <mesh position={[0.48, 0.94, 0.04]} scale={[0.52, 0.28, 0.38]} geometry={DOOR_UNIT_BOX} material={COFFEE_BODY_MAT} castShadow />
+        <mesh position={[0.42, 0.94, -0.155]} scale={[0.32, 0.18, 0.01]} geometry={DOOR_UNIT_BOX} material={OFFICE_MONITOR_MAT} />
+      </group>
+      {/* Breakroom Refrigerator next to Coffee Counter (Left / +Z side) */}
+      <group position={[3.02, 0, 2.38]}>
+        <mesh position={[0, 0.68, 0]} scale={[0.68, 1.36, 0.72]} geometry={DOOR_UNIT_BOX} material={LAB_CHAMBER_MAT} castShadow receiveShadow />
+        <mesh position={[-0.22, 0.76, -0.365]} scale={[0.025, 0.36, 0.025]} geometry={DOOR_UNIT_BOX} material={DOOR_FRAME_MAT} />
+      </group>
 
       <SceneLabel
-        position={[0, 2.05, 0]}
-        icon="apartment"
-        text={isJa ? zone.labelJa || "OFFICE" : zone.labelEn || "OFFICE"}
-        tone="amber"
+        position={[1.85, 1.45, -1.325]}
+        icon="coffee"
+        text={isJa ? "Cafeteria (カフェテリア・休憩室)" : "Cafeteria"}
+        tone="teal"
       />
     </group>
   );

@@ -243,17 +243,17 @@ export const PsaMachine = memo(function PsaMachine({
   );
 });
 
-const SRS_CAGE_XS = [-1.2, -0.84, -0.48, -0.12, 0.24, 0.6];
+const SRS_CAGE_XS = [-1.14, -0.58, -0.02, 0.54];
 const SRS_LEG_XS = [-1.38, -0.3, 0.78];
 const SRS_LEG_ZS = [-0.58, 0.42];
 const SRS_BUTTON_BOX_XS = [-1.08, -0.58, 0.02, 0.48];
 const SRS_KNOB_XS = [-0.36, -0.22, -0.08, 0.06, 0.2];
 
 /**
- * 3D model for SRS 1 & SRS 2: 6-head SRS mark heat-transfer stamping press workstation
+ * 3D model for SRS 1 & SRS 2: 4-head SRS mark heat-transfer stamping press workstation
  * (SRSマーク熱転写加工機).
  * Oriented to face the AOL machines (-Z direction):
- *   - 6 vertical yellow mesh safety guard cages in a row along X
+ *   - 4 vertical yellow mesh safety guard cages in a row along X
  *   - Aluminum T-slot extrusion base frame + lower electrical control cabinet with indicator lamps
  *   - Dark metallic worktable with die-cut automotive trim parts and front push-button switch boxes
  *   - Tall light-blue backboard (+Z side) with work instruction posters, top station signs, and overhead LED light bar
@@ -417,33 +417,33 @@ export const SrsMachine = memo(function SrsMachine({
           <mesh position={[0, 0.06, 0]} scale={[0.034, 0.03, 0.034]} geometry={CYL_GEO} material={MAT_SRS_ESTOP} />
         </group>
 
-        {/* ── 4. Row of 6 Yellow Mesh Safety Guard Cages & Heat-Transfer Press Heads ── */}
-        {/* Horizontal rear support beam behind the 6 cages */}
+        {/* ── 4. Row of 4 Yellow Mesh Safety Guard Cages & Heat-Transfer Press Heads ── */}
+        {/* Horizontal rear support beam behind the 4 cages */}
         <mesh position={[-0.3, 1.04, 0.3]} scale={[2.16, 0.09, 0.08]} geometry={BOX_GEO} material={MAT_SRS_ALU} />
 
-        {/* Animated press rams inside the 6 stations */}
+        {/* Animated press rams inside the 4 stations */}
         <group ref={ramsRef}>
           {SRS_CAGE_XS.map((cx) => (
             <group key={`ram-${cx}`} position={[cx, 1.0, 0.16]}>
-              <mesh scale={[0.11, 0.22, 0.12]} geometry={BOX_GEO} material={MAT_STEEL} />
-              <mesh position={[0, -0.14, -0.02]} scale={[0.14, 0.03, 0.14]} geometry={BOX_GEO} material={MAT_DARK_METAL} />
+              <mesh scale={[0.12, 0.22, 0.12]} geometry={BOX_GEO} material={MAT_STEEL} />
+              <mesh position={[0, -0.14, -0.02]} scale={[0.16, 0.03, 0.14]} geometry={BOX_GEO} material={MAT_DARK_METAL} />
             </group>
           ))}
         </group>
 
-        {/* 6 Yellow rectangular mesh safety cages */}
+        {/* 4 Yellow rectangular mesh safety cages */}
         {SRS_CAGE_XS.map((cx) => (
           <group key={`cage-${cx}`} position={[cx, 1.04, 0.08]}>
             {/* Yellow outer cage housing */}
-            <mesh scale={[0.21, 0.54, 0.22]} geometry={BOX_GEO} material={MAT_SRS_CAGE_YELLOW} castShadow receiveShadow />
+            <mesh scale={[0.24, 0.54, 0.22]} geometry={BOX_GEO} material={MAT_SRS_CAGE_YELLOW} castShadow receiveShadow />
             {/* Front (-Z) upper & lower dark diamond-mesh window cutouts */}
-            <mesh position={[0, 0.11, -0.112]} scale={[0.14, 0.18, 0.008]} geometry={BOX_GEO} material={MAT_SRS_CAGE_MESH} />
-            <mesh position={[0, -0.11, -0.112]} scale={[0.14, 0.18, 0.008]} geometry={BOX_GEO} material={MAT_SRS_CAGE_MESH} />
+            <mesh position={[0, 0.11, -0.112]} scale={[0.16, 0.18, 0.008]} geometry={BOX_GEO} material={MAT_SRS_CAGE_MESH} />
+            <mesh position={[0, -0.11, -0.112]} scale={[0.16, 0.18, 0.008]} geometry={BOX_GEO} material={MAT_SRS_CAGE_MESH} />
             {/* Side (±X) dark mesh window cutouts */}
-            <mesh position={[-0.106, 0.02, 0]} scale={[0.008, 0.38, 0.14]} geometry={BOX_GEO} material={MAT_SRS_CAGE_MESH} />
-            <mesh position={[0.106, 0.02, 0]} scale={[0.008, 0.38, 0.14]} geometry={BOX_GEO} material={MAT_SRS_CAGE_MESH} />
+            <mesh position={[-0.121, 0.02, 0]} scale={[0.008, 0.38, 0.14]} geometry={BOX_GEO} material={MAT_SRS_CAGE_MESH} />
+            <mesh position={[0.121, 0.02, 0]} scale={[0.008, 0.38, 0.14]} geometry={BOX_GEO} material={MAT_SRS_CAGE_MESH} />
             {/* Actuator mount block behind cage */}
-            <mesh position={[0, 0.04, 0.15]} scale={[0.14, 0.32, 0.1]} geometry={BOX_GEO} material={MAT_DARK_METAL} />
+            <mesh position={[0, 0.04, 0.15]} scale={[0.15, 0.32, 0.1]} geometry={BOX_GEO} material={MAT_DARK_METAL} />
           </group>
         ))}
 
