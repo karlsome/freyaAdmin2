@@ -3,6 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { useLanguage } from "../contexts/LanguageContext";
 import MasterTabNav from "../components/MasterTabNav";
 import PageHeader from "../components/PageHeader";
+import ScnaGatekeeperTab from "../components/scna/ScnaGatekeeperTab";
 import ScnaFreyaTabletTab from "../components/scna/ScnaFreyaTabletTab";
 import ScnaMachineAnalyticsTab from "../components/scna/ScnaMachineAnalyticsTab";
 import ScnaWorkOrderTab from "../components/scna/ScnaWorkOrderTab";
@@ -28,6 +29,13 @@ const SCNA_TABS = [
     label: "Analytics",
     labelEn: "Analytics",
     labelJa: "分析",
+  },
+  {
+    key: "gatekeeper",
+    icon: "lock",
+    label: "Gatekeeper",
+    labelEn: "Gatekeeper",
+    labelJa: "ゲートキーパー",
   },
 ];
 
@@ -121,6 +129,9 @@ export default function ScnaPage() {
         )}
         {activeTab === "analytics" && (
           <ScnaMachineAnalyticsTab onFlash={setFlash} />
+        )}
+        {activeTab === "gatekeeper" && (
+          <ScnaGatekeeperTab onFlash={setFlash} />
         )}
       </div>
     </section>

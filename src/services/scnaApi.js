@@ -191,3 +191,43 @@ export async function fetchScnaMachines() {
   return Array.isArray(payload?.data) ? payload.data.filter(Boolean) : [];
 }
 
+
+const GATEKEEPER_DB = "Sasaki_Coating_MasterDB";
+const GATEKEEPER_COLLECTION = "gatekeeperSettingDB";
+
+async function postQuery(body) {
+  const response = await fetch(`${BASE_URL}queries`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ dbName: GATEKEEPER_DB, collectionName: GATEKEEPER_COLLECTION, ...body }),
+  });
+  return response;
+}
+
+export async function fetchGatekeeperSettings() {
+  const response = await postQuery({ query: {} });
+  const payload = await parseJsonResponse(response, "Failed to fetch gatekeeper settings");
+  return Array.isArray(payload) ? payload : [];
+}
+
+export async function setGatekeeperEnabled({ factory, machine, enabled, username }) {
+  const record = {
+    factory,
+    machine,
+    enabled: Boolean(enabled),
+    updatedAt: new Date().toISOString(),
+    updatedBy: username || "admin",
+  };
+
+  const updateResponse = await postQuery({
+    query: { factory, machine },
+    update: { $set: record },
+  });
+  if (updateResponse.status === 404) {
+    const insertResponse = await postQuery({ insertData: record });
+    await parseJsonResponse(insertResponse, "Failed to create gatekeeper setting");
+  } else {
+    await parseJsonResponse(updateResponse, "Failed to update gatekeeper setting");
+  }
+  return record;
+}
