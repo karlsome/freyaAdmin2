@@ -10,7 +10,7 @@ import {
   uploadScnaNcProgram,
 } from "../../services/scnaApi";
 import { readStoredAuthUser } from "../../utils/auth";
-import ScnaNcProgramPreview from "./ScnaNcProgramPreview";
+import ScnaNcPreviewModal from "./ScnaNcPreviewModal";
 import { parsePce } from "../../utils/pceParser";
 import { parsePlt } from "../../utils/pltParser";
 
@@ -60,10 +60,9 @@ export default function ScnaNcProgramsTab({ onFlash }) {
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef(null);
 
-  // ── preview of an uploaded program (one open at a time) ──
-  const [previewId, setPreviewId] = useState(null);
-  const [previewPoints, setPreviewPoints] = useState(null);
-  const [previewLoading, setPreviewLoading] = useState(false);
+  // ── preview modal: { title, subtitle, points|null, loading } ──
+  const [previewModal, setPreviewModal] = useState(null);
+  const previewRequestRef = useRef(0);
 
   // ── rename ──
   const [renamingId, setRenamingId] = useState(null);
@@ -146,36 +145,46 @@ export default function ScnaNcProgramsTab({ onFlash }) {
     }
   }, [onFlash]);
 
-  async function handleTogglePreview(program) {
-    if (previewId === program._id) {
-      setPreviewId(null);
-      setPreviewPoints(null);
-      return;
-    }
-    setPreviewId(program._id);
-    setPreviewPoints(null);
-    setPreviewLoading(true);
+  async function handleOpenPreview(program) {
+    const requestId = previewRequestRef.current + 1;
+    previewRequestRef.current = requestId;
+    setPreviewModal({
+      title: program.displayName,
+      subtitle: `${program.fileName} · ${program.pointCount} ${isJa ? "ポイント" : "points"}`,
+      points: null,
+      loading: true,
+    });
     try {
       const points = await fetchScnaNcProgramPoints(program._id);
-      // ignore the answer if another preview was opened while this one loaded
-      setPreviewId((current) => {
-        if (current === program._id) setPreviewPoints(points);
-        return current;
-      });
+      if (previewRequestRef.current !== requestId) return; // closed or replaced while loading
+      setPreviewModal((m) => (m ? { ...m, points, loading: false } : m));
     } catch (err) {
       console.error(`[NC programs] Could not load preview for ${program._id}`, err);
+      if (previewRequestRef.current !== requestId) return;
+      setPreviewModal(null);
       onFlash?.({ type: "error", message: err.message });
-      setPreviewId(null);
-    } finally {
-      setPreviewLoading(false);
     }
+  }
+
+  function handleOpenUploadPreview() {
+    previewRequestRef.current += 1;
+    setPreviewModal({
+      title: displayName.trim() || file?.name || "",
+      subtitle: `${file?.name || ""} · ${parsed.pointCount} ${isJa ? "ポイント" : "points"}`,
+      points: parsed.points,
+      loading: false,
+    });
+  }
+
+  function closePreview() {
+    previewRequestRef.current += 1;
+    setPreviewModal(null);
   }
 
   function handleSelect(item) {
     setSelected(item);
     setRenamingId(null);
-    setPreviewId(null);
-    setPreviewPoints(null);
+    closePreview();
     resetForm();
     loadPrograms(item.背番号);
   }
@@ -441,7 +450,11 @@ export default function ScnaNcProgramsTab({ onFlash }) {
                   {" "}Y {parsed.bounds.minY.toFixed(1)}–{parsed.bounds.maxY.toFixed(1)} mm
                 </p>
               )}
-              {parsed && <ScnaNcProgramPreview points={parsed.points} />}
+              {parsed && (
+                <button type="button" onClick={handleOpenUploadPreview} className="text-xs font-semibold text-[var(--freya-blue)]">
+                  {isJa ? "プレビューを表示" : "Preview before uploading"}
+                </button>
+              )}
               <input
                 value={displayName}
                 onChange={(e) => setDisplayName(e.target.value)}
@@ -492,21 +505,13 @@ export default function ScnaNcProgramsTab({ onFlash }) {
                         </p>
                       </div>
                       <div className="flex shrink-0 gap-3 text-xs">
-                        <button type="button" onClick={() => handleTogglePreview(program)} className="text-[var(--freya-blue)]">
-                          {previewId === program._id ? (isJa ? "プレビューを閉じる" : "Hide preview") : (isJa ? "プレビュー" : "Preview")}
+                        <button type="button" onClick={() => handleOpenPreview(program)} className="text-[var(--freya-blue)]">
+                          {isJa ? "プレビュー" : "Preview"}
                         </button>
                         <button type="button" onClick={() => { setRenamingId(program._id); setRenameValue(program.displayName); }} className="text-[var(--freya-blue)]">{isJa ? "名前変更" : "Rename"}</button>
                         <button type="button" onClick={() => handleDelete(program)} className="text-[var(--status-danger)]">{isJa ? "削除" : "Delete"}</button>
                       </div>
                     </div>
-                    {previewId === program._id && (
-                      <div className="mt-3">
-                        {previewLoading && !previewPoints && (
-                          <p className="text-xs text-[var(--text-muted)]">{isJa ? "読み込み中…" : "Loading…"}</p>
-                        )}
-                        {previewPoints && <ScnaNcProgramPreview points={previewPoints} />}
-                      </div>
-                    )}
                   </li>
                 ))}
               </ul>
@@ -514,6 +519,15 @@ export default function ScnaNcProgramsTab({ onFlash }) {
           </div>
         )}
       </div>
+      {previewModal && (
+        <ScnaNcPreviewModal
+          title={previewModal.title}
+          subtitle={previewModal.subtitle}
+          points={previewModal.points}
+          loading={previewModal.loading}
+          onClose={closePreview}
+        />
+      )}
     </div>
   );
 }
