@@ -11,6 +11,24 @@ const PADDING_PX = 16;
 const MEASURE_COLOR = "#facc15";
 const SNAP_RADIUS_PX = 14;
 const CLICK_SLOP_PX = 4;
+const TABLE_COLOR = "#ef4444";
+const TABLE_STORAGE_KEY = "scnaNcTableSize";
+const RULER_L = 44; // left gutter (Y scale) and bottom gutter (X scale), in px
+const RULER_B = 22;
+const RULER_BG = "#111827";
+const RULER_TEXT = "#d4b84a";
+const DEFAULT_TABLE = { w: 2000, h: 1500 }; // Xiao's "workrect"
+
+// The table size is a per-viewer convenience, so a missing or blocked storage just means defaults.
+function loadTableSize() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(TABLE_STORAGE_KEY));
+    if (saved && saved.w > 0 && saved.h > 0) return { w: saved.w, h: saved.h };
+  } catch {
+    // ignore
+  }
+  return DEFAULT_TABLE;
+}
 
 const penColor = (pen) => PEN_COLORS[pen] || OTHER_PEN_COLOR;
 
@@ -38,6 +56,13 @@ function boundsOf(points) {
   return { minX, maxX, minY, maxY };
 }
 
+// 1-2-5 step so ticks stay at least minPx apart whatever the zoom
+function niceStep(minMm) {
+  const pow = 10 ** Math.floor(Math.log10(minMm));
+  for (const m of [1, 2, 5, 10]) if (pow * m >= minMm) return pow * m;
+  return pow * 10;
+}
+
 const num = (v) => Math.round(v * 100) / 100;
 
 export default function ScnaNcProgramPreview({ points, height = "380px" }) {
@@ -55,6 +80,12 @@ export default function ScnaNcProgramPreview({ points, height = "380px" }) {
   const [measurements, setMeasurements] = useState([]); // [{ a, b }] in mm, real (un-flipped) Y
   const [pendingStart, setPendingStart] = useState(null);
   const [hover, setHover] = useState(null); // snapped or raw point under the cursor, in mm
+  const [showTable, setShowTable] = useState(true);
+  const [table, setTable] = useState(loadTableSize); // workrect in mm, origin bottom-left like Xiao
+  const [draft, setDraft] = useState(() => {
+    const t = loadTableSize();
+    return { w: String(t.w), h: String(t.h) };
+  });
 
   const strokes = useMemo(() => buildStrokes(points || []), [points]);
   const bounds = useMemo(() => boundsOf(points || []), [points]);
@@ -68,22 +99,55 @@ export default function ScnaNcProgramPreview({ points, height = "380px" }) {
     if (!el) return undefined;
     const observer = new ResizeObserver(([entry]) => {
       const { width, height: h } = entry.contentRect;
-      if (width > 0 && h > 0) setSize({ w: width, h });
+      if (width > RULER_L && h > RULER_B) setSize({ w: width - RULER_L, h: h - RULER_B });
     });
     observer.observe(el);
     return () => observer.disconnect();
   }, []);
 
-  const fit = useMemo(() => {
-    const bw = Math.max(bounds.maxX - bounds.minX, 1);
-    const bh = Math.max(bounds.maxY - bounds.minY, 1);
+  // Fit frames the table as well as the job, so an out-of-bounds drawing is visible straight away.
+  const fitBox = useMemo(() => {
+    if (!showTable) return bounds;
     return {
-      cx: (bounds.minX + bounds.maxX) / 2,
-      cy: toY((bounds.minY + bounds.maxY) / 2),
+      minX: Math.min(bounds.minX, 0),
+      maxX: Math.max(bounds.maxX, table.w),
+      minY: Math.min(bounds.minY, 0),
+      maxY: Math.max(bounds.maxY, table.h),
+    };
+  }, [bounds, showTable, table]);
+
+  const fit = useMemo(() => {
+    const bw = Math.max(fitBox.maxX - fitBox.minX, 1);
+    const bh = Math.max(fitBox.maxY - fitBox.minY, 1);
+    return {
+      cx: (fitBox.minX + fitBox.maxX) / 2,
+      cy: toY((fitBox.minY + fitBox.maxY) / 2),
       scale: Math.max(bw / (size.w - PADDING_PX * 2), bh / (size.h - PADDING_PX * 2)),
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [bounds, size]);
+  }, [fitBox, size]);
+
+  const outOfBounds = useMemo(() => {
+    let strokeCount = 0;
+    for (const s of strokes) {
+      if (s.pts.some((p) => p.x < 0 || p.y < 0 || p.x > table.w || p.y > table.h)) strokeCount += 1;
+    }
+    return strokeCount;
+  }, [strokes, table]);
+
+  // The field follows what the user types; the table only changes once the value is a valid size.
+  function changeTable(key, raw) {
+    setDraft((d) => ({ ...d, [key]: raw }));
+    const value = Number(raw);
+    if (raw === "" || !Number.isFinite(value) || value <= 0) return;
+    const next = { ...table, [key]: value };
+    setTable(next);
+    try {
+      localStorage.setItem(TABLE_STORAGE_KEY, JSON.stringify(next));
+    } catch {
+      // ignore
+    }
+  }
 
   const current = view || fit;
   const vbW = size.w * current.scale;
@@ -280,6 +344,45 @@ export default function ScnaNcProgramPreview({ points, height = "380px" }) {
     );
   }
 
+  // Rulers sit in their own gutters (left = Y, bottom = X) and read in mm like Xiao's.
+  const step = niceStep(px * 60);
+  const rulerTicks = [];
+  const x0 = current.cx - vbW / 2;
+  for (let x = Math.ceil(x0 / step) * step; x <= x0 + vbW; x += step) {
+    const sx = RULER_L + (x - x0) / px;
+    rulerTicks.push(
+      <g key={`x${x}`}>
+        <line x1={sx} y1={size.h} x2={sx} y2={size.h + 5} stroke={RULER_TEXT} />
+        <text x={sx + 3} y={size.h + 16} fontSize={11} fill={RULER_TEXT}>{num(x)}</text>
+      </g>
+    );
+  }
+  const yTop = flipY - (current.cy - vbH / 2); // real Y at the top edge
+  for (let y = Math.floor(yTop / step) * step; y >= yTop - vbH; y -= step) {
+    const sy = (yTop - y) / px;
+    if (sy < 0 || sy > size.h) continue;
+    rulerTicks.push(
+      <g key={`y${y}`}>
+        <line x1={RULER_L - 5} y1={sy} x2={RULER_L} y2={sy} stroke={RULER_TEXT} />
+        <text x={RULER_L - 7} y={sy - 3} fontSize={11} fill={RULER_TEXT} textAnchor="end">{num(y)}</text>
+      </g>
+    );
+  }
+  const rulers = (
+    <svg
+      width={size.w + RULER_L}
+      height={size.h + RULER_B}
+      style={{ position: "absolute", left: 0, top: 0, pointerEvents: "none" }}
+    >
+      <rect x={0} y={0} width={RULER_L} height={size.h + RULER_B} fill={RULER_BG} />
+      <rect x={0} y={size.h} width={size.w + RULER_L} height={RULER_B} fill={RULER_BG} />
+      <clipPath id="scna-ruler-clip-x"><rect x={RULER_L} y={size.h} width={size.w} height={RULER_B} /></clipPath>
+      <clipPath id="scna-ruler-clip-y"><rect x={0} y={0} width={RULER_L} height={size.h} /></clipPath>
+      <g clipPath="url(#scna-ruler-clip-x)">{rulerTicks.filter((t) => String(t.key).startsWith("x"))}</g>
+      <g clipPath="url(#scna-ruler-clip-y)">{rulerTicks.filter((t) => String(t.key).startsWith("y"))}</g>
+    </svg>
+  );
+
   const toggle = (checked, onChange, label) => (
     <label className="flex items-center gap-1 text-[11px] text-[var(--text-secondary)]">
       <input type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)} />
@@ -302,12 +405,48 @@ export default function ScnaNcProgramPreview({ points, height = "380px" }) {
           {isJa ? "移動（切らない）" : "pen-up move"}
         </span>
         <span>{num(bounds.maxX - bounds.minX)} × {num(bounds.maxY - bounds.minY)} mm</span>
+        {showTable && (
+          <span className="flex items-center gap-1">
+            <span className="inline-block w-5 border-t border-dashed" style={{ borderColor: TABLE_COLOR }} />
+            {isJa ? "テーブル" : "Table"} {table.w} × {table.h} mm
+          </span>
+        )}
       </div>
+
+      {showTable && outOfBounds > 0 && (
+        <p className="rounded-[6px] border border-[var(--status-danger)] px-2 py-1 text-[11px] font-semibold text-[var(--status-danger)]">
+          {isJa
+            ? `⚠ ${outOfBounds} 本の線がテーブル範囲外です（ジョブ ${num(bounds.minX)}…${num(bounds.maxX)} × ${num(bounds.minY)}…${num(bounds.maxY)} mm）`
+            : `⚠ ${outOfBounds} stroke${outOfBounds === 1 ? " is" : "s are"} outside the table (job spans X ${num(bounds.minX)}…${num(bounds.maxX)}, Y ${num(bounds.minY)}…${num(bounds.maxY)} mm)`}
+        </p>
+      )}
 
       <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
         {toggle(showNumbers, setShowNumbers, isJa ? "カット順の番号" : "Cut order numbers")}
         {toggle(showArrows, setShowArrows, isJa ? "開始位置の矢印" : "Start arrows")}
         {toggle(showPenUp, setShowPenUp, isJa ? "移動線" : "Pen-up moves")}
+        {toggle(showTable, setShowTable, isJa ? "テーブル枠" : "Table")}
+        <span className="flex items-center gap-1 text-[11px] text-[var(--text-secondary)]">
+          {isJa ? "テーブル" : "Table"} X
+          <input
+            type="number"
+            min="1"
+            value={draft.w}
+            onChange={(e) => changeTable("w", e.target.value)}
+            onBlur={() => setDraft((d) => ({ ...d, w: String(table.w) }))}
+            className="w-16 rounded-[4px] border border-[var(--border)] bg-transparent px-1 py-0.5 text-[var(--text-primary)]"
+          />
+          Y
+          <input
+            type="number"
+            min="1"
+            value={draft.h}
+            onChange={(e) => changeTable("h", e.target.value)}
+            onBlur={() => setDraft((d) => ({ ...d, h: String(table.h) }))}
+            className="w-16 rounded-[4px] border border-[var(--border)] bg-transparent px-1 py-0.5 text-[var(--text-primary)]"
+          />
+          mm
+        </span>
         <button type="button" onClick={() => setView(null)} className="text-[11px] font-semibold text-[var(--freya-blue)]">
           {isJa ? "全体表示" : "Reset view"}
         </button>
@@ -345,13 +484,25 @@ export default function ScnaNcProgramPreview({ points, height = "380px" }) {
           width={size.w}
           height={size.h}
           viewBox={viewBox}
-          style={{ display: "block", touchAction: "none", cursor: measuring ? "crosshair" : "grab" }}
+          style={{ position: "absolute", left: RULER_L, top: 0, touchAction: "none", cursor: measuring ? "crosshair" : "grab" }}
           onPointerDown={onPointerDown}
           onPointerMove={onPointerMove}
           onPointerUp={onPointerUp}
           onPointerCancel={onPointerUp}
           onPointerLeave={() => setHover(null)}
         >
+          {showTable && (
+            <rect
+              x={0}
+              y={toY(table.h)}
+              width={table.w}
+              height={table.h}
+              fill="none"
+              stroke={TABLE_COLOR}
+              strokeWidth={px * 1.2}
+              strokeDasharray={`${px * 8} ${px * 5}`}
+            />
+          )}
           {showPenUp && (
             <path d={penUpPath} fill="none" stroke={PEN_UP_COLOR} strokeWidth={lineWidth * 0.7} strokeDasharray={`${px * 4} ${px * 4}`} />
           )}
@@ -369,12 +520,23 @@ export default function ScnaNcProgramPreview({ points, height = "380px" }) {
           width={size.w}
           height={size.h}
           viewBox={`0 0 ${size.w} ${size.h}`}
-          style={{ position: "absolute", left: 0, top: 0, pointerEvents: "none" }}
+          style={{ position: "absolute", left: RULER_L, top: 0, pointerEvents: "none" }}
         >
+          {showTable && (() => {
+            const [ox, oy] = toScreen(0, toY(0));
+            const [tx, ty] = toScreen(0, toY(table.h));
+            return (
+              <g>
+                <text x={ox + 4} y={oy - 4} fontSize={11} fill={TABLE_COLOR} style={textStyle}>0, 0</text>
+                <text x={tx + 4} y={ty + 13} fontSize={11} fill={TABLE_COLOR} style={textStyle}>{table.w} × {table.h} mm</text>
+              </g>
+            );
+          })()}
           {numberLabels}
           {measurements.map((m, i) => renderMeasurementLabel(m, i))}
           {measuring && pendingStart && hover && renderMeasurementLabel({ a: pendingStart, b: hover }, "live")}
         </svg>
+        {rulers}
       </div>
       <p className="text-[11px] text-[var(--text-muted)]">
         {isJa ? "ホイールで拡大縮小・ドラッグで移動" : "Scroll to zoom, drag to pan"}
