@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLanguage } from "../../contexts/LanguageContext";
 import { fetchMasterPage } from "../../services/api";
 import {
@@ -37,6 +37,7 @@ export default function ScnaNcProgramsTab({ onFlash }) {
   const [search, setSearch] = useState("");
   const [searchTags, setSearchTags] = useState([]);
   const [page, setPage] = useState(1);
+  const [sort, setSort] = useState({ column: null, direction: 1 });
   const [items, setItems] = useState([]);
   const [totalPages, setTotalPages] = useState(0);
   const [filteredCount, setFilteredCount] = useState(0);
@@ -79,6 +80,7 @@ export default function ScnaNcProgramsTab({ onFlash }) {
       tabKey: "masterDB",
       page,
       limit: PAGE_SIZE,
+      sort: sort.column && sort.column !== "nc" ? sort : { column: null, direction: 1 },
       // 工場 is hard-pinned to SCNA — this tab never lists any other factory
       simpleFilters: { factory: "SCNA" },
       searchTags,
@@ -99,7 +101,30 @@ export default function ScnaNcProgramsTab({ onFlash }) {
       .finally(() => {
         if (requestId === requestIdRef.current) setLoadingItems(false);
       });
-  }, [page, searchTags, onFlash]);
+  }, [page, searchTags, sort, onFlash]);
+
+  function handleSort(columnKey) {
+    setPage(1);
+    setSort((current) => (
+      current.column === columnKey
+        ? { column: columnKey, direction: current.direction === 1 ? -1 : 1 }
+        : { column: columnKey, direction: 1 }
+    ));
+  }
+
+  const displayedItems = useMemo(() => {
+    if (sort.column === "nc") {
+      return [...items].sort((a, b) => {
+        const countA = counts[a.背番号] || 0;
+        const countB = counts[b.背番号] || 0;
+        if (countA !== countB) {
+          return sort.direction === 1 ? countA - countB : countB - countA;
+        }
+        return String(a.背番号 || "").localeCompare(String(b.背番号 || ""));
+      });
+    }
+    return items;
+  }, [items, sort, counts]);
 
   const loadPrograms = useCallback(async (sebanggo) => {
     setLoadingPrograms(true);
@@ -209,7 +234,13 @@ export default function ScnaNcProgramsTab({ onFlash }) {
 
   const canUpload = Boolean(selected && file && parsed && displayName.trim()) && !uploading;
   const cell = "px-3 py-2 text-xs text-[var(--text-primary)]";
-  const head = "px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]";
+  const columns = [
+    { key: "背番号", label: "背番号" },
+    { key: "品番", label: "品番" },
+    { key: "品名", label: isJa ? "品名" : "Name" },
+    { key: "モデル", label: isJa ? "モデル" : "Model" },
+    { key: "nc", label: "NC" },
+  ];
 
   return (
     <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
@@ -238,21 +269,64 @@ export default function ScnaNcProgramsTab({ onFlash }) {
           <table className="w-full">
             <thead className="border-b border-[var(--border)] bg-[var(--surface-subtle)]">
               <tr>
-                <th className={head}>背番号</th>
-                <th className={head}>品番</th>
-                <th className={head}>{isJa ? "品名" : "Name"}</th>
-                <th className={head}>{isJa ? "モデル" : "Model"}</th>
-                <th className={head}>NC</th>
+                {columns.map((col) => {
+                  const isSorted = sort.column === col.key;
+                  return (
+                    <th
+                      key={col.key}
+                      onClick={() => handleSort(col.key)}
+                      className="group cursor-pointer select-none px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)] transition hover:bg-[var(--surface-subtle)] hover:text-[var(--text-primary)]"
+                      aria-sort={
+                        isSorted
+                          ? sort.direction === 1
+                            ? "ascending"
+                            : "descending"
+                          : "none"
+                      }
+                      title={
+                        isSorted
+                          ? isJa
+                            ? sort.direction === 1
+                              ? "昇順（クリックで降順）"
+                              : "降順（クリックで昇順）"
+                            : sort.direction === 1
+                              ? "Ascending (click to sort descending)"
+                              : "Descending (click to sort ascending)"
+                          : isJa
+                            ? "クリックして並び替え"
+                            : "Click to sort"
+                      }
+                    >
+                      <div className="flex items-center gap-1">
+                        <span>{col.label}</span>
+                        <span
+                          className={`material-symbols-outlined transition-colors ${
+                            isSorted
+                              ? "text-[var(--freya-blue)] opacity-100"
+                              : "text-[var(--text-muted)] opacity-30 group-hover:opacity-80"
+                          }`}
+                          style={{ fontSize: 14 }}
+                        >
+                          {isSorted
+                            ? sort.direction === 1
+                              ? "arrow_upward"
+                              : "arrow_downward"
+                            : "unfold_more"}
+                        </span>
+                      </div>
+                    </th>
+                  );
+                })}
               </tr>
             </thead>
             <tbody>
               {loadingItems && (
                 <tr><td colSpan={5} className={`${cell} text-[var(--text-muted)]`}>{isJa ? "読み込み中…" : "Loading…"}</td></tr>
               )}
-              {!loadingItems && items.length === 0 && (
+              {!loadingItems && displayedItems.length === 0 && (
                 <tr><td colSpan={5} className={`${cell} text-[var(--text-muted)]`}>{isJa ? "該当なし" : "No SCNA items found."}</td></tr>
               )}
-              {!loadingItems && items.map((item) => {
+              {!loadingItems && displayedItems.map((item) => {
                 const active = selected?.背番号 === item.背番号;
                 return (
                   <tr
