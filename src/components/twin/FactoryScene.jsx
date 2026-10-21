@@ -26,7 +26,7 @@ if (typeof THREE.setConsoleFunction === "function") {
   });
 }
 
-const DEFAULT_TARGET = [0, 0, 0.6];
+const DEFAULT_TARGET = [0, 0, 0.25];
 const VIEW_DIR = (() => {
   const v = [0, 0.82, 0.57];
   const len = Math.hypot(...v);
@@ -72,9 +72,9 @@ function CameraRig({
     const k = 2 * Math.tan((40 * Math.PI) / 360);
     const fWidth = floor?.width || KOSE_LAYOUT.floor.width;
     const fDepth = floor?.depth || KOSE_LAYOUT.floor.depth;
-    const depthSpan = Math.max(17, (swapAxes ? fWidth : fDepth) + 2.6);
-    const widthSpan = (swapAxes ? fDepth : fWidth) + 2;
-    const dist = Math.max(depthSpan / k, widthSpan / (k * aspect)) * 1.02;
+    const depthSpan = Math.max(18.8, (swapAxes ? fWidth : fDepth) + 3.6);
+    const widthSpan = (swapAxes ? fDepth : fWidth) + 3.6;
+    const dist = Math.max(depthSpan / k, widthSpan / (k * aspect)) * 1.08;
     return {
       pos: defaultTarget.map((t, i) => t + viewDir[i] * dist),
       target: defaultTarget,

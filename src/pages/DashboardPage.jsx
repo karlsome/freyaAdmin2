@@ -287,12 +287,12 @@ function FactoryDashboard({ factory, factories, onFactoryChange }) {
   const areas = LAYOUT_MODES[mode].areas;
 
   return (
-    <section className="w-full min-h-screen lg:h-screen flex flex-col gap-2.5 pt-16 px-4 sm:px-5 md:px-6 pb-3 lg:overflow-hidden">
+    <section className="w-full max-w-full min-w-0 min-h-screen lg:min-h-0 lg:h-dvh lg:max-h-screen flex flex-col gap-2 pt-[60px] px-3 sm:px-4 md:px-5 pb-2.5 lg:overflow-hidden overflow-x-hidden">
       {needsLegacy && <LegacyDataLoader onData={setLegacy} />}
 
       {/* ── Header: title + 3 compact KPI pills + actions ── */}
-      <header className="flex flex-col xl:flex-row xl:items-center gap-2.5">
-        <div className="flex items-center gap-2.5 min-w-[180px]">
+      <header className="flex flex-col xl:flex-row xl:items-center gap-2 min-w-0 flex-shrink-0">
+        <div className="flex items-center gap-2.5 min-w-[170px] flex-shrink-0">
           <span className="material-symbols-outlined text-[var(--freya-blue)]" style={{ fontSize: 26 }}>factory</span>
           <div>
             <FactoryPicker factory={factory} factories={factories} onChange={onFactoryChange} isJa={isJa} />
@@ -318,7 +318,7 @@ function FactoryDashboard({ factory, factories, onFactoryChange }) {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 flex-1">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 flex-1 min-w-0">
           <KpiCard
             icon="precision_manufacturing"
             label={isJa ? "稼働中の設備" : "Machines running"}
@@ -344,7 +344,7 @@ function FactoryDashboard({ factory, factories, onFactoryChange }) {
           />
         </div>
 
-        <div className="flex items-center gap-1.5 self-end xl:self-center">
+        <div className="flex items-center gap-1.5 self-end xl:self-center flex-shrink-0">
           <LayoutSwitcher mode={mode} onChange={setMode} isJa={isJa} />
           <button
             type="button"
@@ -382,8 +382,8 @@ function FactoryDashboard({ factory, factories, onFactoryChange }) {
       </header>
 
       {/* ── Body: layout grid + collapsible AI chat ── */}
-      <div className="flex-1 min-h-0 flex gap-4">
-        <div className="relative flex-1 min-w-0 min-h-0 flex">
+      <div className="flex-1 min-h-0 min-w-0 flex gap-3 overflow-hidden">
+        <div className="relative flex-1 min-w-0 min-h-0 flex overflow-hidden">
           <div className={`dash-grid dash-grid--${mode}`}>
             {slots.map((widgetId, i) => (
               <PanelSlot

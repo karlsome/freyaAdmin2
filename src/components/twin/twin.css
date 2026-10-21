@@ -217,14 +217,14 @@ html:not(.dark) .twin-badge__sebanggo {
 .twin-chip {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  height: 44px;
-  padding: 0 16px 0 12px;
+  gap: 5px;
+  height: 28px;
+  padding: 0 10px 0 8px;
   border-radius: 999px;
   border: 1.5px solid color-mix(in srgb, var(--status) 60%, transparent);
   background: color-mix(in srgb, var(--status) 16%, rgba(15, 23, 42, 0.82));
   color: #fff;
-  font-size: 15px;
+  font-size: 11.5px;
   font-weight: 700;
   backdrop-filter: blur(8px);
   cursor: pointer;
@@ -235,16 +235,16 @@ html:not(.dark) .twin-chip {
   color: #0f172a;
 }
 .twin-chip:hover { transform: translateY(-1px); }
-.twin-chip .material-symbols-outlined { font-size: 22px; color: var(--status); }
-.twin-chip small { font-size: 12px; font-weight: 600; opacity: 0.75; }
+.twin-chip .material-symbols-outlined { font-size: 15px; color: var(--status); }
+.twin-chip small { font-size: 10px; font-weight: 600; opacity: 0.78; }
 
 .twin-legend {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
-  padding: 8px 10px;
-  border-radius: 14px;
-  background: rgba(15, 23, 42, 0.72);
+  gap: 4px;
+  padding: 5px 8px;
+  border-radius: 10px;
+  background: rgba(15, 23, 42, 0.74);
   backdrop-filter: blur(8px);
   color: #e2e8f0;
 }
@@ -252,19 +252,19 @@ html:not(.dark) .twin-legend { background: rgba(255, 255, 255, 0.88); color: #33
 .twin-legend__item {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 3px 9px;
+  gap: 4px;
+  padding: 2px 7px;
   border-radius: 999px;
-  font-size: 12.5px;
+  font-size: 11px;
   font-weight: 600;
 }
-.twin-legend__item b { font-size: 14px; font-variant-numeric: tabular-nums; }
+.twin-legend__item b { font-size: 12px; font-variant-numeric: tabular-nums; }
 .twin-legend__swatch {
-  width: 10px;
-  height: 10px;
-  border-radius: 3px;
+  width: 8px;
+  height: 8px;
+  border-radius: 2.5px;
   background: var(--status);
-  box-shadow: 0 0 8px var(--status);
+  box-shadow: 0 0 6px var(--status);
 }
 
 .twin-icon-btn {
@@ -1456,8 +1456,8 @@ html:not(.dark) .twin-edit-toast {
    ───────────────────────────────────────────────────────────── */
 
 .twin-tv-card {
-  width: 146px;
-  padding: 4px 6px;
+  width: 128px;
+  padding: 3.5px 5.5px;
   border-radius: 7px;
   border: 1.5px solid color-mix(in srgb, var(--tv-accent, #10b981) 80%, transparent);
   background: rgba(7, 11, 20, 0.95);
@@ -1682,14 +1682,14 @@ html:not(.dark) .twin-edit-toast {
 .twin-call-tv-btn {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  height: 40px;
-  padding: 0 12px;
-  border-radius: 12px;
+  gap: 5px;
+  height: 32px;
+  padding: 0 10px;
+  border-radius: 10px;
   border: 1px solid var(--border, rgba(148, 163, 184, 0.3));
   background: var(--surface, rgba(15, 23, 42, 0.85));
   color: var(--text-primary, #f8fafc);
-  font-size: 12.5px;
+  font-size: 11.5px;
   font-weight: 700;
   cursor: pointer;
   transition: all 0.15s ease;

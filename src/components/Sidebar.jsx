@@ -152,7 +152,7 @@ export default function Sidebar({ activePage, badges = {}, mobileOpen = false, o
   function renderSidebarContent(isMobile) {
     return (
       <>
-        <div className="mb-10 flex items-center justify-between px-3">
+        <div className="mb-5 flex flex-shrink-0 items-center justify-between px-3">
           <div className={`flex items-center gap-3 ${isMobile ? "min-w-0 flex-1 mr-2" : "min-w-[264px]"}`}>
             <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-[6px] bg-[var(--surface-hover)] border border-[var(--border)]">
               <span className="material-symbols-outlined text-[var(--freya-blue)]" style={{ fontSize: 20 }}>
@@ -179,7 +179,7 @@ export default function Sidebar({ activePage, badges = {}, mobileOpen = false, o
           )}
         </div>
 
-        <nav className="flex-1 space-y-0.5 overflow-y-auto scrollbar-hide px-3">
+        <nav className="flex-1 min-h-0 space-y-0.5 overflow-y-auto scrollbar-hide px-3">
           {navItems.map((item) => {
             const isActive = isActiveFor(item, activePage);
             const hasChildren = !!item.children?.length;
@@ -318,10 +318,10 @@ export default function Sidebar({ activePage, badges = {}, mobileOpen = false, o
           })}
         </nav>
 
-        <div className="mt-auto space-y-0.5 border-t border-outline-variant/20 px-3 pt-6">
+        <div className="mt-auto flex-shrink-0 space-y-0.5 border-t border-outline-variant/20 px-3 pt-3">
           <button
             className={`w-full flex items-center gap-3 rounded-xl text-outline transition-all duration-200 hover:bg-primary/5 hover:text-primary dark:hover:bg-white/5 dark:hover:text-on-surface ${
-              isMobile ? "px-3 py-2.5" : "min-w-[264px] px-0 py-2.5"
+              isMobile ? "px-3 py-2" : "min-w-[264px] px-0 py-2"
             }`}
             onClick={() => changeLanguage(language === "ja" ? "en" : "ja")}
             title={language === "ja" ? "Switch to English" : "日本語に切り替え"}
@@ -336,7 +336,7 @@ export default function Sidebar({ activePage, badges = {}, mobileOpen = false, o
           </button>
           <button
             className={`w-full flex items-center gap-3 rounded-xl text-error/70 transition-all duration-200 hover:bg-error/5 hover:text-error dark:text-outline dark:hover:bg-white/5 dark:hover:text-on-surface ${
-              isMobile ? "px-3 py-2.5" : "min-w-[264px] px-0 py-2.5"
+              isMobile ? "px-3 py-2" : "min-w-[264px] px-0 py-2"
             }`}
             onClick={onLogout}
             title={t("logout")}
@@ -352,7 +352,7 @@ export default function Sidebar({ activePage, badges = {}, mobileOpen = false, o
 
   return (
     <>
-      <aside className={`group fixed left-0 top-0 z-[45] hidden h-full w-16 overflow-hidden sidebar-glass py-6 font-headline text-sm font-medium transition-[width] duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] hover:w-72 md:flex md:flex-col ${className}`}>
+      <aside className={`group fixed left-0 top-0 z-[45] hidden h-dvh max-h-screen w-16 overflow-hidden sidebar-glass py-4 font-headline text-sm font-medium transition-[width] duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] hover:w-72 md:flex md:flex-col ${className}`}>
         {renderSidebarContent(false)}
       </aside>
 
@@ -364,7 +364,7 @@ export default function Sidebar({ activePage, badges = {}, mobileOpen = false, o
           className={`absolute inset-0 bg-black/45 backdrop-blur-sm transition-opacity ${mobileOpen ? "opacity-100" : "opacity-0"}`}
         />
 
-        <aside className={`absolute left-0 top-0 z-10 flex h-full w-72 max-w-[82vw] flex-col sidebar-glass py-6 font-headline text-sm font-medium shadow-2xl transition-transform duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] ${mobileOpen ? "translate-x-0" : "-translate-x-full"}`}>
+        <aside className={`absolute left-0 top-0 z-10 flex h-dvh max-h-screen w-72 max-w-[82vw] flex-col sidebar-glass py-4 font-headline text-sm font-medium shadow-2xl transition-transform duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] ${mobileOpen ? "translate-x-0" : "-translate-x-full"}`}>
           {renderSidebarContent(true)}
         </aside>
       </div>

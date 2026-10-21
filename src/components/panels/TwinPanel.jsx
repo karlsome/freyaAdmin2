@@ -471,7 +471,7 @@ export default function TwinPanel({
 
       {/* Overlay controls: Toggles for Call Monitor TV, Sensors/Heat Auras, Sensor Info, Cameras, Location Edit, Lite Mode + Reset view */}
       {has3D && (
-        <div className="twin-overlay top-3 right-3 flex items-center gap-1.5">
+        <div className="twin-overlay dash-twin__toolbar top-2.5 right-2.5 flex items-center gap-1">
           {/* Open Call Monitor Modal + 3D Simulator button */}
           <button
             type="button"

@@ -209,17 +209,17 @@ function App() {
             onLogout={handleLogout}
             onNavigate={(page) => navigate(`/${page}`)}
           />
+          <TopNav
+            authUser={authUser}
+            isDark={isDark}
+            onLogout={handleLogout}
+            onOpenMobileNav={() => setMobileNavOpen(true)}
+            onToggleTheme={() => setIsDark((darkMode) => !darkMode)}
+          />
           <main
-            className={`app-main-shell ml-0 min-h-screen bg-background relative md:ml-16 ${shellIntro && !canUseViewTransitions ? "app-main-shell--enter" : ""} ${justLoggedIn && canUseViewTransitions ? "app-main-shell--handoff-target" : ""}`}
+            className={`app-main-shell ml-0 min-h-screen min-w-0 bg-background relative overflow-x-hidden md:ml-16 md:w-[calc(100vw-4rem)] md:max-w-[calc(100vw-4rem)] ${shellIntro && !canUseViewTransitions ? "app-main-shell--enter" : ""} ${shellIntro && canUseViewTransitions ? "app-main-shell--handoff-target" : ""}`}
             style={{ zIndex: 1 }}
           >
-            <TopNav
-              authUser={authUser}
-              isDark={isDark}
-              onLogout={handleLogout}
-              onOpenMobileNav={() => setMobileNavOpen(true)}
-              onToggleTheme={() => setIsDark((darkMode) => !darkMode)}
-            />
             <Routes>
               <Route path="/" element={<Navigate to="/dashboard" replace />} />
               <Route path="/dashboard" element={<DashboardPage />} />
