@@ -255,6 +255,12 @@ export async function uploadScnaNcProgram({ sebanggo, displayName, fileName, sou
   return parseJsonResponse(response, "Failed to upload NC program");
 }
 
+export async function fetchScnaNcProgramPoints(id) {
+  const response = await fetch(`${BASE_URL}api/scna-nc-programs/${encodeURIComponent(id)}/points`);
+  const payload = await parseJsonResponse(response, "Failed to fetch NC program points");
+  return Array.isArray(payload?.points) ? payload.points : [];
+}
+
 export async function renameScnaNcProgram(id, displayName) {
   const response = await fetch(`${BASE_URL}api/scna-nc-programs/${encodeURIComponent(id)}`, {
     method: "PATCH",
