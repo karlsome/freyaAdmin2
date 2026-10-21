@@ -9,6 +9,7 @@ import {
   uploadScnaNcProgram,
 } from "../../services/scnaApi";
 import { readStoredAuthUser } from "../../utils/auth";
+import { parsePce } from "../../utils/pceParser";
 import { parsePlt } from "../../utils/pltParser";
 
 const PAGE_SIZE = 15;
@@ -161,17 +162,20 @@ export default function ScnaNcProgramsTab({ onFlash }) {
 
   async function handleFileChosen(f) {
     if (!f) return;
-    if (!f.name.toLowerCase().endsWith(".plt")) {
-      onFlash?.({ type: "error", message: isJa ? ".plt ファイルのみ受け付け可能です。" : "Only .plt files are accepted." });
+    const lowerName = f.name.toLowerCase();
+    const isPce = lowerName.endsWith(".pce");
+    if (!isPce && !lowerName.endsWith(".plt")) {
+      onFlash?.({ type: "error", message: isJa ? ".plt / .pce ファイルのみ受け付け可能です。" : "Only .plt or .pce files are accepted." });
       resetForm();
       return;
     }
     try {
-      const result = parsePlt(await f.text());
+      const result = isPce ? parsePce(await f.arrayBuffer()) : parsePlt(await f.text());
       setFile(f);
-      setParsed(result);
-      if (!displayName) setDisplayName(f.name.replace(/\.plt$/i, ""));
+      setParsed({ ...result, sourceType: isPce ? "pce" : "plt" });
+      if (!displayName) setDisplayName(f.name.replace(/\.(plt|pce)$/i, ""));
     } catch (err) {
+      console.error(`[NC programs] Could not read ${f.name}`, err);
       onFlash?.({ type: "error", message: `${f.name}: ${err.message}` });
       resetForm();
     }
@@ -185,7 +189,11 @@ export default function ScnaNcProgramsTab({ onFlash }) {
         sebanggo: selected.背番号,
         displayName: displayName.trim(),
         fileName: file.name,
-        pltBase64: await toBase64(file),
+        sourceType: parsed.sourceType,
+        // the original file is kept as sent: PLT as before, PCE under its own field
+        ...(parsed.sourceType === "pce"
+          ? { pceBase64: await toBase64(file) }
+          : { pltBase64: await toBase64(file) }),
         points: parsed.points,
         uploadedBy: readStoredAuthUser()?.username || "admin",
       });
@@ -378,16 +386,22 @@ export default function ScnaNcProgramsTab({ onFlash }) {
           <div className="space-y-5 p-4">
             {/* Upload */}
             <div className="space-y-3 rounded-[8px] border border-dashed border-[var(--border)] p-3">
-              <p className="text-xs font-semibold text-[var(--text-primary)]">{isJa ? "PLT をアップロード" : "Upload a PLT"}</p>
+              <p className="text-xs font-semibold text-[var(--text-primary)]">{isJa ? "PCE / PLT をアップロード" : "Upload a PCE or PLT"}</p>
               <input
                 ref={fileInputRef}
                 type="file"
-                accept=".plt"
+                accept=".pce,.plt"
                 onChange={(e) => handleFileChosen(e.target.files?.[0])}
                 className="block w-full text-xs"
               />
+              <p className="text-[11px] text-[var(--text-muted)]">
+                {isJa
+                  ? "Xiao の .pce をそのままアップロードできます（機械に接続して PLT を書き出す必要はありません）。"
+                  : "You can upload the .pce saved in Xiao directly — no need to connect to the machine to export a PLT."}
+              </p>
               {parsed && (
                 <p className="text-[11px] text-[var(--text-secondary)]">
+                  <span className="font-semibold uppercase">{parsed.sourceType}</span> ·{" "}
                   {parsed.pointCount} {isJa ? "ポイント" : "points"} · {isJa ? "レイヤー" : "layers"} {parsed.layers.join(", ")} ·
                   {" "}X {parsed.bounds.minX.toFixed(1)}–{parsed.bounds.maxX.toFixed(1)} mm ·
                   {" "}Y {parsed.bounds.minY.toFixed(1)}–{parsed.bounds.maxY.toFixed(1)} mm

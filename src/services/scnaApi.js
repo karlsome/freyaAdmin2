@@ -246,11 +246,11 @@ export async function fetchScnaNcPrograms(sebanggo) {
   return Array.isArray(payload) ? payload : [];
 }
 
-export async function uploadScnaNcProgram({ sebanggo, displayName, fileName, pltBase64, points, uploadedBy }) {
+export async function uploadScnaNcProgram({ sebanggo, displayName, fileName, sourceType, pltBase64, pceBase64, points, uploadedBy }) {
   const response = await fetch(`${BASE_URL}api/scna-nc-programs`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ sebanggo, displayName, fileName, pltBase64, points, uploadedBy }),
+    body: JSON.stringify({ sebanggo, displayName, fileName, sourceType, pltBase64, pceBase64, points, uploadedBy }),
   });
   return parseJsonResponse(response, "Failed to upload NC program");
 }
