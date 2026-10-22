@@ -327,3 +327,38 @@ export async function saveScnaLabelFieldNames({ names, username }) {
   });
   return parseJsonResponse(response, "Failed to save field names");
 }
+
+// Item binding for label layouts (writes masterDB.labelLayoutId on SCNA items).
+export async function fetchScnaLabelItems() {
+  const response = await fetch(`${BASE_URL}api/scna-label-layouts/items`);
+  const payload = await parseJsonResponse(response, "Failed to fetch items");
+  return Array.isArray(payload) ? payload : [];
+}
+
+export async function assignScnaLabelLayoutItems(layoutId, { add, remove }) {
+  const response = await fetch(`${BASE_URL}api/scna-label-layouts/${encodeURIComponent(layoutId)}/assign`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ add, remove }),
+  });
+  return parseJsonResponse(response, "Failed to assign items");
+}
+
+export async function migrateScnaLabelCustomers({ dryRun = false } = {}) {
+  const response = await fetch(`${BASE_URL}api/scna-label-layouts/migrate-customers`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ dryRun }),
+  });
+  return parseJsonResponse(response, "Failed to migrate customer bindings");
+}
+
+// Preview PNG (data URL) rendered when a layout is saved; the server stores it in Firebase Storage.
+export async function saveScnaLabelThumbnail(layoutId, imageBase64) {
+  const response = await fetch(`${BASE_URL}api/scna-label-layouts/${encodeURIComponent(layoutId)}/thumbnail`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ imageBase64 }),
+  });
+  return parseJsonResponse(response, "Failed to save label thumbnail");
+}
