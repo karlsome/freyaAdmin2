@@ -269,6 +269,9 @@ export default function ScnaLabelDesignerTab({ onFlash }) {
   const stageW = layout.widthMm * ppm;
   const stageH = layout.heightMm * ppm;
 
+  const stageWrapRef = useRef(null);
+  const toolbarRef = useRef(null);
+  const propsRef = useRef(null);
   const trRef = useRef(null);
   const nodeRefs = useRef({});
   const undoStack = useRef([]);
@@ -377,6 +380,21 @@ export default function ScnaLabelDesignerTab({ onFlash }) {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [selectedId, undo, redo, duplicateSelected, deleteSelected, updateElement]);
+
+  // ── deselect when clicking outside the label (but not in the toolbar / properties panel) ──
+  useEffect(() => {
+    if (!selectedId || namesOpen) return undefined;
+    function onPointerDown(e) {
+      const inside = [stageWrapRef, toolbarRef, propsRef].some((r) => r.current?.contains(e.target));
+      if (!inside) setSelectedId(null);
+    }
+    document.addEventListener("mousedown", onPointerDown);
+    document.addEventListener("touchstart", onPointerDown);
+    return () => {
+      document.removeEventListener("mousedown", onPointerDown);
+      document.removeEventListener("touchstart", onPointerDown);
+    };
+  }, [selectedId, namesOpen]);
 
   // ── transformer follows selection ──
   useEffect(() => {
@@ -760,7 +778,7 @@ export default function ScnaLabelDesignerTab({ onFlash }) {
 
       {/* ── Center: canvas ── */}
       <div className="freya-card min-w-0 rounded-[8px] border border-[var(--border)] bg-[var(--surface)]">
-        <div className="flex flex-wrap items-center gap-1.5 border-b border-[var(--border)] bg-[var(--surface-subtle)] px-3 py-2">
+        <div ref={toolbarRef} className="flex flex-wrap items-center gap-1.5 border-b border-[var(--border)] bg-[var(--surface-subtle)] px-3 py-2">
           {[["text", "Text"], ["barcode128", "Barcode"], ["qr", "QR"], ["line", "Line"], ["rect", "Box"]].map(([type, label]) => (
             <button key={type} type="button" className={btnCls} onClick={() => addElement(type)}>+ {label}</button>
           ))}
@@ -778,7 +796,7 @@ export default function ScnaLabelDesignerTab({ onFlash }) {
         </div>
 
         <div className="overflow-auto bg-[var(--surface-subtle)] p-4">
-          <div style={{ width: stageW, height: stageH }} className="mx-auto shadow-md">
+          <div ref={stageWrapRef} style={{ width: stageW, height: stageH }} className="mx-auto shadow-md">
             <Stage
               width={stageW}
               height={stageH}
@@ -829,7 +847,7 @@ export default function ScnaLabelDesignerTab({ onFlash }) {
       </div>
 
       {/* ── Right: properties ── */}
-      <div className="freya-card h-fit rounded-[8px] border border-[var(--border)] bg-[var(--surface)]">
+      <div ref={propsRef} className="freya-card h-fit rounded-[8px] border border-[var(--border)] bg-[var(--surface)]">
         <div className="border-b border-[var(--border)] bg-[var(--surface-subtle)] px-3 py-2">
           <h3 className="text-xs font-bold text-[var(--text-primary)]">
             {selected ? `${t("Properties", "プロパティ")} · ${selected.type}` : t("Properties", "プロパティ")}
