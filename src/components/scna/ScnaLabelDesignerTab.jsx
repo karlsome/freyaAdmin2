@@ -531,9 +531,8 @@ function ScnaLabelEditor({ onFlash, initialDoc, onBack, requestThumbnail }) {
     const cur = layoutRef.current;
     const copies = [];
     cur.elements.filter((e) => selectedIds.includes(e.id)).forEach((e) => {
-      const copy = { ...e, id: newId(), x: round1(e.x + 3), y: round1(e.y + 3) };
-      if (e.name) copy.name = nextElementName(e.type, [...cur.elements, ...copies]);   // IDs must stay unique
-      copies.push(copy);
+      // The copy keeps the original's element ID, so both receive the same value from the tablet
+      copies.push({ ...e, id: newId(), x: round1(e.x + 3), y: round1(e.y + 3) });
     });
     if (!copies.length) return;
     commit({ ...cur, elements: [...cur.elements, ...copies] });
@@ -1001,12 +1000,6 @@ function ScnaLabelEditor({ onFlash, initialDoc, onBack, requestThumbnail }) {
       onFlash?.({ type: "warning", message: t("Enter a layout name", "レイアウト名を入力してください") });
       return;
     }
-    const seen = new Set();
-    const dup = layout.elements.map((e) => e.name).filter(Boolean).find((n) => (seen.has(n) ? true : (seen.add(n), false)));
-    if (dup) {
-      onFlash?.({ type: "warning", message: t(`Element ID "${dup}" is used more than once.`, `要素ID「${dup}」が重複しています。`) });
-      return;
-    }
     setSaving(true);
     const body = {
       name: name.trim(),
@@ -1453,14 +1446,10 @@ function ScnaLabelEditor({ onFlash, initialDoc, onBack, requestThumbnail }) {
                   placeholder={nextElementName(selected.type, layout.elements.filter((e) => e.id !== selected.id))}
                   onChange={(e) => updateElement(selected.id, { name: e.target.value.replace(ELEMENT_ID_RE, "") })}
                 />
-                {selected.name && layout.elements.some((e) => e.id !== selected.id && e.name === selected.name) ? (
-                  <p className="mt-1 text-[10px] font-semibold text-[var(--status-danger,#dc2626)]">{t("This ID is already used by another element.", "このIDは他の要素で使用されています。")}</p>
-                ) : (
-                  <p className="mt-1 text-[10px] text-[var(--text-muted)]">
-                    {t("Letters, numbers, _ and - . The tablet can replace this element's value at print time:", "英数字・_・- が使えます。タブレットから印刷時にこの要素の値を差し替えられます:")}{" "}
-                    <code>{selected.name ? `SCNA.labelValues.${selected.name} = "…"` : t("(set an ID first)", "（先にIDを設定）")}</code>
-                  </p>
-                )}
+                <p className="mt-1 text-[10px] text-[var(--text-muted)]">
+                  {t("Letters, numbers, _ and - . The tablet can replace the value at print time. Elements that share an ID all get the same value:", "英数字・_・- が使えます。タブレットから印刷時に値を差し替えられます。同じIDの要素にはすべて同じ値が入ります:")}{" "}
+                  <code>{selected.name ? `SCNA.labelValues.${selected.name} = "…"` : t("(set an ID first)", "（先にIDを設定）")}</code>
+                </p>
               </Field>
             )}
             <div className="grid grid-cols-2 gap-2">
