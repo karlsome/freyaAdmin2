@@ -89,6 +89,32 @@ function starterLayout() {
   };
 }
 
+// Change an element's type without losing anything: every existing field (text, bind, font, size,
+// align, strokeWidth…) is kept on the element, so switching back restores it exactly. The content of
+// the current type (text for text, bind for barcode/QR) is carried into the new type's content field.
+const CONTENT_KEY = { text: "text", barcode128: "bind", qr: "bind" };
+
+function convertElementType(el, type) {
+  const next = { ...el, type };
+  const fromKey = CONTENT_KEY[el.type];
+  const toKey = CONTENT_KEY[type];
+  if (toKey) {
+    const carried = fromKey ? el[fromKey] : undefined;
+    next[toKey] = carried ?? el[toKey] ?? (type === "text" ? "Text" : "");
+  }
+  if (type === "text") {
+    next.size = el.size || 12;
+    next.font = el.font || "Helvetica";
+    next.align = el.align || "left";
+  }
+  if (type === "line" || type === "rect") next.strokeWidth = el.strokeWidth || 1;
+  // Size is never changed, except a zero-height box (a line) would be invisible as another type
+  if (type !== "line" && !(el.h >= 1)) {
+    next.h = { text: 8, barcode128: 15, qr: Math.max(el.w, 10), rect: 10 }[type];
+  }
+  return next;
+}
+
 function defaultElement(type) {
   const base = { id: newId(), type, x: 10, y: 10 };
   switch (type) {
@@ -312,18 +338,11 @@ export default function ScnaLabelDesignerTab({ onFlash }) {
     commit({ ...cur, elements: cur.elements.map((e) => (e.id === id ? { ...e, ...patch } : e)) });
   }, [commit]);
 
-  // Change an element's type in place, keeping position/size and carrying the content across
-  // (text <-> barcode/QR content). Fields that don't apply to the new type are dropped.
   const changeType = useCallback((id, type) => {
     const cur = layoutRef.current;
     const el = cur.elements.find((e) => e.id === id);
     if (!el || el.type === type) return;
-    const content = el.text ?? el.bind ?? "";
-    const minH = { text: 8, barcode128: 15, qr: Math.max(el.w, 10), line: 0, rect: 10 }[type];
-    const next = { id, type, x: el.x, y: el.y, w: el.w, h: type === "line" ? el.h : Math.max(el.h, minH) };
-    if (type === "text") Object.assign(next, { text: content || "Text", size: el.size || 12, font: el.font || "Helvetica", align: el.align || "left" });
-    else if (type === "barcode128" || type === "qr") next.bind = content;
-    else next.strokeWidth = el.strokeWidth || 1;
+    const next = convertElementType(el, type);
     commit({ ...cur, elements: cur.elements.map((e) => (e.id === id ? next : e)) });
   }, [commit]);
 
