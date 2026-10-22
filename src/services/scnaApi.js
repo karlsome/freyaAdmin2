@@ -276,3 +276,54 @@ export async function deleteScnaNcProgram(id) {
   });
   return parseJsonResponse(response, "Failed to delete NC program");
 }
+
+// ─── Label layouts (designed here, rendered by the miniPC print server) ───────
+export async function fetchScnaLabelLayouts() {
+  const response = await fetch(`${BASE_URL}api/scna-label-layouts`);
+  const payload = await parseJsonResponse(response, "Failed to fetch label layouts");
+  return Array.isArray(payload) ? payload : [];
+}
+
+export async function createScnaLabelLayout({ name, customers, isDefault, layout, username }) {
+  const response = await fetch(`${BASE_URL}api/scna-label-layouts`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name, customers, isDefault, layout, username }),
+  });
+  return parseJsonResponse(response, "Failed to create label layout");
+}
+
+export async function updateScnaLabelLayout(layoutId, { name, customers, isDefault, layout, username }) {
+  const response = await fetch(`${BASE_URL}api/scna-label-layouts/${encodeURIComponent(layoutId)}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name, customers, isDefault, layout, username }),
+  });
+  return parseJsonResponse(response, "Failed to update label layout");
+}
+
+export async function deleteScnaLabelLayout(layoutId) {
+  const response = await fetch(`${BASE_URL}api/scna-label-layouts/${encodeURIComponent(layoutId)}`, {
+    method: "DELETE",
+  });
+  return parseJsonResponse(response, "Failed to delete label layout");
+}
+
+// Field display names: every field found on SCNA masterDB items + saved English/Japanese names.
+export async function fetchScnaLabelFields() {
+  const response = await fetch(`${BASE_URL}api/scna-label-fields`);
+  const payload = await parseJsonResponse(response, "Failed to fetch label fields");
+  return {
+    fields: Array.isArray(payload?.fields) ? payload.fields : [],
+    names: Array.isArray(payload?.names) ? payload.names : [],
+  };
+}
+
+export async function saveScnaLabelFieldNames({ names, username }) {
+  const response = await fetch(`${BASE_URL}api/scna-label-fields`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ names, username }),
+  });
+  return parseJsonResponse(response, "Failed to save field names");
+}

@@ -8,6 +8,7 @@ import ScnaFreyaTabletTab from "../components/scna/ScnaFreyaTabletTab";
 import ScnaMachineAnalyticsTab from "../components/scna/ScnaMachineAnalyticsTab";
 import ScnaWorkOrderTab from "../components/scna/ScnaWorkOrderTab";
 import ScnaNcProgramsTab from "../components/scna/ScnaNcProgramsTab";
+import ScnaLabelDesignerTab from "../components/scna/ScnaLabelDesignerTab";
 
 const SCNA_TABS = [
   {
@@ -44,6 +45,13 @@ const SCNA_TABS = [
     label: "NC Programs",
     labelEn: "NC Programs",
     labelJa: "NCプログラム",
+  },
+  {
+    key: "labelDesigner",
+    icon: "label",
+    label: "Label Designer",
+    labelEn: "Label Designer",
+    labelJa: "ラベルデザイナー",
   },
 ];
 
@@ -143,6 +151,9 @@ export default function ScnaPage() {
         )}
         {activeTab === "ncPrograms" && (
           <ScnaNcProgramsTab onFlash={setFlash} />
+        )}
+        {activeTab === "labelDesigner" && (
+          <ScnaLabelDesignerTab onFlash={setFlash} />
         )}
       </div>
     </section>
