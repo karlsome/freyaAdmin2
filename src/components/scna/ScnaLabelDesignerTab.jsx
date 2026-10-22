@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Konva from "konva";
+import { flushSync } from "react-dom";
 import { Group, Image as KonvaImage, Layer, Line, Rect, Stage, Text as KonvaText, Transformer } from "react-konva";
 import { useLanguage } from "../../contexts/LanguageContext";
 import { fetchMasterPage } from "../../services/api";
@@ -107,6 +108,70 @@ function starterLayout() {
 // the current type (text for text, bind for barcode/QR) is carried into the new type's content field.
 const CONTENT_KEY = { text: "text", barcode128: "bind", qr: "bind" };
 
+// QR codes and barcodes keep their proportions when resized from a corner. A QR is square, so it has corner
+// handles only; a barcode also gets top / bottom handles because its height is free (the bars just get taller).
+const CORNER_ANCHORS = ["top-left", "top-right", "bottom-left", "bottom-right"];
+const BARCODE_ANCHORS = [...CORNER_ANCHORS, "top-center", "bottom-center"];
+const ALL_ANCHORS = ["top-left", "top-center", "top-right", "middle-right", "middle-left", "bottom-left", "bottom-center", "bottom-right"];
+// Text with Auto-resize on scales its font with the box (corner handles, ratio locked). With it off, dragging
+// only changes the box: the font size is kept and the letters are never stretched (see handleTransform).
+const ratioLocked = (el) => !!el && (el.type === "qr" || el.type === "barcode128" || (el.type === "text" && !!el.autoFit));
+const anchorsFor = (el) => {
+  if (!el) return ALL_ANCHORS;
+  if (el.type === "qr" || (el.type === "text" && el.autoFit)) return CORNER_ANCHORS;
+  if (el.type === "barcode128") return BARCODE_ANCHORS;
+  return ALL_ANCHORS;
+};
+
+// Element IDs: the key the tablet uses to set a value at print time (print_DBprinter.py "overrides").
+// Only elements that show a value get one.
+const NAMED_TYPES = { text: "text", barcode128: "barcode", qr: "qr" };
+const ELEMENT_ID_RE = /[^A-Za-z0-9_-]/g;
+
+function nextElementName(type, elements) {
+  const prefix = NAMED_TYPES[type];
+  if (!prefix) return undefined;
+  const used = new Set(elements.map((e) => e.name).filter(Boolean));
+  let n = 1;
+  while (used.has(`${prefix}_${n}`)) n += 1;
+  return `${prefix}_${n}`;
+}
+
+// Fill in an ID for every value element that has none (layouts saved before IDs existed).
+function withElementNames(elements) {
+  const out = [];
+  elements.forEach((rawEl) => {
+    // Older QR elements may be non-square; the printed QR was always min(w, h), so squaring changes nothing.
+    const el = rawEl.type === "qr" && rawEl.w !== rawEl.h ? { ...rawEl, w: Math.min(rawEl.w, rawEl.h), h: Math.min(rawEl.w, rawEl.h) } : rawEl;
+    if (NAMED_TYPES[el.type] && !el.name) out.push({ ...el, name: nextElementName(el.type, [...elements, ...out]) });
+    else out.push(el);
+  });
+  return out;
+}
+
+// Tightest box for a text element: the width of its longest line and the height of its lines, with the
+// text kept where it is on the label (a centred / right-aligned text keeps its centre / right edge).
+// Smallest box a text element can be dragged to: never smaller than the text, so it always stays selectable.
+function minTextBox(el, filledText, boxW) {
+  const bold = String(el.font || "").includes("Bold");
+  const { size, lines } = layoutText({ ...el, w: boxW }, filledText);
+  const widthPt = Math.max(0, ...lines.map((l) => measurePt(l, size, bold)));
+  return {
+    w: el.wrap ? 3 : Math.max(1, round1(widthPt * PT_TO_MM + 0.4)),
+    h: Math.max(1, round1(lines.length * size * LINE_HEIGHT * PT_TO_MM)),
+  };
+}
+
+function fitTextBox(el, filledText) {
+  const bold = String(el.font || "").includes("Bold");
+  const { size, lines } = layoutText(el, filledText);
+  const widthPt = Math.max(0, ...lines.map((l) => measurePt(l, size, bold)));
+  const w = Math.max(1, round1(widthPt * PT_TO_MM + 0.4));
+  const h = Math.max(1, round1(lines.length * size * LINE_HEIGHT * PT_TO_MM));
+  const shift = el.align === "center" ? 0.5 : el.align === "right" ? 1 : 0;
+  return { w, h, x: round1(el.x + (el.w - w) * shift) };
+}
+
 function convertElementType(el, type) {
   const next = { ...el, type };
   const fromKey = CONTENT_KEY[el.type];
@@ -125,6 +190,7 @@ function convertElementType(el, type) {
   if (type !== "line" && !(el.h >= 1)) {
     next.h = { text: 8, barcode128: 15, qr: Math.max(el.w, 10), rect: 10 }[type];
   }
+  if (type === "qr") next.w = next.h = Math.max(1, round1(Math.min(next.w, next.h)));
   return next;
 }
 
@@ -287,7 +353,7 @@ function ElementShape({ el, ppm, data }) {
     const side = Math.min(w, h);
     return (
       <>
-        <Rect width={Math.max(w, 4)} height={Math.max(h, 4)} fill="rgba(0,0,0,0.001)" />
+        <Rect width={Math.max(side, 4)} height={Math.max(side, 4)} fill="rgba(0,0,0,0.001)" />
         <QrPreview content={show(el.bind || el.text)} side={side} />
       </>
     );
@@ -338,13 +404,14 @@ function ScnaLabelEditor({ onFlash, initialDoc, onBack, requestThumbnail }) {
   const [layout, setLayout] = useState(() => (initialDoc ? {
     widthMm: initialDoc.layout?.widthMm || 152.4,
     heightMm: initialDoc.layout?.heightMm || 101.6,
-    elements: (initialDoc.layout?.elements || []).map((e) => ({ ...e, id: e.id || newId() })),
-  } : starterLayout()));
+    elements: withElementNames((initialDoc.layout?.elements || []).map((e) => ({ ...e, id: e.id || newId() }))),
+  } : { ...starterLayout(), elements: withElementNames(starterLayout().elements) }));
   const [selectedIds, setSelectedIds] = useState([]);
   const [marquee, setMarquee] = useState(null); // drag-select rectangle in px: { x0, y0, x1, y1, additive }
   const [menu, setMenu] = useState(null); // right-click menu position { x, y }
   const [marqueeHits, setMarqueeHits] = useState([]); // element ids currently touched by the drag-select box
-  const [dirty, setDirty] = useState(false);
+  // Layouts saved before element IDs existed get IDs filled in on open; they are kept once saved.
+  const [dirty, setDirty] = useState(() => !!initialDoc && (initialDoc.layout?.elements || []).some((e) => NAMED_TYPES[e.type] && !e.name));
   const [saving, setSaving] = useState(false);
 
   // ── view ──
@@ -381,6 +448,8 @@ function ScnaLabelEditor({ onFlash, initialDoc, onBack, requestThumbnail }) {
   const stageWrapRef = useRef(null);
   const toolbarRef = useRef(null);
   const propsRef = useRef(null);
+  const liveRef = useRef(null); // { id, w, h } while a text box is being dragged (font size is kept)
+  const [liveBox, setLiveBox] = useState(null);
   const menuRef = useRef(null);
   const marqueeRef = useRef(null);
   const dragStartRef = useRef(null);
@@ -423,7 +492,16 @@ function ScnaLabelEditor({ onFlash, initialDoc, onBack, requestThumbnail }) {
 
   const updateElement = useCallback((id, patch) => {
     const cur = layoutRef.current;
-    commit({ ...cur, elements: cur.elements.map((e) => (e.id === id ? { ...e, ...patch } : e)) });
+    commit({
+      ...cur,
+      elements: cur.elements.map((e) => {
+        if (e.id !== id) return e;
+        const next = { ...e, ...patch };
+        // A QR code is always square: its box is the QR, so resizing one side resizes both.
+        if (next.type === "qr" && ("w" in patch || "h" in patch)) next.w = next.h = "w" in patch ? patch.w : patch.h;
+        return next;
+      }),
+    });
   }, [commit]);
 
   const changeType = useCallback((id, type) => {
@@ -435,8 +513,9 @@ function ScnaLabelEditor({ onFlash, initialDoc, onBack, requestThumbnail }) {
   }, [commit]);
 
   const addElement = useCallback((type) => {
-    const el = defaultElement(type);
     const cur = layoutRef.current;
+    const el = { ...defaultElement(type), name: nextElementName(type, cur.elements) };
+    if (!el.name) delete el.name;
     commit({ ...cur, elements: [...cur.elements, el] });
     setSelectedId(el.id);
   }, [commit, setSelectedId]);
@@ -450,9 +529,12 @@ function ScnaLabelEditor({ onFlash, initialDoc, onBack, requestThumbnail }) {
 
   const duplicateSelected = useCallback(() => {
     const cur = layoutRef.current;
-    const copies = cur.elements
-      .filter((e) => selectedIds.includes(e.id))
-      .map((e) => ({ ...e, id: newId(), x: round1(e.x + 3), y: round1(e.y + 3) }));
+    const copies = [];
+    cur.elements.filter((e) => selectedIds.includes(e.id)).forEach((e) => {
+      const copy = { ...e, id: newId(), x: round1(e.x + 3), y: round1(e.y + 3) };
+      if (e.name) copy.name = nextElementName(e.type, [...cur.elements, ...copies]);   // IDs must stay unique
+      copies.push(copy);
+    });
     if (!copies.length) return;
     commit({ ...cur, elements: [...cur.elements, ...copies] });
     setSelectedIds(copies.map((c) => c.id));
@@ -766,24 +848,67 @@ function ScnaLabelEditor({ onFlash, initialDoc, onBack, requestThumbnail }) {
   }
 
   // One commit for every node the transformer resized (single or multi-selection)
+  // Text with Auto-resize off: turn the drag into a box size right away and reset the scale, so the letters are
+  // never stretched while dragging. The font size stays as it is.
+  function handleTransform(e) {
+    // Konva fires "transform" with the first attached node as the target (and "transformend" with the Transformer)
+    const target = e?.target;
+    const node = target?.nodes ? target.nodes()[0] : target;
+    const tr = e?.currentTarget?.nodes ? e.currentTarget : target?.nodes ? target : null;
+    const el = node && layoutRef.current.elements.find((x) => x.id === node.id());
+    if (!el || el.type !== "text" || el.autoFit) return;
+    const sx = node.scaleX(), sy = node.scaleY();
+    const base = liveRef.current?.id === el.id ? liveRef.current : { w: el.w, h: el.h };
+    // Dragging a handle past the opposite edge flips the scale; the box is also kept at least as big as the text,
+    // otherwise the text would stick out of a tiny box and could no longer be clicked.
+    const filled = previewData ? fillTokens(el.text || "", previewData) : String(el.text || "");
+    const rawW = base.w * Math.abs(sx);
+    const min = minTextBox(el, filled, rawW);
+    const next = { id: el.id, w: Math.max(min.w, rawW), h: Math.max(min.h, base.h * Math.abs(sy)) };
+    node.scaleX(1);
+    node.scaleY(1);
+    liveRef.current = next;
+    flushSync(() => setLiveBox(next));
+    tr?.forceUpdate();
+  }
+
   function handleTransformEnd(e) {
-    const tr = e?.target;
-    if (!tr?.nodes) return;
+    // The Transformer is e.currentTarget; e.target is the (first) attached node in this Konva version
+    const tr = e?.currentTarget?.nodes ? e.currentTarget : e?.target?.nodes ? e.target : null;
+    const nodes = tr ? tr.nodes() : e?.target ? [e.target] : [];
+    if (!nodes.length) return;
     const cur = layoutRef.current;
     const patches = {};
-    tr.nodes().forEach((node) => {
+    nodes.forEach((node) => {
       const el = cur.elements.find((x) => x.id === node.id());
       if (!el) return;
       const sx = node.scaleX(), sy = node.scaleY();
       node.scaleX(1);
       node.scaleY(1);
-      patches[el.id] = {
-        x: round1(node.x() / ppm),
-        y: round1(node.y() / ppm),
-        w: Math.max(0.5, round1(el.w * sx)),
-        h: Math.max(0, round1(el.h * sy)),
-      };
+      const base = { x: round1(node.x() / ppm), y: round1(node.y() / ppm) };
+      if (el.type === "qr") {
+        // Square: follow whichever handle was dragged further
+        const side = Math.max(0.5, round1(Math.min(el.w, el.h) * Math.max(sx, sy)));
+        patches[el.id] = { ...base, w: side, h: side };
+      } else if (el.type === "text" && !el.autoFit) {
+        // Font size is kept; only the box changes (already applied live in handleTransform)
+        const live = liveRef.current?.id === el.id ? liveRef.current : { w: el.w * sx, h: el.h * sy };
+        patches[el.id] = { ...base, w: Math.max(0.5, round1(live.w)), h: Math.max(0.5, round1(live.h)) };
+      } else if (el.type === "text") {
+        // Auto-resize on: scale the whole text, font size included, so the letters are never stretched
+        const f = Math.max(sx, sy);
+        patches[el.id] = {
+          ...base,
+          w: Math.max(0.5, round1(el.w * f)),
+          h: Math.max(0.5, round1(el.h * f)),
+          size: Math.max(1, Math.round((Number(el.size) || 10) * f * 2) / 2),
+        };
+      } else {
+        patches[el.id] = { ...base, w: Math.max(0.5, round1(el.w * sx)), h: Math.max(0, round1(el.h * sy)) };
+      }
     });
+    liveRef.current = null;
+    setLiveBox(null);
     commit({ ...cur, elements: cur.elements.map((x) => (patches[x.id] ? { ...x, ...patches[x.id] } : x)) });
   }
 
@@ -831,6 +956,14 @@ function ScnaLabelEditor({ onFlash, initialDoc, onBack, requestThumbnail }) {
 
   useEffect(() => { loadList(); }, [loadList]);
 
+  // Warn before a refresh / tab close / address change while there are unsaved edits.
+  useEffect(() => {
+    if (!dirty) return undefined;
+    const warn = (e) => { e.preventDefault(); e.returnValue = ""; };
+    window.addEventListener("beforeunload", warn);
+    return () => window.removeEventListener("beforeunload", warn);
+  }, [dirty]);
+
   function confirmDiscard() {
     return !dirty || window.confirm(t("Discard unsaved changes?", "保存されていない変更を破棄しますか？"));
   }
@@ -845,10 +978,10 @@ function ScnaLabelEditor({ onFlash, initialDoc, onBack, requestThumbnail }) {
     setLayout({
       widthMm: doc.layout?.widthMm || 152.4,
       heightMm: doc.layout?.heightMm || 101.6,
-      elements: (doc.layout?.elements || []).map((e) => ({ ...e, id: e.id || newId() })),
+      elements: withElementNames((doc.layout?.elements || []).map((e) => ({ ...e, id: e.id || newId() }))),
     });
     setSelectedIds([]);
-    setDirty(false);
+    setDirty((doc.layout?.elements || []).some((e) => NAMED_TYPES[e.type] && !e.name));
   }
 
   function newLayout(kind) {
@@ -858,7 +991,7 @@ function ScnaLabelEditor({ onFlash, initialDoc, onBack, requestThumbnail }) {
     setCurrentId(null);
     setName(kind === "starter" ? "Vuteq KY label" : "New layout");
     setIsDefault(false);
-    setLayout(kind === "starter" ? starterLayout() : blankLayout());
+    setLayout(kind === "starter" ? { ...starterLayout(), elements: withElementNames(starterLayout().elements) } : blankLayout());
     setSelectedIds([]);
     setDirty(false);
   }
@@ -866,6 +999,12 @@ function ScnaLabelEditor({ onFlash, initialDoc, onBack, requestThumbnail }) {
   async function handleSave() {
     if (!name.trim()) {
       onFlash?.({ type: "warning", message: t("Enter a layout name", "レイアウト名を入力してください") });
+      return;
+    }
+    const seen = new Set();
+    const dup = layout.elements.map((e) => e.name).filter(Boolean).find((n) => (seen.has(n) ? true : (seen.add(n), false)));
+    if (dup) {
+      onFlash?.({ type: "warning", message: t(`Element ID "${dup}" is used more than once.`, `要素ID「${dup}」が重複しています。`) });
       return;
     }
     setSaving(true);
@@ -1175,7 +1314,7 @@ function ScnaLabelEditor({ onFlash, initialDoc, onBack, requestThumbnail }) {
                       onDragMove={(e) => handleDragMove(e, el)}
                       onDragEnd={(e) => handleDragEnd(e, el)}
                     >
-                      <ElementShape el={el} ppm={ppm} data={previewData} />
+                      <ElementShape el={liveBox && liveBox.id === el.id ? { ...el, w: liveBox.w, h: liveBox.h } : el} ppm={ppm} data={previewData} />
                     </Group>
                   ))}
                   {marqueeHits.length > 0 && layout.elements
@@ -1244,7 +1383,10 @@ function ScnaLabelEditor({ onFlash, initialDoc, onBack, requestThumbnail }) {
                       if (tr && node) tr.nodes([node]);
                     }}
                     rotateEnabled={false}
-                    keepRatio={false}
+                  flipEnabled={false}
+                    keepRatio={ratioLocked(layout.elements.find((x) => x.id === id))}
+                    enabledAnchors={anchorsFor(layout.elements.find((x) => x.id === id))}
+                    onTransform={handleTransform}
                     onTransformEnd={handleTransformEnd}
                     boundBoxFunc={(oldBox, newBox) => (newBox.width < 4 || newBox.height < 0 ? oldBox : newBox)}
                   />
@@ -1252,7 +1394,10 @@ function ScnaLabelEditor({ onFlash, initialDoc, onBack, requestThumbnail }) {
                 <Transformer
                   ref={trRef}
                   rotateEnabled={false}
-                  keepRatio={false}
+                  flipEnabled={false}
+                  keepRatio={ratioLocked(selected)}
+                  enabledAnchors={anchorsFor(selected)}
+                  onTransform={handleTransform}
                   onTransformEnd={handleTransformEnd}
                   boundBoxFunc={(oldBox, newBox) => (newBox.width < 4 || newBox.height < 0 ? oldBox : newBox)}
                 />
@@ -1300,6 +1445,24 @@ function ScnaLabelEditor({ onFlash, initialDoc, onBack, requestThumbnail }) {
                 <option value="rect">{t("Box", "ボックス")}</option>
               </select>
             </Field>
+            {NAMED_TYPES[selected.type] && (
+              <Field label={t("Element ID", "要素ID")}>
+                <input
+                  className={inputCls}
+                  value={selected.name || ""}
+                  placeholder={nextElementName(selected.type, layout.elements.filter((e) => e.id !== selected.id))}
+                  onChange={(e) => updateElement(selected.id, { name: e.target.value.replace(ELEMENT_ID_RE, "") })}
+                />
+                {selected.name && layout.elements.some((e) => e.id !== selected.id && e.name === selected.name) ? (
+                  <p className="mt-1 text-[10px] font-semibold text-[var(--status-danger,#dc2626)]">{t("This ID is already used by another element.", "このIDは他の要素で使用されています。")}</p>
+                ) : (
+                  <p className="mt-1 text-[10px] text-[var(--text-muted)]">
+                    {t("Letters, numbers, _ and - . The tablet can replace this element's value at print time:", "英数字・_・- が使えます。タブレットから印刷時にこの要素の値を差し替えられます:")}{" "}
+                    <code>{selected.name ? `SCNA.labelValues.${selected.name} = "…"` : t("(set an ID first)", "（先にIDを設定）")}</code>
+                  </p>
+                )}
+              </Field>
+            )}
             <div className="grid grid-cols-2 gap-2">
               <Field label="X (mm)">{numField("x")}</Field>
               <Field label="Y (mm)">{numField("y")}</Field>
@@ -1366,6 +1529,13 @@ function ScnaLabelEditor({ onFlash, initialDoc, onBack, requestThumbnail }) {
                   />
                   {t("Auto-resize: shrink the font size until the text fits the box", "自動リサイズ：ボックスに収まるまで文字サイズを縮小")}
                 </label>
+                <button
+                  type="button"
+                  className={btnCls}
+                  onClick={() => updateElement(selected.id, fitTextBox(selected, previewData ? fillTokens(selected.text || "", previewData) : String(selected.text || "")))}
+                >
+                  {t("Fit box to text", "ボックスを文字に合わせる")}
+                </button>
               </>
             )}
 
