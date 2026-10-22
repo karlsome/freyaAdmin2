@@ -311,6 +311,21 @@ export default function ScnaLabelDesignerTab({ onFlash }) {
     commit({ ...cur, elements: cur.elements.map((e) => (e.id === id ? { ...e, ...patch } : e)) });
   }, [commit]);
 
+  // Change an element's type in place, keeping position/size and carrying the content across
+  // (text <-> barcode/QR content). Fields that don't apply to the new type are dropped.
+  const changeType = useCallback((id, type) => {
+    const cur = layoutRef.current;
+    const el = cur.elements.find((e) => e.id === id);
+    if (!el || el.type === type) return;
+    const content = el.text ?? el.bind ?? "";
+    const minH = { text: 8, barcode128: 15, qr: Math.max(el.w, 10), line: 0, rect: 10 }[type];
+    const next = { id, type, x: el.x, y: el.y, w: el.w, h: type === "line" ? el.h : Math.max(el.h, minH) };
+    if (type === "text") Object.assign(next, { text: content || "Text", size: el.size || 12, font: el.font || "Helvetica", align: el.align || "left" });
+    else if (type === "barcode128" || type === "qr") next.bind = content;
+    else next.strokeWidth = el.strokeWidth || 1;
+    commit({ ...cur, elements: cur.elements.map((e) => (e.id === id ? next : e)) });
+  }, [commit]);
+
   const addElement = useCallback((type) => {
     const el = defaultElement(type);
     const cur = layoutRef.current;
@@ -793,6 +808,9 @@ export default function ScnaLabelDesignerTab({ onFlash }) {
             <input type="checkbox" checked={sample} onChange={(e) => setSample(e.target.checked)} />
             {t("Preview with sample item", "サンプルアイテムでプレビュー")}
           </label>
+          <button type="button" className={`${btnCls} ml-auto`} onClick={openNamesEditor}>
+            {t("Field names", "フィールド名")}
+          </button>
         </div>
 
         <div className="overflow-auto bg-[var(--surface-subtle)] p-4">
@@ -856,6 +874,15 @@ export default function ScnaLabelDesignerTab({ onFlash }) {
         {!selected && <p className="p-3 text-[11px] text-[var(--text-muted)]">{t("Select an element on the label.", "ラベル上の要素を選択してください。")}</p>}
         {selected && (
           <div className="space-y-3 p-3">
+            <Field label={t("Type", "種類")}>
+              <select className={inputCls} value={selected.type} onChange={(e) => changeType(selected.id, e.target.value)}>
+                <option value="text">{t("Text", "テキスト")}</option>
+                <option value="barcode128">{t("Barcode (Code128)", "バーコード (Code128)")}</option>
+                <option value="qr">{t("QR code", "QRコード")}</option>
+                <option value="line">{t("Line", "線")}</option>
+                <option value="rect">{t("Box", "ボックス")}</option>
+              </select>
+            </Field>
             <div className="grid grid-cols-2 gap-2">
               <Field label="X (mm)">{numField("x")}</Field>
               <Field label="Y (mm)">{numField("y")}</Field>
