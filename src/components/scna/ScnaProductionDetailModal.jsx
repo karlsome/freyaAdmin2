@@ -8,6 +8,26 @@ import {
   getRecordQualityChecks,
 } from "../../utils/scna";
 
+
+const fmtNum = (v, digits) => {
+  const n = Number(v);
+  if (v == null || v === "" || Number.isNaN(n)) return "—";
+  return digits != null ? n.toFixed(digits) : n.toLocaleString();
+};
+
+const fmtTime = (iso) => {
+  if (!iso) return "—";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return String(iso);
+  return d.toLocaleString([], { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" });
+};
+
+const COUNT_SOURCE_LABELS = {
+  "auto-confirmed": "Auto (confirmed)",
+  "auto-edited": "Auto (edited)",
+  manual: "Manual",
+};
+
 export default function ScnaProductionDetailModal({ open, record, onClose }) {
   const { language } = useLanguage();
   const isJa = language === "ja";
@@ -28,6 +48,20 @@ export default function ScnaProductionDetailModal({ open, record, onClose }) {
   const formattedCycleTime = !Number.isNaN(cycleTimeNum)
     ? `${cycleTimeNum}s`
     : "N/A";
+
+  // New-format records (box traceability) carry these; legacy records simply don't.
+  const lotDetails = Array.isArray(record.Lot_Details) ? record.Lot_Details : [];
+  const spareLots = Array.isArray(record.Spare_Lots) ? record.Spare_Lots : [];
+  const boxIds = Array.isArray(record.Box_IDs) ? record.Box_IDs : [];
+  const machineSummary =
+    record.Machine_Summary && typeof record.Machine_Summary === "object"
+      ? Object.entries(record.Machine_Summary)
+      : [];
+  const hasTrace = Boolean(record.Run_ID) || boxIds.length > 0;
+  const hasLotDetails = lotDetails.length > 0;
+  const hasCycleInfo = lotDetails.some(
+    (l) => l.cycleSecMedian != null || l.cyclesTotalStart != null || l.shotsAuto != null
+  );
 
   const formattedDate = record.Date || "N/A";
   const hasScratchProcessed = Object.prototype.hasOwnProperty.call(
@@ -182,6 +216,30 @@ export default function ScnaProductionDetailModal({ open, record, onClose }) {
                       {formattedCycleTime}
                     </span>
                   </div>
+                  {record.Total_Pieces != null && (
+                    <div className="flex justify-between gap-2">
+                      <span className="text-blue-700 dark:text-blue-300">Total Pieces:</span>
+                      <span className="font-mono font-semibold text-blue-950 dark:text-blue-100">
+                        {fmtNum(record.Total_Pieces)}
+                      </span>
+                    </div>
+                  )}
+                  {record.Total_Meters != null && (
+                    <div className="flex justify-between gap-2">
+                      <span className="text-blue-700 dark:text-blue-300">Total Meters:</span>
+                      <span className="font-mono font-semibold text-blue-950 dark:text-blue-100">
+                        {fmtNum(record.Total_Meters, 2)}
+                      </span>
+                    </div>
+                  )}
+                  {Number(record["スペアからの部分数"]) > 0 && (
+                    <div className="flex justify-between gap-2">
+                      <span className="text-blue-700 dark:text-blue-300">From Spare:</span>
+                      <span className="font-mono font-semibold text-blue-950 dark:text-blue-100">
+                        {fmtNum(record["スペアからの部分数"])}
+                      </span>
+                    </div>
+                  )}
                   <div className="flex justify-between gap-2">
                     <span className="text-blue-700 dark:text-blue-300">Shot Count:</span>
                     <span className="font-mono font-semibold text-blue-950 dark:text-blue-100">
@@ -313,6 +371,176 @@ export default function ScnaProductionDetailModal({ open, record, onClose }) {
                       : record.WorkOrder_Info.targetMachines || "N/A"}
                   </dd>
                 </div>
+              </div>
+            </div>
+          )}
+
+
+          {/* Run & Box Traceability (new records only) */}
+          {hasTrace && (
+            <div className="rounded-[8px] border border-sky-500/25 bg-sky-500/[0.06] p-5">
+              <div className="flex items-center gap-2 mb-4 text-sky-800 dark:text-sky-300">
+                <span className="material-symbols-outlined" style={{ fontSize: 18 }}>
+                  inventory_2
+                </span>
+                <h4 className="text-sm font-semibold">
+                  {isJa ? "ラン・箱トレーサビリティ (Run & Box Traceability)" : "Run & Box Traceability"}
+                </h4>
+              </div>
+              <div className="space-y-3 text-xs">
+                <div>
+                  <dt className="text-[11px] font-medium text-sky-700 dark:text-sky-400">Run ID</dt>
+                  <dd className="mt-1 font-mono font-semibold text-sm text-sky-950 dark:text-sky-100 break-all">
+                    {record.Run_ID || "N/A"}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-[11px] font-medium text-sky-700 dark:text-sky-400">
+                    {isJa ? `箱ID (Box IDs: ${boxIds.length})` : `Box IDs (${boxIds.length})`}
+                  </dt>
+                  <dd className="mt-1 flex flex-wrap gap-2">
+                    {boxIds.length === 0 && <span className="text-[var(--text-muted)]">—</span>}
+                    {boxIds.map((id) => (
+                      <span
+                        key={id}
+                        className="rounded-full bg-sky-500/15 px-2.5 py-0.5 font-mono text-xs font-semibold text-sky-900 dark:text-sky-200"
+                      >
+                        {id}
+                      </span>
+                    ))}
+                  </dd>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Lot Details (per lot, per machine) */}
+          {hasLotDetails && (
+            <div className="rounded-[8px] border border-[var(--border)] bg-[var(--surface)] p-5">
+              <div className="flex items-center gap-2 mb-4 text-[var(--text-primary)]">
+                <span className="material-symbols-outlined text-[var(--freya-blue)]" style={{ fontSize: 18 }}>
+                  list_alt
+                </span>
+                <h4 className="text-sm font-semibold">
+                  {isJa ? `ロット詳細 (Lot Details: ${lotDetails.length})` : `Lot Details (${lotDetails.length})`}
+                </h4>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr className="border-b border-[var(--border)] text-left text-[11px] text-[var(--text-muted)]">
+                      <th className="py-2 pr-3 font-medium">Lot</th>
+                      <th className="py-2 pr-3 font-medium">Machine</th>
+                      <th className="py-2 pr-3 text-right font-medium">Shots</th>
+                      <th className="py-2 pr-3 text-right font-medium">Pcs/Cycle</th>
+                      <th className="py-2 pr-3 text-right font-medium">Pieces</th>
+                      <th className="py-2 pr-3 text-right font-medium">Meters</th>
+                      {hasCycleInfo && (
+                        <>
+                          <th className="py-2 pr-3 font-medium">Count Source</th>
+                          <th className="py-2 pr-3 text-right font-medium">Cycle (median)</th>
+                        </>
+                      )}
+                      <th className="py-2 font-medium">Time</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {lotDetails.map((lot, i) => (
+                      <tr key={`${lot.lotNumber}-${i}`} className="border-b border-[var(--border)]/60 last:border-0">
+                        <td className="py-2 pr-3 font-mono font-semibold text-[var(--text-primary)]">
+                          {lot.lotNumber || "—"}
+                        </td>
+                        <td className="py-2 pr-3 text-[var(--text-primary)]">{lot.machine || "—"}</td>
+                        <td className="py-2 pr-3 text-right font-mono">{fmtNum(lot.shots)}</td>
+                        <td className="py-2 pr-3 text-right font-mono">{fmtNum(lot.pcPerCycle)}</td>
+                        <td className="py-2 pr-3 text-right font-mono">{fmtNum(lot.pieces)}</td>
+                        <td className="py-2 pr-3 text-right font-mono">{fmtNum(lot.meters, 2)}</td>
+                        {hasCycleInfo && (
+                          <>
+                            <td className="py-2 pr-3">
+                              {lot.countSource
+                                ? COUNT_SOURCE_LABELS[lot.countSource] || lot.countSource
+                                : "—"}
+                              {lot.shotsAuto != null && lot.shotsAuto !== lot.shots && (
+                                <span className="ml-1 text-[var(--text-muted)]">
+                                  (auto {fmtNum(lot.shotsAuto)})
+                                </span>
+                              )}
+                            </td>
+                            <td className="py-2 pr-3 text-right font-mono">
+                              {lot.cycleSecMedian != null ? `${fmtNum(lot.cycleSecMedian, 1)}s` : "—"}
+                            </td>
+                          </>
+                        )}
+                        <td className="py-2 font-mono text-[var(--text-muted)]">{fmtTime(lot.timestamp)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {machineSummary.length > 0 && (
+                <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+                  {machineSummary.map(([machine, m]) => (
+                    <div key={machine} className="rounded-[6px] border border-[var(--border)] p-3">
+                      <div className="font-semibold text-[var(--text-primary)]">{machine}</div>
+                      <div className="mt-1 text-[var(--text-secondary)]">
+                        {Object.entries(m || {})
+                          .filter(([, v]) => v == null || typeof v !== "object")
+                          .map(([k, v]) => `${k}: ${v}`)
+                          .join(" · ")}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Spare lots added into this run's boxes */}
+          {spareLots.length > 0 && (
+            <div className="rounded-[8px] border border-orange-500/25 bg-orange-500/[0.06] p-5">
+              <div className="flex items-center gap-2 mb-4 text-orange-800 dark:text-orange-300">
+                <span className="material-symbols-outlined" style={{ fontSize: 18 }}>
+                  add_box
+                </span>
+                <h4 className="text-sm font-semibold">
+                  {isJa
+                    ? `スペアからの部分数 (Spare Lots: ${spareLots.length})`
+                    : `Partial From Spare (${spareLots.length})`}
+                </h4>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr className="border-b border-orange-500/20 text-left text-[11px] text-orange-700 dark:text-orange-400">
+                      <th className="py-2 pr-3 font-medium">Lot</th>
+                      <th className="py-2 pr-3 text-right font-medium">Pieces</th>
+                      <th className="py-2 pr-3 font-medium">Added</th>
+                      <th className="py-2 pr-3 font-medium">Worker</th>
+                      <th className="py-2 font-medium">Used in box</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {spareLots.map((sp, i) => (
+                      <tr key={`${sp.lotNumber}-${i}`} className="border-b border-orange-500/10 last:border-0">
+                        <td className="py-2 pr-3 font-mono font-semibold text-orange-950 dark:text-orange-100">
+                          {sp.lotNumber || "—"}
+                        </td>
+                        <td className="py-2 pr-3 text-right font-mono">{fmtNum(sp.pieces)}</td>
+                        <td className="py-2 pr-3 font-mono">{fmtTime(sp.at)}</td>
+                        <td className="py-2 pr-3">{sp.worker || "—"}</td>
+                        <td className="py-2 font-mono">
+                          {sp.consumedByBoxUid ? "Yes" : <span className="text-[var(--text-muted)]">Not yet</span>}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <div className="mt-3 text-xs text-orange-800 dark:text-orange-300">
+                {isJa ? "スペアからの部分数合計" : "Total from spare"}:{" "}
+                <span className="font-mono font-semibold">{fmtNum(record["スペアからの部分数"])}</span>
               </div>
             </div>
           )}

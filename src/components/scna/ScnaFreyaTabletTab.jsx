@@ -5,6 +5,7 @@ import IconButton from "../IconButton";
 import StatSummaryCard from "../StatSummaryCard";
 import StatusChip from "../StatusChip";
 import ScnaProductionDetailModal from "./ScnaProductionDetailModal";
+import ScnaBoxLookupModal from "./ScnaBoxLookupModal";
 import {
   fetchFreyaTabletData,
   fetchFreyaTabletEquipmentOptions,
@@ -44,6 +45,7 @@ export default function ScnaFreyaTabletTab({ onFlash }) {
   const [error, setError] = useState("");
   const [refreshNonce, setRefreshNonce] = useState(0);
   const [selectedRecord, setSelectedRecord] = useState(null);
+  const [boxLookupOpen, setBoxLookupOpen] = useState(false);
 
   const requestIdRef = useRef(0);
 
@@ -467,6 +469,16 @@ export default function ScnaFreyaTabletTab({ onFlash }) {
             </button>
             <button
               type="button"
+              onClick={() => setBoxLookupOpen(true)}
+              className="inline-flex h-9 items-center gap-1.5 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3.5 text-xs font-semibold text-[var(--text-primary)] shadow-xs transition hover:bg-[var(--surface-hover)]"
+            >
+              <span className="material-symbols-outlined" style={{ fontSize: 16 }}>
+                qr_code_scanner
+              </span>
+              {isJa ? "箱ID検索" : "Box ID Lookup"}
+            </button>
+            <button
+              type="button"
               onClick={() => setRefreshNonce((n) => n + 1)}
               className="inline-flex h-9 items-center gap-1.5 rounded-[6px] bg-[var(--freya-blue)] px-3.5 text-xs font-semibold text-white shadow-xs transition hover:opacity-95"
             >
@@ -649,6 +661,22 @@ export default function ScnaFreyaTabletTab({ onFlash }) {
                 : `Showing ${start} to ${end} of ${filteredCount.toLocaleString()} entries`}
             </span>
           );
+        }}
+      />
+
+      <ScnaBoxLookupModal
+        open={boxLookupOpen}
+        onClose={() => setBoxLookupOpen(false)}
+        onViewData={({ search, date }) => {
+          setBoxLookupOpen(false);
+          setEquipment("");
+          if (date) {
+            setDateFromInput(date);
+            setDateToInput(date);
+            setAppliedDates({ dateFrom: date, dateTo: date });
+          }
+          setSearchInput(search || "");
+          setPage(1);
         }}
       />
 

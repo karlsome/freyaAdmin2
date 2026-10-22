@@ -362,3 +362,12 @@ export async function saveScnaLabelThumbnail(layoutId, imageBase64) {
   });
   return parseJsonResponse(response, "Failed to save label thumbnail");
 }
+
+export async function fetchScnaBox(boxId) {
+  const response = await fetch(
+    `${BASE_URL}api/scna-boxes/${encodeURIComponent(boxId)}`,
+    { method: "GET", headers: { "Content-Type": "application/json" } }
+  );
+  if (response.status === 404) return null;
+  return parseJsonResponse(response, "Failed to fetch box");
+}
