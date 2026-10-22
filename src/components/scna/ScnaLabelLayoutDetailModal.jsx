@@ -1,3 +1,4 @@
+import { createPortal } from "react-dom";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { assignScnaLabelLayoutItems, fetchScnaLabelItems } from "../../services/scnaApi";
 import ScnaLabelAssignModal from "./ScnaLabelAssignModal";
@@ -52,8 +53,8 @@ export default function ScnaLabelLayoutDetailModal({ doc, layouts, startAssign, 
     }
   }
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+  return createPortal(
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
       <div className="flex max-h-[90vh] w-full max-w-4xl flex-col rounded-[10px] border border-[var(--border)] bg-[var(--surface)] shadow-xl">
         <div className="flex items-center gap-3 border-b border-[var(--border)] px-4 py-3">
           <h3 className="mr-auto truncate text-sm font-bold">{doc.name}</h3>
@@ -145,5 +146,5 @@ export default function ScnaLabelLayoutDetailModal({ doc, layouts, startAssign, 
         />
       )}
     </div>
-  );
+  , document.body);
 }

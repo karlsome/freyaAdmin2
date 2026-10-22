@@ -1,3 +1,4 @@
+import { createPortal } from "react-dom";
 import { useMemo, useState } from "react";
 import { LayoutPreview } from "./ScnaLabelThumb";
 import { effectiveLayouts } from "./scnaLabelUtils";
@@ -24,8 +25,8 @@ export default function ScnaLabelItemSearchModal({ items, layouts, t, onClose, o
     none: t("Nothing assigned and no default layout — prints the built-in label", "未割当・デフォルトなし — 標準ラベルで印刷されます"),
   };
 
-  return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 p-4">
+  return createPortal(
+    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
       <div className="flex max-h-[85vh] w-full max-w-3xl flex-col rounded-[8px] border border-[var(--border)] bg-[var(--surface)] shadow-xl">
         <div className="flex items-start justify-between border-b border-[var(--border)] px-4 py-3">
           <div>
@@ -81,5 +82,5 @@ export default function ScnaLabelItemSearchModal({ items, layouts, t, onClose, o
         </div>
       </div>
     </div>
-  );
+  , document.body);
 }

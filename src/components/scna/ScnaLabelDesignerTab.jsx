@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Konva from "konva";
-import { flushSync } from "react-dom";
+import { createPortal, flushSync } from "react-dom";
 import { Group, Image as KonvaImage, Layer, Line, Rect, Stage, Text as KonvaText, Transformer } from "react-konva";
 import { useLanguage } from "../../contexts/LanguageContext";
 import { fetchMasterPage } from "../../services/api";
@@ -1664,8 +1664,8 @@ function ScnaLabelEditor({ onFlash, initialDoc, onBack, requestThumbnail }) {
         </div>
       )}
 
-      {namesOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+      {namesOpen && createPortal(
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
           <div className="flex max-h-[85vh] w-full max-w-3xl flex-col rounded-[8px] border border-[var(--border)] bg-[var(--surface)] shadow-xl">
             <div className="border-b border-[var(--border)] px-4 py-3">
               <h3 className="text-sm font-bold">{t("Field names", "フィールド名")}</h3>
@@ -1701,7 +1701,7 @@ function ScnaLabelEditor({ onFlash, initialDoc, onBack, requestThumbnail }) {
             </div>
           </div>
         </div>
-      )}
+      , document.body)}
     </div>
   );
 }
