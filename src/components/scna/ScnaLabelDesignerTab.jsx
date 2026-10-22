@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import Konva from "konva";
 import { Group, Image as KonvaImage, Layer, Line, Rect, Stage, Text as KonvaText, Transformer } from "react-konva";
 import { useLanguage } from "../../contexts/LanguageContext";
 import { fetchMasterPage } from "../../services/api";
@@ -547,6 +548,29 @@ export default function ScnaLabelDesignerTab({ onFlash }) {
     const ro = new ResizeObserver(update);
     ro.observe(el);
     return () => ro.disconnect();
+  }, []);
+
+  // Konva starts a drag on the left AND middle button by default. Only the left button may drag
+  // elements here (the middle button pans). Restored when the tab closes, other stages are unaffected.
+  useEffect(() => {
+    const previous = Konva.dragButtons;
+    Konva.dragButtons = [0];
+    return () => { Konva.dragButtons = previous; };
+  }, []);
+
+  // ── Shift + scroll zooms (native listener: React's onWheel is passive and can't preventDefault) ──
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return undefined;
+    function onWheel(e) {
+      if (!e.shiftKey) return;
+      e.preventDefault();
+      // Some browsers turn Shift+wheel into horizontal scroll, so take whichever axis moved
+      const delta = Math.abs(e.deltaY) >= Math.abs(e.deltaX) ? e.deltaY : e.deltaX;
+      setZoom((z) => Math.min(3, Math.max(0.4, Math.round((z - delta * 0.001) * 100) / 100)));
+    }
+    el.addEventListener("wheel", onWheel, { passive: false });
+    return () => el.removeEventListener("wheel", onWheel);
   }, []);
 
   // ── middle-mouse drag pans the canvas (scrolls the panel, and the page vertically) ──
@@ -1247,8 +1271,8 @@ export default function ScnaLabelDesignerTab({ onFlash }) {
           </div>
         </div>
           <p className="px-4 py-2 text-center text-[10px] text-[var(--text-secondary)]">
-            {t("Drag on empty space to select several (Shift/Ctrl+click adds) · right-click for layering · drag to move (snaps to edges, centres and other elements) · arrows nudge 0.5mm (Shift 5mm) · Del removes · Ctrl+D duplicates · Ctrl+Z undoes. Anything outside the white label is NOT printed. Barcode is a placeholder; QR is a live preview.",
-              "空白部分をドラッグで複数選択（Shift/Ctrl+クリックで追加）· 右クリックで重なり順 · ドラッグで移動（スナップ）· 矢印キーで0.5mm移動（Shiftで5mm）· Delで削除 · Ctrl+Dで複製 · Ctrl+Zで元に戻す。白いラベルの外側は印刷されません。バーコードはプレビュー用、QRはライブプレビューです。")}
+            {t("Drag on empty space to select several (Shift/Ctrl+click adds) · right-click for layering · drag to move (snaps to edges, centres and other elements) · arrows nudge 0.5mm (Shift 5mm) · Del removes · Ctrl+D duplicates · Ctrl+Z undoes. Shift+scroll zooms, middle-drag pans. Anything outside the white label is NOT printed. Barcode is a placeholder; QR is a live preview.",
+              "空白部分をドラッグで複数選択（Shift/Ctrl+クリックで追加）· 右クリックで重なり順 · ドラッグで移動（スナップ）· 矢印キーで0.5mm移動（Shiftで5mm）· Delで削除 · Ctrl+Dで複製 · Ctrl+Zで元に戻す。Shift+スクロールでズーム、中ボタンドラッグでパン。白いラベルの外側は印刷されません。バーコードはプレビュー用、QRはライブプレビューです。")}
           </p>
       </div>
 
