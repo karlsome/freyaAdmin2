@@ -260,6 +260,7 @@ export default function ScnaLabelDesignerTab({ onFlash }) {
   const [samplePage, setSamplePage] = useState(1);
   const [sampleTotalPages, setSampleTotalPages] = useState(1);
   const [catalog, setCatalog] = useState({ fields: [], names: [] });
+  const [fieldSearch, setFieldSearch] = useState("");
   const [namesOpen, setNamesOpen] = useState(false);
   const [nameDraft, setNameDraft] = useState({});
   const [savingNames, setSavingNames] = useState(false);
@@ -679,6 +680,17 @@ export default function ScnaLabelDesignerTab({ onFlash }) {
     return v === undefined || v === null || typeof v === "object" ? "" : String(v);
   };
 
+  // Insert-field list: sorted A→Z by the displayed name; search matches name, raw field and value.
+  const shownFields = useMemo(() => {
+    const q = fieldSearch.trim().toLowerCase();
+    return catalogFields
+      .filter((f) => !q
+        || labelFor(f).toLowerCase().includes(q)
+        || f.toLowerCase().includes(q)
+        || sampleValue(f).toLowerCase().includes(q))
+      .sort((a, b) => labelFor(a).localeCompare(labelFor(b), isJa ? "ja" : "en", { sensitivity: "base" }));
+  }, [catalogFields, fieldSearch, labelFor, sampleRecord, isJa]); // eslint-disable-line react-hooks/exhaustive-deps
+
   function openNamesEditor() {
     const draft = {};
     catalogFields.forEach((f) => {
@@ -904,11 +916,23 @@ export default function ScnaLabelDesignerTab({ onFlash }) {
                 <div className="grid grid-cols-2 gap-2">
                   <Field label={t("Size (pt)", "サイズ (pt)")}>{numField("size", 1)}</Field>
                   <Field label={t("Align", "配置")}>
-                    <select className={inputCls} value={selected.align || "left"} onChange={(e) => updateElement(selected.id, { align: e.target.value })}>
-                      <option value="left">left</option>
-                      <option value="center">center</option>
-                      <option value="right">right</option>
-                    </select>
+                    <div className="flex overflow-hidden rounded-[6px] border border-[var(--border)]">
+                      {[["left", "format_align_left"], ["center", "format_align_center"], ["right", "format_align_right"]].map(([val, icon]) => {
+                        const active = (selected.align || "left") === val;
+                        return (
+                          <button
+                            key={val}
+                            type="button"
+                            title={val}
+                            aria-pressed={active}
+                            onClick={() => updateElement(selected.id, { align: val })}
+                            className={`flex flex-1 items-center justify-center py-1 ${active ? "bg-[var(--freya-blue)] text-white" : "bg-[var(--surface)] text-[var(--text-primary)] hover:bg-[var(--surface-subtle)]"}`}
+                          >
+                            <span className="material-symbols-outlined" style={{ fontSize: 18 }}>{icon}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
                   </Field>
                 </div>
                 <label className="flex items-center gap-2 text-xs">
@@ -938,8 +962,17 @@ export default function ScnaLabelDesignerTab({ onFlash }) {
                   <p className="text-[10px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">{t("Insert field (click)", "フィールド挿入（クリック）")}</p>
                   <button type="button" className="text-[10px] font-semibold text-[var(--freya-blue)]" onClick={openNamesEditor}>{t("Edit names", "名前を編集")}</button>
                 </div>
+                <input
+                  className={`${inputCls} mb-1`}
+                  value={fieldSearch}
+                  placeholder={t("Search fields…", "フィールドを検索…")}
+                  onChange={(e) => setFieldSearch(e.target.value)}
+                />
                 <div className="max-h-56 overflow-y-auto rounded-[6px] border border-[var(--border)]">
-                  {catalogFields.map((f) => (
+                  {shownFields.length === 0 && (
+                    <p className="px-2 py-2 text-[11px] text-[var(--text-muted)]">{t("No matching fields", "該当するフィールドがありません")}</p>
+                  )}
+                  {shownFields.map((f) => (
                     <button
                       key={f}
                       type="button"
