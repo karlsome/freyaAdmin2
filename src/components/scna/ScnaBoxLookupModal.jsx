@@ -2,7 +2,7 @@ import { useState } from "react";
 import ModalShell from "../ModalShell";
 import ScnaProductionDetailModal from "./ScnaProductionDetailModal";
 import { useLanguage } from "../../contexts/LanguageContext";
-import { fetchFreyaTabletData, fetchScnaBox } from "../../services/scnaApi";
+import { fetchFreyaTabletData, fetchScnaBox, fetchScnaBoxesByLot } from "../../services/scnaApi";
 
 const fmtNum = (v) => {
   const n = Number(v);
@@ -42,11 +42,31 @@ export default function ScnaBoxLookupModal({ open, onClose, onViewData }) {
   const [error, setError] = useState("");
   const [result, setResult] = useState(null);
   const [recordOpen, setRecordOpen] = useState(false);
+  const [mode, setMode] = useState("box"); // "box" | "lot"
+  const [lotResult, setLotResult] = useState(null); // { lot, boxes }
+  const [copied, setCopied] = useState(false);
 
-  async function handleSearch(e) {
-    e?.preventDefault();
-    const boxId = parseBoxId(input);
+  async function searchLot() {
+    const lot = input.trim();
+    if (!lot) return;
+    setLoading(true);
+    setError("");
+    setResult(null);
+    setLotResult(null);
+    try {
+      const boxes = await fetchScnaBoxesByLot(lot);
+      setLotResult({ lot, boxes });
+    } catch (err) {
+      setError(err.message || (isJa ? "検索に失敗しました。" : "Lookup failed."));
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function searchBoxId(idText, fromLot = false) {
+    const boxId = parseBoxId(idText);
     if (!boxId) return;
+    if (!fromLot) setLotResult(null);
     setLoading(true);
     setError("");
     setResult(null);
@@ -72,6 +92,35 @@ export default function ScnaBoxLookupModal({ open, onClose, onViewData }) {
     }
   }
 
+  function handleSearch(e) {
+    e?.preventDefault();
+    if (mode === "lot") searchLot();
+    else searchBoxId(input);
+  }
+
+  function switchMode(next) {
+    setMode(next);
+    setInput("");
+    setError("");
+    setResult(null);
+    setLotResult(null);
+  }
+
+  function lotLinesOf(b) {
+    return (b.lots || []).filter((l) => l.lotNumber === lotResult?.lot);
+  }
+
+  async function copyBoxIds() {
+    const ids = (lotResult?.boxes || []).map((b) => b.boxId).join("\n");
+    try {
+      await navigator.clipboard.writeText(ids);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1500);
+    } catch {
+      // clipboard blocked: the IDs are still visible in the table
+    }
+  }
+
   const box = result?.box;
   const record = result?.record;
   const workOrder = box?.workOrderNumber || record?.WorkOrder_Info?.workOrderNumber || "";
@@ -82,7 +131,7 @@ export default function ScnaBoxLookupModal({ open, onClose, onViewData }) {
       onClose={onClose}
       eyebrow={isJa ? "SCNA トレーサビリティ" : "SCNA Traceability"}
       title={isJa ? "箱ID検索" : "Box ID Lookup"}
-      subtitle={isJa ? "箱IDまたはラベルQRの内容を入力" : "Enter a box ID or the label QR text"}
+      subtitle={mode === "lot" ? (isJa ? "材料ロット番号から影響のある箱を検索" : "Find every box that contains a material lot") : (isJa ? "箱IDまたはラベルQRの内容を入力" : "Enter a box ID or the label QR text")}
       maxWidth="max-w-4xl"
       footer={
         <div className="flex items-center gap-2">
@@ -105,17 +154,37 @@ export default function ScnaBoxLookupModal({ open, onClose, onViewData }) {
       }
     >
       <div className="max-h-[78vh] space-y-5 overflow-y-auto p-6">
+        <div className="inline-flex rounded-[6px] border border-[var(--border)] p-0.5 text-xs font-semibold">
+          {[
+            ["box", isJa ? "箱ID" : "Box ID"],
+            ["lot", isJa ? "材料ロット" : "Lot number"],
+          ].map(([key, label]) => (
+            <button
+              key={key}
+              type="button"
+              onClick={() => switchMode(key)}
+              className={`h-7 rounded-[4px] px-3 transition ${
+                mode === key
+                  ? "bg-[var(--freya-blue)] text-white"
+                  : "text-[var(--text-secondary)] hover:bg-[var(--surface-hover)]"
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+
         <form onSubmit={handleSearch} className="flex gap-2">
           <input
             autoFocus
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder="WO-9999-B001"
+            placeholder={mode === "lot" ? "88888-2" : "WO-9999-B001"}
             className="h-9 flex-1 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 font-mono text-sm text-[var(--text-primary)]"
           />
           <button
             type="submit"
-            disabled={loading || !parseBoxId(input)}
+            disabled={loading || (mode === "lot" ? !input.trim() : !parseBoxId(input))}
             className="h-9 rounded-[6px] bg-[var(--freya-blue)] px-4 text-xs font-semibold text-white disabled:opacity-50"
           >
             {loading ? (isJa ? "検索中…" : "Searching…") : isJa ? "検索" : "Search"}
@@ -125,6 +194,83 @@ export default function ScnaBoxLookupModal({ open, onClose, onViewData }) {
         {error && (
           <div className="rounded-[6px] border border-rose-500/30 bg-rose-500/[0.06] p-3 text-xs text-rose-700 dark:text-rose-300">
             {error}
+          </div>
+        )}
+
+        {lotResult && (
+          <div className="rounded-[8px] border border-amber-500/25 bg-amber-500/[0.06] p-5">
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+              <h4 className="text-sm font-semibold text-amber-900 dark:text-amber-200">
+                {isJa ? "ロット " : "Lot "}
+                <span className="font-mono">{lotResult.lot}</span>
+                {" — "}
+                {isJa ? `${lotResult.boxes.length} 箱` : `${lotResult.boxes.length} box(es)`}
+                {lotResult.boxes.length > 0 && (
+                  <span className="ml-2 font-mono text-xs font-normal">
+                    {fmtNum(lotResult.boxes.reduce((sum, b) => sum + lotLinesOf(b).reduce((a, l) => a + (Number(l.pieces) || 0), 0), 0))}{" "}
+                    pcs
+                  </span>
+                )}
+              </h4>
+              {lotResult.boxes.length > 0 && (
+                <button
+                  type="button"
+                  onClick={copyBoxIds}
+                  className="h-7 rounded-[6px] border border-amber-500/30 px-3 text-xs font-semibold text-amber-900 dark:text-amber-200"
+                >
+                  {copied ? (isJa ? "コピーしました" : "Copied") : isJa ? "箱IDをコピー" : "Copy box IDs"}
+                </button>
+              )}
+            </div>
+            {lotResult.boxes.length === 0 ? (
+              <p className="text-xs text-[var(--text-secondary)]">
+                {isJa
+                  ? "このロットを含む箱は見つかりませんでした。箱ID機能の導入前の生産分は含まれません。"
+                  : "No boxes contain this lot. Production from before box IDs were introduced is not included."}
+              </p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr className="border-b border-amber-500/20 text-left text-[11px] text-amber-700 dark:text-amber-400">
+                      <th className="py-2 pr-3 font-medium">Box ID</th>
+                      <th className="py-2 pr-3 font-medium">背番号</th>
+                      <th className="py-2 pr-3 font-medium">Machine</th>
+                      <th className="py-2 pr-3 text-right font-medium">Pcs of this lot</th>
+                      <th className="py-2 pr-3 text-right font-medium">Box total</th>
+                      <th className="py-2 font-medium">Printed</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {lotResult.boxes.map((b) => {
+                      const lines = lotLinesOf(b);
+                      return (
+                        <tr key={b.boxId} className="border-b border-amber-500/10 last:border-0">
+                          <td className="py-2 pr-3">
+                            <button
+                              type="button"
+                              onClick={() => searchBoxId(b.boxId, true)}
+                              className="font-mono font-semibold text-[var(--freya-blue)] underline decoration-dotted underline-offset-2"
+                            >
+                              {b.boxId}
+                            </button>
+                          </td>
+                          <td className="py-2 pr-3 font-mono">{b["背番号"] || "—"}</td>
+                          <td className="py-2 pr-3">
+                            {lines.map((l) => (l.source === "spare" ? (isJa ? "スペア" : "Spare") : l.machine)).join(", ") || "—"}
+                          </td>
+                          <td className="py-2 pr-3 text-right font-mono font-semibold">
+                            {fmtNum(lines.reduce((a, l) => a + (Number(l.pieces) || 0), 0))}
+                          </td>
+                          <td className="py-2 pr-3 text-right font-mono">{fmtNum(b.qtyMeasured)}</td>
+                          <td className="py-2 font-mono">{fmtTime(b.printedAt || b.finishedAt)}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         )}
 

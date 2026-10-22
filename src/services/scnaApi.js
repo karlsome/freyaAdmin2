@@ -371,3 +371,12 @@ export async function fetchScnaBox(boxId) {
   if (response.status === 404) return null;
   return parseJsonResponse(response, "Failed to fetch box");
 }
+
+export async function fetchScnaBoxesByLot(lotNumber) {
+  const response = await fetch(
+    `${BASE_URL}api/scna-boxes?lotNumber=${encodeURIComponent(lotNumber)}`,
+    { method: "GET", headers: { "Content-Type": "application/json" } }
+  );
+  const payload = await parseJsonResponse(response, "Failed to search boxes by lot");
+  return Array.isArray(payload) ? payload : [];
+}
