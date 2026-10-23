@@ -127,6 +127,22 @@ export default function ScnaPage() {
               : "Supply Chain Network Analytics & Work Order Management"
           }
           className="mb-6"
+          actions={
+            <a
+              href={`${import.meta.env.BASE_URL}scna-tutorial.html?lang=${isJa ? "ja" : "en"}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3.5 py-2 text-xs font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-hover)] transition-colors shadow-2xs"
+            >
+              <span
+                className="material-symbols-outlined text-[var(--text-muted)]"
+                style={{ fontSize: 16 }}
+              >
+                menu_book
+              </span>
+              {isJa ? "チュートリアル" : "Tutorial"}
+            </a>
+          }
         />
 
         <MasterTabNav

@@ -205,7 +205,7 @@ async function postQuery(body) {
 }
 
 export async function fetchGatekeeperSettings() {
-  const response = await postQuery({ query: {} });
+  const response = await postQuery({ query: { factory: "SCNA" } });
   const payload = await parseJsonResponse(response, "Failed to fetch gatekeeper settings");
   return Array.isArray(payload) ? payload : [];
 }
