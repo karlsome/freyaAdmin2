@@ -14,10 +14,10 @@ const SCNA_DEMO_STATUS = {
   "AOL-1": "running",
   "AOL-4": "running",
   "AOL-5": "idle",
-  "SCNA-MANAS": "running",
+  KUNTAI: "running",
   "SCNA-PSA": "running",
-  "SRS 1": "running",
-  "SRS 2": "break",
+  "Girasol 1": "running",
+  "Girasol 2": "break",
 };
 // Demonstrates AOL-2 & AOL-3 running as a pair while AOL-4 & AOL-5 run solo (and AOL-1 is always solo)
 const SCNA_DEMO_PAIRS = { "AOL-2": "AOL-3" };

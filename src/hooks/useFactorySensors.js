@@ -41,7 +41,7 @@ function evaluateHeatStress(temp, humidity) {
  */
 function inferPositionFromName(name = "", idx = 0, factoryName = "小瀬") {
   const upper = String(name).toUpperCase();
-  const machineMatch = upper.match(/OZNC\d{2}|OZMANAS|AOL-\d|SCNA-MANAS|SCNA-PSA|SRS\s?\d/);
+  const machineMatch = upper.match(/OZNC\d{2}|OZMANAS|AOL-\d|KUNTAI|SCNA-MANAS|SCNA-PSA|GIRASOL[\s-]?\d|SRS[\s-]?\d/);
   if (machineMatch) {
     const mPos = getMachinePositionForFactory(machineMatch[0], factoryName);
     if (mPos) {

@@ -900,7 +900,7 @@ function FactoryContents({
         );
       })}
 
-      {/* MANAS Press (OZMANAS in 小瀬, SCNA-MANAS in SCNA) */}
+      {/* MANAS / KUNTAI Press (OZMANAS in 小瀬, KUNTAI in SCNA) */}
       {layout.manas && (
         <ManasMachine
           id={layout.manas.id}
@@ -935,7 +935,7 @@ function FactoryContents({
         );
       })}
 
-      {/* SRS 1 & SRS 2 Machine(s) */}
+      {/* Girasol 1 & Girasol 2 Machine(s) */}
       {srsMachines.map((srs) => {
         const m = machinesById[srs.id];
         const status = effectiveStatus(m);
@@ -1135,7 +1135,7 @@ function FactoryContents({
         );
       })}
 
-      {/* SRS 1 & SRS 2 Badges */}
+      {/* Girasol 1 & Girasol 2 Badges */}
       {srsMachines.map((srs) => {
         const m = machinesById[srs.id];
         const live = liveMachines[srs.id];
