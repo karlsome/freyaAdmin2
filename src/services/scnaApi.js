@@ -284,22 +284,32 @@ export async function fetchScnaLabelLayouts() {
   return Array.isArray(payload) ? payload : [];
 }
 
-export async function createScnaLabelLayout({ name, customers, isDefault, layout, username }) {
+export async function createScnaLabelLayout({ name, processes, customers, isDefault, layout, username }) {
   const response = await fetch(`${BASE_URL}api/scna-label-layouts`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ name, customers, isDefault, layout, username }),
+    body: JSON.stringify({ name, processes, customers, isDefault, layout, username }),
   });
   return parseJsonResponse(response, "Failed to create label layout");
 }
 
-export async function updateScnaLabelLayout(layoutId, { name, customers, isDefault, layout, username }) {
+export async function updateScnaLabelLayout(layoutId, { name, processes, customers, isDefault, layout, username }) {
   const response = await fetch(`${BASE_URL}api/scna-label-layouts/${encodeURIComponent(layoutId)}`, {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ name, customers, isDefault, layout, username }),
+    body: JSON.stringify({ name, processes, customers, isDefault, layout, username }),
   });
   return parseJsonResponse(response, "Failed to update label layout");
+}
+
+// Copy a layout into other processes as an independent layout.
+export async function duplicateScnaLabelLayout(layoutId, { processes, name, copyBindings, fromProcess, username }) {
+  const response = await fetch(`${BASE_URL}api/scna-label-layouts/${encodeURIComponent(layoutId)}/duplicate`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ processes, name, copyBindings, fromProcess, username }),
+  });
+  return parseJsonResponse(response, "Failed to duplicate label layout");
 }
 
 export async function deleteScnaLabelLayout(layoutId) {
@@ -328,18 +338,18 @@ export async function saveScnaLabelFieldNames({ names, username }) {
   return parseJsonResponse(response, "Failed to save field names");
 }
 
-// Item binding for label layouts (writes masterDB.labelLayoutId on SCNA items).
+// Item binding for label layouts (writes masterDB.labelLayoutByProcess.<process> on SCNA items).
 export async function fetchScnaLabelItems() {
   const response = await fetch(`${BASE_URL}api/scna-label-layouts/items`);
   const payload = await parseJsonResponse(response, "Failed to fetch items");
   return Array.isArray(payload) ? payload : [];
 }
 
-export async function assignScnaLabelLayoutItems(layoutId, { add, remove }) {
+export async function assignScnaLabelLayoutItems(layoutId, { add, remove, process }) {
   const response = await fetch(`${BASE_URL}api/scna-label-layouts/${encodeURIComponent(layoutId)}/assign`, {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ add, remove }),
+    body: JSON.stringify({ add, remove, process }),
   });
   return parseJsonResponse(response, "Failed to assign items");
 }

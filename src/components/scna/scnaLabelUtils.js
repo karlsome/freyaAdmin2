@@ -19,3 +19,16 @@ export function effectiveLayouts(item, layouts) {
 export function hasAssignedLayout(item, layouts) {
   return effectiveLayouts(item, layouts).source === "assigned";
 }
+
+// SCNA processes a label layout can belong to. `press` is the only one with a tablet page wired up so far.
+export const LABEL_PROCESSES = ["PSA", "press", "SRS", "kensa"];
+export const LABEL_PROCESS_NAMES = {
+  PSA: { en: "PSA", ja: "PSA" },
+  press: { en: "Press", ja: "プレス" },
+  SRS: { en: "SRS", ja: "SRS" },
+  kensa: { en: "Kensa", ja: "検査" },
+};
+export const layoutProcesses = (doc) => (Array.isArray(doc?.processes) && doc.processes.length ? doc.processes : ["press"]);
+
+// Items as one process sees them: layoutIds is that process's binding.
+export const itemsForProcess = (items, process) => items.map((i) => ({ ...i, layoutIds: i.layoutIdsByProcess?.[process] || [] }));

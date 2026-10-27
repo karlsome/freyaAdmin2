@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
-  createScnaLabelLayout,
   deleteScnaLabelLayout,
   fetchScnaLabelItems,
   updateScnaLabelLayout,
@@ -8,6 +7,8 @@ import {
 import { readStoredAuthUser } from "../../utils/auth";
 import ScnaLabelItemSearchModal from "./ScnaLabelItemSearchModal";
 import ScnaLabelLayoutDetailModal from "./ScnaLabelLayoutDetailModal";
+import ScnaLabelCopyModal from "./ScnaLabelCopyModal";
+import { itemsForProcess } from "./scnaLabelUtils";
 import { LayoutPreview } from "./ScnaLabelThumb";
 
 const inputCls = "rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-2 py-1.5 text-xs";
@@ -22,8 +23,7 @@ function readView() {
 }
 
 // Card / list gallery of saved layouts. Thumbnails come from Firebase (saved with the layout).
-export default function ScnaLabelExplorer({ layouts, initialLayoutId, t, onEdit, onNew, onChanged, onFlash }) {
-  const [items, setItems] = useState([]);
+export default function ScnaLabelExplorer({ layouts, process, initialLayoutId, t, onEdit, onNew, onChanged, onFlash }) {
   const [view, setView] = useState(readView);
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("all");
@@ -31,10 +31,12 @@ export default function ScnaLabelExplorer({ layouts, initialLayoutId, t, onEdit,
   const [detail, setDetail] = useState(null); // { id, assign }
   const [findOpen, setFindOpen] = useState(false);
   const [menuFor, setMenuFor] = useState(null);
+  const [copyDoc, setCopyDoc] = useState(null);
+  const [rawItems, setRawItems] = useState([]);
 
   const loadItems = useCallback(async () => {
     try {
-      setItems(await fetchScnaLabelItems());
+      setRawItems(await fetchScnaLabelItems());
     } catch (err) {
       onFlash?.({ type: "error", message: err.message });
     }
@@ -43,7 +45,7 @@ export default function ScnaLabelExplorer({ layouts, initialLayoutId, t, onEdit,
   useEffect(() => {
     let alive = true;
     fetchScnaLabelItems()
-      .then((rows) => { if (alive) setItems(rows); })
+      .then((rows) => { if (alive) setRawItems(rows); })
       .catch((err) => onFlash?.({ type: "error", message: err.message }));
     return () => { alive = false; };
   }, [onFlash]);
@@ -52,6 +54,8 @@ export default function ScnaLabelExplorer({ layouts, initialLayoutId, t, onEdit,
     setView(v);
     try { window.localStorage.setItem(VIEW_KEY, v); } catch { /* per-viewer convenience only */ }
   }
+
+  const items = useMemo(() => itemsForProcess(rawItems, process), [rawItems, process]);
 
   const counts = useMemo(() => {
     const c = {};
@@ -79,18 +83,6 @@ export default function ScnaLabelExplorer({ layouts, initialLayoutId, t, onEdit,
 
   const detailDoc = detail ? layouts.find((l) => l.layoutId === detail.id) : null;
   const changed = () => { loadItems(); onChanged?.(); };
-
-  async function duplicate(doc) {
-    const name = window.prompt(t("Name for the copy", "コピーの名前"), `${doc.name} copy`);
-    if (!name || !name.trim()) return;
-    try {
-      await createScnaLabelLayout({ name: name.trim(), isDefault: false, layout: doc.layout, username: readStoredAuthUser()?.username || "admin" });
-      onFlash?.({ type: "success", message: t("Layout duplicated", "レイアウトを複製しました") });
-      onChanged?.();
-    } catch (err) {
-      onFlash?.({ type: "error", message: err.message });
-    }
-  }
 
   async function makeDefault(doc) {
     try {
@@ -128,7 +120,7 @@ export default function ScnaLabelExplorer({ layouts, initialLayoutId, t, onEdit,
     return (
       <div className="relative flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
         <button type="button" className={btnCls} onClick={() => onEdit?.(doc)}>✎ {t("Edit", "編集")}</button>
-        <button type="button" className={btnCls} onClick={() => duplicate(doc)}>⧉ {t("Duplicate", "複製")}</button>
+        <button type="button" className={btnCls} onClick={() => setCopyDoc(doc)}>⧉ {t("Copy to process…", "工程にコピー…")}</button>
         <button type="button" className={btnCls} aria-label="More" onClick={() => setMenuFor(menuFor === doc.layoutId ? null : doc.layoutId)}>⋯</button>
         {menuFor === doc.layoutId && (
           <>
@@ -153,8 +145,8 @@ export default function ScnaLabelExplorer({ layouts, initialLayoutId, t, onEdit,
         <div>
           <h3 className="text-lg font-bold text-[var(--text-primary)]">{t("Label Layout Explorer", "ラベルレイアウトエクスプローラー")}</h3>
           <p className="text-[11px] text-[var(--text-secondary)]">
-            {t("Create, edit, preview and assign label layouts to SCNA items. An item can have several layouts; the operator picks one on the tablet.",
-              "ラベルレイアウトの作成・編集・プレビュー・アイテムへの割り当てを行います。1つのアイテムに複数のレイアウトを割り当てられ、タブレットで選択します。")}
+            {t("Layouts are per process. Create, edit, preview and assign them to SCNA items; an item can have several layouts in a process and the operator picks one on the tablet.",
+              "レイアウトは工程ごとに管理します。作成・編集・プレビュー・アイテムへの割り当てを行います。1つの工程で複数のレイアウトを割り当てられ、タブレットで選択します。")}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -257,11 +249,22 @@ export default function ScnaLabelExplorer({ layouts, initialLayoutId, t, onEdit,
           key={`${detailDoc.layoutId}-${detail.assign}`}
           doc={detailDoc}
           layouts={layouts}
+          process={process}
           startAssign={detail.assign}
           t={t}
           onClose={() => setDetail(null)}
           onEdit={(d) => { setDetail(null); onEdit?.(d); }}
           onChanged={changed}
+          onFlash={onFlash}
+        />
+      )}
+      {copyDoc && (
+        <ScnaLabelCopyModal
+          doc={copyDoc}
+          process={process}
+          t={t}
+          onClose={() => setCopyDoc(null)}
+          onCopied={() => { setCopyDoc(null); changed(); }}
           onFlash={onFlash}
         />
       )}

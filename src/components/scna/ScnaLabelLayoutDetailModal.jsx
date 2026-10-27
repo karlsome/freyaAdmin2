@@ -2,6 +2,7 @@ import { createPortal } from "react-dom";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { assignScnaLabelLayoutItems, fetchScnaLabelItems } from "../../services/scnaApi";
 import ScnaLabelAssignModal from "./ScnaLabelAssignModal";
+import { itemsForProcess } from "./scnaLabelUtils";
 import { LayoutPreview } from "./ScnaLabelThumb";
 
 const inputCls = "w-full rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-2 py-1 text-xs";
@@ -12,7 +13,7 @@ const PAGE_SIZE = 15;
 const fmtDate = (v) => (v ? String(v).slice(0, 16).replace("T", " ") : "—");
 
 // One layout in detail: preview, facts, and the items assigned to it (paginated).
-export default function ScnaLabelLayoutDetailModal({ doc, layouts, startAssign, t, onClose, onEdit, onChanged, onFlash }) {
+export default function ScnaLabelLayoutDetailModal({ doc, layouts, process, startAssign, t, onClose, onEdit, onChanged, onFlash }) {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -22,13 +23,13 @@ export default function ScnaLabelLayoutDetailModal({ doc, layouts, startAssign, 
   const loadItems = useCallback(async () => {
     setLoading(true);
     try {
-      setItems(await fetchScnaLabelItems());
+      setItems(itemsForProcess(await fetchScnaLabelItems(), process));
     } catch (err) {
       onFlash?.({ type: "error", message: err.message });
     } finally {
       setLoading(false);
     }
-  }, [onFlash]);
+  }, [onFlash, process]);
 
   useEffect(() => { loadItems(); }, [loadItems]);
 
@@ -45,7 +46,7 @@ export default function ScnaLabelLayoutDetailModal({ doc, layouts, startAssign, 
 
   async function removeItem(it) {
     try {
-      await assignScnaLabelLayoutItems(doc.layoutId, { add: [], remove: [it.背番号] });
+      await assignScnaLabelLayoutItems(doc.layoutId, { add: [], remove: [it.背番号], process });
       await loadItems();
       onChanged?.();
     } catch (err) {
@@ -139,6 +140,7 @@ export default function ScnaLabelLayoutDetailModal({ doc, layouts, startAssign, 
           layoutId={doc.layoutId}
           layoutName={doc.name}
           layouts={layouts}
+          process={process}
           t={t}
           onClose={() => setAssignOpen(false)}
           onSaved={() => { loadItems(); onChanged?.(); }}

@@ -9,8 +9,8 @@ const primaryBtn = "rounded-[6px] bg-[var(--freya-blue)] px-3 py-1.5 text-xs fon
 const CUSTOMER = "顧客/納入先";
 const FILTERS = ["all", "unassigned", "mine", "other"];
 
-// Pick which SCNA masterDB items print with this layout. Saves masterDB.labelLayoutId on the items.
-export default function ScnaLabelAssignModal({ layoutId, layoutName, layouts, t, onClose, onSaved, onFlash }) {
+// Pick which SCNA masterDB items print with this layout in one process. Saves masterDB.labelLayoutByProcess.<process>.
+export default function ScnaLabelAssignModal({ layoutId, layoutName, layouts, process, t, onClose, onSaved, onFlash }) {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -19,6 +19,8 @@ export default function ScnaLabelAssignModal({ layoutId, layoutName, layouts, t,
   const [filter, setFilter] = useState("all");
   const [selected, setSelected] = useState(() => new Set()); // 背番号 chosen for this layout
   const [initial, setInitial] = useState(() => new Set()); // 背番号 bound to this layout when opened
+
+  const idsOf = (it) => it.layoutIdsByProcess?.[process] || [];
 
   const layoutNames = useMemo(() => {
     const m = {};
@@ -31,7 +33,7 @@ export default function ScnaLabelAssignModal({ layoutId, layoutName, layouts, t,
     fetchScnaLabelItems()
       .then((rows) => {
         if (!alive) return;
-        const mine = new Set(rows.filter((r) => (r.layoutIds || []).includes(layoutId)).map((r) => r.背番号));
+        const mine = new Set(rows.filter((r) => idsOf(r).includes(layoutId)).map((r) => r.背番号));
         setItems(rows);
         setInitial(mine);
         setSelected(new Set(mine));
@@ -39,10 +41,10 @@ export default function ScnaLabelAssignModal({ layoutId, layoutName, layouts, t,
       .catch((err) => onFlash?.({ type: "error", message: err.message }))
       .finally(() => alive && setLoading(false));
     return () => { alive = false; };
-  }, [layoutId]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [layoutId, process]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const statusOf = (it) => {
-    const ids = it.layoutIds || [];
+    const ids = idsOf(it);
     if (ids.includes(layoutId)) return "mine";
     return ids.length ? "other" : "unassigned";
   };
@@ -93,7 +95,7 @@ export default function ScnaLabelAssignModal({ layoutId, layoutName, layouts, t,
   async function save() {
     setSaving(true);
     try {
-      await assignScnaLabelLayoutItems(layoutId, { add, remove });
+      await assignScnaLabelLayoutItems(layoutId, { add, remove, process });
       onFlash?.({ type: "success", message: t("Items updated", "アイテムを更新しました") });
       onSaved?.();
       onClose();
@@ -110,7 +112,7 @@ export default function ScnaLabelAssignModal({ layoutId, layoutName, layouts, t,
       return <span className="rounded bg-[var(--freya-blue)]/10 px-1.5 py-0.5 text-[10px] font-semibold text-[var(--freya-blue)]">{t("This layout", "このレイアウト")}</span>;
     }
     if (st === "other") {
-      const names = it.layoutIds.map((id) => layoutNames[id]).filter(Boolean).join(", ");
+      const names = idsOf(it).map((id) => layoutNames[id]).filter(Boolean).join(", ");
       return <span className="rounded bg-[var(--surface-subtle)] px-1.5 py-0.5 text-[10px] font-semibold text-[var(--text-secondary)]">{names || t("Other layout", "別のレイアウト")}</span>;
     }
     return <span className="rounded bg-[var(--status-warning)]/10 px-1.5 py-0.5 text-[10px] font-semibold text-[var(--status-warning)]">{t("No layout", "未割当")}</span>;
