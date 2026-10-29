@@ -232,6 +232,42 @@ export async function setGatekeeperEnabled({ factory, machine, enabled, username
   return record;
 }
 
+// Label printing rule per tablet machine (SRS "Girasol-N", Kensa "ITn"). Missing doc = printing required.
+const PRINT_RULE_COLLECTION = "scnaPrintRuleDB";
+
+async function postPrintRuleQuery(body) {
+  return fetch(`${BASE_URL}queries`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ dbName: GATEKEEPER_DB, collectionName: PRINT_RULE_COLLECTION, ...body }),
+  });
+}
+
+export async function fetchPrintRules() {
+  const response = await postPrintRuleQuery({ query: { factory: "SCNA" } });
+  if (response.status === 404) return [];
+  const payload = await parseJsonResponse(response, "Failed to fetch print rules");
+  return Array.isArray(payload) ? payload : [];
+}
+
+export async function setPrintRequired({ factory, machine, printRequired, username }) {
+  const record = {
+    factory,
+    machine,
+    printRequired: Boolean(printRequired),
+    updatedAt: new Date().toISOString(),
+    updatedBy: username || "admin",
+  };
+  const updateResponse = await postPrintRuleQuery({ query: { factory, machine }, update: { $set: record } });
+  if (updateResponse.status === 404) {
+    const insertResponse = await postPrintRuleQuery({ insertData: record });
+    await parseJsonResponse(insertResponse, "Failed to create print rule");
+  } else {
+    await parseJsonResponse(updateResponse, "Failed to update print rule");
+  }
+  return record;
+}
+
 // ─── NC programs (PLT → JSON points, sent to the CNC by the miniPC listener) ───
 export async function fetchScnaNcProgramCounts() {
   const response = await fetch(`${BASE_URL}api/scna-nc-programs/counts`);
