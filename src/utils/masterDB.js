@@ -1,14 +1,14 @@
 export const MASTER_TABS = [
-  { key: "masterDB", label: "内装品 DB", description: "Interior product records", ready: true },
-  { key: "materialDB", label: "材料 DB", description: "Material master records", ready: true },
-  { key: "productPDFs", label: "梱包 / 検査基準 / 3点照合", description: "Product PDF library", ready: true },
-  { key: "materialPDFs", label: "作業条件表 (PSA)", description: "Material PDF library", ready: true },
-  { key: "furyoKanri", label: "不良管理", description: "Defect definition management", ready: true },
-  { key: "factoryDB", label: "工場", description: "Factory master list", ready: true },
-  { key: "setsubiDB", label: "設備", description: "Equipment by factory", ready: true },
-  { key: "processDB", label: "工程 DB (Process)", description: "Process master records", ready: true },
-  { key: "bomDB", label: "BOM DB", description: "Bill of materials builder", ready: true },
-  { key: "pceFiles", label: "pce ファイル", description: "PCE file upload utility", ready: true },
+  { key: "masterDB", label: "内装品 DB", labelJa: "内装品 DB", labelEn: "Interior Products DB", description: "Interior product records", descriptionJa: "内装品製品レコード", ready: true },
+  { key: "materialDB", label: "材料 DB", labelJa: "材料 DB", labelEn: "Materials DB", description: "Material master records", descriptionJa: "材料マスターレコード", ready: true },
+  { key: "productPDFs", label: "梱包 / 検査基準 / 3点照合", labelJa: "梱包 / 検査基準 / 3点照合", labelEn: "Packaging / Inspection / 3-Point Check", description: "Product PDF library", descriptionJa: "製品PDFライブラリ", ready: true },
+  { key: "materialPDFs", label: "作業条件表 (PSA)", labelJa: "作業条件表 (PSA)", labelEn: "Work Conditions (PSA)", description: "Material PDF library", descriptionJa: "材料PDFライブラリ", ready: true },
+  { key: "furyoKanri", label: "不良管理", labelJa: "不良管理", labelEn: "Defect Management", description: "Defect definition management", descriptionJa: "不良項目の定義と管理", ready: true },
+  { key: "factoryDB", label: "工場", labelJa: "工場", labelEn: "Factories", description: "Factory master list", descriptionJa: "工場マスター一覧", ready: true },
+  { key: "setsubiDB", label: "設備", labelJa: "設備", labelEn: "Equipment", description: "Equipment by factory", descriptionJa: "工場別設備一覧", ready: true },
+  { key: "processDB", label: "工程 DB (Process)", labelJa: "工程 DB", labelEn: "Process DB", description: "Process master records", descriptionJa: "工程マスターレコード", ready: true },
+  { key: "bomDB", label: "BOM DB", labelJa: "BOM DB", labelEn: "BOM DB", description: "Bill of materials builder", descriptionJa: "部品構成表 (BOM)", ready: true },
+  { key: "pceFiles", label: "pce ファイル", labelJa: "pce ファイル", labelEn: "PCE Files", description: "PCE file upload utility", descriptionJa: "PCEファイルアップロード管理", ready: true },
 ];
 
 export const MASTER_PAGE_SIZE_OPTIONS = [10, 25, 50, 100];
@@ -39,16 +39,22 @@ const MATERIAL_DEFAULT_FIELDS = MATERIAL_PRIORITY_COLUMNS
 const MASTER_TAB_UI = {
   masterDB: {
     processFilterLabel: "Equipment",
+    processFilterLabelJa: "設備",
     processAllLabel: "All Equipment",
+    processAllLabelJa: "すべての設備",
     recordLabel: "Master Record",
+    recordLabelJa: "内装品マスターレコード",
     previewFields: ["品番", "品名", "モデル", "背番号", "加工設備", "工場"],
     identityTitleFields: ["品番", "品名", "材料品番"],
     identitySubtitleFields: ["モデル", "背番号"],
   },
   materialDB: {
     processFilterLabel: "Material",
+    processFilterLabelJa: "材料",
     processAllLabel: "All Material",
+    processAllLabelJa: "すべての材料",
     recordLabel: "Material Record",
+    recordLabelJa: "材料マスターレコード",
     previewFields: ["品番", "品名", "ラベル品番", "仕様", "型番", "梱包数"],
     identityTitleFields: ["品番", "品名", "ラベル品番"],
     identitySubtitleFields: ["型番", "仕様", "工程コード"],
@@ -159,7 +165,7 @@ const DATE_FIELD_PATTERN = /(^date$|日付|年月日)/i;
 const TIME_FIELD_PATTERN = /(time|時刻|時間)/i;
 const TEXTAREA_FIELD_PATTERN = /(備考|note|boardData|説明|comment)/i;
 
-const OPERATOR_LABELS = {
+export const OPERATOR_LABELS = {
   equals: "equals",
   not_equals: "is not",
   contains: "contains",
@@ -169,6 +175,18 @@ const OPERATOR_LABELS = {
   greater: "greater than",
   less: "less than",
   range: "range",
+};
+
+export const OPERATOR_LABELS_JA = {
+  equals: "等しい",
+  not_equals: "等しくない",
+  contains: "含む",
+  in: "リストに含まれる",
+  exists: "値が存在する",
+  not_exists: "値が存在しない",
+  greater: "より大きい",
+  less: "より小さい",
+  range: "範囲指定",
 };
 
 let filterRowCount = 0;
@@ -425,8 +443,9 @@ export function buildMasterAdvancedQuery(rows = [], fieldDefinitions = []) {
   return { $and: clauses };
 }
 
-export function getActiveMasterAdvancedFilters(rows = [], fieldDefinitions = []) {
+export function getActiveMasterAdvancedFilters(rows = [], fieldDefinitions = [], isJa = false) {
   const fieldMap = Object.fromEntries(fieldDefinitions.map((field) => [field.field, field]));
+  const labels = isJa ? OPERATOR_LABELS_JA : OPERATOR_LABELS;
 
   return rows.flatMap((row) => {
     const fieldDefinition = fieldMap[row.field];
@@ -436,7 +455,7 @@ export function getActiveMasterAdvancedFilters(rows = [], fieldDefinitions = [])
       return [{
         id: row.id,
         label: fieldDefinition.label,
-        operator: OPERATOR_LABELS[row.operator] || row.operator,
+        operator: labels[row.operator] || row.operator,
         value: "",
       }];
     }
@@ -464,7 +483,7 @@ export function getActiveMasterAdvancedFilters(rows = [], fieldDefinitions = [])
     return [{
       id: row.id,
       label: fieldDefinition.label,
-      operator: OPERATOR_LABELS[row.operator] || row.operator,
+      operator: labels[row.operator] || row.operator,
       value: renderedValue,
     }];
   });

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { useLanguage } from "../contexts/LanguageContext";
 import IconButton from "./IconButton";
 import {
   archiveEquipmentRecord,
@@ -33,22 +34,25 @@ import SetsubiRecordModal from "./SetsubiRecordModal";
 // ── Shared sub-components ────────────────────────────────────────────────────
 
 function SuccessModal({ message, onClose }) {
+  const { language } = useLanguage();
+  const isJa = language === "ja";
   if (!message) return null;
   return (
-    <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-md">
-      <div className="flex min-h-full items-start justify-center px-4 pb-4 pt-10">
-        <div className="dashboard-section w-full max-w-md rounded-2xl overflow-hidden">
-          <div className="border-b border-separator/40 px-6 py-5">
-            <h3 className="text-2xl font-semibold text-on-surface">Success</h3>
-          </div>
-          <div className="px-6 py-6">
-            <p className="text-sm text-on-surface-variant">{message}</p>
-            <div className="mt-6 flex justify-end">
-              <button type="button" onClick={onClose}
-                className="rounded-xl bg-primary px-4 py-2 text-xs font-semibold text-on-primary hover:opacity-90 active:scale-95 transition-all duration-150">
-                OK
-              </button>
-            </div>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
+      <div className="w-full max-w-md rounded-[12px] border border-[var(--border)] bg-[var(--surface-raised)] shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+        <div className="border-b border-[var(--border)] px-5 py-4">
+          <h3 className="text-base font-bold text-[var(--text-primary)]">{isJa ? "完了" : "Success"}</h3>
+        </div>
+        <div className="p-5">
+          <p className="text-xs text-[var(--text-secondary)]">{message}</p>
+          <div className="mt-5 flex justify-end">
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-[6px] bg-[var(--freya-blue)] px-4 py-1.5 text-xs font-semibold text-white hover:bg-[var(--freya-blue-hover)] active:scale-[0.98] transition-all shadow-xs"
+            >
+              OK
+            </button>
           </div>
         </div>
       </div>
@@ -60,15 +64,15 @@ function MediaLightbox({ url, onClose }) {
   if (!url) return null;
   const isVideo = isVideoUrl(url);
   return createPortal(
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80"
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 backdrop-blur-xs"
       onClick={onClose}>
       <div className="relative" onClick={(e) => e.stopPropagation()}>
         {isVideo ? (
           <video src={url} controls autoPlay
-            className="max-h-[90vh] max-w-[90vw] rounded-2xl shadow-2xl" />
+            className="max-h-[90vh] max-w-[90vw] rounded-[12px] border border-[var(--border)] shadow-2xl" />
         ) : (
           <img src={url} alt="full size"
-            className="max-h-[90vh] max-w-[90vw] rounded-2xl object-contain shadow-2xl" />
+            className="max-h-[90vh] max-w-[90vw] rounded-[12px] border border-[var(--border)] object-contain shadow-2xl" />
         )}
         <button type="button" onClick={onClose}
           className="absolute -right-3 -top-3 flex h-8 w-8 items-center justify-center rounded-full bg-white/20 text-white shadow-lg transition hover:bg-white/40">
@@ -83,6 +87,9 @@ function MediaLightbox({ url, onClose }) {
 // ── Event detail / edit popup ────────────────────────────────────────────────
 
 function EventDetailModal({ event, canEdit, username, role, onClose, onSaved, onDeleted }) {
+  const { language } = useLanguage();
+  const isJa = language === "ja";
+
   const [mode, setMode] = useState("view"); // "view" | "edit"
   const [draft, setDraft] = useState(null);
   const [busy, setBusy] = useState(false);
@@ -140,7 +147,7 @@ function EventDetailModal({ event, canEdit, username, role, onClose, onSaved, on
     }
     if (failedCount) {
       const raw = results.find((r) => r.status === "rejected")?.reason?.message || "";
-      setUploadError(raw.startsWith("<") ? "Upload failed — server error." : raw || `${failedCount} file(s) failed to upload.`);
+      setUploadError(raw.startsWith("<") ? (isJa ? "アップロード失敗 — サーバーエラー" : "Upload failed — server error.") : raw || (isJa ? `${failedCount} 件のファイルのアップロードに失敗しました。` : `${failedCount} file(s) failed to upload.`));
     }
     setUploading(false);
   }
@@ -172,14 +179,14 @@ function EventDetailModal({ event, canEdit, username, role, onClose, onSaved, on
       onSaved();
       onClose();
     } catch (err) {
-      setUploadError(err?.message || "Failed to save.");
+      setUploadError(err?.message || (isJa ? "保存に失敗しました。" : "Failed to save."));
     } finally {
       setBusy(false);
     }
   }
 
   async function handleDelete() {
-    const reason = window.prompt("Enter the reason for deleting this record.");
+    const reason = window.prompt(isJa ? "このレコードを削除する理由を入力してください。" : "Enter the reason for deleting this record.");
     if (!reason?.trim()) return;
     const recordId = event._id?.$oid ?? event._id;
     if (!recordId) return;
@@ -194,7 +201,7 @@ function EventDetailModal({ event, canEdit, username, role, onClose, onSaved, on
       onDeleted();
       onClose();
     } catch (err) {
-      setUploadError(err?.message || "Failed to delete.");
+      setUploadError(err?.message || (isJa ? "削除に失敗しました。" : "Failed to delete."));
     } finally {
       setBusy(false);
     }
@@ -204,186 +211,201 @@ function EventDetailModal({ event, canEdit, username, role, onClose, onSaved, on
   const imageURLs = mode === "edit" ? draft?.imageURLs ?? [] : (Array.isArray(event.imageURLs) ? event.imageURLs : []);
 
   return createPortal(
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-black/50 backdrop-blur-md">
-      <div className="flex min-h-full items-start justify-center px-4 pb-4 pt-10">
-        <div className="dashboard-section w-full max-w-lg rounded-2xl overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/60 backdrop-blur-xs p-4">
+      <div className="w-full max-w-lg rounded-[12px] border border-[var(--border)] bg-[var(--surface-raised)] shadow-2xl overflow-hidden my-8 animate-in fade-in zoom-in-95 duration-150">
 
-          {/* Header */}
-          <div className="border-b border-separator/40 px-6 py-5">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-outline">事案詳細</div>
-                <h3 className="mt-2 text-2xl font-semibold text-on-surface">
-                  {mode === "edit" ? "事案を編集" : (event["発生事案"] || "—")}
-                </h3>
-                {mode === "view" && event["工場"] && (
-                  <p className="mt-1 text-sm text-on-surface-variant">{event["工場"]}</p>
+        {/* Header */}
+        <div className="border-b border-[var(--border)] px-6 py-4">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--text-muted)]">
+                {isJa ? "事案詳細" : "Event Details"}
+              </div>
+              <h3 className="mt-1 text-lg font-bold text-[var(--text-primary)]">
+                {mode === "edit" ? (isJa ? "事案を編集" : "Edit Event") : (event["発生事案"] || "—")}
+              </h3>
+              {mode === "view" && event["工場"] && (
+                <p className="mt-0.5 text-xs text-[var(--text-secondary)]">{event["工場"]}</p>
+              )}
+            </div>
+            <IconButton icon="close" onClick={onClose} size="md" ariaLabel={isJa ? "閉じる" : "Close dialog"} />
+          </div>
+        </div>
+
+        <div className="max-h-[70vh] overflow-y-auto px-6 py-5 scrollbar-hide">
+          {mode === "view" ? (
+            <div className="grid gap-5">
+              {/* Meta row */}
+              <div className="flex flex-wrap gap-2.5">
+                {event.eventDate && (
+                  <span className="rounded-[6px] border border-[var(--freya-blue)]/20 bg-[var(--freya-blue)]/10 px-2.5 py-1 text-xs font-semibold text-[var(--freya-blue)]">{event.eventDate}</span>
+                )}
+                {event["名前"] && (
+                  <span className="rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1 text-xs font-semibold text-[var(--text-secondary)]">{event["名前"]}</span>
                 )}
               </div>
-              <IconButton icon="close" onClick={onClose} size="xl" ariaLabel="Close dialog" />
-            </div>
-          </div>
 
-          <div className="max-h-[72vh] overflow-y-auto px-6 py-6 scrollbar-hide">
-            {mode === "view" ? (
-              <div className="grid gap-5">
-                {/* Meta row */}
-                <div className="flex flex-wrap gap-3">
-                  {event.eventDate && (
-                    <span className="rounded-xl bg-primary/10 px-3 py-1 text-[11px] font-semibold text-primary">{event.eventDate}</span>
-                  )}
-                  {event["名前"] && (
-                    <span className="rounded-xl bg-surface-container px-3 py-1 text-[11px] font-semibold text-on-surface-variant">{event["名前"]}</span>
-                  )}
+              {/* Tags */}
+              {tags.length > 0 && (
+                <div className="flex flex-wrap gap-1.5">
+                  {tags.map((tag) => (
+                    <span key={tag} className="rounded-full border border-[var(--border)] bg-[var(--surface-subtle)] px-2.5 py-0.5 text-[11px] font-medium text-[var(--text-secondary)]">{tag}</span>
+                  ))}
                 </div>
+              )}
 
-                {/* Tags */}
-                {tags.length > 0 && (
-                  <div className="flex flex-wrap gap-1.5">
-                    {tags.map((tag) => (
-                      <span key={tag} className="rounded-full bg-surface-container px-3 py-1 text-[11px] font-semibold text-on-surface-variant">{tag}</span>
+              {/* Details */}
+              {event["詳細"] && (
+                <div>
+                  <p className="mb-1 text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--text-muted)]">
+                    {isJa ? "詳細" : "Details"}
+                  </p>
+                  <p className="whitespace-pre-wrap text-xs leading-relaxed text-[var(--text-primary)]">{event["詳細"]}</p>
+                </div>
+              )}
+
+              {/* Images / Videos */}
+              {imageURLs.length > 0 && (
+                <div>
+                  <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--text-muted)]">
+                    {isJa ? "画像 / 動画" : "Images / Videos"}
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {imageURLs.map((url) => (
+                      <button key={url} type="button" onClick={() => setLightboxURL(url)}
+                        className="overflow-hidden rounded-[8px] border border-[var(--border)] transition hover:opacity-80">
+                        {isVideoUrl(url) ? (
+                          <video src={url} className="h-16 w-16 object-cover bg-black" muted playsInline />
+                        ) : (
+                          <img src={url} alt="添付画像" className="h-16 w-16 object-cover" />
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="grid gap-4">
+              <label className="block">
+                <div className="mb-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--text-muted)]">
+                  {isJa ? "発生事案" : "Incident / Event"} <span className="text-[var(--status-danger)]">*</span>
+                </div>
+                <input type="text" value={draft.発生事案}
+                  onChange={(e) => setField("発生事案", e.target.value)}
+                  className="w-full rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-xs font-medium text-[var(--text-primary)] placeholder-[var(--text-muted)] outline-none transition focus:border-[var(--freya-blue)] focus:ring-1 focus:ring-[var(--freya-blue)]" />
+              </label>
+
+              <label className="block">
+                <div className="mb-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--text-muted)]">
+                  {isJa ? "詳細" : "Details"}
+                </div>
+                <textarea value={draft.詳細}
+                  onChange={(e) => setField("詳細", e.target.value)}
+                  rows={4}
+                  className="w-full rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-xs font-medium text-[var(--text-primary)] placeholder-[var(--text-muted)] outline-none transition focus:border-[var(--freya-blue)] focus:ring-1 focus:ring-[var(--freya-blue)] resize-none" />
+              </label>
+
+              <div className="grid gap-4 sm:grid-cols-2">
+                <label className="block">
+                  <div className="mb-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--text-muted)]">
+                    {isJa ? "担当者名" : "Name / Reporter"}
+                  </div>
+                  <input type="text" value={draft.名前}
+                    onChange={(e) => setField("名前", e.target.value)}
+                    className="w-full rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-xs font-medium text-[var(--text-primary)] placeholder-[var(--text-muted)] outline-none transition focus:border-[var(--freya-blue)] focus:ring-1 focus:ring-[var(--freya-blue)]" />
+                </label>
+                <label className="block">
+                  <div className="mb-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--text-muted)]">
+                    {isJa ? "発生日" : "Event Date"}
+                  </div>
+                  <input type="date" value={draft.eventDate}
+                    onChange={(e) => setField("eventDate", e.target.value)}
+                    className="w-full rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-xs font-medium text-[var(--text-primary)] placeholder-[var(--text-muted)] outline-none transition focus:border-[var(--freya-blue)] focus:ring-1 focus:ring-[var(--freya-blue)]" />
+                </label>
+              </div>
+
+              <div>
+                <div className="mb-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--text-muted)]">
+                  {isJa ? "カテゴリ" : "Category"}
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {EVENT_CATEGORY_TAGS.map((tag) => {
+                    const selected = draft.tags.includes(tag);
+                    return (
+                      <button key={tag} type="button" onClick={() => toggleTag(tag)}
+                        className={`rounded-[6px] px-3 py-1.5 text-xs font-semibold transition ${selected ? "bg-[var(--freya-blue)] text-white shadow-xs" : "border border-[var(--border)] bg-[var(--surface)] text-[var(--text-secondary)] hover:bg-[var(--surface-hover)]"}`}>
+                        {tag}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div>
+                <div className="mb-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--text-muted)]">
+                  {isJa ? "画像 / 動画" : "Images / Videos"}
+                </div>
+                <input ref={fileInputRef} type="file" accept="image/*,video/mp4,video/quicktime" multiple className="hidden" onChange={handleFileChange} />
+                <button type="button" onClick={() => fileInputRef.current?.click()} disabled={uploading}
+                  className="inline-flex items-center gap-2 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3.5 py-2 text-xs font-semibold text-[var(--text-primary)] transition hover:bg-[var(--surface-hover)] disabled:opacity-50 shadow-2xs">
+                  {uploading
+                    ? <><span className="material-symbols-outlined animate-spin" style={{ fontSize: 16 }}>progress_activity</span>{isJa ? "アップロード中…" : "Uploading…"}</>
+                    : <><span className="material-symbols-outlined" style={{ fontSize: 16 }}>attach_file</span>{isJa ? "ファイルを添付" : "Attach files"}</>}
+                </button>
+                {uploadError && <p className="mt-2 text-xs text-[var(--status-danger)]">{uploadError}</p>}
+                {imageURLs.length > 0 && (
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {imageURLs.map((url) => (
+                      <div key={url} className="group relative">
+                        {isVideoUrl(url) ? (
+                          <video src={url} className="h-16 w-16 rounded-[8px] object-cover border border-[var(--border)] bg-black" muted playsInline />
+                        ) : (
+                          <img src={url} alt="添付画像" className="h-16 w-16 rounded-[8px] object-cover border border-[var(--border)]" />
+                        )}
+                        <button type="button" onClick={() => removeImage(url)}
+                          className="absolute -right-1.5 -top-1.5 hidden h-5 w-5 items-center justify-center rounded-full bg-[var(--status-danger)] text-white group-hover:flex">
+                          <span className="material-symbols-outlined" style={{ fontSize: 11 }}>close</span>
+                        </button>
+                      </div>
                     ))}
                   </div>
                 )}
-
-                {/* Details */}
-                {event["詳細"] && (
-                  <div>
-                    <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">詳細</p>
-                    <p className="whitespace-pre-wrap text-sm text-on-surface">{event["詳細"]}</p>
-                  </div>
-                )}
-
-                {/* Images / Videos */}
-                {imageURLs.length > 0 && (
-                  <div>
-                    <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">画像 / 動画</p>
-                    <div className="flex flex-wrap gap-2">
-                      {imageURLs.map((url) => (
-                        <button key={url} type="button" onClick={() => setLightboxURL(url)}
-                          className="overflow-hidden rounded-xl border border-separator/40 transition hover:opacity-80">
-                          {isVideoUrl(url) ? (
-                            <video src={url} className="h-16 w-16 object-cover bg-black" muted playsInline />
-                          ) : (
-                            <img src={url} alt="添付画像" className="h-16 w-16 object-cover" />
-                          )}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
               </div>
-            ) : (
-              <div className="grid gap-4">
-                <label className="block">
-                  <div className="mb-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-outline">発生事案 <span className="text-error">*</span></div>
-                  <input type="text" value={draft.発生事案}
-                    onChange={(e) => setField("発生事案", e.target.value)}
-                    className="w-full rounded-2xl border border-outline-variant/30 bg-surface px-3 py-3 text-sm text-on-surface outline-none transition focus:border-primary/40" />
-                </label>
+            </div>
+          )}
+        </div>
 
-                <label className="block">
-                  <div className="mb-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-outline">詳細</div>
-                  <textarea value={draft.詳細}
-                    onChange={(e) => setField("詳細", e.target.value)}
-                    rows={4}
-                    className="w-full rounded-2xl border border-outline-variant/30 bg-surface px-3 py-3 text-sm text-on-surface outline-none transition focus:border-primary/40 resize-none" />
-                </label>
+        {/* Footer */}
+        <div className="flex items-center justify-between gap-3 border-t border-[var(--border)] bg-[var(--surface)] px-6 py-4">
+          {canEdit && mode === "edit" ? (
+            <button type="button" onClick={handleDelete} disabled={busy}
+              className="rounded-[6px] border border-[var(--status-danger)]/30 bg-[var(--status-danger)]/10 px-3.5 py-2 text-xs font-semibold text-[var(--status-danger)] transition hover:bg-[var(--status-danger)]/20 disabled:opacity-50 shadow-2xs">
+              {isJa ? "削除" : "Delete"}
+            </button>
+          ) : <div />}
 
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <label className="block">
-                    <div className="mb-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-outline">名前</div>
-                    <input type="text" value={draft.名前}
-                      onChange={(e) => setField("名前", e.target.value)}
-                      className="w-full rounded-2xl border border-outline-variant/30 bg-surface px-3 py-3 text-sm text-on-surface outline-none transition focus:border-primary/40" />
-                  </label>
-                  <label className="block">
-                    <div className="mb-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-outline">発生日</div>
-                    <input type="date" value={draft.eventDate}
-                      onChange={(e) => setField("eventDate", e.target.value)}
-                      className="w-full rounded-2xl border border-outline-variant/30 bg-surface px-3 py-3 text-sm text-on-surface outline-none transition focus:border-primary/40" />
-                  </label>
-                </div>
-
-                <div>
-                  <div className="mb-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-outline">カテゴリ</div>
-                  <div className="flex flex-wrap gap-2">
-                    {EVENT_CATEGORY_TAGS.map((tag) => {
-                      const selected = draft.tags.includes(tag);
-                      return (
-                        <button key={tag} type="button" onClick={() => toggleTag(tag)}
-                          className={`rounded-full px-3.5 py-1.5 text-xs font-semibold transition ${selected ? "bg-primary text-on-primary shadow-sm" : "border border-outline-variant/30 bg-surface text-on-surface hover:bg-surface-container"}`}>
-                          {tag}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                <div>
-                  <div className="mb-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-outline">画像 / 動画</div>
-                  <input ref={fileInputRef} type="file" accept="image/*,video/mp4,video/quicktime" multiple className="hidden" onChange={handleFileChange} />
-                  <button type="button" onClick={() => fileInputRef.current?.click()} disabled={uploading}
-                    className="inline-flex items-center gap-2 rounded-2xl border border-outline-variant/30 bg-surface px-4 py-2.5 text-xs font-semibold text-on-surface transition hover:bg-surface-container disabled:opacity-50">
-                    {uploading
-                      ? <><span className="material-symbols-outlined animate-spin" style={{ fontSize: 16 }}>progress_activity</span>アップロード中…</>
-                      : <><span className="material-symbols-outlined" style={{ fontSize: 16 }}>attach_file</span>ファイルを添付</>}
-                  </button>
-                  {uploadError && <p className="mt-2 text-xs text-error">{uploadError}</p>}
-                  {imageURLs.length > 0 && (
-                    <div className="mt-3 flex flex-wrap gap-2">
-                      {imageURLs.map((url) => (
-                        <div key={url} className="group relative">
-                          {isVideoUrl(url) ? (
-                            <video src={url} className="h-16 w-16 rounded-xl object-cover border border-separator/40 bg-black" muted playsInline />
-                          ) : (
-                            <img src={url} alt="添付画像" className="h-16 w-16 rounded-xl object-cover border border-separator/40" />
-                          )}
-                          <button type="button" onClick={() => removeImage(url)}
-                            className="absolute -right-1.5 -top-1.5 hidden h-5 w-5 items-center justify-center rounded-full bg-error text-white group-hover:flex">
-                            <span className="material-symbols-outlined" style={{ fontSize: 11 }}>close</span>
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
+          <div className="flex items-center gap-2.5">
+            <button type="button" onClick={mode === "edit" ? () => setMode("view") : onClose}
+              className="rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3.5 py-2 text-xs font-semibold text-[var(--text-primary)] transition hover:bg-[var(--surface-hover)] shadow-2xs">
+              {mode === "edit" ? (isJa ? "キャンセル" : "Cancel") : (isJa ? "閉じる" : "Close")}
+            </button>
+            {canEdit && mode === "view" && (
+              <button type="button" onClick={enterEdit}
+                className="rounded-[6px] bg-[var(--freya-blue)] px-4 py-2 text-xs font-semibold text-white hover:bg-[var(--freya-blue-hover)] active:scale-[0.98] transition-all shadow-xs">
+                {isJa ? "編集" : "Edit"}
+              </button>
+            )}
+            {mode === "edit" && (
+              <button type="button" onClick={handleSave} disabled={busy || uploading || !draft?.発生事案?.trim()}
+                className="rounded-[6px] bg-[var(--freya-blue)] px-4 py-2 text-xs font-semibold text-white hover:bg-[var(--freya-blue-hover)] active:scale-[0.98] transition-all shadow-xs disabled:opacity-50">
+                {busy ? (isJa ? "保存中…" : "Saving…") : (isJa ? "変更を保存" : "Save Changes")}
+              </button>
             )}
           </div>
-
-          {/* Footer */}
-          <div className="flex items-center justify-between gap-3 border-t border-separator/40 px-6 py-4">
-            {canEdit && mode === "edit" ? (
-              <button type="button" onClick={handleDelete} disabled={busy}
-                className="rounded-2xl border border-error/20 bg-error/10 px-4 py-2 text-xs font-semibold text-error transition hover:bg-error/20 disabled:opacity-50">
-                Delete
-              </button>
-            ) : <div />}
-
-            <div className="flex items-center gap-3">
-              <button type="button" onClick={mode === "edit" ? () => setMode("view") : onClose}
-                className="rounded-2xl border border-separator/40 px-4 py-2 text-xs font-semibold text-on-surface transition hover:bg-surface-container">
-                {mode === "edit" ? "Cancel" : "Close"}
-              </button>
-              {canEdit && mode === "view" && (
-                <button type="button" onClick={enterEdit}
-                  className="rounded-xl bg-primary px-4 py-2 text-xs font-semibold text-on-primary hover:opacity-90 active:scale-95 transition-all duration-150">
-                  Edit
-                </button>
-              )}
-              {mode === "edit" && (
-                <button type="button" onClick={handleSave} disabled={busy || uploading || !draft?.発生事案?.trim()}
-                  className="rounded-xl bg-primary px-4 py-2 text-xs font-semibold text-on-primary hover:opacity-90 active:scale-95 transition-all duration-150 disabled:opacity-50">
-                  {busy ? "保存中…" : "変更を保存"}
-                </button>
-              )}
-            </div>
-          </div>
-
         </div>
+
       </div>
-      <MediaLightbox url={lightboxURL} onClose={() => setLightboxURL(null)} />
     </div>,
     document.body
   );
@@ -392,52 +414,56 @@ function EventDetailModal({ event, canEdit, username, role, onClose, onSaved, on
 // ── Right-hand detail panel (inline, not a popup) ────────────────────────────
 
 function EquipmentDetailPanel({ equipment, onClose, onEdit }) {
+  const { language } = useLanguage();
+  const isJa = language === "ja";
   if (!equipment) return null;
 
   const fields = [
-    { label: "設備名",            value: equipment.name },
-    { label: "工場",              value: equipment["工場"] },
-    { label: "設置日",            value: equipment.installationDate },
-    { label: "Model",            value: equipment.model },
-    { label: "Size",             value: equipment.size },
-    { label: "Serial No.",       value: equipment.serialNo },
-    { label: "Manufacture Date", value: equipment.manufactureDate },
-    { label: "Voltage",          value: equipment.voltage },
-    { label: "Manufacturer",     value: equipment.manufacturer },
-    { label: "Contact Via",      value: equipment.contactVia },
-    { label: "No. of Heads",     value: equipment.noOfHead },
-    { label: "Length",           value: equipment.tableLength ? `${equipment.tableLength} mm` : undefined },
+    { label: isJa ? "設備名" : "Equipment Name",            value: equipment.name },
+    { label: isJa ? "工場" : "Factory",              value: equipment["工場"] },
+    { label: isJa ? "設置日" : "Installation Date",            value: equipment.installationDate },
+    { label: isJa ? "型式" : "Model",            value: equipment.model },
+    { label: isJa ? "サイズ" : "Size",             value: equipment.size },
+    { label: isJa ? "シリアル番号" : "Serial No.",       value: equipment.serialNo },
+    { label: isJa ? "製造日" : "Manufacture Date", value: equipment.manufactureDate },
+    { label: isJa ? "電圧" : "Voltage",          value: equipment.voltage },
+    { label: isJa ? "メーカー" : "Manufacturer",     value: equipment.manufacturer },
+    { label: isJa ? "連絡窓口" : "Contact Via",      value: equipment.contactVia },
+    { label: isJa ? "ヘッド数" : "No. of Heads",     value: equipment.noOfHead },
+    { label: isJa ? "長さ" : "Length",           value: equipment.tableLength ? `${equipment.tableLength} mm` : undefined },
   ];
 
   return (
-    <div className="rounded-2xl border border-separator/40 bg-surface-container shadow-sm overflow-hidden">
+    <div className="freya-card rounded-[8px] border border-[var(--border)] bg-[var(--surface)] shadow-sm overflow-hidden">
       {/* Header */}
-      <div className="flex items-start justify-between gap-4 border-b border-separator/40 px-6 py-5">
+      <div className="flex items-start justify-between gap-4 border-b border-[var(--border)] px-5 py-4">
         <div>
-          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">設備詳細</p>
-          <h3 className="mt-1 text-xl font-semibold text-on-surface">{equipment.name || "—"}</h3>
+          <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--text-muted)]">
+            {isJa ? "設備詳細" : "Equipment Details"}
+          </p>
+          <h3 className="mt-1 text-lg font-bold text-[var(--text-primary)]">{equipment.name || "—"}</h3>
           {equipment["工場"] && (
-            <p className="mt-0.5 text-sm text-on-surface-variant">{equipment["工場"]}</p>
+            <p className="mt-0.5 text-xs text-[var(--text-secondary)]">{equipment["工場"]}</p>
           )}
         </div>
         <div className="flex shrink-0 items-center gap-2">
           {onEdit && (
             <button type="button" onClick={() => onEdit(equipment)}
-              className="flex h-9 items-center gap-1.5 rounded-2xl border border-separator/40 bg-surface px-3 text-xs font-semibold text-on-surface transition hover:bg-surface-container-high">
+              className="inline-flex h-8 items-center gap-1.5 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 text-xs font-semibold text-[var(--text-primary)] transition hover:bg-[var(--surface-hover)] shadow-2xs">
               <span className="material-symbols-outlined" style={{ fontSize: 16 }}>edit</span>
-              Edit
+              {isJa ? "編集" : "Edit"}
             </button>
           )}
           <button type="button" onClick={onClose}
-            className="p-2 rounded-xl flex-shrink-0 text-outline hover:bg-surface-container hover:text-on-surface transition-all duration-150 active:scale-95">
+            className="p-1.5 rounded-[6px] text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-hover)] transition-colors">
             <span className="material-symbols-outlined" style={{ fontSize: 18 }}>close</span>
           </button>
         </div>
       </div>
 
-      <div className="overflow-y-auto px-6 py-6" style={{ maxHeight: "calc(100vh - 220px)" }}>
+      <div className="overflow-y-auto px-5 py-5" style={{ maxHeight: "calc(100vh - 220px)" }}>
         {equipment.imageURL && (
-          <div className="mb-4 overflow-hidden rounded-2xl border border-separator/40 bg-surface">
+          <div className="mb-4 overflow-hidden rounded-[8px] border border-[var(--border)] bg-[var(--surface-subtle)]">
             <img
               src={equipment.imageURL}
               alt={equipment.name || "equipment"}
@@ -448,13 +474,15 @@ function EquipmentDetailPanel({ equipment, onClose, onEdit }) {
         )}
 
         <section>
-          <p className="mb-3 text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">設備情報</p>
-          <dl className="grid grid-cols-2 gap-3 rounded-2xl border border-separator/40 bg-surface px-5 py-4">
+          <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--text-muted)]">
+            {isJa ? "設備情報" : "Equipment Info"}
+          </p>
+          <dl className="grid grid-cols-2 gap-3 rounded-[8px] border border-[var(--border)] bg-[var(--surface-subtle)] px-4 py-3.5">
             {fields.map(({ label, value }) =>
               value ? (
                 <div key={label} className="flex flex-col gap-0.5">
-                  <dt className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">{label}</dt>
-                  <dd className="text-sm text-on-surface">{value}</dd>
+                  <dt className="text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--text-muted)]">{label}</dt>
+                  <dd className="text-xs font-medium text-[var(--text-primary)]">{value}</dd>
                 </div>
               ) : null
             )}
@@ -468,45 +496,52 @@ function EquipmentDetailPanel({ equipment, onClose, onEdit }) {
 // ── Factory-box sub-components ───────────────────────────────────────────────
 
 function EquipmentRow({ equipment, isSelected, onView }) {
+  const { language } = useLanguage();
+  const isJa = language === "ja";
+
   return (
     <button
       type="button"
       onClick={() => onView(equipment)}
-      className={`w-full rounded-xl border px-3 py-2.5 text-left transition ${
+      className={`w-full rounded-[6px] border px-3 py-2 text-left transition ${
         isSelected
-          ? "border-primary/40 bg-primary/5"
-          : "border-outline-variant/15 bg-surface hover:border-outline-variant/30 hover:bg-surface-container/50"
+          ? "border-[var(--freya-blue)] bg-[var(--freya-blue)]/10"
+          : "border-[var(--border)] bg-[var(--surface)] hover:bg-[var(--surface-hover)] shadow-2xs"
       }`}
     >
-      <p className="truncate text-xs font-semibold text-on-surface">{equipment.name || "—"}</p>
+      <p className="truncate text-xs font-semibold text-[var(--text-primary)]">{equipment.name || "—"}</p>
       {equipment.installationDate && (
-        <p className="mt-0.5 text-[10px] text-on-surface-variant">設置日: {equipment.installationDate}</p>
+        <p className="mt-0.5 text-[10px] text-[var(--text-muted)]">{isJa ? "設置日" : "Installed"}: {equipment.installationDate}</p>
       )}
     </button>
   );
 }
 
 function FactoryBox({ factory, equipment, selectedId, onView }) {
+  const { language } = useLanguage();
+  const isJa = language === "ja";
   const [expanded, setExpanded] = useState(false);
   const name = factory["工場"] || "—";
   const hasMore = equipment.length > 1;
   const visible = expanded ? equipment : equipment.slice(0, 1);
 
   return (
-    <div className="rounded-2xl border border-separator/40 bg-surface-container shadow-sm overflow-hidden">
+    <div className="freya-card rounded-[8px] border border-[var(--border)] bg-[var(--surface)] shadow-sm overflow-hidden">
       {/* Header + equipment rows */}
       <div className="p-4">
         <div className="mb-3 flex items-center gap-2">
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-primary/10">
-            <span className="material-symbols-outlined text-primary" style={{ fontSize: 16 }}>factory</span>
+          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[6px] bg-[var(--freya-blue)]/10 text-[var(--freya-blue)]">
+            <span className="material-symbols-outlined" style={{ fontSize: 16 }}>factory</span>
           </div>
-          <h4 className="text-sm font-semibold text-on-surface">{name}</h4>
+          <h4 className="text-xs font-bold text-[var(--text-primary)]">{name}</h4>
         </div>
 
         <div className="flex flex-col gap-1.5">
           {equipment.length === 0 ? (
-            <div className="rounded-xl border border-separator/40 bg-surface px-3 py-2 text-center">
-              <p className="text-[10px] italic text-on-surface-variant/50">No equipment recorded yet.</p>
+            <div className="rounded-[6px] border border-dashed border-[var(--border)] bg-[var(--surface-subtle)] px-3 py-2 text-center">
+              <p className="text-[10px] italic text-[var(--text-muted)]">
+                {isJa ? "設備がまだ登録されていません。" : "No equipment recorded yet."}
+              </p>
             </div>
           ) : (
             visible.map((eq) => {
@@ -526,17 +561,17 @@ function FactoryBox({ factory, equipment, selectedId, onView }) {
         <button
           type="button"
           onClick={() => setExpanded((v) => !v)}
-          className="flex w-full items-center justify-center gap-1 border-t border-outline-variant/15 py-2 text-on-surface-variant transition hover:bg-surface-container-high"
+          className="flex w-full items-center justify-center gap-1 border-t border-[var(--border)] py-1.5 text-[var(--text-muted)] transition hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)]"
         >
           <span
             className="material-symbols-outlined transition-transform duration-200"
-            style={{ fontSize: 18, transform: expanded ? "rotate(180deg)" : "rotate(0deg)" }}
+            style={{ fontSize: 16, transform: expanded ? "rotate(180deg)" : "rotate(0deg)" }}
           >
             expand_more
           </span>
           {!expanded && (
-            <span className="text-[10px] text-on-surface-variant">
-              +{equipment.length - 1} more
+            <span className="text-[10px] font-medium text-[var(--text-muted)]">
+              +{equipment.length - 1} {isJa ? "件" : "more"}
             </span>
           )}
         </button>
@@ -548,6 +583,9 @@ function FactoryBox({ factory, equipment, selectedId, onView }) {
 // ── Main workspace ───────────────────────────────────────────────────────────
 
 export default function SetsubiDBWorkspace({ refreshToken, onFlash }) {
+  const { language } = useLanguage();
+  const isJa = language === "ja";
+
   const authUser = getAuthUser();
   const canEdit = authUser?.role === "admin";
 
@@ -600,7 +638,7 @@ export default function SetsubiDBWorkspace({ refreshToken, onFlash }) {
         setEquipment(Array.isArray(equipmentRecords) ? equipmentRecords : []);
       } catch (err) {
         if (!active) return;
-        const message = err?.message || "Failed to load data.";
+        const message = err?.message || (isJa ? "データの読み込みに失敗しました。" : "Failed to load data.");
         setError(message);
         onFlash?.({ type: "error", message });
       } finally {
@@ -609,7 +647,7 @@ export default function SetsubiDBWorkspace({ refreshToken, onFlash }) {
     }
     load();
     return () => { active = false; };
-  }, [refreshToken, localRefresh, onFlash]);
+  }, [refreshToken, localRefresh, onFlash, isJa]);
 
   useEffect(() => {
     if (listViewMode !== "all") return undefined;
@@ -618,10 +656,10 @@ export default function SetsubiDBWorkspace({ refreshToken, onFlash }) {
     setAllHistoryError("");
     fetchAllEquipmentHistory()
       .then((rows) => { if (active) setAllHistory(Array.isArray(rows) ? rows : []); })
-      .catch((err) => { if (active) setAllHistoryError(err?.message || "Failed to load records."); })
+      .catch((err) => { if (active) setAllHistoryError(err?.message || (isJa ? "記録の読み込みに失敗しました。" : "Failed to load records.")); })
       .finally(() => { if (active) setAllHistoryLoading(false); });
     return () => { active = false; };
-  }, [listViewMode, localRefresh, historyRefreshKey]);
+  }, [listViewMode, localRefresh, historyRefreshKey, isJa]);
 
   const factoryNames = useMemo(
     () => factories.map((f) => f["工場"]).filter(Boolean),
@@ -693,18 +731,18 @@ export default function SetsubiDBWorkspace({ refreshToken, onFlash }) {
       if (editingRecord) {
         const recordId = editingRecord._id?.$oid ?? editingRecord._id;
         await updateMasterRecord({ recordId, updates: payload, username, role: authUser?.role, tabKey: "setsubiDB" });
-        setSuccessMessage("Record edited successfully.");
+        setSuccessMessage(isJa ? "レコードを更新しました。" : "Record edited successfully.");
         if (viewingEquipment && (viewingEquipment._id?.$oid ?? viewingEquipment._id) === recordId) {
           setViewingEquipment({ ...viewingEquipment, ...payload });
         }
       } else {
         await createMasterRecord({ data: payload, username, role: authUser?.role, tabKey: "setsubiDB" });
-        setSuccessMessage("Record created successfully.");
+        setSuccessMessage(isJa ? "レコードを作成しました。" : "Record created successfully.");
       }
       closeEquipModal();
       setLocalRefresh((n) => n + 1);
     } catch (err) {
-      onFlash?.({ type: "error", message: err?.message || "Failed to save equipment record." });
+      onFlash?.({ type: "error", message: err?.message || (isJa ? "設備の保存に失敗しました。" : "Failed to save equipment record.") });
     } finally {
       setEquipSubmitting(false);
     }
@@ -714,18 +752,21 @@ export default function SetsubiDBWorkspace({ refreshToken, onFlash }) {
     if (!editingRecord) return;
     const recordId = editingRecord._id?.$oid ?? editingRecord._id;
     if (!recordId) return;
-    if (!window.confirm(`Archive "${editingRecord.name || recordId}"? The record will be moved to the equipment archive and its maintenance history will remain intact.`)) return;
+    const promptText = isJa
+      ? `「${editingRecord.name || recordId}」をアーカイブしますか？ レコードは設備アーカイブに移動され、保全履歴は保持されます。`
+      : `Archive "${editingRecord.name || recordId}"? The record will be moved to the equipment archive and its maintenance history will remain intact.`;
+    if (!window.confirm(promptText)) return;
     setEquipSubmitting(true);
     try {
       await archiveEquipmentRecord({ recordId, username: authUser?.username || "unknown", role: authUser?.role });
-      setSuccessMessage("Equipment archived successfully.");
+      setSuccessMessage(isJa ? "設備をアーカイブしました。" : "Equipment archived successfully.");
       if (viewingEquipment && (viewingEquipment._id?.$oid ?? viewingEquipment._id) === recordId) {
         setViewingEquipment(null);
       }
       closeEquipModal();
       setLocalRefresh((n) => n + 1);
     } catch (err) {
-      onFlash?.({ type: "error", message: err?.message || "Failed to archive equipment record." });
+      onFlash?.({ type: "error", message: err?.message || (isJa ? "設備のアーカイブに失敗しました。" : "Failed to archive equipment record.") });
     } finally {
       setEquipSubmitting(false);
     }
@@ -736,29 +777,31 @@ export default function SetsubiDBWorkspace({ refreshToken, onFlash }) {
   // ── Render ───────────────────────────────────────────────────────────────────
 
   return (
-    <section className="dashboard-section rounded-2xl p-6">
+    <div className="freya-card rounded-[8px] border border-[var(--border)] bg-[var(--surface)] p-6 shadow-sm">
       {/* Page header */}
       <div className="mb-4 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-outline">設備</p>
-          <h3 className="mt-1 text-2xl font-semibold text-on-surface">Equipment by Factory</h3>
+          <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--text-muted)]">{isJa ? "設備" : "Equipment"}</p>
+          <h3 className="mt-1 text-xl font-bold tracking-tight text-[var(--text-primary)]">
+            {isJa ? "工場別設備一覧" : "Equipment by Factory"}
+          </h3>
         </div>
         <div className="flex items-center gap-3">
           {!loading && !error && listViewMode === "factory" && (
-            <span className="text-sm text-on-surface-variant">
-              {equipment.length} items · {factories.length} factories
+            <span className="text-xs font-medium text-[var(--text-muted)]">
+              {equipment.length} {isJa ? "件" : "items"} · {factories.length} {isJa ? "工場" : "factories"}
             </span>
           )}
           <button type="button" onClick={() => setBinOpen(true)}
-            className="inline-flex items-center gap-2 rounded-2xl border border-separator/40 bg-surface-container px-4 py-3 text-sm font-semibold text-on-surface transition hover:bg-surface-container-high">
+            className="inline-flex items-center gap-1.5 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-xs font-semibold text-[var(--text-primary)] transition hover:bg-[var(--surface-hover)] shadow-2xs">
             <span className="material-symbols-outlined" style={{ fontSize: 16 }}>delete</span>
-            Recycle Bin
+            {isJa ? "リサイクルビン" : "Recycle Bin"}
           </button>
           {canEdit && (
             <button type="button" onClick={() => openCreateEquipModal()}
-              className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-on-primary hover:opacity-90 active:scale-95 transition-all duration-150">
+              className="inline-flex items-center gap-1.5 rounded-[6px] bg-[var(--freya-blue)] px-3.5 py-2 text-xs font-semibold text-white hover:bg-[var(--freya-blue-hover)] active:scale-[0.98] transition-all shadow-xs">
               <span className="material-symbols-outlined" style={{ fontSize: 16 }}>add</span>
-              Add Equipment
+              {isJa ? "設備を追加" : "Add Equipment"}
             </button>
           )}
         </div>
@@ -766,19 +809,19 @@ export default function SetsubiDBWorkspace({ refreshToken, onFlash }) {
 
       {/* View toggle */}
       <div className="mb-6 flex items-center">
-        <div className="flex overflow-hidden rounded-2xl border border-separator/40 bg-surface-container">
+        <div className="flex overflow-hidden rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] p-0.5">
           {[
-            { key: "factory", label: "View by factory", icon: "factory" },
-            { key: "all",     label: "View all records", icon: "list" },
+            { key: "factory", label: isJa ? "工場別表示" : "View by factory", icon: "factory" },
+            { key: "all",     label: isJa ? "全履歴表示" : "View all records", icon: "list" },
           ].map(({ key, label, icon }) => (
             <button
               key={key}
               type="button"
               onClick={() => setListViewMode(key)}
-              className={`inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold transition ${
+              className={`inline-flex items-center gap-2 rounded-[4px] px-3.5 py-1.5 text-xs font-semibold transition ${
                 listViewMode === key
-                  ? "bg-primary text-on-primary"
-                  : "text-on-surface hover:bg-surface-container-high"
+                  ? "bg-[var(--surface)] text-[var(--text-primary)] shadow-2xs"
+                  : "text-[var(--text-muted)] hover:text-[var(--text-primary)]"
               }`}
             >
               <span className="material-symbols-outlined" style={{ fontSize: 16 }}>{icon}</span>
@@ -792,17 +835,17 @@ export default function SetsubiDBWorkspace({ refreshToken, onFlash }) {
       {listViewMode === "factory" && (
         <>
           {loading && (
-            <div className="flex items-center justify-center py-16 text-sm font-medium text-on-surface-variant">
+            <div className="flex items-center justify-center py-16 text-xs font-medium text-[var(--text-muted)]">
               <span className="material-symbols-outlined animate-spin mr-2" style={{ fontSize: 18 }}>progress_activity</span>
-              Loading…
+              {isJa ? "読み込み中…" : "Loading…"}
             </div>
           )}
           {!loading && error && (
-            <div className="rounded-2xl bg-error/10 px-5 py-4 text-sm font-medium text-error">{error}</div>
+            <div className="rounded-[8px] border border-[var(--status-danger)]/30 bg-[var(--status-danger)]/10 px-5 py-4 text-xs font-medium text-[var(--status-danger)]">{error}</div>
           )}
           {!loading && !error && factories.length === 0 && (
-            <div className="rounded-2xl border border-separator/40 bg-surface px-5 py-8 text-center text-sm text-on-surface-variant">
-              No factory records found in factoryDB.
+            <div className="rounded-[8px] border border-[var(--border)] bg-[var(--surface-subtle)] px-5 py-8 text-center text-xs text-[var(--text-muted)]">
+              {isJa ? "factoryDBに工場の登録がありません。" : "No factory records found in factoryDB."}
             </div>
           )}
           {!loading && !error && factories.length > 0 && (
@@ -847,9 +890,9 @@ export default function SetsubiDBWorkspace({ refreshToken, onFlash }) {
             <select
               value={listFilterFactory}
               onChange={(e) => setListFilterFactory(e.target.value)}
-              className="rounded-2xl border border-separator/40 bg-surface px-3 py-2 text-sm text-on-surface outline-none transition focus:border-primary/40"
+              className="rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs font-medium text-[var(--text-primary)] outline-none transition focus:border-[var(--freya-blue)]"
             >
-              <option value="">All Factories</option>
+              <option value="">{isJa ? "全工場" : "All Factories"}</option>
               {factoryNames.map((f) => <option key={f} value={f}>{f}</option>)}
             </select>
 
@@ -859,10 +902,10 @@ export default function SetsubiDBWorkspace({ refreshToken, onFlash }) {
                   key={tag}
                   type="button"
                   onClick={() => setListFilterTag(listFilterTag === tag ? "" : tag)}
-                  className={`rounded-full px-3 py-1.5 text-xs font-semibold transition ${
+                  className={`rounded-[6px] px-3 py-1.5 text-xs font-semibold transition ${
                     listFilterTag === tag
-                      ? "bg-primary text-on-primary"
-                      : "border border-separator/40 bg-surface text-on-surface hover:bg-surface-container"
+                      ? "bg-[var(--freya-blue)] text-white shadow-xs"
+                      : "border border-[var(--border)] bg-[var(--surface)] text-[var(--text-secondary)] hover:bg-[var(--surface-hover)] shadow-2xs"
                   }`}
                 >
                   {tag}
@@ -873,27 +916,29 @@ export default function SetsubiDBWorkspace({ refreshToken, onFlash }) {
             <button
               type="button"
               onClick={() => setListSortDir((d) => d === "desc" ? "asc" : "desc")}
-              className="ml-auto inline-flex items-center gap-1.5 rounded-2xl border border-separator/40 bg-surface px-3 py-2 text-xs font-semibold text-on-surface transition hover:bg-surface-container"
+              className="ml-auto inline-flex items-center gap-1.5 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs font-semibold text-[var(--text-primary)] transition hover:bg-[var(--surface-hover)] shadow-2xs"
             >
               <span className="material-symbols-outlined" style={{ fontSize: 16 }}>
                 {listSortDir === "desc" ? "arrow_downward" : "arrow_upward"}
               </span>
-              Date {listSortDir === "desc" ? "Newest first" : "Oldest first"}
+              {isJa ? "日付" : "Date"} {listSortDir === "desc" ? (isJa ? "新しい順" : "Newest first") : (isJa ? "古い順" : "Oldest first")}
             </button>
           </div>
 
           {allHistoryLoading && (
-            <div className="flex items-center gap-2 py-12 text-sm text-on-surface-variant">
+            <div className="flex items-center gap-2 py-12 text-xs font-medium text-[var(--text-muted)]">
               <span className="material-symbols-outlined animate-spin" style={{ fontSize: 18 }}>progress_activity</span>
-              読み込み中…
+              {isJa ? "読み込み中…" : "Loading…"}
             </div>
           )}
           {!allHistoryLoading && allHistoryError && (
-            <div className="rounded-2xl bg-error/10 px-5 py-4 text-sm font-medium text-error">{allHistoryError}</div>
+            <div className="rounded-[8px] border border-[var(--status-danger)]/30 bg-[var(--status-danger)]/10 px-5 py-4 text-xs font-medium text-[var(--status-danger)]">{allHistoryError}</div>
           )}
           {!allHistoryLoading && !allHistoryError && filteredSortedHistory.length === 0 && (
-            <div className="rounded-2xl border border-separator/40 bg-surface px-5 py-10 text-center text-sm text-on-surface-variant">
-              {allHistory.length === 0 ? "事案の記録はまだありません。" : "No records matched the current filters."}
+            <div className="rounded-[8px] border border-[var(--border)] bg-[var(--surface-subtle)] px-5 py-10 text-center text-xs text-[var(--text-muted)]">
+              {allHistory.length === 0
+                ? (isJa ? "事案の記録はまだありません。" : "No event records yet.")
+                : (isJa ? "条件に一致する記録がありません。" : "No records matched the current filters.")}
             </div>
           )}
           {!allHistoryLoading && !allHistoryError && filteredSortedHistory.length > 0 && (
@@ -906,20 +951,20 @@ export default function SetsubiDBWorkspace({ refreshToken, onFlash }) {
                     key={key}
                     type="button"
                     onClick={() => setViewingEvent(event)}
-                    className="w-full rounded-2xl border border-separator/40 bg-surface px-4 py-3 text-left transition hover:border-outline-variant/40 hover:bg-surface-container/50"
+                    className="w-full rounded-[8px] border border-[var(--border)] bg-[var(--surface)] px-4 py-3 text-left transition hover:border-[var(--freya-blue)]/50 hover:bg-[var(--surface-hover)]/50 shadow-2xs"
                   >
                     <div className="flex items-start justify-between gap-4">
                       <div className="min-w-0 flex-1">
-                        <p className="text-sm font-semibold text-on-surface">{event["発生事案"] || "—"}</p>
+                        <p className="text-xs font-semibold text-[var(--text-primary)]">{event["発生事案"] || "—"}</p>
                         <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5">
-                          {event["工場"] && <span className="text-[11px] text-on-surface-variant">{event["工場"]}</span>}
-                          {event.equipmentName && <span className="text-[11px] text-on-surface-variant/60">/ {event.equipmentName}</span>}
-                          {event["名前"] && <span className="text-[11px] text-on-surface-variant/60">· {event["名前"]}</span>}
+                          {event["工場"] && <span className="text-[11px] text-[var(--text-secondary)]">{event["工場"]}</span>}
+                          {event.equipmentName && <span className="text-[11px] text-[var(--text-muted)]">/ {event.equipmentName}</span>}
+                          {event["名前"] && <span className="text-[11px] text-[var(--text-muted)]">· {event["名前"]}</span>}
                         </div>
                         {tags.length > 0 && (
                           <div className="mt-1.5 flex flex-wrap gap-1">
                             {tags.map((tag) => (
-                              <span key={tag} className="rounded-full bg-surface-container px-2 py-0.5 text-[10px] font-semibold text-on-surface-variant">
+                              <span key={tag} className="rounded-full border border-[var(--border)] bg-[var(--surface-subtle)] px-2 py-0.5 text-[10px] font-medium text-[var(--text-secondary)]">
                                 {tag}
                               </span>
                             ))}
@@ -927,7 +972,7 @@ export default function SetsubiDBWorkspace({ refreshToken, onFlash }) {
                         )}
                       </div>
                       {event.eventDate && (
-                        <span className="shrink-0 text-[11px] font-semibold text-primary">{event.eventDate}</span>
+                        <span className="shrink-0 rounded-[4px] border border-[var(--freya-blue)]/20 bg-[var(--freya-blue)]/10 px-2 py-0.5 text-[10px] font-semibold text-[var(--freya-blue)]">{event.eventDate}</span>
                       )}
                     </div>
                   </button>
@@ -960,11 +1005,11 @@ export default function SetsubiDBWorkspace({ refreshToken, onFlash }) {
           role={authUser?.role}
           onClose={() => setViewingEvent(null)}
           onSaved={() => {
-            setSuccessMessage("事案を更新しました。");
+            setSuccessMessage(isJa ? "事案を更新しました。" : "Event updated successfully.");
             setHistoryRefreshKey((k) => k + 1);
           }}
           onDeleted={() => {
-            setSuccessMessage("事案をリサイクルビンに移動しました。");
+            setSuccessMessage(isJa ? "事案をリサイクルビンに移動しました。" : "Event moved to recycle bin.");
             setHistoryRefreshKey((k) => k + 1);
             setBinRefresh((k) => k + 1);
           }}
@@ -972,21 +1017,19 @@ export default function SetsubiDBWorkspace({ refreshToken, onFlash }) {
       )}
 
       {binOpen && createPortal(
-        <div className="fixed inset-0 z-50 overflow-y-auto bg-black/50 backdrop-blur-md">
-          <div className="flex min-h-full items-start justify-center px-4 pb-4 pt-10">
-            <div className="w-full max-w-4xl">
-              <div className="mb-3 flex justify-end">
-                <IconButton icon="close" onClick={() => setBinOpen(false)} variant="light" ariaLabel="Close" className="bg-white/20 hover:bg-white/30" />
-              </div>
-              <EquipmentHistoryBinWorkspace
-                refreshToken={binRefresh}
-                onFlash={(msg) => { onFlash?.(msg); setBinRefresh((n) => n + 1); }}
-              />
+        <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/60 backdrop-blur-xs p-4">
+          <div className="w-full max-w-4xl my-8">
+            <div className="mb-3 flex justify-end">
+              <IconButton icon="close" onClick={() => setBinOpen(false)} variant="light" ariaLabel={isJa ? "閉じる" : "Close"} className="bg-white/20 hover:bg-white/30" />
             </div>
+            <EquipmentHistoryBinWorkspace
+              refreshToken={binRefresh}
+              onFlash={(msg) => { onFlash?.(msg); setBinRefresh((n) => n + 1); }}
+            />
           </div>
         </div>,
         document.body
       )}
-    </section>
+    </div>
   );
 }

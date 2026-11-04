@@ -5,7 +5,12 @@
 		},
 		{
 			"path": "../../../Kurachi"
+		},
+		{
+			"path": "../../../ioT"
 		}
 	],
-	"settings": {}
+	"settings": {
+		"liveServer.settings.multiRootWorkspaceName": "Kurachi"
+	}
 }

@@ -36,8 +36,8 @@ function getWindowOrThrow(title) {
   return nextWindow;
 }
 
-function getTimelineRange(items = [], breaks = DEFAULT_BREAKS) {
-  const baseStart = timeToMinutes(PLANNER_CONFIG.workStartTime);
+function getTimelineRange(items = [], breaks = DEFAULT_BREAKS, customStartTime = PLANNER_CONFIG.workStartTime) {
+  const baseStart = timeToMinutes(customStartTime || PLANNER_CONFIG.workStartTime);
   let rangeEnd = timeToMinutes(PLANNER_CONFIG.workEndTime);
 
   items.forEach((item) => {
@@ -119,11 +119,11 @@ function renderScheduleDetailHtml(item, breaks = DEFAULT_BREAKS) {
   );
 }
 
-function generateCalendarHtml({ factoryName, planDate, scheduledProducts = [], breaks = DEFAULT_BREAKS }) {
+function generateCalendarHtml({ factoryName, planDate, scheduledProducts = [], breaks = DEFAULT_BREAKS, startTime = "08:45" }) {
   const sortedItems = sortScheduledProducts(scheduledProducts);
   const grouped = groupByEquipment(sortedItems);
   const equipmentNames = Object.keys(grouped).sort((left, right) => left.localeCompare(right, "ja"));
-  const range = getTimelineRange(sortedItems, breaks);
+  const range = getTimelineRange(sortedItems, breaks, startTime);
   const markers = buildTimeMarkers(range);
   const totalBoxes = sortedItems.reduce((sum, item) => sum + (Number(item.boxes) || 0), 0);
   const totalQuantity = sortedItems.reduce((sum, item) => sum + (Number(item.quantity) || 0), 0);
@@ -778,23 +778,23 @@ function generatePrintHtml({ factoryName, planDate, scheduledProducts = [], sele
   `;
 }
 
-export function openPlannerCalendarWindow({ factoryName, planDate, scheduledProducts = [], breaks = DEFAULT_BREAKS }) {
+export function openPlannerCalendarWindow({ factoryName, planDate, scheduledProducts = [], breaks = DEFAULT_BREAKS, startTime = "08:45" }) {
   if (!scheduledProducts.length) {
     throw new Error("No scheduled products available for calendar view.");
   }
 
   const nextWindow = getWindowOrThrow("calendar view");
-  nextWindow.document.write(generateCalendarHtml({ factoryName, planDate, scheduledProducts, breaks }));
+  nextWindow.document.write(generateCalendarHtml({ factoryName, planDate, scheduledProducts, breaks, startTime }));
   nextWindow.document.close();
 }
 
-export function openPlannerPrintWindow({ factoryName, planDate, scheduledProducts = [], selectedEquipment = [], breaks = DEFAULT_BREAKS }) {
+export function openPlannerPrintWindow({ factoryName, planDate, scheduledProducts = [], selectedEquipment = [], breaks = DEFAULT_BREAKS, startTime = "08:45" }) {
   if (!scheduledProducts.length) {
     throw new Error("No scheduled products available for printing.");
   }
 
   const nextWindow = getWindowOrThrow("print preview");
-  nextWindow.document.write(generatePrintHtml({ factoryName, planDate, scheduledProducts, selectedEquipment, breaks }));
+  nextWindow.document.write(generatePrintHtml({ factoryName, planDate, scheduledProducts, selectedEquipment, breaks, startTime }));
   nextWindow.document.close();
   nextWindow.onload = () => {
     nextWindow.focus();

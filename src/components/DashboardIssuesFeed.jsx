@@ -14,17 +14,17 @@ function IssueTag({ children, color }) {
 export default function DashboardIssuesFeed({ issues, loading, onRecordClick }) {
   if (loading) {
     return (
-      <div className="dashboard-section rounded-2xl p-5 h-full">
+      <div className="freya-card p-5 h-full">
         <div className="flex items-center gap-2 mb-1">
-          <span className="w-8 h-8 rounded-lg bg-error/10 flex items-center justify-center flex-shrink-0">
-            <span className="material-symbols-outlined text-error" style={{ fontSize: 18 }}>warning</span>
+          <span className="w-8 h-8 rounded-[6px] bg-rose-50 dark:bg-rose-950/30 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-900 flex items-center justify-center flex-shrink-0">
+            <span className="material-symbols-outlined" style={{ fontSize: 18 }}>warning</span>
           </span>
-          <h3 className="text-sm font-semibold text-on-surface">Issues Today</h3>
+          <h3 className="text-sm font-semibold text-[var(--text-primary)]">Issues Today</h3>
         </div>
-        <p className="text-[11px] text-outline mb-4 ml-10">Records with maintenance or high defect rate</p>
+        <p className="text-xs text-[var(--text-muted)] mb-4 ml-10">Records requiring maintenance or showing high defect rates</p>
         <div className="space-y-2.5">
           {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="h-[72px] rounded-xl bg-surface-container/70 animate-pulse" />
+            <div key={i} className="h-[72px] rounded-[6px] bg-slate-100 dark:bg-slate-800 animate-pulse" />
           ))}
         </div>
       </div>
@@ -32,28 +32,29 @@ export default function DashboardIssuesFeed({ issues, loading, onRecordClick }) 
   }
 
   return (
-    <div className="dashboard-section rounded-2xl p-5 h-full flex flex-col">
+    <div className="freya-card p-5 h-full flex flex-col">
       <div className="flex items-center gap-2 mb-1">
-        <span className="w-8 h-8 rounded-lg bg-error/10 flex items-center justify-center flex-shrink-0">
-          <span className="material-symbols-outlined text-error" style={{ fontSize: 18 }}>warning</span>
+        <span className="w-8 h-8 rounded-[6px] bg-rose-50 dark:bg-rose-950/30 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-900 flex items-center justify-center flex-shrink-0">
+          <span className="material-symbols-outlined" style={{ fontSize: 18 }}>warning</span>
         </span>
-        <h3 className="text-sm font-semibold text-on-surface">Issues Today</h3>
+        <h3 className="text-sm font-semibold text-[var(--text-primary)]">Issues Today</h3>
         {issues.length > 0 && (
-          <span className="ml-auto px-2.5 py-1 rounded-full bg-error/12 text-error text-[11px] font-semibold border border-error/20">
-            {issues.length}
+          <span className="ml-auto freya-badge freya-badge-defect">
+            <span className="freya-badge-dot" />
+            {issues.length} {issues.length === 1 ? "Issue" : "Issues"}
           </span>
         )}
       </div>
-      <p className="text-[11px] text-outline mb-4 ml-10">Records with maintenance or high defect rate</p>
+      <p className="text-xs text-[var(--text-muted)] mb-4 ml-10">Records requiring maintenance or showing high defect rates</p>
 
       {issues.length === 0 ? (
-        <div className="flex-1 flex flex-col items-center justify-center gap-3 text-emerald-500">
-          <span className="w-14 h-14 rounded-2xl bg-emerald-500/8 flex items-center justify-center">
-            <span className="material-symbols-outlined" style={{ fontSize: 32, fontVariationSettings: "'FILL' 1" }}>check_circle</span>
+        <div className="flex-1 flex flex-col items-center justify-center gap-3 text-emerald-600 dark:text-emerald-400 py-8">
+          <span className="w-12 h-12 rounded-[8px] bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-900 flex items-center justify-center">
+            <span className="material-symbols-outlined" style={{ fontSize: 26, fontVariationSettings: "'FILL' 1" }}>check_circle</span>
           </span>
           <div className="text-center">
-            <p className="text-sm font-semibold">No issues today</p>
-            <p className="text-[11px] text-outline mt-0.5">All records within normal range</p>
+            <p className="text-sm font-semibold text-[var(--text-primary)]">No issues today</p>
+            <p className="text-xs text-[var(--text-muted)] mt-0.5">All production lines within tolerance</p>
           </div>
         </div>
       ) : (
@@ -68,39 +69,39 @@ export default function DashboardIssuesFeed({ issues, loading, onRecordClick }) 
               <button
                 key={r._id?.$oid ?? `${r["工場"]}-${r["設備"]}-${r.Date}-${idx}`}
                 onClick={() => onRecordClick?.(r)}
-                className={`w-full text-left p-3 rounded-xl border transition-all duration-150
-                  bg-surface-container/50 hover:bg-surface-container
+                className={`w-full text-left p-3 rounded-[6px] border transition-all duration-150
+                  bg-[var(--surface)] hover:bg-[var(--surface-hover)]
                   ${isCritical
-                    ? "border-error/25 hover:border-error/45 shadow-[inset_3px_0_0_rgb(var(--c-error))]"
+                    ? "border-rose-300 dark:border-rose-800 shadow-[inset_3px_0_0_#DC2626]"
                     : highNg
-                      ? "border-error/15 hover:border-error/35 shadow-[inset_3px_0_0_rgba(var(--c-error)/0.6)]"
+                      ? "border-rose-200 dark:border-rose-900 shadow-[inset_3px_0_0_#DC2626]"
                       : hasMaint
-                        ? "border-amber-500/20 hover:border-amber-500/40 shadow-[inset_3px_0_0_rgba(245,158,11,0.5)]"
-                        : "border-separator/40 hover:border-primary/25"
+                        ? "border-amber-200 dark:border-amber-900 shadow-[inset_3px_0_0_#D97706]"
+                        : "border-[var(--border)] hover:border-slate-300 dark:hover:border-slate-700"
                   }
                 `}
               >
                 <div className="flex items-start justify-between gap-2 mb-2">
                   <div className="flex items-center gap-2 min-w-0">
-                    <span className="text-xs font-semibold text-on-surface truncate">{r["工場"]}</span>
-                    <span className="text-[10px] text-outline truncate">{r["設備"]}</span>
+                    <span className="text-xs font-semibold text-[var(--text-primary)] truncate">{r["工場"]}</span>
+                    <span className="text-[11px] text-[var(--text-muted)] truncate">{r["設備"]}</span>
                   </div>
-                  <span className="text-[10px] text-outline flex-shrink-0 bg-surface-container px-1.5 py-0.5 rounded-md">{r["_process"]}</span>
+                  <span className="text-[10px] font-semibold text-[var(--text-muted)] flex-shrink-0 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-[4px]">{r["_process"]}</span>
                 </div>
-                <div className="text-[11px] text-on-surface-variant truncate mb-2">
+                <div className="text-xs text-[var(--text-secondary)] truncate mb-2">
                   {r["品番"]} · {r["背番号"]} · {r["Worker_Name"]}
                 </div>
                 <div className="flex flex-wrap gap-2">
                   {highNg && (
-                    <IssueTag color="bg-error/12 text-error border border-error/20">
+                    <IssueTag color="bg-rose-50 dark:bg-rose-950/30 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-900">
                       <span className="material-symbols-outlined" style={{ fontSize: 11 }}>report</span>
-                      {defRate.toFixed(1)}% NG
+                      <span className="freya-tabular">{defRate.toFixed(1)}% NG</span>
                     </IssueTag>
                   )}
                   {hasMaint && (
-                    <IssueTag color="bg-amber-500/12 text-amber-500 border border-amber-500/20">
+                    <IssueTag color="bg-amber-50 dark:bg-amber-950/30 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-900">
                       <span className="material-symbols-outlined" style={{ fontSize: 11 }}>build</span>
-                      {Number(r.Total_Trouble_Hours).toFixed(1)} h downtime
+                      <span className="freya-tabular">{Number(r.Total_Trouble_Hours).toFixed(1)} h downtime</span>
                     </IssueTag>
                   )}
                 </div>

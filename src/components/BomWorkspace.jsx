@@ -1,10 +1,14 @@
 import React, { useState, useEffect } from 'react';
+import { useLanguage } from '../contexts/LanguageContext';
 import { fetchMasterPage, query } from '../services/api';
 import BomEditModal from './BomEditModal';
 import MaterialDetailModal from './MaterialDetailModal';
 import PaginationControls from './PaginationControls';
 
 export default function BomWorkspace({ initialSearch = "", initialCreateHinban = "", onFlash }) {
+  const { language } = useLanguage();
+  const isJa = language === "ja";
+
   const [boms, setBoms] = useState([]);
   const [loading, setLoading] = useState(true);
   const [editModalOpen, setEditModalOpen] = useState(false);
@@ -84,7 +88,7 @@ export default function BomWorkspace({ initialSearch = "", initialCreateHinban =
       }
     } catch (err) {
       console.error(err);
-      if (onFlash) onFlash({ type: "error", message: "Failed to load BOMs" });
+      if (onFlash) onFlash({ type: "error", message: isJa ? "BOMの取得に失敗しました" : "Failed to load BOMs" });
     } finally {
       setLoading(false);
     }
@@ -103,44 +107,48 @@ export default function BomWorkspace({ initialSearch = "", initialCreateHinban =
         setDetailModalData(data);
         setDetailModalOpen(true);
       } else {
-        if (onFlash) onFlash({ type: "warning", message: "Master data not found for " + hinban });
+        if (onFlash) onFlash({ type: "warning", message: isJa ? `品番 ${hinban} のマスターデータが見つかりません` : "Master data not found for " + hinban });
       }
     } catch (err) {
       console.error(err);
-      if (onFlash) onFlash({ type: "error", message: "Error fetching material details" });
+      if (onFlash) onFlash({ type: "error", message: isJa ? "材料詳細の取得エラー" : "Error fetching material details" });
     }
   }
 
   return (
-    <div className="dashboard-section rounded-2xl px-6 py-6 h-full flex flex-col gap-6 animate-[fadeIn_0.15s_ease-out]">
+    <div className="freya-card rounded-[8px] border border-[var(--border)] bg-[var(--surface)] p-6 shadow-sm flex flex-col gap-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-xl font-bold text-on-surface">BOM Management</h2>
+        <h2 className="text-xl font-bold tracking-tight text-[var(--text-primary)]">
+          {isJa ? "部品構成表 (BOM) 管理" : "BOM Management"}
+        </h2>
         <button 
           onClick={() => { setSelectedBom(null); setEditModalOpen(true); }}
-          className="flex items-center gap-2 rounded-full bg-primary px-4 py-2 text-sm font-bold text-on-primary shadow-sm hover:bg-primary/90 transition-colors"
+          className="inline-flex items-center gap-1.5 rounded-[6px] bg-[var(--freya-blue)] px-3.5 py-2 text-xs font-semibold text-white hover:bg-[var(--freya-blue-hover)] active:scale-[0.98] transition-all shadow-xs"
         >
-          <span className="material-symbols-outlined" style={{ fontSize: 20 }}>add</span>
-          Create New BOM
+          <span className="material-symbols-outlined" style={{ fontSize: 18 }}>add</span>
+          {isJa ? "新規BOM作成" : "Create New BOM"}
         </button>
       </div>
 
       <div className="flex-1 flex gap-4 min-h-0">
         
         {/* Left Pane: BOM List */}
-        <div className="w-1/3 bg-surface-variant/10 border border-outline-variant/30 rounded-xl flex flex-col overflow-hidden">
-          <div className="p-4 border-b border-outline-variant/30 bg-surface-variant/20 flex flex-col gap-3">
-            <div className="flex items-center justify-between font-bold text-on-surface text-sm">
-              <span>BOM List</span>
-              {loading && <span className="material-symbols-outlined animate-spin text-outline" style={{ fontSize: 16 }}>progress_activity</span>}
+        <div className="w-1/3 rounded-[8px] border border-[var(--border)] bg-[var(--surface)] flex flex-col overflow-hidden shadow-2xs">
+          <div className="p-3.5 border-b border-[var(--border)] bg-[var(--surface-subtle)] flex flex-col gap-2.5">
+            <div className="flex items-center justify-between font-bold text-[var(--text-primary)] text-xs">
+              <span className="uppercase tracking-[0.04em] text-[var(--text-muted)]">
+                {isJa ? "BOM一覧" : "BOM List"}
+              </span>
+              {loading && <span className="material-symbols-outlined animate-spin text-[var(--text-muted)]" style={{ fontSize: 16 }}>progress_activity</span>}
             </div>
             <div className="relative w-full">
-              <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline" style={{ fontSize: 18 }}>search</span>
+              <span className="material-symbols-outlined absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" style={{ fontSize: 16 }}>search</span>
               <input 
                 type="text" 
-                placeholder="Search 品番..." 
+                placeholder={isJa ? "品番を検索..." : "Search 品番..."}
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
-                className="w-full bg-surface-variant/30 border border-outline-variant/50 rounded-lg pl-9 pr-3 py-1.5 text-sm focus:border-primary focus:outline-none transition-colors"
+                className="w-full rounded-[6px] border border-[var(--border)] bg-[var(--surface)] pl-8 pr-3 py-1.5 text-xs text-[var(--text-primary)] placeholder-[var(--text-muted)] outline-none focus:border-[var(--freya-blue)] transition-colors"
               />
             </div>
           </div>
@@ -151,34 +159,38 @@ export default function BomWorkspace({ initialSearch = "", initialCreateHinban =
                 <button
                   key={bom._id?.$oid || idx}
                   onClick={() => setSelectedBom(bom)}
-                  className={`w-full text-left px-3 py-3 rounded-lg text-sm font-medium transition-colors border ${
+                  className={`w-full text-left px-3 py-2 rounded-[6px] text-xs font-medium transition-colors border ${
                     isSelected 
-                      ? 'bg-primary/10 border-primary/30 text-primary' 
-                      : 'bg-surface border-transparent hover:bg-surface-variant/30 text-on-surface hover:border-outline-variant/30'
+                      ? 'border-[var(--freya-blue)]/40 bg-[var(--freya-blue)]/10 text-[var(--freya-blue)]' 
+                      : 'border-transparent bg-[var(--surface)] hover:bg-[var(--surface-hover)] text-[var(--text-primary)] hover:border-[var(--border)]'
                   }`}
                 >
-                  <div className="truncate">{bom['品番']}</div>
-                  <div className="text-[10px] text-outline mt-1 font-normal">
-                    {bom.BOM?.length || 0} process steps
+                  <div className="truncate font-semibold">{bom['品番']}</div>
+                  <div className="text-[10px] text-[var(--text-muted)] mt-0.5 font-normal">
+                    {bom.BOM?.length || 0} {isJa ? "工程ステップ" : "process steps"}
                   </div>
                 </button>
               );
             })}
             {!loading && boms.length === 0 && (
-              <div className="text-center p-4 text-xs text-outline">No BOMs found.</div>
+              <div className="text-center p-4 text-xs text-[var(--text-muted)]">
+                {isJa ? "BOMが見つかりません。" : "No BOMs found."}
+              </div>
             )}
           </div>
           
           {/* Pagination Controls */}
           {totalPages > 0 && (
-            <div className="p-4 border-t border-outline-variant/30 flex flex-col gap-4 bg-surface-variant/10">
+            <div className="p-3 border-t border-[var(--border)] flex flex-col gap-2 bg-[var(--surface-subtle)]">
               <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-3">
                 <div className="flex items-center gap-2">
-                  <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-outline whitespace-nowrap">Rows per page</span>
+                  <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--text-muted)] whitespace-nowrap">
+                    {isJa ? "表示件数" : "Rows"}
+                  </span>
                   <select
                     value={pageSize}
                     onChange={(e) => setPageSize(Number(e.target.value))}
-                    className="bg-surface border border-outline-variant/50 rounded text-xs px-2 py-1 focus:outline-none"
+                    className="rounded-[4px] border border-[var(--border)] bg-[var(--surface)] text-xs px-2 py-1 text-[var(--text-primary)] focus:outline-none focus:border-[var(--freya-blue)]"
                   >
                     {[30, 50, 100].map(size => <option key={size} value={size}>{size}</option>)}
                   </select>
@@ -196,29 +208,33 @@ export default function BomWorkspace({ initialSearch = "", initialCreateHinban =
         </div>
 
         {/* Right Pane: BOM Details */}
-        <div className="flex-1 bg-surface-variant/10 border border-outline-variant/30 rounded-xl flex flex-col overflow-hidden relative">
+        <div className="flex-1 rounded-[8px] border border-[var(--border)] bg-[var(--surface)] flex flex-col overflow-hidden shadow-2xs relative">
           {selectedBom ? (
             <>
-              <div className="p-6 border-b border-outline-variant/30 bg-surface-variant/20 flex items-start justify-between">
+              <div className="p-5 border-b border-[var(--border)] bg-[var(--surface-subtle)] flex items-start justify-between">
                 <div>
-                  <div className="text-xs font-bold text-outline uppercase tracking-wider mb-1">Target Material (Parent)</div>
-                  <h3 className="text-2xl font-bold text-on-surface">{selectedBom['品番']}</h3>
+                  <div className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-[0.14em] mb-1">
+                    {isJa ? "親品番 (完成品・中間品)" : "Target Material (Parent)"}
+                  </div>
+                  <h3 className="text-xl font-bold tracking-tight text-[var(--text-primary)]">{selectedBom['品番']}</h3>
                 </div>
                 <button 
                   onClick={() => setEditModalOpen(true)}
-                  className="flex items-center gap-1 text-primary hover:bg-primary/10 px-3 py-1.5 rounded-lg transition-colors text-sm font-bold"
+                  className="inline-flex items-center gap-1 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-hover)] transition-colors shadow-2xs"
                 >
-                  <span className="material-symbols-outlined" style={{ fontSize: 18 }}>edit</span>
-                  Edit
+                  <span className="material-symbols-outlined" style={{ fontSize: 16 }}>edit</span>
+                  {isJa ? "編集" : "Edit"}
                 </button>
               </div>
               
-              <div className="flex-1 overflow-y-auto p-6">
-                <div className="text-sm font-bold text-outline uppercase tracking-wider mb-4">Ingredients & Processes</div>
-                <div className="space-y-4">
+              <div className="flex-1 overflow-y-auto p-5">
+                <div className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-[0.14em] mb-3">
+                  {isJa ? "構成品および工程" : "Ingredients & Processes"}
+                </div>
+                <div className="space-y-3">
                   {(!selectedBom.BOM || selectedBom.BOM.length === 0) ? (
-                    <div className="text-center p-8 border border-dashed border-outline-variant/50 rounded-xl text-outline text-sm">
-                      No processes defined for this BOM.
+                    <div className="text-center p-8 border border-dashed border-[var(--border)] rounded-[8px] text-[var(--text-muted)] text-xs">
+                      {isJa ? "このBOMには工程が定義されていません。" : "No processes defined for this BOM."}
                     </div>
                   ) : (
                     selectedBom.BOM.map((step, sIdx) => {
@@ -229,7 +245,7 @@ export default function BomWorkspace({ initialSearch = "", initialCreateHinban =
                       const procCode = step['工程コード'];
                       const processDisplay = procName && procCode 
                         ? `${procName} - ${procCode}` 
-                        : (procName || (procCode ? `Process ${procCode}` : `Step ${sIdx + 1}`));
+                        : (procName || (procCode ? (isJa ? `工程 ${procCode}` : `Process ${procCode}`) : (isJa ? `ステップ ${sIdx + 1}` : `Step ${sIdx + 1}`)));
 
                       const rawProdUnit = step['生産単位'];
                       const prodUnitName = typeof rawProdUnit === 'object' 
@@ -239,58 +255,62 @@ export default function BomWorkspace({ initialSearch = "", initialCreateHinban =
                       const kataban = step['型番'];
 
                       return (
-                        <div key={sIdx} className="bg-surface border border-outline-variant/30 rounded-xl shadow-sm p-4 flex flex-col md:flex-row md:items-center justify-between gap-4 relative overflow-hidden">
-                          <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary/40"></div>
+                        <div key={sIdx} className="rounded-[8px] border border-[var(--border)] bg-[var(--surface)] shadow-2xs p-4 flex flex-col md:flex-row md:items-center justify-between gap-4 relative overflow-hidden">
+                          <div className="absolute left-0 top-0 bottom-0 w-1 bg-[var(--freya-blue)]"></div>
                           <div className="flex-1 pl-2">
                             <div className="flex flex-wrap items-center gap-2 mb-1">
-                              <span className="text-[10px] font-bold text-primary bg-primary/10 px-2 py-0.5 rounded-full">
-                                Step {step['工程番号'] || sIdx + 1}
+                              <span className="text-[10px] font-bold text-[var(--freya-blue)] bg-[var(--freya-blue)]/10 px-2 py-0.5 rounded-[4px] border border-[var(--freya-blue)]/20">
+                                {isJa ? `工程 ${step['工程番号'] || sIdx + 1}` : `Step ${step['工程番号'] || sIdx + 1}`}
                               </span>
-                              <span className="font-bold text-on-surface text-sm md:text-base">
+                              <span className="font-bold text-[var(--text-primary)] text-xs md:text-sm">
                                 {processDisplay}
                               </span>
                               {timeOption && (
-                                <span className="font-mono text-xs font-bold text-primary bg-primary/10 px-2 py-0.5 rounded border border-primary/20" title={`時間オプション: ${timeOption}`}>
+                                <span className="font-mono text-xs font-bold text-[var(--freya-blue)] bg-[var(--freya-blue)]/10 px-2 py-0.5 rounded-[4px] border border-[var(--freya-blue)]/20" title={`時間オプション: ${timeOption}`}>
                                   {timeOption}
                                 </span>
                               )}
                               {kataban && kataban !== '*' && (
-                                <span className="text-xs font-semibold text-on-surface/80 bg-surface-variant/40 px-2 py-0.5 rounded" title={`型番: ${kataban}`}>
+                                <span className="text-xs font-semibold text-[var(--text-secondary)] bg-[var(--surface-subtle)] border border-[var(--border)] px-2 py-0.5 rounded-[4px]" title={`型番: ${kataban}`}>
                                   {kataban}
                                 </span>
                               )}
                             </div>
-                            <div className="text-xs text-outline flex items-center flex-wrap gap-x-4 gap-y-1.5 mt-2">
-                              <span><strong className="text-on-surface-variant">Lead Time:</strong> {step['作業リード日'] || 0}d</span>
-                              <span><strong className="text-on-surface-variant">Setup:</strong> {step['段取時間'] || 0}m</span>
+                            <div className="text-xs text-[var(--text-muted)] flex items-center flex-wrap gap-x-4 gap-y-1.5 mt-2">
+                              <span><strong className="text-[var(--text-secondary)] font-semibold">{isJa ? "リード日:" : "Lead Time:"}</strong> {step['作業リード日'] || 0}d</span>
+                              <span><strong className="text-[var(--text-secondary)] font-semibold">{isJa ? "段取時間:" : "Setup:"}</strong> {step['段取時間'] || 0}m</span>
                               <span>
-                                <strong className="text-on-surface-variant">Work:</strong> {step['作業時間'] || 0}s/{prodUnitName || 'unit'}
+                                <strong className="text-[var(--text-secondary)] font-semibold">{isJa ? "作業時間:" : "Work:"}</strong> {step['作業時間'] || 0}s/{prodUnitName || (isJa ? "単位" : "unit")}
                               </span>
                               {prodUnitName && (
                                 <span>
-                                  <strong className="text-on-surface-variant">生産単位:</strong> {prodUnitName}
+                                  <strong className="text-[var(--text-secondary)] font-semibold">{isJa ? "生産単位:" : "生産単位:"}</strong> {prodUnitName}
                                 </span>
                               )}
                               {timeOption && (
                                 <span>
-                                  <strong className="text-on-surface-variant">時間オプション:</strong> {timeOption}
+                                  <strong className="text-[var(--text-secondary)] font-semibold">{isJa ? "時間オプション:" : "時間オプション:"}</strong> {timeOption}
                                 </span>
                               )}
                             </div>
                           </div>
                           
-                          <div className="flex-1 border-t md:border-t-0 md:border-l border-outline-variant/30 pt-3 md:pt-0 md:pl-4">
-                            <div className="text-[10px] font-bold uppercase text-outline mb-1">Material Used (構成品番)</div>
+                          <div className="flex-1 border-t md:border-t-0 md:border-l border-[var(--border)] pt-3 md:pt-0 md:pl-4">
+                            <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--text-muted)] mb-1">
+                              {isJa ? "使用原材料 (構成品番)" : "Material Used (構成品番)"}
+                            </div>
                             {isClickable ? (
                               <button 
                                 onClick={() => handleIngredientClick(hinban)}
-                                className="text-sm font-bold text-primary hover:underline flex items-center gap-1 text-left cursor-pointer"
+                                className="text-xs font-bold text-[var(--freya-blue)] hover:underline flex items-center gap-1 text-left cursor-pointer"
                               >
                                 {hinban}
                                 <span className="material-symbols-outlined" style={{ fontSize: 16 }}>open_in_new</span>
                               </button>
                             ) : (
-                              <span className="text-sm text-outline italic">No material specified</span>
+                              <span className="text-xs text-[var(--text-muted)] italic">
+                                {isJa ? "原材料未指定" : "No material specified"}
+                              </span>
                             )}
                           </div>
                         </div>
@@ -301,9 +321,11 @@ export default function BomWorkspace({ initialSearch = "", initialCreateHinban =
               </div>
             </>
           ) : (
-            <div className="flex-1 flex flex-col items-center justify-center text-outline">
-              <span className="material-symbols-outlined mb-2 opacity-50" style={{ fontSize: 48 }}>account_tree</span>
-              <p className="text-sm font-medium">Select a BOM from the left to view details</p>
+            <div className="flex-1 flex flex-col items-center justify-center text-[var(--text-muted)]">
+              <span className="material-symbols-outlined mb-2 opacity-50" style={{ fontSize: 44 }}>account_tree</span>
+              <p className="text-xs font-medium">
+                {isJa ? "左側の一覧からBOMを選択して詳細を表示" : "Select a BOM from the left to view details"}
+              </p>
             </div>
           )}
         </div>

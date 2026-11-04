@@ -26,6 +26,8 @@ import PrototypePage from "./pages/PrototypePage";
 import PrototypeRequestPage from "./pages/PrototypeRequestPage";
 import FirstFactoryPage from "./pages/FirstFactoryPage";
 import StopCallPage from "./pages/StopCallPage";
+import AnalyticsPage from "./pages/AnalyticsPage";
+import ScnaPage from "./pages/ScnaPage";
 import LoginPage from "./pages/LoginPage";
 import {
   clearStoredAuthUser,
@@ -36,11 +38,9 @@ import {
 
 const placeholderPages = [
   "notifications",
-  "analytics",
   "financials",
   "userManagement",
   "customerManagement",
-  "scna",
   "videoManual",
 ];
 
@@ -192,14 +192,6 @@ function App() {
 
   return (
     <div className="overflow-hidden">
-      {isDark && (
-        <div className="aurora-bg" aria-hidden="true">
-          <div className="aurora-blob aurora-blob-1" />
-          <div className="aurora-blob aurora-blob-2" />
-          <div className="aurora-blob aurora-blob-3" />
-          <div className="aurora-blob aurora-blob-4" />
-        </div>
-      )}
       {isLoginRoute ? (
         <LoginPage
           isDark={isDark}
@@ -217,17 +209,17 @@ function App() {
             onLogout={handleLogout}
             onNavigate={(page) => navigate(`/${page}`)}
           />
+          <TopNav
+            authUser={authUser}
+            isDark={isDark}
+            onLogout={handleLogout}
+            onOpenMobileNav={() => setMobileNavOpen(true)}
+            onToggleTheme={() => setIsDark((darkMode) => !darkMode)}
+          />
           <main
-            className={`app-main-shell ml-0 min-h-screen bg-background dark:bg-transparent relative md:ml-16 ${shellIntro && !canUseViewTransitions ? "app-main-shell--enter" : ""} ${justLoggedIn && canUseViewTransitions ? "app-main-shell--handoff-target" : ""}`}
+            className={`app-main-shell ml-0 min-h-screen min-w-0 bg-background relative overflow-x-hidden md:ml-16 md:w-[calc(100vw-4rem)] md:max-w-[calc(100vw-4rem)] ${shellIntro && !canUseViewTransitions ? "app-main-shell--enter" : ""} ${shellIntro && canUseViewTransitions ? "app-main-shell--handoff-target" : ""}`}
             style={{ zIndex: 1 }}
           >
-            <TopNav
-              authUser={authUser}
-              isDark={isDark}
-              onLogout={handleLogout}
-              onOpenMobileNav={() => setMobileNavOpen(true)}
-              onToggleTheme={() => setIsDark((darkMode) => !darkMode)}
-            />
             <Routes>
               <Route path="/" element={<Navigate to="/dashboard" replace />} />
               <Route path="/dashboard" element={<DashboardPage />} />
@@ -236,10 +228,14 @@ function App() {
               <Route path="/planner" element={<PlannerPage />} />
               <Route path="/approvals" element={<ApprovalsPage />} />
               <Route path="/noda" element={<NodaPage />} />
+              <Route path="/scna" element={<ScnaPage />} />
+              <Route path="/scna/:tab" element={<ScnaPage />} />
               <Route path="/inventory" element={<InventoryPage />} />
               <Route path="/factoryStatus" element={<FactoryStatusPage />} />
               <Route path="/factoryStatus/:tab" element={<FactoryStatusPage />} />
-              <Route path="/factoryStatus/logs" element={<FactoryStatusLogsPage />} />
+              <Route path="/analytics" element={<Navigate to="/analytics/material" replace />} />
+              <Route path="/analytics/:tab" element={<AnalyticsPage />} />
+              <Route path="/analytics/:tab/:process" element={<AnalyticsPage />} />
               {placeholderPages.map((page) => (
                 <Route key={page} path={`/${page}`} element={<PlaceholderPage page={page} />} />
               ))}

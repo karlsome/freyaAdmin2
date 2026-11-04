@@ -8,6 +8,7 @@ import PageHeader from "../components/PageHeader";
 import StatSummaryCard from "../components/StatSummaryCard";
 import StatusChip from "../components/StatusChip";
 import FactoryStatusLogsModal from "../components/factoryStatus/FactoryStatusLogsModal";
+import { useLanguage } from "../contexts/LanguageContext";
 import {
   fetchFactoryStatusFactories,
   fetchFactoryStatusSnapshot,
@@ -17,14 +18,15 @@ import {
   buildFactoryStatusAdvancedFilterClauses,
   buildFactoryStatusPageInfo,
   createFactoryStatusAdvancedFilterRow,
-  FACTORY_STATUS_ADVANCED_FILTER_FIELDS,
   FACTORY_STATUS_AUTO_REFRESH_MS,
   FACTORY_STATUS_OPERATOR_LABELS,
+  FACTORY_STATUS_OPERATOR_LABELS_JA,
   FACTORY_STATUS_PAGE_SIZE,
   formatFactoryStatusDateTime,
   formatFactoryStatusDuration,
   formatFactoryStatusNumber,
   getFactoryStatusAccessibleFactories,
+  getFactoryStatusAdvancedFilterFields,
   getFactoryStatusBadgeMeta,
   getFactoryStatusOperatorName,
   getDefaultFactoryStatusSelection,
@@ -64,21 +66,20 @@ function joinClasses(...classes) {
 function SummaryCard({ icon, label, value, subtitle, accent, loading = false }) {
   return (
     <StatSummaryCard
+      variant="freya"
       icon={icon}
       label={label}
       value={value}
       subtitle={subtitle}
       accent={accent}
       loading={loading}
-      valueClassName="planner-data-text text-2xl font-semibold tabular-nums"
-      labelClassName="planner-data-text text-[11px] font-semibold text-on-surface-variant"
-      subtitleClassName="planner-data-text text-[10px] text-outline"
-      iconClassName="shadow-none"
     />
   );
 }
 
 export default function FactoryStatusPage() {
+  const { language } = useLanguage();
+  const isJa = language === "ja";
   const navigate = useNavigate();
   const { tab } = useParams();
   const activeTab = tab || "live-monitor";
@@ -101,12 +102,12 @@ export default function FactoryStatusPage() {
   const [refreshNonce, setRefreshNonce] = useState(0);
   const [logsModalState, setLogsModalState] = useState({ open: false, factory: "", equipment: "" });
 
-  const selectionSummary = summarizeFactoryStatusSelection(selectedFactories);
+  const selectionSummary = summarizeFactoryStatusSelection(selectedFactories, language);
   const selectedFactoriesKey = selectedFactories.join("||");
   const pagesByFactoryKey = JSON.stringify(pagesByFactory);
 
   const advancedFieldDefinitions = useMemo(() => (
-    FACTORY_STATUS_ADVANCED_FILTER_FIELDS.map((field) => ({
+    getFactoryStatusAdvancedFilterFields(language).map((field) => ({
       ...field,
       options: Array.isArray(field.options)
         ? field.options
@@ -118,7 +119,7 @@ export default function FactoryStatusPage() {
               ? filterOptions.actions
               : [],
     }))
-  ), [filterOptions.actions, filterOptions.equipments, filterOptions.workers]);
+  ), [filterOptions.actions, filterOptions.equipments, filterOptions.workers, language]);
 
   useEffect(() => {
     let cancelled = false;
@@ -286,65 +287,65 @@ export default function FactoryStatusPage() {
   const columns = useMemo(() => ([
     {
       key: "equipment",
-      label: "Equipment",
+      label: isJa ? "設備" : "Equipment",
       width: 150,
-      renderCell: (row) => <span className="planner-data-text text-sm font-semibold text-on-surface">{row.equipment || "—"}</span>,
+      renderCell: (row) => <span className="text-xs font-semibold text-[var(--text-primary)]">{row.equipment || "—"}</span>,
       disableCellWrapper: true,
     },
     {
       key: "statusKey",
-      label: "Status",
+      label: isJa ? "ステータス" : "Status",
       width: 120,
       renderCell: (row) => {
-        const meta = getFactoryStatusBadgeMeta(row.statusKey);
-        return <StatusChip icon={meta.icon} label={meta.label} className={`planner-data-text ${meta.badgeClassName}`} />;
+        const meta = getFactoryStatusBadgeMeta(row.statusKey, language);
+        return <StatusChip icon={meta.icon} label={meta.label} className={`text-xs ${meta.badgeClassName}`} />;
       },
       disableCellWrapper: true,
     },
     {
       key: "workerName",
-      label: "Operator",
+      label: isJa ? "作業者" : "Operator",
       width: 160,
-      renderCell: (row) => <span className="planner-data-text text-sm font-semibold text-on-surface">{getFactoryStatusOperatorName(row) || "—"}</span>,
+      renderCell: (row) => <span className="text-xs font-medium text-[var(--text-primary)]">{getFactoryStatusOperatorName(row) || "—"}</span>,
       disableCellWrapper: true,
     },
     {
       key: "latestAction",
-      label: "Latest Action",
+      label: isJa ? "直近アクション" : "Latest Action",
       width: 260,
-      renderCell: (row) => <div className="planner-data-text whitespace-normal text-sm text-on-surface-variant">{row.latestAction || "—"}</div>,
+      renderCell: (row) => <div className="whitespace-normal text-xs text-[var(--text-secondary)]">{row.latestAction || "—"}</div>,
       disableCellWrapper: true,
     },
     {
       key: "partNumber",
-      label: "Part Number",
+      label: isJa ? "品番" : "Part Number",
       width: 180,
-      renderCell: (row) => <span className="planner-data-text text-sm font-semibold text-on-surface">{row.partNumber || "—"}</span>,
+      renderCell: (row) => <span className="text-xs font-mono font-medium text-[var(--text-primary)]">{row.partNumber || "—"}</span>,
       disableCellWrapper: true,
     },
     {
       key: "backNumber",
-      label: "Serial Number",
+      label: isJa ? "背番号" : "Serial Number",
       width: 150,
-      renderCell: (row) => <span className="planner-data-text text-sm font-semibold text-on-surface">{row.backNumber || "—"}</span>,
+      renderCell: (row) => <span className="text-xs font-mono text-[var(--text-primary)]">{row.backNumber || "—"}</span>,
       disableCellWrapper: true,
     },
     {
       key: "elapsedMinutes",
-      label: "Elapsed",
+      label: isJa ? "経過時間" : "Elapsed",
       width: 120,
-      renderCell: (row) => <span className="planner-data-text text-sm font-semibold tabular-nums text-on-surface">{formatFactoryStatusDuration(row.elapsedMinutes)}</span>,
+      renderCell: (row) => <span className="font-mono freya-tabular text-xs font-semibold text-[var(--text-primary)]">{formatFactoryStatusDuration(row.elapsedMinutes)}</span>,
       disableCellWrapper: true,
     },
     {
       key: "lastUpdatedAt",
-      label: "Last Update",
+      label: isJa ? "最終更新" : "Last Update",
       width: 220,
       renderCell: (row) => (
-        <div className="planner-data-text min-w-0">
-          <div className="text-sm font-semibold text-on-surface">{formatFactoryStatusDateTime(row.lastUpdatedAt)}</div>
-          <div className="mt-1 text-xs text-on-surface-variant">
-            {row.lastUpdatedMinutes != null ? `${formatFactoryStatusNumber(row.lastUpdatedMinutes)} min ago` : "—"}
+        <div className="min-w-0">
+          <div className="text-xs font-mono font-semibold text-[var(--text-primary)]">{formatFactoryStatusDateTime(row.lastUpdatedAt)}</div>
+          <div className="mt-0.5 text-[11px] text-[var(--text-muted)]">
+            {row.lastUpdatedMinutes != null ? `${formatFactoryStatusNumber(row.lastUpdatedMinutes)} ${isJa ? "分前" : "min ago"}` : "—"}
           </div>
         </div>
       ),
@@ -352,84 +353,85 @@ export default function FactoryStatusPage() {
     },
     {
       key: "todayActualQuantity",
-      label: "Today Actual",
+      label: isJa ? "本日実績" : "Today Actual",
       width: 130,
-      renderCell: (row) => <span className="planner-data-text text-sm font-semibold tabular-nums text-primary">{formatFactoryStatusNumber(row.todayActualQuantity)}</span>,
+      renderCell: (row) => <span className="font-mono freya-tabular text-xs font-bold text-[var(--freya-blue)]">{formatFactoryStatusNumber(row.todayActualQuantity)}</span>,
       disableCellWrapper: true,
     },
-  ]), []);
+  ]), [isJa, language]);
 
   return (
-    <section className="h-screen overflow-y-auto scrollbar-hide px-8 pb-16 pt-24">
+    <div className="w-full h-screen overflow-y-auto space-y-6 pt-20 px-4 sm:px-6 md:px-8 pb-16">
       <div className="w-full">
         <PageHeader
-          eyebrow="Live Operations"
-          eyebrowClassName="tracking-[0.18em] text-primary"
-          title="Factory Status"
-          subtitle="Track live machine activity from tablet logs, compare goals versus actual production, and review the current machine state by factory."
-          subtitleClassName="max-w-4xl"
+          eyebrow={isJa ? "リアルタイム運用" : "Live Operations"}
+          badge={isJa ? "ライブ" : "LIVE"}
+          title={isJa ? "工場ステータス" : "Factory Status"}
+          subtitle={isJa
+            ? "タブレットログから設備の稼働状況を把握し、目標と実績を比較して工場ごとの現在の設備状態を確認します。"
+            : "Track live machine activity from tablet logs, compare goals versus actual production, and review the current machine state by factory."}
           className="md:flex-row md:items-start md:justify-between"
           actions={(
             <>
               <button
                 type="button"
                 onClick={() => openLogsPage()}
-                className="rounded-2xl border border-outline-variant/25 px-4 py-2.5 text-sm font-semibold text-on-surface transition hover:bg-surface-container"
+                className="rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-hover)] transition-colors shadow-none"
               >
-                Logs Page
+                {isJa ? "ログページ" : "Logs Page"}
               </button>
-              <div className="planner-data-text rounded-2xl border border-outline-variant/20 bg-surface-container-low/40 px-4 py-2.5 text-sm text-on-surface-variant">
-                {generatedAt ? `Updated ${formatFactoryStatusDateTime(generatedAt)}` : "Waiting for first load..."}
+              <div className="rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] px-3 py-1.5 text-xs font-mono text-[var(--text-secondary)]">
+                {generatedAt ? (isJa ? `更新日時 ${formatFactoryStatusDateTime(generatedAt)}` : `Updated ${formatFactoryStatusDateTime(generatedAt)}`) : (isJa ? "初回読み込み待機中..." : "Waiting for first load...")}
               </div>
               <button
                 type="button"
                 onClick={() => setRefreshNonce((current) => current + 1)}
                 disabled={loadingSnapshot || loadingFactories}
-                className="rounded-2xl border border-outline-variant/25 px-4 py-2.5 text-sm font-semibold text-on-surface transition hover:bg-surface-container disabled:cursor-not-allowed disabled:opacity-60"
+                className="rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-hover)] disabled:cursor-not-allowed disabled:opacity-50 transition-colors shadow-none"
               >
-                {loadingSnapshot ? "Refreshing..." : "Refresh"}
+                {loadingSnapshot ? (isJa ? "更新中..." : "Refreshing...") : (isJa ? "更新" : "Refresh")}
               </button>
             </>
           )}
         />
 
         {error ? (
-          <div className="planner-data-text mb-6 rounded-2xl border border-error/20 bg-error/10 px-5 py-4 text-sm text-error">
+          <div className="mb-4 rounded-[6px] border border-red-500/20 bg-red-500/10 px-4 py-3 text-xs text-red-600 dark:text-red-400">
             {error}
           </div>
         ) : null}
 
-        <div className="dashboard-section mb-6 rounded-2xl p-5">
+        <div className="freya-card rounded-[8px] border border-[var(--border)] bg-[var(--surface)] p-4 shadow-sm mb-6">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
-              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Filters</p>
-              <h2 className="mt-1 text-lg font-semibold text-on-surface">Factory Scope</h2>
-              <p className="planner-data-text mt-2 text-sm text-on-surface-variant">{selectionSummary.countLabel} · {selectionSummary.selectedText}</p>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">{isJa ? "フィルター" : "Filters"}</p>
+              <h2 className="mt-0.5 text-sm font-semibold text-[var(--text-primary)]">{isJa ? "対象工場" : "Factory Scope"}</h2>
+              <p className="mt-1 text-xs text-[var(--text-secondary)]">{selectionSummary.countLabel} · {selectionSummary.selectedText}</p>
             </div>
             <div className="flex flex-wrap gap-2">
               <button
                 type="button"
                 onClick={handleSelectAllFactories}
                 disabled={!factoryOptions.length}
-                className="rounded-2xl border border-outline-variant/20 px-3 py-2 text-xs font-semibold text-on-surface transition hover:bg-surface-container disabled:cursor-not-allowed disabled:opacity-60"
+                className="rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1 text-xs font-medium text-[var(--text-primary)] hover:bg-[var(--surface-hover)] disabled:cursor-not-allowed disabled:opacity-50 transition-colors"
               >
-                Select All
+                {isJa ? "すべて選択" : "Select All"}
               </button>
               <button
                 type="button"
                 onClick={handleClearFactories}
                 disabled={!selectedFactories.length}
-                className="rounded-2xl border border-outline-variant/20 px-3 py-2 text-xs font-semibold text-on-surface transition hover:bg-surface-container disabled:cursor-not-allowed disabled:opacity-60"
+                className="rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1 text-xs font-medium text-[var(--text-primary)] hover:bg-[var(--surface-hover)] disabled:cursor-not-allowed disabled:opacity-50 transition-colors"
               >
-                Clear
+                {isJa ? "クリア" : "Clear"}
               </button>
             </div>
           </div>
 
-          <div className="mt-4 grid gap-4 xl:grid-cols-[minmax(0,1.7fr)_260px]">
+          <div className="mt-3 grid gap-4 xl:grid-cols-[minmax(0,1.7fr)_260px]">
             <div>
-              <span className="block text-xs font-semibold uppercase tracking-[0.18em] text-outline">Factories</span>
-              <div className="mt-2 flex flex-wrap gap-2">
+              <span className="block text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">{isJa ? "工場一覧" : "Factories"}</span>
+              <div className="mt-1.5 flex flex-wrap gap-1.5">
                 {factoryOptions.map((factory) => {
                   const active = selectedFactories.includes(factory);
 
@@ -439,10 +441,10 @@ export default function FactoryStatusPage() {
                       type="button"
                       onClick={() => toggleFactory(factory)}
                       className={joinClasses(
-                        "planner-data-text rounded-full border px-3 py-2 text-sm font-semibold transition",
+                        "rounded-[6px] border px-3 py-1.5 text-xs font-medium transition-colors",
                         active
-                          ? "border-primary/30 bg-primary/10 text-primary"
-                          : "border-outline-variant/20 bg-white text-on-surface hover:bg-surface-container dark:bg-surface-container"
+                          ? "border-[var(--freya-blue)] bg-[var(--freya-blue)]/10 text-[var(--freya-blue)] font-semibold"
+                          : "border-[var(--border)] bg-[var(--surface)] text-[var(--text-primary)] hover:bg-[var(--surface-hover)]"
                       )}
                     >
                       {factory}
@@ -450,15 +452,15 @@ export default function FactoryStatusPage() {
                   );
                 })}
                 {!factoryOptions.length && !loadingFactories ? (
-                  <div className="planner-data-text rounded-2xl border border-outline-variant/20 bg-surface-container-low/35 px-4 py-3 text-sm text-on-surface-variant">
-                    No accessible factories found.
+                  <div className="rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] px-3 py-2 text-xs text-[var(--text-muted)]">
+                    {isJa ? "アクセス可能な工場がありません。" : "No accessible factories found."}
                   </div>
                 ) : null}
               </div>
             </div>
 
             <label className="block">
-              <span className="block text-xs font-semibold uppercase tracking-[0.18em] text-outline">Date</span>
+              <span className="block text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">{isJa ? "日付" : "Date"}</span>
               <input
                 type="date"
                 value={date}
@@ -466,205 +468,220 @@ export default function FactoryStatusPage() {
                   setDate(event.target.value);
                   setPagesByFactory({});
                 }}
-                className="planner-data-text mt-2 h-11 w-full rounded-2xl border border-outline-variant/30 bg-white px-4 text-sm text-on-surface outline-none transition focus:border-primary/40 dark:bg-surface-container"
+                className="mt-1.5 h-8 w-full rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-2.5 text-xs text-[var(--text-primary)] outline-none focus:border-[var(--freya-blue)] transition-colors"
               />
-              <p className="planner-data-text mt-2 text-xs text-on-surface-variant">Defaults to today and auto-refreshes every 60 seconds.</p>
+              <p className="mt-1 text-[11px] text-[var(--text-muted)]">
+                {isJa ? "初期値は本日。60秒ごとに自動更新されます。" : "Defaults to today and auto-refreshes every 60 seconds."}
+              </p>
             </label>
           </div>
 
-          <AdvancedFilterSection
-            rows={advancedRows}
-            fieldDefinitions={advancedFieldDefinitions}
-            onUpdateRow={handleUpdateAdvancedRow}
-            onAddRow={() => setAdvancedRows((current) => [...current, createFactoryStatusAdvancedFilterRow()])}
-            onRemoveRow={handleRemoveAdvancedRow}
-            onClearRows={handleClearAdvancedFilters}
-            operatorLabels={FACTORY_STATUS_OPERATOR_LABELS}
-            useOperatorLabelsInSelect
-            title="Advanced Filters"
-            activeSummaryDescription="Filter the grouped machine tables without changing the top-level factory and date scope."
-            variant="compact"
-            framed
-            enableTextSuggestions
-            inputIdPrefix="factory-status-filter-options"
-            footer={(
-              <>
-                <button
-                  type="button"
-                  onClick={handleApplyAdvancedFilters}
-                  className="flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-on-primary transition-opacity hover:opacity-90"
-                >
-                  <span className="material-symbols-outlined" style={{ fontSize: 16 }}>filter_alt</span>
-                  Apply Advanced Filters
-                </button>
+          <div className="mt-3 border-t border-[var(--border)] pt-3">
+            <AdvancedFilterSection
+              rows={advancedRows}
+              fieldDefinitions={advancedFieldDefinitions}
+              onUpdateRow={handleUpdateAdvancedRow}
+              onAddRow={() => setAdvancedRows((current) => [...current, createFactoryStatusAdvancedFilterRow()])}
+              onRemoveRow={handleRemoveAdvancedRow}
+              onClearRows={handleClearAdvancedFilters}
+              operatorLabels={isJa ? FACTORY_STATUS_OPERATOR_LABELS_JA : FACTORY_STATUS_OPERATOR_LABELS}
+              useOperatorLabelsInSelect
+              title={isJa ? "詳細フィルター" : "Advanced Filters"}
+              activeSummaryDescription={isJa
+                ? "上位の工場・日付範囲を変更せずに、設備一覧テーブルを絞り込みます。"
+                : "Filter the grouped machine tables without changing the top-level factory and date scope."}
+              variant="compact"
+              framed
+              enableTextSuggestions
+              inputIdPrefix="factory-status-filter-options"
+              footer={(
+                <>
+                  <button
+                    type="button"
+                    onClick={handleApplyAdvancedFilters}
+                    className="flex items-center gap-1.5 rounded-[6px] bg-[var(--freya-blue)] px-3 py-1.5 text-xs font-semibold text-white hover:bg-[var(--freya-blue-hover)] transition-colors shadow-none"
+                  >
+                    <span className="material-symbols-outlined" style={{ fontSize: 15 }}>filter_alt</span>
+                    {isJa ? "フィルター適用" : "Apply Filters"}
+                  </button>
 
-                <button
-                  type="button"
-                  onClick={handleClearAdvancedFilters}
-                  className="flex items-center gap-2 rounded-xl border border-outline-variant/20 px-5 py-2.5 text-sm font-semibold text-on-surface transition hover:bg-surface-container"
-                >
-                  <span className="material-symbols-outlined" style={{ fontSize: 16 }}>refresh</span>
-                  Reset Advanced Filters
-                </button>
-              </>
-            )}
-          />
+                  <button
+                    type="button"
+                    onClick={handleClearAdvancedFilters}
+                    className="flex items-center gap-1.5 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-hover)] transition-colors shadow-none"
+                  >
+                    <span className="material-symbols-outlined" style={{ fontSize: 15 }}>refresh</span>
+                    {isJa ? "フィルター解除" : "Reset Filters"}
+                  </button>
+                </>
+              )}
+            />
+          </div>
         </div>
 
         <MasterTabNav
           tabs={[
-            { key: "live-monitor", label: "Live Monitor", ready: true },
-            { key: "live-status", label: "Production Status", ready: true },
+            { key: "live-monitor", label: isJa ? "ライブモニター" : "Live Monitor", ready: true },
+            { key: "live-status", label: isJa ? "生産ステータス" : "Production Status", ready: true },
           ]}
           activeTab={activeTab}
           onSelect={(tab) => navigate(`/factoryStatus/${tab.key}`, { replace: true })}
         />
 
         {activeTab === "live-status" && (
-          <>
-            <div className="mb-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-6">
-          <SummaryCard
-            icon="flag"
-            label="Goal"
-            value={formatFactoryStatusNumber(summary.totalGoalQuantity)}
-            subtitle="Selected factories"
-            accent="bg-primary/10 text-primary"
-            loading={loadingSnapshot && !generatedAt}
-          />
-          <SummaryCard
-            icon="precision_manufacturing"
-            label="Actual"
-            value={formatFactoryStatusNumber(summary.totalActualQuantity)}
-            subtitle="Today from pressDB"
-            accent="bg-sky-500/10 text-sky-600 dark:text-sky-300"
-            loading={loadingSnapshot && !generatedAt}
-          />
-          <SummaryCard
-            icon="trending_up"
-            label="Achievement"
-            value={`${summary.achievementRate.toLocaleString()}%`}
-            subtitle="Goal vs actual"
-            accent="bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
-            loading={loadingSnapshot && !generatedAt}
-          />
-          <SummaryCard
-            icon="play_circle"
-            label="Active Machines"
-            value={formatFactoryStatusNumber(summary.activeMachines)}
-            subtitle="Live sessions in progress"
-            accent="bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
-            loading={loadingSnapshot && !generatedAt}
-          />
-          <SummaryCard
-            icon="schedule"
-            label="Stale Machines"
-            value={formatFactoryStatusNumber(summary.staleMachines)}
-            subtitle="Active but not recently updated"
-            accent="bg-amber-500/10 text-amber-700 dark:text-amber-300"
-            loading={loadingSnapshot && !generatedAt}
-          />
-          <SummaryCard
-            icon="pause_circle"
-            label="Idle Machines"
-            value={formatFactoryStatusNumber(summary.idleMachines)}
-            subtitle={`${formatFactoryStatusNumber(summary.activeSessions)} active sessions`}
-            accent="bg-surface-container text-on-surface-variant"
-            loading={loadingSnapshot && !generatedAt}
-          />
-        </div>
-
-        {!selectedFactories.length && !loadingFactories ? (
-          <div className="glass-card rounded-2xl px-6 py-12 text-center">
-            <h2 className="text-xl font-semibold text-on-surface">Choose at least one factory</h2>
-            <p className="planner-data-text mt-2 text-sm text-on-surface-variant">The grouped machine tables appear after you select one or more factories.</p>
-          </div>
-        ) : null}
-
-        {groups.map((group) => (
-          <div key={group.factory} className="mb-6">
-            <div className="mb-4 rounded-2xl border border-outline-variant/15 bg-surface-container-low/35 px-5 py-4">
-              <div className="flex flex-wrap items-start justify-between gap-4">
-                <div>
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Factory</p>
-                  <h2 className="mt-1 text-2xl font-semibold text-on-surface">{group.factory}</h2>
-                  <p className="planner-data-text mt-2 text-sm text-on-surface-variant">
-                    {formatFactoryStatusNumber(group.overview.filteredMachineCount)} of {formatFactoryStatusNumber(group.overview.machineCount)} machines match the current table filters.
-                  </p>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={() => openLogsPage({ factory: group.factory })}
-                  className="planner-data-text rounded-2xl border border-outline-variant/20 px-4 py-2 text-sm font-semibold text-on-surface transition hover:bg-surface-container"
-                >
-                  Logs Page
-                </button>
-              </div>
-
-              <div className="planner-data-text mt-4 flex flex-wrap gap-4 text-sm text-on-surface-variant">
-                <span><span className="font-semibold text-on-surface">Goal</span> {formatFactoryStatusNumber(group.goal.totalTargetQuantity)}</span>
-                <span><span className="font-semibold text-on-surface">Actual</span> {formatFactoryStatusNumber(group.overview.actualQuantity)}</span>
-                <span><span className="font-semibold text-on-surface">Good</span> {formatFactoryStatusNumber(group.overview.goodQuantity)}</span>
-                <span><span className="font-semibold text-on-surface">NG</span> {formatFactoryStatusNumber(group.overview.ngQuantity)}</span>
-                <span><span className="font-semibold text-on-surface">Progress</span> {group.overview.achievementRate.toLocaleString()}%</span>
-              </div>
-
-              <div className="mt-3 h-2 overflow-hidden rounded-full bg-surface-container-high">
-                <div
-                  className="h-full rounded-full bg-primary"
-                  style={{ width: `${Math.min(group.overview.achievementRate, 100)}%` }}
-                />
-              </div>
-
-              <div className="planner-data-text mt-4 flex flex-wrap gap-4 text-sm text-on-surface-variant">
-                <span><span className="font-semibold text-on-surface">Running</span> {formatFactoryStatusNumber(group.overview.activeMachines)}</span>
-                <span><span className="font-semibold text-on-surface">Stale</span> {formatFactoryStatusNumber(group.overview.staleMachines)}</span>
-                <span><span className="font-semibold text-on-surface">Idle</span> {formatFactoryStatusNumber(group.overview.idleMachines)}</span>
-                <span><span className="font-semibold text-on-surface">Sessions</span> {formatFactoryStatusNumber(group.overview.activeSessions)}</span>
-                <span><span className="font-semibold text-on-surface">Records</span> {formatFactoryStatusNumber(group.overview.recordCount)}</span>
-              </div>
+          <div className="mt-4 space-y-6">
+            <div className="grid gap-3 grid-cols-2 md:grid-cols-3 xl:grid-cols-6">
+              <SummaryCard
+                icon="flag"
+                label={isJa ? "目標数" : "Goal"}
+                value={formatFactoryStatusNumber(summary.totalGoalQuantity)}
+                subtitle={isJa ? "選択中の工場" : "Selected factories"}
+                loading={loadingSnapshot && !generatedAt}
+              />
+              <SummaryCard
+                icon="precision_manufacturing"
+                label={isJa ? "実績数" : "Actual"}
+                value={formatFactoryStatusNumber(summary.totalActualQuantity)}
+                subtitle={isJa ? "pressDB 本日分" : "Today from pressDB"}
+                loading={loadingSnapshot && !generatedAt}
+              />
+              <SummaryCard
+                icon="trending_up"
+                label={isJa ? "達成率" : "Achievement"}
+                value={`${summary.achievementRate.toLocaleString()}%`}
+                subtitle={isJa ? "目標比" : "Goal vs actual"}
+                loading={loadingSnapshot && !generatedAt}
+              />
+              <SummaryCard
+                icon="play_circle"
+                label={isJa ? "稼働設備" : "Active Machines"}
+                value={formatFactoryStatusNumber(summary.activeMachines)}
+                subtitle={isJa ? "セッション進行中" : "Live sessions in progress"}
+                loading={loadingSnapshot && !generatedAt}
+              />
+              <SummaryCard
+                icon="schedule"
+                label={isJa ? "停滞設備" : "Stale Machines"}
+                value={formatFactoryStatusNumber(summary.staleMachines)}
+                subtitle={isJa ? "稼働中だが未更新" : "Active but not recently updated"}
+                loading={loadingSnapshot && !generatedAt}
+              />
+              <SummaryCard
+                icon="pause_circle"
+                label={isJa ? "停止設備" : "Idle Machines"}
+                value={formatFactoryStatusNumber(summary.idleMachines)}
+                subtitle={isJa ? `${formatFactoryStatusNumber(summary.activeSessions)} 件の稼働セッション` : `${formatFactoryStatusNumber(summary.activeSessions)} active sessions`}
+                loading={loadingSnapshot && !generatedAt}
+              />
             </div>
 
-            <DataTable
-              columns={columns}
-              rows={group.rows}
-              loading={false}
-              error=""
-              sort={sort}
-              page={group.pagination.currentPage}
-              pageSize={FACTORY_STATUS_PAGE_SIZE}
-              filteredCount={group.pagination.totalItems}
-              totalPages={group.pagination.totalPages}
-              onSort={handleSort}
-              onPageChange={(nextPage) => {
-                setPagesByFactory((current) => ({ ...current, [group.factory]: nextPage }));
-              }}
-              onRowClick={(row) => openLogsForEquipment(group.factory, row?.equipment)}
-              rowKey={(row) => `${group.factory}-${row.equipment}`}
-              getRowClassName={(row) => getFactoryStatusRowToneClass(row)}
-              renderPageInfo={({ filteredCount, page, pageSize }) => (
-                <span className="planner-data-text">{buildFactoryStatusPageInfo({ filteredCount, page, pageSize })}</span>
-              )}
-              emptyTitle="No matching machines"
-              emptyMessage="Adjust the advanced filters or refresh the live factory data."
-              layoutStorageKey="factory-status-table-layout"
-              enableColumnResize
-              enableColumnReorder
-              tableClassName="ui-table-data min-w-full border-separate border-spacing-0"
-              className="glass-card overflow-hidden rounded-[28px]"
-              topBarClassName="flex flex-col gap-4 border-b border-outline-variant/15 px-5 py-4 md:flex-row md:items-center md:justify-between"
-              bottomBarClassName="flex flex-col gap-4 border-t border-outline-variant/15 px-5 py-4 md:flex-row md:items-center md:justify-between"
-            />
+            {!selectedFactories.length && !loadingFactories ? (
+              <div className="freya-card rounded-[8px] border border-[var(--border)] bg-[var(--surface)] p-8 text-center">
+                <h2 className="text-base font-semibold text-[var(--text-primary)]">
+                  {isJa ? "工場を1つ以上選択してください" : "Choose at least one factory"}
+                </h2>
+                <p className="mt-1 text-xs text-[var(--text-muted)]">
+                  {isJa ? "工場を選択すると設備一覧テーブルが表示されます。" : "The grouped machine tables appear after you select one or more factories."}
+                </p>
+              </div>
+            ) : null}
+
+            {groups.map((group) => (
+              <div key={group.factory} className="space-y-3">
+                <div className="rounded-[8px] border border-[var(--border)] bg-[var(--surface)] p-4 shadow-sm">
+                  <div className="flex flex-wrap items-start justify-between gap-4">
+                    <div>
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">{isJa ? "工場" : "Factory"}</p>
+                      <h2 className="mt-0.5 text-xl font-semibold text-[var(--text-primary)]">{group.factory}</h2>
+                      <p className="mt-1 text-xs text-[var(--text-secondary)]">
+                        {isJa ? (
+                          <>
+                            <span className="font-semibold text-[var(--text-primary)] font-mono freya-tabular">{formatFactoryStatusNumber(group.overview.filteredMachineCount)}</span> / <span className="font-semibold text-[var(--text-primary)] font-mono freya-tabular">{formatFactoryStatusNumber(group.overview.machineCount)}</span> 台がフィルターに一致
+                          </>
+                        ) : (
+                          <>
+                            <span className="font-semibold text-[var(--text-primary)] font-mono freya-tabular">{formatFactoryStatusNumber(group.overview.filteredMachineCount)}</span> of <span className="font-semibold text-[var(--text-primary)] font-mono freya-tabular">{formatFactoryStatusNumber(group.overview.machineCount)}</span> machines match current filters.
+                          </>
+                        )}
+                      </p>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => openLogsPage({ factory: group.factory })}
+                      className="rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-hover)] transition-colors shadow-none"
+                    >
+                      {isJa ? "ログページ" : "Logs Page"}
+                    </button>
+                  </div>
+
+                  <div className="mt-3 flex flex-wrap gap-2 text-xs text-[var(--text-secondary)]">
+                    <span className="rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] px-2.5 py-1"><span className="font-semibold text-[var(--text-primary)]">{isJa ? "目標" : "Goal"}</span> <span className="font-mono freya-tabular font-medium">{formatFactoryStatusNumber(group.goal.totalTargetQuantity)}</span></span>
+                    <span className="rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] px-2.5 py-1"><span className="font-semibold text-[var(--text-primary)]">{isJa ? "実績" : "Actual"}</span> <span className="font-mono freya-tabular font-medium">{formatFactoryStatusNumber(group.overview.actualQuantity)}</span></span>
+                    <span className="rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] px-2.5 py-1"><span className="font-semibold text-[var(--text-primary)]">{isJa ? "良品" : "Good"}</span> <span className="font-mono freya-tabular font-medium">{formatFactoryStatusNumber(group.overview.goodQuantity)}</span></span>
+                    <span className="rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] px-2.5 py-1"><span className="font-semibold text-[var(--text-primary)]">{isJa ? "不良" : "NG"}</span> <span className="font-mono freya-tabular font-medium">{formatFactoryStatusNumber(group.overview.ngQuantity)}</span></span>
+                    <span className="rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] px-2.5 py-1"><span className="font-semibold text-[var(--text-primary)]">{isJa ? "進捗" : "Progress"}</span> <span className="font-mono freya-tabular font-semibold text-[var(--freya-blue)]">{group.overview.achievementRate.toLocaleString()}%</span></span>
+                  </div>
+
+                  <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-[var(--surface-subtle)]">
+                    <div
+                      className="h-full rounded-full bg-[var(--freya-blue)] transition-all duration-300"
+                      style={{ width: `${Math.min(group.overview.achievementRate, 100)}%` }}
+                    />
+                  </div>
+
+                  <div className="mt-3 flex flex-wrap gap-2 text-xs text-[var(--text-secondary)]">
+                    <span className="rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] px-2.5 py-1"><span className="font-semibold text-[var(--text-primary)]">{isJa ? "稼働中" : "Running"}</span> <span className="font-mono freya-tabular font-medium">{formatFactoryStatusNumber(group.overview.activeMachines)}</span></span>
+                    <span className="rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] px-2.5 py-1"><span className="font-semibold text-[var(--text-primary)]">{isJa ? "停滞" : "Stale"}</span> <span className="font-mono freya-tabular font-medium">{formatFactoryStatusNumber(group.overview.staleMachines)}</span></span>
+                    <span className="rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] px-2.5 py-1"><span className="font-semibold text-[var(--text-primary)]">{isJa ? "停止" : "Idle"}</span> <span className="font-mono freya-tabular font-medium">{formatFactoryStatusNumber(group.overview.idleMachines)}</span></span>
+                    <span className="rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] px-2.5 py-1"><span className="font-semibold text-[var(--text-primary)]">{isJa ? "セッション" : "Sessions"}</span> <span className="font-mono freya-tabular font-medium">{formatFactoryStatusNumber(group.overview.activeSessions)}</span></span>
+                    <span className="rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] px-2.5 py-1"><span className="font-semibold text-[var(--text-primary)]">{isJa ? "レコード" : "Records"}</span> <span className="font-mono freya-tabular font-medium">{formatFactoryStatusNumber(group.overview.recordCount)}</span></span>
+                  </div>
+                </div>
+
+                <DataTable
+                  columns={columns}
+                  rows={group.rows}
+                  loading={false}
+                  error=""
+                  sort={sort}
+                  page={group.pagination.currentPage}
+                  pageSize={FACTORY_STATUS_PAGE_SIZE}
+                  filteredCount={group.pagination.totalItems}
+                  totalPages={group.pagination.totalPages}
+                  onSort={handleSort}
+                  onPageChange={(nextPage) => {
+                    setPagesByFactory((current) => ({ ...current, [group.factory]: nextPage }));
+                  }}
+                  onRowClick={(row) => openLogsForEquipment(group.factory, row?.equipment)}
+                  rowKey={(row) => `${group.factory}-${row.equipment}`}
+                  getRowClassName={(row) => getFactoryStatusRowToneClass(row)}
+                  renderPageInfo={({ filteredCount, page, pageSize }) => (
+                    <span className="text-xs text-[var(--text-secondary)] font-mono">{buildFactoryStatusPageInfo({ filteredCount, page, pageSize }, language)}</span>
+                  )}
+                  emptyTitle={isJa ? "一致する設備がありません" : "No matching machines"}
+                  emptyMessage={isJa ? "詳細フィルターを調整するか、最新データに更新してください。" : "Adjust the advanced filters or refresh the live factory data."}
+                  pageSizeLabel={isJa ? "件数" : "Rows"}
+                  layoutStorageKey="factory-status-table-layout"
+                  enableColumnResize
+                  enableColumnReorder
+                  tableClassName="ui-table-data min-w-full border-separate border-spacing-0 text-xs"
+                  className="rounded-[8px] border border-[var(--border)] bg-[var(--surface)] overflow-hidden shadow-sm"
+                  topBarClassName="flex flex-col gap-3 border-b border-[var(--border)] px-4 py-3 md:flex-row md:items-center md:justify-between"
+                  bottomBarClassName="flex flex-col gap-3 border-t border-[var(--border)] px-4 py-3 md:flex-row md:items-center md:justify-between"
+                />
+              </div>
+            ))}
           </div>
-        ))}
-          </>
         )}
 
         {activeTab === "live-monitor" && (
-          <FactoryLiveMonitor 
-            factories={selectedFactories} 
-            onMachineClick={(factory, equipment) => setLogsModalState({ open: true, factory, equipment })}
-          />
+          <div className="mt-4">
+            <FactoryLiveMonitor 
+              factories={selectedFactories} 
+              onMachineClick={(factory, equipment) => setLogsModalState({ open: true, factory, equipment })}
+            />
+          </div>
         )}
 
         <FactoryStatusLogsModal
@@ -679,6 +696,6 @@ export default function FactoryStatusPage() {
           }}
         />
       </div>
-    </section>
+    </div>
   );
 }

@@ -23,16 +23,37 @@ export const FACTORY_STATUS_OPERATOR_LABELS = {
   range: "range",
 };
 
+export const FACTORY_STATUS_OPERATOR_LABELS_JA = {
+  equals: "一致",
+  not_equals: "不一致",
+  contains: "含む",
+  in: "いずれかに一致",
+  exists: "存在する",
+  not_exists: "存在しない",
+  greater: "より大きい",
+  less: "より小さい",
+  range: "範囲",
+};
+
 export const FACTORY_STATUS_ADVANCED_FILTER_FIELDS = [
-  { field: "equipment", label: "Equipment", group: "Machine", type: "select", operators: ["equals", "not_equals", "contains", "in", "exists", "not_exists"] },
-  { field: "statusKey", label: "Status", group: "Machine", type: "select", operators: ["equals", "not_equals", "in", "exists", "not_exists"], options: FACTORY_STATUS_STATUS_OPTIONS },
-  { field: "workerName", label: "Operator", group: "Worker", type: "select", operators: ["equals", "not_equals", "contains", "in", "exists", "not_exists"] },
-  { field: "latestAction", label: "Latest Action", group: "Activity", type: "select", operators: ["equals", "not_equals", "contains", "in", "exists", "not_exists"] },
-  { field: "partNumber", label: "Part Number", group: "Product", type: "text", operators: ["equals", "not_equals", "contains", "exists", "not_exists"] },
-  { field: "backNumber", label: "Serial Number", group: "Product", type: "text", operators: ["equals", "not_equals", "contains", "exists", "not_exists"] },
-  { field: "todayActualQuantity", label: "Today Actual", group: "Output", type: "number", operators: ["equals", "not_equals", "greater", "less", "range", "exists", "not_exists"] },
-  { field: "lastUpdatedMinutes", label: "Last Update Age (min)", group: "Activity", type: "number", operators: ["equals", "not_equals", "greater", "less", "range", "exists", "not_exists"] },
+  { field: "equipment", label: "Equipment", labelJa: "設備", group: "Machine", groupJa: "設備", type: "select", operators: ["equals", "not_equals", "contains", "in", "exists", "not_exists"] },
+  { field: "statusKey", label: "Status", labelJa: "ステータス", group: "Machine", groupJa: "設備", type: "select", operators: ["equals", "not_equals", "in", "exists", "not_exists"], options: FACTORY_STATUS_STATUS_OPTIONS },
+  { field: "workerName", label: "Operator", labelJa: "作業者", group: "Worker", groupJa: "作業者", type: "select", operators: ["equals", "not_equals", "contains", "in", "exists", "not_exists"] },
+  { field: "latestAction", label: "Latest Action", labelJa: "直近アクション", group: "Activity", groupJa: "アクティビティ", type: "select", operators: ["equals", "not_equals", "contains", "in", "exists", "not_exists"] },
+  { field: "partNumber", label: "Part Number", labelJa: "品番", group: "Product", groupJa: "製品", type: "text", operators: ["equals", "not_equals", "contains", "exists", "not_exists"] },
+  { field: "backNumber", label: "Serial Number", labelJa: "背番号", group: "Product", groupJa: "製品", type: "text", operators: ["equals", "not_equals", "contains", "exists", "not_exists"] },
+  { field: "todayActualQuantity", label: "Today Actual", labelJa: "本日実績", group: "Output", groupJa: "生産量", type: "number", operators: ["equals", "not_equals", "greater", "less", "range", "exists", "not_exists"] },
+  { field: "lastUpdatedMinutes", label: "Last Update Age (min)", labelJa: "経過時間(分)", group: "Activity", groupJa: "アクティビティ", type: "number", operators: ["equals", "not_equals", "greater", "less", "range", "exists", "not_exists"] },
 ];
+
+export function getFactoryStatusAdvancedFilterFields(language = "en") {
+  const isJa = language === "ja";
+  return FACTORY_STATUS_ADVANCED_FILTER_FIELDS.map((field) => ({
+    ...field,
+    label: isJa ? field.labelJa || field.label : field.label,
+    group: isJa ? field.groupJa || field.group : field.group,
+  }));
+}
 
 let factoryStatusFilterRowCount = 0;
 
@@ -146,73 +167,81 @@ export function formatFactoryStatusDuration(value) {
   return `${hours}h ${minutes}m`;
 }
 
-export function buildFactoryStatusPageInfo({ filteredCount, page, pageSize }) {
+export function buildFactoryStatusPageInfo({ filteredCount, page, pageSize }, language = "en") {
   const safeCount = Number(filteredCount) || 0;
-  if (!safeCount) return "0 machines shown";
+  const isJa = language === "ja";
+  if (!safeCount) return isJa ? "表示中の設備: 0 件" : "0 machines shown";
 
   const start = (page - 1) * pageSize + 1;
   const end = Math.min(page * pageSize, safeCount);
-  return `${safeCount.toLocaleString()} machines, showing ${start.toLocaleString()}-${end.toLocaleString()}`;
+  return isJa
+    ? `${safeCount.toLocaleString()} 件中 ${start.toLocaleString()}〜${end.toLocaleString()} 件を表示`
+    : `${safeCount.toLocaleString()} machines, showing ${start.toLocaleString()}-${end.toLocaleString()}`;
 }
 
-export function buildFactoryStatusLogPageInfo({ filteredCount, page, pageSize }) {
+export function buildFactoryStatusLogPageInfo({ filteredCount, page, pageSize }, language = "en") {
   const safeCount = Number(filteredCount) || 0;
-  if (!safeCount) return "0 logs shown";
+  const isJa = language === "ja";
+  if (!safeCount) return isJa ? "表示中のログ: 0 件" : "0 logs shown";
 
   const start = (page - 1) * pageSize + 1;
   const end = Math.min(page * pageSize, safeCount);
-  return `${safeCount.toLocaleString()} logs, showing ${start.toLocaleString()}-${end.toLocaleString()}`;
+  return isJa
+    ? `${safeCount.toLocaleString()} 件中 ${start.toLocaleString()}〜${end.toLocaleString()} 件を表示`
+    : `${safeCount.toLocaleString()} logs, showing ${start.toLocaleString()}-${end.toLocaleString()}`;
 }
 
-export function getFactoryStatusBadgeMeta(statusKey) {
+export function getFactoryStatusBadgeMeta(statusKey, language = "en") {
+  const isJa = language === "ja";
   switch (statusKey) {
     case "running":
       return {
-        label: "Running",
+        label: isJa ? "稼働中" : "Running",
         icon: "play_circle",
         badgeClassName: "bg-emerald-500/12 text-emerald-700 dark:text-emerald-300",
       };
     case "stale":
       return {
-        label: "Stale",
+        label: isJa ? "停滞" : "Stale",
         icon: "schedule",
         badgeClassName: "bg-amber-500/12 text-amber-700 dark:text-amber-300",
       };
     default:
       return {
-        label: "Idle",
+        label: isJa ? "停止" : "Idle",
         icon: "pause_circle",
         badgeClassName: "bg-surface-container text-on-surface-variant",
       };
   }
 }
 
-export function getFactoryStatusLogStatusMeta(status) {
+export function getFactoryStatusLogStatusMeta(status, language = "en") {
+  const isJa = language === "ja";
   const normalized = asTrimmedString(status).toLowerCase();
 
   if (normalized.includes("complete") || normalized.includes("done")) {
     return {
-      label: asTrimmedString(status) || "Completed",
+      label: isJa ? "完了" : (asTrimmedString(status) || "Completed"),
       badgeClassName: "bg-emerald-500/12 text-emerald-700 dark:text-emerald-300",
     };
   }
 
   if (normalized.includes("error") || normalized.includes("failed")) {
     return {
-      label: asTrimmedString(status) || "Error",
+      label: isJa ? "エラー" : (asTrimmedString(status) || "Error"),
       badgeClassName: "bg-error/12 text-error",
     };
   }
 
   if (normalized.includes("pause") || normalized.includes("break") || normalized.includes("hold")) {
     return {
-      label: asTrimmedString(status) || "Paused",
+      label: isJa ? "一時停止" : (asTrimmedString(status) || "Paused"),
       badgeClassName: "bg-amber-500/12 text-amber-700 dark:text-amber-300",
     };
   }
 
   return {
-    label: asTrimmedString(status) || "In Progress",
+    label: isJa ? "進行中" : (asTrimmedString(status) || "In Progress"),
     badgeClassName: "bg-sky-500/12 text-sky-700 dark:text-sky-300",
   };
 }
@@ -261,24 +290,25 @@ export function getFactoryStatusAccessibleFactories(authUser = {}, availableFact
   return sortFactoryStatusFactories(availableFactories.filter((factory) => allowedSet.has(factory)));
 }
 
-export function summarizeFactoryStatusSelection(selectedFactories = []) {
+export function summarizeFactoryStatusSelection(selectedFactories = [], language = "en") {
+  const isJa = language === "ja";
   const cleanFactories = (Array.isArray(selectedFactories) ? selectedFactories : []).map(asTrimmedString).filter(Boolean);
   if (!cleanFactories.length) {
     return {
-      countLabel: "No factories selected",
-      selectedText: "Choose one or more factories",
+      countLabel: isJa ? "工場未選択" : "No factories selected",
+      selectedText: isJa ? "1つ以上の工場を選択してください" : "Choose one or more factories",
     };
   }
 
   if (cleanFactories.length === 1) {
     return {
-      countLabel: "1 factory selected",
+      countLabel: isJa ? "1 工場選択中" : "1 factory selected",
       selectedText: cleanFactories[0],
     };
   }
 
   return {
-    countLabel: `${cleanFactories.length} factories selected`,
+    countLabel: isJa ? `${cleanFactories.length} 工場選択中` : `${cleanFactories.length} factories selected`,
     selectedText: cleanFactories.join(" · "),
   };
 }

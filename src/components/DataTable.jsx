@@ -58,9 +58,16 @@ function getDefaultColumnWidths(columns) {
 
 function normalizeColumnOrder(order, columns) {
   const nextKeys = getDefaultColumnOrder(columns);
-  const safeOrder = Array.isArray(order) ? order.filter((key) => nextKeys.includes(key)) : [];
+  const leadingKeys = [];
+  if (columns[0] && columns[0].reorderable === false) {
+    leadingKeys.push(columns[0].key);
+  }
+  const safeOrder = Array.isArray(order)
+    ? order.filter((key) => nextKeys.includes(key) && !leadingKeys.includes(key))
+    : [];
+  const remainingKeys = nextKeys.filter((key) => !safeOrder.includes(key) && !leadingKeys.includes(key));
 
-  return [...safeOrder, ...nextKeys.filter((key) => !safeOrder.includes(key))];
+  return [...leadingKeys, ...safeOrder, ...remainingKeys];
 }
 
 function normalizeColumnWidths(widths, columns) {
@@ -224,27 +231,27 @@ export default function DataTable({
   resetColumnsLabel = "Reset columns",
   stickyHeader = false,
   stickyHeaderOffset = 0,
-  stickyHeaderCellClassName = "bg-surface-container-low/95 backdrop-blur-md",
+  stickyHeaderCellClassName = "bg-[var(--surface)] border-b border-[var(--border)]",
   defaultColumnWidth = null,
   defaultMinColumnWidth = 112,
   defaultMaxColumnWidth = null,
-  className = "glass-card rounded-2xl overflow-hidden mb-8",
-  topBarClassName = "flex flex-col gap-4 border-b border-separator/40 px-5 py-4 md:flex-row md:items-center md:justify-between",
-  bottomBarClassName = "flex flex-col gap-4 border-t border-separator/40 px-5 py-4 md:flex-row md:items-center md:justify-between",
-  topInfoClassName = "text-sm font-medium text-on-surface-variant",
-  bottomInfoClassName = "text-sm text-on-surface-variant",
+  className = "freya-card overflow-hidden mb-8",
+  topBarClassName = "flex flex-col gap-4 border-b border-[var(--border)] px-5 py-4 md:flex-row md:items-center md:justify-between bg-[var(--surface)]",
+  bottomBarClassName = "flex flex-col gap-4 border-t border-[var(--border)] px-5 py-4 md:flex-row md:items-center md:justify-between bg-[var(--surface)]",
+  topInfoClassName = "text-sm font-medium text-[var(--text-secondary)]",
+  bottomInfoClassName = "text-sm text-[var(--text-muted)]",
   tableClassName = "ui-table-data min-w-full",
   tableViewportClassName = "overflow-x-auto",
   tableViewportStyle,
-  headClassName = "bg-surface-container-low border-b border-outline-variant/20",
-  headerCellClassName = "px-3 py-3 text-left whitespace-nowrap",
-  headerButtonClassName = "ui-table-heading inline-flex items-center gap-2 text-on-surface-variant transition hover:text-on-surface",
-  rowClassName = "border-b border-outline-variant/10 transition hover:bg-primary/5",
+  headClassName = "bg-slate-50 dark:bg-slate-900/60 border-b border-[var(--border)]",
+  headerCellClassName = "px-4 py-2.5 text-left whitespace-nowrap",
+  headerButtonClassName = "inline-flex items-center gap-2 text-[12px] font-semibold text-[var(--text-muted)] uppercase tracking-[0.04em] transition hover:text-[var(--text-primary)]",
+  rowClassName = "border-b border-[var(--border)] transition hover:bg-slate-50/80 dark:hover:bg-slate-800/40",
   clickableRowClassName = "cursor-pointer",
-  cellClassName = "px-3 py-3 align-top",
-  rowsSelectClassName = "h-10 rounded-2xl border border-outline-variant/30 bg-white px-3 text-sm text-on-surface outline-none transition focus:border-primary/40",
-  loadingOverlayClassName = "absolute inset-0 z-10 flex items-center justify-center bg-surface/70 backdrop-blur-sm",
-  loadingPillClassName = "flex items-center gap-3 rounded-full bg-surface-container px-4 py-3 text-sm font-semibold text-on-surface shadow-lg",
+  cellClassName = "px-4 py-3 align-top text-sm font-medium freya-tabular text-[var(--text-primary)]",
+  rowsSelectClassName = "h-9 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 text-xs text-[var(--text-primary)] outline-none transition focus:border-[var(--freya-blue)]",
+  loadingOverlayClassName = "absolute inset-0 z-10 flex items-center justify-center bg-[var(--surface)]/70 backdrop-blur-sm",
+  loadingPillClassName = "flex items-center gap-3 rounded-[6px] bg-[var(--surface)] border border-[var(--border)] px-4 py-3 text-sm font-semibold text-[var(--text-primary)] shadow-sm",
 }) {
   const initialLayoutRef = useRef(null);
 
@@ -282,9 +289,13 @@ export default function DataTable({
   useEffect(() => {
     setColumnOrder((currentOrder) => {
       const nextKeys = columns.map((column) => column.key);
-      const preservedKeys = currentOrder.filter((key) => nextKeys.includes(key));
-      const appendedKeys = nextKeys.filter((key) => !preservedKeys.includes(key));
-      const mergedKeys = [...preservedKeys, ...appendedKeys];
+      const leadingKeys = [];
+      if (columns[0] && columns[0].reorderable === false) {
+        leadingKeys.push(columns[0].key);
+      }
+      const preservedKeys = currentOrder.filter((key) => nextKeys.includes(key) && !leadingKeys.includes(key));
+      const appendedKeys = nextKeys.filter((key) => !preservedKeys.includes(key) && !leadingKeys.includes(key));
+      const mergedKeys = [...leadingKeys, ...preservedKeys, ...appendedKeys];
 
       if (
         mergedKeys.length === currentOrder.length &&
@@ -342,9 +353,10 @@ export default function DataTable({
 
   const orderedColumns = displayOrder.map((key) => columnMap.get(key)).filter(Boolean);
   const resolvedColumns = orderedColumns.map((column) => {
-    const minWidth = parseNumericSize(column.minWidth) ?? defaultMinColumnWidth;
+    const parsedWidth = parseNumericSize(column.width);
+    const minWidth = parseNumericSize(column.minWidth) ?? (parsedWidth != null && parsedWidth < defaultMinColumnWidth ? parsedWidth : defaultMinColumnWidth);
     const maxWidth = parseNumericSize(column.maxWidth) ?? defaultMaxColumnWidth;
-    const explicitWidth = columnWidths[column.key] ?? parseNumericSize(column.width) ?? defaultColumnWidth;
+    const explicitWidth = columnWidths[column.key] ?? parsedWidth ?? defaultColumnWidth;
     const width = typeof explicitWidth === "number"
       ? Math.max(minWidth, maxWidth != null ? Math.min(explicitWidth, maxWidth) : explicitWidth)
       : explicitWidth;
@@ -638,7 +650,12 @@ export default function DataTable({
                       <th
                         key={column.key}
                         className={resolvedHeaderCellClassName}
-                        style={stickyHeader ? { top: toSizeValue(stickyHeaderOffset), zIndex: 15 } : undefined}
+                        style={{
+                          ...(stickyHeader ? { top: toSizeValue(stickyHeaderOffset), zIndex: 15 } : {}),
+                          ...(column.resolvedWidth != null ? { width: toSizeValue(column.resolvedWidth) } : {}),
+                          ...(column.resolvedMinWidth != null ? { minWidth: toSizeValue(column.resolvedMinWidth) } : {}),
+                          ...(column.resolvedMaxWidth != null ? { maxWidth: toSizeValue(column.resolvedMaxWidth) } : {}),
+                        }}
                         onDragOver={reorderable ? (event) => handleColumnDragOver(event, column.key) : undefined}
                         onDrop={reorderable ? (event) => handleColumnDrop(event, column.key) : undefined}
                       >
@@ -649,12 +666,12 @@ export default function DataTable({
                               onClick={() => onSort(sortKey)}
                               className={resolvedHeaderButtonClassName}
                             >
-                              <span className="truncate">{column.label}</span>
+                              <span className={column.noTruncate ? "whitespace-nowrap" : "truncate"}>{column.label}</span>
                               <span className={active ? "text-primary" : "text-outline"}>{arrow || "↕"}</span>
                             </button>
                           ) : (
                             <div className={resolvedHeaderButtonClassName}>
-                              <span className="truncate">{column.label}</span>
+                              <span className={column.noTruncate ? "whitespace-nowrap" : "truncate"}>{column.label}</span>
                             </div>
                           )}
 
@@ -741,7 +758,15 @@ export default function DataTable({
                         );
 
                         return (
-                          <td key={column.key} className={resolvedCellClassName}>
+                          <td
+                            key={column.key}
+                            className={resolvedCellClassName}
+                            style={{
+                              ...(column.resolvedWidth != null ? { width: toSizeValue(column.resolvedWidth) } : {}),
+                              ...(column.resolvedMinWidth != null ? { minWidth: toSizeValue(column.resolvedMinWidth) } : {}),
+                              ...(column.resolvedMaxWidth != null ? { maxWidth: toSizeValue(column.resolvedMaxWidth) } : {}),
+                            }}
+                          >
                             {column.disableCellWrapper ? (
                               content
                             ) : (

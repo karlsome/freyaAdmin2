@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState, useRef } from "react";
 import { createPortal } from "react-dom";
 import { query } from "../services/api";
+import { useLanguage } from "../contexts/LanguageContext";
 
 const HINBAN_PROJECTION = {
   "品番": 1,
@@ -9,7 +10,13 @@ const HINBAN_PROJECTION = {
   "品目マスタ.品名": 1,
 };
 
-export function SearchableHinbanSelect({ value, onChange, placeholder = "Search 品番...", className }) {
+export function SearchableHinbanSelect({ value, onChange, placeholder, className }) {
+  let isJa = false;
+  try {
+    const { language } = useLanguage();
+    isJa = language === "ja";
+  } catch {}
+  const resolvedPlaceholder = placeholder ?? (isJa ? "品番を検索..." : "Search 品番...");
   const [isOpen, setIsOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [options, setOptions] = useState([]);
@@ -113,8 +120,8 @@ export function SearchableHinbanSelect({ value, onChange, placeholder = "Search 
         }}
         className={`${className} flex items-center justify-between text-left truncate px-3 cursor-pointer`}
       >
-        <span className={`truncate ${value ? "text-on-surface font-semibold" : "opacity-60"}`}>
-          {value || placeholder}
+        <span className={`truncate ${value ? "text-on-surface font-semibold" : "opacity-70"}`}>
+          {value || resolvedPlaceholder}
         </span>
         <div className="flex items-center gap-1 shrink-0 ml-2 text-outline">
           {value && (
@@ -214,7 +221,7 @@ export function SearchableHinbanSelect({ value, onChange, placeholder = "Search 
                 );
               })
             ) : (
-              <div className="p-4 text-xs text-outline text-center">No matches found</div>
+              <div className="p-4 text-xs text-outline text-center">{isJa ? "一致する項目がありません" : "No matches found"}</div>
             )}
           </div>
         </div>,
@@ -225,6 +232,11 @@ export function SearchableHinbanSelect({ value, onChange, placeholder = "Search 
 }
 
 export function SearchableSelect({ value, options, multiple, onChange, placeholder, className }) {
+  let isJa = false;
+  try {
+    const { language } = useLanguage();
+    isJa = language === "ja";
+  } catch {}
   const [isOpen, setIsOpen] = useState(false);
   const [queryText, setQueryText] = useState("");
   const [coords, setCoords] = useState({ top: 0, left: 0, width: 0, showAbove: false, maxHeight: 350 });
@@ -363,7 +375,7 @@ export function SearchableSelect({ value, options, multiple, onChange, placehold
               ref={searchInputRef}
               type="text"
               className="w-full bg-surface-variant/30 border border-outline-variant/40 rounded-lg pl-8 pr-7 py-1.5 text-xs text-on-surface focus:border-primary focus:outline-none placeholder:text-outline"
-              placeholder="Search..."
+              placeholder={isJa ? "検索..." : "Search..."}
               value={queryText}
               onChange={(e) => setQueryText(e.target.value)}
             />
@@ -388,13 +400,13 @@ export function SearchableSelect({ value, options, multiple, onChange, placehold
               className="px-3 py-2 text-xs text-primary hover:bg-primary/10 transition-colors cursor-pointer flex items-center gap-1.5 border-b border-outline-variant/20 font-medium"
             >
               <span className="material-symbols-outlined" style={{ fontSize: 14 }}>add</span>
-              <span>Use: <strong>"{queryText.trim()}"</strong></span>
+              <span>{isJa ? `"${queryText.trim()}" を使用` : <>Use: <strong>"{queryText.trim()}"</strong></>}</span>
             </div>
           )}
 
           <div className="overflow-y-auto flex-1 flex flex-col divide-y divide-outline-variant/15 pr-0.5">
             {filteredOptions.length === 0 && !queryText.trim() ? (
-              <div className="px-4 py-3 text-xs text-outline text-center">No options available</div>
+              <div className="px-4 py-3 text-xs text-outline text-center">{isJa ? "選択肢がありません" : "No options available"}</div>
             ) : (
               filteredOptions.map((option) => {
                 const isSelected = multiple
@@ -490,6 +502,11 @@ function RowValueInput({
   enableTextSuggestions,
   inputIdPrefix,
 }) {
+  let isJa = false;
+  try {
+    const { language } = useLanguage();
+    isJa = language === "ja";
+  } catch {}
   const datalistId = `${inputIdPrefix}-${row.id}`;
 
   if (!fieldDefinition) {
@@ -507,7 +524,9 @@ function RowValueInput({
   if (row.operator === "exists" || row.operator === "not_exists") {
     return (
       <div className={`${styles.controlBase} flex items-center px-3 text-xs text-outline/80 italic bg-surface-variant/20 cursor-default select-none border-dashed`}>
-        {row.operator === "exists" ? "Field exists & is not empty" : "Field is empty or missing"}
+        {row.operator === "exists"
+          ? (isJa ? "値が存在する（空でない）" : "Field exists & is not empty")
+          : (isJa ? "値が空または存在しない" : "Field is empty or missing")}
       </div>
     );
   }
@@ -525,7 +544,7 @@ function RowValueInput({
             onChange({ valueFrom: val });
           }}
           className={styles.controlBase}
-          placeholder="From"
+          placeholder={isJa ? "開始" : "From"}
         />
         <input
           type={inputType}
@@ -535,7 +554,7 @@ function RowValueInput({
             onChange({ valueTo: val });
           }}
           className={styles.controlBase}
-          placeholder="To"
+          placeholder={isJa ? "終了" : "To"}
         />
       </div>
     );
@@ -548,7 +567,7 @@ function RowValueInput({
       <SearchableHinbanSelect
         value={row.value || ""}
         onChange={onChange}
-        placeholder="Select or search 品番..."
+        placeholder={isJa ? "品番を選択または検索..." : "Select or search 品番..."}
         className={styles.controlBase}
       />
     );
@@ -563,10 +582,8 @@ function RowValueInput({
         ? row.value[0] || ""
         : row.value;
     const placeholder = loading
-      ? `Loading ${fieldDefinition.label}...`
-      : options.length
-        ? `Select or search ${fieldDefinition.label}...`
-        : `Select or search ${fieldDefinition.label}...`;
+      ? (isJa ? `${fieldDefinition.label} を読み込み中...` : `Loading ${fieldDefinition.label}...`)
+      : (isJa ? `${fieldDefinition.label} を選択または検索...` : `Select or search ${fieldDefinition.label}...`);
 
     return (
       <SearchableSelect
@@ -589,7 +606,7 @@ function RowValueInput({
         value={inputValue}
         onChange={(event) => onChange({ value: event.target.value })}
         className={styles.controlBase}
-        placeholder="Comma separated values"
+        placeholder={isJa ? "カンマ区切りで入力" : "Comma separated values"}
       />
     );
   }
@@ -605,7 +622,7 @@ function RowValueInput({
         onChange({ value: val });
       }}
       className={styles.controlBase}
-      placeholder="Enter value"
+      placeholder={isJa ? "値を入力" : "Enter value"}
     />
   );
 }
@@ -676,9 +693,9 @@ export default function AdvancedFilterSection({
   optionsCacheKey = "default",
   operatorLabels = {},
   useOperatorLabelsInSelect = false,
-  title = "Advanced Filters",
-  addRowLabel = "Add Filter Row",
-  activeSummaryTitle = "Active Filters",
+  title,
+  addRowLabel,
+  activeSummaryTitle,
   activeSummaryDescription = "",
   showActiveSummary = true,
   chipTone = "primary",
@@ -686,11 +703,22 @@ export default function AdvancedFilterSection({
   framed = true,
   enableTextSuggestions = false,
   inputIdPrefix = "advanced-filter-options",
-  selectFieldLabel = "Select field",
-  selectOperatorLabel = "Select operator",
+  selectFieldLabel,
+  selectOperatorLabel,
   footer,
   onCustomFieldClick,
 }) {
+  let isJa = false;
+  try {
+    const { language } = useLanguage();
+    isJa = language === "ja";
+  } catch {}
+
+  const resolvedTitle = title ?? (isJa ? "詳細フィルタ" : "Advanced Filters");
+  const resolvedAddRowLabel = addRowLabel ?? (isJa ? "フィルタ追加" : "Add Filter Row");
+  const resolvedActiveSummaryTitle = activeSummaryTitle ?? (isJa ? "適用中のフィルタ" : "Active Filters");
+  const resolvedSelectFieldLabel = selectFieldLabel ?? (isJa ? "項目を選択" : "Select field");
+  const resolvedSelectOperatorLabel = selectOperatorLabel ?? (isJa ? "条件を選択" : "Select operator");
   const styles = getStylePreset(variant, framed);
   const [open, setOpen] = useState(false);
   const [optionsByField, setOptionsByField] = useState({});
@@ -746,10 +774,10 @@ export default function AdvancedFilterSection({
           <>
             <div className="flex items-center gap-1.5">
               <span className="material-symbols-outlined text-primary" style={{ fontSize: 14 }}>filter_alt</span>
-              <span className="uppercase tracking-wider">{title}</span>
+              <span className="uppercase tracking-wider">{resolvedTitle}</span>
               {activeFilters.length ? (
                 <span className="rounded-full bg-primary/15 px-1.5 py-0.5 text-[9px] font-semibold normal-case tracking-normal text-primary">
-                  {activeFilters.length} active
+                  {isJa ? `${activeFilters.length}件 適用中` : `${activeFilters.length} active`}
                 </span>
               ) : null}
             </div>
@@ -763,10 +791,10 @@ export default function AdvancedFilterSection({
             <span className="material-symbols-outlined" style={{ fontSize: 14 }}>
               {open ? "keyboard_arrow_up" : "keyboard_arrow_down"}
             </span>
-            {title}
+            {resolvedTitle}
             {activeFilters.length ? (
               <span className="rounded-full bg-primary/15 px-1.5 py-0.5 text-[9px] font-semibold normal-case tracking-normal text-primary">
-                {activeFilters.length} active
+                {isJa ? `${activeFilters.length}件 適用中` : `${activeFilters.length} active`}
               </span>
             ) : null}
           </>
@@ -804,7 +832,7 @@ export default function AdvancedFilterSection({
                     }}
                     className={`${styles.controlBase} ${styles.fieldControl}`}
                   >
-                    <option value="">{selectFieldLabel}</option>
+                    <option value="">{resolvedSelectFieldLabel}</option>
                     {fieldGroups.map((group) => (
                       <optgroup key={group} label={group}>
                         {fieldDefinitions.filter((field) => field.group === group).map((field) => (
@@ -813,8 +841,8 @@ export default function AdvancedFilterSection({
                       </optgroup>
                     ))}
                     {onCustomFieldClick && (
-                      <optgroup label="Custom Fields">
-                        <option value="__CUSTOM__">Custom...</option>
+                      <optgroup label={isJa ? "カスタム項目" : "Custom Fields"}>
+                        <option value="__CUSTOM__">{isJa ? "カスタム..." : "Custom..."}</option>
                       </optgroup>
                     )}
                   </select>
@@ -830,7 +858,7 @@ export default function AdvancedFilterSection({
                     disabled={!fieldDefinition}
                     className={`${styles.controlBase} ${styles.operatorControl}`}
                   >
-                    <option value="">{selectOperatorLabel}</option>
+                    <option value="">{resolvedSelectOperatorLabel}</option>
                     {operators.map((operator) => (
                       <option key={operator} value={operator}>
                         {useOperatorLabelsInSelect ? (operatorLabels[operator] || operator) : operator}
@@ -868,21 +896,21 @@ export default function AdvancedFilterSection({
               className={styles.addButton}
             >
               <span className="material-symbols-outlined" style={{ fontSize: variant === "roomy" ? 16 : 14 }}>add</span>
-              {addRowLabel}
+              {resolvedAddRowLabel}
             </button>
 
             {showActiveSummary && activeFilters.length ? (
               <div className={styles.summaryPanel}>
                 <div className="flex items-center justify-between gap-3">
                   <div>
-                    <div className={styles.summaryTitle}>{activeSummaryTitle}</div>
+                    <div className={styles.summaryTitle}>{resolvedActiveSummaryTitle}</div>
                     {activeSummaryDescription ? (
                       <div className={styles.summaryDescription}>{activeSummaryDescription}</div>
                     ) : null}
                   </div>
                   {typeof onClearRows === "function" ? (
                     <button type="button" onClick={onClearRows} className={styles.clearButton}>
-                      Clear All
+                      {isJa ? "すべてクリア" : "Clear All"}
                     </button>
                   ) : null}
                 </div>

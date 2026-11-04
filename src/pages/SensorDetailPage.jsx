@@ -8,6 +8,7 @@ import SensorTrendChart from "../components/SensorTrendChart";
 import DeviceNamingModal from "../components/DeviceNamingModal";
 import SensorDevicePhotoPreviewModal from "../components/SensorDevicePhotoPreviewModal";
 import { getAuthUser } from "../utils/masterDB";
+import { useLanguage } from "../contexts/LanguageContext";
 
 const SENSOR_READINGS_PAGE_SIZE_OPTIONS = [15, 50, 100];
 const SENSOR_DEVICE_OFFLINE_THRESHOLD_MS = 30 * 60 * 1000;
@@ -61,15 +62,15 @@ function getMinutesSinceTimestamp(timestamp, currentTimestamp = Date.now()) {
   return Math.max(0, Math.floor((currentTimestamp - timestamp.getTime()) / 60000));
 }
 
-function formatSensorLastSeen(minutesSinceLastReading) {
-  if (minutesSinceLastReading == null) return "Last seen unknown";
-  if (minutesSinceLastReading < 1) return "Last seen just now";
-  if (minutesSinceLastReading < 60) return `Last seen ${minutesSinceLastReading} min ago`;
+function formatSensorLastSeen(minutesSinceLastReading, isJa = false) {
+  if (minutesSinceLastReading == null) return isJa ? "最終確認: 不明" : "Last seen unknown";
+  if (minutesSinceLastReading < 1) return isJa ? "最終確認: たった今" : "Last seen just now";
+  if (minutesSinceLastReading < 60) return isJa ? `最終確認: ${minutesSinceLastReading}分前` : `Last seen ${minutesSinceLastReading} min ago`;
 
   const hours = Math.floor(minutesSinceLastReading / 60);
   const minutes = minutesSinceLastReading % 60;
-  if (minutes === 0) return `Last seen ${hours} hr ago`;
-  return `Last seen ${hours} hr ${minutes} min ago`;
+  if (minutes === 0) return isJa ? `最終確認: ${hours}時間前` : `Last seen ${hours} hr ago`;
+  return isJa ? `最終確認: ${hours}時間${minutes}分前` : `Last seen ${hours} hr ${minutes} min ago`;
 }
 
 // Sensor `Date` fields are written in JST (factory-local time). `toISOString()`
@@ -83,12 +84,14 @@ function dateRangeDefault() {
   return { start: toISO(start), end: toISO(end) };
 }
 
-function buildSensorReadingsPageInfo({ filteredCount, page, pageSize }) {
-  if (!filteredCount) return "0 readings shown";
+function buildSensorReadingsPageInfo({ filteredCount, page, pageSize }, isJa = false) {
+  if (!filteredCount) return isJa ? "0件表示" : "0 readings shown";
 
   const start = (page - 1) * pageSize + 1;
   const end = Math.min(page * pageSize, filteredCount);
-  return `${filteredCount.toLocaleString()} readings, showing ${start.toLocaleString()}-${end.toLocaleString()}`;
+  return isJa
+    ? `${filteredCount.toLocaleString()} 件中 ${start.toLocaleString()}〜${end.toLocaleString()} 件表示`
+    : `${filteredCount.toLocaleString()} readings, showing ${start.toLocaleString()}-${end.toLocaleString()}`;
 }
 
 function getSensorTableSort(sortKey) {
@@ -146,6 +149,8 @@ function SensorCard({
   onEdit = null,
   onPreviewPhotos = null
 }) {
+  const { language } = useLanguage();
+  const isJa = language === "ja";
   const latest = device?.latest ?? {};
   const latestTemp = parseTemp(latest.Temperature);
   const latestHumid = parseHumid(latest.Humidity);
@@ -158,13 +163,13 @@ function SensorCard({
   const displayName = device?.displayName || null;
   const photoCount = Array.isArray(device?.imageURLs) ? device.imageURLs.filter(Boolean).length : 0;
   const isOffline = Boolean(device?.isOffline);
-  const lastSeenLabel = formatSensorLastSeen(device?.minutesSinceLastReading);
+  const lastSeenLabel = formatSensorLastSeen(device?.minutesSinceLastReading, isJa);
   const cardStateClassName = isOffline
-    ? `sensor-device-card--offline border-error/35 hover:border-error/45 ${isActive ? "ring-1 ring-inset ring-error/15" : ""}`
+    ? `border-[var(--status-danger)]/40 hover:border-[var(--status-danger)]/60 ${isActive ? "ring-1 ring-[var(--status-danger)]/30" : ""}`
     : isActive
-      ? "bg-primary/[0.06] shadow-[0_16px_36px_rgba(99,102,241,0.14)]"
-      : "";
-  const titleClassName = isOffline ? "text-error" : isActive ? "text-primary" : "text-on-surface";
+      ? "border-[var(--freya-blue)] ring-1 ring-[var(--freya-blue)]/30 bg-[var(--surface-subtle)]"
+      : "hover:border-[var(--border-strong)]";
+  const titleClassName = isOffline ? "text-[var(--status-danger)]" : isActive ? "text-[var(--freya-blue)]" : "text-[var(--text-primary)]";
 
   function handleCardKeyDown(event) {
     if (event.target !== event.currentTarget) return;
@@ -180,71 +185,77 @@ function SensorCard({
       onClick={() => onSelect?.(device?.deviceId || "all")}
       onKeyDown={handleCardKeyDown}
       aria-pressed={isActive}
-      className={`glass-card relative flex w-full cursor-pointer flex-col gap-4 overflow-hidden rounded-2xl p-5 text-left transition-all duration-150 hover:border-primary/30 hover:shadow-[0_14px_32px_rgba(15,23,42,0.08)] focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/35 ${cardStateClassName}`}
+      className={`freya-card relative flex w-full cursor-pointer flex-col gap-3 overflow-hidden rounded-[8px] border border-[var(--border)] bg-[var(--surface)] p-4 text-left shadow-sm transition-all duration-150 focus:outline-none focus-visible:ring-1 focus-visible:ring-[var(--freya-blue)] ${cardStateClassName}`}
     >
       {isActive ? (
         <span
           aria-hidden="true"
-          className="pointer-events-none absolute left-2 top-3 bottom-3 w-1 rounded-full bg-primary shadow-[0_0_12px_rgba(99,102,241,0.35)]"
+          className="pointer-events-none absolute left-0 top-2 bottom-2 w-1 rounded-r bg-[var(--freya-blue)]"
         />
       ) : null}
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Device</p>
-          <div className="mt-1 flex flex-wrap items-center gap-2">
-            <p className={`text-base font-semibold truncate ${titleClassName}`}>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">
+            {isJa ? "デバイス" : "Device"}
+          </p>
+          <div className="mt-1 flex flex-wrap items-center gap-1.5">
+            <p className={`text-sm font-semibold truncate ${titleClassName}`}>
               {displayName || device?.deviceId || "Unknown"}
             </p>
             {isActive ? (
-              <span className="inline-flex items-center gap-1 rounded-full border border-primary/20 bg-primary/10 px-2.5 py-1 text-[10px] font-semibold text-primary">
+              <span className="inline-flex items-center gap-1 rounded-[4px] border border-[var(--freya-blue)]/30 bg-[var(--freya-blue)]/10 px-2 py-0.5 text-[10px] font-mono font-medium text-[var(--freya-blue)]">
                 <span className="material-symbols-outlined" style={{ fontSize: 11 }}>check</span>
-                Selected
+                {isJa ? "選択中" : "Selected"}
               </span>
             ) : null}
             {isOffline ? (
-              <span className="inline-flex items-center gap-1 rounded-full border border-error/20 bg-error/10 px-2.5 py-1 text-[10px] font-semibold text-error">
-                <span className="h-2 w-2 rounded-full bg-error" aria-hidden="true" />
-                Offline
+              <span className="inline-flex items-center gap-1 rounded-[4px] border border-[var(--status-danger)]/30 bg-[var(--status-danger)]/10 px-2 py-0.5 text-[10px] font-mono font-medium text-[var(--status-danger)]">
+                <span className="h-1.5 w-1.5 rounded-full bg-[var(--status-danger)]" aria-hidden="true" />
+                {isJa ? "オフライン" : "Offline"}
               </span>
             ) : null}
           </div>
           {displayName && (
-            <p className="mt-0.5 font-mono text-[10px] text-outline truncate">{device?.deviceId}</p>
+            <p className="mt-0.5 font-mono text-[10px] text-[var(--text-muted)] truncate">{device?.deviceId}</p>
           )}
         </div>
-        <div className="flex flex-col items-end gap-2 flex-shrink-0">
-          <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-[10px] font-semibold ${wbgtStatus.bg} ${wbgtStatus.color}`}>
+        <div className="flex flex-col items-end gap-1.5 flex-shrink-0">
+          <span className={`inline-flex items-center rounded-[4px] border px-2 py-0.5 text-[10px] font-mono font-medium ${wbgtStatus.bg} ${wbgtStatus.color}`}>
             WBGT {wbgt ?? "—"}°C
           </span>
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
-        <div className={`p-3 rounded-xl ${tempStatus.bg}`}>
-          <div className="flex items-center gap-2">
-            <p className={`text-lg font-semibold ${tempStatus.color}`}>{Number.isNaN(latestTemp) ? "—" : `${latestTemp}°C`}</p>
+      <div className="grid grid-cols-2 gap-2.5">
+        <div className={`p-2.5 rounded-[6px] border border-[var(--border)] ${tempStatus.bg}`}>
+          <div className="flex items-center gap-1.5">
+            <p className={`text-base font-bold font-mono ${tempStatus.color}`}>{Number.isNaN(latestTemp) ? "—" : `${latestTemp}°C`}</p>
             {offset ? (
-              <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-surface/50 text-on-surface-variant border border-outline-variant/30 whitespace-nowrap" title="Temperature Offset">
+              <span className="text-[9px] font-mono font-semibold px-1 py-0.5 rounded-[3px] bg-[var(--surface)] text-[var(--text-secondary)] border border-[var(--border)] whitespace-nowrap" title={isJa ? "温度補正" : "Temperature Offset"}>
                 {offset > 0 ? "+" : ""}{offset}°C
               </span>
             ) : null}
           </div>
-          <p className="text-[10px] text-on-surface-variant">Temperature</p>
-          <Sparkline values={tempTrend} color={latestTemp >= 30 ? "#f87171" : "#6366f1"} />
+          <p className="text-[10px] font-medium text-[var(--text-muted)] mt-0.5">
+            {isJa ? "温度" : "Temperature"}
+          </p>
+          <Sparkline values={tempTrend} color={latestTemp >= 30 ? "#f87171" : "var(--freya-blue)"} />
         </div>
-        <div className={`p-3 rounded-xl ${humidityStatus.bg}`}>
-          <p className={`text-lg font-semibold ${humidityStatus.color}`}>{Number.isNaN(latestHumid) ? "—" : `${latestHumid}%`}</p>
-          <p className="text-[10px] text-on-surface-variant">Humidity</p>
+        <div className={`p-2.5 rounded-[6px] border border-[var(--border)] ${humidityStatus.bg}`}>
+          <p className={`text-base font-bold font-mono ${humidityStatus.color}`}>{Number.isNaN(latestHumid) ? "—" : `${latestHumid}%`}</p>
+          <p className="text-[10px] font-medium text-[var(--text-muted)] mt-0.5">
+            {isJa ? "湿度" : "Humidity"}
+          </p>
           <Sparkline values={humidityTrend} color="#22d3ee" />
         </div>
       </div>
 
-      <div className="flex items-center justify-between gap-3 text-[10px] text-outline">
+      <div className="flex items-center justify-between gap-2 text-[11px] text-[var(--text-muted)] pt-1 border-t border-[var(--border)]">
         <div className="min-w-0 flex-1 truncate">
-          <span className={isOffline ? "font-semibold text-error" : undefined}>
-            {isOffline ? `Offline · ${lastSeenLabel}` : `Last: ${latest?.Date || "—"} ${latest?.Time || ""}`}
+          <span className={isOffline ? "font-semibold text-[var(--status-danger)]" : undefined}>
+            {isOffline ? `${isJa ? "オフライン" : "Offline"} · ${lastSeenLabel}` : `${isJa ? "最終" : "Last"}: ${latest?.Date || "—"} ${latest?.Time || ""}`}
           </span>
-          <span> · {Number(device?.readingCount) || 0} readings</span>
+          <span className="font-mono"> · {Number(device?.readingCount) || 0} {isJa ? "件" : "readings"}</span>
         </div>
         <div className="flex flex-shrink-0 items-center gap-1">
           {photoCount > 0 && onPreviewPhotos ? (
@@ -254,8 +265,8 @@ function SensorCard({
                 event.stopPropagation();
                 onPreviewPhotos(device);
               }}
-              className="inline-flex items-center gap-1 rounded-xl border border-separator/40 bg-surface px-2.5 py-1 text-[10px] font-semibold text-on-surface-variant transition-all duration-150 hover:border-primary/30 hover:bg-surface-container hover:text-primary active:scale-95"
-              title={`View ${photoCount} device photo${photoCount === 1 ? "" : "s"}`}
+              className="inline-flex items-center gap-1 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-2 py-0.5 text-[10px] font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-hover)] shadow-2xs transition-colors"
+              title={isJa ? `${photoCount}枚の写真を表示` : `View ${photoCount} device photo${photoCount === 1 ? "" : "s"}`}
             >
               <span className="material-symbols-outlined" style={{ fontSize: 11 }}>photo_library</span>
               {photoCount}
@@ -269,10 +280,10 @@ function SensorCard({
                 event.stopPropagation();
                 onEdit(device);
               }}
-              className="rounded-xl p-2 text-outline transition-all duration-150 hover:bg-surface-container hover:text-primary active:scale-95"
-              title="Rename device"
+              className="rounded-[6px] border border-[var(--border)] bg-[var(--surface)] p-1 text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-hover)] shadow-2xs transition-colors"
+              title={isJa ? "デバイス名を変更" : "Rename device"}
             >
-              <span className="material-symbols-outlined" style={{ fontSize: 16 }}>edit</span>
+              <span className="material-symbols-outlined" style={{ fontSize: 14 }}>edit</span>
             </button>
           ) : null}
         </div>
@@ -283,6 +294,8 @@ function SensorCard({
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
 function YearSelectionModal({ isOpen, onClose, onApply, initialSelectedYears }) {
+  const { language } = useLanguage();
+  const isJa = language === "ja";
   const [selected, setSelected] = useState(initialSelectedYears);
   
   useEffect(() => {
@@ -300,47 +313,51 @@ function YearSelectionModal({ isOpen, onClose, onApply, initialSelectedYears }) 
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-      <div className="glass-card w-full max-w-sm rounded-2xl overflow-hidden shadow-2xl border border-outline-variant/30 animate-in fade-in zoom-in-95 duration-200">
-        <div className="px-6 py-5 border-b border-outline-variant/20 flex items-center gap-3">
-          <span className="material-symbols-outlined text-primary">calendar_month</span>
-          <h2 className="text-lg font-semibold text-on-surface">Select Years</h2>
+      <div className="freya-card w-full max-w-sm rounded-[12px] overflow-hidden shadow-2xl border border-[var(--border)] bg-[var(--surface-raised)] animate-in fade-in zoom-in-95 duration-150">
+        <div className="px-5 py-4 border-b border-[var(--border)] flex items-center gap-2.5">
+          <span className="material-symbols-outlined text-[var(--freya-blue)]">calendar_month</span>
+          <h2 className="text-sm font-semibold text-[var(--text-primary)]">
+            {isJa ? "対象年の選択" : "Select Years"}
+          </h2>
         </div>
         
-        <div className="p-6">
-          <div className="grid grid-cols-2 gap-3">
+        <div className="p-5">
+          <div className="grid grid-cols-2 gap-2.5">
             {yearOptions.map(year => (
-              <label key={year} className={`flex items-center gap-3 p-3 rounded-xl border transition-all cursor-pointer ${selected.includes(year) ? 'bg-primary/10 border-primary/40' : 'bg-surface-container-lowest border-outline-variant/20 hover:border-outline-variant/40'}`}>
+              <label key={year} className={`flex items-center gap-2.5 p-2.5 rounded-[6px] border transition-colors cursor-pointer ${selected.includes(year) ? 'bg-[var(--surface-subtle)] border-[var(--freya-blue)]/50' : 'bg-[var(--surface)] border-[var(--border)] hover:border-[var(--border-strong)]'}`}>
                 <input 
                   type="checkbox" 
                   checked={selected.includes(year)}
                   onChange={() => toggleYear(year)}
-                  className="w-4 h-4 text-primary rounded border-outline-variant focus:ring-primary/30"
+                  className="w-4 h-4 text-[var(--freya-blue)] rounded border-[var(--border)] focus:ring-[var(--freya-blue)]"
                 />
-                <span className={`text-sm font-semibold ${selected.includes(year) ? 'text-primary' : 'text-on-surface'}`}>{year}</span>
+                <span className={`text-xs font-semibold ${selected.includes(year) ? 'text-[var(--freya-blue)]' : 'text-[var(--text-primary)]'}`}>{year}</span>
               </label>
             ))}
           </div>
           {selected.length === 0 && (
-            <p className="text-xs text-error mt-4 font-medium flex items-center gap-1.5">
+            <p className="text-xs text-[var(--status-danger)] mt-3 font-medium flex items-center gap-1.5">
               <span className="material-symbols-outlined" style={{ fontSize: 14 }}>warning</span>
-              Please select at least one year.
+              {isJa ? "少なくとも1つの年を選択してください。" : "Please select at least one year."}
             </p>
           )}
         </div>
 
-        <div className="px-6 py-4 bg-surface-container/50 border-t border-outline-variant/20 flex items-center justify-end gap-3">
+        <div className="px-5 py-3 bg-[var(--surface-subtle)] border-t border-[var(--border)] flex items-center justify-end gap-2">
           <button
+            type="button"
             onClick={onClose}
-            className="px-4 py-2 rounded-xl text-sm font-semibold text-on-surface-variant hover:bg-surface-container-high transition-colors"
+            className="rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-hover)] transition-colors shadow-2xs"
           >
-            Cancel
+            {isJa ? "キャンセル" : "Cancel"}
           </button>
           <button
+            type="button"
             onClick={() => onApply(selected)}
             disabled={selected.length === 0}
-            className="px-6 py-2 rounded-xl text-sm font-semibold bg-primary text-on-primary hover:bg-primary/90 transition-all disabled:opacity-50 shadow-md shadow-primary/20"
+            className="rounded-[6px] bg-[var(--freya-blue)] px-4 py-1.5 text-xs font-semibold text-white hover:bg-[var(--freya-blue-hover)] transition-colors shadow-xs disabled:opacity-50"
           >
-            Apply
+            {isJa ? "適用" : "Apply"}
           </button>
         </div>
       </div>
@@ -349,6 +366,8 @@ function YearSelectionModal({ isOpen, onClose, onApply, initialSelectedYears }) 
 }
 
 export default function SensorDetailPage() {
+  const { language } = useLanguage();
+  const isJa = language === "ja";
   const { factoryName: encoded } = useParams();
   const factoryName = decodeURIComponent(encoded);
   const navigate    = useNavigate();
@@ -423,13 +442,15 @@ export default function SensorDetailPage() {
 
     setPhotoPreview({
       activeIndex: 0,
-      eyebrow: "Device Photos",
+      eyebrow: isJa ? "デバイス写真" : "Device Photos",
       deviceId: normalizeDeviceId(device?.deviceId),
       displayName: device?.displayName || "",
       factoryName,
       images: imageURLs.map((url, index) => ({
         url,
-        label: `${device?.displayName || device?.deviceId || "Device"} photo ${index + 1}`,
+        label: isJa
+          ? `${device?.displayName || device?.deviceId || "デバイス"} 写真 ${index + 1}`
+          : `${device?.displayName || device?.deviceId || "Device"} photo ${index + 1}`,
       })),
     });
   }
@@ -609,14 +630,14 @@ export default function SensorDetailPage() {
   }, [deviceFilter, overview.devices]);
 
   const selectedDeviceName = useMemo(() => {
-    if (!deviceFilter || deviceFilter === "all") return "All Sensors";
+    if (!deviceFilter || deviceFilter === "all") return isJa ? "すべてのセンサー" : "All Sensors";
     const activeCard = overview.latestDevices?.find(
       (d) => normalizeDeviceId(d.deviceId) === normalizeDeviceId(deviceFilter)
     );
     if (!activeCard) return deviceFilter;
     const ioTName = iotNamesMap.get(activeCard.deviceId);
     return ioTName?.name ? `${ioTName.name} - ${activeCard.deviceId}` : activeCard.deviceId;
-  }, [deviceFilter, overview.latestDevices, iotNamesMap]);
+  }, [deviceFilter, overview.latestDevices, iotNamesMap, isJa]);
 
   useEffect(() => {
     setPage(1);
@@ -655,7 +676,7 @@ export default function SensorDetailPage() {
         if (cancelled || requestId !== tableRequestIdRef.current) return;
         setTableRows([]);
         setPagination({ ...EMPTY_SENSOR_PAGINATION, itemsPerPage: pageSize });
-        setTableError(loadError.message || "Failed to load sensor readings.");
+        setTableError(loadError.message || (isJa ? "計測記録の読み込みに失敗しました。" : "Failed to load sensor readings."));
       } finally {
         if (!cancelled && requestId === tableRequestIdRef.current) {
           setTableLoading(false);
@@ -668,7 +689,7 @@ export default function SensorDetailPage() {
     return () => {
       cancelled = true;
     };
-  }, [deviceFilter, factoryName, page, pageSize, range.end, range.start, rangeMode, selectedYears, sortKey, iotNamesMap]);
+  }, [deviceFilter, factoryName, page, pageSize, range.end, range.start, rangeMode, selectedYears, sortKey, iotNamesMap, isJa]);
 
   const devices = useMemo(() => Array.from(new Set(
     (Array.isArray(overview.devices) ? overview.devices : [])
@@ -774,57 +795,57 @@ export default function SensorDetailPage() {
   const tableColumns = useMemo(() => ([
     {
       key: "Date",
-      label: "Date",
+      label: isJa ? "日付" : "Date",
       sortKey: "date",
       width: 128,
-      renderCell: (row) => <span className="text-on-surface-variant">{row.Date || "—"}</span>,
+      renderCell: (row) => <span className="font-mono text-xs text-[var(--text-secondary)]">{row.Date || "—"}</span>,
       disableCellWrapper: true,
     },
     {
       key: "Time",
-      label: "Time",
+      label: isJa ? "時刻" : "Time",
       width: 116,
-      renderCell: (row) => <span className="text-on-surface-variant">{row.Time || "—"}</span>,
+      renderCell: (row) => <span className="font-mono text-xs text-[var(--text-secondary)]">{row.Time || "—"}</span>,
       disableCellWrapper: true,
     },
     {
       key: "device",
-      label: "Device",
+      label: isJa ? "デバイス" : "Device",
       width: 224,
       renderCell: (row) => {
         const friendlyName = getDisplayName(row.device);
         return friendlyName ? (
           <div>
-            <span className="text-sm font-semibold text-on-surface">{friendlyName}</span>
-            <p className="font-mono text-[10px] text-outline">{row.device || "—"}</p>
+            <span className="text-xs font-semibold text-[var(--text-primary)]">{friendlyName}</span>
+            <p className="font-mono text-[10px] text-[var(--text-muted)]">{row.device || "—"}</p>
           </div>
         ) : (
-          <span className="font-mono text-on-surface">{row.device || "—"}</span>
+          <span className="font-mono text-xs text-[var(--text-primary)]">{row.device || "—"}</span>
         );
       },
       disableCellWrapper: true,
     },
     {
       key: "temperature",
-      label: "Temp",
+      label: isJa ? "温度" : "Temp",
       sortKey: "temperature",
       width: 128,
       renderCell: (row) => {
         const temperature = parseTemp(row.Temperature);
         const meta = getTempStatus(temperature);
-        return <span className={`font-semibold ${meta.color}`}>{Number.isNaN(temperature) ? "—" : `${temperature}°C`}</span>;
+        return <span className={`font-mono text-xs font-semibold ${meta.color}`}>{Number.isNaN(temperature) ? "—" : `${temperature}°C`}</span>;
       },
       disableCellWrapper: true,
     },
     {
       key: "humidity",
-      label: "Humidity",
+      label: isJa ? "湿度" : "Humidity",
       width: 132,
       sortable: false,
       renderCell: (row) => {
         const humidity = parseHumid(row.Humidity);
         const meta = getHumidityStatus(humidity);
-        return <span className={`font-semibold ${meta.color}`}>{Number.isNaN(humidity) ? "—" : `${humidity}%`}</span>;
+        return <span className={`font-mono text-xs font-semibold ${meta.color}`}>{Number.isNaN(humidity) ? "—" : `${humidity}%`}</span>;
       },
       disableCellWrapper: true,
     },
@@ -838,13 +859,13 @@ export default function SensorDetailPage() {
         const humidity = parseHumid(row.Humidity);
         const wbgt = calcWBGT(temperature, humidity);
         const meta = getWBGTStatus(wbgt);
-        return <span className={`font-semibold ${meta.color}`}>{wbgt ?? "—"}°C</span>;
+        return <span className={`font-mono text-xs font-semibold ${meta.color}`}>{wbgt ?? "—"}°C</span>;
       },
       disableCellWrapper: true,
     },
     {
       key: "status",
-      label: "Status",
+      label: isJa ? "状態" : "Status",
       width: 116,
       sortable: false,
       renderCell: (row) => {
@@ -853,145 +874,160 @@ export default function SensorDetailPage() {
         const wbgt = calcWBGT(temperature, humidity);
         const meta = getWBGTStatus(wbgt);
         return (
-          <span className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-semibold ${meta.bg} ${meta.color}`}>
+          <span className={`inline-flex rounded-[4px] border px-2 py-0.5 text-[10px] font-mono font-medium ${meta.bg} ${meta.color}`}>
             {row.sensorStatus ?? "OK"}
           </span>
         );
       },
       disableCellWrapper: true,
     },
-  ]), [iotNamesMap]);
+  ]), [iotNamesMap, isJa]);
 
   return (
-    <section className="pt-24 pb-16 px-8 overflow-y-auto h-screen scrollbar-hide">
+    <section className="w-full h-screen overflow-y-auto space-y-6 pt-20 px-4 sm:px-6 md:px-8 pb-16">
       <PageHeader
         leading={(
           <button
+            type="button"
             onClick={() => navigate(-1)}
-            className="p-2 rounded-xl hover:bg-surface-container text-outline hover:text-primary transition-colors"
+            className="w-8 h-8 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:border-[var(--border-strong)] flex items-center justify-center transition-colors shadow-2xs"
+            title={isJa ? "戻る" : "Go back"}
           >
-            <span className="material-symbols-outlined">arrow_back</span>
+            <span className="material-symbols-outlined" style={{ fontSize: 18 }}>arrow_back</span>
           </button>
         )}
         bodyClassName="items-start"
         title={(
-          <>
-            <span className="material-symbols-outlined text-tertiary">sensors</span>
-            {factoryName} - Sensor Data
-          </>
+          <div className="flex items-center gap-2.5">
+            <span className="material-symbols-outlined text-[var(--freya-blue)]">sensors</span>
+            <span>{factoryName} - {isJa ? "センサーデータ" : "Sensor Data"}</span>
+          </div>
         )}
-        titleClassName="flex items-center gap-3"
-        subtitle={`${rangeMode === 'date' ? `${range.start} → ${range.end}` : `Years: ${selectedYears.join(', ')}`} · ${overview.totalReadings.toLocaleString()} readings`}
+        subtitle={`${rangeMode === 'date' ? `${range.start} → ${range.end}` : `${isJa ? "対象年" : "Years"}: ${selectedYears.join(', ')}`} · ${overview.totalReadings.toLocaleString()} ${isJa ? "件" : "readings"}`}
         className="mb-6 md:flex-row md:items-center md:justify-between"
         actions={(
           <button
+            type="button"
             onClick={handleExport}
             disabled={overview.totalReadings === 0 || exporting}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold bg-surface-container border border-outline-variant/20 text-on-surface-variant hover:bg-surface-container-high hover:text-primary transition-all disabled:opacity-40"
+            className="rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-hover)] transition-colors shadow-2xs flex items-center gap-1.5 disabled:opacity-40"
           >
             <span className="material-symbols-outlined" style={{ fontSize: 16 }}>download</span>
-            {exporting ? "Exporting..." : "Export CSV"}
+            {exporting ? (isJa ? "エクスポート中..." : "Exporting...") : (isJa ? "CSVエクスポート" : "Export CSV")}
           </button>
         )}
       />
 
       {/* ── Filter bar ── */}
-      <div className="glass-card rounded-2xl p-5 flex flex-wrap items-center gap-4 mb-6">
-        <div className="flex items-center p-1 bg-surface-container-lowest rounded-xl border border-outline-variant/20">
+      <div className="freya-card rounded-[8px] border border-[var(--border)] bg-[var(--surface)] p-4 shadow-sm flex flex-wrap items-center gap-4">
+        <div className="flex items-center p-0.5 bg-[var(--surface-subtle)] rounded-[6px] border border-[var(--border)]">
           <button
+            type="button"
             onClick={() => setRangeMode("date")}
-            className={`px-4 py-1.5 text-xs font-semibold rounded-lg transition-all ${rangeMode === "date" ? "bg-primary text-on-primary shadow-sm" : "text-on-surface-variant hover:text-on-surface"}`}
+            className={`px-3 py-1 text-xs font-semibold rounded-[4px] transition-all ${rangeMode === "date" ? "bg-[var(--freya-blue)] text-white shadow-xs" : "text-[var(--text-muted)] hover:text-[var(--text-primary)]"}`}
           >
-            Date Range
+            {isJa ? "日付範囲" : "Date Range"}
           </button>
           <button
+            type="button"
             onClick={() => setIsYearModalOpen(true)}
-            className={`px-4 py-1.5 text-xs font-semibold rounded-lg transition-all ${rangeMode === "years" ? "bg-primary text-on-primary shadow-sm" : "text-on-surface-variant hover:text-on-surface"}`}
+            className={`px-3 py-1 text-xs font-semibold rounded-[4px] transition-all ${rangeMode === "years" ? "bg-[var(--freya-blue)] text-white shadow-xs" : "text-[var(--text-muted)] hover:text-[var(--text-primary)]"}`}
           >
-            All Reading
+            {isJa ? "全期間・年別" : "All Reading"}
           </button>
         </div>
 
         {rangeMode === "date" ? (
           <>
             <div className="flex items-center gap-2">
-              <span className="text-[10px] text-outline font-semibold uppercase tracking-wider">From</span>
+              <span className="text-[11px] text-[var(--text-muted)] font-semibold uppercase tracking-[0.04em]">
+                {isJa ? "開始" : "From"}
+              </span>
               <input
                 type="date"
                 value={range.start}
                 max={range.end}
                 onChange={(e) => setRange((r) => ({ ...r, start: e.target.value }))}
-                className="bg-surface-container-lowest border border-outline-variant/20 rounded-lg px-3 py-1.5 text-xs text-on-surface focus:ring-2 focus:ring-primary/20 focus:border-primary/30 outline-none transition-all duration-150"
+                className="rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1 text-xs text-[var(--text-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--freya-blue)]"
               />
             </div>
             <div className="flex items-center gap-2">
-              <span className="text-[10px] text-outline font-semibold uppercase tracking-wider">To</span>
+              <span className="text-[11px] text-[var(--text-muted)] font-semibold uppercase tracking-[0.04em]">
+                {isJa ? "終了" : "To"}
+              </span>
               <input
                 type="date"
                 value={range.end}
                 min={range.start}
                 max={toISO(new Date())}
                 onChange={(e) => setRange((r) => ({ ...r, end: e.target.value }))}
-                className="bg-surface-container-lowest border border-outline-variant/20 rounded-lg px-3 py-1.5 text-xs text-on-surface focus:ring-2 focus:ring-primary/20 focus:border-primary/30 outline-none transition-all duration-150"
+                className="rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1 text-xs text-[var(--text-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--freya-blue)]"
               />
             </div>
           </>
         ) : (
-          <div className="flex items-center gap-3 bg-surface-container/30 px-4 py-1.5 rounded-lg border border-outline-variant/20">
-            <span className="text-[10px] text-outline font-semibold uppercase tracking-wider">Selected Years</span>
-            <span className="text-xs font-bold text-primary">{selectedYears.join(", ")}</span>
-            <button onClick={() => setIsYearModalOpen(true)} className="text-[10px] text-on-surface-variant hover:text-primary transition-colors flex items-center gap-1 ml-2 border-l border-outline-variant/20 pl-3">
-              <span className="material-symbols-outlined" style={{ fontSize: 14 }}>edit</span> Edit
+          <div className="flex items-center gap-2.5 bg-[var(--surface-subtle)] px-3 py-1 rounded-[6px] border border-[var(--border)]">
+            <span className="text-[11px] text-[var(--text-muted)] font-semibold uppercase tracking-[0.04em]">
+              {isJa ? "選択中の年" : "Selected Years"}
+            </span>
+            <span className="text-xs font-bold text-[var(--freya-blue)]">{selectedYears.join(", ")}</span>
+            <button type="button" onClick={() => setIsYearModalOpen(true)} className="text-[11px] text-[var(--freya-blue)] hover:underline flex items-center gap-1 ml-2 border-l border-[var(--border)] pl-2 font-medium">
+              <span className="material-symbols-outlined" style={{ fontSize: 13 }}>edit</span> {isJa ? "編集" : "Edit"}
             </button>
           </div>
         )}
 
         <div className="flex items-center gap-2">
-          <span className="text-[10px] text-outline font-semibold uppercase tracking-wider">Device</span>
+          <span className="text-[11px] text-[var(--text-muted)] font-semibold uppercase tracking-[0.04em]">
+            {isJa ? "デバイス" : "Device"}
+          </span>
           <select
             value={deviceFilter}
             onChange={(e) => setDeviceFilter(normalizeDeviceId(e.target.value) || "all")}
-            className="bg-surface-container-lowest border border-outline-variant/20 rounded-lg px-3 py-1.5 text-xs text-on-surface focus:ring-2 focus:ring-primary/20 outline-none transition-all duration-150"
+            className="rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1 text-xs text-[var(--text-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--freya-blue)]"
           >
-            <option value="all">All Devices</option>
+            <option value="all">{isJa ? "すべてのデバイス" : "All Devices"}</option>
             {devices.map((d) => <option key={d} value={d}>{d}</option>)}
           </select>
         </div>
         <div className="flex items-center gap-2">
-          <span className="text-[10px] text-outline font-semibold uppercase tracking-wider">Sort</span>
+          <span className="text-[11px] text-[var(--text-muted)] font-semibold uppercase tracking-[0.04em]">
+            {isJa ? "並び替え" : "Sort"}
+          </span>
           <select
             value={sortKey}
             onChange={(e) => setSortKey(e.target.value)}
-            className="bg-surface-container-lowest border border-outline-variant/20 rounded-lg px-3 py-1.5 text-xs text-on-surface focus:ring-2 focus:ring-primary/20 outline-none transition-all duration-150"
+            className="rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1 text-xs text-[var(--text-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--freya-blue)]"
           >
-            <option value="date_desc">Latest First</option>
-            <option value="date_asc">Oldest First</option>
-            <option value="temp_desc">Temp High → Low</option>
-            <option value="temp_asc">Temp Low → High</option>
+            <option value="date_desc">{isJa ? "最新順" : "Latest First"}</option>
+            <option value="date_asc">{isJa ? "古い順" : "Oldest First"}</option>
+            <option value="temp_desc">{isJa ? "温度 高→低" : "Temp High → Low"}</option>
+            <option value="temp_asc">{isJa ? "温度 低→高" : "Temp Low → High"}</option>
           </select>
         </div>
         {hasActiveFilters ? (
           <button
             type="button"
             onClick={handleResetFilters}
-            className="inline-flex items-center gap-2 rounded-lg border border-error/20 bg-error/10 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-error transition hover:bg-error/15"
+            className="inline-flex items-center gap-1.5 rounded-[6px] border border-[var(--status-danger)]/30 bg-[var(--status-danger)]/10 px-2.5 py-1 text-xs font-semibold text-[var(--status-danger)] hover:bg-[var(--status-danger)]/20 transition-colors shadow-2xs"
           >
             <span className="material-symbols-outlined" style={{ fontSize: 14 }}>restart_alt</span>
-            Reset Filters
+            {isJa ? "フィルターをリセット" : "Reset Filters"}
           </button>
         ) : null}
-        <div className="ml-auto flex gap-2">
+        <div className="ml-auto flex gap-1.5">
           {["7d", "14d", "30d"].map((preset) => {
             const days = parseInt(preset);
             const s = new Date(); s.setDate(s.getDate() - (days - 1));
             return (
               <button
                 key={preset}
+                type="button"
                 onClick={() => {
                   setRange({ start: toISO(s), end: toISO(new Date()) });
                   setRangeMode("date");
                 }}
-                className="px-3 py-1.5 text-[10px] font-semibold rounded-lg bg-surface-container hover:bg-primary/10 hover:text-primary text-outline transition-colors"
+                className="px-2.5 py-1 text-xs font-semibold rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)] text-[var(--text-muted)] transition-colors shadow-2xs"
               >
                 {preset}
               </button>
@@ -1000,26 +1036,30 @@ export default function SensorDetailPage() {
         </div>
       </div>
       {loading && overview === EMPTY_SENSOR_OVERVIEW ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="glass-card rounded-2xl h-44 animate-pulse" />
+            <div key={i} className="freya-card rounded-[8px] border border-[var(--border)] bg-[var(--surface)] h-40 animate-pulse" />
           ))}
         </div>
       ) : (
         <>
           {/* ── KPI strip ── */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {[
               {
-                label: `Avg Temperature${deviceFilter !== "all" && iotNamesMap.get(normalizeDeviceId(deviceFilter))?.offset ? ` (Offset: ${iotNamesMap.get(normalizeDeviceId(deviceFilter)).offset > 0 ? "+" : ""}${iotNamesMap.get(normalizeDeviceId(deviceFilter)).offset}°C)` : ""}`,
+                label: isJa
+                  ? `平均温度${deviceFilter !== "all" && iotNamesMap.get(normalizeDeviceId(deviceFilter))?.offset ? ` (補正: ${iotNamesMap.get(normalizeDeviceId(deviceFilter)).offset > 0 ? "+" : ""}${iotNamesMap.get(normalizeDeviceId(deviceFilter)).offset}°C)` : ""}`
+                  : `Avg Temperature${deviceFilter !== "all" && iotNamesMap.get(normalizeDeviceId(deviceFilter))?.offset ? ` (Offset: ${iotNamesMap.get(normalizeDeviceId(deviceFilter)).offset > 0 ? "+" : ""}${iotNamesMap.get(normalizeDeviceId(deviceFilter)).offset}°C)` : ""}`,
                 value: sensorKPIs.avgTemp !== null ? `${sensorKPIs.avgTemp}°C` : "—",
-                sub: sensorKPIs.minTemp !== null ? `Min ${sensorKPIs.minTemp}°C` : null,
+                sub: sensorKPIs.minTemp !== null ? (isJa ? `最低 ${sensorKPIs.minTemp}°C` : `Min ${sensorKPIs.minTemp}°C`) : null,
                 icon: "thermostat",
                 color: getTempStatus(sensorKPIs.avgTemp).color,
                 bg: getTempStatus(sensorKPIs.avgTemp).bg,
               },
               {
-                label: `Peak Temperature${deviceFilter !== "all" && iotNamesMap.get(normalizeDeviceId(deviceFilter))?.offset ? ` (Offset: ${iotNamesMap.get(normalizeDeviceId(deviceFilter)).offset > 0 ? "+" : ""}${iotNamesMap.get(normalizeDeviceId(deviceFilter)).offset}°C)` : ""}`,
+                label: isJa
+                  ? `最高温度${deviceFilter !== "all" && iotNamesMap.get(normalizeDeviceId(deviceFilter))?.offset ? ` (補正: ${iotNamesMap.get(normalizeDeviceId(deviceFilter)).offset > 0 ? "+" : ""}${iotNamesMap.get(normalizeDeviceId(deviceFilter)).offset}°C)` : ""}`
+                  : `Peak Temperature${deviceFilter !== "all" && iotNamesMap.get(normalizeDeviceId(deviceFilter))?.offset ? ` (Offset: ${iotNamesMap.get(normalizeDeviceId(deviceFilter)).offset > 0 ? "+" : ""}${iotNamesMap.get(normalizeDeviceId(deviceFilter)).offset}°C)` : ""}`,
                 value: sensorKPIs.peakTemp !== null ? `${sensorKPIs.peakTemp}°C` : "—",
                 sub: null,
                 icon: "device_thermostat",
@@ -1027,7 +1067,7 @@ export default function SensorDetailPage() {
                 bg: getTempStatus(sensorKPIs.peakTemp).bg,
               },
               {
-                label: "Avg Humidity",
+                label: isJa ? "平均湿度" : "Avg Humidity",
                 value: sensorKPIs.avgHumid !== null ? `${sensorKPIs.avgHumid}%` : "—",
                 sub: null,
                 icon: "water_drop",
@@ -1035,41 +1075,47 @@ export default function SensorDetailPage() {
                 bg: getHumidityStatus(sensorKPIs.avgHumid).bg,
               },
               {
-                label: "Heat Stress Alerts",
+                label: isJa ? "暑さ指数アラート" : "Heat Stress Alerts",
                 value: sensorKPIs.heatAlerts,
-                sub: sensorKPIs.heatAlerts > 0 ? "WBGT > 28°C" : "All clear",
+                sub: sensorKPIs.heatAlerts > 0 ? (isJa ? "WBGT > 28°C (厳重警戒)" : "WBGT > 28°C") : (isJa ? "正常" : "All clear"),
                 icon: "warning",
-                color: sensorKPIs.heatAlerts > 0 ? "text-error" : "text-outline",
-                bg: sensorKPIs.heatAlerts > 0 ? "bg-error/10" : "bg-surface-container",
+                color: sensorKPIs.heatAlerts > 0 ? "text-[var(--status-danger)]" : "text-[var(--text-muted)]",
+                bg: sensorKPIs.heatAlerts > 0 ? "bg-[var(--status-danger)]/10 border-[var(--status-danger)]/20" : "bg-[var(--surface)]",
               },
             ].map(({ label, value, sub, icon, color, bg }) => (
-              <div key={label} className={`rounded-2xl p-5 border border-outline-variant/10 ${bg}`}>
-                <div className="flex items-center gap-2 mb-2">
-                  <span className={`material-symbols-outlined ${color}`} style={{ fontSize: 16 }}>{icon}</span>
-                  <p className="text-[10px] text-outline font-semibold uppercase tracking-wider">{label}</p>
+              <div key={label} className={`freya-card rounded-[8px] p-4 border border-[var(--border)] bg-[var(--surface)] shadow-sm flex flex-col justify-between ${bg}`}>
+                <div>
+                  <div className="flex items-center gap-1.5 mb-1">
+                    <span className={`material-symbols-outlined ${color}`} style={{ fontSize: 16 }}>{icon}</span>
+                    <p className="text-[11px] text-[var(--text-muted)] font-semibold uppercase tracking-[0.04em]">{label}</p>
+                  </div>
+                  <p className={`text-2xl font-mono font-bold ${color}`}>{value}</p>
                 </div>
-                <p className={`text-2xl font-semibold ${color}`}>{value}</p>
-                {sub && <p className="text-[10px] text-outline mt-1">{sub}</p>}
+                {sub && <p className="text-[11px] text-[var(--text-muted)] mt-1.5 font-medium">{sub}</p>}
               </div>
             ))}
           </div>
 
           {/* ── Trend charts ── */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-6">
-            <div className="glass-card rounded-2xl p-5">
-              <div className="flex items-center gap-2 mb-4">
-                <span className="material-symbols-outlined text-tertiary" style={{ fontSize: 16 }}>thermostat</span>
-                <p className="text-[10px] text-outline font-semibold uppercase tracking-[0.15em]">
-                  Temperature Trend ({rangeMode === 'date' && range.start === range.end ? "hourly" : "daily"} avg)
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <div className="freya-card rounded-[8px] border border-[var(--border)] bg-[var(--surface)] p-4 shadow-sm">
+              <div className="flex items-center gap-2 mb-3">
+                <span className="material-symbols-outlined text-[var(--freya-blue)]" style={{ fontSize: 16 }}>thermostat</span>
+                <p className="text-xs font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">
+                  {isJa
+                    ? `温度推移 (${rangeMode === 'date' && range.start === range.end ? "時間別" : "日別"}平均)`
+                    : `Temperature Trend (${rangeMode === 'date' && range.start === range.end ? "hourly" : "daily"} avg)`}
                 </p>
               </div>
               <SensorTrendChart readings={overview.trends} type="temp" height={180} deviceNamesMap={iotNamesMap} />
             </div>
-            <div className="glass-card rounded-2xl p-5">
-              <div className="flex items-center gap-2 mb-4">
+            <div className="freya-card rounded-[8px] border border-[var(--border)] bg-[var(--surface)] p-4 shadow-sm">
+              <div className="flex items-center gap-2 mb-3">
                 <span className="material-symbols-outlined text-cyan-400" style={{ fontSize: 16 }}>water_drop</span>
-                <p className="text-[10px] text-outline font-semibold uppercase tracking-[0.15em]">
-                  Humidity Trend ({rangeMode === 'date' && range.start === range.end ? "hourly" : "daily"} avg)
+                <p className="text-xs font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">
+                  {isJa
+                    ? `湿度推移 (${rangeMode === 'date' && range.start === range.end ? "時間別" : "日別"}平均)`
+                    : `Humidity Trend (${rangeMode === 'date' && range.start === range.end ? "hourly" : "daily"} avg)`}
                 </p>
               </div>
               <SensorTrendChart readings={overview.trends} type="humid" height={180} deviceNamesMap={iotNamesMap} />
@@ -1078,11 +1124,13 @@ export default function SensorDetailPage() {
 
           {/* ── Device summary cards ── */}
           {!cardLoading && deviceCards.length > 0 && (
-            <div className="mb-6">
-              <p className="text-[10px] text-outline font-semibold uppercase tracking-[0.18em] mb-4">
-                {deviceCards.length} Device{deviceCards.length !== 1 ? "s" : ""} — Latest Readings
+            <div className="space-y-3">
+              <p className="text-[11px] text-[var(--text-muted)] font-semibold uppercase tracking-[0.04em]">
+                {isJa
+                  ? `${deviceCards.length} 台のデバイス — 最新計測値`
+                  : `${deviceCards.length} Device${deviceCards.length !== 1 ? "s" : ""} — Latest Readings`}
               </p>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                 {deviceCards.map((device) => (
                   <SensorCard
                     key={device.deviceId}
@@ -1099,16 +1147,16 @@ export default function SensorDetailPage() {
           )}
 
           {/* ── Records table ── */}
-          <div className="glass-card rounded-2xl p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-base font-semibold text-on-surface flex items-center gap-2">
-                All Readings
-                <span className="text-primary bg-primary/10 px-2 py-0.5 rounded text-sm font-medium">
+          <div className="freya-card rounded-[8px] border border-[var(--border)] bg-[var(--surface)] p-4 shadow-sm">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-semibold text-[var(--text-primary)] flex items-center gap-2">
+                {isJa ? "すべての計測データ" : "All Readings"}
+                <span className="rounded-[4px] border border-[var(--freya-blue)]/30 bg-[var(--freya-blue)]/10 px-2 py-0.5 text-xs font-mono font-medium text-[var(--freya-blue)]">
                   {selectedDeviceName}
                 </span>
               </h3>
-              <span className="text-[10px] text-outline font-semibold uppercase tracking-wider">
-                {(pagination.totalItems || tableRows.length).toLocaleString()} rows
+              <span className="text-[11px] text-[var(--text-muted)] font-mono font-medium">
+                {(pagination.totalItems || tableRows.length).toLocaleString()} {isJa ? "件" : "rows"}
               </span>
             </div>
             <DataTable
@@ -1128,24 +1176,24 @@ export default function SensorDetailPage() {
                 setPage(1);
               }}
               pageSizeOptions={SENSOR_READINGS_PAGE_SIZE_OPTIONS}
-              pageSizeLabel="Rows"
+              pageSizeLabel={isJa ? "件数" : "Rows"}
               rowKey={(row) => `${row.Date || ""}-${row.Time || ""}-${row.device || "sensor"}`}
               renderPageInfo={({ filteredCount, page: currentPage, pageSize: currentPageSize }) => (
-                <span>{buildSensorReadingsPageInfo({ filteredCount, page: currentPage, pageSize: currentPageSize })}</span>
+                <span>{buildSensorReadingsPageInfo({ filteredCount, page: currentPage, pageSize: currentPageSize }, isJa)}</span>
               )}
-              emptyTitle="No sensor readings found"
-              emptyMessage="Adjust the date range or device filter to load sensor readings."
+              emptyTitle={isJa ? "計測データが見つかりません" : "No sensor readings found"}
+              emptyMessage={isJa ? "日付範囲やデバイスのフィルターを調整してデータを読み込んでください。" : "Adjust the date range or device filter to load sensor readings."}
               layoutStorageKey="sensor-readings-table-layout"
               enableColumnResize
               enableColumnReorder
               stickyHeader
               stickyHeaderOffset={0}
-              className="overflow-hidden rounded-2xl"
-              topBarClassName="mb-4 flex flex-wrap items-center justify-end gap-3 px-1"
+              className="overflow-hidden rounded-[8px] border border-[var(--border)]"
+              topBarClassName="mb-3 flex flex-wrap items-center justify-end gap-3 px-1"
               topInfoClassName="hidden"
-              bottomBarClassName="flex flex-col gap-4 border-t border-outline-variant/15 px-1 pt-4 md:flex-row md:items-center md:justify-between"
-              rowClassName="border-b border-outline-variant/10 transition hover:bg-surface-container"
-              rowsSelectClassName="h-10 rounded-2xl border border-outline-variant/30 bg-white px-3 text-sm text-on-surface outline-none transition focus:border-primary/40 dark:bg-surface-container"
+              bottomBarClassName="flex flex-col gap-3 border-t border-[var(--border)] px-2 pt-3 md:flex-row md:items-center md:justify-between text-xs text-[var(--text-muted)]"
+              rowClassName="border-b border-[var(--border)] transition hover:bg-[var(--surface-hover)]"
+              rowsSelectClassName="h-8 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-2 text-xs text-[var(--text-primary)] outline-none focus:border-[var(--freya-blue)]"
             />
           </div>
         </>

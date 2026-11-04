@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useLanguage } from "../contexts/LanguageContext";
 import ModalShell from "./ModalShell";
 import MaterialDetailModal from "./MaterialDetailModal";
 import { query } from "../services/api";
@@ -11,6 +12,8 @@ export default function MaterialPDFBulkMatchModal({
   onClose,
   onConfirm,
 }) {
+  const { language } = useLanguage();
+  const isJa = language === "ja";
   const [manualAssignments, setManualAssignments] = useState({});
   const [expandedZuban, setExpandedZuban] = useState(null);
   const [excludedMaterialIds, setExcludedMaterialIds] = useState({});
@@ -94,9 +97,9 @@ export default function MaterialPDFBulkMatchModal({
     const currentExclusions = excludedMaterialIds[drawingNumber] || new Set();
 
     return (
-      <div className="mt-2 space-y-1 rounded-xl bg-surface-container-low p-3">
-        <div className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-outline">
-          Link to specific materials
+      <div className="mt-2 space-y-1 rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] p-2.5">
+        <div className="mb-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--text-muted)]">
+          {isJa ? "特定の材料に関連付け" : "Link to specific materials"}
         </div>
         {materialsGroup.map((material, idx) => {
           const materialId = material?._id?.$oid || material?._id || String(idx);
@@ -105,31 +108,31 @@ export default function MaterialPDFBulkMatchModal({
           return (
             <label
               key={materialId}
-              className={`flex cursor-pointer items-center gap-3 rounded-lg px-3 py-2 transition hover:bg-surface-container ${isExcluded ? 'opacity-60' : ''}`}
+              className={`flex cursor-pointer items-center gap-2.5 rounded-[4px] px-2.5 py-1.5 transition hover:bg-[var(--surface-hover)] ${isExcluded ? 'opacity-50' : ''}`}
             >
               <input
                 type="checkbox"
                 checked={!isExcluded}
                 onChange={() => toggleExclusion(drawingNumber, materialId)}
-                className="h-4 w-4 shrink-0 accent-primary"
+                className="h-3.5 w-3.5 shrink-0 rounded-[3px] border-[var(--border)] text-[var(--freya-blue)] focus:ring-0"
               />
               <div className="flex min-w-0 flex-1 flex-col">
                 <div className="flex items-center gap-2">
                   <button
                     type="button"
                     onClick={(e) => handleShowDetails(e, material)}
-                    className="truncate text-sm font-bold text-primary hover:underline"
+                    className="truncate text-xs font-bold text-[var(--freya-blue)] hover:underline"
                     disabled={loadingDetailId === materialId}
                   >
-                    {material?.品番 || "No 品番"}
+                    {material?.品番 || (isJa ? "品番未設定" : "No 品番")}
                   </button>
                   {loadingDetailId === materialId && (
-                    <span className="material-symbols-outlined animate-spin text-[14px] text-primary">
+                    <span className="material-symbols-outlined animate-spin text-[12px] text-[var(--freya-blue)]">
                       sync
                     </span>
                   )}
                 </div>
-                <span className="truncate text-xs text-on-surface-variant">
+                <span className="truncate text-[11px] text-[var(--text-secondary)]">
                   工程: {material?.工程コード || "—"} | 品名: {material?.品目マスタ?.品名 || "—"}
                 </span>
               </div>
@@ -144,49 +147,55 @@ export default function MaterialPDFBulkMatchModal({
     <ModalShell
       open={open}
       onClose={onClose}
-      eyebrow="Bulk Match Review"
-      title="Review filename matches"
-      subtitle={`${totalFiles} files selected. ${matched.length} matched automatically, ${toAssign.length} need manual assignment.`}
+      eyebrow={isJa ? "一括照合確認" : "Bulk Match Review"}
+      title={isJa ? "ファイル名の一致を確認" : "Review filename matches"}
+      subtitle={
+        isJa
+          ? `${totalFiles} 件のファイルが選択されました。${matched.length} 件が自動照合され、${toAssign.length} 件の手動割り当てが必要です。`
+          : `${totalFiles} files selected. ${matched.length} matched automatically, ${toAssign.length} need manual assignment.`
+      }
       maxWidth="max-w-4xl"
       overlayOpacity="50"
       footer={
-        <div className="flex items-center justify-end gap-3">
+        <div className="flex items-center justify-end gap-2">
           <button
             type="button"
             onClick={onClose}
-            className="rounded-2xl border border-separator/40 px-4 py-2 text-xs font-semibold text-on-surface transition hover:bg-surface-container"
+            className="rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3.5 py-1.5 text-xs font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-hover)] transition-colors shadow-2xs"
           >
-            Cancel
+            {isJa ? "キャンセル" : "Cancel"}
           </button>
           <button
             type="button"
             onClick={handleConfirm}
-            className="rounded-xl bg-primary px-4 py-2 text-xs font-semibold text-on-primary hover:opacity-90 active:scale-95 transition-all duration-150"
+            className="rounded-[6px] bg-[var(--freya-blue)] px-4 py-1.5 text-xs font-semibold text-white hover:bg-[var(--freya-blue-hover)] transition-colors shadow-xs"
           >
-            Confirm Upload
+            {isJa ? "アップロードを確定" : "Confirm Upload"}
           </button>
         </div>
       }
     >
-      <div className="max-h-[60vh] space-y-4 overflow-y-auto px-6 py-5 scrollbar-hide">
-        <section className="rounded-2xl border border-outline-variant/15 bg-surface-container-low px-4 py-4">
-          <div className="text-xs font-semibold uppercase tracking-[0.18em] text-outline">Matched Files</div>
-          <div className="mt-3 space-y-2">
+      <div className="max-h-[60vh] space-y-3.5 overflow-y-auto px-6 py-4 scrollbar-hide">
+        <section className="rounded-[8px] border border-[var(--border)] bg-[var(--surface-subtle)] p-3.5">
+          <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--text-muted)]">
+            {isJa ? "一致したファイル" : "Matched Files"}
+          </div>
+          <div className="mt-2.5 space-y-1.5">
             {matched.length ? matched.map((item) => (
-              <div key={`${item.file.name}-${item.drawingNumber}`} className="rounded-2xl bg-surface px-4 py-3 text-sm">
+              <div key={`${item.file.name}-${item.drawingNumber}`} className="rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-xs">
                 <div 
                   className="flex cursor-pointer items-center justify-between gap-3 transition hover:opacity-80"
                   onClick={() => setExpandedZuban(expandedZuban === item.drawingNumber ? null : item.drawingNumber)}
                 >
-                  <span className="truncate text-on-surface">{item.file.name}</span>
+                  <span className="truncate text-[var(--text-primary)]">{item.file.name}</span>
                   <div className="flex items-center gap-2">
                     {materialMap.get(item.drawingNumber)?.length > 0 && (
-                      <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary/10 text-[10px] font-bold text-primary">
+                      <span className="flex h-4.5 w-4.5 items-center justify-center rounded-full bg-[var(--freya-blue)]/10 text-[10px] font-bold text-[var(--freya-blue)]">
                         {materialMap.get(item.drawingNumber).length}
                       </span>
                     )}
-                    <span className="shrink-0 font-semibold text-primary">{item.drawingNumber}</span>
-                    <span className={`material-symbols-outlined text-[16px] text-outline transition-transform ${expandedZuban === item.drawingNumber ? 'rotate-180' : ''}`}>
+                    <span className="shrink-0 font-bold text-[var(--freya-blue)]">{item.drawingNumber}</span>
+                    <span className={`material-symbols-outlined text-[16px] text-[var(--text-muted)] transition-transform ${expandedZuban === item.drawingNumber ? 'rotate-180' : ''}`}>
                       expand_more
                     </span>
                   </div>
@@ -194,21 +203,27 @@ export default function MaterialPDFBulkMatchModal({
                 {expandedZuban === item.drawingNumber && renderMaterialsList(item.drawingNumber)}
               </div>
             )) : (
-              <div className="rounded-2xl bg-surface px-4 py-3 text-sm text-on-surface-variant">No automatic matches were found.</div>
+              <div className="rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-xs text-[var(--text-muted)]">
+                {isJa ? "自動一致したファイルはありません。" : "No automatic matches were found."}
+              </div>
             )}
           </div>
         </section>
 
-        <section className="rounded-2xl border border-outline-variant/15 bg-surface-container-low px-4 py-4">
-          <div className="text-xs font-semibold uppercase tracking-[0.18em] text-outline">Manual Assignment</div>
-          <div className="mt-3 space-y-3">
+        <section className="rounded-[8px] border border-[var(--border)] bg-[var(--surface-subtle)] p-3.5">
+          <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--text-muted)]">
+            {isJa ? "手動割り当て" : "Manual Assignment"}
+          </div>
+          <div className="mt-2.5 space-y-2.5">
             {toAssign.length ? toAssign.map((item, index) => {
               const selectedDrawingNumber = manualAssignments[index];
               return (
-                <div key={`${item.file.name}-${index}`} className="rounded-2xl bg-surface px-4 py-3">
-                  <div className="text-sm font-semibold text-on-surface">{item.file.name}</div>
-                  <div className="mt-1 text-xs text-on-surface-variant">
-                    {item.candidates?.length ? `Candidates: ${item.candidates.join(", ")}` : "No filename match found"}
+                <div key={`${item.file.name}-${index}`} className="rounded-[6px] border border-[var(--border)] bg-[var(--surface)] p-3">
+                  <div className="text-xs font-bold text-[var(--text-primary)]">{item.file.name}</div>
+                  <div className="mt-0.5 text-[11px] text-[var(--text-secondary)]">
+                    {item.candidates?.length
+                      ? `${isJa ? "候補: " : "Candidates: "}${item.candidates.join(", ")}`
+                      : (isJa ? "一致するファイル名が見つかりません" : "No filename match found")}
                   </div>
 
                   <select
@@ -217,23 +232,23 @@ export default function MaterialPDFBulkMatchModal({
                       ...current,
                       [index]: event.target.value,
                     }))}
-                    className="mt-3 h-11 w-full rounded-2xl border border-separator/40 bg-white px-4 text-sm text-on-surface outline-none transition focus:border-primary/40"
+                    className="mt-2 h-8.5 w-full rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 text-xs text-[var(--text-primary)] outline-none transition focus:border-[var(--freya-blue)]"
                   >
-                    <option value="">Skip this file</option>
+                    <option value="">{isJa ? "このファイルをスキップ" : "Skip this file"}</option>
                     {selectedSerialNumbers.map((drawingNumber) => (
                       <option key={`${item.file.name}-${drawingNumber}`} value={drawingNumber}>{drawingNumber}</option>
                     ))}
                   </select>
 
                   {selectedDrawingNumber && (
-                    <div className="mt-3">
+                    <div className="mt-2.5">
                       <button 
                         onClick={() => setExpandedZuban(expandedZuban === selectedDrawingNumber ? null : selectedDrawingNumber)}
-                        className="flex items-center gap-1 text-xs font-semibold text-primary transition hover:opacity-80"
+                        className="flex items-center gap-1 text-xs font-semibold text-[var(--freya-blue)] transition hover:opacity-80"
                       >
-                        {expandedZuban === selectedDrawingNumber ? "Hide Materials" : "Select Specific Materials"}
+                        {expandedZuban === selectedDrawingNumber ? (isJa ? "材料を非表示" : "Hide Materials") : (isJa ? "特定の材料を選択" : "Select Specific Materials")}
                         {materialMap.get(selectedDrawingNumber)?.length > 0 && (
-                          <span className="flex h-4 w-4 items-center justify-center rounded-full bg-primary/10 text-[9px] font-bold text-primary">
+                          <span className="flex h-4 w-4 items-center justify-center rounded-full bg-[var(--freya-blue)]/10 text-[9px] font-bold text-[var(--freya-blue)]">
                             {materialMap.get(selectedDrawingNumber).length}
                           </span>
                         )}
@@ -247,15 +262,21 @@ export default function MaterialPDFBulkMatchModal({
                 </div>
               );
             }) : (
-              <div className="rounded-2xl bg-surface px-4 py-3 text-sm text-on-surface-variant">Every file was matched automatically.</div>
+              <div className="rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-xs text-[var(--text-muted)]">
+                {isJa ? "すべてのファイルが自動照合されました。" : "Every file was matched automatically."}
+              </div>
             )}
           </div>
         </section>
 
-        <section className="rounded-2xl border border-outline-variant/15 bg-surface-container-low px-4 py-4">
-          <div className="text-xs font-semibold uppercase tracking-[0.18em] text-outline">Selected 図番 Without a File</div>
-          <div className="mt-3 text-sm text-on-surface-variant">
-            {unassignedSerials.length ? unassignedSerials.join(", ") : "All selected materials have at least one file match."}
+        <section className="rounded-[8px] border border-[var(--border)] bg-[var(--surface-subtle)] p-3.5">
+          <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--text-muted)]">
+            {isJa ? "ファイルが未割り当ての図番" : "Selected 図番 Without a File"}
+          </div>
+          <div className="mt-2 text-xs text-[var(--text-secondary)]">
+            {unassignedSerials.length
+              ? unassignedSerials.join(", ")
+              : (isJa ? "選択されたすべての材料にファイルが照合されています。" : "All selected materials have at least one file match.")}
           </div>
         </section>
       </div>

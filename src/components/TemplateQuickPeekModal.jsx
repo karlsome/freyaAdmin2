@@ -187,19 +187,21 @@ export default function TemplateQuickPeekModal({
                     {template?.schedule && (
                       <span className="rounded-lg bg-surface-container px-2.5 py-1 flex items-center gap-1 capitalize text-on-surface">
                         <span className="material-symbols-outlined" style={{ fontSize: 14 }}>event_repeat</span>
-                        {template.schedule}
+                        {template.schedule === "daily" ? (language === "ja" ? "日次" : "daily") : template.schedule === "weekly" ? (language === "ja" ? "週次" : "weekly") : template.schedule === "monthly" ? (language === "ja" ? "月次" : "monthly") : template.schedule}
                       </span>
                     )}
                     {Array.isArray(template?.fields) && (
                       <span className="rounded-lg bg-primary/10 px-2.5 py-1 text-primary font-semibold">
-                        {template.fields.length} Check Items
+                        {template.fields.length} {language === "ja" ? "項目" : "Check Items"}
                       </span>
                     )}
                   </div>
                 </div>
 
                 <div className="space-y-2.5">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Checklist Items ({template?.fields?.length || 0})</p>
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">
+                    {language === "ja" ? "チェック項目一覧" : "Checklist Items"} ({template?.fields?.length || 0})
+                  </p>
                   {Array.isArray(template?.fields) && template.fields.map((f, idx) => {
                     const isCurrentItem = activeFieldId && (
                       String(f.id ?? "").toLowerCase() === String(activeFieldId).toLowerCase() ||
@@ -263,7 +265,7 @@ export default function TemplateQuickPeekModal({
                                 </span>
                               </div>
 
-                              <p className="mt-1 text-sm font-semibold text-on-surface leading-snug">{label || "Untitled check item"}</p>
+                              <p className="mt-1 text-sm font-semibold text-on-surface leading-snug">{label || (language === "ja" ? "無題のチェック項目" : "Untitled check item")}</p>
                               {desc && <p className="mt-1 text-xs text-outline leading-relaxed whitespace-pre-line">{desc}</p>}
 
                               {/* Allowed Range for Numeric Check */}
@@ -311,8 +313,8 @@ export default function TemplateQuickPeekModal({
       <SensorDevicePhotoPreviewModal
         preview={previewImage ? {
           ...previewImage,
-          eyebrow: "Checklist Template Reference Photo",
-          displayName: templateName || "Template Reference Photo",
+          eyebrow: language === "ja" ? "チェックシート参考写真" : "Checklist Template Reference Photo",
+          displayName: templateName || (language === "ja" ? "テンプレート参考写真" : "Template Reference Photo"),
           subtitle: template?.工場 || undefined,
         } : null}
         onClose={() => setPreviewImage(null)}

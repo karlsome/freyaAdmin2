@@ -2,6 +2,7 @@ import { useRef, useState } from "react";
 import ModalShell from "./ModalShell";
 import SensorDevicePhotoPreviewModal from "./SensorDevicePhotoPreviewModal";
 import { formatMasterValue, getMasterRecordIdentity, getMasterTabUI } from "../utils/masterDB";
+import { useLanguage } from "../contexts/LanguageContext";
 
 function getVisibleFields(fieldDefinitions, record) {
   const seen = new Set();
@@ -32,6 +33,8 @@ export default function MasterDetailDrawer({
   onUploadImage,
   tabKey = "masterDB",
 }) {
+  const { language } = useLanguage();
+  const isJa = language === "ja";
   const inputRef = useRef(null);
   const [editing, setEditing] = useState(false);
   const [photoPreview, setPhotoPreview] = useState(null);
@@ -46,10 +49,11 @@ export default function MasterDetailDrawer({
   if (!open || !record) return null;
 
   const tabUI = getMasterTabUI(tabKey);
+  const recordLabel = isJa ? (tabUI.recordLabelJa || tabUI.recordLabel) : tabUI.recordLabel;
   const identity = getMasterRecordIdentity(record, tabKey);
   const title = tabKey === "masterDB"
     ? (() => {
-        const partNo = record["品番"] || record["品名"] || record["材料品番"] || tabUI.recordLabel;
+        const partNo = record["品番"] || record["品名"] || record["材料品番"] || recordLabel;
         const serialNo = record["背番号"];
         return serialNo ? `${partNo} - ${serialNo}` : partNo;
       })()
@@ -62,13 +66,15 @@ export default function MasterDetailDrawer({
     <ModalShell
       open={open}
       onClose={onClose}
-      eyebrow={tabUI.recordLabel}
+      eyebrow={recordLabel}
       title={title}
       maxWidth="max-w-2xl"
       footer={
         <div className="flex items-center justify-between gap-3">
           <div className="text-sm text-on-surface-variant">
-            {editing ? "Editing live master record." : "Read-only mode."}
+            {editing
+              ? (isJa ? "マスターレコード編集中" : "Editing live master record.")
+              : (isJa ? "閲覧専用モード" : "Read-only mode.")}
           </div>
           <div className="flex items-center gap-3">
             {editing ? (
@@ -83,7 +89,7 @@ export default function MasterDetailDrawer({
                   }}
                   className="rounded-2xl border border-outline-variant/20 px-4 py-2 text-xs font-semibold text-on-surface transition hover:bg-surface-container"
                 >
-                  Cancel
+                  {isJa ? "キャンセル" : "Cancel"}
                 </button>
                 <button
                   type="button"
@@ -91,7 +97,9 @@ export default function MasterDetailDrawer({
                   disabled={saving}
                   className="rounded-xl bg-primary px-4 py-2 text-xs font-semibold text-on-primary hover:opacity-90 active:scale-95 transition-all duration-150 disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  {saving ? "Saving…" : "Save Changes"}
+                  {saving
+                    ? (isJa ? "保存中…" : "Saving…")
+                    : (isJa ? "変更を保存" : "Save Changes")}
                 </button>
               </>
             ) : (
@@ -100,7 +108,7 @@ export default function MasterDetailDrawer({
                 onClick={() => setEditing(true)}
                 className="rounded-xl bg-primary px-4 py-2 text-xs font-semibold text-on-primary hover:opacity-90 active:scale-95 transition-all duration-150"
               >
-                Edit Record
+                {isJa ? "レコードを編集" : "Edit Record"}
               </button>
             )}
           </div>
@@ -116,7 +124,7 @@ export default function MasterDetailDrawer({
                 <button
                   type="button"
                   onClick={() => setPhotoPreview({
-                    eyebrow: tabUI.recordLabel || "Master Record",
+                    eyebrow: recordLabel,
                     displayName: title,
                     images: [{ url: record.imageURL, label: title }],
                     activeIndex: 0,
@@ -128,12 +136,16 @@ export default function MasterDetailDrawer({
               ) : (
                 <div className="flex h-20 items-center justify-center gap-3 text-on-surface-variant">
                   <span className="material-symbols-outlined" style={{ fontSize: 28 }}>image_not_supported</span>
-                  <span className="text-sm font-medium">No image uploaded</span>
+                  <span className="text-sm font-medium">
+                    {isJa ? "画像が未登録です" : "No image uploaded"}
+                  </span>
                 </div>
               )}
               {uploading && (
                 <div className="absolute inset-0 flex items-center justify-center bg-surface/80 backdrop-blur-sm">
-                  <div className="rounded-full bg-surface-container px-4 py-2 text-xs font-semibold text-on-surface shadow-lg">Uploading…</div>
+                  <div className="rounded-full bg-surface-container px-4 py-2 text-xs font-semibold text-on-surface shadow-lg">
+                    {isJa ? "アップロード中…" : "Uploading…"}
+                  </div>
                 </div>
               )}
               {editing && (
@@ -156,7 +168,11 @@ export default function MasterDetailDrawer({
                     disabled={uploading}
                     className="absolute bottom-3 right-3 rounded-xl bg-primary px-3 py-1.5 text-xs font-semibold text-on-primary hover:opacity-90 active:scale-95 transition-all duration-150 disabled:opacity-50"
                   >
-                    {uploading ? "Uploading…" : record.imageURL ? "Update Image" : "Upload Image"}
+                    {uploading
+                      ? (isJa ? "アップロード中…" : "Uploading…")
+                      : record.imageURL
+                        ? (isJa ? "画像を更新" : "Update Image")
+                        : (isJa ? "画像をアップロード" : "Upload Image")}
                   </button>
                 </>
               )}

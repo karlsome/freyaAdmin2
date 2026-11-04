@@ -9,10 +9,13 @@ export function getDefectRate(record) {
   return quantity > 0 ? (totalNg / quantity) * 100 : 0;
 }
 
-export function getDefectStatus(rate) {
+export function getDefectStatus(rate, isJa = false) {
   if (rate >= 2.0) return {
     level: "high",
-    label: "High Defect Rate",
+    key: "highDefectRate",
+    label: isJa ? "高不良率" : "High Defect Rate",
+    labelEn: "High Defect Rate",
+    labelJa: "高不良率",
     color: "text-error",
     bg: "bg-error/10 border border-error/20",
     dot: "bg-error",
@@ -20,7 +23,10 @@ export function getDefectStatus(rate) {
   };
   if (rate >= 1.5) return {
     level: "warning",
-    label: "Warning",
+    key: "warning",
+    label: isJa ? "警告" : "Warning",
+    labelEn: "Warning",
+    labelJa: "警告",
     color: "text-amber-600 dark:text-amber-400",
     bg: "bg-amber-500/10 border border-amber-500/20",
     dot: "bg-amber-500",
@@ -28,7 +34,10 @@ export function getDefectStatus(rate) {
   };
   return {
     level: "normal",
-    label: "Normal",
+    key: "normal",
+    label: isJa ? "正常" : "Normal",
+    labelEn: "Normal",
+    labelJa: "正常",
     color: "text-emerald-600 dark:text-emerald-400",
     bg: "bg-emerald-500/10 border border-emerald-500/20",
     dot: "bg-emerald-500",

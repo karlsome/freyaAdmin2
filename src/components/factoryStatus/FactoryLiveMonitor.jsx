@@ -1,20 +1,26 @@
 import React from 'react';
 import FactoryLiveCard from './FactoryLiveCard';
+import { useLanguage } from '../../contexts/LanguageContext';
 
 export default function FactoryLiveMonitor({ factories, onMachineClick }) {
+  const { language } = useLanguage();
+  const isJa = language === "ja";
+
   if (!factories || factories.length === 0) {
     return (
-      <div className="bg-surface-container rounded-3xl p-12 text-center border border-outline-variant">
-        <h3 className="text-2xl font-bold text-on-surface mb-2">No Factories Selected</h3>
-        <p className="text-on-surface-variant">
-          Please select at least one factory from the filters above to view the live monitor.
+      <div className="freya-card rounded-[8px] border border-[var(--border)] bg-[var(--surface)] p-8 text-center">
+        <h3 className="text-base font-semibold text-[var(--text-primary)] mb-1">
+          {isJa ? "工場が選択されていません" : "No Factories Selected"}
+        </h3>
+        <p className="text-xs text-[var(--text-muted)]">
+          {isJa ? "ライブモニターを表示するには、上のフィルターから1つ以上の工場を選択してください。" : "Please select at least one factory from the filters above to view the live monitor."}
         </p>
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-4">
       {factories.map(factory => (
         <FactoryLiveCard key={factory} factory={factory} onRowClick={onMachineClick} />
       ))}

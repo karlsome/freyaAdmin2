@@ -10,27 +10,27 @@ export const EMPTY_INVENTORY_SUMMARY = {
 };
 
 export const INVENTORY_SUMMARY_CARDS = [
-  { key: "totalItems", label: "Items", icon: "inventory_2", accent: "bg-slate-100 text-slate-700 dark:bg-slate-800/80 dark:text-slate-200" },
-  { key: "totalPhysicalStock", label: "Physical Stock", icon: "warehouse", accent: "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300" },
-  { key: "totalReservedStock", label: "Reserved Stock", icon: "bookmarks", accent: "bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300" },
-  { key: "totalAvailableStock", label: "Available Stock", icon: "check_circle", accent: "bg-sky-100 text-sky-700 dark:bg-sky-500/15 dark:text-sky-300" },
+  { key: "totalItems", label: "Items", labelJa: "品目数", icon: "inventory_2", accent: "bg-slate-100 text-slate-700 dark:bg-slate-800/80 dark:text-slate-200" },
+  { key: "totalPhysicalStock", label: "Physical Stock", labelJa: "実在庫数", icon: "warehouse", accent: "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300" },
+  { key: "totalReservedStock", label: "Reserved Stock", labelJa: "引当在庫数", icon: "bookmarks", accent: "bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300" },
+  { key: "totalAvailableStock", label: "Available Stock", labelJa: "利用可能在庫数", icon: "check_circle", accent: "bg-sky-100 text-sky-700 dark:bg-sky-500/15 dark:text-sky-300" },
 ];
 
 export const INVENTORY_BATCH_FILTER_FIELDS = [
-  { field: "品番", label: "Part Number", group: "Inventory", type: "text", operators: ["equals", "contains"] },
-  { field: "背番号", label: "Serial Number", group: "Inventory", type: "text", operators: ["equals", "contains"] },
-  { field: "工場", label: "Factory", group: "Inventory", type: "text", operators: ["equals", "contains"] },
-  { field: "モデル", label: "Model", group: "Inventory", type: "text", operators: ["equals", "contains"] },
+  { field: "品番", label: "Part Number", labelJa: "品番", group: "Inventory", groupJa: "在庫", type: "text", operators: ["equals", "contains"] },
+  { field: "背番号", label: "Serial Number", labelJa: "背番号", group: "Inventory", groupJa: "在庫", type: "text", operators: ["equals", "contains"] },
+  { field: "工場", label: "Factory", labelJa: "工場", group: "Inventory", groupJa: "在庫", type: "text", operators: ["equals", "contains"] },
+  { field: "モデル", label: "Model", labelJa: "モデル", group: "Inventory", groupJa: "在庫", type: "text", operators: ["equals", "contains"] },
 ];
 
 export const INVENTORY_ADVANCED_FILTER_FIELDS = [
-  { field: "品番", label: "Part Number", group: "Identity", type: "select", operators: ["equals", "not_equals", "contains", "in", "exists", "not_exists"] },
-  { field: "背番号", label: "Serial Number", group: "Identity", type: "select", operators: ["equals", "not_equals", "contains", "in", "exists", "not_exists"] },
-  { field: "工場", label: "Factory", group: "Identity", type: "select", operators: ["equals", "not_equals", "contains", "in", "exists", "not_exists"] },
-  { field: "physicalQuantity", label: "Physical Stock", group: "Stock", type: "number", operators: ["equals", "not_equals", "greater", "less", "range", "exists", "not_exists"] },
-  { field: "reservedQuantity", label: "Reserved Stock", group: "Stock", type: "number", operators: ["equals", "not_equals", "greater", "less", "range", "exists", "not_exists"] },
-  { field: "availableQuantity", label: "Available Stock", group: "Stock", type: "number", operators: ["equals", "not_equals", "greater", "less", "range", "exists", "not_exists"] },
-  { field: "lastUpdated", label: "Last Updated", group: "Dates", type: "date", operators: ["equals", "not_equals", "greater", "less", "range", "exists", "not_exists"] },
+  { field: "品番", label: "Part Number", labelJa: "品番", group: "Identity", groupJa: "基本情報", type: "select", operators: ["equals", "not_equals", "contains", "in", "exists", "not_exists"] },
+  { field: "背番号", label: "Serial Number", labelJa: "背番号", group: "Identity", groupJa: "基本情報", type: "select", operators: ["equals", "not_equals", "contains", "in", "exists", "not_exists"] },
+  { field: "工場", label: "Factory", labelJa: "工場", group: "Identity", groupJa: "基本情報", type: "select", operators: ["equals", "not_equals", "contains", "in", "exists", "not_exists"] },
+  { field: "physicalQuantity", label: "Physical Stock", labelJa: "実在庫数", group: "Stock", groupJa: "在庫数", type: "number", operators: ["equals", "not_equals", "greater", "less", "range", "exists", "not_exists"] },
+  { field: "reservedQuantity", label: "Reserved Stock", labelJa: "引当在庫数", group: "Stock", groupJa: "在庫数", type: "number", operators: ["equals", "not_equals", "greater", "less", "range", "exists", "not_exists"] },
+  { field: "availableQuantity", label: "Available Stock", labelJa: "利用可能在庫数", group: "Stock", groupJa: "在庫数", type: "number", operators: ["equals", "not_equals", "greater", "less", "range", "exists", "not_exists"] },
+  { field: "lastUpdated", label: "Last Updated", labelJa: "最終更新日時", group: "Dates", groupJa: "日時", type: "date", operators: ["equals", "not_equals", "greater", "less", "range", "exists", "not_exists"] },
 ];
 
 export const INVENTORY_OPERATOR_LABELS = {
@@ -43,6 +43,18 @@ export const INVENTORY_OPERATOR_LABELS = {
   greater: "greater than",
   less: "less than",
   range: "range",
+};
+
+export const INVENTORY_OPERATOR_LABELS_JA = {
+  equals: "と一致",
+  not_equals: "と不一致",
+  contains: "を含む",
+  in: "のいずれか",
+  exists: "存在する",
+  not_exists: "存在しない",
+  greater: "より大きい",
+  less: "より小さい",
+  range: "範囲",
 };
 
 let inventoryBatchFilterCount = 0;
@@ -209,21 +221,25 @@ export function formatInventoryDate(value) {
   return date.toLocaleDateString();
 }
 
-export function buildInventoryPageInfo({ filteredCount, page, pageSize }) {
+export function buildInventoryPageInfo({ filteredCount, page, pageSize }, language = "en") {
+  const isJa = language === "ja";
   const safeCount = Number(filteredCount) || 0;
-  if (!safeCount) return "0 items shown";
+  if (!safeCount) return isJa ? "0 件表示" : "0 items shown";
 
   const start = (page - 1) * pageSize + 1;
   const end = Math.min(page * pageSize, safeCount);
-  return `${safeCount.toLocaleString()} items, showing ${start.toLocaleString()}-${end.toLocaleString()}`;
+  return isJa
+    ? `${safeCount.toLocaleString()} 件中 ${start.toLocaleString()} - ${end.toLocaleString()} 件を表示`
+    : `${safeCount.toLocaleString()} items, showing ${start.toLocaleString()}-${end.toLocaleString()}`;
 }
 
-export function getInventoryAvailabilityMeta(value) {
+export function getInventoryAvailabilityMeta(value, language = "en") {
+  const isJa = language === "ja";
   const availableQuantity = Number(value) || 0;
 
   if (availableQuantity <= 0) {
     return {
-      label: "Out of Stock",
+      label: isJa ? "在庫切れ" : "Out of Stock",
       icon: "cancel",
       badgeClassName: "bg-error/10 text-error",
       rowClassName: "bg-error/5",
@@ -232,7 +248,7 @@ export function getInventoryAvailabilityMeta(value) {
 
   if (availableQuantity <= 10) {
     return {
-      label: "Low Stock",
+      label: isJa ? "残り僅か" : "Low Stock",
       icon: "warning",
       badgeClassName: "bg-amber-500/10 text-amber-700 dark:text-amber-300",
       rowClassName: "bg-amber-500/5",
@@ -240,7 +256,7 @@ export function getInventoryAvailabilityMeta(value) {
   }
 
   return {
-    label: "Available",
+    label: isJa ? "利用可能" : "Available",
     icon: "check_circle",
     badgeClassName: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300",
     rowClassName: "",
@@ -306,13 +322,14 @@ export function downloadInventoryCsvFile(fileName, rows = []) {
   URL.revokeObjectURL(link.href);
 }
 
-export function summarizeSelectedInventoryTags(selectedBackNumbers = []) {
+export function summarizeSelectedInventoryTags(selectedBackNumbers = [], language = "en") {
+  const isJa = language === "ja";
   if (!Array.isArray(selectedBackNumbers) || selectedBackNumbers.length === 0) {
-    return { countLabel: "None selected", visible: [], overflow: 0 };
+    return { countLabel: isJa ? "未選択" : "None selected", visible: [], overflow: 0 };
   }
 
   return {
-    countLabel: `${selectedBackNumbers.length} products selected`,
+    countLabel: isJa ? `${selectedBackNumbers.length} 件の製品を選択中` : `${selectedBackNumbers.length} products selected`,
     visible: selectedBackNumbers.slice(0, 10),
     overflow: Math.max(selectedBackNumbers.length - 10, 0),
   };

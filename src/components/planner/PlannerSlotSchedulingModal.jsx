@@ -1,38 +1,50 @@
 import { useEffect, useState } from "react";
 import PlannerModalShell from "./PlannerModalShell";
 import EmptyState from "../EmptyState";
+import { useLanguage } from "../../contexts/LanguageContext";
 
-function QueueRow({ item, index, total, onMove, onQuantityChange, onRemove }) {
+function QueueRow({ item, index, total, onMove, onQuantityChange, onRemove, isJa }) {
   return (
-    <div className="planner-data-text rounded-2xl border border-outline-variant/15 bg-surface-container-low p-4">
+    <div className="rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] p-3">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <div className="font-semibold text-on-surface">{item.背番号 || item.品番}</div>
-          <div className="mt-1 text-on-surface-variant">{item.品番}</div>
-          <div className="mt-1 text-on-surface-variant">Remaining {item.remainingQuantity} pcs</div>
+          <div className="text-xs font-semibold text-[var(--text-primary)]">{item.背番号 || item.品番}</div>
+          <div className="mt-0.5 text-xs text-[var(--text-muted)]">{item.品番}</div>
+          <div className="mt-0.5 text-xs text-[var(--text-muted)]">
+            {isJa ? `残 ${item.remainingQuantity} 個` : `Remaining ${item.remainingQuantity} pcs`}
+          </div>
         </div>
 
-        <div className="flex items-center gap-2">
-          <button type="button" onClick={() => onMove(index, -1)} disabled={index === 0} className="rounded-2xl border border-separator/40 px-2 py-1 text-xs font-semibold text-on-surface transition hover:bg-surface-container disabled:opacity-40">↑</button>
-          <button type="button" onClick={() => onMove(index, 1)} disabled={index === total - 1} className="rounded-2xl border border-separator/40 px-2 py-1 text-xs font-semibold text-on-surface transition hover:bg-surface-container disabled:opacity-40">↓</button>
-          <button type="button" onClick={() => onRemove(item._id)} className="rounded-2xl border border-error/20 px-2 py-1 text-xs font-semibold text-error transition hover:bg-error/10">Remove</button>
+        <div className="flex items-center gap-1.5">
+          <button type="button" onClick={() => onMove(index, -1)} disabled={index === 0} className="rounded-[4px] border border-[var(--border)] bg-[var(--surface)] px-2 py-0.5 text-xs font-semibold text-[var(--text-primary)] transition hover:bg-[var(--surface-hover)] disabled:opacity-40">↑</button>
+          <button type="button" onClick={() => onMove(index, 1)} disabled={index === total - 1} className="rounded-[4px] border border-[var(--border)] bg-[var(--surface)] px-2 py-0.5 text-xs font-semibold text-[var(--text-primary)] transition hover:bg-[var(--surface-hover)] disabled:opacity-40">↓</button>
+          <button type="button" onClick={() => onRemove(item._id)} className="rounded-[4px] border border-[var(--status-danger)]/30 bg-[var(--status-danger)]/5 px-2 py-0.5 text-xs font-semibold text-[var(--status-danger)] transition hover:bg-[var(--status-danger)]/10">
+            {isJa ? "削除" : "Remove"}
+          </button>
         </div>
       </div>
 
-      <div className="mt-3">
-        <label className="planner-data-label text-outline">Schedule Quantity</label>
+      <div className="mt-2.5">
+        <label className="text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">
+          {isJa ? "計画数量" : "Schedule Quantity"}
+        </label>
         <input
           type="number"
           min="1"
           max={item.remainingQuantity}
           value={item.quantity}
           onChange={(event) => onQuantityChange(item._id, Number(event.target.value || 0))}
-          className="planner-data-text mt-2 h-11 w-full rounded-2xl border border-separator/40 px-4 outline-none transition focus:border-primary/40"
+          className="mt-1.5 h-8 w-full rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-2.5 text-xs text-[var(--text-primary)] outline-none transition focus:border-[var(--freya-blue)] focus:ring-1 focus:ring-[var(--freya-blue)]"
         />
       </div>
     </div>
   );
 }
+
+import {
+  getEquipmentUnavailableInfo,
+  isEquipmentUnavailable,
+} from "../../utils/planner";
 
 export default function PlannerSlotSchedulingModal({
   open,
@@ -40,12 +52,18 @@ export default function PlannerSlotSchedulingModal({
   startTime,
   goals = [],
   currentDate,
+  unavailableEquipment = {},
   submitting = false,
   onClose,
   onConfirm,
 }) {
+  const { language } = useLanguage();
+  const isJa = language === "ja";
   const [search, setSearch] = useState("");
   const [queue, setQueue] = useState([]);
+
+  const isBroken = isEquipmentUnavailable(equipment, unavailableEquipment);
+  const brokenInfo = isBroken ? getEquipmentUnavailableInfo(equipment, unavailableEquipment) : null;
 
   useEffect(() => {
     if (!open) return;
@@ -85,8 +103,8 @@ export default function PlannerSlotSchedulingModal({
   return (
     <PlannerModalShell
       open={open}
-      title={`Schedule at ${equipment || "Equipment"}`}
-      subtitle={`Start queue at ${startTime}. Add one or more goals and they will be placed sequentially from this slot.`}
+      title={isJa ? `${equipment || "設備"} にスケジュール追加` : `Schedule at ${equipment || "Equipment"}`}
+      subtitle={isJa ? `開始時刻: ${startTime}。1つ以上の目標を追加すると、この枠から順次配置されます。` : `Start queue at ${startTime}. Add one or more goals and they will be placed sequentially from this slot.`}
       onClose={onClose}
       maxWidthClassName="max-w-6xl"
       footer={(
@@ -94,35 +112,53 @@ export default function PlannerSlotSchedulingModal({
           <button
             type="button"
             onClick={onClose}
-            className="rounded-2xl border border-separator/40 px-4 py-2 text-sm font-semibold text-on-surface transition hover:bg-surface-container"
+            className="rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs font-semibold text-[var(--text-primary)] transition hover:bg-[var(--surface-hover)]"
           >
-            Cancel
+            {isJa ? "キャンセル" : "Cancel"}
           </button>
           <button
             type="button"
             disabled={submitting || !queue.length}
             onClick={() => onConfirm(queue)}
-            className="rounded-2xl bg-primary px-4 py-2 text-sm font-semibold text-on-primary transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+            className="rounded-[6px] bg-[var(--freya-blue)] px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-[var(--freya-blue-hover)] disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {submitting ? "Scheduling…" : `Schedule ${queue.length} item${queue.length === 1 ? "" : "s"}`}
+            {submitting
+              ? (isJa ? "スケジュール中…" : "Scheduling…")
+              : (isJa ? `${queue.length} 件をスケジュール` : `Schedule ${queue.length} item${queue.length === 1 ? "" : "s"}`)}
           </button>
         </div>
       )}
     >
-      <div className="planner-data-text grid gap-5 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)]">
-        <div className="rounded-2xl border border-outline-variant/15 bg-surface-container-low p-4">
-          <div className="ui-control-surface flex h-11 items-center gap-3 rounded-2xl border border-separator/40 px-4">
-            <span className="material-symbols-outlined text-outline" style={{ fontSize: 18 }}>search</span>
+      {isBroken ? (
+        <div className="mb-4 flex items-center gap-2.5 rounded-lg border border-red-300 dark:border-red-800 bg-red-50 dark:bg-red-950/40 p-3 text-xs text-red-800 dark:text-red-200 shadow-2xs">
+          <span className="material-symbols-outlined text-lg text-red-600 dark:text-red-400">warning</span>
+          <div>
+            <div className="font-bold">
+              {isJa ? `【注意】${equipment} は現在、故障・保全停止中として登録されています。` : `[Warning] ${equipment} is currently reported as broken down / under maintenance.`}
+            </div>
+            {brokenInfo?.reason ? (
+              <div className="mt-0.5 text-[11px] text-red-600 dark:text-red-300">
+                {isJa ? `停止理由: ${brokenInfo.reason}` : `Reason: ${brokenInfo.reason}`}
+              </div>
+            ) : null}
+          </div>
+        </div>
+      ) : null}
+
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)]">
+        <div className="rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] p-3">
+          <div className="flex h-9 items-center gap-2 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 focus-within:border-[var(--freya-blue)] focus-within:ring-1 focus-within:ring-[var(--freya-blue)]">
+            <span className="material-symbols-outlined text-[var(--text-muted)]" style={{ fontSize: 16 }}>search</span>
             <input
               type="text"
               value={search}
               onChange={(event) => setSearch(event.target.value)}
-              placeholder="Search goals for this date…"
-              className="planner-data-text h-full flex-1 bg-transparent outline-none"
+              placeholder={isJa ? "この日付の目標を検索…" : "Search goals for this date…"}
+              className="h-full flex-1 bg-transparent text-xs text-[var(--text-primary)] placeholder:text-[var(--text-muted)] outline-none"
             />
           </div>
 
-          <div className="mt-4 max-h-[58vh] space-y-3 overflow-y-auto">
+          <div className="mt-3 max-h-[58vh] space-y-2 overflow-y-auto">
             {availableGoals.map((goal) => {
               const queued = queue.some((item) => item._id === goal._id);
               return (
@@ -131,16 +167,16 @@ export default function PlannerSlotSchedulingModal({
                   type="button"
                   onClick={() => addGoal(goal)}
                   disabled={queued}
-                  className="w-full rounded-2xl border border-outline-variant/15 bg-surface px-4 py-4 text-left transition hover:bg-surface-container disabled:cursor-not-allowed disabled:opacity-50"
+                  className="w-full rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-2.5 text-left transition hover:bg-[var(--surface-hover)] disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div>
-                      <div className="font-semibold text-on-surface">{goal.背番号 || goal.品番}</div>
-                      <div className="mt-1 text-on-surface-variant">{goal.品番}</div>
-                      <div className="mt-1 text-on-surface-variant">{goal.品名 || "Unnamed product"}</div>
+                      <div className="text-xs font-semibold text-[var(--text-primary)]">{goal.背番号 || goal.品番}</div>
+                      <div className="mt-0.5 text-xs text-[var(--text-muted)]">{goal.品番}</div>
+                      <div className="mt-0.5 text-xs text-[var(--text-muted)]">{goal.品名 || (isJa ? "品名未設定" : "Unnamed product")}</div>
                     </div>
-                    <span className="rounded-full bg-primary/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-primary">
-                      {goal.remainingQuantity} pcs
+                    <span className="rounded-[4px] bg-[var(--freya-blue)]/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.04em] text-[var(--freya-blue)]">
+                      {goal.remainingQuantity} {isJa ? "個" : "pcs"}
                     </span>
                   </div>
                 </button>
@@ -148,23 +184,29 @@ export default function PlannerSlotSchedulingModal({
             })}
 
             {!availableGoals.length ? (
-              <EmptyState className="bg-surface px-4 py-10">No goals with remaining quantity are available for the selected date.</EmptyState>
+              <EmptyState className="rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-4 py-10 text-xs text-[var(--text-muted)]">
+                {isJa ? "選択された日付に未完了の目標はありません。" : "No goals with remaining quantity are available for the selected date."}
+              </EmptyState>
             ) : null}
           </div>
         </div>
 
-        <div className="rounded-2xl border border-outline-variant/15 bg-surface-container-low p-4">
-          <div className="mb-4 flex items-center justify-between gap-3">
+        <div className="rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] p-3">
+          <div className="mb-3 flex items-center justify-between gap-3">
             <div>
-              <div className="planner-data-label text-outline">Queue</div>
-              <div className="mt-1 text-on-surface-variant">Items run in the order shown here.</div>
+              <div className="text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">
+                {isJa ? "投入キュー" : "Queue"}
+              </div>
+              <div className="mt-0.5 text-xs text-[var(--text-muted)]">
+                {isJa ? "ここに表示されている順序で実行されます。" : "Items run in the order shown here."}
+              </div>
             </div>
-            <div className="rounded-full bg-surface px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-on-surface-variant">
-              {queue.length} selected
+            <div className="rounded-[4px] border border-[var(--border)] bg-[var(--surface)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">
+              {isJa ? `${queue.length} 件選択中` : `${queue.length} selected`}
             </div>
           </div>
 
-          <div className="max-h-[58vh] space-y-3 overflow-y-auto">
+          <div className="max-h-[58vh] space-y-2 overflow-y-auto">
             {queue.map((item, index) => (
               <QueueRow
                 key={item._id}
@@ -179,11 +221,14 @@ export default function PlannerSlotSchedulingModal({
                   }));
                 }}
                 onRemove={(id) => setQueue((items) => items.filter((entry) => entry._id !== id))}
+                isJa={isJa}
               />
             ))}
 
             {!queue.length ? (
-              <EmptyState className="bg-surface px-4 py-10">Add goals from the left panel to build a scheduling queue.</EmptyState>
+              <EmptyState className="rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-4 py-10 text-xs text-[var(--text-muted)]">
+                {isJa ? "左側のパネルから目標を追加してスケジュールキューを作成してください。" : "Add goals from the left panel to build a scheduling queue."}
+              </EmptyState>
             ) : null}
           </div>
         </div>

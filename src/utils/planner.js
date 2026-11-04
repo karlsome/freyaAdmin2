@@ -80,8 +80,36 @@ export function formatDuration(totalSeconds) {
   return hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
 }
 
+const _productLookupCache = new WeakMap();
+
+function getProductIndex(products = []) {
+  if (!Array.isArray(products) || !products.length) return { bySerial: new Map(), byCode: new Map(), byId: new Map() };
+  let index = _productLookupCache.get(products);
+  if (!index) {
+    const bySerial = new Map();
+    const byCode = new Map();
+    const byId = new Map();
+    products.forEach((p) => {
+      if (p.背番号 && !bySerial.has(p.背番号)) bySerial.set(p.背番号, p);
+      if (p.品番 && !byCode.has(p.品番)) byCode.set(p.品番, p);
+      if (p._id) byId.set(String(p._id), p);
+    });
+    index = { bySerial, byCode, byId };
+    _productLookupCache.set(products, index);
+  }
+  return index;
+}
+
 export function getMatchingProduct(item, products = []) {
   if (!item) return null;
+
+  if (Array.isArray(products) && products.length > 50) {
+    const { bySerial, byCode, byId } = getProductIndex(products);
+    if (item.背番号 && bySerial.has(item.背番号)) return bySerial.get(item.背番号);
+    if (item.品番 && byCode.has(item.品番)) return byCode.get(item.品番);
+    if (item._id && byId.has(String(item._id))) return byId.get(String(item._id));
+    return null;
+  }
 
   return products.find((product) => (
     (item.背番号 && product.背番号 === item.背番号)
@@ -244,7 +272,22 @@ export function findNextAvailableTime(startMinutes, durationMinutes, equipment, 
   };
 }
 
+const _spanCache = new WeakMap();
+
 export function getScheduledSpan(item, breaks = DEFAULT_BREAKS) {
+  if (item && typeof item === "object") {
+    const cached = _spanCache.get(item);
+    if (cached && cached.breaks === breaks && cached.startTime === item.startTime) {
+      return cached.span;
+    }
+    const startMinutes = timeToMinutes(item?.startTime || PLANNER_CONFIG.workStartTime);
+    const totalSeconds = Number(item?.estimatedTime?.totalSeconds || 0);
+    const durationMinutes = totalSeconds / 60;
+    const span = findNextAvailableTime(startMinutes, durationMinutes, item?.equipment, breaks);
+    _spanCache.set(item, { breaks, startTime: item.startTime, span });
+    return span;
+  }
+
   const startMinutes = timeToMinutes(item?.startTime || PLANNER_CONFIG.workStartTime);
   const totalSeconds = Number(item?.estimatedTime?.totalSeconds || 0);
   const durationMinutes = totalSeconds / 60;
@@ -252,30 +295,46 @@ export function getScheduledSpan(item, breaks = DEFAULT_BREAKS) {
   return findNextAvailableTime(startMinutes, durationMinutes, item?.equipment, breaks);
 }
 
-export function getLatestEquipmentEnd(scheduledProducts = [], equipment, breaks = DEFAULT_BREAKS) {
+export function getLatestEquipmentEnd(scheduledProducts = [], equipment, breaks = DEFAULT_BREAKS, customStartTime = PLANNER_CONFIG.workStartTime) {
   const items = scheduledProducts.filter((item) => item.equipment === equipment && item.startTime);
   if (!items.length) {
-    return timeToMinutes(PLANNER_CONFIG.workStartTime);
+    return timeToMinutes(customStartTime || PLANNER_CONFIG.workStartTime);
   }
 
   return Math.max(...items.map((item) => getScheduledSpan(item, breaks).endTime));
 }
 
-export function getTimelineSlots(scheduledProducts = [], actualBlocks = [], breaks = DEFAULT_BREAKS) {
+export function getTimelineSlots(scheduledProducts = [], actualBlocks = [], breaks = DEFAULT_BREAKS, customStartTime = null) {
   const slots = [];
-  const startMinutes = timeToMinutes(PLANNER_CONFIG.workStartTime);
+  const baseStartStr = customStartTime || PLANNER_CONFIG.workStartTime;
+  let startMinutes = timeToMinutes(baseStartStr);
   let endMinutes = timeToMinutes(PLANNER_CONFIG.workEndTime);
 
   scheduledProducts.forEach((item) => {
     if (!item?.startTime || !item?.estimatedTime?.totalSeconds) return;
+    const itemStart = timeToMinutes(item.startTime);
+    startMinutes = Math.min(startMinutes, itemStart);
     const span = getScheduledSpan(item, breaks);
     endMinutes = Math.max(endMinutes, span.endTime);
   });
 
   actualBlocks.forEach((block) => {
+    if (block?.startTime) {
+      startMinutes = Math.min(startMinutes, timeToMinutes(block.startTime));
+    }
     const end = timeToMinutes(block?.endTime || PLANNER_CONFIG.workEndTime);
     endMinutes = Math.max(endMinutes, end);
   });
+
+  // Snap startMinutes down to nearest interval
+  startMinutes = Math.floor(startMinutes / PLANNER_CONFIG.intervalMinutes) * PLANNER_CONFIG.intervalMinutes;
+
+  // Cap single-day timeline slots at 24:00 (1440 minutes) to avoid generating hundreds of empty multi-day columns
+  const maxDayMinutes = 1440;
+  if (endMinutes > maxDayMinutes) {
+    console.warn(`⚠️ [Planner] Production extends past midnight (${minutesToTime(endMinutes)}). Capping single-day timeline view at 24:00.`);
+    endMinutes = maxDayMinutes;
+  }
 
   for (let minute = startMinutes; minute <= endMinutes; minute += PLANNER_CONFIG.intervalMinutes) {
     slots.push(minutesToTime(minute));
@@ -284,8 +343,8 @@ export function getTimelineSlots(scheduledProducts = [], actualBlocks = [], brea
   return slots;
 }
 
-export function getFirstVisibleSlotMinutes(item, breaks = DEFAULT_BREAKS) {
-  let current = timeToMinutes(item?.startTime || PLANNER_CONFIG.workStartTime);
+export function getFirstVisibleSlotMinutes(item, breaks = DEFAULT_BREAKS, customStartTime = PLANNER_CONFIG.workStartTime) {
+  let current = timeToMinutes(item?.startTime || customStartTime || PLANNER_CONFIG.workStartTime);
 
   while (isBreakAtSlot(current, item?.equipment, breaks)) {
     current += PLANNER_CONFIG.intervalMinutes;
@@ -528,6 +587,7 @@ export function getPlannerGoalState(goal) {
       textClassName: "text-emerald-600 dark:text-emerald-300",
       dotClassName: "bg-emerald-500",
       label: "Completed",
+      labelJa: "完了",
     };
   }
 
@@ -541,6 +601,7 @@ export function getPlannerGoalState(goal) {
       textClassName: "text-amber-600 dark:text-amber-300",
       dotClassName: "bg-amber-500",
       label: "In Progress",
+      labelJa: "進行中",
     };
   }
 
@@ -553,13 +614,14 @@ export function getPlannerGoalState(goal) {
     textClassName: "text-rose-600 dark:text-rose-300",
     dotClassName: "bg-rose-500",
     label: "Pending",
+    labelJa: "未着手",
   };
 }
 
-export function getEffectiveWorkMinutes(breaks = DEFAULT_BREAKS, equipment = null) {
-  const workStart = timeToMinutes(PLANNER_CONFIG.workStartTime);
+export function getEffectiveWorkMinutes(breaks = DEFAULT_BREAKS, equipment = null, customStartTime = PLANNER_CONFIG.workStartTime) {
+  const workStart = timeToMinutes(customStartTime || PLANNER_CONFIG.workStartTime);
   const workEnd = timeToMinutes(PLANNER_CONFIG.workEndTime);
-  const totalMinutes = workEnd - workStart;
+  const totalMinutes = Math.max(1, workEnd - workStart);
 
   const breakMinutes = (Array.isArray(breaks) ? breaks : []).reduce((sum, item) => {
     const matchesEquipment = !equipment || !item.equipment || item.equipment === equipment;
@@ -570,10 +632,10 @@ export function getEffectiveWorkMinutes(breaks = DEFAULT_BREAKS, equipment = nul
   return Math.max(1, totalMinutes - breakMinutes);
 }
 
-export function getEquipmentUtilization(scheduledProducts = [], equipment, breaks = DEFAULT_BREAKS) {
+export function getEquipmentUtilization(scheduledProducts = [], equipment, breaks = DEFAULT_BREAKS, customStartTime = PLANNER_CONFIG.workStartTime) {
   const products = scheduledProducts.filter((item) => item.equipment === equipment);
   const totalMinutes = products.reduce((sum, item) => sum + ((Number(item?.estimatedTime?.totalSeconds || 0)) / 60), 0);
-  const utilization = Math.round((totalMinutes / getEffectiveWorkMinutes(breaks, equipment)) * 100);
+  const utilization = Math.round((totalMinutes / getEffectiveWorkMinutes(breaks, equipment, customStartTime)) * 100);
 
   return {
     totalMinutes,
@@ -616,7 +678,7 @@ function is992WProduct(goal, products = []) {
   return String(fullProduct?.モデル || "").trim() === "992W(310D)";
 }
 
-export function buildSmartAssignments(goals = [], currentDate, trends = {}, products = []) {
+export function buildSmartAssignments(goals = [], currentDate, trends = {}, products = [], unavailableEquipment = []) {
   const todaysGoals = goals.filter((goal) => goal.date === currentDate && Number(goal.remainingQuantity || 0) > 0);
   const assignments = {};
   const tdLockedEquipment = { group: null, single: null };
@@ -655,11 +717,14 @@ export function buildSmartAssignments(goals = [], currentDate, trends = {}, prod
       const needsGroup = firstDigit >= 1 && firstDigit <= 4;
       const equipmentType = needsGroup ? "group" : "single";
 
-      if (material === "TD" && tdLockedEquipment[equipmentType]) {
+      if (material === "TD" && tdLockedEquipment[equipmentType] && !isEquipmentUnavailable(tdLockedEquipment[equipmentType], unavailableEquipment)) {
         bestEquipment = tdLockedEquipment[equipmentType];
       } else {
         const equipmentOptions = Object.entries(trend.equipmentDistribution)
-          .filter(([equipment]) => (needsGroup ? isGroupEquipment(equipment) : !isGroupEquipment(equipment)))
+          .filter(([equipment]) => {
+            if (isEquipmentUnavailable(equipment, unavailableEquipment)) return false;
+            return needsGroup ? isGroupEquipment(equipment) : !isGroupEquipment(equipment);
+          })
           .map(([equipment, frequency]) => {
             const materialBonus = (assignments[equipment] || []).filter((item) => {
               return is992WProduct(item, products) && getMaterialSuffix(String(item.背番号 || "")) === material;
@@ -679,7 +744,14 @@ export function buildSmartAssignments(goals = [], currentDate, trends = {}, prod
           }
         }
       }
-    } else if (trend?.mostFrequentEquipment) {
+    } else if (trend?.equipmentDistribution) {
+      const candidates = Object.entries(trend.equipmentDistribution)
+        .filter(([equipment]) => !isEquipmentUnavailable(equipment, unavailableEquipment))
+        .sort((left, right) => right[1] - left[1]);
+      if (candidates.length > 0) {
+        bestEquipment = candidates[0][0];
+      }
+    } else if (trend?.mostFrequentEquipment && !isEquipmentUnavailable(trend.mostFrequentEquipment, unavailableEquipment)) {
       bestEquipment = trend.mostFrequentEquipment;
     }
 
@@ -705,4 +777,65 @@ export function buildSmartAssignments(goals = [], currentDate, trends = {}, prod
     totalUnassigned,
     sourceGoals: todaysGoals,
   };
+}
+
+// ─── Equipment Availability & Machine Status ────────────────────────────────
+export function getUnavailableStorageKey(factory = "") {
+  return `planner_unavailable_equipment_${String(factory || "").trim()}`;
+}
+
+export function loadUnavailableEquipmentFromStorage(factory = "") {
+  if (!factory) return {};
+  try {
+    const raw = localStorage.getItem(getUnavailableStorageKey(factory));
+    return raw ? JSON.parse(raw) : {};
+  } catch {
+    return {};
+  }
+}
+
+export function saveUnavailableEquipmentToStorage(factory = "", map = {}) {
+  if (!factory) return;
+  try {
+    localStorage.setItem(getUnavailableStorageKey(factory), JSON.stringify(map || {}));
+  } catch (err) {
+    console.warn("Failed to save unavailable equipment to localStorage:", err);
+  }
+}
+
+export function isEquipmentUnavailable(equipmentName = "", unavailableMap = {}) {
+  const normalized = String(equipmentName || "").trim();
+  if (!normalized || !unavailableMap || typeof unavailableMap !== "object") return false;
+
+  if (unavailableMap[normalized]?.isUnavailable) return true;
+
+  if (normalized.includes(",")) {
+    const parts = normalized.split(",").map((p) => p.trim());
+    return parts.some((part) => unavailableMap[part]?.isUnavailable);
+  }
+
+  return false;
+}
+
+export function getEquipmentUnavailableInfo(equipmentName = "", unavailableMap = {}) {
+  const normalized = String(equipmentName || "").trim();
+  if (!normalized || !unavailableMap || typeof unavailableMap !== "object") return null;
+
+  if (unavailableMap[normalized]?.isUnavailable) return unavailableMap[normalized];
+
+  if (normalized.includes(",")) {
+    const parts = normalized.split(",").map((p) => p.trim());
+    for (const part of parts) {
+      if (unavailableMap[part]?.isUnavailable) {
+        return unavailableMap[part];
+      }
+    }
+  }
+
+  return null;
+}
+
+export function getBrokenDownEquipmentCount(equipmentList = [], unavailableMap = {}) {
+  if (!Array.isArray(equipmentList) || !equipmentList.length) return 0;
+  return equipmentList.filter((eq) => isEquipmentUnavailable(eq, unavailableMap)).length;
 }

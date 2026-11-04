@@ -16,6 +16,7 @@ import {
   resolveInventoryActorName,
 } from "../services/inventoryApi";
 import { getAuthDisplayName, readStoredAuthUser } from "../utils/auth";
+import { useLanguage } from "../contexts/LanguageContext";
 import {
   buildInventoryExportMatrix,
   buildInventoryAdvancedFilterClauses,
@@ -32,6 +33,7 @@ import {
   getInventoryRowToneClass,
   INVENTORY_ADVANCED_FILTER_FIELDS,
   INVENTORY_OPERATOR_LABELS,
+  INVENTORY_OPERATOR_LABELS_JA,
   INVENTORY_PAGE_SIZE_OPTIONS,
   INVENTORY_SUMMARY_CARDS,
   joinInventoryClasses,
@@ -49,34 +51,34 @@ function FlashBanner({ flash, onClose }) {
   if (!flash) return null;
 
   const tone = flash.type === "error"
-    ? "border-error/20 bg-error/10 text-error"
+    ? "border-[var(--status-danger)]/30 bg-[var(--status-danger)]/10 text-[var(--status-danger)]"
     : flash.type === "warning"
-      ? "border-amber-500/20 bg-amber-500/10 text-amber-700 dark:text-amber-300"
-      : "border-emerald-500/20 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300";
+      ? "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300"
+      : "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300";
 
   return (
-    <div className={joinInventoryClasses("mb-6 rounded-3xl border px-5 py-4", tone)}>
+    <div className={joinInventoryClasses("mb-6 rounded-[8px] border px-4 py-3", tone)}>
       <div className="flex items-start justify-between gap-4">
         <div>
-          <p className="text-[10px] font-semibold uppercase tracking-[0.18em]">Status</p>
-          <p className="mt-1 text-sm font-medium">{flash.message}</p>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.04em]">Status</p>
+          <p className="mt-0.5 text-xs font-medium">{flash.message}</p>
         </div>
-        <button type="button" onClick={onClose} className="text-current/70 transition hover:text-current">
-          <span className="material-symbols-outlined">close</span>
+        <button type="button" onClick={onClose} className="flex h-6 w-6 items-center justify-center rounded-[4px] text-current/70 transition hover:bg-[var(--surface-hover)] hover:text-current">
+          <span className="material-symbols-outlined" style={{ fontSize: 16 }}>close</span>
         </button>
       </div>
     </div>
   );
 }
 
-function AvailabilityCell({ value }) {
-  const meta = getInventoryAvailabilityMeta(value);
+function AvailabilityCell({ value, language = "en" }) {
+  const meta = getInventoryAvailabilityMeta(value, language);
 
   return (
     <div className="min-w-0">
-      <div className="font-semibold text-on-surface">{formatInventoryNumber(value)}</div>
-      <div className="mt-2">
-        <span className={joinInventoryClasses("inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold", meta.badgeClassName)}>
+      <div className="font-semibold text-[var(--text-primary)]">{formatInventoryNumber(value)}</div>
+      <div className="mt-1">
+        <span className={joinInventoryClasses("inline-flex items-center gap-1 rounded-[6px] px-2 py-0.5 text-xs font-semibold", meta.badgeClassName)}>
           <span className="material-symbols-outlined" style={{ fontSize: 14 }}>{meta.icon}</span>
           {meta.label}
         </span>
@@ -86,6 +88,8 @@ function AvailabilityCell({ value }) {
 }
 
 export default function InventoryPage() {
+  const { language } = useLanguage();
+  const isJa = language === "ja";
   const [authUser] = useState(() => readStoredAuthUser());
   const canAdd = canAddInventory(authUser);
   const canAdminReset = canAdminResetInventory(authUser);
@@ -115,10 +119,12 @@ export default function InventoryPage() {
   const [transactionState, setTransactionState] = useState({ open: false, backNumber: "" });
 
   const deferredSearch = useDeferredValue(filters.search);
-  const selectedTagSummary = summarizeSelectedInventoryTags(selectedBackNumbers);
+  const selectedTagSummary = summarizeSelectedInventoryTags(selectedBackNumbers, language);
   const advancedFieldDefinitions = useMemo(() => (
     INVENTORY_ADVANCED_FILTER_FIELDS.map((field) => ({
       ...field,
+      label: isJa ? (field.labelJa || field.label) : field.label,
+      group: isJa ? (field.groupJa || field.group) : field.group,
       options: field.field === "品番"
         ? filterOptions.partNumbers
         : field.field === "背番号"
@@ -127,7 +133,7 @@ export default function InventoryPage() {
             ? filterOptions.factories
             : [],
     }))
-  ), [filterOptions.backNumbers, filterOptions.factories, filterOptions.partNumbers]);
+  ), [filterOptions.backNumbers, filterOptions.factories, filterOptions.partNumbers, isJa]);
 
   useEffect(() => {
     if (!flash) return undefined;
@@ -341,7 +347,7 @@ export default function InventoryPage() {
 
     try {
       if (filters.model && selectedBackNumbers.length === 0) {
-        setFlash({ type: "warning", message: "The selected model does not currently map to any serial numbers to export." });
+        setFlash({ type: "warning", message: isJa ? "選択したモデルに紐づく背番号が現在存在しません。" : "The selected model does not currently map to any serial numbers to export." });
         return;
       }
 
@@ -354,9 +360,9 @@ export default function InventoryPage() {
       });
       const result = await exportInventoryData(exportFilters);
       downloadInventoryCsvFile("inventory-data.csv", buildInventoryExportMatrix(result));
-      setFlash({ type: "success", message: `Exported ${result.length} inventory item${result.length === 1 ? "" : "s"}.` });
+      setFlash({ type: "success", message: isJa ? `${result.length} 件の在庫アイテムをエクスポートしました。` : `Exported ${result.length} inventory item${result.length === 1 ? "" : "s"}.` });
     } catch (exportError) {
-      setFlash({ type: "error", message: exportError.message || "Failed to export inventory data." });
+      setFlash({ type: "error", message: exportError.message || (isJa ? "在庫データのエクスポートに失敗しました。" : "Failed to export inventory data.") });
     } finally {
       setExporting(false);
     }
@@ -365,7 +371,7 @@ export default function InventoryPage() {
   const columns = useMemo(() => ([
     {
       key: "品番",
-      label: "Part Number",
+      label: isJa ? "品番" : "Part Number",
       width: 170,
       renderCell: (row) => (
         <button
@@ -374,7 +380,7 @@ export default function InventoryPage() {
             event.stopPropagation();
             setTransactionState({ open: true, backNumber: row.背番号 });
           }}
-          className="text-left font-semibold text-primary transition hover:underline"
+          className="text-left font-semibold text-[var(--freya-blue)] transition hover:underline"
         >
           {row.品番 || "—"}
         </button>
@@ -383,53 +389,53 @@ export default function InventoryPage() {
     },
     {
       key: "背番号",
-      label: "Serial Number",
+      label: isJa ? "背番号" : "Serial Number",
       width: 170,
-      renderCell: (row) => <span className="font-semibold text-on-surface">{row.背番号 || "—"}</span>,
+      renderCell: (row) => <span className="font-semibold text-[var(--text-primary)]">{row.背番号 || "—"}</span>,
       disableCellWrapper: true,
     },
     {
       key: "工場",
-      label: "Factory",
+      label: isJa ? "工場" : "Factory",
       width: 140,
       renderCell: (row) => row.工場 ? (
-        <span className="inline-flex items-center rounded-full bg-primary/10 px-2.5 py-1 text-xs font-semibold text-primary">
+        <span className="inline-flex items-center rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] px-2 py-0.5 text-xs font-semibold text-[var(--text-primary)]">
           {row.工場}
         </span>
-      ) : <span className="text-on-surface-variant">—</span>,
+      ) : <span className="text-[var(--text-muted)]">—</span>,
       disableCellWrapper: true,
     },
     {
       key: "physicalQuantity",
-      label: "Physical",
+      label: isJa ? "実在庫" : "Physical",
       width: 120,
-      renderCell: (row) => <span className="font-semibold text-emerald-700 dark:text-emerald-300">{formatInventoryNumber(row.physicalQuantity)}</span>,
+      renderCell: (row) => <span className="font-semibold text-emerald-600 dark:text-emerald-400">{formatInventoryNumber(row.physicalQuantity)}</span>,
       disableCellWrapper: true,
     },
     {
       key: "reservedQuantity",
-      label: "Reserved",
+      label: isJa ? "引当" : "Reserved",
       width: 120,
-      renderCell: (row) => <span className="font-semibold text-amber-700 dark:text-amber-300">{formatInventoryNumber(row.reservedQuantity)}</span>,
+      renderCell: (row) => <span className="font-semibold text-amber-600 dark:text-amber-400">{formatInventoryNumber(row.reservedQuantity)}</span>,
       disableCellWrapper: true,
     },
     {
       key: "availableQuantity",
-      label: "Available",
+      label: isJa ? "利用可能" : "Available",
       width: 180,
-      renderCell: (row) => <AvailabilityCell value={row.availableQuantity} />,
+      renderCell: (row) => <AvailabilityCell value={row.availableQuantity} language={language} />,
       disableCellWrapper: true,
     },
     {
       key: "lastUpdated",
-      label: "Last Updated",
+      label: isJa ? "最終更新日時" : "Last Updated",
       width: 190,
-      renderCell: (row) => <span className="text-on-surface-variant">{formatInventoryDateTime(row.lastUpdated)}</span>,
+      renderCell: (row) => <span className="text-[var(--text-muted)]">{formatInventoryDateTime(row.lastUpdated)}</span>,
       disableCellWrapper: true,
     },
     {
       key: "actions",
-      label: "Actions",
+      label: isJa ? "操作" : "Actions",
       sortable: false,
       width: 90,
       renderCell: (row) => (
@@ -439,22 +445,22 @@ export default function InventoryPage() {
           variant="ghost"
           size="md"
           iconSize={18}
-          ariaLabel="View transactions"
+          ariaLabel={isJa ? "履歴を表示" : "View transactions"}
         />
       ),
       disableCellWrapper: true,
     },
-  ]), []);
+  ]), [isJa, language]);
 
   return (
-    <section className="h-screen overflow-y-auto scrollbar-hide px-8 pb-16 pt-24">
+    <div className="w-full h-screen overflow-y-auto space-y-6 pt-20 px-4 sm:px-6 md:px-8 pb-16">
       <div className="w-full">
         <PageHeader
-          eyebrow="Warehouse Ledger"
-          eyebrowClassName="tracking-[0.18em] text-primary"
-          title="Inventory"
-          subtitle="Track the latest inventory state by serial number, inspect transaction history, add stock manually, and run controlled reset workflows."
-          subtitleClassName="max-w-3xl"
+          eyebrow={isJa ? "倉庫台帳" : "Warehouse Ledger"}
+          eyebrowClassName="tracking-[0.04em] text-[var(--freya-blue)] uppercase font-semibold text-xs"
+          title={isJa ? "在庫管理" : "Inventory"}
+          subtitle={isJa ? "背番号ごとの最新在庫状況の追跡、入出庫履歴の確認、手動在庫追加、および制御されたリセット処理を行います。" : "Track the latest inventory state by serial number, inspect transaction history, add stock manually, and run controlled reset workflows."}
+          subtitleClassName="max-w-3xl text-xs text-[var(--text-muted)]"
           className="md:flex-row md:items-start md:justify-between"
           actions={(
             <>
@@ -462,34 +468,34 @@ export default function InventoryPage() {
                 type="button"
                 onClick={() => setRefreshNonce((current) => current + 1)}
                 disabled={loading || modelLoading}
-                className="rounded-2xl border border-separator/40 px-4 py-2.5 text-sm font-semibold text-on-surface transition hover:bg-surface-container disabled:cursor-not-allowed disabled:opacity-60"
+                className="rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs font-semibold text-[var(--text-primary)] transition hover:bg-[var(--surface-hover)] disabled:cursor-not-allowed disabled:opacity-50"
               >
-                Refresh
+                {isJa ? "更新" : "Refresh"}
               </button>
               <button
                 type="button"
                 onClick={handleExport}
                 disabled={exporting || modelLoading}
-                className="rounded-2xl border border-separator/40 px-4 py-2.5 text-sm font-semibold text-on-surface transition hover:bg-surface-container disabled:cursor-not-allowed disabled:opacity-60"
+                className="rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs font-semibold text-[var(--text-primary)] transition hover:bg-[var(--surface-hover)] disabled:cursor-not-allowed disabled:opacity-50"
               >
-                {exporting ? "Exporting..." : "Export CSV"}
+                {exporting ? (isJa ? "エクスポート中..." : "Exporting...") : (isJa ? "CSVエクスポート" : "Export CSV")}
               </button>
               {canAdminReset ? (
                 <button
                   type="button"
                   onClick={() => setBatchResetOpen(true)}
-                  className="rounded-2xl border border-error/20 bg-error/8 px-4 py-2.5 text-sm font-semibold text-error transition hover:bg-error/12"
+                  className="rounded-[6px] border border-[var(--status-danger)]/30 bg-[var(--status-danger)]/5 px-3 py-1.5 text-xs font-semibold text-[var(--status-danger)] transition hover:bg-[var(--status-danger)]/10"
                 >
-                  Batch Reset
+                  {isJa ? "一括リセット" : "Batch Reset"}
                 </button>
               ) : null}
               {canAdd ? (
                 <button
                   type="button"
                   onClick={() => setAddModalOpen(true)}
-                  className="rounded-2xl bg-primary px-4 py-2.5 text-sm font-semibold text-on-primary transition hover:opacity-90"
+                  className="rounded-[6px] bg-[var(--freya-blue)] px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-[var(--freya-blue-hover)]"
                 >
-                  Add Inventory
+                  {isJa ? "在庫追加" : "Add Inventory"}
                 </button>
               ) : null}
             </>
@@ -502,34 +508,35 @@ export default function InventoryPage() {
           {INVENTORY_SUMMARY_CARDS.map((card) => (
             <StatSummaryCard
               key={card.key}
+              variant="freya"
               icon={card.icon}
-              label={card.label}
+              label={isJa ? (card.labelJa || card.label) : card.label}
               value={formatInventoryNumber(summary[card.key] ?? 0)}
-              subtitle={card.key === "totalItems" ? "Latest unique serial records" : `Across the current inventory filter set`}
+              subtitle={card.key === "totalItems" ? (isJa ? "最新の固有背番号レコード" : "Latest unique serial records") : (isJa ? "現在の在庫フィルター全体" : "Across the current inventory filter set")}
               accent={card.accent}
               loading={loading && !rows.length}
             />
           ))}
         </div>
 
-        <div className="dashboard-section mb-6 rounded-2xl p-5">
+        <div className="freya-card mb-6 rounded-[8px] border border-[var(--border)] bg-[var(--surface)] p-5 shadow-sm">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
-              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Filters</p>
-              <h2 className="mt-1 text-lg font-semibold text-on-surface">Inventory Filters</h2>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">{isJa ? "フィルター" : "Filters"}</p>
+              <h2 className="mt-0.5 text-base font-semibold text-[var(--text-primary)]">{isJa ? "在庫フィルター" : "Inventory Filters"}</h2>
             </div>
-            {modelLoading ? <p className="text-sm text-on-surface-variant">Loading model products...</p> : null}
+            {modelLoading ? <p className="text-xs text-[var(--text-muted)]">{isJa ? "モデル製品を読み込み中..." : "Loading model products..."}</p> : null}
           </div>
 
-          <div className="mt-4 grid gap-4 xl:grid-cols-4">
+          <div className="mt-4 grid gap-3 xl:grid-cols-4">
             <label className="block">
-              <span className="block text-xs font-semibold uppercase tracking-[0.18em] text-outline">Part Number</span>
+              <span className="block text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">{isJa ? "品番" : "Part Number"}</span>
               <select
                 value={filters.partNumber}
                 onChange={(event) => updateFilter("partNumber", event.target.value)}
-                className="mt-2 h-11 w-full rounded-2xl border border-separator/40 bg-white px-4 text-sm text-on-surface outline-none transition focus:border-primary/40 dark:bg-surface-container"
+                className="mt-1.5 h-9 w-full rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] px-3 text-xs text-[var(--text-primary)] outline-none transition focus:border-[var(--freya-blue)] focus:ring-1 focus:ring-[var(--freya-blue)]"
               >
-                <option value="">All Part Numbers</option>
+                <option value="">{isJa ? "すべての品番" : "All Part Numbers"}</option>
                 {filterOptions.partNumbers.map((value) => (
                   <option key={value} value={value}>{value}</option>
                 ))}
@@ -537,14 +544,14 @@ export default function InventoryPage() {
             </label>
 
             <label className="block">
-              <span className="block text-xs font-semibold uppercase tracking-[0.18em] text-outline">Serial Number</span>
+              <span className="block text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">{isJa ? "背番号" : "Serial Number"}</span>
               <select
                 value={filters.backNumber}
                 onChange={(event) => updateFilter("backNumber", event.target.value)}
                 disabled={selectedBackNumbers.length > 0}
-                className="mt-2 h-11 w-full rounded-2xl border border-separator/40 bg-white px-4 text-sm text-on-surface outline-none transition focus:border-primary/40 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-surface-container"
+                className="mt-1.5 h-9 w-full rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] px-3 text-xs text-[var(--text-primary)] outline-none transition focus:border-[var(--freya-blue)] focus:ring-1 focus:ring-[var(--freya-blue)] disabled:cursor-not-allowed disabled:opacity-50"
               >
-                <option value="">{selectedBackNumbers.length > 0 ? "Model tag filter active" : "All Serial Numbers"}</option>
+                <option value="">{selectedBackNumbers.length > 0 ? (isJa ? "モデルタグフィルター有効" : "Model tag filter active") : (isJa ? "すべての背番号" : "All Serial Numbers")}</option>
                 {filterOptions.backNumbers.map((value) => (
                   <option key={value} value={value}>{value}</option>
                 ))}
@@ -552,13 +559,13 @@ export default function InventoryPage() {
             </label>
 
             <label className="block">
-              <span className="block text-xs font-semibold uppercase tracking-[0.18em] text-outline">Model</span>
+              <span className="block text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">{isJa ? "モデル" : "Model"}</span>
               <select
                 value={filters.model}
                 onChange={(event) => handleModelChange(event.target.value)}
-                className="mt-2 h-11 w-full rounded-2xl border border-separator/40 bg-white px-4 text-sm text-on-surface outline-none transition focus:border-primary/40 dark:bg-surface-container"
+                className="mt-1.5 h-9 w-full rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] px-3 text-xs text-[var(--text-primary)] outline-none transition focus:border-[var(--freya-blue)] focus:ring-1 focus:ring-[var(--freya-blue)]"
               >
-                <option value="">All Models</option>
+                <option value="">{isJa ? "すべてのモデル" : "All Models"}</option>
                 {models.map((value) => (
                   <option key={value} value={value}>{value}</option>
                 ))}
@@ -566,13 +573,13 @@ export default function InventoryPage() {
             </label>
 
             <label className="block">
-              <span className="block text-xs font-semibold uppercase tracking-[0.18em] text-outline">Search</span>
+              <span className="block text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">{isJa ? "検索" : "Search"}</span>
               <input
                 type="text"
                 value={filters.search}
                 onChange={(event) => updateFilter("search", event.target.value)}
-                placeholder="Part number or serial number..."
-                className="mt-2 h-11 w-full rounded-2xl border border-separator/40 bg-white px-4 text-sm text-on-surface outline-none transition focus:border-primary/40 dark:bg-surface-container"
+                placeholder={isJa ? "品番または背番号で検索..." : "Part number or serial number..."}
+                className="mt-1.5 h-9 w-full rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] px-3 text-xs text-[var(--text-primary)] outline-none transition focus:border-[var(--freya-blue)] focus:ring-1 focus:ring-[var(--freya-blue)]"
               />
             </label>
           </div>
@@ -584,10 +591,10 @@ export default function InventoryPage() {
             onAddRow={() => setAdvancedRows((current) => [...current, createInventoryAdvancedFilterRow()])}
             onRemoveRow={handleRemoveAdvancedRow}
             onClearRows={handleClearAdvancedFilters}
-            operatorLabels={INVENTORY_OPERATOR_LABELS}
+            operatorLabels={isJa ? INVENTORY_OPERATOR_LABELS_JA : INVENTORY_OPERATOR_LABELS}
             useOperatorLabelsInSelect
-            title="Advanced Filters"
-            activeSummaryDescription="Current advanced inventory conditions before execution."
+            title={isJa ? "詳細フィルター" : "Advanced Filters"}
+            activeSummaryDescription={isJa ? "実行前の現在の詳細在庫条件。" : "Current advanced inventory conditions before execution."}
             variant="compact"
             framed
             enableTextSuggestions
@@ -597,60 +604,60 @@ export default function InventoryPage() {
                 <button
                   type="button"
                   onClick={handleApplyAdvancedFilters}
-                  className="flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-on-primary transition-opacity hover:opacity-90"
+                  className="flex items-center gap-1.5 rounded-[6px] bg-[var(--freya-blue)] px-3.5 py-1.5 text-xs font-semibold text-white transition hover:bg-[var(--freya-blue-hover)]"
                 >
                   <span className="material-symbols-outlined" style={{ fontSize: 16 }}>filter_alt</span>
-                  Apply Advanced Filters
+                  {isJa ? "詳細フィルターを適用" : "Apply Advanced Filters"}
                 </button>
 
                 <button
                   type="button"
                   onClick={handleClearAdvancedFilters}
-                  className="flex items-center gap-2 rounded-xl border border-separator/40 glass-card px-5 py-2.5 text-sm font-semibold text-on-surface transition-all hover:border-primary/30"
+                  className="flex items-center gap-1.5 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3.5 py-1.5 text-xs font-semibold text-[var(--text-primary)] transition hover:bg-[var(--surface-hover)]"
                 >
                   <span className="material-symbols-outlined" style={{ fontSize: 16 }}>refresh</span>
-                  Reset Advanced Filters
+                  {isJa ? "詳細フィルターをリセット" : "Reset Advanced Filters"}
                 </button>
               </>
             )}
           />
 
           {filters.model || selectedBackNumbers.length > 0 ? (
-            <div className="mt-4 rounded-2xl border border-outline-variant/15 bg-surface-container-low/35 p-4">
+            <div className="mt-4 rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] p-3">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-outline">Selected Products</p>
-                  <p className="mt-1 text-sm text-on-surface-variant">{selectedTagSummary.countLabel}</p>
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">{isJa ? "選択中の製品" : "Selected Products"}</p>
+                  <p className="mt-0.5 text-xs text-[var(--text-primary)]">{selectedTagSummary.countLabel}</p>
                 </div>
                 {filters.model ? (
                   <button
                     type="button"
                     onClick={() => handleModelChange("")}
-                    className="rounded-2xl border border-separator/40 px-3 py-2 text-xs font-semibold text-on-surface transition hover:bg-surface-container"
+                    className="rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1 text-xs font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-hover)] transition-colors"
                   >
-                    Clear Model Filter
+                    {isJa ? "モデルフィルターを解除" : "Clear Model Filter"}
                   </button>
                 ) : null}
               </div>
 
               {selectedTagSummary.visible.length > 0 ? (
-                <div className="mt-4 flex flex-wrap gap-2">
+                <div className="mt-3 flex flex-wrap gap-1.5">
                   {selectedTagSummary.visible.map((backNumber) => (
-                    <span key={backNumber} className="inline-flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1.5 text-xs font-semibold text-primary">
+                    <span key={backNumber} className="inline-flex items-center gap-1.5 rounded-[6px] border border-[var(--freya-blue)]/30 bg-[var(--freya-blue)]/10 px-2 py-0.5 text-xs font-semibold text-[var(--freya-blue)]">
                       {backNumber}
                       <button
                         type="button"
                         onClick={() => handleRemoveSelectedBackNumber(backNumber)}
                         className="text-current/70 transition hover:text-current"
-                        aria-label={`Remove ${backNumber}`}
+                        aria-label={isJa ? `${backNumber} を削除` : `Remove ${backNumber}`}
                       >
                         <span className="material-symbols-outlined" style={{ fontSize: 14 }}>close</span>
                       </button>
                     </span>
                   ))}
                   {selectedTagSummary.overflow > 0 ? (
-                    <span className="inline-flex items-center rounded-full bg-surface-container px-3 py-1.5 text-xs font-semibold text-on-surface-variant">
-                      +{selectedTagSummary.overflow} more
+                    <span className="inline-flex items-center rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-2 py-0.5 text-xs font-semibold text-[var(--text-muted)]">
+                      +{selectedTagSummary.overflow} {isJa ? "件" : "more"}
                     </span>
                   ) : null}
                 </div>
@@ -676,25 +683,25 @@ export default function InventoryPage() {
             setPage(1);
           }}
           pageSizeOptions={INVENTORY_PAGE_SIZE_OPTIONS}
-          pageSizeLabel="Rows"
+          pageSizeLabel={isJa ? "件数" : "Rows"}
           rowKey={(row) => row.背番号}
           onRowClick={(row) => setTransactionState({ open: true, backNumber: row.背番号 })}
           getRowClassName={(row) => getInventoryRowToneClass(row)}
           renderPageInfo={({ filteredCount, page: currentPage, pageSize: currentPageSize }) => (
-            <span>{buildInventoryPageInfo({ filteredCount, page: currentPage, pageSize: currentPageSize })}</span>
+            <span>{buildInventoryPageInfo({ filteredCount, page: currentPage, pageSize: currentPageSize }, language)}</span>
           )}
-          emptyTitle="No matching inventory records"
-          emptyMessage="Adjust the filters or add inventory to create the first transaction."
+          emptyTitle={isJa ? "該当する在庫レコードがありません" : "No matching inventory records"}
+          emptyMessage={isJa ? "フィルターを調整するか、在庫を追加して最初の取引を作成してください。" : "Adjust the filters or add inventory to create the first transaction."}
           layoutStorageKey="inventory-table-layout"
           enableColumnResize
           enableColumnReorder
           stickyHeader
           stickyHeaderOffset={0}
-          className="dashboard-section mb-6 overflow-hidden rounded-2xl"
-          topBarClassName="flex flex-col gap-4 border-b border-outline-variant/15 px-5 py-4 md:flex-row md:items-center md:justify-between"
-          bottomBarClassName="flex flex-col gap-4 border-t border-outline-variant/15 px-5 py-4 md:flex-row md:items-center md:justify-between"
-          rowClassName="border-b border-outline-variant/10 transition hover:bg-primary/5"
-          rowsSelectClassName="h-10 rounded-2xl border border-separator/40 bg-white px-3 text-sm text-on-surface outline-none transition focus:border-primary/40 dark:bg-surface-container"
+          className="freya-card mb-6 overflow-hidden rounded-[8px] border border-[var(--border)] bg-[var(--surface)] shadow-sm"
+          topBarClassName="flex flex-col gap-3 border-b border-[var(--border)] px-4 py-3 md:flex-row md:items-center md:justify-between text-xs text-[var(--text-muted)]"
+          bottomBarClassName="flex flex-col gap-3 border-t border-[var(--border)] px-4 py-3 md:flex-row md:items-center md:justify-between text-xs text-[var(--text-muted)]"
+          rowClassName="border-b border-[var(--border)] transition hover:bg-[var(--surface-hover)]"
+          rowsSelectClassName="h-8 rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] px-2.5 text-xs text-[var(--text-primary)] outline-none focus:border-[var(--freya-blue)] focus:ring-1 focus:ring-[var(--freya-blue)]"
         />
 
         <InventoryAddModal
@@ -740,6 +747,6 @@ export default function InventoryPage() {
           }}
         />
       </div>
-    </section>
+    </div>
   );
 }

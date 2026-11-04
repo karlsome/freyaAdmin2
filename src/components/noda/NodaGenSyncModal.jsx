@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import Papa from "papaparse";
 import NodaModalFrame from "./NodaModalFrame";
+import { useLanguage } from "../../contexts/LanguageContext";
 import {
   bulkCreateNodaRequests,
   checkNodaInventory,
@@ -97,7 +98,7 @@ async function validateGenItems(parsedItems, deliveryDate) {
   return { validated, errors };
 }
 
-function DuplicateSelectionStep({ duplicateGroups, duplicateSelections, onToggle, onContinue }) {
+function DuplicateSelectionStep({ duplicateGroups, duplicateSelections, onToggle, onContinue, isJa }) {
   const groups = Object.values(duplicateGroups);
 
   return (
@@ -106,9 +107,11 @@ function DuplicateSelectionStep({ duplicateGroups, duplicateSelections, onToggle
         <div className="flex items-start gap-3">
           <span className="material-symbols-outlined">warning</span>
           <div>
-            <p className="font-semibold">Duplicate GEN entries detected</p>
+            <p className="font-semibold">{isJa ? "GENの重複データを検出しました" : "Duplicate GEN entries detected"}</p>
             <p className="mt-1 text-amber-900/80 dark:text-amber-200/80">
-              Select the rows to include for each duplicated serial number. Multiple selections will be summed before comparison.
+              {isJa
+                ? "重複している背番号について、対象とする行を選択してください。複数選択した場合は合計されます。"
+                : "Select the rows to include for each duplicated serial number. Multiple selections will be summed before comparison."}
             </p>
           </div>
         </div>
@@ -128,7 +131,7 @@ function DuplicateSelectionStep({ duplicateGroups, duplicateSelections, onToggle
                   <p className="text-sm text-on-surface-variant">{group.品番}</p>
                 </div>
                 <span className="rounded-full bg-amber-500/15 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-amber-700 dark:text-amber-300">
-                  {group.entries.length} duplicates
+                  {isJa ? `${group.entries.length} 件の重複` : `${group.entries.length} duplicates`}
                 </span>
               </div>
 
@@ -153,8 +156,8 @@ function DuplicateSelectionStep({ duplicateGroups, duplicateSelections, onToggle
                       />
                       <div className="flex-1">
                         <div className="flex flex-wrap items-center justify-between gap-2">
-                          <span className="font-semibold text-on-surface">{entry.quantity} pieces</span>
-                          <span className="text-xs text-on-surface-variant">Available stock: {entry.availableQuantity}</span>
+                          <span className="font-semibold text-on-surface">{entry.quantity} {isJa ? "個" : "pieces"}</span>
+                          <span className="text-xs text-on-surface-variant">{isJa ? "引当可能在庫: " : "Available stock: "}{entry.availableQuantity}</span>
                         </div>
                       </div>
                     </label>
@@ -164,8 +167,8 @@ function DuplicateSelectionStep({ duplicateGroups, duplicateSelections, onToggle
 
               <div className="mt-3 rounded-2xl bg-surface-container-high/50 px-4 py-3 text-xs text-on-surface-variant">
                 {selectedRows.length
-                  ? `Selected quantity: ${selectedTotal} pieces`
-                  : "No entries selected. This serial number will be excluded."}
+                  ? (isJa ? `選択数量: ${selectedTotal} 個` : `Selected quantity: ${selectedTotal} pieces`)
+                  : (isJa ? "行が未選択です。この背番号は除外されます。" : "No entries selected. This serial number will be excluded.")}
               </div>
             </div>
           );
@@ -178,30 +181,30 @@ function DuplicateSelectionStep({ duplicateGroups, duplicateSelections, onToggle
           onClick={onContinue}
           className="rounded-2xl bg-primary px-5 py-3 text-sm font-semibold text-on-primary transition hover:opacity-90"
         >
-          Continue To Comparison
+          {isJa ? "比較へ進む" : "Continue To Comparison"}
         </button>
       </div>
     </div>
   );
 }
 
-function ComparisonStep({ availableItems, existingRequestsCount, nextRequestNumber, quantities, onQuantityChange }) {
+function ComparisonStep({ availableItems, existingRequestsCount, nextRequestNumber, quantities, onQuantityChange, isJa }) {
   return (
     <div className="space-y-5">
       <div className="rounded-[24px] border border-primary/20 bg-primary/8 p-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-primary">Creating Request</p>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-primary">{isJa ? "作成対象リクエスト" : "Creating Request"}</p>
             <h3 className="mt-1 text-lg font-semibold text-on-surface">{nextRequestNumber}</h3>
           </div>
           {existingRequestsCount ? (
             <span className="rounded-full bg-white/80 px-3 py-1 text-xs font-semibold text-on-surface dark:bg-surface-container">
-              {existingRequestsCount} existing requests on this date
+              {isJa ? `この日付の既存リクエスト: ${existingRequestsCount} 件` : `${existingRequestsCount} existing requests on this date`}
             </span>
           ) : null}
         </div>
         <p className="mt-3 text-sm text-on-surface-variant">
-          Adjust quantities below. Set a row to 0 to exclude it from the new request.
+          {isJa ? "数量を調整してください。0に設定すると新規リクエストから除外されます。" : "Adjust quantities below. Set a row to 0 to exclude it from the new request."}
         </p>
       </div>
 
@@ -217,16 +220,16 @@ function ComparisonStep({ availableItems, existingRequestsCount, nextRequestNumb
                     <span className="text-sm text-on-surface-variant">{item.品番}</span>
                   </div>
                   <div className="mt-3 grid gap-2 text-xs text-on-surface-variant sm:grid-cols-2 xl:grid-cols-4">
-                    <span>GEN Total: <strong className="text-on-surface">{item.genTotal}</strong></span>
-                    <span>Allocated: <strong className="text-amber-700 dark:text-amber-300">{item.allocatedQty}</strong></span>
-                    <span>Remaining: <strong className="text-emerald-700 dark:text-emerald-300">{item.remainingQty}</strong></span>
-                    <span>Available: <strong className="text-sky-700 dark:text-sky-300">{item.availableQuantity}</strong></span>
+                    <span>{isJa ? "GEN合計: " : "GEN Total: "}<strong className="text-on-surface">{item.genTotal}</strong></span>
+                    <span>{isJa ? "引当済: " : "Allocated: "}<strong className="text-amber-700 dark:text-amber-300">{item.allocatedQty}</strong></span>
+                    <span>{isJa ? "残数量: " : "Remaining: "}<strong className="text-emerald-700 dark:text-emerald-300">{item.remainingQty}</strong></span>
+                    <span>{isJa ? "引当可能: " : "Available: "}<strong className="text-sky-700 dark:text-sky-300">{item.availableQuantity}</strong></span>
                   </div>
                 </div>
 
                 <div className="w-full lg:w-40">
                   <label className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-outline">
-                    Quantity
+                    {isJa ? "数量" : "Quantity"}
                   </label>
                   <input
                     type="number"
@@ -236,7 +239,7 @@ function ComparisonStep({ availableItems, existingRequestsCount, nextRequestNumb
                     onChange={(event) => onQuantityChange(item.背番号, item.remainingQty, event.target.value)}
                     className="h-11 w-full rounded-2xl border border-outline-variant/30 bg-white px-4 text-sm text-on-surface outline-none transition focus:border-primary/40 dark:bg-surface-container"
                   />
-                  <p className="mt-2 text-right text-xs text-on-surface-variant">Max {item.remainingQty}</p>
+                  <p className="mt-2 text-right text-xs text-on-surface-variant">{isJa ? `最大 ${item.remainingQty}` : `Max ${item.remainingQty}`}</p>
                 </div>
               </div>
             </div>
@@ -248,6 +251,8 @@ function ComparisonStep({ availableItems, existingRequestsCount, nextRequestNumb
 }
 
 export default function NodaGenSyncModal({ open, authUser, onClose, onSubmitted }) {
+  const { language } = useLanguage();
+  const isJa = language === "ja";
   const [deliveryDate, setDeliveryDate] = useState(todayDateString());
   const [progress, setProgress] = useState({ value: 0, message: "" });
   const [error, setError] = useState("");
@@ -276,7 +281,7 @@ export default function NodaGenSyncModal({ open, authUser, onClose, onSubmitted 
 
   async function handleFetchFromGen() {
     if (!deliveryDate) {
-      setError("Please select a delivery date.");
+      setError(isJa ? "納入日を選択してください。" : "Please select a delivery date.");
       return;
     }
 
@@ -284,18 +289,18 @@ export default function NodaGenSyncModal({ open, authUser, onClose, onSubmitted 
     setError("");
 
     try {
-      setProgress({ value: 15, message: "Connecting to GEN…" });
+      setProgress({ value: 15, message: isJa ? "GENへ接続中…" : "Connecting to GEN…" });
       const arrayBuffer = await fetchGenCsvBuffer(deliveryDate);
 
-      setProgress({ value: 35, message: "Parsing CSV data…" });
+      setProgress({ value: 35, message: isJa ? "CSVデータを解析中…" : "Parsing CSV data…" });
       const decoder = new TextDecoder("shift-jis");
       const csvText = decoder.decode(arrayBuffer);
       const parsedItems = parseGenCsv(csvText);
 
-      setProgress({ value: 55, message: "Validating master data and inventory…" });
+      setProgress({ value: 55, message: isJa ? "マスターデータと在庫を検証中…" : "Validating master data and inventory…" });
       const { validated } = await validateGenItems(parsedItems, deliveryDate);
 
-      setProgress({ value: 75, message: "Loading existing Noda requests…" });
+      setProgress({ value: 75, message: isJa ? "既存の野田リクエストを読み込み中…" : "Loading existing Noda requests…" });
       const existingRequests = await fetchNodaBulkRequestsByPickupDate(deliveryDate);
       const allocatedQuantities = calculateAllocatedQuantities(existingRequests);
       const nextRequestNumber = getNextNodaRequestNumber(existingRequests, deliveryDate);
@@ -310,7 +315,7 @@ export default function NodaGenSyncModal({ open, authUser, onClose, onSubmitted 
       };
 
       setWorkflowData(nextWorkflow);
-      setProgress({ value: 100, message: "Ready." });
+      setProgress({ value: 100, message: isJa ? "準備完了" : "Ready." });
 
       if (Object.keys(duplicates).length > 0) {
         const defaultSelections = {};
@@ -328,7 +333,7 @@ export default function NodaGenSyncModal({ open, authUser, onClose, onSubmitted 
         .filter((item) => item.remainingQty > 0);
 
       if (!availableItems.length) {
-        throw new Error("All GEN items are already fully allocated for this date.");
+        throw new Error(isJa ? "この日付のGEN品目はすべて引当済みです。" : "All GEN items are already fully allocated for this date.");
       }
 
       setWorkflowData((current) => ({ ...current, availableItems }));
@@ -337,7 +342,7 @@ export default function NodaGenSyncModal({ open, authUser, onClose, onSubmitted 
       );
       setPhase("comparison");
     } catch (loadError) {
-      setError(loadError.message || "Failed to fetch data from GEN.");
+      setError(loadError.message || (isJa ? "GENからのデータ取得に失敗しました。" : "Failed to fetch data from GEN."));
       setProgress({ value: 0, message: "" });
     } finally {
       setBusy(false);
@@ -399,7 +404,7 @@ export default function NodaGenSyncModal({ open, authUser, onClose, onSubmitted 
       .filter((item) => item.remainingQty > 0);
 
     if (!availableItems.length) {
-      setError("All selected items are already fully allocated for this date.");
+      setError(isJa ? "選択した品目はすべてこの日付に引当済みです。" : "All selected items are already fully allocated for this date.");
       return;
     }
 
@@ -422,7 +427,7 @@ export default function NodaGenSyncModal({ open, authUser, onClose, onSubmitted 
 
   async function handleCreateRequest() {
     if (!workflowData?.availableItems?.length) {
-      setError("No comparison data is available.");
+      setError(isJa ? "比較データがありません。" : "No comparison data is available.");
       return;
     }
 
@@ -441,7 +446,7 @@ export default function NodaGenSyncModal({ open, authUser, onClose, onSubmitted 
     }, []);
 
     if (!items.length) {
-      setError("Enter at least one quantity greater than zero.");
+      setError(isJa ? "1つ以上の数量を0より大きく入力してください。" : "Enter at least one quantity greater than zero.");
       return;
     }
 
@@ -449,18 +454,18 @@ export default function NodaGenSyncModal({ open, authUser, onClose, onSubmitted 
     setError("");
 
     try {
-      setProgress({ value: 25, message: "Validating inventory…" });
+      setProgress({ value: 25, message: isJa ? "在庫を確認中…" : "Validating inventory…" });
 
       for (const item of items) {
         const inventoryResult = await checkNodaInventory(item.背番号);
         const availableQuantity = inventoryResult?.inventory?.availableQuantity || 0;
 
         if (!inventoryResult?.success || availableQuantity < item.quantity) {
-          throw new Error(`${item.背番号}: insufficient stock for selected quantity.`);
+          throw new Error(isJa ? `${item.背番号}: 選択数量に対する在庫が不足しています。` : `${item.背番号}: insufficient stock for selected quantity.`);
         }
       }
 
-      setProgress({ value: 70, message: "Creating bulk request…" });
+      setProgress({ value: 70, message: isJa ? "一括リクエストを作成中…" : "Creating bulk request…" });
       await bulkCreateNodaRequests(
         {
           items,
@@ -469,14 +474,16 @@ export default function NodaGenSyncModal({ open, authUser, onClose, onSubmitted 
         authUser?.username || "system"
       );
 
-      setProgress({ value: 100, message: "Request created." });
+      setProgress({ value: 100, message: isJa ? "リクエスト作成完了" : "Request created." });
       onSubmitted?.({
         type: "success",
-        message: `Created Noda request from GEN for ${workflowData.deliveryDate}.`,
+        message: isJa
+          ? `${workflowData.deliveryDate} の野田リクエストをGENから作成しました。`
+          : `Created Noda request from GEN for ${workflowData.deliveryDate}.`,
       });
       onClose?.();
     } catch (createError) {
-      setError(createError.message || "Failed to create request from GEN.");
+      setError(createError.message || (isJa ? "GENからのリクエスト作成に失敗しました。" : "Failed to create request from GEN."));
       setProgress({ value: 0, message: "" });
     } finally {
       setCreateBusy(false);
@@ -490,8 +497,8 @@ export default function NodaGenSyncModal({ open, authUser, onClose, onSubmitted 
       open={open}
       onClose={onClose}
       icon="cloud_sync"
-      title="Sync From GEN"
-      subtitle="Fetch GEN export data, review quantities, and create a Noda bulk request."
+      title={isJa ? "GEN同期" : "Sync From GEN"}
+      subtitle={isJa ? "GENエクスポートデータを取得し、数量を確認して野田一括リクエストを作成します。" : "Fetch GEN export data, review quantities, and create a Noda bulk request."}
       maxWidthClassName="max-w-5xl"
       footer={(
         <div className="flex flex-wrap items-center justify-between gap-3">
@@ -504,7 +511,7 @@ export default function NodaGenSyncModal({ open, authUser, onClose, onSubmitted 
               onClick={() => onClose?.()}
               className="rounded-2xl border border-separator/40 px-4 py-2.5 text-sm font-semibold text-on-surface transition hover:bg-surface-container"
             >
-              Cancel
+              {isJa ? "キャンセル" : "Cancel"}
             </button>
             {phase === "date" ? (
               <button
@@ -513,7 +520,7 @@ export default function NodaGenSyncModal({ open, authUser, onClose, onSubmitted 
                 disabled={busy}
                 className="rounded-2xl bg-primary px-5 py-2.5 text-sm font-semibold text-on-primary transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
               >
-                {busy ? "Fetching…" : "Fetch From GEN"}
+                {busy ? (isJa ? "取得中…" : "Fetching…") : (isJa ? "GENから取得" : "Fetch From GEN")}
               </button>
             ) : null}
             {phase === "comparison" ? (
@@ -523,7 +530,7 @@ export default function NodaGenSyncModal({ open, authUser, onClose, onSubmitted 
                 disabled={createBusy || !canCreate}
                 className="rounded-2xl bg-emerald-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
               >
-                {createBusy ? "Creating…" : "Create Request"}
+                {createBusy ? (isJa ? "作成中…" : "Creating…") : (isJa ? "リクエスト作成" : "Create Request")}
               </button>
             ) : null}
           </div>
@@ -551,7 +558,7 @@ export default function NodaGenSyncModal({ open, authUser, onClose, onSubmitted 
         {phase === "date" ? (
           <div className="rounded-[24px] border border-separator/40 bg-surface-container-low/35 p-5">
             <label className="block text-xs font-semibold uppercase tracking-[0.18em] text-outline">
-              Delivery Date
+              {isJa ? "納入日" : "Delivery Date"}
             </label>
             <input
               type="date"
@@ -560,7 +567,9 @@ export default function NodaGenSyncModal({ open, authUser, onClose, onSubmitted 
               className="mt-3 h-12 w-full rounded-2xl border border-outline-variant/30 bg-white px-4 text-sm text-on-surface outline-none transition focus:border-primary/40 dark:bg-surface-container"
             />
             <p className="mt-3 text-sm text-on-surface-variant">
-              GEN sync imports the export for a single date, validates inventory, and lets you adjust the final quantities before creating a bulk request.
+              {isJa
+                ? "GEN同期は指定日のエクスポートを取り込み、在庫を照合して、一括リクエスト作成前に最終数量を調整できます。"
+                : "GEN sync imports the export for a single date, validates inventory, and lets you adjust the final quantities before creating a bulk request."}
             </p>
           </div>
         ) : null}
@@ -571,6 +580,7 @@ export default function NodaGenSyncModal({ open, authUser, onClose, onSubmitted 
             duplicateSelections={duplicateSelections}
             onToggle={handleToggleDuplicate}
             onContinue={handleContinueFromDuplicates}
+            isJa={isJa}
           />
         ) : null}
 
@@ -581,6 +591,7 @@ export default function NodaGenSyncModal({ open, authUser, onClose, onSubmitted 
             nextRequestNumber={workflowData.nextRequestNumber}
             quantities={quantities}
             onQuantityChange={handleQuantityChange}
+            isJa={isJa}
           />
         ) : null}
       </div>

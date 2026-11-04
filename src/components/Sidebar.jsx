@@ -1,6 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useLanguage } from "../contexts/LanguageContext";
 import IconButton from "./IconButton";
+import freyaLogo from "../assets/freya-systems-logo.png";
 
 const navItems = [
   { icon: "dashboard",                labelKey: "dashboard",           page: "dashboard" },
@@ -20,9 +21,14 @@ const navItems = [
   },
   { icon: "event_note",               labelKey: "planner",             page: "planner" },
   { icon: "inventory_2",              labelKey: "inventory",           page: "inventory" },
-  { icon: "notifications",            labelKey: "notifications",       page: "notifications" },
-  { icon: "analytics",                labelKey: "analytics",           page: "analytics" },
-  { icon: "payments",                 labelKey: "financials",          page: "financials" },
+  { icon: "analytics",                labelKey: "analytics",           page: "analytics",
+    children: [
+      { icon: "inventory_2",          labelKey: "materialAnalytics",   page: "analytics/material" },
+      { icon: "precision_manufacturing", labelKey: "productionAnalytics", page: "analytics/production" },
+      { icon: "fact_check",           labelKey: "qualityAnalytics",    page: "analytics/quality" },
+      { icon: "speed",                labelKey: "machineAnalytics",    page: "analytics/machines" },
+    ]
+  },
   { icon: "group",                    labelKey: "userManagement",      page: "userManagement" },
   { icon: "fact_check",               labelKey: "approvals",           page: "approvals" },
   { icon: "database",                 labelKey: "masterDB",            page: "masterDB" },
@@ -86,7 +92,38 @@ function isActiveFor(item, activePage) {
 }
 
 export default function Sidebar({ activePage, badges = {}, mobileOpen = false, onClose, onLogout, onNavigate, onOpenSettings, className = "" }) {
-  const [openItems, setOpenItems] = useState(() => new Set());
+  // Initialize openItems with any item that has an active child
+  const [openItems, setOpenItems] = useState(() => {
+    const initial = new Set();
+    navItems.forEach((item) => {
+      if (hasActiveChild(item, activePage)) {
+        initial.add(item.page);
+      }
+    });
+    return initial;
+  });
+
+  // Track the previous active parent so when navigating between major sections,
+  // the newly active parent auto-expands while allowing the user to manually collapse/expand
+  const prevActiveParentRef = useRef(
+    navItems.find((item) => hasActiveChild(item, activePage))?.page
+  );
+
+  useEffect(() => {
+    const currentActiveParent = navItems.find((item) => hasActiveChild(item, activePage))?.page;
+    if (currentActiveParent && currentActiveParent !== prevActiveParentRef.current) {
+      prevActiveParentRef.current = currentActiveParent;
+      setOpenItems((prev) => {
+        if (!prev.has(currentActiveParent)) {
+          const next = new Set(prev);
+          next.add(currentActiveParent);
+          return next;
+        }
+        return prev;
+      });
+    }
+  }, [activePage]);
+
   const { t, language, changeLanguage } = useLanguage();
 
   useEffect(() => {
@@ -103,7 +140,11 @@ export default function Sidebar({ activePage, badges = {}, mobileOpen = false, o
   function toggleOpen(page) {
     setOpenItems((prev) => {
       const next = new Set(prev);
-      next.has(page) ? next.delete(page) : next.add(page);
+      if (next.has(page)) {
+        next.delete(page);
+      } else {
+        next.add(page);
+      }
       return next;
     });
   }
@@ -111,16 +152,19 @@ export default function Sidebar({ activePage, badges = {}, mobileOpen = false, o
   function renderSidebarContent(isMobile) {
     return (
       <>
-        <div className="mb-10 flex items-center justify-between px-3">
-          <div className={`flex items-center gap-3 ${isMobile ? "" : "min-w-[256px]"}`}>
-            <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl kinetic-gradient shadow-lg shadow-primary/20">
-              <span className="material-symbols-outlined text-white" style={{ fontVariationSettings: "'FILL' 1" }}>
+        <div className="mb-5 flex flex-shrink-0 items-center justify-between px-3">
+          <div className={`flex items-center gap-3 ${isMobile ? "min-w-0 flex-1 mr-2" : "min-w-[264px]"}`}>
+            <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-[6px] bg-[var(--surface-hover)] border border-[var(--border)]">
+              <span className="material-symbols-outlined text-[var(--freya-blue)]" style={{ fontSize: 20 }}>
                 precision_manufacturing
               </span>
             </div>
-            <div className={`overflow-hidden transition-opacity duration-200 ${isMobile ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`}>
-              <h1 className="whitespace-nowrap text-lg font-semibold leading-none text-on-surface">Freya Admin</h1>
-              <p className="mt-0.5 whitespace-nowrap text-[10px] font-semibold uppercase tracking-[0.18em] text-primary">Detailed Data</p>
+            <div className={`overflow-hidden transition-opacity duration-200 flex-1 flex items-center ${isMobile ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`}>
+              <img
+                src={freyaLogo}
+                alt="FREYA SYSTEMS"
+                className="h-9 sm:h-[42px] w-auto max-w-[155px] sm:max-w-[205px] object-contain object-left dark:invert select-none"
+              />
             </div>
           </div>
 
@@ -135,11 +179,11 @@ export default function Sidebar({ activePage, badges = {}, mobileOpen = false, o
           )}
         </div>
 
-        <nav className="flex-1 space-y-0.5 overflow-y-auto scrollbar-hide px-3">
+        <nav className="flex-1 min-h-0 space-y-0.5 overflow-y-auto scrollbar-hide px-3">
           {navItems.map((item) => {
             const isActive = isActiveFor(item, activePage);
             const hasChildren = !!item.children?.length;
-            const isOpen = openItems.has(item.page) || hasActiveChild(item, activePage);
+            const isOpen = openItems.has(item.page);
             const activeChildPage = getActiveChildPage(item, activePage);
             const label = t(item.labelKey);
 
@@ -149,18 +193,21 @@ export default function Sidebar({ activePage, badges = {}, mobileOpen = false, o
                   <button
                     type="button"
                     onClick={() => {
+                      if (hasChildren && !openItems.has(item.page)) {
+                        setOpenItems((prev) => new Set(prev).add(item.page));
+                      }
                       onNavigate(item.page);
                       if (isMobile) onClose?.();
                     }}
                     title={label}
-                    className={`min-w-0 flex-1 flex items-center gap-3 rounded-xl text-left transition-all duration-200 ease-in-out ${
+                    className={`min-w-0 flex-1 flex items-center gap-3 rounded-[6px] text-left transition-all duration-200 ease-in-out ${
                       isMobile
                         ? "px-3 py-2.5"
                         : "px-0 py-2.5"
                     } ${
                       isActive
-                        ? "bg-primary/5 text-primary dark:bg-transparent dark:shadow-[0_0_15px_rgba(192,193,255,0.2)]"
-                        : "text-outline hover:bg-primary/5 hover:text-primary dark:hover:bg-white/5 dark:hover:text-on-surface"
+                        ? "bg-[var(--freya-blue-subtle)] text-[var(--freya-blue)] font-semibold shadow-xs"
+                        : "text-[var(--text-muted)] hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)]"
                     }`}
                   >
                     <span
@@ -188,13 +235,16 @@ export default function Sidebar({ activePage, badges = {}, mobileOpen = false, o
                   {hasChildren && (
                     <button
                       type="button"
-                      onClick={() => toggleOpen(item.page)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        toggleOpen(item.page);
+                      }}
                       aria-label={`${isOpen ? "Collapse" : "Expand"} ${label} submenu`}
                       title={`${isOpen ? "Collapse" : "Expand"} ${label}`}
-                      className={`mr-1.5 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg transition-all duration-300 hover:bg-primary/5 ${
+                      className={`mr-1.5 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-[6px] transition-all duration-200 hover:bg-[var(--surface-hover)] ${
                         isOpen ? "rotate-180" : "rotate-0"
                       } ${
-                        isActive ? "text-primary" : "text-outline"
+                        isActive ? "text-[var(--freya-blue)]" : "text-[var(--text-muted)]"
                       } ${
                         isMobile ? "opacity-100" : "opacity-0 group-hover:opacity-100"
                       }`}
@@ -234,12 +284,12 @@ export default function Sidebar({ activePage, badges = {}, mobileOpen = false, o
                                 if (isMobile) onClose?.();
                               }}
                               title={childLabel}
-                              className={`min-w-0 flex-1 rounded-xl py-1.5 pr-2 text-left transition-all duration-200 ${
+                              className={`min-w-0 flex-1 rounded-[6px] py-1.5 pr-2 text-left transition-all duration-200 ${
                                 isMobile ? "pl-2.5" : "pl-1"
                               } ${
                                 childActive
-                                  ? "bg-primary/5 text-primary"
-                                  : "text-outline hover:bg-primary/5 hover:text-primary dark:hover:bg-white/5 dark:hover:text-on-surface"
+                                  ? "bg-[var(--freya-blue-subtle)] text-[var(--freya-blue)] font-semibold"
+                                  : "text-[var(--text-muted)] hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)]"
                               }`}
                             >
                               <div className="flex items-center gap-2.5">
@@ -268,10 +318,10 @@ export default function Sidebar({ activePage, badges = {}, mobileOpen = false, o
           })}
         </nav>
 
-        <div className="mt-auto space-y-0.5 border-t border-outline-variant/20 px-3 pt-6">
+        <div className="mt-auto flex-shrink-0 space-y-0.5 border-t border-outline-variant/20 px-3 pt-3">
           <button
             className={`w-full flex items-center gap-3 rounded-xl text-outline transition-all duration-200 hover:bg-primary/5 hover:text-primary dark:hover:bg-white/5 dark:hover:text-on-surface ${
-              isMobile ? "px-3 py-2.5" : "min-w-[264px] px-0 py-2.5"
+              isMobile ? "px-3 py-2" : "min-w-[264px] px-0 py-2"
             }`}
             onClick={() => changeLanguage(language === "ja" ? "en" : "ja")}
             title={language === "ja" ? "Switch to English" : "日本語に切り替え"}
@@ -286,7 +336,7 @@ export default function Sidebar({ activePage, badges = {}, mobileOpen = false, o
           </button>
           <button
             className={`w-full flex items-center gap-3 rounded-xl text-error/70 transition-all duration-200 hover:bg-error/5 hover:text-error dark:text-outline dark:hover:bg-white/5 dark:hover:text-on-surface ${
-              isMobile ? "px-3 py-2.5" : "min-w-[264px] px-0 py-2.5"
+              isMobile ? "px-3 py-2" : "min-w-[264px] px-0 py-2"
             }`}
             onClick={onLogout}
             title={t("logout")}
@@ -302,7 +352,7 @@ export default function Sidebar({ activePage, badges = {}, mobileOpen = false, o
 
   return (
     <>
-      <aside className={`group fixed left-0 top-0 z-[45] hidden h-full w-16 overflow-hidden sidebar-glass py-6 font-headline text-sm font-medium transition-[width] duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] hover:w-72 md:flex md:flex-col ${className}`}>
+      <aside className={`group fixed left-0 top-0 z-[45] hidden h-dvh max-h-screen w-16 overflow-hidden sidebar-glass py-4 font-headline text-sm font-medium transition-[width] duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] hover:w-72 md:flex md:flex-col ${className}`}>
         {renderSidebarContent(false)}
       </aside>
 
@@ -314,7 +364,7 @@ export default function Sidebar({ activePage, badges = {}, mobileOpen = false, o
           className={`absolute inset-0 bg-black/45 backdrop-blur-sm transition-opacity ${mobileOpen ? "opacity-100" : "opacity-0"}`}
         />
 
-        <aside className={`absolute left-0 top-0 z-10 flex h-full w-72 max-w-[82vw] flex-col sidebar-glass py-6 font-headline text-sm font-medium shadow-2xl transition-transform duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] ${mobileOpen ? "translate-x-0" : "-translate-x-full"}`}>
+        <aside className={`absolute left-0 top-0 z-10 flex h-dvh max-h-screen w-72 max-w-[82vw] flex-col sidebar-glass py-4 font-headline text-sm font-medium shadow-2xl transition-transform duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] ${mobileOpen ? "translate-x-0" : "-translate-x-full"}`}>
           {renderSidebarContent(true)}
         </aside>
       </div>

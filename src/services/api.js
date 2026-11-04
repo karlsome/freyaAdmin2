@@ -266,6 +266,68 @@ export async function fetchProductionData(factoryName, date) {
   }
 }
 
+// ─── First Factory (PSA Process) Production Data ─────────────────────────────
+export async function fetchFirstFactoryProduction(date) {
+  const key = `firstFactoryProd_${date}`;
+  const cached = _getCached(key, SENSOR_TTL);
+  if (cached) return cached;
+
+  try {
+    const res = await fetch(`${BASE_URL}api/production/status?date=${encodeURIComponent(date)}`);
+    if (res.ok) {
+      const json = await res.json();
+      if (json.success && Array.isArray(json.records)) {
+        _setCache(key, json.records);
+        return json.records;
+      }
+    }
+  } catch {
+    // fallback to universal query
+  }
+
+  try {
+    const data = await query("submittedDB", "firstFactoryProduction", { date });
+    const records = Array.isArray(data) ? data : (data?.records || data?.data || []);
+    _setCache(key, records);
+    return records;
+  } catch {
+    return [];
+  }
+}
+
+export async function fetchFirstFactoryProductionByPeriod(from, to, partNumbers = [], filters = {}) {
+  const queryObj = {};
+  if (from && to && from === to) {
+    queryObj.date = from;
+  } else if (from && to) {
+    queryObj.date = { $gte: from, $lte: to };
+  } else if (from) {
+    queryObj.date = { $gte: from };
+  } else if (to) {
+    queryObj.date = { $lte: to };
+  }
+
+  if (Array.isArray(partNumbers) && partNumbers.length > 0) {
+    queryObj.hinban = { $in: partNumbers };
+  }
+
+  if (filters?.machine) queryObj.machine = filters.machine;
+  if (filters?.worker) queryObj.worker = filters.worker;
+  if (filters?.status) queryObj.status = filters.status;
+
+  try {
+    const data = await query("submittedDB", "firstFactoryProduction", queryObj, {
+      sort: { date: -1, startEpoch: -1, createdAt: -1 },
+      limit: 3000,
+    });
+    return Array.isArray(data) ? data : (data?.records || data?.data || []);
+  } catch (err) {
+    console.error("fetchFirstFactoryProductionByPeriod error:", err);
+    return [];
+  }
+}
+
+
 // ─── Sensor data (tempHumidityDB) ─────────────────────────────────────────────
 export function calcWBGT(temperature, humidity) {
   try {
@@ -284,10 +346,11 @@ export function calcWBGT(temperature, humidity) {
   }
 }
 
-function _parseSensorReadings(readings, offsets = {}) {
+function _parseSensorReadings(readings, offsets = {}, names = {}) {
   const sensorMap = new Map();
   readings.forEach((r) => {
-    const id = r.device;
+    const id = String(r.device ?? "").trim();
+    if (!id) return;
     const rTime = new Date(`${r.Date} ${r.Time}`);
     const existing = sensorMap.get(id);
     if (!existing || rTime > new Date(`${existing.Date} ${existing.Time}`)) {
@@ -296,14 +359,17 @@ function _parseSensorReadings(readings, offsets = {}) {
   });
 
   const sensors = Array.from(sensorMap.values()).map((r) => {
+    const id = String(r.device ?? "").trim();
     let rawTemp = parseFloat(String(r.Temperature ?? "").replace("°C", "").trim());
-    if (!isNaN(rawTemp) && offsets[r.device]) {
-      rawTemp += offsets[r.device];
+    if (!isNaN(rawTemp) && offsets[id]) {
+      rawTemp += offsets[id];
     }
+    const rawHumid = parseFloat(String(r.Humidity ?? "").replace("%", "").trim());
     return {
-      deviceId:    r.device,
+      deviceId:    id,
+      name:        names[id] || null,
       temperature: Math.round(rawTemp * 100) / 100,
-      humidity:    parseFloat(String(r.Humidity    ?? "").replace("%",  "").trim()),
+      humidity:    Math.round(rawHumid * 100) / 100,
       status:      r.sensorStatus ?? "OK",
       lastUpdate:  `${r.Date} ${r.Time}`,
       factory:     r["工場"],
@@ -331,18 +397,35 @@ export async function fetchSensorData(factoryName, date) {
 
   const empty = { sensors: [], highestTemp: null, averageHumidity: null, wbgt: null, sensorCount: 0, hasData: false };
   try {
-    const readings = await _getJson(`api/factory/sensors/${encodeURIComponent(factoryName)}/${encodeURIComponent(date)}`);
+    let readings = [];
+    try {
+      readings = await _getJson(`api/factory/sensors/${encodeURIComponent(factoryName)}/${encodeURIComponent(date)}`);
+    } catch {
+      readings = [];
+    }
+    if (!readings?.length) {
+      readings = await query(
+        "submittedDB",
+        "tempHumidityDB",
+        { 工場: factoryName },
+        { sort: { Date: -1, Time: -1 }, limit: 200 }
+      );
+    }
     if (!readings?.length) { _setCache(key, empty); return empty; }
 
     const deviceNames = await fetchIoTDeviceNames(factoryName);
     const offsets = {};
+    const names = {};
     if (Array.isArray(deviceNames)) {
-      deviceNames.forEach(d => {
-        if (d.offset) offsets[d.deviceId] = Number(d.offset);
+      deviceNames.forEach((d) => {
+        const id = String(d?.deviceId ?? "").trim();
+        if (!id) return;
+        if (d.offset) offsets[id] = Number(d.offset);
+        if (d.name) names[id] = String(d.name).trim();
       });
     }
 
-    const data = _parseSensorReadings(readings, offsets);
+    const data = _parseSensorReadings(readings, offsets, names);
     _setCache(key, data);
     return data;
   } catch {
@@ -2681,3 +2764,245 @@ export async function saveExportTemplate(templateData) {
     insertData: templateData
   });
 }
+
+// ─── Material Lots Analytics ────────────────────────────────────────────────
+export async function fetchMaterialLotAnalytics(params = {}) {
+  const queryParams = new URLSearchParams();
+  Object.entries(params).forEach(([key, val]) => {
+    if (val !== undefined && val !== null && val !== "") {
+      queryParams.append(key, val);
+    }
+  });
+  const endpoint = `api/analytics/material-lots${queryParams.toString() ? `?${queryParams.toString()}` : ""}`;
+  return _getJson(endpoint);
+}
+
+// ─── FREYA Industrial AI Copilot ────────────────────────────────────────────
+export async function askAICopilot({ prompt, currentPersona, kpiContext, history = [] }) {
+  const res = await fetch(`${BASE_URL}api/ai/copilot`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ prompt, currentPersona, kpiContext, history })
+  });
+  const data = await _readJson(res);
+  if (!res.ok) throw new Error(data?.error || `AI Copilot request failed (${res.status})`);
+  return data;
+}
+
+// ─── Production & Quality Analytics ─────────────────────────────────────────
+export async function fetchAnalyticsData({
+  fromDate,
+  toDate,
+  collectionName = "kensaDB",
+  factoryFilter,
+  bans = [],
+  partNumbers = [],
+  models = [],
+  advancedFilters = [],
+  userRole = "admin",
+  factoryAccess = [],
+}) {
+  const body = {
+    fromDate,
+    toDate,
+    collectionName,
+    userRole,
+    factoryAccess,
+  };
+  if (factoryFilter) body.factoryFilter = factoryFilter;
+  if (Array.isArray(bans) && bans.length > 0) body.bans = bans;
+  if (Array.isArray(partNumbers) && partNumbers.length > 0) body.partNumbers = partNumbers;
+  if (Array.isArray(models) && models.length > 0) body.models = models;
+  if (Array.isArray(advancedFilters) && advancedFilters.length > 0) body.advancedFilters = advancedFilters;
+
+  return _postJson("api/analytics-data", body);
+}
+
+export async function fetchMasterDbProducts(model) {
+  const queryParam = model ? `?model=${encodeURIComponent(model)}` : "";
+  return _getJson(`api/masterdb/products${queryParam}`);
+}
+
+/**
+ * Fetch equipment list grouped by factory for Equipment Management / Machine Performance.
+ */
+export async function fetchEquipmentList() {
+  return _getJson("api/equipment/list");
+}
+
+/**
+ * Fetch detailed production records for equipment analytics.
+ * @param {Object} params
+ * @param {string} params.startDate
+ * @param {string} params.endDate
+ * @param {string[]} [params.equipment]
+ * @param {string} [params.hinban]
+ * @param {string} [params.seiban]
+ */
+export async function fetchEquipmentData({ startDate, endDate, equipment, hinban, seiban, hinbans, parts } = {}) {
+  return _postJson("api/equipment/data", {
+    startDate: startDate || undefined,
+    endDate: endDate || undefined,
+    equipment: Array.isArray(equipment) && equipment.length > 0 ? equipment : undefined,
+    hinban: hinban || undefined,
+    seiban: seiban || undefined,
+    hinbans: Array.isArray(hinbans) && hinbans.length > 0 ? hinbans : undefined,
+    parts: Array.isArray(parts) && parts.length > 0 ? parts : undefined,
+  });
+}
+
+/**
+ * Fetch cross-machine part comparison data for given part(s)
+ * @param {Object} params
+ * @param {string} [params.hinban]
+ * @param {string} [params.seiban]
+ * @param {Array<{hinban: string, seiban?: string}>} [params.parts]
+ * @param {string[]} [params.hinbans]
+ * @param {string} [params.startDate]
+ * @param {string} [params.endDate]
+ */
+export async function fetchPartCrossMachineComparison({ hinban, seiban, hinbans, parts, startDate, endDate } = {}) {
+  return _postJson("api/equipment/part-comparison", {
+    hinban: hinban || undefined,
+    seiban: seiban || undefined,
+    hinbans: Array.isArray(hinbans) && hinbans.length > 0 ? hinbans : undefined,
+    parts: Array.isArray(parts) && parts.length > 0 ? parts : undefined,
+    startDate: startDate || undefined,
+    endDate: endDate || undefined,
+  });
+}
+
+// ─── Digital Twin 3D Annotations (Sensors & Cameras Coordinates in MongoDB) ──
+export async function fetchTwinAnnotations(factoryName) {
+  if (!factoryName) return null;
+
+  // 1. Try dedicated REST endpoint
+  try {
+    const res = await fetch(`${BASE_URL}api/digital-twin/${encodeURIComponent(factoryName)}/annotations`);
+    if (res.ok) {
+      const data = await res.json();
+      if (data && data.success && (data.sensors !== null || data.cameras !== null || data.callMonitor !== null)) {
+        return {
+          sensors: Array.isArray(data.sensors) ? data.sensors : [],
+          cameras: Array.isArray(data.cameras) ? data.cameras : [],
+          callMonitor: data.callMonitor || null,
+          updatedAt: data.updatedAt,
+        };
+      }
+    }
+  } catch (_) {
+    // fallback to generic queries
+  }
+
+  // 2. Fallback to Sasaki_Coating_MasterDB.twinAnnotations via POST /queries
+  try {
+    const rows = await query("Sasaki_Coating_MasterDB", "twinAnnotations", { factory: factoryName });
+    if (rows && rows.length > 0) {
+      const doc = rows[0];
+      return {
+        sensors: Array.isArray(doc.sensors) ? doc.sensors : [],
+        cameras: Array.isArray(doc.cameras) ? doc.cameras : [],
+        callMonitor: doc.callMonitor || null,
+        updatedAt: doc.updatedAt,
+      };
+    }
+  } catch (err) {
+    console.warn("fetchTwinAnnotations query fallback failed:", err);
+  }
+
+  return null;
+}
+
+export async function saveTwinAnnotations(factoryName, { sensors, cameras, callMonitor, username = "admin" }) {
+  if (!factoryName) return false;
+
+  const payload = {
+    factory: factoryName,
+    sensors: Array.isArray(sensors) ? sensors : [],
+    cameras: Array.isArray(cameras) ? cameras : [],
+    callMonitor: callMonitor || null,
+    updatedAt: new Date().toISOString(),
+    updatedBy: username,
+  };
+
+  let saved = false;
+
+  // 1. Try dedicated REST endpoint
+  try {
+    const res = await _postJson(`api/digital-twin/${encodeURIComponent(factoryName)}/annotations`, payload);
+    if (res?.success) saved = true;
+  } catch (_) {
+    // fallback to generic queries
+  }
+
+  // 2. Fallback: Save directly via POST /queries to MongoDB
+  if (!saved) {
+    try {
+      const existing = await query("Sasaki_Coating_MasterDB", "twinAnnotations", { factory: factoryName });
+      if (existing && existing.length > 0) {
+        await _postJson("queries", {
+          dbName: "Sasaki_Coating_MasterDB",
+          collectionName: "twinAnnotations",
+          query: { factory: factoryName },
+          update: {
+            $set: {
+              sensors: payload.sensors,
+              cameras: payload.cameras,
+              callMonitor: payload.callMonitor,
+              updatedAt: new Date(),
+              updatedBy: username,
+            },
+          },
+        });
+      } else {
+        await _postJson("queries", {
+          dbName: "Sasaki_Coating_MasterDB",
+          collectionName: "twinAnnotations",
+          insertData: {
+            factory: factoryName,
+            sensors: payload.sensors,
+            cameras: payload.cameras,
+            callMonitor: payload.callMonitor,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+            updatedBy: username,
+          },
+        });
+      }
+      saved = true;
+    } catch (err) {
+      console.error("Failed to save twin annotations to MongoDB:", err);
+    }
+  }
+
+  return saved;
+}
+
+export async function resetTwinAnnotations(factoryName) {
+  if (!factoryName) return;
+
+  try {
+    await fetch(`${BASE_URL}api/digital-twin/${encodeURIComponent(factoryName)}/annotations`, { method: "DELETE" });
+  } catch (_) {}
+
+  try {
+    await _postJson("queries", {
+      dbName: "Sasaki_Coating_MasterDB",
+      collectionName: "twinAnnotations",
+      query: { factory: factoryName },
+      update: {
+        $set: {
+          sensors: [],
+          cameras: [],
+          callMonitor: null,
+          updatedAt: new Date(),
+          _reset: true,
+        },
+      },
+    });
+  } catch (_) {}
+}
+
+
+
+
