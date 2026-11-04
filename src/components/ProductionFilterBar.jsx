@@ -140,7 +140,7 @@ export default function ProductionFilterBar({
       if (x.id !== id) return x;
       const next = { ...x, ...patch };
       if ("field" in patch && patch.field !== x.field) {
-        const def = [...FILTER_SCHEMA, ...customFields].find((s) => s.field === patch.field);
+        const def = [...activeSchema, ...customFields].find((s) => s.field === patch.field);
         next.operator = def?.operators?.[0] || "equals";
         next.value = next.operator === "in" ? [] : "";
       }
@@ -185,7 +185,7 @@ export default function ProductionFilterBar({
 
   const handleApply = () => {
     const advancedFilters = filterRows.filter(hasFilterValue).map(row => {
-      const def = [...FILTER_SCHEMA, ...customFields].find(s => s.field === row.field);
+      const def = [...activeSchema, ...customFields].find(s => s.field === row.field);
       return { ...row, type: def?.type || "text" };
     });
     onApply?.({ dateFrom, dateTo, partNumbers, serialNumbers, advancedFilters });
@@ -195,12 +195,22 @@ export default function ProductionFilterBar({
   const isJa = language === "ja";
 
   const activeSchema = useMemo(() => {
-    return FILTER_SCHEMA.map((f) => ({
+    const hidaseFields = factoryName === "肥田瀬"
+      ? ["非不良廃棄", "疵引処理数", "初回生産品", "終物", "サンプル", "調整用"].map((field) => ({
+          field,
+          label: field,
+          group: "Quantity & Performance",
+          groupJa: "数量・実績",
+          type: "number",
+          operators: ["equals", "not_equals", "greater_than", "less_than", "exists", "not_exists"],
+        }))
+      : [];
+    return [...FILTER_SCHEMA, ...hidaseFields].map((f) => ({
       ...f,
       label: isJa && f.labelJa ? f.labelJa : f.label,
       group: isJa && f.groupJa ? f.groupJa : f.group,
     }));
-  }, [isJa]);
+  }, [isJa, factoryName]);
 
   const hasActiveFilters = 
     dateFrom !== todayStr() ||

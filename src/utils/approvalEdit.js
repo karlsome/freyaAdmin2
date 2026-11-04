@@ -229,6 +229,11 @@ export function buildApprovalEditSections(draft = {}, collectionName) {
 
   if (collectionName === "pressDB" || collectionName === "slitDB") {
     PRESS_COUNTER_FIELDS.forEach((field) => addFieldItem(quantityItems, processedKeys, draft, field, field, "integer"));
+    if (draft["工場"] === "肥田瀬") {
+      addFieldItem(quantityItems, processedKeys, draft, "非不良廃棄", "非不良廃棄", "integer");
+      addStructuredItem(quantityItems, processedKeys, draft, "非不良廃棄_詳細", "非不良廃棄 詳細");
+      addFieldItem(quantityItems, processedKeys, draft, "疵引処理数", "疵引処理数", "integer");
+    }
     addFieldItem(quantityItems, processedKeys, draft, "Total_NG", "合計不良", "auto");
   }
 
@@ -333,7 +338,18 @@ export function computeApprovalDerivedFields(draft = {}, collectionName) {
   }
 
   const processQuantity = normalizeInteger(draft.Process_Quantity);
-  draft.Total = Math.max(0, processQuantity - ngTotal);
+  const isHidase = draft["工場"] === "肥田瀬";
+  let deduction = 0;
+  if (isHidase) {
+    if (isPlainObject(draft["非不良廃棄_詳細"])) {
+      const detailSum = Object.values(draft["非不良廃棄_詳細"]).reduce((sum, value) => sum + normalizeInteger(value), 0);
+      if (detailSum > 0 || draft["非不良廃棄"] === undefined) {
+        draft["非不良廃棄"] = detailSum;
+      }
+    }
+    deduction = normalizeInteger(draft["非不良廃棄"]);
+  }
+  draft.Total = Math.max(0, processQuantity - ngTotal - deduction);
 
   if (isPlainObject(draft.Break_Time_Data)) {
     const totalBreakMinutes = Object.values(draft.Break_Time_Data).reduce((sum, entry) => {

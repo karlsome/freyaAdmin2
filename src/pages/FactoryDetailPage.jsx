@@ -523,6 +523,10 @@ export default function FactoryDetailPage({ combined = false }) {
   const stripNG      = allFlat.reduce((s, r) => s + (Number(r.SRS_Total_NG) || Number(r.Total_NG) || 0), 0);
   const stripRate    = stripTotal > 0 ? Math.round((stripNG / stripTotal) * 10000) / 100 : 0;
   const defStatus    = getDefectStatus(stripRate, isJa);
+  const isHidase     = !combined && factoryName === "肥田瀬";
+  const stripDisposal = isHidase
+    ? allFlat.reduce((s, r) => s + (Number(r["非不良廃棄"]) || 0), 0)
+    : 0;
 
   // Per-process stats
   const PROCESS_ACCENT = {
@@ -718,7 +722,7 @@ export default function FactoryDetailPage({ combined = false }) {
         ) : (
           <>
             {/* Row 1: overall metrics */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className={`grid grid-cols-1 sm:grid-cols-2 ${isHidase ? "lg:grid-cols-5" : "lg:grid-cols-4"} gap-4`}>
               <StatSummaryCard
                 variant="freya"
                 label={isJa ? "総処理数" : "Total Processed"}
@@ -727,6 +731,16 @@ export default function FactoryDetailPage({ combined = false }) {
                 icon="output"
                 loading={loading}
               />
+              {isHidase && (
+                <StatSummaryCard
+                  variant="freya"
+                  label="非不良廃棄"
+                  value={stripDisposal.toLocaleString()}
+                  subtitle={isJa ? "非不良の廃棄数" : "Non-defective scrap"}
+                  icon="delete_sweep"
+                  loading={loading}
+                />
+              )}
               <StatSummaryCard
                 variant="freya"
                 label={isJa ? "不良数 (NG)" : "Defect Units (NG)"}
@@ -1177,6 +1191,7 @@ export default function FactoryDetailPage({ combined = false }) {
                     processName={proc}
                     rows={currentRows[proc] ?? []}
                     showFactoryColumn={combined}
+                    factoryName={combined ? null : factoryName}
                     onRowClick={(record, pName) => {
                       openRecord(record, pName);
                     }}
