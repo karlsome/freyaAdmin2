@@ -94,6 +94,7 @@ function App() {
         units={units}
         hasSensors={Boolean(data?.hasCycleSensors)}
         onOpenCamera={() => {}}
+        callSounds
       />
       <MachineDrawer machine={selected} partner={partner} isJa={IS_JA} onClose={() => setSelectedId(null)} onCamera={() => {}} onDetails={() => {}} />
     </div>

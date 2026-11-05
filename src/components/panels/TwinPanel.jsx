@@ -3,6 +3,7 @@ import { STATUS_THEME, statusLabel } from "../twin/twinTheme";
 import FloorPlan2D from "./FloorPlan2D";
 import { useFactorySensors } from "../../hooks/useFactorySensors";
 import { useFactoryCallMonitor, CALL_THEMES } from "../../hooks/useFactoryCallMonitor";
+import { useCallSounds } from "../../hooks/useCallSounds";
 import StopCallMonitorModal from "../twin/StopCallMonitorModal";
 import {
   getFactoryAnnotations,
@@ -38,6 +39,7 @@ export default function TwinPanel({
   units = [],
   hasSensors = true,
   onOpenCamera,
+  callSounds = false,
 }) {
   const [viewKey, setViewKey] = useState(0);
   const [showSensors, setShowSensors] = useState(true);
@@ -88,6 +90,7 @@ export default function TwinPanel({
     clearSimulatedCalls,
     loadDemoPreset,
   } = useFactoryCallMonitor(factory);
+  const [soundOn, toggleSound] = useCallSounds(activeCalls, callSounds);
 
   const annotations = useMemo(() => getFactoryAnnotations(factory), [factory]);
   const defaultCameras = annotations.cameras || [];
@@ -487,6 +490,19 @@ export default function TwinPanel({
               <span className="twin-call-tv-btn__badge">{activeCalls.length}</span>
             )}
           </button>
+
+          {/* Call alert sound on/off (standalone 3D only) */}
+          {callSounds && (
+            <button
+              type="button"
+              className={`twin-icon-btn ${soundOn ? "is-on" : ""}`}
+              onClick={toggleSound}
+              title={isJa ? (soundOn ? "呼出音 ON" : "呼出音 OFF") : (soundOn ? "Call sound on" : "Call sound muted")}
+              aria-label="Toggle call sound"
+            >
+              <span className="material-symbols-outlined" style={{ fontSize: 18 }}>{soundOn ? "volume_up" : "volume_off"}</span>
+            </button>
+          )}
 
           {/* Toggle 3D Call Monitor TV visibility */}
           <button
