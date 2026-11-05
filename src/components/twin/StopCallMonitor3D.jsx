@@ -51,6 +51,7 @@ const StopCallMonitor3D = memo(function StopCallMonitor3D({
   isConnected = false,
   isJa = true,
   onOpenMonitor,
+  footer = null,
   onSelectMachine,
   editMode = false,
   isDragging = false,
@@ -257,6 +258,7 @@ const StopCallMonitor3D = memo(function StopCallMonitor3D({
           pointerEvents: "auto",
         }}
       >
+        <div style={{ position: "relative" }}>
         <div
           className={`twin-tv-card ${isScna ? "twin-tv-card--scna" : ""} ${activeCalls.length > 0 ? "twin-tv-card--alert" : ""} ${editMode ? "twin-tv-card--editable" : ""} ${(isDragging || heightDragStart) ? "twin-tv-card--dragging" : ""}`}
           style={{ "--tv-accent": activeColor }}
@@ -432,6 +434,15 @@ const StopCallMonitor3D = memo(function StopCallMonitor3D({
               </div>
             </div>
           )}
+        </div>
+        {footer && (
+          <div
+            style={{ position: "absolute", top: "100%", left: "50%", transform: "translateX(-50%)", marginTop: 8 }}
+            onPointerDown={(e) => e.stopPropagation()}
+          >
+            {footer}
+          </div>
+        )}
         </div>
       </Html>
     </group>

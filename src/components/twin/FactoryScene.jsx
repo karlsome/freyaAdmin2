@@ -658,6 +658,7 @@ const MachineBadge = memo(function MachineBadge({
   call,
   totalNG = 0,
   pausedSince = 0,
+  inline = false,
 }) {
   const theme = STATUS_THEME[status] || STATUS_THEME.off;
   const callTheme = call?.theme || null;
@@ -665,8 +666,7 @@ const MachineBadge = memo(function MachineBadge({
   const shortTitle = String(title).replace(/^OZ/, "");
   const showStatusTag = !call && (status === "break" || status === "maintenance" || status === "cncCancel" || status === "stopCall" || status === "paused");
 
-  return (
-    <Html position={[position[0], height, position[1]]} center zIndexRange={[30, 10]}>
+  const button = (
       <button
         type="button"
         onClick={() => onSelect && onSelect(machineId)}
@@ -736,9 +736,45 @@ const MachineBadge = memo(function MachineBadge({
           </div>
         )}
       </button>
+  );
+  if (inline) return button;
+  return (
+    <Html position={[position[0], height, position[1]]} center zIndexRange={[30, 10]}>
+      {button}
     </Html>
   );
 });
+
+// KUNTAI (MANAS) badge. `inline` renders just the chip (used under the Stop Call monitor card).
+function ManasBadge({ layout, machinesById, liveMachines, callsByMachine, isJa, selectedId, onSelect, inline = false }) {
+  const mId = layout.manas.id;
+  const m = machinesById[mId];
+  const live = liveMachines[mId];
+  const call = callsByMachine[mId] || null;
+  const status = effectiveStatus(m);
+  const { value, unit } = badgeValue(m, isJa);
+  const sebanggo = live?.sebanggo || m?.sebanggo || null;
+  const scale = layout.manas.modelScale || 1;
+  return (
+    <MachineBadge
+      machineId={mId}
+      position={layout.manas.pos}
+      height={call ? 3.5 * scale : 2.35 * scale}
+      title={layout.manas.title || "MANAS"}
+      value={m?.hasCycleSensor ? value : sebanggo || value || "—"}
+      unit={m?.hasCycleSensor ? unit : value !== "0" ? unit : ""}
+      status={status}
+      isJa={isJa}
+      dim={status === "off"}
+      selected={selectedId === mId}
+      sebanggo={m?.hasCycleSensor ? sebanggo : null}
+      call={call}
+      totalNG={live?.totalNG || 0}
+      onSelect={onSelect}
+      inline={inline}
+    />
+  );
+}
 
 function badgeValue(machine, isJa, shared = false) {
   const pieces = shared ? machine?.pair?.sharedPieces : machine?.pieces;
@@ -1126,36 +1162,11 @@ function FactoryContents({
           );
         })}
 
-      {/* MANAS Badge */}
-      {layout.manas &&
-        (() => {
-          const mId = layout.manas.id;
-          const m = machinesById[mId];
-          const live = liveMachines[mId];
-          const call = callsByMachine[mId] || null;
-          const status = effectiveStatus(m);
-          const { value, unit } = badgeValue(m, isJa);
-          const sebanggo = live?.sebanggo || m?.sebanggo || null;
-          const scale = layout.manas.modelScale || 1;
-          return (
-            <MachineBadge
-              machineId={mId}
-              position={layout.manas.pos}
-              height={call ? 3.5 * scale : 2.35 * scale}
-              title={layout.manas.title || "MANAS"}
-              value={m?.hasCycleSensor ? value : sebanggo || value || "—"}
-              unit={m?.hasCycleSensor ? unit : value !== "0" ? unit : ""}
-              status={status}
-              isJa={isJa}
-              dim={status === "off"}
-              selected={selectedId === mId}
-              sebanggo={m?.hasCycleSensor ? sebanggo : null}
-              call={call}
-              totalNG={live?.totalNG || 0}
-              onSelect={onSelect}
-            />
-          );
-        })()}
+      {/* MANAS / KUNTAI badge. With the Stop Call monitor shown it renders under the monitor card
+          (footer prop below) so the monitor never covers it. */}
+      {layout.manas && !(showCallMonitor && callMonitor) && (
+        <ManasBadge layout={layout} machinesById={machinesById} liveMachines={liveMachines} callsByMachine={callsByMachine} isJa={isJa} selectedId={selectedId} onSelect={onSelect} />
+      )}
 
       {/* SCNA-PSA Badges */}
       {psaMachines.map((psa) => {
@@ -1228,6 +1239,11 @@ function FactoryContents({
           isConnected={isCallStreamConnected}
           isJa={isJa}
           onOpenMonitor={onOpenCallMonitor}
+          footer={
+            layout.manas ? (
+              <ManasBadge layout={layout} machinesById={machinesById} liveMachines={liveMachines} callsByMachine={callsByMachine} isJa={isJa} selectedId={selectedId} onSelect={onSelect} inline />
+            ) : null
+          }
           onSelectMachine={onSelect}
           editMode={editMode}
           isDragging={activeDrag?.type === "monitor"}
