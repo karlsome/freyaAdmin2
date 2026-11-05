@@ -657,12 +657,13 @@ const MachineBadge = memo(function MachineBadge({
   sebanggo,
   call,
   totalNG = 0,
+  pausedSince = 0,
 }) {
   const theme = STATUS_THEME[status] || STATUS_THEME.off;
   const callTheme = call?.theme || null;
   const badgeColor = callTheme ? callTheme.color : theme.color;
   const shortTitle = String(title).replace(/^OZ/, "");
-  const showStatusTag = !call && (status === "break" || status === "maintenance" || status === "cncCancel" || status === "stopCall");
+  const showStatusTag = !call && (status === "break" || status === "maintenance" || status === "cncCancel" || status === "stopCall" || status === "paused");
 
   return (
     <Html position={[position[0], height, position[1]]} center zIndexRange={[30, 10]}>
@@ -717,7 +718,15 @@ const MachineBadge = memo(function MachineBadge({
               {unit && <small>{unit}</small>}
             </span>
             {showStatusTag && (
-              <span className="twin-badge__status">{isJa ? theme.ja : theme.en}</span>
+              <span className="twin-badge__status">
+                {isJa ? theme.ja : theme.en}
+                {status === "paused" && pausedSince > 0 && (
+                  <>
+                    {" "}
+                    <PauseTimer since={pausedSince} />
+                  </>
+                )}
+              </span>
             )}
           </div>
         )}
@@ -732,6 +741,38 @@ function badgeValue(machine, isJa, shared = false) {
   if (pieces !== null && pieces !== undefined && pieces > 0) return { value: formatNumber(pieces), unit: isJa ? "個" : "pcs" };
   if (cycles) return { value: formatNumber(cycles), unit: isJa ? "回" : "cyc" };
   return { value: "0", unit: isJa ? "個" : "pcs" };
+}
+
+/**
+ * SCNA only: the machine's Python listener reports the physical CNC state (`live.cnc`).
+ * When the CNC is paused while the tablet says the machine is running, show "paused".
+ * Tablet-owned states (break / maintenance / check / calls) keep priority.
+ */
+const TABLET_OWNED_STATUSES = new Set(["break", "maintenance", "stopCall", "cncCancel"]);
+function isCncPaused(live) {
+  return !!live && live.mode === "running" && live.cnc?.state === "PAUSED";
+}
+function withCncPause(status, lives, enabled) {
+  if (!enabled || TABLET_OWNED_STATUSES.has(status)) return status;
+  return lives.some(isCncPaused) ? "paused" : status;
+}
+function cncPausedSince(lives) {
+  const times = lives.filter(isCncPaused).map((l) => l.cnc.since || 0).filter(Boolean);
+  return times.length ? Math.min(...times) : 0;
+}
+
+/** mm:ss (or h:mm:ss) ticking once a second; only mounted while a machine is paused. */
+function PauseTimer({ since }) {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const id = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => window.clearInterval(id);
+  }, []);
+  const s = Math.max(0, Math.floor((now - since) / 1000));
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const p = (n) => String(n).padStart(2, "0");
+  return <>{h > 0 ? `${h}:${p(m)}:${p(s % 60)}` : `${p(m)}:${p(s % 60)}`}</>;
 }
 
 const FLOOR_PLANE = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
@@ -823,6 +864,7 @@ function FactoryContents({
   onCommitPositions,
   onRotateCamera,
 }) {
+  const isScna = String(layout?.factory || "").toUpperCase() === "SCNA";
   const ncPos = useMemo(
     () => Object.fromEntries((layout.ncMachines || []).map((m) => [m.id, m.pos])),
     [layout]
@@ -882,7 +924,7 @@ function FactoryContents({
           ...(m?.tableLength ? { tableLength: m.tableLength } : {}),
           ...(m?.noOfHead ? { noOfHead: m.noOfHead } : {}),
         };
-        const status = effectiveStatus(m);
+        const status = withCncPause(effectiveStatus(m), [liveMachines[id]], isScna);
         const call = callsByMachine[id] || null;
         return (
           <NcCutter
@@ -1017,7 +1059,7 @@ function FactoryContents({
           const m = machinesById[id];
           const live = liveMachines[id];
           const call = callsByMachine[id] || null;
-          const status = effectiveStatus(m);
+          const status = withCncPause(effectiveStatus(m), [live], isScna);
           const { value, unit } = badgeValue(m, isJa);
           const sebanggo = live?.sebanggo || m?.sebanggo || m?.activeRun?.sebanggo || null;
           return (
@@ -1036,6 +1078,7 @@ function FactoryContents({
               sebanggo={sebanggo}
               call={call}
               totalNG={live?.totalNG || 0}
+              pausedSince={cncPausedSince([live])}
               onSelect={onSelect}
             />
           );
@@ -1054,6 +1097,8 @@ function FactoryContents({
             null;
           const call = callsByMachine[p.a] || callsByMachine[p.b] || null;
           const totalNG = (liveMachines[p.a]?.totalNG || 0) + (liveMachines[p.b]?.totalNG || 0);
+          const pairLives = [liveMachines[p.a], liveMachines[p.b]];
+          const pairStatus = withCncPause(p.status, pairLives, isScna);
           return (
             <MachineBadge
               key={`badge-${p.a}-${p.b}`}
@@ -1063,13 +1108,14 @@ function FactoryContents({
               title={`${p.a.replace(/^OZ/, "")}⇄${p.b.replace(/^OZ/, "")}`}
               value={value}
               unit={unit}
-              status={p.status}
+              status={pairStatus}
               isJa={isJa}
-              dim={p.status === "off"}
+              dim={pairStatus === "off"}
               selected={selectedId === p.a || selectedId === p.b}
               sebanggo={sebanggo}
               call={call}
               totalNG={totalNG}
+              pausedSince={cncPausedSince(pairLives)}
               onSelect={onSelect}
             />
           );

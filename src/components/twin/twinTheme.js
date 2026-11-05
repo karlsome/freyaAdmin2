@@ -8,6 +8,7 @@ export const STATUS_THEME = {
   maintenance: { color: "#a855f7", ja: "メンテ中", en: "Maintenance", icon: "build",         pulse: true },
   stopCall:    { color: "#ef4444", ja: "呼出中",   en: "Stop call",   icon: "campaign",      pulse: true },
   cncCancel:   { color: "#ec4899", ja: "CNC中断",  en: "CNC cancel",  icon: "dangerous",     pulse: true },
+  paused:      { color: "#f97316", ja: "一時停止", en: "Paused",      icon: "pause_circle",  pulse: true },
 };
 
 export const ATTENTION_STATUSES = new Set(["stopCall", "cncCancel", "maintenance", "idle"]);
