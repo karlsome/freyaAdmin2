@@ -175,7 +175,9 @@ const NcCutter = memo(function NcCutter({ id, position, noOfHead = 1, tableLengt
         ? "#f59e0b"
         : call?.material
           ? "#3b82f6"
-          : null;
+          : call?.quality
+            ? "#7c3aed"
+            : null;
 
   useFrame(({ clock }, delta) => {
     const t = clock.getElapsedTime();

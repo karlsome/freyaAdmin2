@@ -258,6 +258,7 @@ export default function StopCallMonitorModal({
                         {call.leader && <span className="twin-tv-tile__tag is-leader">CALL</span>}
                         {call.stop && <span className="twin-tv-tile__tag is-stop">STOP</span>}
                         {call.box && <span className="twin-tv-tile__tag is-box">BOX 📦</span>}
+                        {call.quality && <span className="twin-tv-tile__tag is-quality">QC ✅</span>}
                         {call.material && (
                           <span className="twin-tv-tile__tag is-material">
                             ROLL 🧻 {call.zairyoSebanggo || ""}

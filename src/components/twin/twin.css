@@ -2000,6 +2000,12 @@ html:not(.dark) .twin-edit-toast {
   animation: twin-badge-alert 1.2s ease-in-out infinite;
 }
 
+.twin-tv-tile.is-calling--quality {
+  background: linear-gradient(180deg, #7c3aed, #4c1d95);
+  border-color: #ddd6fe;
+  animation: twin-badge-alert 1s ease-in-out infinite;
+}
+
 .twin-tv-tile__ng {
   position: absolute;
   top: 6px;

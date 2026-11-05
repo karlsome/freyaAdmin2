@@ -39,7 +39,9 @@ const ManasMachine = memo(function ManasMachine({ id, position, size, modelScale
         ? "#f59e0b"
         : call?.material
           ? "#3b82f6"
-          : null;
+          : call?.quality
+            ? "#7c3aed"
+            : null;
 
   useFrame(({ clock }, delta) => {
     const targetLift = hovered || selected ? 0.06 : 0;

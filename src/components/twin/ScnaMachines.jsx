@@ -55,6 +55,7 @@ function resolveCallColor(call) {
   if (call.stop) return "#a855f7";
   if (call.box) return "#f59e0b";
   if (call.material) return "#3b82f6";
+  if (call.quality) return "#7c3aed";
   return null;
 }
 

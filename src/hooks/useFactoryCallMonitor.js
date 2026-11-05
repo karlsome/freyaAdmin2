@@ -50,6 +50,17 @@ export const CALL_THEMES = {
     shortEn: "ROLL",
     icon: "album",
   },
+  quality: {
+    key: "quality",
+    color: "#7c3aed",
+    glow: "#8b5cf6",
+    badgeBg: "rgba(124, 58, 237, 0.94)",
+    labelJa: "2時間品質チェック",
+    labelEn: "2-HOUR QC",
+    shortJa: "品質",
+    shortEn: "QC",
+    icon: "fact_check",
+  },
 };
 
 export function getPrimaryCallType(call) {
@@ -58,6 +69,7 @@ export function getPrimaryCallType(call) {
   if (call.stop) return "stop";
   if (call.box) return "box";
   if (call.material) return "material";
+  if (call.quality) return "quality";
   return "leader";
 }
 
@@ -289,7 +301,7 @@ const EMPTY_CALLS_MAP = {};
     });
 
     const sorted = Array.from(mergedMap.values())
-      .filter((c) => c.leader || c.stop || c.box || c.material)
+      .filter((c) => c.leader || c.stop || c.box || c.material || c.quality)
       .sort((a, b) => (a.since || 0) - (b.since || 0));
 
     if (sorted.length === 0) return EMPTY_CALLS;
@@ -338,6 +350,7 @@ const EMPTY_CALLS_MAP = {};
             stop: callType === "stop",
             box: callType === "box",
             material: callType === "material",
+            quality: callType === "quality",
             zairyoSebanggo: callType === "material" ? zairyoSebanggo : "",
             since: Date.now(),
           },
@@ -349,7 +362,7 @@ const EMPTY_CALLS_MAP = {};
         zairyoSebanggo:
           callType === "material" && !existing.material ? zairyoSebanggo : existing.zairyoSebanggo,
       };
-      if (!updated.leader && !updated.stop && !updated.box && !updated.material) {
+      if (!updated.leader && !updated.stop && !updated.box && !updated.material && !updated.quality) {
         return prev.filter((c) => c.machine !== machineId);
       }
       return prev.map((c) => (c.machine === machineId ? updated : c));

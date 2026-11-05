@@ -1,4 +1,4 @@
-import { memo, Suspense, useEffect, useMemo, useRef, useState } from "react";
+import { memo, Suspense, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { CameraControls, Edges, Grid } from "@react-three/drei";
@@ -709,6 +709,11 @@ const MachineBadge = memo(function MachineBadge({
                 🧻{call.zairyoSebanggo || (isJa ? "部材" : "ROLL")}
               </span>
             )}
+            {call.quality && (
+              <span className="twin-badge__call-pill" style={{ background: CALL_THEMES.quality.color }}>
+                ✅{isJa ? "品質" : "QC"}
+              </span>
+            )}
             <span className="twin-badge__call-timer">{call.waitFormatted}</span>
           </div>
         ) : (
@@ -897,9 +902,9 @@ function FactoryContents({
 
       {/* SCNA decorative zones (ROLL STORAGE, OFFICE, ENTRANCE/EXIT 1 & 2, KENSA TABLES) */}
       {layout.zones?.rollStorage && <RollStorageZone zone={layout.zones.rollStorage} isJa={isJa} />}
-      {layout.zones?.office && <OfficeZone zone={layout.zones.office} isJa={isJa} />}
+      {layout.zones?.office && <StaticGroup><OfficeZone zone={layout.zones.office} isJa={isJa} /></StaticGroup>}
       {(layout.zones?.entrances || []).map((ent) => (
-        <EntranceZone key={ent.id} entrance={ent} isJa={isJa} />
+        <StaticGroup key={ent.id}><EntranceZone entrance={ent} isJa={isJa} /></StaticGroup>
       ))}
       {(layout.zones?.kensaTables || []).map((kt) => (
         <KensaTable key={kt.id} position={kt.pos} size={kt.size} />
@@ -1270,6 +1275,70 @@ function FactoryContents({
 }
 
 /**
+ * Freezes a decorative group (office / cafeteria / entrances): its transforms are computed once and
+ * never re-evaluated, so three.js skips it on every frame.
+ */
+function StaticGroup({ children }) {
+  const ref = useRef();
+  useLayoutEffect(() => {
+    ref.current?.traverse((o) => {
+      o.updateMatrix();
+      o.matrixAutoUpdate = false;
+    });
+  });
+  return <group ref={ref}>{children}</group>;
+}
+
+/**
+ * Keeps the floating machine badges from covering each other. Every 250 ms the on-screen rects of
+ * the badges are checked; a badge that overlaps one already placed is lifted just above it
+ * (CSS `translate`, so hover scaling still works). Badges drop back when there is room again.
+ */
+function BadgeDeclutter() {
+  const gl = useThree((s) => s.gl);
+  const last = useRef(0);
+  useFrame(({ clock }) => {
+    const t = clock.getElapsedTime();
+    if (t - last.current < 0.25) return;
+    last.current = t;
+    const root = gl.domElement.parentElement?.parentElement || document;
+    const els = Array.from(root.querySelectorAll(".twin-badge"));
+    if (!els.length) return;
+    const items = els
+      .map((el) => {
+        const dy = Number(el.dataset.dy || 0);
+        const r = el.getBoundingClientRect();
+        return { el, dy, top: r.top - dy, bottom: r.bottom - dy, left: r.left, right: r.right, vis: r.width > 0 };
+      })
+      .filter((i) => i.vis)
+      .sort((a, b) => a.bottom - b.bottom);
+    const placed = [];
+    items.forEach((it) => {
+      let off = 0;
+      for (let n = 0; n < 8; n += 1) {
+        const hit = placed.find(
+          (p) =>
+            it.left < p.right - 2 &&
+            it.right > p.left + 2 &&
+            it.top + off < p.bottom + off2(p) - 2 &&
+            it.bottom + off > p.top + off2(p) + 2
+        );
+        if (!hit) break;
+        off = hit.top + off2(hit) - 3 - it.bottom;
+      }
+      it.final = off;
+      placed.push(it);
+      if (Math.abs(off - it.dy) > 0.5) {
+        it.el.dataset.dy = String(off);
+        it.el.style.translate = off ? `0 ${off}px` : "";
+      }
+    });
+  });
+  return null;
+}
+const off2 = (p) => p.final || 0;
+
+/**
  * Monitors WebGL renderer capabilities and sustained frame times.
  * Automatically activates Lite Mode on software/basic GPUs or if FPS drops below 26 FPS.
  */
@@ -1411,6 +1480,7 @@ export default function FactoryScene({
       <directionalLight position={[-10, 8, -6]} intensity={0.35} />
 
       <AdaptivePerformanceWatcher liteMode={liteMode} onAutoLite={onAutoLite} />
+      <BadgeDeclutter />
 
       <FloorDragTracker
         floor={layout.floor}

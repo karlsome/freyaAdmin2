@@ -289,6 +289,7 @@ const MachineCallEffect = memo(function MachineCallEffect({
     else if (call.stop) list.push({ type: "stop", color: CALL_THEMES.stop.color });
     if (call.box) list.push({ type: "box", color: CALL_THEMES.box.color });
     if (call.material) list.push({ type: "material", color: CALL_THEMES.material.color });
+    if (call.quality) list.push({ type: "quality", color: CALL_THEMES.quality.color });
     return list;
   }, [call]);
 
@@ -401,7 +402,7 @@ const MachineCallEffect = memo(function MachineCallEffect({
       {activeModels.map((item, idx) => {
         const xOffset = startX + idx * spacing;
         const posOffset = [xOffset, baseHeight, 0];
-        if (item.type === "leader" || item.type === "stop") {
+        if (item.type === "leader" || item.type === "stop" || item.type === "quality") {
           return <SirenBeacon3D key={item.type} color={item.color} offset={posOffset} />;
         }
         if (item.type === "box") {

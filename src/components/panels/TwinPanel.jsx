@@ -47,9 +47,11 @@ export default function TwinPanel({
   const [callMonitorModalOpen, setCallMonitorModalOpen] = useState(false);
   const [liteMode, setLiteMode] = useState(() => {
     try {
-      return localStorage.getItem("freya_twin_lite_mode") === "1";
+      const saved = localStorage.getItem("freya_twin_lite_mode");
+      if (saved === null) return Boolean(window.__twinDefaultLite);
+      return saved === "1";
     } catch {
-      return false;
+      return Boolean(window.__twinDefaultLite);
     }
   });
   const [editMode, setEditMode] = useState(false);

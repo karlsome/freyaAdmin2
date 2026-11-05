@@ -277,6 +277,7 @@ const StopCallMonitor3D = memo(function StopCallMonitor3D({
                 if (c.leader) tags.push({ label: "CALL", bg: CALL_THEMES.leader.color });
                 if (c.stop) tags.push({ label: "STOP", bg: CALL_THEMES.stop.color });
                 if (c.box) tags.push({ label: "BOX", bg: CALL_THEMES.box.color });
+                if (c.quality) tags.push({ label: "QC", bg: CALL_THEMES.quality.color });
                 if (c.material) {
                   tags.push({
                     label: c.zairyoSebanggo ? `ROLL:${c.zairyoSebanggo}` : "ROLL",
