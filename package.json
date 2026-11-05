@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "build:factory3d": "vite build --config vite.factory3d.config.js",
     "lint": "eslint .",
     "preview": "vite preview"
   },

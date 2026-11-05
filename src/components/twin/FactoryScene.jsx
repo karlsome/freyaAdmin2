@@ -74,7 +74,7 @@ function CameraRig({
     const fDepth = floor?.depth || KOSE_LAYOUT.floor.depth;
     const depthSpan = Math.max(18.8, (swapAxes ? fWidth : fDepth) + 3.6);
     const widthSpan = (swapAxes ? fDepth : fWidth) + 3.6;
-    const dist = Math.max(depthSpan / k, widthSpan / (k * aspect)) * 1.08;
+    const dist = Math.max(depthSpan / k, widthSpan / (k * aspect)) * 1.08 * (window.__twinOverviewScale ?? 1);
     return {
       pos: defaultTarget.map((t, i) => t + viewDir[i] * dist),
       target: defaultTarget,
