@@ -5,11 +5,11 @@ import { Html } from "./HtmlOverlay";
 import { CALL_THEMES } from "../../hooks/useFactoryCallMonitor";
 import { KOSE_MACHINE_IDS } from "../../data/factoryLayouts/kose";
 import { effectiveStatus } from "./twinTheme";
-import { SCNA_TV_GRID } from "../../data/factoryLayouts/scna";
 
 
 /* Mini replica of the SCNA factory-stopcall TV: one tile per AOL machine with its real state. */
-const SCNA_MINI_IDS = SCNA_TV_GRID.filter((id) => /^AOL-/.test(id));
+const SCNA_MINI_IDS = ["SCNA-PSA", "KUNTAI", "Girasol 1", "Girasol 2", "AOL-1", "AOL-2", "AOL-3", "AOL-4", "AOL-5"];
+const SCNA_MINI_NAMES = { "SCNA-PSA": "LAMINATOR", KUNTAI: "KUNTAI", "Girasol 1": "GIRASOL 1", "Girasol 2": "GIRASOL 2" };
 
 function miniTile(id, live, machine, call) {
   const seb = live?.sebanggo || machine?.sebanggo || machine?.activeRun?.sebanggo || "";
@@ -314,7 +314,7 @@ const StopCallMonitor3D = memo(function StopCallMonitor3D({
                     }}
                     title={`${id}: ${t.word}`}
                   >
-                    <span className="twin-tv-mini__name">{id}</span>
+                    <span className="twin-tv-mini__name">{SCNA_MINI_NAMES[id] || id}</span>
                     <span className="twin-tv-mini__word">{t.word}</span>
                     <span className="twin-tv-mini__sub">{t.sub}</span>
                     {ng > 0 && <span className="twin-tv-mini__ng">{ng}</span>}

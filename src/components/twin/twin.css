@@ -2236,7 +2236,7 @@ html:not(.dark) .twin-edit-toast {
   line-height: 1.15;
   min-width: 0;
 }
-.twin-tv-mini__tile:first-child { grid-column: 1 / -1; }
+.twin-tv-mini__tile:last-child:nth-child(odd) { grid-column: 1 / -1; }
 .twin-tv-mini__name { font-size: 9px; font-weight: 800; color: #cbd5e1; }
 .twin-tv-mini__word { font-size: 12px; font-weight: 900; color: #f8fafc; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .twin-tv-mini__sub { font-size: 7.5px; font-weight: 700; color: rgba(255,255,255,0.7); min-height: 9px; font-variant-numeric: tabular-nums; }
