@@ -1307,8 +1307,10 @@ function BadgeDeclutter() {
     const items = els
       .map((el) => {
         const dy = Number(el.dataset.dy || 0);
-        const r = el.getBoundingClientRect();
-        return { el, dy, top: r.top - dy, bottom: r.bottom - dy, left: r.left, right: r.right, vis: r.width > 0 };
+        // Measure the untransformed wrapper, not the badge: the badge pulses (scale animation) and is
+        // translated by this very pass, which would make the layout flip back and forth.
+        const r = (el.parentElement || el).getBoundingClientRect();
+        return { el, dy, top: r.top, bottom: r.bottom, left: r.left, right: r.right, vis: r.width > 0 };
       })
       .filter((i) => i.vis)
       .sort((a, b) => a.bottom - b.bottom);
@@ -1328,7 +1330,10 @@ function BadgeDeclutter() {
       }
       it.final = off;
       placed.push(it);
-      if (Math.abs(off - it.dy) > 0.5) {
+      off = Math.round(off);
+      it.final = off;
+      // Hysteresis: ignore small changes (text width ticking, sub-pixel camera drift).
+      if (Math.abs(off - it.dy) > 6 || (off === 0 && it.dy !== 0)) {
         it.el.dataset.dy = String(off);
         it.el.style.translate = off ? `0 ${off}px` : "";
       }

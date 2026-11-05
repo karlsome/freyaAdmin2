@@ -103,7 +103,7 @@
   cursor: pointer;
   user-select: none;
   box-shadow: 0 3px 10px -4px color-mix(in srgb, var(--status) 50%, transparent);
-  transition: transform 0.16s ease, box-shadow 0.16s ease, opacity 0.2s ease;
+  transition: transform 0.16s ease, box-shadow 0.16s ease, opacity 0.2s ease, translate 0.25s ease;
 }
 html:not(.dark) .twin-badge {
   background: rgba(255, 255, 255, 0.94);
