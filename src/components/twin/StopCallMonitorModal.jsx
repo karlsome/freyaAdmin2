@@ -117,6 +117,15 @@ export default function StopCallMonitorModal({
               <span className="material-symbols-outlined" style={{ fontSize: 16 }}>open_in_new</span>
               {isJa ? "別タブで開く" : "Open TV URL"}
             </a>
+            <button
+              type="button"
+              className="twin-icon-btn"
+              onClick={onClose}
+              aria-label="Minimize"
+              title={isJa ? "最小化（コンパクト表示に戻る）" : "Minimize (back to compact)"}
+            >
+              <span className="material-symbols-outlined">close_fullscreen</span>
+            </button>
             <button type="button" className="twin-icon-btn" onClick={onClose} aria-label="Close">
               <span className="material-symbols-outlined">close</span>
             </button>
