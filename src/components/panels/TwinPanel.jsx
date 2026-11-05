@@ -2,7 +2,7 @@ import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { STATUS_THEME, statusLabel } from "../twin/twinTheme";
 import FloorPlan2D from "./FloorPlan2D";
 import { useFactorySensors } from "../../hooks/useFactorySensors";
-import { useFactoryCallMonitor } from "../../hooks/useFactoryCallMonitor";
+import { useFactoryCallMonitor, CALL_THEMES } from "../../hooks/useFactoryCallMonitor";
 import StopCallMonitorModal from "../twin/StopCallMonitorModal";
 import {
   getFactoryAnnotations,
@@ -578,6 +578,16 @@ export default function TwinPanel({
               <span className="twin-legend__swatch" />
               <span className="twin-legend__label">{statusLabel(s, isJa)}</span>
               <b>{counts[s] || 0}</b>
+            </span>
+          ))}
+        </div>
+        {/* Call pulse colors (what each 3D pulse / ring color means) */}
+        <div className="twin-legend" style={{ marginTop: 4 }}>
+          {Object.values(CALL_THEMES).map((c) => (
+            <span key={c.key} className="twin-legend__item" style={{ "--status": c.color }}>
+              <span className="twin-legend__swatch" />
+              <span className="twin-legend__label">{isJa ? c.labelJa : c.labelEn}</span>
+              <b>{activeCalls.filter((a) => a[c.key]).length}</b>
             </span>
           ))}
         </div>
