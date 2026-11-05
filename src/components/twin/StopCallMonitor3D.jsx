@@ -5,6 +5,31 @@ import { Html } from "./HtmlOverlay";
 import { CALL_THEMES } from "../../hooks/useFactoryCallMonitor";
 import { KOSE_MACHINE_IDS } from "../../data/factoryLayouts/kose";
 import { effectiveStatus } from "./twinTheme";
+import { SCNA_TV_GRID } from "../../data/factoryLayouts/scna";
+
+
+/* Mini replica of the SCNA factory-stopcall TV: one tile per AOL machine with its real state. */
+const SCNA_MINI_IDS = SCNA_TV_GRID.filter((id) => /^AOL-/.test(id));
+
+function miniTile(id, live, machine, call) {
+  const seb = live?.sebanggo || machine?.sebanggo || machine?.activeRun?.sebanggo || "";
+  if (call) {
+    const tags = [];
+    if (call.leader) tags.push("CALL");
+    if (call.stop) tags.push("STOP");
+    if (call.box) tags.push("BOX");
+    if (call.quality) tags.push("QC");
+    if (call.material) tags.push("ROLL");
+    return { cls: `is-call-${call.primaryCall}`, word: tags.join(" ") || "CALL", sub: call.waitFormatted };
+  }
+  const mode = live?.mode || effectiveStatus(machine) || "idle";
+  if (mode === "running" && live?.cnc?.state === "PAUSED") return { cls: "is-paused", word: "PAUSED", sub: seb };
+  if (mode === "running") return { cls: "is-running", word: seb || "RUNNING", sub: seb ? "RUNNING" : "" };
+  if (mode === "break") return { cls: "is-break", word: "BREAK", sub: seb };
+  if (mode === "maintenance") return { cls: "is-maint", word: "MAINT", sub: seb };
+  if (mode === "check") return { cls: "is-check", word: "CHECK", sub: seb };
+  return { cls: "is-idle", word: "IDLE", sub: "" };
+}
 
 const MIN_TV_HEIGHT = 1.4;
 const MAX_TV_HEIGHT = 7.5;
@@ -20,6 +45,9 @@ const StopCallMonitor3D = memo(function StopCallMonitor3D({
   machineIds = KOSE_MACHINE_IDS,
   activeCalls = [],
   machinesById = {},
+  liveMachines = {},
+  callsByMachine = {},
+  isScna = false,
   isConnected = false,
   isJa = true,
   onOpenMonitor,
@@ -230,7 +258,7 @@ const StopCallMonitor3D = memo(function StopCallMonitor3D({
         }}
       >
         <div
-          className={`twin-tv-card ${activeCalls.length > 0 ? "twin-tv-card--alert" : ""} ${editMode ? "twin-tv-card--editable" : ""} ${(isDragging || heightDragStart) ? "twin-tv-card--dragging" : ""}`}
+          className={`twin-tv-card ${isScna ? "twin-tv-card--scna" : ""} ${activeCalls.length > 0 ? "twin-tv-card--alert" : ""} ${editMode ? "twin-tv-card--editable" : ""} ${(isDragging || heightDragStart) ? "twin-tv-card--dragging" : ""}`}
           style={{ "--tv-accent": activeColor }}
           onPointerDown={(e) => {
             if (!editMode) return;
@@ -256,7 +284,7 @@ const StopCallMonitor3D = memo(function StopCallMonitor3D({
           <div className="twin-tv-card__header">
             <span className="twin-tv-card__title">
               <span className={`twin-tv-card__dot ${isConnected ? "is-online" : ""}`} />
-              <span>{isJa ? "呼出モニター" : "CALL MONITOR"}</span>
+              <span>{isScna ? "STOP CALL" : isJa ? "呼出モニター" : "CALL MONITOR"}</span>
             </span>
             <span className="twin-tv-card__action">
               {activeCalls.length > 0 ? (
@@ -269,7 +297,32 @@ const StopCallMonitor3D = memo(function StopCallMonitor3D({
           </div>
 
           {/* TV Body: Either Active Calls Queue OR Mini 19-Machine Status Matrix */}
-          {activeCalls.length > 0 ? (
+          {isScna ? (
+            <div className="twin-tv-mini">
+              {SCNA_MINI_IDS.map((id) => {
+                const call = callsByMachine[id] || null;
+                const t = miniTile(id, liveMachines[id], machinesById[id], call);
+                const ng = liveMachines[id]?.totalNG || 0;
+                return (
+                  <div
+                    key={id}
+                    className={`twin-tv-mini__tile ${t.cls}`}
+                    onClick={(e) => {
+                      if (editMode) return;
+                      e.stopPropagation();
+                      if (onSelectMachine) onSelectMachine(id);
+                    }}
+                    title={`${id}: ${t.word}`}
+                  >
+                    <span className="twin-tv-mini__name">{id}</span>
+                    <span className="twin-tv-mini__word">{t.word}</span>
+                    <span className="twin-tv-mini__sub">{t.sub}</span>
+                    {ng > 0 && <span className="twin-tv-mini__ng">{ng}</span>}
+                  </div>
+                );
+              })}
+            </div>
+          ) : activeCalls.length > 0 ? (
             <div className="twin-tv-card__calls">
               {activeCalls.slice(0, 2).map((c) => {
                 const shortName = String(c.machine).replace(/^OZ/, "");

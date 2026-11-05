@@ -2215,3 +2215,42 @@ html:not(.dark) .twin-edit-toast {
 
 
 
+
+/* ── SCNA mini stop-call board (mirrors factory-stopcall-tv.html tiles) ── */
+.twin-tv-card--scna { width: 176px; }
+.twin-tv-mini {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 3px;
+  margin-top: 2px;
+}
+.twin-tv-mini__tile {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0;
+  padding: 3px 5px 3px;
+  border-radius: 5px;
+  border: 1.5px solid #223047;
+  background: #101725;
+  line-height: 1.15;
+  min-width: 0;
+}
+.twin-tv-mini__tile:first-child { grid-column: 1 / -1; }
+.twin-tv-mini__name { font-size: 9px; font-weight: 800; color: #cbd5e1; }
+.twin-tv-mini__word { font-size: 12px; font-weight: 900; color: #f8fafc; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.twin-tv-mini__sub { font-size: 7.5px; font-weight: 700; color: rgba(255,255,255,0.7); min-height: 9px; font-variant-numeric: tabular-nums; }
+.twin-tv-mini__ng { position: absolute; top: 2px; right: 3px; padding: 0 4px; border-radius: 999px; background: #e11d2a; color: #fff; font-size: 8px; font-weight: 900; }
+.twin-tv-mini__tile.is-running { background: linear-gradient(180deg, #0f2c1f, #0b2117); border-color: #1f7a4a; }
+.twin-tv-mini__tile.is-running .twin-tv-mini__word { color: #a8f5c8; }
+.twin-tv-mini__tile.is-break { background: linear-gradient(180deg, #0d2540, #091a2e); border-color: #2f80ed; }
+.twin-tv-mini__tile.is-maint { background: linear-gradient(180deg, #33240b, #231807); border-color: #f59e0b; }
+.twin-tv-mini__tile.is-check { background: linear-gradient(180deg, #0b2f2c, #08201e); border-color: #14b8a6; }
+.twin-tv-mini__tile.is-paused { background: #3a1608; border-color: #f97316; }
+.twin-tv-mini__tile.is-paused .twin-tv-mini__word { color: #fdba74; }
+.twin-tv-mini__tile.is-idle .twin-tv-mini__word { color: #64748b; font-size: 10px; }
+.twin-tv-mini__tile.is-call-leader { background: linear-gradient(180deg, #e11d2a, #9e0e18); border-color: #ff9aa1; animation: twin-badge-alert 1s ease-in-out infinite; }
+.twin-tv-mini__tile.is-call-stop { background: linear-gradient(180deg, #9333ea, #581c87); border-color: #d8b4fe; animation: twin-badge-alert 1s ease-in-out infinite; }
+.twin-tv-mini__tile.is-call-box { background: linear-gradient(180deg, #d97706, #92400e); border-color: #fde68a; animation: twin-badge-alert 1.2s ease-in-out infinite; }
+.twin-tv-mini__tile.is-call-material { background: linear-gradient(180deg, #2563eb, #1e3a8a); border-color: #93c5fd; animation: twin-badge-alert 1.2s ease-in-out infinite; }
+.twin-tv-mini__tile.is-call-quality { background: linear-gradient(180deg, #7c3aed, #4c1d95); border-color: #ddd6fe; animation: twin-badge-alert 1s ease-in-out infinite; }

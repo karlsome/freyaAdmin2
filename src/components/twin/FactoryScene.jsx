@@ -1222,6 +1222,9 @@ function FactoryContents({
           machineIds={layoutMachineIds}
           activeCalls={activeCalls}
           machinesById={machinesById}
+          liveMachines={liveMachines}
+          callsByMachine={callsByMachine}
+          isScna={isScna}
           isConnected={isCallStreamConnected}
           isJa={isJa}
           onOpenMonitor={onOpenCallMonitor}
