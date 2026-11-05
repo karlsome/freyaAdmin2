@@ -11,12 +11,14 @@ import { getFactory3DLayout, has3DLayout, machineIdsFor, normalizeFactoryMachine
 import { STATUS_ORDER, effectiveStatus } from "../src/components/twin/twinTheme";
 import { attentionUnits, buildUnits } from "../src/components/panels/twinUnits";
 
-// factory3D.html?filter=SCNA  (also accepts ?factory=, ?lang=en|ja, ?theme=light|dark)
+// factory3D.html?filter=SCNA  (also accepts ?factory=, ?lang=ja (default en), ?theme=light|dark)
 const params = new URLSearchParams(window.location.search);
 const FACTORY = params.get("filter") || params.get("factory") || "SCNA";
 // Initial camera distance multiplier (<1 = closer). Override: ?zoom=0.7
 window.__twinOverviewScale = Number(params.get("zoom")) || 0.78;
-const IS_JA = (params.get("lang") || "ja") !== "en";
+// Weak-graphics friendly by default (no shadows, no antialiasing, 1x pixel ratio). ?lite=0 for full quality.
+window.__twinDefaultLite = params.get("lite") !== "0";
+const IS_JA = (params.get("lang") || "en") === "ja";
 const IS_DARK = params.get("theme") ? params.get("theme") === "dark" : false;
 
 function App() {

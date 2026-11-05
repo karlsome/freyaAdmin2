@@ -276,7 +276,7 @@ export default function MachineDrawer({ machine, partner, isJa, onClose, onCamer
       {/* Info Rows */}
       <div className="twin-drawer__rows">
         <InfoRow icon="person" label={isJa ? "現在の作業者" : "Current Worker"} value={worker} />
-        <InfoRow icon="sell" label="背番号 / 品番" value={sebanggo ? `${sebanggo}${hinban ? `  ·  ${hinban}` : ""}` : ""} />
+        <InfoRow icon="sell" label={isJa ? "背番号 / 品番" : "Part No. / Item"} value={sebanggo ? `${sebanggo}${hinban ? `  ·  ${hinban}` : ""}` : ""} />
         <InfoRow icon="schedule" label={isJa ? "最後のサイクル" : "Last cycle"} value={formatAgo(secondsSince, isJa)} />
         {machine.tableLength && (
           <InfoRow

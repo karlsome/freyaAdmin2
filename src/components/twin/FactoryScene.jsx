@@ -678,7 +678,7 @@ const MachineBadge = memo(function MachineBadge({
           <span className="twin-badge__dot" />
           <span>{shortTitle}</span>
           {sebanggo && status !== "off" && (
-            <span className="twin-badge__sebanggo" title={`背番号: ${sebanggo}`}>
+            <span className="twin-badge__sebanggo" title={`${isJa ? "背番号" : "Part No."}: ${sebanggo}`}>
               {sebanggo}
             </span>
           )}
