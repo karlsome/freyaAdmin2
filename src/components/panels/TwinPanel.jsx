@@ -582,7 +582,7 @@ export default function TwinPanel({
           ))}
         </div>
         {/* Call pulse colors (what each 3D pulse / ring color means) */}
-        <div className="twin-legend" style={{ marginTop: 4 }}>
+        <div className="twin-legend twin-legend--calls" style={{ marginTop: 4 }}>
           {Object.values(CALL_THEMES).map((c) => (
             <span key={c.key} className="twin-legend__item" style={{ "--status": c.color }}>
               <span className="twin-legend__swatch" />
