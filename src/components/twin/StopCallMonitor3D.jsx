@@ -62,6 +62,18 @@ const StopCallMonitor3D = memo(function StopCallMonitor3D({
   const bezelMatRef = useRef();
   const floorRingRef = useRef();
   const [hovered, setHovered] = useState(false);
+  // Minimize: collapse the card to just its header bar (remembered per browser).
+  const [collapsed, setCollapsed] = useState(() => {
+    try { return localStorage.getItem("twin.stopcall.collapsed") === "1"; } catch { return false; }
+  });
+  const toggleCollapsed = (e) => {
+    e.stopPropagation();
+    setCollapsed((c) => {
+      const next = !c;
+      try { localStorage.setItem("twin.stopcall.collapsed", next ? "1" : "0"); } catch { /* ignore */ }
+      return next;
+    });
+  };
   const [heightDragStart, setHeightDragStart] = useState(null);
 
   const tvHeight = Math.max(MIN_TV_HEIGHT, Math.min(MAX_TV_HEIGHT, Number(monitor?.height) || 3.4));
@@ -260,7 +272,7 @@ const StopCallMonitor3D = memo(function StopCallMonitor3D({
       >
         <div style={{ position: "relative" }}>
         <div
-          className={`twin-tv-card ${isScna ? "twin-tv-card--scna" : ""} ${activeCalls.length > 0 ? "twin-tv-card--alert" : ""} ${editMode ? "twin-tv-card--editable" : ""} ${(isDragging || heightDragStart) ? "twin-tv-card--dragging" : ""}`}
+          className={`twin-tv-card ${isScna ? "twin-tv-card--scna" : ""} ${activeCalls.length > 0 ? "twin-tv-card--alert" : ""} ${editMode ? "twin-tv-card--editable" : ""} ${collapsed ? "twin-tv-card--collapsed" : ""} ${(isDragging || heightDragStart) ? "twin-tv-card--dragging" : ""}`}
           style={{ "--tv-accent": activeColor }}
           onPointerDown={(e) => {
             if (!editMode) return;
@@ -292,14 +304,24 @@ const StopCallMonitor3D = memo(function StopCallMonitor3D({
               {activeCalls.length > 0 ? (
                 <span className="twin-tv-card__count">{activeCalls.length}</span>
               ) : null}
-              <span className="material-symbols-outlined" style={{ fontSize: 11 }}>
+              {!editMode && (
+                <span
+                  className="material-symbols-outlined twin-tv-card__min"
+                  style={{ fontSize: 14 }}
+                  onClick={toggleCollapsed}
+                  title={collapsed ? (isJa ? "元のサイズに戻す" : "Restore") : (isJa ? "最小化" : "Minimize")}
+                >
+                  {collapsed ? "expand_content" : "minimize"}
+                </span>
+              )}
+              <span className="material-symbols-outlined" style={{ fontSize: 14 }}>
                 {editMode ? "open_with" : "open_in_full"}
               </span>
             </span>
           </div>
 
           {/* TV Body: Either Active Calls Queue OR Mini 19-Machine Status Matrix */}
-          {isScna ? (
+          {collapsed ? null : isScna ? (
             <div className="twin-tv-mini">
               {SCNA_MINI_IDS.map((id) => {
                 const call = callsByMachine[id] || null;

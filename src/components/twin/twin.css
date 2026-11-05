@@ -2254,3 +2254,9 @@ html:not(.dark) .twin-edit-toast {
 .twin-tv-mini__tile.is-call-box { background: linear-gradient(180deg, #d97706, #92400e); border-color: #fde68a; animation: twin-badge-alert 1.2s ease-in-out infinite; }
 .twin-tv-mini__tile.is-call-material { background: linear-gradient(180deg, #2563eb, #1e3a8a); border-color: #93c5fd; animation: twin-badge-alert 1.2s ease-in-out infinite; }
 .twin-tv-mini__tile.is-call-quality { background: linear-gradient(180deg, #7c3aed, #4c1d95); border-color: #ddd6fe; animation: twin-badge-alert 1s ease-in-out infinite; }
+
+/* Stop Call card minimized: header bar only */
+.twin-tv-card--collapsed { width: auto; min-width: 128px; }
+.twin-tv-card--collapsed .twin-tv-card__header { margin-bottom: 0; }
+.twin-tv-card__min { border-radius: 4px; padding: 1px; }
+.twin-tv-card__min:hover { background: rgba(148, 163, 184, 0.3); }
