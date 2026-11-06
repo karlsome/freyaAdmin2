@@ -23,6 +23,7 @@ function miniTile(id, live, machine, call) {
     return { cls: `is-call-${call.primaryCall}`, word: tags.join(" ") || "CALL", sub: call.waitFormatted };
   }
   const mode = live?.mode || effectiveStatus(machine) || "idle";
+  if (live?.cnc?.state === "POWER_OFF" && mode !== "break" && mode !== "maintenance") return { cls: "is-idle", word: "POWER OFF", sub: "" };
   if (mode === "running" && live?.cnc?.state === "PAUSED") return { cls: "is-paused", word: "PAUSED", sub: seb };
   if (mode === "running") return { cls: "is-running", word: seb || "RUNNING", sub: seb ? "RUNNING" : "" };
   if (mode === "break") return { cls: "is-break", word: "BREAK", sub: seb };

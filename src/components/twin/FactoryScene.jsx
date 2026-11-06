@@ -664,7 +664,7 @@ const MachineBadge = memo(function MachineBadge({
   const callTheme = call?.theme || null;
   const badgeColor = callTheme ? callTheme.color : theme.color;
   const shortTitle = String(title).replace(/^OZ/, "");
-  const showStatusTag = !call && (status === "break" || status === "maintenance" || status === "cncCancel" || status === "stopCall" || status === "paused");
+  const showStatusTag = !call && (status === "break" || status === "maintenance" || status === "cncCancel" || status === "stopCall" || status === "paused" || status === "powerOff");
 
   const button = (
       <button
@@ -793,9 +793,22 @@ const TABLET_OWNED_STATUSES = new Set(["break", "maintenance", "stopCall", "cncC
 function isCncPaused(live) {
   return !!live && live.mode === "running" && live.cnc?.state === "PAUSED";
 }
+function isCncPowerOff(live) {
+  return !!live && live.cnc?.state === "POWER_OFF";
+}
 function withCncPause(status, lives, enabled) {
   if (!enabled || TABLET_OWNED_STATUSES.has(status)) return status;
+  const known = lives.filter(Boolean);
+  if (known.length > 0 && known.every(isCncPowerOff)) return "powerOff";
   return lives.some(isCncPaused) ? "paused" : status;
+}
+
+/** SCNA NC badges: an idle / not-running machine shows IDLE (or OFF) instead of leftover piece counts. */
+function scnaBadgeValue(status, base, isJa, enabled) {
+  if (!enabled) return base;
+  if (status === "powerOff") return { value: "OFF", unit: "" };
+  if (status === "idle" || status === "off") return { value: isJa ? "停止" : "IDLE", unit: "" };
+  return base;
 }
 function cncPausedSince(lives) {
   const times = lives.filter(isCncPaused).map((l) => l.cnc.since || 0).filter(Boolean);
@@ -1101,7 +1114,7 @@ function FactoryContents({
           const live = liveMachines[id];
           const call = callsByMachine[id] || null;
           const status = withCncPause(effectiveStatus(m), [live], isScna);
-          const { value, unit } = badgeValue(m, isJa);
+          const { value, unit } = scnaBadgeValue(status, badgeValue(m, isJa), isJa, isScna);
           const sebanggo = live?.sebanggo || m?.sebanggo || m?.activeRun?.sebanggo || null;
           return (
             <MachineBadge
@@ -1114,7 +1127,7 @@ function FactoryContents({
               unit={unit}
               status={status}
               isJa={isJa}
-              dim={status === "off"}
+              dim={status === "off" || status === "powerOff"}
               selected={selectedId === id}
               sebanggo={sebanggo}
               call={call}
@@ -1129,7 +1142,6 @@ function FactoryContents({
         .map((p) => {
           const a = ncPos[p.a];
           const b = ncPos[p.b];
-          const { value, unit } = badgeValue(p.lead, isJa, true);
           const sebanggo =
             p.lead?.pair?.sebanggo ||
             p.lead?.sebanggo ||
@@ -1140,6 +1152,7 @@ function FactoryContents({
           const totalNG = (liveMachines[p.a]?.totalNG || 0) + (liveMachines[p.b]?.totalNG || 0);
           const pairLives = [liveMachines[p.a], liveMachines[p.b]];
           const pairStatus = withCncPause(p.status, pairLives, isScna);
+          const { value, unit } = scnaBadgeValue(pairStatus, badgeValue(p.lead, isJa, true), isJa, isScna);
           return (
             <MachineBadge
               key={`badge-${p.a}-${p.b}`}
@@ -1151,7 +1164,7 @@ function FactoryContents({
               unit={unit}
               status={pairStatus}
               isJa={isJa}
-              dim={pairStatus === "off"}
+              dim={pairStatus === "off" || pairStatus === "powerOff"}
               selected={selectedId === p.a || selectedId === p.b}
               sebanggo={sebanggo}
               call={call}

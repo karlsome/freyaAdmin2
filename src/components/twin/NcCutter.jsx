@@ -145,7 +145,7 @@ const NcCutter = memo(function NcCutter({ id, position, noOfHead = 1, tableLengt
   const minX = -L * 0.14;
   const maxX = L * 0.36;
   const maxZ = D * 0.25;
-  const gantryRestX = status === "off"
+  const gantryRestX = (status === "off" || status === "powerOff")
     ? -L * 0.16
     : minX + hashUnit(id, 1) * (maxX - minX);
   const initialStartX = running
@@ -189,7 +189,7 @@ const NcCutter = memo(function NcCutter({ id, position, noOfHead = 1, tableLengt
       const gX = gantryRef.current ? Math.abs(gantryRef.current.position.x - gantryRestX) : 0;
       const hZ = headsRef.current ? Math.abs(headsRef.current.position.z) : 0;
       const grpY = groupRef.current ? Math.abs(groupRef.current.position.y - targetLift) : 0;
-      const idleIntensity = status === "off" ? 0.1 : 0.8;
+      const idleIntensity = (status === "off" || status === "powerOff") ? 0.1 : 0.8;
       if (gX < 0.001 && hZ < 0.001 && grpY < 0.001) {
         if (frameMatRef.current && frameMatRef.current.emissiveIntensity !== 0) {
           frameMatRef.current.emissiveIntensity = 0;
@@ -287,7 +287,7 @@ const NcCutter = memo(function NcCutter({ id, position, noOfHead = 1, tableLengt
       ? 2.8 + Math.sin(t * 9) * 1.6
       : running
         ? (isActivelyCutting ? 2.4 : 1.5) + Math.sin(t * (5 + hashUnit(id, 4) * 3) + phase) * 0.55
-        : status === "off"
+        : (status === "off" || status === "powerOff")
           ? 0.1
           : 0.8;
     lightMats.current.forEach((m) => {
@@ -343,7 +343,7 @@ const NcCutter = memo(function NcCutter({ id, position, noOfHead = 1, tableLengt
                   ref={(m) => { lightMats.current[side > 0 ? 1 : 0] = m; }}
                   color={callColor || COLORS.light}
                   emissive={callColor || COLORS.light}
-                  emissiveIntensity={status === "off" ? 0.1 : 0.8}
+                  emissiveIntensity={(status === "off" || status === "powerOff") ? 0.1 : 0.8}
                   toneMapped={false}
                 />
               </mesh>
@@ -383,7 +383,7 @@ const NcCutter = memo(function NcCutter({ id, position, noOfHead = 1, tableLengt
             position={[0.02, 0.665, 0.03]}
             rotation={[-Math.PI / 2, 0, 0]}
             geometry={SCREEN_GEO}
-            material={status === "off" ? MAT_PED_SCREEN_OFF : MAT_PED_SCREEN_ON}
+            material={(status === "off" || status === "powerOff") ? MAT_PED_SCREEN_OFF : MAT_PED_SCREEN_ON}
           />
           <mesh position={[-0.12, 0.68, -0.12]} scale={[0.025, 0.04, 0.025]} geometry={CYL_GEO} material={MAT_PED_STOP} />
           {[-0.04, 0.04].map((z) => (

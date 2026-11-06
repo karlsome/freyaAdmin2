@@ -9,6 +9,8 @@ export const STATUS_THEME = {
   stopCall:    { color: "#ef4444", ja: "呼出中",   en: "Stop call",   icon: "campaign",      pulse: true },
   cncCancel:   { color: "#ec4899", ja: "CNC中断",  en: "CNC cancel",  icon: "dangerous",     pulse: true },
   paused:      { color: "#f97316", ja: "一時停止", en: "Paused",      icon: "pause_circle",  pulse: true },
+  // SCNA: the NC cutter has been unreachable for 80s+ (reported by its Python listener) -> assumed powered off
+  powerOff:    { color: "#475569", ja: "電源OFF",  en: "Power OFF",   icon: "power_off",     pulse: false },
 };
 
 export const ATTENTION_STATUSES = new Set(["stopCall", "cncCancel", "maintenance", "idle"]);
