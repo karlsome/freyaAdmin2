@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { CALL_THEMES, formatCallWait } from "../../hooks/useFactoryCallMonitor";
 import { KOSE_MACHINE_IDS } from "../../data/factoryLayouts/kose";
 import { SCNA_MACHINE_IDS, SCNA_TV_GRID } from "../../data/factoryLayouts/scna";
@@ -45,11 +45,84 @@ export default function StopCallMonitorModal({
   const [simMachine, setSimMachine] = useState(() => factoryMachineIds[0] || "OZNC01");
   const [simMatSeb, setSimMatSeb] = useState("7GD-ROLL");
 
+  // ── Full-screen takeover alert (mirrors factory-stopcall-tv.html queueTakeover) ──
+  // Fires for every newly raised call type (leader / stop / box / material / 2-hour QC).
+  const TAKEOVER_TYPES = ["leader", "stop", "box", "material", "quality"];
+  const TAKEOVER_TITLES = {
+    leader: ["呼び出し / CALLING LEADER", "CALLING LEADER"],
+    stop: ["停止待ち / STOP QUEUED", "STOP QUEUED"],
+    box: ["空箱リクエスト / BOX REQUEST", "BOX REQUEST"],
+    material: ["部材リクエスト / MATERIAL REQUEST", "MATERIAL REQUEST"],
+    quality: ["2時間品質チェック / 2-HOUR QUALITY CHECK", "2-HOUR QUALITY CHECK"],
+  };
+  const [takeover, setTakeover] = useState(null);
+  const prevTypesRef = useRef(null); // Map<machine, {type:true}>; null until first snapshot
+  const takeoverQueueRef = useRef([]);
+  const takeoverBusyRef = useRef(false);
+  const activeCallsRef = useRef(activeCalls);
+  activeCallsRef.current = activeCalls;
+
+  const runTakeover = () => {
+    const item = takeoverQueueRef.current.shift();
+    if (!item) {
+      takeoverBusyRef.current = false;
+      setTakeover(null);
+      return;
+    }
+    takeoverBusyRef.current = true;
+    const idx = activeCallsRef.current.findIndex((c) => c.machine === item.machine);
+    if (idx < 0) {
+      runTakeover(); // no longer active
+      return;
+    }
+    setTakeover({ ...item, rank: idx + 1 });
+    window.setTimeout(() => {
+      setTakeover(null);
+      window.setTimeout(runTakeover, 350);
+    }, 3000);
+  };
+
+  useEffect(() => {
+    const next = new Map();
+    const events = [];
+    activeCalls.forEach((c) => {
+      const flags = {};
+      TAKEOVER_TYPES.forEach((t) => {
+        if (c[t]) flags[t] = true;
+      });
+      next.set(c.machine, flags);
+      const prev = prevTypesRef.current?.get(c.machine) || {};
+      TAKEOVER_TYPES.forEach((t) => {
+        if (c[t] && !prev[t] && prevTypesRef.current) {
+          events.push({ machine: c.machine, type: t, since: c.since || 0 });
+        }
+      });
+    });
+    prevTypesRef.current = next;
+    if (events.length) {
+      events.sort((a, b) => a.since - b.since).forEach((ev) => takeoverQueueRef.current.push(ev));
+      if (!takeoverBusyRef.current) runTakeover();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeCalls]);
+
   const tvUrl = `https://karlsome.github.io/Kurachi/factory-stopcall-tv.html?filter=${encodeURIComponent(factory)}`;
 
   return (
     <div className="twin-tv-modal-backdrop" onClick={onClose}>
       <div className="twin-tv-modal" onClick={(e) => e.stopPropagation()}>
+        {takeover && (
+          <div className={`twin-tv-takeover twin-tv-takeover--${takeover.type}`}>
+            <div className="twin-tv-takeover__label">
+              {TAKEOVER_TITLES[takeover.type][isJa ? 0 : 1]}
+            </div>
+            <div className="twin-tv-takeover__machine">{takeover.machine}</div>
+            <div className="twin-tv-takeover__rank">
+              #{takeover.rank} {isJa ? "に呼ばれました / called" : "called"}
+            </div>
+          </div>
+        )}
+
         {/* Header */}
         <header className="twin-tv-modal__header">
           <div className="twin-tv-modal__brand">
