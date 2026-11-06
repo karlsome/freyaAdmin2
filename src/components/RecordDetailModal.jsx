@@ -199,7 +199,7 @@ function StructuredValueCard({ value, depth = 0 }) {
 }
 
 // ─── PhotosSection ────────────────────────────────────────────────────────────
-function PhotosSection({ checkImages, labelImages, totalCount, onPreview }) {
+function PhotosSection({ checkImages, labelImages, defectImages = [], totalCount, onPreview }) {
   const { language } = useLanguage();
   const isJa = language === "ja";
 
@@ -252,6 +252,25 @@ function PhotosSection({ checkImages, labelImages, totalCount, onPreview }) {
               </div>
             </div>
           )}
+          {defectImages.length > 0 && (
+            <div>
+              <p className="text-[11px] font-semibold text-[var(--text-muted)] mb-2 uppercase tracking-[0.04em]">
+                {isJa ? `不良画像 (${defectImages.length})` : `Defect Images (${defectImages.length})`}
+              </p>
+              <div className="grid grid-cols-4 gap-2">
+                {defectImages.map((url, i) => (
+                  <button
+                    key={i}
+                    type="button"
+                    onClick={() => onPreview?.("defect", i)}
+                    className="block w-full rounded-[6px] overflow-hidden border border-[var(--border)] hover:border-[var(--border-strong)] transition-colors duration-150 cursor-zoom-in"
+                  >
+                    <img src={url} alt={isJa ? `不良画像 ${i + 1}` : `Defect Image ${i + 1}`} className="w-full aspect-square object-cover bg-black/20" />
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
     </CollapsibleSection>
   );
@@ -265,11 +284,12 @@ function BreakTimeSection({ record }) {
   const data = record.Break_Time_Data ?? {};
   const breaks = Object.entries(data)
     .filter(([, v]) => v?.start && v?.end)
-    .map(([k, v]) => ({ key: k, start: v.start, end: v.end }));
+    .map(([k, v]) => ({ key: Array.isArray(data) ? `break${Number(k) + 1}` : k, start: v.start, end: v.end }));
 
   if (breaks.length === 0) return null;
 
-  const totalMin = record.Total_Break_Minutes ?? 0;
+  // New kensa submissions store breaks as an array + Break_Time_Total_Minutes; legacy uses an object + Total_Break_Minutes.
+  const totalMin = record.Total_Break_Minutes ?? record.Break_Time_Total_Minutes ?? 0;
   const breakHeadings = isJa ? ["休憩", "開始", "終了", "所要時間"] : ["Break", "Start", "End", "Duration"];
 
   return (
@@ -389,6 +409,184 @@ function MaintenanceSection({ record, onPreview }) {
             ? `トラブル合計: ${totalMin}分 (${maint.totalHours ?? record.Total_Trouble_Hours ?? 0}時間)`
             : `Total trouble: ${totalMin} min (${maint.totalHours ?? record.Total_Trouble_Hours ?? 0} hrs)`}
         </p>
+      </div>
+    </CollapsibleSection>
+  );
+}
+
+// ─── KensaTraceSection ────────────────────────────────────────────────────────
+// New-format kensaDB records (box traceability): inputs (Lot_Details), spare lots, label bypass,
+// unlabelled NG and stop calls. Legacy records have none of these, so this renders nothing for them.
+function KensaTraceSection({ record }) {
+  const { language } = useLanguage();
+  const isJa = language === "ja";
+  const toArr = (v) => (Array.isArray(v) ? v : []);
+  const kensaBoxes = toArr(record.Kensa_Box_IDs);
+  const inputBoxes = toArr(record.Box_IDs);
+  const lotDetails = toArr(record.Lot_Details);
+  const spareLots = toArr(record.Spare_Lots);
+  const unlabelled = toArr(record.Kensa_Unlabelled_NG);
+  const stop = record.StopCall && typeof record.StopCall === "object" ? record.StopCall : null;
+  const stopRecords = stop ? toArr(stop.records) : [];
+  const hasStop = stop && (Number(stop.count) > 0 || stopRecords.length > 0);
+  const bypass = record.Kensa_Label_Bypass;
+
+  const hasAny = kensaBoxes.length || inputBoxes.length || lotDetails.length || spareLots.length || unlabelled.length || hasStop || bypass || record.Submit_UID;
+  if (!hasAny) return null;
+
+  const fmtDT = (iso) => {
+    if (!iso) return "—";
+    const d = new Date(iso);
+    return Number.isNaN(d.getTime()) ? String(iso) : d.toLocaleString();
+  };
+  const ngEntries = (ng) => Object.entries(ng && typeof ng === "object" ? ng : {}).filter(([, v]) => Number(v) > 0);
+  const th = "px-3 py-2 text-left uppercase tracking-[0.04em] text-[var(--text-muted)] text-[11px] font-semibold";
+  const td = "px-3 py-2 text-xs text-[var(--text-primary)] align-top";
+  const Chip = ({ children, danger }) => (
+    <span className={`inline-block px-2 py-0.5 rounded-[4px] border text-[11px] font-mono freya-tabular ${danger ? "border-[var(--semantic-error)]/40 text-[var(--semantic-error)]" : "border-[var(--border)] text-[var(--text-secondary)]"} bg-[var(--surface)]`}>{children}</span>
+  );
+  const Block = ({ title, children }) => (
+    <div>
+      <p className="text-[11px] font-semibold text-[var(--text-muted)] mb-2 uppercase tracking-[0.04em]">{title}</p>
+      {children}
+    </div>
+  );
+
+  return (
+    <CollapsibleSection
+      icon="inventory_2"
+      label={isJa ? "ボックス・ロット トレーサビリティ" : "Boxes & Lot Traceability"}
+      defaultOpen
+      badge={lotDetails.length > 0 ? <span className="px-1.5 py-0.5 rounded-full bg-surface-container text-[9px] font-semibold normal-case tracking-normal">{lotDetails.length}</span> : null}
+    >
+      <div className="pb-5 space-y-4">
+        {(kensaBoxes.length > 0 || inputBoxes.length > 0 || record.Submit_UID || bypass) && (
+          <div className="grid grid-cols-1 gap-3">
+            {kensaBoxes.length > 0 && (
+              <Block title={isJa ? "検査ボックスID" : "Kensa Box IDs"}>
+                <div className="flex flex-wrap gap-1.5">{kensaBoxes.map((b) => <Chip key={b}>{b}</Chip>)}</div>
+              </Block>
+            )}
+            {inputBoxes.length > 0 && (
+              <Block title={isJa ? "投入ボックスID" : "Input Box IDs"}>
+                <div className="flex flex-wrap gap-1.5">{inputBoxes.map((b) => <Chip key={b}>{b}</Chip>)}</div>
+              </Block>
+            )}
+            {bypass && (
+              <Block title={isJa ? "ラベルバイパス" : "Label Bypass"}>
+                <span className="text-xs text-[var(--text-primary)] break-all">{typeof bypass === "object" ? JSON.stringify(bypass) : String(bypass)}</span>
+              </Block>
+            )}
+            {record.Submit_UID && (
+              <Block title="Submit UID"><span className="text-xs font-mono text-[var(--text-secondary)] break-all">{record.Submit_UID}</span></Block>
+            )}
+          </div>
+        )}
+
+        {lotDetails.length > 0 && (
+          <Block title={isJa ? "投入内訳 (ロット / 不良)" : "Inputs (lots / NG)"}>
+            <div className="rounded-[8px] overflow-x-auto border border-[var(--border)]">
+              <table className="w-full">
+                <thead className="bg-[var(--surface-raised)] border-b border-[var(--border)]">
+                  <tr>
+                    <th className={th}>{isJa ? "ボックス" : "Box"}</th>
+                    <th className={`${th} text-right`}>{isJa ? "数量" : "Qty"}</th>
+                    <th className={th}>{isJa ? "ロット" : "Lots"}</th>
+                    <th className={th}>NG</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[var(--border)] bg-[var(--surface)]">
+                  {lotDetails.map((d, i) => {
+                    const lots = toArr(d.lotDetails).length > 0
+                      ? toArr(d.lotDetails).map((l) => ({ lotNumber: l.lotNumber, pieces: l.pieces }))
+                      : toArr(d.lots).map((l) => ({ lotNumber: typeof l === "string" ? l : l?.lotNumber, pieces: null }));
+                    const ng = ngEntries(d.ng);
+                    return (
+                      <tr key={`${d.boxId || d.srsId || "legacy"}-${i}`}>
+                        <td className={`${td} font-mono`}>
+                          {d.boxId || d.srsId || (isJa ? "(ラベルなし)" : "(no label)")}
+                          {d.srsId && d.boxId ? <div className="text-[var(--text-muted)]">SRS {d.srsId}</div> : null}
+                          {d.legacy ? <div className="text-[var(--text-muted)]">legacy</div> : null}
+                        </td>
+                        <td className={`${td} text-right font-mono freya-tabular`}>{d.qty != null ? Number(d.qty).toLocaleString() : "—"}</td>
+                        <td className={td}>
+                          <div className="flex flex-wrap gap-1">
+                            {lots.length === 0 ? "—" : lots.map((l, j) => (
+                              <Chip key={`${l.lotNumber}-${j}`}>{l.lotNumber}{l.pieces != null ? ` · ${l.pieces}pcs` : ""}</Chip>
+                            ))}
+                          </div>
+                        </td>
+                        <td className={td}>
+                          {Number(d.ngTotal) > 0 || ng.length > 0 ? (
+                            <div className="flex flex-wrap gap-1 items-center">
+                              <span className="text-[var(--semantic-error)] font-semibold freya-tabular mr-1">{Number(d.ngTotal) || ng.reduce((a, [, v]) => a + Number(v), 0)}</span>
+                              {ng.map(([k, v]) => <Chip key={k} danger>{k.replace(/^counter-/, "#")}: {v}</Chip>)}
+                            </div>
+                          ) : "0"}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </Block>
+        )}
+
+        {spareLots.length > 0 && (
+          <Block title={`${isJa ? "スペアからの部分数" : "Partial From Spare"} (${spareLots.length}) — ${Number(record["スペアからの部分数"]) || spareLots.reduce((a, l) => a + (Number(l.pieces) || 0), 0)} pcs`}>
+            <div className="rounded-[8px] overflow-x-auto border border-[var(--border)]">
+              <table className="w-full">
+                <thead className="bg-[var(--surface-raised)] border-b border-[var(--border)]">
+                  <tr>
+                    <th className={th}>{isJa ? "ロット" : "Lot"}</th>
+                    <th className={`${th} text-right`}>{isJa ? "数量" : "Pieces"}</th>
+                    <th className={th}>{isJa ? "追加日時" : "Added"}</th>
+                    <th className={th}>{isJa ? "作業者" : "Worker"}</th>
+                    <th className={th}>{isJa ? "使用ボックス" : "Used in box"}</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[var(--border)] bg-[var(--surface)]">
+                  {spareLots.map((l, i) => (
+                    <tr key={`${l.lotNumber}-${i}`}>
+                      <td className={`${td} font-mono`}>{l.lotNumber || "—"}</td>
+                      <td className={`${td} text-right font-mono freya-tabular`}>{l.pieces ?? "—"}</td>
+                      <td className={`${td} font-mono`}>{fmtDT(l.at)}</td>
+                      <td className={td}>{l.worker || "—"}</td>
+                      <td className={`${td} font-mono`}>{l.consumedByBoxUid || "—"}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </Block>
+        )}
+
+        {unlabelled.length > 0 && (
+          <Block title={isJa ? "ラベルなし不良" : "Unlabelled NG"}>
+            <div className="space-y-1.5">
+              {unlabelled.map((u, i) => (
+                <div key={i} className="flex flex-wrap items-center gap-1.5 text-xs">
+                  <span className="font-mono text-[var(--text-primary)]">{u.boxId || u.srsId || (isJa ? "(ラベルなし)" : "(no label)")}</span>
+                  <span className="text-[var(--semantic-error)] font-semibold freya-tabular">{u.ngTotal}</span>
+                  {ngEntries(u.ng).map(([k, v]) => <Chip key={k} danger>{k.replace(/^counter-/, "#")}: {v}</Chip>)}
+                </div>
+              ))}
+            </div>
+          </Block>
+        )}
+
+        {hasStop && (
+          <Block title={`${isJa ? "停止呼出" : "Stop Calls"} — ${stop.count ?? stopRecords.length}× · ${stop.totalWaitMinutes ?? 0} ${isJa ? "分" : "min"}`}>
+            {stopRecords.length > 0 && (
+              <div className="space-y-1.5">
+                {stopRecords.map((r, i) => (
+                  <div key={i} className="text-xs text-[var(--text-secondary)] font-mono break-all">{JSON.stringify(r)}</div>
+                ))}
+              </div>
+            )}
+          </Block>
+        )}
       </div>
     </CollapsibleSection>
   );
@@ -557,6 +755,12 @@ export default function RecordDetailModal({ record, processName, onClose, onLotC
     ["文字欠け",  record["文字欠け"], true],
     ["その他不良", record["その他"], true],
     [isJa ? "予備 (Spare)" : "Spare",     record.Spare],
+    [isJa ? "スペアからの部分数" : "Partial From Spare", record["スペアからの部分数"]],
+    ...(processName === "Kensa" ? [
+      [isJa ? "良品数 (合計)" : "Good Qty (Total)", record.Total],
+      [isJa ? "残数量" : "Remaining Qty", record.Remaining_Quantity],
+      [isJa ? "タブレット" : "Tablet", record.Tablet_Home],
+    ] : []),
     [isJa ? "コメント" : "Comment",      record.Comment],
     [isJa ? "製造ロット" : "Production Lot", record["製造ロット"]],
   ].filter(([, v]) => v != null && v !== "");
@@ -779,6 +983,9 @@ export default function RecordDetailModal({ record, processName, onClose, onLotC
           </div>
         )}
 
+        {/* New-format kensa: boxes, lots, spare, stop calls (renders nothing for legacy records) */}
+        <KensaTraceSection record={record} />
+
         {/* Uploaded photos — collapsible */}
         {(() => {
           const checkImages = [
@@ -788,15 +995,18 @@ export default function RecordDetailModal({ record, processName, onClose, onLotC
           const labelImages = Array.isArray(record.materialLabelImages)
             ? record.materialLabelImages.filter(Boolean)
             : record["材料ラベル画像"] ? [record["材料ラベル画像"]] : [];
-          const totalCount = checkImages.length + labelImages.length;
+          // New kensa records: QC defect photos (array of URLs)
+          const defectPhotos = Array.isArray(record.defectImages) ? record.defectImages.filter(Boolean) : [];
+          const totalCount = checkImages.length + labelImages.length + defectPhotos.length;
           if (totalCount === 0) return null;
 
           function handleOpenPreview(group, index) {
             const combined = [
               ...checkImages.map((image) => ({ url: image.url, label: image.label })),
               ...labelImages.map((url, i) => ({ url, label: isJa ? `材料ラベル ${i + 1}` : `Material Label ${i + 1}` })),
+              ...defectPhotos.map((url, i) => ({ url, label: isJa ? `不良画像 ${i + 1}` : `Defect Image ${i + 1}` })),
             ];
-            const activeIndex = group === "label" ? checkImages.length + index : index;
+            const activeIndex = group === "defect" ? checkImages.length + labelImages.length + index : group === "label" ? checkImages.length + index : index;
             setPhotoPreview({
               eyebrow: isJa ? "実績写真" : "Record Photos",
               displayName: isJa ? `${processName ?? "実績"}写真` : `${processName ?? "Record"} Photos`,
@@ -806,7 +1016,7 @@ export default function RecordDetailModal({ record, processName, onClose, onLotC
             });
           }
 
-          return <PhotosSection checkImages={checkImages} labelImages={labelImages} totalCount={totalCount} onPreview={handleOpenPreview} />;
+          return <PhotosSection checkImages={checkImages} labelImages={labelImages} defectImages={defectPhotos} totalCount={totalCount} onPreview={handleOpenPreview} />;
         })()}
 
         {/* Break times — collapsible */}
