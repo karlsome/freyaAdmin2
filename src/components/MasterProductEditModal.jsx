@@ -998,6 +998,8 @@ export default function MasterProductEditModal({
 
   const [draft, setDraft] = useState(initialDraft);
   const [isLookingUpMaterial, setIsLookingUpMaterial] = useState(false);
+  const [dupErrors, setDupErrors] = useState({});
+  const [dupChecking, setDupChecking] = useState({});
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [previewImage, setPreviewImage] = useState(null);
 
@@ -1053,6 +1055,8 @@ export default function MasterProductEditModal({
       } else {
         setDraft(initialDraft);
       }
+      setDupErrors({});
+      setDupChecking({});
     }
   }, [open, record]);
 
@@ -1095,6 +1099,43 @@ export default function MasterProductEditModal({
 
   const handleChange = (field, value) => {
     setDraft((prev) => ({ ...prev, [field]: value }));
+    if (field === "品番" || field === "背番号") {
+      setDupErrors((prev) => (prev[field] ? { ...prev, [field]: "" } : prev));
+    }
+  };
+
+  // Duplicate checker for 品番 / 背番号 (against masterDB). Returns error text or "".
+  const checkDuplicate = async (field, rawValue) => {
+    const value = String(rawValue ?? "").trim();
+    if (!value) {
+      setDupErrors((prev) => ({ ...prev, [field]: "" }));
+      return "";
+    }
+    setDupChecking((prev) => ({ ...prev, [field]: true }));
+    try {
+      const res = await query("Sasaki_Coating_MasterDB", "masterDB", { [field]: value }, { limit: 5 });
+      const rows = Array.isArray(res) ? res : res?.data || [];
+      const ownId = record?._id?.$oid || record?._id || null;
+      const other = rows.find((r) => (r?._id?.$oid || r?._id) !== ownId);
+      let msg = "";
+      if (other) {
+        msg =
+          field === "品番"
+            ? isJa
+              ? `この品番は既に登録されています（背番号: ${other["背番号"] || "-"}）。`
+              : `This product already exists (Part No. ${value}, Back No. ${other["背番号"] || "-"}).`
+            : isJa
+              ? `この背番号は既に使用されています（品番: ${other["品番"] || "-"}）。背番号は一意である必要があります。`
+              : `Back No. "${value}" is already used by ${other["品番"] || "another product"}. Back No. must be unique.`;
+      }
+      setDupErrors((prev) => ({ ...prev, [field]: msg }));
+      return msg;
+    } catch (err) {
+      console.error("Duplicate check failed:", err);
+      return "";
+    } finally {
+      setDupChecking((prev) => ({ ...prev, [field]: false }));
+    }
   };
 
   // 1. Auto-generate 材料品番 from 材料背番号 on blur / change
@@ -1218,12 +1259,19 @@ export default function MasterProductEditModal({
     }
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e?.preventDefault();
     if (!draft["品番"]?.trim()) {
       alert(isJa ? "品番を入力してください。" : "Please enter a Part Number (品番).");
       return;
     }
+
+    // Re-verify uniqueness right before saving
+    const [hinbanErr, backNoErr] = await Promise.all([
+      checkDuplicate("品番", draft["品番"]),
+      checkDuplicate("背番号", draft["背番号"]),
+    ]);
+    if (hinbanErr || backNoErr) return;
 
     const payload = { ...draft };
 
@@ -1315,9 +1363,14 @@ export default function MasterProductEditModal({
                   required
                   value={draft["品番"] ?? ""}
                   onChange={(e) => handleChange("品番", e.target.value)}
+                  onBlur={(e) => checkDuplicate("品番", e.target.value)}
                   placeholder="e.g. 74222-X1B17-E0"
-                  className="w-full rounded-xl border border-outline-variant/40 bg-surface px-3 py-2 text-xs font-medium text-on-surface outline-none focus:border-primary focus:ring-1 focus:ring-primary font-mono"
+                  className={`w-full rounded-xl border bg-surface px-3 py-2 text-xs font-medium text-on-surface outline-none focus:ring-1 font-mono ${dupErrors["品番"] ? "border-error focus:border-error focus:ring-error" : "border-outline-variant/40 focus:border-primary focus:ring-primary"}`}
                 />
+                {dupChecking["品番"] && (
+                  <p className="mt-1 text-[10px] text-on-surface-variant">{isJa ? "確認中..." : "Checking..."}</p>
+                )}
+                {dupErrors["品番"] && <p className="mt-1 text-[10px] font-medium text-error">{dupErrors["品番"]}</p>}
               </div>
 
               <div>
@@ -1341,9 +1394,14 @@ export default function MasterProductEditModal({
                   type="text"
                   value={draft["背番号"] ?? ""}
                   onChange={(e) => handleChange("背番号", e.target.value)}
+                  onBlur={(e) => checkDuplicate("背番号", e.target.value)}
                   placeholder="e.g. 1GL / RA04"
-                  className="w-full rounded-xl border border-outline-variant/40 bg-surface px-3 py-2 text-xs font-bold text-primary outline-none focus:border-primary focus:ring-1 focus:ring-primary font-mono"
+                  className={`w-full rounded-xl border bg-surface px-3 py-2 text-xs font-bold text-primary outline-none focus:ring-1 font-mono ${dupErrors["背番号"] ? "border-error focus:border-error focus:ring-error" : "border-outline-variant/40 focus:border-primary focus:ring-primary"}`}
                 />
+                {dupChecking["背番号"] && (
+                  <p className="mt-1 text-[10px] text-on-surface-variant">{isJa ? "確認中..." : "Checking..."}</p>
+                )}
+                {dupErrors["背番号"] && <p className="mt-1 text-[10px] font-medium text-error">{dupErrors["背番号"]}</p>}
               </div>
 
               <div>
