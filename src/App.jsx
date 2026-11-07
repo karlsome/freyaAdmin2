@@ -29,6 +29,7 @@ import FirstFactoryPage from "./pages/FirstFactoryPage";
 import StopCallPage from "./pages/StopCallPage";
 import AnalyticsPage from "./pages/AnalyticsPage";
 import ScnaPage from "./pages/ScnaPage";
+import FinancialsPage from "./pages/FinancialsPage";
 import LoginPage from "./pages/LoginPage";
 import {
   clearStoredAuthUser,
@@ -39,7 +40,6 @@ import {
 
 const placeholderPages = [
   "notifications",
-  "financials",
   "customerManagement",
   "videoManual",
 ];
@@ -231,6 +231,7 @@ function App() {
               <Route path="/scna" element={<ScnaPage />} />
               <Route path="/scna/:tab" element={<ScnaPage />} />
               <Route path="/inventory" element={<InventoryPage />} />
+              <Route path="/financials" element={<FinancialsPage />} />
               <Route path="/factoryStatus" element={<FactoryStatusPage />} />
               <Route path="/factoryStatus/:tab" element={<FactoryStatusPage />} />
               <Route path="/analytics" element={<Navigate to="/analytics/material" replace />} />

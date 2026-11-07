@@ -29,6 +29,7 @@ const navItems = [
       { icon: "speed",                labelKey: "machineAnalytics",    page: "analytics/machines" },
     ]
   },
+  { icon: "payments",                 labelKey: "financials",          page: "financials" },
   { icon: "group",                    labelKey: "userManagement",      page: "userManagement" },
   { icon: "fact_check",               labelKey: "approvals",           page: "approvals" },
   { icon: "database",                 labelKey: "masterDB",            page: "masterDB" },
