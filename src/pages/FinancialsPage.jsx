@@ -3,6 +3,7 @@ import FinancialsBreakdownModal from "../components/financials/FinancialsBreakdo
 import FinancialsChart from "../components/financials/FinancialsChart";
 import FinancialsPeriodBreakdownModal from "../components/financials/FinancialsPeriodBreakdownModal";
 import FinancialsProductSelectorModal from "../components/financials/FinancialsProductSelectorModal";
+import { SearchableSelect } from "../components/AdvancedFilterSection";
 import PageHeader from "../components/PageHeader";
 import { useLanguage } from "../contexts/LanguageContext";
 import { exportFinancialsCsv, fetchFinancials, fetchFinancialsFactories } from "../services/financialsApi";
@@ -608,13 +609,18 @@ export default function FinancialsPage() {
 
           <div className="mt-3 grid gap-3 md:grid-cols-3">
             {filterType === "model" ? (
-              <label className="block">
+              <div>
                 <span className={labelCls}>{isJa ? "モデル" : "Model"}</span>
-                <select value={model} onChange={(e) => handleModelChange(e.target.value)} className={inputCls}>
-                  <option value="">{isJa ? "すべてのモデル" : "All Models"}</option>
-                  {models.map((m) => <option key={m} value={m}>{m}</option>)}
-                </select>
-              </label>
+                <div className="mt-1.5">
+                  <SearchableSelect
+                    value={model}
+                    options={models}
+                    onChange={({ value }) => handleModelChange(value || "")}
+                    placeholder={isJa ? "すべてのモデル (選択または検索...)" : "All Models (select or search...)"}
+                    className="h-9 w-full rounded-[6px] border border-[var(--border)] bg-[var(--surface-subtle)] text-xs text-[var(--text-primary)] outline-none transition hover:border-[var(--freya-blue)]"
+                  />
+                </div>
+              </div>
             ) : (
               <div>
                 <span className={labelCls}>{isJa ? "背番号" : "Serial Numbers"}</span>
