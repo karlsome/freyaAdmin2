@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import FinancialsBreakdownModal from "../components/financials/FinancialsBreakdownModal";
 import FinancialsChart from "../components/financials/FinancialsChart";
+import FinancialsPeriodBreakdownModal from "../components/financials/FinancialsPeriodBreakdownModal";
 import FinancialsProductSelectorModal from "../components/financials/FinancialsProductSelectorModal";
 import PageHeader from "../components/PageHeader";
 import { useLanguage } from "../contexts/LanguageContext";
@@ -68,6 +69,24 @@ function adjustRow(row) {
     yieldPercent: Math.round((created > 0 ? (finalGood / created) * 100 : 0) * 100) / 100,
     defectRate: Math.round((created > 0 ? (ngAfterRecovery / created) * 100 : 0) * 100) / 100,
   };
+}
+
+// Trend label → { fromDate, toDate }. Daily labels are 'yyyy-mm-dd'; weekly ones '2026-W08'
+// (week 1 = the Monday-based week containing Jan 4 of that year, same scheme as the server).
+function labelToRange(label, rangeFrom, rangeTo) {
+  const week = String(label).match(/^(\d{4})-W(\d{2})$/);
+  if (!week) return { fromDate: label, toDate: label };
+  const year = Number(week[1]);
+  const jan4 = Date.UTC(year, 0, 4);
+  const dayMs = 86400000;
+  const week1 = jan4 - (((new Date(jan4).getUTCDay() || 7) - 1) * dayMs);
+  const start = week1 + (Number(week[2]) - 1) * 7 * dayMs;
+  const iso = (ms) => new Date(ms).toISOString().slice(0, 10);
+  let fromDate = iso(start);
+  let toDate = iso(start + 6 * dayMs);
+  if (rangeFrom && fromDate < rangeFrom) fromDate = rangeFrom;
+  if (rangeTo && toDate > rangeTo) toDate = rangeTo;
+  return { fromDate, toDate };
 }
 
 const EMPTY_SUMMARY = { totalValue: 0, scrapLoss: 0, totalCreated: 0, finalGood: 0, totalLoss: 0, defectRate: 0, yieldPercent: 0 };
@@ -176,6 +195,7 @@ export default function FinancialsPage() {
   const [error, setError] = useState("");
   const [exporting, setExporting] = useState(false);
   const [breakdown, setBreakdown] = useState(null);
+  const [periodTarget, setPeriodTarget] = useState(null);
   const requestRef = useRef(0);
 
   useEffect(() => {
@@ -278,6 +298,44 @@ export default function FinancialsPage() {
     });
   }, [fromDate, toDate, factory]);
 
+  // Click a trend point/bar → breakdown of that day (or week) across all 背番号
+  const openPeriod = useCallback((index) => {
+    const rawLabel = trend?.labels?.[index];
+    if (rawLabel === undefined) return;
+    const { fromDate: f, toDate: t } = labelToRange(rawLabel, fromDate, toDate);
+    setPeriodTarget({
+      label: rawLabel,
+      fromDate: f,
+      toDate: t,
+      chartScrapLoss: trend.scrapLoss?.[index] || 0,
+      filters: { model, bans: selectedBans, factory },
+    });
+  }, [trend, fromDate, toDate, model, selectedBans, factory]);
+
+  const openPeriodBan = useCallback((row, f, t) => {
+    setBreakdown({
+      ban: row.ban,
+      hinban: row.hinban,
+      fromDate: f,
+      toDate: t,
+      factory: row.factory || "",
+      focus: { hinban: row.hinban, factory: row.factory, expected: row.scrapLoss || 0, metric: "scrapLoss" },
+    });
+  }, []);
+
+  // Shared click/hover wiring for the two trend charts (nearest column on the x axis)
+  const periodClickOptions = useMemo(() => ({
+    interaction: { mode: "index", axis: "x", intersect: false },
+    onClick: (evt, _elements, chart) => {
+      const hit = chart.getElementsAtEventForMode(evt, "index", { axis: "x", intersect: false }, false);
+      if (hit.length) openPeriod(hit[0].index);
+    },
+    onHover: (evt, elements) => {
+      const target = evt?.native?.target;
+      if (target) target.style.cursor = elements.length ? "pointer" : "default";
+    },
+  }), [openPeriod]);
+
   // ── Chart configs ──────────────────────────────────────────────────────────
   const yenTick = (v) => `¥${Number(v).toLocaleString()}`;
   const barOptions = (tick, tooltip, legend = false) => ({
@@ -354,10 +412,11 @@ export default function FinancialsPage() {
     options: {
       responsive: true,
       maintainAspectRatio: false,
-      plugins: { legend: { position: "bottom" }, tooltip: { callbacks: { label: (c) => `${c.dataset.label}: ${yen(c.raw)}` } } },
+      ...periodClickOptions,
+      plugins: { legend: { position: "bottom" }, tooltip: { callbacks: { label: (c) => `${c.dataset.label}: ${yen(c.raw)}`, footer: () => (isJa ? "クリックで内訳を表示" : "Click for breakdown") } } },
       scales: { x: { grid: { display: false } }, y: { grid: { color: GRID }, ticks: { callback: yenTick } } },
     },
-  }), [trend, trendLabels, isJa]);
+  }), [trend, trendLabels, isJa, periodClickOptions]);
 
   const posNegCfg = useMemo(() => ({
     type: "bar",
@@ -372,7 +431,8 @@ export default function FinancialsPage() {
     options: {
       responsive: true,
       maintainAspectRatio: false,
-      plugins: { legend: { display: false }, tooltip: { callbacks: { label: (c) => `${c.dataset.label}: ${yen(Math.abs(c.raw || 0))}` } } },
+      ...periodClickOptions,
+      plugins: { legend: { display: false }, tooltip: { callbacks: { label: (c) => `${c.dataset.label}: ${yen(Math.abs(c.raw || 0))}`, footer: () => (isJa ? "クリックで内訳を表示" : "Click for breakdown") } } },
       scales: {
         x: { grid: { display: false } },
         y: {
@@ -389,7 +449,7 @@ export default function FinancialsPage() {
         },
       },
     },
-  }), [trend, trendLabels, isJa]);
+  }), [trend, trendLabels, isJa, periodClickOptions]);
 
   // ── Exports ────────────────────────────────────────────────────────────────
   async function handleExportCsv() {
@@ -830,6 +890,7 @@ export default function FinancialsPage() {
         onClose={() => setSelectorOpen(false)}
         onConfirm={(bans) => { setSelectedBans(bans); setSelectorOpen(false); resetPage(); }}
       />
+      <FinancialsPeriodBreakdownModal target={periodTarget} onClose={() => setPeriodTarget(null)} onOpenBan={openPeriodBan} isJa={isJa} />
       <FinancialsBreakdownModal target={breakdown} onClose={() => setBreakdown(null)} isJa={isJa} />
     </div>
   );
