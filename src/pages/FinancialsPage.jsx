@@ -313,13 +313,15 @@ export default function FinancialsPage() {
     });
   }, [trend, fromDate, toDate, model, selectedBans, factory]);
 
-  const openPeriodBan = useCallback((row, f, t) => {
+  // factory = the page's factory filter (not the row's): the server folds NG from zero-created lots
+  // into the row across factories, so narrowing to the row's factory would drop that NG.
+  const openPeriodBan = useCallback((row, f, t, pageFactory) => {
     setBreakdown({
       ban: row.ban,
       hinban: row.hinban,
       fromDate: f,
       toDate: t,
-      factory: row.factory || "",
+      factory: pageFactory || "",
       focus: { hinban: row.hinban, factory: row.factory, expected: row.scrapLoss || 0, metric: "scrapLoss" },
     });
   }, []);

@@ -140,7 +140,7 @@ function PeriodBody({ target, onClose, onOpenBan, isJa }) {
                     ) : rows.map((r, i) => (
                       <tr
                         key={`${r.hinban}|${r.ban}|${r.factory}`}
-                        onClick={() => onOpenBan(r, fromDate, toDate)}
+                        onClick={() => onOpenBan(r, fromDate, toDate, filters.factory || "")}
                         className={`cursor-pointer hover:bg-[var(--surface-hover)] ${i === 0 ? "bg-red-500/10" : ""}`}
                         title={isJa ? "クリックして計算内訳を表示" : "Click to see how this was calculated"}
                       >
