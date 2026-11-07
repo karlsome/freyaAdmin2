@@ -56,7 +56,7 @@ function compareValues(left, right, direction) {
 function FactoryTags({ items, emptyLabel, tone = "blue" }) {
   if (!items.length) return <span className="text-xs text-[var(--text-muted)]">{emptyLabel}</span>;
   const toneClass = tone === "green"
-    ? "border-[var(--status-success,#16a34a)]/30 bg-[var(--status-success,#16a34a)]/10 text-[var(--status-success,#16a34a)]"
+    ? "border-[var(--status-complete)]/30 bg-[var(--status-complete)]/10 text-[var(--status-complete)]"
     : "border-[var(--freya-blue)]/30 bg-[var(--freya-blue)]/10 text-[var(--freya-blue)]";
   return (
     <div className="flex flex-wrap gap-1">
@@ -359,7 +359,7 @@ export default function UserManagementPage() {
         renderCell: (row) => {
           if (editingUserId === row._id && FACTORY_ROLES.includes(userDraft?.role)) {
             return (
-              <TagInput
+              <TagInput portal
                 tags={userDraft.factory}
                 onChange={(next) => setUserDraft((d) => ({ ...d, factory: next }))}
                 suggestions={factoryOptions}
@@ -380,14 +380,14 @@ export default function UserManagementPage() {
         width: 230,
         renderCell: (row) => (editingUserId === row._id ? (
           <div className="flex gap-3 whitespace-nowrap">
-            <button type="button" className={`${linkButtonClass} text-[var(--status-success,#16a34a)]`} onClick={() => saveUser(row._id)}>{tr("Save", "保存")}</button>
+            <button type="button" className={`${linkButtonClass} text-[var(--status-complete)]`} onClick={() => saveUser(row._id)}>{tr("Save", "保存")}</button>
             <button type="button" className={`${linkButtonClass} text-[var(--text-secondary)]`} onClick={cancelEditUser}>{tr("Cancel", "キャンセル")}</button>
           </div>
         ) : (
           <div className="flex gap-3 whitespace-nowrap">
             <button type="button" className={`${linkButtonClass} text-[var(--freya-blue)]`} onClick={() => startEditUser(row)}>{tr("Edit", "編集")}</button>
-            <button type="button" className={`${linkButtonClass} text-[var(--status-warning,#d97706)]`} onClick={() => { setResetTarget(row); setResetPasswordValue(""); }}>{tr("Reset Password", "パスワードリセット")}</button>
-            <button type="button" className={`${linkButtonClass} text-[var(--status-danger)]`} onClick={() => handleArchiveUser(row)}>{tr("Delete", "削除")}</button>
+            <button type="button" className={`${linkButtonClass} text-[var(--status-warning)]`} onClick={() => { setResetTarget(row); setResetPasswordValue(""); }}>{tr("Reset Password", "パスワードリセット")}</button>
+            <button type="button" className={`${linkButtonClass} text-[var(--status-critical)]`} onClick={() => handleArchiveUser(row)}>{tr("Delete", "削除")}</button>
           </div>
         )),
         disableCellWrapper: true,
@@ -499,12 +499,12 @@ export default function UserManagementPage() {
         sortKey: "部署",
         width: 280,
         renderCell: (row) => (editingWorkerId === row._id ? (
-          <TagInput
+          <TagInput portal
             tags={workerDraft.部署}
             onChange={(next) => setWorkerDraft((d) => ({ ...d, 部署: next }))}
             suggestions={factoryOptions}
             placeholder={tr("Add department", "部署を追加")}
-            tagClassName="bg-[var(--status-success,#16a34a)]/10 text-[var(--status-success,#16a34a)]"
+            tagClassName="bg-[var(--status-complete)]/10 text-[var(--status-complete)]"
           />
         ) : <FactoryTags items={toDepartmentArray(row)} emptyLabel={tr("No department set", "部署未設定")} tone="green" />),
         disableCellWrapper: true,
@@ -518,13 +518,13 @@ export default function UserManagementPage() {
         width: 140,
         renderCell: (row) => (editingWorkerId === row._id ? (
           <div className="flex gap-3 whitespace-nowrap">
-            <button type="button" className={`${linkButtonClass} text-[var(--status-success,#16a34a)]`} onClick={() => saveWorker(row._id)}>{tr("Save", "保存")}</button>
+            <button type="button" className={`${linkButtonClass} text-[var(--status-complete)]`} onClick={() => saveWorker(row._id)}>{tr("Save", "保存")}</button>
             <button type="button" className={`${linkButtonClass} text-[var(--text-secondary)]`} onClick={cancelEditWorker}>{tr("Cancel", "キャンセル")}</button>
           </div>
         ) : (
           <div className="flex gap-3 whitespace-nowrap">
             <button type="button" className={`${linkButtonClass} text-[var(--freya-blue)]`} onClick={() => startEditWorker(row)}>{tr("Edit", "編集")}</button>
-            <button type="button" className={`${linkButtonClass} text-[var(--status-danger)]`} onClick={() => handleDeleteWorker(row)}>{tr("Delete", "削除")}</button>
+            <button type="button" className={`${linkButtonClass} text-[var(--status-critical)]`} onClick={() => handleDeleteWorker(row)}>{tr("Delete", "削除")}</button>
           </div>
         )),
         disableCellWrapper: true,
@@ -537,7 +537,7 @@ export default function UserManagementPage() {
   if (!canAccess) {
     return (
       <section className="w-full h-screen overflow-y-auto pt-20 px-4 sm:px-6 md:px-8">
-        <p className="text-sm font-semibold text-[var(--status-danger)]">{tr("Access Denied", "アクセスが拒否されました")}</p>
+        <p className="text-sm font-semibold text-[var(--status-critical)]">{tr("Access Denied", "アクセスが拒否されました")}</p>
       </section>
     );
   }
@@ -560,12 +560,12 @@ export default function UserManagementPage() {
         actions={activeTab === "admin" ? (
           <button type="button" className={primaryButtonClass} onClick={() => setShowUserForm((v) => !v)}>
             <span className="material-symbols-outlined" style={{ fontSize: 16 }}>person_add</span>
-            {tr("Create New User", "新規ユーザー作成")}
+            {tr("Create Admin Member", "管理メンバー作成")}
           </button>
         ) : (
           <button type="button" className={primaryButtonClass} onClick={() => setShowWorkerForm((v) => !v)}>
             <span className="material-symbols-outlined" style={{ fontSize: 16 }}>person_add</span>
-            {tr("Create New Worker", "新規作業者作成")}
+            {tr("Create Factory Member", "工場メンバー作成")}
           </button>
         )}
       />
@@ -574,8 +574,8 @@ export default function UserManagementPage() {
         <div
           role="status"
           className={`flex items-start justify-between gap-3 rounded-[6px] border px-4 py-3 text-xs font-semibold ${notice.tone === "success"
-            ? "border-[var(--status-success,#16a34a)]/30 bg-[var(--status-success,#16a34a)]/10 text-[var(--text-primary)]"
-            : "border-[var(--status-danger)]/30 bg-[var(--status-danger)]/10 text-[var(--text-primary)]"}`}
+            ? "border-[var(--status-complete)]/30 bg-[var(--status-complete)]/10 text-[var(--text-primary)]"
+            : "border-[var(--status-critical)]/30 bg-[var(--status-critical)]/10 text-[var(--text-primary)]"}`}
         >
           <span>{notice.message}</span>
           <button type="button" onClick={() => setNotice(null)} className="text-[var(--text-muted)] hover:text-[var(--text-primary)]">
@@ -627,33 +627,6 @@ export default function UserManagementPage() {
         </>
       ) : (
         <>
-          {showWorkerForm ? (
-            <form onSubmit={submitWorkerForm} className="freya-card grid grid-cols-1 gap-4 rounded-[8px] border border-[var(--border)] bg-[var(--surface)] p-5 shadow-sm md:grid-cols-2">
-              <Field label={tr("Name", "名前")}>
-                <input required className={inputClass} value={workerForm.Name} onChange={(e) => setWorkerForm((f) => ({ ...f, Name: e.target.value }))} />
-              </Field>
-              <Field label={tr("ID Number", "ID番号")}>
-                <input className={inputClass} value={workerForm["ID number"]} onChange={(e) => setWorkerForm((f) => ({ ...f, "ID number": e.target.value }))} />
-              </Field>
-              <div className="md:col-span-2">
-                <TagInput
-                  label={tr("Department Selection", "部署選択")}
-                  tags={workerForm.部署}
-                  onChange={(next) => setWorkerForm((f) => ({ ...f, 部署: next }))}
-                  suggestions={factoryOptions}
-                  placeholder={tr("Add department", "部署を追加")}
-                />
-              </div>
-              <Field label={tr("Picture URL", "写真URL")} className="md:col-span-2">
-                <input className={inputClass} value={workerForm.Picture} onChange={(e) => setWorkerForm((f) => ({ ...f, Picture: e.target.value }))} />
-              </Field>
-              <div className="flex gap-2 md:col-span-2">
-                <button type="submit" disabled={workerSaving} className={primaryButtonClass}>{tr("Submit", "送信")}</button>
-                <button type="button" className={secondaryButtonClass} onClick={() => setShowWorkerForm(false)}>{tr("Cancel", "キャンセル")}</button>
-              </div>
-            </form>
-          ) : null}
-
           <div className="freya-card rounded-[8px] border border-[var(--border)] bg-[var(--surface)] p-4 shadow-sm space-y-3">
             <SearchBox value={workerSearch} onChange={(v) => { setWorkerSearch(v); setWorkerPage(1); }} placeholder={tr("Search workers...", "作業者を検索...")} />
             <DataTable
@@ -687,7 +660,7 @@ export default function UserManagementPage() {
       <ModalShell
         open={showUserForm}
         onClose={() => setShowUserForm(false)}
-        title={tr("Create New User", "新規ユーザー作成")}
+        title={tr("Create Admin Member", "管理メンバー作成")}
         maxWidth="max-w-2xl"
         footer={(
           <div className="flex justify-end gap-2">
@@ -720,7 +693,7 @@ export default function UserManagementPage() {
           </Field>
           {FACTORY_ROLES.includes(userForm.role) ? (
             <div className="md:col-span-2">
-              <TagInput
+              <TagInput portal
                 label={tr("Factory Selection", "工場選択")}
                 tags={userForm.factory}
                 onChange={(next) => setUserForm((f) => ({ ...f, factory: next }))}
@@ -729,6 +702,40 @@ export default function UserManagementPage() {
               />
             </div>
           ) : null}
+        </form>
+      </ModalShell>
+
+      <ModalShell
+        open={showWorkerForm}
+        onClose={() => setShowWorkerForm(false)}
+        title={tr("Create Factory Member", "工場メンバー作成")}
+        maxWidth="max-w-2xl"
+        footer={(
+          <div className="flex justify-end gap-2">
+            <button type="button" className={secondaryButtonClass} onClick={() => setShowWorkerForm(false)}>{tr("Cancel", "キャンセル")}</button>
+            <button type="submit" form="createWorkerForm" disabled={workerSaving} className={primaryButtonClass}>{tr("Submit", "送信")}</button>
+          </div>
+        )}
+      >
+        <form id="createWorkerForm" onSubmit={submitWorkerForm} className="grid min-h-0 flex-1 grid-cols-1 gap-x-4 gap-y-4 overflow-y-auto px-6 py-5 md:grid-cols-2">
+          <Field label={tr("Name", "名前")}>
+            <input required className={inputClass} value={workerForm.Name} onChange={(e) => setWorkerForm((f) => ({ ...f, Name: e.target.value }))} />
+          </Field>
+          <Field label={tr("ID Number", "ID番号")}>
+            <input className={inputClass} value={workerForm["ID number"]} onChange={(e) => setWorkerForm((f) => ({ ...f, "ID number": e.target.value }))} />
+          </Field>
+          <div className="md:col-span-2">
+            <TagInput portal
+              label={tr("Department Selection", "部署選択")}
+              tags={workerForm.部署}
+              onChange={(next) => setWorkerForm((f) => ({ ...f, 部署: next }))}
+              suggestions={factoryOptions}
+              placeholder={tr("Add department", "部署を追加")}
+            />
+          </div>
+          <Field label={tr("Picture URL", "写真URL")} className="md:col-span-2">
+            <input className={inputClass} value={workerForm.Picture} onChange={(e) => setWorkerForm((f) => ({ ...f, Picture: e.target.value }))} />
+          </Field>
         </form>
       </ModalShell>
 

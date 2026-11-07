@@ -1,4 +1,5 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useLayoutEffect } from "react";
+import { createPortal } from "react-dom";
 
 export default function TagInput({ 
   label, 
@@ -11,24 +12,36 @@ export default function TagInput({
   placeholder = "Type and press enter...",
   className = "",
   tagClassName = "",
-  uppercase = false
+  uppercase = false,
+  // Render the suggestion list on document.body so scrollable/overflow parents (e.g. modals) do not clip it
+  portal = false,
 }) {
   const [inputValue, setInputValue] = useState("");
   const [isFocused, setIsFocused] = useState(false);
+  const [menuRect, setMenuRect] = useState(null);
   const inputRef = useRef(null);
   const wrapperRef = useRef(null);
+  const fieldRef = useRef(null);
 
   const safeTags = Array.isArray(tags) ? tags : [];
 
-  useEffect(() => {
-    function handleClickOutside(event) {
-      if (wrapperRef.current && !wrapperRef.current.contains(event.target)) {
-        setIsFocused(false);
-      }
-    }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
+  // Portal mode: keep the floating list anchored under the field (follows scroll / resize / tag wrapping)
+  useLayoutEffect(() => {
+    if (!portal || !isFocused) return undefined;
+    const update = () => {
+      const el = fieldRef.current;
+      if (!el) return;
+      const rect = el.getBoundingClientRect();
+      setMenuRect({ left: rect.left, width: rect.width, top: rect.bottom + 4 });
+    };
+    update();
+    window.addEventListener("resize", update);
+    window.addEventListener("scroll", update, true);
+    return () => {
+      window.removeEventListener("resize", update);
+      window.removeEventListener("scroll", update, true);
+    };
+  }, [portal, isFocused, safeTags.length, inputValue]);
 
   const addTag = (tag) => {
     let trimmed = (tag || "").trim();
@@ -76,11 +89,54 @@ export default function TagInput({
     (s) => s.toLowerCase().includes(inputValue.toLowerCase()) && !safeTags.includes(s)
   );
 
+  const showMenu = isFocused && (filteredSuggestions.length > 0 || (inputValue.trim() && !safeTags.includes(inputValue.trim())));
+
+  const menu = showMenu ? (
+    <ul
+      className={portal
+        ? "fixed z-[1000] max-h-64 overflow-y-auto rounded-xl border border-outline-variant/30 bg-[var(--surface-raised,var(--surface))] py-1 shadow-xl"
+        : "absolute left-0 right-0 top-[100%] z-30 mt-1 max-h-48 overflow-y-auto rounded-xl border border-outline-variant/30 bg-surface py-1 shadow-xl"}
+      style={portal && menuRect ? { left: menuRect.left, width: menuRect.width, top: menuRect.top } : undefined}
+    >
+      {inputValue.trim() && !safeTags.includes(inputValue.trim()) && !filteredSuggestions.includes(inputValue.trim()) && (
+        <li 
+          className="cursor-pointer px-4 py-2 text-sm text-on-surface hover:bg-surface-container-high flex items-center gap-2 font-medium"
+          onMouseDown={(e) => {
+            e.preventDefault();
+            addTag(inputValue);
+            inputRef.current?.focus();
+          }}
+        >
+          <span className="material-symbols-outlined text-primary" style={{ fontSize: 16 }}>add</span>
+          Add "{inputValue.trim()}"
+        </li>
+      )}
+      {filteredSuggestions.map((suggestion, index) => (
+        <li
+          key={index}
+          className="cursor-pointer px-4 py-2 text-sm text-on-surface hover:bg-surface-container-high font-medium"
+          onMouseDown={(e) => {
+            e.preventDefault();
+            addTag(suggestion);
+            inputRef.current?.focus();
+          }}
+        >
+          {suggestion}
+        </li>
+      ))}
+    </ul>
+  ) : null;
+
   return (
     <div className={`relative flex flex-col ${className}`} ref={wrapperRef}>
       {label && <label className="mb-1 block text-[11px] font-semibold text-on-surface-variant uppercase tracking-wider">{label}</label>}
       <div 
+        ref={fieldRef}
         className="flex min-h-[38px] flex-wrap items-center gap-2 rounded-xl border border-outline-variant/30 bg-surface px-3 py-1.5 focus-within:border-primary focus-within:ring-1 focus-within:ring-primary cursor-text"
+        onMouseDown={(e) => {
+          // Clicking tags / padding must not blur the input (which would close the list); focus it instead
+          if (e.target !== inputRef.current) e.preventDefault();
+        }}
         onClick={() => inputRef.current?.focus()}
       >
         {safeTags.map((tag, index) => (
@@ -108,41 +164,13 @@ export default function TagInput({
           onChange={(e) => setInputValue(e.target.value)}
           onKeyDown={handleKeyDown}
           onFocus={() => setIsFocused(true)}
+          onBlur={() => setIsFocused(false)}
           className="flex-1 min-w-[80px] bg-transparent text-sm text-on-surface placeholder-on-surface-variant/50 outline-none"
           placeholder={safeTags.length === 0 ? placeholder : ""}
         />
       </div>
 
-      {isFocused && (filteredSuggestions.length > 0 || (inputValue.trim() && !safeTags.includes(inputValue.trim()))) && (
-        <ul className="absolute left-0 right-0 top-[100%] z-30 mt-1 max-h-48 overflow-y-auto rounded-xl border border-outline-variant/30 bg-surface py-1 shadow-xl">
-          {inputValue.trim() && !safeTags.includes(inputValue.trim()) && !filteredSuggestions.includes(inputValue.trim()) && (
-            <li 
-              className="cursor-pointer px-4 py-2 text-sm text-on-surface hover:bg-surface-container-high flex items-center gap-2 font-medium"
-              onMouseDown={(e) => {
-                e.preventDefault();
-                addTag(inputValue);
-                inputRef.current?.focus();
-              }}
-            >
-              <span className="material-symbols-outlined text-primary" style={{ fontSize: 16 }}>add</span>
-              Add "{inputValue.trim()}"
-            </li>
-          )}
-          {filteredSuggestions.map((suggestion, index) => (
-            <li
-              key={index}
-              className="cursor-pointer px-4 py-2 text-sm text-on-surface hover:bg-surface-container-high font-medium"
-              onMouseDown={(e) => {
-                e.preventDefault();
-                addTag(suggestion);
-                inputRef.current?.focus();
-              }}
-            >
-              {suggestion}
-            </li>
-          ))}
-        </ul>
-      )}
+      {portal ? (menu && menuRect ? createPortal(menu, document.body) : null) : menu}
     </div>
   );
 }
