@@ -10,6 +10,7 @@ import FactoryDetailPage from "./pages/FactoryDetailPage";
 import SensorDetailPage from "./pages/SensorDetailPage";
 import SensorsPage from "./pages/SensorsPage";
 import DevicesPage from "./pages/DevicesPage";
+import UserManagementPage from "./pages/UserManagementPage";
 import PlaceholderPage from "./pages/PlaceholderPage";
 import MasterDBPage from "./pages/MasterDBPage";
 import PlannerPage from "./pages/PlannerPage";
@@ -39,7 +40,6 @@ import {
 const placeholderPages = [
   "notifications",
   "financials",
-  "userManagement",
   "customerManagement",
   "videoManual",
 ];
@@ -243,6 +243,7 @@ function App() {
               <Route path="/maintenance" element={<MaintenancePage />} />
               <Route path="/maintenance/submissions" element={<ChecklistSubmissionsPage />} />
               <Route path="/maintenance/submissions/tickets" element={<TicketSubmissionsPage />} />
+              <Route path="/userManagement" element={<UserManagementPage />} />
               <Route path="/masterDB" element={<MasterDBPage />} />
               <Route path="/prototype" element={<PrototypePage />} />
               <Route path="/prototype/request" element={<PrototypeRequestPage />} />
