@@ -1,3 +1,5 @@
+import { useLanguage } from "../../contexts/LanguageContext";
+
 function Icon({ children, className = "text-[20px]" }) {
   return <span className={`material-symbols-outlined ${className}`}>{children}</span>;
 }
@@ -38,15 +40,17 @@ export default function VideoManualExportStatusModal({
   onOpenUrl,
   onCopyUrl,
 }) {
+  const { t } = useLanguage();
+
   if (!open) return null;
 
   const type = status?.type || (busy ? "info" : "success");
   const progress = typeof status?.progress === "number"
     ? Math.max(0, Math.min(100, status.progress))
     : null;
-  const badgeLabel = status?.status || (busy ? "PROCESSING" : type === "error" ? "FAILED" : "COMPLETE");
-  const title = status?.title || (busy ? "Preparing export" : "Export Complete!");
-  const message = status?.message || (busy ? "Please keep this page open while the export finishes." : "The flattened deployed video is ready.");
+  const badgeLabel = t(status?.status || "") || (busy ? t("PROCESSING") : type === "error" ? t("FAILED") : t("COMPLETE"));
+  const title = t(status?.title || "") || (busy ? t("Preparing export") : t("Export Complete!"));
+  const message = t(status?.message || "") || (busy ? t("Please keep this page open while the export finishes.") : t("The flattened deployed video is ready."));
   const tone = getStatusTone(type, busy);
   const canShowActions = !busy && type === "success";
 
@@ -61,7 +65,7 @@ export default function VideoManualExportStatusModal({
         <div className="border-b border-separator px-6 py-5">
           <div className="flex items-center gap-2 text-sm font-black text-on-surface">
             <Icon className="text-[18px] text-primary">download</Icon>
-            <h3 id="video-manual-export-status-title">Export Video</h3>
+            <h3 id="video-manual-export-status-title">{t("Export Video")}</h3>
           </div>
         </div>
 
@@ -80,7 +84,7 @@ export default function VideoManualExportStatusModal({
             <p className="mt-2 text-sm font-semibold text-on-surface-variant">{message}</p>
             {busy ? (
               <p className="mt-3 text-xs font-bold uppercase tracking-[0.14em] text-outline">
-                Refresh and close are blocked until the export finishes.
+                {t("Refresh and close are blocked until the export finishes.")}
               </p>
             ) : null}
           </div>
@@ -100,7 +104,7 @@ export default function VideoManualExportStatusModal({
                   className={`inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl text-sm font-black transition ${tone.button}`}
                 >
                   <Icon className="text-[18px]">download</Icon>
-                  Download Video
+                  {t("Download Video")}
                 </button>
               ) : null}
 
@@ -112,7 +116,7 @@ export default function VideoManualExportStatusModal({
                     className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-separator bg-surface text-sm font-black text-on-surface transition hover:bg-surface-container"
                   >
                     <Icon className="text-[18px]">open_in_new</Icon>
-                    Open URL
+                    {t("Open URL")}
                   </button>
                 ) : <div />}
 
@@ -123,7 +127,7 @@ export default function VideoManualExportStatusModal({
                     className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-separator bg-surface text-sm font-black text-on-surface transition hover:bg-surface-container"
                   >
                     <Icon className="text-[18px]">content_copy</Icon>
-                    Copy URL
+                    {t("Copy URL")}
                   </button>
                 ) : <div />}
               </div>
@@ -136,7 +140,7 @@ export default function VideoManualExportStatusModal({
             disabled={busy}
             className="mt-5 inline-flex h-11 w-full items-center justify-center rounded-xl bg-surface-container text-sm font-black text-on-surface-variant transition hover:bg-surface-container-high disabled:cursor-not-allowed disabled:opacity-60"
           >
-            Close
+            {t("Close")}
           </button>
         </div>
       </section>

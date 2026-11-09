@@ -1,3 +1,4 @@
+import { useLanguage } from "../../contexts/LanguageContext";
 import { createShapeSvg, extractShapeStyle, getClipCategory, getClipRelativePlaybackTime, getKeyframedScalarValueAtTime, normalizeHexColor } from "./videoManualEditorUtils";
 
 const FONT_OPTIONS = ["Work Sans", "Montserrat", "Open Sans", "Roboto", "Lato", "Merriweather", "Playfair Display", "Oswald"];
@@ -20,10 +21,12 @@ function formatInputNumber(value, fallback = 0, decimals = 4) {
 }
 
 function Section({ title, children, action }) {
+  const { t } = useLanguage();
+
   return (
     <section className="border-t border-separator pt-3">
       <div className="mb-2 flex items-center justify-between gap-2">
-        <h4 className="text-xs font-bold text-on-surface">{title}</h4>
+        <h4 className="text-xs font-bold text-on-surface">{t(title)}</h4>
         {action}
       </div>
       <div className="space-y-2">{children}</div>
@@ -32,9 +35,11 @@ function Section({ title, children, action }) {
 }
 
 function Field({ label, children }) {
+  const { t } = useLanguage();
+
   return (
     <label className="block space-y-1 text-[11px] font-semibold text-on-surface-variant">
-      <span>{label}</span>
+      <span>{t(label)}</span>
       {children}
     </label>
   );
@@ -59,12 +64,21 @@ function NumberField({ label, value, min, max, step = "0.1", onChange }) {
   );
 }
 
+const OPTION_JA = {
+  left: "左", center: "中央", right: "右", top: "上", middle: "中央", bottom: "下",
+  fade: "フェード", zoom: "ズーム", slideLeft: "左へスライド", slideRight: "右へスライド", slideUp: "上へスライド", slideDown: "下へスライド",
+  carouselLeft: "カルーセル左", carouselRight: "カルーセル右", carouselUp: "カルーセル上", carouselDown: "カルーセル下",
+  reveal: "リビール", wipeRight: "ワイプ右", wipeLeft: "ワイプ左", zoomIn: "ズームイン", zoomOut: "ズームアウト",
+};
+
 function SelectField({ label, value, options, onChange, emptyLabel = "None" }) {
+  const { t, language } = useLanguage();
+
   return (
     <Field label={label}>
       <select value={value || ""} onChange={(event) => onChange(event.target.value)} className={inputClass}>
         {options.map((option) => (
-          <option key={option || "none"} value={option}>{option || emptyLabel}</option>
+          <option key={option || "none"} value={option}>{option ? (language === "ja" && OPTION_JA[option]) || option : t(emptyLabel)}</option>
         ))}
       </select>
     </Field>
@@ -86,6 +100,7 @@ export default function VideoManualClipPropertiesPanel({
   onOpenAnimationPanel,
   onAddKeyframe,
 }) {
+  const { t } = useLanguage();
   const clip = selectedClip?.clip || {};
   const asset = clip.asset || {};
   const category = getClipCategory(clip);
@@ -97,7 +112,7 @@ export default function VideoManualClipPropertiesPanel({
   const title = isText ? "Selected Text" : isShape ? "Selected Shape" : `Selected ${mediaKind}`;
   const pill = isText ? "Text" : isShape ? "Shapes" : "Media";
 
-  const update = (updates, message) => onUpdateClip(updates, message);
+  const update = (updates, message) => onUpdateClip(updates, message ? t(message) : message);
   const updateNumber = (value, buildUpdate, message) => {
     const numericValue = Number(value);
     if (!Number.isFinite(numericValue)) return;
@@ -166,11 +181,11 @@ export default function VideoManualClipPropertiesPanel({
       <div className="flex-1 space-y-3 pb-3">
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">
-            <p className="truncate text-sm font-bold text-on-surface">{title}</p>
-            <p className="text-xs font-semibold text-on-surface-variant">Track {Number(selectedClip?.trackIndex ?? 0) + 1}</p>
+            <p className="truncate text-sm font-bold text-on-surface">{t(title)}</p>
+            <p className="text-xs font-semibold text-on-surface-variant">{t("Track {n}", { n: Number(selectedClip?.trackIndex ?? 0) + 1 })}</p>
           </div>
           <span className="rounded-full border border-separator px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.14em] text-on-surface-variant">
-            {pill}
+            {t(pill)}
           </span>
         </div>
 
@@ -226,7 +241,7 @@ export default function VideoManualClipPropertiesPanel({
                 className={`inline-flex h-8 items-center justify-center gap-1.5 rounded-lg px-2.5 text-[11px] font-bold transition ${mediaVolume <= 0 ? "bg-primary text-on-primary hover:bg-primary/90" : "bg-surface-container text-on-surface hover:bg-surface-container-high "}`}
               >
                 <Icon className="text-[15px]">{mediaVolume <= 0 ? "volume_off" : "volume_up"}</Icon>
-                {mediaVolume <= 0 ? "Unmute" : "Mute"}
+                {mediaVolume <= 0 ? t("Unmute") : t("Mute")}
               </button>
             ) : null}
           </Section>
@@ -294,7 +309,7 @@ export default function VideoManualClipPropertiesPanel({
           action={(
             <button type="button" onClick={onOpenAnimationPanel} className="inline-flex h-7 items-center gap-1 rounded-full border border-separator px-2.5 text-[11px] font-bold text-on-surface-variant transition hover:bg-surface-container">
               <Icon className="text-[14px]">show_chart</Icon>
-              Animation
+              {t("Animation")}
             </button>
           )}
         >
@@ -304,7 +319,7 @@ export default function VideoManualClipPropertiesPanel({
             className="flex w-full items-center justify-center gap-1.5 rounded-lg bg-amber-50 px-3 py-2 text-[11px] font-bold text-amber-700 transition hover:bg-amber-100 dark:bg-amber-500/10 dark:text-amber-200 dark:hover:bg-amber-500/20"
           >
             <svg width="9" height="9" viewBox="0 0 8 8" aria-hidden="true"><rect x="1" y="1" width="6" height="6" fill="currentColor" transform="rotate(45 4 4)" /></svg>
-            Add Keyframe T={keyframeTime.toFixed(2)}s
+            {t("Add Keyframe")} T={keyframeTime.toFixed(2)}s
           </button>
         </Section>
       </div>

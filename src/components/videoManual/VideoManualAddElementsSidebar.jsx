@@ -1,3 +1,4 @@
+import { useLanguage } from "../../contexts/LanguageContext";
 import { useEffect, useRef } from "react";
 import VideoManualClipPropertiesPanel from "./VideoManualClipPropertiesPanel";
 import VideoManualKeyframePanel from "./VideoManualKeyframePanel";
@@ -25,16 +26,25 @@ function Icon({ children, className = "text-[20px]" }) {
   return <span className={`material-symbols-outlined ${className}`}>{children}</span>;
 }
 
+function useTx() {
+  const { t } = useLanguage();
+  return (node) => (typeof node === "string" ? t(node) : node);
+}
+
 function SectionTitle({ children, action }) {
+  const tx = useTx();
+
   return (
     <div className="mb-1.5 flex items-center justify-between gap-2">
-      <p className="text-[11px] font-bold text-on-surface-variant">{children}</p>
+      <p className="text-[11px] font-bold text-on-surface-variant">{tx(children)}</p>
       {action}
     </div>
   );
 }
 
 function WideButton({ children, onClick, icon, trailingIcon = "arrow_forward", disabled = false }) {
+  const tx = useTx();
+
   return (
     <button
       type="button"
@@ -44,7 +54,7 @@ function WideButton({ children, onClick, icon, trailingIcon = "arrow_forward", d
     >
       <span className="inline-flex min-w-0 items-center gap-2">
         {icon ? <Icon className="text-[16px]">{icon}</Icon> : null}
-        <span className="truncate">{children}</span>
+        <span className="truncate">{tx(children)}</span>
       </span>
       <Icon className="text-[16px] text-outline">{trailingIcon}</Icon>
     </button>
@@ -52,6 +62,8 @@ function WideButton({ children, onClick, icon, trailingIcon = "arrow_forward", d
 }
 
 function TileButton({ children, onClick, icon, preview }) {
+  const tx = useTx();
+
   return (
     <button
       type="button"
@@ -59,12 +71,14 @@ function TileButton({ children, onClick, icon, preview }) {
       className="flex min-h-[76px] flex-col items-center justify-center gap-2 rounded-lg bg-surface-container px-2 py-3 text-xs font-bold text-on-surface transition hover:bg-surface-container-high"
     >
       {preview || (icon ? <Icon className="text-[26px]">{icon}</Icon> : null)}
-      <span className="text-center leading-tight">{children}</span>
+      <span className="text-center leading-tight">{tx(children)}</span>
     </button>
   );
 }
 
 function OptionButton({ children, meta, active, onClick }) {
+  const tx = useTx();
+
   return (
     <button
       type="button"
@@ -75,8 +89,8 @@ function OptionButton({ children, meta, active, onClick }) {
           : "border-transparent bg-surface-container text-on-surface hover:bg-surface-container-high"
       }`}
     >
-      <span>{children}</span>
-      {meta ? <span className="text-[11px] font-semibold text-outline">{meta}</span> : null}
+      <span>{tx(children)}</span>
+      {meta ? <span className="text-[11px] font-semibold text-outline">{tx(meta)}</span> : null}
     </button>
   );
 }
@@ -120,11 +134,12 @@ export default function VideoManualAddElementsSidebar({
   onApplyAnimationPreset,
   onComingSoon,
 }) {
+  const { t } = useLanguage();
   const shellRef = useRef(null);
   const activeMeta = ADD_CATEGORIES.find((category) => category.id === activeCategory) || ADD_CATEGORIES[0];
   const selectedCategory = getClipCategory(selectedClip?.clip);
   const showingProperties = !!selectedClip && !!selectedCategory && selectedCategory === activeCategory;
-  const drawerTitle = showingProperties ? `${activeMeta.label} Properties` : activeMeta.label;
+  const drawerTitle = showingProperties ? t("{name} Properties", { name: t(activeMeta.label) }) : t(activeMeta.label);
 
   useEffect(() => {
     if (!isOpen) return undefined;
@@ -172,19 +187,19 @@ export default function VideoManualAddElementsSidebar({
           <div>
             <SectionTitle>Text Presets</SectionTitle>
             <div className="grid gap-2">
-              <button type="button" onClick={() => onAddText({ text: "Title", fontSize: 72, fontWeight: 600 })} className="rounded-lg bg-surface-container px-4 py-3 text-left text-sm font-bold text-on-surface transition hover:bg-surface-container-high">Headline Title</button>
-              <button type="button" onClick={() => onAddText({ text: "Subtitle", fontSize: 44, fontWeight: 500 })} className="rounded-lg bg-surface-container px-4 py-3 text-left text-sm font-bold text-on-surface transition hover:bg-surface-container-high">Subtitle</button>
-              <button type="button" onClick={() => onAddText({ text: "Body text", fontSize: 36, fontWeight: 400 })} className="rounded-lg bg-surface-container px-4 py-3 text-left text-sm font-semibold text-on-surface-variant transition hover:bg-surface-container-high">Paragraph</button>
+              <button type="button" onClick={() => onAddText({ text: t("Title"), fontSize: 72, fontWeight: 600 })} className="rounded-lg bg-surface-container px-4 py-3 text-left text-sm font-bold text-on-surface transition hover:bg-surface-container-high">{t("Headline Title")}</button>
+              <button type="button" onClick={() => onAddText({ text: t("Subtitle"), fontSize: 44, fontWeight: 500 })} className="rounded-lg bg-surface-container px-4 py-3 text-left text-sm font-bold text-on-surface transition hover:bg-surface-container-high">{t("Subtitle")}</button>
+              <button type="button" onClick={() => onAddText({ text: t("Body text"), fontSize: 36, fontWeight: 400 })} className="rounded-lg bg-surface-container px-4 py-3 text-left text-sm font-semibold text-on-surface-variant transition hover:bg-surface-container-high">{t("Paragraph")}</button>
             </div>
           </div>
 
           <div>
-            <SectionTitle action={<button type="button" onClick={() => onComingSoon("Custom fonts")} className="rounded-full bg-primary px-2.5 py-1 text-[11px] font-bold text-on-primary transition hover:bg-primary/90">Upload</button>}>
+            <SectionTitle action={<button type="button" onClick={() => onComingSoon(t("Custom fonts"))} className="rounded-full bg-primary px-2.5 py-1 text-[11px] font-bold text-on-primary transition hover:bg-primary/90">{t("Upload")}</button>}>
               Fonts
             </SectionTitle>
             <div className="grid grid-cols-2 gap-2">
               <button type="button" onClick={() => onAddText({ text: "Work Sans", fontFamily: "Work Sans", fontSize: 36, fontWeight: 500 })} className="rounded-lg bg-surface-container px-3 py-4 text-center text-xs font-bold text-on-surface transition hover:bg-surface-container-high">Work Sans</button>
-              <button type="button" onClick={() => onComingSoon("More fonts")} className="rounded-lg bg-surface-container px-3 py-4 text-center text-xs font-bold text-on-surface transition hover:bg-surface-container-high">More Fonts</button>
+              <button type="button" onClick={() => onComingSoon(t("More fonts"))} className="rounded-lg bg-surface-container px-3 py-4 text-center text-xs font-bold text-on-surface transition hover:bg-surface-container-high">{t("More Fonts")}</button>
             </div>
           </div>
         </div>
@@ -319,7 +334,7 @@ export default function VideoManualAddElementsSidebar({
       </div>
 
       <div className="flex w-[72px] flex-col items-center border-l border-separator bg-surface-container-low p-1.5">
-        <div className="w-full px-1 py-1.5 text-center text-[9px] font-bold uppercase tracking-[0.22em] text-on-surface-variant">Add</div>
+        <div className="w-full px-1 py-1.5 text-center text-[9px] font-bold uppercase tracking-[0.22em] text-on-surface-variant">{t("Add")}</div>
         <div className="flex w-full flex-1 flex-col gap-1.5 overflow-y-auto pb-1.5">
           {ADD_CATEGORIES.map((category) => {
             const active = isOpen && activeCategory === category.id;
@@ -335,7 +350,7 @@ export default function VideoManualAddElementsSidebar({
                 }`}
               >
                 {renderCategoryIcon(category)}
-                <span className="max-w-full break-words text-[10px] font-bold leading-[1.05]">{category.label}</span>
+                <span className="max-w-full break-words text-[10px] font-bold leading-[1.05]">{t(category.label)}</span>
               </button>
             );
           })}

@@ -105,8 +105,8 @@ function getRevisionId(revision) {
   return String(revision?._id?.$oid || revision?._id || revision?.revisionId || "");
 }
 
-function getRevisionDisplayName(revision) {
-  return revision?.revisionName || (revision?.revisionNumber ? `Revision ${revision.revisionNumber}` : "revision");
+function getRevisionDisplayName(revision, t = (key) => key) {
+  return revision?.revisionName || (revision?.revisionNumber ? t("Revision {n}", { n: revision.revisionNumber }) : t("revision"));
 }
 
 function getPublicRenderSource(sourceUrl, assetSourceMap = {}) {
@@ -617,9 +617,9 @@ export default function VideoManualProjectEditorPage() {
 
   const showNotice = useCallback((message, type = "success") => {
     window.clearTimeout(noticeTimerRef.current);
-    setNotice({ type, message });
+    setNotice({ type, message: t(message) });
     noticeTimerRef.current = window.setTimeout(() => setNotice({ type: "", message: "" }), type === "error" ? 6000 : 3200);
-  }, []);
+  }, [t]);
 
   useEffect(() => () => window.clearTimeout(noticeTimerRef.current), []);
 
@@ -705,7 +705,7 @@ export default function VideoManualProjectEditorPage() {
           id: `${trackIndex}:${clipIndex}`,
           trackIndex,
           clipIndex,
-          label: `Step ${index + 1}`,
+          label: t("Step {n}", { n: index + 1 }),
           startTime,
           endTime: startTime + (Number.isFinite(length) ? length : 0),
         };
@@ -1246,7 +1246,7 @@ export default function VideoManualProjectEditorPage() {
         disposeSDK();
         if (!cancelled) {
           console.error("Shotstack SDK init failed:", error);
-          setProjectError(`Failed to initialize the editor: ${error.message || "unknown error"}`);
+          setProjectError(t("Failed to initialize the editor: {message}", { message: error.message || t("unknown error") }));
         }
       }
     }
@@ -1354,7 +1354,7 @@ export default function VideoManualProjectEditorPage() {
 
     const nextRevisionNumber = (Number(project?.currentRevisionNumber) || 0) + 1;
     const defaultRevisionName = `${project?.title || "Untitled Project"} Rev ${String(nextRevisionNumber).padStart(2, "0")}`;
-    const revisionName = window.prompt("Revision name:", defaultRevisionName);
+    const revisionName = window.prompt(t("Revision name:"), defaultRevisionName);
     if (!revisionName || !revisionName.trim()) return;
 
     setSaving(true);
@@ -1367,7 +1367,7 @@ export default function VideoManualProjectEditorPage() {
       setProject(await fetchVideoManualProject(projectId));
       await loadRevisionHistory({ open: true });
       setHasUnsavedChanges(false);
-      showNotice(`Revision ${revisionNumber} created.`);
+      showNotice(t("Revision {n} created.", { n: revisionNumber }));
     } catch (error) {
       showNotice(error.message || "Revision save failed.", "error");
     } finally {
@@ -1396,7 +1396,7 @@ export default function VideoManualProjectEditorPage() {
       const snapshot = nextRevision?.snapshot || {};
       await loadEditIntoStudio(snapshot.edit || DEFAULT_VIDEO_MANUAL_TEMPLATE, snapshot.assetSourceMap || {});
       setRevisionPreview(nextRevision);
-      showNotice(`Previewing ${getRevisionDisplayName(nextRevision)}.`);
+      showNotice(t("Previewing {name}.", { name: getRevisionDisplayName(nextRevision, t) }));
       await loadRevisionHistory({ open: true });
     } catch (error) {
       showNotice(error.message || "Revision preview failed.", "error");
@@ -1429,7 +1429,7 @@ export default function VideoManualProjectEditorPage() {
   const handleRestoreRevision = useCallback(async (revision) => {
     const revisionId = getRevisionId(revision);
     if (!revisionId || !projectId) return;
-    if (!window.confirm("Restore this revision as the current working copy?")) return;
+    if (!window.confirm(t("Restore this revision as the current working copy?"))) return;
 
     setRevisionActionId(`${revisionId}:restore`);
     try {
@@ -1454,7 +1454,7 @@ export default function VideoManualProjectEditorPage() {
       revisionPreviewSourceRef.current = null;
       setRevisionPreview(null);
       setRevisionHistory((current) => ({ ...current, open: false }));
-      showNotice(`Restored ${getRevisionDisplayName(nextRevision)}.`);
+      showNotice(t("Restored {name}.", { name: getRevisionDisplayName(nextRevision, t) }));
     } catch (error) {
       showNotice(error.message || "Revision restore failed.", "error");
     } finally {
@@ -1475,7 +1475,7 @@ export default function VideoManualProjectEditorPage() {
         type: "info",
         status: status ? status.toUpperCase() : "RENDERING",
         title: "Rendering video",
-        message: progress == null ? "Shotstack is processing the selected revision." : `Shotstack is processing the selected revision (${progress}%).`,
+        message: progress == null ? t("Shotstack is processing the selected revision.") : t("Shotstack is processing the selected revision ({progress}%).", { progress }),
         progress,
       });
 
@@ -1556,7 +1556,7 @@ export default function VideoManualProjectEditorPage() {
 
     const nextRevisionNumber = (Number(project?.currentRevisionNumber) || 0) + 1;
     const defaultRevisionName = `${project?.title || "Untitled Project"} Rev ${String(nextRevisionNumber).padStart(2, "0")}`;
-    const revisionName = window.prompt("Export requires a saved revision. Revision name:", defaultRevisionName);
+    const revisionName = window.prompt(t("Export requires a saved revision. Revision name:"), defaultRevisionName);
     if (!revisionName || !revisionName.trim()) {
       return null;
     }
@@ -1572,7 +1572,7 @@ export default function VideoManualProjectEditorPage() {
         await loadRevisionHistory({ open: true });
       }
       setHasUnsavedChanges(false);
-      showNotice(`Revision ${revisionNumber} created for export.`);
+      showNotice(t("Revision {n} created for export.", { n: revisionNumber }));
       return fetchVideoManualRevision(String(revisionId));
     } finally {
       setSaving(false);
@@ -1585,7 +1585,7 @@ export default function VideoManualProjectEditorPage() {
     actionId = null,
     successStatus = "DEPLOYED",
     completionTitle = "Deployment complete",
-    buildCompletionMessage = (resolvedName) => `${resolvedName} is now live on the factory side.`,
+    buildCompletionMessage = (resolvedName) => t("{name} is now live on the factory side.", { name: resolvedName }),
   } = {}) => {
     const revisionId = getRevisionId(revision);
     if (!revisionId || !projectId) {
@@ -1597,7 +1597,7 @@ export default function VideoManualProjectEditorPage() {
     setDeploymentStatus({
       type: "info",
       status: "CHECKING",
-      title: `Preparing ${normalizedReasonLabel.toLowerCase()}`,
+      title: t("Preparing {reason}", { reason: t(normalizedReasonLabel).toLowerCase() }),
       message: "Checking whether this revision already has a reusable deployed video.",
       progress: null,
     });
@@ -1685,7 +1685,7 @@ export default function VideoManualProjectEditorPage() {
               downloadUrl: renderResult?.downloadUrl || null,
             });
           } catch (shotstackError) {
-            throw new Error(`${primaryMessage} Shotstack fallback also failed: ${shotstackError?.message || "Unknown error."}`);
+            throw new Error(t("{primary} Shotstack fallback also failed: {message}", { primary: primaryMessage, message: shotstackError?.message || t("Unknown error.") }));
           }
         }
       }
@@ -1696,7 +1696,7 @@ export default function VideoManualProjectEditorPage() {
         await loadRevisionHistory({ open: true });
       }
 
-      const resolvedName = deployData?.revisionName || getRevisionDisplayName(fullRevision);
+      const resolvedName = deployData?.revisionName || getRevisionDisplayName(fullRevision, t);
       const resolvedDownloadUrl = deployData?.deployedVideoUrl || nextProject?.deployedVideoUrl || "";
       const resolvedFileName = deployData?.deployedVideoFileName
         || nextProject?.deployedVideoFileName
@@ -1721,8 +1721,8 @@ export default function VideoManualProjectEditorPage() {
       setDeploymentStatus({
         type: "error",
         status: "FAILED",
-        title: `${normalizedReasonLabel} failed`,
-        message: error.message || `The ${normalizedReasonLabel.toLowerCase()} could not be completed.`,
+        title: t("{reason} failed", { reason: t(normalizedReasonLabel) }),
+        message: error.message || t("The {reason} could not be completed.", { reason: t(normalizedReasonLabel).toLowerCase() }),
         progress: null,
       });
       throw error;
@@ -1753,7 +1753,7 @@ export default function VideoManualProjectEditorPage() {
       showNotice("Back to current before deploying a revision.", "error");
       return;
     }
-    if (!window.confirm(`Deploy ${getRevisionDisplayName(revision)} to the factory side?`)) return;
+    if (!window.confirm(t("Deploy {name} to the factory side?", { name: getRevisionDisplayName(revision, t) }))) return;
 
     try {
       const { deployData, fullRevision, usedLocalFallback } = await runRevisionDeployment(revision, {
@@ -1761,13 +1761,13 @@ export default function VideoManualProjectEditorPage() {
         showHistoryAfter: true,
         actionId: `${revisionId}:deploy`,
         completionTitle: "Deployment complete",
-        buildCompletionMessage: (resolvedName) => `${resolvedName} is now live on the factory side.`,
+        buildCompletionMessage: (resolvedName) => t("{name} is now live on the factory side.", { name: resolvedName }),
       });
 
       showNotice(
         usedLocalFallback
-          ? `Deployed ${deployData?.revisionName || getRevisionDisplayName(fullRevision)} using the browser export fallback.`
-          : `Deployed ${deployData?.revisionName || getRevisionDisplayName(fullRevision)}.`
+          ? t("Deployed {name} using the browser export fallback.", { name: deployData?.revisionName || getRevisionDisplayName(fullRevision, t) })
+          : t("Deployed {name}.", { name: deployData?.revisionName || getRevisionDisplayName(fullRevision, t) })
       );
     } catch (error) {
       showNotice(error.message || "Deployment failed.", "error");
@@ -1809,15 +1809,15 @@ export default function VideoManualProjectEditorPage() {
         actionId: "export",
         successStatus: "COMPLETE",
         completionTitle: "Export Complete!",
-        buildCompletionMessage: () => "The flattened deployed video is ready in Firebase Storage.",
+        buildCompletionMessage: () => t("The flattened deployed video is ready in Firebase Storage."),
       });
 
-      const resolvedName = deployData?.revisionName || getRevisionDisplayName(fullRevision);
+      const resolvedName = deployData?.revisionName || getRevisionDisplayName(fullRevision, t);
 
       showNotice(
         usedLocalFallback
-          ? `${resolvedName} is ready using the browser export fallback.`
-          : `${resolvedName} is ready.`
+          ? t("{name} is ready using the browser export fallback.", { name: resolvedName })
+          : t("{name} is ready.", { name: resolvedName })
       );
     } catch (error) {
       if (exportModalWasOpened) {
@@ -1885,7 +1885,7 @@ export default function VideoManualProjectEditorPage() {
       showNotice("Your role cannot undeploy revisions.", "error");
       return;
     }
-    if (!window.confirm(`Hide "${project?.title || "Untitled Project"}" from the factory side?`)) return;
+    if (!window.confirm(t("Hide \"{name}\" from the factory side?", { name: project?.title || t("vmUntitledProject") }))) return;
 
     setRevisionActionId("undeploy");
     setDeploymentStatus({
@@ -2036,7 +2036,7 @@ export default function VideoManualProjectEditorPage() {
       }],
     });
     syncSteps();
-    showNotice(`${shapeType === "rect" ? "Rectangle" : shapeType[0].toUpperCase() + shapeType.slice(1)} added.`);
+    showNotice(t("{name} added.", { name: t(shapeType === "rect" ? "Rectangle" : shapeType[0].toUpperCase() + shapeType.slice(1)) }));
   }, [getPlaybackTime, showNotice, syncSteps]);
 
   const loadAssetLibrary = useCallback(async (libraryType = assetLibrary.type, silent = false) => {
@@ -2115,7 +2115,7 @@ export default function VideoManualProjectEditorPage() {
         loadAssetLibrary(assetLibrary.type, true),
         loadAssetRecycleBin(assetLibrary.type, true),
       ]);
-      showNotice(`${Number(result?.deletedCount || 0)} asset(s) moved to recycle bin.`);
+      showNotice(t("{n} asset(s) moved to recycle bin.", { n: Number(result?.deletedCount || 0) }));
       return result;
     } catch (error) {
       showNotice(error.message || "Failed to move assets to recycle bin.", "error");
@@ -2134,7 +2134,7 @@ export default function VideoManualProjectEditorPage() {
         loadAssetLibrary(assetLibrary.type, true),
         loadAssetRecycleBin(assetLibrary.type, true),
       ]);
-      showNotice(`${Number(result?.restoredCount || 0)} asset(s) restored.`);
+      showNotice(t("{n} asset(s) restored.", { n: Number(result?.restoredCount || 0) }));
       return result;
     } catch (error) {
       showNotice(error.message || "Failed to restore assets.", "error");
@@ -2153,7 +2153,7 @@ export default function VideoManualProjectEditorPage() {
         loadAssetLibrary(assetLibrary.type, true),
         loadAssetRecycleBin(assetLibrary.type, true),
       ]);
-      showNotice(`${Number(result?.deletedCount || 0)} asset(s) permanently deleted from Firebase and recycle bin.`);
+      showNotice(t("{n} asset(s) permanently deleted from Firebase and recycle bin.", { n: Number(result?.deletedCount || 0) }));
       return result;
     } catch (error) {
       showNotice(error.message || "Failed to permanently delete assets.", "error");
@@ -2197,7 +2197,7 @@ export default function VideoManualProjectEditorPage() {
 
     setAssetLibrary((current) => ({ ...current, open: false }));
     syncSteps();
-    showNotice(`${getAssetLibraryTypeLabel(assetType)} item added.`);
+    showNotice(t("{type} item added.", { type: t(getAssetLibraryTypeLabel(assetType)) }));
   }, [apiBaseUrl, getPlaybackTime, rememberAssetSource, showNotice, syncSteps]);
 
   const handleUploadAsset = useCallback(async (file) => {
@@ -2222,7 +2222,7 @@ export default function VideoManualProjectEditorPage() {
         uploadProgress: null,
         items: [uploadedAsset, ...current.items.filter((item) => String(item.assetId || item._id || "") !== String(uploadedAsset.assetId))],
       }));
-      showNotice(`${getAssetLibraryItemLabel(assetType)} uploaded. Click Use ${getAssetLibraryItemLabel(assetType)} to add it to the timeline.`);
+      showNotice(t("{type} uploaded. Click Use {type} to add it to the timeline.", { type: t(getAssetLibraryItemLabel(assetType)) }));
       loadAssetLibrary(assetType);
     } catch (error) {
       setAssetLibrary((current) => ({ ...current, uploading: false, uploadProgress: null, error: error.message || "Upload failed." }));
@@ -2308,7 +2308,7 @@ export default function VideoManualProjectEditorPage() {
     });
 
     if (blockingKeyframe != null) {
-      showNotice(`Keyframes must be at least ${KEYFRAME_MIN_SPACING.toFixed(2)}s apart.`, "error");
+      showNotice(t("Keyframes must be at least {s}s apart.", { s: KEYFRAME_MIN_SPACING.toFixed(2) }), "error");
       return;
     }
 
@@ -2341,7 +2341,7 @@ export default function VideoManualProjectEditorPage() {
       setActiveAddCategory("animation");
       setAddDrawerOpen(true);
       scheduleTimelineKeyframeRefresh();
-      showNotice(`${sameTimeKeyframe != null ? "Keyframe updated" : "Keyframe recorded"} at T=${targetTime.toFixed(2)}s.`);
+      showNotice(t(sameTimeKeyframe != null ? "Keyframe updated at T={time}s." : "Keyframe recorded at T={time}s.", { time: targetTime.toFixed(2) }));
     } catch (error) {
       console.error("Failed to add keyframe", error);
       showNotice(error.message || "Keyframe update failed.", "error");
@@ -2423,7 +2423,7 @@ export default function VideoManualProjectEditorPage() {
       setKeyframeDraft(null);
       setKeyframeEditMode(null);
       scheduleTimelineKeyframeRefresh();
-      showNotice(`Keyframe recorded at T=${activeKeyframeEditMode.time.toFixed(2)}s.`);
+      showNotice(t("Keyframe recorded at T={time}s.", { time: activeKeyframeEditMode.time.toFixed(2) }));
     } catch (error) {
       console.error("Failed to record keyframe", error);
       showNotice(error.message || "Keyframe record failed.", "error");
@@ -2484,7 +2484,7 @@ export default function VideoManualProjectEditorPage() {
       setKeyframeDraft(null);
       setKeyframeEditMode(null);
       scheduleTimelineKeyframeRefresh();
-      showNotice(`Keyframe removed at T=${currentActiveKeyframe.time.toFixed(2)}s.`);
+      showNotice(t("Keyframe removed at T={time}s.", { time: currentActiveKeyframe.time.toFixed(2) }));
     } catch (error) {
       console.error("Failed to delete keyframe", error);
       showNotice(error.message || "Keyframe delete failed.", "error");
@@ -2592,7 +2592,7 @@ export default function VideoManualProjectEditorPage() {
       setSelectedClip({ ...selection, clip: updatedClip || { ...clip, length: firstLength } });
       syncSteps();
       scheduleTimelineKeyframeRefresh();
-      showNotice(`Clip split at ${playhead.toFixed(2)}s.`);
+      showNotice(t("Clip split at {s}s.", { s: playhead.toFixed(2) }));
     } catch (error) {
       console.error("Failed to trim selected clip", error);
       showNotice(error.message || "Trim failed.", "error");
@@ -2600,7 +2600,7 @@ export default function VideoManualProjectEditorPage() {
   }, [getPlaybackTime, readClipAt, scheduleTimelineKeyframeRefresh, selectedClip, showNotice, syncSteps]);
 
   const handleComingSoon = useCallback((label) => {
-    showNotice(`${label} is coming soon.`);
+    showNotice(t("{label} is coming soon.", { label }));
   }, [showNotice]);
 
   return (
@@ -2632,20 +2632,20 @@ export default function VideoManualProjectEditorPage() {
           <span className={`material-symbols-outlined flex-shrink-0 text-[18px] ${projectError || notice.type === "error" ? "text-error" : "text-emerald-500"}`}>
             {projectError || notice.type === "error" ? "error" : "check_circle"}
           </span>
-          <span className="min-w-0">{projectError || notice.message}</span>
+          <span className="min-w-0">{t(projectError || notice.message)}</span>
         </div>
       ) : null}
 
       {revisionPreview ? (
         <div className="relative z-20 flex flex-wrap items-center justify-center gap-3 bg-primary px-4 py-2 text-xs font-black text-on-primary">
-          <span>Previewing {getRevisionDisplayName(revisionPreview)}. Edits are not saved until you restore this revision.</span>
+          <span>{t("Previewing {name}. Edits are not saved until you restore this revision.", { name: getRevisionDisplayName(revisionPreview, t) })}</span>
           <button
             type="button"
             onClick={handleExitRevisionPreview}
             disabled={Boolean(revisionActionId)}
             className="rounded-lg bg-surface/15 px-3 py-1 text-[11px] transition hover:bg-surface/25 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            Back to Current
+            {t("Back to Current")}
           </button>
         </div>
       ) : null}
@@ -2656,7 +2656,7 @@ export default function VideoManualProjectEditorPage() {
         </div>
       ) : !project ? (
         <div className="flex flex-1 items-center justify-center px-6 text-center text-sm font-bold text-on-surface-variant">
-          {projectError || "Project not found."}
+          {projectError ? t(projectError) : t("Project not found.")}
         </div>
       ) : (
         <div ref={editorBodyRef} className={`relative flex min-h-0 flex-1 flex-col ${timelineResizing ? "select-none" : ""}`}>
@@ -2712,14 +2712,14 @@ export default function VideoManualProjectEditorPage() {
           >
             <div
               role="separator"
-              aria-label="Resize timeline"
+              aria-label={t("Resize timeline")}
               aria-orientation="horizontal"
               aria-valuemin={TIMELINE_MIN_HEIGHT}
               aria-valuemax={TIMELINE_MAX_HEIGHT}
               aria-valuenow={timelineHeight}
               aria-valuetext={`${timelineHeight}px`}
               tabIndex={0}
-              title="Drag to resize timeline"
+              title={t("Drag to resize timeline")}
               onPointerDown={handleTimelineResizePointerDown}
               onKeyDown={handleTimelineResizeKeyDown}
               onDoubleClick={() => {

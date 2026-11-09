@@ -1,3 +1,4 @@
+import { useLanguage } from "../../contexts/LanguageContext";
 import { ACTIVE_KEYFRAME_THRESHOLD, getAllKeyframeTimesForClip, getClipRelativePlaybackTime, normalizeKeyframeFieldValue } from "./videoManualEditorUtils";
 
 const KEYFRAME_FIELDS = [
@@ -41,6 +42,7 @@ function ActionButton({ children, icon, onClick, disabled = false, tone = "slate
 }
 
 function KeyframeField({ field, activeKeyframe, values, editing, changed, onChange }) {
+  const { t } = useLanguage();
   const rawValue = values?.[field.id];
   const value = activeKeyframe && rawValue != null ? rawValue : "";
   const icon = field.icon.length === 1
@@ -49,7 +51,7 @@ function KeyframeField({ field, activeKeyframe, values, editing, changed, onChan
 
   return (
     <label className={`grid grid-cols-[2rem_1fr] overflow-hidden rounded-lg border transition ${changed ? "border-primary/30 bg-primary/10 " : "border-separator bg-surface "}`}>
-      <span className="flex items-center justify-center border-r border-inherit text-on-surface-variant" title={field.label}>{icon}</span>
+      <span className="flex items-center justify-center border-r border-inherit text-on-surface-variant" title={t(field.label)}>{icon}</span>
       <input
         type="number"
         min={field.min}
@@ -79,8 +81,9 @@ export default function VideoManualKeyframePanel({
   onChangeDraftValue,
   onApplyAnimationPreset,
 }) {
+  const { t } = useLanguage();
   const clip = selectedClip?.clip || null;
-  const assetType = clip?.asset?.type || "No clip selected";
+  const assetType = clip?.asset?.type || t("No clip selected");
   const disabled = !clip;
   const relativeTime = clip ? getClipRelativePlaybackTime(clip, playbackTime) : 0;
   const keyframeTimes = clip ? getAllKeyframeTimesForClip(clip) : [];
@@ -95,38 +98,38 @@ export default function VideoManualKeyframePanel({
   return (
     <div className="space-y-3">
       <div className="rounded-lg border border-separator bg-surface-container-low px-3 py-2">
-        <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-outline">Selected</p>
+        <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-outline">{t("Selected")}</p>
         <p className="mt-1 truncate text-xs font-bold text-on-surface">{assetType}</p>
       </div>
 
       <ActionButton icon="add" tone="amber" onClick={onAddKeyframe} disabled={disabled}>
-        <span className="inline-flex items-center gap-1"><Diamond /> Add Keyframe T={relativeTime.toFixed(2)}s</span>
+        <span className="inline-flex items-center gap-1"><Diamond /> {t("Add Keyframe")} T={relativeTime.toFixed(2)}s</span>
       </ActionButton>
 
       <section className="space-y-2 rounded-lg border border-separator bg-surface p-3">
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">
-            <p className="text-xs font-black text-on-surface">Current Diamond</p>
+            <p className="text-xs font-black text-on-surface">{t("Current Keyframe")}</p>
             <p className="mt-0.5 truncate text-[11px] font-semibold text-on-surface-variant">
-              {activeKeyframe ? `T=${activeKeyframe.time.toFixed(2)}s` : `Within ${ACTIVE_KEYFRAME_THRESHOLD.toFixed(2)}s`}
+              {activeKeyframe ? `T=${activeKeyframe.time.toFixed(2)}s` : t("Within {s}s", { s: ACTIVE_KEYFRAME_THRESHOLD.toFixed(2) })}
             </p>
           </div>
           <span className={`inline-flex h-6 items-center gap-1 rounded-full px-2 text-[10px] font-black uppercase tracking-[0.12em] ${activeKeyframe ? "bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-200" : "bg-surface-container text-outline "}`}>
             <Diamond active={!!activeKeyframe} />
-            {activeKeyframe ? "Active" : "None"}
+            {activeKeyframe ? t("Active") : t("None")}
           </span>
         </div>
 
         <div className="flex flex-wrap gap-1.5">
           {!isKeyframeEditMode ? (
-            <ActionButton icon="edit" onClick={onEnterEditMode} disabled={!activeKeyframe}>Edit</ActionButton>
+            <ActionButton icon="edit" onClick={onEnterEditMode} disabled={!activeKeyframe}>{t("Edit")}</ActionButton>
           ) : (
             <>
-              <ActionButton icon="radio_button_checked" onClick={onRecordEditMode}>Record</ActionButton>
-              <ActionButton icon="close" onClick={onCancelEditMode}>Cancel</ActionButton>
+              <ActionButton icon="radio_button_checked" onClick={onRecordEditMode}>{t("Record")}</ActionButton>
+              <ActionButton icon="close" onClick={onCancelEditMode}>{t("Cancel")}</ActionButton>
             </>
           )}
-          <ActionButton icon="delete" tone="red" onClick={onDeleteKeyframe} disabled={!activeKeyframe}>Delete</ActionButton>
+          <ActionButton icon="delete" tone="red" onClick={onDeleteKeyframe} disabled={!activeKeyframe}>{t("Delete")}</ActionButton>
         </div>
 
         <div className="grid gap-2">
@@ -155,13 +158,13 @@ export default function VideoManualKeyframePanel({
       ) : null}
 
       <section className="space-y-2 border-t border-separator pt-3">
-        <p className="text-[11px] font-bold text-on-surface-variant">Presets</p>
+        <p className="text-[11px] font-bold text-on-surface-variant">{t("Presets")}</p>
         <div className="grid gap-2">
-          <ActionButton icon="opacity" onClick={() => onApplyAnimationPreset("fadeIn")} disabled={disabled}>Fade In</ActionButton>
-          <ActionButton icon="blur_on" onClick={() => onApplyAnimationPreset("fadeOut")} disabled={disabled}>Fade Out</ActionButton>
-          <ActionButton icon="zoom_in_map" onClick={() => onApplyAnimationPreset("zoomIn")} disabled={disabled}>Zoom In</ActionButton>
-          <ActionButton icon="east" onClick={() => onApplyAnimationPreset("slideLeft")} disabled={disabled}>Slide Left</ActionButton>
-          <ActionButton icon="graphic_eq" onClick={() => onApplyAnimationPreset("pulse")} disabled={disabled}>Pulse</ActionButton>
+          <ActionButton icon="opacity" onClick={() => onApplyAnimationPreset("fadeIn")} disabled={disabled}>{t("Fade In")}</ActionButton>
+          <ActionButton icon="blur_on" onClick={() => onApplyAnimationPreset("fadeOut")} disabled={disabled}>{t("Fade Out")}</ActionButton>
+          <ActionButton icon="zoom_in_map" onClick={() => onApplyAnimationPreset("zoomIn")} disabled={disabled}>{t("Zoom In")}</ActionButton>
+          <ActionButton icon="east" onClick={() => onApplyAnimationPreset("slideLeft")} disabled={disabled}>{t("Slide Left")}</ActionButton>
+          <ActionButton icon="graphic_eq" onClick={() => onApplyAnimationPreset("pulse")} disabled={disabled}>{t("Pulse")}</ActionButton>
         </div>
       </section>
     </div>

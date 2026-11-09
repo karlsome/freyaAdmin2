@@ -1,3 +1,5 @@
+import { useLanguage } from "../../contexts/LanguageContext";
+
 function Icon({ children, className = "text-[20px]" }) {
   return <span className={`material-symbols-outlined ${className}`}>{children}</span>;
 }
@@ -6,24 +8,27 @@ function getRevisionId(revision) {
   return String(revision?._id?.$oid || revision?._id || revision?.revisionId || "");
 }
 
-function formatDateTime(value, fallback = "Unknown time") {
+function formatDateTime(value, fallback = "") {
   if (!value) return fallback;
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return fallback;
   return date.toLocaleString();
 }
 
-function getRevisionLabel(revision) {
-  if (!revision) return "Current";
-  return revision.revisionName || (revision.revisionNumber ? `Revision ${revision.revisionNumber}` : "Unnamed Revision");
+function getRevisionLabel(revision, t) {
+  if (!revision) return t("Current");
+  return revision.revisionName || (revision.revisionNumber ? t("Revision {n}", { n: revision.revisionNumber }) : t("Unnamed Revision"));
 }
 
-function getLiveRevisionText(project) {
-  if (!project?.deployedRevisionId) return "Factory live revision: Not deployed";
+function getLiveRevisionText(project, t) {
+  if (!project?.deployedRevisionId) return t("Factory live revision: Not deployed");
 
   const revisionLabel = project.deployedRevisionName
-    || (project.deployedRevisionNumber ? `Revision ${project.deployedRevisionNumber}` : "Revision");
-  return `Factory live revision: ${revisionLabel} | Deployed ${formatDateTime(project.deployedAt, "unknown time")}`;
+    || (project.deployedRevisionNumber ? t("Revision {n}", { n: project.deployedRevisionNumber }) : t("Revision"));
+  return t("Factory live revision: {label} | Deployed {time}", {
+    label: revisionLabel,
+    time: formatDateTime(project.deployedAt, t("unknown time")),
+  });
 }
 
 export default function VideoManualRevisionHistoryModal({
@@ -44,6 +49,8 @@ export default function VideoManualRevisionHistoryModal({
   onUndeploy,
   onBackToCurrent,
 }) {
+  const { t } = useLanguage();
+
   if (!open) return null;
 
   const revisionItems = Array.isArray(revisions) ? revisions : [];
@@ -65,15 +72,15 @@ export default function VideoManualRevisionHistoryModal({
       >
         <div className="flex items-start justify-between gap-4 border-b border-separator px-6 py-5">
           <div className="min-w-0 flex-1">
-            <p className="text-xs font-black uppercase tracking-[0.24em] text-primary">Revision History</p>
+            <p className="text-xs font-black uppercase tracking-[0.24em] text-primary">{t("Revision History")}</p>
             <h3 id="video-manual-history-title" className="mt-1 truncate text-2xl font-black text-on-surface">
-              {project?.title || "Video Manual"}
+              {project?.title || t("vmTitle")}
             </h3>
             <div className="mt-2 flex flex-wrap items-center gap-2 text-xs font-bold text-on-surface-variant">
-              <span>{getLiveRevisionText(project)}</span>
+              <span>{getLiveRevisionText(project, t)}</span>
               {previewRevision ? (
                 <span className="rounded-full bg-primary/10 px-2.5 py-1 text-primary">
-                  Previewing {getRevisionLabel(previewRevision)}
+                  {t("Previewing {name}", { name: getRevisionLabel(previewRevision, t) })}
                 </span>
               ) : null}
             </div>
@@ -88,7 +95,7 @@ export default function VideoManualRevisionHistoryModal({
                 className="inline-flex h-10 items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 text-xs font-black text-amber-700 transition hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-amber-800 dark:bg-amber-500/15 dark:text-amber-200"
               >
                 <Icon className="text-[17px]">unpublished</Icon>
-                Undeploy
+                {t("Undeploy")}
               </button>
             ) : null}
             {previewRevision ? (
@@ -99,7 +106,7 @@ export default function VideoManualRevisionHistoryModal({
                 className="inline-flex h-10 items-center gap-2 rounded-xl border border-primary/30 bg-primary/10 px-3 text-xs font-black text-primary transition hover:bg-primary/10 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <Icon className="text-[17px]">arrow_back</Icon>
-                Back to Current
+                {t("Back to Current")}
               </button>
             ) : null}
             <button
@@ -107,7 +114,7 @@ export default function VideoManualRevisionHistoryModal({
               onClick={onRefresh}
               disabled={loading || hasAction}
               className="flex h-10 w-10 items-center justify-center rounded-xl text-outline transition hover:bg-surface-container-high hover:text-on-surface disabled:cursor-not-allowed disabled:opacity-50"
-              title="Refresh history"
+              title={t("Refresh history")}
             >
               <Icon className={loading ? "animate-spin text-[20px]" : "text-[20px]"}>refresh</Icon>
             </button>
@@ -115,7 +122,7 @@ export default function VideoManualRevisionHistoryModal({
               type="button"
               onClick={onClose}
               className="flex h-10 w-10 items-center justify-center rounded-full text-outline transition hover:bg-surface-container-high hover:text-on-surface"
-              title="Close"
+              title={t("Close")}
             >
               <Icon>close</Icon>
             </button>
@@ -127,10 +134,10 @@ export default function VideoManualRevisionHistoryModal({
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div className="min-w-0 flex-1">
                 <p className={`text-xs font-black uppercase tracking-[0.18em] ${deploymentStatus.type === "error" ? "text-red-600 dark:text-red-300" : deploymentStatus.type === "success" ? "text-emerald-700 dark:text-emerald-300" : "text-primary "}`}>
-                  {deploymentStatus.status || "Deployment"}
+                  {t(deploymentStatus.status || "Deployment")}
                 </p>
-                <p className="mt-1 text-sm font-black text-on-surface">{deploymentStatus.title}</p>
-                {deploymentStatus.message ? <p className="mt-1 text-xs font-semibold text-on-surface-variant">{deploymentStatus.message}</p> : null}
+                <p className="mt-1 text-sm font-black text-on-surface">{t(deploymentStatus.title)}</p>
+                {deploymentStatus.message ? <p className="mt-1 text-xs font-semibold text-on-surface-variant">{t(deploymentStatus.message)}</p> : null}
               </div>
               {deploymentStatus.type === "success" && (deploymentDownloadActionUrl || deploymentOpenUrl) ? (
                 <div className="flex shrink-0 items-center gap-2">
@@ -140,7 +147,7 @@ export default function VideoManualRevisionHistoryModal({
                     className="inline-flex h-9 items-center gap-1.5 rounded-xl bg-emerald-600 px-3 text-xs font-black text-white transition hover:bg-emerald-700"
                   >
                     <Icon className="text-[16px]">download</Icon>
-                    Download Video
+                    {t("Download Video")}
                   </button>
                   <button
                     type="button"
@@ -148,7 +155,7 @@ export default function VideoManualRevisionHistoryModal({
                     className="inline-flex h-9 items-center gap-1.5 rounded-xl bg-emerald-50 px-3 text-xs font-black text-emerald-700 transition hover:bg-emerald-100 dark:bg-emerald-500/15 dark:text-emerald-200"
                   >
                     <Icon className="text-[16px]">open_in_new</Icon>
-                    Open URL
+                    {t("Open URL")}
                   </button>
                   <button
                     type="button"
@@ -156,7 +163,7 @@ export default function VideoManualRevisionHistoryModal({
                     className="inline-flex h-9 items-center gap-1.5 rounded-xl bg-surface px-3 text-xs font-black text-emerald-700 transition hover:bg-emerald-100 dark:bg-emerald-500/15 dark:text-emerald-200"
                   >
                     <Icon className="text-[16px]">content_copy</Icon>
-                    Copy URL
+                    {t("Copy URL")}
                   </button>
                 </div>
               ) : null}
@@ -171,7 +178,7 @@ export default function VideoManualRevisionHistoryModal({
 
         <div className="flex-1 overflow-y-auto bg-surface-container-low px-6 py-6">
           {loading ? (
-            <p className="py-12 text-center text-sm font-bold text-outline">Loading revisions...</p>
+            <p className="py-12 text-center text-sm font-bold text-outline">{t("Loading revisions...")}</p>
           ) : null}
 
           {!loading && error ? (
@@ -182,8 +189,8 @@ export default function VideoManualRevisionHistoryModal({
 
           {!loading && !error && revisionItems.length === 0 ? (
             <div className="rounded-2xl border border-dashed border-separator bg-surface/80 px-6 py-12 text-center">
-              <p className="text-base font-black text-on-surface">No revisions saved yet.</p>
-              <p className="mt-2 text-sm font-semibold text-on-surface-variant">Use Save Revision to capture the current project state.</p>
+              <p className="text-base font-black text-on-surface">{t("No revisions saved yet.")}</p>
+              <p className="mt-2 text-sm font-semibold text-on-surface-variant">{t("Use Save Revision to capture the current project state.")}</p>
             </div>
           ) : null}
 
@@ -203,17 +210,17 @@ export default function VideoManualRevisionHistoryModal({
                         <div className="flex flex-wrap items-center gap-2">
                           <h4 className="min-w-0 truncate text-sm font-black text-on-surface">{getRevisionLabel(revision)}</h4>
                           {revision.isDeployed ? (
-                            <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-[10px] font-black uppercase tracking-wide text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-200">Live</span>
+                            <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-[10px] font-black uppercase tracking-wide text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-200">{t("Live")}</span>
                           ) : null}
                           {isPreviewing ? (
-                            <span className="rounded-full bg-primary/10 px-2.5 py-1 text-[10px] font-black uppercase tracking-wide text-primary">Preview</span>
+                            <span className="rounded-full bg-primary/10 px-2.5 py-1 text-[10px] font-black uppercase tracking-wide text-primary">{t("Preview")}</span>
                           ) : null}
                         </div>
                         <p className="mt-1 text-xs font-bold text-outline">
-                          Revision {revision.revisionNumber || "?"} | {formatDateTime(revision.createdAt)}
+                          {t("Revision {n}", { n: revision.revisionNumber || "?" })} | {formatDateTime(revision.createdAt)}
                         </p>
                         <p className="mt-2 text-xs font-semibold text-on-surface-variant">
-                          Saved by {revision.createdBy || "unknown"}
+                          {t("Saved by {name}", { name: revision.createdBy || t("unknown") })}
                         </p>
                       </div>
 
@@ -225,7 +232,7 @@ export default function VideoManualRevisionHistoryModal({
                           className="inline-flex h-9 items-center gap-1.5 rounded-xl bg-primary/10 px-3 text-xs font-black text-primary transition hover:bg-primary/10 disabled:cursor-not-allowed disabled:opacity-50"
                         >
                           <Icon className="text-[16px]">visibility</Icon>
-                          {actionId === previewActionId ? "Loading" : "Preview"}
+                          {actionId === previewActionId ? t("Loading") : t("Preview")}
                         </button>
                         {!previewRevision ? (
                           <button
@@ -235,14 +242,14 @@ export default function VideoManualRevisionHistoryModal({
                             className="inline-flex h-9 items-center gap-1.5 rounded-xl bg-amber-50 px-3 text-xs font-black text-amber-700 transition hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-amber-500/15 dark:text-amber-200"
                           >
                             <Icon className="text-[16px]">restore</Icon>
-                            {actionId === restoreActionId ? "Restoring" : "Restore"}
+                            {actionId === restoreActionId ? t("Restoring") : t("Restore")}
                           </button>
                         ) : null}
                         {canDeploy && !previewRevision ? (
                           revision.isDeployed ? (
                             <span className="inline-flex h-9 items-center gap-1.5 rounded-xl bg-emerald-50 px-3 text-xs font-black text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-200">
                               <Icon className="text-[16px]">check_circle</Icon>
-                              Deployed
+                              {t("Deployed")}
                             </span>
                           ) : (
                             <button
@@ -252,7 +259,7 @@ export default function VideoManualRevisionHistoryModal({
                               className="inline-flex h-9 items-center gap-1.5 rounded-xl bg-emerald-50 px-3 text-xs font-black text-emerald-700 transition hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-emerald-500/15 dark:text-emerald-200"
                             >
                               <Icon className="text-[16px]">rocket_launch</Icon>
-                              {actionId === deployActionId ? "Deploying" : "Deploy"}
+                              {actionId === deployActionId ? t("Deploying") : t("Deploy")}
                             </button>
                           )
                         ) : null}
