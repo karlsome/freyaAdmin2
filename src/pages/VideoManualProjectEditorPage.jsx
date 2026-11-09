@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useLanguage } from "../contexts/LanguageContext";
 import { useNavigate, useParams } from "react-router-dom";
 import { Canvas, Controls, Edit, Timeline, UIController, VideoExporter } from "@shotstack/shotstack-studio";
 import VideoManualAddElementsSidebar from "../components/videoManual/VideoManualAddElementsSidebar";
@@ -509,6 +510,7 @@ function buildKeyframeSourceClipFromSnapshot(clip, snapshot) {
 }
 
 export default function VideoManualProjectEditorPage() {
+  const { t } = useLanguage();
   const navigate = useNavigate();
   const { projectId } = useParams();
 
@@ -1731,14 +1733,14 @@ export default function VideoManualProjectEditorPage() {
 
   const handleToolbarBack = useCallback(() => {
     if (exportInFlightRef.current || exportBusy) {
-      showNotice("An export is still in progress. Wait for it to finish before leaving this page.", "error");
+      showNotice(t("vmExportBusyLeave"), "error");
       return;
     }
 
-    if (hasUnsavedChanges && !window.confirm("You have unsaved changes that are not in a revision. Leave anyway?")) return;
+    if (hasUnsavedChanges && !window.confirm(t("vmLeaveConfirm"))) return;
 
     navigate("/videoManual");
-  }, [exportBusy, hasUnsavedChanges, navigate, showNotice]);
+  }, [exportBusy, hasUnsavedChanges, navigate, showNotice, t]);
 
   const handleDeployRevision = useCallback(async (revision) => {
     const revisionId = getRevisionId(revision);

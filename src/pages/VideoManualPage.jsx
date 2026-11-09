@@ -1,6 +1,7 @@
 import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import PageHeader from "../components/PageHeader";
+import { useLanguage } from "../contexts/LanguageContext";
 import {
   fetchVideoManualPlaylistProjects,
   fetchVideoManualPlaylists,
@@ -8,7 +9,7 @@ import {
 
 const PROJECT_PREVIEW_POLL_INTERVAL_MS = 4000;
 
-function formatDateTime(value, fallback = "Not updated yet") {
+function formatDateTime(value, fallback = "") {
   if (!value) return fallback;
 
   const date = new Date(value);
@@ -16,9 +17,9 @@ function formatDateTime(value, fallback = "Not updated yet") {
   return date.toLocaleString();
 }
 
-function formatPlural(count, singular, plural = `${singular}s`) {
+function formatProjectCount(count, t) {
   const safeCount = Number.isFinite(Number(count)) ? Number(count) : 0;
-  return `${safeCount} ${safeCount === 1 ? singular : plural}`;
+  return `${safeCount} ${safeCount === 1 ? t("vmProject") : t("vmProjects")}`;
 }
 
 function filterItemsByQuery(items, query, resolver) {
@@ -61,12 +62,13 @@ function getProjectPreviewMedia(project) {
 }
 
 function ProjectCard({ project, onOpen }) {
+  const { t } = useLanguage();
   const [showInfo, setShowInfo] = useState(false);
   const [isHoveringPreview, setIsHoveringPreview] = useState(false);
   const videoRef = useRef(null);
   const { previewUrl, thumbnailUrl } = getProjectPreviewMedia(project);
-  const latestRevision = Number(project?.currentRevisionNumber || 0) > 0 ? `Revision ${project.currentRevisionNumber}` : "None";
-  const deployedRevision = project?.deployedRevisionName || (project?.deployedRevisionNumber ? `Revision ${project.deployedRevisionNumber}` : "Not deployed");
+  const latestRevision = Number(project?.currentRevisionNumber || 0) > 0 ? `${t("vmRevision")} ${project.currentRevisionNumber}` : t("vmNone");
+  const deployedRevision = project?.deployedRevisionName || (project?.deployedRevisionNumber ? `${t("vmRevision")} ${project.deployedRevisionNumber}` : t("vmNotDeployed"));
   const previewStatus = String(project?.previewStatus || "").trim().toLowerCase();
 
   useEffect(() => {
@@ -83,11 +85,11 @@ function ProjectCard({ project, onOpen }) {
   }, [isHoveringPreview, previewUrl]);
 
   const badge = previewStatus === "processing"
-    ? "Preview processing"
+    ? t("vmPreviewProcessing")
     : previewStatus === "failed"
-      ? "Preview failed"
+      ? t("vmPreviewFailed")
       : !previewUrl && !thumbnailUrl
-        ? "No preview yet"
+        ? t("vmNoPreview")
         : "";
 
   return (
@@ -145,7 +147,7 @@ function ProjectCard({ project, onOpen }) {
               setShowInfo((value) => !value);
             }}
             className={`flex h-7 w-7 items-center justify-center rounded-full bg-black/55 text-white transition-opacity duration-150 hover:bg-black/70 focus-visible:opacity-100 ${showInfo ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`}
-            aria-label="Project information"
+            aria-label={t("vmProjectInfo")}
           >
             <span className="material-symbols-outlined" style={{ fontSize: 16 }}>info</span>
           </button>
@@ -156,10 +158,10 @@ function ProjectCard({ project, onOpen }) {
               className="absolute right-0 top-9 z-10 w-56 cursor-default rounded-xl border border-separator/40 bg-surface px-3 py-3 shadow-lg"
             >
               <div className="space-y-2 text-xs text-on-surface-variant">
-                <p><span className="font-bold text-on-surface">Created by:</span> {project?.createdBy || "Unknown"}</p>
-                <p><span className="font-bold text-on-surface">Last edited:</span> {formatDateTime(project?.lastEditedAt || project?.updatedAt)}</p>
-                <p><span className="font-bold text-on-surface">Deployed:</span> {deployedRevision}</p>
-                <p><span className="font-bold text-on-surface">Latest:</span> {latestRevision}</p>
+                <p><span className="font-bold text-on-surface">{t("vmCreatedBy")}</span> {project?.createdBy || t("vmUnknown")}</p>
+                <p><span className="font-bold text-on-surface">{t("vmLastEdited")}</span> {formatDateTime(project?.lastEditedAt || project?.updatedAt, t("vmNotUpdated"))}</p>
+                <p><span className="font-bold text-on-surface">{t("vmDeployedLabel")}</span> {deployedRevision}</p>
+                <p><span className="font-bold text-on-surface">{t("vmLatestLabel")}</span> {latestRevision}</p>
               </div>
             </div>
           ) : null}
@@ -167,9 +169,9 @@ function ProjectCard({ project, onOpen }) {
       </div>
 
       <div className="min-w-0 p-4">
-        <h3 className="truncate text-sm font-bold text-on-surface">{project?.title || "Untitled Project"}</h3>
+        <h3 className="truncate text-sm font-bold text-on-surface">{project?.title || t("vmUntitledProject")}</h3>
         <p className="mt-1 line-clamp-2 text-xs text-on-surface-variant">
-          {project?.description || "No description"}
+          {project?.description || t("vmNoDescription")}
         </p>
       </div>
     </article>
@@ -189,6 +191,7 @@ function EmptyState({ icon, title, description }) {
 }
 
 export default function VideoManualPage() {
+  const { t } = useLanguage();
   const navigate = useNavigate();
   const [playlists, setPlaylists] = useState([]);
   const [projects, setProjects] = useState([]);
@@ -309,8 +312,8 @@ export default function VideoManualPage() {
   return (
     <section className="h-screen overflow-y-auto px-4 pb-24 pt-20 scrollbar-hide sm:px-6 sm:pb-16 sm:pt-24 md:px-8">
       <PageHeader
-        title="Video Manual"
-        subtitle="Pick a playlist, then open a project to edit it."
+        title={t("vmTitle")}
+        subtitle={t("vmSubtitle")}
         actions={(
           <button
             type="button"
@@ -318,7 +321,7 @@ export default function VideoManualPage() {
             className="inline-flex items-center gap-2 rounded-xl border border-separator/50 px-4 py-2 text-xs font-bold text-on-surface-variant transition-all duration-150 hover:border-primary/30 hover:bg-surface-container hover:text-primary active:scale-95"
           >
             <span className="material-symbols-outlined" style={{ fontSize: 16 }}>refresh</span>
-            Refresh
+            {t("vmRefresh")}
           </button>
         )}
       />
@@ -326,7 +329,7 @@ export default function VideoManualPage() {
       <div className="grid gap-6 lg:grid-cols-[280px_minmax(0,1fr)]">
         <aside className="dashboard-section rounded-2xl p-4 lg:sticky lg:top-24 lg:self-start">
           <div className="mb-3 flex items-center gap-2">
-            <h2 className="text-sm font-bold text-on-surface">Playlists</h2>
+            <h2 className="text-sm font-bold text-on-surface">{t("vmPlaylists")}</h2>
             <span className="ml-auto text-[10px] text-outline">{filteredPlaylists.length}</span>
           </div>
 
@@ -336,7 +339,7 @@ export default function VideoManualPage() {
               value={playlistQuery}
               onChange={(event) => setPlaylistQuery(event.target.value)}
               className="w-full bg-transparent text-sm font-medium text-on-surface outline-none placeholder:text-outline"
-              placeholder="Search playlists"
+              placeholder={t("vmSearchPlaylists")}
               type="search"
             />
           </label>
@@ -345,7 +348,7 @@ export default function VideoManualPage() {
             <div className="mb-3 flex gap-3 rounded-xl border border-error/20 bg-error/10 px-3 py-3">
               <span className="material-symbols-outlined text-error flex-shrink-0" style={{ fontSize: 18 }}>report</span>
               <div>
-                <p className="text-sm font-bold text-on-surface">Could not load playlists</p>
+                <p className="text-sm font-bold text-on-surface">{t("vmPlaylistLoadFailed")}</p>
                 <p className="mt-1 text-xs text-on-surface-variant">{playlistsError}</p>
               </div>
             </div>
@@ -374,9 +377,9 @@ export default function VideoManualPage() {
                       <span className="material-symbols-outlined" style={{ fontSize: 16 }}>inventory_2</span>
                     </span>
                     <span className="min-w-0 flex-1">
-                      <span className="block truncate text-sm font-bold text-on-surface">{playlist?.name || "Untitled Playlist"}</span>
+                      <span className="block truncate text-sm font-bold text-on-surface">{playlist?.name || t("vmUntitledPlaylist")}</span>
                       <span className="block truncate text-[11px] text-outline">
-                        {formatPlural(playlist?.projectCount || 0, "project")}{playlist?.model ? ` · ${playlist.model}` : ""}
+                        {formatProjectCount(playlist?.projectCount || 0, t)}{playlist?.model ? ` · ${playlist.model}` : ""}
                       </span>
                     </span>
                   </button>
@@ -385,8 +388,8 @@ export default function VideoManualPage() {
             ) : (
               <EmptyState
                 icon="folder"
-                title={playlistQuery ? "No matching playlists" : "No playlists available"}
-                description={playlistQuery ? "Try a different search." : "There are no playlists for this account yet."}
+                title={playlistQuery ? t("vmNoMatchingPlaylists") : t("vmNoPlaylists")}
+                description={playlistQuery ? t("vmTryDifferentSearch") : t("vmNoPlaylistsDesc")}
               />
             )}
           </div>
@@ -396,10 +399,10 @@ export default function VideoManualPage() {
           <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="min-w-0">
               <h2 className="truncate text-lg font-bold text-on-surface">
-                {selectedPlaylist?.name || "Projects"}
+                {selectedPlaylist?.name || t("vmProjectsHeading")}
               </h2>
               <p className="text-xs text-outline">
-                {selectedPlaylist ? formatPlural(filteredProjects.length, "project") : "No playlist selected"}
+                {selectedPlaylist ? formatProjectCount(filteredProjects.length, t) : t("vmNoPlaylistSelected")}
               </p>
             </div>
 
@@ -409,7 +412,7 @@ export default function VideoManualPage() {
                 value={projectQuery}
                 onChange={(event) => setProjectQuery(event.target.value)}
                 className="w-full bg-transparent text-sm font-medium text-on-surface outline-none placeholder:text-outline"
-                placeholder="Search projects"
+                placeholder={t("vmSearchProjects")}
                 type="search"
               />
             </label>
@@ -419,7 +422,7 @@ export default function VideoManualPage() {
             <div className="mb-5 flex gap-3 rounded-2xl border border-error/20 bg-error/10 px-4 py-4">
               <span className="material-symbols-outlined text-error flex-shrink-0" style={{ fontSize: 18 }}>report</span>
               <div>
-                <p className="text-sm font-bold text-on-surface">Could not load projects</p>
+                <p className="text-sm font-bold text-on-surface">{t("vmProjectLoadFailed")}</p>
                 <p className="mt-1 text-xs text-on-surface-variant">{projectsError}</p>
               </div>
             </div>
@@ -428,8 +431,8 @@ export default function VideoManualPage() {
           {!selectedPlaylist && !playlistsLoading ? (
             <EmptyState
               icon="video_library"
-              title="Choose a playlist"
-              description="Select a playlist on the left to see its projects."
+              title={t("vmChoosePlaylist")}
+              description={t("vmChoosePlaylistDesc")}
             />
           ) : projectsLoading ? (
             <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
@@ -450,8 +453,8 @@ export default function VideoManualPage() {
           ) : (
             <EmptyState
               icon="movie_edit"
-              title={projectQuery ? "No matching projects" : "No projects yet"}
-              description={projectQuery ? "Try a different search." : "This playlist doesn't have any projects yet."}
+              title={projectQuery ? t("vmNoMatchingProjects") : t("vmNoProjects")}
+              description={projectQuery ? t("vmTryDifferentSearch") : t("vmNoProjectsDesc")}
             />
           )}
         </section>
