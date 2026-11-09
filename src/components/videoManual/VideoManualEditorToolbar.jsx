@@ -31,8 +31,32 @@ function IconButton({ icon, onClick, title, disabled = false }) {
   );
 }
 
+function Divider() {
+  return <div className="mx-1 h-6 w-px flex-shrink-0 bg-separator" />;
+}
+
+function SaveState({ hasUnsavedChanges, revisionNumber }) {
+  if (hasUnsavedChanges) {
+    return (
+      <span className="inline-flex items-center gap-1.5 text-[11px] font-bold text-amber-700 dark:text-amber-300">
+        <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
+        Unsaved changes
+      </span>
+    );
+  }
+
+  return (
+    <span className="inline-flex items-center gap-1.5 text-[11px] font-bold text-outline">
+      <span className={`h-1.5 w-1.5 rounded-full ${revisionNumber > 0 ? "bg-emerald-500" : "bg-outline-variant"}`} />
+      {revisionNumber > 0 ? `Saved as Rev ${String(revisionNumber).padStart(2, "0")}` : "No revisions yet"}
+    </span>
+  );
+}
+
 export default function VideoManualEditorToolbar({
   projectTitle,
+  hasUnsavedChanges = false,
+  revisionNumber = 0,
   saving,
   busy = false,
   onBack,
@@ -47,61 +71,48 @@ export default function VideoManualEditorToolbar({
 }) {
   return (
     <header className="relative z-30 flex h-14 flex-shrink-0 items-center gap-3 border-b border-separator bg-surface px-4 text-sm shadow-sm">
-      <div className="flex min-w-0 flex-1 items-center gap-2">
-        <ToolbarButton icon="arrow_back" onClick={onBack} disabled={busy}>Projects</ToolbarButton>
+      {/* Left: navigation + project identity */}
+      <div className="flex min-w-0 flex-1 items-center gap-3">
+        <IconButton icon="arrow_back" title="Back to projects" onClick={onBack} disabled={busy} />
+        <div className="min-w-0">
+          <div className="max-w-[320px] truncate text-sm font-black leading-tight text-on-surface">
+            {projectTitle || "Video Manual"}
+          </div>
+          <SaveState hasUnsavedChanges={hasUnsavedChanges} revisionNumber={revisionNumber} />
+        </div>
+      </div>
 
-        <div className="mx-1 h-6 w-px bg-surface-container-high" />
-
+      {/* Center: editing tools */}
+      <div className="hidden items-center gap-1 md:flex">
         <IconButton icon="undo" title="Undo" onClick={onUndo} />
         <IconButton icon="redo" title="Redo" onClick={onRedo} />
-
-        <div className="mx-1 hidden h-6 w-px bg-surface-container-high sm:block" />
-
-        <div className="hidden items-center gap-2 lg:flex">
-          <ToolbarButton icon="save" onClick={onSaveRevision} disabled={saving || busy}>Save Revision</ToolbarButton>
-          <ToolbarButton icon="history" onClick={onShowHistory} disabled={busy}>History</ToolbarButton>
-        </div>
+        <Divider />
+        <IconButton icon="zoom_out" title="Zoom out" onClick={onZoomOut} />
+        <button
+          type="button"
+          onClick={onAutoFit}
+          className="h-8 rounded-lg px-3 text-xs font-bold text-on-surface-variant transition hover:bg-surface-container-high hover:text-on-surface"
+          title="Fit the canvas to the available space"
+        >
+          Fit
+        </button>
+        <IconButton icon="zoom_in" title="Zoom in" onClick={onZoomIn} />
       </div>
 
-      <div className="pointer-events-none absolute left-1/2 hidden min-w-0 -translate-x-1/2 flex-col items-center sm:flex">
-        <span className="max-w-[260px] truncate text-sm font-black text-on-surface">
-          {projectTitle || "Video Manual"}
-        </span>
-        <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-outline">Shotstack editor</span>
-      </div>
-
-      <div className="flex min-w-0 flex-1 items-center justify-end gap-3">
-        <div className="hidden items-center overflow-hidden rounded-xl border border-separator bg-surface-container-low md:flex">
-          <button
-            type="button"
-            onClick={onZoomOut}
-            className="flex h-9 w-10 items-center justify-center border-r border-separator text-on-surface-variant transition hover:bg-surface hover:text-on-surface"
-            title="Zoom out"
-          >
-            <Icon>zoom_out</Icon>
-          </button>
-          <button
-            type="button"
-            onClick={onAutoFit}
-            className="h-9 min-w-[132px] px-4 text-xs font-black text-on-surface transition hover:bg-surface"
-          >
-            Auto-Fit Page
-          </button>
-          <button
-            type="button"
-            onClick={onZoomIn}
-            className="flex h-9 w-10 items-center justify-center border-l border-separator text-on-surface-variant transition hover:bg-surface hover:text-on-surface"
-            title="Zoom in"
-          >
-            <Icon>zoom_in</Icon>
-          </button>
-        </div>
+      {/* Right: save / history / export */}
+      <div className="flex min-w-0 flex-1 items-center justify-end gap-2">
+        <ToolbarButton icon="save" onClick={onSaveRevision} disabled={saving || busy} title="Save the current state as a new revision">
+          <span className="hidden lg:inline">Save Revision</span>
+        </ToolbarButton>
+        <ToolbarButton icon="history" onClick={onShowHistory} disabled={busy} title="Revision history">
+          <span className="hidden lg:inline">History</span>
+        </ToolbarButton>
 
         <button
           type="button"
           onClick={onExport}
           disabled={saving || busy}
-          className="inline-flex h-10 items-center gap-2 rounded-lg bg-primary px-4 text-sm font-black text-on-primary shadow-sm transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60"
+          className="inline-flex h-9 items-center gap-2 rounded-lg bg-primary px-4 text-sm font-black text-on-primary shadow-sm transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60"
         >
           <Icon className={busy ? "animate-spin text-[18px]" : "text-[18px]"}>{busy ? "progress_activity" : "download"}</Icon>
           {busy ? "Exporting" : "Export"}

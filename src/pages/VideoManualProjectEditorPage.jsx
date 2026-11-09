@@ -517,6 +517,8 @@ export default function VideoManualProjectEditorPage() {
   const [loadingProject, setLoadingProject] = useState(true);
   const [projectError, setProjectError] = useState("");
   const [saving, setSaving] = useState(false);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const editorReadyAtRef = useRef(0);
   const [notice, setNotice] = useState({ type: "", message: "" });
   const [activeAddCategory, setActiveAddCategory] = useState("text");
   const [addDrawerOpen, setAddDrawerOpen] = useState(false);
@@ -1198,6 +1200,7 @@ export default function VideoManualProjectEditorPage() {
         timelineRef.current = timeline;
         controlsRef.current = controls;
         uiRef.current = ui;
+        editorReadyAtRef.current = Date.now();
 
         const syncAll = () => {
           syncSteps();
@@ -1209,6 +1212,13 @@ export default function VideoManualProjectEditorPage() {
 
         ["track:added", "track:removed", "clip:added", "clip:deleted", "edit:changed", "timeline:backgroundChanged", "output:resized", "output:fpsChanged"].forEach((eventName) => {
           unsubs.push(edit.events.on(eventName, syncAll));
+        });
+
+        ["clip:added", "clip:deleted", "clip:updated", "track:added", "track:removed", "timeline:backgroundChanged", "output:resized", "output:fpsChanged"].forEach((eventName) => {
+          unsubs.push(edit.events.on(eventName, () => {
+            // Ignore events fired while the project is still loading into the editor.
+            if (Date.now() - editorReadyAtRef.current > 1500) setHasUnsavedChanges(true);
+          }));
         });
 
         unsubs.push(edit.events.on("clip:selected", syncSelectedClip));
@@ -1354,6 +1364,7 @@ export default function VideoManualProjectEditorPage() {
       const { revisionNumber } = await createVideoManualRevision(projectId, snapshot, revisionName.trim());
       setProject(await fetchVideoManualProject(projectId));
       await loadRevisionHistory({ open: true });
+      setHasUnsavedChanges(false);
       showNotice(`Revision ${revisionNumber} created.`);
     } catch (error) {
       showNotice(error.message || "Revision save failed.", "error");
@@ -1558,6 +1569,7 @@ export default function VideoManualProjectEditorPage() {
       if (revisionHistory.open) {
         await loadRevisionHistory({ open: true });
       }
+      setHasUnsavedChanges(false);
       showNotice(`Revision ${revisionNumber} created for export.`);
       return fetchVideoManualRevision(String(revisionId));
     } finally {
@@ -1723,8 +1735,10 @@ export default function VideoManualProjectEditorPage() {
       return;
     }
 
+    if (hasUnsavedChanges && !window.confirm("You have unsaved changes that are not in a revision. Leave anyway?")) return;
+
     navigate("/videoManual");
-  }, [exportBusy, navigate, showNotice]);
+  }, [exportBusy, hasUnsavedChanges, navigate, showNotice]);
 
   const handleDeployRevision = useCallback(async (revision) => {
     const revisionId = getRevisionId(revision);
@@ -2588,9 +2602,11 @@ export default function VideoManualProjectEditorPage() {
   }, [showNotice]);
 
   return (
-    <div className="mt-16 flex h-[calc(100vh-4rem)] min-h-0 flex-col overflow-hidden bg-surface-container">
+    <div className="relative mt-16 flex h-[calc(100vh-4rem)] min-h-0 flex-col overflow-hidden bg-surface-container">
       <VideoManualEditorToolbar
         projectTitle={project?.title || "Video Manual"}
+        hasUnsavedChanges={hasUnsavedChanges}
+        revisionNumber={Number(project?.currentRevisionNumber) || 0}
         saving={saving || exportBusy || Boolean(revisionPreview) || Boolean(revisionActionId)}
         busy={exportBusy}
         onBack={handleToolbarBack}
@@ -2605,8 +2621,16 @@ export default function VideoManualProjectEditorPage() {
       />
 
       {(projectError || notice.message) ? (
-        <div className={`relative z-20 flex justify-center px-4 py-1.5 text-xs font-black text-white ${projectError || notice.type === "error" ? "bg-red-500" : "bg-emerald-500"}`}>
-          {projectError || notice.message}
+        <div
+          role="status"
+          className={`pointer-events-none absolute left-1/2 top-16 z-[60] flex max-w-[min(560px,90vw)] -translate-x-1/2 items-center gap-2 rounded-xl border px-4 py-2.5 text-xs font-bold shadow-lg ${projectError || notice.type === "error"
+            ? "border-error/30 bg-error-container text-on-error-container"
+            : "border-emerald-500/30 bg-surface text-on-surface"}`}
+        >
+          <span className={`material-symbols-outlined flex-shrink-0 text-[18px] ${projectError || notice.type === "error" ? "text-error" : "text-emerald-500"}`}>
+            {projectError || notice.type === "error" ? "error" : "check_circle"}
+          </span>
+          <span className="min-w-0">{projectError || notice.message}</span>
         </div>
       ) : null}
 
