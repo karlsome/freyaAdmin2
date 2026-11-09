@@ -7,12 +7,12 @@ export default function VideoManualClipActionBar({ selectedClip, onTrimClip, onD
   const canTrim = selectedClip?.clip?.asset?.type === "video";
 
   return (
-    <div className="flex h-9 flex-shrink-0 items-center gap-2 border-b border-slate-200 bg-slate-50 px-3 dark:border-slate-800 dark:bg-slate-900">
+    <div className="flex h-9 flex-shrink-0 items-center gap-2 border-b border-separator bg-surface-container-low px-3">
       <button
         type="button"
         onClick={onTrimClip}
         disabled={!canTrim}
-        className="inline-flex h-7 items-center gap-1 rounded bg-slate-200 px-2 text-xs font-semibold text-slate-600 transition hover:bg-slate-300 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-slate-700 dark:text-slate-200 dark:hover:bg-slate-600"
+        className="inline-flex h-7 items-center gap-1 rounded bg-surface-container-high px-2 text-xs font-semibold text-on-surface-variant transition hover:bg-surface-container-highest disabled:cursor-not-allowed disabled:opacity-50"
         title="Trim selected video clip"
       >
         <Icon>content_cut</Icon>

@@ -46,7 +46,7 @@ function VideoPreviewModal({ asset, onClose }) {
           <button
             type="button"
             onClick={onClose}
-            className="flex h-8 w-8 items-center justify-center rounded-full text-slate-400 transition hover:bg-white/10 hover:text-white"
+            className="flex h-8 w-8 items-center justify-center rounded-full text-outline transition hover:bg-surface/10 hover:text-white"
             title="Close preview"
           >
             <Icon className="text-[20px]">close</Icon>
@@ -63,7 +63,7 @@ function VideoPreviewModal({ asset, onClose }) {
               preload="metadata"
             />
           ) : (
-            <div className="flex h-full w-full items-center justify-center text-slate-400">
+            <div className="flex h-full w-full items-center justify-center text-outline">
               <div className="text-center">
                 <Icon className="text-[48px]">videocam_off</Icon>
                 <p className="mt-2 text-sm font-semibold">No playable source available</p>
@@ -132,7 +132,7 @@ function AssetPreview({ asset }) {
             className={`h-full w-full object-cover transition-opacity duration-150 ${isHovering && hoverPreviewUrl ? "opacity-0" : "opacity-100"}`}
           />
         ) : (
-          <div className="flex h-full w-full items-center justify-center bg-slate-200 text-slate-500 dark:bg-slate-900 dark:text-slate-400">
+          <div className="flex h-full w-full items-center justify-center bg-surface-container-high text-on-surface-variant">
             <Icon className="text-[44px]">video_library</Icon>
           </div>
         )}
@@ -161,7 +161,7 @@ function AssetPreview({ asset }) {
   }
 
   return (
-    <div className="flex h-full items-center justify-center bg-slate-100 text-slate-400 dark:bg-slate-900 dark:text-slate-500">
+    <div className="flex h-full items-center justify-center bg-surface-container text-outline">
       <Icon className="text-[44px]">audio_file</Icon>
     </div>
   );
@@ -332,18 +332,18 @@ export default function VideoManualAssetLibraryModal({
 
   return (
     <div className="fixed inset-0 z-[340] flex items-center justify-center bg-slate-950/55 px-4 backdrop-blur-sm">
-      <div className="flex max-h-[82vh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl border border-white/70 bg-white shadow-[0_30px_120px_-40px_rgba(15,23,42,0.55)] dark:border-slate-800 dark:bg-slate-950">
-        <div className="flex items-start justify-between gap-4 border-b border-slate-200 px-6 py-5 dark:border-slate-800">
+      <div className="flex max-h-[82vh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl border border-white/70 bg-surface shadow-[0_30px_120px_-40px_rgba(15,23,42,0.55)]">
+        <div className="flex items-start justify-between gap-4 border-b border-separator px-6 py-5">
           <div className="min-w-0 flex-1">
-            <p className="text-xs font-black uppercase tracking-[0.24em] text-cyan-600 dark:text-cyan-300">Playlist Media Library</p>
-            <h3 className="mt-1 truncate text-2xl font-black text-slate-900 dark:text-white">{title}</h3>
-            <p className="mt-2 text-sm font-semibold text-slate-500 dark:text-slate-400">{uploading ? `Uploading ${uploadProgress ?? 0}%` : (showRecycleBin ? "Recycle bin keeps deleted assets for 60 days." : "Browse uploaded files for this playlist.")}</p>
+            <p className="text-xs font-black uppercase tracking-[0.24em] text-primary">Playlist Media Library</p>
+            <h3 className="mt-1 truncate text-2xl font-black text-on-surface">{title}</h3>
+            <p className="mt-2 text-sm font-semibold text-on-surface-variant">{uploading ? `Uploading ${uploadProgress ?? 0}%` : (showRecycleBin ? "Recycle bin keeps deleted assets for 60 days." : "Browse uploaded files for this playlist.")}</p>
           </div>
           <div className="flex items-center gap-2">
             <button
               type="button"
               onClick={() => setShowRecycleBin((current) => !current)}
-              className={`inline-flex h-10 items-center gap-2 rounded-xl px-3 text-xs font-black transition ${showRecycleBin ? "bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-200" : "bg-slate-100 text-slate-700 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"}`}
+              className={`inline-flex h-10 items-center gap-2 rounded-xl px-3 text-xs font-black transition ${showRecycleBin ? "bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-200" : "bg-surface-container text-on-surface hover:bg-surface-container-high "}`}
               title="Recycle Bin"
             >
               <Icon className="text-[18px]">delete</Icon>
@@ -353,7 +353,7 @@ export default function VideoManualAssetLibraryModal({
               type="button"
               onClick={() => setEditMode((current) => !current)}
               disabled={listLoading || actionBusy}
-              className={`inline-flex h-10 items-center gap-2 rounded-xl px-3 text-xs font-black transition ${editMode ? "bg-cyan-100 text-cyan-700 dark:bg-cyan-500/20 dark:text-cyan-200" : "bg-slate-100 text-slate-700 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"} disabled:cursor-not-allowed disabled:opacity-50`}
+              className={`inline-flex h-10 items-center gap-2 rounded-xl px-3 text-xs font-black transition ${editMode ? "bg-primary/10 text-primary " : "bg-surface-container text-on-surface hover:bg-surface-container-high "} disabled:cursor-not-allowed disabled:opacity-50`}
               title="Edit"
             >
               <Icon className="text-[18px]">edit</Icon>
@@ -363,7 +363,7 @@ export default function VideoManualAssetLibraryModal({
               type="button"
               onClick={showRecycleBin ? onLoadRecycleBin : onRefresh}
               disabled={listLoading || uploading || actionBusy}
-              className="flex h-10 w-10 items-center justify-center rounded-xl text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 disabled:cursor-not-allowed disabled:opacity-50 dark:hover:bg-slate-800 dark:hover:text-white"
+              className="flex h-10 w-10 items-center justify-center rounded-xl text-outline transition hover:bg-surface-container-high hover:text-on-surface disabled:cursor-not-allowed disabled:opacity-50"
               title="Refresh"
             >
               <Icon className={listLoading ? "animate-spin text-[20px]" : "text-[20px]"}>refresh</Icon>
@@ -372,7 +372,7 @@ export default function VideoManualAssetLibraryModal({
               type="button"
               onClick={() => fileInputRef.current?.click()}
               disabled={uploading || showRecycleBin}
-              className="inline-flex h-10 items-center gap-2 rounded-xl bg-cyan-500 px-4 text-sm font-black text-white transition hover:bg-cyan-600 disabled:cursor-not-allowed disabled:opacity-60"
+              className="inline-flex h-10 items-center gap-2 rounded-xl bg-primary px-4 text-sm font-black text-on-primary transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60"
             >
               <Icon className="text-[18px]">upload</Icon>
               Upload
@@ -380,7 +380,7 @@ export default function VideoManualAssetLibraryModal({
             <button
               type="button"
               onClick={onClose}
-              className="flex h-10 w-10 items-center justify-center rounded-full text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800 dark:hover:text-white"
+              className="flex h-10 w-10 items-center justify-center rounded-full text-outline transition hover:bg-surface-container-high hover:text-on-surface"
               title="Close"
             >
               <Icon>close</Icon>
@@ -389,22 +389,22 @@ export default function VideoManualAssetLibraryModal({
         </div>
 
         {uploading ? (
-          <div className="h-1 bg-slate-100 dark:bg-slate-800">
-            <div className="h-full bg-cyan-500 transition-[width] duration-200" style={{ width: `${Math.max(0, Math.min(100, uploadProgress ?? 0))}%` }} />
+          <div className="h-1 bg-surface-container">
+            <div className="h-full bg-primary transition-[width] duration-200" style={{ width: `${Math.max(0, Math.min(100, uploadProgress ?? 0))}%` }} />
           </div>
         ) : null}
 
         {editMode ? (
-          <div className="flex flex-wrap items-center gap-2 border-b border-slate-200 px-6 py-3 dark:border-slate-800">
+          <div className="flex flex-wrap items-center gap-2 border-b border-separator px-6 py-3">
             <button
               type="button"
               onClick={toggleSelectAll}
               disabled={!displayedItems.length || listLoading || actionBusy}
-              className="rounded-lg border border-slate-200 bg-slate-100 px-3 py-1.5 text-[11px] font-black text-slate-700 transition hover:bg-slate-200 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
+              className="rounded-lg border border-separator bg-surface-container px-3 py-1.5 text-[11px] font-black text-on-surface transition hover:bg-surface-container-high disabled:cursor-not-allowed disabled:opacity-50"
             >
               {selectedAssets.length === displayedItems.length && displayedItems.length ? "Unselect All" : "Select All"}
             </button>
-            <span className="text-xs font-bold text-slate-500 dark:text-slate-400">{selectedAssets.length} selected</span>
+            <span className="text-xs font-bold text-on-surface-variant">{selectedAssets.length} selected</span>
 
             {!showRecycleBin ? (
               <button
@@ -438,9 +438,9 @@ export default function VideoManualAssetLibraryModal({
           </div>
         ) : null}
 
-        <div className="grid flex-1 grid-cols-1 gap-4 overflow-y-auto bg-slate-50 px-6 py-6 md:grid-cols-2 xl:grid-cols-3 dark:bg-slate-900/40">
+        <div className="grid flex-1 grid-cols-1 gap-4 overflow-y-auto bg-surface-container-low px-6 py-6 md:grid-cols-2 xl:grid-cols-3">
           {listLoading ? (
-            <p className="col-span-full py-12 text-center text-sm font-bold text-slate-400">Loading playlist library...</p>
+            <p className="col-span-full py-12 text-center text-sm font-bold text-outline">Loading playlist library...</p>
           ) : null}
 
           {!listLoading && listError ? (
@@ -448,9 +448,9 @@ export default function VideoManualAssetLibraryModal({
           ) : null}
 
           {!listLoading && !listError && displayedItems.length === 0 ? (
-            <div className="col-span-full rounded-2xl border border-dashed border-slate-300 bg-white/80 px-6 py-12 text-center dark:border-slate-700 dark:bg-slate-950/40">
-              <p className="text-base font-black text-slate-700 dark:text-slate-200">{showRecycleBin ? `No ${title.toLowerCase()} in recycle bin.` : `No ${title.toLowerCase()} in this playlist yet.`}</p>
-              <p className="mt-2 text-sm font-semibold text-slate-500 dark:text-slate-400">{showRecycleBin ? "Deleted assets appear here for up to 60 days." : "Upload a file to add it to this project."}</p>
+            <div className="col-span-full rounded-2xl border border-dashed border-separator bg-surface/80 px-6 py-12 text-center">
+              <p className="text-base font-black text-on-surface">{showRecycleBin ? `No ${title.toLowerCase()} in recycle bin.` : `No ${title.toLowerCase()} in this playlist yet.`}</p>
+              <p className="mt-2 text-sm font-semibold text-on-surface-variant">{showRecycleBin ? "Deleted assets appear here for up to 60 days." : "Upload a file to add it to this project."}</p>
             </div>
           ) : null}
 
@@ -477,13 +477,13 @@ export default function VideoManualAssetLibraryModal({
             const isSelected = selectedSet.has(assetId);
 
             return (
-              <article key={assetId || name} className={`overflow-hidden rounded-2xl border bg-white shadow-sm transition dark:bg-slate-950 ${isSelected ? "border-cyan-500 ring-2 ring-cyan-500/20" : "border-slate-200 hover:border-cyan-300 hover:shadow-md dark:border-slate-800 dark:hover:border-cyan-500"}`}>
-                <div className="relative aspect-video overflow-hidden bg-slate-100 dark:bg-slate-900">
+              <article key={assetId || name} className={`overflow-hidden rounded-2xl border bg-surface shadow-sm transition ${isSelected ? "border-primary/30 ring-2 ring-primary/30" : "border-separator hover:border-primary/30 hover:shadow-md "}`}>
+                <div className="relative aspect-video overflow-hidden bg-surface-container">
                   {editMode ? (
                     <button
                       type="button"
                       onClick={() => toggleAssetSelection(asset)}
-                      className={`absolute left-2 top-2 z-10 inline-flex h-6 w-6 items-center justify-center rounded-md border text-white ${isSelected ? "border-cyan-500 bg-cyan-500" : "border-white/70 bg-black/35"}`}
+                      className={`absolute left-2 top-2 z-10 inline-flex h-6 w-6 items-center justify-center rounded-md border text-on-primary ${isSelected ? "border-primary/30 bg-primary" : "border-white/70 bg-black/35"}`}
                     >
                       {isSelected ? <Icon className="text-[15px]">check</Icon> : null}
                     </button>
@@ -511,11 +511,11 @@ export default function VideoManualAssetLibraryModal({
                 <div className="space-y-3 p-4">
                   <div>
                     <div className="flex items-start justify-between gap-3">
-                      <p className="min-w-0 flex-1 truncate text-sm font-black text-slate-800 dark:text-white">{name}</p>
-                      <span className="shrink-0 rounded-full bg-cyan-50 px-2 py-1 text-[10px] font-black uppercase tracking-wide text-cyan-700 dark:bg-cyan-500/15 dark:text-cyan-200">{getAssetLibraryTypeLabel(assetType)}</span>
+                      <p className="min-w-0 flex-1 truncate text-sm font-black text-on-surface">{name}</p>
+                      <span className="shrink-0 rounded-full bg-primary/10 px-2 py-1 text-[10px] font-black uppercase tracking-wide text-primary">{getAssetLibraryTypeLabel(assetType)}</span>
                     </div>
-                    <p className="mt-1 text-xs font-semibold text-slate-400">{metaLabel || "Shared playlist asset"}</p>
-                    <p className="mt-2 text-xs font-bold text-slate-500 dark:text-slate-400">{previewLabel}</p>
+                    <p className="mt-1 text-xs font-semibold text-outline">{metaLabel || "Shared playlist asset"}</p>
+                    <p className="mt-2 text-xs font-bold text-on-surface-variant">{previewLabel}</p>
                     {usageProjects.length ? (
                       <p className="mt-1 text-[11px] font-semibold text-amber-600 dark:text-amber-300">Used in: {usageProjects.join(", ")}</p>
                     ) : null}
@@ -528,7 +528,7 @@ export default function VideoManualAssetLibraryModal({
                   </div>
                   {!editMode && !showRecycleBin ? (
                     <div className="flex justify-end">
-                      <button type="button" onClick={() => onUseAsset(asset)} className="rounded-xl bg-cyan-500 px-3 py-2 text-xs font-black text-white transition hover:bg-cyan-600">
+                      <button type="button" onClick={() => onUseAsset(asset)} className="rounded-xl bg-primary px-3 py-2 text-xs font-black text-on-primary transition hover:bg-primary/90">
                         Use {getAssetLibraryItemLabel(assetType)}
                       </button>
                     </div>

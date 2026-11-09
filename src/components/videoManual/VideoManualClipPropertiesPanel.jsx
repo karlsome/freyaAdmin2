@@ -21,9 +21,9 @@ function formatInputNumber(value, fallback = 0, decimals = 4) {
 
 function Section({ title, children, action }) {
   return (
-    <section className="border-t border-slate-200 pt-3 dark:border-slate-800">
+    <section className="border-t border-separator pt-3">
       <div className="mb-2 flex items-center justify-between gap-2">
-        <h4 className="text-xs font-bold text-slate-950 dark:text-white">{title}</h4>
+        <h4 className="text-xs font-bold text-on-surface">{title}</h4>
         {action}
       </div>
       <div className="space-y-2">{children}</div>
@@ -33,15 +33,15 @@ function Section({ title, children, action }) {
 
 function Field({ label, children }) {
   return (
-    <label className="block space-y-1 text-[11px] font-semibold text-slate-500 dark:text-slate-400">
+    <label className="block space-y-1 text-[11px] font-semibold text-on-surface-variant">
       <span>{label}</span>
       {children}
     </label>
   );
 }
 
-const inputClass = "w-full rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 outline-none transition focus:border-cyan-400 focus:ring-2 focus:ring-cyan-500/10 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100";
-const colorInputClass = "h-9 w-full cursor-pointer rounded-lg border border-slate-200 bg-white p-1 dark:border-slate-700 dark:bg-slate-900";
+const inputClass = "w-full rounded-lg border border-separator bg-surface px-2.5 py-1.5 text-xs font-semibold text-on-surface outline-none transition focus:border-primary/30 focus:ring-2 focus:ring-primary/30";
+const colorInputClass = "h-9 w-full cursor-pointer rounded-lg border border-separator bg-surface p-1";
 
 function NumberField({ label, value, min, max, step = "0.1", onChange }) {
   return (
@@ -166,10 +166,10 @@ export default function VideoManualClipPropertiesPanel({
       <div className="flex-1 space-y-3 pb-3">
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">
-            <p className="truncate text-sm font-bold text-slate-950 dark:text-white">{title}</p>
-            <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">Track {Number(selectedClip?.trackIndex ?? 0) + 1}</p>
+            <p className="truncate text-sm font-bold text-on-surface">{title}</p>
+            <p className="text-xs font-semibold text-on-surface-variant">Track {Number(selectedClip?.trackIndex ?? 0) + 1}</p>
           </div>
-          <span className="rounded-full border border-slate-200 px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.14em] text-slate-600 dark:border-slate-700 dark:text-slate-300">
+          <span className="rounded-full border border-separator px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.14em] text-on-surface-variant">
             {pill}
           </span>
         </div>
@@ -223,7 +223,7 @@ export default function VideoManualClipPropertiesPanel({
               <button
                 type="button"
                 onClick={() => updateAsset({ volume: mediaVolume > 0 ? 0 : 1 }, mediaVolume > 0 ? "Muted." : "Unmuted.")}
-                className={`inline-flex h-8 items-center justify-center gap-1.5 rounded-lg px-2.5 text-[11px] font-bold transition ${mediaVolume <= 0 ? "bg-cyan-500 text-white hover:bg-cyan-600" : "bg-slate-100 text-slate-700 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"}`}
+                className={`inline-flex h-8 items-center justify-center gap-1.5 rounded-lg px-2.5 text-[11px] font-bold transition ${mediaVolume <= 0 ? "bg-primary text-on-primary hover:bg-primary/90" : "bg-surface-container text-on-surface hover:bg-surface-container-high "}`}
               >
                 <Icon className="text-[15px]">{mediaVolume <= 0 ? "volume_off" : "volume_up"}</Icon>
                 {mediaVolume <= 0 ? "Unmute" : "Mute"}
@@ -292,7 +292,7 @@ export default function VideoManualClipPropertiesPanel({
         <Section
           title="Animation"
           action={(
-            <button type="button" onClick={onOpenAnimationPanel} className="inline-flex h-7 items-center gap-1 rounded-full border border-slate-200 px-2.5 text-[11px] font-bold text-slate-600 transition hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800">
+            <button type="button" onClick={onOpenAnimationPanel} className="inline-flex h-7 items-center gap-1 rounded-full border border-separator px-2.5 text-[11px] font-bold text-on-surface-variant transition hover:bg-surface-container">
               <Icon className="text-[14px]">show_chart</Icon>
               Animation
             </button>

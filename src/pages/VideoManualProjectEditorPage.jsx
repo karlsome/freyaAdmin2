@@ -2588,7 +2588,7 @@ export default function VideoManualProjectEditorPage() {
   }, [showNotice]);
 
   return (
-    <div className="mt-16 flex h-[calc(100vh-4rem)] min-h-0 flex-col overflow-hidden bg-slate-100 font-sans dark:bg-slate-950">
+    <div className="mt-16 flex h-[calc(100vh-4rem)] min-h-0 flex-col overflow-hidden bg-surface-container">
       <VideoManualEditorToolbar
         projectTitle={project?.title || "Video Manual"}
         saving={saving || exportBusy || Boolean(revisionPreview) || Boolean(revisionActionId)}
@@ -2611,13 +2611,13 @@ export default function VideoManualProjectEditorPage() {
       ) : null}
 
       {revisionPreview ? (
-        <div className="relative z-20 flex flex-wrap items-center justify-center gap-3 bg-sky-500 px-4 py-2 text-xs font-black text-white">
+        <div className="relative z-20 flex flex-wrap items-center justify-center gap-3 bg-primary px-4 py-2 text-xs font-black text-on-primary">
           <span>Previewing {getRevisionDisplayName(revisionPreview)}. Edits are not saved until you restore this revision.</span>
           <button
             type="button"
             onClick={handleExitRevisionPreview}
             disabled={Boolean(revisionActionId)}
-            className="rounded-lg bg-white/15 px-3 py-1 text-[11px] transition hover:bg-white/25 disabled:cursor-not-allowed disabled:opacity-60"
+            className="rounded-lg bg-surface/15 px-3 py-1 text-[11px] transition hover:bg-surface/25 disabled:cursor-not-allowed disabled:opacity-60"
           >
             Back to Current
           </button>
@@ -2626,10 +2626,10 @@ export default function VideoManualProjectEditorPage() {
 
       {loadingProject ? (
         <div className="flex flex-1 items-center justify-center">
-          <span className="material-symbols-outlined animate-spin text-[32px] text-slate-400">progress_activity</span>
+          <span className="material-symbols-outlined animate-spin text-[32px] text-outline">progress_activity</span>
         </div>
       ) : !project ? (
-        <div className="flex flex-1 items-center justify-center px-6 text-center text-sm font-bold text-slate-500">
+        <div className="flex flex-1 items-center justify-center px-6 text-center text-sm font-bold text-on-surface-variant">
           {projectError || "Project not found."}
         </div>
       ) : (
@@ -2637,8 +2637,8 @@ export default function VideoManualProjectEditorPage() {
           <div className="relative flex min-h-0 flex-1 overflow-hidden">
             <VideoManualStepsPanel steps={steps} onSelectStep={(step) => editRef.current?.seek?.(step.startTime)} onAddStep={handleAddStep} />
 
-            <main className="relative flex min-w-0 flex-1 flex-col bg-slate-200 dark:bg-slate-950">
-              <div className="relative flex min-h-0 flex-1 items-center justify-center overflow-hidden bg-slate-200 p-4 dark:bg-slate-950">
+            <main className="relative flex min-w-0 flex-1 flex-col bg-surface-container-high">
+              <div className="relative flex min-h-0 flex-1 items-center justify-center overflow-hidden bg-surface-container-high p-4">
                 <div ref={studioElRef} data-shotstack-studio className="h-full w-full max-w-[980px] overflow-hidden rounded-lg border border-black/5 bg-black shadow-xl" />
                 <style dangerouslySetInnerHTML={{ __html: `
                   [data-shotstack-studio] > div:not(canvas) { opacity: 0 !important; pointer-events: none !important; position: absolute !important; width: 0 !important; height: 0 !important; overflow: hidden !important; }
@@ -2681,7 +2681,7 @@ export default function VideoManualProjectEditorPage() {
           </div>
 
           <div
-            className="relative z-20 flex flex-shrink-0 flex-col border-t border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-950"
+            className="relative z-20 flex flex-shrink-0 flex-col border-t border-separator bg-surface"
             style={{ height: timelineHeight }}
           >
             <div
@@ -2700,12 +2700,12 @@ export default function VideoManualProjectEditorPage() {
                 timelineHeightUserSetRef.current = false;
                 fitTimelineToEdit(true);
               }}
-              className={`group absolute -top-4 left-0 right-0 z-30 flex h-8 cursor-row-resize touch-none items-center justify-center outline-none ${timelineResizing ? "bg-blue-500/10" : ""}`}
+              className={`group absolute -top-4 left-0 right-0 z-30 flex h-8 cursor-row-resize touch-none items-center justify-center outline-none ${timelineResizing ? "bg-primary/10" : ""}`}
             >
-              <span className={`flex h-5 w-20 items-center justify-center gap-1 rounded-full border shadow-sm ring-1 ring-black/5 transition-all duration-200 ease-out group-hover:w-28 group-hover:gap-1.5 group-focus-visible:w-28 group-focus-visible:gap-1.5 ${timelineResizing ? "w-28 gap-1.5 border-blue-400 bg-blue-50 ring-blue-400/30" : "border-slate-200 bg-white group-hover:border-blue-300 group-hover:bg-blue-50 group-hover:ring-blue-300/30 group-focus-visible:border-blue-400 group-focus-visible:bg-blue-50 group-focus-visible:ring-2 group-focus-visible:ring-blue-400/40 dark:border-slate-700 dark:bg-slate-900 dark:ring-white/10 dark:group-hover:border-blue-500 dark:group-hover:bg-slate-800"}`}>
-                <span className={`h-1.5 w-1.5 rounded-full ${timelineResizing ? "bg-blue-500" : "bg-slate-400 group-hover:bg-blue-500 dark:bg-slate-500"}`} />
-                <span className={`h-1.5 w-1.5 rounded-full ${timelineResizing ? "bg-blue-500" : "bg-slate-400 group-hover:bg-blue-500 dark:bg-slate-500"}`} />
-                <span className={`h-1.5 w-1.5 rounded-full ${timelineResizing ? "bg-blue-500" : "bg-slate-400 group-hover:bg-blue-500 dark:bg-slate-500"}`} />
+              <span className={`flex h-5 w-20 items-center justify-center gap-1 rounded-full border shadow-sm ring-1 ring-black/5 transition-all duration-200 ease-out group-hover:w-28 group-hover:gap-1.5 group-focus-visible:w-28 group-focus-visible:gap-1.5 ${timelineResizing ? "w-28 gap-1.5 border-primary/30 bg-primary/10 ring-primary/30" : "border-separator bg-surface group-hover:border-primary/30 group-hover:bg-primary/10 group-hover:ring-primary/30 group-focus-visible:border-primary/40 group-focus-visible:bg-primary/10 group-focus-visible:ring-2 group-focus-visible:ring-blue-400/40 "}`}>
+                <span className={`h-1.5 w-1.5 rounded-full ${timelineResizing ? "bg-primary" : "bg-outline-variant group-hover:bg-primary/90 "}`} />
+                <span className={`h-1.5 w-1.5 rounded-full ${timelineResizing ? "bg-primary" : "bg-outline-variant group-hover:bg-primary/90 "}`} />
+                <span className={`h-1.5 w-1.5 rounded-full ${timelineResizing ? "bg-primary" : "bg-outline-variant group-hover:bg-primary/90 "}`} />
               </span>
             </div>
             <VideoManualClipActionBar selectedClip={selectedClip} onTrimClip={handleTrimSelectedClip} onDeleteClip={handleDeleteSelectedClip} />

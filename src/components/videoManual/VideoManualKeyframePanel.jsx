@@ -22,10 +22,10 @@ function Diamond({ active = false }) {
 
 function ActionButton({ children, icon, onClick, disabled = false, tone = "slate" }) {
   const toneClass = tone === "red"
-    ? "bg-red-50 text-red-600 hover:bg-red-100 disabled:bg-slate-100 disabled:text-slate-400 dark:bg-red-500/10 dark:text-red-300 dark:hover:bg-red-500/20 dark:disabled:bg-slate-800 dark:disabled:text-slate-500"
+    ? "bg-red-50 text-red-600 hover:bg-red-100 disabled:bg-surface-container disabled:text-outline dark:bg-red-500/10 dark:text-red-300 dark:hover:bg-red-500/20"
     : tone === "amber"
-      ? "bg-amber-50 text-amber-700 hover:bg-amber-100 disabled:bg-slate-100 disabled:text-slate-400 dark:bg-amber-500/10 dark:text-amber-200 dark:hover:bg-amber-500/20 dark:disabled:bg-slate-800 dark:disabled:text-slate-500"
-      : "bg-slate-100 text-slate-700 hover:bg-slate-200 disabled:text-slate-400 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700 dark:disabled:text-slate-500";
+      ? "bg-amber-50 text-amber-700 hover:bg-amber-100 disabled:bg-surface-container disabled:text-outline dark:bg-amber-500/10 dark:text-amber-200 dark:hover:bg-amber-500/20"
+      : "bg-surface-container text-on-surface hover:bg-surface-container-high disabled:text-outline";
 
   return (
     <button
@@ -48,8 +48,8 @@ function KeyframeField({ field, activeKeyframe, values, editing, changed, onChan
     : <Icon className="text-[14px]">{field.icon}</Icon>;
 
   return (
-    <label className={`grid grid-cols-[2rem_1fr] overflow-hidden rounded-lg border transition ${changed ? "border-cyan-300 bg-cyan-50/70 dark:border-cyan-500/50 dark:bg-cyan-500/10" : "border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900"}`}>
-      <span className="flex items-center justify-center border-r border-inherit text-slate-500 dark:text-slate-300" title={field.label}>{icon}</span>
+    <label className={`grid grid-cols-[2rem_1fr] overflow-hidden rounded-lg border transition ${changed ? "border-primary/30 bg-primary/10 " : "border-separator bg-surface "}`}>
+      <span className="flex items-center justify-center border-r border-inherit text-on-surface-variant" title={field.label}>{icon}</span>
       <input
         type="number"
         min={field.min}
@@ -59,7 +59,7 @@ function KeyframeField({ field, activeKeyframe, values, editing, changed, onChan
         disabled={!activeKeyframe}
         readOnly={!editing}
         onChange={(event) => onChange(field.id, event.target.value)}
-        className="min-w-0 bg-transparent px-2.5 py-2 text-xs font-bold text-slate-800 outline-none disabled:cursor-not-allowed disabled:text-slate-400 read-only:cursor-default dark:text-slate-100 dark:disabled:text-slate-500"
+        className="min-w-0 bg-transparent px-2.5 py-2 text-xs font-bold text-on-surface outline-none disabled:cursor-not-allowed disabled:text-outline read-only:cursor-default"
       />
     </label>
   );
@@ -94,24 +94,24 @@ export default function VideoManualKeyframePanel({
 
   return (
     <div className="space-y-3">
-      <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 dark:border-slate-800 dark:bg-slate-900">
-        <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">Selected</p>
-        <p className="mt-1 truncate text-xs font-bold text-slate-700 dark:text-slate-100">{assetType}</p>
+      <div className="rounded-lg border border-separator bg-surface-container-low px-3 py-2">
+        <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-outline">Selected</p>
+        <p className="mt-1 truncate text-xs font-bold text-on-surface">{assetType}</p>
       </div>
 
       <ActionButton icon="add" tone="amber" onClick={onAddKeyframe} disabled={disabled}>
         <span className="inline-flex items-center gap-1"><Diamond /> Add Keyframe T={relativeTime.toFixed(2)}s</span>
       </ActionButton>
 
-      <section className="space-y-2 rounded-lg border border-slate-200 bg-white p-3 dark:border-slate-800 dark:bg-slate-950">
+      <section className="space-y-2 rounded-lg border border-separator bg-surface p-3">
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">
-            <p className="text-xs font-black text-slate-900 dark:text-white">Current Diamond</p>
-            <p className="mt-0.5 truncate text-[11px] font-semibold text-slate-500 dark:text-slate-400">
+            <p className="text-xs font-black text-on-surface">Current Diamond</p>
+            <p className="mt-0.5 truncate text-[11px] font-semibold text-on-surface-variant">
               {activeKeyframe ? `T=${activeKeyframe.time.toFixed(2)}s` : `Within ${ACTIVE_KEYFRAME_THRESHOLD.toFixed(2)}s`}
             </p>
           </div>
-          <span className={`inline-flex h-6 items-center gap-1 rounded-full px-2 text-[10px] font-black uppercase tracking-[0.12em] ${activeKeyframe ? "bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-200" : "bg-slate-100 text-slate-400 dark:bg-slate-800 dark:text-slate-500"}`}>
+          <span className={`inline-flex h-6 items-center gap-1 rounded-full px-2 text-[10px] font-black uppercase tracking-[0.12em] ${activeKeyframe ? "bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-200" : "bg-surface-container text-outline "}`}>
             <Diamond active={!!activeKeyframe} />
             {activeKeyframe ? "Active" : "None"}
           </span>
@@ -147,15 +147,15 @@ export default function VideoManualKeyframePanel({
       {keyframeTimes.length ? (
         <div className="flex flex-wrap gap-1.5">
           {keyframeTimes.map((time) => (
-            <span key={time} className="inline-flex h-6 items-center gap-1 rounded-full bg-slate-100 px-2 text-[10px] font-bold text-slate-500 dark:bg-slate-800 dark:text-slate-300">
+            <span key={time} className="inline-flex h-6 items-center gap-1 rounded-full bg-surface-container px-2 text-[10px] font-bold text-on-surface-variant">
               <Diamond /> {time.toFixed(2)}s
             </span>
           ))}
         </div>
       ) : null}
 
-      <section className="space-y-2 border-t border-slate-200 pt-3 dark:border-slate-800">
-        <p className="text-[11px] font-bold text-slate-500 dark:text-slate-400">Presets</p>
+      <section className="space-y-2 border-t border-separator pt-3">
+        <p className="text-[11px] font-bold text-on-surface-variant">Presets</p>
         <div className="grid gap-2">
           <ActionButton icon="opacity" onClick={() => onApplyAnimationPreset("fadeIn")} disabled={disabled}>Fade In</ActionButton>
           <ActionButton icon="blur_on" onClick={() => onApplyAnimationPreset("fadeOut")} disabled={disabled}>Fade Out</ActionButton>

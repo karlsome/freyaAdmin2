@@ -14,10 +14,10 @@ function getStatusTone(type, busy) {
 
   if (busy || type === "info") {
     return {
-      badge: "bg-blue-100 text-blue-700 dark:bg-blue-500/15 dark:text-blue-200",
-      iconWrap: "bg-blue-50 text-blue-600 dark:bg-blue-500/15 dark:text-blue-200",
-      title: "text-blue-700 dark:text-blue-200",
-      button: "bg-slate-100 text-slate-500",
+      badge: "bg-primary/10 text-primary",
+      iconWrap: "bg-primary/10 text-primary",
+      title: "text-primary",
+      button: "bg-surface-container text-on-surface-variant",
     };
   }
 
@@ -56,11 +56,11 @@ export default function VideoManualExportStatusModal({
         role="dialog"
         aria-modal="true"
         aria-labelledby="video-manual-export-status-title"
-        className="w-full max-w-md overflow-hidden rounded-[28px] border border-white/70 bg-white shadow-[0_30px_120px_-40px_rgba(15,23,42,0.6)] dark:border-slate-800 dark:bg-slate-950"
+        className="w-full max-w-md overflow-hidden rounded-[28px] border border-white/70 bg-surface shadow-[0_30px_120px_-40px_rgba(15,23,42,0.6)]"
       >
-        <div className="border-b border-slate-200 px-6 py-5 dark:border-slate-800">
-          <div className="flex items-center gap-2 text-sm font-black text-slate-900 dark:text-white">
-            <Icon className="text-[18px] text-blue-500">download</Icon>
+        <div className="border-b border-separator px-6 py-5">
+          <div className="flex items-center gap-2 text-sm font-black text-on-surface">
+            <Icon className="text-[18px] text-primary">download</Icon>
             <h3 id="video-manual-export-status-title">Export Video</h3>
           </div>
         </div>
@@ -77,17 +77,17 @@ export default function VideoManualExportStatusModal({
               {badgeLabel}
             </span>
             <p className={`mt-4 text-xl font-black ${tone.title}`}>{title}</p>
-            <p className="mt-2 text-sm font-semibold text-slate-500 dark:text-slate-400">{message}</p>
+            <p className="mt-2 text-sm font-semibold text-on-surface-variant">{message}</p>
             {busy ? (
-              <p className="mt-3 text-xs font-bold uppercase tracking-[0.14em] text-slate-400 dark:text-slate-500">
+              <p className="mt-3 text-xs font-bold uppercase tracking-[0.14em] text-outline">
                 Refresh and close are blocked until the export finishes.
               </p>
             ) : null}
           </div>
 
           {progress != null ? (
-            <div className="mt-5 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
-              <div className="h-2 rounded-full bg-blue-500 transition-[width] duration-300" style={{ width: `${progress}%` }} />
+            <div className="mt-5 overflow-hidden rounded-full bg-surface-container">
+              <div className="h-2 rounded-full bg-primary transition-[width] duration-300" style={{ width: `${progress}%` }} />
             </div>
           ) : null}
 
@@ -109,7 +109,7 @@ export default function VideoManualExportStatusModal({
                   <button
                     type="button"
                     onClick={onOpenUrl}
-                    className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white text-sm font-black text-slate-700 transition hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
+                    className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-separator bg-surface text-sm font-black text-on-surface transition hover:bg-surface-container"
                   >
                     <Icon className="text-[18px]">open_in_new</Icon>
                     Open URL
@@ -120,7 +120,7 @@ export default function VideoManualExportStatusModal({
                   <button
                     type="button"
                     onClick={onCopyUrl}
-                    className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white text-sm font-black text-slate-700 transition hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
+                    className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-separator bg-surface text-sm font-black text-on-surface transition hover:bg-surface-container"
                   >
                     <Icon className="text-[18px]">content_copy</Icon>
                     Copy URL
@@ -134,7 +134,7 @@ export default function VideoManualExportStatusModal({
             type="button"
             onClick={onClose}
             disabled={busy}
-            className="mt-5 inline-flex h-11 w-full items-center justify-center rounded-xl bg-slate-100 text-sm font-black text-slate-600 transition hover:bg-slate-200 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
+            className="mt-5 inline-flex h-11 w-full items-center justify-center rounded-xl bg-surface-container text-sm font-black text-on-surface-variant transition hover:bg-surface-container-high disabled:cursor-not-allowed disabled:opacity-60"
           >
             Close
           </button>
